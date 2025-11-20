@@ -9242,10 +9242,11 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 			velocityFromAnim = 0.07f * runAssoc->blendAmount + 0.1f;
 		}
 	}
-	velocityFromAnim *= 1.5f;
+
+	velocityFromAnim *= rouz.ped_jump_fwd;	// rouz edit
 
 	if (ped->IsPlayer() || ped->m_pedInObjective && ped->m_pedInObjective->IsPlayer())
-		ped->ApplyMoveForce(0.0f, 0.0f, 1.5f*8.5f);
+		ped->ApplyMoveForce(0.0f, 0.0f, rouz.ped_jump_vert*8.5f);	// rouz edit
 	else
 		ped->ApplyMoveForce(0.0f, 0.0f, 4.5f);
 	

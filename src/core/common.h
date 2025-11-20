@@ -410,6 +410,7 @@ typedef struct
 	void *bomb_veh, *rc_veh, *ctrl_veh, *glue_veh;
 	float fov_mul, ped_mul, bike_midair_lean_mul, drown_mul, lod_dist_scale;
 	float prev_player_health, base_player_health;
+	float ped_jump_vert, ped_jump_fwd;
 	double health_drop_time;
 	volatile int veh_window_control, handbrake;
 	volatile double gas_v, brake_v, steer_v, yaw_v, pitch_v, yaw, pitch;
