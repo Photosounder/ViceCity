@@ -338,7 +338,8 @@ CStreaming::Update(void)
 	if(!ms_disableStreaming && TheCamera.GetPosition().z < 55.0f)
 		AddModelsToRequestList(TheCamera.GetPosition(), 0);
 
-	DeleteFarAwayRwObjects(TheCamera.GetPosition());
+	if (rouz.no_unstreaming)
+		DeleteFarAwayRwObjects(TheCamera.GetPosition());
 
 	if(!ms_disableStreaming &&
 	   !CCutsceneMgr::IsCutsceneProcessing() &&
@@ -365,6 +366,7 @@ CStreaming::Update(void)
 	//if (CPad::GetPad(1)->GetLeftShoulder2JustDown() && CPad::GetPad(1)->GetRightShoulder1() && CPad::GetPad(1)->GetRightShoulder2())
 	//	PrintRequestList();
 
+	if (rouz.no_unstreaming)
 	for(si = ms_endRequestedList.m_prev; si != &ms_startRequestedList; si = prev){
 		prev = si->m_prev;
 		if((si->m_flags & (STREAMFLAGS_KEEP_IN_MEMORY|STREAMFLAGS_PRIORITY)) == 0)
@@ -1134,6 +1136,9 @@ CStreaming::RemoveModel(int32 id)
 void
 CStreaming::RemoveUnusedBuildings(eLevelName level)
 {
+	if (rouz.no_unstreaming)
+		return;
+
 	if(level != LEVEL_BEACH)
 		RemoveBuildings(LEVEL_BEACH);
 	if(level != LEVEL_MAINLAND)
@@ -1258,6 +1263,9 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 void
 CStreaming::RemoveUnusedBigBuildings(eLevelName level)
 {
+	if (rouz.no_unstreaming)
+		return;
+
 	ISLAND_LOADING_IS(LOW)
 	{
 	if(level != LEVEL_BEACH)
@@ -1395,6 +1403,9 @@ void
 CStreaming::RemoveAllUnusedModels(void)
 {
 	int i;
+
+	if (rouz.no_unstreaming)
+		return;
 
 	for(i = 0; i < MAXVEHICLESLOADED; i++)
 		RemoveLoadedVehicle();
@@ -1637,6 +1648,10 @@ CStreaming::StreamVehiclesAndPeds(void)
 		)
 		return;
 
+	// rouz edit
+	if(FindPlayerPed()==NULL)
+		return;
+
 	if(FindPlayerPed()->m_pWanted->AreSwatRequired()){
 		RequestModel(MI_ENFORCER, STREAMFLAGS_DONT_REMOVE);
 		RequestModel(MI_SWAT, STREAMFLAGS_DONT_REMOVE);
@@ -1869,6 +1884,9 @@ void
 CStreaming::RemoveCurrentZonesModels(void)
 {
 	int i;
+
+	if (rouz.no_unstreaming)
+		return;
 
 	if (ms_currentPedGrp != -1)
 		for (i = 0; i < NUMMODELSPERPEDGROUP; i++) {
@@ -2807,6 +2825,9 @@ CStreaming::DeleteAllRwObjects(void)
 	int x, y;
 	CSector *sect;
 
+	if (rouz.no_unstreaming)
+		return;
+
 	for(x = 0; x < NUMSECTORS_X; x++)
 		for(y = 0; y < NUMSECTORS_Y; y++){
 			sect = CWorld::GetSector(x, y);
@@ -2851,6 +2872,9 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 	int xmin, xmax, ymin, ymax;
 	int inc;
 	CSector *sect;
+
+	if (rouz.no_unstreaming)
+		return;
 
 	if(ms_memoryUsed < mem)
 		return;
@@ -3079,6 +3103,9 @@ CStreaming::DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem)
 void
 CStreaming::MakeSpaceFor(int32 size)
 {
+	if (rouz.no_unstreaming)
+		return;
+
 #ifdef FIX_BUGS
 #define MB (1024 * 1024)
 	if(ms_memoryAvailable == 0) {

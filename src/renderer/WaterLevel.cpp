@@ -709,13 +709,11 @@ CWaterLevel::GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool
 {
 	int32 x = WATER_TO_SMALL_SECTOR_X(fX + WATER_X_OFFSET);
 	int32 y = WATER_TO_SMALL_SECTOR_Y(fY);
-		
-#ifdef FIX_BUGS
-	if ( x < 0 || x >= MAX_SMALL_SECTORS ) return false;
-	if ( y < 0 || y >= MAX_SMALL_SECTORS ) return false;
-#endif
 
-	int8 nBlock = aWaterFineBlockList[x][y];
+	// rouz edit
+	int8 nBlock = 0;
+	if (x >= 0 && x < MAX_SMALL_SECTORS && y >= 0 && y < MAX_SMALL_SECTORS)
+		nBlock = aWaterFineBlockList[x][y];
 
 	if ( nBlock == NO_WATER )
 		return false;
@@ -751,13 +749,11 @@ CWaterLevel::GetWaterLevelNoWaves(float fX, float fY, float fZ, float *pfOutLeve
 {
 	int32 x = WATER_TO_SMALL_SECTOR_X(fX + WATER_X_OFFSET);
 	int32 y = WATER_TO_SMALL_SECTOR_Y(fY);
-		
-#ifdef FIX_BUGS
-	if ( x < 0 || x >= MAX_SMALL_SECTORS ) return false;
-	if ( y < 0 || y >= MAX_SMALL_SECTORS ) return false;
-#endif
-	
-	int8 nBlock = aWaterFineBlockList[x][y];
+
+	// rouz edit
+	int8 nBlock = 0;
+	if (x >= 0 && x < MAX_SMALL_SECTORS && y >= 0 && y < MAX_SMALL_SECTORS)
+		nBlock = aWaterFineBlockList[x][y];
 		
 	if ( nBlock == NO_WATER )
 		return false;

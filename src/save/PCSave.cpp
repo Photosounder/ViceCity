@@ -11,6 +11,9 @@
 #include "Messages.h"
 #include "PCSave.h"
 #include "Text.h"
+#ifdef START_FROM_LAST_SAVE
+#include "Date.h"
+#endif
 
 const char* _psGetUserFilesFolder();
 
@@ -92,6 +95,9 @@ C_PcSave::PcClassSaveRoutine(int32 file, uint8 *data, uint32 size)
 void
 C_PcSave::PopulateSlotInfo()
 {
+#ifdef START_FROM_LAST_SAVE
+		b_SavesExist = false;
+#endif
 	for (int i = 0; i < SLOT_COUNT; i++) {
 		Slots[i] = SLOT_EMPTY;
 		SlotFileName[i][0] = '\0';
@@ -114,6 +120,9 @@ C_PcSave::PopulateSlotInfo()
 			CFileMgr::Read(file, (char*)&header, sizeof(header));
 			if (strncmp((char*)&header, TopLineEmptyFile, sizeof(TopLineEmptyFile)-1) != 0) {
 				Slots[i] = SLOT_OK;
+#ifdef START_FROM_LAST_SAVE
+				b_SavesExist = true;
+#endif
 				memcpy(SlotFileName[i], &header.FileName, sizeof(header.FileName));
 				
 				SlotFileName[i][24] = '\0';
@@ -131,6 +140,14 @@ C_PcSave::PopulateSlotInfo()
 #endif
 				SYSTEMTIME st;
 				memcpy(&st, &header.SaveDateTime, sizeof(SYSTEMTIME));
+#ifdef START_FROM_LAST_SAVE
+				SlotDate[i].m_nYear = st.wYear;
+				SlotDate[i].m_nMonth = st.wMonth;
+				SlotDate[i].m_nDay = st.wDay;
+				SlotDate[i].m_nHour = st.wHour;
+				SlotDate[i].m_nMinute = st.wMinute;
+				SlotDate[i].m_nSecond = st.wSecond;
+#endif
 				const char *month;
 				switch (st.wMonth)
 				{

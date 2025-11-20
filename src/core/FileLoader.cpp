@@ -1209,6 +1209,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 	angle = -RADTODEG(2.0f * Acos(angle));
 	xform = RwMatrixCreate();
 	RwMatrixRotate(xform, &axis, angle, rwCOMBINEREPLACE);
+	//RwMatrixScale(xform, &scale, rwCOMBINEPOSTCONCAT);			// rouz edit, take scaling factor into account, astoundingly this isn't supposed to be done, the values are bogus
 	RwMatrixTranslate(xform, &trans, rwCOMBINEPOSTCONCAT);
 
 	if(mi->GetObjectID() == -1){

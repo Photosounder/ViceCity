@@ -657,6 +657,14 @@ FindPlayerCoors(void)
 		return TheCamera.GetPosition();
 #endif
 	CPlayerPed *ped = FindPlayerPed();
+
+	//rouzic edit, ped can be NULL when dying
+	if (ped==NULL)
+	{
+		CVector cv;
+		return cv;
+	}
+
 	if(ped->InVehicle())
 		return ped->m_pMyVehicle->GetPosition();
 	else

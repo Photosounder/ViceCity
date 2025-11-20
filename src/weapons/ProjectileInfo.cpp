@@ -86,6 +86,9 @@ CProjectileInfo::AddProjectile(CEntity *entity, eWeaponType weapon, CVector pos,
 					matrix.GetUp() = TheCamera.Cams[TheCamera.ActiveCam].Up;
 					matrix.GetRight() = CrossProduct(TheCamera.Cams[TheCamera.ActiveCam].Up, TheCamera.Cams[TheCamera.ActiveCam].Front);
 					matrix.GetPosition() = pos;
+					// rouz edit, added velocity so that we can fire rockets while on a moving vehicle
+					CVector vecSpeed = ((CPhysical*)entity)->m_vecMoveSpeed;
+					vy += Max(0.0f, DotProduct(vecSpeed, entity->GetForward())) + Max(0.0f, DotProduct(vecSpeed, entity->GetUp()));
 				} else if (ped->m_pSeekTarget != nil) {
 					float ry = CGeneral::GetRadianAngleBetweenPoints(1.0f, ped->m_pSeekTarget->GetPosition().z, 1.0f, pos.z);
 					float rz = Atan2(-ped->GetForward().x, ped->GetForward().y);

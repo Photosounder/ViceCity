@@ -1,4 +1,5 @@
 #include "common.h"
+#include "main.h"	// rouz edit
 #include "General.h"
 #include "Pad.h"
 #include "DMAudio.h"
@@ -223,6 +224,10 @@ CBike::ProcessControl(void)
 	bExtraSpeed = false;
 	bRestingOnPhysical = false;
 
+	// rouz edit, fix wheel rotation bug
+	for(i=0; i < 2; i++)
+		m_aWheelRotation[i] = rangewrap(m_aWheelRotation[i], 0., TWOPI);
+
 	if(CReplay::IsPlayingBack())
 		return;
 
@@ -244,6 +249,7 @@ CBike::ProcessControl(void)
 		if(FindPlayerPed()->GetPedState() != PED_EXIT_CAR && FindPlayerPed()->GetPedState() != PED_DRAG_FROM_CAR){
 			ProcessControlInputs(0);
 
+			// Lean back
 			if(m_fLeanInput < 0.0f){
 				m_vecCentreOfMass.y = pHandling->CentreOfMass.y + pBikeHandling->fLeanBakCOM*m_fLeanInput;
 				CVector com = m_vecCentreOfMass;
@@ -264,7 +270,10 @@ CBike::ProcessControl(void)
 						ApplyTurnForce(-force*CTimer::GetTimeStep()*GetUp(), com+GetForward());
 					}
 				}
-			}else{
+			}
+			// Lean forward
+			else
+			{
 				m_vecCentreOfMass.y = pHandling->CentreOfMass.y + pBikeHandling->fLeanFwdCOM*m_fLeanInput;
 				CVector com = m_vecCentreOfMass;
 #ifdef FIX_BUGS
@@ -366,6 +375,30 @@ CBike::ProcessControl(void)
 			m_fBrakePedal = 1.0f;
 			bIsHandbrakeOn = true;
 		}
+
+		// rouz remote control
+		if (rouz.remote_control && this == rouz.rc_veh)
+		{
+			bIsHandbrakeOn = false;
+
+			m_fGasPedal = 1.f * ((float) CPad::GetPad(0)->GetChar('I') - (float) CPad::GetPad(0)->GetChar('K'));
+			m_fBrakePedal = 1.f * (float) CPad::GetPad(0)->GetChar('K');
+			m_fSteerAngle = 30.f*PI/180.f * ((float) CPad::GetPad(0)->GetChar('J') - (float) CPad::GetPad(0)->GetChar('L'));
+
+			// Handle reverse
+			float fwd_speed = DotProduct(m_vecMoveSpeed, GetForward());
+			if (fwd_speed <= 0.f)
+			{
+				// Brake if we're trying to go forward
+				if (m_fGasPedal > 0.f && fwd_speed < 0.f)
+					m_fBrakePedal = 1.f;
+				else
+					m_fBrakePedal = 0.f;
+			}
+
+			bBalancedByRider = 1;
+			bIsStanding = 0;
+		}
 		break;
 
 	case STATUS_WRECKED:
@@ -450,8 +483,12 @@ CBike::ProcessControl(void)
 		m_vecCentreOfMass.z = pBikeHandling->fNoPlayerCOMz;
 	}
 
+	// rouz window control
+	rouz_veh_apply_controls_from_window((void *) this);
+
 	// Skip physics if object is found to have been static recently
 	bool skipPhysics = false;
+	if (!((rouz.remote_bomb && rouz.bomb_veh == this) || (rouz.remote_control && rouz.rc_veh == this)))
 	if(!bIsStuck && (GetStatus() == STATUS_ABANDONED || GetStatus() == STATUS_WRECKED) && !bIsBeingPickedUp){
 		bool makeStatic = false;
 		float moveSpeedLimit, turnSpeedLimit, distanceLimit;
@@ -806,6 +843,10 @@ CBike::ProcessControl(void)
 			}
 		}else if(m_fWheelAngle < DEGTORAD(20.0f))
 			m_fWheelAngle += DEGTORAD(1.5f)*CTimer::GetTimeStep();
+
+		// rouz edit, always turn wheels with remote_control
+		if (rouz.remote_control && this == rouz.rc_veh && GetStatus()==STATUS_ABANDONED)
+			m_fWheelAngle = m_fSteerAngle;
 
 		static float fThrust;
 		static tWheelState WheelState[2];
@@ -1224,7 +1265,8 @@ CBike::ProcessControl(void)
 		CVector worldCOM = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 		// Keep bike upright
 		if(bBalancedByRider){
-			ApplyTurnForce(-0.07f*onSideness*m_fTurnMass*GetUp()*CTimer::GetTimeStep(), worldCOM+GetRight());
+			if (m_nWheelsOnGround || rouz.clean_bike_backflips==0)	// rouz edit, allows flying upside down
+				ApplyTurnForce(-0.07f*onSideness*m_fTurnMass*GetUp()*CTimer::GetTimeStep(), worldCOM+GetRight());
 			bIsStanding = false;
 		}else
 			ApplyTurnForce(-0.1f*onSideness*m_fTurnMass*GetUp()*CTimer::GetTimeStep(), worldCOM+GetRight());
@@ -1809,6 +1851,8 @@ static float fMouseCentreRange = 0.35f;
 static float fMouseSteerSens = -0.0035f;
 static float fMouseCentreMult = 0.975f;
 
+extern float get_horizon_angle_of_attack(void *p_ptr);
+
 void
 CBike::ProcessControlInputs(uint8 pad)
 {
@@ -1849,8 +1893,15 @@ CBike::ProcessControlInputs(uint8 pad)
 	else
 #endif
 	updown = -CPad::GetPad(pad)->GetSteeringUpDown()/128.0f + CPad::GetPad(pad)->GetCarGunUpDown()/128.0f;
-	m_fLeanInput += (updown - m_fLeanInput)*0.2f*CTimer::GetTimeStep();
-	m_fLeanInput = Clamp(m_fLeanInput, -1.0f, 1.0f);
+	float lean_mul = 1.f;
+	if (rouz.flight && m_nWheelsOnGround==0)
+	{
+		CVector normal_vec = this->GetUp();
+		lean_mul = rouz.bike_midair_lean_mul + sinf(fabs(get_horizon_angle_of_attack((void *) this)));
+	}
+
+	m_fLeanInput += (updown - m_fLeanInput)*0.2f*CTimer::GetTimeStep() * lean_mul;
+	m_fLeanInput = Clamp(m_fLeanInput, -1.0f*lean_mul, 1.0f*lean_mul);
 
 	// Accelerate/Brake
 	float acceleration = (CPad::GetPad(pad)->GetAccelerate() - CPad::GetPad(pad)->GetBrake())/255.0f;
@@ -2010,6 +2061,10 @@ CBike::DoDriveByShootings(void)
 	CAnimBlendAssociation *anim;
 	CPlayerInfo* playerInfo = ((CPlayerPed*)pDriver)->GetPlayerInfoForThisPlayerPed();
 	if (playerInfo && !playerInfo->m_bDriveByAllowed)
+		return;
+
+	// rouz edit, prevents problems when being a passenger
+	if (pDriver==NULL)
 		return;
 
 	CWeapon *weapon = pDriver->GetWeapon();
@@ -2610,6 +2665,9 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		    assoc = RpAnimBlendGetNextAssociation(assoc))
 			assoc->flags |= ASSOC_DELETEFADEDOUT;
 	}
+
+	if (ped == FindPlayerPed() && rouz.cant_fall_off_bike)	// FIXME makes you stuck if you get jacked
+		return;
 
 	ped->SetPedState(PED_IDLE);
 	CAnimManager::BlendAnimation(ped->GetClump(), ped->m_animGroup, ANIM_STD_IDLE, 100.0f);

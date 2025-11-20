@@ -362,9 +362,11 @@ CMenuManager::GetPreviousPageOption()
 
 	if (prevPage == -1) // Game also does same
 		return 0;
-
+#ifdef START_FROM_LAST_SAVE
+	prevPage = prevPage == MENUPAGE_NONE ? (!m_bGameNotLoaded ? MENUPAGE_PAUSE_MENU : (b_SavesExist ? MENUPAGE_START_MENU_RESUME : MENUPAGE_START_MENU)) : prevPage;
+#else
 	prevPage = prevPage == MENUPAGE_NONE ? (!m_bGameNotLoaded ? MENUPAGE_PAUSE_MENU : MENUPAGE_START_MENU) : prevPage;
-
+#endif
 	for (int i = 0; i < NUM_MENUROWS; i++) {
 		if (aScreens[prevPage].m_aEntries[i].m_Action >= MENUACTION_NOTHING) { // CFO check
 			if (aScreens[prevPage].m_aEntries[i].m_TargetMenu == m_nCurrScreen) {
@@ -2280,7 +2282,11 @@ CMenuManager::DrawFrontEnd()
 
 	if (m_nCurrScreen == MENUPAGE_NONE) {
 		if (m_bGameNotLoaded) {
+#ifdef START_FROM_LAST_SAVE
+			m_nCurrScreen = (b_SavesExist ? MENUPAGE_START_MENU_RESUME : MENUPAGE_START_MENU);
+#else
 			m_nCurrScreen = MENUPAGE_START_MENU;
+#endif
 		} else {
 			m_nCurrScreen = MENUPAGE_PAUSE_MENU;
 		}
@@ -4463,6 +4469,9 @@ CMenuManager::UserInput(void)
 			if (m_nCurrScreen != MENUPAGE_START_MENU && m_nCurrScreen != MENUPAGE_PAUSE_MENU && m_nCurrScreen != MENUPAGE_CHOOSE_SAVE_SLOT
 				&& m_nCurrScreen != MENUPAGE_SAVE_CHEAT_WARNING && m_nCurrScreen != MENUPAGE_SAVING_IN_PROGRESS
 				&& m_nCurrScreen != MENUPAGE_DELETING_IN_PROGRESS && m_nCurrScreen != MENUPAGE_OUTRO
+#ifdef START_FROM_LAST_SAVE
+				&& m_nCurrScreen != MENUPAGE_START_MENU_RESUME
+#endif
 #ifdef MISSION_REPLAY
 				&& m_nCurrScreen != MENUPAGE_MISSION_RETRY
 #endif
@@ -4774,6 +4783,20 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				}
 				break;
 			}
+#ifdef START_FROM_LAST_SAVE
+			case MENUACTION_RESUME_LAST_SAVE:
+			{
+				int saveSlot = 0;
+				for (int i = 1; i < SLOT_COUNT; i++) {
+					if (Slots[i] == SLOT_OK && SlotDate[saveSlot] < SlotDate[i]) {
+						saveSlot = i;
+					}
+				}
+				m_nCurrSaveSlot = saveSlot;
+				SwitchToNewScreen(MENUPAGE_LOADING_IN_PROGRESS);
+				break;
+			}
+#endif
 			case MENUACTION_NEWGAME:
 				DoSettingsBeforeStartingAGame();
 				break;

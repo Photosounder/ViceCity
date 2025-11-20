@@ -297,6 +297,10 @@ void
 psMouseSetPos(RwV2d *pos)
 {
 	POINT point;
+	
+	// rouz edit: don't move the mouse if the window is out of focus
+	if (rouz.window_focus==0)
+		return;
 
 	point.x = (RwInt32) pos->x;
 	point.y = (RwInt32) pos->y;
@@ -963,18 +967,32 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	POINTS points;
 	static BOOL noMemory = FALSE;
+	static int cursor_init = 1;
 
-	
 	switch( message )
 	{
-		case WM_SETCURSOR:
+		// rouz edit, handles cursor properly
+		case WM_SETCURSOR:	// adapted from https://stackoverflow.com/questions/5629613/hide-cursor-in-client-rectangle-but-not-on-title-bar
 		{
-			ShowCursor(FALSE);
-			
-			SetCursor(nil);
-			
-			break; // is this correct ?
+			WORD ht = LOWORD(lParam);
+			static bool hiddencursor = false;
+			if (HTCLIENT==ht && !hiddencursor)
+			{
+				hiddencursor = true;
+				if (cursor_init)
+					cursor_init = 0;
+				else
+					ShowCursor(FALSE);
+				//debug("ShowCursor(FALSE) from WM_SETCURSOR\n");
+			}
+			else if (HTCLIENT!=ht && hiddencursor) 
+			{
+				hiddencursor = false;
+				ShowCursor(TRUE);
+				//debug("ShowCursor(TRUE) from WM_SETCURSOR\n");
+			}
 		}
+		break;
 		
 		case WM_SIZE:
 		{
@@ -1171,6 +1189,21 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 		case WM_ACTIVATEAPP:
 		{
+			// rouz edit, fixed the release of the cursor when tabbing out in full screen
+			if (wParam == FALSE)	// when tabbing out
+			{
+				rouz.window_focus = 0;
+				ShowCursor(TRUE);
+				//debug("ShowCursor(TRUE) from WM_ACTIVATEAPP\n");
+			}
+			else			// when tabbing back in
+			{
+				rouz.window_focus = 1;
+				if (cursor_init==0)
+					ShowCursor(FALSE);
+				//debug("ShowCursor(FALSE) from WM_ACTIVATEAPP\n");
+			}
+
 			switch ( gGameState )
 			{
 				case GS_LOGO_MPEG:
@@ -1303,16 +1336,23 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 
-#ifdef FIX_BUGS // game turns on menu when focus is re-gained rather than lost
+		// rouz edit: keep the game running in the background, release and show the cursor
 		case WM_KILLFOCUS:
-#else
-		case WM_SETFOCUS:
-#endif
 		{
-			CGame::InitAfterFocusLoss();
+			rouz.window_focus = 0;
+			ShowCursor(TRUE);
+			//debug("ShowCursor(TRUE) from WM_KILLFOCUS\n");
 			break;
 		}
 
+		case WM_SETFOCUS:
+		{
+			rouz.window_focus = 1;
+			ShowCursor(FALSE);
+			//debug("ShowCursor(FALSE) from WM_KILLFOCUS\n");
+			//CGame::InitAfterFocusLoss();
+			break;
+		}
 	}
 
 	/*
@@ -2017,6 +2057,8 @@ WinMain(HINSTANCE instance,
 	RwInt32 argc, i;
 	RwChar **argv;
 	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, nil, SPIF_SENDCHANGE);
+
+	rouz_init();
 
 #ifndef MASTER
 	if (strstr(cmdLine, "-console"))

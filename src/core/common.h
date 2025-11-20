@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rl.h"
+
 #define _CRT_SECURE_NO_WARNINGS
 #define _USE_MATH_DEFINES
 #pragma warning(disable: 4244)	// int to float
@@ -400,3 +402,23 @@ template<int s, int t> struct check_size {
 #define CONCAT_(x,y) x##y
 #define CONCAT(x,y) CONCAT_(x,y)
 
+typedef struct
+{
+	int window_focus, no_unstreaming, stream_sector_count, remote_bomb, remote_control, ped_cam_change, unlock_traffic_gen, ghost_town, screwy_gravity, status_physics, glue_on_vehs, flight, car_no_cam_move_by_keyboard, clean_bike_backflips, cant_fall_off_bike, car_first_person, tonyhawk, health_regen, no_ambulance, peds_attack_cops;
+	double th_jump_time, th_jump_release_time;
+	int driver_ped_count, veh_locked_count, slippery;
+	void *bomb_veh, *rc_veh, *ctrl_veh, *glue_veh;
+	float fov_mul, ped_mul, bike_midair_lean_mul, drown_mul, lod_dist_scale;
+	float prev_player_health, base_player_health;
+	double health_drop_time;
+	volatile int veh_window_control, handbrake;
+	volatile double gas_v, brake_v, steer_v, yaw_v, pitch_v, yaw, pitch;
+	volatile double midi_gas_v, midi_steer_v;
+	volatile double cam_offset_x, cam_offset_y, cam_offset_z, cam_fov, cam_near_z;
+	volatile double thrust_power, zero_thrust_speed_kt, thrust_in_vacuum;
+	xyz_t world_offset;
+} rouz_t;
+
+extern rouz_t rouz;
+
+extern double get_game_time();

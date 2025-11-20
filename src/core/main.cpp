@@ -1593,7 +1593,7 @@ Idle(void *arg)
 #ifdef FIX_BUGS
 		RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)FALSE); // TODO: temp? this fixes OpenGL render but there should be a better place for this
 		// This has to be done BEFORE RwCameraBeginUpdate
-		RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip());
+		RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip()*10.f);	// rouz edit, increased the far plane to avoid visible clipping
 		RwCameraSetFogDistance(Scene.camera, CTimeCycle::GetFogStart());
 #endif
 
@@ -2439,3 +2439,1091 @@ main(int argc, char *argv[])
 	return 0;
 }
 #endif
+
+// rouz edits
+#include "Bike.h"
+
+rouz_t rouz={0};
+
+xyz_t CompressedVector_to_xyz(CompressedVector cv)
+{
+	return xyz(cv.x, cv.y, cv.z);
+}
+
+xyz_t CVector_to_xyz(CVector cv)
+{
+	return xyz(cv.x, cv.y, cv.z);
+}
+
+CVector xyz_to_CVector(xyz_t v)
+{
+	CVector cv;
+	cv.x = v.x;
+	cv.y = v.y;
+	cv.z = v.z;
+	return cv;
+}
+
+void revc_pos_track()
+{
+	int i;
+	static xyz_t *pos_hist = NULL;
+	static col_t *pos_col = NULL;
+	static int pos_count=0, pos_as=0, pos_col_as=0;
+	CPed *player = FindPlayerPed();
+	static double last_rec_time=NAN, time_thresh = 0.25, map_scale = 0.004*4.;
+	col_t col;
+	xyz_t pos;
+
+	if (isnan(last_rec_time))
+		last_rec_time = get_time_hr() - 1e6;
+
+	// Record position in array
+	if (player && get_time_hr() > last_rec_time + time_thresh)
+	{
+		int skip_add= 0;
+
+		// Only add record if moved more than 50 cm
+		if (pos_hist && pos_count > 1)
+			if (hypot_xyz(CVector_to_xyz(player->GetPosition()), pos_hist[pos_count-2]) < 0.5)
+				skip_add = 1;
+
+		// Allocate position and height colour
+		if (skip_add == 0)
+		{
+			alloc_enough((void **) &pos_hist, pos_count+=1, &pos_as, sizeof(xyz_t), 1.5);
+			alloc_enough((void **) &pos_col, pos_count, &pos_col_as, sizeof(col_t), 1.5);
+			last_rec_time = get_time_hr();
+		}
+	}
+
+	if (pos_hist == NULL)
+		return;
+
+	// Continuous update position and colour
+	if (player && pos_hist)
+	{
+		pos_hist[pos_count-1] = CVector_to_xyz(player->GetPosition());
+		//pos_col[pos_count-1] = get_colour_seq_fullarg(pos_hist[pos_count-1].z*0.1, xyz(0.36, 0.187, 0.13), set_xyz(0.2), 0.3, 0.7);
+		pos_col[pos_count-1] = get_colour_seq_linear(pos_hist[pos_count-1].z*0.1, xyz(0.36, 0.187, 0.13), set_xyz(0.2), 0.43, 0.57);
+	}
+
+	// Draw lines between positions
+	for (i=MAXN(1, pos_count-32000); i < pos_count; i++)
+	{
+		xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos_hist[i-1], pos_hist[pos_count-1])), set_xy(map_scale));
+		xy_t p1 = mul_xy(xyz_to_xy(sub_xyz(pos_hist[i], pos_hist[pos_count-1])), set_xy(map_scale));
+		draw_line_thin(sc_xy(p0), sc_xy(p1), drawing_thickness, pos_col[i], blend_add, exp((double) 0.001*time_thresh*(i-pos_count)));
+	}
+
+	// Unrelated: show objects
+	col = make_colour(0.1, 0.2, 0.4, 1.);
+	if (CPools::GetObjectPool())
+	{
+		int pool_size = CPools::GetObjectPool()->GetSize();
+		for (i=0; i < pool_size; i++)
+		{
+			CObject *obj = CPools::GetObjectPool()->GetSlot(i);
+			if (obj)
+			{
+				pos = CVector_to_xyz(obj->GetPosition());
+				xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos, pos_hist[pos_count-1])), set_xy(map_scale));
+				draw_circle(HOLLOWCIRCLE, sc_xy(p0), 2.*map_scale*zc.scrscale, drawing_thickness, col, blend_add, 1.);
+			}
+		}
+	}
+
+	// Unrelated: show peds
+	col = make_colour(0.4, 0.2, 0.1, 1.);
+	if (CPools::GetPedPool())
+	{
+		int pool_size = CPools::GetPedPool()->GetSize();
+		for (i=0; i < pool_size; i++)
+		{
+			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			if (ped)
+			{
+				pos = CVector_to_xyz(ped->GetPosition());
+				xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos, pos_hist[pos_count-1])), set_xy(map_scale));
+				draw_circle(HOLLOWCIRCLE, sc_xy(p0), 0.75*map_scale*zc.scrscale, drawing_thickness, col, blend_add, 1.);
+			}
+		}
+	}
+
+//return;
+	// Unrelated: show buildings
+	col = make_colour(0.1, 0.1, 0.1, 1.);
+	if (CPools::GetBuildingPool())
+	{
+		int pool_size = CPools::GetBuildingPool()->GetSize();
+		for (i=0; i < pool_size; i++)
+		{
+			CBuilding *building = CPools::GetBuildingPool()->GetSlot(i);
+			if (building)
+			{
+				pos = CVector_to_xyz(building->GetPosition());
+				CColModel *model = CModelInfo::GetColModel(building->m_modelIndex);
+				/*if (model)
+				{
+					if (model->numTriangles > 0 && model->boundingBox.max.z - model->boundingBox.min.z < 1.)
+					{
+						for (int it=0; it < model->numTriangles; it++)
+						{
+							triangle_t tr = triangle(
+							sc_xy(mul_xy(xyz_to_xy(sub_xyz(add_xyz(pos, CompressedVector_to_xyz(model->vertices[model->triangles[it].a])), pos_hist[pos_count-1])), set_xy(map_scale))),
+							sc_xy(mul_xy(xyz_to_xy(sub_xyz(add_xyz(pos, CompressedVector_to_xyz(model->vertices[model->triangles[it].b])), pos_hist[pos_count-1])), set_xy(map_scale))),
+							sc_xy(mul_xy(xyz_to_xy(sub_xyz(add_xyz(pos, CompressedVector_to_xyz(model->vertices[model->triangles[it].c])), pos_hist[pos_count-1])), set_xy(map_scale))) );
+							draw_triangle_thin(tr, drawing_thickness, col, blend_add, 1.);
+						}
+					}
+					else
+					{
+						pos = add_xyz(pos, CVector_to_xyz(model->boundingSphere.center));
+						xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos, pos_hist[pos_count-1])), set_xy(map_scale));
+						draw_circle(HOLLOWCIRCLE, sc_xy(p0), model->boundingSphere.radius*0.25*map_scale*zc.scrscale, drawing_thickness, col, blend_add, 1.);
+					}
+				}*/
+			}
+		}
+	}
+}
+
+void rouz_veh_apply_controls_from_window(void *veh_ptr)
+{
+	CVehicle *veh = (CVehicle *) veh_ptr;
+
+	// Copy values to game
+	if (veh && veh==rouz.ctrl_veh && rouz.veh_window_control)
+	{
+		veh->m_fGasPedal = rouz.gas_v;
+		veh->m_fBrakePedal = rouz.brake_v;
+		veh->m_fSteerAngle = rouz.steer_v;
+		veh->bIsHandbrakeOn = rouz.handbrake;
+		rouz.pitch = rouz.pitch_v;
+		rouz.yaw = rouz.yaw_v;
+	}
+	else
+	{
+		rouz.pitch = 0.;
+		rouz.yaw = 0.;
+	}
+}
+
+void veh_control_window()
+{
+	static double gas_v=NAN, brake_v=NAN, steer_deg_v=NAN, yaw_v=NAN, pitch_v=NAN;
+	static int handbrake=0, kb_is_master=0, midi_control=0;
+	static double now=NAN, last_time;
+	double frame_s;
+
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Vehicle control", "pos	0	0", "dim	3;10	3;6", "off	0	1", "",
+		"elem 10", "type knob", "label Gas", "knob -1 0 1 tan %.3f", "knob_arg 0.4", "pos	0;3	-0;9", "dim	1", "off	0	1", "",
+		"elem 20", "type knob", "label Brake", "knob 0 0 1 tan", "knob_arg 0.4", "link_pos_id 10._b", "pos	0	-0;2", "dim	1", "off	0	1", "",
+		"elem 30", "type knob", "label Steer angle", "knob -25 0 25 tan %.1f\302\260", "knob_arg 3", "link_pos_id 10.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+		"elem 40", "type checkbox", "label Handbrake", "link_pos_id 30._b", "pos	0	-0;2", "dim	1	0;3", "off	0	1", "",
+		"elem 50", "type checkbox", "label Control veh", "link_pos_id 40._b", "pos	0	-0;1", "dim	1	0;3", "off	0	1", "",
+		"elem 60", "type checkbox", "label Keyboard is master", "link_pos_id 50._b", "pos	0	-0;1", "dim	1	0;3", "off	0	1", "",
+		"elem 61", "type checkbox", "label MIDI control", "link_pos_id 60._b", "pos	0	-0;1", "dim	1	0;3", "off	0	1", "",
+		"elem 70", "type knob", "label Yaw", "knob -1 0 1 tan", "knob_arg 0.4", "link_pos_id 30.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+		"elem 80", "type knob", "label Pitch", "knob -1 0 1 tan %.3f", "knob_arg 0.1", "link_pos_id 70._b", "pos	0	-0;2", "dim	1", "off	0	1", "",
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Vehicle control");
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	flwindow_init_pinned(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Time
+	if (isnan(now))
+		last_time = get_time_hr() - 1./60.;
+	else
+		last_time = now;
+	now = get_time_hr();
+	frame_s = now - last_time;
+
+	// Find vehicle
+	CVehicle *veh = FindPlayerVehicle();
+	if(veh==NULL && rouz.rc_veh)
+		veh = (CVehicle *) rouz.rc_veh;
+	rouz.ctrl_veh = veh;
+
+	// Copy values from game
+	if (veh)
+	{
+		rouz.handbrake = veh->bIsHandbrakeOn;
+	}
+	else
+	{
+		gas_v = NAN;
+		brake_v = NAN;
+		steer_deg_v = NAN;
+		yaw_v = NAN;
+		pitch_v = NAN;
+		rouz.handbrake = 0;
+	}
+
+	if (midi_control)
+	{
+		if (isnan(rouz.midi_gas_v) == 0)
+		{
+			rouz.gas_v = gas_v = rouz.midi_gas_v;
+			rouz.midi_gas_v = NAN;
+		}
+
+		if (isnan(rouz.midi_steer_v) == 0)
+		{
+			steer_deg_v = rouz.midi_steer_v;
+			rouz.steer_v = steer_deg_v * -pi/180.;
+			rouz.midi_steer_v = NAN;
+		}
+	}
+
+	// Controls
+	if (ctrl_knob_fromlayout(&gas_v, &layout, 10))		rouz.gas_v = gas_v;
+	if (ctrl_knob_fromlayout(&brake_v, &layout, 20))	rouz.brake_v = brake_v;
+	if (ctrl_knob_fromlayout(&steer_deg_v, &layout, 30))	rouz.steer_v = steer_deg_v * -pi/180.;
+	if (ctrl_knob_fromlayout(&yaw_v, &layout, 70))		rouz.yaw_v = yaw_v;
+	if (ctrl_knob_fromlayout(&pitch_v, &layout, 80))	rouz.pitch_v = pitch_v;
+	if (ctrl_checkbox_fromlayout(&handbrake, &layout, 40))	rouz.handbrake = handbrake;
+	ctrl_checkbox_fromlayout((int *) &rouz.veh_window_control, &layout, 50);
+	ctrl_checkbox_fromlayout(&kb_is_master, &layout, 60);
+	ctrl_checkbox_fromlayout(&midi_control, &layout, 61);	
+
+	// Mouse wheel gas
+	if (mouse.zoom_flag == 0)
+	{
+		if (gas_v > 0.)
+			gas_v = (1. + 0.04 * (double) mouse.b.wheel) * gas_v + (double) mouse.b.wheel * 0.04;
+		else
+			gas_v = (1. - 0.04 * (double) mouse.b.wheel) * gas_v + (double) mouse.b.wheel * 0.04;
+		if (rouz.gas_v * gas_v < 0.)
+			gas_v = 0.;
+		rouz.gas_v = gas_v;
+	}
+
+	// Keyboard controls
+	if (cur_textedit==NULL)
+	{
+		// Brake
+		if (mouse.key_state[RL_SCANCODE_S] > 0)
+		{
+			gas_v = 0.;
+			rouz.gas_v = 0.;
+			rouz.brake_v = 1.;
+		}
+		else
+			rouz.brake_v = brake_v;
+
+		// Gas
+		static double gas_start=0.;
+		if (mouse.key_state[RL_SCANCODE_W] > 0)
+		{
+			if (mouse.key_state[RL_SCANCODE_W]==2)
+				gas_start = now;
+
+			if (kb_is_master)
+			{
+				double delta = short_erf((now-gas_start)/0.6, 2.);	// start going fully after 0.3 sec
+				gas_v += delta * frame_s;
+			}
+
+			rouz.gas_v = gas_v;
+		}
+
+		// Turn
+		static double turn_start=0., turn_end=0., last_angle=0.;
+		if (mouse.key_state[RL_SCANCODE_A] > 0 || mouse.key_state[RL_SCANCODE_D] > 0)
+		{
+			if (mouse.key_state[RL_SCANCODE_A]==2 || mouse.key_state[RL_SCANCODE_D]==2)
+				turn_start = now;
+
+			int way = (mouse.key_state[RL_SCANCODE_D] > 0) - (mouse.key_state[RL_SCANCODE_A] > 0);
+			double delta = (double) way * short_erf((now-turn_start)/0.12, 2.);	// start turning fully after 0.06 sec
+			steer_deg_v += delta * frame_s * 40.;
+			steer_deg_v = rangelimit(steer_deg_v, -25., 25.);
+			rouz.steer_v = steer_deg_v * -pi/180.;
+
+			last_angle = steer_deg_v;
+			turn_end = now;
+		}
+		else if (kb_is_master)
+		{
+			double angle_mul = 0.5 - 0.5*short_erf((now-turn_end)/0.5-1., 1.);	// angle goes to 0 in 1 sec
+			steer_deg_v = last_angle * angle_mul;
+			rouz.steer_v = steer_deg_v * -pi/180.;
+		}
+
+		// Handbrake
+		if (kb_is_master)
+			rouz.handbrake = (mouse.key_state[RL_SCANCODE_SPACE] > 0);
+	}
+}
+
+void camera_pos_window()
+{
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Camera pos", "pos	0	0", "dim	3;10	3;2", "off	0	1", "",
+		"elem 10", "type knob", "label X", "knob -8 0 8 tan %.3f", "knob_arg 0.6", "pos	0;3	-0;9", "dim	1", "off	0	1", "",
+		"elem 20", "type knob", "label Y", "knob -8 0 8 tan", "knob_arg 0.6", "link_pos_id 10.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+		"elem 30", "type knob", "label Z", "knob -8 0 8 tan", "knob_arg 0.6", "link_pos_id 20.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+		"elem 40", "type knob", "label FOV", "knob 20 85 175 log %.1f\302\260", "link_pos_id 10._b", "pos	0	-0;2", "dim	1", "off	0	1", "",
+		"elem 50", "type knob", "label Near Z clip", "knob 0 0.2 2 tan", "knob_arg 0.05", "link_pos_id 40.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Camera pos");
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	flwindow_init_pinned(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Controls
+	ctrl_knob_fromlayout((double *) &rouz.cam_offset_x, &layout, 10);
+	ctrl_knob_fromlayout((double *) &rouz.cam_offset_y, &layout, 20);
+	ctrl_knob_fromlayout((double *) &rouz.cam_offset_z, &layout, 30);
+	ctrl_knob_fromlayout((double *) &rouz.cam_fov, &layout, 40);
+	ctrl_knob_fromlayout((double *) &rouz.cam_near_z, &layout, 50);
+}
+
+void flight_thrust_window()
+{
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Flight thrust", "pos	0	0", "dim	3;10	2", "off	0	1", "",
+		"elem 10", "type knob", "label Thrust power", "knob -1 0.004 1 tan %.2g", "knob_arg 0.01", "pos	0;3	-0;9", "dim	1", "off	0	1", "",
+		"elem 20", "type knob", "label Zero thrust speed", "knob 0 250 4000 tan %.0f", "knob_arg 200", "knob_unit kt", "link_pos_id 10.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+		"elem 30", "type knob", "label Thrust in vacuum", "knob 0 0 1 linear %.2f", "link_pos_id 20.r_", "pos	0;2	0", "dim	1", "off	0	1", "",
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Flight thrust");
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Controls
+	ctrl_knob_fromlayout((double *) &rouz.thrust_power, &layout, 10);
+	ctrl_knob_fromlayout((double *) &rouz.zero_thrust_speed_kt, &layout, 20);
+	ctrl_knob_fromlayout((double *) &rouz.thrust_in_vacuum, &layout, 30);
+}
+
+void cheats_window()
+{
+	static double timescale_v = NAN;
+
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Cheats", "pos	0	0", "dim	1;6	1;9", "off	0	1", "",
+		"elem 10", "type knob", "label Time scale", "knob 0.01 1 24 tan %.3f", "knob_arg 0.2", "pos	0;3	-0;6", "dim	1", "off	0	1", "",
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Cheats");
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	flwindow_init_pinned(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	window.bar_height = 1./4.;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Controls
+	ctrl_knob_fromlayout((double *) &timescale_v, &layout, 10);
+	CTimer::SetTimeScale(timescale_v);
+}
+
+double rlip_altitude, cur_altitude;
+rlip_t altitude_prog0={0}, altitude_prog1={0};
+
+double atmosphere_eval_altitude(rlip_t *prog, double altitude)
+{
+	if (prog->valid_prog != 1)
+		return NAN;
+
+	rlip_altitude = altitude;
+	volatile int exec_on = 1;
+	prog->exec_on = &exec_on;
+
+	rlip_execute_opcode(prog);
+	return prog->return_value[0];
+}
+
+/*
+Default: exp(-max(0, z-26) / 1200)
+Realistic: exp(-z / 10400)
+Layered: exp(-z / 4000) * (0.5+0.5*erf(2+cos(z*2*pi / 120)*3.2))
+*/
+
+void atmosphere_window()
+{
+	static rlip_inputs_t inputs[] = { RLIP_FUNC, {"z", &rlip_altitude, "pd"} };
+
+	static int init = 1;
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Atmosphere", "pos	0	0", "dim	8	3;6", "off	0	1", "",
+		"elem 10", "type rect", "link_pos_id 0.rt", "pos	-0;6	-0;9", "dim	1;7	2;6", "off	1", "",
+		"elem 20", "type textedit", "pos	0;6	-1;2", "dim	4;11	1", "off	0	1", "",
+		"elem 21", "type label", "label Air density ratio formula (z is altitude in metres)", "link_pos_id 20", "pos	0;1	0;1", "dim	4;9	0;4", "off	0", "",
+		"elem 30", "type button", "label Apply formula", "link_pos_id 20.rb", "pos	-0;1	-0;2", "dim	2	0;8", "off	1", "",		
+	};
+
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Atmosphere");
+
+	// Window
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	//flwindow_init_pinned(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Controls
+	// Formula input and compilation
+	if (init)
+		print_to_layout_textedit(&layout, 20, 1, "exp(-max(0, z-26) / 1200)");
+	if (ctrl_textedit_fromlayout(&layout, 20) || init)
+	{
+		free_rlip(&altitude_prog0);
+		char *expr = get_textedit_string_fromlayout(&layout, 20);
+		altitude_prog0 = rlip_expression_compile(expr, inputs, sizeof(inputs)/sizeof(*inputs), 0, NULL);
+	}
+
+	draw_label_fromlayout(&layout, 21, ALIG_LEFT | MONODIGITS);
+
+	// Formula applying
+	if (isfinite(atmosphere_eval_altitude(&altitude_prog0, 30.)))
+	{
+		if (ctrl_button_fromlayout(&layout, 30) || init)
+		{
+			free_rlip(&altitude_prog1);
+			char *expr = get_textedit_string_fromlayout(&layout, 20);
+			altitude_prog1 = rlip_expression_compile(expr, inputs, sizeof(inputs)/sizeof(*inputs), 0, NULL);
+		}
+	}
+
+	// Graph
+	rect_t graph_area = gui_layout_elem_comp_area_os(&layout, 10, XY0);
+	xy_t p[4];
+	rlip_t *prog = &altitude_prog0;
+	if (prog->valid_prog != 1)
+		prog = &altitude_prog1;
+	double alt_step = 6., alt_thickness = 5.;
+	double alt_round = nearbyint(cur_altitude / alt_step) * alt_step;
+	int alt_bar_count = 12;
+	double alt_centre = cur_altitude;
+	for (int i=-alt_bar_count; i <= alt_bar_count; i++)
+	{
+		double h0, h1, alt, alt0, alt1;
+		alt = alt_round + alt_step * (double) i;
+		alt0 = alt - 0.5*alt_thickness;
+		alt1 = alt + 0.5*alt_thickness;
+
+		h0 = (alt0 - cur_altitude) * 0.5*get_rect_dim(graph_area).y / (alt_step*alt_bar_count) + get_rect_centre(graph_area).y;
+		h1 = (alt1 - cur_altitude) * 0.5*get_rect_dim(graph_area).y / (alt_step*alt_bar_count) + get_rect_centre(graph_area).y;
+		h0 = MAXN(h0, graph_area.p0.y);
+		h1 = MINN(h1, graph_area.p1.y);
+
+		p[0] = xy(graph_area.p1.x, h1);
+		p[1] = xy(graph_area.p1.x, h0);
+		p[2] = xy(mix(graph_area.p1.x, graph_area.p0.x, atmosphere_eval_altitude(prog, alt0)), h0);
+		p[3] = xy(mix(graph_area.p1.x, graph_area.p0.x, atmosphere_eval_altitude(prog, alt1)), h1);
+		draw_polygon_wc(p, 4, drawing_thickness, make_grey(0.4), blend_add, 1.);
+	}
+	draw_line_thin(sc_xy(get_rect_coord(graph_area, xy(0., 0.5))), sc_xy(get_rect_coord(graph_area, xy(1., 0.5))), drawing_thickness, make_grey(0.5), blend_add, 1.);
+
+	init = 0;
+}
+
+void revc_main()
+{
+	static int init = 1, veh_control_detach=0, cam_pos_detach=0, cheats_detach=0, atmosphere_detach=0, thrust_detach=0;
+
+	if (init)
+	{
+		init = 0;
+
+		int display_id = MINN(1, sdl_get_display_count()-1);
+		sdl_set_window_rect((SDL_Window *) fb->window, make_recti_off(sdl_get_display_usable_rect(display_id).p1, xyi(864, 486), xyi(1, 1)));
+	}
+
+	revc_pos_track();
+	window_register(1, veh_control_window, NULL, make_rect_off(xy(-16., 9.), xy(8., 8.), xy(0., 1.)), &veh_control_detach, 0);
+	window_register(1, camera_pos_window, NULL, make_rect_off(xy(-8., 9.), xy(8., 8.), xy(0., 1.)), &cam_pos_detach, 0);
+	window_register(1, cheats_window, NULL, make_rect_off(xy(-16., -9.), xy(5., 5.), xy(0., 0.)), &cheats_detach, 0);
+	window_register(1, atmosphere_window, NULL, make_rect_off(xy(0., 200.), xy(150., 100.), xy(0.5, 0.5)), &atmosphere_detach, 0);
+	window_register(1, flight_thrust_window, NULL, make_rect_off(xy(0., 160.), xy(60., 40.), xy(0.5, 0.5)), &thrust_detach, 0);
+	sleep_hr(1./100.);
+}
+
+int sdl_main_loop_thread(void *ptr)
+{
+	sdl_main_param_t param={0};
+	param.window_name = "Michel's reVC epic hack window";
+	param.func = revc_main;
+	param.use_drawq = 1;
+	param.maximise_window = 0;
+	param.gui_toolbar = 1;
+	rl_sdl_standard_main_loop(param);
+	return 0;
+}
+
+void midiin_callback(HMIDIIN hMidiIn, UINT wMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+{
+	uint8_t *data = (uint8_t *) &dwParam1;
+
+	fprintf_rl(stdout, "midiin_callback(): wMsg %x. Status: %x, data: %x %x\n", wMsg, data[0], data[1], data[2]);
+
+	if (wMsg == MIM_DATA)
+	{
+		// Mod wheel => gas_v
+		if (data[0] == 0xb0 && data[1] == 1)
+			rouz.midi_gas_v = sq((double) data[2] / 127.);
+
+		// Pitch wheel => steer_v
+		if (data[0] == 0xe0)
+			rouz.midi_steer_v = mix(-25., 25., (double) ((data[2]<<7) | data[1]) / 16383.);
+
+		// Pads
+		if (data[0] >= 0x89 && data[0] <= 0xa9 && (data[0] & 0xf) == 0x9)
+		{
+			// Pads 6/7 => steer_v
+			if (data[1] == 0x29)
+				rouz.midi_steer_v = mix(0, -25., (double) data[2] / 127.);
+
+			if (data[1] == 0x2a)
+				rouz.midi_steer_v = mix(0., 25., (double) data[2] / 127.);
+
+			// Pads 5/1 => gas_v
+			if (data[1] == 0x24)
+				rouz.midi_gas_v = mix(0., -1., (double) data[2] / 127.);
+
+			if (data[1] == 0x28)
+				rouz.midi_gas_v = mix(0., 1., (double) data[2] / 127.);
+		}
+
+		// Knobs
+		if (data[0] == 0xb0)
+		{
+			double v = (double) data[2];
+			if (data[2] >= 0x40)
+				v -= 128.;
+
+			switch (data[1])
+			{
+					case 0x3:	rouz.cam_offset_x += v * 0.01;
+				break;	case 0x9:	rouz.cam_offset_y += v * 0.01;
+				break;	case 0xe:	rouz.cam_offset_z += v * 0.01;
+				break;	case 0x10:	rouz.cam_fov += v * 0.5;
+				break;	case 0x11:	rouz.cam_near_z *= 1. + v * 0.01;
+				break;	case 0x14:	rouz.midi_steer_v = rouz.steer_v*180./-pi + v * 0.5;
+			}
+		}
+	}
+}
+
+void rouz_init()
+{
+	rouz.window_focus = 1;			// don't change, inits the window focus flag
+	rouz.fov_mul = 0.75f;			// FOV multiplier
+	rouz.no_unstreaming = 1;		// don't unload buildings
+	rouz.ped_cam_change = 1;		// can change camera distance on foot
+	rouz.unlock_traffic_gen = 0;		// spawn about as many vehicles as possible
+	rouz.ghost_town = 0;			// stop traffic spawning
+	rouz.screwy_gravity = 0;		// gravity cheats, makes more entities be affected by gravity
+	rouz.ped_mul = 1.f;			// ped spawning limit multiplier
+	rouz.glue_on_vehs = 1;			// prevents sliding when standing on moving vehicle
+	rouz.car_no_cam_move_by_keyboard = 1;	// prevents camera from moving with GetCarGunLeftRight/GetCarGunUpDown
+	rouz.bike_midair_lean_mul = 0.05f;	// multiplies bike midair pitch up/down speed when flying
+	rouz.clean_bike_backflips = 0;		// allows backflipping in midair without upright stabilisation
+	rouz.cant_fall_off_bike = 0;		// prevents falling off of bike
+	rouz.drown_mul = 0.f;			// prevent drowing damage
+	rouz.lod_dist_scale = 1.f;		// scale object render distances
+	rouz.car_first_person = 1;		// nicer first person car camera
+	rouz.thrust_power = 0.004;		// thrust power
+	rouz.zero_thrust_speed_kt = 250.;	// speed in knots at which zero thrust is produced
+	rouz.thrust_in_vacuum = 0.;		// ratio of thrust in vacuum
+
+	rouz.cam_fov = NAN;
+	rouz.cam_near_z = NAN;
+
+	// SDL main loop in its own thread
+	rl_thread_create_detached(sdl_main_loop_thread, NULL);
+
+	// Start MIDI input callback
+	static midiin_dev_t dev={0};
+	init_midi_input_device(0, &dev, NULL, midiin_callback, NULL);
+}
+
+void move_entity(CEntity *p, xyz_t new_offset, int moves)
+{
+	xyz_t v;
+
+	if (p)
+	{
+		if (((CPlaceable *) p)->orig_pos_set == 0)
+		{
+			((CPlaceable *) p)->orig_pos = sub_xyz(CVector_to_xyz(((CPlaceable *) p)->GetPosition()), rouz.world_offset);
+			((CPlaceable *) p)->orig_pos_set = 1;
+		}
+
+		if (moves == 0)
+			v = add_xyz(((CPlaceable *) p)->orig_pos, new_offset);
+		else
+			v = add_xyz(CVector_to_xyz(((CPlaceable *) p)->GetPosition()), sub_xyz(new_offset, rouz.world_offset));
+
+		((CPlaceable *) p)->m_matrix.px = v.x;
+		((CPlaceable *) p)->m_matrix.py = v.y;
+		((CPlaceable *) p)->m_matrix.pz = v.z;
+
+		((CEntity *) p)->GetMatrix().UpdateRW();
+		((CEntity *) p)->UpdateRwFrame();
+	}
+}
+
+void move_everything(xyz_t new_offset)
+{
+	int i;
+	//if (((CEntity *) p)->m_modelIndex == 2424)
+
+	if (CPools::GetBuildingPool())
+		for (i=0; i < CPools::GetBuildingPool()->GetSize(); i++)
+			move_entity(CPools::GetBuildingPool()->GetSlot(i), new_offset, 0);
+
+	if (CPools::GetObjectPool())
+		for (i=0; i < CPools::GetObjectPool()->GetSize(); i++)
+			move_entity(CPools::GetObjectPool()->GetSlot(i), new_offset, 0);
+
+	if (CPools::GetTreadablePool())
+		for (i=0; i < CPools::GetTreadablePool()->GetSize(); i++)
+			move_entity(CPools::GetTreadablePool()->GetSlot(i), new_offset, 0);
+
+	if (CPools::GetDummyPool())
+		for (i=0; i < CPools::GetDummyPool()->GetSize(); i++)
+			move_entity(CPools::GetDummyPool()->GetSlot(i), new_offset, 0);
+
+	if (CPools::GetPedPool())
+		for (i=0; i < CPools::GetPedPool()->GetSize(); i++)
+			move_entity(CPools::GetPedPool()->GetSlot(i), new_offset, 1);
+
+	if (CPools::GetVehiclePool())
+		for (i=0; i < CPools::GetVehiclePool()->GetSize(); i++)
+			move_entity(CPools::GetVehiclePool()->GetSlot(i), new_offset, 1);
+
+	rouz.world_offset = new_offset;
+}
+
+void rouz_update()
+{
+	int i;
+
+	if (rouz.remote_bomb==2)
+	{
+		DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
+		rouz.remote_bomb = 1;
+	}
+
+	if (rouz.remote_control==2)
+	{
+		DMAudio.PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 1.f);
+		rouz.remote_control = 1;
+	}
+
+	if (rouz.screwy_gravity || rouz.status_physics)
+	{
+		int veh_count = CPools::GetVehiclePool()->GetSize();
+
+		for (i = 0; i < veh_count; i++)
+		{
+			CVehicle *veh = CPools::GetVehiclePool()->GetSlot(i);
+			if (veh)
+				if (veh->GetStatus() == STATUS_SIMPLE)
+					veh->SetStatus(STATUS_PHYSICS);
+		}
+
+		int ped_count = CPools::GetPedPool()->GetSize();
+		for (i = 0; i < ped_count; i++)
+		{
+			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			if (ped)
+			{
+				ped->bPedPhysics = 1;
+				//if (ped->GetStatus() == STATUS_SIMPLE)
+					ped->SetStatus(STATUS_PHYSICS);
+			}
+		}
+	}
+
+	// Count driver peds
+	rouz.driver_ped_count = 0;
+	int ped_count = CPools::GetPedPool()->GetSize();
+	for (i=0; i < ped_count; i++)
+	{
+		CPed *ped = CPools::GetPedPool()->GetSlot(i);
+		if (ped)
+			if (ped->InVehicle() && !ped->bCarPassenger && ped != FindPlayerPed())
+				rouz.driver_ped_count++;
+	}
+
+	// Count "locked" vehs (vehs that won't despawn)
+	/*rouz.veh_locked_count = 0;
+	if (CPools::GetVehiclePool())
+		for (i=0; i < CPools::GetVehiclePool()->GetSize(); i++)
+			if (CPools::GetVehiclePool()->GetSlot(i))
+				if (CPools::GetVehiclePool()->GetSlot(i)->bIsLocked)
+					rouz.veh_locked_count++;*/
+
+	// Move everything
+	/*static double last_time=0.;
+	if (get_time_hr() >= last_time + 10.)
+	{
+		last_time = get_time_hr();
+		move_everything(add_xyz(rouz.world_offset, xyz(5., 0., 0.)));
+		//move_everything(xyz(0., 0., 5.*sin(last_time*0.5)));
+	}*/
+}
+
+float get_airflow_angle_of_attack(void *p_ptr, void *normal_vec_ptr)
+{
+	CPhysical *p = (CPhysical *) p_ptr;
+	CVector normal_vec = *(CVector *) normal_vec_ptr;
+
+	return acosf(Clamp(DotProduct(p->m_vecMoveSpeed, normal_vec) / (p->m_vecMoveSpeed.Magnitude() * normal_vec.Magnitude()), -1.f, 1.f)) - 0.5f*PI;
+}
+
+float get_horizon_angle_of_attack(void *p_ptr)
+{
+	CPhysical *p = (CPhysical *) p_ptr;
+
+	return 0.5f*PI - acosf(Clamp(DotProduct(CVector(0.f, 0.f, 1.f), p->GetForward()), -1.f, 1.f));
+}
+
+void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector speed)
+{
+	int was_in_veh = ped->bInVehicle;
+
+	// adapted from control/Script.cpp
+	if (ped->bInVehicle)
+	{
+		if (ped->m_pMyVehicle->bIsBus)
+			ped->bRenderPedInCar = true;
+		if (ped->m_pMyVehicle->pDriver == ped){
+			ped->m_pMyVehicle->RemoveDriver();
+			ped->m_pMyVehicle->SetStatus(STATUS_ABANDONED);
+			ped->m_pMyVehicle->bEngineOn = false;
+			ped->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = 0;
+		}else{
+			ped->m_pMyVehicle->RemovePassenger(ped);
+		}
+	}
+	ped->RemoveInCarAnims();
+	ped->bInVehicle = false;
+	ped->m_pMyVehicle = nil;
+	ped->SetPedState(PED_IDLE);
+	ped->m_nLastPedState = PED_NONE;
+	ped->bUsesCollision = true;
+	ped->ReplaceWeaponWhenExitingVehicle();
+	ped->m_pVehicleAnim = nil;
+	ped->SetMoveState(PEDMOVE_NONE);
+	CAnimManager::BlendAnimation(ped->GetClump(), ped->m_animGroup, ANIM_STD_IDLE, 1000.0f);
+	//ped->RestartNonPartialAnims();
+	pos.z += ped->GetDistanceFromCentreOfMassToBaseOfModel();
+
+	// Necessary to make speed modifiable
+	if (was_in_veh == 0)
+	{
+		ped->bIsStanding = false;
+		ped->bWasStanding = false;
+		ped->bIsInTheAir = true;
+	}
+
+	ped->Teleport(pos);
+	ped->SetMoveSpeed(speed);
+	ped->bIsFrozen = 0;
+	ped->ApplyMoveSpeed();
+	CTheScripts::ClearSpaceForMissionEntity(pos, ped);
+}
+
+void update_kb_flag(int *state, int input)
+{
+	if (input)
+		*state = 1 + (*state <= 0);
+	else
+		*state = -1 - (*state > 0);
+}
+
+int rouz_acceleration_cheats(void *ptr)
+{
+	CPhysical *p = (CPhysical *) ptr;
+	static int print_counter = 0;
+
+	// Flight
+	if (rouz.flight && (p == FindPlayerVehicle() || p == rouz.rc_veh))
+	{
+		float air_density, ias, tas;
+		//#define REALISTIC_AIR
+		#ifdef REALISTIC_AIR
+		float air_density_denominator = 10400.f;
+		float lift_mul[4] = {0.006f, 0.0036f, 0.001f, 0.00001f};
+		#else
+		float air_density_denominator = 1200.f;
+		float lift_mul[4] = {0.06f, 0.015f, 0.0002f, 0.01f};
+		#endif
+
+		//air_density = expf(-Max(0.f, p->GetPosition().z-26.f) / 1200.f);	// a denominator of 10400.f is realistic, but lower is better (1200.f), 20.f is funny
+		cur_altitude = p->GetPosition().z;
+		air_density = atmosphere_eval_altitude(&altitude_prog1, p->GetPosition().z);
+
+		tas = p->m_vecMoveSpeed.Magnitude();
+		ias = tas * air_density;
+		if (print_counter==0)
+			debug("IAS %.1f kt, TAS %.1f kt\n", ias * 50.f * 3600.f/1852.f, tas * 50.f * 3600.f/1852.f);
+		print_counter++;
+
+		// Car pitch
+		if (((CVehicle *) p)->IsCar() || ((CVehicle *) p)->IsBoat())
+			p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetRight() * ((float) -rouz.pitch + (float) CPad::GetPad(0)->GetCarGunUpDown()/128.f + (float) CPad::GetPad(0)->GetChar('P')-(float) CPad::GetPad(0)->GetChar(';')) * -0.0006f * (1.f + 4.f*(((CAutomobile *) p)->m_nWheelsOnGround==4));
+
+		if (tas > 0.01f)
+		{
+			CVector acc, normal_vec;
+			float angle_of_attack, lift;
+
+			// Horizontal plane
+			normal_vec = p->GetUp();
+			angle_of_attack = get_airflow_angle_of_attack(p, &normal_vec);
+			lift = sinf(angle_of_attack) * sqf(ias);
+			//debug("aoa %.2f, lift %.4f\n", RADTODEG(angle_of_attack), lift);
+			acc = normal_vec * lift * lift_mul[0];
+
+			// Lateral plane
+			normal_vec = p->GetRight();
+			angle_of_attack = get_airflow_angle_of_attack(p, &normal_vec);
+			lift = sinf(angle_of_attack) * sqf(ias);
+			//debug("lateral aoa %.2f, lift %.4f\n", RADTODEG(angle_of_attack), lift);
+			acc += normal_vec * lift * lift_mul[1];
+
+			// Spin vehicle if lateral wind
+			p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetUp() * lift * lift_mul[3];
+
+			// Front plane
+			normal_vec = p->GetForward();
+			angle_of_attack = get_airflow_angle_of_attack(p, &normal_vec);
+			lift = sinf(angle_of_attack) * sqf(ias);
+			//debug("front aoa %.2f, lift %.4f\n", RADTODEG(angle_of_attack), lift);
+			acc += normal_vec * lift * lift_mul[2];
+
+			// Integrate
+			p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+		}
+
+		// Rotation drag
+		p->m_vecTurnSpeed *= powf(0.5f, CTimer::GetTimeStepInMilliseconds()*0.001f);
+
+		// Thrust and turning
+		if ((((CVehicle *) p)->IsBike() && ((CBike *) p)->m_nWheelsOnGround == 0) || (((CVehicle *) p)->IsCar() && ((CAutomobile *) p)->m_nWheelsOnGround == 0) || ((CVehicle *) p)->IsBoat())
+		{
+			// Thrust
+			float fwd_tas = DotProduct(p->m_vecMoveSpeed, p->GetForward());
+			float thrust = rouz.thrust_power * mix(air_density, 1., rouz.thrust_in_vacuum);		// initial thrust
+			float zero_speed = rouz.zero_thrust_speed_kt / (50.f * 3600.f/1852.f);
+			if (((CVehicle *) p)->m_fGasPedal > 0.f)
+				thrust *= (zero_speed - rangelimitf(fwd_tas, 0., zero_speed)) / zero_speed;		// thrust goes down to 0 at ~250 kt
+			else
+				thrust *= 0.3 * (-zero_speed + rangelimitf(-fwd_tas, 0., zero_speed)) / -zero_speed;
+			p->m_vecMoveSpeed += CTimer::GetTimeStep() * p->GetForward() * ((CVehicle *) p)->m_fGasPedal * thrust;
+
+			// Turning
+			if (((CVehicle *) p)->IsBike())
+				p->m_vecTurnSpeed += CTimer::GetTimeStep() * (-p->GetForward() + p->GetUp()*0.005f) * ((CVehicle *) p)->m_fSteerAngle * 0.09f;
+			else
+			{
+				p->m_vecTurnSpeed += CTimer::GetTimeStep() * -p->GetForward() * ((CVehicle *) p)->m_fSteerAngle * 0.0018f;	// bank
+				p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetUp() * (sqf(ias)+0.08f + 0.16f*erff(ias*10.f)*(float)p->bIsInWater) * ((float) CPad::GetPad(0)->GetCarGunLeftRight()/128.f + (float) CPad::GetPad(0)->GetChar('O')-(float) CPad::GetPad(0)->GetChar('U') + rouz.yaw) * -0.002f;	// rudder
+			}
+			// GetRight -> point nose up (+) or down (-)
+			// -GetForward -> banking
+			// GetUp -> flat-spin fast
+		}
+	}
+
+	// Tony Hawk mode
+	if (rouz.tonyhawk && (p == FindPlayerVehicle() || p == rouz.rc_veh))
+	{
+		static int jump_key=0, flip_key=0, grab_key=0, thrust_key=0, left_key=0, up_key=0, down_key=0, right_key=0, jump_pending=0, prev_wheels_on_ground=0;
+		static double jump_pending_time=0., two_wheel_time=0.;
+		int wheels_on_ground = 0, wheel_count = 0;
+
+		update_kb_flag(&jump_key, CPad::GetPad(0)->GetPad5());
+		update_kb_flag(&flip_key, CPad::GetPad(0)->GetPad4());
+		update_kb_flag(&grab_key, CPad::GetPad(0)->GetPad6());
+		update_kb_flag(&thrust_key, CPad::GetPad(0)->GetPad0());
+		update_kb_flag(&left_key, CPad::GetPad(0)->GetChar('A'));
+		update_kb_flag(&up_key, CPad::GetPad(0)->GetChar('W'));
+		update_kb_flag(&down_key, CPad::GetPad(0)->GetChar('S'));
+		update_kb_flag(&right_key, CPad::GetPad(0)->GetChar('D'));
+
+		// Wheels on ground
+		if (((CVehicle *) p)->IsCar())
+		{
+			wheel_count = 4;
+			wheels_on_ground = ((CAutomobile*) p)->m_nWheelsOnGround;
+		}
+
+		if (((CVehicle *) p)->IsBike())
+		{
+			wheel_count = 2;
+			wheels_on_ground = ((CBike *) p)->m_nWheelsOnGround;
+		}
+
+		// Register jump preparation
+		if (jump_key == 2)
+			rouz.th_jump_time = get_game_time();
+
+		// Measure time spent since having two or more wheels on the ground
+		if (wheels_on_ground >= 2 &&  prev_wheels_on_ground < 2)
+			two_wheel_time = get_game_time();
+		prev_wheels_on_ground = wheels_on_ground;
+
+		// Do the jump
+		if (get_game_time()-jump_pending_time > 0.4)
+			jump_pending = 0;
+
+		if (jump_key == -2 || (jump_pending && get_game_time() - two_wheel_time > 0.1))
+		{
+			rouz.th_jump_release_time = get_game_time();
+			
+			double thrust_ratio = MINN(0.3, (rouz.th_jump_release_time - rouz.th_jump_time) / 0.5) * 0.75;
+
+			if (wheels_on_ground < 2)
+			{
+				thrust_ratio = 0.;
+
+				if (jump_key == -2)
+				{
+					jump_pending = 1;
+					jump_pending_time = get_game_time();
+				}
+			}
+			else
+				jump_pending = 0;
+
+			p->m_vecMoveSpeed += p->GetUp() * thrust_ratio;
+		}
+
+		// Don't do tricks if flying
+		if (wheels_on_ground > 0 || rouz.flight == 0)
+		{
+			// Do the flip
+			if (flip_key + left_key >= 3)
+				p->m_vecTurnSpeed += -p->GetForward() * (wheels_on_ground == 0 ? 0.1 : 0.04);	// was 0.1 until 2025
+
+			if (flip_key + right_key >= 3)
+				p->m_vecTurnSpeed += p->GetForward() * (wheels_on_ground == 0 ? 0.1 : 0.04);
+
+			if (flip_key + up_key >= 3)
+				p->m_vecTurnSpeed += -p->GetRight() * 0.05;
+				//p->m_vecTurnSpeed += -p->GetUp() * 0.1;
+
+			if (flip_key + down_key >= 3)
+				p->m_vecTurnSpeed += p->GetRight() * 0.12;
+
+			if (grab_key + right_key >= 3)
+				p->m_vecTurnSpeed += -p->GetUp() * (wheels_on_ground >= 2 ? 0.03 : 0.09);	// was 0.1 until 2025
+
+			if (grab_key + left_key >= 3)
+				p->m_vecTurnSpeed += p->GetUp() * (wheels_on_ground >= 2 ? 0.03 : 0.09);
+		}
+
+		// Thrust forward
+		if (thrust_key == 2)
+			p->m_vecMoveSpeed += p->GetForward() * 0.2;
+	}
+
+	// Building attraction
+	if (rouz.screwy_gravity & 1)
+	{
+		CVector acc, attractor(-764.f, 360.f, 120.f);
+		//attractor(117.f, -352.f, 80.f);
+		float dbb2, dbb, fmag, mass = 5.9736e24f * 6.67428e-11f * 1e-9f;
+
+		dbb2 = (attractor - p->GetPosition()).MagnitudeSqr();
+		dbb = sqrtf(dbb2);
+		fmag = mass / dbb2;
+		if (p == FindPlayerVehicle() && print_counter==0)
+			debug("fmag = %.3f N, dbb = %.4f m\n", fmag, dbb);
+		print_counter++;
+		fmag = Min(fmag, 9.8f * 1.f);
+		acc = fmag * (attractor - p->GetPosition()) / dbb;
+		acc *= GRAVITY / 9.8;					// Newtons to retarded GTA units
+		p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+	}
+
+	// Vehicle antigravity
+	if (rouz.screwy_gravity & 2)
+	{
+		CVector acc, attractor;
+		float dbb2, dbb, fmag, mass = 5.9736e24f * 6.67428e-11f * -2e-11f;
+
+		CVehicle *player_veh = FindPlayerVehicle();
+		if (player_veh)
+		{
+			attractor = player_veh->GetPosition();
+			dbb2 = (attractor - p->GetPosition()).MagnitudeSqr();
+			dbb = sqrtf(dbb2);
+			fmag = mass / dbb2;
+			acc = fmag * (attractor - p->GetPosition()) / dbb;
+			acc *= GRAVITY / 9.8;					// Newtons to retarded GTA units
+			if (p != FindPlayerVehicle())
+				p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+		}
+
+		p->m_vecMoveSpeed.z -= GRAVITY * CTimer::GetTimeStep();		// add regular GTA gravity
+	}
+
+	// Falling upwards attraction
+	if (rouz.screwy_gravity & 4)
+	{
+		CVector acc, attractor(0.f, 0.f, -6374121.f);	// Earth depth at Miami sea level
+		float dbb2, dbb, fmag, mass = 5.9736e24f * 6.67428e-11f * 0.7f;
+
+		dbb2 = (attractor - p->GetPosition()).MagnitudeSqr();
+		dbb = sqrtf(dbb2);
+		fmag = mass / dbb2;
+		acc = fmag * (attractor - p->GetPosition()) / dbb;
+		acc *= GRAVITY / 9.8;						// Newtons to retarded GTA units
+		p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+	}
+
+	print_counter &= 31;
+
+	if (rouz.screwy_gravity)
+		return 1;
+
+	return 0;
+}
+
+double get_game_time()
+{
+	return (double) CTimer::GetTimeInMilliseconds() * 1e-3;
+}

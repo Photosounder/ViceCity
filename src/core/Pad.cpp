@@ -41,6 +41,10 @@
 #include "Stats.h"
 #include "CarCtrl.h"
 #include "TrafficLights.h"
+#include "Bike.h"	// rouz edit, added for fixing bikes
+#include "GameLogic.h"	// rouz edit
+#include "Messages.h"	// rouz edit
+extern void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector speed);	// rouz edit
 
 #ifdef GTA_PS2
 #include "eetypes.h"
@@ -288,6 +292,10 @@ void WeaponCheat3()
 
 void HealthCheat()
 {
+	// rouz edit
+	if (FindPlayerPed()==NULL)
+		return;
+
 	CHud::SetHelpMessage(TheText.Get("CHEAT3"), true);
 	FindPlayerPed()->m_fHealth = CWorld::Players[0].m_nMaxHealth;
 	if (FindPlayerVehicle()) {
@@ -441,18 +449,30 @@ void MoneyCheat()
 
 void ArmourCheat()
 {
+	// rouz edit
+	if (FindPlayerPed()==NULL)
+		return;
+
 	CHud::SetHelpMessage(TheText.Get("CHEAT4"), true);
 	FindPlayerPed()->m_fArmour = CWorld::Players[0].m_nMaxArmour;
 }
 
 void WantedLevelUpCheat()
 {
+	// rouz edit
+	if (FindPlayerPed()==NULL)
+		return;
+
 	CHud::SetHelpMessage(TheText.Get("CHEAT5"), true);
 	FindPlayerPed()->m_pWanted->CheatWantedLevel(Min(FindPlayerPed()->m_pWanted->GetWantedLevel() + 2, 6));
 }
 
 void WantedLevelDownCheat()
 {
+	// rouz edit
+	if (FindPlayerPed()==NULL)
+		return;
+
 	CHud::SetHelpMessage(TheText.Get("CHEAT5"), true);
 	FindPlayerPed()->m_pWanted->CheatWantedLevel(0);
 }
@@ -1249,10 +1269,17 @@ int Cheat_strncmp(char* sourceStr, char* origCheatStr)
 // TODO(Miami): Mobile has changed some of the cheats to include debugging things
 void CPad::AddToPCCheatString(char c)
 {
-	for (int32 i = ARRAY_SIZE(KeyBoardCheatString) - 2; i >= 0; i--)
-		KeyBoardCheatString[i + 1] = KeyBoardCheatString[i];
+	// rouz edit to only have G + numbers
+	if (c != '+' && c != 'G' && !(c >= '0' && c <= '9'))
+		return;
 
-	KeyBoardCheatString[0] = c;
+	if (c != '+')	// rouz edit so that + can repeat the previous cheat
+	{
+		for (int32 i = ARRAY_SIZE(KeyBoardCheatString) - 2; i >= 0; i--)
+			KeyBoardCheatString[i + 1] = KeyBoardCheatString[i];
+
+		KeyBoardCheatString[0] = c;
+	}
 
 #define _CHEATCMP(str) strncmp(str, KeyBoardCheatString, sizeof(str)-1)
 
@@ -1580,6 +1607,543 @@ void CPad::AddToPCCheatString(char c)
 	if (!_CHEATCMP("TAEHCSREYALRETAW"))
 		RenderWaterLayersCheat();
 #endif
+
+	wchar_t msg[64];
+
+	// rouz SEAWAYS
+	// "G11"
+	if (!_CHEATCMP("11G"))
+	{
+		CVehicle::bHoverCheat = !CVehicle::bHoverCheat;
+		swprintf(msg, L"Seaways %s", CVehicle::bHoverCheat ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz KANGAROO
+	// "G12"
+	if (!_CHEATCMP("21G"))
+	{
+		KangarooCheat();
+		swprintf(msg, L"Kangaroo");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz ?
+	// "G13"
+	if (!_CHEATCMP("31G"))
+	{
+		//VehicleCheat(MI_SABRETUR);
+		//ChangePlayerCheat();
+		//MayhemCheat();
+		WeaponsForAllCheat();
+		EverybodyAttacksPlayerCheat();
+		MadCarsCheat();
+		TrafficLightsCheat();
+		swprintf(msg, L"???");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz GREENLIGHT
+	// "G14"
+	if (!_CHEATCMP("41G"))
+	{
+		CTrafficLights::bGreenLightsCheat ^= 1;
+		if (CTrafficLights::bGreenLightsCheat)
+			swprintf(msg, L"Traffic lights are always green");
+		else
+			swprintf(msg, L"Traffic lights back to normal");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz 
+	// "G15"
+	if (!_CHEATCMP("51G"))
+	{
+		rouz.peds_attack_cops ^= 1;
+		if (rouz.peds_attack_cops)
+			swprintf(msg, L"Peds attack cops and paramedics");
+		else
+			swprintf(msg, L"Peds don't attack cops anymore");
+		CHud::SetHelpMessage((wchar *) msg, true);
+
+		for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
+			if (rouz.peds_attack_cops)
+				CPedType::AddThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
+			else
+				CPedType::RemoveThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
+
+		for (int i = PEDSTAT_GANG1; i <= PEDSTAT_COWARD; i++)
+			if (rouz.peds_attack_cops)
+			{
+				CPedStats::ms_apPedStats[i]->m_temper = 100;
+				CPedStats::ms_apPedStats[i]->m_fear = 0;
+				CPedStats::ms_apPedStats[i]->m_lawfulness = 0;
+				CPedStats::ms_apPedStats[i]->m_flags &= ~STAT_GUN_PANIC;
+			}
+
+		CPopulation::ms_bGivePedsWeapons = rouz.peds_attack_cops;
+	}
+
+
+	// rouz remote bomb cheat
+	// "G21"
+	if (!_CHEATCMP("12G"))
+	{
+		rouz.bomb_veh = FindPlayerVehicle();
+		if (rouz.bomb_veh)
+		{
+			rouz.remote_bomb = 2;
+			CHud::SetHelpMessage((wchar *) L"Remote bomb armed", true);
+		}
+	}
+
+	// rouz remote control cheat
+	// "G22"
+	if (!_CHEATCMP("22G"))
+	{
+		rouz.rc_veh = FindPlayerVehicle();
+
+		if (rouz.rc_veh == NULL && FindPlayerPed()->m_pCurrentPhysSurface)
+			if (FindPlayerPed()->m_pCurrentPhysSurface->IsVehicle())
+				rouz.rc_veh = (CVehicle *) FindPlayerPed()->m_pCurrentPhysSurface;
+
+		if (rouz.rc_veh)
+		{
+			rouz.remote_control = 2;
+			CHud::SetHelpMessage((wchar *) L"Remote control enabled", true);
+		}
+	}
+
+	// rouz set car on fire cheat
+	// "G23"
+	if (!_CHEATCMP("32G"))
+	{
+		// Based on the G44 code for fixing a vehicle
+		// Fix veh we're in or the remote controlled veh
+		CVehicle *veh = FindPlayerVehicle();
+		if(veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh)
+		{
+			if (veh->m_fHealth > 250.f)
+				CHud::SetHelpMessage((wchar *) L"Vehicle set on fire", true);
+
+			// Restore health and fix
+			float prev_health = veh->m_fHealth;
+			veh->m_fHealth = 249.0f;
+			if (veh->IsCar())
+			{
+				((CAutomobile *)veh)->Damage.SetEngineStatus(0);
+				if (prev_health <= 0.f && ((CAutomobile *)veh)->m_rwObject)
+					((CAutomobile *)veh)->Fix();
+			}
+			else if (veh->IsBike() && prev_health <= 0.f)
+			{
+				((CBike *)veh)->Fix();
+			}
+
+			// Resurrect rc vehicle
+			if (veh != FindPlayerVehicle())
+				veh->SetStatus(STATUS_ABANDONED);
+			veh->bRenderScorched = false;
+		}
+	}
+
+	// rouz set status physics
+	// "G30"
+	if (!_CHEATCMP("03G"))
+	{
+		rouz.status_physics ^= 1;
+		swprintf(msg, L"Physics for all %s", rouz.status_physics & 1 ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz screwy gravity cheat
+	// "G31"
+	if (!_CHEATCMP("13G"))
+	{
+		rouz.screwy_gravity ^= 1;
+		swprintf(msg, L"Screwy gravity %s", rouz.screwy_gravity & 1 ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz antigravity repelling
+	// "G32"
+	if (!_CHEATCMP("23G"))
+	{
+		rouz.screwy_gravity ^= 2;
+		swprintf(msg, L"%s", rouz.screwy_gravity & 2 ? L"OUTTA MY WAY VICE FUCKING SHITS" : L"Antigravity repelling off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz flight
+	// "G33"
+	if (!_CHEATCMP("33G"))
+	{
+		rouz.flight ^= 1;
+		swprintf(msg, L"Flight %s", rouz.flight ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz Earth antigravity
+	// "G34"
+	if (!_CHEATCMP("43G"))
+	{
+		rouz.screwy_gravity ^= 4;
+		swprintf(msg, L"%s", rouz.screwy_gravity & 4 ? L"Falling upwards" : L"Earth antigravity off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz Tony Hawk mode
+	// "G35"
+	if (!_CHEATCMP("53G"))
+	{
+		rouz.tonyhawk ^= 1;
+		swprintf(msg, L"Tony Hawk mode %s", rouz.tonyhawk ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz slippery mode
+	// "G36"
+	if (!_CHEATCMP("63G"))
+	{
+		rouz.slippery ^= 1;
+		swprintf(msg, L"Slippery tires %s", rouz.slippery ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz flip car
+	// "G41"
+	if (!_CHEATCMP("14G"))
+	{
+		CVehicle *veh = FindPlayerVehicle();
+		if (veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh)
+		{
+			veh->SetHeading(veh->GetForward().Heading());
+			veh->m_vecTurnSpeed *= 0.f;
+			CHud::SetHelpMessage((wchar *) L"Flip vehicle", true);
+		}
+	}
+
+	// rouz become passenger
+	// "G42"
+	if (!_CHEATCMP("24G"))
+	{
+		CVehicle *veh = FindPlayerVehicle();
+		if (veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh==NULL && FindPlayerPed()->m_pCurrentPhysSurface)
+			if (FindPlayerPed()->m_pCurrentPhysSurface->IsVehicle())
+				veh = (CVehicle *) FindPlayerPed()->m_pCurrentPhysSurface;
+
+		if (veh)
+		{
+			//veh->AddPassenger(FindPlayerPed(), 0);
+			FindPlayerPed()->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, veh);
+			CHud::SetHelpMessage((wchar *) L"Become passenger", true);
+		}
+	}
+
+	// rouz glue to veg
+	// "G43"
+	if (!_CHEATCMP("34G"))
+	{
+		//FindPlayerPed()->SetObjective(OBJECTIVE_SUN_BATHE);
+		//FindPlayerPed()->SetWaitState(WAITSTATE_SUN_BATHE_IDLE, nil);
+
+		if (FindPlayerPed()->m_pCurrentPhysSurface)
+		{
+			if (rouz.glue_veh == FindPlayerPed()->m_pCurrentPhysSurface)
+			{
+				rouz.glue_veh = NULL;
+				CHud::SetHelpMessage((wchar *) L"Unglued to veh", true);
+			}
+			else if (FindPlayerPed()->m_pCurrentPhysSurface->IsVehicle())
+			{
+				rouz.glue_veh = (CVehicle *) FindPlayerPed()->m_pCurrentPhysSurface;
+				CHud::SetHelpMessage((wchar *) L"Glued to veh", true);
+			}
+		}
+		else
+		{
+			rouz.glue_veh = NULL;
+			CHud::SetHelpMessage((wchar *) L"Unglued to veh", true);
+		}
+	}
+
+	// rouz fix/resurrection
+	// "G44"
+	if (!_CHEATCMP("44G"))
+	{
+		rouz.health_regen = 0;	// health_regen defeats resurrection
+		rouz.prev_player_health = CWorld::Players[0].m_nMaxHealth;
+		rouz.base_player_health = CWorld::Players[0].m_nMaxHealth;
+
+		// Resurrect player (doesn't work if we die while driving)
+		CPlayerPed *pPlayerPed = FindPlayerPed();
+
+		if (pPlayerPed->m_fHealth == 0.f)
+		{
+			HealthCheat();
+			pPlayerPed->m_fHealth = 300.f;
+			pPlayerPed->bIsVisible = true;
+			pPlayerPed->m_bloodyFootprintCountOrDeathTime = 0;
+			pPlayerPed->bDoBloodyFootprints = false;
+			pPlayerPed->m_nDrunkenness = 0;
+			pPlayerPed->m_nFadeDrunkenness = 0;
+			//CMBlur::ClearDrunkBlur();
+			pPlayerPed->m_nDrunkCountdown = 0;
+			pPlayerPed->ClearAdrenaline();
+			pPlayerPed->m_fCurrentStamina = pPlayerPed->m_fMaxStamina;
+			//if (pPlayerPed->m_pFire)
+			//	pPlayerPed->m_pFire->Extinguish();
+			pPlayerPed->bInVehicle = false;
+			pPlayerPed->m_pMyVehicle = nil;
+			pPlayerPed->m_pVehicleAnim = nil;
+			//pPlayerPed->m_pWanted->Reset();
+			pPlayerPed->bCancelEnteringCar = false;
+			pPlayerPed->RestartNonPartialAnims();
+			pPlayerPed->GetPlayerInfoForThisPlayerPed()->MakePlayerSafe(false);
+			pPlayerPed->bRemoveFromWorld = false;
+			pPlayerPed->ClearWeaponTarget();
+			pPlayerPed->SetInitialState();
+			CCarCtrl::ClearInterestingVehicleList();
+			//pPlayerPed->Teleport(pos + CVector(0.0f, 0.0f, 1.0f));
+			pPlayerPed->SetMoveSpeed(0.0f, 0.0f, 0.0f);
+			//pPlayerPed->m_fRotationCur = DEGTORAD(angle);
+			pPlayerPed->m_fRotationDest = pPlayerPed->m_fRotationCur;
+			pPlayerPed->SetHeading(pPlayerPed->m_fRotationCur);
+			//CTheScripts::ClearSpaceForMissionEntity(pos, pPlayerPed);
+			//CWorld::ClearExcitingStuffFromArea(pos, 4000.0f, true);
+			pPlayerPed->RestoreHeadingRate();
+			CGame::currArea = AREA_MAIN_MAP;
+			CStreaming::RemoveBuildingsNotInArea(AREA_MAIN_MAP);
+			TheCamera.SetCameraDirectlyInFrontForFollowPed_CamOnAString();
+			TheCamera.Restore();
+			//CReferences::RemoveReferencesToPlayer();
+			//CGarages::PlayerArrestedOrDied();
+			CStats::CheckPointReachedUnsuccessfully();
+			CWorld::Remove(pPlayerPed);
+			CWorld::Add(pPlayerPed);
+			//CHud::ResetWastedText();
+			//CStreaming::StreamZoneModels(pos);
+
+			pPlayerPed->ResolveReferences();	// seems necessary to stop getting busted
+			CMessages::ClearMessages();
+			CHud::GetRidOfAllHudMessages();
+
+			//CGameLogic::RestorePlayerStuffDuringResurrection(FindPlayerPed(), FindPlayerPed()->GetPosition(), 0.f);
+			if (pPlayerPed->GetPlayerInfoForThisPlayerPed())
+			{
+				pPlayerPed->GetPlayerInfoForThisPlayerPed()->m_WBState = WBSTATE_PLAYING;
+				pPlayerPed->GetPlayerInfoForThisPlayerPed()->m_nWBTime = 0;
+			}
+		}
+		
+		// Health and armour
+		HealthCheat();
+		//ArmourCheat();
+
+		// Fix veh we're in or the remote controlled veh
+		CVehicle *veh = FindPlayerVehicle();
+		if(veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh)
+		{
+			// Restore health and fix
+			veh->m_fHealth = 1000.0f;
+			if(veh->IsCar())
+			{
+				((CAutomobile *)veh)->Damage.SetEngineStatus(0);
+				if (((CAutomobile *)veh)->m_rwObject)
+					((CAutomobile *)veh)->Fix();
+			}
+			else if(veh->IsBike())
+			{
+				((CBike *)veh)->Fix();
+			}
+
+			// Resurrect rc vehicle
+			if (veh != FindPlayerVehicle())
+				veh->SetStatus(STATUS_ABANDONED);
+			veh->bRenderScorched = false;
+		}
+
+		CHud::SetHelpMessage((wchar *) L"Fix everything", true);
+	}
+
+	// rouz teleport player on rc veh
+	// "G45"
+	if (!_CHEATCMP("54G"))
+	{
+		CVehicle *veh = FindPlayerVehicle();
+		if(veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh && FindPlayerPed())
+		{
+			veh->m_nDoorLock = CARLOCK_UNLOCKED;
+			command_warp_player_from_car_to_coord(FindPlayerPed(), veh->GetPosition() + CVector(0.0f, 0.0f, 2.0f), veh->m_vecMoveSpeed + CVector(0.0f, 0.0f, -0.1f));
+			CHud::SetHelpMessage((wchar *) L"Teleport on vehicle", true);
+		}
+	}
+
+	// rouz teleport veh up 60 metres
+	// "G46"
+	if (!_CHEATCMP("64G"))
+	{
+		CPed *ped = FindPlayerPed();
+		CVehicle *veh = FindPlayerVehicle();
+		if(veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh && ped)
+		{
+			veh->SetPosition(veh->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
+			ped->Teleport(ped->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
+			CHud::SetHelpMessage((wchar *) L"Teleport up 60 metres", true);
+		}
+	}
+
+	// Regenerative health
+	// "G47"
+	if (!_CHEATCMP("74G"))
+	{
+		rouz.health_regen ^= 1;
+		swprintf(msg, L"Health regen %s", rouz.health_regen ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz set wanted level
+	// "G51_"
+	if (strncmp("15G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
+		FindPlayerPed()->m_pWanted->CheatWantedLevel(KeyBoardCheatString[0]-'0');
+
+	// rouz set max wanted level
+	// "G52_"
+	if (strncmp("25G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
+	{
+		FindPlayerPed()->m_pWanted->SetMaximumWantedLevel(KeyBoardCheatString[0]-'0');
+		FindPlayerPed()->m_pWanted->UpdateWantedLevel();
+		swprintf(msg, L"Max wanted level %d", KeyBoardCheatString[0]-'0');
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz no ambulance
+	// "G53"
+	if (!_CHEATCMP("35G"))
+	{
+		rouz.no_ambulance ^= 1;
+		swprintf(msg, L"Ambulances %s spawn", rouz.no_ambulance ? L"cannot" : L"may");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz remove weapons
+	// "G611"
+	if (!_CHEATCMP("116G"))
+	{
+		FindPlayerPed()->ClearWeapons();
+		CHud::SetHelpMessage((wchar *) L"Weapons removed", true);
+	}
+
+	// rouz remove armour
+	// "G612"
+	if (!_CHEATCMP("216G"))
+	{
+		FindPlayerPed()->m_fArmour = 0.f;
+		CHud::SetHelpMessage((wchar *) L"Armour removed", true);
+	}
+
+	// rouz traffic volume toggle
+	// "G01"
+	if (!_CHEATCMP("10G"))
+	{
+		rouz.unlock_traffic_gen ^= 1;
+		swprintf(msg, L"Traffic generation is now %s", rouz.unlock_traffic_gen & 1 ? L"unlimited" : L"limited");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz clean bike backflips
+	// "G02"
+	if (!_CHEATCMP("20G"))
+	{
+		rouz.clean_bike_backflips ^= 1;
+		swprintf(msg, L"Clean bike backflips %s", rouz.clean_bike_backflips & 1 ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz can't fall of bike
+	// "G03"
+	if (!_CHEATCMP("30G"))
+	{
+		rouz.cant_fall_off_bike ^= 1;
+		swprintf(msg, L"Can't fall off bike %s", rouz.cant_fall_off_bike & 1 ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// rouz lock doors
+	// "G04"
+	if (!_CHEATCMP("40G"))
+	{
+		CPed *ped = FindPlayerPed();
+		CVehicle *veh = FindPlayerVehicle();
+		if (veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh)
+		{
+			if (veh->m_nDoorLock == CARLOCK_UNLOCKED)
+			{
+				veh->m_nDoorLock = (ped && ped->InVehicle()) ? CARLOCK_LOCKED_PLAYER_INSIDE : CARLOCK_LOCKED;
+				swprintf(msg, L"Doors locked");
+			}
+			else
+			{
+				veh->m_nDoorLock = CARLOCK_UNLOCKED;
+				swprintf(msg, L"Doors unlocked");
+			}
+			CHud::SetHelpMessage((wchar *) msg, true);
+		}
+	}
+
+	// rouz won't despawn
+	// "G05"
+	if (!_CHEATCMP("50G"))
+	{
+		CVehicle *veh = FindPlayerVehicle();
+		if(veh==NULL && rouz.rc_veh)
+			veh = (CVehicle *) rouz.rc_veh;
+
+		if (veh)
+		{
+			veh->bIsLocked ^= 1;
+			rouz.veh_locked_count += (int) veh->bIsLocked * 2 - 1;
+			swprintf(msg, veh->bIsLocked ? L"Veh won't despawn" : L"Veh can despawn");
+			CHud::SetHelpMessage((wchar *) msg, true);
+		}
+	}
+
+	// rouz traffic volume toggle
+	// "G06"
+	if (!_CHEATCMP("60G"))
+	{
+		rouz.ghost_town ^= 1;
+		swprintf(msg, L"Ghost town mode is now %s", rouz.ghost_town & 1 ? L"on" : L"off");
+		CHud::SetHelpMessage((wchar *) msg, true);
+	}
+
+	// Set weather
+	// "G07X"
+	if (!_CHEATCMP("070G")) { CWeather::ReleaseWeather();				CHud::SetHelpMessage((wchar *)L"Normal weather", true); }
+	if (!_CHEATCMP("170G")) { CWeather::ForceWeatherNow(WEATHER_SUNNY);		CHud::SetHelpMessage((wchar *)L"Sunny weather", true); }
+	if (!_CHEATCMP("270G")) { CWeather::ForceWeatherNow(WEATHER_EXTRA_SUNNY);	CHud::SetHelpMessage((wchar *)L"Extra sunny weather", true); }
+	if (!_CHEATCMP("370G")) { CWeather::ForceWeatherNow(WEATHER_HURRICANE);		CHud::SetHelpMessage((wchar *)L"Hurricane weather", true); }
 
 #undef _CHEATCMP
 }

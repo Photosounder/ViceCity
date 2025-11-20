@@ -868,6 +868,7 @@ void CGame::Process(void)
 	CStreaming::Update();
 	uint32 processTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond() - startTime;
 	CWindModifiers::Number = 0;
+	rouz_update();
 	if (!CTimer::GetIsPaused())
 	{
 #ifndef MASTER

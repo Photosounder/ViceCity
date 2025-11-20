@@ -397,7 +397,12 @@ RsInitialize(void)
 	 */
 	RwBool              result;
 
-	RsGlobal.appName = RWSTRING("GTA: Vice City");
+	// rouz edit
+	char date_string[32], *title_string;
+	date_macro_to_nice_date(date_string, __DATE__);
+	title_string = sprintf_alloc("GTA: Vice City - Michel edition of %s", date_string);
+	RsGlobal.appName = title_string;
+
 	RsGlobal.maximumWidth = DEFAULT_SCREEN_WIDTH;
 	RsGlobal.maximumHeight = DEFAULT_SCREEN_HEIGHT;
 	RsGlobal.width = DEFAULT_SCREEN_WIDTH;

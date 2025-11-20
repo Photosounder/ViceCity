@@ -352,8 +352,9 @@ CPhysical::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 void
 CPhysical::ProcessControl(void)
 {
-	if(!IsPed())
-		bIsInWater = false;
+	// rouz edit, no idea why bIsInWater was disabled for vehicles
+	//if(!IsPed())
+	//	bIsInWater = false;
 	bHasContacted = false;
 	bIsInSafePosition = false;
 	bWasPostponed = false;
@@ -525,9 +526,14 @@ CPhysical::ApplySpringDampening(float damping, CVector &springDir, CVector &poin
 	return true;
 }
 
+extern int rouz_acceleration_cheats(void *ptr);
+
 void
 CPhysical::ApplyGravity(void)
 {
+	if (rouz_acceleration_cheats(this))
+		return;
+
 	if (!bAffectedByGravity)
 		return;
 #ifdef WALLCLIMB_CHEAT
@@ -565,6 +571,11 @@ CPhysical::ApplyFriction(void)
 void
 CPhysical::ApplyAirResistance(void)
 {
+	// rouz edit, flight mode
+	CPhysical *p = (CPhysical *) this;
+	if (rouz.flight && (p == FindPlayerVehicle() || p == rouz.rc_veh))
+		return;
+
 	if(m_fAirResistance > 0.1f){
 		float f = Pow(m_fAirResistance, CTimer::GetTimeStep());
 		m_vecMoveSpeed *= f;
@@ -572,7 +583,9 @@ CPhysical::ApplyAirResistance(void)
 	}else if(GetStatus() != STATUS_GHOST){ 
 		float f = Pow(1.0f/Abs(1.0f + m_fAirResistance*0.5f*m_vecMoveSpeed.MagnitudeSqr()), CTimer::GetTimeStep());
 		m_vecMoveSpeed *= f;
-		m_vecTurnSpeed *= 0.99f;
+		//rouz edit, this fixes spin decay depending on FPS
+		//m_vecTurnSpeed *= 0.99f;
+		m_vecTurnSpeed *= Pow(0.99f, CTimer::GetTimeStep());
 	}
 }
 

@@ -263,6 +263,10 @@ CAutomobile::ProcessControl(void)
 	CColModel *colModel;
 	float brake = 0.0f;
 
+	// rouz edit, fix wheel rotation bug
+	for(i=0; i < 4; i++)
+		m_aWheelRotation[i] = rangewrap(m_aWheelRotation[i], 0., TWOPI);
+
 	if(bUsingSpecialColModel)
 		colModel = &CWorld::Players[CWorld::PlayerInFocus].m_ColModel;
 	else
@@ -524,6 +528,66 @@ CAutomobile::ProcessControl(void)
 			m_fBrakePedal = 1.0f;
 			bIsHandbrakeOn = true;
 		}
+
+		// rouz remote bomb
+		if (rouz.remote_bomb && this == rouz.bomb_veh)
+		{
+			m_fGasPedal = 1.6f;
+			m_fBrakePedal = 0.0f;
+
+			// Set yield
+			float yield = 0.f;
+			if (CPad::GetPad(0)->GetCharJustDown('B'))
+				yield = 1.f;
+
+			if (yield > 0.f)
+			{
+				DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
+				BlowUpCar(nil);
+				CExplosion::AddExplosion(this, nil, EXPLOSION_HELI2, GetPosition(), 0);
+				rouz.remote_bomb = 0;
+				rouz.bomb_veh = NULL;
+			}
+		}
+
+		// rouz remote control
+		if (rouz.remote_control && this == rouz.rc_veh)
+		{
+			bIsHandbrakeOn = false;
+
+			m_fGasPedal = 1.f * ((float) CPad::GetPad(0)->GetChar('I') - (float) CPad::GetPad(0)->GetChar('K'));
+			m_fBrakePedal = 1.f * (float) CPad::GetPad(0)->GetChar('K');
+			m_fSteerAngle = 30.f*PI/180.f * ((float) CPad::GetPad(0)->GetChar('J') - (float) CPad::GetPad(0)->GetChar('L'));
+
+			if (DotProduct(m_vecMoveSpeed, GetForward()) <= 0.f)
+				m_fBrakePedal = 0.f;
+
+			static CVector player_offset;
+			static int player_offset_set=0;
+			/*if (CPad::GetPad(0)->GetChar('P'))
+			{
+				if (player_offset_set==0)
+				{
+					player_offset_set = 1;
+					player_offset = FindPlayerPed()->GetPosition() - GetPosition();
+				}
+				//m_vecMoveSpeed.z = 0.011f;
+				FindPlayerPed()->SetPosition(player_offset + GetPosition());
+				FindPlayerPed()->m_vecMoveSpeed = m_vecMoveSpeed;
+				FindPlayerPed()->GetMatrix().Translate(FindPlayerPed()->m_vecMoveSpeed * CTimer::GetTimeStep());
+				//FindPlayerPed()->bAffectedByGravity = 0;
+				FindPlayerPed()->bIsFrozen = 1;
+				FindPlayerPed()->bUsesCollision = 0;
+			}
+			else
+			{
+				player_offset_set = 0;
+				FindPlayerPed()->bAffectedByGravity = 1;
+				FindPlayerPed()->bIsFrozen = 0;
+				FindPlayerPed()->bUsesCollision = 1;
+			}*/
+			//SetTurnSpeed(0.f, 0.0f, 0.01f);
+		}
 		break;
 
 	case STATUS_WRECKED:
@@ -558,8 +622,12 @@ CAutomobile::ProcessControl(void)
 	default: break;
 	}
 
+	// rouz window control
+	rouz_veh_apply_controls_from_window((void *) this);
+
 	// Skip physics if object is found to have been static recently
 	bool skipPhysics = false;
+	if (!((rouz.remote_bomb && rouz.bomb_veh == this) || (rouz.remote_control && rouz.rc_veh == this)))
 	if(!bIsStuck && (GetStatus() == STATUS_ABANDONED || GetStatus() == STATUS_WRECKED)){
 		bool makeStatic = false;
 		float moveSpeedLimit, turnSpeedLimit, distanceLimit;
@@ -1650,7 +1718,8 @@ CAutomobile::ProcessControl(void)
 	// Turn around at the edge of the world
 	// TODO: make the numbers defines
 
-	float heading;
+	// rouz edit, world edge bounce disabled
+	/*float heading;
 	if(GetPosition().x > 1950.0f-400.0f){
 		if(m_vecMoveSpeed.x > 0.0f)
 			m_vecMoveSpeed.x *= -1.0f;
@@ -1680,7 +1749,7 @@ CAutomobile::ProcessControl(void)
 			SetHeading(PI-heading);
 		else if(heading < -HALFPI)
 			SetHeading(-PI-heading);
-	}
+	}*/
 
 	if(bInfiniteMass){
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
@@ -3141,7 +3210,8 @@ CAutomobile::ProcessControlInputs(uint8 pad)
 		// simpler than the code below
 		if(speed * acceleration < 0.0f){
 			// if opposite directions, have to brake first
-			m_fGasPedal = 0.0f;
+			//m_fGasPedal = 0.0f;		// rouz edit: we don't want this for flight
+			m_fGasPedal = acceleration;	// rouz
 			m_fBrakePedal = Abs(acceleration);
 		}else{
 			// accelerating in same direction we were already going

@@ -226,6 +226,9 @@ CBoat::ProcessControl(void)
 	default: break;
 	}
 
+	// rouz window control
+	rouz_veh_apply_controls_from_window((void *) this);
+
 	float collisionDamage = pHandling->fCollisionDamageMultiplier * m_fDamageImpulse;
 #ifdef FIX_BUGS
 	if(GetStatus() == STATUS_PLAYER && CStats::GetPercentageProgress() >= 100.0f)

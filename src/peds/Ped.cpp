@@ -1534,9 +1534,13 @@ CPed::UpdatePosition(void)
 	CVector2D velocityChange;
 
 	SetHeading(m_fRotationCur);
-	if (m_pCurrentPhysSurface) {
+	if (m_pCurrentPhysSurface)
+	{
 		CVector2D velocityOfSurface;
-		if (!IsPlayer() && m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat()) {
+
+		// If surface is boat
+		if (!IsPlayer() && m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat())
+		{
 
 			// It seems R* didn't like m_vecOffsetFromPhysSurface for boats
 			CVector offsetToSurface = GetPosition() - m_pCurrentPhysSurface->GetPosition();
@@ -1549,14 +1553,29 @@ CPed::UpdatePosition(void)
 			float slideMult = -m_pCurrentPhysSurface->m_vecTurnSpeed.MagnitudeSqr();
 			velocityOfSurface = slideMult * offsetToSurface * CTimer::GetTimeStep() + (surfaceTurnVelocity + surfaceMoveVelocity);
 			m_vecMoveSpeed.z = slideMult * offsetToSurface.z * CTimer::GetTimeStep() + (surfaceTurnVelocity.z + surfaceMoveVelocity.z);
-		} else {
-			velocityOfSurface = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface);
 		}
+		// or any other surface
+		else
+		{
+			//debug("m_vecOffsetFromPhysSurface %.3f  %.3f  %.3f\n", m_vecOffsetFromPhysSurface.x, m_vecOffsetFromPhysSurface.y, m_vecOffsetFromPhysSurface.z);
+			//debug("m_pCurrentPhysSurface->GetRight() %.3f  %.3f  %.3f\n", m_pCurrentPhysSurface->GetRight().x, m_pCurrentPhysSurface->GetRight().y, m_pCurrentPhysSurface->GetRight().z);
+			velocityOfSurface = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface);
+
+			CVector surf_rot = m_pCurrentPhysSurface->GetRight();
+			surf_rot.x = -surf_rot.x;
+			surf_rot.z = -surf_rot.z;
+			//if (m_moved.x!=0.f && m_moved.y!=0.f)
+				surf_rel_origin = CrossProduct(m_vecOffsetFromPhysSurface, surf_rot);
+			//debug("surf_rel_origin %.3f  %.3f  %.3f\n", surf_rel_origin.x, surf_rel_origin.y, surf_rel_origin.z);
+		}
+
 		// Reminder: m_moved is displacement from walking/running.
 		velocityChange = m_moved + velocityOfSurface - m_vecMoveSpeed;
 		m_fRotationCur += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 		m_fRotationDest += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
-	} else if (m_nSurfaceTouched == SURFACE_STEEP_CLIFF && (m_vecDamageNormal.x != 0.0f || m_vecDamageNormal.y != 0.0f)) {
+	}
+	else if (m_nSurfaceTouched == SURFACE_STEEP_CLIFF && (m_vecDamageNormal.x != 0.0f || m_vecDamageNormal.y != 0.0f))
+	{
 		// Ped got damaged by steep slope
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, -0.001f);
 		// some kind of
@@ -1570,7 +1589,9 @@ CPed::UpdatePosition(void)
 		if (reactionAndVelocityDotProd < 0.0f) {
 			velocityChange -= reactionAndVelocityDotProd * reactionForce;
 		}
-	} else {
+	}
+	else
+	{
 		velocityChange = m_moved - m_vecMoveSpeed;
 	}
 	
@@ -1584,6 +1605,7 @@ CPed::UpdatePosition(void)
 			changeMult = 0.01f * CTimer::GetTimeStep();
 		}
 
+		if (rouz.glue_on_vehs==0)
 		if (speedChange > changeMult) {
 			velocityChange = velocityChange * (changeMult / speedChange);
 		}
@@ -1663,7 +1685,7 @@ CPed::ProcessBuoyancy(void)
 					CVector pos = GetPosition();
 					if (PlacePedOnDryLand()) {
 						if (m_fHealth > 20.0f)
-							InflictDamage(nil, WEAPONTYPE_DROWNING, 15.0f, PEDPIECE_TORSO, false);
+							InflictDamage(nil, WEAPONTYPE_DROWNING, rouz.drown_mul * 15.0f, PEDPIECE_TORSO, false);
 
 						if (bIsInTheAir) {
 							RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
@@ -1687,7 +1709,7 @@ CPed::ProcessBuoyancy(void)
 			m_vecMoveSpeed.z *= speedMult;
 			bIsStanding = false;
 			bIsDrowning = true;
-			InflictDamage(nil, WEAPONTYPE_DROWNING, 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
+			InflictDamage(nil, WEAPONTYPE_DROWNING, rouz.drown_mul * 3.0f * CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
 		}
 		if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.25f * CTimer::GetTimeStep()) {
 			if (speedMult == 0.0f) {
@@ -5348,7 +5370,7 @@ CPed::SetLanding(void)
 
 	RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
 	if (fallAssoc || m_nPedType == PEDTYPE_COP && bKnockedUpIntoAir) {
-		landAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_FALL_COLLAPSE);
+		landAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_GET_UP);	// rouz edit, used ANIM_STD_FALL_COLLAPSE before
 		DMAudio.PlayOneShot(m_audioEntityId, SOUND_FALL_COLLAPSE, 1.0f);
 
 		if (IsPlayer())
@@ -9220,9 +9242,10 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 			velocityFromAnim = 0.07f * runAssoc->blendAmount + 0.1f;
 		}
 	}
+	velocityFromAnim *= 1.5f;
 
 	if (ped->IsPlayer() || ped->m_pedInObjective && ped->m_pedInObjective->IsPlayer())
-		ped->ApplyMoveForce(0.0f, 0.0f, 8.5f);
+		ped->ApplyMoveForce(0.0f, 0.0f, 1.5f*8.5f);
 	else
 		ped->ApplyMoveForce(0.0f, 0.0f, 4.5f);
 	

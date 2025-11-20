@@ -18,7 +18,7 @@ enum Config {
 	EXTRADIRSIZE = 256,
 	CUTSCENEDIRSIZE = 512,
 
-	SIMPLEMODELSIZE = 3885,
+	SIMPLEMODELSIZE = 5120,	// rouz edit, increased for modified data, was 3885
 	TIMEMODELSIZE = 385,
 	CLUMPMODELSIZE = 5,
 	WEAPONMODELSIZE = 37,
@@ -26,7 +26,7 @@ enum Config {
 	VEHICLEMODELSIZE = 110,
 	TWODFXSIZE = 1210,
 
-	MAXVEHICLESLOADED = 50, // 70 on mobile
+	MAXVEHICLESLOADED = 120, // rouz edit, originally 50, 70 on mobile
 
 	NUMOBJECTINFO = 210,
 
@@ -35,12 +35,12 @@ enum Config {
 	NUMENTRYINFOS = 3200,
 	NUMPEDS = 140,
 	NUMVEHICLES = 110,
-	NUMBUILDINGS = 7000,
+	NUMBUILDINGS = 20000,		// rouz edit, increased for modified data, was 7000
 	NUMTREADABLES = 1,
-	NUMOBJECTS = 460,
-	NUMDUMMIES = 2340,
+	NUMOBJECTS = 860,		// rouz edit, was 460
+	NUMDUMMIES = 3340,		// rouz edit, was 2340
 	NUMAUDIOSCRIPTOBJECTS = 192,
-	NUMCOLMODELS = 4400,
+	NUMCOLMODELS = 8000,		// rouz edit, increased for modified data, was 4400
 	NUMCUTSCENEOBJECTS = 50,	// not a pool in VC
 
 	NUMANIMBLOCKS = 35,
@@ -55,12 +55,12 @@ enum Config {
 	NUM_PATHCONNECTIONS = 20400,
 
 	// Link list lengths
-	NUMALPHALIST = 20,
-	NUMBOATALPHALIST = 20,
-	NUMALPHAENTITYLIST = 200,
+	NUMALPHALIST = 60,		// rouz edit, was 20
+	NUMBOATALPHALIST = 200,		// rouz edit, was 20
+	NUMALPHAENTITYLIST = 600,	// rouz edit, was 200
 	NUMALPHAUNTERWATERENTITYLIST = 30,
 	NUMCOLCACHELINKS = 50,
-	NUMREFERENCES = 800,
+	NUMREFERENCES = 1800,		// rouz edit, was 800
 
 	// Zones
 	NUMAUDIOZONES = 14,
@@ -119,7 +119,7 @@ enum Config {
 	NUMPHONES = 50,
 	NUMPEDGROUPS = 67,
 	NUMMODELSPERPEDGROUP = 16,
-	MAXZONEPEDSLOADED = 8,
+	MAXZONEPEDSLOADED = NUMMODELSPERPEDGROUP-1,	// rouz edit
 	NUMSHOTINFOS = 100,
 
 	NUMROADBLOCKS = 300,
@@ -318,7 +318,7 @@ enum Config {
 #ifdef LIBRW
 #define EXTENDED_COLOURFILTER		// more options for colour filter (replaces mblur)
 #define EXTENDED_PIPELINES		// custom render pipelines (includes Neo)
-#define SCREEN_DROPLETS			// neo water droplets
+//#define SCREEN_DROPLETS			// neo water droplets
 #define NEW_RENDERER		// leeds-like world rendering, needs librw
 #endif
 
@@ -380,6 +380,8 @@ enum Config {
 #		define PED_CAR_DENSITY_SLIDERS
 #	endif
 #endif
+
+#define START_FROM_LAST_SAVE // adds button to start menu to start game from last save
 
 // Script
 #define USE_DEBUG_SCRIPT_LOADER	// Loads main.scm by default. Hold R for main_freeroam.scm and D for main_d.scm

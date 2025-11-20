@@ -1676,6 +1676,46 @@ CPlayerPed::ProcessControl(void)
 	
 	UpdateMeleeAttackers();
 
+	// rouz edit, glue to veh
+	if (rouz.glue_veh && IsPlayer())
+	{
+		CPlayerPed *ped = FindPlayerPed();
+		CVehicle *veh = (CVehicle *) rouz.glue_veh;
+
+		ped->bIsStanding = true;
+		ped->bWasStanding = true;
+		ped->bIsInTheAir = false;
+		ped->bIsFrozen = 0;
+
+		ped->SetPosition(veh->GetPosition() + CVector(0.0f, 0.0f, 2.0f));
+		ped->SetMoveSpeed(veh->m_vecMoveSpeed + CVector(0.0f, 0.0f, 0.0f));
+		ped->ApplyMoveSpeed();
+	}
+
+	// rouz edit, health regen
+	if (rouz.health_regen && IsPlayer())
+	{
+		CPlayerPed *ped = FindPlayerPed();
+
+		if (ped)
+		{
+			// Initialise
+			if (rouz.base_player_health == 0.)
+				rouz.base_player_health = ped->m_fHealth;
+
+			// If health has just gone down
+			if (rouz.prev_player_health > ped->m_fHealth)
+			{
+				rouz.base_player_health = ped->m_fHealth;
+				rouz.health_drop_time = get_game_time();
+			}
+
+			ped->m_fHealth = mix(CWorld::Players[0].m_nMaxHealth, rouz.base_player_health, gaussian((get_game_time() - rouz.health_drop_time) / 30.));
+
+			rouz.prev_player_health = ped->m_fHealth;
+		}
+	}
+
 	if (m_pCurrentPhysSurface && m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat()) {
 		bTryingToReachDryLand = true;
 

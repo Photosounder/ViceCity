@@ -1365,7 +1365,10 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 	bool OnTrain = FindPlayerVehicle() && FindPlayerVehicle()->IsTrain();
 
 	TargetCoors = CameraTarget;
-	TargetCoors.z += fTranslateCamUp;
+	if (rouz.ped_cam_change)
+		TargetCoors.z += 0.2f;			// rouz edit, focus more on the ped instead of above his head
+	else
+		TargetCoors.z += fTranslateCamUp;
 
 	float AlphaOffset, BetaOffset;
 	if(CPad::GetPad(0)->IsPlayerControlsDisabledBy(PLAYERCONTROL_PLAYERINFO)){
@@ -1431,6 +1434,9 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 		CamDist = fBaseDist + Cos(Min(Alpha*fFalloff, HALFPI))*fAngleDist;
 	else
 		CamDist = fBaseDist + Cos(Alpha)*fAngleDist;
+
+	if (rouz.ped_cam_change)
+		CamDist += TheCamera.m_fPedZoomValueSmooth;
 
 	if(TheCamera.m_bUseTransitionBeta)
 		Beta = m_fTransitionBeta;
@@ -2641,12 +2647,98 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 
 		CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(CamTargetEntity->GetModelIndex());
 		CVector CamPos = mi->GetFrontSeatPosn();
-		CamPos.x = 0.0f;
-		CamPos.y += 0.08f;
-		CamPos.z += 0.62f;
-		FOV = 60.0f;
+
+		// rouz edit
+		if (rouz.car_first_person)
+		{
+			// POV is driver
+			/*CamPos.x = -CamPos.x;
+			CamPos.y -= 0.3f;
+			CamPos.z += 0.7f;*/
+
+			// POV is middle back
+			CamPos.x = 0.f;
+			CamPos.y -= 1.f;
+			CamPos.z += 0.75f;
+
+			if (mi->m_positions[CAR_POS_BACKSEAT].y < mi->m_positions[CAR_POS_FRONTSEAT].y)
+			{
+				CamPos = mi->m_positions[CAR_POS_BACKSEAT];
+				CamPos.x = 0.f;
+				CamPos.z += 0.75f;
+			}
+
+			CamPos.x += rouz.cam_offset_x;
+			CamPos.y += rouz.cam_offset_y;
+			CamPos.z += rouz.cam_offset_z;
+
+			FOV = rouz.cam_fov;
+			RwCameraSetNearClipPlane(Scene.camera, rouz.cam_near_z);
+		}
+		else
+		{
+			CamPos.x = 0.0f;
+			CamPos.y += 0.08f;
+			CamPos.z += 0.62f;
+			FOV = 60.0f;
+		}
+
 		Source = Multiply3x3(*matrix, CamPos);
 		Source += CamTargetEntity->GetPosition();
+
+		// rouz edit
+		/*if (rouz.car_first_person && FindPlayerPed())
+		{
+			CamTargetEntity->GetMatrix().UpdateRW();
+			CamTargetEntity->UpdateRwFrame();
+			CamTargetEntity->UpdateRpHAnim();
+			FindPlayerPed()->GetMatrix().UpdateRW();
+			FindPlayerPed()->UpdateRwFrame();
+			FindPlayerPed()->UpdateRpHAnim();
+			RwV3d HeadPos;
+			FindPlayerPed()->m_pedIK.GetComponentPosition(HeadPos, PED_HEAD);
+			Source = HeadPos + 0.1f * FindPlayerPed()->GetUp();
+
+			// Look around
+			bool UseMouse = false;
+			float MouseX = CPad::GetPad(0)->GetMouseX();
+			float MouseY = CPad::GetPad(0)->GetMouseY();
+			float LookLeftRight, LookUpDown;
+			if(MouseX != 0.0f || MouseY != 0.0f){
+				UseMouse = true;
+				LookLeftRight = -3.0f*MouseX;
+				LookUpDown = 4.0f*MouseY;
+			}else{
+				LookLeftRight = -CPad::GetPad(0)->SniperModeLookLeftRight();
+				LookUpDown = CPad::GetPad(0)->SniperModeLookUpDown();
+			}
+			if(UseMouse){
+				Beta += TheCamera.m_fMouseAccelHorzntl * LookLeftRight * FOV/80.0f;
+				Alpha += TheCamera.m_fMouseAccelVertical * LookUpDown * FOV/80.0f;
+			}else{
+				float xdir = LookLeftRight < 0.0f ? -1.0f : 1.0f;
+				float ydir = LookUpDown < 0.0f ? -1.0f : 1.0f;
+				Beta += SQR(LookLeftRight/100.0f)*xdir*0.8f/14.0f * FOV/80.0f * CTimer::GetTimeStep();
+				Alpha += SQR(LookUpDown/150.0f)*ydir*1.0f/14.0f * FOV/80.0f * CTimer::GetTimeStep();
+			}
+			while(Beta >= PI) Beta -= 2*PI;
+			while(Beta < -PI) Beta += 2*PI;
+			if(Alpha > DEGTORAD(60.0f)) Alpha = DEGTORAD(60.0f);
+			else if(Alpha < -DEGTORAD(89.5f)) Alpha = -DEGTORAD(89.5f);
+
+			TargetCoors.x = 3.0f * Cos(Alpha) * Cos(Beta) + Source.x;
+			TargetCoors.y = 3.0f * Cos(Alpha) * Sin(Beta) + Source.y;
+			TargetCoors.z = 3.0f * Sin(Alpha) + Source.z;
+			Front = TargetCoors - Source;
+			Front.Normalise();
+			Source += Front*0.4f;
+
+			GetVectorsReadyForRW();
+			float Rotation = CGeneral::GetATanOfXY(Front.x, Front.y) - HALFPI;
+			FindPlayerPed()->m_fRotationCur = Rotation;
+			FindPlayerPed()->m_fRotationDest = Rotation;
+		}*/
+
 		if(((CVehicle*)CamTargetEntity)->IsBoat())
 			Source.z += 0.5f;
 		else if(((CVehicle*)CamTargetEntity)->IsBike() && ((CVehicle*)CamTargetEntity)->pDriver){
@@ -5059,6 +5151,10 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	// Using GetCarGun(LR/UD) will give us same unprocessed RightStick value as SA
 	float stickX = -(pad->GetCarGunLeftRight());
 	float stickY = -pad->GetCarGunUpDown();
+
+	// rouz edit, I always hated this feature
+	if (rouz.car_no_cam_move_by_keyboard)
+		stickX = stickY = 0.f;
 
 	// In SA this checks for m_bUseMouse3rdPerson so num2 / num8 do not move camera
 	// when Keyboard & Mouse controls are used. To make it work better with III/VC, check for actual pad state instead

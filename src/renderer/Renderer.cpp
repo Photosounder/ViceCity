@@ -697,6 +697,9 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 				   ent->GetModelIndex() == MI_COACH ||
 				   TheCamera.m_bInATunnelAndABigVehicle ||
 				   direction == LOOKING_BEHIND && veh->pHandling->Flags & HANDLING_UNKNOWN){
+					// rouz edit
+					if (rouz.car_first_person)
+						return VIS_VISIBLE;
 					ent->bNoBrightHeadLights = true;
 					return VIS_OFFSCREEN;
 				}

@@ -2,6 +2,9 @@
 
 #include "Game.h"
 #include "PCSave.h"
+#ifdef START_FROM_LAST_SAVE
+#include "Date.h"
+#endif
 
 #define SLOT_COUNT (8)
 
@@ -35,6 +38,10 @@ extern char ValidSaveName[260];
 extern char LoadFileName[256];
 extern wchar SlotFileName[SLOT_COUNT][260];
 extern wchar SlotSaveDate[SLOT_COUNT][70];
+#ifdef START_FROM_LAST_SAVE
+extern bool b_SavesExist;
+extern CDate SlotDate[SLOT_COUNT];
+#endif
 extern int CheckSum;
 extern enum eLevelName m_LevelToLoad;
 extern int Slots[SLOT_COUNT];

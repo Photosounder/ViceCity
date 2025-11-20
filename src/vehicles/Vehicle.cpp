@@ -808,6 +808,13 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 	if(bAlreadySkidding)
 		adhesion *= pHandling->fTractionLoss;
 
+	// rouz edit
+	if (rouz.slippery)
+		if (wheelId == CARWHEEL_FRONT_LEFT || wheelId == CARWHEEL_FRONT_RIGHT)
+			adhesion *= 0.2f;
+		else
+			adhesion *= 0.19f;
+
 	// moving sideways
 	if(contactSpeedRight != 0.0f){
 		// exert opposing force

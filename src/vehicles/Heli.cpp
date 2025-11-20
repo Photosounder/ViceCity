@@ -400,6 +400,8 @@ CHeli::ProcessControl(void)
 	// Find angular speed
 	float targetAngularSpeed;
 	m_fAngularSpeed *= Pow(0.995f, CTimer::GetTimeStep());
+	if (fabsf(m_fAngularSpeed) > 0.1f)		// rouz edit, overly high angle would cause infinite loops
+		m_fAngularSpeed = copysignf(0.1f, m_fAngularSpeed);
 	if(fTargetDist < 8.0f)
 		targetAngularSpeed = 0.0f;
 	else{
@@ -813,6 +815,9 @@ CHeli::UpdateHelis(void)
 {
 	int i, j;
 
+	if (FindPlayerPed()==NULL)	// rouz edit
+		return;
+
 	// Spawn new police helis
 	int numHelisRequired = 
 #ifdef FIX_BUGS
@@ -832,8 +837,8 @@ CHeli::UpdateHelis(void)
 				pHelis[HELI_RANDOM0] = heli;
 			else if(pHelis[HELI_RANDOM1] == nil)
 				pHelis[HELI_RANDOM1] = heli;
-			else
-				assert(0 && "too many helis");
+			//else
+			//	assert(0 && "too many helis");	// rouz edit, no such thing a too many helis
 		}
 	}
 

@@ -650,6 +650,9 @@ public:
 	CVector m_vecSpotToGuard;
 	float m_radiusToGuard;
 
+	// rouz edit
+	CVector surf_rel_origin;
+
 	static void *operator new(size_t) throw();
 	static void *operator new(size_t, int) throw();
 	static void operator delete(void*, size_t) throw();

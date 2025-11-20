@@ -56,6 +56,10 @@ char ValidSaveName[260];
 char LoadFileName[256];
 wchar SlotFileName[SLOT_COUNT][260];
 wchar SlotSaveDate[SLOT_COUNT][70];
+#ifdef START_FROM_LAST_SAVE
+bool b_SavesExist;
+CDate SlotDate[SLOT_COUNT];
+#endif
 int CheckSum;
 eLevelName m_LevelToLoad;
 char SaveFileNameJustSaved[260];

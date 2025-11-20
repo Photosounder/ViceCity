@@ -568,7 +568,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 		* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult;
 	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
 
-	if (ms_nTotalPeds < maxPossiblePedsForArea || addCop) {
+	if (ms_nTotalPeds - rouz.driver_ped_count < rouz.ped_mul * maxPossiblePedsForArea || addCop) {
 		int decisionThreshold = CGeneral::GetRandomNumberInRange(0, 1000);
 		if (decisionThreshold < zoneInfo.copPedThreshold || addCop) {
 			pedTypeToAdd = PEDTYPE_COP;
@@ -1038,6 +1038,9 @@ CPopulation::TestSafeForRealObject(CDummyObject *dummy)
 void
 CPopulation::ManagePopulation(void)
 {
+	if (FindPlayerPed()==NULL)	// rouz edit
+		return;
+
 	int frameMod32 = CTimer::GetFrameCounter() & 31;
 	CVector playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
 

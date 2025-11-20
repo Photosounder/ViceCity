@@ -74,3 +74,10 @@ extern bool gbDrawVersionText;
 #ifdef NO_MOVIES
 extern bool gbNoMovies;
 #endif
+
+extern void rouz_veh_apply_controls_from_window(void *veh_ptr);
+extern void rouz_init();
+extern void rouz_update();
+extern float get_airflow_angle_of_attack(void *p_ptr, void *normal_vec_ptr);
+extern float get_horizon_angle_of_attack(void *p_ptr);
+extern int rouz_acceleration_cheats(void *ptr);

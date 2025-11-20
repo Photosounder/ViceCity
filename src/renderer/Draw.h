@@ -52,11 +52,7 @@ public:
 
 	static void SetFOV(float fov);
 	static float GetFOV(void) { return ms_fFOV; }
-#ifdef ASPECT_RATIO_SCALE
-	static float GetScaledFOV(void) { return ms_fScaledFOV; }
-#else
-	static float GetScaledFOV(void) { return ms_fFOV; }
-#endif
+	static float GetScaledFOV(void);
 
 	static float CalculateAspectRatio(void);
 #ifdef ASPECT_RATIO_SCALE

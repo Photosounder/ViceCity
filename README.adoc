@@ -1,0 +1,131 @@
+++++
+<p align="center">
+  <img width="400" src="./img/logo_edited.png">
+</p>
+++++
+
+My fork of reVC with my own edits. The original reVC is all about recreating the original game and adding a minimum of fixes, this fork is all about changing more things, adding cool things, and ruining both the reVC codebase and the original experience with nonsense. Let's see what I did.
+
+== What I fixed or added
+
+=== Fixes
+* I changed how the mouse cursor is handled and hidden (on Windows) so that running the game either in a window or full screen and switching to other programs works correctly. Also switching to other programs doesn't bring up the menu automatically, so the game can keep running in the background.
+* The FOV in reVC is actually too large with widescreen fixes, so I hardcoded a FOV reduction. It should probably depend on the aspect ratio, but I currently use a fixed ratio.
+* With one little addition I was able to have two different levels of camera closeness when on foot.
+* I changed the centering of the camera on foot to be lower so we can better see what we stand on.
+* I increased the far clip plane to avoid annoying visible clipping (mostly at high altitudes) and modified librw (only in the D3D9 renderer) so that the fog remains the same. More is needed to be done to improve how the game looks from high altitudes.
+* I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat.
+* I fixed ped spawning when there are many cars. Without my fix when calculating how many peds exist the game correctly avoids counting car passengers but does count drivers, so if there are many drivers then no ped on the street would spawn. I fixed that by counting the number of drivers myself and taking that into account when deciding to create new peds. I also added a multiplier to easily have fewer or more peds.
+* I also hated how while driving a car pressing the keys to pitch up or down would make the camera move up or down, so I've disabled the camera movement based on such keyboard inputs.
+* When falling from a height I was tired of the rolling animation always screwing up my landings so I replaced it with an animation of getting up from laying down, this way our ped stays in place.
+* I fixed dying police helicopters from spinning too fast and causing infinite loops.
+* I fixed wheel rotation values getting too high which caused them to stop spinning at high FPS or have their sizes glitch.
+
+=== Spawning and streaming
+* I added a clause that reduces the spawn distance when there are few cars already spawned, so that when you start a new game you'll have a few cars spawning near you.
+* I removed some checks to kind of max out the spawning of cars, so there are a lot more cars spawning.
+* I added debug messages to know why the random spawning of cars doesn't fully go through.
+* I disabled the unloading of many objects, because why should we constantly unload objects then reload them later? Doing so can bring the RAM usage up to about 700 MB, which of course in the 2020s is nothing.
+* I increased some limits to try to max out how many models of vehicles and peds can be loaded.
+
+=== Other
+* I disabled sliding when standing on a moving vehicle so that we don't constantly slide off when standing on a remote controlled car.
+* I disabled losing health from drowning. Hopefully I will eventually do more to make water more logical.
+* Some of the aforementioned changes are toggled by variables stored in a struct where I put all my original stuff, and they can be disabled in the `rouz_init()` function.
+* I incorporated https://github.com/k00lagin/[k00lagin]'s https://github.com/k00lagin/reVC-experiments/commit/fd9cc8638ae31edcf1ebe87856b161bbbc29c9b3[Resume menu button].
+* I made some glorious cheats.
+
+== My original cheats
+
+=== "G21" - Full throttle remote car bomb
+
+Enter a car or truck, type G21 like it's a normal cheat, and when you exit the vehicle it will be as if the gas pedal was pushed down while the steering wheel is held straight, as long as the car has an "abandoned" status (meaning no driver). When you press the `B` key on your keyboard (hardcoded) it will explode with the same power as a crashing helicopter. So you can aim your vehicle towards a target, exit it, see your vehicle ram that target and then detonate whenever you choose. If you pop some of the car's tires horror and hilarity ensue as the car spins madly and kills all pedestrians and motorcyclists in its unpredictable path.
+
+=== "G22" - Remote controlled car/bike
+
+Enter a car, truck or bike, type G22, and when you exit you can now control the vehicle remotely with the keys `IJKL` (also hardcoded). So you can drive this vehicle while driving another vehicle, or from a distance, or while you stand on top of it, so you can drive a vehicle and fire any weapon at the same time, which makes police chases have a fairly different dynamic. The game will not add to your wanted level if you crash into cops or run people over, however if you're standing on the vehicle then running pedestrians over might make you jump up in the air and off of your controlled vehicle. You can have both G21 and G22 above activated at the same time. In that case it will work as if G22 was activated, but the car will still explode if you press the `B` key.
+
+https://user-images.githubusercontent.com/7466235/124305969-188d6980-db66-11eb-90f0-37dd01bf179a.mp4
+++++
+<p align="center">
+  With the G22 cheat you can drive the car you're standing on and do stunts while shooting any gun.
+</p>
+++++
+
+=== "G31" - Screwy gravity
+
+Instead of being attracted to the Earth, all people and vehicles are now mysteriously attracted to a building containing an object a billionth the mass of the Earth. This allows you to orbit this building for as long as air drag allows you and eventually drive on every face of the building all while every other vehicle crashes into it and explodes. Uses an accurate physical simulation of gravity.
+
+=== "G32" - OUTTA MY WAY VICE FUCKING SHITS
+
+This time the gravity comes not from a building, but from your vehicle! Also it's actually antigravity, so everybody who gets close to you gets repelled. You can drive at full speed and never have to worry about hitting another car, as all will be forming a big high speed exploding mess in front of you.
+
+G31 and G32 do work together, their effects are combined.
+
+=== "G33" - Flying vehicle
+
+It mainly allows you to fly slowly or do tricks in the air. I'm quite proud of my flight simulator code, it has air density that decreases with altitude, both an horizontal and lateral simulated plane, a simulated tail that keeps your vehicle going with the flow laterally, forward thrust that decreases with speed and a way to turn that I quite like on motorbikes. Works great on motorbikes and is a bit clunky with cars, which is part of the charm, maybe. Also works together with G31 and G32. It also works in water which allows you to use any remote controlled vehicle as a boat.
+
+=== "G41" - Flip vehicle
+
+Makes your vehicle horizontal while conserving its heading and stops it from spinning if in mid-air. Also applies to your remote controlled vehicle.
+
+=== "G42" - Enter as passenger
+
+You'll enter the nearest car as passenger.
+
+=== "G43" - Sunbathing
+
+I'll probably change that later.
+
+=== "G44" - Fix and resurrect yourself and your vehicle
+
+This restores your health, the health and body of either the vehicle you're in or your remote controlled vehicle. It can also bring that vehicle back from the dead as well as bring you back from the dead whether you got shot, ran over, exploded or busted by the police. It currently cannot resurrect you if you died while driving. Also resurrection doesn't always work and can even get your game stuck on a grey screen because the ways of GTA are mysterious.
+
+=== "G45" - Teleport yourself onto the roof of your vehicle
+
+Works when you're inside the vehicle or if you have a remote-controlled vehicle.
+
+=== "G46" - Teleport yourself and your vehicle up 60 metres
+
+Useful for taking flight easily.
+
+=== "G510" to "G516" - Set wanted level
+
+Type G51 and the wanted level you want.
+
+=== "G520" to "G526" - Set maximum wanted level
+
+Type G52 and the maximum wanted level you want.
+
+=== "G611" - Remove weapons
+
+Removes all weapons.
+
+=== "G612" - Remove armour
+
+Removes armour.
+
+=== "G01" - Toggle traffic generation limit
+
+By default I have unlocked traffic generation so it's much denser than usual. This can be changed to a more normal limited generation which lowers traffic. Only affects vehicles, not peds.
+
+=== "G02" - Clean bike backflips
+
+I always wanted to be able to do clean backflips without being rotated upright halfway through the flip. This allows you to do that.
+
+=== "G03" - Can't fall off bike
+
+Now you can't fall off your bike for any reason, yay! Currently makes you bugged if you get jacked.
+
+=== "G04" - Lock doors
+
+=== "G05" - Prevent vehicle despawn
+
+== Restored cheats from the original
+
+=== "G11" - SEAWAYS
+
+=== "G12" - KANGAROO
+
+=== "G14" - GREENLIGHT

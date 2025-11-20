@@ -98,9 +98,10 @@ CSimpleModelInfo::SetAtomic(int n, RpAtomic *atomic)
 void
 CSimpleModelInfo::SetLodDistances(float *dist)
 {
-	m_lodDistances[0] = dist[0];
-	m_lodDistances[1] = dist[1];
-	m_lodDistances[2] = dist[2];
+	// rouz edit, distances can be multiplied
+	m_lodDistances[0] = dist[0]*rouz.lod_dist_scale;
+	m_lodDistances[1] = dist[1]*rouz.lod_dist_scale;
+	m_lodDistances[2] = dist[2]*rouz.lod_dist_scale;
 }
 
 void

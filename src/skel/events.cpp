@@ -189,6 +189,7 @@ HandleKeyDown(RsKeyStatus *keyStatus)
 			case rsPLUS:
 				{
 					CPad::TempKeyState.ADD = 255;
+					pad0->AddToPCCheatString('+');	// rouz edit to make + sent to the cheats function
 					break;
 				}
 				

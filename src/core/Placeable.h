@@ -3,9 +3,13 @@
 class CPlaceable
 {
 protected:
-	CMatrix m_matrix;
+	//CMatrix m_matrix;		// rouz edit
 
 public:
+	CMatrix m_matrix;		// rouz edit, I hate C++
+	xyz_t orig_pos;			// rouz edit, keep track of the original location for buildings and such
+	int orig_pos_set = 0;
+
 	// disable allocation
 	static void *operator new(size_t);
 

@@ -116,7 +116,16 @@ CCarCtrl::GenerateRandomCars()
 		CountDownToCarsAtStart = 2;
 		return;
 	}
-	if (NumRandomCars < 30){
+
+// rouz
+static int prev_num=-1;
+if (prev_num != NumRandomCars)
+{
+debug("NumRandomCars %d\n", NumRandomCars);
+prev_num = NumRandomCars;
+}
+
+	if (NumRandomCars < 3000){
 		if (CountDownToCarsAtStart == 0)
 			GenerateOneRandomCar();
 		else if (--CountDownToCarsAtStart == 0) {
@@ -130,6 +139,8 @@ CCarCtrl::GenerateRandomCars()
 		GenerateEmergencyServicesCar();
 }
 
+int debug_cargen=0;
+
 void
 CCarCtrl::GenerateOneRandomCar()
 {
@@ -141,10 +152,20 @@ CCarCtrl::GenerateOneRandomCar()
 	CZoneInfo zone;
 	CTheZones::GetZoneInfoForTimeOfDay(&vecTargetPos, &zone);
 	pPlayer->m_nTrafficMultiplier = pPlayer->m_fRoadDensity * zone.carDensity;
-	if (NumRandomCars >= pPlayer->m_nTrafficMultiplier * CarDensityMultiplier * CIniFile::CarNumberMultiplier)
+
+	// rouz edit: stops spawning
+	if (rouz.ghost_town)
 		return;
-	if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars + NumLawEnforcerCars + NumRandomCars >= MaxNumberOfCarsInUse)
+
+	// rouz edit: allows more traffic
+	if (rouz.unlock_traffic_gen==0)
+	{
+		if (NumRandomCars - rouz.veh_locked_count >= pPlayer->m_nTrafficMultiplier * CarDensityMultiplier * CIniFile::CarNumberMultiplier)
+			return;
+		if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars + NumLawEnforcerCars + NumRandomCars - rouz.veh_locked_count >= MaxNumberOfCarsInUse)
 		return;
+	}
+
 	CWanted* pWanted = pPlayer->m_pPed->m_pWanted;
 	int carClass;
 	int carModel;
@@ -290,6 +311,8 @@ CCarCtrl::GenerateOneRandomCar()
 			break;
 		}
 	}
+
+if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberInRange(0.f, 1.f))) + 0.01f;	// rouz edit: generate cars at close range if there are too few cars (like when starting anew)
 	if (!ThePaths.GenerateCarCreationCoors(vecTargetPos.x, vecTargetPos.y, frontX, frontY,
 		preferredDistance, angleLimit, invertAngleLimitTest, &spawnPosition, &curNodeId, &nextNodeId,
 		&positionBetweenNodes, carClass == COPS && pWanted->GetWantedLevel() >= 1))
@@ -298,7 +321,10 @@ CCarCtrl::GenerateOneRandomCar()
 	CPathNode* pNextNode = &ThePaths.m_pathNodes[nextNodeId];
 	bool bBoatGenerated = false;
 	if ((CGeneral::GetRandomNumber() & 0xF) > Min(pCurNode->spawnRate, pNextNode->spawnRate))
+	{
+		if (debug_cargen) debug("Car gen stopped because spawnRate = min(%d, %d)\n", pCurNode->spawnRate, pNextNode->spawnRate);
 		return;
+	}
 	if (pCurNode->bWaterPath) {
 		bBoatGenerated = true;
 		if (carClass == COPS) {
@@ -326,11 +352,18 @@ CCarCtrl::GenerateOneRandomCar()
 	int16 colliding;
 	CWorld::FindObjectsKindaColliding(spawnPosition, bBoatGenerated ? 40.0f : 10.0f, true, &colliding, 2, nil, false, true, true, false, false);
 	if (colliding)
+	{
+		if (debug_cargen) debug("Car gen stopped because colliding\n");
 		/* If something is already present in spawn position, do not create vehicle*/
 		return;
+	}
 	if (!bBoatGenerated && !ThePaths.TestCoorsCloseness(vecTargetPos, false, spawnPosition))
+	{
+		if (debug_cargen) debug("Car gen stopped because TestCoorsCloseness\n");
+		//pVehicle->GetModelInfo()->SetVehicleColour(68, 68);
 		/* Testing if spawn position can reach target position via valid path. */
 		return;
+	}
 	int16 idInNode = 0;
 
 	while (idInNode < pCurNode->numLinks &&
@@ -341,8 +374,11 @@ CCarCtrl::GenerateOneRandomCar()
 	int16 lanesOnCurrentRoad = pPathLink->pathNodeIndex == nextNodeId ? pPathLink->numLeftLanes : pPathLink->numRightLanes;
 	CVehicleModelInfo* pModelInfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(carModel);
 	if (lanesOnCurrentRoad == 0)
+	{
+		if (debug_cargen) debug("Car gen stopped because lanesOnCurrentRoad\n");
 		/* Not spawning vehicle if road is one way and intended direction is opposide to that way. */
 		return;
+	}
 	CVehicle* pVehicle;
 	if (CModelInfo::IsBoatModel(carModel))
 		pVehicle = new CBoat(carModel, RANDOM_VEHICLE);
@@ -411,6 +447,7 @@ CCarCtrl::GenerateOneRandomCar()
 		positionBetweenNodes = Min(1.0f - carLength / distanceBetweenNodes, Max(carLength / distanceBetweenNodes, positionBetweenNodes));
 	pVehicle->AutoPilot.m_nNextDirection = (curNodeId >= nextNodeId) ? 1 : -1;
 	if (pCurNode->numLinks == 1){
+		if (debug_cargen) debug("Car gen stopped because pCurNode->numLinks == 1\n");
 		/* Do not create vehicle if there is nowhere to go. */
 		delete pVehicle;
 		return;
@@ -561,6 +598,7 @@ CCarCtrl::GenerateOneRandomCar()
 		}
 	}
 	if (groundZ == INFINITE_Z || ABS(groundZ - finalPosition.z) > 7.0f) {
+		if (debug_cargen) debug("Car gen stopped because no ground (groundZ = %.2f, finalPosition.z = %.2f)\n", groundZ, finalPosition.z);
 		/* Failed to find ground or too far from expected position. */
 		delete pVehicle;
 		return;
@@ -591,6 +629,7 @@ CCarCtrl::GenerateOneRandomCar()
 	CVisibilityPlugins::SetClumpAlpha(pVehicle->GetClump(), 0);
 	if (!pVehicle->GetIsOnScreen()){
 		if ((vecTargetPos - pVehicle->GetPosition()).Magnitude2D() > OFFSCREEN_DESPAWN_RANGE * (pVehicle->bExtendedRange ? EXTENDED_RANGE_DESPAWN_MULTIPLIER : 1.0f)) {
+			if (debug_cargen) debug("Car gen stopped because car too far offscreen\n");
 			/* Too far away cars that are not visible aren't needed. */
 			delete pVehicle;
 			return;
@@ -598,10 +637,12 @@ CCarCtrl::GenerateOneRandomCar()
 	}else{
 		if ((vecTargetPos - pVehicle->GetPosition()).Magnitude2D() > TheCamera.GenerationDistMultiplier * (pVehicle->bExtendedRange ? EXTENDED_RANGE_DESPAWN_MULTIPLIER : 1.0f) * ONSCREEN_DESPAWN_RANGE ||
 			(vecTargetPos - pVehicle->GetPosition()).Magnitude2D() < TheCamera.GenerationDistMultiplier * MINIMAL_DISTANCE_TO_SPAWN_ONSCREEN) {
+			if (debug_cargen) debug("Car gen stopped because car too far on screen\n");
 			delete pVehicle;
 			return;
 		}
 		if ((TheCamera.GetPosition() - pVehicle->GetPosition()).Magnitude2D() < 82.5f * TheCamera.GenerationDistMultiplier || bTopDownCamera) {
+			if (debug_cargen) debug("Car gen stopped because car too far from camera (%.2f)\n", (TheCamera.GetPosition() - pVehicle->GetPosition()).Magnitude2D());
 			delete pVehicle;
 			return;
 		}
@@ -615,17 +656,20 @@ CCarCtrl::GenerateOneRandomCar()
 	if (testForCollision){
 		CWorld::FindObjectsKindaColliding(pVehicle->GetPosition(), radiusToTest + 20.0f, true, &colliding, 2, nil, false, true, false, false, false);
 		if (colliding){
+			if (debug_cargen) debug("Car gen stopped because extended model sphere colliding\n");
 			delete pVehicle;
 			return;
 		}
 	}
 	CWorld::FindObjectsKindaColliding(pVehicle->GetPosition(), radiusToTest, true, &colliding, 2, nil, false, true, false, false, false);
 	if (colliding){
+		if (debug_cargen) debug("Car gen stopped because model sphere colliding\n");
 		delete pVehicle;
 		return;
 	}
 	if (speedDifferenceWithTarget.x * distanceToTarget.x +
 		speedDifferenceWithTarget.y * distanceToTarget.y >= 0.0f){
+		if (debug_cargen) debug("Car gen stopped because speed difference (%.2f)\n", speedDifferenceWithTarget.x * distanceToTarget.x + speedDifferenceWithTarget.y * distanceToTarget.y);
 		delete pVehicle;
 		return;
 	}
@@ -3175,7 +3219,7 @@ void CCarCtrl::GenerateEmergencyServicesCar(void)
 	if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars +
 		NumLawEnforcerCars + NumRandomCars > MaxNumberOfCarsInUse)
 		return;
-	if (NumAmbulancesOnDuty == 0){
+	if (NumAmbulancesOnDuty == 0 && rouz.no_ambulance == 0){
 		if (gAccidentManager.CountActiveAccidents() < 2){
 			if (CStreaming::HasModelLoaded(MI_AMBULAN))
 				CStreaming::SetModelIsDeletable(MI_MEDIC);
