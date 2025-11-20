@@ -115,7 +115,7 @@ G31 and G32 do work together, their effects are combined.
 
 ==== G33 - Flying vehicle
 
-It mainly allows you to fly in a car, bike or boat. I'm quite proud of my flight simulator code, it has air density that decreases with altitude, both an horizontal and lateral simulated plane, a simulated tail that keeps your vehicle going with the flow laterally, forward thrust that decreases with speed and a way to turn that I quite like on motorbikes. Works great on motorbikes and is a bit clunky with cars, which is part of the charm, maybe. Also works together with G31 and G32. It also works in water which allows you to use any remote controlled vehicle as a boat. Flying boats behave weirdly above water.
+It mainly allows you to fly in a car, bike or boat. I'm quite proud of my flight simulator code, it has air density that decreases with altitude, both an horizontal and lateral simulated plane (plus a smaller plane in the third axis for front drag), a simulated tail that keeps your vehicle going with the flow laterally and forward thrust that decreases with speed. Stall isn't simulated though so vehicles fall down like a feather. Also works together with G31 and G32. It also works in water which allows you to use any remote controlled vehicle as a boat. Flying boats behave weirdly above water.
 
 ++++
 <p align="center">
