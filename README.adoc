@@ -310,6 +310,12 @@ The most essential combination of cheats, flip your burning car with G41 and fix
 
 ==== G22 + G33 + G45 - Sail on a car
 
+++++
+<p align="center">
+  <img src="./img/sailing.png">
+</p>
+++++
+
 Cars that fell into water normally float uselessly. But now by enabling remote control (G22) and standing on top of your car (G45) the flight mode (G33) can be used to slowly thrust your car as it floats on water, so you can use this to sail all around the map. Naturally you can also use this to pick a fight with other boats by shooting at them with your guns and even jump onto other boats to commandeer them.
 
 ==== G31 + G32 - Fight gravity on the road
@@ -340,13 +346,13 @@ G23 sets your car on fire which gives it 5 seconds until it explodes, while G21 
 
 ==== G43 + G06 + G14 + G47 - Map the roads
 
-Jump on a car driven by an NPC, glue yourself to it with G43, make sure other cars don't get in the way with G06, get rid of red lights with G14 and just to be safe turn on regenerative health with G47 if case riding on top of the car gets you hurt, and voilà, the car will drive on random roads and given enough time (which can be helped by setting the time scale to the max in the epic hack window) you will obtain a good map of the roads of Vice City in the hack window.
-
 ++++
 <p align="center">
   <img src="./img/map_the_roads.png">
 </p>
 ++++
+
+Jump on a car driven by an NPC, glue yourself to it with G43, make sure other cars don't get in the way with G06, get rid of red lights with G14 and just to be safe turn on regenerative health with G47 if case riding on top of the car gets you hurt, and voilà, the car will drive on random roads and given enough time (which can be helped by setting the time scale to the max in the epic hack window) you will obtain a good map of the roads of Vice City in the hack window.
 
 == Epic hack window
 
