@@ -19,6 +19,13 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I changed the centering of the camera on foot to be lower so we can better see what we stand on.
 * I increased the far clip plane to avoid annoying visible clipping (mostly at high altitudes) and modified librw (only in the D3D9 renderer) so that the fog remains the same. More is needed to be done to improve how the game looks from high altitudes.
 * I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat.
+
+++++
+<p align="center">
+  <img src="./img/rocket.png">
+</p>
+++++
+
 * I fixed ped spawning when there are many cars. Without my fix when calculating how many peds exist the game correctly avoids counting car passengers but does count drivers, so if there are many drivers then no ped on the street would spawn. I fixed that by counting the number of drivers myself and taking that into account when deciding to create new peds. I also added a multiplier to easily have fewer or more peds.
 * I also hated how while driving a car pressing the keys to pitch up or down would make the camera move up or down, so I've disabled the camera movement based on such keyboard inputs.
 * When falling from a height I was tired of the rolling animation always screwing up my landings so I replaced it with an animation of getting up from laying down, this way our ped stays in place.
@@ -66,6 +73,12 @@ In flying mode (G33) `U` and `O` are also for steering left and right and `;` an
 
 ==== G23: Car gets on fire
 
+++++
+<p align="center">
+  <img src="./img/G23.png">
+</p>
+++++
+
 Sets the car's damage to just enough so that it burns. Naturally it will explode after 5 seconds, unless you fix it (G44) or use G23 again (which happens silently).
 
 ==== G30 - Physics for all
@@ -74,17 +87,35 @@ All vehicles and peds are affected by physics. This is useful in slippery tires 
 
 ==== G31 - Screwy gravity
 
+++++
+<p align="center">
+  <img src="./img/G31.png">
+</p>
+++++
+
 Instead of being attracted to the Earth, all people and vehicles are now mysteriously attracted to a building containing an object a billionth the mass of the Earth. This allows you to orbit this building for as long as air drag allows you and eventually drive on every face of the building all while every other vehicle crashes into it and explodes. Uses an accurate physical simulation of gravity.
 
 ==== G32 - OUTTA MY WAY VICE FUCKING SHITS
 
 This time the gravity comes not from a building, but from your vehicle! Also it's actually antigravity, so everybody who gets close to you gets repelled. You can drive at full speed and never have to worry about hitting another car, as all will be forming a big high speed exploding mess in front of you.
 
+++++
+<p align="center">
+  <img src="./img/G32.png">
+</p>
+++++
+
 G31 and G32 do work together, their effects are combined.
 
 ==== G33 - Flying vehicle
 
 It mainly allows you to fly in a car, bike or boat. I'm quite proud of my flight simulator code, it has air density that decreases with altitude, both an horizontal and lateral simulated plane, a simulated tail that keeps your vehicle going with the flow laterally, forward thrust that decreases with speed and a way to turn that I quite like on motorbikes. Works great on motorbikes and is a bit clunky with cars, which is part of the charm, maybe. Also works together with G31 and G32. It also works in water which allows you to use any remote controlled vehicle as a boat. Flying boats behave weirdly above water.
+
+++++
+<p align="center">
+  <img src="./img/G33.png">
+</p>
+++++
 
 See my explanation of the atmosphere and flight thrust windows for how flight characteristics can be controlled.
 
@@ -102,6 +133,12 @@ I really thought to myself "driving normally is boring, I'd rather have Tony Haw
 - `Num4` + `A` or `D`: Spin left or right like a kickflip or heelflip.
 - `Num4` + `S` or `W`: Backflip or frontflip.
 
+++++
+<p align="center">
+  <img src="./img/G35.png">
+</p>
+++++
+
 A sort of ollie is best achieved by a jump quickly followed by a backflip which will make the tail of the car hit the ground and then later a frontflip to level the car. This allows jumping higher than a normal flat jump. Boosting with `Num0` can also help with jumping over taller obstacles, and with boost and flips you can control your car kind of like a rocket.
 
 ==== G36 - Slippery tires
@@ -114,11 +151,23 @@ Makes your vehicle horizontal while conserving its heading and stops it from spi
 
 ==== G42 - Enter as passenger
 
+++++
+<p align="center">
+  <img src="./img/G42.png">
+</p>
+++++
+
 You'll enter the nearest car as passenger. Seems to only work if your vehicle is remote controlled (G22).
 
 ==== G43 - Glue to vehicle
 
 Glue yourself to the car you're standing on. You'll be hovering at a fixed height above your vehicle's centre and this can be a problem when flying because the car can hit your body if you don't fly level.
+
+++++
+<p align="center">
+  <img src="./img/G43.png">
+</p>
+++++
 
 ==== G44 - Fix and resurrect yourself and your vehicle
 
@@ -156,13 +205,25 @@ Removes all your weapons.
 
 Removes your armour.
 
-==== G01 - Toggle traffic generation limit
+==== G01 - Unlimited traffic generation
 
-By default I have unlocked traffic generation so it's much denser than usual. This can be changed to a more normal limited generation which lowers traffic. Only affects vehicles, not peds.
+++++
+<p align="center">
+  <img src="./img/G01.png">
+</p>
+++++
+
+This unlocks traffic generation so it's much denser than usual by removing the usual limits on how many random vehicles can be spawned. Only affects vehicles, not peds.
 
 ==== G02 - Clean bike backflips
 
 I always wanted to be able to do clean backflips without being rotated upright halfway through the flip. This allows you to do that. It has the side effect that if your wheels aren't on the ground you need to somehow get them on the ground again to restore your balance and drive normally again.
+
+++++
+<p align="center">
+  <img src="./img/G02.png">
+</p>
+++++
 
 ==== G03 - Can't fall off bike
 
@@ -172,13 +233,25 @@ Now you can't fall off your bike for any reason, yay! Currently makes you bugged
 
 Lock car doors so no one can remove you from the car. But then you also can't get out unless you unlock the doors also with G04. You can use G45 to teleport yourself on top of the car. Peds inside the car can still get out though, this doesn't lock them in.
 
+++++
+<p align="center">
+  <img src="./img/G04.png">
+</p>
+++++
+
 ==== G05 - Prevent vehicle despawn
 
 This stops the car from disappearing if you put it somewhere and then go far away. But if you set it as your remote controlled car and you go far away it will fall through the ground and disappear.
 
 ==== G06 - Ghost town
 
-Almost no car appears on the road, peds still appear normally.
+Almost no car appears on the roads, peds still appear normally.
+
+++++
+<p align="center">
+  <img src="./img/G06.png">
+</p>
+++++
 
 ==== G07_ - Set the weather
 
@@ -191,6 +264,12 @@ Almost no car appears on the road, peds still appear normally.
 
 ==== G11 - SEAWAYS
 
+++++
+<p align="center">
+  <img src="./img/G11.png">
+</p>
+++++
+
 Drive your car on water.
 
 ==== G12 - KANGAROO
@@ -199,7 +278,13 @@ Jump super high on foot.
 
 ==== G13 - Riot mode (FIGHTFIGHTFIGHT + OURGODGIVENRIGHTTOBEARARMS, I think)
 
-Peds (pedestrians) get weapons and attack you and cars drive dangerously. Cannot be toggled off.
+Pedestrians get weapons and attack you and cars drive dangerously. Cannot be toggled off.
+
+++++
+<p align="center">
+  <img src="./img/G13.png">
+</p>
+++++
 
 ==== G14 - GREENLIGHT
 
@@ -208,6 +293,12 @@ Traffic lights are always green.
 ==== G15 - Peds attack paramedics
 
 Peds get guns and attack cops and paramedics. Well, they don't do a very good job of attacking cops, not sure why, but they do a good job of attacking paramedics.
+
+++++
+<p align="center">
+  <img src="./img/G15.png">
+</p>
+++++
 
 == Cool cheat combinations
 
