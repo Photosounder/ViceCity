@@ -15,9 +15,15 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 === Fixes
 * I changed how the mouse cursor is handled and hidden (on Windows) so that running the game either in a window or full screen and switching to other programs works correctly. Also switching to other programs doesn't bring up the menu automatically, so the game can keep running in the background.
 * The FOV in reVC is actually too large with widescreen fixes, so I hardcoded a FOV reduction. It should probably depend on the aspect ratio, but I currently use a fixed ratio.
-* With one little addition I was able to have two different levels of camera closeness when on foot.
-* I changed the centering of the camera on foot to be lower so we can better see what we stand on.
+
+++++
+<p align="center">
+  <img src="./img/distance.png">
+</p>
+++++
 * I increased the far clip plane to avoid annoying visible clipping (mostly at high altitudes) and modified librw (only in the D3D9 renderer) so that the fog remains the same. More is needed to be done to improve how the game looks from high altitudes.
+* I changed the centering of the camera on foot to be lower so we can better see what we stand on.
+* With one little addition I was able to have two different levels of camera closeness when on foot.
 * I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat.
 
 ++++
