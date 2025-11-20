@@ -418,4 +418,4 @@ By default the air density and thrust are configured so that cars fly like a sma
 
 You need a normal Windows install of GTA Vice City, then download my latest release from the https://github.com/Photosounder/ViceCity/releases[Releases section] and put `reVC.exe` in your GTA Vice City folder and launch it.
 
-If you want to compile it yourself you'll need to put my library https://github.com/Photosounder/rouziclib[rouziclib] somewhere and make sure the compiler finds it. For me it's in `D:\VC_libs\include`, you can see that if you open `build/reVC.vcxproj` with a text editor.
+If you want to compile it yourself you'll need to put my library https://github.com/Photosounder/rouziclib[rouziclib] somewhere and make sure the compiler finds it.
