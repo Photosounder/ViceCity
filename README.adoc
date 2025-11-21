@@ -27,6 +27,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
   <img src="./img/distance.png">
 </p>
 ++++
+
 * I increased the far clip plane to avoid annoying visible clipping (mostly at high altitudes) and modified librw (only in the D3D9 renderer) so that the fog remains the same. More is needed to be done to improve how the game looks from high altitudes.
 * I changed the centering of the camera on foot to be lower so we can better see what we stand on.
 * With one little addition I was able to have two different levels of camera closeness when on foot.
@@ -52,6 +53,14 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I increased some limits to try to max out how many models of vehicles and peds can be loaded.
 
 === Other
+
+++++
+<p align="center">
+  <img src="./img/out_of_bounds.png">
+</p>
+++++
+
+* I disabled the invisible box around the map that would make you bounce in the other direction, so now you can sail or fly much further away, far enough for water to become invisible and for the game to crash.
 * I disabled sliding when standing on a moving vehicle so that we don't constantly slide off when standing on a remote controlled car.
 * I disabled losing health from drowning as a ped (but not as a driver). Hopefully I will eventually do more to make water more logical.
 * Some of the aforementioned changes are toggled by variables stored in a struct where I put all my original stuff, and they can be disabled in the `rouz_init()` function.
