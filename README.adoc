@@ -414,7 +414,7 @@ Most of the time, to avoid driving at a mad speed, you want "Gas" to be around 0
 "MIDI control" is made to drive using physical knobs from a MIDI keyboard, which is quite interesting to use.
 
 ifdef::env-github[]
-image:https://img.youtube.com/vi/D67jxy7AHV8/maxresdefault.jpg[link=https://youtu.be/D67jxy7AHV8]
+image:./img/midi_yt.png[link=https://youtu.be/D67jxy7AHV8]
 endif::[]
 
 ifndef::env-github[]
