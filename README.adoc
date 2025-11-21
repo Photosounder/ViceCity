@@ -178,7 +178,7 @@ Makes your vehicle horizontal while conserving its heading and stops it from spi
 </p>
 ++++
 
-You'll enter the nearest car as passenger. Seems to only work if your vehicle is remote controlled (G22).
+You'll enter the nearest car as passenger. Seems to only work if your vehicle is remote controlled (G22). Then you can drive/fly around with the `IJKL` controls, with the added benefit that the engine will be quiet.
 
 ==== G43 - Glue to vehicle
 
