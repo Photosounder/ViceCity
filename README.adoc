@@ -144,9 +144,9 @@ See my explanation of the atmosphere and flight thrust windows for how flight ch
 
 Makes gravity be only 70% of normal gravity.
 
-==== G35 - Tony Hawk Pro Skater mode
+==== G35 - Tony Hawk's Pro Skater mode
 
-I really thought to myself "driving normally is boring, I'd rather have Tony Hawk Pro Skater but with cars instead of a skateboard". Requires the use of a num keypad, so laptop users probably can't enjoy that one.
+I really thought to myself "driving normally is boring, I'd rather have Tony Hawk's Pro Skater but with cars instead of a skateboard". Requires the use of a num keypad, so laptop users probably can't enjoy that one.
 
 - `Num0`: Boost forward speed by about 20 km/h.
 - `Num5`: Jump as soon as enough wheels touch the ground.
