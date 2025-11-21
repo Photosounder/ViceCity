@@ -413,6 +413,8 @@ Most of the time, to avoid driving at a mad speed, you want "Gas" to be around 0
 
 "MIDI control" is made to drive using physical knobs from a MIDI keyboard, which is quite interesting to use.
 
+video::D67jxy7AHV8[youtube]
+
 === Atmosphere and flight thrust windows
 
 The formula for air density as a function of altitude, `exp(-max(0, z-26) / 1200)`, essentially an exponential function with a scale and a limit for maximum density, is defined in my "epic hack window" in a window north of the main view, which can be accessed by entering the zoom-scroll mode by clicking the middle mouse buttom, zooming out and moving north. The default formula is fairly realistic except in how it scales with altitude, except that a more realistic formula would replace the `1200` with about 10000 to make the atmosphere scaled more normally, but that would be boring in the game to flight so far above the map that it disappears before feeling the effects of low air denstiy.
