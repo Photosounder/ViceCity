@@ -8,6 +8,12 @@
 
 My fork of reVC with my own edits. The original reVC is all about recreating the original game and adding a minimum of fixes, this fork is all about changing more things, adding cool things, and ruining both the reVC codebase and the original experience with nonsense. Let's see what I did.
 
+++++
+<p align="center">
+  <img src="./img/fpv.png">
+</p>
+++++
+
 == What I fixed or added
 
 Most of my modifications are indicated by a `// rouz edit` comment in the code. You can see the bulk of my modifications in https://github.com/Photosounder/ViceCity/commit/d5103c6eca84606d002f22365364a8b4e21fdd66[this single commit].
