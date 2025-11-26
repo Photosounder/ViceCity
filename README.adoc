@@ -92,7 +92,7 @@ https://user-images.githubusercontent.com/7466235/124305969-188d6980-db66-11eb-9
 
 In flying mode (G33) `U` and `O` are also for steering left and right and `;` and `P` are for pitching up and down.
 
-==== G23: Car gets on fire
+==== G23 - Car gets on fire
 
 ++++
 <p align="center">
