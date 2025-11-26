@@ -355,6 +355,10 @@ G36 and G30 make all cars drift around, and G35 enables jumping, so that when yo
 
 Adding G515 (5 star wanted level) is an interesting variant because FBI cars will drift towards you at high speed, and with G35 you can jump and/or tilt your car backwards so that when FBI cars hit you it throws you high in the air, and then by doing flips (also with G35) do cool tricks to land on your wheels.
 
+=== G32 + G01 + G03 - Ride fast unimpeded while everything explodes around you.
+
+G32 activates vehicle antigravity, G01 maximises the number of vehicles on the road, and if you're on a bike, G03 prevents you from falling off. Take a motorbike and go fast without worrying about traffic because traffic is flying off and exploding in front of you. Very relaxing.
+
 ==== G13 + G47 + G06 + G53 + G520 - Survive the madness
 
 G13 makes the peds armed and violent towards each other and you, G47 is regenerative health so that you have to manage your health (avoid fights when close to death to recover), G06 removes cars so that you will be alone against the peds with no easy way out, G53 removes ambulances so that they won't bother you (maybe this could be replaced by G15 to make peds attack paramedics instead, but then they won't be as aggressive towards you), and G520 means the cops won't bother you as you kill your way out of this mess.
