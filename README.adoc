@@ -66,6 +66,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * Some of the aforementioned changes are toggled by variables stored in a struct where I put all my original stuff, and they can be disabled in the `rouz_init()` function.
 * I incorporated https://github.com/k00lagin/[k00lagin]'s https://github.com/k00lagin/reVC-experiments/commit/fd9cc8638ae31edcf1ebe87856b161bbbc29c9b3[Resume menu button].
 * I made jumping on foot 25% higher and 25% faster (in terms of forward speed) by default.
+* You can now exit cars at any speed instantly (done in `CVehicle::CanPedExitCar()` and the other two functions below it) by just getting out and closing the door (unless you're going over 80 km/h in which case you roll out), because it's funny.
 * I made some glorious cheats.
 
 == Cheats

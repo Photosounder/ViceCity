@@ -1730,6 +1730,7 @@ CVehicle::CanPedEnterCar(void)
 bool
 CVehicle::CanPedExitCar(bool jumpExit)
 {
+	if (m_vecMoveSpeed.MagnitudeSqr() < 0.2f) return true; // rouz edit, speed threshold is 80 km/h
 	CVector up = GetUp();
 	if(up.z > 0.1f || up.z < -0.1f){
 		if (IsBoat())
@@ -1761,6 +1762,7 @@ CVehicle::CanPedExitCar(bool jumpExit)
 bool
 CVehicle::CanPedJumpOutCar(void)
 {
+	return true;	// rouz edit
 	if(GetUp().z < 0.3f)
 		return false;
 	float speed = m_vecMoveSpeed.MagnitudeSqr();
@@ -1770,6 +1772,7 @@ CVehicle::CanPedJumpOutCar(void)
 bool
 CVehicle::CanPedJumpOffBike(void)
 {
+	return true; // rouz edit
 	if(pPassengers[0])
 		return false;
 	return m_vecMoveSpeed.MagnitudeSqr() < 0.07f ? false : true;
