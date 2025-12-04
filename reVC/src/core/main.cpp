@@ -3063,8 +3063,8 @@ void rouz_init()
 	rouz.thrust_power = 0.004;		// thrust power
 	rouz.zero_thrust_speed_kt = 250.;	// speed in knots at which zero thrust is produced
 	rouz.thrust_in_vacuum = 0.;		// ratio of thrust in vacuum
-	rouz.ped_jump_vert = 1.f;
-	rouz.ped_jump_fwd = 1.f;
+	rouz.ped_jump_vert = 1.25f;
+	rouz.ped_jump_fwd = 1.25f;
 
 	rouz.cam_fov = NAN;
 	rouz.cam_near_z = NAN;

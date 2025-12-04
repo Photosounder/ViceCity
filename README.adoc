@@ -65,6 +65,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I disabled losing health from drowning as a ped (but not as a driver). Hopefully I will eventually do more to make water more logical.
 * Some of the aforementioned changes are toggled by variables stored in a struct where I put all my original stuff, and they can be disabled in the `rouz_init()` function.
 * I incorporated https://github.com/k00lagin/[k00lagin]'s https://github.com/k00lagin/reVC-experiments/commit/fd9cc8638ae31edcf1ebe87856b161bbbc29c9b3[Resume menu button].
+* I made jumping on foot 25% higher and 25% faster (in terms of forward speed) by default.
 * I made some glorious cheats.
 
 == Cheats
