@@ -67,6 +67,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I incorporated https://github.com/k00lagin/[k00lagin]'s https://github.com/k00lagin/reVC-experiments/commit/fd9cc8638ae31edcf1ebe87856b161bbbc29c9b3[Resume menu button].
 * I made jumping on foot 25% higher and 25% faster (in terms of forward speed) by default.
 * You can now exit cars at any speed instantly (done in `CVehicle::CanPedExitCar()` and the other two functions below it) by just getting out and closing the door (unless you're going over 80 km/h in which case you roll out), because it's funny.
+* I changed the camera transition when exiting a car so that it doesn't make you look at the car but rather makes you look in the same direction you were already looking.
 * I made some glorious cheats.
 
 == Cheats
@@ -80,6 +81,8 @@ Also I created some much cooler cheats than the original game had.
 ==== G21 - Full throttle remote car bomb
 
 Enter a car or truck, type G21 like it's a normal cheat, and when you exit the vehicle it will be as if the gas pedal was pushed down while the steering wheel is held straight, as long as the car has an "abandoned" status (meaning no driver). When you press the `B` key on your keyboard (hardcoded) it will explode with the same power as a crashing helicopter. So you can aim your vehicle towards a target, exit it, see your vehicle ram that target and then detonate whenever you choose. If you pop some of the car's tires horror and hilarity ensue as the car spins madly and kills all pedestrians and motorcyclists in its unpredictable path.
+
+Since I added instant car exit (not a cheat, it's there by default) it's even more practical as now you can bail out quickly and detonate.
 
 ==== G22 - Remote controlled car/bike
 

@@ -312,7 +312,7 @@ CCamera::Process(void)
 
 	// Stop transition when it's done
 	if(m_uiTransitionState != 0){
-		if(CTimer::GetTimeInMilliseconds() > m_uiTransitionDuration+m_uiTimeTransitionStart){
+		if(CTimer::GetTimeInMilliseconds() > m_uiTransitionDuration + m_uiTimeTransitionStart || 0 /*rouz edit*/) {
 			m_uiTransitionState = 0;
 			m_vecDoingSpecialInterPolation = false;
 			m_bWaitForInterpolToFinish = false;
@@ -2379,7 +2379,7 @@ CCamera::StartTransition(int16 newMode)
 						betaOffset = DEGTORAD(95.0f);
 				}
 			}
-			Cams[ActiveCam].m_fTransitionBeta = targetBeta + betaOffset + PI;
+			Cams[ActiveCam].m_fTransitionBeta = camBeta + PI;//targetBeta + betaOffset + PI;	// rouz edit
 		}
 		break;
 
