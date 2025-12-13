@@ -1994,7 +1994,7 @@ void CPad::AddToPCCheatString(char c)
 		}
 	}
 
-	// rouz teleport veh up 60 metres
+	// rouz teleport veh up 40 metres
 	// "G46"
 	if (!_CHEATCMP("64G"))
 	{
@@ -2007,7 +2007,7 @@ void CPad::AddToPCCheatString(char c)
 		{
 			veh->SetPosition(veh->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
 			ped->Teleport(ped->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
-			CHud::SetHelpMessage((wchar *) L"Teleport up 60 metres", true);
+			CHud::SetHelpMessage((wchar *) L"Teleport up 40 metres", true);
 		}
 	}
 

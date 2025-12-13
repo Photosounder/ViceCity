@@ -203,7 +203,7 @@ This restores your health, the health and body of either the vehicle you're in o
 
 Works when you're inside the vehicle or if you have a remote-controlled vehicle.
 
-==== G46 - Teleport yourself and your vehicle up 60 metres
+==== G46 - Teleport yourself and your vehicle up 40 metres
 
 Useful for taking flight easily or getting out of a bad place. If you're outside of a vehicle but have a remote controlled vehicle (G22) then both the car and you as a ped will be teleported up.
 
