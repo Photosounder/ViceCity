@@ -18,22 +18,18 @@ InitMemoryMgr(void)
 #endif
 }
 
-
-RwMemoryFunctions memFuncs = {
-	MemoryMgrMalloc,
-	MemoryMgrFree,
-	MemoryMgrRealloc,
-	MemoryMgrCalloc
-};
-
-#ifdef USE_CUSTOM_ALLOCATOR
+//#ifdef USE_CUSTOM_ALLOCATOR
 // game seems to be using heap directly here, but this is nicer
-void *operator new(size_t sz) throw() { return MemoryMgrMalloc(sz); }
+void *operator new(size_t sz) throw()
+{
+	return MemoryMgrMalloc(sz);
+}
 void *operator new[](size_t sz) throw() { return MemoryMgrMalloc(sz); }
 void operator delete(void *ptr) throw() { MemoryMgrFree(ptr); }
 void operator delete[](void *ptr) throw() { MemoryMgrFree(ptr); }
-#endif
+//#endif
 
+#undef MemoryMgrMalloc // rouz edit
 void*
 MemoryMgrMalloc(size_t size)
 {
@@ -47,6 +43,7 @@ MemoryMgrMalloc(size_t size)
 	return mem;
 }
 
+#undef MemoryMgrRealloc // rouz edit
 void*
 MemoryMgrRealloc(void *ptr, size_t size)
 {
@@ -60,6 +57,7 @@ MemoryMgrRealloc(void *ptr, size_t size)
 	return mem;
 }
 
+#undef MemoryMgrCalloc // rouz edit
 void*
 MemoryMgrCalloc(size_t num, size_t size)
 {
@@ -76,6 +74,7 @@ MemoryMgrCalloc(size_t num, size_t size)
 	return mem;
 }
 
+#undef MemoryMgrFree // rouz edit
 void
 MemoryMgrFree(void *ptr)
 {
@@ -89,6 +88,14 @@ MemoryMgrFree(void *ptr)
 	free(ptr);
 #endif
 }
+
+// rouz edit
+RwMemoryFunctions memFuncs = {
+	MemoryMgrMalloc,
+	MemoryMgrFree,
+	MemoryMgrRealloc,
+	MemoryMgrCalloc
+};
 
 void *
 RwMallocAlign(RwUInt32 size, RwUInt32 align)

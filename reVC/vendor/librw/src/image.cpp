@@ -70,7 +70,7 @@ Image::create(int32 width, int32 height, int32 depth)
 void
 Image::destroy(void)
 {
-	this->free();
+	this->imfree();
 	rwFree(this);
 	numAllocated--;
 }
@@ -91,7 +91,7 @@ Image::allocate(void)
 }
 
 void
-Image::free(void)
+Image::imfree(void)
 {
 	if(this->flags&1){
 		rwFree(this->pixels);
@@ -661,7 +661,7 @@ Image::convertTo32(void)
 		newpixels += newstride;
 	}
 
-	this->free();
+	this->imfree();
 	this->depth = 32;
 	this->bpp = 4;
 	this->stride = newstride;
@@ -688,7 +688,7 @@ Image::palettize(int32 depth)
 	// TODO: maybe do floyd-steinberg dithering?
 	quant.matchImage(newpixels, newstride, this);
 
-	this->free();
+	this->imfree();
 	this->depth = depth;
 	this->bpp = depth < 8 ? 1 : depth/8;
 	this->stride = newstride;
@@ -731,7 +731,7 @@ Image::unpalettize(bool forceAlpha)
 		line += this->stride;
 		nline += nstride;
 	}
-	this->free();
+	this->imfree();
 	this->depth = ndepth;
 	this->bpp = ndepth < 8 ? 1 : ndepth/8;
 	this->stride = nstride;

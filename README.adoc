@@ -332,7 +332,7 @@ Peds get guns and attack cops and paramedics. Well, they don't do a very good jo
 
 ==== G41 + G44 - Fix yourself
 
-The most essential combination of cheats, flip your burning car with G41 and fix it with G44. If you're in a bad place you car also use G46 to teleport yourself way up and with G35's flips you can orient yourself in a direction then use `Num0` to boost yourself there.
+The most essential combination of cheats, flip your burning car with G41 and fix it with G44. If you're in a bad place you can also use G46 to teleport yourself way up and with G35's flips you can orient yourself in a direction then use `Num0` to boost yourself there.
 
 ==== G22 + G33 + G45 - Sail on a car
 
@@ -356,7 +356,7 @@ If only that building attracts you gravitationally you can also attempt to evade
 
 ==== G36 + G30 + G35 - Drift around and jump over obstacles
 
-G36 and G30 make all cars drift around, and G35 enables jumping, so that when you drift towards an oncoming car you car just jump over it to maintain your momentum. Instead of jumping you could also use G06 or G32 to make sure no car gets in your way. G35 also allows reorienting your car (with `Num6` + `A` or `D`) to fix your heading quickly and `Num0` can give you the sudden thrust needed to adjust your trajectory, so that you're not just drifting but also kind of handling your car like a rocket.
+G36 and G30 make all cars drift around, and G35 enables jumping, so that when you drift towards an oncoming car you can just jump over it to maintain your momentum. Instead of jumping you could also use G06 or G32 to make sure no car gets in your way. G35 also allows reorienting your car (with `Num6` + `A` or `D`) to fix your heading quickly and `Num0` can give you the sudden thrust needed to adjust your trajectory, so that you're not just drifting but also kind of handling your car like a rocket.
 
 Adding G515 (5 star wanted level) is an interesting variant because FBI cars will drift towards you at high speed, and with G35 you can jump and/or tilt your car backwards so that when FBI cars hit you it throws you high in the air, and then by doing flips (also with G35) do cool tricks to land on your wheels.
 

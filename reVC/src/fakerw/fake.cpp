@@ -172,7 +172,7 @@ RwFrame     *RwCameraGetFrame(const RwCamera *camera) { return camera->getFrame(
 RwImage     *RwImageCreate(RwInt32 width, RwInt32 height, RwInt32 depth) { return Image::create(width, height, depth); }
 RwBool       RwImageDestroy(RwImage * image) { image->destroy(); return true; }
 RwImage     *RwImageAllocatePixels(RwImage * image) { image->allocate(); return image; }
-RwImage     *RwImageFreePixels(RwImage * image) { image->free(); return image; }
+RwImage     *RwImageFreePixels(RwImage * image) { image->imfree(); return image; }
 RwImage     *RwImageCopy(RwImage * destImage, const RwImage * sourceImage);
 RwImage     *RwImageResize(RwImage * image, RwInt32 width, RwInt32 height);
 RwImage     *RwImageApplyMask(RwImage * image, const RwImage * mask);

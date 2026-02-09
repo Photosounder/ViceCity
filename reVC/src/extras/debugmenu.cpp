@@ -725,7 +725,7 @@ findMenu(const char *name)
 {
 	Menu *m;
 	MenuEntry *e;
-	char *tmppath = strdup(name);
+	char *tmppath = make_string_copy(name); // char *tmppath = strdup(name); rouz edit
 	char *next, *curname;
 
 	curname = tmppath;

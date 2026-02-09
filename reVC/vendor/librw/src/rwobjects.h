@@ -137,7 +137,7 @@ struct Image
 	static Image *create(int32 width, int32 height, int32 depth);
 	void destroy(void);
 	void allocate(void);
-	void free(void);
+	void imfree(void);
 	void setPixels(uint8 *pixels);
 	void setPixelsDXT(int32 type, uint8 *pixels);
 	void setPalette(uint8 *palette);
