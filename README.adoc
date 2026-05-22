@@ -203,13 +203,13 @@ This restores your health, the health and body of either the vehicle you're in o
 
 Works when you're inside the vehicle or if you have a remote-controlled vehicle.
 
-==== G46 - Teleport yourself and your vehicle up 40 metres
+==== G46 / G47 - Teleport yourself and your vehicle up 40 metres / down 6 metres.
 
-Useful for taking flight easily or getting out of a bad place. If you're outside of a vehicle but have a remote controlled vehicle (G22) then both the car and you as a ped will be teleported up.
+Useful for taking flight easily or getting out of a bad place. If you're outside of a vehicle but have a remote controlled vehicle (G22) then both the car and you as a ped will be teleported up. Teleporting down while on land allows you to fly underground and underwater.
 
-==== G47 - Regenerative health
+==== G48 - Regenerative health
 
-Slowly regenerate your body's health according to the Gaussian function. When you get hit the timer resets to the middle of the upside down Gaussian function so that it progressively transitions back to full health. Regenerative health gets disabled if you use G44, so if you do you have to use G47 to turn it back on. If you die while G47 is on you will spawn with almost zero health but it will regenerate.
+Slowly regenerate your body's health according to the Gaussian function. When you get hit the timer resets to the middle of the upside down Gaussian function so that it progressively transitions back to full health. Regenerative health gets disabled if you use G44, so if you do you have to use G48 to turn it back on. If you die while G48 is on you will spawn with almost zero health but it will regenerate.
 
 ==== G510 to G516 - Set wanted level
 
@@ -364,9 +364,9 @@ Adding G515 (5 star wanted level) is an interesting variant because FBI cars wil
 
 G32 activates vehicle antigravity, G01 maximises the number of vehicles on the road, and if you're on a bike, G03 prevents you from falling off. Take a motorbike and go fast without worrying about traffic because traffic is flying off and exploding in front of you. Very relaxing.
 
-==== G13 + G47 + G06 + G53 + G520 - Survive the madness
+==== G13 + G48 + G06 + G53 + G520 - Survive the madness
 
-G13 makes the peds armed and violent towards each other and you, G47 is regenerative health so that you have to manage your health (avoid fights when close to death to recover), G06 removes cars so that you will be alone against the peds with no easy way out, G53 removes ambulances so that they won't bother you (maybe this could be replaced by G15 to make peds attack paramedics instead, but then they won't be as aggressive towards you), and G520 means the cops won't bother you as you kill your way out of this mess.
+G13 makes the peds armed and violent towards each other and you, G48 is regenerative health so that you have to manage your health (avoid fights when close to death to recover), G06 removes cars so that you will be alone against the peds with no easy way out, G53 removes ambulances so that they won't bother you (maybe this could be replaced by G15 to make peds attack paramedics instead, but then they won't be as aggressive towards you), and G520 means the cops won't bother you as you kill your way out of this mess.
 
 Maybe G36 could be added to make any car you might find both harder to drive and easier for peds to jack.
 
@@ -374,7 +374,7 @@ Maybe G36 could be added to make any car you might find both harder to drive and
 
 G23 sets your car on fire which gives it 5 seconds until it explodes, while G21 makes it drive away straight without a driver (only if G22 is off). So you can turn on G21 in your car, aim your car at your target, set your car on fire with G23, exit your car at the right moment and watch it drive away and explode, hopefully also taking out your enemies. Adding G36 makes it drive away more slowly, which could be a good thing if your enemies aren't far away.
 
-==== G43 + G06 + G14 + G47 - Map the roads
+==== G43 + G06 + G14 + G48 - Map the roads
 
 ++++
 <p align="center">
@@ -382,7 +382,7 @@ G23 sets your car on fire which gives it 5 seconds until it explodes, while G21 
 </p>
 ++++
 
-Jump on a car driven by an NPC, glue yourself to it with G43, make sure other cars don't get in the way with G06, get rid of red lights with G14 and just to be safe turn on regenerative health with G47 if case riding on top of the car gets you hurt, and voilà, the car will drive on random roads and given enough time (which can be helped by setting the time scale to the max in the epic hack window) you will obtain a good map of the roads of Vice City in the hack window.
+Jump on a car driven by an NPC, glue yourself to it with G43, make sure other cars don't get in the way with G06, get rid of red lights with G14 and just to be safe turn on regenerative health with G48 if case riding on top of the car gets you hurt, and voilà, the car will drive on random roads and given enough time (which can be helped by setting the time scale to the max in the epic hack window) you will obtain a good map of the roads of Vice City in the hack window.
 
 == Epic hack window
 

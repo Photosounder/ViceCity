@@ -1994,26 +1994,37 @@ void CPad::AddToPCCheatString(char c)
 		}
 	}
 
-	// rouz teleport veh up 40 metres
-	// "G46"
+	// rouz teleport
+	float teleport_height = 0.f;
+	// "G46" up 40 metres
 	if (!_CHEATCMP("64G"))
+		teleport_height = 40.f;
+
+	// "G47" down 5 metres
+	if(!_CHEATCMP("74G"))
+		teleport_height = -6.f;
+	
+	if (teleport_height)
 	{
 		CPed *ped = FindPlayerPed();
 		CVehicle *veh = FindPlayerVehicle();
-		if(veh==NULL && rouz.rc_veh)
-			veh = (CVehicle *) rouz.rc_veh;
+		if(veh == NULL && rouz.rc_veh) veh = (CVehicle *)rouz.rc_veh;
 
-		if (veh && ped)
-		{
-			veh->SetPosition(veh->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
-			ped->Teleport(ped->GetPosition() + CVector(0.0f, 0.0f, 40.0f));
-			CHud::SetHelpMessage((wchar *) L"Teleport up 40 metres", true);
+		if(veh && ped)
+			veh->SetPosition(veh->GetPosition() + CVector(0.0f, 0.0f, teleport_height));
+
+		if(ped)
+			ped->Teleport(ped->GetPosition() + CVector(0.0f, 0.0f, teleport_height));
+
+		if(veh || ped) {
+			swprintf(msg, L"Teleport %s %g metres", teleport_height > 0.f ? L"up" : L"down", fabs(teleport_height));
+			CHud::SetHelpMessage((wchar *) msg, true);
 		}
 	}
 
 	// Regenerative health
-	// "G47"
-	if (!_CHEATCMP("74G"))
+	// "G48"
+	if (!_CHEATCMP("84G"))
 	{
 		rouz.health_regen ^= 1;
 		swprintf(msg, L"Health regen %s", rouz.health_regen ? L"on" : L"off");

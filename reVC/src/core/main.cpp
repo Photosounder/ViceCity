@@ -3298,8 +3298,9 @@ int rouz_acceleration_cheats(void *ptr)
 
 		tas = p->m_vecMoveSpeed.Magnitude();
 		ias = tas * air_density;
+		float alt_100kt = p->GetPosition().z + (sqf(tas * 50.f) - sqf(51.44444444444444f)) * (1.f/(1.85f*2.f*9.81f));
 		if (print_counter==0)
-			debug("IAS %.1f kt, TAS %.1f kt\n", ias * 50.f * 3600.f/1852.f, tas * 50.f * 3600.f/1852.f);
+			debug("IAS %.1f kt, TAS %.1f kt, 100 kt alt %.0f ft\n", ias * 50.f * 3600.f/1852.f, tas * 50.f * 3600.f/1852.f, alt_100kt * 0.3048f);
 		print_counter++;
 
 		// Car pitch
