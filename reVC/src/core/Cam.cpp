@@ -1651,21 +1651,8 @@ CCam::WorkOutCamHeight(const CVector &TargetCoors, float TargetOrientation, floa
 
 	float Length = (Source - TargetCoors).Magnitude2D();
 
-	CVector Forward = CamTargetEntity->GetForward();
-	float CarAlpha = CGeneral::GetATanOfXY(Forward.Magnitude2D(), Forward.z);
-	// this shouldn't be necessary....
-	while(CarAlpha >= PI) CarAlpha -= 2*PI;
-	while(CarAlpha < -PI) CarAlpha += 2*PI;
-
-	while(Beta >= PI) Beta -= 2*PI;
-	while(Beta < -PI) Beta += 2*PI;
-
-	float DeltaBeta = Beta - TargetOrientation;
-	while(DeltaBeta >= PI) DeltaBeta -= 2*PI;
-	while(DeltaBeta < -PI) DeltaBeta += 2*PI;
-
-	float BehindCarNess = Cos(DeltaBeta);	// 1 if behind car, 0 if side, -1 if in front
-	CarAlpha = -CarAlpha * BehindCarNess;
+	// rouz edit (block replaced by this line)
+	float CarAlpha = 0.0f;
 
 	float fwdSpeed = DotProduct(((CPhysical*)CamTargetEntity)->m_vecMoveSpeed, CamTargetEntity->GetForward())*180.0f;
 	if(CamTargetEntity->GetModelIndex() == MI_FIRETRUCK && CPad::GetPad(0)->GetCarGunFired()){
@@ -5100,37 +5087,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		newDistance = Max(minDistForThisCar, carPosChange);
 	}
 	float maxAlphaAllowed = CARCAM_SET[camSetArrPos][13];
-
-	// Originally this is to prevent camera enter into car while we're stopping, but what about moving???
-	// This is also original LCS and SA bug, or some attempt to fix lag. We'll never know
-
-	// if (car->m_vecMoveSpeed.MagnitudeSqr() < sq(0.2f))
-		if (car->GetModelIndex() != MI_FIRETRUCK)
-			if (!isBike || ((CBike*)car)->m_nWheelsOnGround > 3)
-				if (!isHeli && (!isPlane || ((CAutomobile*)car)->m_nWheelsOnGround)) {
-
-					CVector left = CrossProduct(car->GetForward(), CVector(0.0f, 0.0f, 1.0f));
-					left.Normalise();
-					CVector up = CrossProduct(left, car->GetForward());
-					up.Normalise();
-					float lookingUp = DotProduct(up, Front);
-					if (lookingUp > 0.0f) {
-						float v88 = Asin(Abs(Sin(Beta - (car->GetForward().Heading() - HALFPI))));
-						float v200;
-						if (v88 <= Atan2(carCol->boundingBox.max.x, -carCol->boundingBox.min.y)) {
-							v200 = (1.5f - carCol->boundingBox.min.y) / Cos(v88);
-						} else {
-							float a6g = 1.2f + carCol->boundingBox.max.x;
-							v200 = a6g / Cos(Max(0.0f, HALFPI - v88));
-						}
-						maxAlphaAllowed = Cos(Beta - (car->GetForward().Heading() - HALFPI)) * Atan2(car->GetForward().z, car->GetForward().Magnitude2D())
-							+ Atan2(TargetCoors.z - car->GetPosition().z + car->GetHeightAboveRoad(), v200 * 1.2f);
-
-						if (isCar && ((CAutomobile*)car)->m_nWheelsOnGround > 1 && Abs(DotProduct(car->m_vecTurnSpeed, car->GetForward())) < 0.05f) {
-							maxAlphaAllowed += Cos(Beta - (car->GetForward().Heading() - HALFPI) + HALFPI) * Atan2(car->GetRight().z, car->GetRight().Magnitude2D());
-						}
-					}
-				}
+	// rouz edit (removal of a block of code)
 
 	float targetAlpha = Asin(Clamp(Front.z, -1.0f, 1.0f)) - zoomModeAlphaOffset;
 	if (targetAlpha <= maxAlphaAllowed) {
