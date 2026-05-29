@@ -60,6 +60,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 </p>
 ++++
 
+* I disabled the way that the camera would suddenly pitch down when the vehicle would pitch straight down (common when doing flips).
 * I disabled the invisible box around the map that would make you bounce in the other direction, so now you can sail or fly much further away, far enough for water to become invisible and for the game to crash.
 * I disabled sliding when standing on a moving vehicle so that we don't constantly slide off when standing on a remote controlled car.
 * I disabled losing health from drowning as a ped (but not as a driver). Hopefully I will eventually do more to make water more logical.

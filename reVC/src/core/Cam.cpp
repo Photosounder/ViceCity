@@ -1651,8 +1651,21 @@ CCam::WorkOutCamHeight(const CVector &TargetCoors, float TargetOrientation, floa
 
 	float Length = (Source - TargetCoors).Magnitude2D();
 
-	// rouz edit (block replaced by this line)
-	float CarAlpha = 0.0f;
+	CVector Forward = CamTargetEntity->GetForward();
+	float CarAlpha = CGeneral::GetATanOfXY(Forward.Magnitude2D(), Forward.z);
+	// this shouldn't be necessary....
+	while(CarAlpha >= PI) CarAlpha -= 2*PI;
+	while(CarAlpha < -PI) CarAlpha += 2*PI;
+
+	while(Beta >= PI) Beta -= 2*PI;
+	while(Beta < -PI) Beta += 2*PI;
+
+	float DeltaBeta = Beta - TargetOrientation;
+	while(DeltaBeta >= PI) DeltaBeta -= 2*PI;
+	while(DeltaBeta < -PI) DeltaBeta += 2*PI;
+
+	float BehindCarNess = Cos(DeltaBeta);	// 1 if behind car, 0 if side, -1 if in front
+	CarAlpha = -CarAlpha * BehindCarNess;
 
 	float fwdSpeed = DotProduct(((CPhysical*)CamTargetEntity)->m_vecMoveSpeed, CamTargetEntity->GetForward())*180.0f;
 	if(CamTargetEntity->GetModelIndex() == MI_FIRETRUCK && CPad::GetPad(0)->GetCarGunFired()){
