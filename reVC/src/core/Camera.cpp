@@ -561,15 +561,7 @@ CCamera::Process(void)
 	if(shakeOffset > 0.0f && m_BlurType != MOTION_BLUR_SNIPER)
 		SetMotionBlurAlpha(Min((int)(shakeStrength*255.0f) + 25, 150));
 
-	static bool bExtra1stPrsBlur = false;
-	if(Cams[ActiveCam].Mode == CCam::MODE_1STPERSON && FindPlayerVehicle() && FindPlayerVehicle()->GetUp().z < 0.2f){
-		SetMotionBlur(230, 230, 230, 215, MOTION_BLUR_LIGHT_SCENE);
-		bExtra1stPrsBlur = true;
-	}else if(bExtra1stPrsBlur){
-		SetMotionBlur(CTimeCycle::GetBlurRed(), CTimeCycle::GetBlurGreen(), CTimeCycle::GetBlurBlue(), m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
-		bExtra1stPrsBlur = false;
-	}
-
+	// rouz edit (ChatGPT removed upside down overexposure)
 	CalculateDerivedValues();
 	CDraw::SetFOV(FOV);
 

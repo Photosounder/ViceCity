@@ -2748,21 +2748,8 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 			Source.z = Neck.z + fBike1stPersonOffsetZ;
 		}
 
-		if(((CVehicle*)CamTargetEntity)->IsUpsideDown()){
-			if(DontLookThroughWorldFixer < 0.5f)
-				DontLookThroughWorldFixer += 0.03f;
-			else
-				DontLookThroughWorldFixer = 0.5f;
-		}else{
-			if(DontLookThroughWorldFixer < 0.0f)
-#ifdef FIX_BUGS
-				DontLookThroughWorldFixer += 0.03f;
-#else
-				DontLookThroughWorldFixer -= 0.03f;
-#endif
-			else
-				DontLookThroughWorldFixer = 0.0f;
-		}
+		// rouz edit (ChatGPT removed moving the camera down when upside down)
+		DontLookThroughWorldFixer = 0.0f;
 		Source.z += DontLookThroughWorldFixer;
 		Front = matrix->GetForward();
 		Front.Normalise();

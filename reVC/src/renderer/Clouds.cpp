@@ -30,6 +30,14 @@ CRGBA CClouds::ms_colourTop;
 CRGBA CClouds::ms_colourBottom;
 CRGBA CClouds::ms_colourBkGrd;
 
+//+ rouz edit (ChatGPT)
+static float HorizonX;
+static float HorizonSkyX;
+static float HorizonSkyY;
+static float HorizonLineX;
+static float HorizonLineY;
+//- rouz edit (ChatGPT)
+
 void
 CClouds::Init(void)
 {
@@ -314,22 +322,104 @@ UseDarkBackground(void)
 	return TheCamera.GetForward().z < -0.9f || gbShowCollisionPolys;
 }
 
+//+ rouz edit (ChatGPT)
+static void CalcScreenCoorsNoClip(const CVector &in, float &x, float &y)
+{
+	CVector view = TheCamera.m_viewMatrix * in;
+	if(Abs(view.z) < 0.001f)
+		view.z = view.z < 0.0f ? -0.001f : 0.001f;
+	x = view.x * SCREEN_WIDTH / view.z;
+	y = view.y * SCREEN_HEIGHT / view.z;
+}
+
+static void UpdateHorizonCoors(void)
+{
+	CVector forward(TheCamera.GetForward().x, TheCamera.GetForward().y, 0.0f);
+	if(forward.MagnitudeSqr() < 0.0001f){
+		HorizonX = SCREEN_WIDTH/2.0f;
+		HorizonSkyX = SCREEN_WIDTH/2.0f;
+		HorizonSkyY = SCREEN_HEIGHT/2.0f - 1.0f;
+		CClouds::ms_horizonZ = SCREEN_HEIGHT/2.0f;
+		HorizonLineX = Cos(CClouds::ms_cameraRoll);
+		HorizonLineY = -Sin(CClouds::ms_cameraRoll);
+		return;
+	}
+	forward.Normalise();
+
+	CVector right = CrossProduct(CVector(0.0f, 0.0f, 1.0f), forward);
+	right.Normalise();
+
+	CVector center = TheCamera.GetPosition() + forward*3000.0f;
+	center.z = 0.0f;
+	CVector left = center - right*3000.0f;
+	CVector rightPos = center + right*3000.0f;
+	CVector sky = center;
+	sky.z += 1.0f;
+
+	CalcScreenCoorsNoClip(center, HorizonX, CClouds::ms_horizonZ);
+	CalcScreenCoorsNoClip(sky, HorizonSkyX, HorizonSkyY);
+	float leftX, leftY, rightX, rightY;
+	CalcScreenCoorsNoClip(left, leftX, leftY);
+	CalcScreenCoorsNoClip(rightPos, rightX, rightY);
+
+	HorizonLineX = rightX - leftX;
+	HorizonLineY = rightY - leftY;
+	float len = Sqrt(SQR(HorizonLineX) + SQR(HorizonLineY));
+	if(len > 0.001f){
+		HorizonLineX /= len;
+		HorizonLineY /= len;
+	}else{
+		HorizonLineX = Cos(CClouds::ms_cameraRoll);
+		HorizonLineY = -Sin(CClouds::ms_cameraRoll);
+	}
+}
+
+static void DrawHorizonBand(float centerY, float topOffset, float bottomOffset, const CRGBA &top, const CRGBA &bottom)
+{
+	float halfWidth = 2.0f*Sqrt(SQR(SCREEN_WIDTH) + SQR(SCREEN_HEIGHT));
+	float lineX = HorizonLineX;
+	float lineY = HorizonLineY;
+	float downX = -lineY;
+	float downY = lineX;
+	float skySide = (HorizonSkyX - HorizonX)*downX + (HorizonSkyY - CClouds::ms_horizonZ)*downY;
+	if(skySide > 0.0f){
+		downX = -downX;
+		downY = -downY;
+	}
+
+	float topLeftX = HorizonX - lineX*halfWidth + downX*topOffset;
+	float topLeftY = centerY - lineY*halfWidth + downY*topOffset;
+	float topRightX = HorizonX + lineX*halfWidth + downX*topOffset;
+	float topRightY = centerY + lineY*halfWidth + downY*topOffset;
+	float bottomLeftX = HorizonX - lineX*halfWidth + downX*bottomOffset;
+	float bottomLeftY = centerY - lineY*halfWidth + downY*bottomOffset;
+	float bottomRightX = HorizonX + lineX*halfWidth + downX*bottomOffset;
+	float bottomRightY = centerY + lineY*halfWidth + downY*bottomOffset;
+
+	CSprite2d::DrawAnyRect(topLeftX, topLeftY, topRightX, topRightY,
+		bottomLeftX, bottomLeftY, bottomRightX, bottomRightY,
+		top, top, bottom, bottom);
+}
+//- rouz edit (ChatGPT)
+
 void
 CClouds::RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 	int16 botred, int16 botgreen, int16 botblue, int16 alpha)
 {
 	PUSH_RENDERGROUP("CClouds::RenderBackground");
 
-	CVector right = CrossProduct(TheCamera.GetUp(), TheCamera.GetForward());
-	right.Normalise();
-	float c = right.Magnitude2D();
-	if(c > 1.0f)
-		c = 1.0f;
-	ms_cameraRoll = Acos(c);
-	if(right.z < 0.0f)
-		ms_cameraRoll = -ms_cameraRoll;
-
-	ms_HorizonTilt = SCREEN_WIDTH/2.0f * Tan(ms_cameraRoll);
+	//+ rouz edit (ChatGPT)
+	CVector camRight = CrossProduct(TheCamera.GetUp(), TheCamera.GetForward());
+	camRight.Normalise();
+	CVector levelRight = CrossProduct(CVector(0.0f, 0.0f, 1.0f), TheCamera.GetForward());
+	if(levelRight.MagnitudeSqr() > 0.0001f){
+		levelRight.Normalise();
+		ms_cameraRoll = Atan2(camRight.z, DotProduct(camRight, levelRight));
+	}else
+		ms_cameraRoll = 0.0f;
+	ms_HorizonTilt = 0.0f;
+	UpdateHorizonCoors();
+	//- rouz edit (ChatGPT)
 
 	if(UseDarkBackground()){
 		ms_colourTop.r = 50;
@@ -351,7 +441,7 @@ CClouds::RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 		CRect r(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		CSprite2d::DrawRect(r, ms_colourBottom, ms_colourBottom, ms_colourTop, ms_colourTop);
 	}else{
-		ms_horizonZ = CSprite::CalcHorizonCoors();
+		// rouz edit (ChatGPT removed ms_horizonZ = CSprite::CalcHorizonCoors();)
 
 		int fogr = (topred + 2 * botred) / 3;
 		int fogg = (topgreen + 2 * botgreen) / 3;
@@ -359,6 +449,8 @@ CClouds::RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 
 		// Draw top/bottom gradient
 		float gradheight = SCREEN_HEIGHT/2.0f;
+		// rouz edit (ChatGPT)
+		float skyDepth = 2.0f*Sqrt(SQR(SCREEN_WIDTH) + SQR(SCREEN_HEIGHT));
 
 		ms_colourTop.r = topred;
 		ms_colourTop.g = topgreen;
@@ -369,50 +461,23 @@ CClouds::RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 		ms_colourBottom.b = botblue;
 		ms_colourBottom.a = alpha;
 
-		float botright = ms_horizonZ - ms_HorizonTilt;
-		float botleft = ms_horizonZ + ms_HorizonTilt;
-		float topright = botright - gradheight;
-		float topleft = botleft - gradheight;
-
-		CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-			 ms_colourTop, ms_colourTop, ms_colourBottom, ms_colourBottom);
+		// rouz edit (ChatGPT)
+		DrawHorizonBand(ms_horizonZ, -gradheight, 0.0f, ms_colourTop, ms_colourBottom);
 
 		// draw the small stripe (whatever it's supposed to be)
 		ms_colourTop.r = fogr;
 		ms_colourTop.g = fogg;
 		ms_colourTop.b = fogb;
 		ms_colourTop.a = alpha;
-		topright = ms_horizonZ - ms_HorizonTilt;
-		topleft = ms_horizonZ + ms_HorizonTilt;
-		botright = topright + SMALLSTRIPHEIGHT;
-		botleft = topleft + SMALLSTRIPHEIGHT;
-		CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-			ms_colourTop, ms_colourTop, ms_colourTop, ms_colourTop);
+		//+ rouz edit (ChatGPT)
+		DrawHorizonBand(ms_horizonZ, 0.0f, SMALLSTRIPHEIGHT, ms_colourTop, ms_colourTop);
 
-		// Only top
-		if(ms_horizonZ + ms_HorizonTilt - gradheight > 0.0f ||
-		   ms_horizonZ - ms_HorizonTilt - gradheight > 0.0f){
-			ms_colourTop.r = topred;
-			ms_colourTop.g = topgreen;
-			ms_colourTop.b = topblue;
-			ms_colourTop.a = alpha;
-
-			if(ms_horizonZ - Abs(ms_HorizonTilt) - gradheight > SCREEN_HEIGHT){
-				// only top is visible
-				topleft = 0.0f;
-				topright = 0.0f;
-				botleft = SCREEN_HEIGHT;
-				botright = SCREEN_HEIGHT;
-			}else{
-				botright = ms_horizonZ - ms_HorizonTilt - gradheight;
-				botleft = ms_horizonZ + ms_HorizonTilt - gradheight;
-				topright = Min(ms_horizonZ - ms_HorizonTilt - 2*SCREEN_HEIGHT, 0.0f);
-				topleft = Min(ms_horizonZ + ms_HorizonTilt - 2*SCREEN_HEIGHT, 0.0f);
-			}
-
-			CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-				ms_colourTop, ms_colourTop, ms_colourTop, ms_colourTop);
-		}
+		ms_colourTop.r = topred;
+		ms_colourTop.g = topgreen;
+		ms_colourTop.b = topblue;
+		ms_colourTop.a = alpha;
+		DrawHorizonBand(ms_horizonZ, -skyDepth, -gradheight, ms_colourTop, ms_colourTop);
+		//- rouz edit
 
 		// Set both to fog colour for RenderHorizon
 		ms_colourTop.r = fogr;
@@ -437,14 +502,8 @@ CClouds::RenderHorizon(void)
 	ms_colourBottom.a = 230;
 	ms_colourTop.a = 80;
 
-	float topright = ms_horizonZ - ms_HorizonTilt;
-	float topleft = ms_horizonZ + ms_HorizonTilt;
-	float botright = topright + SMALLSTRIPHEIGHT;
-	float botleft = topleft + SMALLSTRIPHEIGHT;
-
-	CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-		ms_colourTop, ms_colourTop, ms_colourBottom, ms_colourBottom);
-
+	// rouz edit (ChatGPT)
+	DrawHorizonBand(ms_horizonZ, 0.0f, SMALLSTRIPHEIGHT, ms_colourTop, ms_colourBottom);
 
 	ms_colourBkGrd.r = 128.0f*CTimeCycle::GetAmbientRed();
 	ms_colourBkGrd.g = 128.0f*CTimeCycle::GetAmbientGreen();
@@ -452,22 +511,14 @@ CClouds::RenderHorizon(void)
 	ms_colourBkGrd.a = 255;
 
 	float horzstrip = SCREEN_STRETCH_Y(HORIZSTRIPHEIGHT);
-	topright = botright;
-	topleft = botleft;
-	botright = topright + horzstrip;
-	botleft = topleft + horzstrip;
+	//+ rouz edit (ChatGPT)
+	float skyDepth = 2.0f*Sqrt(SQR(SCREEN_WIDTH) + SQR(SCREEN_HEIGHT));
 
-	CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-		ms_colourBottom, ms_colourBottom, ms_colourBkGrd, ms_colourBkGrd);
-
-
-	topright = botright;
-	topleft = botleft;
-	botright = Max(topright, SCREEN_HEIGHT);
-	botleft = Max(topleft, SCREEN_HEIGHT);
-
-	CSprite2d::DrawAnyRect(0.0f, topleft,  SCREEN_WIDTH, topright,  0.0f, botleft,  SCREEN_WIDTH, botright,
-		ms_colourBkGrd, ms_colourBkGrd, ms_colourBkGrd, ms_colourBkGrd);
+	DrawHorizonBand(ms_horizonZ, SMALLSTRIPHEIGHT, SMALLSTRIPHEIGHT + horzstrip,
+		ms_colourBottom, ms_colourBkGrd);
+	DrawHorizonBand(ms_horizonZ, SMALLSTRIPHEIGHT + horzstrip, skyDepth,
+		ms_colourBkGrd, ms_colourBkGrd);
+	//- rouz edit
 
 	POP_RENDERGROUP();
 }
