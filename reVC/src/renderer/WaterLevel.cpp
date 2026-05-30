@@ -889,6 +889,14 @@ SectorRadius(float fSize)
 	return Sqrt(Pow(fSize, 2) + Pow(fSize, 2));
 }
 
+//+ rouz edit (ChatGPT)
+inline float
+WrapTextureCoordinate(float fCoord)
+{
+	return fCoord - Floor(fCoord);
+}
+//+ rouz edit (ChatGPT)
+
 void
 CWaterLevel::RenderWater()
 {
@@ -915,32 +923,28 @@ CWaterLevel::RenderWater()
 	
 	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
 	
+	//+ rouz edit (ChatGPT)
 	if ( !CTimer::GetIsPaused() )
 	{
-		TEXTURE_ADDU       += windAddUV;
-		TEXTURE_ADDV       += windAddUV;
+		float timeStep = CTimer::GetTimeStepFix();
+
+		TEXTURE_ADDU       += windAddUV * timeStep;
+		TEXTURE_ADDV       += windAddUV * timeStep;
 		
-		_TEXTURE_MASK_ADDU += Sin(fAngle) 		 * 0.0005f + 1.1f * windAddUV;
-		_TEXTURE_MASK_ADDV -= Cos(fAngle * 1.3f) * 0.0005f + 1.2f * windAddUV;
+		_TEXTURE_MASK_ADDU += (Sin(fAngle)        * 0.0005f + 1.1f * windAddUV) * timeStep;
+		_TEXTURE_MASK_ADDV -= (Cos(fAngle * 1.3f) * 0.0005f + 1.2f * windAddUV) * timeStep;
 		
-		_TEXTURE_WAKE_ADDU -= Sin(fAngle) 		 * 0.0003f + windAddUV;
-		_TEXTURE_WAKE_ADDV += Cos(fAngle * 0.7f) * 0.0003f + windAddUV;
+		_TEXTURE_WAKE_ADDU -= (Sin(fAngle)        * 0.0003f + windAddUV) * timeStep;
+		_TEXTURE_WAKE_ADDV += (Cos(fAngle * 0.7f) * 0.0003f + windAddUV) * timeStep;
 	}
 	
-	if ( _TEXTURE_MASK_ADDU >= 1.0f )
-		_TEXTURE_MASK_ADDU = 0.0f;
-	if ( _TEXTURE_MASK_ADDV >= 1.0f )
-		_TEXTURE_MASK_ADDV = 0.0f;
-	
-	if ( _TEXTURE_WAKE_ADDU >= 1.0f )
-		_TEXTURE_WAKE_ADDU = 0.0f;
-	if ( _TEXTURE_WAKE_ADDV >= 1.0f )
-		_TEXTURE_WAKE_ADDV = 0.0f;
-	
-	if ( TEXTURE_ADDU >= 1.0f )
-		TEXTURE_ADDU = 0.0f;
-	if ( TEXTURE_ADDV >= 1.0f )
-		TEXTURE_ADDV = 0.0f;
+	_TEXTURE_MASK_ADDU = WrapTextureCoordinate(_TEXTURE_MASK_ADDU);
+	_TEXTURE_MASK_ADDV = WrapTextureCoordinate(_TEXTURE_MASK_ADDV);
+	_TEXTURE_WAKE_ADDU = WrapTextureCoordinate(_TEXTURE_WAKE_ADDU);
+	_TEXTURE_WAKE_ADDV = WrapTextureCoordinate(_TEXTURE_WAKE_ADDV);
+	TEXTURE_ADDU = WrapTextureCoordinate(TEXTURE_ADDU);
+	TEXTURE_ADDV = WrapTextureCoordinate(TEXTURE_ADDV);
+	//- rouz edit (ChatGPT)
 	
 #ifdef PC_WATER
 	_fWaterZOffset = CWeather::WindClipped * 0.5f + 0.25f;
