@@ -27,7 +27,7 @@ public:
 	static uint32 LightningFlashLastChange;
 	static uint32 WhenToPlayLightningSound;
 	static uint32 LightningDuration;
-	static int32 StreamAfterRainTimer;
+	static float StreamAfterRainTimer; // rouz edit (ChatGPT)
 
 	static float ExtraSunnyness;
 	static float Foggyness;
@@ -70,4 +70,4 @@ struct tRainStreak
 	uint32 timer;
 };
 
-extern RwTexture* gpRainDropTex;
+extern RwTexture* gpRainDropTex; // rouz edit (ChatGPT)

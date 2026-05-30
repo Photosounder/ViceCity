@@ -1464,23 +1464,35 @@ CSpecialParticleStuff::StartBoatFoamAnimation()
 void
 CSpecialParticleStuff::UpdateBoatFoamAnimation(CMatrix* pMatrix)
 {
-	static int32 FrameInAnimation = 0;
+	//+ rouz edit (ChatGPT)
+	static uint32 AnimationStartTime = 0;
+	static uint32 LastFrameInAnimation = 0;
+	//- rouz edit (ChatGPT)
 	static float X, Y, Z, dX, dY, dZ;
 	CreateFoamAroundObject(pMatrix, 107.0f, 24.1f, 30.5f, 2);
 	uint32 prev = CTimer::GetPreviousTimeInMilliseconds();
 	uint32 cur = CTimer::GetTimeInMilliseconds();
-	if (FrameInAnimation != 0) {
-		X += dX;
-		Y += dY;
-		Z += dZ;
-		CVector pos = *pMatrix * CVector(X, Y, Z);
-		CParticle::AddParticle(PARTICLE_STEAM_NY, pos, CVector(0.0f, 0.0f, 0.0f),
-			nil, FrameInAnimation * 0.5f + 2.0f, FoamColour, 1, 0, 0, 0);
-		if (++FrameInAnimation > 15)
-			FrameInAnimation = 0;
+
+	//+ rouz edit (ChatGPT)
+	if (AnimationStartTime != 0) {
+		uint32 frameInAnimation = (cur - AnimationStartTime) * 30 / 1000 + 1;
+		if (frameInAnimation > 15) {
+			AnimationStartTime = 0;
+		} else {
+			if (frameInAnimation != LastFrameInAnimation) {
+				CVector pos = *pMatrix * CVector(X + dX * frameInAnimation, Y + dY * frameInAnimation, Z + dZ * frameInAnimation);
+				CParticle::AddParticle(PARTICLE_STEAM_NY, pos, CVector(0.0f, 0.0f, 0.0f),
+					nil, frameInAnimation * 0.5f + 2.0f, FoamColour, 1, 0, 0, 0);
+				LastFrameInAnimation = frameInAnimation;
+			}
+		}
+		//- rouz edit (ChatGPT)
 	}
 	if ((cur & 0x3FF) < (prev & 0x3FF)) {
-		FrameInAnimation = 1;
+		//+ rouz edit (ChatGPT)
+		AnimationStartTime = cur;
+		LastFrameInAnimation = 0;
+		//- rouz edit (ChatGPT)
 		int rnd = CGeneral::GetRandomNumber();
 		X = (int8)(rnd - 128) * 0.2f;
 		Y = (int8)((rnd >> 8) - 128) * 0.2f;

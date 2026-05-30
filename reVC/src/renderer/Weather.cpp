@@ -34,7 +34,7 @@ uint32 CWeather::LightningStart;
 uint32 CWeather::LightningFlashLastChange;
 uint32 CWeather::WhenToPlayLightningSound;
 uint32 CWeather::LightningDuration;
-int32 CWeather::StreamAfterRainTimer;
+float CWeather::StreamAfterRainTimer; // rouz edit (ChatGPT)
 
 float CWeather::ExtraSunnyness;
 float CWeather::Foggyness;
@@ -103,6 +103,11 @@ const float Windyness[] = {
 #define MIN_TIME_BETWEEN_LIGHTNING_FLASH_CHANGES (50)
 
 #define RAIN_CHANGE_SPEED (0.003f)
+//+ rouz edit (ChatGPT)
+#define STREAM_AFTER_RAIN_TIME (800.0f * (1000.0f / 30.0f))
+#define HEAT_HAZE_ADD_INTERVAL (8.0f * (1000.0f / 30.0f))
+#define BEASTIE_ADD_INTERVAL (10.0f * (1000.0f / 30.0f))
+//- rouz edit (ChatGPT)
 
 #define DROPLETS_LEFT_OFFSET (10.0f)
 #define DROPLETS_RIGHT_OFFSET (10.0f)
@@ -126,6 +131,14 @@ const float Windyness[] = {
 #define RAIN_COLOUR_B (256)
 #define RAIN_ALPHA (255)
 
+//+ rouz edit (ChatGPT)
+static float
+WeatherTimeStep()
+{
+	return CTimer::GetTimeStepInSeconds() * 30.0f;
+}
+//- rouz edit (ChatGPT)
+
 void CWeather::Init(void)
 {
 	NewWeatherType = WEATHER_EXTRA_SUNNY;
@@ -142,6 +155,14 @@ void CWeather::Init(void)
 
 void CWeather::Update(void)
 {
+	//+ rouz edit (ChatGPT)
+	static float lightningUpdateCounter;
+
+	lightningUpdateCounter += WeatherTimeStep();
+	int32 lightningUpdates = int32(lightningUpdateCounter);
+	lightningUpdateCounter -= lightningUpdates;
+	//- rouz edit (ChatGPT)
+
 	if(!CReplay::IsPlayingBack()){
 		float fNewInterpolation = (CClock::GetMinutes() + CClock::GetSeconds()/60.0f)/60.0f;
 		if (fNewInterpolation < InterpolationValue) {
@@ -169,35 +190,39 @@ void CWeather::Update(void)
 		LightningFlash = false;
 		LightningBurst = false;
 	}
-	else{
-		if (LightningBurst) {
-			if ((CGeneral::GetRandomNumber() & 255) >= 32) {
-				// 0.875 probability
-				if (CTimer::GetTimeInMilliseconds() - LightningFlashLastChange > MIN_TIME_BETWEEN_LIGHTNING_FLASH_CHANGES) {
-					bool bOldLightningFlash = LightningFlash;
-					LightningFlash = CGeneral::GetRandomTrueFalse();
-					if (LightningFlash != bOldLightningFlash)
-						LightningFlashLastChange = CTimer::GetTimeInMilliseconds();
+	//+ rouz edit (ChatGPT)
+	else {
+		for (int32 i = 0; i < lightningUpdates; i++) {
+			if (LightningBurst) {
+				if ((CGeneral::GetRandomNumber() & 255) >= 32) {
+					// 0.875 probability
+					if (CTimer::GetTimeInMilliseconds() - LightningFlashLastChange > MIN_TIME_BETWEEN_LIGHTNING_FLASH_CHANGES) {
+						bool bOldLightningFlash = LightningFlash;
+						LightningFlash = CGeneral::GetRandomTrueFalse();
+						if (LightningFlash != bOldLightningFlash)
+							LightningFlashLastChange = CTimer::GetTimeInMilliseconds();
+					}
+				}
+				else {
+					// 0.125 probability
+					LightningBurst = false;
+					LightningDuration = Min((CTimer::GetTimeInMilliseconds() - LightningStart) * 30 / 1000, 20);
+					LightningFlash = false;
+					WhenToPlayLightningSound = CTimer::GetTimeInMilliseconds() + 150 * (20 - LightningDuration);
 				}
 			}
 			else {
-				// 0.125 probability
-				LightningBurst = false;
-				LightningDuration = Min(CTimer::GetFrameCounter() - LightningStart, 20);
-				LightningFlash = false;
-				WhenToPlayLightningSound = CTimer::GetTimeInMilliseconds() + 150 * (20 - LightningDuration);
-			}
-		}
-		else {
-			if (CGeneral::GetRandomNumber() >= 200) {
-				// lower probability on PC due to randomness bug
-				LightningFlash = false;
-			}
-			else {
-				LightningBurst = true;
-				LightningStart = CTimer::GetFrameCounter();
-				LightningFlashLastChange = CTimer::GetTimeInMilliseconds();
-				LightningFlash = true;
+				if (CGeneral::GetRandomNumber() >= 200) {
+					// lower probability on PC due to randomness bug
+					LightningFlash = false;
+				}
+				else {
+					LightningBurst = true;
+					LightningStart = CTimer::GetTimeInMilliseconds();
+					LightningFlashLastChange = CTimer::GetTimeInMilliseconds();
+					LightningFlash = true;
+				}
+				//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -305,8 +330,12 @@ void CWeather::Update(void)
 
 	AddRain();
 
+	//+ rouz edit (ChatGPT)
+	static uint32 nextHeatHazeAddTime;
 	if ((NewWeatherType == WEATHER_SUNNY || NewWeatherType == WEATHER_EXTRA_SUNNY) &&
-		!CGame::IsInInterior() && !CCutsceneMgr::IsRunning() && (CTimer::GetFrameCounter() & 7) == 0) {
+		!CGame::IsInInterior() && !CCutsceneMgr::IsRunning() && CTimer::GetTimeInMilliseconds() >= nextHeatHazeAddTime) {
+		nextHeatHazeAddTime = CTimer::GetTimeInMilliseconds() + HEAT_HAZE_ADD_INTERVAL;
+		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		if (FindPlayerPed() && (!FindPlayerPed()->CheckIfInTheAir() || FindPlayerPed()->CheckIfInTheAir() && FindPlayerPed()->GetPosition().z < 7.5f &&
 			CClock::GetHours() > 6 && CClock::GetHours() < 18))
@@ -338,8 +367,17 @@ void CWeather::AddHeatHaze()
 
 void CWeather::AddBeastie()
 {
-	if(FindPlayerVehicle() || CTimer::GetFrameCounter()%10 || (CGeneral::GetRandomNumber()&5) == 0)
+	//+ rouz edit (ChatGPT)
+	static uint32 nextBeastieAddTime;
+	if(FindPlayerVehicle() || CTimer::GetTimeInMilliseconds() < nextBeastieAddTime)
 		return;
+
+	nextBeastieAddTime = CTimer::GetTimeInMilliseconds() + BEASTIE_ADD_INTERVAL;
+
+	if((CGeneral::GetRandomNumber()&5) == 0)
+		return;
+	//- rouz edit (ChatGPT)
+
 	CVector pos = TheCamera.GetPosition();
 	float dist = CGeneral::GetRandomNumberInRange(90.0f, 60.0f);
 	int angle = CGeneral::GetRandomNumber() % CParticle::SIN_COS_TABLE_SIZE;
@@ -420,12 +458,14 @@ void CWeather::AddStreamAfterRain()
 		}
 	}else{
 		startStreamAfterRain = 0;
-		StreamAfterRainTimer = 800;
+		StreamAfterRainTimer = STREAM_AFTER_RAIN_TIME; // rouz edit (ChatGPT)
 	}
 }
 
 void CWeather::AddRain()
 {
+	static float particleUpdateCounter; // rouz edit (ChatGPT)
+
 	if (CCullZones::CamNoRain() || CCullZones::PlayerNoRain())
 		return;
 	if (TheCamera.GetLookingLRBFirstPerson()) {
@@ -436,21 +476,32 @@ void CWeather::AddRain()
 		}
 	}
 
+	//+ rouz edit (ChatGPT)
+	particleUpdateCounter += WeatherTimeStep();
+	int32 particleUpdates = int32(particleUpdateCounter);
+	particleUpdateCounter -= particleUpdates;
+
 	if(Rain > 0.0){
 		startStreamAfterRain = 1;
-		StreamAfterRainTimer = 800;
+		StreamAfterRainTimer = STREAM_AFTER_RAIN_TIME;
 	}else if(startStreamAfterRain){
 		if(StreamAfterRainTimer > 0){
-			AddStreamAfterRain();
-			StreamAfterRainTimer--;
+			for(int i = 0; i < particleUpdates; i++)
+				AddStreamAfterRain();
+			StreamAfterRainTimer -= CTimer::GetTimeStepInSeconds() * 1000.0f;
 		}else{
 			startStreamAfterRain = 0;
-			StreamAfterRainTimer = 800;
+			StreamAfterRainTimer = STREAM_AFTER_RAIN_TIME;
 		}
 	}
 
+	if (particleUpdates == 0)
+		return;
+
 	if (Wind > 1.1f)
-		AddSplashesDuringHurricane();
+		for(int i = 0; i < particleUpdates; i++)
+			AddSplashesDuringHurricane();
+	//- rouz edit (ChatGPT)
 
 	if (Rain <= 0.1f)
 		return;
@@ -458,53 +509,57 @@ void CWeather::AddRain()
 	int numDrops = 5.0f * Rain;
 	int numSplashes = 2.0f * Rain;
 	CVector pos, dir;
-	for(int i = 0; i < numDrops; i++){
-		pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
-		pos.y = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_HEIGHT/5);
-		pos.z = 0.0f;
-		dir.x = 0.0f;
-		dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
-		dir.z = 0.0f;
-		CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
+	//+ rouz edit (ChatGPT)
+	for(int update = 0; update < particleUpdates; update++){
+		for(int i = 0; i < numDrops; i++){
+			pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
+			pos.y = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_HEIGHT/5);
+			pos.z = 0.0f;
+			dir.x = 0.0f;
+			dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
+			dir.z = 0.0f;
+			CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
 
-		pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
-		pos.y = CGeneral::GetRandomNumberInRange((int)SCREEN_HEIGHT/5, (int)SCREEN_HEIGHT/2);
-		pos.z = 0.0f;
-		dir.x = 0.0f;
-		dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
-		dir.z = 0.0f;
-		CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
+			pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
+			pos.y = CGeneral::GetRandomNumberInRange((int)SCREEN_HEIGHT/5, (int)SCREEN_HEIGHT/2);
+			pos.z = 0.0f;
+			dir.x = 0.0f;
+			dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
+			dir.z = 0.0f;
+			CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
 
-		pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
-		pos.y = 0.0f;
-		pos.z = 0.0f;
-		dir.x = 0.0f;
-		dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
-		dir.z = 0.0f;
-		CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
+			pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
+			pos.y = 0.0f;
+			pos.z = 0.0f;
+			dir.x = 0.0f;
+			dir.y = CGeneral::GetRandomNumberInRange(30.0f, 40.0f);
+			dir.z = 0.0f;
+			CParticle::AddParticle(PARTICLE_RAINDROP_2D, pos, dir, nil, CGeneral::GetRandomNumberInRange(0.1f, 0.75f), 0, 0, (int)Rain&3, 0);
 
-		float dist = CGeneral::GetRandomNumberInRange(0.0f, Max(10.0f*Rain, 40.0f)/2.0f);
-		float angle;
-		uint8 rnd = CGeneral::GetRandomNumber();
-		if(rnd&1)
-			angle = (CGeneral::GetRandomNumber()&0x7F)/128.0f * TWOPI;
-		else
-			angle = TheCamera.Orientation + (rnd-128)/160.0f;
-		pos.x = TheCamera.GetPosition().x + dist*Sin(angle);
-		pos.y = TheCamera.GetPosition().y + dist*Cos(angle);
-		pos.z = 0.0f;
-		CColPoint point;
-		CEntity *ent;
-		if(CWorld::ProcessVerticalLine(pos+CVector(0.0f, 0.0f, 40.0f), -40.0f, point, ent, true, false, false, false, true, false, nil)){
-			pos.z = point.point.z;
-			for(int j = 0; j < numSplashes+15; j++){
-				CVector pos2 = pos;
-				pos2.x += CGeneral::GetRandomNumberInRange(-15.0f, 15.0f);
-				pos2.y += CGeneral::GetRandomNumberInRange(-15.0f, 15.0f);
-				if(CGeneral::GetRandomNumber() & 1)
-					CParticle::AddParticle(PARTICLE_RAIN_SPLASH, pos2, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colour);
-				else
-					CParticle::AddParticle(PARTICLE_RAIN_SPLASHUP, pos2, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colour);
+			float dist = CGeneral::GetRandomNumberInRange(0.0f, Max(10.0f*Rain, 40.0f)/2.0f);
+			float angle;
+			uint8 rnd = CGeneral::GetRandomNumber();
+			if(rnd&1)
+				angle = (CGeneral::GetRandomNumber()&0x7F)/128.0f * TWOPI;
+			else
+				angle = TheCamera.Orientation + (rnd-128)/160.0f;
+			pos.x = TheCamera.GetPosition().x + dist*Sin(angle);
+			pos.y = TheCamera.GetPosition().y + dist*Cos(angle);
+			pos.z = 0.0f;
+			CColPoint point;
+			CEntity *ent;
+			if(CWorld::ProcessVerticalLine(pos+CVector(0.0f, 0.0f, 40.0f), -40.0f, point, ent, true, false, false, false, true, false, nil)){
+				pos.z = point.point.z;
+				for(int j = 0; j < numSplashes+15; j++){
+					CVector pos2 = pos;
+					pos2.x += CGeneral::GetRandomNumberInRange(-15.0f, 15.0f);
+					pos2.y += CGeneral::GetRandomNumberInRange(-15.0f, 15.0f);
+					if(CGeneral::GetRandomNumber() & 1)
+						CParticle::AddParticle(PARTICLE_RAIN_SPLASH, pos2, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colour);
+					else
+						CParticle::AddParticle(PARTICLE_RAIN_SPLASHUP, pos2, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colour);
+				}
+				//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -573,6 +628,8 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 
 void CWeather::RenderRainStreaks(void)
 {
+	static float streakGenerationCounter; // rouz edit (ChatGPT)
+
 	if (CTimer::GetIsCodePaused())
 		return;
 	int base_intensity = (64.0f - CTimeCycle::GetFogReduction()) / 64.0f * int(255 * Rain);
@@ -580,6 +637,11 @@ void CWeather::RenderRainStreaks(void)
 		return;
 	if (TheCamera.m_CameraAverageSpeed > 1.75f)
 		return;
+	//+ rouz edit (ChatGPT)
+	streakGenerationCounter += WeatherTimeStep();
+	int32 streakGenerationUpdates = int32(streakGenerationCounter);
+	streakGenerationCounter -= streakGenerationUpdates;
+	//- rouz edit (ChatGPT)
 	TempBufferIndicesStored = 0;
 	TempBufferVerticesStored = 0;
 	for (int i = 0; i < NUM_RAIN_STREAKS; i++) {
@@ -606,7 +668,11 @@ void CWeather::RenderRainStreaks(void)
 #endif
 			}
 		}
-		else if ((CGeneral::GetRandomNumber() & 0xF00) == 0){
+		//+ rouz edit (ChatGPT)
+		else for (int32 update = 0; update < streakGenerationUpdates; update++) {
+			if ((CGeneral::GetRandomNumber() & 0xF00) != 0)
+				continue;
+			//- rouz edit (ChatGPT)
 			// 1/16 probability
 			Streaks[i].direction = CVector(0.0f, 0.0f, -12.0f);
 			Streaks[i].position = 6.0f * TheCamera.GetForward() + TheCamera.GetPosition() + CVector(-1.8f * Streaks[i].direction.x, -1.8f * Streaks[i].direction.y, 8.0f);
@@ -619,6 +685,7 @@ void CWeather::RenderRainStreaks(void)
 			Streaks[i].position.x += ((CGeneral::GetRandomNumber() & 255) - 128) * 0.04f;
 			Streaks[i].position.y += ((CGeneral::GetRandomNumber() & 255) - 128) * 0.04f;
 			Streaks[i].timer = CTimer::GetTimeInMilliseconds();
+			break; // rouz edit (ChatGPT)
 		}
 	}
 	if (TempBufferIndicesStored){
