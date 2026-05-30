@@ -1002,20 +1002,47 @@ enum Corners
 	CORNER_FAR_TOPRIGHT,
 	CORNER_FAR_BOTRIGHT,
 	CORNER_FAR_BOTLEFT,
-	CORNER_LOD_LEFT,
-	CORNER_LOD_RIGHT,
-	CORNER_PRIO_LEFT,
-	CORNER_PRIO_RIGHT,
+//+ rouz edit (ChatGPT)
+	CORNER_LOD_TOPLEFT,
+	CORNER_LOD_TOPRIGHT,
+	CORNER_LOD_BOTRIGHT,
+	CORNER_LOD_BOTLEFT,
+	CORNER_PRIO_TOPLEFT,
+	CORNER_PRIO_TOPRIGHT,
+	CORNER_PRIO_BOTRIGHT,
+	CORNER_PRIO_BOTLEFT,
+	CORNER_COUNT,
 };
+
+static void
+SetSectorPolyPoint(RwV2d &point, const CVector &coors)
+{
+	point.x = CWorld::GetSectorX(coors.x);
+	point.y = CWorld::GetSectorY(coors.y);
+}
+
+static void
+ScanSectorFrustum(CVector *vectors, int32 firstCorner, void (*scanfunc)(CPtrList *))
+{
+	RwV2d poly[3];
+	int32 i;
+
+	SetSectorPolyPoint(poly[0], vectors[CORNER_CAM]);
+	for(i = 0; i < 4; i++){
+		SetSectorPolyPoint(poly[1], vectors[firstCorner + i]);
+		SetSectorPolyPoint(poly[2], vectors[firstCorner + ((i + 1) & 3)]);
+		CRenderer::ScanSectorPoly(poly, 3, scanfunc);
+	}
+}
+//- rouz edit (ChatGPT)
 
 void
 CRenderer::ScanWorld(void)
 {
 	float f = RwCameraGetFarClipPlane(TheCamera.m_pRwCamera);
 	RwV2d vw = *RwCameraGetViewWindow(TheCamera.m_pRwCamera);
-	CVector vectors[9];
+	CVector vectors[CORNER_COUNT]; // rouz edit (ChatGPT)
 	RwMatrix *cammatrix;
-	RwV2d poly[3];
 
 	memset(vectors, 0, sizeof(vectors));
 	vectors[CORNER_FAR_TOPLEFT].x = -vw.x * f;
@@ -1046,22 +1073,19 @@ CRenderer::ScanWorld(void)
 	prevPos = TheCamera.GetPosition();
 	prevFwd = TheCamera.GetForward();
 
-	if(cammatrix->at.z > 0.0f){
-		// looking up, bottom corners are further away
-		vectors[CORNER_LOD_LEFT] = vectors[CORNER_FAR_BOTLEFT] * LOD_DISTANCE/f;
-		vectors[CORNER_LOD_RIGHT] = vectors[CORNER_FAR_BOTRIGHT] * LOD_DISTANCE/f;
-	}else{
-		// looking down, top corners are further away
-		vectors[CORNER_LOD_LEFT] = vectors[CORNER_FAR_TOPLEFT] * LOD_DISTANCE/f;
-		vectors[CORNER_LOD_RIGHT] = vectors[CORNER_FAR_TOPRIGHT] * LOD_DISTANCE/f;
+	//+ rouz edit (ChatGPT)
+	vectors[CORNER_LOD_TOPLEFT] = vectors[CORNER_FAR_TOPLEFT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_TOPRIGHT] = vectors[CORNER_FAR_TOPRIGHT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_BOTRIGHT] = vectors[CORNER_FAR_BOTRIGHT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_BOTLEFT] = vectors[CORNER_FAR_BOTLEFT] * LOD_DISTANCE/f;
+
+	for(int32 i = 0; i < 4; i++){
+		vectors[CORNER_PRIO_TOPLEFT + i].x = vectors[CORNER_LOD_TOPLEFT + i].x * 0.2f;
+		vectors[CORNER_PRIO_TOPLEFT + i].y = vectors[CORNER_LOD_TOPLEFT + i].y * 0.2f;
+		vectors[CORNER_PRIO_TOPLEFT + i].z = vectors[CORNER_LOD_TOPLEFT + i].z;
 	}
-	vectors[CORNER_PRIO_LEFT].x = vectors[CORNER_LOD_LEFT].x * 0.2f;
-	vectors[CORNER_PRIO_LEFT].y = vectors[CORNER_LOD_LEFT].y * 0.2f;
-	vectors[CORNER_PRIO_LEFT].z = vectors[CORNER_LOD_LEFT].z;
-	vectors[CORNER_PRIO_RIGHT].x = vectors[CORNER_LOD_RIGHT].x * 0.2f;
-	vectors[CORNER_PRIO_RIGHT].y = vectors[CORNER_LOD_RIGHT].y * 0.2f;
-	vectors[CORNER_PRIO_RIGHT].z = vectors[CORNER_LOD_RIGHT].z;
-	RwV3dTransformPoints(vectors, vectors, 9, cammatrix);
+	RwV3dTransformPoints(vectors, vectors, ARRAY_SIZE(vectors), cammatrix);
+	//- rouz edit (ChatGPT)
 
 	m_loadingPriority = false;
 	if(TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOPDOWN ||
@@ -1094,43 +1118,22 @@ CRenderer::ScanWorld(void)
 #ifdef GTA_TRAIN
 		CVehicle *train = FindPlayerTrain();
 		if(train && train->GetPosition().z < 0.0f){
-			poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-			poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-			poly[1].x = CWorld::GetSectorX(vectors[CORNER_LOD_LEFT].x);
-			poly[1].y = CWorld::GetSectorY(vectors[CORNER_LOD_LEFT].y);
-			poly[2].x = CWorld::GetSectorX(vectors[CORNER_LOD_RIGHT].x);
-			poly[2].y = CWorld::GetSectorY(vectors[CORNER_LOD_RIGHT].y);
-			ScanSectorPoly(poly, 3, ScanSectorList_Subway);
+			// rouz edit (ChatGPT)
+			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_Subway);
 		}else
 #endif
 		{
+			//+ rouz edit (ChatGPT)
 			if(f > LOD_DISTANCE){
 				// priority
-				poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-				poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-				poly[1].x = CWorld::GetSectorX(vectors[CORNER_PRIO_LEFT].x);
-				poly[1].y = CWorld::GetSectorY(vectors[CORNER_PRIO_LEFT].y);
-				poly[2].x = CWorld::GetSectorX(vectors[CORNER_PRIO_RIGHT].x);
-				poly[2].y = CWorld::GetSectorY(vectors[CORNER_PRIO_RIGHT].y);
-				ScanSectorPoly(poly, 3, ScanSectorList_Priority);
+				ScanSectorFrustum(vectors, CORNER_PRIO_TOPLEFT, ScanSectorList_Priority);
 
 				// below LOD
-				poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-				poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-				poly[1].x = CWorld::GetSectorX(vectors[CORNER_LOD_LEFT].x);
-				poly[1].y = CWorld::GetSectorY(vectors[CORNER_LOD_LEFT].y);
-				poly[2].x = CWorld::GetSectorX(vectors[CORNER_LOD_RIGHT].x);
-				poly[2].y = CWorld::GetSectorY(vectors[CORNER_LOD_RIGHT].y);
-				ScanSectorPoly(poly, 3, ScanSectorList);
+				ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList);
 			}else{
-				poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-				poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-				poly[1].x = CWorld::GetSectorX(vectors[CORNER_FAR_TOPLEFT].x);
-				poly[1].y = CWorld::GetSectorY(vectors[CORNER_FAR_TOPLEFT].y);
-				poly[2].x = CWorld::GetSectorX(vectors[CORNER_FAR_TOPRIGHT].x);
-				poly[2].y = CWorld::GetSectorY(vectors[CORNER_FAR_TOPRIGHT].y);
-				ScanSectorPoly(poly, 3, ScanSectorList);
+				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList);
 			}
+			//- rouz edit (ChatGPT)
 			
 #ifdef NO_ISLAND_LOADING
 			if (FrontEndMenuManager.m_PrefsIslandLoading == CMenuManager::ISLAND_LOADING_HIGH) {
@@ -1154,9 +1157,8 @@ CRenderer::RequestObjectsInFrustum(void)
 {
 	float f = RwCameraGetFarClipPlane(TheCamera.m_pRwCamera);
 	RwV2d vw = *RwCameraGetViewWindow(TheCamera.m_pRwCamera);
-	CVector vectors[9];
+	CVector vectors[CORNER_COUNT]; // rouz edit (ChatGPT)
 	RwMatrix *cammatrix;
-	RwV2d poly[3];
 
 	memset(vectors, 0, sizeof(vectors));
 	vectors[CORNER_FAR_TOPLEFT].x = -vw.x * f;
@@ -1177,22 +1179,19 @@ CRenderer::RequestObjectsInFrustum(void)
 	CWorld::AdvanceCurrentScanCode();
 	ms_vecCameraPosition = TheCamera.GetPosition();
 
-	if(cammatrix->at.z > 0.0f){
-		// looking up, bottom corners are further away
-		vectors[CORNER_LOD_LEFT] = vectors[CORNER_FAR_BOTLEFT] * LOD_DISTANCE/f;
-		vectors[CORNER_LOD_RIGHT] = vectors[CORNER_FAR_BOTRIGHT] * LOD_DISTANCE/f;
-	}else{
-		// looking down, top corners are further away
-		vectors[CORNER_LOD_LEFT] = vectors[CORNER_FAR_TOPLEFT] * LOD_DISTANCE/f;
-		vectors[CORNER_LOD_RIGHT] = vectors[CORNER_FAR_TOPRIGHT] * LOD_DISTANCE/f;
+	//+ rouz edit (ChatGPT)
+	vectors[CORNER_LOD_TOPLEFT] = vectors[CORNER_FAR_TOPLEFT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_TOPRIGHT] = vectors[CORNER_FAR_TOPRIGHT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_BOTRIGHT] = vectors[CORNER_FAR_BOTRIGHT] * LOD_DISTANCE/f;
+	vectors[CORNER_LOD_BOTLEFT] = vectors[CORNER_FAR_BOTLEFT] * LOD_DISTANCE/f;
+
+	for(int32 i = 0; i < 4; i++){
+		vectors[CORNER_PRIO_TOPLEFT + i].x = vectors[CORNER_LOD_TOPLEFT + i].x * 0.2f;
+		vectors[CORNER_PRIO_TOPLEFT + i].y = vectors[CORNER_LOD_TOPLEFT + i].y * 0.2f;
+		vectors[CORNER_PRIO_TOPLEFT + i].z = vectors[CORNER_LOD_TOPLEFT + i].z;
 	}
-	vectors[CORNER_PRIO_LEFT].x = vectors[CORNER_LOD_LEFT].x * 0.2f;
-	vectors[CORNER_PRIO_LEFT].y = vectors[CORNER_LOD_LEFT].y * 0.2f;
-	vectors[CORNER_PRIO_LEFT].z = vectors[CORNER_LOD_LEFT].z;
-	vectors[CORNER_PRIO_RIGHT].x = vectors[CORNER_LOD_RIGHT].x * 0.2f;
-	vectors[CORNER_PRIO_RIGHT].y = vectors[CORNER_LOD_RIGHT].y * 0.2f;
-	vectors[CORNER_PRIO_RIGHT].z = vectors[CORNER_LOD_RIGHT].z;
-	RwV3dTransformPoints(vectors, vectors, 9, cammatrix);
+	RwV3dTransformPoints(vectors, vectors, ARRAY_SIZE(vectors), cammatrix);
+	//- rouz edit (ChatGPT)
 
 	if(TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOPDOWN ||
 #ifdef FIX_BUGS
@@ -1221,13 +1220,8 @@ CRenderer::RequestObjectsInFrustum(void)
 			for(int y = y1; y <= y2; y++)
 				ScanSectorList_RequestModels(CWorld::GetSector(x1, y)->m_lists);
 	}else{
-		poly[0].x = CWorld::GetSectorX(vectors[CORNER_CAM].x);
-		poly[0].y = CWorld::GetSectorY(vectors[CORNER_CAM].y);
-		poly[1].x = CWorld::GetSectorX(vectors[CORNER_LOD_LEFT].x);
-		poly[1].y = CWorld::GetSectorY(vectors[CORNER_LOD_LEFT].y);
-		poly[2].x = CWorld::GetSectorX(vectors[CORNER_LOD_RIGHT].x);
-		poly[2].y = CWorld::GetSectorY(vectors[CORNER_LOD_RIGHT].y);
-		ScanSectorPoly(poly, 3, ScanSectorList_RequestModels);
+		// rouz edit (ChatGPT)
+		ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_RequestModels);
 	}
 }
 
