@@ -599,7 +599,10 @@ struct BuildingInst
 	uint8 fadeAlpha;
 	bool lighting;
 };
-BuildingInst blendInsts[3][2000];
+//+ rouz edit (ChatGPT)
+enum { MAX_BLEND_INSTS = NUMVISIBLEENTITIES + NUMALPHAENTITYLIST };
+BuildingInst blendInsts[3][MAX_BLEND_INSTS];
+//- rouz edit (ChatGPT)
 int numBlendInsts[3];
 
 static RwRGBAReal black;
@@ -620,7 +623,10 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
+	//+ rouz edit (ChatGPT)
+	BuildingInst localBuilding;
+	BuildingInst *building = numBlendInsts[pass] < MAX_BLEND_INSTS ? &blendInsts[pass][numBlendInsts[pass]] : &localBuilding;
+	//- rouz edit (ChatGPT)
 
 	atomic->getPipeline()->instance(atomic);
 	building->instHeader = (gl3::InstanceDataHeader*)atomic->geometry->instData;
@@ -669,7 +675,7 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 		drawInst(building->instHeader, inst);
 	}
 	teardownVertexInput(building->instHeader);
-	if(defer)
+	if(defer && numBlendInsts[pass] < MAX_BLEND_INSTS) // rouz edit (ChatGPT)
 		numBlendInsts[pass]++;
 }
 
@@ -678,6 +684,10 @@ AtomicFullyTransparent(RpAtomic *atomic, int pass, int fadeAlpha)
 {
 	using namespace rw;
 	using namespace rw::gl3;
+
+	// rouz edit (ChatGPT)
+	if(numBlendInsts[pass] >= MAX_BLEND_INSTS)
+		return;
 
 	BuildingInst *building = &blendInsts[pass][numBlendInsts[pass]];
 

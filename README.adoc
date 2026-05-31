@@ -30,6 +30,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 
 * I increased the far clip plane to avoid annoying visible clipping (mostly at high altitudes) and modified librw (only in the D3D9 renderer) so that the fog remains the same. More is needed to be done to improve how the game looks from high altitudes.
 * I fixed the many visual bugs (horizon moving and rotating wackily, everything getting overexposed, camera moving lower inside the vehicle, objects disappearing) when the first person vehicle camera would roll.
+* I fixed most missing objects creating holes in the ground and missing water tiles that could be seen from a high altitude.
 * I changed the centering of the camera on foot to be lower so we can better see what we stand on.
 * With one little addition I was able to have two different levels of camera closeness when on foot.
 * I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat.

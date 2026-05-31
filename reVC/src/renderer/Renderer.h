@@ -83,7 +83,9 @@ public:
 	static void ScanSectorList(CPtrList *lists);
 	static void ScanSectorList_Priority(CPtrList *lists);
 	static void ScanSectorList_Subway(CPtrList *lists);
+	static void ScanSectorList_FarStaticMapEntities(CPtrList *lists); // rouz edit (ChatGPT)
 	static void ScanSectorList_RequestModels(CPtrList *lists);
+	static void ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists); // rouz edit (ChatGPT)
 
 	static void SortBIGBuildings(void);
 	static void SortBIGBuildingsForSectorList(CPtrList *list);

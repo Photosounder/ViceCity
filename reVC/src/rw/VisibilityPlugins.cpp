@@ -343,7 +343,7 @@ CVisibilityPlugins::RenderFadingAtomic(RpAtomic *atomic, float camdist)
 	if(fadefactor > 1.0f)
 		fadefactor = 1.0f;
 	alpha = mi->m_alpha * fadefactor;
-	if(alpha == 255)
+	if(alpha == 255 || lodatm == nil) // rouz edit (ChatGPT)
 		RENDERCALLBACK(atomic);
 	else{
 		RpGeometry *geo = RpAtomicGetGeometry(lodatm);

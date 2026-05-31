@@ -244,6 +244,94 @@ CRenderer::RenderFirstPersonVehicle(void)
 
 inline bool IsRoad(CEntity *e) { return e->IsBuilding() && ((CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex()))->m_wetRoadReflection; }
 
+//+ rouz edit (ChatGPT)
+#define HIGH_ALTITUDE_STATIC_MAP_RENDER_Z 40.0f
+
+struct HighAltitudeStaticMapInstance
+{
+	CSimpleModelInfo *modelInfo;
+	CVector position;
+};
+
+static bool gbUseHighAltitudeStaticMapDistance;
+static int32 gNumHighAltitudeStaticMapInstances;
+static HighAltitudeStaticMapInstance gaHighAltitudeStaticMapInstances[NUMVISIBLEENTITIES];
+
+static bool
+ShouldScanFarStaticMapEntities(void)
+{
+	return TheCamera.GetPosition().z > HIGH_ALTITUDE_STATIC_MAP_RENDER_Z;
+}
+
+static bool
+IsLowStaticMapEntity(CEntity *e)
+{
+	if(!(e->IsBuilding() || e->IsObject() || e->IsDummy()) || e->bIsBIGBuilding)
+		return false;
+
+	CColModel *col = CModelInfo::GetColModel(e->GetModelIndex());
+	return col && e->GetPosition().z + col->boundingBox.max.z <= HIGH_ALTITUDE_STATIC_MAP_RENDER_Z;
+}
+
+static bool
+IsHighAltitudeStaticMapEntity(CEntity *e)
+{
+	if(!(e->IsBuilding() || e->IsObject() || e->IsDummy()) || e->bIsBIGBuilding)
+		return false;
+
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
+	if(mi->m_drawLast || mi->m_additive || mi->m_noZwrite || e->bDrawLast)
+		return false;
+
+	return e->IsObject() ? IsLowStaticMapEntity(e) : true;
+}
+
+static bool
+ShouldForceHighAltitudeStaticMapEntity(CEntity *e)
+{
+	return IsHighAltitudeStaticMapEntity(e);
+}
+
+static float
+GetHighAltitudeLodDistance(CEntity *e, CSimpleModelInfo *mi, float dist)
+{
+	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(e)){
+		float largestLodDist = mi->GetLargestLodDistance();
+		if(dist > largestLodDist)
+			return Max(0.0f, largestLodDist - 0.1f);
+	}
+	return dist;
+}
+
+static void
+MarkHighAltitudeStaticMapInstance(CEntity *e)
+{
+	if(!gbUseHighAltitudeStaticMapDistance || !ShouldForceHighAltitudeStaticMapEntity(e) ||
+	   gNumHighAltitudeStaticMapInstances >= NUMVISIBLEENTITIES)
+		return;
+
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
+	for(int32 i = 0; i < gNumHighAltitudeStaticMapInstances; i++)
+		if(gaHighAltitudeStaticMapInstances[i].modelInfo == mi &&
+		   (gaHighAltitudeStaticMapInstances[i].position - e->GetPosition()).MagnitudeSqr() < 1.0f)
+			return;
+
+	gaHighAltitudeStaticMapInstances[gNumHighAltitudeStaticMapInstances].modelInfo = mi;
+	gaHighAltitudeStaticMapInstances[gNumHighAltitudeStaticMapInstances].position = e->GetPosition();
+	gNumHighAltitudeStaticMapInstances++;
+}
+
+static bool
+IsHighAltitudeStaticMapInstanceQueued(CSimpleModelInfo *mi, const CVector &position)
+{
+	for(int32 i = 0; i < gNumHighAltitudeStaticMapInstances; i++)
+		if(gaHighAltitudeStaticMapInstances[i].modelInfo == mi &&
+		   (gaHighAltitudeStaticMapInstances[i].position - position).MagnitudeSqr() < 1.0f)
+			return true;
+	return false;
+}
+//- rouz edit (ChatGPT)
+
 void
 CRenderer::RenderRoads(void)
 {
@@ -427,7 +515,7 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 			fadefactor = 1.0f;
 		alpha = mi->m_alpha * fadefactor;
 
-		if(alpha == 255)
+		if(alpha == 255 || lodatm == nil) // rouz edit (ChatGPT)
 			WorldRender::AtomicFirstPass(atomic, pass);
 		else{
 			// not quite sure what this is about, do we have to do that?
@@ -761,7 +849,11 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(ent->IsObject() && ent->bRenderDamaged)
 		mi->m_isDamaged = true;
 
-	RpAtomic *a = mi->GetAtomicFromDistance(dist);
+	//+ rouz edit (ChatGPT)
+	float lodDist = GetHighAltitudeLodDistance(ent, mi, dist);
+	RpAtomic *a = mi->GetAtomicFromDistance(lodDist);
+	//- rouz edit (ChatGPT)
+
 	if(a){
 		mi->m_isDamaged = false;
 		if(ent->m_rwObject == nil)
@@ -784,12 +876,14 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		if(mi->m_alpha != 255){
 			CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 			ent->bDistanceFade = true;
+			MarkHighAltitudeStaticMapInstance(ent); // rouz edit (ChatGPT)
 			return VIS_INVISIBLE;
 		}
 
 		if(mi->m_drawLast || ent->bDrawLast){
 			if(CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist)){
 				ent->bDistanceFade = false;
+				MarkHighAltitudeStaticMapInstance(ent); // rouz edit (ChatGPT)
 				return VIS_INVISIBLE;
 			}
 		}
@@ -801,18 +895,18 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(mi->m_noFade){
 		mi->m_isDamaged = false;
 		// request model
-		if(dist - STREAM_DISTANCE < mi->GetLargestLodDistance() && request)
+		if(lodDist - STREAM_DISTANCE < mi->GetLargestLodDistance() && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
 
 	// We might be fading
 
-	a = mi->GetAtomicFromDistance(dist - FADE_DISTANCE);
+	a = mi->GetAtomicFromDistance(lodDist - FADE_DISTANCE); // rouz edit (ChatGPT)
 	mi->m_isDamaged = false;
 	if(a == nil){
 		// request model
-		if(dist - FADE_DISTANCE - STREAM_DISTANCE < mi->GetLargestLodDistance() && request)
+		if(lodDist - FADE_DISTANCE - STREAM_DISTANCE < mi->GetLargestLodDistance() && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
@@ -833,6 +927,8 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	}else{
 		CVisibilityPlugins::InsertEntityIntoSortedList(ent, dist);
 		ent->bDistanceFade = true;
+		// rouz edit (ChatGPT)
+		MarkHighAltitudeStaticMapInstance(ent);
 		return VIS_OFFSCREEN;	// Why this?
 	}
 }
@@ -870,6 +966,10 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 
 	float dist = (ms_vecCameraPosition-ent->GetPosition()).Magnitude();
 	CSimpleModelInfo *nonLOD = mi->GetRelatedModel();
+
+	// rouz edit (ChatGPT)
+	if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, ent->GetPosition()))
+		return VIS_INVISIBLE;
 
 	// Find out whether to draw below near distance.
 	// This is only the case if there is a non-LOD which is either not
@@ -967,6 +1067,10 @@ CRenderer::ConstructRenderList(void)
 	ms_nNoOfInVisibleEntities = 0;
 }
 	ms_vecCameraPosition = TheCamera.GetPosition();
+	//+ rouz edit (ChatGPT)
+	gNumHighAltitudeStaticMapInstances = 0;
+	gbUseHighAltitudeStaticMapDistance = false;
+	//- rouz edit (ChatGPT)
 
 	// unused
 	pFullBlockedRanges = nil;
@@ -1130,6 +1234,10 @@ CRenderer::ScanWorld(void)
 
 				// below LOD
 				ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList);
+
+				// rouz edit (ChatGPT)
+				if(ShouldScanFarStaticMapEntities())
+					ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_FarStaticMapEntities);
 			}else{
 				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList);
 			}
@@ -1220,8 +1328,15 @@ CRenderer::RequestObjectsInFrustum(void)
 			for(int y = y1; y <= y2; y++)
 				ScanSectorList_RequestModels(CWorld::GetSector(x1, y)->m_lists);
 	}else{
-		// rouz edit (ChatGPT)
-		ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_RequestModels);
+		//+ rouz edit (ChatGPT)
+		if(f > LOD_DISTANCE){
+			ScanSectorFrustum(vectors, CORNER_LOD_TOPLEFT, ScanSectorList_RequestModels);
+			if(ShouldScanFarStaticMapEntities())
+				ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_RequestFarStaticMapEntityModels);
+		}else{
+			ScanSectorFrustum(vectors, CORNER_FAR_TOPLEFT, ScanSectorList_RequestModels);
+		}
+		//- rouz edit (ChatGPT)
 	}
 }
 
@@ -1440,13 +1555,23 @@ CRenderer::InsertEntityIntoList(CEntity *ent)
 
 #ifdef NEW_RENDERER
 	// TODO: there are more flags being checked here
-	if(gbNewRenderer && (ent->IsVehicle() || ent->IsPed()))
+	//+ rouz edit (ChatGPT)
+	if(gbNewRenderer && (ent->IsVehicle() || ent->IsPed())){
+		if(ms_nNoOfVisibleVehicles >= NUMVISIBLEENTITIES)
+			return;
 		ms_aVisibleVehiclePtrs[ms_nNoOfVisibleVehicles++] = ent;
-	else if(gbNewRenderer && ent->IsBuilding())
+	}else if(gbNewRenderer && ent->IsBuilding()){
+		if(ms_nNoOfVisibleBuildings >= NUMVISIBLEENTITIES)
+			return;
 		ms_aVisibleBuildingPtrs[ms_nNoOfVisibleBuildings++] = ent;
-	else
+	}else
 #endif
+	{
+		if(ms_nNoOfVisibleEntities >= NUMVISIBLEENTITIES)
+			return;
 		ms_aVisibleEntityPtrs[ms_nNoOfVisibleEntities++] = ent;
+	}
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -1569,6 +1694,66 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+void
+CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
+{
+	CPtrNode *node;
+	CPtrList *list;
+	CEntity *ent;
+	int i;
+	static int32 listIDs[] = {
+		ENTITYLIST_BUILDINGS,
+		ENTITYLIST_BUILDINGS_OVERLAP,
+		ENTITYLIST_OBJECTS,
+		ENTITYLIST_OBJECTS_OVERLAP,
+		ENTITYLIST_DUMMIES,
+		ENTITYLIST_DUMMIES_OVERLAP,
+	};
+	float dx, dy;
+
+	for(i = 0; i < ARRAY_SIZE(listIDs); i++){
+		list = &lists[listIDs[i]];
+		for(node = list->first; node; node = node->next){
+			ent = (CEntity*)node->item;
+			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;	// already seen
+			if(!ShouldForceHighAltitudeStaticMapEntity(ent))
+				continue;
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			ent->bOffscreen = false;
+
+			gbUseHighAltitudeStaticMapDistance = true;
+			switch(SetupEntityVisibility(ent)){
+			case VIS_VISIBLE:
+				MarkHighAltitudeStaticMapInstance(ent);
+				InsertEntityIntoList(ent);
+				break;
+			case VIS_INVISIBLE:
+				if(!IsGlass(ent->GetModelIndex()))
+					break;
+				// fall through
+			case VIS_OFFSCREEN:
+				ent->bOffscreen = true;
+				dx = ms_vecCameraPosition.x - ent->GetPosition().x;
+				dy = ms_vecCameraPosition.y - ent->GetPosition().y;
+				if(dx > -30.0f && dx < 30.0f &&
+				   dy > -30.0f && dy < 30.0f &&
+				   ms_nNoOfInVisibleEntities < NUMINVISIBLEENTITIES - 1)
+					ms_aInVisibleEntityPtrs[ms_nNoOfInVisibleEntities++] = ent;
+				break;
+			case VIS_STREAMME:
+				if(!CStreaming::ms_disableStreaming)
+					if(!m_loadingPriority || CStreaming::ms_numModelsRequested < 10)
+						CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				break;
+			}
+			gbUseHighAltitudeStaticMapDistance = false;
+		}
+	}
+}
+//- rouz edit (ChatGPT)
+
 #ifdef GTA_TRAIN
 void
 CRenderer::ScanSectorList_Subway(CPtrList *lists)
@@ -1627,6 +1812,42 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+void
+CRenderer::ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
+{
+	CPtrNode *node;
+	CPtrList *list;
+	CEntity *ent;
+	int i;
+	static int32 listIDs[] = {
+		ENTITYLIST_BUILDINGS,
+		ENTITYLIST_BUILDINGS_OVERLAP,
+		ENTITYLIST_OBJECTS,
+		ENTITYLIST_OBJECTS_OVERLAP,
+		ENTITYLIST_DUMMIES,
+		ENTITYLIST_DUMMIES_OVERLAP,
+	};
+
+	for(i = 0; i < ARRAY_SIZE(listIDs); i++){
+		list = &lists[listIDs[i]];
+		for(node = list->first; node; node = node->next){
+			ent = (CEntity*)node->item;
+			if(ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;	// already seen
+			if(!ShouldForceHighAltitudeStaticMapEntity(ent))
+				continue;
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+
+			gbUseHighAltitudeStaticMapDistance = true;
+			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+			gbUseHighAltitudeStaticMapDistance = false;
+		}
+	}
+}
+//- rouz edit (ChatGPT)
+
 // Put big buildings in front
 // This seems pointless because the sector lists shouldn't have big buildings in the first place
 void
@@ -1665,6 +1886,11 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 		if(!CClock::GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
 			return false;
 	float dist = (ent->GetPosition() - campos).Magnitude();
+
+	// rouz edit (ChatGPT)
+	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(ent))
+		return true;
+
 	if(mi->m_noFade)
 		return dist - STREAM_DISTANCE < mi->GetLargestLodDistance();
 	else

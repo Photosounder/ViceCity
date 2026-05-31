@@ -804,8 +804,9 @@ CWaterLevel::GetWaterNormal(float fX, float fY)
 inline float
 _GetWaterDrawDist()
 {
+	// rouz edit (ChatGPT)
+	if     ( TheCamera.GetPosition().z > 40.0f  ) return 4000.0f;
 	if     ( TheCamera.GetPosition().z < 15.0f  ) return 1200.0f;
-	if     ( TheCamera.GetPosition().z > 60.0f  ) return 2000.0f;
 	return ( TheCamera.GetPosition().z + -15.0f ) * 800.0f / 45.0f + 1200.0f;
 }
 

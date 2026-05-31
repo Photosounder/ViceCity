@@ -1,5 +1,4 @@
 #include "common.h"
-#include <ctype.h>
 #include "main.h"
 
 #include "General.h"
