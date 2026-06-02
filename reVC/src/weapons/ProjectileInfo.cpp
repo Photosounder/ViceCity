@@ -266,8 +266,22 @@ CProjectileInfo::Update()
 
 	int tearGasOffset = -0.0f; // unused
 	
+	//+ rouz edit (ChatGPT)
+	static float rocketSmokeFrameCounter[NUM_PROJECTILES];
+	static uint32 rocketSmokeExpirationTime[NUM_PROJECTILES];
+	static CProjectile *rocketSmokeProjectile[NUM_PROJECTILES];
+	static CVector rocketSmokePreviousPos[NUM_PROJECTILES];
+	//- rouz edit (ChatGPT)
+
 	for (int i = 0; i < ARRAY_SIZE(gaProjectileInfo); i++) {
-		if (!gaProjectileInfo[i].m_bInUse) continue;
+		if (!gaProjectileInfo[i].m_bInUse) {
+			//+ rouz edit (ChatGPT)
+			rocketSmokeFrameCounter[i] = 0.0f;
+			rocketSmokeExpirationTime[i] = 0;
+			rocketSmokeProjectile[i] = nil;
+			//- rouz edit (ChatGPT)
+			continue;
+		}
 
 		CPed *ped = (CPed*)gaProjectileInfo[i].m_pSource;
 		if (ped != nil && ped->IsPed() && !ped->IsPointerValid())
@@ -291,6 +305,11 @@ CProjectileInfo::Update()
 
 		if ( nextPos.x <= PROJECTILE_BOUNDARY_MIN_X || nextPos.x >= PROJECTILE_BOUNDARY_MAX_X || nextPos.y <= PROJECTILE_BOUNDARY_MIN_Y || nextPos.y >= PROJECTILE_BOUNDARY_MAX_Y ) {
 			// Not RemoveProjectile, because we don't want no explosion
+			//+ rouz edit (ChatGPT)
+			rocketSmokeFrameCounter[i] = 0.0f;
+			rocketSmokeExpirationTime[i] = 0;
+			rocketSmokeProjectile[i] = nil;
+			//- rouz edit (ChatGPT)
 			gaProjectileInfo[i].m_bInUse = false;
 			CWorld::Remove(ms_apProjectile[i]);
 			delete ms_apProjectile[i];
@@ -306,20 +325,51 @@ CProjectileInfo::Update()
 		}
 
 		if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_ROCKET) {
-			CParticle::AddParticlesAlongLine(PARTICLE_ROCKET_SMOKE, gaProjectileInfo[i].m_vecPos, projectilePos, CVector(0.0f, 0.0f, 0.0f), 0.7f, 0, 0, 0, 3000);
+			//+ rouz edit (ChatGPT)
+			if (rocketSmokeProjectile[i] != ms_apProjectile[i] || rocketSmokeExpirationTime[i] != gaProjectileInfo[i].m_nExplosionTime) {
+				rocketSmokeFrameCounter[i] = 0.0f;
+				rocketSmokeExpirationTime[i] = gaProjectileInfo[i].m_nExplosionTime;
+				rocketSmokeProjectile[i] = ms_apProjectile[i];
+				rocketSmokePreviousPos[i] = gaProjectileInfo[i].m_vecPos;
+			}
+
+			rocketSmokeFrameCounter[i] += CTimer::GetTimeStepFix();
+			if (rocketSmokeFrameCounter[i] >= 1.0f) {
+				int32 smokeFrames = (int32)rocketSmokeFrameCounter[i];
+				CVector smokeStart = rocketSmokePreviousPos[i];
+				CVector smokeStep = (projectilePos - rocketSmokePreviousPos[i]) * (1.0f / smokeFrames);
+
+				for (int32 smokeFrame = 0; smokeFrame < smokeFrames; smokeFrame++) {
+					CVector smokeEnd = smokeStart + smokeStep;
+					CParticle::AddParticlesAlongLine(PARTICLE_ROCKET_SMOKE, smokeStart, smokeEnd, CVector(0.0f, 0.0f, 0.0f), 0.7f, 0, 0, 0, 3000);
+					smokeStart = smokeEnd;
+				}
+
+				rocketSmokePreviousPos[i] = projectilePos;
+				rocketSmokeFrameCounter[i] -= smokeFrames;
+			}
+			//- rouz edit (ChatGPT)
 		}
 
 		if (CTimer::GetTimeInMilliseconds() <= gaProjectileInfo[i].m_nExplosionTime || gaProjectileInfo[i].m_nExplosionTime == 0) {
 			if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_ROCKET) {
 				CVector pos = ms_apProjectile[i]->GetPosition();
 				CWorld::pIgnoreEntity = ms_apProjectile[i];
-				if (ms_apProjectile[i]->bHasCollided
+				//+ rouz edit (ChatGPT)
+				bool removeProjectile = ms_apProjectile[i]->bHasCollided
 					|| !CWorld::GetIsLineOfSightClear(gaProjectileInfo[i].m_vecPos, pos, true, true, true, true, false, false)
-					|| CHeli::TestRocketCollision(&pos) || CPlane::TestRocketCollision(&pos)) {
+					|| CHeli::TestRocketCollision(&pos) || CPlane::TestRocketCollision(&pos);
+				if (removeProjectile) {
 					RemoveProjectile(&gaProjectileInfo[i], ms_apProjectile[i]);
+					rocketSmokeFrameCounter[i] = 0.0f;
+					rocketSmokeExpirationTime[i] = 0;
+					rocketSmokeProjectile[i] = nil;
+					CWorld::pIgnoreEntity = nil;
+					continue;
 				}
 				CWorld::pIgnoreEntity = nil;
-				ms_apProjectile[i]->m_vecMoveSpeed *= 1.07f;
+				ms_apProjectile[i]->m_vecMoveSpeed *= Pow(1.07f, CTimer::GetTimeStepFix());
+				//- rouz edit (ChatGPT)
 
 			} else if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_MOLOTOV) {
 				CVector pos = ms_apProjectile[i]->GetPosition();
@@ -349,6 +399,11 @@ CProjectileInfo::Update()
 				RemoveProjectile(&gaProjectileInfo[i], ms_apProjectile[i]);
 			}
 		}
+
+		//+ rouz edit (ChatGPT)
+		if (!gaProjectileInfo[i].m_bInUse)
+			continue;
+		//- rouz edit (ChatGPT)
 
 		gaProjectileInfo[i].m_vecPos = ms_apProjectile[i]->GetPosition();
 	}

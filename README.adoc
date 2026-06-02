@@ -33,7 +33,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I fixed most missing objects creating holes in the ground and missing water tiles that could be seen from a high altitude.
 * I changed the centering of the camera on foot to be lower so we can better see what we stand on.
 * With one little addition I was able to have two different levels of camera closeness when on foot.
-* I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat.
+* I fixed firing rockets on foot while moving fast (like being atop a fast moving vehicle) so that it's safe to fire rockets in any direction while using my remote controlled car cheat and I fixed how fast rockets travel.
 * I fixed things that would be animated at the incorrect speed (like water or weather effects) when the game isn't playing at 1x speed and 50 fps.
 
 ++++
@@ -57,14 +57,16 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 
 === Other
 
+* Airline planes now have collisions enabled, you can't just go through them anymore, they can push you, you can stand on them or land on them.
+* They also have their motion smoothed so they fly more smoothly and realistically.
+* I disabled the way that the camera would suddenly pitch down when the vehicle would pitch straight down (common when doing flips).
+
 ++++
 <p align="center">
   <img src="./img/out_of_bounds.png">
 </p>
 ++++
 
-* Airline planes now have collisions enabled, you can't just go through them anymore, they can push you, you can stand on them or land on them.
-* I disabled the way that the camera would suddenly pitch down when the vehicle would pitch straight down (common when doing flips).
 * I disabled the invisible box around the map that would make you bounce in the other direction, so now you can sail or fly much further away, far enough for water to become invisible and for the game to crash.
 * I disabled sliding when standing on a moving vehicle so that we don't constantly slide off when standing on a remote controlled car.
 * I disabled losing health from drowning as a ped (but not as a driver). Hopefully I will eventually do more to make water more logical.
