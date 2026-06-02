@@ -165,7 +165,7 @@ public:
 	bool ApplyCollision(CColPoint &colpoint, float &impulse);
 	bool ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CVector &moveSpeed, CVector &turnSpeed);
 	bool ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint);
-	bool ApplyFriction(float adhesiveLimit, CColPoint &colpoint);
+	bool ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surface = nil); // rouz edit (ChatGPT)
 
 	bool ProcessShiftSectorList(CPtrList *ptrlists);
 	bool ProcessCollisionSectorList_SimpleCar(CPtrList *lists);

@@ -589,6 +589,24 @@ CPhysical::ApplyAirResistance(void)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+static bool
+IsKinematicCollisionSurface(CEntity *ent)
+{
+	return ent && ent->IsVehicle() && ((CVehicle*)ent)->IsPlane();
+}
+
+static CVector
+GetKinematicCollisionSurfaceSpeed(CEntity *ent, const CVector &point)
+{
+	if(IsKinematicCollisionSurface(ent)){
+		CPhysical *phys = (CPhysical*)ent;
+		return phys->GetSpeed(point - phys->GetPosition());
+	}
+	return CVector(0.0f, 0.0f, 0.0f);
+}
+//- rouz edit (ChatGPT)
+
 bool
 CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, float &impulseB)
 {
@@ -951,12 +969,14 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 	float normalSpeed;
 	CVector speed;
 	CVector vImpulse;
+	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(B, colpoint.point); // rouz edit (ChatGPT)
+	CVector relativeMoveSpeed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_BEACHBALL && B != (CEntity*)FindPlayerPed())
 		((CObject*)this)->m_nBeachballBounces = 0;
 
 	if(bPedPhysics){
-		normalSpeed = DotProduct(m_vecMoveSpeed, colpoint.normal);
+		normalSpeed = DotProduct(relativeMoveSpeed, colpoint.normal); // rouz edit (ChatGPT)
 		if(normalSpeed < 0.0f){
 			impulse = -normalSpeed * m_fMass;
 			ApplyMoveForce(colpoint.normal * impulse);
@@ -964,7 +984,7 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 		}
 	}else{
 		CVector pointpos = colpoint.point - GetPosition();
-		speed = GetSpeed(pointpos);
+		speed = GetSpeed(pointpos) - surfaceSpeed; // rouz edit (ChatGPT)
 		normalSpeed = DotProduct(speed, colpoint.normal);
 		if(normalSpeed < 0.0f){
 			int16 elasticityType = 0;
@@ -987,24 +1007,24 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 			}
 
 			if(elasticityType == 1 && !bHasContacted &&
-			   Abs(m_vecMoveSpeed.x) < minspeed &&
-			   Abs(m_vecMoveSpeed.y) < minspeed &&
-			   Abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+			   Abs(relativeMoveSpeed.x) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.y) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.z) < minspeed*2.0f) // rouz edit (ChatGPT)
 				impulse = -0.98f * normalSpeed * mass;
 			if(elasticityType == 3 &&
-			   Abs(m_vecMoveSpeed.x) < minspeed &&
-			   Abs(m_vecMoveSpeed.y) < minspeed &&
-			   Abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+			   Abs(relativeMoveSpeed.x) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.y) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.z) < minspeed*2.0f) // rouz edit (ChatGPT)
 				impulse = -0.8f * normalSpeed * mass;
 			else if(elasticityType == 2 &&
-			   Abs(m_vecMoveSpeed.x) < minspeed &&
-			   Abs(m_vecMoveSpeed.y) < minspeed &&
-			   Abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+			   Abs(relativeMoveSpeed.x) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.y) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.z) < minspeed*2.0f) // rouz edit (ChatGPT)
 				impulse = -0.92f * normalSpeed * mass;
 			else if(elasticityType == 4 &&
-			   Abs(m_vecMoveSpeed.x) < minspeed &&
-			   Abs(m_vecMoveSpeed.y) < minspeed &&
-			   Abs(m_vecMoveSpeed.z) < minspeed*2.0f)
+			   Abs(relativeMoveSpeed.x) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.y) < minspeed && // rouz edit (ChatGPT)
+			   Abs(relativeMoveSpeed.z) < minspeed*2.0f) // rouz edit (ChatGPT)
 				impulse = -0.8f * normalSpeed * mass;
 			else if(IsVehicle() && ((CVehicle*)this)->IsBoat() &&
 			   (colpoint.surfaceB == SURFACE_WOOD_SOLID || colpoint.normal.z < 0.5f))
@@ -1185,9 +1205,10 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 }
 
 bool
-CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint)
+CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surface) // rouz edit (ChatGPT)
 {
 	CVector speed;
+	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(surface, colpoint.point); // rouz edit (ChatGPT)
 	float normalSpeed;
 	CVector vOtherSpeed;
 	float fOtherSpeed;
@@ -1196,8 +1217,9 @@ CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint)
 	float impulseLimit;
 
 	if(bPedPhysics){
-		normalSpeed = DotProduct(m_vecMoveSpeed, colpoint.normal);
-		vOtherSpeed = m_vecMoveSpeed - colpoint.normal*normalSpeed;
+		speed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
+		normalSpeed = DotProduct(speed, colpoint.normal); // rouz edit (ChatGPT)
+		vOtherSpeed = speed - colpoint.normal*normalSpeed; // rouz edit (ChatGPT)
 
 		fOtherSpeed = vOtherSpeed.Magnitude();
 		if(fOtherSpeed > 0.0f){
@@ -1218,7 +1240,7 @@ CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint)
 		}
 	}else{
 		CVector pointpos = colpoint.point - GetPosition();
-		speed = GetSpeed(pointpos);
+		speed = GetSpeed(pointpos) - surfaceSpeed; // rouz edit (ChatGPT)
 		normalSpeed = DotProduct(speed, colpoint.normal);
 		vOtherSpeed = speed - colpoint.normal*normalSpeed;
 
@@ -1816,7 +1838,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 							DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 						}
 
-						if(A->ApplyFriction(adhesion, aColPoints[i]))
+						if(A->ApplyFriction(adhesion, aColPoints[i], B)) // rouz edit (ChatGPT)
 							A->bHasContacted = true;
 					}
 				}

@@ -47,6 +47,7 @@ public:
 	bool m_bIsDrugRunCesna;
 	bool m_bIsDropOffCesna;
 	bool m_bTempPlane;
+	bool m_bHasCollisionVelocity; // rouz edit (ChatGPT)
 
 	CPlane(int32 id, uint8 CreatedBy);
 	~CPlane(void);

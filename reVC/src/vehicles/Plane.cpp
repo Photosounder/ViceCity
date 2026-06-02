@@ -86,6 +86,7 @@ CPlane::CPlane(int32 id, uint8 CreatedBy)
 	m_bIsDrugRunCesna = false;
 	m_bIsDropOffCesna = false;
 	m_bTempPlane = false;
+	m_bHasCollisionVelocity = false; // rouz edit (ChatGPT)
 
 	SetStatus(STATUS_PLANE);
 	m_level = LEVEL_GENERIC;
@@ -157,6 +158,12 @@ CPlane::ProcessControl(void)
 	m_nDamagePieceType = 0;
 	m_fDamageImpulse = 0.0f;
 	m_pDamageEntity = nil;
+	//- rouz edit (ChatGPT)
+
+	//+ rouz edit (ChatGPT)
+	CMatrix previousCollisionMatrix(GetMatrix());
+	bool hadCollisionVelocity = m_bHasCollisionVelocity;
+	bool updatedCollisionMatrix = false;
 	//- rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_AIRTRAIN){
@@ -289,6 +296,7 @@ CPlane::ProcessControl(void)
 
 	// Update plane position and speed
 	if(GetModelIndex() == MI_AIRTRAIN || !m_isFarAway || ((CTimer::GetFrameCounter() + m_randomSeed) & 7) == 0){
+		updatedCollisionMatrix = true; // rouz edit (ChatGPT)
 		if(GetModelIndex() == MI_AIRTRAIN){
 			float pathPositionRear = PlanePathPosition[m_nPlaneId] - 30.0f;
 			if(pathPositionRear < 0.0f)
@@ -566,6 +574,19 @@ CPlane::ProcessControl(void)
 			m_isFarAway = !((posFront - TheCamera.GetPosition()).MagnitudeSqr2D() < sq(300.0f));
 		}
 	}
+
+	//+ rouz edit (ChatGPT)
+	if(updatedCollisionMatrix){
+		if(hadCollisionVelocity && CTimer::GetTimeStep() > 0.0f){
+			float invTimeStep = 1.0f/CTimer::GetTimeStep();
+			m_vecMoveSpeed = (GetPosition() - previousCollisionMatrix.GetPosition()) * invTimeStep;
+			m_vecTurnSpeed = (CrossProduct(previousCollisionMatrix.GetRight(), GetRight()) +
+				CrossProduct(previousCollisionMatrix.GetForward(), GetForward()) +
+				CrossProduct(previousCollisionMatrix.GetUp(), GetUp())) * (0.5f * invTimeStep);
+		}
+		m_bHasCollisionVelocity = true;
+	}
+	//- rouz edit (ChatGPT)
 
 	GetMatrix().UpdateRW();
 	UpdateRwFrame();
