@@ -57,6 +57,54 @@ enum
 	CESNA_STATUS_LANDED,
 };
 
+//+ rouz edit (ChatGPT)
+static float
+GetPlanePathSegmentLength(CPlaneNode *nodes, int32 numNodes, float totalLength, int32 start, int32 end)
+{
+	float length;
+
+	if(start == end)
+		return 0.0f;
+	length = nodes[end].t - nodes[start].t;
+	if(length <= 0.0f)
+		length += totalLength;
+	return length;
+}
+
+static CVector
+GetPlanePathTangent(CPlaneNode *nodes, int32 numNodes, float totalLength, bool loop, int32 node, float segmentLength)
+{
+	int32 prev = node > 0 ? node - 1 : (loop ? numNodes - 1 : node);
+	int32 next = node + 1 < numNodes ? node + 1 : (loop ? 0 : node);
+	float prevLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, prev, node);
+	float nextLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, node, next);
+	float tangentLength = prevLength + nextLength;
+
+	if(prev == node)
+		return nodes[next].p - nodes[node].p;
+	if(next == node)
+		return nodes[node].p - nodes[prev].p;
+	if(tangentLength <= 0.0f)
+		return CVector(0.0f, 0.0f, 0.0f);
+	return (nodes[next].p - nodes[prev].p) * (segmentLength/tangentLength);
+}
+
+static CVector
+InterpolatePlanePathPosition(CPlaneNode *nodes, int32 numNodes, float totalLength, bool loop, int32 node, int32 next, float f)
+{
+	float f2 = f*f;
+	float f3 = f2*f;
+	float segmentLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, node, next);
+	CVector tangent0 = GetPlanePathTangent(nodes, numNodes, totalLength, loop, node, segmentLength);
+	CVector tangent1 = GetPlanePathTangent(nodes, numNodes, totalLength, loop, next, segmentLength);
+
+	return nodes[node].p*(2.0f*f3 - 3.0f*f2 + 1.0f) +
+		tangent0*(f3 - 2.0f*f2 + f) +
+		nodes[next].p*(-2.0f*f3 + 3.0f*f2) +
+		tangent1*(f3 - f2);
+}
+//- rouz edit (ChatGPT)
+
 int32 CesnaMissionStatus;
 int32 CesnaMissionStartTime;
 CPlane *pDrugRunCesna;
@@ -351,7 +399,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += TotalLengthOfFlightPath;
 			float f = (pathPositionRear - pPathNodes[m_nCurPathNode].t)/dist;
-			CVector posRear = (1.0f - f)*pPathNodes[m_nCurPathNode].p + f*pPathNodes[nextTrackNode].p;
+			CVector posRear = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, m_nCurPathNode, nextTrackNode, f); // rouz edit (ChatGPT)
 
 			// Same for the front
 			float pathPositionFront = pathPositionRear + 60.0f;
@@ -381,7 +429,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += TotalLengthOfFlightPath;
 			f = (pathPositionFront - pPathNodes[curPathNodeFront].t)/dist;
-			CVector posFront = (1.0f - f)*pPathNodes[curPathNodeFront].p + f*pPathNodes[nextPathNodeFront].p;
+			CVector posFront = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, curPathNodeFront, nextPathNodeFront, f); // rouz edit (ChatGPT)
 
 			// And for another point 60 units in front of the plane, used to calculate roll
 			float pathPositionFront2 = pathPositionFront + 60.0f;
@@ -411,7 +459,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += TotalLengthOfFlightPath;
 			f = (pathPositionFront2 - pPathNodes[curPathNodeFront2].t)/dist;
-			CVector posFront2 = (1.0f - f)*pPathNodes[curPathNodeFront2].p + f*pPathNodes[nextPathNodeFront2].p;
+			CVector posFront2 = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, curPathNodeFront2, nextPathNodeFront2, f); // rouz edit (ChatGPT)
 
 			// Now set matrix
 			GetMatrix().SetTranslateOnly((posRear + posFront) / 2.0f);
@@ -445,6 +493,7 @@ CPlane::ProcessControl(void)
 			CPlaneNode *pathNodes;
 			float planePathSpeed;
 			int numPathNodes;
+			bool planePathLoops; // rouz edit (ChatGPT)
 
 			if(GetModelIndex() == MI_CHOPPER){
 				planePathPosition = PlanePath3Position[m_nPlaneId];
@@ -452,12 +501,14 @@ CPlane::ProcessControl(void)
 				pathNodes = pPath3Nodes;
 				planePathSpeed = PlanePath3Speed[m_nPlaneId];
 				numPathNodes = NumPath3Nodes;
+				planePathLoops = false; // rouz edit (ChatGPT)
 			}else{
 				planePathPosition = PlanePath2Position[m_nPlaneId];
 				totalLengthOfFlightPath = TotalLengthOfFlightPath2;
 				pathNodes = pPath2Nodes;
 				planePathSpeed = PlanePath2Speed[m_nPlaneId];
 				numPathNodes = NumPath2Nodes;
+				planePathLoops = true; // rouz edit (ChatGPT)
 			}
 
 			// Advance current node to appropriate position
@@ -488,7 +539,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += totalLengthOfFlightPath;
 			float f = (pathPositionRear - pathNodes[m_nCurPathNode].t)/dist;
-			CVector posRear = (1.0f - f)*pathNodes[m_nCurPathNode].p + f*pathNodes[nextTrackNode].p;
+			CVector posRear = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, m_nCurPathNode, nextTrackNode, f); // rouz edit (ChatGPT)
 
 			// Same for the front
 			float pathPositionFront = pathPositionRear + 20.0f;
@@ -518,7 +569,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += totalLengthOfFlightPath;
 			f = (pathPositionFront - pathNodes[curPathNodeFront].t)/dist;
-			CVector posFront = (1.0f - f)*pathNodes[curPathNodeFront].p + f*pathNodes[nextPathNodeFront].p;
+			CVector posFront = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, curPathNodeFront, nextPathNodeFront, f); // rouz edit (ChatGPT)
 
 			// And for another point 30 units in front of the plane, used to calculate roll
 			float pathPositionFront2 = pathPositionFront + 30.0f;
@@ -548,7 +599,7 @@ CPlane::ProcessControl(void)
 			if(dist < 0.0f)
 				dist += totalLengthOfFlightPath;
 			f = (pathPositionFront2 - pathNodes[curPathNodeFront2].t)/dist;
-			CVector posFront2 = (1.0f - f)*pathNodes[curPathNodeFront2].p + f*pathNodes[nextPathNodeFront2].p;
+			CVector posFront2 = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, curPathNodeFront2, nextPathNodeFront2, f); // rouz edit (ChatGPT)
 
 			// Now set matrix
 			GetMatrix().SetTranslateOnly((posRear + posFront) / 2.0f);
