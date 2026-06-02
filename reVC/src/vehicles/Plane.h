@@ -55,6 +55,7 @@ public:
 	void SetModelIndex(uint32 id);
 	void DeleteRwObject(void);
 	void ProcessControl(void);
+	void ProcessCollision(void); // rouz edit (ChatGPT)
 	void PreRender(void);
 	void Render(void);
 	void FlagToDestroyWhenNextProcessed() { bRemoveFromWorld = true; }

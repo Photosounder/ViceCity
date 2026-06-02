@@ -6,6 +6,7 @@
 #include "ModelInfo.h"
 #include "Treadable.h"
 #include "Ped.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "Vehicle.h"
 #include "Boat.h"
 #include "Heli.h"
@@ -1258,6 +1259,7 @@ CRenderer::ScanWorld(void)
 			ScanBigBuildingList(CWorld::GetBigBuildingList(LEVEL_GENERIC));
 		}
 	}
+	ScanFarAwayVehicles(); // rouz edit (ChatGPT)
 }
 
 void
@@ -1338,6 +1340,7 @@ CRenderer::RequestObjectsInFrustum(void)
 		}
 		//- rouz edit (ChatGPT)
 	}
+	ScanFarAwayVehicleModels(); // rouz edit (ChatGPT)
 }
 
 bool
@@ -1602,6 +1605,40 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+void
+CRenderer::ScanFarAwayVehicles(void)
+{
+	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CEntity *ent;
+	int vis;
+
+	if(vehiclePool == nil)
+		return;
+
+	for(int i = 0; i < vehiclePool->GetSize(); i++){
+		ent = vehiclePool->GetSlot(i);
+		if(ent == nil ||
+		   !ent->bDrawFarAway ||
+		   ent->m_scanCode == CWorld::GetCurrentScanCode())
+			continue;
+
+		ent->m_scanCode = CWorld::GetCurrentScanCode();
+		vis = SetupBigBuildingVisibility(ent);
+		switch(vis){
+		case VIS_VISIBLE:
+			InsertEntityIntoList(ent);
+			ent->bOffscreen = false;
+			break;
+		case VIS_STREAMME:
+			if(!CStreaming::ms_disableStreaming)
+				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+			break;
+		}
+	}
+}
+//- rouz edit (ChatGPT)
+
 void
 CRenderer::ScanSectorList(CPtrList *lists)
 {
@@ -1811,6 +1848,30 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 		}
 	}
 }
+
+//+ rouz edit (ChatGPT)
+void
+CRenderer::ScanFarAwayVehicleModels(void)
+{
+	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CEntity *ent;
+
+	if(vehiclePool == nil)
+		return;
+
+	for(int i = 0; i < vehiclePool->GetSize(); i++){
+		ent = vehiclePool->GetSlot(i);
+		if(ent == nil ||
+		   !ent->bDrawFarAway ||
+		   ent->m_scanCode == CWorld::GetCurrentScanCode())
+			continue;
+
+		ent->m_scanCode = CWorld::GetCurrentScanCode();
+		if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+			CStreaming::RequestModel(ent->GetModelIndex(), 0);
+	}
+}
+//- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 void

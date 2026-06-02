@@ -80,11 +80,13 @@ public:
 	static void RequestObjectsInFrustum(void);
 	static void ScanSectorPoly(RwV2d *poly, int32 numVertices, void (*scanfunc)(CPtrList *));
 	static void ScanBigBuildingList(CPtrList &list);
+	static void ScanFarAwayVehicles(void); // rouz edit (ChatGPT)
 	static void ScanSectorList(CPtrList *lists);
 	static void ScanSectorList_Priority(CPtrList *lists);
 	static void ScanSectorList_Subway(CPtrList *lists);
 	static void ScanSectorList_FarStaticMapEntities(CPtrList *lists); // rouz edit (ChatGPT)
 	static void ScanSectorList_RequestModels(CPtrList *lists);
+	static void ScanFarAwayVehicleModels(void); // rouz edit (ChatGPT)
 	static void ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists); // rouz edit (ChatGPT)
 
 	static void SortBIGBuildings(void);

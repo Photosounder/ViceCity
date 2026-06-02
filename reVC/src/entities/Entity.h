@@ -90,6 +90,7 @@ public:
 	uint32 bDontStream : 1;              // tell the streaming not to stream me
 	uint32 bUnderwater : 1;              // this object is underwater change drawing order
 	uint32 bHasPreRenderEffects : 1; // Object has a prerender effects attached to it
+	uint32 bDrawFarAway : 1;             // render this dynamic entity in the far-distance pass // rouz edit (ChatGPT)
 
 	uint16 m_scanCode;
 	uint16 m_randomSeed;

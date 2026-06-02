@@ -77,14 +77,17 @@ CPlane::CPlane(int32 id, uint8 CreatedBy)
 	m_fAirResistance = 0.9994f;
 	m_fElasticity = 0.05f;
 
-	bUsesCollision = false;
+	//+ rouz edit (ChatGPT)
+	bUsesCollision = true;
+	bInfiniteMass = true;
+	bDrawFarAway = true;
+	//- rouz edit (ChatGPT)
 	m_bHasBeenHit = false;
 	m_bIsDrugRunCesna = false;
 	m_bIsDropOffCesna = false;
 	m_bTempPlane = false;
 
 	SetStatus(STATUS_PLANE);
-	bIsBIGBuilding = true;
 	m_level = LEVEL_GENERIC;
 
 	m_isFarAway = false;
@@ -143,6 +146,18 @@ CPlane::ProcessControl(void)
 
 	if(CReplay::IsPlayingBack())
 		return;
+
+	//+ rouz edit (ChatGPT)
+	bHasContacted = false;
+	bIsInSafePosition = false;
+	bWasPostponed = false;
+	bHasHitWall = false;
+	m_nCollisionRecords = 0;
+	bHasCollided = false;
+	m_nDamagePieceType = 0;
+	m_fDamageImpulse = 0.0f;
+	m_pDamageEntity = nil;
+	//- rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_AIRTRAIN){
 		if(GetPosition().z > 100.0f)
@@ -552,9 +567,9 @@ CPlane::ProcessControl(void)
 		}
 	}
 
-	bIsInSafePosition = true;
 	GetMatrix().UpdateRW();
 	UpdateRwFrame();
+	RemoveAndAdd(); // rouz edit (ChatGPT)
 
 	// Handle streaming and such
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
@@ -593,6 +608,29 @@ CPlane::ProcessControl(void)
 		CStreaming::RequestModel(GetModelIndex(), STREAMFLAGS_DEPENDENCY);
 	}
 }
+
+//+ rouz edit (ChatGPT)
+void
+CPlane::ProcessCollision(void)
+{
+	CMatrix savedMatrix(GetMatrix());
+	CVector savedMoveSpeed = m_vecMoveSpeed;
+	CVector savedTurnSpeed = m_vecTurnSpeed;
+	CVector savedMoveFriction = m_vecMoveFriction;
+	CVector savedTurnFriction = m_vecTurnFriction;
+
+	CheckCollision();
+
+	GetMatrix() = savedMatrix;
+	m_vecMoveSpeed = savedMoveSpeed;
+	m_vecTurnSpeed = savedTurnSpeed;
+	m_vecMoveFriction = savedMoveFriction;
+	m_vecTurnFriction = savedTurnFriction;
+	bIsStuck = false;
+	bIsInSafePosition = true;
+	RemoveAndAdd();
+}
+//- rouz edit (ChatGPT)
 
 void
 CPlane::PreRender(void)

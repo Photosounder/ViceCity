@@ -78,6 +78,7 @@ CEntity::CEntity(void)
 	bDontStream = false;
 	bUnderwater = false;
 	bHasPreRenderEffects = false;
+	bDrawFarAway = false; // rouz edit (ChatGPT)
 
 	m_scanCode = 0;
 	m_modelIndex = -1;
@@ -844,6 +845,7 @@ CEntity::SaveEntityFlags(uint8*& buf)
 	if (bDontStream) tmp |= BIT(12);
 	if (bUnderwater) tmp |= BIT(13);
 	if (bHasPreRenderEffects) tmp |= BIT(14);
+	if (bDrawFarAway) tmp |= BIT(15); // rouz edit (ChatGPT)
 
 	WriteSaveBuf(buf, tmp);
 }
@@ -901,6 +903,7 @@ CEntity::LoadEntityFlags(uint8*& buf)
 	bDontStream = !!(tmp & BIT(12));
 	bUnderwater = !!(tmp & BIT(13));
 	bHasPreRenderEffects = !!(tmp & BIT(14));
+	bDrawFarAway = !!(tmp & BIT(15)); // rouz edit (ChatGPT)
 }
 
 #endif
