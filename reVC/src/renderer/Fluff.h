@@ -151,9 +151,6 @@ public:
 	static void Render();
 	static void PossiblyAddThisEntity(CEntity *pEnt);
 	static void RegisterOne(CEntity *pEnt, uint16 nType);
-	static bool IsMovingBlimp(CEntity *pEnt); // rouz edit (ChatGPT)
-	static CVector GetMovingBlimpSpeed(CEntity *pEnt, const CVector &point); // rouz edit (ChatGPT)
-	static float GetMovingBlimpTurnSpeedZ(CEntity *pEnt); // rouz edit (ChatGPT)
 };
 
 class CScrollBar

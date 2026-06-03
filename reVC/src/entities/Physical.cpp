@@ -20,8 +20,6 @@
 #include "Bike.h"
 #include "Pickups.h"
 #include "Physical.h"
-#include "Pools.h" // rouz edit (ChatGPT)
-#include "Fluff.h" // rouz edit (ChatGPT)
 
 #ifdef WALLCLIMB_CHEAT
 bool gGravityCheat;
@@ -351,52 +349,6 @@ CPhysical::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 	return numSpheres;
 }
 
-//+ rouz edit (ChatGPT)
-static bool
-IsBlimpCollisionEntity(CEntity *ent)
-{
-	return ent != nil &&
-	       ent->bUsesCollision &&
-	       ent->bDrawFarAway &&
-	       (ent->GetModelIndex() == MI_BLIMP_DAY || ent->GetModelIndex() == MI_BLIMP_NIGHT);
-}
-
-static bool
-ProcessBlimpCollisionFallback(CPhysical *phys)
-{
-	CBuildingPool *buildingPool = CPools::GetBuildingPool();
-	CVUVECTOR center;
-	float radius;
-
-	if (buildingPool == nil)
-		return false;
-
-	phys->GetBoundCentre(center);
-	radius = phys->GetBoundRadius();
-
-	for (int32 i = buildingPool->GetSize() - 1; i >= 0; i--) {
-		CEntity *ent = buildingPool->GetSlot(i);
-		if (!IsBlimpCollisionEntity(ent) ||
-		    ent == phys ||
-		    !ent->GetIsTouching(center, radius))
-			continue;
-
-		CWorld::AdvanceCurrentScanCode();
-		CPtrList lists[NUMSECTORENTITYLISTS];
-		CPtrNode node;
-		node.item = ent;
-		node.prev = nil;
-		node.next = nil;
-		lists[ENTITYLIST_BUILDINGS].first = &node;
-		bool hit = phys->ProcessCollisionSectorList(lists);
-		lists[ENTITYLIST_BUILDINGS].first = nil;
-		return hit;
-	}
-
-	return false;
-}
-//- rouz edit (ChatGPT)
-
 void
 CPhysical::ProcessControl(void)
 {
@@ -641,18 +593,16 @@ CPhysical::ApplyAirResistance(void)
 static bool
 IsKinematicCollisionSurface(CEntity *ent)
 {
-	return ent && (ent->IsVehicle() && ((CVehicle*)ent)->IsPlane() || CMovingThings::IsMovingBlimp(ent));
+	return ent && ent->IsVehicle() && ((CVehicle*)ent)->IsPlane();
 }
 
 static CVector
 GetKinematicCollisionSurfaceSpeed(CEntity *ent, const CVector &point)
 {
-	if(ent && ent->IsVehicle() && ((CVehicle*)ent)->IsPlane()){
+	if(IsKinematicCollisionSurface(ent)){
 		CPhysical *phys = (CPhysical*)ent;
 		return phys->GetSpeed(point - phys->GetPosition());
 	}
-	if(CMovingThings::IsMovingBlimp(ent))
-		return CMovingThings::GetMovingBlimpSpeed(ent, point);
 	return CVector(0.0f, 0.0f, 0.0f);
 }
 //- rouz edit (ChatGPT)
@@ -2102,8 +2052,6 @@ CPhysical::CheckCollision(void)
 	for(node = m_entryInfoList.first; node; node = node->next)
 		if(ProcessCollisionSectorList(node->sector->m_lists))
 			return true;
-	if(ProcessBlimpCollisionFallback(this)) // rouz edit (ChatGPT)
-		return true; // rouz edit (ChatGPT)
 	return false;
 }
 
@@ -2117,8 +2065,6 @@ CPhysical::CheckCollision_SimpleCar(void)
 	for(node = m_entryInfoList.first; node; node = node->next)
 		if(ProcessCollisionSectorList_SimpleCar(node->sector->m_lists))
 			return true;
-	if(ProcessBlimpCollisionFallback(this)) // rouz edit (ChatGPT)
-		return true; // rouz edit (ChatGPT)
 	return false;
 }
 

@@ -40,7 +40,6 @@
 #include "Clock.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
-#include "Fluff.h" // rouz edit (ChatGPT)
 
 CPed *gapTempPedList[50];
 uint16 gnNumTempPedList;
@@ -1575,18 +1574,6 @@ CPed::UpdatePosition(void)
 		m_fRotationCur += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 		m_fRotationDest += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 	}
-	//+ rouz edit (ChatGPT)
-	else if (CMovingThings::IsMovingBlimp(m_pCurSurface))
-	{
-		CVector surfacePoint = GetPosition();
-		surfacePoint.z -= FEET_OFFSET;
-		CVector2D velocityOfSurface = CMovingThings::GetMovingBlimpSpeed(m_pCurSurface, surfacePoint);
-
-		velocityChange = m_moved + velocityOfSurface - m_vecMoveSpeed;
-		m_fRotationCur += CMovingThings::GetMovingBlimpTurnSpeedZ(m_pCurSurface) * CTimer::GetTimeStep();
-		m_fRotationDest += CMovingThings::GetMovingBlimpTurnSpeedZ(m_pCurSurface) * CTimer::GetTimeStep();
-	}
-	//- rouz edit (ChatGPT)
 	else if (m_nSurfaceTouched == SURFACE_STEEP_CLIFF && (m_vecDamageNormal.x != 0.0f || m_vecDamageNormal.y != 0.0f))
 	{
 		// Ped got damaged by steep slope
@@ -9282,15 +9269,6 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 			ped->m_vecMoveSpeed.x += ped->m_pCurrentPhysSurface->m_vecMoveSpeed.x;
 			ped->m_vecMoveSpeed.y += ped->m_pCurrentPhysSurface->m_vecMoveSpeed.y;
 		}
-		//+ rouz edit (ChatGPT)
-		else if (CMovingThings::IsMovingBlimp(ped->m_pCurSurface)) {
-			CVector surfacePoint = ped->GetPosition();
-			surfacePoint.z -= FEET_OFFSET;
-			CVector surfaceSpeed = CMovingThings::GetMovingBlimpSpeed(ped->m_pCurSurface, surfacePoint);
-			ped->m_vecMoveSpeed.x += surfaceSpeed.x;
-			ped->m_vecMoveSpeed.y += surfaceSpeed.y;
-		}
-		//- rouz edit (ChatGPT)
 	}
 
 	ped->bIsStanding = false;

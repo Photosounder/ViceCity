@@ -24,8 +24,6 @@
 #include "Replay.h"
 #include "Coronas.h"
 #include "SaveBuf.h"
-#include "ModelInfo.h" // rouz edit (ChatGPT)
-#include "ColModel.h" // rouz edit (ChatGPT)
 
 #ifdef COMPATIBLE_SAVES
 #define SCRIPTPATHS_SAVE_SIZE 0x9C
@@ -410,27 +408,21 @@ void CMovingThings::Init()
 		aMovingThings[i].m_farAway = 0;
 	}
 
-	//+ rouz edit (ChatGPT)
 	for (int i = 0; i < NUMSECTORS_X; i++) {
 		for (int j = 0; j < NUMSECTORS_Y; j++) {
-			for (CPtrNode *pNode = CWorld::GetSector(i, j)->m_lists[ENTITYLIST_BUILDINGS].first; pNode; ) {
-				CPtrNode *pNext = pNode->next;
+			for (CPtrNode *pNode = CWorld::GetSector(i, j)->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 				CEntity *pEntity = (CEntity *)pNode->item;
 				PossiblyAddThisEntity(pEntity);
-				pNode = pNext;
 			}
 		}
 	}
 
 	for (int32 i = 0; i < NUM_LEVELS; i++) {
-		for (CPtrNode *pNode = CWorld::GetBigBuildingList((eLevelName)i).first; pNode; ) {
-			CPtrNode *pNext = pNode->next;
+		for (CPtrNode *pNode = CWorld::GetBigBuildingList((eLevelName)i).first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			PossiblyAddThisEntity(pEntity);
-			pNode = pNext;
 		}
 	}
-	//- rouz edit (ChatGPT)
 
 	CEscalators::Init();
 	aScrollBars[0].Init(CVector(-1069.209f, 1320.126f, 18.848f), CVector(-1069.209f, 1342.299f, 22.612f), SCROLL_ARENA_STRING, 128, 255, 0, 0.3f);
@@ -502,190 +494,6 @@ void CMovingThings::RegisterOne(CEntity *pEnt, uint16 nType) {
 	Num++;
 }
 
-//+ rouz edit (ChatGPT)
-static bool
-IsBlimpModel(int32 modelIndex)
-{
-	return modelIndex == MI_BLIMP_NIGHT || modelIndex == MI_BLIMP_DAY;
-}
-
-static float
-GetBlimpPathAngle(void)
-{
-	return (CTimer::GetTimeInMilliseconds() % 0x3FFFF) * TWOPI / 0x3FFFF;
-}
-
-static float
-GetBlimpAngularSpeedPerTimeStep(void)
-{
-	return TWOPI / 0x3FFFF * (1000.0f / 50.0f);
-}
-
-static void
-SetBlimpPathTransform(CEntity *pEnt, float angle)
-{
-	float s = Sin(angle);
-	float c = Cos(angle);
-
-	pEnt->GetRight() = CVector(-c, -s, 0.0f);
-	pEnt->GetForward() = CVector(s, -c, 0.0f);
-	pEnt->GetUp() = CVector(0.0f, 0.0f, 1.0f);
-	pEnt->SetPosition(CVector(350.0f * c - 465.0f, 350.0f * s + 1163.0f, 260.0f));
-}
-
-bool
-CMovingThings::IsMovingBlimp(CEntity *pEnt)
-{
-	return pEnt && IsBlimpModel(pEnt->GetModelIndex());
-}
-
-float
-CMovingThings::GetMovingBlimpTurnSpeedZ(CEntity *pEnt)
-{
-	if (IsMovingBlimp(pEnt) && !pEnt->IsBuilding())
-		return ((CPhysical *)pEnt)->m_vecTurnSpeed.z;
-	return IsMovingBlimp(pEnt) ? GetBlimpAngularSpeedPerTimeStep() : 0.0f;
-}
-
-CVector
-CMovingThings::GetMovingBlimpSpeed(CEntity *pEnt, const CVector &point)
-{
-	if (!IsMovingBlimp(pEnt))
-		return CVector(0.0f, 0.0f, 0.0f);
-
-	if (!pEnt->IsBuilding()) {
-		CPhysical *phys = (CPhysical *)pEnt;
-		return phys->GetSpeed(point - phys->GetPosition());
-	}
-
-	float angle = GetBlimpPathAngle();
-	float s = Sin(angle);
-	float c = Cos(angle);
-	float angularSpeed = GetBlimpAngularSpeedPerTimeStep();
-	CVector centerSpeed(-350.0f * s * angularSpeed, 350.0f * c * angularSpeed, 0.0f);
-	return centerSpeed + CrossProduct(CVector(0.0f, 0.0f, angularSpeed), point - pEnt->GetPosition());
-}
-
-static CColModel BlimpColModel;
-static CColBox BlimpColBoxes[1];
-static void DisableOriginalBlimpBuilding(CEntity *pEnt);
-static void SetupBlimpAsMovingCollisionBuilding(CEntity *pEnt);
-
-static void
-SetupBlimpColModel(CColModel *colModel)
-{
-	colModel->boundingSphere.Set(43.0f, CVector(0.0f, 0.0f, 0.0f));
-	colModel->boundingBox.Set(CVector(-9.75f, -42.75f, -11.0f), CVector(9.75f, 42.75f, 11.5f));
-	BlimpColBoxes[0].Set(colModel->boundingBox.min, colModel->boundingBox.max, SURFACE_THICK_METAL_PLATE, 0);
-	colModel->numSpheres = 0;
-	colModel->numBoxes = ARRAY_SIZE(BlimpColBoxes);
-	colModel->numTriangles = 0;
-	colModel->numLines = 0;
-	colModel->spheres = nil;
-	colModel->boxes = BlimpColBoxes;
-	colModel->triangles = nil;
-	colModel->lines = nil;
-	colModel->vertices = nil;
-	colModel->level = LEVEL_GENERIC;
-	colModel->ownsCollisionVolumes = false;
-}
-
-static void
-EnsureBlimpCollisionModel(CEntity *pEnt)
-{
-	CBaseModelInfo *mi = CModelInfo::GetModelInfo(pEnt->GetModelIndex());
-	CColModel *colModel = mi->GetColModel();
-
-	if (colModel == nil) {
-		SetupBlimpColModel(&BlimpColModel);
-		mi->SetColModel(&BlimpColModel);
-		return;
-	}
-
-	if (colModel->numSpheres == 0 && colModel->numBoxes == 0 && colModel->numTriangles == 0)
-		SetupBlimpColModel(colModel);
-}
-
-static bool
-ShouldBlimpUseCollision(CEntity *pEnt)
-{
-	CBaseModelInfo *mi = CModelInfo::GetModelInfo(pEnt->GetModelIndex());
-	if (mi->GetModelType() != MITYPE_TIME)
-		return true;
-
-	CTimeModelInfo *timeInfo = (CTimeModelInfo *)mi;
-	return CClock::GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff());
-}
-
-static void
-SetupBlimpAsMovingCollisionEntity(CEntity *pEnt)
-{
-	EnsureBlimpCollisionModel(pEnt);
-
-	CObject *pObj = new CObject(pEnt->GetModelIndex(), true);
-	if (pObj == nil) {
-		SetupBlimpAsMovingCollisionBuilding(pEnt);
-		CMovingThings::RegisterOne(pEnt, 4);
-		return;
-	}
-
-	DisableOriginalBlimpBuilding(pEnt);
-	SetBlimpPathTransform(pObj, GetBlimpPathAngle());
-	pObj->m_objectMatrix = pObj->GetMatrix();
-	pObj->m_level = pEnt->m_level;
-	pObj->m_area = pEnt->m_area;
-	pObj->m_randomSeed = pEnt->m_randomSeed;
-	pObj->ObjectCreatedBy = CONTROLLED_SUB_OBJECT;
-	pObj->SetStatus(STATUS_ABANDONED);
-	pObj->SetIsStatic(true);
-	pObj->bStreamingDontDelete = true;
-	pObj->bDrawFarAway = true;
-	pObj->bUsesCollision = ShouldBlimpUseCollision(pObj);
-	pObj->bAffectedByGravity = false;
-	pObj->bInfiniteMass = true;
-	pObj->m_phy_flagA08 = false;
-	pObj->m_fMass = 100000000.0f;
-	pObj->m_fTurnMass = 100000000.0f;
-	pObj->m_fAirResistance = 0.9994f;
-	pObj->m_fElasticity = 0.05f;
-	pObj->m_vecMoveSpeed = CMovingThings::GetMovingBlimpSpeed(pObj, pObj->GetPosition());
-	pObj->m_vecTurnSpeed = CVector(0.0f, 0.0f, GetBlimpAngularSpeedPerTimeStep());
-	pObj->GetMatrix().UpdateRW();
-	pObj->UpdateRwFrame();
-	CWorld::Add(pObj);
-	CMovingThings::RegisterOne(pObj, 4);
-}
-
-static void
-DisableOriginalBlimpBuilding(CEntity *pEnt)
-{
-	pEnt->bUsesCollision = false;
-	pEnt->bDrawFarAway = false;
-	pEnt->bIsVisible = false;
-	if (pEnt->m_rwObject)
-		pEnt->DeleteRwObject();
-}
-
-static void
-SetupBlimpAsMovingCollisionBuilding(CEntity *pEnt)
-{
-	bool bWasBigBuilding = pEnt->bIsBIGBuilding;
-
-	CWorld::Remove(pEnt);
-	EnsureBlimpCollisionModel(pEnt);
-
-	if (bWasBigBuilding) {
-		pEnt->bIsBIGBuilding = false;
-		pEnt->bStreamBIGBuilding = false;
-	}
-
-	pEnt->bStreamingDontDelete = true;
-	pEnt->bDrawFarAway = true;
-	pEnt->bUsesCollision = ShouldBlimpUseCollision(pEnt);
-	CWorld::Add(pEnt);
-}
-//- rouz edit (ChatGPT)
-
 void CMovingThings::PossiblyAddThisEntity(CEntity *pEnt) {
 	if (pEnt->GetModelIndex() == MI_LIGHTBEAM) {
 		RegisterOne(pEnt, 1);
@@ -697,8 +505,8 @@ void CMovingThings::PossiblyAddThisEntity(CEntity *pEnt) {
 		|| pEnt->GetModelIndex() == MI_HOTELFAN_DAY || pEnt->GetModelIndex() == MI_HOTROOMFAN) {
 		RegisterOne(pEnt, 3);
 	}
-	else if (IsBlimpModel(pEnt->GetModelIndex())) { // rouz edit (ChatGPT)
-		SetupBlimpAsMovingCollisionEntity(pEnt); // rouz edit (ChatGPT)
+	else if (pEnt->GetModelIndex() == MI_BLIMP_NIGHT || pEnt->GetModelIndex() == MI_BLIMP_DAY) {
+		RegisterOne(pEnt, 4);
 	}
 }
 
@@ -707,10 +515,6 @@ static float maxUpdateDists[5] = { 100.0f, 1500.0f, 400.0f, 100.0f, 2000.0f };
 
 void CMovingThing::Update()
 {
-	CMatrix previousBlimpMatrix(m_pEntity->GetMatrix()); // rouz edit (ChatGPT)
-	bool bReinsertBlimp = m_nType == 4 && !m_pEntity->bIsBIGBuilding; // rouz edit (ChatGPT)
-	if (bReinsertBlimp) CWorld::Remove(m_pEntity); // rouz edit (ChatGPT)
-
 	switch (m_nType) {
 	case 1: {
 		float angle = (CTimer::GetTimeInMilliseconds() % 0x3FFF) * TWOPI / 0x3FFF;
@@ -751,40 +555,23 @@ void CMovingThing::Update()
 		m_pEntity->GetForward() = CVector(-s, c, 0.0f);
 		m_pEntity->GetUp() = CVector(0.0f, 0.0f, 1.0f);
 	}
-	break;
+		break;
 	case 4: {
-		SetBlimpPathTransform(m_pEntity, GetBlimpPathAngle()); // rouz edit (ChatGPT)
+		float angle = (CTimer::GetTimeInMilliseconds() % 0x3FFFF) * TWOPI / 0x3FFFF;
+		float s = Sin(angle);
+		float c = Cos(angle);
+		m_pEntity->GetRight() = CVector(-c, -s, 0.0f);
+		m_pEntity->GetForward() = CVector(s, -c, 0.0f);
+		m_pEntity->GetUp() = CVector(0.0f, 0.0f, 1.0f);
+		m_pEntity->SetPosition(CVector(350.0f * c - 465.0f, 350.0f * s + 1163.0f, 260.0f));
 	}
 		break;
 	default:
 		break;
 	}
 
-	//+ rouz edit (ChatGPT)
-	if (m_nType == 4 && !m_pEntity->IsBuilding()) {
-		CPhysical *phys = (CPhysical *)m_pEntity;
-		if (CTimer::GetTimeStep() > 0.0f) {
-			float invTimeStep = 1.0f / CTimer::GetTimeStep();
-			phys->m_vecMoveSpeed = (m_pEntity->GetPosition() - previousBlimpMatrix.GetPosition()) * invTimeStep;
-			phys->m_vecTurnSpeed = (CrossProduct(previousBlimpMatrix.GetRight(), m_pEntity->GetRight()) +
-				CrossProduct(previousBlimpMatrix.GetForward(), m_pEntity->GetForward()) +
-				CrossProduct(previousBlimpMatrix.GetUp(), m_pEntity->GetUp())) * (0.5f * invTimeStep);
-		} else {
-			phys->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-			phys->m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
-		}
-	}
-	//- rouz edit (ChatGPT)
-
 	m_pEntity->GetMatrix().UpdateRW();
 	m_pEntity->UpdateRwFrame();
-
-	//+ rouz edit (ChatGPT)
-	if (bReinsertBlimp) {
-		m_pEntity->bUsesCollision = ShouldBlimpUseCollision(m_pEntity);
-		CWorld::Add(m_pEntity);
-	}
-	//- rouz edit (ChatGPT)
 	
 	if (SQR(m_pEntity->GetPosition().x - TheCamera.GetPosition().x) + SQR(m_pEntity->GetPosition().y - TheCamera.GetPosition().y) < SQR(maxUpdateDists[m_nType])) {
 		if (m_farAway == 1) {
