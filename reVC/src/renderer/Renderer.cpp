@@ -1259,7 +1259,7 @@ CRenderer::ScanWorld(void)
 			ScanBigBuildingList(CWorld::GetBigBuildingList(LEVEL_GENERIC));
 		}
 	}
-	ScanFarAwayVehicles(); // rouz edit (ChatGPT)
+	ScanFarAwayEntities(); // rouz edit (ChatGPT)
 }
 
 void
@@ -1340,7 +1340,7 @@ CRenderer::RequestObjectsInFrustum(void)
 		}
 		//- rouz edit (ChatGPT)
 	}
-	ScanFarAwayVehicleModels(); // rouz edit (ChatGPT)
+	ScanFarAwayEntityModels(); // rouz edit (ChatGPT)
 }
 
 bool
@@ -1607,33 +1607,80 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanFarAwayVehicles(void)
+CRenderer::ScanFarAwayEntities(void)
 {
 	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CBuildingPool *buildingPool = CPools::GetBuildingPool();
+	CObjectPool *objectPool = CPools::GetObjectPool();
 	CEntity *ent;
 	int vis;
 
-	if(vehiclePool == nil)
-		return;
+	if(vehiclePool){
+		for(int i = 0; i < vehiclePool->GetSize(); i++){
+			ent = vehiclePool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
 
-	for(int i = 0; i < vehiclePool->GetSize(); i++){
-		ent = vehiclePool->GetSlot(i);
-		if(ent == nil ||
-		   !ent->bDrawFarAway ||
-		   ent->m_scanCode == CWorld::GetCurrentScanCode())
-			continue;
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			vis = SetupBigBuildingVisibility(ent);
+			switch(vis){
+			case VIS_VISIBLE:
+				InsertEntityIntoList(ent);
+				ent->bOffscreen = false;
+				break;
+			case VIS_STREAMME:
+				if(!CStreaming::ms_disableStreaming)
+					CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				break;
+			}
+		}
+	}
 
-		ent->m_scanCode = CWorld::GetCurrentScanCode();
-		vis = SetupBigBuildingVisibility(ent);
-		switch(vis){
-		case VIS_VISIBLE:
-			InsertEntityIntoList(ent);
-			ent->bOffscreen = false;
-			break;
-		case VIS_STREAMME:
-			if(!CStreaming::ms_disableStreaming)
-				CStreaming::RequestModel(ent->GetModelIndex(), 0);
-			break;
+	if(buildingPool){
+		for(int i = 0; i < buildingPool->GetSize(); i++){
+			ent = buildingPool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
+
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			vis = SetupBigBuildingVisibility(ent);
+			switch(vis){
+			case VIS_VISIBLE:
+				InsertEntityIntoList(ent);
+				ent->bOffscreen = false;
+				break;
+			case VIS_STREAMME:
+				if(!CStreaming::ms_disableStreaming)
+					CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				break;
+			}
+		}
+	}
+
+	if(objectPool){
+		for(int i = 0; i < objectPool->GetSize(); i++){
+			ent = objectPool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
+
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			vis = SetupBigBuildingVisibility(ent);
+			switch(vis){
+			case VIS_VISIBLE:
+				InsertEntityIntoList(ent);
+				ent->bOffscreen = false;
+				break;
+			case VIS_STREAMME:
+				if(!CStreaming::ms_disableStreaming)
+					CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				break;
+			}
 		}
 	}
 }
@@ -1851,24 +1898,53 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 
 //+ rouz edit (ChatGPT)
 void
-CRenderer::ScanFarAwayVehicleModels(void)
+CRenderer::ScanFarAwayEntityModels(void)
 {
 	CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+	CBuildingPool *buildingPool = CPools::GetBuildingPool();
+	CObjectPool *objectPool = CPools::GetObjectPool();
 	CEntity *ent;
 
-	if(vehiclePool == nil)
-		return;
+	if(vehiclePool){
+		for(int i = 0; i < vehiclePool->GetSize(); i++){
+			ent = vehiclePool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
 
-	for(int i = 0; i < vehiclePool->GetSize(); i++){
-		ent = vehiclePool->GetSlot(i);
-		if(ent == nil ||
-		   !ent->bDrawFarAway ||
-		   ent->m_scanCode == CWorld::GetCurrentScanCode())
-			continue;
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+		}
+	}
 
-		ent->m_scanCode = CWorld::GetCurrentScanCode();
-		if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
-			CStreaming::RequestModel(ent->GetModelIndex(), 0);
+	if(buildingPool){
+		for(int i = 0; i < buildingPool->GetSize(); i++){
+			ent = buildingPool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
+
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+		}
+	}
+
+	if(objectPool){
+		for(int i = 0; i < objectPool->GetSize(); i++){
+			ent = objectPool->GetSlot(i);
+			if(ent == nil ||
+			   !ent->bDrawFarAway ||
+			   ent->m_scanCode == CWorld::GetCurrentScanCode())
+				continue;
+
+			ent->m_scanCode = CWorld::GetCurrentScanCode();
+			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
+				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+		}
 	}
 }
 //- rouz edit (ChatGPT)
