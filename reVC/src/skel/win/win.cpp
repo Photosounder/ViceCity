@@ -28,6 +28,7 @@
 #pragma warning( pop )
 
 #define WM_GRAPHNOTIFY	WM_USER+13
+#define WM_REVC_RESTORE_MAXIMIZE (WM_APP+42) // rouz edit (ChatGPT)
 
 #ifndef USE_D3D9
 #pragma comment( lib, "d3d8.lib" )
@@ -54,6 +55,9 @@
 #define MAX_SUBSYSTEMS		(16)
 
 static RwBool		  ForegroundApp = TRUE;
+static RwBool		  WindowMinimized = FALSE; // rouz edit (ChatGPT)
+static RwBool		  ResetPresentationAfterRestore = FALSE; // rouz edit (ChatGPT)
+static RwBool		  RestoreMaximizePending = FALSE; // rouz edit (ChatGPT)
 
 static RwBool		  RwInitialised = FALSE;
 
@@ -234,14 +238,27 @@ psCameraBeginUpdate(RwCamera *camera)
 void
 psCameraShowRaster(RwCamera *camera)
 {
+	//+ rouz edit (ChatGPT)
+	RwUInt32 rasterFlags;
+
 #ifdef LEGACY_MENU_OPTIONS
 	if (FrontEndMenuManager.m_PrefsVsync || FrontEndMenuManager.m_bMenuActive)
 #else
 	if (FrontEndMenuManager.m_PrefsFrameLimiter || FrontEndMenuManager.m_bMenuActive)
 #endif
-		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPWAITVSYNC);
+		rasterFlags = rwRASTERFLIPWAITVSYNC;
 	else
-		RwCameraShowRaster(camera, PSGLOBAL(window), rwRASTERFLIPDONTWAIT);
+		rasterFlags = rwRASTERFLIPDONTWAIT;
+
+	if (ResetPresentationAfterRestore)
+	{
+		RwCameraShowRaster(camera, PSGLOBAL(window),
+			rasterFlags == rwRASTERFLIPWAITVSYNC ? rwRASTERFLIPDONTWAIT : rwRASTERFLIPWAITVSYNC);
+		ResetPresentationAfterRestore = FALSE;
+	}
+
+	RwCameraShowRaster(camera, PSGLOBAL(window), rasterFlags);
+	//- rouz edit (ChatGPT)
 
 	return;
 }
@@ -962,6 +979,58 @@ void HandleGraphEvent(void)
 /*
  *****************************************************************************
  */ 
+//+ rouz edit (ChatGPT)
+static void
+RefreshCameraSizeFromClient(HWND window, RwBool forceResize)
+{
+	if (!RwInitialised)
+		return;
+
+	RECT client;
+	GetClientRect(window, &client);
+
+	RwRect r;
+	r.x = 0;
+	r.y = 0;
+	r.w = client.right - client.left;
+	r.h = client.bottom - client.top;
+
+	if (r.w > 0 && r.h > 0)
+	{
+		if (forceResize)
+		{
+			RwRect tmp = r;
+			tmp.w = r.w == 1 ? 2 : 1;
+			tmp.h = r.h == 1 ? 2 : 1;
+			RsEventHandler(rsCAMERASIZE, &tmp);
+		}
+
+		RsEventHandler(rsCAMERASIZE, &r);
+	}
+}
+
+static void
+RestoreFromMinimize(HWND window, RwBool restoredMaximized)
+{
+	if (WindowMinimized && !IsIconic(window))
+	{
+		WindowMinimized = FALSE;
+		ForegroundApp = TRUE;
+		ResetPresentationAfterRestore = TRUE;
+		RefreshCameraSizeFromClient(window, TRUE);
+
+		if (restoredMaximized)
+		{
+			RestoreMaximizePending = TRUE;
+			PostMessage(window, WM_REVC_RESTORE_MAXIMIZE, 0, 0);
+		}
+	}
+}
+
+/*
+ *****************************************************************************
+ */ 
+//- rouz edit (ChatGPT)
 LRESULT CALLBACK
 MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -996,6 +1065,19 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		case WM_SIZE:
 		{
+			//+ rouz edit (ChatGPT)
+			if (wParam == SIZE_MINIMIZED)
+			{
+				WindowMinimized = TRUE;
+				return 0L;
+			}
+
+			if (WindowMinimized)
+			{
+				RestoreFromMinimize(window, wParam == SIZE_MAXIMIZED);
+			}
+			//- rouz edit (ChatGPT)
+
 			RwRect r;
 
 			r.x = 0;
@@ -1033,6 +1115,20 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 			return 0L;
 		}
+
+		//+ rouz edit (ChatGPT)
+		case WM_REVC_RESTORE_MAXIMIZE:
+		{
+			if (RestoreMaximizePending)
+			{
+				RestoreMaximizePending = FALSE;
+				ShowWindow(window, SW_RESTORE);
+				ShowWindow(window, SW_MAXIMIZE);
+			}
+
+			return 0L;
+		}
+		//- rouz edit (ChatGPT)
 
 		case WM_SIZING:
 		{
@@ -1199,6 +1295,9 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			else			// when tabbing back in
 			{
 				rouz.window_focus = 1;
+				ForegroundApp = TRUE; // rouz edit (ChatGPT)
+				RestoreFromMinimize(window, FALSE); // rouz edit (ChatGPT)
+				RefreshCameraSizeFromClient(window, FALSE); // rouz edit (ChatGPT)
 				if (cursor_init==0)
 					ShowCursor(FALSE);
 				//debug("ShowCursor(FALSE) from WM_ACTIVATEAPP\n");
@@ -1348,6 +1447,9 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		case WM_SETFOCUS:
 		{
 			rouz.window_focus = 1;
+			ForegroundApp = TRUE; // rouz edit (ChatGPT)
+			RestoreFromMinimize(window, FALSE); // rouz edit (ChatGPT)
+			RefreshCameraSizeFromClient(window, FALSE); // rouz edit (ChatGPT)
 			ShowCursor(FALSE);
 			//debug("ShowCursor(FALSE) from WM_KILLFOCUS\n");
 			//CGame::InitAfterFocusLoss();
@@ -2310,7 +2412,7 @@ WinMain(HINSTANCE instance,
 				TheModelViewer();
 			}
 #endif
-			else if( ForegroundApp )
+			else if( ForegroundApp && !WindowMinimized ) // rouz edit (ChatGPT)
 			{
 				switch ( gGameState )
 				{
@@ -2539,7 +2641,7 @@ WinMain(HINSTANCE instance,
 			}
 			else
 			{
-				if ( RwCameraBeginUpdate(Scene.camera) )
+				if ( !WindowMinimized && RwCameraBeginUpdate(Scene.camera) ) // rouz edit (ChatGPT)
 				{
 					RwCameraEndUpdate(Scene.camera);
 					ForegroundApp = TRUE;
