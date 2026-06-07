@@ -621,8 +621,12 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 	float massFactorA;
 	if(B->bPedPhysics){
 		massFactorA = 10.0f;
-		if(B->IsPed() && ((CPed*)B)->m_pCurrentPhysSurface == A)
+		//+ rouz edit (ChatGPT)
+		// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
+		bool bPedCarriedByA = B->IsPed() && (((CPed*)B)->m_pCurrentPhysSurface == A || (A->IsVehicle() && rouz.glue_on_vehs && ((CPed*)B)->m_pCurSurface == A));
+		if(bPedCarriedByA)
 			ispedcontactA = true;
+		//- rouz edit (ChatGPT)
 	}else
 		massFactorA = A->bIsHeavy ? 2.0f : 1.0f;
 
@@ -634,8 +638,12 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		else
 			massFactorB = 10.0f;
 
-		if(A->IsPed() && ((CPed*)A)->m_pCurrentPhysSurface == B)
+		//+ rouz edit (ChatGPT)
+		// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
+		bool bPedCarriedByB = A->IsPed() && (((CPed*)A)->m_pCurrentPhysSurface == B || (B->IsVehicle() && rouz.glue_on_vehs && ((CPed*)A)->m_pCurSurface == B));
+		if(bPedCarriedByB)
 			ispedcontactB = true;
+		//- rouz edit (ChatGPT)
 	}else
 		massFactorB = B->bIsHeavy ? 2.0f : 1.0f;
 
@@ -808,6 +816,11 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			CVector fB = colpoint.normal*(-impulseB/massFactorB);
 			if(!A->bInfiniteMass){
 				if(fA.z < 0.0f) fA.z = 0.0f;
+				//+ rouz edit (ChatGPT)
+				// Suppress upward self-collision impulses from the surface carrying this ped.
+				if(ispedcontactB)
+					fA.z = 0.0f;
+				//- rouz edit (ChatGPT)
 				if(ispedcontactB){
 					fA.x *= 2.0f;
 					fA.y *= 2.0f;
@@ -852,6 +865,11 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					if(Abs(speedA) < 0.01f)
 						fB *= 0.5f;
 				}
+				//+ rouz edit (ChatGPT)
+				// Suppress upward self-collision impulses from the surface carrying this ped.
+				if(ispedcontactA)
+					fB.z = 0.0f;
+				//- rouz edit (ChatGPT)
 				if(ispedcontactA){
 					fB.x *= 2.0f;
 					fB.y *= 2.0f;

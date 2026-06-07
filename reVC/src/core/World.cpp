@@ -2051,6 +2051,30 @@ CWorld::Process(void)
 		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CPed *movingPed = (CPed *)node->item;
 			if(movingPed->IsPed()) {
+				//+ rouz edit (ChatGPT)
+				// Re-sync vehicle-carried peds after all vehicle collision movement has finished.
+				if(rouz.glue_on_vehs && !movingPed->bInVehicle && movingPed->bIsStanding &&
+				   movingPed->m_pCurrentPhysSurface && movingPed->m_pCurrentPhysSurface->IsVehicle() &&
+				   !((CVehicle*)movingPed->m_pCurrentPhysSurface)->IsBoat()) {
+					CPhysical *surface = movingPed->m_pCurrentPhysSurface;
+					CVector surfacePoint = surface->GetMatrix() * movingPed->surf_rel_origin;
+					movingPed->m_vecOffsetFromPhysSurface = surfacePoint - surface->GetPosition();
+
+					CVector carriedPos = surfacePoint;
+					carriedPos.z += FEET_OFFSET;
+					movingPed->SetPosition(carriedPos);
+
+					CVector surfaceVelocity = surface->GetSpeed(movingPed->m_vecOffsetFromPhysSurface);
+					movingPed->m_vecMoveSpeed.x = surfaceVelocity.x + movingPed->m_moved.x;
+					movingPed->m_vecMoveSpeed.y = surfaceVelocity.y + movingPed->m_moved.y;
+					movingPed->m_vecMoveSpeed.z = surfaceVelocity.z;
+
+					movingPed->GetMatrix().UpdateRW();
+					movingPed->UpdateRwFrame();
+					movingPed->RemoveAndAdd();
+				}
+				//- rouz edit (ChatGPT)
+
 				if(movingPed->bInVehicle && movingPed->m_nPedState != PED_EXIT_TRAIN ||
 				   movingPed->EnteringCar()) {
 					CVehicle *movingCar = movingPed->m_pMyVehicle;

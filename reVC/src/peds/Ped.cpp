@@ -124,6 +124,10 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 	m_walkAroundType = 0;
 	m_pCurrentPhysSurface = nil;
 	m_vecOffsetFromPhysSurface = CVector(0.0f, 0.0f, 0.0f);
+	//+ rouz edit (ChatGPT)
+	// Initialise the surface-local carry anchor.
+	surf_rel_origin = CVector(0.0f, 0.0f, 0.0f);
+	//- rouz edit (ChatGPT)
 	m_pSeekTarget = nil;
 	m_vecSeekPos = CVector(0.0f, 0.0f, 0.0f);
 	m_wepSkills = 0;
@@ -1557,20 +1561,52 @@ CPed::UpdatePosition(void)
 		// or any other surface
 		else
 		{
+			//+ rouz edit (ChatGPT)
+			// Move the carried contact point with the vehicle instead of chasing it by velocity.
+			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle()) {
+				CVector surfacePoint = m_pCurrentPhysSurface->GetMatrix() * surf_rel_origin;
+				CVector animMove(m_moved.x, m_moved.y, 0.0f);
+				surfacePoint += animMove * CTimer::GetTimeStep();
+
+				CMatrix surfaceInv;
+				Invert(m_pCurrentPhysSurface->GetMatrix(), surfaceInv);
+				surf_rel_origin = surfaceInv * surfacePoint;
+				m_vecOffsetFromPhysSurface = surfacePoint - m_pCurrentPhysSurface->GetPosition();
+
+				CVector carriedPos = surfacePoint;
+				carriedPos.z += FEET_OFFSET;
+				SetPosition(carriedPos);
+				GetMatrix().UpdateRW();
+			}
+			//- rouz edit (ChatGPT)
+
 			//debug("m_vecOffsetFromPhysSurface %.3f  %.3f  %.3f\n", m_vecOffsetFromPhysSurface.x, m_vecOffsetFromPhysSurface.y, m_vecOffsetFromPhysSurface.z);
 			//debug("m_pCurrentPhysSurface->GetRight() %.3f  %.3f  %.3f\n", m_pCurrentPhysSurface->GetRight().x, m_pCurrentPhysSurface->GetRight().y, m_pCurrentPhysSurface->GetRight().z);
-			velocityOfSurface = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface);
+			//+ rouz edit (ChatGPT)
+			// Match the ped's vertical speed to the carried vehicle contact point.
+			CVector surfaceVelocity = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface);
+			velocityOfSurface = surfaceVelocity;
+			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle())
+				m_vecMoveSpeed.z = surfaceVelocity.z;
+			//- rouz edit (ChatGPT)
 
-			CVector surf_rot = m_pCurrentPhysSurface->GetRight();
-			surf_rot.x = -surf_rot.x;
-			surf_rot.z = -surf_rot.z;
-			//if (m_moved.x!=0.f && m_moved.y!=0.f)
-				surf_rel_origin = CrossProduct(m_vecOffsetFromPhysSurface, surf_rot);
-			//debug("surf_rel_origin %.3f  %.3f  %.3f\n", surf_rel_origin.x, surf_rel_origin.y, surf_rel_origin.z);
+			//+ rouz edit (ChatGPT)
+			// Preserve the local carry anchor while vehicle glue is active.
+			if (!rouz.glue_on_vehs || !m_pCurrentPhysSurface->IsVehicle()) {
+				CVector surf_rot = m_pCurrentPhysSurface->GetRight();
+				surf_rot.x = -surf_rot.x;
+				surf_rot.z = -surf_rot.z;
+				//if (m_moved.x!=0.f && m_moved.y!=0.f)
+					surf_rel_origin = CrossProduct(m_vecOffsetFromPhysSurface, surf_rot);
+				//debug("surf_rel_origin %.3f  %.3f  %.3f\n", surf_rel_origin.x, surf_rel_origin.y, surf_rel_origin.z);
+			}
+			//- rouz edit (ChatGPT)
 		}
 
-		// Reminder: m_moved is displacement from walking/running.
+		//+ rouz edit (ChatGPT)
+		// Keep vehicle velocity in the ped's physical speed while the local anchor handles relative placement.
 		velocityChange = m_moved + velocityOfSurface - m_vecMoveSpeed;
+		//- rouz edit (ChatGPT)
 		m_fRotationCur += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 		m_fRotationDest += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 	}
@@ -1769,6 +1805,11 @@ CPed::ProcessControl(void)
 {
 	CColPoint foundCol;
 	CEntity *foundEnt = nil;
+
+	//+ rouz edit (ChatGPT)
+	// Remember the carried surface before this control pass can refresh standing contact.
+	CPhysical *previousPhysSurface = m_pCurrentPhysSurface;
+	//- rouz edit (ChatGPT)
 
 	if (CTimer::GetFrameCounter() + m_randomSeed % 32 == 0)
 		PruneReferences();
@@ -2136,6 +2177,16 @@ CPed::ProcessControl(void)
 
 					if (collidingVeh == m_pMyVehicle)
 						bCollidedWithMyVehicle = true;
+
+					//+ rouz edit (ChatGPT)
+					// Ignore bogus damage impulses from the vehicle carrying or just beneath this ped.
+					if (collidingVeh == m_pCurrentPhysSurface || (rouz.glue_on_vehs && collidingVeh == m_pCurSurface) || (bWasStanding && collidingVeh == previousPhysSurface)) {
+						m_fDamageImpulse = 0.0f;
+						m_pDamageEntity = nil;
+						bHitSomethingLastFrame = false;
+						break;
+					}
+					//- rouz edit (ChatGPT)
 
 					float oldHealth = m_fHealth;
 					bool playerSufferSound = false;
@@ -2922,6 +2973,11 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 	CColPoint intersectionPoint;
 	CColLine ourLine;
 
+	//+ rouz edit (ChatGPT)
+	// Keep the previous surface so same-vehicle contact can preserve its local anchor.
+	CPhysical *previousPhysSurface = m_pCurrentPhysSurface;
+	//- rouz edit (ChatGPT)
+
 	CColModel *ourCol = CModelInfo::GetColModel(GetModelIndex());
 	CColModel *hisCol = CModelInfo::GetColModel(collidingEnt->GetModelIndex());
 
@@ -3017,6 +3073,15 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 								m_pCurrentPhysSurface = (CPhysical*)collidingEnt;
 								collidingEnt->RegisterReference((CEntity**)&m_pCurrentPhysSurface);
 								m_vecOffsetFromPhysSurface = intersectionPoint.point - collidingEnt->GetPosition();
+								//+ rouz edit (ChatGPT)
+								// Initialise the local carry anchor when stepping onto a new physical surface.
+								bool sameCarrySurface = previousPhysSurface == m_pCurrentPhysSurface || m_pCurSurface == collidingEnt;
+								if (!sameCarrySurface || !bWasStanding) {
+									CMatrix surfaceInv;
+									Invert(m_pCurrentPhysSurface->GetMatrix(), surfaceInv);
+									surf_rel_origin = surfaceInv * intersectionPoint.point;
+								}
+								//- rouz edit (ChatGPT)
 								m_pCurSurface = collidingEnt;
 								collidingEnt->RegisterReference((CEntity**)&m_pCurSurface);
 								m_collPoly.valid = false;

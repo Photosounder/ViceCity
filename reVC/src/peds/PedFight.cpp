@@ -3631,6 +3631,12 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 	PedNode nodeToDamage;
 	eWeaponType killMethod;
 
+	//+ rouz edit (ChatGPT)
+	// Ignore car-hit damage from the vehicle carrying or just beneath this ped.
+	if (car == m_pCurrentPhysSurface || (rouz.glue_on_vehs && car == m_pCurSurface))
+		return;
+	//- rouz edit (ChatGPT)
+
 	if (m_nPedState == PED_FALL || m_nPedState == PED_DIE) {
 		if (!m_pCollidingEntity || car->GetStatus() == STATUS_PLAYER)
 			m_pCollidingEntity = car;
