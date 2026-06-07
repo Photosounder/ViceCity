@@ -325,7 +325,7 @@ Traffic lights are always green.
 
 ==== G15 - Peds attack paramedics
 
-Peds get guns and attack cops and paramedics. Well, they don't do a very good job of attacking cops, not sure why, but they do a good job of attacking paramedics.
+Peds get guns and attack cops and paramedics.
 
 ++++
 <p align="center">

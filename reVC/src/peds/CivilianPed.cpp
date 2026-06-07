@@ -203,7 +203,7 @@ CCivilianPed::CivilianAI(void)
 	} else {
 		if (m_threatEntity && m_threatEntity->IsPed()) {
 			CPed *threatPed = (CPed*)m_threatEntity;
-			if (m_pedStats->m_fear <= 100 - threatPed->m_pedStats->m_temper && threatPed->m_nPedType != PEDTYPE_COP) {
+			if (m_pedStats->m_fear <= 100 - threatPed->m_pedStats->m_temper && (threatPed->m_nPedType != PEDTYPE_COP || rouz.peds_attack_cops)) { // rouz edit (ChatGPT)
 				if (threatPed->GetWeapon()->IsTypeMelee() || !GetWeapon()->IsTypeMelee()) {
 					if (threatPed->IsPlayer() && IsGangMember() && bCanAttackPlayerWithCops) {
 						SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, m_threatEntity);
