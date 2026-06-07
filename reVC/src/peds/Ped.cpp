@@ -1562,7 +1562,7 @@ CPed::UpdatePosition(void)
 		else
 		{
 			//+ rouz edit (ChatGPT)
-			// Move the carried contact point with the vehicle instead of chasing it by velocity.
+			// Advance the local carry anchor by the ped's own movement before projecting it onto vehicle collision.
 			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle()) {
 				CVector surfacePoint = m_pCurrentPhysSurface->GetMatrix() * surf_rel_origin;
 				CVector animMove(m_moved.x, m_moved.y, 0.0f);
@@ -5403,6 +5403,14 @@ CPed::InTheAir(void)
 {
 	CColPoint foundCol;
 	CEntity *foundEnt;
+
+	//+ rouz edit (ChatGPT)
+	// Finish the landing handoff if collision already accepted this airborne ped as standing.
+	if (bIsStanding && !bIsPedDieAnimPlaying && !DyingOrDead()) {
+		SetLanding();
+		return;
+	}
+	//- rouz edit (ChatGPT)
 
 	CVector ourPos = GetPosition();
 	CVector bitBelow = GetPosition();
