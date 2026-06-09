@@ -87,11 +87,6 @@ public:
 	static int16 nNoTempObjects;
 	static float fDistToNearestTree;
 
-	static void *operator new(size_t) throw();
-	static void *operator new(size_t, int) throw();
-	static void operator delete(void*, size_t) throw();
-	static void operator delete(void*, int) throw();
-
 	CObject(void);
 	CObject(int32, bool);
 	CObject(CDummyObject*);

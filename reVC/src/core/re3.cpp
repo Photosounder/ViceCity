@@ -38,6 +38,7 @@
 #include "Script.h"
 #include "MBlur.h"
 #include "postfx.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "custompipes.h"
 #include "MemoryHeap.h"
 #include "FileMgr.h"
@@ -731,12 +732,24 @@ SpawnCar(int id)
 		}
 
 		CVehicle *v;
-		if(CModelInfo::IsBoatModel(id))
-			v = new CBoat(id, RANDOM_VEHICLE);
-		else if(CModelInfo::IsBikeModel(id))
-			v = new CBike(id, RANDOM_VEHICLE);
-		else
-			v = new CAutomobile(id, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+		if(CModelInfo::IsBoatModel(id)) {
+			// Allocate the debug-spawned boat without invoking C++ new.
+			v = CPools::GetVehiclePool()->New();
+			assert(v);
+			std::allocator<CBoat>().construct((CBoat*)v, id, RANDOM_VEHICLE);
+		} else if(CModelInfo::IsBikeModel(id)) {
+			// Allocate the debug-spawned bike without invoking C++ new.
+			v = CPools::GetVehiclePool()->New();
+			assert(v);
+			std::allocator<CBike>().construct((CBike*)v, id, RANDOM_VEHICLE);
+		} else {
+			// Allocate the debug-spawned automobile without invoking C++ new.
+			v = CPools::GetVehiclePool()->New();
+			assert(v);
+			std::allocator<CAutomobile>().construct((CAutomobile*)v, id, RANDOM_VEHICLE);
+		}
+//- rouz edit (ChatGPT)
 
 		v->bHasBeenOwnedByPlayer = true;
 		if(carCol1)

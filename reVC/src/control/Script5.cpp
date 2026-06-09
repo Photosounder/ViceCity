@@ -2390,7 +2390,11 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 			}
 			CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
 			CWorld::Remove(pVehicle);
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the displaced vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			break;
 		}
 		case ENTITY_TYPE_PED:
@@ -2675,7 +2679,11 @@ void CTheScripts::RemoveThisPed(CPed* pPed)
 			}
 		}
 		CWorld::RemoveReferencesToDeletedObject(pPed);
-		delete pPed;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the scripted ped without invoking C++ delete.
+		pPed->~CPed();
+		CPools::GetPedPool()->Delete(pPed);
+//- rouz edit (ChatGPT)
 		if (bWasMissionPed)
 			--CPopulation::ms_nTotalMissionPeds;
 	}

@@ -25,33 +25,6 @@ int16 CObject::nNoTempObjects;
 //int16 CObject::nBodyCastHealth = 1000;
 float CObject::fDistToNearestTree;
 
-// Object pools tends to be full sometimes, let's free a temp. object in this case.
-#ifdef FIX_BUGS
-void *CObject::operator new(size_t sz) throw() {
-	CObject *obj = CPools::GetObjectPool()->New();
-	if (!obj) {
-		CObjectPool *objectPool = CPools::GetObjectPool();
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
-			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
-				CWorld::Remove(existing);
-				delete existing;
-				obj = objectPool->New(handle);
-				break;
-			}
-		}
-	}
-	return obj;
-}
-#else
-void *CObject::operator new(size_t sz) throw() { return CPools::GetObjectPool()->New(); }
-#endif
-void *CObject::operator new(size_t sz, int handle) throw() { return CPools::GetObjectPool()->New(handle); };
-
-void CObject::operator delete(void *p, size_t sz) throw() { CPools::GetObjectPool()->Delete((CObject*)p); }
-void CObject::operator delete(void *p, int handle) throw() { CPools::GetObjectPool()->Delete((CObject*)p); }
-
 CObject::CObject(void)
 {
 	m_type = ENTITY_TYPE_OBJECT;
@@ -811,7 +784,11 @@ CObject::DeleteAllMissionObjects()
 		CObject *pObject = objectPool->GetSlot(i);
 		if (pObject && pObject->ObjectCreatedBy == MISSION_OBJECT) {
 			CWorld::Remove(pObject);
-			delete pObject;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the mission object without invoking C++ delete.
+			pObject->~CObject();
+			objectPool->Delete(pObject);
+//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -824,7 +801,11 @@ CObject::DeleteAllTempObjects()
 		CObject *pObject = objectPool->GetSlot(i);
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT) {
 			CWorld::Remove(pObject);
-			delete pObject;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the temporary object without invoking C++ delete.
+			pObject->~CObject();
+			objectPool->Delete(pObject);
+//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -837,7 +818,11 @@ CObject::DeleteAllTempObjectsInArea(CVector point, float fRadius)
 		CObject *pObject = objectPool->GetSlot(i);
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT && (point - pObject->GetPosition()).MagnitudeSqr() < SQR(fRadius)) {
 			CWorld::Remove(pObject);
-			delete pObject;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the temporary object without invoking C++ delete.
+			pObject->~CObject();
+			objectPool->Delete(pObject);
+//- rouz edit (ChatGPT)
 		}
 	}
 }

@@ -13,14 +13,26 @@ void
 CTxdStore::Initialise(void)
 {
 	if(ms_pTxdPool == nil)
-		ms_pTxdPool = new CPool<TxdDef,TxdDef>(TXDSTORESIZE, "TexDictionary");
+//+ rouz edit (ChatGPT)
+		// Construct the TXD pool without invoking C++ new.
+	{
+		ms_pTxdPool = (CPool<TxdDef,TxdDef>*)malloc(sizeof(CPool<TxdDef,TxdDef>));
+		std::allocator<CPool<TxdDef,TxdDef> >().construct(ms_pTxdPool, TXDSTORESIZE, "TexDictionary");
+	}
+//- rouz edit (ChatGPT)
 }
 
 void
 CTxdStore::Shutdown(void)
 {
 	if(ms_pTxdPool)
-		delete ms_pTxdPool;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the TXD pool without invoking C++ delete.
+	{
+		std::allocator<CPool<TxdDef,TxdDef> >().destroy(ms_pTxdPool);
+		free(ms_pTxdPool);
+	}
+//- rouz edit (ChatGPT)
 }
 
 void

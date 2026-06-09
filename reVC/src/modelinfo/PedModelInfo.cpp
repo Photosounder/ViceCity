@@ -9,13 +9,31 @@
 #include "VisibilityPlugins.h"
 #include "ModelInfo.h"
 #include "custompipes.h"
+#include "Pools.h" // rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+CPedModelInfo::~CPedModelInfo(void)
+{
+	if(m_hitColModel){
+		// Destroy and release the hit collision model without invoking C++ delete.
+		m_hitColModel->~CColModel();
+		CPools::GetColModelPool()->Delete(m_hitColModel);
+	}
+}
+//- rouz edit (ChatGPT)
 
 void
 CPedModelInfo::DeleteRwObject(void)
 {
 	CClumpModelInfo::DeleteRwObject();
 	if(m_hitColModel)
-		delete m_hitColModel;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the hit collision model without invoking C++ delete.
+	{
+		m_hitColModel->~CColModel();
+		CPools::GetColModelPool()->Delete(m_hitColModel);
+	}
+//- rouz edit (ChatGPT)
 	m_hitColModel = nil;
 }
 
@@ -77,7 +95,12 @@ void
 CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 {
 	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(clump);
-	CColModel *colmodel = new CColModel;
+//+ rouz edit (ChatGPT)
+	// Construct the hit collision model in pool storage without invoking C++ new.
+	CColModel *colmodel = CPools::GetColModelPool()->New();
+	assert(colmodel);
+	std::allocator<CColModel>().construct(colmodel);
+//- rouz edit (ChatGPT)
 	CColSphere *spheres = (CColSphere*)RwMalloc(NUMPEDINFONODES*sizeof(CColSphere));
 	RwFrame *root = RpClumpGetFrame(m_clump);
 	RwMatrix *invmat = RwMatrixCreate();

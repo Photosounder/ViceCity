@@ -7,13 +7,30 @@
 #include "rtcharse.h"
 #include "re3_inttypes.h"
 #include "debugmenu.h"
-#include <new>
 
 #ifdef _WIN32
 #define snprintf _snprintf
 
 #define strdup _strdup
 #endif
+
+//+ rouz edit (ChatGPT)
+#define DEBUGMENU_NEW(TYPE, ...) [&]() -> TYPE* { \
+	/* Allocate a debug menu object without invoking C++ new. */ \
+	TYPE *ptr = (TYPE*)malloc(sizeof(TYPE)); \
+	assert(ptr); \
+	std::allocator<TYPE>().construct(ptr, __VA_ARGS__); \
+	return ptr; \
+}()
+
+#define DEBUGMENU_NEW0(TYPE) [&]() -> TYPE* { \
+	/* Allocate a debug menu object without invoking C++ new. */ \
+	TYPE *ptr = (TYPE*)malloc(sizeof(TYPE)); \
+	assert(ptr); \
+	std::allocator<TYPE>().construct(ptr); \
+	return ptr; \
+}()
+//- rouz edit (ChatGPT)
 
 
 // Font stuff
@@ -164,7 +181,16 @@ struct MenuEntry_Sub : MenuEntry
 	Menu *submenu;
 
 	MenuEntry_Sub(const char *name, Menu *menu);
-	~MenuEntry_Sub(void) { delete submenu; }
+//+ rouz edit (ChatGPT)
+	~MenuEntry_Sub(void) {
+		// Destroy and release the submenu without invoking C++ delete.
+		if(submenu){
+			submenu->~Menu();
+			free(submenu);
+			submenu = nil;
+		}
+	}
+//- rouz edit (ChatGPT)
 };
 
 struct MenuEntry_Var : MenuEntry
@@ -715,7 +741,14 @@ Menu::~Menu(void)
 	MenuEntry *e, *next;
 	for(e = entries; e; e = next){
 		next = e->next;
-		delete e;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the menu entry without invoking C++ delete.
+		if(e->type == MENUSUB)
+			((MenuEntry_Sub*)e)->~MenuEntry_Sub();
+		else
+			e->~MenuEntry();
+		free(e);
+//- rouz edit (ChatGPT)
 	}
 	memset(this, 0, sizeof(Menu));
 }
@@ -751,9 +784,15 @@ findMenu(const char *name)
 			m = ((MenuEntry_Sub*)e)->submenu;
 		}else{
 			// Create submenus that don't exist yet
-			Menu *submenu = new Menu();
+//+ rouz edit (ChatGPT)
+			// Allocate the submenu without invoking C++ new.
+			Menu *submenu = DEBUGMENU_NEW0(Menu);
+//- rouz edit (ChatGPT)
 			submenu->parent = m;
-			MenuEntry *me = new MenuEntry_Sub(curname, submenu);
+//+ rouz edit (ChatGPT)
+			// Allocate the submenu entry without invoking C++ new.
+			MenuEntry *me = DEBUGMENU_NEW(MenuEntry_Sub, curname, submenu);
+//- rouz edit (ChatGPT)
 			// Don't sort submenus outside the toplevel menu
 			if(m == &toplevel)
 				m->insertEntrySorted(me);
@@ -822,7 +861,10 @@ DebugMenuShutdown(void)
 		arrow = nil;
 
 		toplevel.~Menu();
-		new (&toplevel) Menu();
+//+ rouz edit (ChatGPT)
+		// Reconstruct the top-level menu without invoking C++ new.
+		std::allocator<Menu>().construct(&toplevel);
+//- rouz edit (ChatGPT)
 
 		activeMenu = &toplevel;
 		deepestMenu = &toplevel;
@@ -1243,6 +1285,7 @@ drawMouse(void)
  */
 
 
+//+ rouz edit (ChatGPT)
 #define X(NAME, TYPE, unused1, unused2) \
 MenuEntry*																			\
 DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound, const char **strings)	\
@@ -1250,13 +1293,19 @@ DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc tr
 	Menu *m = findMenu(path);																\
 	if(m == nil)																		\
 		return nil;																		\
-	MenuEntry *e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound, strings);							\
+	/* Allocate a typed debug menu entry without invoking C++ new. */								\
+	MenuEntry_##NAME *entry = (MenuEntry_##NAME*)malloc(sizeof(MenuEntry_##NAME));							\
+	assert(entry);																		\
+	std::allocator<MenuEntry_##NAME>().construct(entry, name, ptr, triggerFunc, step, lowerBound, upperBound, strings);	\
+	MenuEntry *e = entry;							\
 	m->appendEntry(e);							\
 	return e;																		\
 }
+//- rouz edit (ChatGPT)
 INTTYPES
 #undef X
 
+//+ rouz edit (ChatGPT)
 #define X(NAME, TYPE, unused1, unused2) \
 MenuEntry*																			\
 DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc triggerFunc, TYPE step, TYPE lowerBound, TYPE upperBound)	\
@@ -1264,10 +1313,15 @@ DebugMenuAdd##NAME(const char *path, const char *name, TYPE *ptr, TriggerFunc tr
 	Menu *m = findMenu(path);																\
 	if(m == nil)																		\
 		return nil;																		\
-	MenuEntry *e = new MenuEntry_##NAME(name, ptr, triggerFunc, step, lowerBound, upperBound);								\
+	/* Allocate a typed debug menu entry without invoking C++ new. */								\
+	MenuEntry_##NAME *entry = (MenuEntry_##NAME*)malloc(sizeof(MenuEntry_##NAME));								\
+	assert(entry);																		\
+	std::allocator<MenuEntry_##NAME>().construct(entry, name, ptr, triggerFunc, step, lowerBound, upperBound);	\
+	MenuEntry *e = entry;								\
 	m->appendEntry(e);							\
 	return e;																		\
 }
+//- rouz edit (ChatGPT)
 FLOATTYPES
 #undef X
 
@@ -1277,7 +1331,10 @@ DebugMenuAddCmd(const char *path, const char *name, TriggerFunc triggerFunc)
 	Menu *m = findMenu(path);
 	if(m == nil)
 		return nil;
-	MenuEntry *e = new MenuEntry_Cmd(name, triggerFunc);
+//+ rouz edit (ChatGPT)
+	// Allocate the command menu entry without invoking C++ new.
+	MenuEntry *e = DEBUGMENU_NEW(MenuEntry_Cmd, name, triggerFunc);
+//- rouz edit (ChatGPT)
 	m->appendEntry(e);
 	return e;
 }

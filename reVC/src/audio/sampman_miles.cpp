@@ -592,7 +592,7 @@ _FindMP3s(void)
 		
 		OutputDebugString(fd.cFileName);
 		
-		_pMP3List = new tMP3Entry;
+		_pMP3List = (tMP3Entry*)malloc(sizeof(tMP3Entry)); // rouz edit (ChatGPT)
 		
 		if ( _pMP3List == NULL )
 		{
@@ -612,7 +612,7 @@ _FindMP3s(void)
 		
 		if ( bShortcut )
 		{
-			_pMP3List->pLinkPath = new char[MAX_PATH*2];
+			_pMP3List->pLinkPath = (char*)malloc(MAX_PATH*2); // rouz edit (ChatGPT)
 			strcpy(_pMP3List->pLinkPath, filepath);
 		}
 		else
@@ -677,7 +677,7 @@ _FindMP3s(void)
 					
 					OutputDebugString(fd.cFileName);
 					
-					_pMP3List = new tMP3Entry;
+					_pMP3List = (tMP3Entry*)malloc(sizeof(tMP3Entry)); // rouz edit (ChatGPT)
 					
 					if ( _pMP3List  == NULL)
 						break;
@@ -691,7 +691,7 @@ _FindMP3s(void)
 					
 					if ( bShortcut )
 					{
-						_pMP3List->pLinkPath = new char [MAX_PATH*2];
+						_pMP3List->pLinkPath = (char*)malloc(MAX_PATH*2); // rouz edit (ChatGPT)
 						strcpy(_pMP3List->pLinkPath, filepath);
 					}
 					else
@@ -745,7 +745,7 @@ _FindMP3s(void)
 					AIL_close_stream(mp3Stream[0]);
 					mp3Stream[0] = NULL;
 					
-					pList->pNext = new tMP3Entry;
+					pList->pNext = (tMP3Entry*)malloc(sizeof(tMP3Entry)); // rouz edit (ChatGPT)
 					
 					tMP3Entry *e = pList->pNext;
 					
@@ -760,7 +760,7 @@ _FindMP3s(void)
 					
 					if ( bShortcut )
 					{
-						e->pLinkPath = new char [MAX_PATH*2];
+						e->pLinkPath = (char*)malloc(MAX_PATH*2); // rouz edit (ChatGPT)
 						strcpy(e->pLinkPath, filepath);
 					}
 					else
@@ -799,14 +799,14 @@ _DeleteMP3Entries(void)
 		if ( e->pLinkPath != NULL )
 		{
 #ifndef FIX_BUGS
-			delete   e->pLinkPath; // BUG: should be delete []
+			free(e->pLinkPath); // rouz edit (ChatGPT)
 #else
-			delete[] e->pLinkPath;
+			free(e->pLinkPath); // rouz edit (ChatGPT)
 #endif
 			e->pLinkPath = NULL;
 		}
 		
-		delete e;
+		free(e); // rouz edit (ChatGPT)
 		
 		if ( next )
 			e = next;

@@ -23,30 +23,6 @@ cAudioScriptObject::Reset()
 	AudioEntity = AEHANDLE_NONE;
 }
 
-void *
-cAudioScriptObject::operator new(size_t sz) throw()
-{
-	return CPools::GetAudioScriptObjectPool()->New();
-}
-
-void *
-cAudioScriptObject::operator new(size_t sz, int handle) throw()
-{
-	return CPools::GetAudioScriptObjectPool()->New(handle);
-}
-
-void
-cAudioScriptObject::operator delete(void *p, size_t sz) throw()
-{
-	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
-}
-
-void
-cAudioScriptObject::operator delete(void *p, int handle) throw()
-{
-	CPools::GetAudioScriptObjectPool()->Delete((cAudioScriptObject *)p);
-}
-
 void
 cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
 {
@@ -59,8 +35,12 @@ cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
 	for (int32 i = 0; i < pool_size; i++) {
 		int32 handle;
 		ReadSaveBuf(&handle, buf);
-		cAudioScriptObject *p = new(handle) cAudioScriptObject;
+//+ rouz edit (ChatGPT)
+		// Restore the audio script object into its saved pool slot.
+		cAudioScriptObject *p = CPools::GetAudioScriptObjectPool()->New(handle);
 		assert(p != nil);
+		std::allocator<cAudioScriptObject>().construct(p);
+//- rouz edit (ChatGPT)
 		ReadSaveBuf(p, buf);
 		p->AudioEntity = DMAudio.CreateLoopingScriptObject(p);
 	}
@@ -95,7 +75,12 @@ PlayOneShotScriptObject(uint8 id, CVector const &pos)
 {
 	if (!DMAudio.IsAudioInitialised()) return;
 
-	cAudioScriptObject *audioScriptObject = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+	// Allocate a pooled audio script object without invoking C++ new.
+	cAudioScriptObject *audioScriptObject = CPools::GetAudioScriptObjectPool()->New();
+	assert(audioScriptObject != nil);
+	std::allocator<cAudioScriptObject>().construct(audioScriptObject);
+//- rouz edit (ChatGPT)
 	audioScriptObject->Posn = pos;
 	audioScriptObject->AudioId = id;
 	audioScriptObject->AudioEntity = AEHANDLE_NONE;

@@ -28,6 +28,7 @@
 #include "HandlingMgr.h"
 #include "Ropes.h"
 #include "Heli.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 #include "Replay.h"
 #endif
@@ -646,7 +647,28 @@ CHeli::SpawnFlyingComponent(int32 component)
 	if(atomic == nil)
 		return nil;
 
-	obj = new CObject;
+//+ rouz edit (ChatGPT)
+	// Allocate the flying component object without invoking C++ new.
+	CObjectPool *objectPool = CPools::GetObjectPool();
+	obj = objectPool->New();
+#ifdef FIX_BUGS
+	if (!obj) {
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				existing->~CObject();
+				objectPool->Delete(existing);
+				obj = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	if (obj)
+#endif
+		std::allocator<CObject>().construct(obj);
+//- rouz edit (ChatGPT)
 	if(obj == nil)
 		return nil;
 
@@ -770,8 +792,14 @@ CHeli::GenerateHeli(bool catalina)
 
 	if(catalina)
 		assert(0 && "can't create catalina's heli");
-	else
-		heli = new CHeli(MI_CHOPPER, PERMANENT_VEHICLE);
+//+ rouz edit (ChatGPT)
+	else {
+		// Allocate the heli from the vehicle pool without invoking C++ new.
+		heli = (CHeli*)CPools::GetVehiclePool()->New();
+		assert(heli);
+		std::allocator<CHeli>().construct(heli, MI_CHOPPER, PERMANENT_VEHICLE);
+	}
+//- rouz edit (ChatGPT)
 
 	if(catalina)
 		heliPos = CVector(-224.0f, 201.0f, 83.0f);
@@ -858,7 +886,11 @@ CHeli::UpdateHelis(void)
 	for(i = 0; i < NUM_HELIS; i++)
 		if(pHelis[i] && pHelis[i]->m_heliStatus == HELI_STATUS_FLY_AWAY && pHelis[i]->GetPosition().z > 150.0f){
 			CWorld::Remove(pHelis[i]);
-			delete pHelis[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the heli without invoking C++ delete.
+			pHelis[i]->~CHeli();
+			CPools::GetVehiclePool()->Delete(pHelis[i]);
+//- rouz edit (ChatGPT)
 			pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
@@ -905,7 +937,11 @@ CHeli::UpdateHelis(void)
 
 			CDarkel::RegisterCarBlownUpByPlayer(pHelis[i]);
 			CWorld::Remove(pHelis[i]);
-			delete pHelis[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the heli without invoking C++ delete.
+			pHelis[i]->~CHeli();
+			CPools::GetVehiclePool()->Delete(pHelis[i]);
+//- rouz edit (ChatGPT)
 			pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
@@ -1041,7 +1077,11 @@ CHeli::RemoveCatalinaHeli(void)
 	CatalinaHeliOn = false;
 	if(pHelis[HELI_CATALINA]){
 		CWorld::Remove(pHelis[HELI_CATALINA]);
-		delete pHelis[HELI_CATALINA];
+//+ rouz edit (ChatGPT)
+		// Destroy and release Catalina's heli without invoking C++ delete.
+		pHelis[HELI_CATALINA]->~CHeli();
+		CPools::GetVehiclePool()->Delete(pHelis[HELI_CATALINA]);
+//- rouz edit (ChatGPT)
 		pHelis[HELI_CATALINA] = nil;
 	}
 }

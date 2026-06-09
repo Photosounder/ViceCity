@@ -25,6 +25,7 @@
 #include "World.h"
 #include "VarConsole.h"
 #include "SaveBuf.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #define ROTATED_DOOR_OPEN_SPEED (0.015f)
 #define ROTATED_DOOR_CLOSE_SPEED (0.02f)
@@ -1382,7 +1383,11 @@ void CGarage::RemoveCarsBlockingDoorNotInside()
 		if (!IsPointInsideGarage(pVehicle->GetPosition())) {
 			if (!pVehicle->bIsLocked && pVehicle->CanBeDeleted()) {
 				CWorld::Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the vehicle without invoking C++ delete.
+				pVehicle->~CVehicle();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 #ifndef FIX_BUGS
 				return;
 #endif
@@ -1861,16 +1866,33 @@ CVehicle* CStoredCar::RestoreCar()
 		CVehicleModelInfo::SetComponentsToUse(m_nVariationA, m_nVariationB);
 	}
 	CVehicle* pVehicle;
-	if (CModelInfo::IsBoatModel(m_nModelIndex))
-		pVehicle = new CBoat(m_nModelIndex, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+	if (CModelInfo::IsBoatModel(m_nModelIndex)) {
+		// Restore the stored boat without invoking C++ new.
+		pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CBoat>().construct((CBoat*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
+	}
+//- rouz edit (ChatGPT)
 	else if (CModelInfo::IsBikeModel(m_nModelIndex))
 	{
-		CBike* pBike = new CBike(m_nModelIndex, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Restore the stored bike without invoking C++ new.
+		CBike* pBike = (CBike*)CPools::GetVehiclePool()->New();
+		assert(pBike);
+		std::allocator<CBike>().construct(pBike, m_nModelIndex, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 		pBike->bIsStanding = true;
 		pVehicle = pBike;
 	}
-	else
-		pVehicle = new CAutomobile(m_nModelIndex, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+	else {
+		// Restore the stored automobile without invoking C++ new.
+		pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
+	}
+//- rouz edit (ChatGPT)
 	pVehicle->SetPosition(m_vecPos);
 	pVehicle->SetStatus(STATUS_ABANDONED);
 	pVehicle->GetForward() = m_vecAngle;
@@ -1915,7 +1937,11 @@ void CGarage::StoreAndRemoveCarsForThisHideout(CStoredCar* aCars, int32 nMax)
 					aCars[index++].StoreCar(pVehicle);
 				CWorld::Players[CWorld::PlayerInFocus].CancelPlayerEnteringCars(pVehicle);
 				CWorld::Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the stored vehicle without invoking C++ delete.
+				pVehicle->~CVehicle();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -2002,7 +2028,11 @@ void CGarage::TidyUpGarage()
 			if (IsPointInsideGarage(pVehicle->GetPosition())) {
 				if (pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->GetUp().z < 0.5f) {
 					CWorld::Remove(pVehicle);
-					delete pVehicle;
+//+ rouz edit (ChatGPT)
+					// Destroy and release the garage vehicle without invoking C++ delete.
+					pVehicle->~CVehicle();
+					CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 				}
 			}
 		}
@@ -2037,7 +2067,11 @@ void CGarage::TidyUpGarageClose()
 		if (bRemove) {
 			// no MISSION_VEHICLE check???
 			CWorld::Remove(pVehicle);
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the garage vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		}
 	}
 }

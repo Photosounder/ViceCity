@@ -264,30 +264,25 @@ CPathFind::Init(void)
 void
 CPathFind::AllocatePathFindInfoMem(int16 numPathGroups)
 {
-	delete[] InfoForTileCars;
+	free(InfoForTileCars); // rouz edit (ChatGPT)
 	InfoForTileCars = nil;
-	delete[] InfoForTilePeds;
+	free(InfoForTilePeds); // rouz edit (ChatGPT)
 	InfoForTilePeds = nil;
 
 	// NB: MIAMI doesn't use numPathGroups here but hardcodes PATHNODESIZE
-	InfoForTileCars = new CPathInfoForObject[12*PATHNODESIZE];
-	memset(InfoForTileCars, 0, 12*PATHNODESIZE*sizeof(CPathInfoForObject));
-	InfoForTilePeds = new CPathInfoForObject[12*PATHNODESIZE];
-	memset(InfoForTilePeds, 0, 12*PATHNODESIZE*sizeof(CPathInfoForObject));
+	InfoForTileCars = (CPathInfoForObject*)calloc(12*PATHNODESIZE, sizeof(CPathInfoForObject)); // rouz edit (ChatGPT)
+	InfoForTilePeds = (CPathInfoForObject*)calloc(12*PATHNODESIZE, sizeof(CPathInfoForObject)); // rouz edit (ChatGPT)
 
-	delete[] DetachedInfoForTileCars;
+	free(DetachedInfoForTileCars); // rouz edit (ChatGPT)
 	DetachedInfoForTileCars = nil;
-	delete[] DetachedInfoForTilePeds;
+	free(DetachedInfoForTilePeds); // rouz edit (ChatGPT)
 	DetachedInfoForTilePeds = nil;
-	DetachedInfoForTileCars = new CPathInfoForObject[12*NUMDETACHED_CARS];
-	memset(DetachedInfoForTileCars, 0, 12*NUMDETACHED_CARS*sizeof(CPathInfoForObject));
-	DetachedInfoForTilePeds = new CPathInfoForObject[12*NUMDETACHED_PEDS];
-	memset(DetachedInfoForTilePeds, 0, 12*NUMDETACHED_PEDS*sizeof(CPathInfoForObject));
+	DetachedInfoForTileCars = (CPathInfoForObject*)calloc(12*NUMDETACHED_CARS, sizeof(CPathInfoForObject)); // rouz edit (ChatGPT)
+	DetachedInfoForTilePeds = (CPathInfoForObject*)calloc(12*NUMDETACHED_PEDS, sizeof(CPathInfoForObject)); // rouz edit (ChatGPT)
 
-	delete[] TempExternalNodes;
+	free(TempExternalNodes); // rouz edit (ChatGPT)
 	TempExternalNodes = nil;
-	TempExternalNodes = new CTempNodeExternal[NUMTEMPEXTERNALNODES];
-	memset(TempExternalNodes, 0, NUMTEMPEXTERNALNODES*sizeof(CTempNodeExternal));
+	TempExternalNodes = (CTempNodeExternal*)calloc(NUMTEMPEXTERNALNODES, sizeof(CTempNodeExternal)); // rouz edit (ChatGPT)
 	NumTempExternalNodes = 0;
 	NumDetachedPedNodeGroups = 0;
 	NumDetachedCarNodeGroups = 0;
@@ -448,7 +443,7 @@ CPathFind::PreparePathData(void)
 	if(!CPathFind::LoadPathFindData() &&	// empty
 	   InfoForTileCars && InfoForTilePeds &&
 	   DetachedInfoForTileCars && DetachedInfoForTilePeds && TempExternalNodes){
-		tempNodes = new CTempNode[NUMTEMPNODES];
+		tempNodes = (CTempNode*)malloc(sizeof(CTempNode)*NUMTEMPNODES); // rouz edit (ChatGPT)
 
 		m_numConnections = 0;
 
@@ -507,21 +502,21 @@ CPathFind::PreparePathData(void)
 		PreparePathDataForType(PATH_PED, tempNodes, InfoForTilePeds, 1.0f, DetachedInfoForTilePeds, NumDetachedPedNodeGroups);
 		m_numPedPathNodes = m_numPathNodes - m_numCarPathNodes;
 
-		delete[] tempNodes;
+		free(tempNodes); // rouz edit (ChatGPT)
 
 		CountFloodFillGroups(PATH_CAR);
 		CountFloodFillGroups(PATH_PED);
 
-		delete[] InfoForTileCars;
+		free(InfoForTileCars); // rouz edit (ChatGPT)
 		InfoForTileCars = nil;
-		delete[] InfoForTilePeds;
+		free(InfoForTilePeds); // rouz edit (ChatGPT)
 		InfoForTilePeds = nil;
 
-		delete[] DetachedInfoForTileCars;
+		free(DetachedInfoForTileCars); // rouz edit (ChatGPT)
 		DetachedInfoForTileCars = nil;
-		delete[] DetachedInfoForTilePeds;
+		free(DetachedInfoForTilePeds); // rouz edit (ChatGPT)
 		DetachedInfoForTilePeds = nil;
-		delete[] TempExternalNodes;
+		free(TempExternalNodes); // rouz edit (ChatGPT)
 		TempExternalNodes = nil;
 	}
 	printf("Done with PreparePathData\n");
@@ -620,7 +615,7 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 	oldNumLinks = m_numConnections;
 
 #define OBJECTINDEX(n) (mapObjIndices[(n)])
-	int16 *mapObjIndices = new int16[NUM_PATHNODES];
+	int16 *mapObjIndices = (int16*)malloc(sizeof(int16)*NUM_PATHNODES); // rouz edit (ChatGPT)
 	NumTempExternalNodes = 0;
 
 	// Calculate internal nodes, store them and connect them to defining object
@@ -1014,7 +1009,7 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 			m_numPathNodes--;
 		}
 
-	delete[] mapObjIndices;
+	free(mapObjIndices); // rouz edit (ChatGPT)
 }
 
 float

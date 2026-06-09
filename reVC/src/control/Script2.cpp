@@ -717,7 +717,12 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 		}
 		if (!DMAudio.IsAudioInitialised())
 			return 0;
-		cAudioScriptObject* obj = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+		// Allocate a pooled audio script object without invoking C++ new.
+		cAudioScriptObject* obj = CPools::GetAudioScriptObjectPool()->New();
+		assert(obj);
+		std::allocator<cAudioScriptObject>().construct(obj);
+//- rouz edit (ChatGPT)
 		obj->Posn = *(CVector*)&ScriptParams[0];
 		obj->AudioId = ScriptParams[3];
 		obj->AudioEntity = AEHANDLE_NONE;
@@ -728,7 +733,12 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 		if (DMAudio.IsAudioInitialised()) {
-			cAudioScriptObject* obj = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+			// Allocate a pooled audio script object without invoking C++ new.
+			cAudioScriptObject* obj = CPools::GetAudioScriptObjectPool()->New();
+			assert(obj);
+			std::allocator<cAudioScriptObject>().construct(obj);
+//- rouz edit (ChatGPT)
 			obj->Posn = *(CVector*)&ScriptParams[0];
 			obj->AudioId = ScriptParams[3];
 			obj->AudioEntity = DMAudio.CreateLoopingScriptObject(obj);
@@ -748,7 +758,11 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 			return 0;
 		}
 		DMAudio.DestroyLoopingScriptObject(obj->AudioEntity);
-		delete obj;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the pooled audio script object without invoking C++ delete.
+		obj->~cAudioScriptObject();
+		CPools::GetAudioScriptObjectPool()->Delete(obj);
+//- rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_IS_CAR_STUCK_ON_ROOF:
@@ -1127,12 +1141,24 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 			break;
 		}
 		CPed* pPed;
-		if (ScriptParams[1] == PEDTYPE_COP)
-			pPed = new CCopPed((eCopType)ScriptParams[2]);
-		else if (ScriptParams[1] == PEDTYPE_EMERGENCY || ScriptParams[1] == PEDTYPE_FIREMAN)
-			pPed = new CEmergencyPed(ScriptParams[2]);
-		else
-			pPed = new CCivilianPed((ePedType)ScriptParams[1], ScriptParams[2]);
+//+ rouz edit (ChatGPT)
+		if (ScriptParams[1] == PEDTYPE_COP) {
+			// Allocate the scripted passenger cop without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CCopPed>().construct((CCopPed*)pPed, (eCopType)ScriptParams[2]);
+		} else if (ScriptParams[1] == PEDTYPE_EMERGENCY || ScriptParams[1] == PEDTYPE_FIREMAN) {
+			// Allocate the scripted passenger emergency ped without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CEmergencyPed>().construct((CEmergencyPed*)pPed, ScriptParams[2]);
+		} else {
+			// Allocate the scripted passenger civilian ped without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, (ePedType)ScriptParams[1], ScriptParams[2]);
+		}
+//- rouz edit (ChatGPT)
 		pPed->CharCreatedBy = MISSION_CHAR;
 		pPed->bRespondsToThreats = false;
 		pPed->bAllowMedicsToReviveMe = false;

@@ -464,7 +464,12 @@ CGameLogic::UpdateShortCut()
 			CStreaming::RequestModel(MI_KAUFMAN, 0);
 			return;
 		}
-		pShortCutTaxi = new CAutomobile(MI_KAUFMAN, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the shortcut taxi without invoking C++ new.
+		pShortCutTaxi = (CAutomobile*)CPools::GetVehiclePool()->New();
+		if (pShortCutTaxi)
+			std::allocator<CAutomobile>().construct(pShortCutTaxi, MI_KAUFMAN, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 		if (!pShortCutTaxi)
 			return;
 		pShortCutTaxi->SetPosition(ShortCutStart);

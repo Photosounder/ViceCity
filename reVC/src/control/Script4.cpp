@@ -1040,7 +1040,12 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			mi = MI_MALE01;
 			pedtype = ((CPedModelInfo*)(CModelInfo::GetModelInfo(mi)))->m_pedType;
 		}
-		CPed* ped = new CCivilianPed(pedtype, mi);
+//+ rouz edit (ChatGPT)
+		// Allocate the scripted ambient ped without invoking C++ new.
+		CPed* ped = CPools::GetPedPool()->New();
+		assert(ped);
+		std::allocator<CCivilianPed>().construct((CCivilianPed*)ped, pedtype, mi);
+//- rouz edit (ChatGPT)
 		ped->CharCreatedBy = MISSION_CHAR;
 		ped->bRespondsToThreats = false;
 		ped->bAllowMedicsToReviveMe = false;
@@ -1946,11 +1951,22 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 			return 0;
 		CVehicle* car;
 		if (CModelInfo::IsBikeModel(model)) {
-			car = new CBike(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the car-park bike without invoking C++ new.
+			car = CPools::GetVehiclePool()->New();
+			assert(car);
+			std::allocator<CBike>().construct((CBike*)car, model, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 			((CBike*)(car))->bIsStanding = true;
 		}
-		else
-			car = new CAutomobile(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+		else {
+			// Allocate the car-park vehicle without invoking C++ new.
+			car = CPools::GetVehiclePool()->New();
+			assert(car);
+			std::allocator<CAutomobile>().construct((CAutomobile*)car, model, RANDOM_VEHICLE);
+		}
+//- rouz edit (ChatGPT)
 		CVector pos = *(CVector*)&ScriptParams[0];
 		pos.z += car->GetDistanceFromCentreOfMassToBaseOfModel();
 		car->SetPosition(pos);

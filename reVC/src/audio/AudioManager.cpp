@@ -4,6 +4,7 @@
 #include "audio_enums.h"
 
 #include "AudioScriptObject.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "MusicManager.h"
 #include "Timer.h"
 #include "DMAudio.h"
@@ -370,7 +371,11 @@ cAudioManager::DestroyAllGameCreatedEntities()
 				case AUDIOTYPE_SCRIPTOBJECT:
 					entity = (cAudioScriptObject *)m_asAudioEntities[i].m_pEntity;
 					if (entity) {
-						delete entity;
+//+ rouz edit (ChatGPT)
+						// Destroy and release the pooled audio script object without invoking C++ delete.
+						entity->~cAudioScriptObject();
+						CPools::GetAudioScriptObjectPool()->Delete(entity);
+//- rouz edit (ChatGPT)
 						m_asAudioEntities[i].m_pEntity = nil;
 					}
 					DestroyEntity(i);
@@ -588,7 +593,11 @@ cAudioManager::ServiceSoundEffects()
 #endif
 	for (int32 i = 0; i < m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal; i++) {
 		cAudioScriptObject *object = (cAudioScriptObject *)m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity;
-		delete object;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the pooled audio script object without invoking C++ delete.
+		object->~cAudioScriptObject();
+		CPools::GetAudioScriptObjectPool()->Delete(object);
+//- rouz edit (ChatGPT)
 		m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity = nil;
 		DestroyEntity(m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]);
 	}

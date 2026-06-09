@@ -111,7 +111,12 @@ CAnimViewer::Initialise(void) {
 	CClock::Initialise(60000);
 	CTimeCycle::Initialise();
 	CCarCtrl::Init();
-	CPlayerPed *player = new CPlayerPed();
+//+ rouz edit (ChatGPT)
+	// Allocate the anim viewer player without invoking C++ new.
+	CPlayerPed *player = (CPlayerPed*)CPools::GetPedPool()->New();
+	assert(player);
+	std::allocator<CPlayerPed>().construct(player);
+//- rouz edit (ChatGPT)
 	player->SetPosition(1000.0f, 1000.0f, 1000.0f);
 	CWorld::Players[0].m_pPed = player;
 	CDraw::SetFOV(120.0f);
@@ -220,8 +225,13 @@ PlayAnimation(RpClump *clump, AssocGroupId animGroup, AnimationId anim)
 {
 	CAnimBlendAssociation *currentAssoc = RpAnimBlendClumpGetAssociation(clump, anim);
 
-	if (currentAssoc && currentAssoc->IsPartial())
-		delete currentAssoc;
+//+ rouz edit (ChatGPT)
+	// Destroy the matching partial animation without invoking C++ delete.
+	if (currentAssoc && currentAssoc->IsPartial()){
+		currentAssoc->~CAnimBlendAssociation();
+		free(currentAssoc);
+	}
+//- rouz edit (ChatGPT)
 
 	RpAnimBlendClumpSetBlendDeltas(clump, ASSOC_PARTIAL, -8.0f);
 
@@ -251,8 +261,19 @@ CAnimViewer::Update(void)
 		if (reloadIFP) {
 			if (pTarget) {
 				CWorld::Remove(pTarget);
-				if (pTarget)
-					delete pTarget;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the anim viewer target without invoking C++ delete.
+				if (pTarget->IsVehicle()) {
+					pTarget->~CEntity();
+					CPools::GetVehiclePool()->Delete((CVehicle*)pTarget);
+				} else if (pTarget->IsPed()) {
+					pTarget->~CEntity();
+					CPools::GetPedPool()->Delete((CPed*)pTarget);
+				} else if (pTarget->IsObject()) {
+					pTarget->~CEntity();
+					CPools::GetObjectPool()->Delete((CObject*)pTarget);
+				}
+//- rouz edit (ChatGPT)
 			}
 			pTarget = nil;
 			
@@ -282,23 +303,87 @@ CAnimViewer::Update(void)
 
 				CVehicleModelInfo* veh = (CVehicleModelInfo*)modelInfo;
 				if (veh->m_vehicleType == VEHICLE_TYPE_CAR) {
-					pTarget = new CAutomobile(modelId, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+					// Allocate the anim viewer car without invoking C++ new.
+					pTarget = CPools::GetVehiclePool()->New();
+					assert(pTarget);
+					std::allocator<CAutomobile>().construct((CAutomobile*)pTarget, modelId, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 				} else if (veh->m_vehicleType == VEHICLE_TYPE_BOAT) {
-					pTarget = new CBoat(modelId, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+					// Allocate the anim viewer boat without invoking C++ new.
+					pTarget = CPools::GetVehiclePool()->New();
+					assert(pTarget);
+					std::allocator<CBoat>().construct((CBoat*)pTarget, modelId, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 				} else if (veh->m_vehicleType == VEHICLE_TYPE_BIKE) {
-					pTarget = new CBike(modelId, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+					// Allocate the anim viewer bike without invoking C++ new.
+					pTarget = CPools::GetVehiclePool()->New();
+					assert(pTarget);
+					std::allocator<CBike>().construct((CBike*)pTarget, modelId, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 				} else {
-					pTarget = new CObject(modelId, true);
+//+ rouz edit (ChatGPT)
+					// Allocate the anim viewer object without invoking C++ new.
+					CObjectPool *objectPool = CPools::GetObjectPool();
+					pTarget = objectPool->New();
+#ifdef FIX_BUGS
+					if (!pTarget) {
+						for (int32 i = 0; i < objectPool->GetSize(); i++) {
+							CObject *existing = objectPool->GetSlot(i);
+							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+								int32 handle = objectPool->GetIndex(existing);
+								CWorld::Remove(existing);
+								existing->~CObject();
+								objectPool->Delete(existing);
+								pTarget = objectPool->New(handle);
+								break;
+							}
+						}
+					}
+					if (pTarget)
+#endif
+						std::allocator<CObject>().construct((CObject*)pTarget, modelId, true);
+					assert(pTarget);
+//- rouz edit (ChatGPT)
 					if (!modelInfo->GetColModel()) {
 						modelInfo->SetColModel(&CTempColModels::ms_colModelWheel1);
 					}
 				}
 				pTarget->SetStatus(STATUS_ABANDONED);
 			} else if (modelInfo->GetModelType() == MITYPE_PED) {
-				pTarget = new CPed(PEDTYPE_CIVMALE);
+//+ rouz edit (ChatGPT)
+				// Allocate the anim viewer ped without invoking C++ new.
+				pTarget = CPools::GetPedPool()->New();
+				assert(pTarget);
+				std::allocator<CPed>().construct((CPed*)pTarget, PEDTYPE_CIVMALE);
+//- rouz edit (ChatGPT)
 				pTarget->SetModelIndex(modelId);
 			} else {
-				pTarget = new CObject(modelId, true);
+//+ rouz edit (ChatGPT)
+				// Allocate the anim viewer object without invoking C++ new.
+				CObjectPool *objectPool = CPools::GetObjectPool();
+				pTarget = objectPool->New();
+#ifdef FIX_BUGS
+				if (!pTarget) {
+					for (int32 i = 0; i < objectPool->GetSize(); i++) {
+						CObject *existing = objectPool->GetSlot(i);
+						if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+							int32 handle = objectPool->GetIndex(existing);
+							CWorld::Remove(existing);
+							existing->~CObject();
+							objectPool->Delete(existing);
+							pTarget = objectPool->New(handle);
+							break;
+						}
+					}
+				}
+				if (pTarget)
+#endif
+					std::allocator<CObject>().construct((CObject*)pTarget, modelId, true);
+				assert(pTarget);
+//- rouz edit (ChatGPT)
 				if (!modelInfo->GetColModel())
 				{
 					modelInfo->SetColModel(&CTempColModels::ms_colModelWheel1);
@@ -409,8 +494,19 @@ CAnimViewer::Update(void)
 		modelId = nextModelId;
 		if (pTarget) {
 			CWorld::Remove(pTarget);
-			if (pTarget)
-				delete pTarget;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the anim viewer target without invoking C++ delete.
+			if (pTarget->IsVehicle()) {
+				pTarget->~CEntity();
+				CPools::GetVehiclePool()->Delete((CVehicle*)pTarget);
+			} else if (pTarget->IsPed()) {
+				pTarget->~CEntity();
+				CPools::GetPedPool()->Delete((CPed*)pTarget);
+			} else if (pTarget->IsObject()) {
+				pTarget->~CEntity();
+				CPools::GetObjectPool()->Delete((CObject*)pTarget);
+			}
+//- rouz edit (ChatGPT)
 		}
 		pTarget = nil;
 		return;
@@ -425,8 +521,13 @@ CAnimViewer::Update(void)
 void
 CAnimViewer::Shutdown(void)
 {
-	if (CWorld::Players[0].m_pPed)
-		delete CWorld::Players[0].m_pPed;
+//+ rouz edit (ChatGPT)
+	if (CWorld::Players[0].m_pPed) {
+		// Destroy and release the anim viewer player without invoking C++ delete.
+		CWorld::Players[0].m_pPed->~CPlayerPed();
+		CPools::GetPedPool()->Delete(CWorld::Players[0].m_pPed);
+	}
+//- rouz edit (ChatGPT)
 
 	CWorld::ShutDown();
 	CModelInfo::ShutDown();

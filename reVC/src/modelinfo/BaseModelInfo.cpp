@@ -6,6 +6,7 @@
 #include "BaseModelInfo.h"
 #include "ModelInfo.h"
 #include "ColModel.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 CBaseModelInfo::CBaseModelInfo(ModelInfoType type)
 {
@@ -35,7 +36,13 @@ CBaseModelInfo::DeleteCollisionModel(void)
 {
 	if(m_colModel && m_bOwnsColModel){
 		if(m_colModel)
-			delete m_colModel;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the collision model without invoking C++ delete.
+		{
+			m_colModel->~CColModel();
+			CPools::GetColModelPool()->Delete(m_colModel);
+		}
+//- rouz edit (ChatGPT)
 		m_colModel = nil;
 	}
 }

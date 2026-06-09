@@ -12,6 +12,7 @@
 #include "Explosion.h"
 #include "Weapon.h"
 #include "World.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #ifdef SQUEEZE_PERFORMANCE
 uint32 projectileInUse;
@@ -169,23 +170,48 @@ CProjectileInfo::AddProjectile(CEntity *entity, eWeaponType weapon, CVector pos,
 	if (i == ARRAY_SIZE(gaProjectileInfo))
 		return false;
 
+	int32 projectileModel = -1; // rouz edit (ChatGPT)
 	switch (weapon)
 	{
 		case WEAPONTYPE_ROCKET:
-		ms_apProjectile[i] = new CProjectile(MI_MISSILE);
+		projectileModel = MI_MISSILE; // rouz edit (ChatGPT)
 		break;
 		case WEAPONTYPE_TEARGAS:
-		ms_apProjectile[i] = new CProjectile(MI_TEARGAS);
+		projectileModel = MI_TEARGAS; // rouz edit (ChatGPT)
 		break;
 		case WEAPONTYPE_MOLOTOV:
-		ms_apProjectile[i] = new CProjectile(MI_MOLOTOV);
+		projectileModel = MI_MOLOTOV; // rouz edit (ChatGPT)
 		break;
 		case WEAPONTYPE_GRENADE:
 		case WEAPONTYPE_DETONATOR_GRENADE:
-		ms_apProjectile[i] = new CProjectile(MI_GRENADE);
+		projectileModel = MI_GRENADE; // rouz edit (ChatGPT)
 		break;
 		default: break;
 	}
+//+ rouz edit (ChatGPT)
+	// Allocate the projectile from the object pool without invoking C++ new.
+	if (projectileModel != -1) {
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		ms_apProjectile[i] = (CProjectile*)objectPool->New();
+#ifdef FIX_BUGS
+		if (!ms_apProjectile[i]) {
+			for (int32 j = 0; j < objectPool->GetSize(); j++) {
+				CObject *existing = objectPool->GetSlot(j);
+				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+					int32 handle = objectPool->GetIndex(existing);
+					CWorld::Remove(existing);
+					existing->~CObject();
+					objectPool->Delete(existing);
+					ms_apProjectile[i] = (CProjectile*)objectPool->New(handle);
+					break;
+				}
+			}
+		}
+		if (ms_apProjectile[i])
+#endif
+			std::allocator<CProjectile>().construct(ms_apProjectile[i], projectileModel);
+	}
+//- rouz edit (ChatGPT)
 
 	if (ms_apProjectile[i] == nil)
 		return false;
@@ -236,7 +262,11 @@ CProjectileInfo::RemoveProjectile(CProjectileInfo *info, CProjectile *projectile
 
 	info->m_bInUse = false;
 	CWorld::Remove(projectile);
-	delete projectile;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the projectile without invoking C++ delete.
+	projectile->~CProjectile();
+	CPools::GetObjectPool()->Delete(projectile);
+//- rouz edit (ChatGPT)
 }
 
 void
@@ -312,7 +342,11 @@ CProjectileInfo::Update()
 			//- rouz edit (ChatGPT)
 			gaProjectileInfo[i].m_bInUse = false;
 			CWorld::Remove(ms_apProjectile[i]);
-			delete ms_apProjectile[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the projectile without invoking C++ delete.
+			ms_apProjectile[i]->~CProjectile();
+			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+//- rouz edit (ChatGPT)
         	continue;
 		}
 		if ( gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_TEARGAS && CTimer::GetTimeInMilliseconds() > gaProjectileInfo[i].m_nExplosionTime - 19500 ) {
@@ -426,7 +460,11 @@ CProjectileInfo::IsProjectileInRange(float x1, float x2, float y1, float y2, flo
 
 						gaProjectileInfo[i].m_bInUse = false;
 						CWorld::Remove(ms_apProjectile[i]);
-						delete ms_apProjectile[i];
+//+ rouz edit (ChatGPT)
+						// Destroy and release the projectile without invoking C++ delete.
+						ms_apProjectile[i]->~CProjectile();
+						CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+//- rouz edit (ChatGPT)
 					}
 				}
 			}
@@ -443,7 +481,11 @@ CProjectileInfo::RemoveDetonatorProjectiles()
 			CExplosion::AddExplosion(nil, gaProjectileInfo[i].m_pSource, EXPLOSION_GRENADE, gaProjectileInfo[i].m_vecPos, 0); // TODO(Miami): New parameter: 1
 			gaProjectileInfo[i].m_bInUse = false;
 			CWorld::Remove(ms_apProjectile[i]);
-			delete ms_apProjectile[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the projectile without invoking C++ delete.
+			ms_apProjectile[i]->~CProjectile();
+			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -464,7 +506,11 @@ CProjectileInfo::RemoveAllProjectiles()
 
 			gaProjectileInfo[i].m_bInUse = false;
 			CWorld::Remove(ms_apProjectile[i]);
-			delete ms_apProjectile[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the projectile without invoking C++ delete.
+			ms_apProjectile[i]->~CProjectile();
+			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -489,7 +535,11 @@ CProjectileInfo::RemoveIfThisIsAProjectile(CObject *object)
 
 	gaProjectileInfo[i].m_bInUse = false;
 	CWorld::Remove(ms_apProjectile[i]);
-	delete ms_apProjectile[i];
+//+ rouz edit (ChatGPT)
+	// Destroy and release the projectile without invoking C++ delete.
+	ms_apProjectile[i]->~CProjectile();
+	CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+//- rouz edit (ChatGPT)
 	ms_apProjectile[i] = nil;
 	return true;
 }

@@ -12,6 +12,7 @@
 #include "Object.h"
 #include "World.h"
 #include "SaveBuf.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #define MAX_DISTANCE_TO_FIND_CRANE (10.0f)
 #define CRANE_UPDATE_RADIUS (300.0f)
@@ -311,7 +312,11 @@ void CCrane::Update(void)
 								CGarages::TriggerMessage("GA_10", CAR_REWARD_MILITARY_CRANE, MESSAGE_SHOW_DURATION, -1);
 							}
 							CWorld::Remove(m_pVehiclePickedUp);
-							delete m_pVehiclePickedUp;
+//+ rouz edit (ChatGPT)
+							// Destroy and release the crane vehicle without invoking C++ delete.
+							m_pVehiclePickedUp->~CVehicle();
+							CPools::GetVehiclePool()->Delete(m_pVehiclePickedUp);
+//- rouz edit (ChatGPT)
 						}
 					}
 					m_pVehiclePickedUp = nil;

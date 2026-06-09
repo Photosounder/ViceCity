@@ -35,7 +35,11 @@ CCutsceneObject::~CCutsceneObject(void)
 {
 	if ( m_pShadow )
 	{
-		delete m_pShadow;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the cutscene shadow without invoking C++ delete.
+		m_pShadow->~CCutsceneShadow();
+		free(m_pShadow);
+//- rouz edit (ChatGPT)
 		m_pShadow = nil;
 	}
 }
@@ -55,7 +59,12 @@ CCutsceneObject::CreateShadow(void)
 {
 	if ( IsPedModel(GetModelIndex()) )
 	{
-		m_pShadow = new CCutsceneShadow();
+//+ rouz edit (ChatGPT)
+		// Allocate the cutscene shadow without invoking C++ new.
+		m_pShadow = (CCutsceneShadow*)malloc(sizeof(CCutsceneShadow));
+		assert(m_pShadow);
+		std::allocator<CCutsceneShadow>().construct(m_pShadow);
+//- rouz edit (ChatGPT)
 		if (!m_pShadow->IsInitialized())
 			m_pShadow->Create(m_rwObject, 6, true, 4, true);
 	}

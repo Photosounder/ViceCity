@@ -43,6 +43,7 @@
 #include "MemoryCard.h"
 #include "MemoryHeap.h"
 #include "Pad.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "Particle.h"
 #include "ParticleObject.h"
 #include "PedRoutes.h"
@@ -611,7 +612,11 @@ bool CGame::ShutDown(void)
 		if ( CWorld::Players[i].m_pPed )
 		{
 			CWorld::Remove(CWorld::Players[i].m_pPed);
-			delete CWorld::Players[i].m_pPed;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the player ped without invoking C++ delete.
+			CWorld::Players[i].m_pPed->~CPlayerPed();
+			CPools::GetPedPool()->Delete(CWorld::Players[i].m_pPed);
+//- rouz edit (ChatGPT)
 			CWorld::Players[i].m_pPed = nil;
 		}
 		

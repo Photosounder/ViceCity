@@ -988,7 +988,12 @@ CAnimManager::Shutdown(void)
 
 	ms_animCache.Shutdown();
 
-	delete[] ms_aAnimAssocGroups;
+//+ rouz edit (ChatGPT)
+	// Destroy and release association groups without invoking C++ array delete.
+	for(i = 0; i < NUM_ANIM_ASSOC_GROUPS; i++)
+		std::allocator<CAnimBlendAssocGroup>().destroy(&ms_aAnimAssocGroups[i]);
+	free(ms_aAnimAssocGroups);
+//- rouz edit (ChatGPT)
 }
 
 void
@@ -1234,7 +1239,12 @@ void
 CAnimManager::LoadAnimFiles(void)
 {
 	LoadAnimFile("ANIM\\PED.IFP");
-	ms_aAnimAssocGroups = new CAnimBlendAssocGroup[NUM_ANIM_ASSOC_GROUPS];
+//+ rouz edit (ChatGPT)
+	// Allocate and construct association groups without invoking C++ array new.
+	ms_aAnimAssocGroups = (CAnimBlendAssocGroup*)malloc(sizeof(CAnimBlendAssocGroup)*NUM_ANIM_ASSOC_GROUPS);
+	for(int i = 0; i < NUM_ANIM_ASSOC_GROUPS; i++)
+		std::allocator<CAnimBlendAssocGroup>().construct(&ms_aAnimAssocGroups[i]);
+//- rouz edit (ChatGPT)
 	CreateAnimAssocGroups();
 }
 
@@ -1345,7 +1355,12 @@ CAnimManager::LoadAnimFile(RwStream *stream, bool compress, char (*uncompressedA
 		ROUNDSIZE(info.size);
 		RwStreamRead(stream, buf, info.size);
 		hier->numSequences = *(int*)buf;
-		hier->sequences = new CAnimBlendSequence[hier->numSequences];
+//+ rouz edit (ChatGPT)
+		// Allocate and construct animation sequences without invoking C++ array new.
+		hier->sequences = (CAnimBlendSequence*)malloc(sizeof(CAnimBlendSequence)*hier->numSequences);
+		for(k = 0; k < hier->numSequences; k++)
+			std::allocator<CAnimBlendSequence>().construct(&hier->sequences[k]);
+//- rouz edit (ChatGPT)
 
 		CAnimBlendSequence *seq = hier->sequences;
 		for(k = 0; k < hier->numSequences; k++, seq++){

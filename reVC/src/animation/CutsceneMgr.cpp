@@ -165,7 +165,12 @@ CCutsceneMgr::Initialise(void)
 	ms_animLoaded = false;
 	ms_cutsceneProcessing = false;
 
-	ms_pCutsceneDir = new CDirectory(CUTSCENEDIRSIZE);
+//+ rouz edit (ChatGPT)
+	// Allocate the cutscene directory without invoking C++ new.
+	ms_pCutsceneDir = (CDirectory*)malloc(sizeof(CDirectory));
+	assert(ms_pCutsceneDir);
+	std::allocator<CDirectory>().construct(ms_pCutsceneDir, CUTSCENEDIRSIZE);
+//- rouz edit (ChatGPT)
 	ms_pCutsceneDir->ReadDirFile("ANIM\\CUTS.DIR");
 
 	numUncompressedAnims = 0;
@@ -175,7 +180,14 @@ CCutsceneMgr::Initialise(void)
 void
 CCutsceneMgr::Shutdown(void)
 {
-	delete ms_pCutsceneDir;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the cutscene directory without invoking C++ delete.
+	if(ms_pCutsceneDir){
+		ms_pCutsceneDir->~CDirectory();
+		free(ms_pCutsceneDir);
+		ms_pCutsceneDir = nil;
+	}
+//- rouz edit (ChatGPT)
 }
 
 void
@@ -390,7 +402,12 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 	} else if (modelId >= MI_SPECIAL01 && modelId <= MI_SPECIAL21) {
 		pModelInfo = CModelInfo::GetModelInfo(modelId);
 		if (pModelInfo->GetColModel() == &CTempColModels::ms_colModelPed1) {
-			CColModel *colModel = new CColModel();
+//+ rouz edit (ChatGPT)
+			// Construct the cutscene collision model in pool storage without invoking C++ new.
+			CColModel *colModel = CPools::GetColModelPool()->New();
+			assert(colModel);
+			std::allocator<CColModel>().construct(colModel);
+//- rouz edit (ChatGPT)
 			colModel->boundingSphere.radius = 2.0f;
 			colModel->boundingSphere.center = CVector(0.0f, 0.0f, 0.0f);
 			pModelInfo->SetColModel(colModel, true);
@@ -402,7 +419,12 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 		pColModel->boundingBox.max = CVector(radius, radius, radius);
 	}
 
-	pCutsceneObject = new CCutsceneObject();
+//+ rouz edit (ChatGPT)
+	// Allocate a cutscene object from the object pool without invoking C++ new.
+	pCutsceneObject = (CCutsceneObject*)CPools::GetObjectPool()->New();
+	assert(pCutsceneObject);
+	std::allocator<CCutsceneObject>().construct(pCutsceneObject);
+//- rouz edit (ChatGPT)
 	pCutsceneObject->SetModelIndex(modelId);
 	if (ms_useCutsceneShadows)
 		pCutsceneObject->CreateShadow();
@@ -424,7 +446,11 @@ CCutsceneMgr::DeleteCutsceneData(void)
 	for (--ms_numCutsceneObjs; ms_numCutsceneObjs >= 0; ms_numCutsceneObjs--) {
 		CWorld::Remove(ms_pCutsceneObjects[ms_numCutsceneObjs]);
 		ms_pCutsceneObjects[ms_numCutsceneObjs]->DeleteRwObject();
-		delete ms_pCutsceneObjects[ms_numCutsceneObjs];
+//+ rouz edit (ChatGPT)
+		// Destroy and release the cutscene object without invoking C++ delete.
+		ms_pCutsceneObjects[ms_numCutsceneObjs]->~CCutsceneObject();
+		CPools::GetObjectPool()->Delete(ms_pCutsceneObjects[ms_numCutsceneObjs]);
+//- rouz edit (ChatGPT)
 		ms_pCutsceneObjects[ms_numCutsceneObjs] = nil;
 	}
 	ms_numCutsceneObjs = 0;
@@ -433,7 +459,11 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		CBaseModelInfo *minfo = CModelInfo::GetModelInfo(i);
 		CColModel *colModel = minfo->GetColModel();
 		if (colModel != &CTempColModels::ms_colModelPed1) {
-			delete colModel;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the cutscene collision model without invoking C++ delete.
+			colModel->~CColModel();
+			CPools::GetColModelPool()->Delete(colModel);
+//- rouz edit (ChatGPT)
 			minfo->SetColModel(&CTempColModels::ms_colModelPed1);
 		}
 	}
@@ -612,7 +642,11 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 		if (pPed) {
 			if (!pPed->IsPlayer() && pPed->CanBeDeleted()) {
 				CWorld::Remove(pPed);
-				delete pPed;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the cutscene-cleared ped without invoking C++ delete.
+				pPed->~CPed();
+				CPools::GetPedPool()->Delete(pPed);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -622,7 +656,11 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 		if (pVehicle) {
 			if (pVehicle->CanBeDeleted()) {
 				CWorld::Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the cutscene-cleared vehicle without invoking C++ delete.
+				pVehicle->~CVehicle();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}

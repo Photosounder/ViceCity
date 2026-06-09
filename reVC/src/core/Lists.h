@@ -7,8 +7,6 @@ public:
 	CPtrNode *prev;
 	CPtrNode *next;
 
-	void *operator new(size_t);
-	void operator delete(void *p, size_t);
 };
 
 class CPtrList
@@ -33,12 +31,9 @@ public:
 		first = node;
 		return node;
 	}
-	CPtrNode *InsertItem(void *item){
-		CPtrNode *node = new CPtrNode;
-		node->item = item;
-		InsertNode(node);
-		return node;
-	}
+//+ rouz edit (ChatGPT)
+	CPtrNode *InsertItem(void *item);
+//- rouz edit (ChatGPT)
 	void RemoveNode(CPtrNode *node){
 		if(node == first)
 			first = node->next;
@@ -47,10 +42,9 @@ public:
 		if(node->next)
 			node->next->prev = node->prev;
 	}
-	void DeleteNode(CPtrNode *node){
-		RemoveNode(node);
-		delete node;
-	}
+//+ rouz edit (ChatGPT)
+	void DeleteNode(CPtrNode *node);
+//- rouz edit (ChatGPT)
 	void RemoveItem(void *item){
 		CPtrNode *node, *next;
 		for(node = first; node; node = next){
@@ -81,8 +75,6 @@ public:
 	CEntryInfoNode *prev;
 	CEntryInfoNode *next;
 
-	void *operator new(size_t);
-	void operator delete(void *p, size_t);
 };
 
 class CEntryInfoList
@@ -100,14 +92,9 @@ public:
 		first = node;
 		return node;
 	}
-	CEntryInfoNode *InsertItem(CPtrList *list, CPtrNode *listnode, CSector *sect){
-		CEntryInfoNode *node = new CEntryInfoNode;
-		node->list = list;
-		node->listnode = listnode;
-		node->sector = sect;
-		InsertNode(node);
-		return node;
-	}
+//+ rouz edit (ChatGPT)
+	CEntryInfoNode *InsertItem(CPtrList *list, CPtrNode *listnode, CSector *sect);
+//- rouz edit (ChatGPT)
 	void RemoveNode(CEntryInfoNode *node){
 		if(node == first)
 			first = node->next;
@@ -116,10 +103,9 @@ public:
 		if(node->next)
 			node->next->prev = node->prev;
 	}
-	void DeleteNode(CEntryInfoNode *node){
-		RemoveNode(node);
-		delete node;
-	}
+//+ rouz edit (ChatGPT)
+	void DeleteNode(CEntryInfoNode *node);
+//- rouz edit (ChatGPT)
 	void Flush(void){
 		CEntryInfoNode *node, *next;
 		for(node = first; node; node = next){

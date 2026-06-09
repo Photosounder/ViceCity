@@ -14,6 +14,7 @@
 #include "HandlingMgr.h"
 #include "Train.h"
 #include "AudioScriptObject.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 static CTrainNode* pTrackNodes;
 static int16 NumTrackNodes;
@@ -464,7 +465,12 @@ CTrain::InitTrains(void)
 	int8 lastWagon[]   = { 0, 0, 1,  0, 1 };
 	int16 wagonGroup[] = { 0, 0, 0,  1, 1 };
 	for(i = 0; i < 5; i++){
-		train = new CTrain(MI_TRAIN, PERMANENT_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the train wagon from the vehicle pool without invoking C++ new.
+		train = (CTrain*)CPools::GetVehiclePool()->New();
+		assert(train);
+		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
+//- rouz edit (ChatGPT)
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 		train->SetStatus(STATUS_ABANDONED);
 		train->bIsLocked = true;
@@ -483,7 +489,12 @@ CTrain::InitTrains(void)
 	int8 lastWagon_S[]   = { 0, 1,  0, 1,  0, 1,  0, 1 };
 	int16 wagonGroup_S[] = { 0, 0,  1, 1,  2, 2,  3, 3 };
 	for(i = 0; i < 8; i++){
-		train = new CTrain(MI_TRAIN, PERMANENT_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the train wagon from the vehicle pool without invoking C++ new.
+		train = (CTrain*)CPools::GetVehiclePool()->New();
+		assert(train);
+		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
+//- rouz edit (ChatGPT)
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 		train->SetStatus(STATUS_ABANDONED);
 		train->bIsLocked = true;
@@ -513,8 +524,8 @@ void
 CTrain::Shutdown(void)
 {
 #ifdef GTA_TRAIN
-	delete[] pTrackNodes;
-	delete[] pTrackNodes_S;
+	free(pTrackNodes); // rouz edit (ChatGPT)
+	free(pTrackNodes_S); // rouz edit (ChatGPT)
 	pTrackNodes = nil;
 	pTrackNodes_S = nil;
 #endif
@@ -541,7 +552,7 @@ CTrain::ReadAndInterpretTrackFile(Const char *filename, CTrainNode **nodes, int1
 		gString[lp] = '\0';
 		sscanf(gString, "%d", &tmp);
 		*numNodes = tmp;
-		*nodes = new CTrainNode[*numNodes];
+		*nodes = (CTrainNode*)malloc(sizeof(CTrainNode)*(*numNodes)); // rouz edit (ChatGPT)
 
 		for(i = 0; i < *numNodes; i++){
 			*gString = '\0';
@@ -653,7 +664,12 @@ void
 PlayAnnouncement(uint8 sound, uint8 station)
 {
 	// this was gone in a PC version but inlined on PS2
-	cAudioScriptObject *obj = new cAudioScriptObject;
+//+ rouz edit (ChatGPT)
+	// Allocate a pooled audio script object without invoking C++ new.
+	cAudioScriptObject *obj = CPools::GetAudioScriptObjectPool()->New();
+	assert(obj);
+	std::allocator<cAudioScriptObject>().construct(obj);
+//- rouz edit (ChatGPT)
 	obj->AudioId = sound;
 	obj->Posn = CTrain::aStationCoors[station];
 	obj->AudioEntity = AEHANDLE_NONE;

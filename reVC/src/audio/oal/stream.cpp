@@ -224,9 +224,16 @@ class CWavFile : public IDecoder
 			fclose(m_pFile);
 			m_pFile = nil;
 		}
-		delete[] m_pAdpcmBuffer;
-		delete[] m_ppPcmBuffers;
-		delete[] m_pAdpcmDecoders;
+		free(m_pAdpcmBuffer); // rouz edit (ChatGPT)
+		free(m_ppPcmBuffers); // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+		// Destroy and release ADPCM decoders without invoking C++ array delete.
+		if(m_pAdpcmDecoders){
+			for(uint32 i = 0; i < m_FormatHeader.NumChannels; i++)
+				std::allocator<CImaADPCMDecoder>().destroy(&m_pAdpcmDecoders[i]);
+			free(m_pAdpcmDecoders);
+		}
+//- rouz edit (ChatGPT)
 	}
 
 	uint32 GetCurrentSample() const
@@ -272,9 +279,14 @@ public:
 			m_FormatHeader.AudioFormat = WAVEFMT_IMA_ADPCM;
 		case WAVEFMT_IMA_ADPCM:
 			m_nSamplesPerBlock = (m_FormatHeader.BlockAlign / m_FormatHeader.NumChannels - 4) * 2 + 1;
-			m_pAdpcmBuffer = new uint8[m_FormatHeader.BlockAlign];
-			m_ppPcmBuffers = new int16*[m_FormatHeader.NumChannels];
-			m_pAdpcmDecoders = new CImaADPCMDecoder[m_FormatHeader.NumChannels];
+			m_pAdpcmBuffer = (uint8*)malloc(m_FormatHeader.BlockAlign); // rouz edit (ChatGPT)
+			m_ppPcmBuffers = (int16**)malloc(sizeof(int16*)*m_FormatHeader.NumChannels); // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+			// Allocate and construct ADPCM decoders without invoking C++ array new.
+			m_pAdpcmDecoders = (CImaADPCMDecoder*)malloc(sizeof(CImaADPCMDecoder)*m_FormatHeader.NumChannels);
+			for(uint32 i = 0; i < m_FormatHeader.NumChannels; i++)
+				std::allocator<CImaADPCMDecoder>().construct(&m_pAdpcmDecoders[i]);
+//- rouz edit (ChatGPT)
 			break;
 		case WAVEFMT_PCM:
 			m_nSamplesPerBlock = 1;
@@ -798,11 +810,16 @@ public:
 		fseek(m_pFile, 0, SEEK_SET);
 
 		m_nNumberOfBlocks = m_FileSize / (nChannels * VB_BLOCK_SIZE);
-		m_pVagDecoders = new CVagDecoder[nChannels];
-		m_ppVagBuffers = new uint8*[nChannels];
-		m_ppPcmBuffers = new int16*[nChannels];
+//+ rouz edit (ChatGPT)
+		// Allocate and construct VAG decoders without invoking C++ array new.
+		m_pVagDecoders = (CVagDecoder*)malloc(sizeof(CVagDecoder)*nChannels);
+		for(uint8 i = 0; i < nChannels; i++)
+			std::allocator<CVagDecoder>().construct(&m_pVagDecoders[i]);
+//- rouz edit (ChatGPT)
+		m_ppVagBuffers = (uint8**)malloc(sizeof(uint8*)*nChannels); // rouz edit (ChatGPT)
+		m_ppPcmBuffers = (int16**)malloc(sizeof(int16*)*nChannels); // rouz edit (ChatGPT)
 		for (uint8 i = 0; i < nChannels; i++)
-			m_ppVagBuffers[i] = new uint8[VB_BLOCK_SIZE];
+			m_ppVagBuffers[i] = (uint8*)malloc(VB_BLOCK_SIZE); // rouz edit (ChatGPT)
 	}
 
 	void FileOpen()
@@ -815,11 +832,16 @@ public:
 		{
 			fclose(m_pFile);
 
-			delete[] m_pVagDecoders;
+//+ rouz edit (ChatGPT)
+			// Destroy and release VAG decoders without invoking C++ array delete.
 			for (int i = 0; i < m_nChannels; i++)
-				delete[] m_ppVagBuffers[i];
-			delete[] m_ppVagBuffers;
-			delete[] m_ppPcmBuffers;
+				std::allocator<CVagDecoder>().destroy(&m_pVagDecoders[i]);
+			free(m_pVagDecoders);
+//- rouz edit (ChatGPT)
+			for (int i = 0; i < m_nChannels; i++)
+				free(m_ppVagBuffers[i]); // rouz edit (ChatGPT)
+			free(m_ppVagBuffers); // rouz edit (ChatGPT)
+			free(m_ppPcmBuffers); // rouz edit (ChatGPT)
 		}
 	}
 
@@ -1110,7 +1132,11 @@ void audioFileOpsThread()
 				auto streamToClose = gStreamsToClose.front();
 				gStreamsToClose.pop();
 				if (streamToClose.first) { // pSoundFile
-					delete streamToClose.first;
+//+ rouz edit (ChatGPT)
+					// Destroy and release the decoder without invoking C++ delete.
+					streamToClose.first->~IDecoder();
+					free(streamToClose.first);
+//- rouz edit (ChatGPT)
 				}
 
 				if (streamToClose.second) { // pBuffer
@@ -1271,21 +1297,63 @@ bool CStream::Open(const char* filename, uint32 overrideSampleRate)
 
 	if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".wav")], ".wav"))
 #ifdef AUDIO_OAL_USE_SNDFILE
-		m_pSoundFile = new CSndFile(m_aFilename);
+//+ rouz edit (ChatGPT)
+		// Construct the sound-file decoder without invoking C++ new.
+	{
+		CSndFile *soundFile = (CSndFile*)malloc(sizeof(CSndFile));
+		std::allocator<CSndFile>().construct(soundFile, m_aFilename);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 #else
-		m_pSoundFile = new CWavFile(m_aFilename);
+//+ rouz edit (ChatGPT)
+		// Construct the WAV decoder without invoking C++ new.
+	{
+		CWavFile *soundFile = (CWavFile*)malloc(sizeof(CWavFile));
+		std::allocator<CWavFile>().construct(soundFile, m_aFilename);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 #endif
 #ifdef AUDIO_OAL_USE_MPG123
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".mp3")], ".mp3"))
-		m_pSoundFile = new CMP3File(m_aFilename);
+//+ rouz edit (ChatGPT)
+		// Construct the MP3 decoder without invoking C++ new.
+	{
+		CMP3File *soundFile = (CMP3File*)malloc(sizeof(CMP3File));
+		std::allocator<CMP3File>().construct(soundFile, m_aFilename);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".adf")], ".adf"))
-		m_pSoundFile = new CADFFile(m_aFilename);
+//+ rouz edit (ChatGPT)
+		// Construct the ADF decoder without invoking C++ new.
+	{
+		CADFFile *soundFile = (CADFFile*)malloc(sizeof(CADFFile));
+		std::allocator<CADFFile>().construct(soundFile, m_aFilename);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 #endif
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".vb")], ".VB"))
-		m_pSoundFile = new CVbFile(m_aFilename, overrideSampleRate);
+//+ rouz edit (ChatGPT)
+		// Construct the VB decoder without invoking C++ new.
+	{
+		CVbFile *soundFile = (CVbFile*)malloc(sizeof(CVbFile));
+		std::allocator<CVbFile>().construct(soundFile, m_aFilename, overrideSampleRate);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 #ifdef AUDIO_OAL_USE_OPUS
 	else if (!strcasecmp(&m_aFilename[strlen(m_aFilename) - strlen(".opus")], ".opus"))
-		m_pSoundFile = new COpusFile(m_aFilename);
+//+ rouz edit (ChatGPT)
+		// Construct the Opus decoder without invoking C++ new.
+	{
+		COpusFile *soundFile = (COpusFile*)malloc(sizeof(COpusFile));
+		std::allocator<COpusFile>().construct(soundFile, m_aFilename);
+		m_pSoundFile = soundFile;
+	}
+//- rouz edit (ChatGPT)
 #endif
 	else 
 		m_pSoundFile = nil;
@@ -1341,7 +1409,11 @@ void CStream::Close()
 
 	if ( m_pSoundFile )
 	{
-		delete m_pSoundFile;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the decoder without invoking C++ delete.
+		m_pSoundFile->~IDecoder();
+		free(m_pSoundFile);
+//- rouz edit (ChatGPT)
 		m_pSoundFile = nil;
 	}
 

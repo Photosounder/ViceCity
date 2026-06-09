@@ -2123,12 +2123,24 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 			break;
 		}
 		CPed* ped;
-		if (ScriptParams[0] == PEDTYPE_COP)
-			ped = new CCopPed((eCopType)ScriptParams[1]);
-		else if (ScriptParams[0] == PEDTYPE_EMERGENCY || ScriptParams[0] == PEDTYPE_FIREMAN)
-			ped = new CEmergencyPed(ScriptParams[1]);
-		else
-			ped = new CCivilianPed((ePedType)ScriptParams[0], ScriptParams[1]);
+//+ rouz edit (ChatGPT)
+		if (ScriptParams[0] == PEDTYPE_COP) {
+			// Allocate the scripted cop without invoking C++ new.
+			ped = CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCopPed>().construct((CCopPed*)ped, (eCopType)ScriptParams[1]);
+		} else if (ScriptParams[0] == PEDTYPE_EMERGENCY || ScriptParams[0] == PEDTYPE_FIREMAN) {
+			// Allocate the scripted emergency ped without invoking C++ new.
+			ped = CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CEmergencyPed>().construct((CEmergencyPed*)ped, ScriptParams[1]);
+		} else {
+			// Allocate the scripted civilian ped without invoking C++ new.
+			ped = CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCivilianPed>().construct((CCivilianPed*)ped, (ePedType)ScriptParams[0], ScriptParams[1]);
+		}
+//- rouz edit (ChatGPT)
 		ped->CharCreatedBy = MISSION_CHAR;
 		ped->bRespondsToThreats = false;
 		ped->bAllowMedicsToReviveMe = false;
@@ -2327,7 +2339,12 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		CollectParameters(&m_nIp, 4);
 		int32 handle;
 		if (CModelInfo::IsBoatModel(ScriptParams[0])) {
-			CBoat* boat = new CBoat(ScriptParams[0], MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the scripted boat without invoking C++ new.
+			CBoat* boat = (CBoat*)CPools::GetVehiclePool()->New();
+			assert(boat);
+			std::allocator<CBoat>().construct(boat, ScriptParams[0], MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 			CVector pos = *(CVector*)&ScriptParams[1];
 			if (pos.z <= MAP_Z_LOW_LIMIT)
 				pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
@@ -2347,10 +2364,18 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		else {
 			CVehicle* car;
 
-			if (!CModelInfo::IsBikeModel(ScriptParams[0]))
-				car = new CAutomobile(ScriptParams[0], MISSION_VEHICLE);
-			else {
-				car = new CBike(ScriptParams[0], MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+			if (!CModelInfo::IsBikeModel(ScriptParams[0])) {
+				// Allocate the scripted car without invoking C++ new.
+				car = CPools::GetVehiclePool()->New();
+				assert(car);
+				std::allocator<CAutomobile>().construct((CAutomobile*)car, ScriptParams[0], MISSION_VEHICLE);
+			} else {
+				// Allocate the scripted bike without invoking C++ new.
+				car = CPools::GetVehiclePool()->New();
+				assert(car);
+				std::allocator<CBike>().construct((CBike*)car, ScriptParams[0], MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 				((CBike*)(car))->bIsStanding = true;
 			}
 			CVector pos = *(CVector*)&ScriptParams[1];
@@ -2388,7 +2413,11 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		if (car) {
 			CWorld::Remove(car);
 			CWorld::RemoveReferencesToDeletedObject(car);
-			delete car;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the scripted vehicle without invoking C++ delete.
+			car->~CVehicle();
+			CPools::GetVehiclePool()->Delete(car);
+//- rouz edit (ChatGPT)
 		}
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.RemoveEntityFromList(ScriptParams[0], CLEANUP_CAR);
@@ -2926,7 +2955,29 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 		int mi = ScriptParams[0] >= 0 ? ScriptParams[0] : CTheScripts::UsedObjectArray[-ScriptParams[0]].index;
-		CObject* pObj = new CObject(mi, false);
+//+ rouz edit (ChatGPT)
+		// Allocate the scripted object without invoking C++ new.
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		CObject* pObj = objectPool->New();
+#ifdef FIX_BUGS
+		if (!pObj) {
+			for (int32 i = 0; i < objectPool->GetSize(); i++) {
+				CObject *existing = objectPool->GetSlot(i);
+				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+					int32 handle = objectPool->GetIndex(existing);
+					CWorld::Remove(existing);
+					existing->~CObject();
+					objectPool->Delete(existing);
+					pObj = objectPool->New(handle);
+					break;
+				}
+			}
+		}
+		if (pObj)
+#endif
+			std::allocator<CObject>().construct(pObj, mi, false);
+		assert(pObj);
+//- rouz edit (ChatGPT)
 		pObj->ObjectCreatedBy = MISSION_OBJECT;
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
@@ -2954,7 +3005,11 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		if (pObj){
 			CWorld::Remove(pObj);
 			CWorld::RemoveReferencesToDeletedObject(pObj);
-			delete pObj;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the scripted object without invoking C++ delete.
+			pObj->~CObject();
+			CPools::GetObjectPool()->Delete(pObj);
+//- rouz edit (ChatGPT)
 		}
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.RemoveEntityFromList(ScriptParams[0], CLEANUP_OBJECT);
@@ -3146,12 +3201,24 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 			break;
 		}
 		CPed* pPed;
-		if (ScriptParams[1] == PEDTYPE_COP)
-			pPed = new CCopPed((eCopType)ScriptParams[2]);
-		else if (ScriptParams[1] == PEDTYPE_EMERGENCY || ScriptParams[1] == PEDTYPE_FIREMAN)
-			pPed = new CEmergencyPed(ScriptParams[2]);
-		else
-			pPed = new CCivilianPed((ePedType)ScriptParams[1], ScriptParams[2]);
+//+ rouz edit (ChatGPT)
+		if (ScriptParams[1] == PEDTYPE_COP) {
+			// Allocate the scripted driver cop without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CCopPed>().construct((CCopPed*)pPed, (eCopType)ScriptParams[2]);
+		} else if (ScriptParams[1] == PEDTYPE_EMERGENCY || ScriptParams[1] == PEDTYPE_FIREMAN) {
+			// Allocate the scripted driver emergency ped without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CEmergencyPed>().construct((CEmergencyPed*)pPed, ScriptParams[2]);
+		} else {
+			// Allocate the scripted driver civilian ped without invoking C++ new.
+			pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, (ePedType)ScriptParams[1], ScriptParams[2]);
+		}
+//- rouz edit (ChatGPT)
 		pPed->CharCreatedBy = MISSION_CHAR;
 		pPed->bRespondsToThreats = false;
 		pPed->bAllowMedicsToReviveMe = false;

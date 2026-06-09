@@ -9,6 +9,7 @@
 #include "Particle.h"
 #include "AnimBlendAssociation.h"
 #include "General.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 uint32 NumOfStingerSegments;
 
@@ -46,7 +47,28 @@ CStinger::Init(CPed *pPed)
 
 	pOwner = pPed;
 	for (i = 0; i < NUM_STINGER_SEGMENTS; i++) {
-		pSpikes[i] = new CStingerSegment();
+//+ rouz edit (ChatGPT)
+		// Allocate a stinger segment from the object pool without invoking C++ new.
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		pSpikes[i] = (CStingerSegment*)objectPool->New();
+#ifdef FIX_BUGS
+		if (!pSpikes[i]) {
+			for (int32 j = 0; j < objectPool->GetSize(); j++) {
+				CObject *existing = objectPool->GetSlot(j);
+				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+					int32 handle = objectPool->GetIndex(existing);
+					CWorld::Remove(existing);
+					existing->~CObject();
+					objectPool->Delete(existing);
+					pSpikes[i] = (CStingerSegment*)objectPool->New(handle);
+					break;
+				}
+			}
+		}
+		if (pSpikes[i])
+#endif
+			std::allocator<CStingerSegment>().construct(pSpikes[i]);
+//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		if (!pSpikes[i]) {
 			// Abort!! Pool is full
@@ -86,14 +108,23 @@ CStinger::Remove()
 #ifdef FIX_BUGS
 		if (spikeSegment) {
 			CWorld::Remove(spikeSegment);
-			delete spikeSegment;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the stinger segment without invoking C++ delete.
+			spikeSegment->~CStingerSegment();
+			CPools::GetObjectPool()->Delete(spikeSegment);
+//- rouz edit (ChatGPT)
 			pSpikes[i] = nil;
 		}
 #else
 		if (spikeSegment->m_entryInfoList.first != nil)
 			spikeSegment->bRemoveFromWorld = true;
-		else
-			delete spikeSegment;
+//+ rouz edit (ChatGPT)
+		else {
+			// Destroy and release the stinger segment without invoking C++ delete.
+			spikeSegment->~CStingerSegment();
+			CPools::GetObjectPool()->Delete(spikeSegment);
+		}
+//- rouz edit (ChatGPT)
 #endif
 	}
 	bIsDeployed = false;

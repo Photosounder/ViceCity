@@ -468,7 +468,7 @@ PreAllocateRwObjects(void)
 	int i;
 
 	PUSH_MEMID(MEMID_PRE_ALLOC);
-	void **tmp = new void*[0x8000];
+	void **tmp = (void**)malloc(sizeof(void*)*0x8000); // rouz edit (ChatGPT)
 	preAlloc = true;
 
 	for(i = 0; i < NUM_PREALLOC_ATOMICS; i++)
@@ -506,7 +506,7 @@ PreAllocateRwObjects(void)
 	for(i = 0; i < NUM_PREALLOC_MATERIALS; i++)
 		RpMaterialDestroy((RpMaterial*)tmp[i]);
 
-	delete[] tmp;
+	free(tmp); // rouz edit (ChatGPT)
 	preAlloc = false;
 	POP_MEMID();
 }

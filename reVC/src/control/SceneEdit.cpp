@@ -19,6 +19,7 @@
 #include "Vehicle.h"
 #include "WeaponInfo.h"
 #include "World.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 bool CSceneEdit::m_bEditOn;
 int32 CSceneEdit::m_bCameraFollowActor;
@@ -180,7 +181,11 @@ void CSceneEdit::InitPlayback(void)
 	for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
 		if (pVehicles[i]) {
 			CWorld::Remove(pVehicles[i]);
-			delete pVehicles[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the scene vehicle without invoking C++ delete.
+			pVehicles[i]->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicles[i]);
+//- rouz edit (ChatGPT)
 			pVehicles[i] = nil;
 		}
 	}
@@ -219,7 +224,11 @@ void CSceneEdit::ReInitialise(void)
 	for (int i = 0; i < NUM_VEHICLES_IN_MOVIE; i++) {
 		if (pVehicles[i]) {
 			CWorld::Remove(pVehicles[i]);
-			delete pVehicles[i];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the scene vehicle without invoking C++ delete.
+			pVehicles[i]->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicles[i]);
+//- rouz edit (ChatGPT)
 			pVehicles[i] = nil;
 		}
 	}
@@ -376,7 +385,12 @@ void CSceneEdit::ProcessCommand(void)
 #endif
 				break;
 			}
-			CPed* pPed = new CCivilianPed(PEDTYPE_SPECIAL, m_nPedmodelId);
+//+ rouz edit (ChatGPT)
+			// Allocate the scene actor without invoking C++ new.
+			CPed* pPed = CPools::GetPedPool()->New();
+			assert(pPed);
+			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
+//- rouz edit (ChatGPT)
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->SetPosition(m_vecCurrentPosition);
 			pPed->SetOrientation(0.0f, 0.0f, 0.0f);
@@ -413,7 +427,11 @@ void CSceneEdit::ProcessCommand(void)
 				}
 				if (CPad::GetPad(1)->GetCircleJustDown()) {
 					CWorld::Remove(pActors[m_nActor]);
-					delete pActors[m_nActor];
+//+ rouz edit (ChatGPT)
+					// Destroy and release the scene actor without invoking C++ delete.
+					pActors[m_nActor]->~CPed();
+					CPools::GetPedPool()->Delete(pActors[m_nActor]);
+//- rouz edit (ChatGPT)
 					pActors[m_nActor] = nil;
 					m_nActor = -1;
 					m_bCommandActive = false;
@@ -423,7 +441,11 @@ void CSceneEdit::ProcessCommand(void)
 				m_nPedmodelId = mi;
 				if (pActors[m_nActor]) {
 					CWorld::Remove(pActors[m_nActor]);
-					delete pActors[m_nActor];
+//+ rouz edit (ChatGPT)
+					// Destroy and release the scene actor without invoking C++ delete.
+					pActors[m_nActor]->~CPed();
+					CPools::GetPedPool()->Delete(pActors[m_nActor]);
+//- rouz edit (ChatGPT)
 				}
 				pActors[m_nActor] = nil;
 				m_nActor = -1;
@@ -478,7 +500,12 @@ void CSceneEdit::ProcessCommand(void)
 #endif
 				break;
 			}
-			CVehicle* pVehicle = new CAutomobile(m_nVehiclemodelId, MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the scene vehicle without invoking C++ new.
+			CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+			assert(pVehicle);
+			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle->SetStatus(STATUS_PHYSICS);
 			pVehicle->SetPosition(m_vecCurrentPosition);
 			pVehicle->SetOrientation(0.0f, 0.0f, 0.0f);
@@ -515,7 +542,11 @@ void CSceneEdit::ProcessCommand(void)
 				}
 				if (CPad::GetPad(1)->GetCircleJustDown()) {
 					CWorld::Remove(pVehicles[m_nVehicle]);
-					delete pVehicles[m_nVehicle];
+//+ rouz edit (ChatGPT)
+					// Destroy and release the scene vehicle without invoking C++ delete.
+					pVehicles[m_nVehicle]->~CVehicle();
+					CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+//- rouz edit (ChatGPT)
 					pVehicles[m_nVehicle] = nil;
 					m_nVehicle = -1;
 					m_bCommandActive = false;
@@ -525,7 +556,11 @@ void CSceneEdit::ProcessCommand(void)
 				m_nVehiclemodelId = mi;
 				if (pVehicles[m_nVehicle]) {
 					CWorld::Remove(pVehicles[m_nVehicle]);
-					delete pVehicles[m_nVehicle];
+//+ rouz edit (ChatGPT)
+					// Destroy and release the scene vehicle without invoking C++ delete.
+					pVehicles[m_nVehicle]->~CVehicle();
+					CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+//- rouz edit (ChatGPT)
 				}
 				pVehicles[m_nVehicle] = nil;
 				m_nVehicle = -1;
@@ -552,7 +587,11 @@ void CSceneEdit::ProcessCommand(void)
 		SelectVehicle();
 		if (m_bVehicleSelected) {
 			CWorld::Remove(pVehicles[m_nVehicle]);
-			delete pVehicles[m_nVehicle];
+//+ rouz edit (ChatGPT)
+			// Destroy and release the selected scene vehicle without invoking C++ delete.
+			pVehicles[m_nVehicle]->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+//- rouz edit (ChatGPT)
 			m_nCurrentVehicle = 0;
 			--m_nNumVehicles;
 			pVehicles[m_nVehicle] = nil;
@@ -811,7 +850,12 @@ void CSceneEdit::PlayBack(void)
 #endif
 			break;
 		}
-		CPed* pPed = new CCivilianPed(PEDTYPE_SPECIAL, m_nPedmodelId);
+//+ rouz edit (ChatGPT)
+		// Allocate the replayed scene actor without invoking C++ new.
+		CPed* pPed = CPools::GetPedPool()->New();
+		assert(pPed);
+		std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
+//- rouz edit (ChatGPT)
 		pPed->CharCreatedBy = MISSION_CHAR;
 		CWorld::Add(pPed);
 		pPed->SetPosition(m_vecCurrentPosition);
@@ -838,7 +882,12 @@ void CSceneEdit::PlayBack(void)
 #endif
 			break;
 		}
-		CVehicle* pVehicle = new CAutomobile(m_nVehiclemodelId, MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the replayed scene vehicle without invoking C++ new.
+		CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 		pVehicle->SetStatus(STATUS_PHYSICS);
 		pVehicle->SetPosition(m_vecCurrentPosition);
 		pVehicle->SetOrientation(0.0f, 0.0f, 0.0f);

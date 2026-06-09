@@ -22,7 +22,7 @@ CTexturePool::Create(D3DFORMAT _Format, int _size, uint32 mipmapLevels, int32 nu
 	Format = _Format;
 	size = _size;
 	levels = mipmapLevels;
-	pTextures = new IDirect3DTexture8 *[numTextures];
+	pTextures = (IDirect3DTexture8**)malloc(sizeof(IDirect3DTexture8*)*numTextures); // rouz edit (ChatGPT)
 	texturesMax = numTextures;
 	texturesNum = 0;
 	texturesUsed = 0;
@@ -37,7 +37,7 @@ CTexturePool::Release()
 		i++;
 	}
 
-	delete[] pTextures;
+	free(pTextures); // rouz edit (ChatGPT)
 
 	pTextures = nil;
 	texturesNum = 0;
@@ -70,7 +70,7 @@ CTexturePool::Resize(int numTextures)
 	if (numTextures == texturesMax)
 		return;
 
-	IDirect3DTexture8 **newTextures = new IDirect3DTexture8 *[numTextures];
+	IDirect3DTexture8 **newTextures = (IDirect3DTexture8**)malloc(sizeof(IDirect3DTexture8*)*numTextures); // rouz edit (ChatGPT)
 
 	for (int i = 0; i < texturesNum && i < numTextures; i++)
 		newTextures[i] = pTextures[i];
@@ -79,7 +79,7 @@ CTexturePool::Resize(int numTextures)
 		for (int i = numTextures; i < texturesNum; i++)
 			pTextures[i]->Release();
 	}
-	delete[] pTextures;
+	free(pTextures); // rouz edit (ChatGPT)
 	pTextures = newTextures;
 	texturesMax = numTextures;
 }
@@ -87,7 +87,7 @@ CTexturePool::Resize(int numTextures)
 void
 CPaletteList::Alloc(int max)
 {
-	Data = new int[max];
+	Data = (int*)malloc(sizeof(int)*max); // rouz edit (ChatGPT)
 	Max = max;
 	Num = 0;
 }
@@ -95,7 +95,7 @@ CPaletteList::Alloc(int max)
 void
 CPaletteList::Free()
 {
-	delete[] Data;
+	free(Data); // rouz edit (ChatGPT)
 	Data = nil;
 	Num = 0;
 }
@@ -125,10 +125,10 @@ CPaletteList::Resize(int max)
 	if (max == Max)
 		return;
 
-	int *newData = new int[4 * max];
+	int *newData = (int*)malloc(sizeof(int)*4*max); // rouz edit (ChatGPT)
 	for (int i = 0; i < Num && i < max; i++)
 		newData[i] = Data[i];
-	delete[] Data;
+	free(Data); // rouz edit (ChatGPT)
 	Data = newData;
 	Max = max;
 }

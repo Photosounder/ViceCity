@@ -121,7 +121,12 @@ void FrontendOptionAddSelect(const char* gxtKey, uint16 x, uint16 y, uint8 align
 	option.m_Y = y;
 	option.m_Align = align;
 	strncpy(option.m_EntryName, gxtKey, 8);
-	option.m_CFOSelect = new CCFOSelect();
+//+ rouz edit (ChatGPT)
+	// Allocate the select option payload without invoking C++ new.
+	option.m_CFOSelect = (CCFOSelect*)malloc(sizeof(CCFOSelect));
+	assert(option.m_CFOSelect);
+	std::allocator<CCFOSelect>().construct(option.m_CFOSelect);
+//- rouz edit (ChatGPT)
 	option.m_CFOSelect->rightTexts = (char**)malloc(numRightTexts * sizeof(char*));
 	memcpy(option.m_CFOSelect->rightTexts, rightTexts, numRightTexts * sizeof(char*));
 	option.m_CFOSelect->numRightTexts = numRightTexts;
@@ -147,7 +152,12 @@ void FrontendOptionAddDynamic(const char* gxtKey, uint16 x, uint16 y, uint8 alig
 	option.m_Y = y;
 	option.m_Align = align;
 	strncpy(option.m_EntryName, gxtKey, 8);
-	option.m_CFODynamic = new CCFODynamic();
+//+ rouz edit (ChatGPT)
+	// Allocate the dynamic option payload without invoking C++ new.
+	option.m_CFODynamic = (CCFODynamic*)malloc(sizeof(CCFODynamic));
+	assert(option.m_CFODynamic);
+	std::allocator<CCFODynamic>().construct(option.m_CFODynamic);
+//- rouz edit (ChatGPT)
 	option.m_CFODynamic->drawFunc = drawFunc;
 	option.m_CFODynamic->buttonPressFunc = buttonPressFunc;
 	option.m_CFODynamic->value = var;
@@ -160,7 +170,12 @@ uint8 FrontendScreenAdd(const char* gxtKey, int prevPage, int lineHeight, bool s
 
 	uint8 screenOrder = RegisterNewScreen(gxtKey, prevPage, returnPrevPageFunc);
 
-	CCustomScreenLayout *screen = new CCustomScreenLayout();
+//+ rouz edit (ChatGPT)
+	// Allocate the custom screen layout without invoking C++ new.
+	CCustomScreenLayout *screen = (CCustomScreenLayout*)malloc(sizeof(CCustomScreenLayout));
+	assert(screen);
+	std::allocator<CCustomScreenLayout>().construct(screen);
+//- rouz edit (ChatGPT)
 	aScreens[screenOrder].layout = screen;
 	screen->lineHeight = lineHeight;
 	screen->showLeftRightHelper = showLeftRightHelper;

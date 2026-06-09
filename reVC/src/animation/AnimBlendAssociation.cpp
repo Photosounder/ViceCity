@@ -217,7 +217,11 @@ CAnimBlendAssociation::UpdateBlend(float timeDelta)
 		if(flags & ASSOC_DELETEFADEDOUT){
 			if(callbackType == CB_FINISH || callbackType == CB_DELETE)
 				callback(this, callbackArg);
-			delete this;
+//+ rouz edit (ChatGPT)
+			// Destroy and release this association without invoking C++ delete.
+			this->~CAnimBlendAssociation();
+			free(this);
+//- rouz edit (ChatGPT)
 			return false;
 		}
 	}

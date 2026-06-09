@@ -2,6 +2,7 @@
 #define ALDEVICELIST_H
 
 #include "oal_utils.h"
+#include <stdlib.h> // rouz edit (ChatGPT)
 
 #ifdef AUDIO_OAL
 #pragma warning(disable: 4786)  //disable warning "identifier was truncated to '255' characters in the browser information"
@@ -36,14 +37,14 @@ struct ALDEVICEINFO {
 
 	~ALDEVICEINFO()
 	{
-		delete[] strDeviceName;
+		free(strDeviceName); // rouz edit (ChatGPT)
 		strDeviceName = NULL;
 	}
 
 	void SetName(const char *name)
 	{
-		if(strDeviceName) delete[] strDeviceName;
-		strDeviceName = new char[strlen(name) + 1];
+		if(strDeviceName) free(strDeviceName); // rouz edit (ChatGPT)
+		strDeviceName = (char*)malloc(strlen(name) + 1); // rouz edit (ChatGPT)
 		strcpy(strDeviceName, name);
 	}
 };

@@ -380,12 +380,24 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 		return;
 	}
 	CVehicle* pVehicle;
-	if (CModelInfo::IsBoatModel(carModel))
-		pVehicle = new CBoat(carModel, RANDOM_VEHICLE);
-	else if (CModelInfo::IsBikeModel(carModel))
-		pVehicle = new CBike(carModel, RANDOM_VEHICLE);
-	else
-		pVehicle = new CAutomobile(carModel, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+	if (CModelInfo::IsBoatModel(carModel)) {
+		// Allocate the generated boat from the vehicle pool without invoking C++ new.
+		pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CBoat>().construct((CBoat*)pVehicle, carModel, RANDOM_VEHICLE);
+	} else if (CModelInfo::IsBikeModel(carModel)) {
+		// Allocate the generated bike from the vehicle pool without invoking C++ new.
+		pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CBike>().construct((CBike*)pVehicle, carModel, RANDOM_VEHICLE);
+	} else {
+		// Allocate the generated automobile from the vehicle pool without invoking C++ new.
+		pVehicle = CPools::GetVehiclePool()->New();
+		assert(pVehicle);
+		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, carModel, RANDOM_VEHICLE);
+	}
+//- rouz edit (ChatGPT)
 	pVehicle->AutoPilot.m_nPrevRouteNode = 0;
 	pVehicle->AutoPilot.m_nCurrentRouteNode = curNodeId;
 	pVehicle->AutoPilot.m_nNextRouteNode = nextNodeId;
@@ -449,7 +461,11 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 	if (pCurNode->numLinks == 1){
 		if (debug_cargen) debug("Car gen stopped because pCurNode->numLinks == 1\n");
 		/* Do not create vehicle if there is nowhere to go. */
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the generated vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return;
 	}
 	int16 nextConnection = pVehicle->AutoPilot.m_nNextPathNodeInfo;
@@ -585,7 +601,11 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 	CEntity* pEntity;
 	if (bBoatGenerated) {
 		if (!CWaterLevel::GetWaterLevel(finalPosition, &groundZ, true)) {
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 	}
@@ -600,7 +620,11 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 	if (groundZ == INFINITE_Z || ABS(groundZ - finalPosition.z) > 7.0f) {
 		if (debug_cargen) debug("Car gen stopped because no ground (groundZ = %.2f, finalPosition.z = %.2f)\n", groundZ, finalPosition.z);
 		/* Failed to find ground or too far from expected position. */
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the generated vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return;
 	}
 	if (CModelInfo::IsBoatModel(carModel)) {
@@ -631,23 +655,39 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 		if ((vecTargetPos - pVehicle->GetPosition()).Magnitude2D() > OFFSCREEN_DESPAWN_RANGE * (pVehicle->bExtendedRange ? EXTENDED_RANGE_DESPAWN_MULTIPLIER : 1.0f)) {
 			if (debug_cargen) debug("Car gen stopped because car too far offscreen\n");
 			/* Too far away cars that are not visible aren't needed. */
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 	}else{
 		if ((vecTargetPos - pVehicle->GetPosition()).Magnitude2D() > TheCamera.GenerationDistMultiplier * (pVehicle->bExtendedRange ? EXTENDED_RANGE_DESPAWN_MULTIPLIER : 1.0f) * ONSCREEN_DESPAWN_RANGE ||
 			(vecTargetPos - pVehicle->GetPosition()).Magnitude2D() < TheCamera.GenerationDistMultiplier * MINIMAL_DISTANCE_TO_SPAWN_ONSCREEN) {
 			if (debug_cargen) debug("Car gen stopped because car too far on screen\n");
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		if ((TheCamera.GetPosition() - pVehicle->GetPosition()).Magnitude2D() < 82.5f * TheCamera.GenerationDistMultiplier || bTopDownCamera) {
 			if (debug_cargen) debug("Car gen stopped because car too far from camera (%.2f)\n", (TheCamera.GetPosition() - pVehicle->GetPosition()).Magnitude2D());
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		if (pVehicle->GetModelIndex() == MI_MARQUIS) { // so marquis can only spawn if player doesn't see it?
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 	}
@@ -657,20 +697,32 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 		CWorld::FindObjectsKindaColliding(pVehicle->GetPosition(), radiusToTest + 20.0f, true, &colliding, 2, nil, false, true, false, false, false);
 		if (colliding){
 			if (debug_cargen) debug("Car gen stopped because extended model sphere colliding\n");
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 	}
 	CWorld::FindObjectsKindaColliding(pVehicle->GetPosition(), radiusToTest, true, &colliding, 2, nil, false, true, false, false, false);
 	if (colliding){
 		if (debug_cargen) debug("Car gen stopped because model sphere colliding\n");
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the generated vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return;
 	}
 	if (speedDifferenceWithTarget.x * distanceToTarget.x +
 		speedDifferenceWithTarget.y * distanceToTarget.y >= 0.0f){
 		if (debug_cargen) debug("Car gen stopped because speed difference (%.2f)\n", speedDifferenceWithTarget.x * distanceToTarget.x + speedDifferenceWithTarget.y * distanceToTarget.y);
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the generated vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return;
 	}
 	pVehicleModel->AvoidSameVehicleColour(&pVehicle->m_currentColour1, &pVehicle->m_currentColour2);
@@ -986,7 +1038,11 @@ CCarCtrl::RemoveCarsIfThePoolGetsFull(void)
 	}
 	if (pClosestVehicle) {
 		CWorld::Remove(pClosestVehicle);
-		delete pClosestVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the closest vehicle without invoking C++ delete.
+		pClosestVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pClosestVehicle);
+//- rouz edit (ChatGPT)
 	}
 }
 
@@ -1003,7 +1059,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 		pVehicle->CanBeDeleted() && !CCranes::IsThisCarBeingTargettedByAnyCrane(pVehicle)){
 		if (pVehicle->bFadeOut && CVisibilityPlugins::GetClumpAlpha(pVehicle->GetClump()) == 0){
 			CWorld::Remove(pVehicle);
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		float distanceToPlayer = (pVehicle->GetPosition() - vecPlayerPos).Magnitude2D();
@@ -1036,7 +1096,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 				pVehicle->bFadeOut = true;
 			}else{
 				CWorld::Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the vehicle without invoking C++ delete.
+				pVehicle->~CVehicle();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 			return;
 		}
@@ -1053,7 +1117,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 		!CTrafficLights::ShouldCarStopForBridge(pVehicle) &&
 		!CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())){
 		CWorld::Remove(pVehicle);
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return;
 	}
 	if (pVehicle->GetStatus() == STATUS_WRECKED) {
@@ -1064,7 +1132,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 				if ((pVehicle->GetPosition() - vecPlayerPos).MagnitudeSqr() > SQR(6.5f)) {
 					if (!CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())) {
 						CWorld::Remove(pVehicle);
-						delete pVehicle;
+//+ rouz edit (ChatGPT)
+						// Destroy and release the vehicle without invoking C++ delete.
+						pVehicle->~CVehicle();
+						CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 					}
 				}
 			}
@@ -3289,7 +3361,12 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 	}
 	if (attempts >= 5)
 		return false;
-	CAutomobile* pVehicle = new CAutomobile(mi, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+	// Allocate the emergency automobile from the vehicle pool without invoking C++ new.
+	CAutomobile* pVehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+	assert(pVehicle);
+	std::allocator<CAutomobile>().construct(pVehicle, mi, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 	pVehicle->AutoPilot.m_vecDestinationCoors = vecPos;
 	pVehicle->SetPosition(spawnPos);
 	pVehicle->AutoPilot.m_nCarMission = (JoinCarWithRoadSystemGotoCoors(pVehicle, vecPos, false)) ? MISSION_GOTOCOORDS_STRAIGHT : MISSION_GOTOCOORDS;
@@ -3312,7 +3389,11 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 			groundZ = colPoint.point.z;
 	}
 	if (groundZ == INFINITE_Z) {
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the emergency automobile without invoking C++ delete.
+		pVehicle->~CAutomobile();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return false;
 	}
 	spawnPos.z = groundZ + pVehicle->GetDistanceFromCentreOfMassToBaseOfModel();

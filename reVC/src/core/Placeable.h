@@ -10,9 +10,6 @@ public:
 	xyz_t orig_pos;			// rouz edit, keep track of the original location for buildings and such
 	int orig_pos_set = 0;
 
-	// disable allocation
-	static void *operator new(size_t);
-
 	CPlaceable(void);
 	const CVector &GetPosition(void) { return m_matrix.GetPosition(); }
 	void SetPosition(float x, float y, float z) {

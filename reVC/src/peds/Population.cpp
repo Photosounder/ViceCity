@@ -28,6 +28,7 @@
 #include "Streaming.h"
 #include "Clock.h"
 #include "WaterLevel.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #define MIN_CREATION_DIST		40.0f // not for start of the game (look at the GeneratePedsAtStartOfGame)
 #define CREATION_RANGE			10.0f // added over the MIN_CREATION_DIST.
@@ -110,7 +111,11 @@ void
 CPopulation::RemovePed(CPed *ent)
 {
 	CWorld::Remove((CEntity*)ent);
-	delete ent;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the ped without invoking C++ delete.
+	ent->~CPed();
+	CPools::GetPedPool()->Delete(ent);
+//- rouz edit (ChatGPT)
 }
 
 int32
@@ -423,7 +428,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		case PEDTYPE_CIVMALE:
 		case PEDTYPE_CIVFEMALE:
 		{
-			CCivilianPed *ped = new CCivilianPed(pedType, miOrCopType);
+//+ rouz edit (ChatGPT)
+			// Allocate the civilian ped without invoking C++ new.
+			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
+//- rouz edit (ChatGPT)
 			ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -455,7 +465,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		}
 		case PEDTYPE_COP:
 		{
-			CCopPed *ped = new CCopPed((eCopType)miOrCopType, modifier);
+//+ rouz edit (ChatGPT)
+			// Allocate the cop ped without invoking C++ new.
+			CCopPed *ped = (CCopPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCopPed>().construct(ped, (eCopType)miOrCopType, modifier);
+//- rouz edit (ChatGPT)
 			ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -471,7 +486,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		case PEDTYPE_GANG8:
 		case PEDTYPE_GANG9:
 		{
-			CCivilianPed *ped = new CCivilianPed(pedType, miOrCopType);
+//+ rouz edit (ChatGPT)
+			// Allocate the gang ped without invoking C++ new.
+			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
+//- rouz edit (ChatGPT)
 			ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -488,7 +508,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		}
 		case PEDTYPE_EMERGENCY:
 		{
-			CEmergencyPed *ped = new CEmergencyPed(PEDTYPE_EMERGENCY);
+//+ rouz edit (ChatGPT)
+			// Allocate the emergency ped without invoking C++ new.
+			CEmergencyPed *ped = (CEmergencyPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CEmergencyPed>().construct(ped, PEDTYPE_EMERGENCY);
+//- rouz edit (ChatGPT)
 		    ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -496,7 +521,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		}
 		case PEDTYPE_FIREMAN:
 		{
-			CEmergencyPed *ped = new CEmergencyPed(PEDTYPE_FIREMAN);
+//+ rouz edit (ChatGPT)
+			// Allocate the fireman ped without invoking C++ new.
+			CEmergencyPed *ped = (CEmergencyPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CEmergencyPed>().construct(ped, PEDTYPE_FIREMAN);
+//- rouz edit (ChatGPT)
 		    ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -505,7 +535,12 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		case PEDTYPE_CRIMINAL:
 		case PEDTYPE_PROSTITUTE:
 		{
-			CCivilianPed *ped = new CCivilianPed(pedType, miOrCopType);
+//+ rouz edit (ChatGPT)
+			// Allocate the civilian ped without invoking C++ new.
+			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			assert(ped);
+			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
+//- rouz edit (ChatGPT)
 			ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
@@ -927,12 +962,37 @@ CPopulation::ConvertToRealObject(CDummyObject *dummy)
 	if (!TestSafeForRealObject(dummy))
 		return;
 
-	CObject *obj = new CObject(dummy);
+//+ rouz edit (ChatGPT)
+	// Allocate the real object without invoking C++ new.
+	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObject *obj = objectPool->New();
+#ifdef FIX_BUGS
+	if (!obj) {
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				existing->~CObject();
+				objectPool->Delete(existing);
+				obj = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	if (obj)
+#endif
+		std::allocator<CObject>().construct(obj, dummy);
+//- rouz edit (ChatGPT)
 	if (!obj)
 		return;
 
 	CWorld::Remove(dummy);
-	delete dummy;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the dummy without invoking C++ delete.
+	dummy->~CDummyObject();
+	CPools::GetDummyPool()->Delete(dummy);
+//- rouz edit (ChatGPT)
 	CWorld::Add(obj);
 
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(obj->GetModelIndex());
@@ -949,7 +1009,12 @@ CPopulation::ConvertToRealObject(CDummyObject *dummy)
 void
 CPopulation::ConvertToDummyObject(CObject *obj)
 {
-	CDummyObject *dummy = new CDummyObject(obj);
+//+ rouz edit (ChatGPT)
+	// Allocate the dummy object without invoking C++ new.
+	CDummyObject *dummy = (CDummyObject*)CPools::GetDummyPool()->New();
+	assert(dummy);
+	std::allocator<CDummyObject>().construct(dummy, obj);
+//- rouz edit (ChatGPT)
 
 	dummy->GetMatrix() = obj->m_objectMatrix;
 	dummy->GetMatrix().UpdateRW();
@@ -960,7 +1025,11 @@ CPopulation::ConvertToDummyObject(CObject *obj)
 		dummy->bIsVisible = false;
 
 	CWorld::Remove(obj);
-	delete obj;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the real object without invoking C++ delete.
+	obj->~CObject();
+	CPools::GetObjectPool()->Delete(obj);
+//- rouz edit (ChatGPT)
 	CWorld::Add(dummy);
 }
 
@@ -1054,11 +1123,19 @@ CPopulation::ManagePopulation(void)
 				if (obj->GetModelIndex() != MI_ROADWORKBARRIER1 && obj->GetModelIndex() != MI_BEACHBALL) {
 					if (objPlayerDist > 51.0f || objPlayerDist > 25.0f && !obj->GetIsOnScreen() || CTimer::GetTimeInMilliseconds() > obj->m_nEndOfLifeTime) {
 						CWorld::Remove(obj);
-						delete obj;
+//+ rouz edit (ChatGPT)
+						// Destroy and release the temporary object without invoking C++ delete.
+						obj->~CObject();
+						CPools::GetObjectPool()->Delete(obj);
+//- rouz edit (ChatGPT)
 					}
 				} else if (objPlayerDist > 120.0f) {
 					CWorld::Remove(obj);
-					delete obj;
+//+ rouz edit (ChatGPT)
+					// Destroy and release the temporary object without invoking C++ delete.
+					obj->~CObject();
+					CPools::GetObjectPool()->Delete(obj);
+//- rouz edit (ChatGPT)
 				}
 
 			} else if (objPlayerDist > 80.0f && (obj->m_objectMatrix.GetPosition() - playerPos).Magnitude() > 80.0f) {

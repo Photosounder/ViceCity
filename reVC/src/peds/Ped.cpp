@@ -54,11 +54,6 @@ bool CPed::bFannyMagnetCheat;
 bool CPed::bPedCheat3;
 CVector2D CPed::ms_vec2DFleePosition;
 
-void *CPed::operator new(size_t sz) throw() { return CPools::GetPedPool()->New();  }
-void *CPed::operator new(size_t sz, int handle) throw() { return CPools::GetPedPool()->New(handle); }
-void CPed::operator delete(void *p, size_t sz) throw() { CPools::GetPedPool()->Delete((CPed*)p); }
-void CPed::operator delete(void *p, int handle) throw() { CPools::GetPedPool()->Delete((CPed*)p); }
-
 float gfTommyFatness = 1.0f;
 
 CPed::CPed(uint32 pedType) : m_pedIK(this)
@@ -376,7 +371,13 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 CPed::~CPed(void)
 {
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
-	if ( m_pRTShadow ) delete m_pRTShadow;
+//+ rouz edit (ChatGPT)
+	if ( m_pRTShadow ) {
+		// Destroy and release the ped cutscene shadow without invoking C++ delete.
+		m_pRTShadow->~CCutsceneShadow();
+		free(m_pRTShadow);
+	}
+//- rouz edit (ChatGPT)
 #endif
 	CWorld::Remove(this);
 	if (m_attractor)
@@ -468,7 +469,12 @@ CPed::SetModelIndex(uint32 mi)
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
 	if (!m_pRTShadow)
 	{
-		m_pRTShadow = new CCutsceneShadow;
+//+ rouz edit (ChatGPT)
+		// Allocate the ped cutscene shadow without invoking C++ new.
+		m_pRTShadow = (CCutsceneShadow*)malloc(sizeof(CCutsceneShadow));
+		assert(m_pRTShadow);
+		std::allocator<CCutsceneShadow>().construct(m_pRTShadow);
+//- rouz edit (ChatGPT)
 		m_pRTShadow->Create(m_rwObject, 10, 1, 1, 1);
 		//m_pRTShadow->Create(m_rwObject, 8, 0, 0, 0);
 	}

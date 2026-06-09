@@ -40,25 +40,65 @@ CPools::Initialise(void)
 {
 	PUSH_MEMID(MEMID_POOLS);
 	CHECKMEM("before pools");
-	ms_pPtrNodePool = new CCPtrNodePool(NUMPTRNODES, "PtrNode");
+//+ rouz edit (ChatGPT)
+	// Construct the pointer-node pool without invoking C++ new.
+	ms_pPtrNodePool = (CCPtrNodePool*)malloc(sizeof(CCPtrNodePool));
+	std::allocator<CCPtrNodePool>().construct(ms_pPtrNodePool, NUMPTRNODES, "PtrNode");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CPtrNodePool");
-	ms_pEntryInfoNodePool = new CEntryInfoNodePool(NUMENTRYINFOS, "EntryInfoNode");
+//+ rouz edit (ChatGPT)
+	// Construct the entry-info pool without invoking C++ new.
+	ms_pEntryInfoNodePool = (CEntryInfoNodePool*)malloc(sizeof(CEntryInfoNodePool));
+	std::allocator<CEntryInfoNodePool>().construct(ms_pEntryInfoNodePool, NUMENTRYINFOS, "EntryInfoNode");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CEntryInfoNodePool");
-	ms_pPedPool = new CPedPool(NUMPEDS, "Peds");
+//+ rouz edit (ChatGPT)
+	// Construct the ped pool without invoking C++ new.
+	ms_pPedPool = (CPedPool*)malloc(sizeof(CPedPool));
+	std::allocator<CPedPool>().construct(ms_pPedPool, NUMPEDS, "Peds");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CPedPool");
-	ms_pVehiclePool = new CVehiclePool(NUMVEHICLES, "Vehicles");
+//+ rouz edit (ChatGPT)
+	// Construct the vehicle pool without invoking C++ new.
+	ms_pVehiclePool = (CVehiclePool*)malloc(sizeof(CVehiclePool));
+	std::allocator<CVehiclePool>().construct(ms_pVehiclePool, NUMVEHICLES, "Vehicles");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CVehiclePool");
-	ms_pBuildingPool = new CBuildingPool(NUMBUILDINGS, "Buildings");
+//+ rouz edit (ChatGPT)
+	// Construct the building pool without invoking C++ new.
+	ms_pBuildingPool = (CBuildingPool*)malloc(sizeof(CBuildingPool));
+	std::allocator<CBuildingPool>().construct(ms_pBuildingPool, NUMBUILDINGS, "Buildings");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CBuildingPool");
-	ms_pTreadablePool = new CTreadablePool(NUMTREADABLES, "Treadables");
+//+ rouz edit (ChatGPT)
+	// Construct the treadable pool without invoking C++ new.
+	ms_pTreadablePool = (CTreadablePool*)malloc(sizeof(CTreadablePool));
+	std::allocator<CTreadablePool>().construct(ms_pTreadablePool, NUMTREADABLES, "Treadables");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CTreadablePool");
-	ms_pObjectPool = new CObjectPool(NUMOBJECTS, "Objects");
+//+ rouz edit (ChatGPT)
+	// Construct the object pool without invoking C++ new.
+	ms_pObjectPool = (CObjectPool*)malloc(sizeof(CObjectPool));
+	std::allocator<CObjectPool>().construct(ms_pObjectPool, NUMOBJECTS, "Objects");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CObjectPool");
-	ms_pDummyPool = new CDummyPool(NUMDUMMIES, "Dummys");
+//+ rouz edit (ChatGPT)
+	// Construct the dummy pool without invoking C++ new.
+	ms_pDummyPool = (CDummyPool*)malloc(sizeof(CDummyPool));
+	std::allocator<CDummyPool>().construct(ms_pDummyPool, NUMDUMMIES, "Dummys");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after CDummyPool");
-	ms_pAudioScriptObjectPool = new CAudioScriptObjectPool(NUMAUDIOSCRIPTOBJECTS, "AudioScriptObj");
+//+ rouz edit (ChatGPT)
+	// Construct the audio-script-object pool without invoking C++ new.
+	ms_pAudioScriptObjectPool = (CAudioScriptObjectPool*)malloc(sizeof(CAudioScriptObjectPool));
+	std::allocator<CAudioScriptObjectPool>().construct(ms_pAudioScriptObjectPool, NUMAUDIOSCRIPTOBJECTS, "AudioScriptObj");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after cAudioScriptObjectPool");
-	ms_pColModelPool = new CColModelPool(NUMCOLMODELS, "ColModel");
+//+ rouz edit (ChatGPT)
+	// Construct the collision-model pool without invoking C++ new.
+	ms_pColModelPool = (CColModelPool*)malloc(sizeof(CColModelPool));
+	std::allocator<CColModelPool>().construct(ms_pColModelPool, NUMCOLMODELS, "ColModel");
+//- rouz edit (ChatGPT)
 	CHECKMEM("after pools");
 	POP_MEMID();
 }
@@ -78,16 +118,29 @@ CPools::ShutDown(void)
 	debug("ColModels left %d\n", ms_pColModelPool->GetNoOfUsedSpaces());
 	printf("Shutdown pool started\n");
 
-	delete ms_pPtrNodePool;
-	delete ms_pEntryInfoNodePool;
-	delete ms_pPedPool;
-	delete ms_pVehiclePool;
-	delete ms_pBuildingPool;
-	delete ms_pTreadablePool;
-	delete ms_pObjectPool;
-	delete ms_pDummyPool;
-	delete ms_pAudioScriptObjectPool;
-	delete ms_pColModelPool;
+//+ rouz edit (ChatGPT)
+	// Destroy and release pool managers without invoking C++ delete.
+	ms_pPtrNodePool->~CCPtrNodePool();
+	free(ms_pPtrNodePool);
+	ms_pEntryInfoNodePool->~CEntryInfoNodePool();
+	free(ms_pEntryInfoNodePool);
+	ms_pPedPool->~CPedPool();
+	free(ms_pPedPool);
+	ms_pVehiclePool->~CVehiclePool();
+	free(ms_pVehiclePool);
+	ms_pBuildingPool->~CBuildingPool();
+	free(ms_pBuildingPool);
+	ms_pTreadablePool->~CTreadablePool();
+	free(ms_pTreadablePool);
+	ms_pObjectPool->~CObjectPool();
+	free(ms_pObjectPool);
+	ms_pDummyPool->~CDummyPool();
+	free(ms_pDummyPool);
+	ms_pAudioScriptObjectPool->~CAudioScriptObjectPool();
+	free(ms_pAudioScriptObjectPool);
+	ms_pColModelPool->~CColModelPool();
+	free(ms_pColModelPool);
+//- rouz edit (ChatGPT)
 
 	printf("Shutdown pool done\n");
 }
@@ -116,10 +169,19 @@ CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 	CObject *object = ms_pObjectPool->GetSlot(slot);
 	if (object->ObjectCreatedBy == TEMP_OBJECT) {
 		CWorld::Remove(object);
-		delete object;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the temporary object without invoking C++ delete.
+		object->~CObject();
+		ms_pObjectPool->Delete(object);
+//- rouz edit (ChatGPT)
 	} else if (!CProjectileInfo::RemoveIfThisIsAProjectile(object)) {
 		// relocate to another slot??
-		CObject *newObject = new CObject(object->GetModelIndex(), false);
+//+ rouz edit (ChatGPT)
+		// Allocate the relocated object without invoking C++ new.
+		CObject *newObject = ms_pObjectPool->New();
+		assert(newObject);
+		std::allocator<CObject>().construct(newObject, object->GetModelIndex(), false);
+//- rouz edit (ChatGPT)
 		CWorld::Remove(object);
 #if 0 // todo better
 		*newObject = *object;
@@ -128,7 +190,11 @@ CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 #endif
 		CWorld::Add(newObject);
 		object->m_rwObject = nil;
-		delete object;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the old object without invoking C++ delete.
+		object->~CObject();
+		ms_pObjectPool->Delete(object);
+//- rouz edit (ChatGPT)
 		newObject->m_pFirstReference = nil;
 	}
 }
@@ -155,23 +221,39 @@ INITSAVEBUF
 		ReadSaveBuf(&slot, buf);
 		CVehicle* pVehicle;
 #ifdef COMPATIBLE_SAVES
-		if (type == VEHICLE_TYPE_BOAT)
-			pVehicle = new(slot) CBoat(model, RANDOM_VEHICLE);
-		else if (type == VEHICLE_TYPE_CAR)
-			pVehicle = new(slot) CAutomobile(model, RANDOM_VEHICLE);
-		else if (type == VEHICLE_TYPE_BIKE)
-			pVehicle = new(slot) CBike(model, RANDOM_VEHICLE);
-		else
+//+ rouz edit (ChatGPT)
+		if (type == VEHICLE_TYPE_BOAT) {
+			// Restore the boat into its saved vehicle-pool slot.
+			pVehicle = ms_pVehiclePool->New(slot);
+			assert(pVehicle);
+			std::allocator<CBoat>().construct((CBoat*)pVehicle, model, RANDOM_VEHICLE);
+		} else if (type == VEHICLE_TYPE_CAR) {
+			// Restore the automobile into its saved vehicle-pool slot.
+			pVehicle = ms_pVehiclePool->New(slot);
+			assert(pVehicle);
+			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, model, RANDOM_VEHICLE);
+		} else if (type == VEHICLE_TYPE_BIKE) {
+			// Restore the bike into its saved vehicle-pool slot.
+			pVehicle = ms_pVehiclePool->New(slot);
+			assert(pVehicle);
+			std::allocator<CBike>().construct((CBike*)pVehicle, model, RANDOM_VEHICLE);
+		} else
+//- rouz edit (ChatGPT)
 			assert(0);
 		--CCarCtrl::NumRandomCars;
 		pVehicle->Load(buf);
 		CWorld::Add(pVehicle);
 #else
-		char* vbuf = new char[Max(CBike::nSaveStructSize, Max(CAutomobile::nSaveStructSize, CBoat::nSaveStructSize))];
+		char* vbuf = (char*)malloc(Max(CBike::nSaveStructSize, Max(CAutomobile::nSaveStructSize, CBoat::nSaveStructSize))); // rouz edit (ChatGPT)
 		if (type == VEHICLE_TYPE_BOAT) {
 			memcpy(vbuf, buf, sizeof(CBoat));
 			SkipSaveBuf(buf, sizeof(CBoat));
-			CBoat* pBoat = new(slot) CBoat(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Restore the boat into its saved vehicle-pool slot.
+			CBoat* pBoat = (CBoat*)ms_pVehiclePool->New(slot);
+			assert(pBoat);
+			std::allocator<CBoat>().construct(pBoat, model, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle = pBoat;
 			--CCarCtrl::NumRandomCars;
 		}
@@ -180,7 +262,12 @@ INITSAVEBUF
 			SkipSaveBuf(buf, sizeof(CAutomobile));
 			CStreaming::RequestModel(model, 0); // is it needed?
 			CStreaming::LoadAllRequestedModels(false);
-			CAutomobile* pAutomobile = new(slot) CAutomobile(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Restore the automobile into its saved vehicle-pool slot.
+			CAutomobile* pAutomobile = (CAutomobile*)ms_pVehiclePool->New(slot);
+			assert(pAutomobile);
+			std::allocator<CAutomobile>().construct(pAutomobile, model, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle = pAutomobile;
 			CCarCtrl::NumRandomCars--; // why?
 			pAutomobile->Damage = ((CAutomobile*)vbuf)->Damage;
@@ -193,7 +280,12 @@ INITSAVEBUF
 			memcpy(vbuf, buf, sizeof(CAutomobile));
 #endif
 			SkipSaveBuf(buf, sizeof(CBike));
-			CBike* pBike = new(slot) CBike(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Restore the bike into its saved vehicle-pool slot.
+			CBike* pBike = (CBike*)ms_pVehiclePool->New(slot);
+			assert(pBike);
+			std::allocator<CBike>().construct(pBike, model, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle = pBike;
 			--CCarCtrl::NumRandomCars;
 		}
@@ -236,7 +328,7 @@ INITSAVEBUF
 		pVehicle->AutoPilot = pBufferVehicle->AutoPilot;
 		CCarCtrl::UpdateCarCount(pVehicle, false);
 		CWorld::Add(pVehicle);
-		delete[] vbuf;
+		free(vbuf); // rouz edit (ChatGPT)
 #endif
 	}
 VALIDATESAVEBUF(size)
@@ -432,7 +524,7 @@ INITSAVEBUF
 		CopyFromBuf(buf, mi);
 		int ref;
 		CopyFromBuf(buf, ref);
-		char* obuf = new char[sizeof(CObject)];
+		char* obuf = (char*)malloc(sizeof(CObject)); // rouz edit (ChatGPT)
 		CObject* pBufferObject = (CObject*)obuf;
 		CCompressedMatrix tmp;
 		CopyFromBuf(buf, tmp);
@@ -469,7 +561,12 @@ INITSAVEBUF
 #endif
 		if (GetObjectPool()->GetSlot(ref >> 8))
 			CPopulation::ConvertToDummyObject(GetObjectPool()->GetSlot(ref >> 8));
-		CObject* pObject = new(ref) CObject(mi, false);
+//+ rouz edit (ChatGPT)
+		// Restore the object into its saved object-pool slot.
+		CObject* pObject = GetObjectPool()->New(ref);
+		assert(pObject);
+		std::allocator<CObject>().construct(pObject, mi, false);
+//- rouz edit (ChatGPT)
 		pObject->GetMatrix() = pBufferObject->GetMatrix();
 #ifdef COMPATIBLE_SAVES
 		pObject->LoadEntityFlags(buf);
@@ -496,7 +593,7 @@ INITSAVEBUF
 		pObject->m_nCostValue = pBufferObject->m_nCostValue;
 		pObject->m_nBonusValue = pBufferObject->m_nBonusValue;
 		CWorld::Add(pObject);
-		delete[] obuf;
+		free(obuf); // rouz edit (ChatGPT)
 	}
 VALIDATESAVEBUF(size)
 }
@@ -572,9 +669,14 @@ INITSAVEBUF
 		CStreaming::RequestSpecialModel(model, name, STREAMFLAGS_DONT_REMOVE);
 		CStreaming::LoadAllRequestedModels(false);
 
-		if (pedtype == PEDTYPE_PLAYER1)
-			pPed = new(ref) CPlayerPed();
-		else
+//+ rouz edit (ChatGPT)
+		if (pedtype == PEDTYPE_PLAYER1) {
+			// Restore the player ped into its saved ped-pool slot.
+			pPed = GetPedPool()->New(ref);
+			assert(pPed);
+			std::allocator<CPlayerPed>().construct((CPlayerPed*)pPed);
+		} else
+//- rouz edit (ChatGPT)
 			assert(0);
 
 		pPed->Load(buf);
@@ -590,7 +692,7 @@ INITSAVEBUF
 		}
 		CWorld::Add(pPed);
 #else
-		char* pbuf = new char[sizeof(CPlayerPed)];
+		char* pbuf = (char*)malloc(sizeof(CPlayerPed)); // rouz edit (ChatGPT)
 		CPlayerPed* pBufferPlayer = (CPlayerPed*)pbuf;
 		CPed* pPed;
 		char name[MAX_MODEL_NAME];
@@ -605,7 +707,12 @@ INITSAVEBUF
 		CStreaming::RequestSpecialModel(model, name, STREAMFLAGS_DONT_REMOVE);
 		CStreaming::LoadAllRequestedModels(false);
 		if (pedtype == PEDTYPE_PLAYER1) {
-			CPlayerPed* pPlayerPed = new(ref) CPlayerPed();
+//+ rouz edit (ChatGPT)
+			// Restore the player ped into its saved ped-pool slot.
+			CPlayerPed* pPlayerPed = (CPlayerPed*)GetPedPool()->New(ref);
+			assert(pPlayerPed);
+			std::allocator<CPlayerPed>().construct(pPlayerPed);
+//- rouz edit (ChatGPT)
 			for (int i = 0; i < ARRAY_SIZE(pPlayerPed->m_nTargettableObjects); i++)
 				pPlayerPed->m_nTargettableObjects[i] = pBufferPlayer->m_nTargettableObjects[i];
 			pPlayerPed->m_fMaxStamina = pBufferPlayer->m_fMaxStamina;
@@ -637,7 +744,7 @@ INITSAVEBUF
 			CWorld::Players[0].m_pPed = (CPlayerPed*)pPed;
 		}
 		CWorld::Add(pPed);
-		delete[] pbuf;
+		free(pbuf); // rouz edit (ChatGPT)
 #endif
 	}
 VALIDATESAVEBUF(size)

@@ -28,6 +28,7 @@
 #include "Streaming.h"
 #include "ColStore.h"
 #include "Occlusion.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 char CFileLoader::ms_line[256];
 
@@ -197,7 +198,12 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 			if(mi->GetColModel() && mi->DoesOwnColModel()){
 				LoadCollisionModel(work_buff+24, *mi->GetColModel(), modelname);
 			}else{
-				CColModel *model = new CColModel;
+//+ rouz edit (ChatGPT)
+				// Construct the collision model in pool storage without invoking C++ new.
+				CColModel *model = CPools::GetColModelPool()->New();
+				assert(model);
+				std::allocator<CColModel>().construct(model);
+//- rouz edit (ChatGPT)
 				model->level = colSlot;
 				LoadCollisionModel(work_buff+24, *model, modelname);
 				mi->SetColModel(model, true);
@@ -237,7 +243,12 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 		mi = CModelInfo::GetModelInfo(modelname, &modelIndex);
 		if(mi){
 			CColStore::IncludeModelIndex(colSlot, modelIndex);
-			CColModel *model = new CColModel;
+//+ rouz edit (ChatGPT)
+			// Construct the collision model in pool storage without invoking C++ new.
+			CColModel *model = CPools::GetColModelPool()->New();
+			assert(model);
+			std::allocator<CColModel>().construct(model);
+//- rouz edit (ChatGPT)
 			model->level = colSlot;
 			LoadCollisionModel(work_buff, *model, modelname);
 			mi->SetColModel(model, true);
@@ -273,7 +284,12 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 			if(mi->GetColModel()){
 				LoadCollisionModel(work_buff, *mi->GetColModel(), modelname);
 			}else{
-				CColModel *model = new CColModel;
+//+ rouz edit (ChatGPT)
+				// Construct the collision model in pool storage without invoking C++ new.
+				CColModel *model = CPools::GetColModelPool()->New();
+				assert(model);
+				std::allocator<CColModel>().construct(model);
+//- rouz edit (ChatGPT)
 				model->level = colSlot;
 				LoadCollisionModel(work_buff, *model, modelname);
 				mi->SetColModel(model, true);
@@ -1213,10 +1229,21 @@ CFileLoader::LoadObjectInstance(const char *line)
 
 	if(mi->GetObjectID() == -1){
 		if(ThePaths.IsPathObject(id)){
-			entity = new CTreadable;
+//+ rouz edit (ChatGPT)
+			// Allocate a treadable map entity from its pool without invoking C++ new.
+			entity = CPools::GetTreadablePool()->New();
+			assert(entity);
+			std::allocator<CTreadable>().construct((CTreadable*)entity);
+//- rouz edit (ChatGPT)
 			ThePaths.RegisterMapObject((CTreadable*)entity);
-		}else
-			entity = new CBuilding;
+//+ rouz edit (ChatGPT)
+		}else{
+			// Allocate a building map entity from its pool without invoking C++ new.
+			entity = CPools::GetBuildingPool()->New();
+			assert(entity);
+			std::allocator<CBuilding>().construct((CBuilding*)entity);
+		}
+//- rouz edit (ChatGPT)
 		entity->SetModelIndexNoCreate(id);
 		entity->GetMatrix() = CMatrix(xform);
 		entity->m_level = CTheZones::GetLevelFromPosition(&entity->GetPosition());
@@ -1241,7 +1268,12 @@ CFileLoader::LoadObjectInstance(const char *line)
 		if(entity->GetPosition().z + col->boundingBox.min.z < 6.0f)
 			entity->bUnderwater = true;
 	}else{
-		entity = new CDummyObject;
+//+ rouz edit (ChatGPT)
+		// Allocate a dummy map object from its pool without invoking C++ new.
+		entity = CPools::GetDummyPool()->New();
+		assert(entity);
+		std::allocator<CDummyObject>().construct((CDummyObject*)entity);
+//- rouz edit (ChatGPT)
 		entity->SetModelIndexNoCreate(id);
 		entity->GetMatrix() = CMatrix(xform);
 		CWorld::Add(entity);

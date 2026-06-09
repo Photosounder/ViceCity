@@ -33,7 +33,11 @@ AnimBlendClumpDestroy(void *object, RwInt32 offsetInObject, RwInt32 sizeInObject
 	data = *RPANIMBLENDCLUMPDATA(object);
 	if(data){
 		RpAnimBlendClumpRemoveAllAssociations((RpClump*)object);
-		delete data;
+//+ rouz edit (ChatGPT)
+		// Destroy and release clump animation data without invoking C++ delete.
+		data->~CAnimBlendClumpData();
+		free(data);
+//- rouz edit (ChatGPT)
 		*RPANIMBLENDCLUMPDATA(object) = nil;
 	}
 	return object;
@@ -72,7 +76,12 @@ RpAnimBlendGetNextAssociation(CAnimBlendAssociation *assoc, uint32 mask)
 void
 RpAnimBlendAllocateData(RpClump *clump)
 {
-	*RPANIMBLENDCLUMPDATA(clump) = new CAnimBlendClumpData;
+//+ rouz edit (ChatGPT)
+	// Construct clump animation data without invoking C++ new.
+	CAnimBlendClumpData *data = (CAnimBlendClumpData*)malloc(sizeof(CAnimBlendClumpData));
+	std::allocator<CAnimBlendClumpData>().construct(data);
+	*RPANIMBLENDCLUMPDATA(clump) = data;
+//- rouz edit (ChatGPT)
 }
 
 
@@ -103,7 +112,13 @@ RpAnimBlendClumpRemoveAssociations(RpClump *clump, uint32 mask)
 		CAnimBlendAssociation *assoc = CAnimBlendAssociation::FromLink(link);
 		if(mask == 0 || (assoc->flags & mask))
 			if(assoc)
-				delete assoc;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the association without invoking C++ delete.
+			{
+				assoc->~CAnimBlendAssociation();
+				free(assoc);
+			}
+//- rouz edit (ChatGPT)
 	}
 }
 

@@ -369,8 +369,12 @@ DealWithTxdWriteError(uint32 num, uint32 count, const char *text)
 bool
 CreateTxdImageForVideoCard()
 {
-	uint8 *buf = new uint8[CDSTREAM_SECTOR_SIZE];
-	CDirectory *pDir = new CDirectory(TXDSTORESIZE);
+	uint8 *buf = (uint8*)malloc(CDSTREAM_SECTOR_SIZE); // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+	// Construct the directory in malloc storage without invoking C++ new.
+	CDirectory *pDir = (CDirectory*)malloc(sizeof(CDirectory));
+	std::allocator<CDirectory>().construct(pDir, TXDSTORESIZE);
+//- rouz edit (ChatGPT)
 	CDirectory::DirectoryInfo dirInfo;
 
 	CStreaming::FlushRequestList();
@@ -382,8 +386,12 @@ CreateTxdImageForVideoCard()
 	RwStream *img = RwStreamOpen(rwSTREAMFILENAME, rwSTREAMWRITE, "models\\txd.img");
 	if (img == nil) {
 		// original code does otherwise and it leaks
-		delete []buf;
-		delete pDir;
+		free(buf); // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+		// Destroy and release the directory without invoking C++ delete.
+		pDir->~CDirectory();
+		free(pDir);
+//- rouz edit (ChatGPT)
 
 		if (_dwOperatingSystemVersion == OS_WINNT || _dwOperatingSystemVersion == OS_WIN2000 || _dwOperatingSystemVersion == OS_WINXP)
 			DealWithTxdWriteError(0, TXDSTORESIZE, "CVT_CRT");
@@ -431,8 +439,12 @@ CreateTxdImageForVideoCard()
 				if (RwTexDictionaryStreamWrite(CTxdStore::GetSlot(i)->texDict, img) == nil) {
 					DealWithTxdWriteError(i, TXDSTORESIZE, "CVT_ERR");
 					RwStreamClose(img, nil);
-					delete []buf;
-					delete pDir;
+					free(buf); // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+					// Destroy and release the directory without invoking C++ delete.
+					pDir->~CDirectory();
+					free(pDir);
+//- rouz edit (ChatGPT)
 					CStreaming::RemoveTxd(i);
 #ifdef RW_GL3
 					rw::gl3::needToReadBackTextures = false;
@@ -467,7 +479,7 @@ CreateTxdImageForVideoCard()
 #endif
 
 	RwStreamClose(img, nil);
-	delete []buf;
+	free(buf); // rouz edit (ChatGPT)
 
 #ifdef RW_GL3
 	rw::gl3::needToReadBackTextures = false;
@@ -475,11 +487,19 @@ CreateTxdImageForVideoCard()
 
 	if (!pDir->WriteDirFile("models\\txd.dir")) {
 		DealWithTxdWriteError(i, TXDSTORESIZE, "CVT_ERR");
-		delete pDir;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the directory without invoking C++ delete.
+		pDir->~CDirectory();
+		free(pDir);
+//- rouz edit (ChatGPT)
 		return false;
 	}
 
-	delete pDir;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the directory without invoking C++ delete.
+	pDir->~CDirectory();
+	free(pDir);
+//- rouz edit (ChatGPT)
 
 	WriteVideoCardCapsFile();
 	return true;

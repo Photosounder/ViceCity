@@ -653,11 +653,6 @@ public:
 	// rouz edit
 	CVector surf_rel_origin;
 
-	static void *operator new(size_t) throw();
-	static void *operator new(size_t, int) throw();
-	static void operator delete(void*, size_t) throw();
-	static void operator delete(void*, int) throw();
-
 	CPed(uint32 pedType);
 	~CPed(void);
 

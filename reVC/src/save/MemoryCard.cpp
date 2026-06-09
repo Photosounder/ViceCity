@@ -994,7 +994,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 {
 #if defined(PS2)
 	const uint32 size = 50968;
-	uint8 *data = new uint8[size];
+	uint8 *data = (uint8*)malloc(size); // rouz edit (ChatGPT)
 	
 	char icon1_path[80];
 	char icon2_path[80];
@@ -1026,7 +1026,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1034,7 +1034,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1042,7 +1042,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1055,7 +1055,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1063,7 +1063,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1071,7 +1071,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1084,7 +1084,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1092,7 +1092,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
@@ -1100,11 +1100,11 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	
 	if ( nError != NO_ERR_SUCCESS )
 	{
-		delete [] data;
+		free(data); // rouz edit (ChatGPT)
 		return RES_FAILED;
 	}
 	
-	delete [] data;
+	free(data); // rouz edit (ChatGPT)
 	
 	return RES_SUCCESS;
 #else

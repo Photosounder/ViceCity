@@ -7,6 +7,7 @@
 #include "PlayerPed.h"
 #include "General.h"
 #include "Object.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 int CWaterCreatures::nNumActiveSeaLifeForms;
 CWaterCreature CWaterCreatures::aWaterCreatures[NUM_WATER_CREATURES];
@@ -112,7 +113,28 @@ CObject *CWaterCreatures::CreateSeaLifeForm(CVector const& pos, int16 modelID, i
 	if (CObject::nNoTempObjects >= NUMTEMPOBJECTS)
 		return nil;
 
-	CObject *pObj = new CObject(modelID, true);
+//+ rouz edit (ChatGPT)
+	// Allocate the water creature object without invoking C++ new.
+	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObject *pObj = objectPool->New();
+#ifdef FIX_BUGS
+	if (!pObj) {
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				existing->~CObject();
+				objectPool->Delete(existing);
+				pObj = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	if (pObj)
+#endif
+		std::allocator<CObject>().construct(pObj, modelID, true);
+//- rouz edit (ChatGPT)
 
 	if (!pObj) return nil;
 	
@@ -248,7 +270,11 @@ void CWaterCreatures::UpdateAll() {
 		case WATER_CREATURE_REMOVE: 
 			if (aWaterCreatures[i].m_pObj){
 				CWorld::Remove(aWaterCreatures[i].m_pObj);
-				delete aWaterCreatures[i].m_pObj;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the water creature object without invoking C++ delete.
+				aWaterCreatures[i].m_pObj->~CObject();
+				CPools::GetObjectPool()->Delete(aWaterCreatures[i].m_pObj);
+//- rouz edit (ChatGPT)
 			}
 			FreeFishStructSlot(&aWaterCreatures[i]);
 			nNumActiveSeaLifeForms--;
@@ -265,7 +291,11 @@ void CWaterCreatures::RemoveAll() {
 		if (aWaterCreatures[i].m_state != WATER_CREATURE_DISABLED) {
 			if (aWaterCreatures[i].m_pObj){
 				CWorld::Remove(aWaterCreatures[i].m_pObj);
-				delete aWaterCreatures[i].m_pObj;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the water creature object without invoking C++ delete.
+				aWaterCreatures[i].m_pObj->~CObject();
+				CPools::GetObjectPool()->Delete(aWaterCreatures[i].m_pObj);
+//- rouz edit (ChatGPT)
 			}
 			FreeFishStructSlot(&aWaterCreatures[i]);
 			aWaterCreatures[i].m_state = WATER_CREATURE_DISABLED;

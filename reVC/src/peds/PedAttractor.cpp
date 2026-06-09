@@ -25,7 +25,12 @@ CPedAttractorManager* GetPedAttractorManager()
 	static CPedAttractorManager *pedAttrMgr;
 	if(pedAttrMgr == nil){
 		PUSH_MEMID(MEMID_PED_ATTR);
-		pedAttrMgr = new CPedAttractorManager;
+//+ rouz edit (ChatGPT)
+		// Allocate the ped-attractor manager without invoking C++ new.
+		pedAttrMgr = (CPedAttractorManager*)malloc(sizeof(CPedAttractorManager));
+		assert(pedAttrMgr);
+		std::allocator<CPedAttractorManager>().construct(pedAttrMgr);
+//- rouz edit (ChatGPT)
 		POP_MEMID();
 	}
 	return pedAttrMgr;
@@ -662,12 +667,44 @@ CPedAttractor* CPedAttractorManager::RegisterPed(CPed* pPed, C2dEffect* pEffect,
 	}
 	PUSH_MEMID(MEMID_PED_ATTR);
 	switch (pEffect->pedattr.type) {
-	case ATTRACTOR_ATM: pRegisteredAttractor = new CPedAtmAttractor(pEffect, matrix, gcMaxSizeOfAtmQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.15f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
-	case ATTRACTOR_SEAT: pRegisteredAttractor = new CPedSeatAttractor(pEffect, matrix, gcMaxSizeOfSeatQueue, 1.0f, 30000.0f, 3000.0f, 0.125f, 0.1f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
-	case ATTRACTOR_STOP: pRegisteredAttractor = new CPedStopAttractor(pEffect, matrix, gcMaxSizeOfStopQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.1f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
-	case ATTRACTOR_PIZZA: pRegisteredAttractor = new CPedPizzaAttractor(pEffect, matrix, gcMaxSizeOfPizzaQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.1f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
-	case ATTRACTOR_SHELTER: pRegisteredAttractor = new CPedShelterAttractor(pEffect, matrix, gcMaxSizeOfShelterQueue, 1.0f, 30000.0f, 3000.0f, 0.5f, 6.28f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
-	case ATTRACTOR_ICECREAM: pRegisteredAttractor = new CPedIceCreamAttractor(pEffect, matrix, gcMaxSizeOfIceCreamQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.3f, 0.1f, 0.1f); vecAttractors.push_back(pRegisteredAttractor); break;
+//+ rouz edit (ChatGPT)
+	case ATTRACTOR_ATM:
+		// Allocate the ATM attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedAtmAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedAtmAttractor>().construct((CPedAtmAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfAtmQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.15f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+	case ATTRACTOR_SEAT:
+		// Allocate the seat attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedSeatAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedSeatAttractor>().construct((CPedSeatAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfSeatQueue, 1.0f, 30000.0f, 3000.0f, 0.125f, 0.1f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+	case ATTRACTOR_STOP:
+		// Allocate the stop attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedStopAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedStopAttractor>().construct((CPedStopAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfStopQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.1f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+	case ATTRACTOR_PIZZA:
+		// Allocate the pizza attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedPizzaAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedPizzaAttractor>().construct((CPedPizzaAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfPizzaQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.1f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+	case ATTRACTOR_SHELTER:
+		// Allocate the shelter attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedShelterAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedShelterAttractor>().construct((CPedShelterAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfShelterQueue, 1.0f, 30000.0f, 3000.0f, 0.5f, 6.28f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+	case ATTRACTOR_ICECREAM:
+		// Allocate the ice-cream attractor without invoking C++ new.
+		pRegisteredAttractor = (CPedAttractor*)malloc(sizeof(CPedIceCreamAttractor));
+		assert(pRegisteredAttractor);
+		std::allocator<CPedIceCreamAttractor>().construct((CPedIceCreamAttractor*)pRegisteredAttractor, pEffect, matrix, gcMaxSizeOfIceCreamQueue, 1.0f, 30000.0f, 3000.0f, 0.2f, 0.3f, 0.1f, 0.1f);
+		vecAttractors.push_back(pRegisteredAttractor); break;
+//- rouz edit (ChatGPT)
 	}
 	POP_MEMID();
 	if (pRegisteredAttractor)
@@ -697,7 +734,11 @@ bool CPedAttractorManager::DeRegisterPed(CPed* pPed, CPedAttractor* pAttractor, 
 			break;
 		}
 	}
-	delete pAttractor;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the attractor without invoking C++ delete.
+	pAttractor->~CPedAttractor();
+	free(pAttractor);
+//- rouz edit (ChatGPT)
 	return true;
 }
 
@@ -740,7 +781,11 @@ bool CPedAttractorManager::BroadcastDeparture(CPed* pPed, CPedAttractor* pAttrac
 			break;
 		}
 	}
-	delete pAttractor;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the attractor without invoking C++ delete.
+	pAttractor->~CPedAttractor();
+	free(pAttractor);
+//- rouz edit (ChatGPT)
 	return true;
 }
 

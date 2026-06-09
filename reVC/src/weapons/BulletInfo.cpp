@@ -5,6 +5,7 @@
 #include "AnimBlendAssociation.h"
 #include "DMAudio.h"
 #include "AudioScriptObject.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 #include "Collision.h"
 #endif
@@ -234,7 +235,12 @@ void CBulletInfo::Update(void)
 						if (!DMAudio.IsAudioInitialised())
 							break;
 
-						pAudio = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+						// Allocate a pooled audio script object without invoking C++ new.
+						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						if (pAudio)
+							std::allocator<cAudioScriptObject>().construct(pAudio);
+//- rouz edit (ChatGPT)
 						if (pAudio)
 							pAudio->Reset();
 						pAudio->Posn = pHitEntity->GetPosition();
@@ -246,7 +252,12 @@ void CBulletInfo::Update(void)
 						if (!DMAudio.IsAudioInitialised())
 							break;
 
-						pAudio = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+						// Allocate a pooled audio script object without invoking C++ new.
+						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						if (pAudio)
+							std::allocator<cAudioScriptObject>().construct(pAudio);
+//- rouz edit (ChatGPT)
 						if (pAudio)
 							pAudio->Reset();
 						pAudio->Posn = pHitEntity->GetPosition();
@@ -258,7 +269,12 @@ void CBulletInfo::Update(void)
 						if (!DMAudio.IsAudioInitialised())
 							break;
 
-						pAudio = new cAudioScriptObject();
+//+ rouz edit (ChatGPT)
+						// Allocate a pooled audio script object without invoking C++ new.
+						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						if (pAudio)
+							std::allocator<cAudioScriptObject>().construct(pAudio);
+//- rouz edit (ChatGPT)
 						if (pAudio)
 							pAudio->Reset();
 						pAudio->Posn = pHitEntity->GetPosition();

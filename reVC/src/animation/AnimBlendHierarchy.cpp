@@ -84,7 +84,12 @@ CAnimBlendHierarchy::RemoveQuaternionFlips(void)
 void
 CAnimBlendHierarchy::RemoveAnimSequences(void)
 {
-	delete[] sequences;
+//+ rouz edit (ChatGPT)
+	// Destroy and release sequences without invoking C++ array delete.
+	for(int i = 0; i < numSequences; i++)
+		std::allocator<CAnimBlendSequence>().destroy(&sequences[i]);
+	free(sequences);
+//- rouz edit (ChatGPT)
 	sequences = nil;
 	numSequences = 0;
 }

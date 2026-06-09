@@ -18,6 +18,7 @@
 #include "Record.h"
 #include "References.h"
 #include "Replay.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "RpAnimBlend.h"
 #include "Shadows.h"
 #include "TempColModels.h"
@@ -141,7 +142,11 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 			}
 			CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
 			Remove(pVehicle);
-			delete pVehicle;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the vehicle without invoking C++ delete.
+			pVehicle->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		}
 	}
 	CObject::DeleteAllTempObjectsInArea(pos, radius);
@@ -1415,7 +1420,11 @@ CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, floa
 				}
 				CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
 				Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the vehicle without invoking C++ delete.
+				pVehicle->~CVehicle();
+				pVehiclePool->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -1549,7 +1558,26 @@ CWorld::RemoveEntityInsteadOfProcessingIt(CEntity *ent)
 			CPopulation::RemovePed((CPed *)ent);
 	} else {
 		Remove(ent);
-		delete ent;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the entity without invoking C++ delete.
+		if(ent->IsVehicle()) {
+			ent->~CEntity();
+			CPools::GetVehiclePool()->Delete((CVehicle *)ent);
+		} else if(ent->IsObject()) {
+			ent->~CEntity();
+			CPools::GetObjectPool()->Delete((CObject *)ent);
+		} else if(ent->IsBuilding()) {
+			bool isTreadable = ((CBuilding *)ent)->GetIsATreadable();
+			ent->~CEntity();
+			if(isTreadable)
+				CPools::GetTreadablePool()->Delete((CTreadable *)ent);
+			else
+				CPools::GetBuildingPool()->Delete((CBuilding *)ent);
+		} else if(ent->IsDummy()) {
+			ent->~CEntity();
+			CPools::GetDummyPool()->Delete((CDummy *)ent);
+		}
+//- rouz edit (ChatGPT)
 	}
 }
 
@@ -1595,7 +1623,11 @@ CWorld::RemoveFallenCars(void)
 				} else if(veh->VehicleCreatedBy == RANDOM_VEHICLE ||
 				          veh->VehicleCreatedBy == PARKED_VEHICLE) {
 					Remove(veh);
-					delete veh;
+//+ rouz edit (ChatGPT)
+					// Destroy and release the fallen vehicle without invoking C++ delete.
+					veh->~CVehicle();
+					CPools::GetVehiclePool()->Delete(veh);
+//- rouz edit (ChatGPT)
 				}
 			}
 		}
@@ -1666,27 +1698,51 @@ CWorld::ShutDown(void)
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the building without invoking C++ delete.
+			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
+			pEntity->~CEntity();
+			if(isTreadable)
+				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+			else
+				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_VEHICLES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the vehicle without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetVehiclePool()->Delete((CVehicle *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_PEDS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the ped without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetPedPool()->Delete((CPed *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the object without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetObjectPool()->Delete((CObject *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the dummy without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetDummyPool()->Delete((CDummy *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 #ifndef FIX_BUGS
 		pSector->m_lists[ENTITYLIST_BUILDINGS].Flush();
@@ -1699,7 +1755,15 @@ CWorld::ShutDown(void)
 		for(CPtrNode *pNode = ms_bigBuildingsList[i].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			// Maybe remove from world here?
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the big building without invoking C++ delete.
+			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
+			pEntity->~CEntity();
+			if(isTreadable)
+				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+			else
+				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		ms_bigBuildingsList[i].Flush();
 	}
@@ -1756,19 +1820,31 @@ CWorld::ClearForRestart(void)
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_PEDS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the ped without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetPedPool()->Delete((CPed *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = GetBigBuildingList(LEVEL_GENERIC).first; pNode; pNode = pNode->next) {
 			CVehicle *pVehicle = (CVehicle *)pNode->item;
 			if(pVehicle && pVehicle->IsVehicle() && pVehicle->IsPlane()) {
 				Remove(pVehicle);
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the plane without invoking C++ delete.
+				pVehicle->~CVehicle();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_VEHICLES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the vehicle without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetVehiclePool()->Delete((CVehicle *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 	}
 	CPools::CheckPoolsEmpty();
@@ -1899,17 +1975,33 @@ CWorld::RemoveStaticObjects()
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_BUILDINGS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the static building without invoking C++ delete.
+			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
+			pEntity->~CEntity();
+			if(isTreadable)
+				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+			else
+				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the static object without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetObjectPool()->Delete((CObject *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
 			CEntity *pEntity = (CEntity *)pNode->item;
 			Remove(pEntity);
-			delete pEntity;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the static dummy without invoking C++ delete.
+			pEntity->~CEntity();
+			CPools::GetDummyPool()->Delete((CDummy *)pEntity);
+//- rouz edit (ChatGPT)
 		}
 		pSector->m_lists[ENTITYLIST_BUILDINGS].Flush();
 		pSector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP].Flush();

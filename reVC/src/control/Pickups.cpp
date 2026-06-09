@@ -196,15 +196,67 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 		CPools::MakeSureSlotInObjectPoolIsEmpty(handle);
 		if (extraHandle >= 0)
 			CPools::MakeSureSlotInObjectPoolIsEmpty(extraHandle);
-		if (object == nil)
-			object = new(handle) CObject(m_eModelIndex, false);
+//+ rouz edit (ChatGPT)
+		if (object == nil) {
+			// Allocate the handled pickup object without invoking C++ new.
+			object = CPools::GetObjectPool()->New(handle);
+			assert(object);
+			std::allocator<CObject>().construct(object, m_eModelIndex, false);
+		}
+//- rouz edit (ChatGPT)
 
-		if (extraHandle >= 0 && modelId != -1 && extraObject == nil)
-			extraObject = new(extraHandle) CObject(modelId, false);
+//+ rouz edit (ChatGPT)
+		if (extraHandle >= 0 && modelId != -1 && extraObject == nil) {
+			// Allocate the handled extra pickup object without invoking C++ new.
+			extraObject = CPools::GetObjectPool()->New(extraHandle);
+			assert(extraObject);
+			std::allocator<CObject>().construct(extraObject, modelId, false);
+		}
+//- rouz edit (ChatGPT)
 	} else {
-		object = new CObject(m_eModelIndex, false);
-		if (modelId != -1)
-			extraObject = new CObject(modelId, false);
+//+ rouz edit (ChatGPT)
+		// Allocate the pickup object without invoking C++ new.
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		object = objectPool->New();
+#ifdef FIX_BUGS
+		if (!object) {
+			for (int32 i = 0; i < objectPool->GetSize(); i++) {
+				CObject *existing = objectPool->GetSlot(i);
+				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+					int32 tempHandle = objectPool->GetIndex(existing);
+					CWorld::Remove(existing);
+					existing->~CObject();
+					objectPool->Delete(existing);
+					object = objectPool->New(tempHandle);
+					break;
+				}
+			}
+		}
+		if (object)
+#endif
+			std::allocator<CObject>().construct(object, m_eModelIndex, false);
+		if (modelId != -1) {
+			// Allocate the extra pickup object without invoking C++ new.
+			extraObject = objectPool->New();
+#ifdef FIX_BUGS
+			if (!extraObject) {
+				for (int32 i = 0; i < objectPool->GetSize(); i++) {
+					CObject *existing = objectPool->GetSlot(i);
+					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+						int32 tempHandle = objectPool->GetIndex(existing);
+						CWorld::Remove(existing);
+						existing->~CObject();
+						objectPool->Delete(existing);
+						extraObject = objectPool->New(tempHandle);
+						break;
+					}
+				}
+			}
+			if (extraObject)
+#endif
+				std::allocator<CObject>().construct(extraObject, modelId, false);
+		}
+//- rouz edit (ChatGPT)
 	}
 
 	if (object == nil) return nil;
@@ -665,7 +717,11 @@ CPickup::ProcessGunShot(CVector *vec1, CVector *vec2)
 		if (CCollision::TestLineSphere(line, sphere)) {
 			CExplosion::AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
 			CWorld::Remove(m_pObject);
-			delete m_pObject;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the pickup object without invoking C++ delete.
+			m_pObject->~CObject();
+			CPools::GetObjectPool()->Delete(m_pObject);
+//- rouz edit (ChatGPT)
 			m_pObject = nil;
 			m_bRemoved = true;
 			m_eType = PICKUP_NONE;
@@ -678,12 +734,20 @@ CPickup::GetRidOfObjects()
 {
 	if (m_pObject) {
 		CWorld::Remove(m_pObject);
-		delete m_pObject;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the pickup object without invoking C++ delete.
+		m_pObject->~CObject();
+		CPools::GetObjectPool()->Delete(m_pObject);
+//- rouz edit (ChatGPT)
 		m_pObject = nil;
 	}
 	if (m_pExtraObject) {
 		CWorld::Remove(m_pExtraObject);
-		delete m_pExtraObject;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the extra pickup object without invoking C++ delete.
+		m_pExtraObject->~CObject();
+		CPools::GetObjectPool()->Delete(m_pExtraObject);
+//- rouz edit (ChatGPT)
 		m_pExtraObject = nil;
 	}
 }
@@ -810,12 +874,20 @@ CPickups::RemovePickUp(int32 pickupIndex)
 
 	if (aPickUps[index].m_pObject) {
 		CWorld::Remove(aPickUps[index].m_pObject);
-		delete aPickUps[index].m_pObject;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the pickup object without invoking C++ delete.
+		aPickUps[index].m_pObject->~CObject();
+		CPools::GetObjectPool()->Delete(aPickUps[index].m_pObject);
+//- rouz edit (ChatGPT)
 		aPickUps[index].m_pObject = nil;
 	}
 	if (aPickUps[index].m_pExtraObject) {
 		CWorld::Remove(aPickUps[index].m_pExtraObject);
-		delete aPickUps[index].m_pExtraObject;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the extra pickup object without invoking C++ delete.
+		aPickUps[index].m_pExtraObject->~CObject();
+		CPools::GetObjectPool()->Delete(aPickUps[index].m_pExtraObject);
+//- rouz edit (ChatGPT)
 		aPickUps[index].m_pExtraObject = nil;
 	}
 	aPickUps[index].m_eType = PICKUP_NONE;
@@ -1409,7 +1481,11 @@ CPickups::RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType weaponType
 					if (CWeaponInfo::GetWeaponInfo(WeaponForModel(aPickUps[slot].m_pObject->GetModelIndex()))->m_nWeaponSlot == weaponSlot &&
 						aPickUps[slot].m_nQuantity == 0) {
 						CWorld::Remove(aPickUps[slot].m_pObject);
-						delete aPickUps[slot].m_pObject;
+//+ rouz edit (ChatGPT)
+						// Destroy and release the empty weapon pickup without invoking C++ delete.
+						aPickUps[slot].m_pObject->~CObject();
+						CPools::GetObjectPool()->Delete(aPickUps[slot].m_pObject);
+//- rouz edit (ChatGPT)
 						aPickUps[slot].m_bRemoved = true;
 						aPickUps[slot].m_pObject = nil;
 						aPickUps[slot].m_eType = PICKUP_NONE;

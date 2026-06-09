@@ -41,7 +41,9 @@ public:
 	static RwObjectNameIdAssocation m_pPedIds[PED_NODE_MAX];
 
 	CPedModelInfo(void) : CClumpModelInfo(MITYPE_PED) { m_hitColModel = nil; }
-	~CPedModelInfo(void) { delete m_hitColModel; }
+//+ rouz edit (ChatGPT)
+	~CPedModelInfo(void);
+//- rouz edit (ChatGPT)
 	void DeleteRwObject(void);
 	void SetClump(RpClump *);
 

@@ -15,6 +15,7 @@
 #include "CarCtrl.h"
 #include "General.h"
 #include "Object.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #define ROADBLOCKDIST (90.0f)
 #define ROADBLOCK_OBJECT_WIDTH (4.0f)
@@ -84,7 +85,12 @@ CRoadBlocks::GenerateRoadBlockCopsForCar(CVehicle* pVehicle, int32 roadBlockType
 		}
 		if (!CStreaming::HasModelLoaded(modelInfoId))
 			copType = COP_STREET;
-		CCopPed* pCopPed = new CCopPed(copType);
+//+ rouz edit (ChatGPT)
+		// Allocate the roadblock cop without invoking C++ new.
+		CCopPed* pCopPed = (CCopPed*)CPools::GetPedPool()->New();
+		assert(pCopPed);
+		std::allocator<CCopPed>().construct(pCopPed, copType);
+//- rouz edit (ChatGPT)
 		if (copType == COP_STREET)
 			pCopPed->SetCurrentWeapon(WEAPONTYPE_COLT45);
 		CPedPlacement::FindZCoorForPed(&posForZ);
@@ -235,7 +241,12 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 		int16 colliding = 0;
 		CWorld::FindObjectsKindaColliding(tmp.GetPosition(), fModelRadius, 0, &colliding, 2, nil, false, true, true, false, false);
 		if (!colliding) {
-			CAutomobile* pVehicle = new CAutomobile(vehicleId, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the roadblock vehicle without invoking C++ new.
+			CAutomobile* pVehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+			assert(pVehicle);
+			std::allocator<CAutomobile>().construct(pVehicle, vehicleId, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle->SetStatus(STATUS_ABANDONED);
 			// pVehicle->GetHeightAboveRoad(); // called but return value is ignored?
 			tmp.GetPosition().z += fModelRadius - 0.6f;
@@ -261,7 +272,11 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 				pVehicle->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 7000;
 			}
 			else {
-				delete pVehicle;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the roadblock vehicle without invoking C++ delete.
+				pVehicle->~CAutomobile();
+				CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -288,7 +303,30 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 		tmp.GetPosition().z -= pMI->GetColModel()->boundingBox.min.z;
 		CWorld::FindObjectsKindaColliding(tmp.GetPosition(), pMI->GetColModel()->boundingSphere.radius, 0, &colliding, 2, nil, false, true, true, false, false);
 		if (colliding == 0) {
-			CObject* pObject = new CObject(MI_ROADWORKBARRIER1, true);
+//+ rouz edit (ChatGPT)
+			// Allocate the roadblock barrier without invoking C++ new.
+			CObjectPool *objectPool = CPools::GetObjectPool();
+			CObject* pObject = objectPool->New();
+#ifdef FIX_BUGS
+			if (!pObject) {
+				for (int32 j = 0; j < objectPool->GetSize(); j++) {
+					CObject *existing = objectPool->GetSlot(j);
+					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+						int32 handle = objectPool->GetIndex(existing);
+						CWorld::Remove(existing);
+						existing->~CObject();
+						objectPool->Delete(existing);
+						pObject = objectPool->New(handle);
+						break;
+					}
+				}
+			}
+			if (pObject)
+#endif
+				std::allocator<CObject>().construct(pObject, MI_ROADWORKBARRIER1, true);
+			if (!pObject)
+				continue;
+//- rouz edit (ChatGPT)
 			pObject->GetMatrix() = tmp;
 			pObject->ObjectCreatedBy = TEMP_OBJECT;
 			pObject->m_nEndOfLifeTime = CTimer::GetTimeInMilliseconds() + 600000;

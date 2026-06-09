@@ -24,6 +24,7 @@
 #include "Replay.h"
 #include "Coronas.h"
 #include "SaveBuf.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #ifdef COMPATIBLE_SAVES
 #define SCRIPTPATHS_SAVE_SIZE 0x9C
@@ -968,7 +969,28 @@ CEscalator::Update(void) {
 			if (TheCamera.IsSphereVisible(m_midPoint, m_radius) && (m_stepsCount + 10 < CPools::GetObjectPool()->GetNoOfFreeSpaces())) { 
 				m_bIsActive = true;
 				for (int i = 0; i < m_stepsCount; i++) {
-					m_pSteps[i] = new CObject(MI_ESCALATORSTEP, TRUE);
+//+ rouz edit (ChatGPT)
+					// Allocate the escalator step without invoking C++ new.
+					CObjectPool *objectPool = CPools::GetObjectPool();
+					m_pSteps[i] = objectPool->New();
+#ifdef FIX_BUGS
+					if (!m_pSteps[i]) {
+						for (int32 j = 0; j < objectPool->GetSize(); j++) {
+							CObject *existing = objectPool->GetSlot(j);
+							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+								int32 handle = objectPool->GetIndex(existing);
+								CWorld::Remove(existing);
+								existing->~CObject();
+								objectPool->Delete(existing);
+								m_pSteps[i] = objectPool->New(handle);
+								break;
+							}
+						}
+					}
+					if (m_pSteps[i])
+#endif
+						std::allocator<CObject>().construct(m_pSteps[i], MI_ESCALATORSTEP, TRUE);
+//- rouz edit (ChatGPT)
 					if (m_pSteps[i]) {
 						m_pSteps[i]->SetPosition(m_pos1);
 						CWorld::Add(m_pSteps[i]);
@@ -1028,7 +1050,11 @@ CEscalator::SwitchOff(void) {
 			if (m_pSteps[i]) {
 				CWorld::Remove(m_pSteps[i]);
 				deletingEscalator = true;
-				delete m_pSteps[i];
+//+ rouz edit (ChatGPT)
+				// Destroy and release the escalator step without invoking C++ delete.
+				m_pSteps[i]->~CObject();
+				CPools::GetObjectPool()->Delete(m_pSteps[i]);
+//- rouz edit (ChatGPT)
 				m_pSteps[i] = nil;
 				deletingEscalator = false;
 			}
@@ -1217,7 +1243,7 @@ void CScriptPath::Update(void) {
 
 void CScriptPath::Clear(void) {
 	if (m_pNode)
-		delete[] m_pNode;
+		free(m_pNode); // rouz edit (ChatGPT)
 	m_pNode = nil;
 	m_numNodes = 0;
 	for (int i = 0; i < 6; i++)
@@ -1304,7 +1330,7 @@ INITSAVEBUF
 #endif
 		}
 
-		aArray[i].m_pNode = new CPlaneNode[aArray[i].m_numNodes];
+		aArray[i].m_pNode = (CPlaneNode*)malloc(sizeof(CPlaneNode)*aArray[i].m_numNodes); // rouz edit (ChatGPT)
 		for (int32 j = 0; j < aArray[i].m_numNodes; j++) {
 			ReadSaveBuf(&aArray[i].m_pNode[j], buf);
 		}

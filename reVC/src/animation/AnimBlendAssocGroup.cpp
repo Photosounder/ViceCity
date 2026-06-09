@@ -37,7 +37,12 @@ void
 CAnimBlendAssocGroup::DestroyAssociations(void)
 {
 	if(assocList){
-		delete[] assocList;
+//+ rouz edit (ChatGPT)
+		// Destroy and release associations without invoking C++ array delete.
+		for(int i = 0; i < numAssociations; i++)
+			std::allocator<CAnimBlendAssociation>().destroy(&assocList[i]);
+		free(assocList);
+//- rouz edit (ChatGPT)
 		assocList = nil;
 		numAssociations = 0;
 	}
@@ -68,7 +73,12 @@ CAnimBlendAssocGroup::CopyAnimation(uint32 id)
 	if(anim == nil)
 		return nil;
 	CAnimManager::UncompressAnimation(anim->hierarchy);
-	return new CAnimBlendAssociation(*anim);
+//+ rouz edit (ChatGPT)
+	// Construct the animation copy without invoking C++ new.
+	CAnimBlendAssociation *copy = (CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));
+	std::allocator<CAnimBlendAssociation>().construct(copy, *anim);
+	return copy;
+//- rouz edit (ChatGPT)
 }
 
 CAnimBlendAssociation*
@@ -78,7 +88,12 @@ CAnimBlendAssocGroup::CopyAnimation(const char *name)
 	if(anim == nil)
 		return nil;
 	CAnimManager::UncompressAnimation(anim->hierarchy);
-	return new CAnimBlendAssociation(*anim);
+//+ rouz edit (ChatGPT)
+	// Construct the animation copy without invoking C++ new.
+	CAnimBlendAssociation *copy = (CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));
+	std::allocator<CAnimBlendAssociation>().construct(copy, *anim);
+	return copy;
+//- rouz edit (ChatGPT)
 }
 
 bool
@@ -144,7 +159,12 @@ CAnimBlendAssocGroup::CreateAssociations(const char *name)
 	DestroyAssociations();
 
 	animBlock = CAnimManager::GetAnimationBlock(name);
-	assocList = new CAnimBlendAssociation[animBlock->numAnims];
+//+ rouz edit (ChatGPT)
+	// Allocate and construct associations without invoking C++ array new.
+	assocList = (CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation)*animBlock->numAnims);
+	for(i = 0; i < animBlock->numAnims; i++)
+		std::allocator<CAnimBlendAssociation>().construct(&assocList[i]);
+//- rouz edit (ChatGPT)
 	numAssociations = 0;
 
 	for(i = 0; i < animBlock->numAnims; i++){
@@ -175,7 +195,12 @@ CAnimBlendAssocGroup::CreateAssociations(const char *blockName, RpClump *clump, 
 	DestroyAssociations();
 
 	animBlock = CAnimManager::GetAnimationBlock(blockName);
-	assocList = new CAnimBlendAssociation[numAssocs];
+//+ rouz edit (ChatGPT)
+	// Allocate and construct associations without invoking C++ array new.
+	assocList = (CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation)*numAssocs);
+	for(i = 0; i < numAssocs; i++)
+		std::allocator<CAnimBlendAssociation>().construct(&assocList[i]);
+//- rouz edit (ChatGPT)
 
 	numAssociations = 0;
 	for(i = 0; i < numAssocs; i++){

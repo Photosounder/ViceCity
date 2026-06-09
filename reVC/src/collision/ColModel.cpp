@@ -3,7 +3,6 @@
 #include "Collision.h"
 #include "Game.h"
 #include "MemoryHeap.h"
-#include "Pools.h"
 
 CColModel::CColModel(void)
 {
@@ -24,20 +23,6 @@ CColModel::CColModel(void)
 CColModel::~CColModel(void)
 {
 	RemoveCollisionVolumes();
-}
-
-void*
-CColModel::operator new(size_t) throw()
-{
-	CColModel* node = CPools::GetColModelPool()->New();
-	assert(node);
-	return node;
-}
-
-void
-CColModel::operator delete(void *p, size_t) throw()
-{
-	CPools::GetColModelPool()->Delete((CColModel*)p);
 }
 
 void

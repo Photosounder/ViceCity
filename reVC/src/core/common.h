@@ -20,7 +20,9 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h> // rouz edit (ChatGPT)
 #include <math.h>
+#include <memory> // rouz edit (ChatGPT)
 
 #ifdef __MWERKS__
 #define AUDIO_MSS

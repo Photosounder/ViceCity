@@ -3407,7 +3407,7 @@ CCamera::LoadTrainCamNodes(char const *name)
 
 	m_uiNumberOfTrainCamNodes = 0;
 
-	buf = new uint8[20000];
+	buf = (uint8*)malloc(20000); // rouz edit (ChatGPT)
 	len = CFileMgr::LoadFile(filename, buf, 20000, "r");
 
 	for(i = 0; i < MAX_NUM_OF_NODES; i++){
@@ -3489,7 +3489,7 @@ CCamera::LoadTrainCamNodes(char const *name)
 		}
 	}
 
-	delete[] buf;
+	free(buf); // rouz edit (ChatGPT)
 	CFileMgr::SetDir("");
 }
 
@@ -3581,7 +3581,7 @@ CCamera::LoadPathSplines(int file)
 
 	DeleteCutSceneCamDataMemory();
 	for(i = 0; i < MAX_NUM_OF_SPLINETYPES; i++)
-		m_arrPathArray[i].m_arr_PathData = new float[CCamPathSplines::MAXPATHLENGTH];
+		m_arrPathArray[i].m_arr_PathData = (float*)malloc(sizeof(float)*CCamPathSplines::MAXPATHLENGTH); // rouz edit (ChatGPT)
 
 //	Why is this gone?
 //	for(i = 0; i < MAX_NUM_OF_SPLINETYPES; i++)
@@ -3637,7 +3637,7 @@ CCamera::DeleteCutSceneCamDataMemory(void)
 	int i;
 	for(i = 0; i < MAX_NUM_OF_SPLINETYPES; i++)
 		if(m_arrPathArray[i].m_arr_PathData){
-			delete[] m_arrPathArray[i].m_arr_PathData;
+			free(m_arrPathArray[i].m_arr_PathData); // rouz edit (ChatGPT)
 			m_arrPathArray[i].m_arr_PathData = nil;
 		}
 }

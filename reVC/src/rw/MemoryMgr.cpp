@@ -18,17 +18,6 @@ InitMemoryMgr(void)
 #endif
 }
 
-//#ifdef USE_CUSTOM_ALLOCATOR
-// game seems to be using heap directly here, but this is nicer
-void *operator new(size_t sz) throw()
-{
-	return MemoryMgrMalloc(sz);
-}
-void *operator new[](size_t sz) throw() { return MemoryMgrMalloc(sz); }
-void operator delete(void *ptr) throw() { MemoryMgrFree(ptr); }
-void operator delete[](void *ptr) throw() { MemoryMgrFree(ptr); }
-//#endif
-
 #undef MemoryMgrMalloc // rouz edit
 void*
 MemoryMgrMalloc(size_t size)

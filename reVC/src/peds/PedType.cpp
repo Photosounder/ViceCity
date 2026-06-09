@@ -15,7 +15,11 @@ CPedType::Initialise(void)
 
 	debug("Initialising CPedType...\n");
 	for(i = 0; i < NUM_PEDTYPES; i++){
-		ms_apPedType[i] = new CPedType;
+//+ rouz edit (ChatGPT)
+		// Construct the ped type without invoking C++ new.
+		ms_apPedType[i] = (CPedType*)malloc(sizeof(CPedType));
+		std::allocator<CPedType>().construct(ms_apPedType[i]);
+//- rouz edit (ChatGPT)
 		ms_apPedType[i]->m_flag = PED_FLAG_PLAYER1;
 		ms_apPedType[i]->unknown1 = 0.0f;
 		ms_apPedType[i]->unknown2 = 0.0f;
@@ -36,7 +40,13 @@ CPedType::Shutdown(void)
 	int i;
 	debug("Shutting down CPedType...\n");
 	for(i = 0; i < NUM_PEDTYPES; i++)
-		delete ms_apPedType[i];
+//+ rouz edit (ChatGPT)
+		// Destroy and release the ped type without invoking C++ delete.
+	{
+		std::allocator<CPedType>().destroy(ms_apPedType[i]);
+		free(ms_apPedType[i]);
+	}
+//- rouz edit (ChatGPT)
 	debug("CPedType shut down\n");
 }
 
@@ -53,7 +63,7 @@ CPedType::LoadPedData(void)
 	float f1, f2, f3, f4, f5;
 
 	type = NUM_PEDTYPES;
-	buf = new char[16 * 1024];
+	buf = (char*)malloc(16 * 1024); // rouz edit (ChatGPT)
 
 	CFileMgr::SetDir("DATA");
 	buflen = CFileMgr::LoadFile("PED.DAT", (uint8*)buf, 16 * 1024, "r");
@@ -120,7 +130,7 @@ CPedType::LoadPedData(void)
 		}
 	}
 
-	delete[] buf;
+	free(buf); // rouz edit (ChatGPT)
 }
 
 ePedType
@@ -213,7 +223,11 @@ CPedStats::Initialise(void)
 
 	debug("Initialising CPedStats...\n");
 	for(i = 0; i < NUM_PEDSTATS; i++){
-		ms_apPedStats[i] = new CPedStats;
+//+ rouz edit (ChatGPT)
+		// Construct the ped stats without invoking C++ new.
+		ms_apPedStats[i] = (CPedStats*)malloc(sizeof(CPedStats));
+		std::allocator<CPedStats>().construct(ms_apPedStats[i]);
+//- rouz edit (ChatGPT)
 		ms_apPedStats[i]->m_type = PEDSTAT_PLAYER;
 		ms_apPedStats[i]->m_name[8] = 'R';	// WHAT?
 		ms_apPedStats[i]->m_fleeDistance = 20.0f;
@@ -237,7 +251,13 @@ CPedStats::Shutdown(void)
 	int i;
 	debug("Shutting down CPedStats...\n");
 	for(i = 0; i < NUM_PEDSTATS; i++)
-		delete ms_apPedStats[i];
+//+ rouz edit (ChatGPT)
+		// Destroy and release the ped stats without invoking C++ delete.
+	{
+		std::allocator<CPedStats>().destroy(ms_apPedStats[i]);
+		free(ms_apPedStats[i]);
+	}
+//- rouz edit (ChatGPT)
 	debug("CPedStats shut down\n");
 }
 
@@ -254,7 +274,7 @@ CPedStats::LoadPedStats(void)
 	int fear, temper, lawfullness, sexiness, flags;
 
 	type = 0;
-	buf = new char[16 * 1024];
+	buf = (char*)malloc(16 * 1024); // rouz edit (ChatGPT)
 
 	CFileMgr::SetDir("DATA");
 	buflen = CFileMgr::LoadFile("PEDSTATS.DAT", (uint8*)buf, 16 * 1024, "r");
@@ -303,7 +323,7 @@ CPedStats::LoadPedStats(void)
 		type++;
 	}
 
-	delete[] buf;
+	free(buf); // rouz edit (ChatGPT)
 }
 
 ePedStats

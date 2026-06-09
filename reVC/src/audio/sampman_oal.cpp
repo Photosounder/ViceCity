@@ -560,7 +560,7 @@ _FindMP3s(void)
 					
 					OutputDebugString(fd.cFileName);
 
-					_pMP3List = new tMP3Entry;
+					_pMP3List = (tMP3Entry*)malloc(sizeof(tMP3Entry)); // rouz edit (ChatGPT)
 
 					if (_pMP3List == NULL)
 						break;
@@ -574,7 +574,7 @@ _FindMP3s(void)
 
 					if (bShortcut)
 					{
-						_pMP3List->pLinkPath = new char[MAX_PATH + sizeof(fd.cFileName)];
+						_pMP3List->pLinkPath = (char*)malloc(MAX_PATH + sizeof(fd.cFileName)); // rouz edit (ChatGPT)
 						strcpy(_pMP3List->pLinkPath, filepath);
 					}
 					else
@@ -615,7 +615,7 @@ _FindMP3s(void)
 
 					OutputDebugString(fd.cFileName);
 					
-					pList->pNext = new tMP3Entry;
+					pList->pNext = (tMP3Entry*)malloc(sizeof(tMP3Entry)); // rouz edit (ChatGPT)
 					
 					tMP3Entry *e = pList->pNext;
 					
@@ -630,7 +630,7 @@ _FindMP3s(void)
 					
 					if ( bShortcut )
 					{
-						e->pLinkPath = new char [MAX_PATH + sizeof(fd.cFileName)];
+						e->pLinkPath = (char*)malloc(MAX_PATH + sizeof(fd.cFileName)); // rouz edit (ChatGPT)
 						strcpy(e->pLinkPath, filepath);
 					}
 					else
@@ -669,14 +669,14 @@ _DeleteMP3Entries(void)
 		if ( e->pLinkPath != NULL )
 		{
 #ifndef FIX_BUGS
-			delete   e->pLinkPath; // BUG: should be delete []
+			free(e->pLinkPath); // rouz edit (ChatGPT)
 #else
-			delete[] e->pLinkPath;
+			free(e->pLinkPath); // rouz edit (ChatGPT)
 #endif
 			e->pLinkPath = NULL;
 		}
 		
-		delete e;
+		free(e); // rouz edit (ChatGPT)
 		
 		if ( next )
 			e = next;
@@ -767,8 +767,13 @@ cSampleManager::Initialise(void)
 
 	EFXInit();
 
-	for(int i = 0; i < MAX_STREAMS; i++)
-		aStream[i] = new CStream(ALStreamSources[i], ALStreamBuffers[i]);
+//+ rouz edit (ChatGPT)
+	for(int i = 0; i < MAX_STREAMS; i++) {
+		// Construct the stream without invoking C++ new.
+		aStream[i] = (CStream*)malloc(sizeof(CStream));
+		std::allocator<CStream>().construct(aStream[i], ALStreamSources[i], ALStreamBuffers[i]);
+	}
+//- rouz edit (ChatGPT)
 
 	CStream::Initialise();
 
@@ -1124,8 +1129,16 @@ cSampleManager::Terminate(void)
 
 	CStream::Terminate();
 
-	for(int32 i = 0; i < MAX_STREAMS; i++)
-		delete aStream[i];
+//+ rouz edit (ChatGPT)
+	for(int32 i = 0; i < MAX_STREAMS; i++) {
+		// Destroy and release the stream without invoking C++ delete.
+		if(aStream[i]){
+			aStream[i]->~CStream();
+			free(aStream[i]);
+			aStream[i] = nil;
+		}
+	}
+//- rouz edit (ChatGPT)
 
 	if ( nSampleBankMemoryStartAddress[SFX_BANK_0] != 0 )
 	{

@@ -2554,7 +2554,12 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 		OutputDebugString("Enumerating skin filenames from skins...");
 		m_pSkinListHead.nextSkin = nil;
 		m_pSelectedSkin = &m_pSkinListHead;
-		m_pSelectedSkin->nextSkin = new tSkinInfo;
+//+ rouz edit (ChatGPT)
+		// Allocate the default skin node without invoking C++ new.
+		m_pSelectedSkin->nextSkin = (tSkinInfo*)malloc(sizeof(tSkinInfo));
+		assert(m_pSelectedSkin->nextSkin);
+		std::allocator<tSkinInfo>().construct(m_pSelectedSkin->nextSkin);
+//- rouz edit (ChatGPT)
 		m_pSelectedSkin = m_pSelectedSkin->nextSkin;
 		m_pSelectedSkin->skinId = 0;
 		strcpy(m_pSelectedSkin->skinNameOriginal, DEFAULT_SKIN_NAME);
@@ -2567,7 +2572,12 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 		HANDLE handle = FindFirstFile("skins\\*.bmp", &FindFileData);
 		for (int i = 1; handle != INVALID_HANDLE_VALUE && i; i = FindNextFile(handle, &FindFileData)) {
 			if (strcmp(FindFileData.cFileName, DEFAULT_SKIN_NAME) != 0) {
-				m_pSelectedSkin->nextSkin = new tSkinInfo;
+//+ rouz edit (ChatGPT)
+				// Allocate the enumerated skin node without invoking C++ new.
+				m_pSelectedSkin->nextSkin = (tSkinInfo*)malloc(sizeof(tSkinInfo));
+				assert(m_pSelectedSkin->nextSkin);
+				std::allocator<tSkinInfo>().construct(m_pSelectedSkin->nextSkin);
+//- rouz edit (ChatGPT)
 				m_pSelectedSkin = m_pSelectedSkin->nextSkin;
 				m_pSelectedSkin->skinId = nextSkinId;
 				strcpy(m_pSelectedSkin->skinNameOriginal, FindFileData.cFileName);

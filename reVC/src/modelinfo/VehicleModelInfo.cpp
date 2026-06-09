@@ -257,7 +257,7 @@ CVehicleModelInfo::SetAnimFile(const char *file)
 	if(strcasecmp(file, "null") == 0)
 		return;
 
-	m_animFileName = new char[strlen(file)+1];
+	m_animFileName = (char*)malloc(strlen(file)+1); // rouz edit (ChatGPT)
 	strcpy(m_animFileName, file);
 }
 
@@ -267,7 +267,7 @@ CVehicleModelInfo::ConvertAnimFileIndex(void)
 	if(m_animFileIndex != -1){
 		// we have a string pointer in that union
 		int32 index = CAnimManager::GetAnimationBlockIndex(m_animFileName);
-		delete[] m_animFileName;
+		free(m_animFileName); // rouz edit (ChatGPT)
 		m_animFileIndex = index;
 	}
 }

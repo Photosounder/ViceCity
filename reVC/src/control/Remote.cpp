@@ -8,11 +8,17 @@
 #include "World.h"
 #include "PlayerInfo.h"
 #include "Vehicle.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 void
 CRemote::GivePlayerRemoteControlledCar(float x, float y, float z, float rot, uint16 model)
 {
-	CAutomobile *car = new CAutomobile(model, MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+	// Allocate the remote-controlled car without invoking C++ new.
+	CAutomobile *car = (CAutomobile*)CPools::GetVehiclePool()->New();
+	assert(car);
+	std::allocator<CAutomobile>().construct(car, model, MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 	bool found;
 
 	z = car->GetDistanceFromCentreOfMassToBaseOfModel() + CWorld::FindGroundZFor3DCoord(x, y, z + 2.0f, &found);

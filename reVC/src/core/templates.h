@@ -42,8 +42,11 @@ class CPool
 
 public:
 	CPool(int32 size, const char *name){
-		m_entries = (U*)new uint8[sizeof(U)*size];
-		m_flags = new uint8[size];
+//+ rouz edit (ChatGPT)
+		// Allocate pool storage without invoking C++ array new.
+		m_entries = (U*)malloc(sizeof(U)*size);
+		m_flags = (uint8*)malloc(size);
+//- rouz edit (ChatGPT)
 		m_size = size;
 		m_allocPtr = -1;
 		for(int i = 0; i < size; i++){
@@ -79,8 +82,11 @@ public:
 	}
 	void Flush() {
 		if (m_size > 0) {
-			delete[] (uint8*)m_entries;
-			delete[] m_flags;
+//+ rouz edit (ChatGPT)
+			// Release raw pool storage without invoking C++ array delete.
+			free(m_entries);
+			free(m_flags);
+//- rouz edit (ChatGPT)
 			m_entries = nil;
 			m_flags = nil;
 			m_size = 0;
@@ -165,8 +171,11 @@ public:
 		return n;
 	}
 	void ClearStorage(uint8 *&flags, U *&entries){
-		delete[] flags;
-		delete[] (uint8*)entries;
+//+ rouz edit (ChatGPT)
+		// Release saved pool snapshots without invoking C++ array delete.
+		free(flags);
+		free(entries);
+//- rouz edit (ChatGPT)
 		flags = nil;
 		entries = nil;
 	}
@@ -180,8 +189,11 @@ public:
 		debug("CopyBack:%d (/%d)\n", GetNoOfUsedSpaces(), m_size); /* Assumed inlining */
 	}
 	void Store(uint8 *&flags, U *&entries){
-		flags = (uint8*)new uint8[sizeof(uint8)*m_size];
-		entries = (U*)new uint8[sizeof(U)*m_size];
+//+ rouz edit (ChatGPT)
+		// Allocate saved pool snapshots without invoking C++ array new.
+		flags = (uint8*)malloc(sizeof(uint8)*m_size);
+		entries = (U*)malloc(sizeof(U)*m_size);
+//- rouz edit (ChatGPT)
 		memcpy(flags, m_flags, sizeof(uint8)*m_size);
 		memcpy(entries, m_entries, sizeof(U)*m_size);
 		debug("Stored:%d (/%d)\n", GetNoOfUsedSpaces(), m_size); /* Assumed inlining */
@@ -218,7 +230,12 @@ public:
 	CLink<T> *links;
 
 	void Init(int n){
-		links = new CLink<T>[n];
+//+ rouz edit (ChatGPT)
+		// Allocate and construct links without invoking C++ array new.
+		links = (CLink<T>*)malloc(sizeof(CLink<T>)*n);
+		for(int i = 0; i < n; i++)
+			std::allocator<CLink<T> >().construct(&links[i]);
+//- rouz edit (ChatGPT)
 		head.next = &tail;
 		tail.prev = &head;
 		freeHead.next = &freeTail;
@@ -227,7 +244,17 @@ public:
 			freeHead.Insert(&links[n]);
 	}
 	void Shutdown(void){
-		delete[] links;
+//+ rouz edit (ChatGPT)
+		// Destroy and release links without invoking C++ array delete.
+		int count = 0;
+		for(CLink<T> *link = freeHead.next; link != &freeTail; link = link->next)
+			count++;
+		for(CLink<T> *link = head.next; link != &tail; link = link->next)
+			count++;
+		for(int i = 0; i < count; i++)
+			std::allocator<CLink<T> >().destroy(&links[i]);
+		free(links);
+//- rouz edit (ChatGPT)
 		links = nil;
 	}
 	void Clear(void){

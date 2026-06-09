@@ -51,6 +51,7 @@
 #include "Bike.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 bool bAllCarCheat;
 
@@ -5538,7 +5539,28 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 	if(atomic == nil)
 		return nil;
 
-	obj = new CObject();
+//+ rouz edit (ChatGPT)
+	// Allocate the flying automobile component without invoking C++ new.
+	CObjectPool *objectPool = CPools::GetObjectPool();
+	obj = objectPool->New();
+#ifdef FIX_BUGS
+	if (!obj) {
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				existing->~CObject();
+				objectPool->Delete(existing);
+				obj = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	if (obj)
+#endif
+		std::allocator<CObject>().construct(obj);
+//- rouz edit (ChatGPT)
 	if(obj == nil)
 		return nil;
 

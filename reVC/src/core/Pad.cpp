@@ -43,6 +43,7 @@
 #include "TrafficLights.h"
 #include "Bike.h"	// rouz edit, added for fixing bikes
 #include "GameLogic.h"	// rouz edit
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "Messages.h"	// rouz edit
 extern void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector speed);	// rouz edit
 
@@ -326,9 +327,19 @@ void VehicleCheat(int model)
 		if (node < 0) return;
 
 #ifdef FIX_BUGS
-		CAutomobile* vehicle = new CAutomobile(model, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the cheat vehicle without invoking C++ new.
+		CAutomobile* vehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+		if (vehicle)
+			std::allocator<CAutomobile>().construct(vehicle, model, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 #else
-		CAutomobile* vehicle = new CAutomobile(model, MISSION_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the cheat vehicle without invoking C++ new.
+		CAutomobile* vehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+		if (vehicle)
+			std::allocator<CAutomobile>().construct(vehicle, model, MISSION_VEHICLE);
+//- rouz edit (ChatGPT)
 #endif
 		if (vehicle != nil) {
 			CVector pos = ThePaths.m_pathNodes[node].GetPosition();

@@ -85,7 +85,12 @@ void CCarGenerator::DoInternalProcessing()
 
 	CVector pos;
 	if (CModelInfo::IsBoatModel(mi)){
-		CBoat* pBoat = new CBoat(mi, PARKED_VEHICLE);
+//+ rouz edit (ChatGPT)
+		// Allocate the parked boat from the vehicle pool without invoking C++ new.
+		CBoat* pBoat = (CBoat*)CPools::GetVehiclePool()->New();
+		assert(pBoat);
+		std::allocator<CBoat>().construct(pBoat, mi, PARKED_VEHICLE);
+//- rouz edit (ChatGPT)
 		pos = m_vecPos;
 		pVehicle = pBoat;
 		if (pos.z <= -100.0f)
@@ -110,12 +115,22 @@ void CCarGenerator::DoInternalProcessing()
 			return;
 		}
 		if (((CVehicleModelInfo*)CModelInfo::GetModelInfo(mi))->m_vehicleType == VEHICLE_TYPE_BIKE) {
-			CBike* pBike = new CBike(mi, PARKED_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the parked bike from the vehicle pool without invoking C++ new.
+			CBike* pBike = (CBike*)CPools::GetVehiclePool()->New();
+			assert(pBike);
+			std::allocator<CBike>().construct(pBike, mi, PARKED_VEHICLE);
+//- rouz edit (ChatGPT)
 			pBike->bIsStanding = true;
 			pVehicle = pBike;
 		}
 		else {
-			CAutomobile* pCar = new CAutomobile(mi, PARKED_VEHICLE);
+//+ rouz edit (ChatGPT)
+			// Allocate the parked automobile from the vehicle pool without invoking C++ new.
+			CAutomobile* pCar = (CAutomobile*)CPools::GetVehiclePool()->New();
+			assert(pCar);
+			std::allocator<CAutomobile>().construct(pCar, mi, PARKED_VEHICLE);
+//- rouz edit (ChatGPT)
 			pVehicle = pCar;
 		}
 		// pVehicle->GetDistanceFromCentreOfMassToBaseOfModel();

@@ -23,7 +23,13 @@ void
 CColStore::Initialise(void)
 {
 	if(ms_pColPool == nil)
-		ms_pColPool = new CPool<ColDef,ColDef>(COLSTORESIZE, "CollisionFiles");
+//+ rouz edit (ChatGPT)
+		// Construct the collision store pool without invoking C++ new.
+	{
+		ms_pColPool = (CPool<ColDef,ColDef>*)malloc(sizeof(CPool<ColDef,ColDef>));
+		std::allocator<CPool<ColDef,ColDef> >().construct(ms_pColPool, COLSTORESIZE, "CollisionFiles");
+	}
+//- rouz edit (ChatGPT)
 	AddColSlot("generic");	// slot 0. not streamed
 #ifndef MASTER
 	VarConsole.Add("Display collision in memory", &bDispColInMem, true);
@@ -37,7 +43,13 @@ CColStore::Shutdown(void)
 	for(i = 0; i < COLSTORESIZE; i++)
 		RemoveColSlot(i);
 	if(ms_pColPool)
-		delete ms_pColPool;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the collision store pool without invoking C++ delete.
+	{
+		std::allocator<CPool<ColDef,ColDef> >().destroy(ms_pColPool);
+		free(ms_pColPool);
+	}
+//- rouz edit (ChatGPT)
 	ms_pColPool = nil;
 }
 

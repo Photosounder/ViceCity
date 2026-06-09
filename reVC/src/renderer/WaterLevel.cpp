@@ -28,6 +28,7 @@
 #include "Occlusion.h"
 #include "Replay.h"
 #include "WaterLevel.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 #include "SurfaceTable.h"
 #include "WaterCreatures.h"
 
@@ -632,7 +633,7 @@ CWaterLevel::TestVisibilityForFineWaterBlocks(const CVector &worldPos)
 void
 CWaterLevel::RemoveIsolatedWater()
 {
-	bool (*isConnected)[MAX_SMALL_SECTORS] = new bool[MAX_SMALL_SECTORS][MAX_SMALL_SECTORS];
+	bool (*isConnected)[MAX_SMALL_SECTORS] = (bool (*)[MAX_SMALL_SECTORS])malloc(sizeof(bool)*MAX_SMALL_SECTORS*MAX_SMALL_SECTORS); // rouz edit (ChatGPT)
 
 	for (int32 x = 0; x < MAX_SMALL_SECTORS; x++)
 	{
@@ -700,7 +701,7 @@ CWaterLevel::RemoveIsolatedWater()
 
 	printf("Removed %d isolated patches of water\n", numRemoved);
 
-	delete[] isConnected;
+	free(isConnected); // rouz edit (ChatGPT)
 }
 #endif
 
@@ -3361,7 +3362,28 @@ CWaterLevel::CreateBeachToy(CVector const &vec, eBeachToy beachtoy)
 		default:
 			break;
 	}
-	CObject *toy = new CObject(model, true);
+//+ rouz edit (ChatGPT)
+	// Allocate the beach toy without invoking C++ new.
+	CObjectPool *objectPool = CPools::GetObjectPool();
+	CObject *toy = objectPool->New();
+#ifdef FIX_BUGS
+	if (!toy) {
+		for (int32 i = 0; i < objectPool->GetSize(); i++) {
+			CObject *existing = objectPool->GetSlot(i);
+			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+				int32 handle = objectPool->GetIndex(existing);
+				CWorld::Remove(existing);
+				existing->~CObject();
+				objectPool->Delete(existing);
+				toy = objectPool->New(handle);
+				break;
+			}
+		}
+	}
+	if (toy)
+#endif
+		std::allocator<CObject>().construct(toy, model, true);
+//- rouz edit (ChatGPT)
 	if (toy) {
 		toy->SetPosition(vec);
 		toy->GetMatrix().UpdateRW();

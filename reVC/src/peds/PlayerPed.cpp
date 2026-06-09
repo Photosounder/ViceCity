@@ -49,7 +49,14 @@ GetPadFromPlayer(CPlayerPed*)
 
 CPlayerPed::~CPlayerPed()
 {
-	delete m_pWanted;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the wanted data without invoking C++ delete.
+	if(m_pWanted){
+		m_pWanted->~CWanted();
+		free(m_pWanted);
+		m_pWanted = nil;
+	}
+//- rouz edit (ChatGPT)
 }
 
 CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
@@ -61,7 +68,12 @@ CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
 #endif
 	SetInitialState();
 
-	m_pWanted = new CWanted();
+//+ rouz edit (ChatGPT)
+	// Allocate wanted data without invoking C++ new.
+	m_pWanted = (CWanted*)malloc(sizeof(CWanted));
+	assert(m_pWanted);
+	std::allocator<CWanted>().construct(m_pWanted);
+//- rouz edit (ChatGPT)
 	m_pWanted->Initialise();
 	m_pArrestingCop = nil;
 	m_currentWeapon = WEAPONTYPE_UNARMED;
@@ -171,7 +183,12 @@ CPlayerPed::GetPlayerInfoForThisPlayerPed()
 void
 CPlayerPed::SetupPlayerPed(int32 index)
 {
-	CPlayerPed *player = new CPlayerPed();
+//+ rouz edit (ChatGPT)
+	// Allocate the player ped from the ped pool without invoking C++ new.
+	CPlayerPed *player = (CPlayerPed*)CPools::GetPedPool()->New();
+	assert(player);
+	std::allocator<CPlayerPed>().construct(player);
+//- rouz edit (ChatGPT)
 	CWorld::Players[index].m_pPed = player;
 #ifdef FIX_BUGS
 	player->RegisterReference((CEntity**)&CWorld::Players[index].m_pPed);
@@ -406,23 +423,45 @@ CPlayerPed::SetRealMoveAnim(void)
 				if (curRunAssoc)
 					curRunAssoc->SetCurrentTime(0.0f);
 
-				delete curIdleAssoc;
-				delete RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_IDLE_TIRED);
+//+ rouz edit (ChatGPT)
+				// Destroy optional movement associations without invoking C++ delete.
+				curIdleAssoc->~CAnimBlendAssociation();
+				free(curIdleAssoc);
+				CAnimBlendAssociation *tiredIdleAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_IDLE_TIRED);
+				if(tiredIdleAssoc){
+					tiredIdleAssoc->~CAnimBlendAssociation();
+					free(tiredIdleAssoc);
+				}
 				CAnimBlendAssociation *fightIdleAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FIGHT_IDLE);
 				if (!fightIdleAnim)
 					fightIdleAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_MELEE_IDLE_FIGHTMODE);
-				delete fightIdleAnim;
-				delete curSprintAssoc;
+				if(fightIdleAnim){
+					fightIdleAnim->~CAnimBlendAssociation();
+					free(fightIdleAnim);
+				}
+				if(curSprintAssoc){
+					curSprintAssoc->~CAnimBlendAssociation();
+					free(curSprintAssoc);
+				}
+//- rouz edit (ChatGPT)
 
 				curSprintAssoc = nil;
 				m_nMoveState = PEDMOVE_WALK;
 			}
 			if (curRunStopAssoc) {
-				delete curRunStopAssoc;
+//+ rouz edit (ChatGPT)
+				// Destroy the run-stop animation without invoking C++ delete.
+				curRunStopAssoc->~CAnimBlendAssociation();
+				free(curRunStopAssoc);
+//- rouz edit (ChatGPT)
 				RestoreHeadingRate();
 			}
 			if (curRunStopRAssoc) {
-				delete curRunStopRAssoc;
+//+ rouz edit (ChatGPT)
+				// Destroy the alternate run-stop animation without invoking C++ delete.
+				curRunStopRAssoc->~CAnimBlendAssociation();
+				free(curRunStopRAssoc);
+//- rouz edit (ChatGPT)
 				RestoreHeadingRate();
 			}
 			if (!curWalkAssoc) {
@@ -434,7 +473,11 @@ CPlayerPed::SetRealMoveAnim(void)
 				curRunAssoc->blendAmount = 0.0f;
 			}
 			if (curWalkStartAssoc && !(curWalkStartAssoc->IsRunning())) {
-				delete curWalkStartAssoc;
+//+ rouz edit (ChatGPT)
+				// Destroy the walk-start animation without invoking C++ delete.
+				curWalkStartAssoc->~CAnimBlendAssociation();
+				free(curWalkStartAssoc);
+//- rouz edit (ChatGPT)
 				curWalkStartAssoc = nil;
 				curWalkAssoc->SetRun();
 				curRunAssoc->SetRun();

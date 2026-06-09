@@ -1266,8 +1266,30 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 		int mi = ScriptParams[0] >= 0 ? ScriptParams[0] : CTheScripts::UsedObjectArray[-ScriptParams[0]].index;
-		CObject* pObj = new CObject(mi, false);
-;		pObj->ObjectCreatedBy = MISSION_OBJECT;
+//+ rouz edit (ChatGPT)
+		// Allocate the scripted object without invoking C++ new.
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		CObject* pObj = objectPool->New();
+#ifdef FIX_BUGS
+		if (!pObj) {
+			for (int32 i = 0; i < objectPool->GetSize(); i++) {
+				CObject *existing = objectPool->GetSlot(i);
+				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+					int32 handle = objectPool->GetIndex(existing);
+					CWorld::Remove(existing);
+					existing->~CObject();
+					objectPool->Delete(existing);
+					pObj = objectPool->New(handle);
+					break;
+				}
+			}
+		}
+		if (pObj)
+#endif
+			std::allocator<CObject>().construct(pObj, mi, false);
+		assert(pObj);
+		pObj->ObjectCreatedBy = MISSION_OBJECT;
+//- rouz edit (ChatGPT)
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);

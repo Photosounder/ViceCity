@@ -29,6 +29,7 @@
 #include "Weather.h"
 #include "GameLogic.h"
 #include "Streaming.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 CVector vecPedCarDoorAnimOffset;
 CVector vecPedCarDoorLoAnimOffset;
@@ -971,9 +972,19 @@ CPed::ProcessObjective(void)
 										CVehicle *newVeh = nil;
 										if (chosenModel != -1) {
 											if (CModelInfo::IsBikeModel(chosenModel)) {
-												newVeh = new CBike(chosenModel, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+												// Allocate the hijack target bike without invoking C++ new.
+												newVeh = CPools::GetVehiclePool()->New();
+												assert(newVeh);
+												std::allocator<CBike>().construct((CBike*)newVeh, chosenModel, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 											} else {
-												newVeh = new CAutomobile(chosenModel, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+												// Allocate the hijack target car without invoking C++ new.
+												newVeh = CPools::GetVehiclePool()->New();
+												assert(newVeh);
+												std::allocator<CAutomobile>().construct((CAutomobile*)newVeh, chosenModel, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 											}
 										}
 										if (newVeh) {

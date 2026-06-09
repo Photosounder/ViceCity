@@ -313,7 +313,7 @@ CKeyArray::Load(size_t length, int file, size_t* offset)
 
 	// You can make numEntries size_t if you want to exceed 32-bit boundaries, everything else should be ready.
 	numEntries = (int)(length / sizeof(CKeyEntry));
-	entries = new CKeyEntry[numEntries];
+	entries = (CKeyEntry*)malloc(sizeof(CKeyEntry)*numEntries); // rouz edit (ChatGPT)
 	rawbytes = (char*)entries;
 
 #ifdef THIS_IS_STUPID
@@ -330,7 +330,7 @@ CKeyArray::Load(size_t length, int file, size_t* offset)
 void
 CKeyArray::Unload(void)
 {
-	delete[] entries;
+	free(entries); // rouz edit (ChatGPT)
 	entries = nil;
 	numEntries = 0;
 }
@@ -407,7 +407,7 @@ CData::Load(size_t length, int file, size_t * offset)
 
 	// You can make numChars size_t if you want to exceed 32-bit boundaries, everything else should be ready.
 	numChars = (int)(length / sizeof(wchar));
-	chars = new wchar[numChars];
+	chars = (wchar*)malloc(sizeof(wchar)*numChars); // rouz edit (ChatGPT)
 	rawbytes = (char*)chars;
 
 #ifdef THIS_IS_STUPID
@@ -424,7 +424,7 @@ CData::Load(size_t length, int file, size_t * offset)
 void
 CData::Unload(void)
 {
-	delete[] chars;
+	free(chars); // rouz edit (ChatGPT)
 	chars = nil;
 	numChars = 0;
 }

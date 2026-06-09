@@ -400,7 +400,11 @@ CPed::SetAttack(CEntity *victim)
 				CAnimBlendAssociation* curMoveAssoc = RpAnimBlendClumpGetAssociation(GetClump(), GetCrouchFireAnim(curWeapon));
 				if (curMoveAssoc) {
 					if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, GetCrouchFireAnim(curWeapon))->hierarchy->name, curMoveAssoc->hierarchy->name) != 0) {
-						delete curMoveAssoc;
+//+ rouz edit (ChatGPT)
+						// Destroy the stale crouch fire animation without invoking C++ delete.
+						curMoveAssoc->~CAnimBlendAssociation();
+						free(curMoveAssoc);
+//- rouz edit (ChatGPT)
 					}
 				}
 				animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, GetCrouchFireAnim(curWeapon), 8.0f);
@@ -426,7 +430,11 @@ CPed::SetAttack(CEntity *victim)
 				CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
 				if (curFireAssoc) {
 					if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
-						delete curFireAssoc;
+//+ rouz edit (ChatGPT)
+						// Destroy the stale fire animation without invoking C++ delete.
+						curFireAssoc->~CAnimBlendAssociation();
+						free(curFireAssoc);
+//- rouz edit (ChatGPT)
 					}
 				}
 				animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, fireAnim, animDelta);

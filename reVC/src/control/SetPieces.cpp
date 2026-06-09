@@ -12,6 +12,7 @@
 #include "World.h"
 #include "VarConsole.h"
 #include "SaveBuf.h"
+#include "Pools.h" // rouz edit (ChatGPT)
 
 #define TIME_BETWEEN_SETPIECE_SPAWNS 20000
 
@@ -93,7 +94,11 @@ void CSetPiece::Update(void)
 		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
 		if (!pVehicle2) {
 			CWorld::Remove(pVehicle1);
-			delete pVehicle1;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated cop car without invoking C++ delete.
+			pVehicle1->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle1);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		pVehicle1->SetStatus(STATUS_PHYSICS);
@@ -191,7 +196,11 @@ void CSetPiece::Update(void)
 		CCopPed* pCop2 = TryToGenerateCopPed(m_vSpawn2);
 		if (!pCop2) {
 			CWorld::Remove(pCop);
-			delete pCop;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated cop without invoking C++ delete.
+			pCop->~CCopPed();
+			CPools::GetPedPool()->Delete(pCop);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		z = CWorld::FindGroundZForCoord(m_vTarget2.x, m_vTarget2.y);
@@ -224,7 +233,11 @@ void CSetPiece::Update(void)
 		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
 		if (!pVehicle2) {
 			CWorld::Remove(pVehicle1);
-			delete pVehicle1;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated cop car without invoking C++ delete.
+			pVehicle1->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle1);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		pVehicle2->SetStatus(STATUS_PHYSICS);
@@ -262,7 +275,11 @@ void CSetPiece::Update(void)
 		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
 		if (!pVehicle2) {
 			CWorld::Remove(pVehicle1);
-			delete pVehicle1;
+//+ rouz edit (ChatGPT)
+			// Destroy and release the generated cop car without invoking C++ delete.
+			pVehicle1->~CVehicle();
+			CPools::GetVehiclePool()->Delete(pVehicle1);
+//- rouz edit (ChatGPT)
 			return;
 		}
 		pVehicle2->SetStatus(STATUS_PHYSICS);
@@ -282,7 +299,12 @@ void CSetPiece::Update(void)
 
 CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
 {
-	CVehicle* pVehicle = new CAutomobile(MI_POLICE, RANDOM_VEHICLE);
+//+ rouz edit (ChatGPT)
+	// Allocate the set-piece police car without invoking C++ new.
+	CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+	assert(pVehicle);
+	std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, MI_POLICE, RANDOM_VEHICLE);
+//- rouz edit (ChatGPT)
 	CVector pos(vSpawn.x, vSpawn.y, 1000.0f);
 	CColPoint point;
 	CEntity* pEntity;
@@ -297,7 +319,11 @@ CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
 	int16 total;
 	CWorld::FindObjectsKindaColliding(pos, pVehicle->GetColModel()->spheres->radius, false, &total, 16, nil, false, true, true, false, false);
 	if (total != 0) {
-		delete pVehicle;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the set-piece police car without invoking C++ delete.
+		pVehicle->~CVehicle();
+		CPools::GetVehiclePool()->Delete(pVehicle);
+//- rouz edit (ChatGPT)
 		return nil;
 	}
 	pVehicle->ChangeLawEnforcerState(true);
@@ -307,7 +333,12 @@ CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
 
 CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D vSpawn)
 {
-	CCopPed* pCop = new CCopPed(COP_STREET);
+//+ rouz edit (ChatGPT)
+	// Allocate the set-piece cop without invoking C++ new.
+	CCopPed* pCop = (CCopPed*)CPools::GetPedPool()->New();
+	assert(pCop);
+	std::allocator<CCopPed>().construct(pCop, COP_STREET);
+//- rouz edit (ChatGPT)
 	CVector pos(vSpawn.x, vSpawn.y, 1000.0f);
 	CColPoint point;
 	CEntity* pEntity;
@@ -317,7 +348,11 @@ CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D vSpawn)
 	int16 total;
 	CWorld::FindObjectsKindaColliding(pos, pCop->GetColModel()->spheres->radius, false, &total, 16, nil, false, true, true, false, false);
 	if (total != 0) {
-		delete pCop;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the set-piece cop without invoking C++ delete.
+		pCop->~CCopPed();
+		CPools::GetPedPool()->Delete(pCop);
+//- rouz edit (ChatGPT)
 		return nil;
 	}
 	CWorld::Add(pCop);

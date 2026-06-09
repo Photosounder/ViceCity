@@ -7,12 +7,12 @@
 CDirectory::CDirectory(int32 maxEntries)
  : numEntries(0), maxEntries(maxEntries)
 {
-	entries = new DirectoryInfo[maxEntries];
+	entries = (DirectoryInfo*)malloc(sizeof(DirectoryInfo)*maxEntries); // rouz edit (ChatGPT)
 }
 
 CDirectory::~CDirectory(void)
 {
-	delete[] entries;
+	free(entries); // rouz edit (ChatGPT)
 }
 
 void

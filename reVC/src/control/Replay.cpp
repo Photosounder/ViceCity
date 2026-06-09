@@ -966,7 +966,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					continue;
 				/* Removing vehicles not present in this frame. */
 				CWorld::Remove(v);
-				delete v;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the missing replay vehicle without invoking C++ delete.
+				v->~CVehicle();
+				CPools::GetVehiclePool()->Delete(v);
+//- rouz edit (ChatGPT)
 			}
 			vehicle_min_index = vp->index + 1;
 			CVehicle* v = CPools::GetVehiclePool()->GetSlot(vp->index);
@@ -979,22 +983,52 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 				else {
 					switch (vp->vehicle_type) {
 					case VEHICLE_TYPE_CAR:
-						new_v = new(vp->index << 8) CAutomobile(mi, 2);	
+//+ rouz edit (ChatGPT)
+						// Allocate the replay car in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CAutomobile>().construct((CAutomobile*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					case VEHICLE_TYPE_BOAT:
-						new_v = new(vp->index << 8) CBoat(mi, 2);
+//+ rouz edit (ChatGPT)
+						// Allocate the replay boat in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CBoat>().construct((CBoat*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					case VEHICLE_TYPE_TRAIN:
-						new_v = new(vp->index << 8) CTrain(mi, 2);
+//+ rouz edit (ChatGPT)
+						// Allocate the replay train in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CTrain>().construct((CTrain*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					case VEHICLE_TYPE_HELI:
-						new_v = new(vp->index << 8) CHeli(mi, 2);
+//+ rouz edit (ChatGPT)
+						// Allocate the replay heli in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CHeli>().construct((CHeli*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					case VEHICLE_TYPE_PLANE:
-						new_v = new(vp->index << 8) CPlane(mi, 2);
+//+ rouz edit (ChatGPT)
+						// Allocate the replay plane in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CPlane>().construct((CPlane*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					case VEHICLE_TYPE_BIKE: // not possible
-						new_v = new(vp->index << 8) CBike(mi, 2);
+//+ rouz edit (ChatGPT)
+						// Allocate the replay bike in its saved slot without invoking C++ new.
+						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						assert(new_v);
+						std::allocator<CBike>().construct((CBike*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 						break;
 					}
 					new_v->SetStatus(STATUS_PLAYER_PLAYBACKFROMBUFFER);
@@ -1017,7 +1051,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					continue;
 				/* Removing vehicles not present in this frame. */
 				CWorld::Remove(v);
-				delete v;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the missing replay bike without invoking C++ delete.
+				v->~CVehicle();
+				CPools::GetVehiclePool()->Delete(v);
+//- rouz edit (ChatGPT)
 			}
 			vehicle_min_index = vp->index + 1;
 			CVehicle* v = CPools::GetVehiclePool()->GetSlot(vp->index);
@@ -1028,7 +1066,12 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					CStreaming::RequestModel(mi, 0);
 				}
 				else {
-					new_v = new(vp->index << 8) CBike(mi, 2);
+//+ rouz edit (ChatGPT)
+					// Allocate the replay bike in its saved slot without invoking C++ new.
+					new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+					assert(new_v);
+					std::allocator<CBike>().construct((CBike*)new_v, mi, 2);
+//- rouz edit (ChatGPT)
 					new_v->SetStatus(STATUS_PLAYER_PLAYBACKFROMBUFFER);
 					vp->matrix.DecompressIntoFullMatrix(new_v->GetMatrix());
 					new_v->m_currentColour1 = vp->primary_color;
@@ -1049,10 +1092,19 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 				}
 				else {
 					CPed* new_p;
-					if (ph->pedtype != PEDTYPE_PLAYER1)
-						new_p = new(ph->index << 8) CCivilianPed((ePedType)ph->pedtype, ph->mi);
-					else
-						new_p = new(ph->index << 8) CPlayerPed();
+//+ rouz edit (ChatGPT)
+					if (ph->pedtype != PEDTYPE_PLAYER1) {
+						// Allocate the replay ped in its saved slot without invoking C++ new.
+						new_p = CPools::GetPedPool()->New(ph->index << 8);
+						assert(new_p);
+						std::allocator<CCivilianPed>().construct((CCivilianPed*)new_p, (ePedType)ph->pedtype, ph->mi);
+					} else {
+						// Allocate the replay player ped in its saved slot without invoking C++ new.
+						new_p = CPools::GetPedPool()->New(ph->index << 8);
+						assert(new_p);
+						std::allocator<CPlayerPed>().construct((CPlayerPed*)new_p);
+					}
+//- rouz edit (ChatGPT)
 					new_p->SetStatus(STATUS_PLAYER_PLAYBACKFROMBUFFER);
 					new_p->GetMatrix().SetUnity();
 					CWorld::Add(new_p);
@@ -1070,7 +1122,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					continue;
 				/* Removing peds not present in this frame. */
 				CWorld::Remove(p);
-				delete p;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the missing replay ped without invoking C++ delete.
+				p->~CPed();
+				CPools::GetPedPool()->Delete(p);
+//- rouz edit (ChatGPT)
 			}
 			ped_min_index = pu->index + 1;
 			ProcessPedUpdate(CPools::GetPedPool()->GetSlot(pu->index), interpolation, buffer);
@@ -1171,7 +1227,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			continue;
 		/* Removing vehicles not present in this frame. */
 		CWorld::Remove(v);
-		delete v;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the trailing replay vehicle without invoking C++ delete.
+		v->~CVehicle();
+		CPools::GetVehiclePool()->Delete(v);
+//- rouz edit (ChatGPT)
 	}
 	for (int i = ped_min_index; i < CPools::GetPedPool()->GetSize(); i++) {
 		CPed* p = CPools::GetPedPool()->GetSlot(i);
@@ -1179,7 +1239,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			continue;
 		/* Removing peds not present in this frame. */
 		CWorld::Remove(p);
-		delete p;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the trailing replay ped without invoking C++ delete.
+		p->~CPed();
+		CPools::GetPedPool()->Delete(p);
+//- rouz edit (ChatGPT)
 	}
 	ProcessReplayCamera();
 	return false;
@@ -1347,18 +1411,18 @@ void CReplay::StoreStuffInMem(void)
 	CPools::GetPtrNodePool()->Store(pBuf6, pBuf7);
 	CPools::GetEntryInfoNodePool()->Store(pBuf8, pBuf9);
 	CPools::GetDummyPool()->Store(pBuf10, pBuf11);
-	pWorld1 = new uint8[sizeof(CSector) * NUMSECTORS_X * NUMSECTORS_Y];
+	pWorld1 = (uint8*)malloc(sizeof(CSector) * NUMSECTORS_X * NUMSECTORS_Y); // rouz edit (ChatGPT)
 	memcpy(pWorld1, CWorld::GetSector(0, 0), NUMSECTORS_X * NUMSECTORS_Y * sizeof(CSector));
 	WorldPtrList = CWorld::GetMovingEntityList().first; // why
 	BigBuildingPtrList = CWorld::GetBigBuildingList(LEVEL_GENERIC).first;
-	pPickups = new uint8[sizeof(CPickup) * NUMPICKUPS];
+	pPickups = (uint8*)malloc(sizeof(CPickup) * NUMPICKUPS); // rouz edit (ChatGPT)
 	memcpy(pPickups, CPickups::aPickUps, NUMPICKUPS * sizeof(CPickup));
-	pReferences = new uint8[(sizeof(CReference) * NUMREFERENCES)];
+	pReferences = (uint8*)malloc(sizeof(CReference) * NUMREFERENCES); // rouz edit (ChatGPT)
 	memcpy(pReferences, CReferences::aRefs, NUMREFERENCES * sizeof(CReference));
 	pEmptyReferences = CReferences::pEmptyList;
-	pStoredCam = new uint8[sizeof(CCamera)];
+	pStoredCam = (uint8*)malloc(sizeof(CCamera)); // rouz edit (ChatGPT)
 	memcpy(pStoredCam, &TheCamera, sizeof(CCamera));
-	pRadarBlips = new uint8[sizeof(sRadarTrace) * NUMRADARBLIPS];
+	pRadarBlips = (uint8*)malloc(sizeof(sRadarTrace) * NUMRADARBLIPS); // rouz edit (ChatGPT)
 	memcpy(pRadarBlips, CRadar::ms_RadarTrace, NUMRADARBLIPS * sizeof(sRadarTrace));
 	PlayerWanted = *FindPlayerPed()->m_pWanted;
 	PlayerInfo = CWorld::Players[0];
@@ -1395,20 +1459,20 @@ void CReplay::StoreStuffInMem(void)
 	ms_nTotalPeds_Stored = CPopulation::ms_nTotalPeds;
 	ms_nTotalMissionPeds_Stored = CPopulation::ms_nTotalMissionPeds;
 	int size = CPools::GetPedPool()->GetSize();
-	pPedAnims = new CStoredDetailedAnimationState[size];
+	pPedAnims = (CStoredDetailedAnimationState*)malloc(sizeof(CStoredDetailedAnimationState)*size); // rouz edit (ChatGPT)
 	for (int i = 0; i < size; i++) {
 		CPed* ped = CPools::GetPedPool()->GetSlot(i);
 		if (ped)
 			StoreDetailedPedAnimation(ped, &pPedAnims[i]);
 	}
-	pGarages = new uint8[sizeof(CGarages::aGarages)];
+	pGarages = (uint8*)malloc(sizeof(CGarages::aGarages)); // rouz edit (ChatGPT)
 	memcpy(pGarages, CGarages::aGarages, sizeof(CGarages::aGarages));
-	FireArray = new CFire[NUM_FIRES];
+	FireArray = (CFire*)malloc(sizeof(CFire)*NUM_FIRES); // rouz edit (ChatGPT)
 	memcpy(FireArray, gFireManager.m_aFires, sizeof(gFireManager.m_aFires));
 	NumOfFires = gFireManager.m_nTotalFires;
-	paProjectileInfo = new uint8[sizeof(gaProjectileInfo)];
+	paProjectileInfo = (uint8*)malloc(sizeof(gaProjectileInfo)); // rouz edit (ChatGPT)
 	memcpy(paProjectileInfo, gaProjectileInfo, sizeof(gaProjectileInfo));
-	paProjectiles = new uint8[sizeof(CProjectileInfo::ms_apProjectile)];
+	paProjectiles = (uint8*)malloc(sizeof(CProjectileInfo::ms_apProjectile)); // rouz edit (ChatGPT)
 	memcpy(paProjectiles, CProjectileInfo::ms_apProjectile, sizeof(CProjectileInfo::ms_apProjectile));
 	CScriptPaths::Save_ForReplay();
 }
@@ -1422,23 +1486,23 @@ void CReplay::RestoreStuffFromMem(void)
 	CPools::GetEntryInfoNodePool()->CopyBack(pBuf8, pBuf9);
 	CPools::GetDummyPool()->CopyBack(pBuf10, pBuf11);
 	memcpy(CWorld::GetSector(0, 0), pWorld1, sizeof(CSector) * NUMSECTORS_X * NUMSECTORS_Y);
-	delete[] pWorld1;
+	free(pWorld1); // rouz edit (ChatGPT)
 	pWorld1 = nil;
 	CWorld::GetMovingEntityList().first = WorldPtrList;
 	CWorld::GetBigBuildingList(LEVEL_GENERIC).first = BigBuildingPtrList;
 	memcpy(CPickups::aPickUps, pPickups, sizeof(CPickup) * NUMPICKUPS);
-	delete[] pPickups;
+	free(pPickups); // rouz edit (ChatGPT)
 	pPickups = nil;
 	memcpy(CReferences::aRefs, pReferences, sizeof(CReference) * NUMREFERENCES);
-	delete[] pReferences;
+	free(pReferences); // rouz edit (ChatGPT)
 	pReferences = nil;
 	CReferences::pEmptyList = pEmptyReferences;
 	pEmptyReferences = nil;
 	memcpy(&TheCamera, pStoredCam, sizeof(CCamera));
-	delete[] pStoredCam;
+	free(pStoredCam); // rouz edit (ChatGPT)
 	pStoredCam = nil;
 	memcpy(CRadar::ms_RadarTrace, pRadarBlips, sizeof(sRadarTrace) * NUMRADARBLIPS);
-	delete[] pRadarBlips;
+	free(pRadarBlips); // rouz edit (ChatGPT)
 	pRadarBlips = nil;
 #ifdef FIX_BUGS
 	for (int i = 0; i < NUMPLAYERS; i++) {
@@ -1448,7 +1512,12 @@ void CReplay::RestoreStuffFromMem(void)
 		pPlayerPed->RegisterReference((CEntity**)&CWorld::Players[i].m_pPed);
 	}
 #endif
-	FindPlayerPed()->m_pWanted = new CWanted(PlayerWanted);
+//+ rouz edit (ChatGPT)
+	// Allocate the restored wanted state without invoking C++ new.
+	FindPlayerPed()->m_pWanted = (CWanted*)malloc(sizeof(CWanted));
+	assert(FindPlayerPed()->m_pWanted);
+	std::allocator<CWanted>().construct(FindPlayerPed()->m_pWanted, PlayerWanted);
+//- rouz edit (ChatGPT)
 	CWorld::Players[0] = PlayerInfo;
 	int i = CPools::GetPedPool()->GetSize();
 	while (--i >= 0) {
@@ -1481,8 +1550,14 @@ void CReplay::RestoreStuffFromMem(void)
 				((CPlayerPed*)ped)->m_pMinigunTopAtomic = nil;
 			ped->AddWeaponModel(ped->m_wepModelID);
 		}
-		if (ped->m_nPedType == PEDTYPE_COP)
-			((CCopPed*)ped)->m_pStinger = new CStinger;
+//+ rouz edit (ChatGPT)
+		if (ped->m_nPedType == PEDTYPE_COP) {
+			// Allocate the restored cop stinger without invoking C++ new.
+			((CCopPed*)ped)->m_pStinger = (CStinger*)malloc(sizeof(CStinger));
+			assert(((CCopPed*)ped)->m_pStinger);
+			std::allocator<CStinger>().construct(((CCopPed*)ped)->m_pStinger);
+		}
+//- rouz edit (ChatGPT)
 	}
 	i = CPools::GetVehiclePool()->GetSize();
 	while (--i >= 0) {
@@ -1615,20 +1690,20 @@ void CReplay::RestoreStuffFromMem(void)
 			continue;
 		RetrieveDetailedPedAnimation(ped, &pPedAnims[i]);
 	}
-	delete[] pPedAnims;
+	free(pPedAnims); // rouz edit (ChatGPT)
 	pPedAnims = nil;
 	memcpy(CGarages::aGarages, pGarages, sizeof(CGarages::aGarages));
-	delete[] pGarages;
+	free(pGarages); // rouz edit (ChatGPT)
 	pGarages = nil;
 	memcpy(gFireManager.m_aFires, FireArray, sizeof(gFireManager.m_aFires));
-	delete[] FireArray;
+	free(FireArray); // rouz edit (ChatGPT)
 	FireArray = nil;
 	gFireManager.m_nTotalFires = NumOfFires;
 	memcpy(gaProjectileInfo, paProjectileInfo, sizeof(gaProjectileInfo));
-	delete[] paProjectileInfo;
+	free(paProjectileInfo); // rouz edit (ChatGPT)
 	paProjectileInfo = nil;
 	memcpy(CProjectileInfo::ms_apProjectile, paProjectiles, sizeof(CProjectileInfo::ms_apProjectile));
-	delete[] paProjectiles;
+	free(paProjectiles); // rouz edit (ChatGPT)
 	paProjectiles = nil;
 	CScriptPaths::Load_ForReplay();
 	CExplosion::ClearAllExplosions();
@@ -1645,7 +1720,11 @@ void CReplay::EmptyPedsAndVehiclePools(void)
 		if (!v)
 			continue;
 		CWorld::Remove(v);
-		delete v;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the replay vehicle without invoking C++ delete.
+		v->~CVehicle();
+		CPools::GetVehiclePool()->Delete(v);
+//- rouz edit (ChatGPT)
 	}
 	i = CPools::GetPedPool()->GetSize();
 	while (--i >= 0) {
@@ -1653,7 +1732,11 @@ void CReplay::EmptyPedsAndVehiclePools(void)
 		if (!p)
 			continue;
 		CWorld::Remove(p);
-		delete p;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the replay ped without invoking C++ delete.
+		p->~CPed();
+		CPools::GetPedPool()->Delete(p);
+//- rouz edit (ChatGPT)
 	}
 }
 
@@ -1666,7 +1749,11 @@ void CReplay::EmptyAllPools(void)
 		if (!o)
 			continue;
 		CWorld::Remove(o);
-		delete o;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the replay object without invoking C++ delete.
+		o->~CObject();
+		CPools::GetObjectPool()->Delete(o);
+//- rouz edit (ChatGPT)
 	}
 	i = CPools::GetDummyPool()->GetSize();
 	while (--i >= 0) {
@@ -1674,7 +1761,11 @@ void CReplay::EmptyAllPools(void)
 		if (!d)
 			continue;
 		CWorld::Remove(d);
-		delete d;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the replay dummy without invoking C++ delete.
+		d->~CDummy();
+		CPools::GetDummyPool()->Delete(d);
+//- rouz edit (ChatGPT)
 	}
 }
 

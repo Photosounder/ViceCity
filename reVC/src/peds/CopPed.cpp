@@ -93,7 +93,12 @@ CCopPed::CCopPed(eCopType copType, int32 modifier) : CPed(PEDTYPE_COP)
 	m_nHassleTimer = 0;
 	field_61C = 0;
 	field_624 = 0;
-	m_pStinger = new CStinger();
+//+ rouz edit (ChatGPT)
+	// Allocate the cop stinger without invoking C++ new.
+	m_pStinger = (CStinger*)malloc(sizeof(CStinger));
+	assert(m_pStinger);
+	std::allocator<CStinger>().construct(m_pStinger);
+//- rouz edit (ChatGPT)
 	SetWeaponLockOnTarget(nil);
 }
 
@@ -101,7 +106,11 @@ CCopPed::~CCopPed()
 {
 	ClearPursuit();
 	m_pStinger->Remove();
-	delete m_pStinger;
+//+ rouz edit (ChatGPT)
+	// Destroy and release the cop stinger without invoking C++ delete.
+	m_pStinger->~CStinger();
+	free(m_pStinger);
+//- rouz edit (ChatGPT)
 }
 
 // Parameter should always be CPlayerPed, but it seems they considered making civilians arrestable at some point

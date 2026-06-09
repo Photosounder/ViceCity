@@ -196,7 +196,12 @@ CStreaming::Init2(void)
 	for(i = 0; i < ARRAY_SIZE(ms_bIsPedFromPedGroupLoaded); i++)
 		ms_bIsPedFromPedGroupLoaded[i] = false;
 
-	ms_pExtraObjectsDir = new CDirectory(EXTRADIRSIZE);
+//+ rouz edit (ChatGPT)
+	// Allocate the extra-object directory without invoking C++ new.
+	ms_pExtraObjectsDir = (CDirectory*)malloc(sizeof(CDirectory));
+	assert(ms_pExtraObjectsDir);
+	std::allocator<CDirectory>().construct(ms_pExtraObjectsDir, EXTRADIRSIZE);
+//- rouz edit (ChatGPT)
 	ms_numPriorityRequests = 0;
 	ms_currentPedGrp = -1;
 	ms_lastCullZone = -1;		// unused because RemoveModelsNotVisibleFromCullzone is gone
@@ -301,7 +306,11 @@ CStreaming::Shutdown(void)
 	RwFreeAlign(ms_pStreamingBuffer[0]);
 	ms_streamingBufferSize = 0;
 	if(ms_pExtraObjectsDir) {
-		delete ms_pExtraObjectsDir;
+//+ rouz edit (ChatGPT)
+		// Destroy and release the extra-object directory without invoking C++ delete.
+		ms_pExtraObjectsDir->~CDirectory();
+		free(ms_pExtraObjectsDir);
+//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		ms_pExtraObjectsDir = nil;
 #endif
@@ -1022,7 +1031,11 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 			if(obj && obj->GetModelIndex() == modelId && obj->CanBeDeleted()){
 				CWorld::Remove(obj);
 				CWorld::RemoveReferencesToDeletedObject(obj);
-				delete obj;
+//+ rouz edit (ChatGPT)
+				// Destroy and release the swapped object without invoking C++ delete.
+				obj->~CObject();
+				CPools::GetObjectPool()->Delete(obj);
+//- rouz edit (ChatGPT)
 			}
 		}
 	}
