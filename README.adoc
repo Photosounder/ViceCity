@@ -48,6 +48,7 @@ Most of my modifications are indicated by a `// rouz edit` comment in the code. 
 * I fixed dying police helicopters from spinning too fast and causing infinite loops.
 * I fixed wheel rotation values getting too high which caused them to stop spinning at high FPS or have their sizes glitch.
 * I fixed many things related to standing on top of a vehicle so that the ped can stand on a moving vehicle without moving around or getting hurt.
+* Popped wheels have friction, but after fixing the vehicle popped wheels would have zero friction. I fixed that.
 
 === Spawning and streaming
 * I added a clause that reduces the spawn distance when there are few cars already spawned, so that when you start a new game you'll have a few cars spawning near you.

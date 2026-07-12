@@ -18,7 +18,7 @@ void
 CDamageManager::ResetDamageStatus(void)
 {
 	int i;
-	m_fWheelDamageEffect = 0.0f;
+	m_fWheelDamageEffect = 0.5f; // rouz edit (ChatGPT)
 	m_engineStatus = 0;
 	for(i = 0; i < ARRAY_SIZE(m_wheelStatus); i++) m_wheelStatus[i] = 0;
 	for(i = 0; i < ARRAY_SIZE(m_doorStatus); i++) m_doorStatus[i] = 0;
