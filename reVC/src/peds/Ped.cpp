@@ -1568,15 +1568,30 @@ CPed::UpdatePosition(void)
 		else
 		{
 			//+ rouz edit (ChatGPT)
-			// Advance the local carry anchor by the ped's own movement before projecting it onto vehicle collision.
+			// Advance the carried foot contact along the vehicle surface before storing its local anchor
 			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle()) {
-				CVector surfacePoint = m_pCurrentPhysSurface->GetMatrix() * surf_rel_origin;
-				CVector animMove(m_moved.x, m_moved.y, 0.0f);
-				surfacePoint += animMove * CTimer::GetTimeStep();
+				const CMatrix &surfaceMatrix = m_pCurrentPhysSurface->GetMatrix();
+				CVector surfacePoint = surfaceMatrix * surf_rel_origin;
+				CVector walkStep = CVector(m_moved.x, m_moved.y, 0.0f) * CTimer::GetTimeStep();
 
-				CMatrix surfaceInv;
-				Invert(m_pCurrentPhysSurface->GetMatrix(), surfaceInv);
-				surf_rel_origin = surfaceInv * surfacePoint;
+				// Resolve walking height near the feet using the same reach as standing ground collision
+				if (!walkStep.IsZero() && !((CVehicle*)m_pCurrentPhysSurface)->IsBoat()) {
+					CVector nextPoint = surfacePoint + walkStep;
+					CColLine groundLine(nextPoint + CVector(0.0f, 0.0f, FEET_OFFSET - 0.25f),
+						nextPoint - CVector(0.0f, 0.0f, 0.15f * CTimer::GetTimeStep()));
+					CColPoint groundPoint;
+					float minDist = 1.0f;
+
+					// Lift or lower the walking step only onto a nearby upward-facing surface
+					if (CCollision::ProcessVerticalLine(groundLine, surfaceMatrix, *m_pCurrentPhysSurface->GetColModel(),
+						groundPoint, minDist, false, false, nil) && groundPoint.normal.z > 0.35f)
+						walkStep.z = groundPoint.point.z - surfacePoint.z;
+				}
+
+				// Preserve stationary anchors and retain the resolved height through every vehicle resync
+				if (!walkStep.IsZero())
+					surf_rel_origin += Multiply3x3(walkStep, surfaceMatrix);
+				surfacePoint = surfaceMatrix * surf_rel_origin;
 				m_vecOffsetFromPhysSurface = surfacePoint - m_pCurrentPhysSurface->GetPosition();
 
 				CVector carriedPos = surfacePoint;
@@ -3112,23 +3127,31 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 
 						float upperSpeedLimit = 0.33f;
 						float lowerSpeedLimit = -0.25f;
-						float speed = m_vecMoveSpeed.Magnitude2D();
+						//+ rouz edit (ChatGPT)
+						// Measure landing impact relative to the vehicle at the actual foot contact
+						CVector landingVelocity = m_vecMoveSpeed;
+						if (rouz.glue_on_vehs && collidingEnt->IsVehicle() && !collidedWithBoat)
+							landingVelocity -= ((CPhysical*)collidingEnt)->GetSpeed(intersectionPoint.point - collidingEnt->GetPosition());
+						float speed = landingVelocity.Magnitude2D();
+						//- rouz edit (ChatGPT)
 						if (m_nPedState == PED_IDLE) {
 							upperSpeedLimit *= 2.0f;
 							lowerSpeedLimit *= 1.5f;
 						}
 						CAnimBlendAssociation *fallAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL);
-						if (!bWasStanding && ((speed > upperSpeedLimit && !bPushedAlongByCar) || (m_vecMoveSpeed.z < lowerSpeedLimit))
+						//+ rouz edit (ChatGPT)
+						// Use relative impact speed for both landing damage paths and the hit direction
+						if (!bWasStanding && ((speed > upperSpeedLimit && !bPushedAlongByCar) || (landingVelocity.z < lowerSpeedLimit))
 							&& m_pCollidingEntity != collidingEnt) {
 
 							float damage = 100.0f * Max(speed - 0.25f, 0.0f);
 							float damage2 = damage;
-							if (m_vecMoveSpeed.z < -0.25f)
-								damage += (-0.25f - m_vecMoveSpeed.z) * 150.0f;
+							if (landingVelocity.z < -0.25f)
+								damage += (-0.25f - landingVelocity.z) * 150.0f;
 
 							uint8 dir = 2; // from backward
-							if (m_vecMoveSpeed.x > 0.01f || m_vecMoveSpeed.x < -0.01f || m_vecMoveSpeed.y > 0.01f || m_vecMoveSpeed.y < -0.01f) {
-								CVector2D offset = -m_vecMoveSpeed;
+							if (Abs(landingVelocity.x) > 0.01f || Abs(landingVelocity.y) > 0.01f) {
+								CVector2D offset = -landingVelocity;
 								dir = GetLocalDirection(offset);
 							}
 							if (CSurfaceTable::IsSoftLanding(intersectionPoint.surfaceB))
@@ -3138,11 +3161,23 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 							if (IsPlayer() && damage2 > 5.0f)
 								Say(SOUND_PED_LAND);
 
-						} else if (!bWasStanding && fallAnim && -0.016f * CTimer::GetTimeStep() > m_vecMoveSpeed.z) {
+						} else if (!bWasStanding && fallAnim && -0.016f * CTimer::GetTimeStep() > landingVelocity.z) {
 							InflictDamage(collidingEnt, WEAPONTYPE_FALL, 15.0f, PEDPIECE_TORSO, 2);
 						}
+						//- rouz edit (ChatGPT)
 						m_vecMoveSpeed.z = 0.0f;
 						bIsStanding = true;
+						//+ rouz edit (ChatGPT)
+						// Keep the resolved support height and vertical carrier motion for subsequent collision passes
+						if (rouz.glue_on_vehs && m_pCurrentPhysSurface == collidingEnt
+							&& collidingEnt->IsVehicle() && !collidedWithBoat) {
+							CVector footPoint = GetPosition() - CVector(0.0f, 0.0f, FEET_OFFSET);
+							CVector anchorPoint = collidingEnt->GetMatrix() * surf_rel_origin;
+							surf_rel_origin += Multiply3x3(CVector(0.0f, 0.0f, footPoint.z - anchorPoint.z), collidingEnt->GetMatrix());
+							m_vecOffsetFromPhysSurface = footPoint - collidingEnt->GetPosition();
+							m_vecMoveSpeed.z = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface).z;
+						}
+						//- rouz edit (ChatGPT)
 				} else {
 					bOnBoat = false;
 				}
@@ -3151,6 +3186,20 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 	}
 
 	int ourCollidedSpheres = CCollision::ProcessColModels(GetMatrix(), *ourCol, collidingEnt->GetMatrix(), *hisCol, collidingPoints, nil, nil);
+	//+ rouz edit (ChatGPT)
+	// Let the standing contact support the feet without pushing the carrier and ped apart
+	if (rouz.glue_on_vehs && bIsStanding && m_pCurrentPhysSurface == collidingEnt
+		&& collidingEnt->IsVehicle() && !collidedWithBoat) {
+		float footHeight = GetPosition().z - FEET_OFFSET;
+		int solidContacts = 0;
+		for (int i = 0; i < ourCollidedSpheres; i++) {
+			if (collidingPoints[i].normal.z > 0.35f && collidingPoints[i].point.z <= footHeight + 0.05f)
+				continue;
+			collidingPoints[solidContacts++] = collidingPoints[i];
+		}
+		ourCollidedSpheres = solidContacts;
+	}
+	//- rouz edit (ChatGPT)
 	if (ourCollidedSpheres > 0 || belowTorsoCollided) {
 		AddCollisionRecord(collidingEnt);
 		if (!collidingEnt->IsBuilding())

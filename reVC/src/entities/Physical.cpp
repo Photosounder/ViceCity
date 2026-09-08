@@ -1025,6 +1025,14 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 	CVector speed;
 	CVector vImpulse;
 	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(B, colpoint.point); // rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Resolve carrier obstacles using relative motion even when the vehicle is stuck or shifted
+	if (rouz.glue_on_vehs && IsPed() && B->IsVehicle() && !((CVehicle*)B)->IsBoat()) {
+		CPed *ped = (CPed*)this;
+		if ((ped->bIsStanding || ped->bWasStanding) && ped->m_pCurrentPhysSurface == B)
+			surfaceSpeed = ((CPhysical*)B)->GetSpeed(colpoint.point - B->GetPosition());
+	}
+	//- rouz edit (ChatGPT)
 	CVector relativeMoveSpeed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_BEACHBALL && B != (CEntity*)FindPlayerPed())
