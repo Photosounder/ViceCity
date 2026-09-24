@@ -26,6 +26,11 @@
 #include "Renderer.h"
 #include "custompipes.h"
 #include "Frontend.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 bool gbShowPedRoadGroups;
 bool gbShowCarRoadGroups;
@@ -498,6 +503,14 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 	assert(RwObjectGetType(ent->m_rwObject) == rpATOMIC);
 	RpAtomic *atomic = (RpAtomic*)ent->m_rwObject;
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(ent->GetModelIndex());
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Submit buildings before the new renderer's GPU instancing bypasses atomic callbacks
+	SoftwarePolygons::RenderAtomic(atomic);
+	ent->bImBeingRendered = false;
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 
 	int pass = PASS_BLEND;
 	if(mi->m_additive)	// very questionable
@@ -643,6 +656,31 @@ CRenderer::RenderVehicles(void)
 		RenderOneNonRoad(node->item.ent);
 	POP_RENDERGROUP();
 }
+
+//+ rouz edit (ChatGPT)
+void
+CRenderer::RenderSoftwareVehicles(void)
+{
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Submit visible vehicle clumps without invoking the GPU vehicle render path
+	for(int i = 0; i < ms_nNoOfVisibleVehicles; i++){
+		CEntity *entity = ms_aVisibleVehiclePtrs[i];
+		if(!entity || !entity->IsVehicle() || !entity->m_rwObject ||
+		   ((CVehicle*)entity)->IsBoat() || RwObjectGetType(entity->m_rwObject) != rpCLUMP)
+			continue;
+		// Apply this vehicle's paint colors before reading its shared materials on the CPU
+		//+ rouz edit (ChatGPT)
+		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(entity->GetModelIndex());
+		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
+			CVehicle *vehicle = (CVehicle*)entity;
+			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
+		}
+		//- rouz edit (ChatGPT)
+		SoftwarePolygons::RenderClump((RpClump*)entity->m_rwObject);
+	}
+#endif
+}
+//- rouz edit (ChatGPT)
 
 void
 CRenderer::RenderTransparentWater(void)

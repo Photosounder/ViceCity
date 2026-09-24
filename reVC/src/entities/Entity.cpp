@@ -27,6 +27,11 @@
 #include "Dummy.h"
 #include "WindModifiers.h"
 #include "SaveBuf.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 int gBuildings;
 
@@ -418,10 +423,23 @@ CEntity::Render(void)
 {
 	if(m_rwObject){
 		bImBeingRendered = true;
-		if(RwObjectGetType(m_rwObject) == rpATOMIC)
+		//+ rouz edit (ChatGPT)
+		if(RwObjectGetType(m_rwObject) == rpATOMIC){
+			// Submit visible static entity geometry to the CPU renderer
+#ifdef REVC_SOFTWARE_POLYGONS
+			SoftwarePolygons::RenderAtomic((RpAtomic*)m_rwObject); // rouz edit (ChatGPT)
+#else
 			RpAtomicRender((RpAtomic*)m_rwObject);
-		else
+#endif
+		}else{
+			// Submit vehicle and ped clump parts through the CPU path
+#ifdef REVC_SOFTWARE_POLYGONS
+			SoftwarePolygons::RenderClump((RpClump*)m_rwObject); // rouz edit (ChatGPT)
+#else
 			RpClumpRender((RpClump*)m_rwObject);
+#endif
+		}
+		//- rouz edit (ChatGPT)
 		bImBeingRendered = false;
 	}
 }

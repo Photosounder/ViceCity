@@ -73,6 +73,11 @@
 #include "Ropes.h"
 #include "postfx.h"
 #include "custompipes.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 #include "screendroplets.h"
 #include "VarConsole.h"
 #ifdef USE_OUR_VERSIONING
@@ -1259,6 +1264,13 @@ if(gbRenderWater)
 
 if(gbRenderEverythingBarRoads)
 	CRenderer::RenderEverythingBarRoads();
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Submit vehicle geometry before the scene framebuffer is uploaded
+	if(gbRenderVehicles)
+		CRenderer::RenderSoftwareVehicles();
+#endif
+	//- rouz edit (ChatGPT)
 	// seam fixer
 	// moved this:
 	// CRenderer::RenderFadingInEntities();
@@ -1299,14 +1311,22 @@ RenderEffects_new(void)
 		C3dMarkers::Render();	// normally rendered in CSpecialFX::Render()
 if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);	// transparent
+		//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
 		CRenderer::RenderVehicles();
+#endif
+		//- rouz edit (ChatGPT)
 	}else{
 		// flipped these two, seems to give the best result
 if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);	// transparent
+		//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
 		CRenderer::RenderVehicles();
+#endif
+		//- rouz edit (ChatGPT)
 	}
 	// better render these after transparent world
 if(gbRenderFadingInEntities)
@@ -1344,9 +1364,23 @@ if(gbRenderFadingInEntities)
 void
 RenderScene(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Clear the CPU framebuffer with the current sky colors before rendering the scene
+	rw::RGBA softwareSkyTop = { (rw::uint8)CTimeCycle::GetSkyTopRed(), (rw::uint8)CTimeCycle::GetSkyTopGreen(), (rw::uint8)CTimeCycle::GetSkyTopBlue(), 255 };
+	rw::RGBA softwareSkyBottom = { (rw::uint8)CTimeCycle::GetSkyBottomRed(), (rw::uint8)CTimeCycle::GetSkyBottomGreen(), (rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255 };
+	SoftwarePolygons::BeginFrame(Scene.camera->frameBuffer->width, Scene.camera->frameBuffer->height, softwareSkyTop, softwareSkyBottom);
+#endif
+	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
 	if(gbNewRenderer){
 		RenderScene_new();
+		//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		// Present the CPU polygons before later effects and HUD passes
+		SoftwarePolygons::Present();
+#endif
+		//- rouz edit (ChatGPT)
 		return;
 	}
 #endif
@@ -1367,6 +1401,12 @@ RenderScene(void)
 	CWeather::RenderRainStreaks();
 	CCoronas::RenderSunReflection();
 	POP_RENDERGROUP();
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Present the CPU polygons before later effects and HUD passes
+	SoftwarePolygons::Present();
+#endif
+	//- rouz edit (ChatGPT)
 }
 
 void

@@ -11,8 +11,14 @@ extern "C" {
 #define COL_FRGB
 #define RL_SDL
 #define RL_OPENCL
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include <src/gl/glad/glad.h>
+#else
 #define RL_OPENCL_GL
 #define RL_BUILTIN_GLEW
+#endif
+//- rouz edit (ChatGPT)
 #define RL_INCL_UNICODE_DATA_MINI
 #define RL_INCL_VECTOR_TYPE_FILEBALL
 

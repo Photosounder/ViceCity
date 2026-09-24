@@ -101,6 +101,7 @@ public:
 	static void ClearForFrame(void);
 	static void RenderPeds(void);
 	static void RenderVehicles(void);	// also renders peds in LCS
+	static void RenderSoftwareVehicles(void); // rouz edit (ChatGPT)
 	static void RenderOneBuilding(CEntity *ent, float camdist = 0.0f);
 	static void RenderWorld(int pass);	// like cWorldStream::Render(int)
 	static void RenderTransparentWater(void);	// keep-out polys and transparent water

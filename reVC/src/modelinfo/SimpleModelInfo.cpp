@@ -6,6 +6,11 @@
 #include "ModelInfo.h"
 #include "AnimManager.h"
 #include "custompipes.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 void
 CSimpleModelInfo::DeleteRwObject(void)
@@ -88,10 +93,19 @@ CSimpleModelInfo::SetAtomic(int n, RpAtomic *atomic)
 		debug("%s has %d polys\n", m_name, RpGeometryGetNumTriangles(geo));
 
 #ifdef EXTENDED_PIPELINES
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Attach world models to the CPU polygon pipeline
+	SoftwarePolygons::Attach(atomic);
+#else
+	//- rouz edit (ChatGPT)
 	if(m_wetRoadReflection)
 		CustomPipes::AttachGlossPipe(atomic);
 	else
 		CustomPipes::AttachWorldPipe(atomic);
+	//+ rouz edit (ChatGPT)
+#endif
+	//- rouz edit (ChatGPT)
 #endif
 }
 

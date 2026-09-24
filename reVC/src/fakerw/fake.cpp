@@ -7,6 +7,11 @@
 #include <rpskin.h>
 #include <assert.h>
 #include <string.h>
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 #ifndef _WIN32
 #include "crossplatform.h"
 #endif
@@ -792,7 +797,18 @@ RwInt32 RpAtomicRegisterPlugin(RwInt32 size, RwUInt32 pluginID, RwPluginObjectCo
 //RwInt32 RpAtomicGetPluginOffset(RwUInt32 pluginID);
 //RwBool RpAtomicValidatePlugins(const RpAtomic * atomic);
 
-RpAtomic *AtomicDefaultRenderCallBack(RpAtomic * atomic) { Atomic::defaultRenderCB(atomic); return atomic; }
+//+ rouz edit (ChatGPT)
+RpAtomic *AtomicDefaultRenderCallBack(RpAtomic * atomic)
+{
+	// Send world atomics through the software rasterizer in this target
+#ifdef REVC_SOFTWARE_POLYGONS
+	SoftwarePolygons::RenderAtomic(atomic);
+#else
+	Atomic::defaultRenderCB(atomic);
+#endif
+	return atomic;
+}
+//- rouz edit (ChatGPT)
 
 
 // TODO: this is extremely simplified

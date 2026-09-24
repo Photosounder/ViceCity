@@ -1897,6 +1897,9 @@ main(int argc, char *argv[])
 	RwV2d pos;
 	RwInt32 i;
 
+	// Initialize gameplay settings before the first camera view window is calculated
+	rouz_init(); // rouz edit (ChatGPT)
+
 #ifdef USE_CUSTOM_ALLOCATOR
 	InitMemoryMgr();
 #endif

@@ -12,6 +12,11 @@
 #include "platform.h"
 #include "main.h"
 #include "MemoryHeap.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 static RwBool               DefaultVideoMode = TRUE;
 
@@ -289,6 +294,12 @@ void
 RsRwTerminate(void)
 {
 	/* Close RenderWare */
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Release the CIT backed software framebuffer before stopping RenderWare
+	SoftwarePolygons::Shutdown();
+#endif
+	//- rouz edit (ChatGPT)
 
 	RwEngineStop();
 	RwEngineClose();
@@ -361,6 +372,12 @@ RsRwInitialize(void *displayID)
 		RwEngineTerm();
 		return (FALSE);
 	}
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Install the CPU polygon path after the RenderWare device has started
+	SoftwarePolygons::Install();
+#endif
+	//- rouz edit (ChatGPT)
 
 	/*
 	 * Register loaders for an image with a particular file extension...

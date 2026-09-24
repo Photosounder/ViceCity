@@ -1,3 +1,14 @@
+//+ rouz edit (ChatGPT)
+#ifdef RW_CIT_ALLOC
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+extern "C" void *cita_win_malloc(size_t, const char *, const char *, int);
+extern "C" void *cita_win_realloc(void *, size_t, const char *, const char *, int);
+extern "C" void cita_win_free(void *, const char *, const char *, int);
+#endif
+//- rouz edit (ChatGPT)
+
 namespace rw {
 
 // uhhhm..... why are these not actual functions?
@@ -208,6 +219,58 @@ inline void *mustrealloc_LOC(void *p, size_t sz, uint32 hint, const char *here) 
 
 char *strdup_LOC(const char *s, uint32 hint, const char *here);
 
+//+ rouz edit (ChatGPT)
+#ifdef RW_CIT_ALLOC
+inline void *citMalloc(size_t size, const char *file, const char *function, int line)
+{
+	// Preserve librw's behavior for zero byte allocations
+	return size ? ::cita_win_malloc(size, file, function, line) : nil;
+}
+inline void *citRealloc(void *ptr, size_t size, const char *file, const char *function, int line)
+{
+	// Record the original librw call site in CIT Alloc
+	return ::cita_win_realloc(ptr, size, file, function, line);
+}
+inline void *citMustMalloc(size_t size, const char *file, const char *function, int line)
+{
+	// Preserve librw's fatal out of memory behavior
+	void *ptr = citMalloc(size, file, function, line);
+	if(ptr == nil && size != 0){
+		std::fprintf(stderr, "Error: out of memory\n");
+		std::exit(1);
+	}
+	return ptr;
+}
+inline void *citMustRealloc(void *ptr, size_t size, const char *file, const char *function, int line)
+{
+	// Preserve librw's fatal resize behavior
+	void *resized = citRealloc(ptr, size, file, function, line);
+	if(resized == nil && size != 0){
+		std::fprintf(stderr, "Error: out of memory\n");
+		std::exit(1);
+	}
+	return resized;
+}
+inline char *citStrdup(const char *source, const char *file, const char *function, int line)
+{
+	// Copy strings into CIT Alloc with the requesting source location
+	size_t size = std::strlen(source) + 1;
+	char *copy = (char*)citMalloc(size, file, function, line);
+	if(copy)
+		std::memcpy(copy, source, size);
+	return copy;
+}
+#define rwMalloc(s, h) rw::citMalloc((s), __FILE__, __func__, __LINE__)
+#define rwMallocT(t, s, h) (t*)rw::citMalloc((s)*sizeof(t), __FILE__, __func__, __LINE__)
+#define rwRealloc(p, s, h) rw::citRealloc((p), (s), __FILE__, __func__, __LINE__)
+#define rwReallocT(t, p, s, h) (t*)rw::citRealloc((p), (s)*sizeof(t), __FILE__, __func__, __LINE__)
+#define rwFree(p) ::cita_win_free((p), __FILE__, __func__, __LINE__)
+#define rwNew(s, h) rw::citMustMalloc((s), __FILE__, __func__, __LINE__)
+#define rwNewT(t, s, h) (t*)rw::citMustMalloc((s)*sizeof(t), __FILE__, __func__, __LINE__)
+#define rwResize(p, s, h) rw::citMustRealloc((p), (s), __FILE__, __func__, __LINE__)
+#define rwResizeT(t, p, s, h) (t*)rw::citMustRealloc((p), (s)*sizeof(t), __FILE__, __func__, __LINE__)
+#define rwStrdup(s, h) rw::citStrdup((s), __FILE__, __func__, __LINE__)
+#else
 #define rwMalloc(s, h) rw::malloc_LOC(s,h,RWHERE)
 #define rwMallocT(t, s, h) (t*)rw::malloc_LOC((s)*sizeof(t),h,RWHERE)
 #define rwRealloc(p, s, h) rw::realloc_LOC(p,s,h,RWHERE)
@@ -216,8 +279,10 @@ char *strdup_LOC(const char *s, uint32 hint, const char *here);
 #define rwNew(s, h) rw::mustmalloc_LOC(s,h,RWHERE)
 #define rwNewT(t, s, h) (t*)rw::mustmalloc_LOC((s)*sizeof(t),h,RWHERE)
 #define rwResize(p, s, h) rw::mustrealloc_LOC(p,s,h,RWHERE)
-#define rwResizeT(t, p, s, h) (t*)rw::mustrealloc_LOC(p,(s)*sizeof(t),h,RWHERE)
+#define rwResizeT(t, p, s, h) (t*)rw::mustrealloc_LOC((p),(s)*sizeof(t),h,RWHERE)
 #define rwStrdup(s, h) rw::strdup_LOC(s,h,RWHERE)
+#endif
+//- rouz edit (ChatGPT)
 
 extern MemoryFunctions defaultMemfuncs;
 extern MemoryFunctions managedMemfuncs;
