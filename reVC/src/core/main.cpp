@@ -1373,6 +1373,24 @@ if(gbRenderFadingInEntities)
 }
 #endif
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static void PresentSoftwareScene(void)
+{
+	// Apply the game's color filter to CPU pixels instead of drawing a GPU overlay
+#ifdef EXTENDED_COLOURFILTER
+	if(TheCamera.m_BlurType == MOTION_BLUR_LIGHT_SCENE){
+		CPostFX::SmoothColor(TheCamera.m_BlurRed, TheCamera.m_BlurGreen,
+			TheCamera.m_BlurBlue, TheCamera.m_motionBlur);
+		SoftwarePolygons::ApplyColourFilter(CPostFX::EffectSwitch, CPostFX::AvgRed,
+			CPostFX::AvgGreen, CPostFX::AvgBlue, CPostFX::Intensity);
+	}
+#endif
+	SoftwarePolygons::Present();
+}
+#endif
+//- rouz edit (ChatGPT)
+
 void
 RenderScene(void)
 {
@@ -1390,7 +1408,7 @@ RenderScene(void)
 		//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 		// Present the CPU polygons before later effects and HUD passes
-		SoftwarePolygons::Present();
+		PresentSoftwareScene(); // rouz edit (ChatGPT)
 #endif
 		//- rouz edit (ChatGPT)
 		return;
@@ -1416,7 +1434,7 @@ RenderScene(void)
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 	// Present the CPU polygons before later effects and HUD passes
-	SoftwarePolygons::Present();
+	PresentSoftwareScene(); // rouz edit (ChatGPT)
 #endif
 	//- rouz edit (ChatGPT)
 }

@@ -41,6 +41,7 @@ void RenderAtomic(rw::Atomic *atomic); // rouz edit (ChatGPT)
 void RenderClump(rw::Clump *clump); // rouz edit (ChatGPT)
 void RenderVehicleClump(rw::Clump *clump); // rouz edit (ChatGPT)
 void BeginFrame(int width, int height, const rw::RGBA &top, const rw::RGBA &bottom); // rouz edit (ChatGPT)
+void ApplyColourFilter(int mode, int red, int green, int blue, float intensity); // rouz edit (ChatGPT)
 void Present();
 }
 //- rouz edit (ChatGPT)

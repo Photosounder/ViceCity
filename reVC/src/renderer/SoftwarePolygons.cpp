@@ -993,6 +993,42 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	framebuffer.textureUploaded = false; // rouz edit (ChatGPT)
 }
 
+//+ rouz edit (ChatGPT)
+void ApplyColourFilter(int mode, int red, int green, int blue, float intensity)
+{
+	// Reproduce the game's normal or mobile color filter inside the CPU framebuffer
+	if(!pixels || (mode != 2 && mode != 3))
+		return;
+	const int colors[3] = { red, green, blue };
+	rw::uint8 lookup[3][256];
+	for(int channel = 0; channel < 3; channel++){
+		const float tint = colors[channel]*intensity/255.0f;
+		const float doubleTint = std::min(1.0f, std::max(0.0f, tint*2.0f));
+		const float gain = doubleTint*(30.0f/255.0f)+2.0f*tint;
+		const float mobileMult = (colors[channel]-64)/256.0f+1.4f;
+		const float mobileAdd = colors[channel]/1536.0f-0.05f;
+		for(int value = 0; value < 256; value++){
+			const float original = value/255.0f;
+			float filtered = original;
+			if(mode == 2){
+				// Match the five color filter shader iterations for each input byte
+				for(int step = 0; step < 5; step++)
+					filtered = std::max(0.0f, std::min(1.0f, original*(1.0f-30.0f/255.0f)+filtered*gain));
+			}else
+				filtered = std::max(0.0f, std::min(1.0f, original*mobileMult+mobileAdd));
+			lookup[channel][value] = (rw::uint8)(filtered*255.0f+0.5f);
+		}
+	}
+	// Apply the precomputed channel maps to every CPU pixel before texture upload
+	const size_t count = (size_t)width*height;
+	for(size_t i = 0; i < count; i++){
+		pixels[i].red = lookup[0][pixels[i].red];
+		pixels[i].green = lookup[1][pixels[i].green];
+		pixels[i].blue = lookup[2][pixels[i].blue];
+	}
+}
+//- rouz edit (ChatGPT)
+
 void Present()
 {
 	// Upload the CPU framebuffer as a texture and draw it over the scene
