@@ -22,6 +22,7 @@ extern "C" void cita_win_free(void *, const char *, const char *, int);
 namespace SoftwarePolygons {
 //+ rouz edit (ChatGPT)
 Framebuffer framebuffer = {};
+int maxFramebufferWidthPixels = 640; // rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 namespace {
 
@@ -39,6 +40,7 @@ struct CachedTexture {
 	int width, height, format;
 	char name[32], mask[32];
 	bool topDown;
+	bool opaque; // rouz edit (ChatGPT)
 	unsigned long long lastUsed;
 };
 
@@ -49,12 +51,24 @@ struct TextureSampler {
 	int wrap;
 	rw::Texture::Addressing addressU, addressV;
 };
+
+//+ rouz edit (ChatGPT)
+struct MaterialState {
+	rw::RGBA color;
+	float surfaceAmbient;
+	rw::Texture *source;
+	const CachedTexture *cached;
+	bool resolved;
+};
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 int width, height;
 rw::RGBA *pixels;
 float *depths;
+float *tileDepthBounds; // rouz edit (ChatGPT)
+int tilesAcross; // rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 rw::Raster *texture;
 rw::ObjPipeline *pipeline;
@@ -167,14 +181,26 @@ const CachedTexture *getCachedTexture(rw::Texture *source)
 	std::memcpy(entry.mask, source->mask, 32);
 	entry.lastUsed = cacheFrame;
 	entry.image = readTextureImage(raster, entry.topDown);
-	if(entry.image)
+	// Record whether sampling this texture can ever discard a pixel
+	//+ rouz edit (ChatGPT)
+	entry.opaque = entry.image != nullptr;
+	if(entry.image){
+		for(int y = 0; y < entry.image->height && entry.opaque; y++)
+			for(int x = 0; x < entry.image->width; x++)
+				if(entry.image->pixels[(size_t)y*entry.image->stride+(size_t)x*4+3] != 255){
+					entry.opaque = false;
+					break;
+				}
 		textureCacheBytes += (size_t)entry.image->stride*entry.image->height;
+	}
+	//- rouz edit (ChatGPT)
 	auto inserted = textureCache.emplace(source, entry);
-	trimTextureCache();
-	// Resolve the entry again because the cache trim can evict an older element
+	// Keep material pointers valid until the next frame's cache trim
+	//+ rouz edit (ChatGPT)
 	(void)inserted;
 	found = textureCache.find(source);
 	return found != textureCache.end() && found->second.image ? &found->second : nullptr;
+	//- rouz edit (ChatGPT)
 }
 
 float addressCoordinate(float value, rw::Texture::Addressing mode)
@@ -514,6 +540,17 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 	const int shaderIndex = raster.textured*2+raster.prelit;
 	const ShadeRect shadePartial = partialShaders[shaderIndex];
 	const ShadeRect shadeFull = fullShaders[shaderIndex];
+	// Only fully covered opaque blocks can raise a conservative depth bound
+	//+ rouz edit (ChatGPT)
+	const bool finiteUVs = std::isfinite(a.u) && std::isfinite(a.v) &&
+		std::isfinite(b.u) && std::isfinite(b.v) && std::isfinite(c.u) && std::isfinite(c.v) &&
+		std::fabs(a.u) < 1000000.0f && std::fabs(a.v) < 1000000.0f &&
+		std::fabs(b.u) < 1000000.0f && std::fabs(b.v) < 1000000.0f &&
+		std::fabs(c.u) < 1000000.0f && std::fabs(c.v) < 1000000.0f;
+	const bool opaqueTile = color.alpha >= 128 &&
+		(!raster.textured || (cached->opaque && finiteUVs &&
+		 sampler.addressU != rw::Texture::BORDER && sampler.addressV != rw::Texture::BORDER));
+	//- rouz edit (ChatGPT)
 
 	// Draw small triangles directly and classify eight pixel blocks on larger ones
 	if((right-left+1)*(bottom-top+1) <= 256)
@@ -522,10 +559,15 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 		const int blockSize = 8;
 		const float w2dx = -raster.w0dx-raster.w1dx;
 		const float w2dy = -raster.w0dy-raster.w1dy;
-		for(int blockTop = top; blockTop <= bottom; blockTop += blockSize)
-			for(int blockLeft = left; blockLeft <= right; blockLeft += blockSize){
-				const int blockRight = std::min(right, blockLeft+blockSize-1);
-				const int blockBottom = std::min(bottom, blockTop+blockSize-1);
+		// Align blocks to the framebuffer so other triangles can reuse their depth bounds
+		//+ rouz edit (ChatGPT)
+		for(int tileTop = top & ~(blockSize-1); tileTop <= bottom; tileTop += blockSize)
+			for(int tileLeft = left & ~(blockSize-1); tileLeft <= right; tileLeft += blockSize){
+				const int blockLeft = std::max(left, tileLeft);
+				const int blockTop = std::max(top, tileTop);
+				const int blockRight = std::min(right, tileLeft+blockSize-1);
+				const int blockBottom = std::min(bottom, tileTop+blockSize-1);
+				const size_t tileIndex = (size_t)(tileTop/blockSize)*tilesAcross+tileLeft/blockSize;
 				const float spanX = (float)(blockRight-blockLeft);
 				const float spanY = (float)(blockBottom-blockTop);
 				const float originW0 = raster.rowW0+raster.w0dx*(blockLeft-left)+raster.w0dy*(blockTop-top);
@@ -541,8 +583,27 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 				if(maxW0 < -margin || maxW1 < -margin || maxW2 < -margin)
 					continue;
 				const int fullCoverage = minW0 > margin && minW1 > margin && minW2 > margin;
+				// Skip blocks whose nearest triangle depth is behind every stored pixel
+				const float originInvz = pixelPlaneAt(&raster.inverseDepth, (float)(blockLeft-left), (float)(blockTop-top));
+				const float depthX = spanX*raster.inverseDepth.dx;
+				const float depthY = spanY*raster.inverseDepth.dy;
+				const float depthMargin = std::fabs(originInvz)*0.00001f+0.0000001f;
+				const float maxInvz = originInvz+std::max(0.0f, depthX)+std::max(0.0f, depthY)+depthMargin;
+				if(maxInvz <= tileDepthBounds[tileIndex]){
+					framebuffer.tileDepthRejectedBlocks++; // rouz edit (ChatGPT)
+					continue;
+				}
 				(fullCoverage ? shadeFull : shadePartial)(&raster, blockLeft, blockTop, blockRight, blockBottom);
+				// Advance the lower bound only when the entire tile got an opaque depth candidate
+				if(opaqueTile && fullCoverage && blockLeft == tileLeft && blockTop == tileTop &&
+				   blockRight == std::min(width-1, tileLeft+blockSize-1) &&
+				   blockBottom == std::min(height-1, tileTop+blockSize-1)){
+					const float minInvz = originInvz+std::min(0.0f, depthX)+std::min(0.0f, depthY)-depthMargin;
+					if(std::isfinite(minInvz) && minInvz > tileDepthBounds[tileIndex])
+						tileDepthBounds[tileIndex] = minInvz;
+				}
 			}
+		//- rouz edit (ChatGPT)
 	}
 	// Update framebuffer counters once after the triangle is complete
 	framebuffer.coveredPixels += raster.coveredCount;
@@ -578,6 +639,11 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 	// Project vertices with RenderWare's world to screen matrix used by camera culling
 	std::vector<ScreenVertex> transformed((size_t)geometry->numVertices);
 	const rw::Matrix *model = atomic->getFrame()->getLTM();
+	// Combine the model and camera transforms once for this atomic
+	//+ rouz edit (ChatGPT)
+	rw::Matrix modelView;
+	rw::Matrix::mult(&modelView, model, &camera->viewMatrix);
+	//- rouz edit (ChatGPT)
 	// Build the same skin matrices as the GL pipeline for animated clump atomics
 	rw::Skin *skin = rw::Skin::get(geometry);
 	rw::HAnimHierarchy *hierarchy = skin ? rw::Skin::getHierarchy(atomic) : nullptr;
@@ -601,7 +667,7 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		}
 	}
 	for(int i = 0; i < geometry->numVertices; i++){
-		rw::V3d world, projected;
+		rw::V3d projected;
 		// Blend each bind pose vertex by its animated bone matrices
 		const rw::V3d &bindVertex = geometry->morphTargets[0].vertices[i];
 		rw::V3d local = bindVertex;
@@ -623,11 +689,13 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 			if(totalWeight > 0.0f)
 				local = blended;
 		}
-		rw::V3d::transformPoints(&world, &local, 1, model);
-		rw::V3d::transformPoints(&projected, &world, 1, &camera->viewMatrix);
+		// Project each posed vertex with the combined matrix
+		rw::V3d::transformPoints(&projected, &local, 1, &modelView); // rouz edit (ChatGPT)
 		// Capture the first vertex and projection inputs for debugger inspection
 		if(framebuffer.submittedAtomics == 1 && i == 0){
 			//+ rouz edit (ChatGPT)
+			rw::V3d world;
+			rw::V3d::transformPoints(&world, &local, 1, model);
 			const rw::V3d &local = geometry->morphTargets[0].vertices[i];
 			framebuffer.firstLocal[0] = local.x; framebuffer.firstLocal[1] = local.y; framebuffer.firstLocal[2] = local.z;
 			framebuffer.firstWorld[0] = world.x; framebuffer.firstWorld[1] = world.y; framebuffer.firstWorld[2] = world.z;
@@ -672,6 +740,12 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		}
 	}
 
+	// Resolve each material's color and decoded texture once per atomic
+	//+ rouz edit (ChatGPT)
+	std::vector<MaterialState> materialStates((size_t)geometry->matList.numMaterials);
+	MaterialState fallback = { { 190, 190, 190, 255 }, 1.0f, nullptr, nullptr, true };
+	const bool hasTexCoords = geometry->numTexCoordSets > 0 && geometry->texCoords[0];
+	//- rouz edit (ChatGPT)
 	// Rasterize each source triangle with its material color and texture
 	for(int i = 0; i < geometry->numTriangles; i++){
 		const rw::Triangle &tri = geometry->triangles[i];
@@ -680,43 +754,54 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		const ScreenVertex &a = transformed[tri.v[0]];
 		const ScreenVertex &b = transformed[tri.v[1]];
 		const ScreenVertex &c = transformed[tri.v[2]];
-		// Clip partially visible triangles at the camera depth planes
+		// Skip clipping when all vertices are already inside both depth planes
 		//+ rouz edit (ChatGPT)
 		const ScreenVertex sourceVertices[3] = { a, b, c };
 		ScreenVertex nearVertices[6], farVertices[6];
-		const int nearCount = clipDepthPlane(sourceVertices, 3, nearVertices, camera->nearPlane, true);
-		const int farCount = nearCount >= 3
-			? clipDepthPlane(nearVertices, nearCount, farVertices, camera->farPlane, false) : 0;
-		if(farCount < 3){
-			framebuffer.depthRejectedTriangles++; // rouz edit (ChatGPT)
-			continue;
-		}
-		for(int vertex = 0; vertex < farCount; vertex++){
-			const float divisor = camera->projection == rw::Camera::PERSPECTIVE ? farVertices[vertex].z : 1.0f;
-			farVertices[vertex].x = width*farVertices[vertex].cameraX/divisor;
-			farVertices[vertex].y = height*farVertices[vertex].cameraY/divisor;
+		const ScreenVertex *polygon = sourceVertices;
+		int polygonCount = 3;
+		if(!(a.z > camera->nearPlane && b.z > camera->nearPlane && c.z > camera->nearPlane &&
+		     a.z < camera->farPlane && b.z < camera->farPlane && c.z < camera->farPlane)){
+			const int nearCount = clipDepthPlane(sourceVertices, 3, nearVertices, camera->nearPlane, true);
+			polygonCount = nearCount >= 3
+				? clipDepthPlane(nearVertices, nearCount, farVertices, camera->farPlane, false) : 0;
+			if(polygonCount < 3){
+				framebuffer.depthRejectedTriangles++;
+				continue;
+			}
+			for(int vertex = 0; vertex < polygonCount; vertex++){
+				const float divisor = camera->projection == rw::Camera::PERSPECTIVE ? farVertices[vertex].z : 1.0f;
+				farVertices[vertex].x = width*farVertices[vertex].cameraX/divisor;
+				farVertices[vertex].y = height*farVertices[vertex].cameraY/divisor;
+			}
+			polygon = farVertices;
+		}else
+			framebuffer.triviallyUnclippedTriangles++; // rouz edit (ChatGPT)
+		//- rouz edit (ChatGPT)
+		// Reuse the material state across triangles sharing the same material ID
+		//+ rouz edit (ChatGPT)
+		MaterialState *state = &fallback;
+		if(tri.matId < geometry->matList.numMaterials && geometry->matList.materials[tri.matId]){
+			state = &materialStates[tri.matId];
+			if(!state->resolved){
+				rw::Material *material = geometry->matList.materials[tri.matId];
+				state->color = geometry->flags & rw::Geometry::MODULATE ? material->color : rw::RGBA{ 255, 255, 255, 255 };
+				state->surfaceAmbient = material->surfaceProps.ambient;
+				state->source = material->texture;
+				state->cached = hasTexCoords ? getCachedTexture(state->source) : nullptr;
+				state->resolved = true;
+			}
 		}
 		//- rouz edit (ChatGPT)
-		rw::RGBA color = { 190, 190, 190, 255 };
-		float surfaceAmbient = 1.0f; // rouz edit (ChatGPT)
-		rw::Texture *source = nullptr;
-		if(tri.matId < geometry->matList.numMaterials && geometry->matList.materials[tri.matId]){
-			rw::Material *material = geometry->matList.materials[tri.matId];
-			color = geometry->flags & rw::Geometry::MODULATE ? material->color : rw::RGBA{ 255, 255, 255, 255 }; // rouz edit (ChatGPT)
-			surfaceAmbient = material->surfaceProps.ambient; // rouz edit (ChatGPT)
-			source = material->texture;
-		}
 		// Count triangles that pass the camera depth checks
 		framebuffer.submittedTriangles++; // rouz edit (ChatGPT)
-		// Fetch a CPU texture only for geometry with UVs and a textured material
-		const CachedTexture *cached = geometry->numTexCoordSets > 0 && geometry->texCoords[0]
-			? getCachedTexture(source) : nullptr;
-		if(cached)
+		// Count triangles whose material has a CPU texture
+		if(state->cached)
 			framebuffer.texturedTriangles++;
 		// Rasterize the clipped polygon as a triangle fan
-		for(int vertex = 1; vertex+1 < farCount; vertex++)
-			drawTriangle(farVertices[0], farVertices[vertex], farVertices[vertex+1], color,
-				geometry->colors != nullptr, ambient, surfaceAmbient, source, cached, cullMode); // rouz edit (ChatGPT)
+		for(int vertex = 1; vertex+1 < polygonCount; vertex++)
+			drawTriangle(polygon[0], polygon[vertex], polygon[vertex+1], state->color,
+				geometry->colors != nullptr, ambient, state->surfaceAmbient, state->source, state->cached, cullMode); // rouz edit (ChatGPT)
 	}
 }
 
@@ -751,8 +836,11 @@ void Shutdown()
 	}
 	SOFTWARE_CIT_FREE(pixels); // rouz edit (ChatGPT)
 	SOFTWARE_CIT_FREE(depths); // rouz edit (ChatGPT)
+	SOFTWARE_CIT_FREE(tileDepthBounds); // rouz edit (ChatGPT)
 	pixels = nullptr;
 	depths = nullptr;
+	tileDepthBounds = nullptr; // rouz edit (ChatGPT)
+	tilesAcross = 0; // rouz edit (ChatGPT)
 	width = height = 0;
 	framebuffer = {};
 	// Restore the previous pipeline before releasing the CPU render hook
@@ -795,6 +883,25 @@ void RenderClump(rw::Clump *clump)
 }
 //- rouz edit (ChatGPT)
 
+//+ rouz edit (ChatGPT)
+void RenderVehicleClump(rw::Clump *clump)
+{
+	// Let vehicle callbacks select body LODs, wheels, and visible components
+	if(!clump)
+		return;
+	FORLIST(link, clump->atomics){
+		rw::Atomic *atomic = rw::Atomic::fromClump(link);
+		if(!(atomic->object.object.flags & rw::Atomic::RENDER))
+			continue;
+		// Submit parts without a game visibility callback through the CPU path
+		if(atomic->renderCB == rw::Atomic::defaultRenderCB)
+			renderAtomic(pipeline, atomic);
+		else
+			atomic->render();
+	}
+}
+//- rouz edit (ChatGPT)
+
 void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const rw::RGBA &bottom) // rouz edit (ChatGPT)
 {
 	// Keep the first implementation at a bounded CPU raster resolution
@@ -803,22 +910,31 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	// Retire decoded textures after streaming stops using them
 	cacheFrame++;
 	trimTextureCache();
-	const int newWidth = std::min(displayWidth, 640);
+	// Limit the CPU framebuffer width while preserving the window's aspect ratio
+	const int newWidth = std::min(displayWidth, std::max(1, maxFramebufferWidthPixels)); // rouz edit (ChatGPT)
 	const int newHeight = std::max(1, displayHeight*newWidth/displayWidth);
 	if(newWidth != width || newHeight != height){
 		// Allocate the CPU framebuffer directly in CIT Alloc with this source location
 		const size_t count = (size_t)newWidth*newHeight;
 		rw::RGBA *newPixels = (rw::RGBA*)SOFTWARE_CIT_MALLOC(count*sizeof(rw::RGBA)); // rouz edit (ChatGPT)
 		float *newDepths = (float*)SOFTWARE_CIT_MALLOC(count*sizeof(float)); // rouz edit (ChatGPT)
-		if(!newPixels || !newDepths){
+		// Allocate one conservative depth bound for each aligned 8 by 8 tile
+		//+ rouz edit (ChatGPT)
+		const int newTilesAcross = (newWidth+7)/8;
+		const size_t tileCount = (size_t)newTilesAcross*((newHeight+7)/8);
+		float *newTileDepthBounds = (float*)SOFTWARE_CIT_MALLOC(tileCount*sizeof(float));
+		if(!newPixels || !newDepths || !newTileDepthBounds){
 			SOFTWARE_CIT_FREE(newPixels); // rouz edit (ChatGPT)
 			SOFTWARE_CIT_FREE(newDepths); // rouz edit (ChatGPT)
+			SOFTWARE_CIT_FREE(newTileDepthBounds);
 			return;
 		}
+		//- rouz edit (ChatGPT)
 		rw::Raster *newTexture = rw::Raster::create(newWidth, newHeight, 32, rw::Raster::TEXTURE | rw::Raster::C8888);
 		if(!newTexture){
 			SOFTWARE_CIT_FREE(newPixels); // rouz edit (ChatGPT)
 			SOFTWARE_CIT_FREE(newDepths); // rouz edit (ChatGPT)
+			SOFTWARE_CIT_FREE(newTileDepthBounds); // rouz edit (ChatGPT)
 			return;
 		}
 		// Replace the previous framebuffer only after all new storage is ready
@@ -826,9 +942,12 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 			texture->destroy();
 		SOFTWARE_CIT_FREE(pixels); // rouz edit (ChatGPT)
 		SOFTWARE_CIT_FREE(depths); // rouz edit (ChatGPT)
+		SOFTWARE_CIT_FREE(tileDepthBounds); // rouz edit (ChatGPT)
 		texture = newTexture;
 		pixels = newPixels;
 		depths = newDepths;
+		tileDepthBounds = newTileDepthBounds; // rouz edit (ChatGPT)
+		tilesAcross = newTilesAcross; // rouz edit (ChatGPT)
 		width = newWidth;
 		height = newHeight;
 	}
@@ -845,6 +964,8 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	}
 	// Reset depth and publish the live CPU buffer for debugger inspection
 	std::fill(depths, depths + (size_t)width*height, 0.0f); // rouz edit (ChatGPT)
+	// Reset tile bounds alongside per-pixel depth for the new scene frame
+	std::fill(tileDepthBounds, tileDepthBounds + (size_t)tilesAcross*((height+7)/8), 0.0f); // rouz edit (ChatGPT)
 	framebuffer.width = width;
 	framebuffer.height = height;
 	framebuffer.pixels = pixels; // rouz edit (ChatGPT)
@@ -854,6 +975,8 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	framebuffer.submittedAtomics = 0;
 	framebuffer.submittedTriangles = 0;
 	framebuffer.depthRejectedTriangles = 0; // rouz edit (ChatGPT)
+	framebuffer.triviallyUnclippedTriangles = 0; // rouz edit (ChatGPT)
+	framebuffer.tileDepthRejectedBlocks = 0; // rouz edit (ChatGPT)
 	framebuffer.offscreenTriangles = 0; // rouz edit (ChatGPT)
 	// Reset projected bounds so the debugger shows the current frame only
 	framebuffer.nonFiniteTriangles = 0; // rouz edit (ChatGPT)

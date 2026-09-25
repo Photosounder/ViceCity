@@ -14,6 +14,7 @@ struct Framebuffer {
 	unsigned int submittedAtomics;
 	unsigned int submittedTriangles;
 	unsigned int depthRejectedTriangles; // rouz edit (ChatGPT)
+	unsigned int triviallyUnclippedTriangles, tileDepthRejectedBlocks; // rouz edit (ChatGPT)
 	unsigned int offscreenTriangles; // rouz edit (ChatGPT)
 	unsigned int nonFiniteTriangles; // rouz edit (ChatGPT)
 	float minScreenX, maxScreenX, minScreenY, maxScreenY; // rouz edit (ChatGPT)
@@ -31,12 +32,14 @@ struct Framebuffer {
 	unsigned long long totalUploadedFrames; // rouz edit (ChatGPT)
 };
 extern Framebuffer framebuffer;
+extern int maxFramebufferWidthPixels; // rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 void Install();
 void Shutdown(); // rouz edit (ChatGPT)
 void Attach(rw::Atomic *atomic);
 void RenderAtomic(rw::Atomic *atomic); // rouz edit (ChatGPT)
 void RenderClump(rw::Clump *clump); // rouz edit (ChatGPT)
+void RenderVehicleClump(rw::Clump *clump); // rouz edit (ChatGPT)
 void BeginFrame(int width, int height, const rw::RGBA &top, const rw::RGBA &bottom); // rouz edit (ChatGPT)
 void Present();
 }

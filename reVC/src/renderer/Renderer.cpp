@@ -681,7 +681,15 @@ CRenderer::RenderSoftwareVehicles(void)
 			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
 		}
 		//- rouz edit (ChatGPT)
-		SoftwarePolygons::RenderClump((RpClump*)entity->m_rwObject);
+		// Set the camera distance used by the vehicle LOD callbacks
+		//+ rouz edit (ChatGPT)
+		RpClump *clump = (RpClump*)entity->m_rwObject;
+		CVisibilityPlugins::SetupVehicleVariables(clump);
+		CVisibilityPlugins::InitAlphaAtomicList();
+		SoftwarePolygons::RenderVehicleClump(clump);
+		// Submit parts deferred by the vehicle's transparency callbacks
+		CVisibilityPlugins::RenderAlphaAtomics();
+		//- rouz edit (ChatGPT)
 	}
 	// Restore the render state expected by the rest of the scene
 	rw::SetRenderState(rw::CULLMODE, oldCullMode); // rouz edit (ChatGPT)
