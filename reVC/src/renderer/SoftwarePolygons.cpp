@@ -41,6 +41,13 @@ struct CachedTexture {
 	bool topDown;
 	unsigned long long lastUsed;
 };
+
+struct TextureSampler {
+	const rw::uint8 *pixels;
+	int width, height, stride;
+	bool topDown;
+	rw::Texture::Addressing addressU, addressV;
+};
 //- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
@@ -184,22 +191,21 @@ float addressCoordinate(float value, rw::Texture::Addressing mode)
 	return value - std::floor(value);
 }
 
-bool sampleTexture(const CachedTexture &cached, const rw::Texture &source, float u, float v, rw::RGBA &texel)
+bool sampleTexture(const TextureSampler &sampler, float u, float v, rw::RGBA &texel)
 {
 	// Sample the nearest texel after applying RenderWare address modes
 	if(!std::isfinite(u) || !std::isfinite(v))
 		return false;
-	u = addressCoordinate(u, (rw::Texture::Addressing)((source.filterAddressing >> 8) & 0xF));
-	v = addressCoordinate(1.0f-v, (rw::Texture::Addressing)((source.filterAddressing >> 12) & 0xF));
+	u = addressCoordinate(u, sampler.addressU);
+	v = addressCoordinate(1.0f-v, sampler.addressV);
 	if(u < 0.0f || v < 0.0f)
 		return false;
-	const rw::Image *image = cached.image;
-	const int x = std::min(image->width-1, (int)(u*image->width));
-	int y = std::min(image->height-1, (int)(v*image->height));
+	const int x = std::min(sampler.width-1, (int)(u*sampler.width));
+	int y = std::min(sampler.height-1, (int)(v*sampler.height));
 	// Convert the GL sampler's bottom origin to ordinary CPU image rows
-	if(cached.topDown)
-		y = image->height-1-y;
-	const rw::uint8 *pixel = image->pixels + (size_t)y*image->stride + (size_t)x*4;
+	if(sampler.topDown)
+		y = sampler.height-1-y;
+	const rw::uint8 *pixel = sampler.pixels + (size_t)y*sampler.stride + (size_t)x*4;
 	texel = { pixel[0], pixel[1], pixel[2], pixel[3] };
 	return true;
 }
@@ -209,6 +215,12 @@ float edge(const ScreenVertex &a, const ScreenVertex &b, float x, float y)
 {
 	return (x-a.x)*(b.y-a.y) - (y-a.y)*(b.x-a.x);
 }
+
+//+ rouz edit (ChatGPT)
+struct PixelPlane {
+	float row, dx, dy;
+};
+//- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 int clipDepthPlane(const ScreenVertex *input, int count, ScreenVertex *output, float plane, bool keepGreater)
@@ -243,30 +255,127 @@ int clipDepthPlane(const ScreenVertex *input, int count, ScreenVertex *output, f
 }
 //- rouz edit (ChatGPT)
 
+//+ rouz edit (ChatGPT)
+struct TriangleRaster {
+	float rowW0, rowW1, w0dx, w0dy, w1dx, w1dy;
+	PixelPlane inverseDepth, uOverZ, vOverZ;
+	PixelPlane redOverZ, greenOverZ, blueOverZ;
+	float ambientRed, ambientGreen, ambientBlue;
+	rw::RGBA color, flatShaded;
+	const TextureSampler *sampler;
+	int left, top, textured, prelit;
+	unsigned int coveredCount, texturedCount;
+};
+
+PixelPlane makePixelPlane(const TriangleRaster *raster, float av, float bv, float cv)
+{
+	// Build the starting value and horizontal and vertical steps for one attribute
+	PixelPlane plane;
+	plane.row = cv+(av-cv)*raster->rowW0+(bv-cv)*raster->rowW1;
+	plane.dx = (av-cv)*raster->w0dx+(bv-cv)*raster->w1dx;
+	plane.dy = (av-cv)*raster->w0dy+(bv-cv)*raster->w1dy;
+	return plane;
+}
+
+float pixelPlaneAt(const PixelPlane *plane, float offsetX, float offsetY)
+{
+	// Find the value of a plane at the first pixel of a rectangle
+	return plane->row+plane->dx*offsetX+plane->dy*offsetY;
+}
+
+void shadeRect(TriangleRaster *raster, int rectLeft, int rectTop, int rectRight, int rectBottom, int fullCoverage)
+{
+	// Start each edge and attribute at the rectangle's top left pixel
+	const float offsetX = (float)(rectLeft-raster->left);
+	const float offsetY = (float)(rectTop-raster->top);
+	float rectW0 = raster->rowW0+raster->w0dx*offsetX+raster->w0dy*offsetY;
+	float rectW1 = raster->rowW1+raster->w1dx*offsetX+raster->w1dy*offsetY;
+	float rowInvz = pixelPlaneAt(&raster->inverseDepth, offsetX, offsetY);
+	float rowUoz = pixelPlaneAt(&raster->uOverZ, offsetX, offsetY);
+	float rowVoz = pixelPlaneAt(&raster->vOverZ, offsetX, offsetY);
+	float rowRoz = pixelPlaneAt(&raster->redOverZ, offsetX, offsetY);
+	float rowGoz = pixelPlaneAt(&raster->greenOverZ, offsetX, offsetY);
+	float rowBoz = pixelPlaneAt(&raster->blueOverZ, offsetX, offsetY);
+	unsigned int coveredCount = 0, texturedCount = 0;
+
+	// Advance edges and attributes across each row and shade pixels that pass depth
+	for(int y = rectTop; y <= rectBottom; y++){
+		float w0 = rectW0, w1 = rectW1;
+		float invz = rowInvz, uoz = rowUoz, voz = rowVoz;
+		float roz = rowRoz, goz = rowGoz, boz = rowBoz;
+		for(int x = rectLeft; x <= rectRight;
+			x++, w0 += raster->w0dx, w1 += raster->w1dx, invz += raster->inverseDepth.dx,
+			uoz += raster->uOverZ.dx, voz += raster->vOverZ.dx,
+			roz += raster->redOverZ.dx, goz += raster->greenOverZ.dx, boz += raster->blueOverZ.dx){
+			if(!fullCoverage && (w0 < 0.0f || w1 < 0.0f || 1.0f-w0-w1 < 0.0f))
+				continue;
+			const size_t index = (size_t)y*width+x;
+			if(!(invz > depths[index]))
+				continue;
+			// Apply perspective corrected prelight and the material color
+			const float z = (raster->prelit || raster->textured) ? 1.0f/invz : 0.0f;
+			rw::RGBA shaded = raster->flatShaded;
+			if(raster->prelit){
+				shaded.red = (rw::uint8)(raster->color.red*std::max(0.0f, std::min(1.0f, roz*z/255.0f+raster->ambientRed)));
+				shaded.green = (rw::uint8)(raster->color.green*std::max(0.0f, std::min(1.0f, goz*z/255.0f+raster->ambientGreen)));
+				shaded.blue = (rw::uint8)(raster->color.blue*std::max(0.0f, std::min(1.0f, boz*z/255.0f+raster->ambientBlue)));
+			}
+			// Sample cutout textures before committing the depth value
+			if(raster->textured){
+				rw::RGBA texel;
+				if(!sampleTexture(*raster->sampler, uoz*z, voz*z, texel))
+					continue;
+				shaded.red = (rw::uint8)((unsigned)shaded.red*texel.red/255);
+				shaded.green = (rw::uint8)((unsigned)shaded.green*texel.green/255);
+				shaded.blue = (rw::uint8)((unsigned)shaded.blue*texel.blue/255);
+				shaded.alpha = (rw::uint8)((unsigned)shaded.alpha*texel.alpha/255);
+			}
+			if(shaded.alpha < 128)
+				continue;
+			depths[index] = invz;
+			pixels[index] = shaded;
+			pixels[index].alpha = 255;
+			coveredCount++;
+			if(raster->textured)
+				texturedCount++;
+		}
+		rectW0 += raster->w0dy;
+		rectW1 += raster->w1dy;
+		rowInvz += raster->inverseDepth.dy;
+		rowUoz += raster->uOverZ.dy;
+		rowVoz += raster->vOverZ.dy;
+		rowRoz += raster->redOverZ.dy;
+		rowGoz += raster->greenOverZ.dy;
+		rowBoz += raster->blueOverZ.dy;
+	}
+	// Accumulate diagnostic counters after the rectangle is finished
+	raster->coveredCount += coveredCount;
+	raster->texturedCount += texturedCount;
+}
+
 void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVertex &c,
 	const rw::RGBA &color, bool hasVertexColors, const rw::RGBAf &ambient, float surfaceAmbient,
 	rw::Texture *source, const CachedTexture *cached)
 {
-	// Reject invalid projected coordinates before computing pixel bounds
+	// Reject invalid projected coordinates and degenerate triangles
 	if(!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(b.x) || !std::isfinite(b.y) ||
 	   !std::isfinite(c.x) || !std::isfinite(c.y) || !std::isfinite(a.z) ||
 	   !std::isfinite(b.z) || !std::isfinite(c.z)){
-		framebuffer.nonFiniteTriangles++; // rouz edit (ChatGPT)
+		framebuffer.nonFiniteTriangles++;
 		return;
 	}
-	// Compute a clipped pixel bounding box and reject degenerate triangles
 	const float area = edge(a, b, c.x, c.y);
 	if(!std::isfinite(area) || std::fabs(area) < 0.001f){
-		framebuffer.degenerateTriangles++; // rouz edit (ChatGPT)
+		framebuffer.degenerateTriangles++;
 		return;
 	}
-	// Cull in floating point before converting coordinates that may exceed integer range
+	// Clamp the triangle's bounding box to the framebuffer
 	const float minX = std::min(a.x, std::min(b.x, c.x));
 	const float maxX = std::max(a.x, std::max(b.x, c.x));
 	const float minY = std::min(a.y, std::min(b.y, c.y));
 	const float maxY = std::max(a.y, std::max(b.y, c.y));
 	if(maxX < 0.0f || minX >= width || maxY < 0.0f || minY >= height){
-		framebuffer.offscreenTriangles++; // rouz edit (ChatGPT)
+		framebuffer.offscreenTriangles++;
 		return;
 	}
 	const int left = (int)std::floor(std::max(0.0f, minX));
@@ -274,51 +383,85 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 	const int top = (int)std::floor(std::max(0.0f, minY));
 	const int bottom = (int)std::ceil(std::min((float)(height-1), maxY));
 
-	// Fill covered pixels using perspective correct depth and material UVs
-	for(int y = top; y <= bottom; y++)
-		for(int x = left; x <= right; x++){
-			const float w0 = edge(b, c, x+0.5f, y+0.5f) / area;
-			const float w1 = edge(c, a, x+0.5f, y+0.5f) / area;
-			const float w2 = 1.0f-w0-w1;
-			if(w0 < 0.0f || w1 < 0.0f || w2 < 0.0f)
-				continue;
-			const float invz = w0/a.z + w1/b.z + w2/c.z;
-			const size_t index = (size_t)y*width+x;
-			if(invz > depths[index]){
-				// Add RenderWare ambient light to the interpolated prelight before material modulation
-				rw::RGBA shaded = color;
-				//+ rouz edit (ChatGPT)
-				const float red = hasVertexColors ? (w0*a.color.red/a.z + w1*b.color.red/b.z + w2*c.color.red/c.z)/invz : 0.0f;
-				const float green = hasVertexColors ? (w0*a.color.green/a.z + w1*b.color.green/b.z + w2*c.color.green/c.z)/invz : 0.0f;
-				const float blue = hasVertexColors ? (w0*a.color.blue/a.z + w1*b.color.blue/b.z + w2*c.color.blue/c.z)/invz : 0.0f;
-				shaded.red = (rw::uint8)(color.red*std::max(0.0f, std::min(1.0f, red/255.0f + ambient.red*surfaceAmbient)));
-				shaded.green = (rw::uint8)(color.green*std::max(0.0f, std::min(1.0f, green/255.0f + ambient.green*surfaceAmbient)));
-				shaded.blue = (rw::uint8)(color.blue*std::max(0.0f, std::min(1.0f, blue/255.0f + ambient.blue*surfaceAmbient)));
-				//- rouz edit (ChatGPT)
-				// Sample a texture before committing depth so transparent texels leave the scene visible
-				if(cached){
-					const float u = (w0*a.u/a.z + w1*b.u/b.z + w2*c.u/c.z)/invz;
-					const float v = (w0*a.v/a.z + w1*b.v/b.z + w2*c.v/c.z)/invz;
-					rw::RGBA texel;
-					if(!sampleTexture(*cached, *source, u, v, texel))
-						continue;
-					shaded.red = (rw::uint8)((unsigned)shaded.red*texel.red/255);
-					shaded.green = (rw::uint8)((unsigned)shaded.green*texel.green/255);
-					shaded.blue = (rw::uint8)((unsigned)shaded.blue*texel.blue/255);
-					shaded.alpha = (rw::uint8)((unsigned)shaded.alpha*texel.alpha/255);
-				}
-				if(shaded.alpha < 128)
+	// Prepare edge steps, perspective planes, and constant triangle shading
+	TriangleRaster raster = {};
+	raster.left = left;
+	raster.top = top;
+	raster.textured = cached != nullptr;
+	raster.prelit = hasVertexColors;
+	raster.color = color;
+	raster.flatShaded = color;
+	raster.ambientRed = ambient.red*surfaceAmbient;
+	raster.ambientGreen = ambient.green*surfaceAmbient;
+	raster.ambientBlue = ambient.blue*surfaceAmbient;
+	const float inverseArea = 1.0f/area;
+	raster.rowW0 = edge(b, c, left+0.5f, top+0.5f)*inverseArea;
+	raster.rowW1 = edge(c, a, left+0.5f, top+0.5f)*inverseArea;
+	raster.w0dx = (c.y-b.y)*inverseArea;
+	raster.w0dy = (b.x-c.x)*inverseArea;
+	raster.w1dx = (a.y-c.y)*inverseArea;
+	raster.w1dy = (c.x-a.x)*inverseArea;
+	const float az = 1.0f/a.z, bz = 1.0f/b.z, cz = 1.0f/c.z;
+	raster.inverseDepth = makePixelPlane(&raster, az, bz, cz);
+	TextureSampler sampler = {};
+	if(raster.textured){
+		const rw::Image *image = cached->image;
+		sampler.pixels = image->pixels;
+		sampler.width = image->width;
+		sampler.height = image->height;
+		sampler.stride = image->stride;
+		sampler.topDown = cached->topDown;
+		sampler.addressU = (rw::Texture::Addressing)((source->filterAddressing >> 8) & 0xF);
+		sampler.addressV = (rw::Texture::Addressing)((source->filterAddressing >> 12) & 0xF);
+		raster.sampler = &sampler;
+		raster.uOverZ = makePixelPlane(&raster, a.u*az, b.u*bz, c.u*cz);
+		raster.vOverZ = makePixelPlane(&raster, a.v*az, b.v*bz, c.v*cz);
+	}
+	if(raster.prelit){
+		raster.redOverZ = makePixelPlane(&raster, a.color.red*az, b.color.red*bz, c.color.red*cz);
+		raster.greenOverZ = makePixelPlane(&raster, a.color.green*az, b.color.green*bz, c.color.green*cz);
+		raster.blueOverZ = makePixelPlane(&raster, a.color.blue*az, b.color.blue*bz, c.color.blue*cz);
+	}else{
+		raster.flatShaded.red = (rw::uint8)(color.red*std::max(0.0f, std::min(1.0f, raster.ambientRed)));
+		raster.flatShaded.green = (rw::uint8)(color.green*std::max(0.0f, std::min(1.0f, raster.ambientGreen)));
+		raster.flatShaded.blue = (rw::uint8)(color.blue*std::max(0.0f, std::min(1.0f, raster.ambientBlue)));
+	}
+
+	// Draw small triangles directly and classify eight pixel blocks on larger ones
+	if((right-left+1)*(bottom-top+1) <= 256)
+		shadeRect(&raster, left, top, right, bottom, false);
+	else{
+		const int blockSize = 8;
+		const float w2dx = -raster.w0dx-raster.w1dx;
+		const float w2dy = -raster.w0dy-raster.w1dy;
+		for(int blockTop = top; blockTop <= bottom; blockTop += blockSize)
+			for(int blockLeft = left; blockLeft <= right; blockLeft += blockSize){
+				const int blockRight = std::min(right, blockLeft+blockSize-1);
+				const int blockBottom = std::min(bottom, blockTop+blockSize-1);
+				const float spanX = (float)(blockRight-blockLeft);
+				const float spanY = (float)(blockBottom-blockTop);
+				const float originW0 = raster.rowW0+raster.w0dx*(blockLeft-left)+raster.w0dy*(blockTop-top);
+				const float originW1 = raster.rowW1+raster.w1dx*(blockLeft-left)+raster.w1dy*(blockTop-top);
+				const float originW2 = 1.0f-originW0-originW1;
+				const float minW0 = originW0+std::min(0.0f, spanX*raster.w0dx)+std::min(0.0f, spanY*raster.w0dy);
+				const float minW1 = originW1+std::min(0.0f, spanX*raster.w1dx)+std::min(0.0f, spanY*raster.w1dy);
+				const float minW2 = originW2+std::min(0.0f, spanX*w2dx)+std::min(0.0f, spanY*w2dy);
+				const float maxW0 = originW0+std::max(0.0f, spanX*raster.w0dx)+std::max(0.0f, spanY*raster.w0dy);
+				const float maxW1 = originW1+std::max(0.0f, spanX*raster.w1dx)+std::max(0.0f, spanY*raster.w1dy);
+				const float maxW2 = originW2+std::max(0.0f, spanX*w2dx)+std::max(0.0f, spanY*w2dy);
+				const float margin = 0.00001f;
+				if(maxW0 < -margin || maxW1 < -margin || maxW2 < -margin)
 					continue;
-				depths[index] = invz;
-				pixels[index] = shaded;
-				pixels[index].alpha = 255;
-				if(cached)
-					framebuffer.texturedPixels++;
-				framebuffer.coveredPixels++; // rouz edit (ChatGPT)
-				framebuffer.totalCoveredPixels++; // rouz edit (ChatGPT)
+				const int fullCoverage = minW0 > margin && minW1 > margin && minW2 > margin;
+				shadeRect(&raster, blockLeft, blockTop, blockRight, blockBottom, fullCoverage);
 			}
-		}
+	}
+	// Update framebuffer counters once after the triangle is complete
+	framebuffer.coveredPixels += raster.coveredCount;
+	framebuffer.totalCoveredPixels += raster.coveredCount;
+	framebuffer.texturedPixels += raster.texturedCount;
 }
+//- rouz edit (ChatGPT)
 
 void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 {
