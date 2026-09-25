@@ -22,7 +22,7 @@ extern "C" void cita_win_free(void *, const char *, const char *, int);
 namespace SoftwarePolygons {
 //+ rouz edit (ChatGPT)
 Framebuffer framebuffer = {};
-int maxFramebufferWidthPixels = 640; // rouz edit (ChatGPT)
+int maxFramebufferWidthPixels = 860; // rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 namespace {
 

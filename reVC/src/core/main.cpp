@@ -1281,6 +1281,13 @@ if(gbRenderEverythingBarRoads)
 	// Submit vehicle geometry before the scene framebuffer is uploaded
 	if(gbRenderVehicles)
 		CRenderer::RenderSoftwareVehicles();
+	// Submit the transparent world and fading entities before the framebuffer upload
+	//+ rouz edit (ChatGPT)
+	if(gbRenderWorld2)
+		CRenderer::RenderWorld(2);
+	if(gbRenderFadingInEntities)
+		CRenderer::RenderFadingInEntities();
+	//- rouz edit (ChatGPT)
 #endif
 	//- rouz edit (ChatGPT)
 	// seam fixer

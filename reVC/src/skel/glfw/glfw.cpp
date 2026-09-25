@@ -1556,7 +1556,9 @@ initkeymap(void)
 void
 keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (key >= 0 && key <= GLFW_KEY_LAST && action != GLFW_REPEAT) {
+	// Forward key repeats as keydown events to match the Windows input path
+	//+ rouz edit (ChatGPT)
+	if (key >= 0 && key <= GLFW_KEY_LAST) {
 		RsKeyCodes ks = (RsKeyCodes)keymap[key];
 
 		if (key == GLFW_KEY_LEFT_SHIFT)
@@ -1566,8 +1568,9 @@ keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 			rshiftStatus = action != GLFW_RELEASE;
 
 		if (action == GLFW_RELEASE) RsKeyboardEventHandler(rsKEYUP, &ks);
-		else if (action == GLFW_PRESS) RsKeyboardEventHandler(rsKEYDOWN, &ks);
+		else if (action == GLFW_PRESS || action == GLFW_REPEAT) RsKeyboardEventHandler(rsKEYDOWN, &ks);
 	}
+	//- rouz edit (ChatGPT)
 }
 
 #else

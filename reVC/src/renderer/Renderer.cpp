@@ -673,11 +673,19 @@ CRenderer::RenderSoftwareVehicles(void)
 		if(!entity || !entity->IsVehicle() || !entity->m_rwObject ||
 		   ((CVehicle*)entity)->IsBoat() || RwObjectGetType(entity->m_rwObject) != rpCLUMP)
 			continue;
+		// Draw seated peds before the vehicle body, as in RenderOneNonRoad
+		//+ rouz edit (ChatGPT)
+		CVehicle *vehicle = (CVehicle*)entity;
+		if(vehicle->pDriver && vehicle->pDriver->m_nPedState == PED_DRIVING)
+			vehicle->pDriver->Render();
+		for(int passenger = 0; passenger < 8; passenger++)
+			if(vehicle->pPassengers[passenger] && vehicle->pPassengers[passenger]->m_nPedState == PED_DRIVING)
+				vehicle->pPassengers[passenger]->Render();
+		//- rouz edit (ChatGPT)
 		// Apply this vehicle's paint colors before reading its shared materials on the CPU
 		//+ rouz edit (ChatGPT)
 		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(entity->GetModelIndex());
 		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
-			CVehicle *vehicle = (CVehicle*)entity;
 			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
 		}
 		//- rouz edit (ChatGPT)
