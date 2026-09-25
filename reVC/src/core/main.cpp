@@ -289,6 +289,13 @@ DoFade(void)
 		}
 	}
 
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Keep fade timing active while hiding gameplay fades drawn outside the CPU framebuffer
+	if(!FrontEndMenuManager.m_bMenuActive)
+		return;
+#endif
+	//- rouz edit (ChatGPT)
 	if(CDraw::FadeValue != 0 || FrontEndMenuManager.m_PrefsBrightness < 256){
 		CSprite2d *splash = LoadSplash(nil);
 
@@ -363,9 +370,14 @@ RwGrabScreen(RwCamera *camera, RwChar *filename)
 void
 DoRWStuffEndOfFrame(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
+	// Hide final debug text and buffered charset drawing in the software target
 	CDebug::DisplayScreenStrings();	// custom
 	CDebug::DebugDisplayTextBuffer();
 	FlushObrsPrintfs();
+#endif
+	//- rouz edit (ChatGPT)
 	RwCameraEndUpdate(Scene.camera);
 	RsCameraShowRaster(Scene.camera);
 #ifndef MASTER
@@ -1412,6 +1424,12 @@ RenderScene(void)
 void
 RenderDebugShit(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Hide debug geometry that is drawn after the CPU framebuffer is presented
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("RenderDebugShit");
 	CTheScripts::RenderTheScriptDebugLines();
 #ifndef FINAL
@@ -1427,6 +1445,12 @@ RenderDebugShit(void)
 void
 RenderEffects(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Hide effects that are still drawn outside the CPU framebuffer
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
 	if(gbNewRenderer){
 		RenderEffects_new();
@@ -1456,6 +1480,12 @@ RenderEffects(void)
 void
 Render2dStuff(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Hide the HUD and other screen overlays until they use the CPU framebuffer
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("Render2dStuff");
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
@@ -1534,6 +1564,13 @@ Render2dStuff(void)
 void
 RenderMenus(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Leave gameplay without the console overlay while preserving frontend menus
+	if(!FrontEndMenuManager.m_bMenuActive)
+		return;
+#endif
+	//- rouz edit (ChatGPT)
 	if (FrontEndMenuManager.m_bMenuActive)
 	{
 		PUSH_RENDERGROUP("RenderMenus");
@@ -1549,6 +1586,14 @@ RenderMenus(void)
 void
 Render2dStuffAfterFade(void)
 {
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Flush frontend text only while the menu is visible
+	if(FrontEndMenuManager.m_bMenuActive)
+		CFont::DrawFonts();
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("Render2dStuffAfterFade");
 #ifndef MASTER
 	DisplayGameDebugText();
@@ -1658,6 +1703,9 @@ Idle(void *arg)
 		RenderScene();
 		tbEndTimer("RenderScene");
 
+		//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
+		// Skip presentation effects that would draw outside the CPU framebuffer
 #ifdef EXTENDED_PIPELINES
 		CustomPipes::EnvMapRender();
 #endif
@@ -1678,6 +1726,8 @@ Idle(void *arg)
 		tbStartTimer(0, "RenderMotionBlur");
 		TheCamera.RenderMotionBlur();
 		tbEndTimer("RenderMotionBlur");
+#endif
+		//- rouz edit (ChatGPT)
 
 		tbStartTimer(0, "Render2dStuff");
 		Render2dStuff();
@@ -1713,11 +1763,22 @@ Idle(void *arg)
 	tbEndTimer("Render2dStuff-Fade");
 	// CCredits::Render(); // They added it to function above and also forgot it here
 #ifdef XBOX_MESSAGE_SCREEN
-	FrontEndMenuManager.DrawOverlays();
+	// Keep frontend overlays tied to the visible menu in the software target
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(FrontEndMenuManager.m_bMenuActive)
+#endif
+		FrontEndMenuManager.DrawOverlays();
+	//- rouz edit (ChatGPT)
 #endif
 
+	// Hide the timebar overlay outside the CPU framebuffer
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 	if (gbShowTimebars)
 		tbDisplay();
+#endif
+	//- rouz edit (ChatGPT)
 
 	DoRWStuffEndOfFrame();
 
