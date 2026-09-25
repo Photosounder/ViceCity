@@ -1395,6 +1395,20 @@ static void PresentSoftwareScene(void)
 #endif
 	SoftwarePolygons::Present();
 }
+
+//+ rouz edit (ChatGPT)
+static void RenderSoftwareWorldEffects(void)
+{
+	// Draw immediate world effects into CPU pixels before the presentation upload
+	SoftwarePolygons::BeginWorldEffects();
+	CShadows::RenderStaticShadows();
+	CShadows::RenderStoredShadows();
+	CSkidmarks::Render();
+	CRubbish::Render();
+	CGlass::Render();
+	SoftwarePolygons::EndWorldEffects();
+}
+//- rouz edit (ChatGPT)
 #endif
 //- rouz edit (ChatGPT)
 
@@ -1414,6 +1428,8 @@ RenderScene(void)
 		RenderScene_new();
 		//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
+		// Add world effects to the CPU framebuffer before presenting it
+		RenderSoftwareWorldEffects(); // rouz edit (ChatGPT)
 		// Present the CPU polygons before later effects and HUD passes
 		PresentSoftwareScene(); // rouz edit (ChatGPT)
 #endif
@@ -1440,6 +1456,8 @@ RenderScene(void)
 	POP_RENDERGROUP();
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
+	// Add world effects to the CPU framebuffer before presenting it
+	RenderSoftwareWorldEffects(); // rouz edit (ChatGPT)
 	// Present the CPU polygons before later effects and HUD passes
 	PresentSoftwareScene(); // rouz edit (ChatGPT)
 #endif

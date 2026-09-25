@@ -436,8 +436,30 @@ void RwIm3DVertexSetU(RwIm3DVertex *vert, RwReal u) { vert->setU(u); }
 void RwIm3DVertexSetV(RwIm3DVertex *vert, RwReal v) { vert->setV(v); }
 void RwIm3DVertexSetRGBA(RwIm3DVertex *vert, RwUInt8 r, RwUInt8 g, RwUInt8 b, RwUInt8 a) { vert->setColor(r, g, b, a); }
 
-void  *RwIm3DTransform(RwIm3DVertex *pVerts, RwUInt32 numVerts, RwMatrix *ltm, RwUInt32 flags) { im3d::Transform(pVerts, numVerts, ltm, flags); return pVerts; }
-RwBool RwIm3DEnd(void) { im3d::End(); return true; }
+//+ rouz edit (ChatGPT)
+void  *RwIm3DTransform(RwIm3DVertex *pVerts, RwUInt32 numVerts, RwMatrix *ltm, RwUInt32 flags) {
+	// Capture world effect vertices while the CPU effects pass is active
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::BeginImmediate(pVerts, numVerts, ltm);
+		return pVerts;
+	}
+#endif
+	im3d::Transform(pVerts, numVerts, ltm, flags);
+	return pVerts;
+}
+RwBool RwIm3DEnd(void) {
+	// Finish the CPU immediate batch without submitting it to OpenGL
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::EndImmediate();
+		return true;
+	}
+#endif
+	im3d::End();
+	return true;
+}
+//- rouz edit (ChatGPT)
 RwBool RwIm3DRenderLine(RwInt32 vert1, RwInt32 vert2) {
 	RwImVertexIndex indices[2];
 	indices[0] = vert1;
@@ -446,7 +468,19 @@ RwBool RwIm3DRenderLine(RwInt32 vert1, RwInt32 vert2) {
 	return true;
 }
 RwBool RwIm3DRenderTriangle(RwInt32 vert1, RwInt32 vert2, RwInt32 vert3);
-RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primType, RwImVertexIndex *indices, RwInt32 numIndices) { im3d::RenderIndexedPrimitive((PrimitiveType)primType, indices, numIndices); return true; }
+//+ rouz edit (ChatGPT)
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primType, RwImVertexIndex *indices, RwInt32 numIndices) {
+	// Route indexed world effect triangles into the active CPU framebuffer
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediateIndexed(primType, indices, numIndices);
+		return true;
+	}
+#endif
+	im3d::RenderIndexedPrimitive((PrimitiveType)primType, indices, numIndices);
+	return true;
+}
+//- rouz edit (ChatGPT)
 RwBool RwIm3DRenderPrimitive(RwPrimitiveType primType);
 
 

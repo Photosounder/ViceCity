@@ -43,5 +43,13 @@ void RenderVehicleClump(rw::Clump *clump); // rouz edit (ChatGPT)
 void BeginFrame(int width, int height, const rw::RGBA &top, const rw::RGBA &bottom); // rouz edit (ChatGPT)
 void ApplyColourFilter(int mode, int red, int green, int blue, float intensity); // rouz edit (ChatGPT)
 void Present();
+//+ rouz edit (ChatGPT)
+void BeginWorldEffects();
+void EndWorldEffects();
+bool CapturingWorldEffects();
+void BeginImmediate(const void *vertices, int count, const void *matrix);
+void RenderImmediateIndexed(int primitiveType, const unsigned short *indices, int count);
+void EndImmediate();
+//- rouz edit (ChatGPT)
 }
 //- rouz edit (ChatGPT)

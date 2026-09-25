@@ -76,6 +76,14 @@ rw::ObjPipeline *originalPipeline; // rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 std::unordered_map<rw::Texture*, CachedTexture> textureCache;
+//+ rouz edit (ChatGPT)
+std::unordered_map<rw::Raster*, CachedTexture> effectTextureCache;
+bool capturingWorldEffects;
+const RwIm3DVertex *immediateVertices;
+int immediateVertexCount;
+rw::Matrix immediateMatrix;
+bool immediateHasMatrix;
+//- rouz edit (ChatGPT)
 unsigned long long cacheFrame;
 size_t textureCacheBytes;
 const size_t textureCacheLimit = 128u*1024u*1024u;
@@ -202,6 +210,35 @@ const CachedTexture *getCachedTexture(rw::Texture *source)
 	return found != textureCache.end() && found->second.image ? &found->second : nullptr;
 	//- rouz edit (ChatGPT)
 }
+
+//+ rouz edit (ChatGPT)
+const CachedTexture *getCachedEffectTexture(rw::Raster *raster)
+{
+	// Cache the raster selected by immediate mode effects without requiring a Texture object
+	if(!raster || raster->platform != rw::PLATFORM_GL3 || raster->type != rw::Raster::TEXTURE)
+		return nullptr;
+	auto found = effectTextureCache.find(raster);
+	if(found != effectTextureCache.end()){
+		if(found->second.width == raster->width && found->second.height == raster->height &&
+		   found->second.format == raster->format){
+			found->second.lastUsed = cacheFrame;
+			return found->second.image ? &found->second : nullptr;
+		}
+		if(found->second.image)
+			found->second.image->destroy();
+		effectTextureCache.erase(found);
+	}
+	CachedTexture entry = {};
+	entry.raster = raster;
+	entry.width = raster->width;
+	entry.height = raster->height;
+	entry.format = raster->format;
+	entry.lastUsed = cacheFrame;
+	entry.image = readTextureImage(raster, entry.topDown);
+	auto inserted = effectTextureCache.emplace(raster, entry);
+	return inserted.first->second.image ? &inserted.first->second : nullptr;
+}
+//- rouz edit (ChatGPT)
 
 float addressCoordinate(float value, rw::Texture::Addressing mode)
 {
@@ -612,6 +649,90 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 }
 //- rouz edit (ChatGPT)
 
+//+ rouz edit (ChatGPT)
+float effectBlendFactor(rw::uint32 mode, float source, float destination, float alpha)
+{
+	// Resolve the blend factors used by shadows, skidmarks, glass, and rubbish
+	switch(mode){
+	case rw::BLENDZERO: return 0.0f;
+	case rw::BLENDONE: return 1.0f;
+	case rw::BLENDSRCCOLOR: return source;
+	case rw::BLENDINVSRCCOLOR: return 1.0f-source;
+	case rw::BLENDSRCALPHA: return alpha;
+	case rw::BLENDINVSRCALPHA: return 1.0f-alpha;
+	case rw::BLENDDESTCOLOR: return destination;
+	case rw::BLENDINVDESTCOLOR: return 1.0f-destination;
+	case rw::BLENDDESTALPHA: return 1.0f;
+	case rw::BLENDINVDESTALPHA: return 0.0f;
+	default: return 1.0f;
+	}
+}
+
+void drawImmediateTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVertex &c,
+	const TextureSampler *sampler, rw::uint32 sourceBlend, rw::uint32 destinationBlend,
+	bool depthTest, bool depthWrite)
+{
+	// Reject invalid or offscreen effect triangles before rasterizing pixels
+	const float area = edge(a, b, c.x, c.y);
+	if(!std::isfinite(area) || std::fabs(area) < 0.001f)
+		return;
+	const float minX = std::min(a.x, std::min(b.x, c.x));
+	const float maxX = std::max(a.x, std::max(b.x, c.x));
+	const float minY = std::min(a.y, std::min(b.y, c.y));
+	const float maxY = std::max(a.y, std::max(b.y, c.y));
+	if(!std::isfinite(minX) || !std::isfinite(maxX) || !std::isfinite(minY) || !std::isfinite(maxY) ||
+	   maxX < 0.0f || minX >= width || maxY < 0.0f || minY >= height)
+		return;
+	const int left = (int)std::floor(std::max(0.0f, minX));
+	const int right = (int)std::ceil(std::min((float)(width-1), maxX));
+	const int top = (int)std::floor(std::max(0.0f, minY));
+	const int bottom = (int)std::ceil(std::min((float)(height-1), maxY));
+	const float inverseArea = 1.0f/area;
+	const float az = 1.0f/a.z, bz = 1.0f/b.z, cz = 1.0f/c.z;
+	// Interpolate vertex color and UVs in perspective before applying blend states
+	for(int y = top; y <= bottom; y++)
+		for(int x = left; x <= right; x++){
+			const float w0 = edge(b, c, x+0.5f, y+0.5f)*inverseArea;
+			const float w1 = edge(c, a, x+0.5f, y+0.5f)*inverseArea;
+			const float w2 = 1.0f-w0-w1;
+			if(w0 < 0.0f || w1 < 0.0f || w2 < 0.0f)
+				continue;
+			const float invz = w0*az+w1*bz+w2*cz;
+			const size_t pixelIndex = (size_t)y*width+x;
+			if(invz <= 0.0f || (depthTest && invz <= depths[pixelIndex]))
+				continue;
+			const float weightA = w0*az/invz;
+			const float weightB = w1*bz/invz;
+			const float weightC = w2*cz/invz;
+			rw::RGBA texel = { 255, 255, 255, 255 };
+			if(sampler && !sampleTexture(*sampler,
+			    weightA*a.u+weightB*b.u+weightC*c.u,
+			    weightA*a.v+weightB*b.v+weightC*c.v, texel))
+				continue;
+			const float alpha = (weightA*a.color.alpha+weightB*b.color.alpha+weightC*c.color.alpha)*texel.alpha/(255.0f*255.0f);
+			if(alpha <= 0.0f)
+				continue;
+			const float source[3] = {
+				(weightA*a.color.red+weightB*b.color.red+weightC*c.color.red)*texel.red/(255.0f*255.0f),
+				(weightA*a.color.green+weightB*b.color.green+weightC*c.color.green)*texel.green/(255.0f*255.0f),
+				(weightA*a.color.blue+weightB*b.color.blue+weightC*c.color.blue)*texel.blue/(255.0f*255.0f)
+			};
+			rw::RGBA &destination = pixels[pixelIndex];
+			rw::uint8 *channels[3] = { &destination.red, &destination.green, &destination.blue };
+			for(int channel = 0; channel < 3; channel++){
+				const float target = *channels[channel]/255.0f;
+				const float mixed = source[channel]*effectBlendFactor(sourceBlend, source[channel], target, alpha)+
+					target*effectBlendFactor(destinationBlend, source[channel], target, alpha);
+				*channels[channel] = (rw::uint8)(255.0f*std::max(0.0f, std::min(1.0f, mixed)));
+			}
+			if(depthWrite)
+				depths[pixelIndex] = invz;
+			framebuffer.coveredPixels++;
+			framebuffer.totalCoveredPixels++;
+		}
+}
+//- rouz edit (ChatGPT)
+
 void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 {
 	// Count every pipeline entry before checking whether CPU geometry is available
@@ -828,6 +949,16 @@ void Shutdown()
 		if(item.second.image)
 			item.second.image->destroy();
 	textureCache.clear();
+	// Release immediate effect texture copies before shutting down RenderWare
+	//+ rouz edit (ChatGPT)
+	for(auto &item : effectTextureCache)
+		if(item.second.image)
+			item.second.image->destroy();
+	effectTextureCache.clear();
+	capturingWorldEffects = false;
+	immediateVertices = nullptr;
+	immediateVertexCount = 0;
+	//- rouz edit (ChatGPT)
 	textureCacheBytes = 0;
 	cacheFrame = 0;
 	if(texture){
@@ -902,6 +1033,121 @@ void RenderVehicleClump(rw::Clump *clump)
 }
 //- rouz edit (ChatGPT)
 
+//+ rouz edit (ChatGPT)
+void BeginWorldEffects()
+{
+	// Enable immediate triangle capture only for the selected world effects
+	capturingWorldEffects = true;
+	immediateVertices = nullptr;
+	immediateVertexCount = 0;
+}
+
+void EndWorldEffects()
+{
+	// Stop capturing before the CPU framebuffer is uploaded as a GPU texture
+	capturingWorldEffects = false;
+	immediateVertices = nullptr;
+	immediateVertexCount = 0;
+}
+
+bool CapturingWorldEffects()
+{
+	// Tell the RenderWare wrapper whether to route immediate draws to the CPU
+	return capturingWorldEffects;
+}
+
+void BeginImmediate(const void *vertices, int count, const void *matrix)
+{
+	// Retain the batch vertices and optional local transform until its indexed draw
+	immediateVertices = (const RwIm3DVertex*)vertices;
+	immediateVertexCount = count;
+	immediateHasMatrix = matrix != nullptr;
+	if(matrix)
+		immediateMatrix = *(const rw::Matrix*)matrix;
+}
+
+void RenderImmediateIndexed(int primitiveType, const unsigned short *indices, int count)
+{
+	// Accept triangle lists with CPU vertices during an active camera update
+	rw::Camera *camera = rw::engine->currentCamera;
+	if(!capturingWorldEffects || !camera || !immediateVertices || immediateVertexCount <= 0 ||
+	   !indices || count < 3 || primitiveType != rw::PRIMTYPETRILIST || !pixels)
+		return;
+	rw::Matrix modelView = camera->viewMatrix;
+	if(immediateHasMatrix)
+		rw::Matrix::mult(&modelView, &immediateMatrix, &camera->viewMatrix);
+	std::vector<ScreenVertex> projected((size_t)immediateVertexCount);
+	// Transform effect vertices with the same camera projection as world atomics
+	for(int i = 0; i < immediateVertexCount; i++){
+		const RwIm3DVertex &source = immediateVertices[i];
+		rw::V3d cameraPoint;
+		rw::V3d::transformPoints(&cameraPoint, &source.position, 1, &modelView);
+		ScreenVertex &vertex = projected[i];
+		vertex.cameraX = cameraPoint.x;
+		vertex.cameraY = cameraPoint.y;
+		vertex.z = cameraPoint.z;
+		vertex.u = source.u;
+		vertex.v = source.v;
+		vertex.color = { source.r, source.g, source.b, source.a };
+		if(vertex.z > camera->nearPlane){
+			const float divisor = camera->projection == rw::Camera::PERSPECTIVE ? vertex.z : 1.0f;
+			vertex.x = width*vertex.cameraX/divisor;
+			vertex.y = height*vertex.cameraY/divisor;
+		}
+	}
+	// Resolve the effect texture and blend state once per indexed batch
+	rw::Raster *raster = (rw::Raster*)rw::GetRenderStatePtr(rw::TEXTURERASTER);
+	const CachedTexture *cached = getCachedEffectTexture(raster);
+	// Skip a textured effect when its raster cannot be decoded on the CPU
+	if(raster && !cached)
+		return; // rouz edit (ChatGPT)
+	TextureSampler sampler = {};
+	if(cached){
+		sampler.pixels = cached->image->pixels;
+		sampler.width = cached->image->width;
+		sampler.height = cached->image->height;
+		sampler.stride = cached->image->stride;
+		sampler.topDown = cached->topDown;
+		sampler.addressU = (rw::Texture::Addressing)rw::GetRenderState(rw::TEXTUREADDRESSU);
+		sampler.addressV = (rw::Texture::Addressing)rw::GetRenderState(rw::TEXTUREADDRESSV);
+		if(!sampler.addressU) sampler.addressU = rw::Texture::WRAP;
+		if(!sampler.addressV) sampler.addressV = rw::Texture::WRAP;
+		sampler.wrap = sampler.addressU == rw::Texture::WRAP && sampler.addressV == rw::Texture::WRAP;
+	}
+	const rw::uint32 sourceBlend = rw::GetRenderState(rw::SRCBLEND);
+	const rw::uint32 destinationBlend = rw::GetRenderState(rw::DESTBLEND);
+	const bool depthTest = rw::GetRenderState(rw::ZTESTENABLE) != 0;
+	const bool depthWrite = rw::GetRenderState(rw::ZWRITEENABLE) != 0;
+	// Clip each triangle against both depth planes before blending its pixels
+	for(int i = 0; i+2 < count; i += 3){
+		if(indices[i] >= immediateVertexCount || indices[i+1] >= immediateVertexCount ||
+		   indices[i+2] >= immediateVertexCount)
+			continue;
+		const ScreenVertex source[3] = { projected[indices[i]], projected[indices[i+1]], projected[indices[i+2]] };
+		ScreenVertex nearVertices[6], farVertices[6];
+		int nearCount = clipDepthPlane(source, 3, nearVertices, camera->nearPlane, true);
+		if(nearCount < 3)
+			continue;
+		int polygonCount = clipDepthPlane(nearVertices, nearCount, farVertices, camera->farPlane, false);
+		for(int vertex = 0; vertex < polygonCount; vertex++){
+			const float divisor = camera->projection == rw::Camera::PERSPECTIVE ? farVertices[vertex].z : 1.0f;
+			farVertices[vertex].x = width*farVertices[vertex].cameraX/divisor;
+			farVertices[vertex].y = height*farVertices[vertex].cameraY/divisor;
+		}
+		for(int vertex = 1; vertex+1 < polygonCount; vertex++)
+			drawImmediateTriangle(farVertices[0], farVertices[vertex], farVertices[vertex+1],
+				cached ? &sampler : nullptr, sourceBlend, destinationBlend, depthTest, depthWrite);
+	}
+}
+
+void EndImmediate()
+{
+	// Release references to an immediate batch after its RenderWare end call
+	immediateVertices = nullptr;
+	immediateVertexCount = 0;
+}
+//- rouz edit (ChatGPT)
+
 void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const rw::RGBA &bottom) // rouz edit (ChatGPT)
 {
 	// Keep the first implementation at a bounded CPU raster resolution
@@ -910,6 +1156,17 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	// Retire decoded textures after streaming stops using them
 	cacheFrame++;
 	trimTextureCache();
+	// Retire decoded effect rasters after they stop appearing in the scene
+	//+ rouz edit (ChatGPT)
+	for(auto it = effectTextureCache.begin(); it != effectTextureCache.end(); ){
+		if(cacheFrame-it->second.lastUsed > 120){
+			if(it->second.image)
+				it->second.image->destroy();
+			it = effectTextureCache.erase(it);
+		}else
+			++it;
+	}
+	//- rouz edit (ChatGPT)
 	// Limit the CPU framebuffer width while preserving the window's aspect ratio
 	const int newWidth = std::min(displayWidth, std::max(1, maxFramebufferWidthPixels)); // rouz edit (ChatGPT)
 	const int newHeight = std::max(1, displayHeight*newWidth/displayWidth);
