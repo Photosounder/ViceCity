@@ -22,6 +22,7 @@ struct Framebuffer {
 	float cameraViewWindow[2], cameraViewOffset[2], viewMatrixX[4], viewMatrixY[4];
 	//- rouz edit (ChatGPT)
 	unsigned int degenerateTriangles; // rouz edit (ChatGPT)
+	unsigned int culledTriangles; // rouz edit (ChatGPT)
 	unsigned int coveredPixels; // rouz edit (ChatGPT)
 	unsigned int texturedTriangles, texturedPixels, cachedTextures; // rouz edit (ChatGPT)
 	bool textureUploaded; // rouz edit (ChatGPT)

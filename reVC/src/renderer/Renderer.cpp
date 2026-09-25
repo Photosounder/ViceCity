@@ -662,6 +662,11 @@ void
 CRenderer::RenderSoftwareVehicles(void)
 {
 #ifdef REVC_SOFTWARE_POLYGONS
+	// Match the normal vehicle path's two-sided cull state during CPU submission
+	//+ rouz edit (ChatGPT)
+	const rw::uint32 oldCullMode = rw::GetRenderState(rw::CULLMODE);
+	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
+	//- rouz edit (ChatGPT)
 	// Submit visible vehicle clumps without invoking the GPU vehicle render path
 	for(int i = 0; i < ms_nNoOfVisibleVehicles; i++){
 		CEntity *entity = ms_aVisibleVehiclePtrs[i];
@@ -678,6 +683,8 @@ CRenderer::RenderSoftwareVehicles(void)
 		//- rouz edit (ChatGPT)
 		SoftwarePolygons::RenderClump((RpClump*)entity->m_rwObject);
 	}
+	// Restore the render state expected by the rest of the scene
+	rw::SetRenderState(rw::CULLMODE, oldCullMode); // rouz edit (ChatGPT)
 #endif
 }
 //- rouz edit (ChatGPT)

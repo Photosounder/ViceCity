@@ -46,6 +46,7 @@ struct TextureSampler {
 	const rw::uint8 *pixels;
 	int width, height, stride;
 	bool topDown;
+	int wrap;
 	rw::Texture::Addressing addressU, addressV;
 };
 //- rouz edit (ChatGPT)
@@ -196,10 +197,17 @@ bool sampleTexture(const TextureSampler &sampler, float u, float v, rw::RGBA &te
 	// Sample the nearest texel after applying RenderWare address modes
 	if(!std::isfinite(u) || !std::isfinite(v))
 		return false;
-	u = addressCoordinate(u, sampler.addressU);
-	v = addressCoordinate(1.0f-v, sampler.addressV);
-	if(u < 0.0f || v < 0.0f)
-		return false;
+	v = 1.0f-v;
+	if(sampler.wrap){
+		// The common repeat mode needs no clamp, mirror or border handling.
+		u -= std::floor(u);
+		v -= std::floor(v);
+	}else{
+		u = addressCoordinate(u, sampler.addressU);
+		v = addressCoordinate(v, sampler.addressV);
+		if(u < 0.0f || v < 0.0f)
+			return false;
+	}
 	const int x = std::min(sampler.width-1, (int)(u*sampler.width));
 	int y = std::min(sampler.height-1, (int)(v*sampler.height));
 	// Convert the GL sampler's bottom origin to ordinary CPU image rows
@@ -283,7 +291,17 @@ float pixelPlaneAt(const PixelPlane *plane, float offsetX, float offsetY)
 	return plane->row+plane->dx*offsetX+plane->dy*offsetY;
 }
 
-void shadeRect(TriangleRaster *raster, int rectLeft, int rectTop, int rectRight, int rectBottom, int fullCoverage)
+// Inline into the fixed-mode wrappers so unused planes and pixel branches disappear.
+#if defined(_MSC_VER)
+#define SOFTWARE_POLYGONS_INLINE __forceinline
+#elif defined(__GNUC__) || defined(__clang__)
+#define SOFTWARE_POLYGONS_INLINE inline __attribute__((always_inline))
+#else
+#define SOFTWARE_POLYGONS_INLINE inline
+#endif
+static SOFTWARE_POLYGONS_INLINE void shadeRect(TriangleRaster *raster,
+	int rectLeft, int rectTop, int rectRight, int rectBottom,
+	int textured, int prelit, int fullCoverage)
 {
 	// Start each edge and attribute at the rectangle's top left pixel
 	const float offsetX = (float)(rectLeft-raster->left);
@@ -312,31 +330,35 @@ void shadeRect(TriangleRaster *raster, int rectLeft, int rectTop, int rectRight,
 			const size_t index = (size_t)y*width+x;
 			if(!(invz > depths[index]))
 				continue;
-			// Apply perspective corrected prelight and the material color
-			const float z = (raster->prelit || raster->textured) ? 1.0f/invz : 0.0f;
+			const float z = (prelit || textured) ? 1.0f/invz : 0.0f;
 			rw::RGBA shaded = raster->flatShaded;
-			if(raster->prelit){
+			rw::RGBA texel;
+			// Reject cutout texels before prelight, clamping and RGB modulation.
+			if(textured){
+				if(!sampleTexture(*raster->sampler, uoz*z, voz*z, texel))
+					continue;
+				// Equivalent to floor(materialAlpha*texelAlpha/255) < 128.
+				if((unsigned)shaded.alpha*texel.alpha < 128u*255u)
+					continue;
+			}else if(shaded.alpha < 128)
+				continue;
+			// Apply perspective corrected prelight and the material color
+			if(prelit){
 				shaded.red = (rw::uint8)(raster->color.red*std::max(0.0f, std::min(1.0f, roz*z/255.0f+raster->ambientRed)));
 				shaded.green = (rw::uint8)(raster->color.green*std::max(0.0f, std::min(1.0f, goz*z/255.0f+raster->ambientGreen)));
 				shaded.blue = (rw::uint8)(raster->color.blue*std::max(0.0f, std::min(1.0f, boz*z/255.0f+raster->ambientBlue)));
 			}
-			// Sample cutout textures before committing the depth value
-			if(raster->textured){
-				rw::RGBA texel;
-				if(!sampleTexture(*raster->sampler, uoz*z, voz*z, texel))
-					continue;
+			// Modulate RGB only for texels that passed the alpha test.
+			if(textured){
 				shaded.red = (rw::uint8)((unsigned)shaded.red*texel.red/255);
 				shaded.green = (rw::uint8)((unsigned)shaded.green*texel.green/255);
 				shaded.blue = (rw::uint8)((unsigned)shaded.blue*texel.blue/255);
-				shaded.alpha = (rw::uint8)((unsigned)shaded.alpha*texel.alpha/255);
 			}
-			if(shaded.alpha < 128)
-				continue;
 			depths[index] = invz;
 			pixels[index] = shaded;
 			pixels[index].alpha = 255;
 			coveredCount++;
-			if(raster->textured)
+			if(textured)
 				texturedCount++;
 		}
 		rectW0 += raster->w0dy;
@@ -353,9 +375,52 @@ void shadeRect(TriangleRaster *raster, int rectLeft, int rectTop, int rectRight,
 	raster->texturedCount += texturedCount;
 }
 
+#undef SOFTWARE_POLYGONS_INLINE
+
+// Fixed flags let each ordinary C-style function keep only the work it needs.
+static void shadeRectFlatPartial(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 0, 0, 0);
+}
+
+static void shadeRectPrelitPartial(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 0, 1, 0);
+}
+
+static void shadeRectTexturedPartial(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 1, 0, 0);
+}
+
+static void shadeRectTexturedPrelitPartial(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 1, 1, 0);
+}
+
+static void shadeRectFlatFull(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 0, 0, 1);
+}
+
+static void shadeRectPrelitFull(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 0, 1, 1);
+}
+
+static void shadeRectTexturedFull(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 1, 0, 1);
+}
+
+static void shadeRectTexturedPrelitFull(TriangleRaster *raster, int left, int top, int right, int bottom)
+{
+	shadeRect(raster, left, top, right, bottom, 1, 1, 1);
+}
+
 void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVertex &c,
 	const rw::RGBA &color, bool hasVertexColors, const rw::RGBAf &ambient, float surfaceAmbient,
-	rw::Texture *source, const CachedTexture *cached)
+	rw::Texture *source, const CachedTexture *cached, rw::uint32 cullMode) // rouz edit (ChatGPT)
 {
 	// Reject invalid projected coordinates and degenerate triangles
 	if(!std::isfinite(a.x) || !std::isfinite(a.y) || !std::isfinite(b.x) || !std::isfinite(b.y) ||
@@ -369,6 +434,14 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 		framebuffer.degenerateTriangles++;
 		return;
 	}
+	// Cull faces with the same winding as RenderWare's OpenGL state
+	//+ rouz edit (ChatGPT)
+	if((cullMode == rw::CULLBACK && area < 0.0f) ||
+	   (cullMode == rw::CULLFRONT && area > 0.0f)){
+		framebuffer.culledTriangles++;
+		return;
+	}
+	//- rouz edit (ChatGPT)
 	// Clamp the triangle's bounding box to the framebuffer
 	const float minX = std::min(a.x, std::min(b.x, c.x));
 	const float maxX = std::max(a.x, std::max(b.x, c.x));
@@ -413,6 +486,7 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 		sampler.topDown = cached->topDown;
 		sampler.addressU = (rw::Texture::Addressing)((source->filterAddressing >> 8) & 0xF);
 		sampler.addressV = (rw::Texture::Addressing)((source->filterAddressing >> 12) & 0xF);
+		sampler.wrap = sampler.addressU == rw::Texture::WRAP && sampler.addressV == rw::Texture::WRAP;
 		raster.sampler = &sampler;
 		raster.uOverZ = makePixelPlane(&raster, a.u*az, b.u*bz, c.u*cz);
 		raster.vOverZ = makePixelPlane(&raster, a.v*az, b.v*bz, c.v*cz);
@@ -427,9 +501,23 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 		raster.flatShaded.blue = (rw::uint8)(color.blue*std::max(0.0f, std::min(1.0f, raster.ambientBlue)));
 	}
 
+	// Select both coverage paths once per triangle, outside the pixel loop.
+	typedef void (*ShadeRect)(TriangleRaster *, int, int, int, int);
+	static const ShadeRect partialShaders[] = {
+		shadeRectFlatPartial, shadeRectPrelitPartial,
+		shadeRectTexturedPartial, shadeRectTexturedPrelitPartial
+	};
+	static const ShadeRect fullShaders[] = {
+		shadeRectFlatFull, shadeRectPrelitFull,
+		shadeRectTexturedFull, shadeRectTexturedPrelitFull
+	};
+	const int shaderIndex = raster.textured*2+raster.prelit;
+	const ShadeRect shadePartial = partialShaders[shaderIndex];
+	const ShadeRect shadeFull = fullShaders[shaderIndex];
+
 	// Draw small triangles directly and classify eight pixel blocks on larger ones
 	if((right-left+1)*(bottom-top+1) <= 256)
-		shadeRect(&raster, left, top, right, bottom, false);
+		shadePartial(&raster, left, top, right, bottom);
 	else{
 		const int blockSize = 8;
 		const float w2dx = -raster.w0dx-raster.w1dx;
@@ -453,7 +541,7 @@ void drawTriangle(const ScreenVertex &a, const ScreenVertex &b, const ScreenVert
 				if(maxW0 < -margin || maxW1 < -margin || maxW2 < -margin)
 					continue;
 				const int fullCoverage = minW0 > margin && minW1 > margin && minW2 > margin;
-				shadeRect(&raster, blockLeft, blockTop, blockRight, blockBottom, fullCoverage);
+				(fullCoverage ? shadeFull : shadePartial)(&raster, blockLeft, blockTop, blockRight, blockBottom);
 			}
 	}
 	// Update framebuffer counters once after the triangle is complete
@@ -484,6 +572,8 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 	if((geometry->flags & rw::Geometry::LIGHT) && pAmbient)
 		ambient = pAmbient->color;
 	//- rouz edit (ChatGPT)
+	// Capture the caller's cull mode once for every triangle in this atomic
+	const rw::uint32 cullMode = rw::GetRenderState(rw::CULLMODE); // rouz edit (ChatGPT)
 
 	// Project vertices with RenderWare's world to screen matrix used by camera culling
 	std::vector<ScreenVertex> transformed((size_t)geometry->numVertices);
@@ -626,7 +716,7 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		// Rasterize the clipped polygon as a triangle fan
 		for(int vertex = 1; vertex+1 < farCount; vertex++)
 			drawTriangle(farVertices[0], farVertices[vertex], farVertices[vertex+1], color,
-				geometry->colors != nullptr, ambient, surfaceAmbient, source, cached); // rouz edit (ChatGPT)
+				geometry->colors != nullptr, ambient, surfaceAmbient, source, cached, cullMode); // rouz edit (ChatGPT)
 	}
 }
 
@@ -772,6 +862,7 @@ void BeginFrame(int displayWidth, int displayHeight, const rw::RGBA &top, const 
 	framebuffer.minScreenY = std::numeric_limits<float>::infinity(); // rouz edit (ChatGPT)
 	framebuffer.maxScreenY = -std::numeric_limits<float>::infinity(); // rouz edit (ChatGPT)
 	framebuffer.degenerateTriangles = 0; // rouz edit (ChatGPT)
+	framebuffer.culledTriangles = 0; // rouz edit (ChatGPT)
 	framebuffer.coveredPixels = 0; // rouz edit (ChatGPT)
 	framebuffer.texturedTriangles = 0; // rouz edit (ChatGPT)
 	framebuffer.texturedPixels = 0; // rouz edit (ChatGPT)
