@@ -20,6 +20,11 @@
 #include "ZoneCull.h"
 #include "SpecialFX.h"
 #include "Replay.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 int32 CWeather::SoundHandle = -1;
 
@@ -565,7 +570,10 @@ void CWeather::AddRain()
 	}
 }
 
-void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale, float distance)
+//+ rouz edit (ChatGPT)
+void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale, float distance,
+	const CVector &cameraRight, const CVector &cameraUp)
+//- rouz edit (ChatGPT)
 {
 	static float RandomTex;
 	static float RandomTexX;
@@ -582,16 +590,19 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 	TempBufferRenderIndexList[TempBufferIndicesStored + 9] = TempBufferVerticesStored + 2;
 	TempBufferRenderIndexList[TempBufferIndicesStored + 10] = TempBufferVerticesStored + 3;
 	TempBufferRenderIndexList[TempBufferIndicesStored + 11] = TempBufferVerticesStored + 4;
+	//+ rouz edit (ChatGPT)
+	// Build the rain streak around the camera basis selected by the current render pass
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 0], 0, 0, 0, 0);
-	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 0], pos.x + 11.0f * TheCamera.GetUp().x, pos.y + 11.0f * TheCamera.GetUp().y, pos.z + 11.0f * TheCamera.GetUp().z);
+	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 0], pos.x + 11.0f * cameraUp.x, pos.y + 11.0f * cameraUp.y, pos.z + 11.0f * cameraUp.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 1], 0, 0, 0, 0);
-	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 1], pos.x - 9.0f * TheCamera.GetRight().x, pos.y - 9.0f * TheCamera.GetRight().y, pos.z - 9.0f * TheCamera.GetRight().z);
+	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 1], pos.x - 9.0f * cameraRight.x, pos.y - 9.0f * cameraRight.y, pos.z - 9.0f * cameraRight.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 2], RAIN_COLOUR_R * intensity / 256, RAIN_COLOUR_G * intensity / 256, RAIN_COLOUR_B * intensity / 256, RAIN_ALPHA);
 	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 2], pos.x, pos.y, pos.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 3], 0, 0, 0, 0);
-	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 3], pos.x + 9.0f * TheCamera.GetRight().x, pos.y + 9.0f * TheCamera.GetRight().y, pos.z + 9.0f * TheCamera.GetRight().z);
+	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 3], pos.x + 9.0f * cameraRight.x, pos.y + 9.0f * cameraRight.y, pos.z + 9.0f * cameraRight.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 4], 0, 0, 0, 0); 
-	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 4], pos.x - 11.0f * TheCamera.GetUp().x, pos.y - 11.0f * TheCamera.GetUp().y, pos.z - 11.0f * TheCamera.GetUp().z);
+	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 4], pos.x - 11.0f * cameraUp.x, pos.y - 11.0f * cameraUp.y, pos.z - 11.0f * cameraUp.z);
+	//- rouz edit (ChatGPT)
 	float u = STREAK_U;
 	float v = STREAK_V;
 	if (scale) {
@@ -621,7 +632,7 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 	RwIm3DVertexSetU(&TempBufferRenderVertices[TempBufferVerticesStored + 3], u + RandomTexX);
 	RwIm3DVertexSetV(&TempBufferRenderVertices[TempBufferVerticesStored + 3], RandomTexY);
 	RwIm3DVertexSetU(&TempBufferRenderVertices[TempBufferVerticesStored + 4], 0.5f * u + RandomTex + RandomTexX);
-	RwIm3DVertexSetV(&TempBufferRenderVertices[TempBufferVerticesStored + 5], 0.5f * v + RandomTexY);
+	RwIm3DVertexSetV(&TempBufferRenderVertices[TempBufferVerticesStored + 4], 0.5f * v + RandomTexY); // rouz edit (ChatGPT)
 	TempBufferIndicesStored += 12;
 	TempBufferVerticesStored += 5;
 }
@@ -629,6 +640,13 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 void CWeather::RenderRainStreaks(void)
 {
 	static float streakGenerationCounter; // rouz edit (ChatGPT)
+	// Keep auxiliary reflection renders from advancing rain streak state
+	//+ rouz edit (ChatGPT)
+	bool renderOnlyExistingStreaks = false;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	renderOnlyExistingStreaks = CustomPipes::bRenderingEnvMap;
+#endif
+	//- rouz edit (ChatGPT)
 
 	if (CTimer::GetIsCodePaused())
 		return;
@@ -637,18 +655,47 @@ void CWeather::RenderRainStreaks(void)
 		return;
 	if (TheCamera.m_CameraAverageSpeed > 1.75f)
 		return;
+	// Use the active reflection camera basis when replaying existing streaks
 	//+ rouz edit (ChatGPT)
-	streakGenerationCounter += WeatherTimeStep();
-	int32 streakGenerationUpdates = int32(streakGenerationCounter);
-	streakGenerationCounter -= streakGenerationUpdates;
+	CVector streakCameraPosition = TheCamera.GetPosition();
+	CVector streakCameraRight = TheCamera.GetRight();
+	CVector streakCameraUp = TheCamera.GetUp();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(renderOnlyExistingStreaks && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame)){
+			RwMatrix *effectMatrix = RwFrameGetMatrix(effectFrame);
+			streakCameraPosition = CVector(effectMatrix->pos);
+			streakCameraRight = CVector(effectMatrix->right);
+			streakCameraUp = CVector(effectMatrix->up);
+			streakCameraRight.Normalise();
+			streakCameraUp.Normalise();
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
+	// Advance streak generation only while rendering the primary camera
+	//+ rouz edit (ChatGPT)
+	int32 streakGenerationUpdates = 0;
+	if(!renderOnlyExistingStreaks){
+		streakGenerationCounter += WeatherTimeStep();
+		streakGenerationUpdates = int32(streakGenerationCounter);
+		streakGenerationCounter -= streakGenerationUpdates;
+	}
 	//- rouz edit (ChatGPT)
 	TempBufferIndicesStored = 0;
 	TempBufferVerticesStored = 0;
 	for (int i = 0; i < NUM_RAIN_STREAKS; i++) {
 		if (Streaks[i].timer) {
 			float secondsElapsed = (CTimer::GetTimeInMilliseconds() - Streaks[i].timer) / 1024.0f;
-			if (secondsElapsed > STREAK_LIFETIME)
-				Streaks[i].timer = 0;
+			// Retire expired streaks only in the primary camera pass
+			//+ rouz edit (ChatGPT)
+			if (secondsElapsed > STREAK_LIFETIME){
+				if(!renderOnlyExistingStreaks)
+					Streaks[i].timer = 0;
+			}
+			//- rouz edit (ChatGPT)
 			else{
 				int intensity;
 				if (secondsElapsed < STREAK_INTEROLATION_TIME)
@@ -660,16 +707,23 @@ void CWeather::RenderRainStreaks(void)
 				CVector dir = Streaks[i].direction;
 				dir.Normalise();
 				CVector pos = Streaks[i].position + secondsElapsed * Streaks[i].direction;
-				RenderOneRainStreak(pos, dir, intensity, false, (pos - TheCamera.GetPosition()).Magnitude());
+				// Keep distance fade and billboard orientation aligned with this render camera
+				//+ rouz edit (ChatGPT)
+				RenderOneRainStreak(pos, dir, intensity, false, (pos - streakCameraPosition).Magnitude(), streakCameraRight, streakCameraUp);
+				//- rouz edit (ChatGPT)
 #ifndef FIX_BUGS // remove useless code
-				if (secondsElapsed > 1.0f && secondsElapsed < STREAK_LIFETIME - 1.0f) {
+				// Keep the legacy random-number side effect out of reflection rendering
+				//+ rouz edit (ChatGPT)
+				if(!renderOnlyExistingStreaks && secondsElapsed > 1.0f && secondsElapsed < STREAK_LIFETIME - 1.0f) {
 					CGeneral::GetRandomNumber(), CGeneral::GetRandomNumber();
 				}
+				//- rouz edit (ChatGPT)
 #endif
 			}
 		}
+		// Generate new streaks only during the primary camera pass
 		//+ rouz edit (ChatGPT)
-		else for (int32 update = 0; update < streakGenerationUpdates; update++) {
+		else if(!renderOnlyExistingStreaks) for (int32 update = 0; update < streakGenerationUpdates; update++) {
 			if ((CGeneral::GetRandomNumber() & 0xF00) != 0)
 				continue;
 			//- rouz edit (ChatGPT)

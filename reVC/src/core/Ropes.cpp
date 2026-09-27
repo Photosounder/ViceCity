@@ -9,6 +9,9 @@
 #include "RenderBuffer.h"
 #include "Camera.h"
 #include "Ropes.h"
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h" // rouz edit (ChatGPT)
+#endif
 
 CRope CRopes::aRopes[8];
 
@@ -19,6 +22,19 @@ RwImVertexIndex RopeIndices[64] = {
 	23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31,
 	31, 32	// unused
 };
+
+//+ rouz edit (ChatGPT)
+static bool
+IsRopeVisibleToActiveCamera(const CVector &center, float radius)
+{
+	// Let the active auxiliary camera clip ropes during environment rendering
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap)
+		return true;
+#endif
+	return TheCamera.IsSphereVisible(center, radius);
+}
+//- rouz edit (ChatGPT)
 
 void
 CRope::Update(void)
@@ -47,7 +63,7 @@ CRope::Render(void)
 {
 	int i;
 	int numVerts = 0;
-	if(!TheCamera.IsSphereVisible(m_pos[16], 20.0f))
+	if(!IsRopeVisibleToActiveCamera(m_pos[16], 20.0f)) // rouz edit (ChatGPT)
 		return;
 
 	for(i = 0; i < ARRAY_SIZE(m_pos); i++){

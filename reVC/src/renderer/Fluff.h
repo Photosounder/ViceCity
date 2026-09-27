@@ -149,6 +149,11 @@ public:
 	static void Shutdown();
 	static void Update();
 	static void Render();
+#ifdef REVC_SOFTWARE_POLYGONS
+	//+ rouz edit (ChatGPT)
+	static void RenderForEnvMap(RwCamera *camera); // rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+#endif
 	static void PossiblyAddThisEntity(CEntity *pEnt);
 	static void RegisterOne(CEntity *pEnt, uint16 nType);
 };
@@ -181,6 +186,11 @@ public:
 	void Init(CVector pos1, CVector pos2, uint8 type, uint8 red, uint8 green, uint8 blue, float scale);
 	void Update();
 	void Render();
+#ifdef REVC_SOFTWARE_POLYGONS
+	//+ rouz edit (ChatGPT)
+	void RenderForEnvMap(RwCamera *camera); // rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+#endif
 };
 
 class CSmokeTrail {

@@ -2,8 +2,54 @@
 #include "rwcore.h"
 #include "ShadowCamera.h"
 #include "RwHelper.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 #define TEXELOFFSET 0.5f
+
+//+ rouz edit (ChatGPT)
+static bool BeginSoftwareShadowPass(RwCamera *camera, const RwRGBA &clearColor)
+{
+	// Convert the RenderWare clear color and open a CPU target for this shadow camera
+#ifdef REVC_SOFTWARE_POLYGONS
+	const rw::RGBA softwareClearColor = {
+		clearColor.red, clearColor.green, clearColor.blue, clearColor.alpha
+	};
+	return SoftwarePolygons::BeginOffscreenFrame(camera, softwareClearColor);
+#else
+	return false;
+#endif
+}
+
+//+ rouz edit (ChatGPT)
+static bool BeginSoftwareShadowPass(RwCamera *camera, RwRaster *initialRaster)
+{
+	// Preserve the current shadow image before rasterizing a partial effect
+#ifdef REVC_SOFTWARE_POLYGONS
+	return SoftwarePolygons::BeginOffscreenFrame(camera, initialRaster);
+#else
+	(void)camera;
+	(void)initialRaster;
+	return false;
+#endif
+}
+//- rouz edit (ChatGPT)
+
+static void EndSoftwareShadowPass(RwCamera *camera, bool active)
+{
+	// Upload the completed CPU shadow image into the camera texture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(active)
+		SoftwarePolygons::EndOffscreenFrame(RwCameraGetRaster(camera));
+#else
+	(void)camera;
+	(void)active;
+#endif
+}
+//- rouz edit (ChatGPT)
 
 RpAtomic *ShadowRenderCallBack(RpAtomic *atomic, void *data)
 {
@@ -183,6 +229,10 @@ CShadowCamera::Update(RpClump *clump)
 	RpGeometry *geometry;
 	
 	RwRGBA              bgColor = { 255, 255, 255, 0 };
+	//+ rouz edit (ChatGPT)
+	// Start CPU rasterization for the auxiliary shadow texture
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, bgColor);
+	//- rouz edit (ChatGPT)
 	
 	RwCameraClear(m_pCamera, &bgColor, rwCAMERACLEARZ | rwCAMERACLEARIMAGE);
 
@@ -203,6 +253,10 @@ CShadowCamera::Update(RpClump *clump)
 		InvertRaster();
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Store the software silhouette in the shadow camera raster
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 	
 	return m_pCamera;
 }
@@ -217,6 +271,10 @@ CShadowCamera::Update(RpAtomic *atomic)
 	RpGeometry *geometry;
 
 	RwRGBA              bgColor = { 255, 255, 255, 0 };
+	//+ rouz edit (ChatGPT)
+	// Start CPU rasterization for the auxiliary shadow texture
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, bgColor);
+	//- rouz edit (ChatGPT)
 
 	RwCameraClear(m_pCamera, &bgColor, rwCAMERACLEARZ | rwCAMERACLEARIMAGE);
   
@@ -236,6 +294,10 @@ CShadowCamera::Update(RpAtomic *atomic)
 		InvertRaster();
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Store the software silhouette in the shadow camera raster
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 	
 	return m_pCamera;
 }
@@ -316,6 +378,11 @@ CShadowCamera::MakeGradientRaster()
 
 	if ( height < 1 )
 		return nil;
+	//+ rouz edit (ChatGPT)
+	// Render the generated cutscene shadow gradient into its CPU raster
+	RwRGBA clearColor = { 0, 0, 0, 0 };
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, clearColor);
+	//- rouz edit (ChatGPT)
       
 	if ( RwCameraBeginUpdate(m_pCamera) )
 	{
@@ -355,6 +422,10 @@ CShadowCamera::MakeGradientRaster()
 		
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Upload the generated gradient before returning its raster
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 	
 	return raster;
 }
@@ -374,6 +445,11 @@ CShadowCamera::RasterResample(RwRaster *dstRaster)
 	float size = (float) RwRasterGetWidth(raster);
 	float uvOffset = TEXELOFFSET / size;
 	float recipCamZ = 1.0f / RwCameraGetNearClipPlane(m_pCamera);
+	//+ rouz edit (ChatGPT)
+	// Prepare a CPU target for the full-screen shadow resample
+	RwRGBA clearColor = { 0, 0, 0, 0 };
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, clearColor);
+	//- rouz edit (ChatGPT)
 
 	if ( RwCameraBeginUpdate(m_pCamera) )
 	{
@@ -391,6 +467,10 @@ CShadowCamera::RasterResample(RwRaster *dstRaster)
 		
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Upload the resampled shadow raster
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 	
 	return raster;
 }
@@ -413,6 +493,11 @@ CShadowCamera::RasterBlur(RwRaster *dstRaster, int32 numPasses)
 	for (int i = 0; i < numPasses; i++ )
 	{
 		RwCameraSetRaster(m_pCamera, raster);
+		//+ rouz edit (ChatGPT)
+		// Rasterize the first half of each shadow blur pass on the CPU
+		RwRGBA clearColor = { 0, 0, 0, 0 };
+		bool softwarePass = BeginSoftwareShadowPass(m_pCamera, clearColor);
+		//- rouz edit (ChatGPT)
 		
 		if ( RwCameraBeginUpdate(m_pCamera) )
 		{
@@ -428,8 +513,16 @@ CShadowCamera::RasterBlur(RwRaster *dstRaster, int32 numPasses)
 			Im2DRenderQuad(0.0f, 0.0f, size, size, RwIm2DGetNearScreenZ(), recipCamZ, 1.0f / size);
 			RwCameraEndUpdate(m_pCamera);
 		}
+		//+ rouz edit (ChatGPT)
+		// Save the first blur half into its active target raster
+		EndSoftwareShadowPass(m_pCamera, softwarePass);
+		//- rouz edit (ChatGPT)
 		
 		RwCameraSetRaster(m_pCamera, dstRaster);
+		//+ rouz edit (ChatGPT)
+		// Rasterize the second half of each shadow blur pass on the CPU
+		softwarePass = BeginSoftwareShadowPass(m_pCamera, clearColor);
+		//- rouz edit (ChatGPT)
       
 		if ( RwCameraBeginUpdate(m_pCamera) )
 		{
@@ -445,6 +538,10 @@ CShadowCamera::RasterBlur(RwRaster *dstRaster, int32 numPasses)
 			
 			RwCameraEndUpdate(m_pCamera);
 		}
+		//+ rouz edit (ChatGPT)
+		// Save the second blur half into its active target raster
+		EndSoftwareShadowPass(m_pCamera, softwarePass);
+		//- rouz edit (ChatGPT)
 	}
 
 	RwCameraSetRaster(m_pCamera, raster);
@@ -465,6 +562,11 @@ CShadowCamera::RasterGradient(RwRaster *dstRaster)
 	float recipCamZ = 1.0f / RwCameraGetNearClipPlane(m_pCamera);
 	
 	RwCameraSetRaster(m_pCamera, dstRaster);
+	//+ rouz edit (ChatGPT)
+	// Prepare a CPU target for the full-screen shadow gradient blend
+	RwRGBA clearColor = { 0, 0, 0, 0 };
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, clearColor);
+	//- rouz edit (ChatGPT)
 	
 	if ( RwCameraBeginUpdate(m_pCamera) )
 	{
@@ -482,6 +584,10 @@ CShadowCamera::RasterGradient(RwRaster *dstRaster)
 		
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Upload the gradient shadow blend into its destination raster
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 
 	RwCameraSetRaster(m_pCamera, raster);
 
@@ -500,6 +606,10 @@ RwRaster *CShadowCamera::DrawOutlineBorder(RwRGBA const& color)
 
 	float size = (float)RwRasterGetWidth(raster) - 1.0f;
 	float recipCamZ = 1.0f / RwCameraGetNearClipPlane(m_pCamera);
+	//+ rouz edit (ChatGPT)
+	// Preserve the generated cutscene shadow while capturing its border
+	bool softwarePass = BeginSoftwareShadowPass(m_pCamera, raster);
+	//- rouz edit (ChatGPT)
 	
 	RwIm2DVertexSetScreenX     (&vx[0], 0.0f);
 	RwIm2DVertexSetScreenY     (&vx[0], 0.0f);
@@ -544,6 +654,10 @@ RwRaster *CShadowCamera::DrawOutlineBorder(RwRGBA const& color)
 		
 		RwCameraEndUpdate(m_pCamera);
 	}
+	//+ rouz edit (ChatGPT)
+	// Store the completed outline in the camera texture
+	EndSoftwareShadowPass(m_pCamera, softwarePass);
+	//- rouz edit (ChatGPT)
 
 	return raster;
 }

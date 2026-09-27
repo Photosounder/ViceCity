@@ -40,6 +40,11 @@
 #include "Clock.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
+//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 CPed *gapTempPedList[50];
 uint16 gnNumTempPedList;
@@ -5155,7 +5160,15 @@ CPed::Render(void)
 			return;
 
 		if (!m_pMyVehicle->IsBike() && !IsPlayer()) {
-			float camDistSq = (TheCamera.GetPosition() - GetPosition()).MagnitudeSqr();
+			// Use the active reflection camera when deciding whether a seated ped is too distant
+			//+ rouz edit (ChatGPT)
+			CVector pedRenderCameraPosition = TheCamera.GetPosition();
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+			if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame())
+				pedRenderCameraPosition = CVector(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
+#endif
+			float camDistSq = (pedRenderCameraPosition - GetPosition()).MagnitudeSqr();
+			//- rouz edit (ChatGPT)
 			if (camDistSq > SQR((m_pMyVehicle->IsBoat() ? 40.0f : 25.0f) * TheCamera.LODDistMultiplier))
 				return;
 		}

@@ -25,6 +25,9 @@
 #include "Coronas.h"
 #include "SaveBuf.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h" // rouz edit (ChatGPT)
+#endif
 
 #ifdef COMPATIBLE_SAVES
 #define SCRIPTPATHS_SAVE_SIZE 0x9C
@@ -33,6 +36,34 @@
 #endif
 
 CPlaneTrail CPlaneTrails::aArray[6];
+
+//+ rouz edit (ChatGPT)
+static bool
+IsEffectSphereVisible(const CVector &center, float radius)
+{
+	// Let the active auxiliary camera clip effect geometry during environment rendering
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap)
+		return true;
+#endif
+	return TheCamera.IsSphereVisible(center, radius);
+}
+
+static CVector
+GetEffectCameraPosition(void)
+{
+	// Use the active reflection camera for distance-based world-effect fades
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		RwFrame *cameraFrame = RwCameraGetFrame(CustomPipes::EnvMapCam);
+		if(cameraFrame && RwFrameGetMatrix(cameraFrame))
+			return CVector(RwFrameGetMatrix(cameraFrame)->pos);
+	}
+#endif
+	return TheCamera.GetPosition();
+}
+//- rouz edit (ChatGPT)
+
 RwImVertexIndex TrailIndices[32] = {
 	0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9,
 	10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16
@@ -51,7 +82,14 @@ CPlaneTrail::Render(float visibility)
 {
 	int i;
 	int numVerts = 0;
-	if(!TheCamera.IsSphereVisible(m_pos[0], 1000.0f))
+	//+ rouz edit (ChatGPT)
+	// Keep the reflection pass from clearing shared plane-trail timestamps
+	bool renderOnlyExistingPoints = false;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	renderOnlyExistingPoints = CustomPipes::bRenderingEnvMap;
+#endif
+	//- rouz edit (ChatGPT)
+	if(!IsEffectSphereVisible(m_pos[0], 1000.0f)) // rouz edit (ChatGPT)
 		return;
 
 	int alpha = visibility*110.0f;
@@ -60,8 +98,14 @@ CPlaneTrail::Render(float visibility)
 
 	for(i = 0; i < ARRAY_SIZE(m_pos); i++){
 		int32 time = CTimer::GetTimeInMilliseconds() - m_time[i];
-		if(time > 30000)
-			m_time[i] = 0;
+		// Skip expired trail points without mutating reflection-shared state
+		//+ rouz edit (ChatGPT)
+		if(time > 30000){
+			if(!renderOnlyExistingPoints)
+				m_time[i] = 0;
+			continue;
+		}
+		//- rouz edit (ChatGPT)
 		if(m_time[i] != 0){
 			float fade = (30000.0f - time) / 10000.0f;
 			fade = Min(fade, 1.0f);
@@ -207,8 +251,9 @@ CPlaneBanner::Render(void)
 {
 	int i;
 	if(m_pos[0].z > -50.0f){
-		float camDist = (TheCamera.GetPosition() - m_pos[0]).Magnitude();
-		if(TheCamera.IsSphereVisible(m_pos[4], 32.0f) && camDist < 300.0f){
+		// Calculate the banner fade from the camera currently rendering the scene
+		float camDist = (GetEffectCameraPosition() - m_pos[0]).Magnitude(); // rouz edit (ChatGPT)
+		if(IsEffectSphereVisible(m_pos[4], 32.0f) && camDist < 300.0f){ // rouz edit (ChatGPT)
 			TempBufferVerticesStored = 0;
 			TempBufferIndicesStored = 0;
 			int alpha = camDist < 250.0f ? 160 : (300.0f-camDist)/(300.0f-250.0f)*160;
@@ -482,6 +527,18 @@ void CMovingThings::Render()
 	CPlaneBanners::Render();
 	POP_RENDERGROUP();
 }
+
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+void
+CMovingThings::RenderForEnvMap(RwCamera *camera)
+{
+	// Render stadium message boards using the reflection camera and its own distance range
+	for(int i = 0; i < ARRAY_SIZE(aScrollBars); i++)
+		aScrollBars[i].RenderForEnvMap(camera);
+}
+#endif
+//- rouz edit (ChatGPT)
 
 void CMovingThings::RegisterOne(CEntity *pEnt, uint16 nType) {
 	if (Num >= NUMMOVINGTHINGS)
@@ -796,6 +853,111 @@ void CScrollBar::Render()
 	CSprite::FlushSpriteBuffer();
 }
 
+#ifdef REVC_SOFTWARE_POLYGONS
+//+ rouz edit (ChatGPT)
+void
+CScrollBar::RenderForEnvMap(RwCamera *camera)
+{
+	// Skip boards outside the reflection camera's range or without a glow texture
+	if(camera == nil || gpCoronaTexture[0] == nil)
+		return;
+	RwFrame *cameraFrame = RwCameraGetFrame(camera);
+	// Skip rendering if the reflection camera has no frame matrix
+	if(cameraFrame == nil || RwFrameGetMatrix(cameraFrame) == nil)
+		return;
+
+	// Orient each sign pixel to the reflection camera without reading main-camera projection
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
+	CVector cameraPos(cameraMatrix->pos);
+	CVector cameraRight(cameraMatrix->right);
+	CVector cameraUp(cameraMatrix->up);
+	CVector cameraForward(cameraMatrix->at);
+	cameraRight.Normalise();
+	cameraUp.Normalise();
+	cameraForward.Normalise();
+	// Recompute visibility and glow strength from the reflection camera, not the main view
+	float cameraDistance = (cameraPos - m_Position).Magnitude();
+	if(cameraDistance > 100.0f)
+		return;
+	float intensity = cameraDistance < 75.0f ? 1.0f : 1.0f - 4.0f * (cameraDistance - 75.0f) / 100.0f;
+	float nearClip = RwCameraGetNearClipPlane(camera);
+	float farClip = RwCameraGetFarClipPlane(camera);
+	uint8 red = intensity*m_uRed;
+	uint8 green = intensity*m_uGreen;
+	uint8 blue = intensity*m_uBlue;
+
+	// Preserve pending reflection geometry before batching the glowing sign pixels
+	RenderBuffer::RenderStuffInBuffer();
+	PUSH_RENDERGROUP("CScrollBar::RenderForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
+	RenderBuffer::ClearRenderBuffer();
+
+	// Recreate the current and trailing glow pixels from the saved five-row message bitmap
+	for(int i = 1; i < ARRAY_SIZE(m_MessageBar); i++){
+		for(int j = 0; j < 5; j++){
+			bool currentPixel = (m_MessageBar[i] & (1 << j)) != 0;
+			bool trailingPixel = !currentPixel && (m_MessageBar[i-1] & (1 << j)) != 0;
+			if(!currentPixel && !trailingPixel)
+				continue;
+			CVector pixelPosition(m_Position.x + m_Size.x*i,
+				m_Position.y + m_Size.y*i,
+				m_Position.z + m_Size.z*j);
+			float depth = DotProduct(pixelPosition-cameraPos, cameraForward);
+			if(depth <= nearClip || depth >= farClip)
+				continue;
+			float pixelScale = m_fScale*(currentPixel ? 3.0f : 2.4f);
+			int pixelRed = currentPixel ? red : red/2;
+			int pixelGreen = currentPixel ? green : green/2;
+			int pixelBlue = currentPixel ? blue : blue/2;
+			RwImVertexIndex *indices;
+			RwIm3DVertex *vertices;
+			// Reserve one reflection-camera billboard in the shared immediate buffer
+			RenderBuffer::StartStoring(6, 4, &indices, &vertices);
+			CVector horizontal = cameraRight*pixelScale;
+			CVector vertical = cameraUp*pixelScale;
+			CVector corners[4] = {
+				pixelPosition-horizontal+vertical,
+				pixelPosition+horizontal+vertical,
+				pixelPosition-horizontal-vertical,
+				pixelPosition+horizontal-vertical
+			};
+			for(int vertex = 0; vertex < 4; vertex++){
+				RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+				RwIm3DVertexSetRGBA(&vertices[vertex], pixelRed, pixelGreen, pixelBlue, 255);
+			}
+			RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+			RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+			RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+			RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+			indices[0] = 0; indices[1] = 1; indices[2] = 2;
+			indices[3] = 2; indices[4] = 1; indices[5] = 3;
+			RenderBuffer::StopStoring();
+		}
+	}
+
+	// Flush the sign pixels and restore standard world effect states
+	RenderBuffer::RenderStuffInBuffer();
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
+	POP_RENDERGROUP();
+}
+#endif
+//- rouz edit (ChatGPT)
+
 void
 CSmokeTrail::RegisterPoint(CVector regPosition, float opacity) {
 	bool bAddedNewPoint = false;
@@ -841,13 +1003,26 @@ CSmokeTrails::Render(void) {
 void
 CSmokeTrail::Render(void) {
 	int numVerts = 0;
+	//+ rouz edit (ChatGPT)
+	// Keep the reflection pass from clearing shared smoke-trail timestamps
+	bool renderOnlyExistingPoints = false;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	renderOnlyExistingPoints = CustomPipes::bRenderingEnvMap;
+#endif
+	//- rouz edit (ChatGPT)
 
-	if (TheCamera.IsSphereVisible(m_pos[0], 10.0f)) {
+	if (IsEffectSphereVisible(m_pos[0], 10.0f)) { // rouz edit (ChatGPT)
 		for (int32 i = 0; i < 16; i++) {
 			int timeSinceSpawned = CTimer::GetTimeInMilliseconds() - m_time[i];
 
-			if (timeSinceSpawned > 2250)
-				m_time[i] = 0;
+			// Skip expired smoke points without mutating reflection-shared state
+			//+ rouz edit (ChatGPT)
+			if (timeSinceSpawned > 2250) {
+				if (!renderOnlyExistingPoints)
+					m_time[i] = 0;
+				continue;
+			}
+			//- rouz edit (ChatGPT)
 
 			if (m_time[i]) {
 				int alpha = (1.0f - timeSinceSpawned / 2250.0f) * 110.0f * m_opacity[i];

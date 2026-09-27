@@ -22,4 +22,10 @@ public:
 	static void Update(void);
 	static void RegisterOne(uint32 id, CVector dir, CVector position, float length);
 	static void Render(void);
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	static void RegisterOneForEnvMap(uint32 id, CVector dir, CVector position, float length);
+	static void RenderForEnvMap(void);
+#endif
+	//- rouz edit (ChatGPT)
 };

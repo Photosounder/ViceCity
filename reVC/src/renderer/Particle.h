@@ -67,6 +67,9 @@ public:
 
 	static void Update();
 	static void Render();
+	//+ rouz edit (ChatGPT)
+	static void RenderForEnvMap(RwCamera *camera);
+	//- rouz edit (ChatGPT)
 
 	static void RemovePSystem(tParticleType type);
 	static void RemoveParticle(CParticle *pParticle, CParticle *pPrevParticle, tParticleSystemData *pPSystemData);

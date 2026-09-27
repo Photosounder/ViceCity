@@ -20,6 +20,9 @@
 #include "ModelIndices.h"
 #include "ModelInfo.h"
 #include "custompipes.h"
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h" // rouz edit (ChatGPT)
+#endif
 
 int8 CVehicleModelInfo::ms_compsToUse[2] = { -2, -2 };
 int8 CVehicleModelInfo::ms_compsUsed[2];
@@ -1135,7 +1138,22 @@ CVehicleModelInfo::SetEnvironmentMap(void)
 	}
 
 #ifdef EXTENDED_PIPELINES
+	// Route vehicle atomics through the software renderer and preserve Neo vehicle effects
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	SoftwarePolygons::AttachVehicleClump(m_clump);
+	// Register standalone wheel model atomics for the same software vehicle effects
+	//+ rouz edit (ChatGPT)
+	if(m_wheelId != -1){
+		wheelmi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_wheelId);
+		for(i = 0; i < wheelmi->m_numAtomics; i++)
+			SoftwarePolygons::Attach(wheelmi->m_atomics[i], false, false, true);
+	}
+	//- rouz edit (ChatGPT)
+#else
 	CustomPipes::AttachVehiclePipe(m_clump);
+#endif
+	//- rouz edit (ChatGPT)
 #endif
 }
 

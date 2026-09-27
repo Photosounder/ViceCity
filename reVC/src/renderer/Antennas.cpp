@@ -4,6 +4,12 @@
 #include "Antennas.h"
 
 CAntenna CAntennas::aAntennas[NUMANTENNAS];
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static CAntenna EnvMapAntennas[NUMANTENNAS];
+static int NumEnvMapAntennas;
+#endif
+//- rouz edit (ChatGPT)
 
 void
 CAntennas::Init(void)
@@ -13,6 +19,12 @@ CAntennas::Init(void)
 		aAntennas[i].active = false;
 		aAntennas[i].updatedLastFrame = false;
 	}
+	// Clear the auxiliary-camera-only antenna queue when starting a new scene
+	//+ rouz edit (ChatGPT)
+	#ifdef REVC_SOFTWARE_POLYGONS
+	NumEnvMapAntennas = 0;
+	#endif
+	//- rouz edit (ChatGPT)
 }
 
 // Free antennas that aren't used anymore
@@ -64,6 +76,32 @@ CAntennas::RegisterOne(uint32 id, CVector dir, CVector position, float length)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+void
+CAntennas::RegisterOneForEnvMap(uint32 id, CVector dir, CVector position, float length)
+{
+	// Use the main spring-simulated antenna whenever its normal pre-render hook registered it
+	for(int i = 0; i < NUMANTENNAS; i++)
+		if(aAntennas[i].active && aAntennas[i].id == id)
+			return;
+	// Avoid duplicate reflection entries for the same vehicle
+	for(int i = 0; i < NumEnvMapAntennas; i++)
+		if(EnvMapAntennas[i].id == id)
+			return;
+	// Build a straight auxiliary antenna for vehicles seen only by the reflection camera
+	if(NumEnvMapAntennas >= NUMANTENNAS)
+		return;
+	CAntenna *antenna = &EnvMapAntennas[NumEnvMapAntennas++];
+	antenna->active = true;
+	antenna->id = id;
+	antenna->segmentLength = length/6.0f;
+	for(int i = 0; i < 6; i++)
+		antenna->pos[i] = position + dir*i*antenna->segmentLength;
+}
+#endif
+//- rouz edit (ChatGPT)
+
 static RwIm3DVertex vertexbufferA[2];
 
 void
@@ -106,6 +144,41 @@ CAntennas::Render(void)
 
 	POP_RENDERGROUP();
 }
+
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+void
+CAntennas::RenderForEnvMap(void)
+{
+	// Render and consume straight antenna entries for reflection-only vehicles
+	if(NumEnvMapAntennas == 0)
+		return;
+	PUSH_RENDERGROUP("CAntennas::RenderForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	// Draw each auxiliary antenna as the same five semi-transparent line segments
+	for(int i = 0; i < NumEnvMapAntennas; i++)
+		for(int j = 0; j < 5; j++){
+			RwIm3DVertexSetRGBA(&vertexbufferA[0], 200, 200, 200, 100);
+			RwIm3DVertexSetPos(&vertexbufferA[0],
+				EnvMapAntennas[i].pos[j].x, EnvMapAntennas[i].pos[j].y, EnvMapAntennas[i].pos[j].z);
+			RwIm3DVertexSetRGBA(&vertexbufferA[1], 200, 200, 200, 100);
+			RwIm3DVertexSetPos(&vertexbufferA[1],
+				EnvMapAntennas[i].pos[j+1].x, EnvMapAntennas[i].pos[j+1].y, EnvMapAntennas[i].pos[j+1].z);
+			if(RwIm3DTransform(vertexbufferA, 2, nil, 0)){
+				RwIm3DRenderLine(0, 1);
+				RwIm3DEnd();
+			}
+		}
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	NumEnvMapAntennas = 0;
+	POP_RENDERGROUP();
+}
+#endif
+//- rouz edit (ChatGPT)
 
 void
 CAntenna::Update(CVector dir, CVector basepos)

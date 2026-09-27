@@ -17,6 +17,11 @@
 #include "Frontend.h"
 #include "MBlur.h"
 #include "postfx.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
 
 // Originally taken from RW example 'mblur'
 
@@ -536,11 +541,15 @@ static float fxZ[NUM_RENDER_FX];
 bool
 CMBlur::PosInside(RwRect *rect, float x1, float y1, float x2, float y2)
 {
-	if((rect->x < x1 - 10.0f || rect->x > x2 + 10.0f || rect->y < y1 - 10.0f || rect->y > y2 + 10.0f) &&
-	   (rect->w < x1 - 10.0f || rect->w > x2 + 10.0f || rect->h < y1 - 10.0f || rect->h > y2 + 10.0f) &&
-	   (rect->x < x1 - 10.0f || rect->x > x2 + 10.0f || rect->h < y1 - 10.0f || rect->h > y2 + 10.0f) &&
-	   (rect->w < x1 - 10.0f || rect->w > x2 + 10.0f || rect->y < y1 - 10.0f || rect->y > y2 + 10.0f))
+	// Scale the overlap tolerance along with the virtual screen dimensions
+	//+ rouz edit (ChatGPT)
+	const float paddingX = SCREEN_SCALE_X(10.0f);
+	const float paddingY = SCREEN_SCALE_Y(10.0f);
+	// Check overlap on both axes so a large effect cannot cover the whole UI region
+	if(rect->w < x1-paddingX || rect->x > x2+paddingX ||
+	   rect->h < y1-paddingY || rect->y > y2+paddingY)
 		return false;
+	//- rouz edit (ChatGPT)
 	return true;
 }
 
@@ -558,28 +567,51 @@ CMBlur::AddRenderFx(RwCamera *cam, RwRect *rect, float z, FxType type)
 		return false;
 
 	switch(type){
+	// Scope refraction-specific locals to their shared effect cases // rouz edit (ChatGPT)
 	case FXTYPE_WATER1:
 	case FXTYPE_WATER2:
 	case FXTYPE_BLOOD1:
 	case FXTYPE_BLOOD2:
-	case FXTYPE_HEATHAZE:	// code seems to be duplicated for this case
+	case FXTYPE_HEATHAZE: { // rouz edit (ChatGPT)
+		// Match the duplicate-effect margin to the scaled screen coordinates
+		//+ rouz edit (ChatGPT)
+		const float effectPaddingX = SCREEN_SCALE_X(10.0f);
+		const float effectPaddingY = SCREEN_SCALE_Y(10.0f);
 		for(int i = 0; i < pBufVertCount; i++)
-			if(fxType[i] == type && PosInside(rect, fxRect[i].x-10.0f, fxRect[i].y-10.0f, fxRect[i].w+10.0f, fxRect[i].h+10.0f))
+			if(fxType[i] == type && PosInside(rect, fxRect[i].x-effectPaddingX, fxRect[i].y-effectPaddingY,
+				fxRect[i].w+effectPaddingX, fxRect[i].h+effectPaddingY))
 				return false;
-		// TODO: fix aspect ratio scaling
-		// radar
-		if(PosInside(rect, 40.0f, SCREEN_SCALE_FROM_BOTTOM(116.0f), 40.0f + SCREEN_SCALE_X(94.0f), SCREEN_SCALE_FROM_BOTTOM(116.0f - 76.0f)))
+		//- rouz edit (ChatGPT)
+		// Keep screen-space effect exclusions aligned with the scaled HUD regions
+		//+ rouz edit (ChatGPT)
+		// Reserve the radar area using the same virtual-screen scaling as the HUD
+		if(PosInside(rect, SCREEN_SCALE_X(40.0f), SCREEN_SCALE_FROM_BOTTOM(116.0f),
+			SCREEN_SCALE_X(40.0f + 94.0f), SCREEN_SCALE_FROM_BOTTOM(116.0f - 76.0f)))
 			return false;
-		// HUD
-		if(PosInside(rect, 400.0f, 0.0f, SCREEN_WIDTH, 90.0f))
+		// Reserve the top-right HUD region from refractive overlays
+		if(PosInside(rect, SCREEN_SCALE_X(400.0f), 0.0f, SCREEN_WIDTH, SCREEN_SCALE_Y(90.0f)))
 			return false;
-		// vehicle name
-		if(CHud::m_VehicleState != 0 && PosInside(rect, SCREEN_WIDTH/2, 350.0f, SCREEN_WIDTH, SCREEN_HEIGHT))
+		// Reserve the bottom-right vehicle and zone labels
+		if(CHud::m_VehicleState != 0 && PosInside(rect, SCREEN_WIDTH/2, SCREEN_SCALE_Y(350.0f), SCREEN_WIDTH, SCREEN_HEIGHT))
 			return false;
-		// zone name
-		if(CHud::m_ZoneState != 0 && PosInside(rect, SCREEN_WIDTH/2, 350.0f, SCREEN_WIDTH, SCREEN_HEIGHT))
+		if(CHud::m_ZoneState != 0 && PosInside(rect, SCREEN_WIDTH/2, SCREEN_SCALE_Y(350.0f), SCREEN_WIDTH, SCREEN_HEIGHT))
+			return false;
+		//- rouz edit (ChatGPT)
+		break;
+	} // rouz edit (ChatGPT)
+	// Protect HUD and radar pixels from the screen-space splash overlays
+	//+ rouz edit (ChatGPT)
+	case FXTYPE_SPLASH1:
+	case FXTYPE_SPLASH2:
+	case FXTYPE_SPLASH3:
+		if(PosInside(rect, SCREEN_SCALE_X(40.0f), SCREEN_SCALE_FROM_BOTTOM(116.0f),
+			SCREEN_SCALE_X(40.0f + 94.0f), SCREEN_SCALE_FROM_BOTTOM(116.0f - 76.0f)) ||
+		   PosInside(rect, SCREEN_SCALE_X(400.0f), 0.0f, SCREEN_WIDTH, SCREEN_SCALE_Y(90.0f)) ||
+		   ((CHud::m_VehicleState != 0 || CHud::m_ZoneState != 0) &&
+			PosInside(rect, SCREEN_WIDTH/2, SCREEN_SCALE_Y(350.0f), SCREEN_WIDTH, SCREEN_HEIGHT)))
 			return false;
 		break;
+	//- rouz edit (ChatGPT)
 	}
 
 	fxRect[pBufVertCount] = *rect;
@@ -593,6 +625,94 @@ CMBlur::AddRenderFx(RwCamera *cam, RwRect *rect, float z, FxType type)
 void
 CMBlur::OverlayRenderFx(RwCamera *cam, RwRaster *frontBuf)
 {
+	// Render queued screen refraction and splash effects directly into the CPU frame
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::FramePending() && SoftwarePolygons::CapturingWorldEffects()){
+		// Skip the screen snapshot when no particles queued a refractive effect
+		//+ rouz edit (ChatGPT)
+		if(pBufVertCount <= 0)
+			return;
+		//- rouz edit (ChatGPT)
+		// Discard queued effects if the source framebuffer cannot be snapshotted
+		if(!SoftwarePolygons::BeginScreenTextureSampling()){
+			pBufVertCount = 0;
+			return;
+		}
+		const int screenWidth = SCREEN_WIDTH;
+		const int screenHeight = SCREEN_HEIGHT;
+		int red = Clamp((int)((0.75f*CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed())*0.55f*255.0f), 0, 255);
+		int green = Clamp((int)((0.75f*CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen())*0.55f*255.0f), 0, 255);
+		int blue = Clamp((int)((0.75f*CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue())*0.55f*255.0f), 0, 255);
+		// Apply each queued effect to the same scene snapshot before post-processing
+		for(int i = 0; i < pBufVertCount; i++){
+			const float left = (float)fxRect[i].x;
+			const float top = (float)fxRect[i].y;
+			const float right = (float)fxRect[i].w;
+			const float bottom = (float)fxRect[i].h;
+			// Refract the saved scene through a heat haze rectangle
+			if(fxType[i] == FXTYPE_HEATHAZE){
+				// Suppress heat haze while a full-screen fade is active
+				if(TheCamera.GetScreenFadeStatus() == FADE_0){
+					int alpha = FrontEndMenuManager.m_PrefsBrightness > 255 ?
+						FrontEndMenuManager.m_PrefsBrightness-90 : FrontEndMenuManager.m_PrefsBrightness-130;
+					alpha = Clamp(alpha, 16, 200)/2;
+					const float leftUOffset = CGeneral::GetRandomNumberInRange(-0.002f, 0.002f);
+					const float topVOffset = CGeneral::GetRandomNumberInRange(-0.002f, 0.002f);
+					const float rightUOffset = CGeneral::GetRandomNumberInRange(-0.002f, 0.002f);
+					const float bottomVOffset = CGeneral::GetRandomNumberInRange(-0.002f, 0.002f);
+					SoftwarePolygons::RenderScreenRefraction(left, top, right, bottom,
+						screenWidth, screenHeight, gpHeatHazeRaster, leftUOffset, topVOffset,
+						rightUOffset, bottomVOffset, alpha);
+				}
+			// Refract and texture the water or blood drop rectangle
+			}else if(fxType[i] == FXTYPE_WATER1 || fxType[i] == FXTYPE_WATER2 ||
+				 fxType[i] == FXTYPE_BLOOD1 || fxType[i] == FXTYPE_BLOOD2){
+				const bool secondFrame = fxType[i] == FXTYPE_WATER2 || fxType[i] == FXTYPE_BLOOD2;
+				const bool blood = fxType[i] == FXTYPE_BLOOD1 || fxType[i] == FXTYPE_BLOOD2;
+				// Keep blood overlays red while water drops inherit the current scene lighting
+				//+ rouz edit (ChatGPT)
+				const int tintRed = blood ? 255 : red;
+				const int tintGreen = blood ? 0 : green;
+				const int tintBlue = blood ? 0 : blue;
+				//- rouz edit (ChatGPT)
+				const float textureWidth = (float)Pow(2.0f, int32(log2(RwRasterGetWidth(RwCameraGetRaster(cam))))+1);
+				const float textureHeight = (float)Pow(2.0f, int32(log2(RwRasterGetHeight(RwCameraGetRaster(cam))))+1);
+				const float leftUOffset = (right-left)/textureWidth;
+				const float rightUOffset = leftUOffset-(right-left+0.5f)*0.66f/textureWidth;
+				const float topVOffset = (bottom-top+0.5f)*0.25f/textureHeight;
+				const float bottomVOffset = -topVOffset;
+				const int refractionStrength = BlurOn ? (blood ? 255 : 160) : (blood ? 128 : 32);
+				SoftwarePolygons::RenderScreenRefraction(left, top, right, bottom,
+					screenWidth, screenHeight, gpDotRaster, leftUOffset, topVOffset,
+					rightUOffset, bottomVOffset, refractionStrength);
+				SoftwarePolygons::RenderScreenTexture(left, top, right, bottom,
+					screenWidth, screenHeight, gpRainDripRaster[secondFrame ? 1 : 0],
+					tintRed, tintGreen, tintBlue, blood ? 255 : 192, true);
+				// Apply the dark water-drop texture after its bright reflection
+				if(!blood)
+					SoftwarePolygons::RenderScreenTexture(left, top, right, bottom,
+						screenWidth, screenHeight, gpRainDripDarkRaster[secondFrame ? 1 : 0],
+						red, green, blue, 96, false);
+			// Draw splash textures with the original additive tint
+			}else if(fxType[i] == FXTYPE_SPLASH1 || fxType[i] == FXTYPE_SPLASH2 || fxType[i] == FXTYPE_SPLASH3){
+				SoftwarePolygons::RenderScreenTexture(left, top, right, bottom,
+					screenWidth, screenHeight, gpCarSplashRaster[0], 200, 200, 200, 255, true);
+			}
+		}
+		pBufVertCount = 0;
+		return;
+	}
+	//+ rouz edit (ChatGPT)
+	// Discard queued software effects instead of drawing them outside the CPU framebuffer
+	pBufVertCount = 0;
+	return;
+	//- rouz edit (ChatGPT)
+#endif
+	//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Keep the direct RenderWare backbuffer path exclusive to hardware renderer builds
+#ifndef REVC_SOFTWARE_POLYGONS
 	bool drawWaterDrops = false;
 	RwIm2DVertex verts[4];
 	int red = (0.75f*CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed())*0.55f * 255;
@@ -798,4 +918,6 @@ CMBlur::OverlayRenderFx(RwCamera *cam, RwRaster *frontBuf)
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 	pBufVertCount = 0;
+#endif
+	//- rouz edit (ChatGPT)
 }

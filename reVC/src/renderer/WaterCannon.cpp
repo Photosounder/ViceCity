@@ -12,6 +12,11 @@
 #include "WaterLevel.h"
 #include "Camera.h"
 #include "Particle.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 #define WATERCANNONVERTS 4
 #define WATERCANNONINDEXES 12
@@ -121,8 +126,33 @@ void CWaterCannon::Render(void)
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE,         (void *)TRUE);
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     (void *)gpWaterRaster);
+	// Orient the spray ribbon to the active camera, including the software reflection camera
+	//+ rouz edit (ChatGPT)
+	CVector cameraForward = TheCamera.GetForward();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		RwFrame *cameraFrame = RwCameraGetFrame(CustomPipes::EnvMapCam);
+		if(cameraFrame){
+			RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
+			if(cameraMatrix){
+				cameraForward = CVector(cameraMatrix->at);
+				cameraForward.Normalise();
+			}
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	
-	float v = float(CGeneral::GetRandomNumber() & 255) / 256;
+	// Keep the auxiliary reflection draw from consuming gameplay random numbers
+	//+ rouz edit (ChatGPT)
+	float v;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap)
+		v = float((CTimer::GetFrameCounter() + m_nId) & 255) / 256.0f;
+	else
+#endif
+		v = float(CGeneral::GetRandomNumber() & 255) / 256.0f;
+	//- rouz edit (ChatGPT)
 		
 	RwIm3DVertexSetV(&WaterCannonVertices[0], v);
 	RwIm3DVertexSetV(&WaterCannonVertices[1], v);
@@ -144,7 +174,7 @@ void CWaterCannon::Render(void)
 		{
 			if ( !bInit )
 			{
-				CVector cp = CrossProduct(m_avecPos[pointB] - m_avecPos[pointA], TheCamera.GetForward());
+				CVector cp = CrossProduct(m_avecPos[pointB] - m_avecPos[pointA], cameraForward); // rouz edit (ChatGPT)
 				norm = cp * (0.05f / cp.Magnitude());
 				bInit = true;
 			}

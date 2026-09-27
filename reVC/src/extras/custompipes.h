@@ -3,6 +3,10 @@
 #ifdef LIBRW
 #ifdef EXTENDED_PIPELINES
 
+class CVehicle; // rouz edit (ChatGPT)
+class CEntity; // rouz edit (ChatGPT)
+class CHeli; // rouz edit (ChatGPT)
+
 namespace CustomPipes {
 
 
@@ -81,6 +85,15 @@ extern rw::Camera *EnvMapCam;
 extern rw::Texture *EnvMapTex;
 extern rw::Texture *EnvMaskTex;
 void EnvMapRender(void);
+#ifdef REVC_SOFTWARE_POLYGONS
+//+ rouz edit (ChatGPT)
+void CaptureStoredShadowsForEnvMap(void);
+void StoreVehicleShadowForEnvMap(::CVehicle *vehicle, int32 shadowType);
+void StoreHeliSearchLightShadowForEnvMap(::CHeli *heli); // rouz edit (ChatGPT)
+void StorePedShadowForEnvMap(::CEntity *ped);
+void StoreBeachBallShadowForEnvMap(::CEntity *beachBall);
+//- rouz edit (ChatGPT)
+#endif
 
 enum {
 	VEHICLEPIPE_MATFX,

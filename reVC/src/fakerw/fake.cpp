@@ -7,6 +7,7 @@
 #include <rpskin.h>
 #include <assert.h>
 #include <string.h>
+#include <cmath> // rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 #include "SoftwarePolygons.h"
@@ -33,6 +34,25 @@ void  RwFree(void *mem) { engine->memfuncs.rwfree(mem); }
 
 //RwReal RwV3dNormalize(RwV3d * out, const RwV3d * in);
 RwReal RwV3dLength(const RwV3d * in) { return length(*in); }
+//+ rouz edit (ChatGPT)
+RwReal RwV3dNormalize(RwV3d *out, const RwV3d *in)
+{
+	// Normalize into a temporary so the input and output vectors may alias
+	if(!out || !in)
+		return 0.0f;
+	const RwV3d source = *in;
+	const float lengthSquared = source.x*source.x + source.y*source.y + source.z*source.z;
+	if(!std::isfinite(lengthSquared) || lengthSquared <= 0.0f){
+		*out = { 0.0f, 0.0f, 0.0f };
+		return 0.0f;
+	}
+	// Return the original magnitude after writing the unit vector
+	const float magnitude = std::sqrt(lengthSquared);
+	const float inverseMagnitude = 1.0f/magnitude;
+	*out = { source.x*inverseMagnitude, source.y*inverseMagnitude, source.z*inverseMagnitude };
+	return magnitude;
+}
+//- rouz edit (ChatGPT)
 //RwReal RwV2dLength(const RwV2d * in);
 //RwReal RwV2dNormalize(RwV2d * out, const RwV2d * in);
 //void RwV2dAssign(RwV2d * out, const RwV2d * ina);
@@ -49,11 +69,96 @@ void RwV3dScale(RwV3d * out, const RwV3d * in, RwReal scalar) { *out = scale(*in
 void RwV3dIncrementScaled(RwV3d * out,  const RwV3d * in, RwReal scalar) { *out = add(*out, scale(*in, scalar)); }
 void RwV3dNegate(RwV3d * out, const RwV3d * in) { *out = neg(*in); }
 RwReal RwV3dDotProduct(const RwV3d * ina, const RwV3d * inb) { return dot(*ina, *inb); }
-//void RwV3dCrossProduct(RwV3d * out, const RwV3d * ina, const RwV3d * inb);
+//+ rouz edit (ChatGPT)
+void RwV3dCrossProduct(RwV3d *out, const RwV3d *a, const RwV3d *b)
+{
+	// Snapshot both inputs so the output may alias either operand
+	if(!out || !a || !b)
+		return;
+	const RwV3d left = *a;
+	const RwV3d right = *b;
+	*out = { left.y*right.z-left.z*right.y,
+		left.z*right.x-left.x*right.z,
+		left.x*right.y-left.y*right.x };
+}
+//- rouz edit (ChatGPT)
 RwV3d *RwV3dTransformPoints(RwV3d * pointsOut, const RwV3d * pointsIn, RwInt32 numPoints, const RwMatrix * matrix)
 	{ V3d::transformPoints(pointsOut, pointsIn, numPoints, matrix); return pointsOut; }
-//RwV3d *RwV3dTransformVectors(RwV3d * vectorsOut, const RwV3d * vectorsIn, RwInt32 numPoints, const RwMatrix * matrix);
+//+ rouz edit (ChatGPT)
+RwV3d *RwV3dTransformVectors(RwV3d *vectorsOut, const RwV3d *vectorsIn,
+	RwInt32 numVectors, const RwMatrix *matrix)
+{
+	// Transform each direction with the matrix basis while excluding translation
+	if(!vectorsOut || !vectorsIn || !matrix || numVectors <= 0)
+		return vectorsOut;
+	for(RwInt32 i = 0; i < numVectors; i++){
+		const RwV3d source = vectorsIn[i];
+		vectorsOut[i].x = matrix->right.x*source.x + matrix->up.x*source.y + matrix->at.x*source.z;
+		vectorsOut[i].y = matrix->right.y*source.x + matrix->up.y*source.y + matrix->at.y*source.z;
+		vectorsOut[i].z = matrix->right.z*source.x + matrix->up.z*source.y + matrix->at.z*source.z;
+	}
+	return vectorsOut;
+}
+//- rouz edit (ChatGPT)
 
+
+
+//+ rouz edit (ChatGPT)
+static bool normalizeRwVector(RwV3d *vector)
+{
+	// Reject zero or non-finite axes before normalizing them
+	const float lengthSquared = vector->x*vector->x + vector->y*vector->y + vector->z*vector->z;
+	if(!std::isfinite(lengthSquared) || lengthSquared <= 1.0e-12f)
+		return false;
+	// Scale a valid axis to unit length
+	const float inverseLength = 1.0f/std::sqrt(lengthSquared);
+	vector->x *= inverseLength;
+	vector->y *= inverseLength;
+	vector->z *= inverseLength;
+	return std::isfinite(vector->x) && std::isfinite(vector->y) && std::isfinite(vector->z);
+}
+
+static void orthonormalizeRwMatrix(RwMatrix *matrix)
+{
+	// Start from the matrix right and forward axes while retaining its translation
+	if(!matrix)
+		return;
+	RwV3d right = matrix->right;
+	RwV3d forward = matrix->at;
+	const RwV3d originalUp = matrix->up;
+	RwV3d up;
+	if(!normalizeRwVector(&right)){
+		right.x = forward.y*originalUp.z-forward.z*originalUp.y;
+		right.y = forward.z*originalUp.x-forward.x*originalUp.z;
+		right.z = forward.x*originalUp.y-forward.y*originalUp.x;
+		if(!normalizeRwVector(&right))
+			return;
+	}
+	// Remove scale and skew from forward, recovering it from up if needed
+	const float projection = forward.x*right.x + forward.y*right.y + forward.z*right.z;
+	forward.x -= right.x*projection;
+	forward.y -= right.y*projection;
+	forward.z -= right.z*projection;
+	if(!normalizeRwVector(&forward)){
+		forward.x = originalUp.y*right.z-originalUp.z*right.y;
+		forward.y = originalUp.z*right.x-originalUp.x*right.z;
+		forward.z = originalUp.x*right.y-originalUp.y*right.x;
+		if(!normalizeRwVector(&forward))
+			return;
+	}
+	// Rebuild the up axis so the output basis is orthogonal and right handed
+	up.x = right.y*forward.z-right.z*forward.y;
+	up.y = right.z*forward.x-right.x*forward.z;
+	up.z = right.x*forward.y-right.y*forward.x;
+	if(!normalizeRwVector(&up))
+		return;
+	// Store the normalized basis and refresh librw's matrix flags
+	matrix->right = right;
+	matrix->up = up;
+	matrix->at = forward;
+	matrix->update();
+}
+//- rouz edit (ChatGPT)
 
 
 RwBool RwMatrixDestroy(RwMatrix *mpMat) { mpMat->destroy(); return true; }
@@ -63,7 +168,17 @@ void RwMatrixSetIdentity(RwMatrix * matrix) { matrix->setIdentity(); }
 RwMatrix *RwMatrixMultiply(RwMatrix * matrixOut, const RwMatrix * MatrixIn1, const RwMatrix * matrixIn2);
 RwMatrix *RwMatrixTransform(RwMatrix * matrix, const RwMatrix * transform, RwOpCombineType combineOp)
 	{ matrix->transform(transform, (rw::CombineOp)combineOp); return matrix; }
-//RwMatrix *RwMatrixOrthoNormalize(RwMatrix * matrixOut, const RwMatrix * matrixIn);
+//+ rouz edit (ChatGPT)
+RwMatrix *RwMatrixOrthoNormalize(RwMatrix *matrixOut, const RwMatrix *matrixIn)
+{
+	// Copy first so callers may normalize a matrix in place
+	if(!matrixOut || !matrixIn)
+		return nil;
+	*matrixOut = *matrixIn;
+	orthonormalizeRwMatrix(matrixOut);
+	return matrixOut;
+}
+//- rouz edit (ChatGPT)
 RwMatrix *RwMatrixInvert(RwMatrix * matrixOut, const RwMatrix * matrixIn) { Matrix::invert(matrixOut, matrixIn); return matrixOut; }
 RwMatrix *RwMatrixScale(RwMatrix * matrix, const RwV3d * scale, RwOpCombineType combineOp)
 	{ matrix->scale(scale, (rw::CombineOp)combineOp); return matrix; }
@@ -93,8 +208,17 @@ RwFrame *RwFrameTranslate(RwFrame * frame, const RwV3d * v, RwOpCombineType comb
 RwFrame *RwFrameRotate(RwFrame * frame, const RwV3d * axis, RwReal angle, RwOpCombineType combine) { frame->rotate(axis, angle, (CombineOp)combine); return frame; }
 RwFrame *RwFrameScale(RwFrame * frame, const RwV3d * v, RwOpCombineType combine) { frame->scale(v, (CombineOp)combine); return frame; }
 RwFrame *RwFrameTransform(RwFrame * frame, const RwMatrix * m, RwOpCombineType combine) { frame->transform(m, (CombineOp)combine); return frame; }
-//TODO: actually implement this!
-RwFrame *RwFrameOrthoNormalize(RwFrame * frame) { return frame; }
+//+ rouz edit (ChatGPT)
+RwFrame *RwFrameOrthoNormalize(RwFrame *frame)
+{
+	// Normalize this local basis before updating attached objects
+	if(!frame)
+		return frame;
+	orthonormalizeRwMatrix(&frame->matrix);
+	frame->updateObjects();
+	return frame;
+}
+//- rouz edit (ChatGPT)
 RwFrame *RwFrameSetIdentity(RwFrame * frame) { frame->matrix.setIdentity(); frame->updateObjects(); return frame; }
 //RwFrame *RwFrameCloneHierarchy(RwFrame * root);
 //RwBool RwFrameDestroyHierarchy(RwFrame * frame);
@@ -256,12 +380,33 @@ RwRaster *RwRasterSetFromImage(RwRaster *raster, RwImage *image) { return raster
 RwTexture *RwTextureCreate(RwRaster * raster) { return Texture::create(raster); }
 RwBool RwTextureDestroy(RwTexture * texture) { texture->destroy(); return true; }
 RwTexture *RwTextureAddRef(RwTexture *texture) { texture->addRef(); return texture; }
-// TODO
-RwBool RwTextureSetMipmapping(RwBool enable) { return true; }
-RwBool RwTextureGetMipmapping(void);
-// TODO
-RwBool RwTextureSetAutoMipmapping(RwBool enable) { return true; }
-RwBool RwTextureGetAutoMipmapping(void);
+//+ rouz edit (ChatGPT)
+RwBool RwTextureSetMipmapping(RwBool enable)
+{
+	// Apply the global mipmap setting used while RenderWare reads textures
+	Texture::setMipmapping(enable);
+	return true;
+}
+
+RwBool RwTextureGetMipmapping(void)
+{
+	// Report whether RenderWare currently enables texture mipmapping
+	return Texture::getMipmapping();
+}
+
+RwBool RwTextureSetAutoMipmapping(RwBool enable)
+{
+	// Apply the global automatic mipmap-generation setting used while loading textures
+	Texture::setAutoMipmapping(enable);
+	return true;
+}
+
+RwBool RwTextureGetAutoMipmapping(void)
+{
+	// Report whether RenderWare currently generates mipmaps automatically
+	return Texture::getAutoMipmapping();
+}
+//- rouz edit (ChatGPT)
 RwBool RwTextureSetMipmapGenerationCallBack(RwTextureCallBackMipmapGeneration callback);
 RwTextureCallBackMipmapGeneration RwTextureGetMipmapGenerationCallBack(void);
 RwBool RwTextureSetMipmapNameCallBack(RwTextureCallBackMipmapName callback);
@@ -421,14 +566,54 @@ void RwIm2DVertexSetIntRGBA(RwIm2DVertex *vert, RwUInt8 red, RwUInt8 green, RwUI
 
 RwReal RwIm2DGetNearScreenZ(void) { return im2d::GetNearZ(); }
 RwReal RwIm2DGetFarScreenZ(void) { return im2d::GetFarZ(); }
+//+ rouz edit (ChatGPT)
 RwBool RwIm2DRenderLine(RwIm2DVertex *vertices, RwInt32 numVertices, RwInt32 vert1, RwInt32 vert2)
-	{ im2d::RenderLine(vertices, numVertices, vert1, vert2); return true; }
+	{
+	// Route screen-space world-effect lines into the CPU framebuffer during capture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		RwImVertexIndex indices[2] = { (RwImVertexIndex)vert1, (RwImVertexIndex)vert2 };
+		SoftwarePolygons::RenderImmediate2D(rwPRIMTYPELINELIST, vertices, numVertices, indices, 2);
+		return true;
+	}
+#endif
+	im2d::RenderLine(vertices, numVertices, vert1, vert2); return true;
+	}
 RwBool RwIm2DRenderTriangle(RwIm2DVertex *vertices, RwInt32 numVertices, RwInt32 vert1, RwInt32 vert2, RwInt32 vert3 )
-	{ im2d::RenderTriangle(vertices, numVertices, vert1, vert2, vert3); return true; }
+	{
+	// Route screen-space world-effect triangles into the CPU framebuffer during capture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		RwImVertexIndex indices[3] = { (RwImVertexIndex)vert1, (RwImVertexIndex)vert2, (RwImVertexIndex)vert3 };
+		SoftwarePolygons::RenderImmediate2D(rwPRIMTYPETRILIST, vertices, numVertices, indices, 3);
+		return true;
+	}
+#endif
+	im2d::RenderTriangle(vertices, numVertices, vert1, vert2, vert3); return true;
+	}
 RwBool RwIm2DRenderPrimitive(RwPrimitiveType primType, RwIm2DVertex *vertices, RwInt32 numVertices)
-	{ im2d::RenderPrimitive((PrimitiveType)primType, vertices, numVertices); return true; }
+	{
+	// Route screen-space world-effect primitives into the CPU framebuffer during capture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediate2D(primType, vertices, numVertices, nullptr, 0);
+		return true;
+	}
+#endif
+	im2d::RenderPrimitive((PrimitiveType)primType, vertices, numVertices); return true;
+	}
 RwBool RwIm2DRenderIndexedPrimitive(RwPrimitiveType primType, RwIm2DVertex *vertices, RwInt32 numVertices, RwImVertexIndex *indices, RwInt32 numIndices)
-	{ im2d::RenderIndexedPrimitive((PrimitiveType)primType, vertices, numVertices, indices, numIndices); return true; }
+	{
+	// Route indexed screen-space effects into the CPU framebuffer during capture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediate2D(primType, vertices, numVertices, indices, numIndices);
+		return true;
+	}
+#endif
+	im2d::RenderIndexedPrimitive((PrimitiveType)primType, vertices, numVertices, indices, numIndices); return true;
+	}
+//- rouz edit (ChatGPT)
 
 
 void RwIm3DVertexSetPos(RwIm3DVertex *vert, RwReal x, RwReal y, RwReal z) { vert->setX(x); vert->setY(y); vert->setZ(z); }
@@ -441,7 +626,12 @@ void  *RwIm3DTransform(RwIm3DVertex *pVerts, RwUInt32 numVerts, RwMatrix *ltm, R
 	// Capture world effect vertices while the CPU effects pass is active
 #ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::CapturingWorldEffects()){
-		SoftwarePolygons::BeginImmediate(pVerts, numVerts, ltm);
+		// Match RenderWare's texture state for immediate batches without UV coordinates
+		//+ rouz edit (ChatGPT)
+		if((flags & rwIM3D_VERTEXUV) == 0)
+			SetRenderStatePtr(TEXTURERASTER, nullptr);
+		//- rouz edit (ChatGPT)
+		SoftwarePolygons::BeginImmediate(pVerts, numVerts, ltm, (flags & rwIM3D_VERTEXUV) != 0); // rouz edit (ChatGPT)
 		return pVerts;
 	}
 #endif
@@ -464,10 +654,30 @@ RwBool RwIm3DRenderLine(RwInt32 vert1, RwInt32 vert2) {
 	RwImVertexIndex indices[2];
 	indices[0] = vert1;
 	indices[1] = vert2;
+	// Route world effect lines through the CPU framebuffer when capture is active
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediateIndexed(rwPRIMTYPELINELIST, indices, 2);
+		return true;
+	}
+#endif
 	im3d::RenderIndexedPrimitive((PrimitiveType)PRIMTYPELINELIST, indices, 2);
 	return true;
 }
-RwBool RwIm3DRenderTriangle(RwInt32 vert1, RwInt32 vert2, RwInt32 vert3);
+//+ rouz edit (ChatGPT)
+RwBool RwIm3DRenderTriangle(RwInt32 vert1, RwInt32 vert2, RwInt32 vert3) {
+	// Route an immediate triangle through the active CPU effect capture
+	RwImVertexIndex indices[3] = { (RwImVertexIndex)vert1, (RwImVertexIndex)vert2, (RwImVertexIndex)vert3 };
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediateIndexed(rwPRIMTYPETRILIST, indices, 3);
+		return true;
+	}
+#endif
+	im3d::RenderIndexedPrimitive((PrimitiveType)rwPRIMTYPETRILIST, indices, 3);
+	return true;
+}
+//- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primType, RwImVertexIndex *indices, RwInt32 numIndices) {
 	// Route indexed world effect triangles into the active CPU framebuffer
@@ -481,7 +691,19 @@ RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primType, RwImVertexIndex *i
 	return true;
 }
 //- rouz edit (ChatGPT)
-RwBool RwIm3DRenderPrimitive(RwPrimitiveType primType);
+//+ rouz edit (ChatGPT)
+RwBool RwIm3DRenderPrimitive(RwPrimitiveType primType) {
+	// Route sequential immediate geometry through the active CPU effect capture
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects()){
+		SoftwarePolygons::RenderImmediatePrimitive(primType);
+		return true;
+	}
+#endif
+	im3d::RenderPrimitive((PrimitiveType)primType);
+	return true;
+}
+//- rouz edit (ChatGPT)
 
 
 
@@ -517,19 +739,21 @@ RwBool RwRenderStateGet(RwRenderState state, void *value)
 	case rwRENDERSTATEFOGTYPE: *uival = rwFOGTYPELINEAR; return true;
 	case rwRENDERSTATEFOGDENSITY: *(float*)value = 1.0f; return true;
 	case rwRENDERSTATECULLMODE: *uival = GetRenderState(CULLMODE); return true;
+	// Expose librw stencil settings to legacy effect code using the RenderWare API
+	//+ rouz edit (ChatGPT)
+	case rwRENDERSTATESTENCILENABLE: *uival = GetRenderState(STENCILENABLE); return true;
+	case rwRENDERSTATESTENCILFAIL: *uival = GetRenderState(STENCILFAIL); return true;
+	case rwRENDERSTATESTENCILZFAIL: *uival = GetRenderState(STENCILZFAIL); return true;
+	case rwRENDERSTATESTENCILPASS: *uival = GetRenderState(STENCILPASS); return true;
+	case rwRENDERSTATESTENCILFUNCTION: *uival = GetRenderState(STENCILFUNCTION); return true;
+	case rwRENDERSTATESTENCILFUNCTIONREF: *uival = GetRenderState(STENCILFUNCTIONREF); return true;
+	case rwRENDERSTATESTENCILFUNCTIONMASK: *uival = GetRenderState(STENCILFUNCTIONMASK); return true;
+	case rwRENDERSTATESTENCILFUNCTIONWRITEMASK: *uival = GetRenderState(STENCILFUNCTIONWRITEMASK); return true;
+	//- rouz edit (ChatGPT)
 
-	// all unsupported
+	// Keep unsupported fog table and alpha primitive buffer queries explicit // rouz edit (ChatGPT)
 	case rwRENDERSTATEFOGTABLE:
 	case rwRENDERSTATEALPHAPRIMITIVEBUFFER:
-
-	case rwRENDERSTATESTENCILENABLE:
-	case rwRENDERSTATESTENCILFAIL:
-	case rwRENDERSTATESTENCILZFAIL:
-	case rwRENDERSTATESTENCILPASS:
-	case rwRENDERSTATESTENCILFUNCTION:
-	case rwRENDERSTATESTENCILFUNCTIONREF:
-	case rwRENDERSTATESTENCILFUNCTIONMASK:
-	case rwRENDERSTATESTENCILFUNCTIONWRITEMASK:
 	default:
 		return false;
 	}
@@ -566,16 +790,19 @@ RwBool RwRenderStateSet(RwRenderState state, void *value)
 	case rwRENDERSTATEFOGTABLE: return true;
 	case rwRENDERSTATEALPHAPRIMITIVEBUFFER: return true;
 	case rwRENDERSTATECULLMODE: SetRenderState(CULLMODE, uival); return true;
+	// Route legacy stencil state changes into librw's active render state
+	//+ rouz edit (ChatGPT)
+	case rwRENDERSTATESTENCILENABLE: SetRenderState(STENCILENABLE, uival); return true;
+	case rwRENDERSTATESTENCILFAIL: SetRenderState(STENCILFAIL, uival); return true;
+	case rwRENDERSTATESTENCILZFAIL: SetRenderState(STENCILZFAIL, uival); return true;
+	case rwRENDERSTATESTENCILPASS: SetRenderState(STENCILPASS, uival); return true;
+	case rwRENDERSTATESTENCILFUNCTION: SetRenderState(STENCILFUNCTION, uival); return true;
+	case rwRENDERSTATESTENCILFUNCTIONREF: SetRenderState(STENCILFUNCTIONREF, uival); return true;
+	case rwRENDERSTATESTENCILFUNCTIONMASK: SetRenderState(STENCILFUNCTIONMASK, uival); return true;
+	case rwRENDERSTATESTENCILFUNCTIONWRITEMASK: SetRenderState(STENCILFUNCTIONWRITEMASK, uival); return true;
+	//- rouz edit (ChatGPT)
 
-	// all unsupported
-	case rwRENDERSTATESTENCILENABLE:
-	case rwRENDERSTATESTENCILFAIL:
-	case rwRENDERSTATESTENCILZFAIL:
-	case rwRENDERSTATESTENCILPASS:
-	case rwRENDERSTATESTENCILFUNCTION:
-	case rwRENDERSTATESTENCILFUNCTIONREF:
-	case rwRENDERSTATESTENCILFUNCTIONMASK:
-	case rwRENDERSTATESTENCILFUNCTIONWRITEMASK:
+	// Keep unknown legacy render state writes non-fatal // rouz edit (ChatGPT)
 	default:
 		return true;
 	}

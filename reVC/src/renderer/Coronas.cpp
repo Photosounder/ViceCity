@@ -17,6 +17,11 @@
 #include "Shadows.h"
 #include "Clock.h"
 #include "Bridge.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 struct FlareDef
 {
@@ -65,6 +70,11 @@ int CCoronas::bChangeBrightnessImmediately;
 
 CRegisteredCorona CCoronas::aCoronas[NUMCORONAS];
 
+//+ rouz edit (ChatGPT)
+static CRegisteredCorona aEnvMapCoronas[NUMCORONAS];
+static int32 NumEnvMapCoronas;
+//- rouz edit (ChatGPT)
+
 const char aCoronaSpriteNames[][32] = {
 	"coronastar",
 	"corona",
@@ -93,7 +103,23 @@ CCoronas::Init(void)
 
 	for(i = 0; i < NUMCORONAS; i++)
 		aCoronas[i].id = 0;
+	//+ rouz edit (ChatGPT)
+	// Clear camera-local corona records after a full corona subsystem reset
+	for(i = 0; i < NUMCORONAS; i++)
+		aEnvMapCoronas[i].id = 0;
+	// Clear reflection-only light sprites when corona resources are reinitialized
+	CCoronas::ResetEnvMapCoronas();
+	//- rouz edit (ChatGPT)
 }
+
+//+ rouz edit (ChatGPT)
+void
+CCoronas::ResetEnvMapCoronas(void)
+{
+	// Start each reflection pass with a fresh set of camera-local corona lights
+	NumEnvMapCoronas = 0;
+}
+//- rouz edit (ChatGPT)
 
 void
 CCoronas::Shutdown(void)
@@ -438,6 +464,391 @@ CCoronas::Render(void)
 	POP_RENDERGROUP();
 }
 
+//+ rouz edit (ChatGPT)
+static void
+RenderEnvMapOnlyCorona(const CRegisteredCorona *corona, RwCamera *camera,
+	const CVector &cameraPos, const CVector &cameraForward,
+	const CVector &cameraRight, const CVector &cameraUp)
+{
+	// Skip invalid and expired reflection-only corona records
+	if(!corona || corona->id == 0 || corona->fadeAlpha == 0 || corona->texture == nil || corona->drawDist <= 0.0f)
+		return;
+	CVector coronaPos = corona->coors;
+	if(corona->id == CCoronas::SUN_CORE || corona->id == CCoronas::SUN_CORONA)
+		coronaPos = cameraPos + CTimeCycle::GetSunDirection()*150.0f;
+	CVector toCorona = coronaPos - cameraPos;
+	float coronaDepth = DotProduct(toCorona, cameraForward);
+	coronaPos -= cameraForward*corona->nearDist;
+	float cameraDepth = coronaDepth - corona->nearDist;
+	if(cameraDepth <= RwCameraGetNearClipPlane(camera) || cameraDepth >= corona->drawDist ||
+	   cameraDepth >= RwCameraGetFarClipPlane(camera))
+		return;
+
+	// Apply camera-distance fade and the close-range suppression used by long-distance lights
+	float fadeDistance = corona->drawDist*0.5f;
+	float distanceFade = coronaDepth < fadeDistance ? 1.0f :
+		1.0f - (coronaDepth-fadeDistance)/fadeDistance;
+	if(corona->useNearDist){
+		float coronaDistance = toCorona.Magnitude();
+		if(coronaDistance < 35.0f)
+			return;
+		if(coronaDistance < 50.0f)
+			distanceFade *= (coronaDistance-35.0f)/15.0f;
+	}
+	int alpha = (int)(corona->fadeAlpha*Clamp(distanceFade, 0.0f, 1.0f));
+	if(alpha <= 0)
+		return;
+
+	// Tint the reflection corona for scene fog and construct its camera-facing quad
+	float fogScale = CWeather::Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
+	int red = Clamp((int)(corona->red/fogScale), 0, 255);
+	int green = Clamp((int)(corona->green/fogScale), 0, 255);
+	int blue = Clamp((int)(corona->blue/fogScale), 0, 255);
+	float widthScale = fogScale;
+	float heightScale = fogScale;
+	if(corona->texture == gpCoronaTexture[8]){
+		float angleFactor = 1.0f - corona->someAngle*2.0f/PI;
+		float streakWidthScale = 6.0f*sq(sq(sq(angleFactor))) + 0.5f;
+		widthScale = streakWidthScale;
+		heightScale *= Max(0.35f - (streakWidthScale - 0.5f)*0.06f, 0.15f);
+	}
+	CVector horizontal = cameraRight*(corona->size*widthScale);
+	CVector vertical = cameraUp*(corona->size*heightScale);
+	CVector corners[4] = {
+		coronaPos-horizontal+vertical,
+		coronaPos+horizontal+vertical,
+		coronaPos-horizontal-vertical,
+		coronaPos+horizontal-vertical
+	};
+	RwIm3DVertex vertices[4];
+	RwImVertexIndex indices[6] = { 0, 1, 2, 2, 1, 3 };
+	for(int vertex = 0; vertex < 4; vertex++){
+		RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+		RwIm3DVertexSetRGBA(&vertices[vertex], red, green, blue, alpha);
+	}
+	RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+	RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+	RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+	RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(corona->texture));
+	if(RwIm3DTransform(vertices, 4, nil, rwIM3D_VERTEXUV)){
+		RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, indices, 6);
+		RwIm3DEnd();
+	}
+}
+
+void
+CCoronas::RenderForEnvMap(RwCamera *camera)
+{
+	// Skip reflection rendering when there is no active camera frame
+	if(camera == nil || RwCameraGetFrame(camera) == nil)
+		return;
+
+	// Read the auxiliary camera basis for world-facing corona quads
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(RwCameraGetFrame(camera));
+	// Skip rendering if the auxiliary camera frame has no matrix
+	if(cameraMatrix == nil)
+		return;
+	CVector cameraPos(cameraMatrix->pos);
+	CVector cameraForward(cameraMatrix->at);
+	CVector cameraRight(cameraMatrix->right);
+	CVector cameraUp(cameraMatrix->up);
+	cameraForward.Normalise();
+	cameraRight.Normalise();
+	cameraUp.Normalise();
+
+	// Set additive, depth-tested state for textured light billboards
+	PUSH_RENDERGROUP("CCoronas::RenderForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+
+	// Draw active corona textures as camera-facing geometry without touching their histories
+	for(int i = 0; i < NUMCORONAS; i++){
+		// Skip empty, fully faded, or textureless corona slots
+		if(aCoronas[i].id == 0 || aCoronas[i].fadeAlpha == 0 || aCoronas[i].texture == nil)
+			continue;
+		bool replacedByEnvMapCorona = false;
+		for(int j = 0; j < NumEnvMapCoronas; j++)
+			if(aEnvMapCoronas[j].id == aCoronas[i].id){
+				replacedByEnvMapCorona = true;
+				break;
+			}
+		if(replacedByEnvMapCorona)
+			continue;
+
+		// Reposition sun coronas from the reflection camera because they represent a direction
+		CVector coronaPos = aCoronas[i].coors;
+		if(aCoronas[i].id == SUN_CORE || aCoronas[i].id == SUN_CORONA)
+			coronaPos = cameraPos + CTimeCycle::GetSunDirection()*150.0f;
+		CVector toCorona = coronaPos - cameraPos;
+		float coronaDepth = DotProduct(toCorona, cameraForward);
+		float cameraDepth = coronaDepth;
+		// Apply the regular sprite pass's small depth bias toward the camera
+		coronaPos -= cameraForward*aCoronas[i].nearDist;
+		cameraDepth -= aCoronas[i].nearDist;
+		// Reject coronas outside the auxiliary camera's depth range
+		if(cameraDepth <= RwCameraGetNearClipPlane(camera) ||
+		   cameraDepth >= aCoronas[i].drawDist || cameraDepth >= RwCameraGetFarClipPlane(camera))
+			continue;
+
+		// Match the distance fade of the regular corona pass
+		float fadeDistance = aCoronas[i].drawDist*0.5f;
+		float distanceFade = coronaDepth < fadeDistance ? 1.0f :
+			1.0f - (coronaDepth-fadeDistance)/fadeDistance;
+		// Match registration's fade for lights that are hidden at close range
+		if(aCoronas[i].useNearDist){
+			float coronaDistance = toCorona.Magnitude();
+			if(coronaDistance < 35.0f)
+				continue;
+			if(coronaDistance < 50.0f)
+				distanceFade *= (coronaDistance-35.0f)/15.0f;
+		}
+		int alpha = (int)(aCoronas[i].fadeAlpha*Clamp(distanceFade, 0.0f, 1.0f));
+		// Ignore lights that have faded out before reaching the reflection camera
+		if(alpha <= 0)
+			continue;
+
+		// Apply the same fog tint before blending each corona texture
+		float fogScale = CWeather::Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
+		int red = Clamp((int)(aCoronas[i].red/fogScale), 0, 255);
+		int green = Clamp((int)(aCoronas[i].green/fogScale), 0, 255);
+		int blue = Clamp((int)(aCoronas[i].blue/fogScale), 0, 255);
+		float widthScale = fogScale;
+		float heightScale = fogScale;
+		if(aCoronas[i].texture == gpCoronaTexture[8]){
+			// Preserve the special narrow shape used by streak coronas
+			float angleFactor = 1.0f - aCoronas[i].someAngle*2.0f/PI;
+			float streakWidthScale = 6.0f*sq(sq(sq(angleFactor))) + 0.5f;
+			widthScale = streakWidthScale;
+			heightScale *= Max(0.35f - (streakWidthScale - 0.5f)*0.06f, 0.15f);
+		}
+		// Scale the textured quad with distance and preserve the elongated streak sprite proportions
+		float halfWidth = aCoronas[i].size*widthScale;
+		float halfHeight = aCoronas[i].size*heightScale;
+		CVector horizontal = cameraRight*halfWidth;
+		CVector vertical = cameraUp*halfHeight;
+		CVector corners[4] = {
+			coronaPos-horizontal+vertical,
+			coronaPos+horizontal+vertical,
+			coronaPos-horizontal-vertical,
+			coronaPos+horizontal-vertical
+		};
+		RwIm3DVertex vertices[4];
+		RwImVertexIndex indices[6] = { 0, 1, 2, 2, 1, 3 };
+		// Populate the four camera-facing vertices and their texture tint
+		for(int vertex = 0; vertex < 4; vertex++){
+			RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+			RwIm3DVertexSetRGBA(&vertices[vertex], red, green, blue, alpha);
+		}
+		RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+		RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+		RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+		RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(aCoronas[i].texture));
+		// Submit each corona as one textured quad to the active reflection camera
+		if(RwIm3DTransform(vertices, 4, nil, rwIM3D_VERTEXUV)){
+			RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, indices, 6);
+			RwIm3DEnd();
+		}
+	}
+	// Draw lights visible only to the reflection camera without changing main corona history
+	for(int i = 0; i < NumEnvMapCoronas; i++)
+		RenderEnvMapOnlyCorona(&aEnvMapCoronas[i], camera, cameraPos, cameraForward, cameraRight, cameraUp);
+
+	// Restore standard state after the auxiliary corona pass
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
+	POP_RENDERGROUP();
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+void
+CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
+{
+	// Skip wet-road light reflections when the weather or reflection camera is unavailable
+	if(CWeather::WetRoads <= 0.0f || gpCoronaTexture[3] == nil || camera == nil || RwCameraGetFrame(camera) == nil)
+		return;
+
+	// Read the reflection camera basis for ground-aligned light streaks
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(RwCameraGetFrame(camera));
+	if(cameraMatrix == nil)
+		return;
+	CVector cameraPos(cameraMatrix->pos);
+	CVector cameraForward(cameraMatrix->at);
+	CVector cameraRight(cameraMatrix->right);
+	cameraForward.Normalise();
+	cameraRight.z = 0.0f;
+	if(cameraRight.MagnitudeSqr() < 0.0001f)
+		cameraRight = CVector(1.0f, 0.0f, 0.0f);
+	else
+		cameraRight.Normalise();
+
+	// Set additive depth-tested state for light reflections on wet ground
+	PUSH_RENDERGROUP("CCoronas::RenderReflectionsForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[3]));
+
+	// Draw cached wet-road reflections without repeating collision queries or changing corona state
+	for(int i = 0; i < NUMCORONAS; i++){
+		if(aCoronas[i].id == 0 || aCoronas[i].reflection == REFLECTION_OFF || !aCoronas[i].renderReflection ||
+		   aCoronas[i].heightAboveRoad >= 20.0f || (aCoronas[i].fadeAlpha == 0 && aCoronas[i].alpha == 0))
+			continue;
+
+		float groundZ = aCoronas[i].coors.z - aCoronas[i].heightAboveRoad;
+		if(groundZ > cameraPos.z)
+			continue;
+		CVector reflectionPos(aCoronas[i].coors.x, aCoronas[i].coors.y, groundZ + 0.02f);
+		float depth = DotProduct(reflectionPos - cameraPos, cameraForward);
+		float drawDist = Min(0.75f*aCoronas[i].drawDist, 55.0f);
+		if(depth <= RwCameraGetNearClipPlane(camera) || depth >= drawDist || depth >= RwCameraGetFarClipPlane(camera))
+			continue;
+
+		float fadeDistance = drawDist*0.5f;
+		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
+		float heightFade = (20.0f-aCoronas[i].heightAboveRoad)/20.0f;
+		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*CWeather::WetRoads);
+		int red = (intensity*aCoronas[i].red)>>8;
+		int green = (intensity*aCoronas[i].green)>>8;
+		int blue = (intensity*aCoronas[i].blue)>>8;
+		if(intensity <= 0 || (red == 0 && green == 0 && blue == 0))
+			continue;
+
+		CVector towardCamera(cameraPos.x-reflectionPos.x, cameraPos.y-reflectionPos.y, 0.0f);
+		if(towardCamera.MagnitudeSqr() < 0.0001f)
+			towardCamera = CVector(-cameraForward.x, -cameraForward.y, 0.0f);
+		if(towardCamera.MagnitudeSqr() < 0.0001f)
+			towardCamera = CVector(0.0f, 1.0f, 0.0f);
+		towardCamera.Normalise();
+		float halfWidth = Max(aCoronas[i].size*0.75f, 0.25f);
+		float halfLength = Max(aCoronas[i].size*2.0f, 0.5f);
+		CVector horizontal = cameraRight*halfWidth;
+		CVector vertical = towardCamera*halfLength;
+		CVector corners[4] = {
+			reflectionPos-horizontal+vertical,
+			reflectionPos+horizontal+vertical,
+			reflectionPos-horizontal-vertical,
+			reflectionPos+horizontal-vertical
+		};
+		RwIm3DVertex vertices[4];
+		RwImVertexIndex indices[6] = { 0, 1, 2, 2, 1, 3 };
+		// Populate the ground quad with the corona's color and reflection texture
+		for(int vertex = 0; vertex < 4; vertex++){
+			RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+			RwIm3DVertexSetRGBA(&vertices[vertex], red, green, blue, 255);
+		}
+		RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+		RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+		RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+		RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+		if(RwIm3DTransform(vertices, 4, nil, rwIM3D_VERTEXUV)){
+			RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, indices, 6);
+			RwIm3DEnd();
+		}
+	}
+	// Reflect wet-road coronas that were registered only for the environment camera
+	for(int i = 0; i < NumEnvMapCoronas; i++){
+		CRegisteredCorona *corona = &aEnvMapCoronas[i];
+		if(corona->id == 0 || corona->reflection == CCoronas::REFLECTION_OFF)
+			continue;
+
+		// Cache the reflection source height and refresh it periodically
+		CColPoint point;
+		CEntity *entity;
+		if(corona->renderReflection){
+			if(((CTimer::GetFrameCounter() + i) & 0xF) == 0 &&
+			   CWorld::ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
+					true, false, false, false, true, false, nil))
+				corona->heightAboveRoad = corona->coors.z - point.point.z;
+		}else if(CWorld::ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
+				true, false, false, false, true, false, nil)){
+			corona->heightAboveRoad = corona->coors.z - point.point.z;
+			corona->renderReflection = true;
+		}
+		if(!corona->renderReflection || corona->heightAboveRoad >= 20.0f)
+			continue;
+		float groundZ = corona->coors.z - corona->heightAboveRoad;
+		if(groundZ > cameraPos.z)
+			continue;
+
+		// Fade the ground reflection by height, wetness, and auxiliary-camera depth
+		CVector reflectionPos(corona->coors.x, corona->coors.y, groundZ + 0.02f);
+		float depth = DotProduct(reflectionPos - cameraPos, cameraForward);
+		float drawDist = Min(0.75f*corona->drawDist, 55.0f);
+		if(depth <= RwCameraGetNearClipPlane(camera) || depth >= drawDist ||
+		   depth >= RwCameraGetFarClipPlane(camera))
+			continue;
+		float fadeDistance = drawDist*0.5f;
+		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
+		float heightFade = (20.0f-corona->heightAboveRoad)/20.0f;
+		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*CWeather::WetRoads);
+		int red = (intensity*corona->red)>>8;
+		int green = (intensity*corona->green)>>8;
+		int blue = (intensity*corona->blue)>>8;
+		if(intensity <= 0 || (red == 0 && green == 0 && blue == 0))
+			continue;
+
+		// Shape the reflected light streak along the ground toward the camera
+		CVector towardCamera(cameraPos.x-reflectionPos.x, cameraPos.y-reflectionPos.y, 0.0f);
+		if(towardCamera.MagnitudeSqr() < 0.0001f)
+			towardCamera = CVector(-cameraForward.x, -cameraForward.y, 0.0f);
+		if(towardCamera.MagnitudeSqr() < 0.0001f)
+			towardCamera = CVector(0.0f, 1.0f, 0.0f);
+		towardCamera.Normalise();
+		CVector horizontal = cameraRight*Max(corona->size*0.75f, 0.25f);
+		CVector vertical = towardCamera*Max(corona->size*2.0f, 0.5f);
+		CVector corners[4] = {
+			reflectionPos-horizontal+vertical,
+			reflectionPos+horizontal+vertical,
+			reflectionPos-horizontal-vertical,
+			reflectionPos+horizontal-vertical
+		};
+		RwIm3DVertex vertices[4];
+		RwImVertexIndex indices[6] = { 0, 1, 2, 2, 1, 3 };
+		for(int vertex = 0; vertex < 4; vertex++){
+			RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+			RwIm3DVertexSetRGBA(&vertices[vertex], red, green, blue, 255);
+		}
+		RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+		RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+		RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+		RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+		if(RwIm3DTransform(vertices, 4, nil, rwIM3D_VERTEXUV)){
+			RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, indices, 6);
+			RwIm3DEnd();
+		}
+	}
+
+	// Restore standard state after drawing the wet-road reflections
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
+	POP_RENDERGROUP();
+}
+//- rouz edit (ChatGPT)
+
 void
 CCoronas::RenderReflections(void)
 {
@@ -534,6 +945,18 @@ CCoronas::RenderReflections(void)
 void
 CCoronas::RenderSunReflection(void)
 {
+	// Anchor the reflected sun streak to the active environment camera during capture
+	//+ rouz edit (ChatGPT)
+	CVector reflectionCameraPosition = TheCamera.GetPosition();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame))
+			reflectionCameraPosition = CVector(RwFrameGetMatrix(effectFrame)->pos);
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	float sunZDir = CTimeCycle::GetSunDirection().z;
 	if(sunZDir > -0.05f){
 		float intensity = (0.3f - Abs(sunZDir - 0.25f))/0.3f *
@@ -545,7 +968,10 @@ CCoronas::RenderSunReflection(void)
 			int g = (CTimeCycle::GetSunCoreGreen() + CTimeCycle::GetSunCoronaGreen())*intensity*0.25f;
 			int b = (CTimeCycle::GetSunCoreBlue() + CTimeCycle::GetSunCoronaBlue())*intensity*0.25f;
 
-			CVector sunPos = 40.0f*CTimeCycle::GetSunDirection() + TheCamera.GetPosition();
+			// Position the reflection streak relative to the camera rendering this pass
+			//+ rouz edit (ChatGPT)
+			CVector sunPos = 40.0f*CTimeCycle::GetSunDirection() + reflectionCameraPosition;
+			//- rouz edit (ChatGPT)
 			sunPos.z = 0.5f*CWeather::Wind + 6.1f;
 			CVector sunDir = CTimeCycle::GetSunDirection();
 			sunDir.z = 0.0;
@@ -957,3 +1383,151 @@ CEntity::ProcessLightsForEntity(void)
 		}
 	}
 }
+
+//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+void
+CCoronas::ProcessLightsForEnvMap(CEntity *entity)
+{
+	// Skip entities that do not contribute their regular 2D effects
+	if(!entity || entity->bRenderDamaged || !entity->bIsVisible || entity->GetUp().z < 0.96f)
+		return;
+	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(entity->GetModelIndex());
+	if(!modelInfo)
+		return;
+
+	// Match the main scene's clock and flicker phase for point and fog lights
+	uint32 flashTimer1 = 0;
+	uint32 flashTimer2 = 0;
+	uint32 flashTimer3 = 0;
+	for(int i = 0; i < modelInfo->GetNum2dEffects(); i++, flashTimer1 += 0x80, flashTimer2 += 0x100, flashTimer3 += 0x200){
+		C2dEffect *effect = modelInfo->Get2dEffect(i);
+		if(effect->type != EFFECT_LIGHT || (effect->light.flags & LIGHTFLAG_HIDE_OBJECT))
+			continue;
+
+		// Determine whether this 2D light is active during the current frame
+		bool lightOn = false;
+		switch(effect->light.lightType){
+		case LIGHT_ON:
+			lightOn = true;
+			break;
+		case LIGHT_ON_NIGHT:
+			lightOn = CClock::GetHours() > 18 || CClock::GetHours() < 7;
+			break;
+		case LIGHT_FLICKER:
+			lightOn = ((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed) & 0x60) != 0 ||
+				((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed) & 3) != 0;
+			break;
+		case LIGHT_FLICKER_NIGHT:
+			if(CClock::GetHours() > 18 || CClock::GetHours() < 7 || CWeather::WetRoads > 0.5f)
+				lightOn = ((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed) & 0x60) != 0 ||
+					((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed) & 3) != 0;
+			break;
+		case LIGHT_FLASH1:
+			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200) != 0;
+			break;
+		case LIGHT_FLASH1_NIGHT:
+			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
+				((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200) != 0;
+			break;
+		case LIGHT_FLASH2:
+			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400) != 0;
+			break;
+		case LIGHT_FLASH2_NIGHT:
+			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
+				((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400) != 0;
+			break;
+		case LIGHT_FLASH3:
+			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800) != 0;
+			break;
+		case LIGHT_FLASH3_NIGHT:
+			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
+				((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800) != 0;
+			break;
+		case LIGHT_RANDOM_FLICKER:
+			lightOn = entity->m_randomSeed > 16 ||
+				((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
+				((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
+			break;
+		case LIGHT_RANDOM_FLICKER_NIGHT:
+			if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
+				lightOn = entity->m_randomSeed > 16 ||
+					((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
+					((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
+			break;
+		case LIGHT_BRIDGE_FLASH1:
+			lightOn = CBridge::ShouldLightsBeFlashing() &&
+				(CTimer::GetTimeInMilliseconds() & 0x200) != 0;
+			break;
+		case LIGHT_BRIDGE_FLASH2:
+			lightOn = CBridge::ShouldLightsBeFlashing() &&
+				(CTimer::GetTimeInMilliseconds() & 0x1FF) < 60;
+			break;
+		}
+		if(!lightOn && !(effect->light.flags & LIGHTFLAG_FOG_ALWAYS))
+			continue;
+
+		// Register reflection-only point lights, fog, and corona sprites
+		CVector pos = entity->GetMatrix() * effect->pos;
+		// Keep reflection-only corona bulbs separate from the main camera's history
+		uint32 coronaId = (uint32)((uintptr)entity + i);
+		bool registeredInMainView = false;
+		for(int coronaIndex = 0; coronaIndex < NUMCORONAS; coronaIndex++)
+			if(aCoronas[coronaIndex].id == coronaId && aCoronas[coronaIndex].registeredThisFrame){
+				registeredInMainView = true;
+				break;
+			}
+		if(lightOn && effect->light.corona && !registeredInMainView && NumEnvMapCoronas < NUMCORONAS){
+			CRegisteredCorona *corona = &aEnvMapCoronas[NumEnvMapCoronas++];
+			if(corona->id != coronaId){
+				corona->renderReflection = false;
+				corona->heightAboveRoad = 0.0f;
+			}
+			corona->coors = pos;
+			corona->id = coronaId;
+			corona->texture = effect->light.corona;
+			corona->size = effect->light.size;
+			corona->someAngle = 0.0f;
+			corona->drawDist = effect->light.dist;
+			corona->nearDist = 1.5f;
+			corona->red = effect->col.r;
+			corona->green = effect->col.g;
+			corona->blue = effect->col.b;
+			corona->fadeAlpha = 255;
+			corona->reflection = effect->light.roadReflection;
+			corona->useNearDist = !!(effect->light.flags & LIGHTFLAG_LONG_DIST);
+		}
+		bool alreadyProcessedFog = false;
+		if(effect->light.range != 0.0f && lightOn){
+			if(effect->col.r == 0 && effect->col.g == 0 && effect->col.b == 0){
+				CPointLights::AddLight(CPointLights::LIGHT_POINT,
+					pos, CVector(0.0f, 0.0f, 0.0f), effect->light.range,
+					0.0f, 0.0f, 0.0f, CPointLights::FOG_NONE, true);
+			}else{
+				CPointLights::AddLight(CPointLights::LIGHT_POINT,
+					pos, CVector(0.0f, 0.0f, 0.0f), effect->light.range,
+					effect->col.r*CTimeCycle::GetSpriteBrightness()/255.0f,
+					effect->col.g*CTimeCycle::GetSpriteBrightness()/255.0f,
+					effect->col.b*CTimeCycle::GetSpriteBrightness()/255.0f,
+					(effect->light.flags & LIGHTFLAG_FOG) >> 1, true);
+				alreadyProcessedFog = true;
+			}
+		}
+		// Add standalone fog effects only when the point light did not carry them
+		if(!alreadyProcessedFog){
+			if(effect->light.flags & LIGHTFLAG_FOG_ALWAYS)
+				CPointLights::AddLight(CPointLights::LIGHT_FOGONLY_ALWAYS,
+					pos, CVector(0.0f, 0.0f, 0.0f), 0.0f,
+					effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
+					CPointLights::FOG_ALWAYS, true);
+			else if(lightOn && effect->light.range == 0.0f &&
+			        (effect->light.flags & LIGHTFLAG_FOG_NORMAL))
+				CPointLights::AddLight(CPointLights::LIGHT_FOGONLY,
+					pos, CVector(0.0f, 0.0f, 0.0f), 0.0f,
+					effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
+					CPointLights::FOG_NORMAL, true);
+		}
+	}
+}
+#endif
+//- rouz edit (ChatGPT)

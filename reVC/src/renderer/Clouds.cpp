@@ -14,6 +14,10 @@
 #include "Timecycle.h"
 #include "Renderer.h"
 #include "Clouds.h"
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "RenderBuffer.h" // rouz edit (ChatGPT)
+#include "SoftwarePolygons.h" // rouz edit (ChatGPT)
+#endif
 
 #define SMALLSTRIPHEIGHT 4.0f
 #define HORIZSTRIPHEIGHT 48.0f
@@ -327,6 +331,256 @@ CClouds::Render(void)
 	POP_RENDERGROUP();
 }
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static void
+StoreEnvMapCloudQuad(const CVector &center, const CVector &cameraRight, const CVector &cameraUp,
+	float halfWidth, float halfHeight, float rotation,
+	const CRGBA &top, const CRGBA &bottom)
+{
+	// Rotate the camera-facing basis to match the cloud sprite orientation
+	float cosine = Cos(rotation);
+	float sine = Sin(rotation);
+	CVector horizontal = cameraRight*(halfWidth*cosine) + cameraUp*(halfWidth*sine);
+	CVector vertical = cameraUp*(halfHeight*cosine) - cameraRight*(halfHeight*sine);
+	CVector corners[4] = {
+		center-horizontal+vertical,
+		center+horizontal+vertical,
+		center-horizontal-vertical,
+		center+horizontal-vertical
+	};
+	RwImVertexIndex *indices;
+	RwIm3DVertex *vertices;
+	// Reserve one textured quad in the shared RenderWare immediate buffer
+	RenderBuffer::StartStoring(6, 4, &indices, &vertices);
+	for(int vertex = 0; vertex < 4; vertex++){
+		RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+		const CRGBA &color = vertex < 2 ? top : bottom;
+		RwIm3DVertexSetRGBA(&vertices[vertex], color.r, color.g, color.b, color.a);
+	}
+	RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+	RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+	RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+	RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+	indices[0] = 0; indices[1] = 1; indices[2] = 2;
+	indices[3] = 2; indices[4] = 1; indices[5] = 3;
+	RenderBuffer::StopStoring();
+}
+
+void
+CClouds::RenderForEnvMap(RwCamera *camera)
+{
+	// Skip sky effects without a valid reflection camera or when the current area is indoors
+	if(camera == nil || !CGame::CanSeeOutSideFromCurrArea())
+		return;
+	RwFrame *cameraFrame = RwCameraGetFrame(camera);
+	// Skip rendering if the reflection camera has no frame matrix
+	if(cameraFrame == nil || RwFrameGetMatrix(cameraFrame) == nil)
+		return;
+
+	// Use the reflection camera basis without touching the main camera's cloud state
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
+	CVector cameraPos(cameraMatrix->pos);
+	CVector cameraRight(cameraMatrix->right);
+	CVector cameraUp(cameraMatrix->up);
+	CVector cameraForward(cameraMatrix->at);
+	cameraRight.Normalise();
+	cameraUp.Normalise();
+	cameraForward.Normalise();
+	float nearClip = RwCameraGetNearClipPlane(camera);
+	float farClip = RwCameraGetFarClipPlane(camera);
+
+	// Preserve pending world geometry before starting the sky effect batches
+	RenderBuffer::RenderStuffInBuffer();
+	PUSH_RENDERGROUP("CClouds::RenderForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+	RenderBuffer::ClearRenderBuffer();
+
+	// Place the moon ahead of the upward-facing reflection camera during its night window
+	float minute = CClock::GetHours()*60.0f + CClock::GetMinutes() + CClock::GetSeconds()/60.0f;
+	float moonFade = Abs(minute - 180.0f);
+	if((int)moonFade < 180 && gpCoronaTexture[2]){
+		float coverage = Max(CWeather::Foggyness, CWeather::CloudCoverage);
+		int brightness = (int)((1.0f-coverage)*(180-(int)moonFade));
+		if(brightness > 0){
+			CVector moonPosition = cameraPos + cameraForward*190.0f + cameraUp*45.0f;
+			float depth = DotProduct(moonPosition-cameraPos, cameraForward);
+			if(depth > nearClip && depth < farClip){
+				RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[2]));
+				CRGBA moonColor(brightness, brightness, brightness, 255);
+				float moonSize = CCoronas::MoonSize*2.0f + 4.0f;
+				StoreEnvMapCloudQuad(moonPosition, cameraRight, cameraUp, moonSize, moonSize, 0.0f, moonColor, moonColor);
+				RenderBuffer::RenderStuffInBuffer();
+			}
+		}
+	}
+
+	// Draw stable stars from the existing sky layout without invoking random flicker
+	int starIntensity = 0;
+	if(CClock::GetHours() < 5 || CClock::GetHours() > 22)
+		starIntensity = 255;
+	else if(CClock::GetHours() == 22)
+		starIntensity = 255*CClock::GetMinutes()/60;
+	else if(CClock::GetHours() == 5)
+		starIntensity = 255*(60-CClock::GetMinutes())/60;
+	starIntensity *= 1.0f-Max(CWeather::Foggyness, CWeather::CloudCoverage);
+	if(starIntensity > 0 && gpCoronaTexture[0]){
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
+		for(int i = 0; i < 11; i++){
+			int star = i%9;
+			float horizontal = (StarCoorsX[star]-0.375f)*180.0f;
+			float vertical = (StarCoorsY[star]-0.35f)*120.0f;
+			CVector starPosition = cameraPos + cameraForward*190.0f + cameraRight*horizontal + cameraUp*vertical;
+			float depth = DotProduct(starPosition-cameraPos, cameraForward);
+			if(depth <= nearClip || depth >= farClip)
+				continue;
+			float size = 0.8f*StarSizes[star];
+			CRGBA starColor(starIntensity, starIntensity, starIntensity, 255);
+			StoreEnvMapCloudQuad(starPosition, cameraRight, cameraUp, size, size, 0.0f, starColor, starColor);
+		}
+		// Add a slow, deterministic pulse to the bright R-star in the reflection sky
+		//+ rouz edit (ChatGPT)
+		const float starPulse = 0.7f + 0.3f*Sin((CTimer::GetTimeInMilliseconds() & 4095)*TWOPI/4096.0f);
+		CVector brightStarPosition = cameraPos + cameraForward*190.0f + cameraRight*95.0f + cameraUp*18.0f;
+		float brightStarDepth = DotProduct(brightStarPosition-cameraPos, cameraForward);
+		if(brightStarDepth > nearClip && brightStarDepth < farClip){
+			int brightStarIntensity = (int)(starIntensity*starPulse);
+			CRGBA brightStarColor(brightStarIntensity, brightStarIntensity, brightStarIntensity, 255);
+			StoreEnvMapCloudQuad(brightStarPosition, cameraRight, cameraUp, 5.0f, 5.0f,
+				0.0f, brightStarColor, brightStarColor);
+		}
+		//- rouz edit (ChatGPT)
+		RenderBuffer::RenderStuffInBuffer();
+	}
+
+	// Render the three animated low-cloud texture layers around the reflection viewpoint
+	float lowCloudIntensity = 1.0f-Max(Max(CWeather::Foggyness, CWeather::CloudCoverage), CWeather::ExtraSunnyness);
+	if(lowCloudIntensity > 0.0f){
+		int red = CTimeCycle::GetLowCloudsRed()*lowCloudIntensity;
+		int green = CTimeCycle::GetLowCloudsGreen()*lowCloudIntensity;
+		int blue = CTimeCycle::GetLowCloudsBlue()*lowCloudIntensity;
+		for(int cloudType = 0; cloudType < 3; cloudType++){
+			if(gpCloudTex[cloudType] == nil)
+				continue;
+			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[cloudType]));
+			for(int i = cloudType; i < 12; i += 3){
+				CVector cloudPosition(cameraPos.x + 800.0f*LowCloudsX[i],
+					cameraPos.y + 800.0f*LowCloudsY[i], 40.0f + 60.0f*LowCloudsZ[i]);
+				float depth = DotProduct(cloudPosition-cameraPos, cameraForward);
+				if(depth <= nearClip || depth >= farClip)
+					continue;
+				CRGBA cloudColor(red, green, blue, 255);
+				StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 320.0f, 40.0f, 0.0f,
+					cloudColor, cloudColor);
+			}
+			RenderBuffer::RenderStuffInBuffer();
+		}
+	}
+
+	// Draw the soft cloud layer with its timecycle gradient and existing wind rotation
+	int fluffyAlpha = 160*(1.0f-Max(CWeather::Foggyness, CWeather::ExtraSunnyness));
+	if(fluffyAlpha > 0 && gpCloudTex[4]){
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[4]));
+		float rotationSine = Sin(CloudRotation);
+		float rotationCosine = Cos(CloudRotation);
+		float spriteRotation = (uint16)IndividualRotation/65336.0f*TWOPI;
+		CRGBA cloudTop(CTimeCycle::GetFluffyCloudsTopRed(), CTimeCycle::GetFluffyCloudsTopGreen(),
+			CTimeCycle::GetFluffyCloudsTopBlue(), fluffyAlpha);
+		CRGBA cloudBottom(CTimeCycle::GetFluffyCloudsBottomRed(), CTimeCycle::GetFluffyCloudsBottomGreen(),
+			CTimeCycle::GetFluffyCloudsBottomBlue(), fluffyAlpha);
+		for(int i = 0; i < 37; i++){
+			float x = 2.0f*CoorsOffsetX[i];
+			float y = 2.0f*CoorsOffsetY[i];
+			CVector cloudPosition(cameraPos.x + x*rotationCosine + y*rotationSine,
+				cameraPos.y + x*rotationSine - y*rotationCosine,
+				40.0f*CoorsOffsetZ[i] + 40.0f);
+			float depth = DotProduct(cloudPosition-cameraPos, cameraForward);
+			if(depth <= nearClip || depth >= farClip)
+				continue;
+			StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 55.0f, 55.0f,
+				spriteRotation, cloudTop, cloudBottom);
+		}
+		RenderBuffer::RenderStuffInBuffer();
+	}
+
+	// Add a camera-relative highlight around the sun without reading main-camera screen coordinates
+	CVector sunDirection = CTimeCycle::GetSunDirection();
+	sunDirection.Normalise();
+	float sunDepth = DotProduct(sunDirection, cameraForward);
+	if(gpCloudTex[3] && sunDepth > 0.05f){
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[3]));
+		float sunScreenX = DotProduct(sunDirection, cameraRight)/sunDepth;
+		float sunScreenY = DotProduct(sunDirection, cameraUp)/sunDepth;
+		float highlightLimit = 0.55f;
+		float cloudRotationSine = Sin(CloudRotation);
+		float cloudRotationCosine = Cos(CloudRotation);
+		for(int i = 0; i < 37; i++){
+			float x = 2.0f*CoorsOffsetX[i];
+			float y = 2.0f*CoorsOffsetY[i];
+			CVector cloudPosition(cameraPos.x + x*cloudRotationCosine + y*cloudRotationSine,
+				cameraPos.y + x*cloudRotationSine - y*cloudRotationCosine,
+				40.0f*CoorsOffsetZ[i] + 40.0f);
+			CVector fromCamera = cloudPosition-cameraPos;
+			float depth = DotProduct(fromCamera, cameraForward);
+			if(depth <= nearClip || depth >= farClip)
+				continue;
+			float screenX = DotProduct(fromCamera, cameraRight)/depth;
+			float screenY = DotProduct(fromCamera, cameraUp)/depth;
+			float deltaX = screenX-sunScreenX;
+			float deltaY = screenY-sunScreenY;
+			float distance = Sqrt(sq(deltaX)+sq(deltaY));
+			if(distance >= highlightLimit)
+				continue;
+			float highlight = (1.0f-Max(CWeather::Foggyness, CWeather::CloudCoverage))*(1.0f-distance/highlightLimit);
+			int red = 200.0f*highlight;
+			if(red <= 0)
+				continue;
+			CRGBA highlightColor(red, 0, 0, 255);
+			StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 30.0f, 30.0f,
+				1.7f-Atan2(deltaY, deltaX), highlightColor, highlightColor);
+		}
+		RenderBuffer::RenderStuffInBuffer();
+	}
+
+	// Add the weather rainbow as six camera-aligned colored streaks
+	if(CWeather::Rainbow != 0.0f && gpCoronaTexture[0]){
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
+		for(int i = 0; i < 6; i++){
+			CVector rainbowPosition = cameraPos + cameraForward*190.0f + cameraUp*35.0f + cameraRight*(i*1.5f-3.75f);
+			CRGBA rainbowColor(BowRed[i]*CWeather::Rainbow, BowGreen[i]*CWeather::Rainbow,
+				BowBlue[i]*CWeather::Rainbow, 255);
+			StoreEnvMapCloudQuad(rainbowPosition, cameraRight, cameraUp, 2.0f, 50.0f,
+				0.0f, rainbowColor, rainbowColor);
+		}
+		RenderBuffer::RenderStuffInBuffer();
+	}
+
+	// Restore the standard world pass states after drawing the sky
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
+	POP_RENDERGROUP();
+}
+#endif
+//- rouz edit (ChatGPT)
+
 bool
 UseDarkBackground(void)
 {
@@ -384,6 +638,13 @@ static void CalcScreenCoorsNoClip(const CVector &in, float &x, float &y)
 		view.z = view.z < 0.0f ? -0.001f : 0.001f;
 	x = view.x * SCREEN_WIDTH / view.z;
 	y = view.y * SCREEN_HEIGHT / view.z;
+	//+ rouz edit (ChatGPT)
+	// Match the software framebuffer's top-down screen Y used by projected world sprites
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects())
+		y = SCREEN_HEIGHT - y;
+#endif
+	//- rouz edit (ChatGPT)
 }
 
 static void UpdateHorizonCoors(void)

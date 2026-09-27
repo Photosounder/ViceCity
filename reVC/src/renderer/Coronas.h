@@ -2,6 +2,8 @@
 
 extern RwTexture *gpCoronaTexture[9];
 
+class CEntity; // rouz edit (ChatGPT)
+
 struct CRegisteredCorona
 {
 	CVector coors;
@@ -99,6 +101,12 @@ public:
 		bool useNearDist = false, float nearDist = 1.5f);
 	static void UpdateCoronaCoors(uint32 id, const CVector &coors, float drawDist, float someAngle);
 	static void Render(void);
+	//+ rouz edit (ChatGPT)
+	static void ResetEnvMapCoronas(void); // rouz edit (ChatGPT)
+	static void ProcessLightsForEnvMap(CEntity *entity); // rouz edit (ChatGPT)
+	static void RenderForEnvMap(RwCamera *camera);
+	static void RenderReflectionsForEnvMap(RwCamera *camera); // rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
 	static void RenderReflections(void);
 	static void RenderSunReflection(void);
 	static void DoSunAndMoon(void);

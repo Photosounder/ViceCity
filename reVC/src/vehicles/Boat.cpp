@@ -29,6 +29,11 @@
 #include "Shadows.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 #define INVALID_ORIENTATION (-9999.99f)
 
@@ -1341,13 +1346,29 @@ void
 CBoat::FillBoatList()
 {
 	int16 frameId = 0;
-	
+	// Select boats from the reflection camera's view when building a reflected wake list
+	//+ rouz edit (ChatGPT)
+	CVector cameraPosition = TheCamera.GetPosition();
+	CVector cameraForward = TheCamera.GetForward();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame)){
+			RwMatrix *effectMatrix = RwFrameGetMatrix(effectFrame);
+			cameraPosition = CVector(effectMatrix->pos);
+			cameraForward = CVector(effectMatrix->at);
+			cameraForward.Normalise();
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	apFrameWakeGeneratingBoats[0] = nil;
 	apFrameWakeGeneratingBoats[1] = nil;
 	apFrameWakeGeneratingBoats[2] = nil;
 	apFrameWakeGeneratingBoats[3] = nil;
-	CVector2D camPos = TheCamera.GetPosition();
-	CVector2D camFwd = TheCamera.GetForward();
+	CVector2D camPos = cameraPosition;
+	CVector2D camFwd = cameraForward;
 	float camDist = camFwd.Magnitude();
 	if(camDist > 0.0f)
 		camFwd /= camDist;

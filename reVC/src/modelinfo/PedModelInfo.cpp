@@ -9,6 +9,9 @@
 #include "VisibilityPlugins.h"
 #include "ModelInfo.h"
 #include "custompipes.h"
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h" // rouz edit (ChatGPT)
+#endif
 #include "Pools.h" // rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
@@ -57,7 +60,14 @@ void
 CPedModelInfo::SetClump(RpClump *clump)
 {
 #ifdef EXTENDED_PIPELINES
+	// Preserve the ped rim-light effect in the CPU renderer
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	SoftwarePolygons::AttachRimlightClump(clump);
+#else
 	CustomPipes::AttachRimPipe(clump);
+#endif
+	//- rouz edit (ChatGPT)
 #endif
 	CClumpModelInfo::SetClump(clump);
 	SetFrameIds(m_pPedIds);	// not needed in VC actually

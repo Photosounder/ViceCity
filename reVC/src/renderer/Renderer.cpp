@@ -7,7 +7,17 @@
 #include "Treadable.h"
 #include "Ped.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "RwHelper.h" // rouz edit (ChatGPT)
 #include "Vehicle.h"
+#include "Automobile.h" // rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "PlayerPed.h"
+#include "Plane.h" // rouz edit (ChatGPT)
+#include "Antennas.h" // rouz edit (ChatGPT)
+#include "SpecialFX.h" // rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
 #include "Boat.h"
 #include "Heli.h"
 #include "Bike.h"
@@ -22,10 +32,14 @@
 #include "Streaming.h"
 #include "Shadows.h"
 #include "PointLights.h"
+#include "Coronas.h" // rouz edit (ChatGPT)
 #include "Occlusion.h"
 #include "Renderer.h"
 #include "custompipes.h"
 #include "Frontend.h"
+#include "CutsceneMgr.h" // rouz edit (ChatGPT)
+#include "TimeStep.h" // rouz edit (ChatGPT)
+#include "Timecycle.h" // rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 #include "SoftwarePolygons.h"
@@ -152,6 +166,17 @@ CRenderer::RenderOneRoad(CEntity *e)
 	}
 }
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static void RenderSoftwarePed(CPed *ped);
+//+ rouz edit (ChatGPT)
+static void RenderSoftwareVehicle(CVehicle *vehicle); // rouz edit (ChatGPT)
+static bool IsSoftwareVehicleOccupant(CPed *ped);
+static void RenderSoftwareVehicleOccupant(CPed *ped);
+//- rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
+
 void
 CRenderer::RenderOneNonRoad(CEntity *e)
 {
@@ -180,12 +205,26 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 	}else
 #endif
 	if(e->IsPed()){
+		// Keep pedestrians separate from transparent world geometry
+		//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		if(!SoftwarePolygons::renderPedsStage.load(std::memory_order_relaxed))
+			return;
+#endif
+		//- rouz edit (ChatGPT)
 #ifndef FINAL
 		if(gbDontRenderPeds)
 			return;
 #endif
 		ped = (CPed*)e;
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		// Keep seated passengers in the vehicle pass instead of drawing them twice
+		if(ped->m_nPedState == PED_DRIVING || IsSoftwareVehicleOccupant(ped)) // rouz edit (ChatGPT)
+#else
 		if(ped->m_nPedState == PED_DRIVING)
+#endif
+//- rouz edit (ChatGPT)
 			return;
 	}
 #ifndef FINAL
@@ -197,6 +236,21 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 		if(gbDontRenderVehicles)
 			return;
 	}
+#endif
+
+#ifdef REVC_SOFTWARE_POLYGONS
+	//+ rouz edit (ChatGPT)
+	// Route alpha-sorted and first-person vehicle draws through the CPU renderer
+	if(e->IsVehicle()){
+		// Keep vehicles separate from the transparent sorting option
+		//+ rouz edit (ChatGPT)
+		if(!SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed))
+			return;
+		//- rouz edit (ChatGPT)
+		RenderSoftwareVehicle((CVehicle*)e);
+		return;
+	}
+	//- rouz edit (ChatGPT)
 #endif
 
 	PUSH_RENDERGROUP(CModelInfo::GetModelInfo(e->GetModelIndex())->GetModelName());
@@ -212,14 +266,31 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 	// Render Peds in vehicle before vehicle itself
 	if(e->IsVehicle()){
 		veh = (CVehicle*)e;
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		// Use the software occupant path for every ped attached to a rendered seat
+		RenderSoftwareVehicleOccupant(veh->pDriver);
+		for(i = 0; i < 8; i++)
+			RenderSoftwareVehicleOccupant(veh->pPassengers[i]);
+#else
 		if(veh->pDriver && veh->pDriver->m_nPedState == PED_DRIVING)
 			veh->pDriver->Render();
 		for(i = 0; i < 8; i++)
 			if(veh->pPassengers[i] && veh->pPassengers[i]->m_nPedState == PED_DRIVING)
 				veh->pPassengers[i]->Render();
+#endif
+//- rouz edit (ChatGPT)
 		SetCullMode(rwCULLMODECULLNONE);
 	}
-	e->Render();
+	// Route peds through the wrapper so reflection rendering does not advance render-only animation
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(e->IsPed())
+		RenderSoftwarePed((CPed*)e);
+	else
+#endif
+		e->Render();
+	//- rouz edit (ChatGPT)
 
 	if(e->IsVehicle()){
 		e->bImBeingRendered = true;
@@ -372,6 +443,160 @@ inline bool PutIntoSortedVehicleList(CVehicle *veh)
 		return veh->bTouchingWater;		
 }
 
+//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+static bool IsVisibleToSoftwareEnvMap(CEntity *entity)
+{
+	// Test the entity bound against the reflection camera frustum
+	if(!entity || !entity->m_rwObject || !entity->bIsVisible ||
+	   entity->bRemoveFromWorld || !CustomPipes::EnvMapCam)
+		return false;
+	rw::Sphere sphere;
+	CVector centre = entity->GetBoundCentre();
+	sphere.center.x = centre.x;
+	sphere.center.y = centre.y;
+	sphere.center.z = centre.z;
+	sphere.radius = entity->GetBoundRadius();
+	return CustomPipes::EnvMapCam->frustumTestSphere(&sphere) != rw::Camera::SPHEREOUTSIDE;
+}
+
+//+ rouz edit (ChatGPT)
+static void StoreSoftwareReflectionPoleShadow(CEntity *entity)
+{
+	// Register cached shadows for reflection-visible streetlight and signal poles
+	if(!entity)
+		return;
+	// Compare model indices at runtime because model IDs are assigned while loading
+	//+ rouz edit (ChatGPT)
+	int modelIndex = entity->GetModelIndex();
+	if(modelIndex == MI_TRAFFICLIGHTS)
+		CShadows::StoreShadowForPole(entity, 2.957f, 0.147f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_TRAFFICLIGHTS_MIAMI)
+		CShadows::StoreShadowForPole(entity, 4.819f, 1.315f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_TRAFFICLIGHTS_TWOVERTICAL)
+		CShadows::StoreShadowForPole(entity, 7.503f, 0.0f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_SINGLESTREETLIGHTS1)
+		CShadows::StoreShadowForPole(entity, 0.744f, 0.0f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_SINGLESTREETLIGHTS2)
+		CShadows::StoreShadowForPole(entity, 0.043f, 0.0f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_SINGLESTREETLIGHTS3)
+		CShadows::StoreShadowForPole(entity, 1.143f, 0.145f, 0.0f, 16.0f, 0.4f, 0);
+	else if(modelIndex == MI_DOUBLESTREETLIGHTS)
+		CShadows::StoreShadowForPole(entity, 0.0f, -0.048f, 0.0f, 16.0f, 0.4f, 0);
+	//- rouz edit (ChatGPT)
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+static bool IsQueuedForSoftwareUnderwaterFade(CEntity *entity)
+{
+	// Find underwater entities already queued for the pass rendered beneath transparent water
+	// Reject a missing entity before searching the visibility list
+	if(!entity)
+		return false;
+	// Search the queued underwater entries for this entity
+	CLink<CVisibilityPlugins::AlphaObjectInfo> *node;
+	for(node = CVisibilityPlugins::m_alphaUnderwaterEntityList.head.next;
+	    node != &CVisibilityPlugins::m_alphaUnderwaterEntityList.tail; node = node->next)
+		if(node->item.entity == entity)
+			return true;
+	// Report when no underwater fade entry matches
+	return false;
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+static int CompareEntityInfoByDistance(const void *leftValue, const void *rightValue)
+{
+	// Order reflection entities from nearest to farthest before reverse drawing
+	const EntityInfo *left = (const EntityInfo*)leftValue;
+	const EntityInfo *right = (const EntityInfo*)rightValue;
+	if(left->sort < right->sort)
+		return -1;
+	if(left->sort > right->sort)
+		return 1;
+	return 0;
+}
+//- rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+//+ rouz edit (ChatGPT)
+static RwObject *GetSoftwareVehicleAtomicCB(RwObject *object, void *data)
+{
+	// Select render-enabled vehicle component atomics for matching alpha setup
+	RpAtomic *atomic = (RpAtomic*)object;
+	if(RwObjectGetType(object) == rpATOMIC && (RpAtomicGetFlags(atomic) & rpATOMICRENDER))
+		*(RpAtomic**)data = atomic;
+	return object;
+}
+
+static void RenderSoftwareAutomobileEffects(CVehicle *vehicle)
+{
+	// Reproduce the rotor transparency normally prepared by CAutomobile::Render
+	if(!vehicle || !vehicle->IsCar() || !vehicle->IsRealHeli())
+		return;
+	CAutomobile *automobile = (CAutomobile*)vehicle;
+	const int rotorAlpha = (int)((1.5f - Min(1.7f*Max(automobile->m_aWheelSpeed[1], 0.0f)/0.22f, 1.5f))*255.0f);
+	const int blurAlpha = (int)(Max(1.5f*automobile->m_aWheelSpeed[1]/0.22f - 0.4f, 0.0f)*150.0f);
+	RpAtomic *atomic = nil;
+	if(automobile->m_aCarNodes[CAR_BONNET]){
+		RwFrameForAllObjects(automobile->m_aCarNodes[CAR_BONNET], GetSoftwareVehicleAtomicCB, &atomic);
+		if(atomic)
+			vehicle->SetComponentAtomicAlpha(atomic, Min(rotorAlpha, 255));
+	}
+	atomic = nil;
+	if(automobile->m_aCarNodes[CAR_BOOT]){
+		RwFrameForAllObjects(automobile->m_aCarNodes[CAR_BOOT], GetSoftwareVehicleAtomicCB, &atomic);
+		if(atomic)
+			vehicle->SetComponentAtomicAlpha(atomic, Min(rotorAlpha, 255));
+	}
+	atomic = nil;
+	if(automobile->m_aCarNodes[CAR_WINDSCREEN]){
+		RwFrameForAllObjects(automobile->m_aCarNodes[CAR_WINDSCREEN], GetSoftwareVehicleAtomicCB, &atomic);
+		if(atomic)
+			vehicle->SetComponentAtomicAlpha(atomic, Min(blurAlpha, 150));
+	}
+	atomic = nil;
+	if(automobile->m_aCarNodes[CAR_BUMP_REAR]){
+		RwFrameForAllObjects(automobile->m_aCarNodes[CAR_BUMP_REAR], GetSoftwareVehicleAtomicCB, &atomic);
+		if(atomic)
+			vehicle->SetComponentAtomicAlpha(atomic, Min(blurAlpha, 150));
+	}
+}
+
+static void RenderSoftwarePed(CPed *ped)
+{
+	// Reuse the current minigun pose during the additional reflection camera pass
+	if(!ped)
+		return;
+#if defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && ped->IsPlayer()){
+		CPlayerPed *player = (CPlayerPed*)ped;
+		const float gunSpinSpeed = player->m_fGunSpinSpeed;
+		player->m_fGunSpinSpeed = 0.0f;
+		ped->Render();
+		player->m_fGunSpinSpeed = gunSpinSpeed;
+		return;
+	}
+#endif
+	// Keep ordinary software-camera rendering on the standard animation path
+	ped->Render();
+}
+//+ rouz edit (ChatGPT)
+static bool IsSoftwareVehicleOccupant(CPed *ped)
+{
+	// Match CPed::Render's in-vehicle condition while leaving exit animations in the ped pass
+	return ped && ped->bInVehicle && ped->m_pMyVehicle &&
+		ped->m_nPedState != PED_EXIT_CAR && ped->m_nPedState != PED_DRAG_FROM_CAR;
+}
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
+
 void
 CRenderer::RenderEverythingBarRoads(void)
 {
@@ -395,6 +620,13 @@ CRenderer::RenderEverythingBarRoads(void)
 		if(CustomPipes::bRenderingEnvMap && (e->IsPed() || e->IsVehicle()))
 			continue;
 #endif
+		//+ rouz edit (ChatGPT)
+		// Let the software reflection pass gather props from its own camera frustum
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+		if(CustomPipes::bRenderingEnvMap && e->IsObject())
+			continue;
+#endif
+		//- rouz edit (ChatGPT)
 
 		if(e->IsVehicle() ||
 		   e->IsPed() && CVisibilityPlugins::GetClumpAlpha((RpClump*)e->m_rwObject) != 255){
@@ -423,6 +655,28 @@ CRenderer::RenderBoats(void)
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
+	//+ rouz edit (ChatGPT)
+	// Gather reflection-camera boats independently from the main camera visibility list
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		if(vehiclePool)
+			for(int32 i = 0; i < vehiclePool->GetSize(); i++){
+				CVehicle *vehicle = vehiclePool->GetSlot(i);
+				if(vehicle && vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle)){
+					// Add the Skimmer's seaplane shadow to the reflection-only effect queue
+					//+ rouz edit (ChatGPT)
+					if(vehicle->GetModelIndex() == MI_SKIMMER)
+						CustomPipes::StoreVehicleShadowForEnvMap(vehicle, VEH_SHD_TYPE_SEAPLANE);
+					//- rouz edit (ChatGPT)
+					RenderSoftwareVehicle(vehicle);
+				}
+			}
+		POP_RENDERGROUP();
+		return;
+	}
+#endif
+	//- rouz edit (ChatGPT)
 
 #ifdef NEW_RENDERER
 	int i;
@@ -446,8 +700,26 @@ CRenderer::RenderBoats(void)
 	    node != &gSortedVehiclesAndPeds.head;
 	    node = node->prev){
 		CVehicle *v = (CVehicle*)node->item.ent;
+		//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		// Submit boat clumps through the CPU renderer
+		RenderSoftwareVehicle(v);
+#else
 		RenderOneNonRoad(v);
+#endif
+		//- rouz edit (ChatGPT)
 	}
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Submit translucent boats omitted from the sorted boat list
+	for(int32 i = 0; i < ms_nNoOfVisibleVehicles; i++){
+		CEntity *entity = ms_aVisibleVehiclePtrs[i];
+		if(entity && entity->IsVehicle() && entity->m_rwObject && ((CVehicle*)entity)->IsBoat() &&
+		   !PutIntoSortedVehicleList((CVehicle*)entity))
+			RenderSoftwareVehicle((CVehicle*)entity);
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	POP_RENDERGROUP();
 }
 
@@ -503,20 +775,61 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 	assert(RwObjectGetType(ent->m_rwObject) == rpATOMIC);
 	RpAtomic *atomic = (RpAtomic*)ent->m_rwObject;
 	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(ent->GetModelIndex());
+	// Select the world blend pass from the building model flags
 	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-	// Submit buildings before the new renderer's GPU instancing bypasses atomic callbacks
-	SoftwarePolygons::RenderAtomic(atomic);
-	ent->bImBeingRendered = false;
-	return;
-#endif
-	//- rouz edit (ChatGPT)
-
 	int pass = PASS_BLEND;
 	if(mi->m_additive)	// very questionable
 		pass = PASS_ADD;
 	if(mi->m_noZwrite)
 		pass = PASS_NOZ;
+	//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Preserve the building blend mode and distance-fade LOD on the CPU path
+	//+ rouz edit (ChatGPT)
+	uint32 alpha = 255;
+	RpGeometry *originalGeometry = nil;
+	if(ent->bDistanceFade){
+		RpAtomic *lodAtomic = mi->GetAtomicFromDistance(camdist-FADE_DISTANCE);
+		float fadeFactor = (mi->GetLargestLodDistance()-(camdist-FADE_DISTANCE))/FADE_DISTANCE;
+		fadeFactor = Clamp(fadeFactor, 0.0f, 1.0f);
+		alpha = (uint32)(mi->m_alpha*fadeFactor);
+		if(alpha < 255 && lodAtomic){
+			RpGeometry *fadeGeometry = RpAtomicGetGeometry(lodAtomic);
+			if(fadeGeometry){
+				originalGeometry = RpAtomicGetGeometry(atomic);
+				if(fadeGeometry != originalGeometry)
+					RpAtomicSetGeometry(atomic, fadeGeometry, rpATOMICSAMEBOUNDINGSPHERE);
+			}else
+				alpha = 255;
+		}else
+			alpha = 255;
+	}
+	const rw::uint32 oldVertexAlpha = rw::GetRenderState(rw::VERTEXALPHA);
+	const rw::uint32 oldDepthWrite = rw::GetRenderState(rw::ZWRITEENABLE);
+	const rw::uint32 oldSourceBlend = rw::GetRenderState(rw::SRCBLEND);
+	const rw::uint32 oldDestinationBlend = rw::GetRenderState(rw::DESTBLEND);
+	// Match the alpha and depth-write settings used by the corresponding blend pass
+	if(alpha < 255)
+		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND,
+		(void*)(pass == PASS_ADD ? rwBLENDONE : rwBLENDINVSRCALPHA));
+	if(pass == PASS_NOZ || alpha < 255)
+		RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	SoftwarePolygons::RenderAtomic(atomic, (int)alpha);
+	// Restore the selected LOD geometry and render states after this building
+	if(originalGeometry)
+		RpAtomicSetGeometry(atomic, originalGeometry, rpATOMICSAMEBOUNDINGSPHERE);
+	rw::SetRenderState(rw::VERTEXALPHA, oldVertexAlpha);
+	rw::SetRenderState(rw::ZWRITEENABLE, oldDepthWrite);
+	rw::SetRenderState(rw::SRCBLEND, oldSourceBlend);
+	rw::SetRenderState(rw::DESTBLEND, oldDestinationBlend);
+	//- rouz edit (ChatGPT)
+	ent->bImBeingRendered = false;
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 
 	if(ent->bDistanceFade){
 		RpAtomic *lodatm;
@@ -543,6 +856,87 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 
 	ent->bImBeingRendered = false;	// TODO: this seems wrong, but do we even need it?
 }
+
+//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+template <class PoolType>
+static void RenderSoftwareReflectionBuildingPool(PoolType *pool, int pass, const CVector &cameraPosition)
+{
+	// Draw loaded building atomics visible only from the reflection camera
+	if(!pool)
+		return;
+	for(int i = 0; i < pool->GetSize(); i++){
+		CEntity *entity = pool->GetSlot(i);
+		if(!IsVisibleToSoftwareEnvMap(entity) || RwObjectGetType(entity->m_rwObject) != rpATOMIC)
+			continue;
+		if(!entity->bOffscreen &&
+		   (entity->bIsBIGBuilding || entity->m_scanCode == CWorld::GetCurrentScanCode()))
+			continue;
+		if(!IsAreaVisible(entity->m_area))
+			continue;
+
+		CSimpleModelInfo *modelInfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(entity->GetModelIndex());
+		if(!modelInfo)
+			continue;
+		if(modelInfo->GetModelType() == MITYPE_TIME){
+			CTimeModelInfo *timeInfo = (CTimeModelInfo*)modelInfo;
+			if(!CClock::GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff())){
+				int32 otherModel = timeInfo->GetOtherTimeModel();
+				if(otherModel == -1 || CModelInfo::GetModelInfo(otherModel)->GetRwObject())
+					continue;
+			}
+		}
+
+		const float distance = (cameraPosition - entity->GetPosition()).Magnitude();
+		const bool roadsPass = entity->bIsBIGBuilding || IsRoad(entity);
+		if((pass == 0) != roadsPass)
+			continue;
+		if(entity->bIsBIGBuilding){
+			CSimpleModelInfo *nonLOD = modelInfo->GetRelatedModel();
+			if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, entity->GetPosition()))
+				continue;
+			if(distance < modelInfo->GetNearDistance() && distance < LOD_DISTANCE){
+				if(nonLOD == nil || (nonLOD->GetRwObject() && nonLOD->m_alpha == 255))
+					continue;
+				if(nonLOD->GetModelType() == MITYPE_TIME){
+					CTimeModelInfo *timeNonLOD = (CTimeModelInfo*)nonLOD;
+					int32 otherModel = timeNonLOD->GetOtherTimeModel();
+					if(otherModel != -1 && CModelInfo::GetModelInfo(otherModel)->GetRwObject())
+						continue;
+				}
+			}
+		}
+
+		RpAtomic *drawAtomic = modelInfo->GetFirstAtomicFromDistance(distance);
+		if(!drawAtomic && !modelInfo->m_noFade)
+			drawAtomic = modelInfo->GetFirstAtomicFromDistance(distance - FADE_DISTANCE);
+		if(!drawAtomic)
+			continue;
+		RpAtomic *atomic = (RpAtomic*)entity->m_rwObject;
+		RpGeometry *savedGeometry = RpAtomicGetGeometry(atomic);
+		if(RpAtomicGetGeometry(drawAtomic) != savedGeometry)
+			RpAtomicSetGeometry(atomic, RpAtomicGetGeometry(drawAtomic), rpATOMICSAMEBOUNDINGSPHERE);
+		const bool savedDistanceFade = entity->bDistanceFade;
+		entity->bDistanceFade = false;
+		CRenderer::RenderOneBuilding(entity, distance);
+		entity->bDistanceFade = savedDistanceFade;
+		if(RpAtomicGetGeometry(atomic) != savedGeometry)
+			RpAtomicSetGeometry(atomic, savedGeometry, rpATOMICSAMEBOUNDINGSPHERE);
+	}
+}
+
+static void RenderSoftwareReflectionBuildings(int pass)
+{
+	// Use the auxiliary camera position to select visible static building LODs
+	if(!CustomPipes::bRenderingEnvMap || !CustomPipes::EnvMapCam ||
+	   !CustomPipes::EnvMapCam->getFrame())
+		return;
+	const CVector cameraPosition(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
+	RenderSoftwareReflectionBuildingPool(CPools::GetBuildingPool(), pass, cameraPosition);
+	RenderSoftwareReflectionBuildingPool(CPools::GetTreadablePool(), pass, cameraPosition);
+}
+#endif
+//- rouz edit (ChatGPT)
 
 void
 CRenderer::RenderWorld(int pass)
@@ -574,6 +968,12 @@ CRenderer::RenderWorld(int pass)
 			if(e->bIsBIGBuilding || IsRoad(e))
 				RenderOneBuilding(e, node->item.sort);
 		}
+		// Include reflection-only roads and distant building LODs
+		//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+		RenderSoftwareReflectionBuildings(0);
+#endif
+		//- rouz edit (ChatGPT)
 		POP_RENDERGROUP();
 		break;
 	case 1:
@@ -592,6 +992,12 @@ CRenderer::RenderWorld(int pass)
 			if(!(e->bIsBIGBuilding || IsRoad(e)))
 				RenderOneBuilding(e, node->item.sort);
 		}
+		// Include reflection-only opaque building atomics
+		//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+		RenderSoftwareReflectionBuildings(1);
+#endif
+		//- rouz edit (ChatGPT)
 		// Now we have iterated through all visible buildings (unsorted and sorted)
 		// and the transparency list is done.
 
@@ -621,6 +1027,22 @@ CRenderer::RenderPeds(void)
 	CEntity *e;
 
 	PUSH_RENDERGROUP("CRenderer::RenderPeds");
+	//+ rouz edit (ChatGPT)
+	// Gather reflection-camera peds independently from the main camera visibility list
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		CPedPool *pedPool = CPools::GetPedPool();
+		if(pedPool)
+			for(i = 0; i < pedPool->GetSize(); i++){
+				CPed *ped = pedPool->GetSlot(i);
+				if(IsVisibleToSoftwareEnvMap(ped))
+					RenderOneNonRoad(ped);
+			}
+		POP_RENDERGROUP();
+		return;
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
 		e = ms_aVisibleVehiclePtrs[i];
 		if(e->IsPed())
@@ -658,50 +1080,609 @@ CRenderer::RenderVehicles(void)
 }
 
 //+ rouz edit (ChatGPT)
-void
-CRenderer::RenderSoftwareVehicles(void)
-{
 #ifdef REVC_SOFTWARE_POLYGONS
-	// Match the normal vehicle path's two-sided cull state during CPU submission
+static void RenderSoftwareVehicleOccupant(CPed *ped)
+{
+	// Skip missing peds and peds that are not seated in this vehicle
+	if(!ped || (ped->m_nPedState != PED_DRIVING && !IsSoftwareVehicleOccupant(ped))) // rouz edit (ChatGPT)
+		return;
+	// Respect the independent pedestrian stage for seated occupants
+	if(!SoftwarePolygons::renderPedsStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+		return; // rouz edit (ChatGPT)
+	// Respect the existing debug switch for pedestrians drawn through vehicle seats
+	//+ rouz edit (ChatGPT)
+#ifndef FINAL
+	if(gbDontRenderPeds)
+		return;
+#endif
+	//- rouz edit (ChatGPT)
+	// Draw seated peds here because the ordinary pedestrian pass skips them
+	//+ rouz edit (ChatGPT)
+	const uint32 oldRenderPedInCar = ped->bRenderPedInCar;
+	ped->bRenderPedInCar = true;
+	RenderSoftwarePed(ped); // rouz edit (ChatGPT)
+	ped->bRenderPedInCar = oldRenderPedInCar;
+	//- rouz edit (ChatGPT)
+}
+
+static void RenderSoftwareVehicle(CVehicle *vehicle)
+{
+	// Skip vehicles without renderable geometry
+	if(!vehicle || !vehicle->m_rwObject)
+		return;
+	// Respect the vehicle stage in every software vehicle pass
+	if(!SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+		return; // rouz edit (ChatGPT)
+	// Respect the renderer's debug visibility switch in every software vehicle pass
+	//+ rouz edit (ChatGPT)
+#ifndef FINAL
+	if(gbDontRenderVehicles)
+		return;
+#endif
+	//- rouz edit (ChatGPT)
+	// Preserve CPlane::Render hiding planes during cutscenes
+	//+ rouz edit (ChatGPT)
+	if(vehicle->IsPlane() && CCutsceneMgr::IsRunning())
+		return;
+	//- rouz edit (ChatGPT)
+	// Preserve the caller's culling state while drawing both sides of vehicle meshes
 	//+ rouz edit (ChatGPT)
 	const rw::uint32 oldCullMode = rw::GetRenderState(rw::CULLMODE);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
 	//- rouz edit (ChatGPT)
-	// Submit visible vehicle clumps without invoking the GPU vehicle render path
-	for(int i = 0; i < ms_nNoOfVisibleVehicles; i++){
-		CEntity *entity = ms_aVisibleVehiclePtrs[i];
-		if(!entity || !entity->IsVehicle() || !entity->m_rwObject ||
-		   ((CVehicle*)entity)->IsBoat() || RwObjectGetType(entity->m_rwObject) != rpCLUMP)
-			continue;
-		// Draw seated peds before the vehicle body, as in RenderOneNonRoad
+	// Render distant atomic vehicle LODs with the regular entity lighting
+	//+ rouz edit (ChatGPT)
+	if(RwObjectGetType(vehicle->m_rwObject) == rpATOMIC){
+		const bool resetLights = vehicle->SetupLighting();
+		// Draw seated occupants before the distant vehicle body
 		//+ rouz edit (ChatGPT)
-		CVehicle *vehicle = (CVehicle*)entity;
-		if(vehicle->pDriver && vehicle->pDriver->m_nPedState == PED_DRIVING)
-			vehicle->pDriver->Render();
+		RenderSoftwareVehicleOccupant(vehicle->pDriver);
 		for(int passenger = 0; passenger < 8; passenger++)
-			if(vehicle->pPassengers[passenger] && vehicle->pPassengers[passenger]->m_nPedState == PED_DRIVING)
-				vehicle->pPassengers[passenger]->Render();
+			RenderSoftwareVehicleOccupant(vehicle->pPassengers[passenger]);
 		//- rouz edit (ChatGPT)
-		// Apply this vehicle's paint colors before reading its shared materials on the CPU
+		// Apply the current paint colors before rasterizing the distant body
 		//+ rouz edit (ChatGPT)
-		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(entity->GetModelIndex());
+		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(vehicle->GetModelIndex());
 		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
 			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
 		}
 		//- rouz edit (ChatGPT)
-		// Set the camera distance used by the vehicle LOD callbacks
+		// Preserve vehicle visibility callbacks while the installed atomic pipeline targets the CPU framebuffer
+		vehicle->Render(); // rouz edit (ChatGPT)
+		vehicle->RemoveLighting(resetLights);
+		rw::SetRenderState(rw::CULLMODE, oldCullMode);
+		return;
+	}
+	//- rouz edit (ChatGPT)
+	// Skip other RenderWare object types
+	if(RwObjectGetType(vehicle->m_rwObject) != rpCLUMP){
+		rw::SetRenderState(rw::CULLMODE, oldCullMode);
+		return;
+	}
+	// Rotate helicopter rotor frames when the software clump path bypasses CHeli::Render
+	//+ rouz edit (ChatGPT)
+	bool renderingReflection = false;
+#if defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	renderingReflection = CustomPipes::bRenderingEnvMap;
+#endif
+	// Keep reflection-only rotor poses temporary so the extra camera pass cannot advance simulation state
+	//+ rouz edit (ChatGPT)
+	RwFrame *reflectionTopRotor = nil;
+	RwFrame *reflectionBackRotor = nil;
+	RwFrame *reflectionRhinoTurret = nil;
+	RwFrame *reflectionDodoPropeller = nil;
+	RwFrame *reflectionDodoRudder = nil;
+	RwFrame *reflectionPlaneTopRotor = nil;
+	RwFrame *reflectionPlaneBackRotor = nil;
+	RwFrame *reflectionRealHeliRotors[4] = { nil, nil, nil, nil };
+	RwMatrix savedTopRotorMatrix;
+	RwMatrix savedBackRotorMatrix;
+	RwMatrix savedRhinoTurretMatrix;
+	RwMatrix savedDodoPropellerMatrix;
+	RwMatrix savedDodoRudderMatrix;
+	RwMatrix savedPlaneTopRotorMatrix;
+	RwMatrix savedPlaneBackRotorMatrix;
+	RwMatrix savedRealHeliRotorMatrices[4];
+	if(vehicle->IsHeli()){
+		CHeli *heli = (CHeli*)vehicle;
+		CMatrix rotorMatrix;
+		CVector rotorPosition;
+		if(renderingReflection){
+			reflectionTopRotor = heli->m_aHeliNodes[HELI_TOPROTOR];
+			reflectionBackRotor = heli->m_aHeliNodes[HELI_BACKROTOR];
+			if(reflectionTopRotor){
+				RwMatrixCopy(&savedTopRotorMatrix, RwFrameGetMatrix(reflectionTopRotor));
+				rotorMatrix.Attach(RwFrameGetMatrix(reflectionTopRotor));
+				rotorPosition = rotorMatrix.GetPosition();
+				rotorMatrix.SetRotateZ(heli->m_fRotorRotation);
+				rotorMatrix.Translate(rotorPosition);
+				rotorMatrix.UpdateRW();
+				RwFrameUpdateObjects(reflectionTopRotor);
+			}
+			if(reflectionBackRotor){
+				RwMatrixCopy(&savedBackRotorMatrix, RwFrameGetMatrix(reflectionBackRotor));
+				rotorMatrix.Attach(RwFrameGetMatrix(reflectionBackRotor));
+				rotorPosition = rotorMatrix.GetPosition();
+				rotorMatrix.SetRotateX(heli->m_fRotorRotation);
+				rotorMatrix.Translate(rotorPosition);
+				rotorMatrix.UpdateRW();
+				RwFrameUpdateObjects(reflectionBackRotor);
+			}
+		}else{
+			rotorMatrix.Attach(RwFrameGetMatrix(heli->m_aHeliNodes[HELI_TOPROTOR]));
+			rotorPosition = rotorMatrix.GetPosition();
+			rotorMatrix.SetRotateZ(heli->m_fRotorRotation);
+			rotorMatrix.Translate(rotorPosition);
+			rotorMatrix.UpdateRW();
+			rotorMatrix.Attach(RwFrameGetMatrix(heli->m_aHeliNodes[HELI_BACKROTOR]));
+			rotorPosition = rotorMatrix.GetPosition();
+			rotorMatrix.SetRotateX(heli->m_fRotorRotation);
+			rotorMatrix.Translate(rotorPosition);
+			rotorMatrix.UpdateRW();
+			heli->m_fRotorRotation += 3.14f/6.5f;
+			if(heli->m_fRotorRotation > 6.28f)
+				heli->m_fRotorRotation -= 6.28f;
+		}
+	}
+	//- rouz edit (ChatGPT)
+	// Draw seated occupants with the vehicle lighting before the body
+	//+ rouz edit (ChatGPT)
+	const bool resetLights = vehicle->SetupLighting();
+	RenderSoftwareVehicleOccupant(vehicle->pDriver);
+	for(int passenger = 0; passenger < 8; passenger++)
+		RenderSoftwareVehicleOccupant(vehicle->pPassengers[passenger]);
+	//- rouz edit (ChatGPT)
+	// Apply the current paint colors before rasterizing shared vehicle materials
+	//+ rouz edit (ChatGPT)
+	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(vehicle->GetModelIndex());
+	if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
+		((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
+	}
+	//- rouz edit (ChatGPT)
+	// Keep the wheels-only cheat from drawing boat hulls while retaining the patrol boat propeller
+	//+ rouz edit (ChatGPT)
+	if(CVehicle::bWheelsOnlyCheat && vehicle->IsBoat()){
+		CBoat *boat = (CBoat*)vehicle;
+		boat->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 3000;
+		if((boat->GetModelIndex() == MI_PREDATOR || boat->GetModelIndex() == MI_REEFER) && boat->m_aBoatNodes[BOAT_MOVING]){
+			RpAtomic *propeller = nil;
+			RwFrameForAllObjects(boat->m_aBoatNodes[BOAT_MOVING], GetSoftwareVehicleAtomicCB, &propeller);
+			if(propeller)
+				SoftwarePolygons::RenderAtomic((rw::Atomic*)propeller);
+		}
+		vehicle->RemoveLighting(resetLights);
+		rw::SetRenderState(rw::CULLMODE, oldCullMode);
+		return;
+	}
+	//- rouz edit (ChatGPT)
+	// Match the automobile wheels-only cheat in the software clump path
+	//+ rouz edit (ChatGPT)
+	if(CVehicle::bWheelsOnlyCheat && vehicle->IsCar()){
+		CAutomobile *automobile = (CAutomobile*)vehicle;
+		const int wheelNodes[] = { CAR_WHEEL_RB, CAR_WHEEL_LB, CAR_WHEEL_RF, CAR_WHEEL_LF, CAR_WHEEL_RM, CAR_WHEEL_LM };
+		for(int wheel = 0; wheel < 6; wheel++){
+			if(!automobile->m_aCarNodes[wheelNodes[wheel]])
+				continue;
+			RwObject *object = GetFirstObject(automobile->m_aCarNodes[wheelNodes[wheel]]);
+			if(object)
+				SoftwarePolygons::RenderAtomic((rw::Atomic*)object);
+		}
+		vehicle->RemoveLighting(resetLights);
+		rw::SetRenderState(rw::CULLMODE, oldCullMode);
+		return;
+	}
+	//- rouz edit (ChatGPT)
+	// Apply reflection-only vehicle part poses after wheel-cheat exits so every saved matrix is restored
+	//+ rouz edit (ChatGPT)
+	if(renderingReflection && vehicle->GetModelIndex() == MI_RHINO){
+		CAutomobile *tank = (CAutomobile*)vehicle;
+		reflectionRhinoTurret = tank->m_aCarNodes[CAR_WINDSCREEN];
+		if(reflectionRhinoTurret){
+			RwMatrixCopy(&savedRhinoTurretMatrix, RwFrameGetMatrix(reflectionRhinoTurret));
+			CMatrix turretMatrix;
+			turretMatrix.Attach(RwFrameGetMatrix(reflectionRhinoTurret));
+			CVector turretPosition = turretMatrix.GetPosition();
+			turretMatrix.SetRotateZ(tank->m_fCarGunLR);
+			turretMatrix.Translate(turretPosition);
+			turretMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionRhinoTurret);
+		}
+	}
+	if(renderingReflection && vehicle->GetModelIndex() == MI_DODO){
+		CAutomobile *dodo = (CAutomobile*)vehicle;
+		CMatrix partMatrix;
+		CVector partPosition;
+		reflectionDodoPropeller = dodo->m_aCarNodes[CAR_WINDSCREEN];
+		if(reflectionDodoPropeller){
+			RwMatrixCopy(&savedDodoPropellerMatrix, RwFrameGetMatrix(reflectionDodoPropeller));
+			partMatrix.Attach(RwFrameGetMatrix(reflectionDodoPropeller));
+			partPosition = partMatrix.GetPosition();
+			partMatrix.SetRotateY(dodo->m_fPropellerRotation);
+			partMatrix.Translate(partPosition);
+			partMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionDodoPropeller);
+		}
+		reflectionDodoRudder = dodo->m_aCarNodes[CAR_BOOT];
+		if(reflectionDodoRudder && dodo->Damage.GetDoorStatus(DOOR_BOOT) != DOOR_STATUS_MISSING){
+			RwMatrixCopy(&savedDodoRudderMatrix, RwFrameGetMatrix(reflectionDodoRudder));
+			partMatrix.Attach(RwFrameGetMatrix(reflectionDodoRudder));
+			partPosition = partMatrix.GetPosition();
+			partMatrix.SetRotate(0.0f, 0.0f, -dodo->m_fSteerAngle);
+			partMatrix.Rotate(0.0f, Sin(dodo->m_fSteerAngle)*DEGTORAD(22.0f), 0.0f);
+			partMatrix.Translate(partPosition);
+			partMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionDodoRudder);
+		}else
+			reflectionDodoRudder = nil;
+	}
+	// Spin the airport chopper rotors for reflection-only visibility without advancing their angle
+	//+ rouz edit (ChatGPT)
+#ifdef CPLANE_ROTORS
+	if(renderingReflection && vehicle->GetModelIndex() == MI_CHOPPER){
+		CPlane *plane = (CPlane*)vehicle;
+		CMatrix rotorMatrix;
+		CVector rotorPosition;
+		reflectionPlaneTopRotor = plane->m_aPlaneNodes[PLANE_TOPROTOR];
+		if(reflectionPlaneTopRotor){
+			RwMatrixCopy(&savedPlaneTopRotorMatrix, RwFrameGetMatrix(reflectionPlaneTopRotor));
+			rotorMatrix.Attach(RwFrameGetMatrix(reflectionPlaneTopRotor));
+			rotorPosition = rotorMatrix.GetPosition();
+			rotorMatrix.SetRotateZ(plane->m_fRotorRotation);
+			rotorMatrix.Translate(rotorPosition);
+			rotorMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionPlaneTopRotor);
+		}
+		reflectionPlaneBackRotor = plane->m_aPlaneNodes[PLANE_BACKROTOR];
+		if(reflectionPlaneBackRotor){
+			RwMatrixCopy(&savedPlaneBackRotorMatrix, RwFrameGetMatrix(reflectionPlaneBackRotor));
+			rotorMatrix.Attach(RwFrameGetMatrix(reflectionPlaneBackRotor));
+			rotorPosition = rotorMatrix.GetPosition();
+			rotorMatrix.SetRotateX(plane->m_fRotorRotation);
+			rotorMatrix.Translate(rotorPosition);
+			rotorMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionPlaneBackRotor);
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
+	// Rotate the four rotor components on automobile-based helicopters for this reflection only
+	//+ rouz edit (ChatGPT)
+	if(renderingReflection && vehicle->IsCar() && ((CAutomobile*)vehicle)->IsRealHeli()){
+		CAutomobile *heli = (CAutomobile*)vehicle;
+		const int rotorNodes[4] = { CAR_BONNET, CAR_WINDSCREEN, CAR_BOOT, CAR_BUMP_REAR };
+		const float rotorAngles[4] = {
+			heli->m_aWheelRotation[1], -heli->m_aWheelRotation[1],
+			heli->m_aWheelRotation[3], -heli->m_aWheelRotation[3]
+		};
+		for(int rotor = 0; rotor < 4; rotor++){
+			reflectionRealHeliRotors[rotor] = heli->m_aCarNodes[rotorNodes[rotor]];
+			if(!reflectionRealHeliRotors[rotor])
+				continue;
+			RwMatrixCopy(&savedRealHeliRotorMatrices[rotor], RwFrameGetMatrix(reflectionRealHeliRotors[rotor]));
+			CMatrix rotorMatrix;
+			rotorMatrix.Attach(RwFrameGetMatrix(reflectionRealHeliRotors[rotor]));
+			CVector rotorPosition = rotorMatrix.GetPosition();
+			if(rotor < 2)
+				rotorMatrix.SetRotateZ(rotorAngles[rotor]);
+			else
+				rotorMatrix.SetRotateX(rotorAngles[rotor]);
+			rotorMatrix.Translate(rotorPosition);
+			rotorMatrix.UpdateRW();
+			RwFrameUpdateObjects(reflectionRealHeliRotors[rotor]);
+		}
+	}
+	//- rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+	// Preserve the extended range of boat and bike set pieces when bypassing their Render overrides
+	//+ rouz edit (ChatGPT)
+	if(vehicle->IsBike() || vehicle->IsBoat())
+		vehicle->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 3000;
+	//- rouz edit (ChatGPT)
+	// Restore rotor alpha before submitting the automobile clump
+	//+ rouz edit (ChatGPT)
+	RenderSoftwareAutomobileEffects(vehicle);
+	//- rouz edit (ChatGPT)
+	// Submit the clump and its deferred translucent parts to the CPU rasterizer
+	//+ rouz edit (ChatGPT)
+	RpClump *clump = (RpClump*)vehicle->m_rwObject;
+	CVisibilityPlugins::SetupVehicleVariables(clump);
+	CVisibilityPlugins::InitAlphaAtomicList();
+	SoftwarePolygons::RenderVehicleClump(clump);
+	CVisibilityPlugins::RenderAlphaAtomics();
+	//+ rouz edit (ChatGPT)
+#ifdef NEW_RENDERER
+	// Preserve the legacy boat hull mask when the software renderer bypasses CBoat::Render
+	if(!gbNewRenderer && vehicle->IsBoat())
+#else
+	// Preserve boat hull masking when the software renderer bypasses CBoat::Render
+	if(vehicle->IsBoat())
+#endif
+		((CBoat*)vehicle)->RenderWaterOutPolys();
+	//- rouz edit (ChatGPT)
+	// Restore reflection-only helicopter rotor matrices before the main camera continues rendering
+	//+ rouz edit (ChatGPT)
+	if(reflectionTopRotor){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionTopRotor), &savedTopRotorMatrix);
+		RwFrameUpdateObjects(reflectionTopRotor);
+	}
+	if(reflectionBackRotor){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionBackRotor), &savedBackRotorMatrix);
+		RwFrameUpdateObjects(reflectionBackRotor);
+	}
+	// Restore the main-view turret matrix after drawing the reflection-only Rhino pose
+	//+ rouz edit (ChatGPT)
+	if(reflectionRhinoTurret){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionRhinoTurret), &savedRhinoTurretMatrix);
+		RwFrameUpdateObjects(reflectionRhinoTurret);
+	}
+	if(reflectionDodoPropeller){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionDodoPropeller), &savedDodoPropellerMatrix);
+		RwFrameUpdateObjects(reflectionDodoPropeller);
+	}
+	if(reflectionDodoRudder){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionDodoRudder), &savedDodoRudderMatrix);
+		RwFrameUpdateObjects(reflectionDodoRudder);
+	}
+	// Restore the airport chopper's temporary reflection rotor pose
+	//+ rouz edit (ChatGPT)
+	if(reflectionPlaneTopRotor){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionPlaneTopRotor), &savedPlaneTopRotorMatrix);
+		RwFrameUpdateObjects(reflectionPlaneTopRotor);
+	}
+	if(reflectionPlaneBackRotor){
+		RwMatrixCopy(RwFrameGetMatrix(reflectionPlaneBackRotor), &savedPlaneBackRotorMatrix);
+		RwFrameUpdateObjects(reflectionPlaneBackRotor);
+	}
+	//- rouz edit (ChatGPT)
+	// Restore the automobile helicopter rotor frames after the reflection draw
+	//+ rouz edit (ChatGPT)
+	for(int rotor = 0; rotor < 4; rotor++)
+		if(reflectionRealHeliRotors[rotor]){
+			RwMatrixCopy(RwFrameGetMatrix(reflectionRealHeliRotors[rotor]), &savedRealHeliRotorMatrices[rotor]);
+			RwFrameUpdateObjects(reflectionRealHeliRotors[rotor]);
+		}
+	//- rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+	vehicle->RemoveLighting(resetLights);
+	rw::SetRenderState(rw::CULLMODE, oldCullMode);
+	//- rouz edit (ChatGPT)
+}
+#endif
+
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static void RenderSoftwareReflectionObject(CObject *object)
+{
+	// Skip missing, hidden, or non-renderable reflection props
+	if(!object || !object->m_rwObject || object->bDoNotRender)
+		return;
+	// Preserve temporary vehicle paint without running object gameplay effects
+	if(object->m_nRefModelIndex != -1 && object->ObjectCreatedBy == TEMP_OBJECT && object->bUseVehicleColours){
+		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(object->m_nRefModelIndex);
+		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE)
+			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(object->m_colour1, object->m_colour2);
+	}
+	// Draw the base entity only so this extra camera pass cannot spawn gameplay particles
+	const bool resetLights = object->SetupLighting();
+	object->CEntity::Render();
+	object->RemoveLighting(resetLights);
+}
+#endif
+//- rouz edit (ChatGPT)
+
+void
+CRenderer::RenderSoftwareVehicles(void)
+{
+#ifdef REVC_SOFTWARE_POLYGONS
+	//+ rouz edit (ChatGPT)
+	// Gather reflection-camera vehicles independently from the main camera visibility list
+#if defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		if(vehiclePool)
+			for(int i = 0; i < vehiclePool->GetSize(); i++){
+				CVehicle *vehicle = vehiclePool->GetSlot(i);
+				if(vehicle && !vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle))
+					RenderSoftwareVehicle(vehicle);
+			}
+		return;
+	}
+#endif
+	//- rouz edit (ChatGPT)
+	// Submit visible vehicle clumps and distant atomic LODs through the CPU path
+	for(int i = 0; i < ms_nNoOfVisibleVehicles; i++){
+		CEntity *entity = ms_aVisibleVehiclePtrs[i];
+		if(!entity || !entity->IsVehicle() || !entity->m_rwObject)
+			continue;
+		// Keep sorted water-touching cars in software reflections while preserving the main-pass split
 		//+ rouz edit (ChatGPT)
-		RpClump *clump = (RpClump*)entity->m_rwObject;
-		CVisibilityPlugins::SetupVehicleVariables(clump);
-		CVisibilityPlugins::InitAlphaAtomicList();
-		SoftwarePolygons::RenderVehicleClump(clump);
-		// Submit parts deferred by the vehicle's transparency callbacks
-		CVisibilityPlugins::RenderAlphaAtomics();
+		CVehicle *vehicle = (CVehicle*)entity;
+		bool renderInReflection = false;
+#if defined(EXTENDED_PIPELINES) && defined(LIBRW)
+		renderInReflection = CustomPipes::bRenderingEnvMap;
+#endif
+		if(vehicle->IsBoat() || (PutIntoSortedVehicleList(vehicle) && !renderInReflection))
+			continue;
+		RenderSoftwareVehicle(vehicle);
 		//- rouz edit (ChatGPT)
 	}
-	// Restore the render state expected by the rest of the scene
-	rw::SetRenderState(rw::CULLMODE, oldCullMode); // rouz edit (ChatGPT)
 #endif
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+template <class PoolType>
+static void RegisterSoftwareReflectionLightPool(PoolType *pool)
+{
+	// Gather light sources from loaded entities visible to the reflection camera
+	if(!pool)
+		return;
+	for(int i = 0; i < pool->GetSize(); i++){
+		CEntity *entity = pool->GetSlot(i);
+		if(IsVisibleToSoftwareEnvMap(entity))
+			CCoronas::ProcessLightsForEnvMap(entity);
+	}
+}
+#endif
+
+void
+CRenderer::RegisterSoftwareReflectionLights(void)
+{
+	// Collect reflection-camera point lights before any geometry is shaded
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(!CustomPipes::bRenderingEnvMap || !CustomPipes::EnvMapCam)
+		return;
+	RegisterSoftwareReflectionLightPool(CPools::GetBuildingPool());
+	RegisterSoftwareReflectionLightPool(CPools::GetTreadablePool());
+	RegisterSoftwareReflectionLightPool(CPools::GetPedPool());
+	RegisterSoftwareReflectionLightPool(CPools::GetVehiclePool());
+	RegisterSoftwareReflectionLightPool(CPools::GetObjectPool());
+#endif
+}
+
+void
+CRenderer::RenderSoftwareReflectionEntities(void)
+{
+	// Render reflection-camera actors and props in one back-to-front order
+	PUSH_RENDERGROUP("CRenderer::RenderSoftwareReflectionEntities");
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame()){
+		static EntityInfo entities[NUMVISIBLEENTITIES];
+		int entityCount = 0;
+		const CVector cameraPosition(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
+		const CVector cameraRight(CustomPipes::EnvMapCam->getFrame()->getLTM()->right);
+		CPedPool *pedPool = CPools::GetPedPool();
+		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		CObjectPool *objectPool = CPools::GetObjectPool();
+		EntityInfo entityInfo;
+		CRegisteredMotionBlurStreak reflectionStreaks[NUMMBLURSTREAKS];
+		int reflectionStreakCount = 0;
+
+		// Gather reflection-visible pedestrians that are not rendered as vehicle occupants
+		if(pedPool)
+			for(int i = 0; i < pedPool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
+				CPed *ped = pedPool->GetSlot(i);
+				if(!ped || ped->m_nPedState == PED_DRIVING || IsSoftwareVehicleOccupant(ped) || !IsVisibleToSoftwareEnvMap(ped)) // rouz edit (ChatGPT)
+					continue;
+				// Add the pedestrian's ground shadow using reflection-camera visibility
+				//+ rouz edit (ChatGPT)
+				CustomPipes::StorePedShadowForEnvMap(ped);
+				//- rouz edit (ChatGPT)
+				entityInfo.ent = ped;
+				entityInfo.sort = (cameraPosition - ped->GetPosition()).MagnitudeSqr();
+				entities[entityCount++] = entityInfo;
+			}
+
+		// Gather reflection-visible cars and aircraft while leaving boats to their dedicated pass
+		if(vehiclePool)
+			for(int i = 0; i < vehiclePool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
+				CVehicle *vehicle = vehiclePool->GetSlot(i);
+				if(!vehicle || vehicle->IsBoat() || !IsVisibleToSoftwareEnvMap(vehicle))
+					continue;
+				// Add reflection-only vehicle shadows without changing the main scene queue
+				//+ rouz edit (ChatGPT)
+				VEH_SHD_TYPE shadowType = VEH_SHD_TYPE_CAR;
+				if(vehicle->IsBike())
+					shadowType = VEH_SHD_TYPE_BIKE;
+				else if(vehicle->IsHeli())
+					shadowType = VEH_SHD_TYPE_HELI;
+				else if(vehicle->GetModelIndex() == MI_RCBARON)
+					shadowType = VEH_SHD_TYPE_RCPLANE;
+				// Preserve the helicopter searchlight pool when only the reflection camera sees it
+				//+ rouz edit (ChatGPT)
+				if(vehicle->IsHeli())
+					CustomPipes::StoreHeliSearchLightShadowForEnvMap((CHeli*)vehicle);
+				//- rouz edit (ChatGPT)
+				// Register shadows for parked vehicles visible only to the reflection camera
+				CustomPipes::StoreVehicleShadowForEnvMap(vehicle, shadowType); // rouz edit (ChatGPT)
+				// Register the RC Bandit's antenna when its normal pre-render pass missed it
+				if(vehicle->GetModelIndex() == MI_RCBANDIT){
+					CVector antennaPosition = vehicle->GetMatrix() * CVector(0.218f, -0.444f, 0.391f);
+					CAntennas::RegisterOneForEnvMap((uintptr)vehicle, vehicle->GetUp(), antennaPosition, 1.0f);
+				}
+				//- rouz edit (ChatGPT)
+				entityInfo.ent = vehicle;
+				entityInfo.sort = (cameraPosition - vehicle->GetPosition()).MagnitudeSqr();
+				entities[entityCount++] = entityInfo;
+			}
+
+		// Gather reflection-visible props into the same transparency ordering
+		if(objectPool)
+			for(int i = 0; i < objectPool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
+				CObject *object = objectPool->GetSlot(i);
+				// Let queued underwater objects render before transparent reflection water
+				if(IsQueuedForSoftwareUnderwaterFade(object) || !IsVisibleToSoftwareEnvMap(object))
+					continue;
+				// Rebuild throwable streaks omitted by the main-camera pre-render cull
+				if((object->GetModelIndex() == MI_GRENADE || object->GetModelIndex() == MI_MOLOTOV) &&
+				   !CMotionBlurStreaks::IsRegisteredForCurrentFrame((uintptr)object) &&
+				   reflectionStreakCount < NUMMBLURSTREAKS){
+					CVector movement = object->m_vecMoveSpeed * CTimeStep::ms_fTimeStep;
+					// Skip stationary throwables that would create a zero-area trail
+					if(movement.MagnitudeSqr() > 0.000001f){
+						CRegisteredMotionBlurStreak *streak = &reflectionStreaks[reflectionStreakCount++];
+						streak->m_id = (uintptr)object;
+						streak->m_red = object->GetModelIndex() == MI_MOLOTOV ? 0 : 100;
+						streak->m_green = 100;
+						streak->m_blue = object->GetModelIndex() == MI_MOLOTOV ? 0 : 100;
+						CVector currentPosition = object->GetPosition();
+						streak->m_pos1[0] = currentPosition - 0.07f*cameraRight;
+						streak->m_pos2[0] = currentPosition + 0.07f*cameraRight;
+						CVector previousPosition = currentPosition - movement;
+						streak->m_pos1[1] = previousPosition - 0.07f*cameraRight;
+						streak->m_pos2[1] = previousPosition + 0.07f*cameraRight;
+						streak->m_isValid[0] = true;
+						streak->m_isValid[1] = true;
+						streak->m_isValid[2] = false;
+					}
+				}
+				// Register pole shadows for objects that only the reflection camera can see
+				//+ rouz edit (ChatGPT)
+				StoreSoftwareReflectionPoleShadow(object);
+				// Preserve the small ground shadow normally registered for beachballs
+				if(object->GetModelIndex() == MI_BEACHBALL)
+					CustomPipes::StoreBeachBallShadowForEnvMap(object);
+				//- rouz edit (ChatGPT)
+				entityInfo.ent = object;
+				entityInfo.sort = (cameraPosition - object->GetPosition()).MagnitudeSqr();
+				entities[entityCount++] = entityInfo;
+			}
+
+		// Sort entities in N log N time so dense reflection scenes stay affordable
+		qsort(entities, entityCount, sizeof(entities[0]), CompareEntityInfoByDistance);
+
+		// Draw farthest entities first while preserving vehicle occupant handling
+		for(int i = entityCount - 1; i >= 0; i--){
+			CEntity *entity = entities[i].ent;
+			if(entity->IsVehicle())
+				RenderSoftwareVehicle((CVehicle*)entity);
+			else if(entity->IsObject())
+				RenderSoftwareReflectionObject((CObject*)entity);
+			else
+				RenderOneNonRoad(entity);
+		}
+		// Draw the local reflection-only projectile trails with depth testing and scene fog
+		if(reflectionStreakCount > 0){
+			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+			RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+			RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
+			RwRenderStateSet(rwRENDERSTATEFOGCOLOR,
+				(void*)RWRGBALONG(CTimeCycle::GetFogRed(), CTimeCycle::GetFogGreen(), CTimeCycle::GetFogBlue(), 255));
+			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+			for(int i = 0; i < reflectionStreakCount; i++)
+				reflectionStreaks[i].Render();
+			// Restore the baseline depth and fog state for following reflection effects
+			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+			RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+			RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+		}
+	}
+#endif
+	POP_RENDERGROUP();
 }
 //- rouz edit (ChatGPT)
 
@@ -720,6 +1701,20 @@ CRenderer::RenderTransparentWater(void)
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 	SetStencilState(2);
 
+	//+ rouz edit (ChatGPT)
+	// Cut reflection water around boats visible only to the environment camera
+#if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
+		if(vehiclePool)
+			for(int32 poolIndex = 0; poolIndex < vehiclePool->GetSize(); poolIndex++){
+				CVehicle *vehicle = vehiclePool->GetSlot(poolIndex);
+				if(vehicle && vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle))
+					((CBoat*)vehicle)->RenderWaterOutPolys();
+			}
+	}else
+#endif
+	//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
 		e = ms_aVisibleVehiclePtrs[i];
 		if(e->IsVehicle() && ((CVehicle*)e)->IsBoat())

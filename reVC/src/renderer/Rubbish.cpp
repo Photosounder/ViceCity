@@ -12,6 +12,11 @@
 #include "TxdStore.h"
 #include "RenderBuffer.h"
 #include "Rubbish.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 #define RUBBISH_MAX_DIST (23.0f)
 #define RUBBISH_FADE_DIST (20.0f)
@@ -50,6 +55,18 @@ void
 CRubbish::Render(void)
 {
 	int type;
+	// Fade debris from the active environment camera while building a reflection
+	//+ rouz edit (ChatGPT)
+	CVector rubbishCameraPosition = TheCamera.GetPosition();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame))
+			rubbishCameraPosition = CVector(RwFrameGetMatrix(effectFrame)->pos);
+	}
+#endif
+	//- rouz edit (ChatGPT)
 
 	if(RubbishVisibility == 0)
 		return;
@@ -91,7 +108,10 @@ CRubbish::Render(void)
 				}
 			}
 
-			float camDist = (pos - TheCamera.GetPosition()).Magnitude2D();
+			// Use the selected render camera for debris distance fading
+			//+ rouz edit (ChatGPT)
+			float camDist = (pos - rubbishCameraPosition).Magnitude2D();
+			//- rouz edit (ChatGPT)
 			if(camDist < RUBBISH_MAX_DIST){
 				if(camDist >= RUBBISH_FADE_DIST)
 					alpha -= alpha*(camDist-RUBBISH_FADE_DIST)/(RUBBISH_MAX_DIST-RUBBISH_FADE_DIST);

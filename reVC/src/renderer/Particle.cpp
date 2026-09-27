@@ -18,6 +18,7 @@
 #include "AudioScriptObject.h"
 #include "ParticleObject.h"
 #include "Particle.h"
+#include "RenderBuffer.h" // rouz edit (ChatGPT)
 #include "soundlist.h"
 #include "SaveBuf.h"
 #include "debugmenu.h"
@@ -2304,6 +2305,166 @@ void CParticle::Render()
 
 	POP_RENDERGROUP();
 }
+
+//+ rouz edit (ChatGPT)
+void CParticle::RenderForEnvMap(RwCamera *camera)
+{
+	// Skip particle reflections when the auxiliary camera has no usable frame
+	if(camera == nil || RwCameraGetFrame(camera) == nil)
+		return;
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(RwCameraGetFrame(camera));
+	// Skip particle reflections when the auxiliary camera matrix is unavailable
+	if(cameraMatrix == nil)
+		return;
+
+	// Extract the reflection camera basis for camera-facing particle quads
+	CVector cameraPos(cameraMatrix->pos);
+	CVector cameraForward(cameraMatrix->at);
+	CVector cameraRight(cameraMatrix->right);
+	CVector cameraUp(cameraMatrix->up);
+	cameraForward.Normalise();
+	cameraRight.Normalise();
+	cameraUp.Normalise();
+
+	// Preserve queued world geometry before switching the shared buffer to particles
+	RenderBuffer::RenderStuffInBuffer();
+	PUSH_RENDERGROUP("CParticle::RenderForEnvMap");
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSWRAP);
+	RwRenderStateSet(rwRENDERSTATETEXTUREPERSPECTIVE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+
+	// Draw world-space particle systems with their current frame and blend mode
+	for(int32 i = 0; i < MAX_PARTICLES; i++){
+		tParticleSystemData *system = &mod_ParticleSystemManager.m_aParticles[i];
+		RwRaster **frames = system->m_ppRaster;
+		uint32 flags = system->Flags;
+		// Keep world-positioned hydrant spray while skipping screen-space particle systems // rouz edit (ChatGPT)
+		if((flags & DRAWTOP2D) || (frames == nil && system->m_Type != PARTICLE_WATER_HYDRANT)) // rouz edit (ChatGPT)
+			continue;
+		// Skip particles represented by screen refraction or post-processing overlays // rouz edit (ChatGPT)
+		if(system->m_Type == PARTICLE_WATERDROP || system->m_Type == PARTICLE_BLOODDROP ||
+		   system->m_Type == PARTICLE_HEATHAZE || system->m_Type == PARTICLE_HEATHAZE_IN_DIST ||
+		   system->m_Type == PARTICLE_RAINDROP_2D) // rouz edit (ChatGPT)
+			continue;
+
+		CParticle *particle = system->m_pParticles;
+		// Skip systems with no live particles
+		if(particle == nil)
+			continue;
+
+		// Set the particle system's original opaque, dark, or additive blend mode
+		RenderBuffer::RenderStuffInBuffer();
+		if(flags & DRAW_OPAQUE){
+			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+		}else{
+			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)((flags & DRAW_DARK) ? rwBLENDSRCALPHA : rwBLENDONE));
+			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+		}
+		// Use the bright additive blend used by the main-view hydrant splash
+		//+ rouz edit (ChatGPT)
+		if(system->m_Type == PARTICLE_WATER_HYDRANT){
+			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
+		}
+		//- rouz edit (ChatGPT)
+		RwRaster *activeRaster = nil;
+		for(; particle != nil; particle = particle->m_pNext){
+			// Skip transparent or zero-size particle entries
+			if(particle->m_nAlpha == 0 || particle->m_fSize <= 0.0f)
+				continue;
+			int frame = system->m_nFinalAnimationFrame == 0 ? 0 :
+				Min((int)particle->m_nCurrentFrame, (int)system->m_nFinalAnimationFrame);
+			// Preserve the water hydrant's current splash animation frame in reflections
+			//+ rouz edit (ChatGPT)
+			RwRaster *raster = frames ? frames[frame] : nil;
+			if(system->m_Type == PARTICLE_WATER_HYDRANT){
+				int splashFrame = Min(frame, MAX_CARSPLASH_FILES-1);
+				raster = gpCarSplashRaster[splashFrame];
+			}
+			//- rouz edit (ChatGPT)
+			// Skip untextured frames instead of inheriting another system's raster
+			if(raster == nil)
+				continue;
+			// Flush the previous frame texture before changing the bound raster
+			if(raster != activeRaster){
+				RenderBuffer::RenderStuffInBuffer();
+				RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
+				activeRaster = raster;
+			}
+
+			// Cull particles outside the reflection camera's near and far planes
+			float cameraDepth = DotProduct(particle->m_vecPosition-cameraPos, cameraForward);
+			if(cameraDepth <= RwCameraGetNearClipPlane(camera) ||
+			   cameraDepth >= RwCameraGetFarClipPlane(camera))
+				continue;
+
+			// Preserve trail length approximately without touching stored screen-space history
+			float halfWidth = particle->m_fSize;
+			float halfHeight = particle->m_fSize;
+			// Match the main renderer's unrotated beetle and trail handling
+			float rotation = system->m_Type == PARTICLE_BEASTIE ? 0.0f :
+				DEGTORAD((float)particle->m_nRotation);
+			if(particle->m_nRotation == 0 || system->m_Type == PARTICLE_BEASTIE){
+				if(flags & VERT_TRAIL)
+					halfHeight += fabsf(particle->m_vecVelocity.z*10.0f)*system->m_fTrailLengthMultiplier;
+				else if(flags & (SCREEN_TRAIL|SPEED_TRAIL)){
+					// Estimate screen trails from world velocity without updating their history fields
+					CVector screenVelocity = particle->m_vecVelocity - cameraForward*DotProduct(particle->m_vecVelocity, cameraForward);
+					halfHeight += screenVelocity.Magnitude()*CTimer::GetTimeStep()*system->m_fTrailLengthMultiplier;
+					float rightVelocity = DotProduct(screenVelocity, cameraRight);
+					float upVelocity = DotProduct(screenVelocity, cameraUp);
+					rotation = Atan2(-rightVelocity, upVelocity);
+				}
+			}
+			float cosine = Cos(rotation);
+			float sine = Sin(rotation);
+			CVector horizontal = cameraRight*(halfWidth*cosine) + cameraUp*(halfWidth*sine);
+			CVector vertical = cameraUp*(halfHeight*cosine) - cameraRight*(halfHeight*sine);
+			CVector corners[4] = {
+				particle->m_vecPosition-horizontal+vertical,
+				particle->m_vecPosition+horizontal+vertical,
+				particle->m_vecPosition-horizontal-vertical,
+				particle->m_vecPosition+horizontal-vertical
+			};
+			int red = particle->m_Color.red*particle->m_nColorIntensity >> 8;
+			int green = particle->m_Color.green*particle->m_nColorIntensity >> 8;
+			int blue = particle->m_Color.blue*particle->m_nColorIntensity >> 8;
+			RwImVertexIndex *indices;
+			RwIm3DVertex *vertices;
+			RenderBuffer::StartStoring(6, 4, &indices, &vertices);
+			// Fill the textured quad with the particle's current color and alpha
+			for(int vertex = 0; vertex < 4; vertex++){
+				RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
+				RwIm3DVertexSetRGBA(&vertices[vertex], red, green, blue, particle->m_nAlpha);
+			}
+			RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
+			RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
+			RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
+			RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
+			indices[0] = 0; indices[1] = 1; indices[2] = 2;
+			indices[3] = 2; indices[4] = 1; indices[5] = 3;
+			RenderBuffer::StopStoring();
+		}
+	}
+
+	// Flush reflected particles and restore the standard effect states
+	RenderBuffer::RenderStuffInBuffer();
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
+	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+	POP_RENDERGROUP();
+}
+//- rouz edit (ChatGPT)
 
 void CParticle::RemovePSystem(tParticleType type)
 {

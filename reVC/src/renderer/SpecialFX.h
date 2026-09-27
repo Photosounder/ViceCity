@@ -42,6 +42,9 @@ public:
 	static void Init(void);
 	static void Update(void);
 	static void RegisterStreak(uintptr id, uint8 r, uint8 g, uint8 b, CVector p1, CVector p2);
+	//+ rouz edit (ChatGPT)
+	static bool IsRegisteredForCurrentFrame(uintptr id);
+	//- rouz edit (ChatGPT)
 	static void Render(void);
 };
 
@@ -119,6 +122,9 @@ public:
 	static C3dMarker *PlaceMarker(uint32 id, uint16 type, CVector &pos, float size, uint8 r, uint8 g, uint8 b, uint8 a, uint16 pulsePeriod, float pulseFraction, int16 rotateRate);
 	static void PlaceMarkerSet(uint32 id, uint16 type, CVector &pos, float size, uint8 r, uint8 g, uint8 b, uint8 a, uint16 pulsePeriod, float pulseFraction, int16 rotateRate);
 	static void Render();
+	//+ rouz edit (ChatGPT)
+	static void RenderForEnvMap(RwCamera *camera);
+	//- rouz edit (ChatGPT)
 	static void Update();
 
 	static C3dMarker m_aMarkerArray[NUM3DMARKERS];
@@ -175,7 +181,9 @@ public:
 	static void Init(void);
 	static void RegisterOne(CVector pos, CVector up, CVector side, CVector front,
 		uint8 type, uint8 red = 0, uint8 green = 0, uint8 blue = 0);
-	static void Render(void);
+	//+ rouz edit (ChatGPT)
+	static void Render(bool reuseFlicker = false);
+	//- rouz edit (ChatGPT)
 	static void RenderOutGeometryBuffer(void);
 };
 
@@ -210,6 +218,9 @@ public:
 		float u0, float v0, float u1, float v1, float u2, float v2, float u3, float v3,
 		uint8 type, uint8 red, uint8 green, uint8 blue, float maxDist); //not used
 	static void Render(void);
+	//+ rouz edit (ChatGPT)
+	static void RenderForEnvMap(void);
+	//- rouz edit (ChatGPT)
 	static void RenderOutGeometryBuffer(void);
 };
 

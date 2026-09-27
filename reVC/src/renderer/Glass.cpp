@@ -17,11 +17,51 @@
 #include "main.h"
 #include "soundlist.h"
 #include "SurfaceTable.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 
 uint32 CGlass::NumGlassEntities;
 CEntity *CGlass::apEntitiesToBeRendered[NUM_GLASSENTITIES];
 CFallingGlassPane CGlass::aGlassPanes[NUM_GLASSPANES];
+
+//+ rouz edit (ChatGPT)
+static CVector
+GetGlassRenderCameraPosition(void)
+{
+	// Use the environment camera position while drawing its reflection scene
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame))
+			return CVector(RwFrameGetMatrix(effectFrame)->pos);
+	}
+#endif
+	return TheCamera.GetPosition();
+}
+
+static CVector
+GetGlassRenderCameraForward(void)
+{
+	// Use the environment camera forward axis while drawing its reflection scene
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame)){
+			CVector forward(RwFrameGetMatrix(effectFrame)->at);
+			forward.Normalise();
+			return forward;
+		}
+	}
+#endif
+	return TheCamera.GetForward();
+}
+//- rouz edit (ChatGPT)
 
 
 CVector2D CentersWithTriangle[NUM_GLASSTRIANGLES];
@@ -144,7 +184,10 @@ CFallingGlassPane::Update(void)
 void
 CFallingGlassPane::Render(void)
 {
-	float distToCamera = (TheCamera.GetPosition() - GetPosition()).Magnitude();
+	//+ rouz edit (ChatGPT)
+	// Compute glass fade from the camera currently rendering this pane
+	float distToCamera = (GetGlassRenderCameraPosition() - GetPosition()).Magnitude();
+	//- rouz edit (ChatGPT)
 
 	CVector fwdNorm = GetForward();
 	fwdNorm.Normalise();
@@ -433,7 +476,10 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 	if ( object->bGlassBroken )
 		return;
 
-	float distToCamera = (TheCamera.GetPosition() - object->GetPosition()).Magnitude();
+	//+ rouz edit (ChatGPT)
+	// Compute glass reflection distance from the active render camera
+	float distToCamera = (GetGlassRenderCameraPosition() - object->GetPosition()).Magnitude();
+	//- rouz edit (ChatGPT)
 
 	if ( distToCamera > 40.0f )
 		return;
@@ -508,8 +554,12 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 		RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredReflection + 2], color, color, color, color);
 		RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredReflection + 3], color, color, color, color);
 
-		float FwdAngle = CGeneral::GetATanOfXY(TheCamera.GetForward().x, TheCamera.GetForward().y);
-		float v = 2.0f * TheCamera.GetForward().z * 0.2f;
+		//+ rouz edit (ChatGPT)
+		// Align the glass reflection texture with the camera currently rendering the pane
+		CVector cameraForward = GetGlassRenderCameraForward();
+		float FwdAngle = CGeneral::GetATanOfXY(cameraForward.x, cameraForward.y);
+		float v = 2.0f * cameraForward.z * 0.2f;
+		//- rouz edit (ChatGPT)
 		float u = float(object->m_randomSeed & 15) * 0.02f + (FwdAngle / TWOPI);
 
 		RwIm3DVertexSetU    (&TempBufferRenderVertices[TempBufferVerticesStoredReflection + 0], u);
@@ -548,9 +598,12 @@ int32
 CGlass::CalcAlphaWithNormal(CVector *normal)
 {
 	ASSERT(normal!=nil);
-	
-	float fwdDir = 2.0f * DotProduct(*normal, TheCamera.GetForward());
-	float fwdDot = DotProduct(TheCamera.GetForward()-fwdDir*(*normal), CVector(0.57f, 0.57f, -0.57f));
+	//+ rouz edit (ChatGPT)
+	// Calculate pane brightness against the camera currently rendering the glass
+	CVector cameraForward = GetGlassRenderCameraForward();
+	float fwdDir = 2.0f * DotProduct(*normal, cameraForward);
+	float fwdDot = DotProduct(cameraForward-fwdDir*(*normal), CVector(0.57f, 0.57f, -0.57f));
+	//- rouz edit (ChatGPT)
 	return int32(lerp(fwdDot*fwdDot*fwdDot*fwdDot*fwdDot*fwdDot, 20.0f, 255.0f));
 }
 

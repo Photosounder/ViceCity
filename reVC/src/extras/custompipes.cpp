@@ -14,6 +14,28 @@
 #include "Renderer.h"
 #include "World.h"
 #include "custompipes.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#include "Entity.h" // rouz edit (ChatGPT)
+#include "Heli.h" // rouz edit (ChatGPT)
+#include "Clouds.h" // rouz edit (ChatGPT)
+#include "Coronas.h" // rouz edit (ChatGPT)
+#include "Glass.h" // rouz edit (ChatGPT)
+#include "Shadows.h" // rouz edit (ChatGPT)
+#include "Skidmarks.h" // rouz edit (ChatGPT)
+#include "Rubbish.h" // rouz edit (ChatGPT)
+#include "Antennas.h" // rouz edit (ChatGPT)
+#include "Ropes.h" // rouz edit (ChatGPT)
+#include "SpecialFX.h" // rouz edit (ChatGPT)
+#include "Fluff.h" // rouz edit (ChatGPT)
+#include "WaterCannon.h" // rouz edit (ChatGPT)
+#include "WaterLevel.h" // rouz edit (ChatGPT)
+#include "PointLights.h" // rouz edit (ChatGPT)
+#include "Particle.h" // rouz edit (ChatGPT)
+#include "ZoneCull.h" // rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
 
 #ifndef LIBRW
 #error "Need librw for EXTENDED_PIPELINES"
@@ -53,6 +75,257 @@ rw::Texture *EnvMapTex;
 rw::Texture *EnvMaskTex;
 static rw::RWDEVICE::Im2DVertex EnvScreenQuad[4];
 static int16 QuadIndices[6] = { 0, 1, 2, 0, 2, 3 };
+
+#ifdef REVC_SOFTWARE_POLYGONS
+//+ rouz edit (ChatGPT)
+static CStoredShadow EnvMapStoredShadows[MAX_STOREDSHADOWS];
+static int16 EnvMapStoredShadowCount;
+static CStoredShadow EnvMapAdditionalShadows[MAX_STOREDSHADOWS];
+static int16 EnvMapAdditionalShadowCount;
+
+static bool
+IsDuplicateEnvMapShadow(const CStoredShadow &shadow)
+{
+	// Compare the shadow geometry so main-view shadows are not added twice
+	for(int16 i = 0; i < EnvMapStoredShadowCount; i++){
+		CStoredShadow *stored = &EnvMapStoredShadows[i];
+		if(stored->m_pTexture == shadow.m_pTexture &&
+		   stored->m_ShadowType == shadow.m_ShadowType &&
+		   Abs(stored->m_vecPos.x - shadow.m_vecPos.x) < 0.01f &&
+		   Abs(stored->m_vecPos.y - shadow.m_vecPos.y) < 0.01f &&
+		   Abs(stored->m_vecPos.z - shadow.m_vecPos.z) < 0.01f &&
+		   Abs(stored->m_vecFront.x - shadow.m_vecFront.x) < 0.01f &&
+		   Abs(stored->m_vecFront.y - shadow.m_vecFront.y) < 0.01f &&
+		   Abs(stored->m_vecSide.x - shadow.m_vecSide.x) < 0.01f &&
+		   Abs(stored->m_vecSide.y - shadow.m_vecSide.y) < 0.01f)
+			return true;
+	}
+
+	// Compare earlier reflection-only shadows before adding another entry
+	for(int16 i = 0; i < EnvMapAdditionalShadowCount; i++){
+		CStoredShadow *stored = &EnvMapAdditionalShadows[i];
+		if(stored->m_pTexture == shadow.m_pTexture &&
+		   stored->m_ShadowType == shadow.m_ShadowType &&
+		   Abs(stored->m_vecPos.x - shadow.m_vecPos.x) < 0.01f &&
+		   Abs(stored->m_vecPos.y - shadow.m_vecPos.y) < 0.01f &&
+		   Abs(stored->m_vecPos.z - shadow.m_vecPos.z) < 0.01f &&
+		   Abs(stored->m_vecFront.x - shadow.m_vecFront.x) < 0.01f &&
+		   Abs(stored->m_vecFront.y - shadow.m_vecFront.y) < 0.01f &&
+		   Abs(stored->m_vecSide.x - shadow.m_vecSide.x) < 0.01f &&
+		   Abs(stored->m_vecSide.y - shadow.m_vecSide.y) < 0.01f)
+			return true;
+	}
+
+	return false;
+}
+
+void
+CaptureStoredShadowsForEnvMap(void)
+{
+	// Copy the frame's temporary shadows before the main pass clears them
+	EnvMapStoredShadowCount = CShadows::ShadowsStoredToBeRendered;
+	for(int16 i = 0; i < EnvMapStoredShadowCount; i++)
+		EnvMapStoredShadows[i] = CShadows::asShadowsStored[i];
+	EnvMapAdditionalShadowCount = 0;
+}
+
+void
+StoreVehicleShadowForEnvMap(CVehicle *vehicle, int32 shadowType)
+{
+	//+ rouz edit (ChatGPT)
+	// Add a camera-relative temporary shadow when the reflection pass lacks a cached static one
+	if(!bRenderingEnvMap || vehicle == nil || EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS || EnvMapCam == nil)
+		return;
+	//- rouz edit (ChatGPT)
+	// Require a usable reflection camera matrix before evaluating shadow distance
+	//+ rouz edit (ChatGPT)
+	RwFrame *envMapFrame = EnvMapCam->getFrame();
+	RwMatrix *envMapMatrix = envMapFrame ? envMapFrame->getLTM() : nil;
+	if(envMapMatrix == nil)
+		return;
+	//- rouz edit (ChatGPT)
+	// Reuse a cached static vehicle shadow when the main view already registered it
+	//+ rouz edit (ChatGPT)
+	const uint32 shadowId = (uint32)((uintptr)vehicle + 1);
+	for(int i = 0; i < MAX_STATICSHADOWS; i++)
+		if(CShadows::aStaticShadows[i].m_nId == shadowId && CShadows::aStaticShadows[i].m_pPolyBunch != nil){
+			CVector staticShadowOffset = CShadows::aStaticShadows[i].m_vecPosn - vehicle->GetPosition();
+			if(staticShadowOffset.MagnitudeSqr2D() < 25.0f)
+				return;
+		}
+	//- rouz edit (ChatGPT)
+
+	// Temporarily isolate the reflection shadow registration from the main pass queue
+	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
+	CStoredShadow savedFirstShadow;
+	if(savedCount > 0)
+		savedFirstShadow = CShadows::asShadowsStored[0];
+	CShadows::ShadowsStoredToBeRendered = 0;
+	// Register the shadow using the reflection camera and keep it out of static main-view state
+	//+ rouz edit (ChatGPT)
+	CVector shadowCameraPosition(envMapMatrix->pos);
+	CShadows::StoreShadowForVehicle(vehicle, (VEH_SHD_TYPE)shadowType, &shadowCameraPosition, true);
+	//- rouz edit (ChatGPT)
+
+	// Keep a new temporary shadow only when the main view did not already add it
+	if(CShadows::ShadowsStoredToBeRendered > 0){
+		CStoredShadow shadow = CShadows::asShadowsStored[0];
+		if(!IsDuplicateEnvMapShadow(shadow))
+			EnvMapAdditionalShadows[EnvMapAdditionalShadowCount++] = shadow;
+	}
+
+	// Restore the queue contents so the reflection cannot alter the main scene
+	if(savedCount > 0)
+		CShadows::asShadowsStored[0] = savedFirstShadow;
+	CShadows::ShadowsStoredToBeRendered = savedCount;
+}
+
+//+ rouz edit (ChatGPT)
+void
+StoreHeliSearchLightShadowForEnvMap(CHeli *heli)
+{
+	// Add an active helicopter searchlight pool to the isolated reflection shadow list
+	if(!bRenderingEnvMap || heli == nil || heli->m_fSearchLightIntensity <= 0.0f ||
+	   EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS || EnvMapCam == nil)
+		return;
+
+	CVector shadowPosition(heli->m_fSearchLightX, heli->m_fSearchLightY, heli->GetPosition().z);
+	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
+	CStoredShadow savedFirstShadow;
+	if(savedCount > 0)
+		savedFirstShadow = CShadows::asShadowsStored[0];
+	CShadows::ShadowsStoredToBeRendered = 0;
+	CShadows::StoreShadowToBeRendered(SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &shadowPosition,
+		6.0f, 0.0f, 0.0f, -6.0f,
+		80*heli->m_fSearchLightIntensity, 80*heli->m_fSearchLightIntensity,
+		80*heli->m_fSearchLightIntensity, 80*heli->m_fSearchLightIntensity,
+		50.0f, true, 1.0f, nil, false);
+
+	// Keep the generated shadow only when it is not already present in the reflection set
+	if(CShadows::ShadowsStoredToBeRendered > 0){
+		CStoredShadow shadow = CShadows::asShadowsStored[0];
+		if(!IsDuplicateEnvMapShadow(shadow))
+			EnvMapAdditionalShadows[EnvMapAdditionalShadowCount++] = shadow;
+	}
+	if(savedCount > 0)
+		CShadows::asShadowsStored[0] = savedFirstShadow;
+	CShadows::ShadowsStoredToBeRendered = savedCount;
+}
+//- rouz edit (ChatGPT)
+
+void
+StorePedShadowForEnvMap(CEntity *ped)
+{
+	// Use reflection-camera distance without relying on the main camera's visibility test
+	if(!bRenderingEnvMap || ped == nil || EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS ||
+	   CTimeCycle::GetShadowStrength() == 0 || EnvMapCam == nil || EnvMapCam->getFrame() == nil)
+		return;
+
+	// Match the game's pedestrian shadow range and sunlight fade
+	RwMatrix *cameraMatrix = EnvMapCam->getFrame()->getLTM();
+	if(cameraMatrix == nil)
+		return;
+	CVector cameraPosition(cameraMatrix->pos);
+	CVector shadowPosition = ped->GetPosition();
+	float distanceSquared = (shadowPosition - cameraPosition).MagnitudeSqr2D();
+	const float drawDistance = 26.0f;
+	if(distanceSquared >= SQR(drawDistance * 0.5f))
+		return;
+	float distance = Sqrt(distanceSquared);
+	float fade = 1.0f - (4.0f / drawDistance) * (distance - drawDistance * 0.25f);
+	int intensity = distance >= drawDistance * 0.25f ?
+		(int)(CTimeCycle::GetShadowStrength() * fade) : CTimeCycle::GetShadowStrength();
+	shadowPosition.x += CTimeCycle::GetShadowDisplacementX();
+	shadowPosition.y += CTimeCycle::GetShadowDisplacementY();
+
+	// Isolate the generated shadow so it cannot change the main scene queue
+	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
+	CStoredShadow savedFirstShadow;
+	if(savedCount > 0)
+		savedFirstShadow = CShadows::asShadowsStored[0];
+	CShadows::ShadowsStoredToBeRendered = 0;
+	CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK, gpShadowPedTex, &shadowPosition,
+		CTimeCycle::GetShadowFrontX(), CTimeCycle::GetShadowFrontY(),
+		CTimeCycle::GetShadowSideX(), CTimeCycle::GetShadowSideY(),
+		intensity, intensity, intensity, intensity, 4.0f, false, 1.0f, nil, false);
+
+	// Keep the new shadow only when it does not duplicate an existing reflection entry
+	if(CShadows::ShadowsStoredToBeRendered > 0){
+		CStoredShadow shadow = CShadows::asShadowsStored[0];
+		if(!IsDuplicateEnvMapShadow(shadow))
+			EnvMapAdditionalShadows[EnvMapAdditionalShadowCount++] = shadow;
+	}
+
+	// Restore the main queue after capturing the reflection shadow
+	if(savedCount > 0)
+		CShadows::asShadowsStored[0] = savedFirstShadow;
+	CShadows::ShadowsStoredToBeRendered = savedCount;
+}
+
+//+ rouz edit (ChatGPT)
+void
+StoreBeachBallShadowForEnvMap(CEntity *beachBall)
+{
+	// Add the beachball's normal compact ground shadow to the reflection queue
+	if(!bRenderingEnvMap || beachBall == nil || EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS ||
+	   CTimeCycle::GetShadowStrength() == 0 || EnvMapCam == nil)
+		return;
+	CVector shadowPosition = beachBall->GetPosition();
+	// Isolate registration so this reflection effect does not consume the main queue
+	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
+	CStoredShadow savedFirstShadow;
+	if(savedCount > 0)
+		savedFirstShadow = CShadows::asShadowsStored[0];
+	CShadows::ShadowsStoredToBeRendered = 0;
+	CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK, gpShadowPedTex, &shadowPosition,
+		0.4f, 0.0f, 0.0f, 0.4f,
+		CTimeCycle::GetShadowStrength(), CTimeCycle::GetShadowStrength(),
+		CTimeCycle::GetShadowStrength(), CTimeCycle::GetShadowStrength(),
+		20.0f, false, 1.0f, nil, false);
+	// Keep the shadow only when the reflection queue does not already contain it
+	if(CShadows::ShadowsStoredToBeRendered > 0){
+		CStoredShadow shadow = CShadows::asShadowsStored[0];
+		if(!IsDuplicateEnvMapShadow(shadow))
+			EnvMapAdditionalShadows[EnvMapAdditionalShadowCount++] = shadow;
+	}
+	// Restore the pending main-view shadow after capturing the reflection entry
+	if(savedCount > 0)
+		CShadows::asShadowsStored[0] = savedFirstShadow;
+	CShadows::ShadowsStoredToBeRendered = savedCount;
+}
+//- rouz edit (ChatGPT)
+
+static void
+RenderStoredShadowsForEnvMap(void)
+{
+	// Skip the reflection pass when neither scene produced temporary shadows
+	if(EnvMapStoredShadowCount <= 0 && EnvMapAdditionalShadowCount <= 0)
+		return;
+
+	// Preserve any live queue while swapping in the cached reflection shadows
+	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
+	CStoredShadow savedShadows[MAX_STOREDSHADOWS];
+	for(int16 i = 0; i < savedCount; i++)
+		savedShadows[i] = CShadows::asShadowsStored[i];
+	for(int16 i = 0; i < EnvMapStoredShadowCount; i++)
+		CShadows::asShadowsStored[i] = EnvMapStoredShadows[i];
+	int16 reflectionShadowCount = EnvMapStoredShadowCount;
+	for(int16 i = 0; i < EnvMapAdditionalShadowCount && reflectionShadowCount < MAX_STOREDSHADOWS; i++)
+		CShadows::asShadowsStored[reflectionShadowCount++] = EnvMapAdditionalShadows[i];
+	CShadows::ShadowsStoredToBeRendered = reflectionShadowCount;
+
+	// Render the cached shadows through the existing software-compatible path
+	CShadows::RenderStoredShadows();
+
+	// Restore the main pass queue and discard this frame's reflection snapshot
+	for(int16 i = 0; i < savedCount; i++)
+		CShadows::asShadowsStored[i] = savedShadows[i];
+	CShadows::ShadowsStoredToBeRendered = savedCount;
+	EnvMapStoredShadowCount = 0;
+	EnvMapAdditionalShadowCount = 0;
+}
+//- rouz edit (ChatGPT)
+#endif
 
 static rw::Camera*
 CreateEnvMapCam(rw::World *world)
@@ -115,9 +388,124 @@ DestroyCam(rw::Camera *cam)
 void
 RenderEnvMapScene(void)
 {
+	//+ rouz edit (ChatGPT)
+	// Register reflection-only entity lights before drawing the reflected scene
+#ifdef REVC_SOFTWARE_POLYGONS
+	CCoronas::ResetEnvMapCoronas();
+	CRenderer::RegisterSoftwareReflectionLights();
+#endif
+	//- rouz edit (ChatGPT)
+	// Fill the reflection target with distant water before world geometry
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	CWaterLevel::RenderWater();
+	// Render the reflection camera's sky layers before opaque world geometry
+	//+ rouz edit (ChatGPT)
+	CClouds::RenderForEnvMap(EnvMapCam);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+#endif
+	//- rouz edit (ChatGPT)
+	// Include the opaque and transparent building passes in vehicle reflections
+	//+ rouz edit (ChatGPT)
+	CRenderer::RenderWorld(0);
+	CRenderer::RenderWorld(1);
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderRoads();
+	// Render boats before cutting their hull silhouettes into the transparent water pass
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	CRenderer::RenderBoats();
+	// Keep fading submerged entities beneath the transparent reflection-water pass
+	CRenderer::RenderFadingInUnderwaterEntities();
+	CRenderer::RenderTransparentWater();
+#endif
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderEverythingBarRoads();
+	//+ rouz edit (ChatGPT)
+	// Sort reflection-camera actors and props together for alpha blending
+#ifdef REVC_SOFTWARE_POLYGONS
+	CRenderer::RenderSoftwareReflectionEntities();
+	DefinedState();
+#endif
+	//- rouz edit (ChatGPT)
+	// Render transparent buildings after the opaque environment and dynamic props
+	//+ rouz edit (ChatGPT)
+	CRenderer::RenderWorld(2);
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderFadingInEntities();
+	// Render reflection-safe world effects without advancing their shared simulations
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	CShadows::RenderStaticShadows();
+	// Add this frame's temporary shadows to the vehicle reflection
+	//+ rouz edit (ChatGPT)
+	RenderStoredShadowsForEnvMap();
+	//- rouz edit (ChatGPT)
+	CSkidmarks::Render();
+	CRubbish::Render();
+	// Draw persistent shattered glass panes into vehicle reflections
+	//+ rouz edit (ChatGPT)
+	CGlass::Render();
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Draw sun glints, rain streaks, and fire-fighting spray in reflections
+	CCoronas::RenderSunReflection();
+	// Draw nearby corona lights using the auxiliary camera's world orientation
+	//+ rouz edit (ChatGPT)
+	CCoronas::RenderForEnvMap(EnvMapCam);
+	//+ rouz edit (ChatGPT)
+	// Reflect wet-road light streaks into the software environment image
+	CCoronas::RenderReflectionsForEnvMap(EnvMapCam);
+	//- rouz edit (ChatGPT)
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	CWeather::RenderRainStreaks();
+	CWaterCannons::Render();
+	DefinedState();
+	// Reflect traffic signals and vehicle lamps using the main pass's flicker values
+	//+ rouz edit (ChatGPT)
+	CBrightLights::Render(true);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Replay registered shiny text geometry in the vehicle reflection
+	//+ rouz edit (ChatGPT)
+	CShinyTexts::RenderForEnvMap();
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Replay active world markers without mutating their registration state
+	//+ rouz edit (ChatGPT)
+	C3dMarkers::RenderForEnvMap(EnvMapCam);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	CAntennas::Render();
+	// Add antennas from RC Bandits that were visible only to the reflection camera
+	//+ rouz edit (ChatGPT)
+	CAntennas::RenderForEnvMap();
+	//- rouz edit (ChatGPT)
+	CRopes::Render();
+	CMotionBlurStreaks::Render();
+	CBulletTraces::Render();
+	CPlaneTrails::Render();
+	CSmokeTrails::Render();
+	CPlaneBanners::Render();
+	// Reflect the animated stadium message board from its current pixel state
+	//+ rouz edit (ChatGPT)
+	CMovingThings::RenderForEnvMap(EnvMapCam);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Add camera-corrected point-light fog to the software reflection
+	//+ rouz edit (ChatGPT)
+	CPointLights::RenderFogEffectForEnvMap(EnvMapCam);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Draw world-space smoke, sparks, and debris particles in the software reflection
+	//+ rouz edit (ChatGPT)
+	CParticle::RenderForEnvMap(EnvMapCam);
+	DefinedState();
+	//- rouz edit (ChatGPT)
+#endif
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -125,6 +513,12 @@ EnvMapRender(void)
 {
 	if(VehiclePipeSwitch != VEHICLEPIPE_NEO)
 		return;
+	// Cache the previous environment image before the camera starts writing this frame
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	SoftwarePolygons::PrimeTexture(EnvMapTex);
+#endif
+	//- rouz edit (ChatGPT)
 
 	RwCameraEndUpdate(Scene.camera);
 
@@ -138,13 +532,49 @@ EnvMapRender(void)
 	skycol.green = CTimeCycle::GetSkyBottomGreen();
 	skycol.blue = CTimeCycle::GetSkyBottomBlue();
 	skycol.alpha = 255;
+	// Keep a timecycle gradient behind geometry in the software environment map
+	//+ rouz edit (ChatGPT)
+	rw::RGBA skyTop = {
+		(rw::uint8)CTimeCycle::GetSkyTopRed(),
+		(rw::uint8)CTimeCycle::GetSkyTopGreen(),
+		(rw::uint8)CTimeCycle::GetSkyTopBlue(), 255
+	};
+	// Match the main software framebuffer during visible lightning flashes
+	//+ rouz edit (ChatGPT)
+	if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+		skyTop.red = skyTop.green = skyTop.blue = 255;
+		skycol.red = skycol.green = skycol.blue = 255;
+	}
+	//- rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
 	EnvMapCam->clear(&skycol, rwCAMERACLEARZ|rwCAMERACLEARIMAGE);
 	RwCameraBeginUpdate(EnvMapCam);
+	// Switch software rasterization to a private buffer for the auxiliary camera
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(!SoftwarePolygons::BeginOffscreenFrame(EnvMapCam, skyTop, skycol)){ // rouz edit (ChatGPT)
+		RwCameraEndUpdate(EnvMapCam);
+		RwCameraBeginUpdate(Scene.camera);
+		return;
+	}
+#endif
+	//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Clear auxiliary point-light registrations before gathering this reflection scene
+#ifdef REVC_SOFTWARE_POLYGONS
+	CPointLights::ResetEnvMapLights();
+#endif
+	//- rouz edit (ChatGPT)
 	bRenderingEnvMap = true;
 	RenderEnvMapScene();
 	bRenderingEnvMap = false;
 
 	if(EnvMaskTex){
+		// Apply the same reflection mask directly to the offscreen CPU pixels
+		//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		SoftwarePolygons::ApplyTextureMask(EnvMaskTex);
+#else
 		rw::SetRenderState(rw::VERTEXALPHA, TRUE);
 		rw::SetRenderState(rw::SRCBLEND, rw::BLENDZERO);
 		rw::SetRenderState(rw::DESTBLEND, rw::BLENDSRCCOLOR);
@@ -152,10 +582,19 @@ EnvMapRender(void)
 		rw::im2d::RenderIndexedPrimitive(rw::PRIMTYPETRILIST, EnvScreenQuad, 4, QuadIndices, 6);
 		rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
 		rw::SetRenderState(rw::DESTBLEND, rw::BLENDINVSRCALPHA);
+#endif
+		//- rouz edit (ChatGPT)
 	}
 	RwCameraEndUpdate(EnvMapCam);
 
-
+	// Upload the software environment image and resume the main camera
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	SoftwarePolygons::EndOffscreenFrame(EnvMapCam->frameBuffer);
+	RwCameraBeginUpdate(Scene.camera);
+	return;
+#endif
+	//- rouz edit (ChatGPT)
 	RwCameraBeginUpdate(Scene.camera);
 
 	// debug env map

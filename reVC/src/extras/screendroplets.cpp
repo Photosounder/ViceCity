@@ -21,6 +21,12 @@
 #include "custompipes.h"
 #include "postfx.h"
 #include "screendroplets.h"
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h" // rouz edit (ChatGPT)
+#include <vector> // rouz edit (ChatGPT)
+#endif
+//- rouz edit (ChatGPT)
 
 // for 640
 #define MAXSIZE 15
@@ -107,6 +113,9 @@ ScreenDroplets::InitDraw(void)
 {
 	ms_maskTex = CreateDropMask(64);
 
+	//+ rouz edit (ChatGPT)
+	// Allocate the GPU sampling resources only for hardware renderer targets
+#ifndef REVC_SOFTWARE_POLYGONS
 	ms_screenTex = RwTextureCreate(nil);
 	RwTextureSetFilterMode(ms_screenTex, rwFILTERLINEAR);
 
@@ -123,9 +132,11 @@ ScreenDroplets::InitDraw(void)
 	const char *vs[] = { shaderDecl, header_vert_src, im2d_UV2_vert_src, nil };
 	const char *fs[] = { shaderDecl, header_frag_src, screenDroplet_frag_src, nil };
 	screenDroplet = Shader::create(vs, fs);
-	assert(screenDroplet);
+		assert(screenDroplet);
 	}
 #endif
+	#endif
+	//- rouz edit (ChatGPT)
 
 	ms_initialised = 1;
 }
@@ -155,7 +166,12 @@ ScreenDroplets::Shutdown(void)
 	}
 #endif
 
+	// Release the GPU-only UV2 path when that path was initialized
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 	closeim2d_uv2();
+#endif
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -196,6 +212,20 @@ StartStoring(int numIndices, int numVertices, RwImVertexIndex **indexStart, Im2D
 void
 ScreenDroplets::Render(void)
 {
+	//+ rouz edit (ChatGPT)
+	// Capture the post-processed CPU frame before the droplets sample and modify it
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Use the camera raster dimensions when the software path has no GPU postfx buffer
+	//+ rouz edit (ChatGPT)
+	RwRaster *sampleRaster = CPostFX::pBackBuffer;
+	if(!sampleRaster && Scene.camera)
+		sampleRaster = RwCameraGetRaster(Scene.camera);
+	if(ms_numDrops <= 0 || !sampleRaster || RwRasterGetWidth(sampleRaster) <= 0 ||
+	   RwRasterGetHeight(sampleRaster) <= 0 || !SoftwarePolygons::BeginScreenTextureSampling())
+		return;
+	//- rouz edit (ChatGPT)
+#endif
+	//- rouz edit (ChatGPT)
 	ScreenDrop *drop;
 
 	DefinedState();
@@ -205,6 +235,8 @@ ScreenDroplets::Render(void)
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, FALSE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 	RwTextureSetRaster(ms_screenTex, CPostFX::pBackBuffer);
 #ifdef RW_D3D9
 	rw::d3d::im2dOverridePS = screenDroplet_PS;
@@ -214,6 +246,8 @@ ScreenDroplets::Render(void)
 	rw::gl3::im2dOverrideShader = screenDroplet;
 	rw::gl3::setTexture(1, ms_screenTex);
 #endif
+#endif
+	//- rouz edit (ChatGPT)
 
 	RenderBuffer::ClearRenderBuffer();
 	for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
@@ -221,6 +255,8 @@ ScreenDroplets::Render(void)
 			AddToRenderList(drop);
 	FlushBuffer();
 
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 #ifdef RW_D3D9
 	rw::d3d::im2dOverridePS = nil;
 	rw::d3d::setTexture(1, nil);
@@ -229,6 +265,8 @@ ScreenDroplets::Render(void)
 	rw::gl3::im2dOverrideShader = nil;
 	rw::gl3::setTexture(1, nil);
 #endif
+#endif
+	//- rouz edit (ChatGPT)
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, FALSE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
@@ -253,6 +291,19 @@ ScreenDroplets::AddToRenderList(ScreenDroplets::ScreenDrop *drop)
 		1.0f, 0.0f
 	};
 
+	// Resolve the source dimensions used to map droplet refraction back to the scene
+	//+ rouz edit (ChatGPT)
+	RwRaster *sampleRaster = CPostFX::pBackBuffer;
+	if(!sampleRaster && Scene.camera)
+		sampleRaster = RwCameraGetRaster(Scene.camera);
+	if(!sampleRaster)
+		return;
+	const int sampleWidth = RwRasterGetWidth(sampleRaster);
+	const int sampleHeight = RwRasterGetHeight(sampleRaster);
+	if(sampleWidth <= 0 || sampleHeight <= 0)
+		return;
+	//- rouz edit (ChatGPT)
+
 	int i;
 	RwImVertexIndex *indices;
 	Im2DVertexUV2 *verts;
@@ -269,10 +320,10 @@ ScreenDroplets::AddToRenderList(ScreenDroplets::ScreenDrop *drop)
 	float vt = drop->y - magSize;
 	float ur = drop->x + magSize;
 	float vb = drop->y + magSize;
-	ul = Max(ul, 0.0f)/RwRasterGetWidth(CPostFX::pBackBuffer);
-	vt = Max(vt, 0.0f)/RwRasterGetHeight(CPostFX::pBackBuffer);
-	ur = Min(ur, SCREEN_WIDTH)/RwRasterGetWidth(CPostFX::pBackBuffer);
-	vb = Min(vb, SCREEN_HEIGHT)/RwRasterGetHeight(CPostFX::pBackBuffer);
+	ul = Max(ul, 0.0f)/sampleWidth;
+	vt = Max(vt, 0.0f)/sampleHeight;
+	ur = Min(ur, SCREEN_WIDTH)/sampleWidth;
+	vb = Min(vb, SCREEN_HEIGHT)/sampleHeight;
 
 	for(i = 0; i < 4; i++){
 		RwIm2DVertexSetScreenX(&verts[i], drop->x + xy[i*2]*scale);
@@ -773,6 +824,32 @@ RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, Rw
 {
 	using namespace rw;
 	using namespace gl3;
+	//+ rouz edit (ChatGPT)
+	// Rasterize UV2 screen effects against the software framebuffer snapshot
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::FramePending()){
+		// Map screen-space droplet coordinates against the active camera raster without requiring a GPU backbuffer
+		//+ rouz edit (ChatGPT)
+		RwRaster *sampleRaster = CPostFX::pBackBuffer;
+		if(!sampleRaster && Scene.camera)
+			sampleRaster = RwCameraGetRaster(Scene.camera);
+		if(SoftwarePolygons::CapturingWorldEffects() && sampleRaster &&
+		   RwRasterGetWidth(sampleRaster) > 0 && RwRasterGetHeight(sampleRaster) > 0 &&
+		   numVertices > 0 && numIndices > 0){
+			std::vector<float> secondaryUVs((size_t)numVertices*2);
+			for(int i = 0; i < numVertices; i++){
+				secondaryUVs[(size_t)i*2] = vertices[i].u2;
+				secondaryUVs[(size_t)i*2+1] = vertices[i].v2;
+			}
+			SoftwarePolygons::RenderImmediate2DUV2(primType, vertices, numVertices,
+				(const unsigned short*)indices, numIndices, secondaryUVs.data(),
+				RwRasterGetWidth(sampleRaster), RwRasterGetHeight(sampleRaster));
+		}
+		//- rouz edit (ChatGPT)
+		return;
+	}
+#endif
+	//- rouz edit (ChatGPT)
 
 	GLfloat xform[4];
 	Camera *cam;

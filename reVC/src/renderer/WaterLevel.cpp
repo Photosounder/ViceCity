@@ -31,6 +31,11 @@
 #include "Pools.h" // rouz edit (ChatGPT)
 #include "SurfaceTable.h"
 #include "WaterCreatures.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 #define RwIm3DVertexSet_RGBA(vert, rgba) RwIm3DVertexSetRGBA(vert, rgba.red, rgba.green, rgba.blue, rgba.alpha) // (RwRGBAAssign(&(_dst)->color, &_src))
 
@@ -75,6 +80,56 @@ RwRaster *gpWaterWakeRaster;
 
 bool _bSeaLife;
 float _fWaterZOffset = WATER_Z_OFFSET;
+
+//+ rouz edit (ChatGPT)
+static bool IsRenderingEnvironmentMapWater(void)
+{
+	// Detect the auxiliary reflection camera without coupling other renderer builds
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	return CustomPipes::bRenderingEnvMap;
+#else
+	return false;
+#endif
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+static CVector GetWaterRenderCameraPosition(void)
+{
+	// Use the reflection camera position only while drawing its auxiliary water image
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame())
+		return CVector(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
+#endif
+	return TheCamera.GetPosition();
+}
+
+static CVector GetWaterRenderCameraForward(void)
+{
+	// Use the reflection camera direction only while drawing its auxiliary water image
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame())
+		return CVector(CustomPipes::EnvMapCam->getFrame()->getLTM()->at);
+#endif
+	return TheCamera.GetForward();
+}
+
+static bool IsWaterRenderSphereVisible(CVector const &centre, float radius)
+{
+	// Test water sectors against the active RenderWare camera frustum
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		rw::Sphere sphere;
+		sphere.center.x = centre.x;
+		sphere.center.y = centre.y;
+		sphere.center.z = centre.z;
+		sphere.radius = radius;
+		return CustomPipes::EnvMapCam->frustumTestSphere(&sphere) != rw::Camera::SPHEREOUTSIDE;
+	}
+#endif
+	return TheCamera.IsSphereVisible(centre, radius);
+}
+//- rouz edit (ChatGPT)
 
 #ifdef PC_WATER
 float fEnvScale               = 0.25f;
@@ -805,10 +860,13 @@ CWaterLevel::GetWaterNormal(float fX, float fY)
 inline float
 _GetWaterDrawDist()
 {
-	// rouz edit (ChatGPT)
-	if     ( TheCamera.GetPosition().z > 40.0f  ) return 4000.0f;
-	if     ( TheCamera.GetPosition().z < 15.0f  ) return 1200.0f;
-	return ( TheCamera.GetPosition().z + -15.0f ) * 800.0f / 45.0f + 1200.0f;
+	// Scale the water draw distance from the camera currently rendering the water
+	//+ rouz edit (ChatGPT)
+	float cameraZ = GetWaterRenderCameraPosition().z;
+	if     ( cameraZ > 40.0f  ) return 4000.0f;
+	if     ( cameraZ < 15.0f  ) return 1200.0f;
+	return ( cameraZ + -15.0f ) * 800.0f / 45.0f + 1200.0f;
+	//- rouz edit (ChatGPT)
 }
 
 inline float
@@ -823,23 +881,27 @@ _GetWavyDrawDist()
 inline void
 _GetCamBounds(bool *bUseCamStartY, bool *bUseCamEndY, bool *bUseCamStartX, bool *bUseCamEndX)
 {
-	if ( TheCamera.GetForward().z > -0.8f )
+	// Avoid directional water-sector clipping for cameras looking mostly vertically
+	//+ rouz edit (ChatGPT)
+	CVector cameraForward = GetWaterRenderCameraForward();
+	if ( Abs(cameraForward.z) < 0.8f )
 	{
-		if ( Abs(TheCamera.GetForward().x) > Abs(TheCamera.GetForward().y) )
+		if ( Abs(cameraForward.x) > Abs(cameraForward.y) )
 		{
-			if ( TheCamera.GetForward().x > 0.0f )
+			if ( cameraForward.x > 0.0f )
 				*bUseCamStartX = true;
 			else
 				*bUseCamEndX = true;
 		}
 		else
 		{
-			if ( TheCamera.GetForward().y > 0.0f )
+			if ( cameraForward.y > 0.0f )
 				*bUseCamStartY = true;
 			else
 				*bUseCamEndY = true;
 		}
 	}
+	//- rouz edit (ChatGPT)
 }
 
 
@@ -915,6 +977,11 @@ CWaterLevel::RenderWater()
 	
 	if ( !CGame::CanSeeWaterFromCurrArea() )
 		return;
+	// Preserve per-frame water state while drawing the auxiliary reflection camera
+	//+ rouz edit (ChatGPT)
+	const bool renderingEnvMap = IsRenderingEnvironmentMapWater();
+	const bool previousWavesCalculated = WavesCalculatedThisFrame;
+	//- rouz edit (ChatGPT)
 	
 	_GetCamBounds(&bUseCamStartY, &bUseCamEndY, &bUseCamStartX, &bUseCamEndX);
 
@@ -925,8 +992,9 @@ CWaterLevel::RenderWater()
 	
 	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
 	
+	// Advance water texture coordinates only for the main game camera
 	//+ rouz edit (ChatGPT)
-	if ( !CTimer::GetIsPaused() )
+	if ( !renderingEnvMap && !CTimer::GetIsPaused() ) // rouz edit (ChatGPT)
 	{
 		float timeStep = CTimer::GetTimeStepFix();
 
@@ -940,16 +1008,21 @@ CWaterLevel::RenderWater()
 		_TEXTURE_WAKE_ADDV += (Cos(fAngle * 0.7f) * 0.0003f + windAddUV) * timeStep;
 	}
 	
-	_TEXTURE_MASK_ADDU = WrapTextureCoordinate(_TEXTURE_MASK_ADDU);
-	_TEXTURE_MASK_ADDV = WrapTextureCoordinate(_TEXTURE_MASK_ADDV);
-	_TEXTURE_WAKE_ADDU = WrapTextureCoordinate(_TEXTURE_WAKE_ADDU);
-	_TEXTURE_WAKE_ADDV = WrapTextureCoordinate(_TEXTURE_WAKE_ADDV);
-	TEXTURE_ADDU = WrapTextureCoordinate(TEXTURE_ADDU);
-	TEXTURE_ADDV = WrapTextureCoordinate(TEXTURE_ADDV);
+	// Keep texture animation fixed while drawing the auxiliary camera
+	if(!renderingEnvMap){
+		_TEXTURE_MASK_ADDU = WrapTextureCoordinate(_TEXTURE_MASK_ADDU);
+		_TEXTURE_MASK_ADDV = WrapTextureCoordinate(_TEXTURE_MASK_ADDV);
+		_TEXTURE_WAKE_ADDU = WrapTextureCoordinate(_TEXTURE_WAKE_ADDU);
+		_TEXTURE_WAKE_ADDV = WrapTextureCoordinate(_TEXTURE_WAKE_ADDV);
+		TEXTURE_ADDU = WrapTextureCoordinate(TEXTURE_ADDU);
+		TEXTURE_ADDV = WrapTextureCoordinate(TEXTURE_ADDV);
+	}
 	//- rouz edit (ChatGPT)
 	
 #ifdef PC_WATER
-	_fWaterZOffset = CWeather::WindClipped * 0.5f + 0.25f;
+	// Update the water height offset only for the primary camera frame
+	if(!renderingEnvMap) // rouz edit (ChatGPT)
+		_fWaterZOffset = CWeather::WindClipped * 0.5f + 0.25f;
 #endif
 
 	RwRGBA color = { 0, 0, 0, 255 };
@@ -977,7 +1050,11 @@ CWaterLevel::RenderWater()
 	RwRenderStateSet(rwRENDERSTATESRCBLEND,      (void *)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND,     (void *)rwBLENDZERO);
 	
-	CVector2D camPos(TheCamera.GetPosition().x, TheCamera.GetPosition().y);
+	// Center sector selection on the camera rendering this water pass
+	//+ rouz edit (ChatGPT)
+	CVector renderCameraPosition = GetWaterRenderCameraPosition();
+	CVector2D camPos(renderCameraPosition.x, renderCameraPosition.y);
+	//- rouz edit (ChatGPT)
 
 	int32 nStartX = WATER_TO_HUGE_SECTOR_X(camPos.x - fHugeSectorMaxRenderDist + WATER_X_OFFSET);
 	int32 nEndX   = WATER_TO_HUGE_SECTOR_X(camPos.x + fHugeSectorMaxRenderDist + WATER_X_OFFSET) + 1;
@@ -1016,7 +1093,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fHugeSectorMaxRenderDistSqr > fHugeSectorDistToCamSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 #ifndef PC_WATER
 						WavesCalculatedThisFrame = true;
@@ -1090,7 +1167,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1109,7 +1186,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1138,7 +1215,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1157,7 +1234,7 @@ CWaterLevel::RenderWater()
 				
 				if ( fCamDistToSector < fHugeSectorMaxRenderDistSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.x, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecExtraHugeSectorCentre.x, vecExtraHugeSectorCentre.y, 0.0f), SectorRadius(EXTRAHUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 						RenderOneFlatExtraHugeWaterPoly(
 							vecExtraHugeSectorCentre.x - EXTRAHUGE_SECTOR_SIZE/2,
@@ -1175,7 +1252,8 @@ CWaterLevel::RenderWater()
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void *)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void *)rwBLENDINVSRCALPHA);
 	
-	if ( WavesCalculatedThisFrame )
+	// Avoid spawning distant sea life from an auxiliary reflection render
+	if ( !renderingEnvMap && WavesCalculatedThisFrame ) // rouz edit (ChatGPT)
 	{
 		RenderSeaBirds();
 		RenderShipsOnHorizon();
@@ -1183,10 +1261,15 @@ CWaterLevel::RenderWater()
 		HandleBeachToysStuff();
 	}
 	
-	if ( _bSeaLife )
+	if ( !renderingEnvMap && _bSeaLife ) // rouz edit (ChatGPT)
 		HandleSeaLifeForms();
 
 	DefinedState();
+	// Restore flags changed while building the auxiliary water image
+	//+ rouz edit (ChatGPT)
+	if(renderingEnvMap)
+		WavesCalculatedThisFrame = previousWavesCalculated;
+	//- rouz edit (ChatGPT)
 }
 
 
@@ -1199,10 +1282,15 @@ CWaterLevel::RenderTransparentWater(void)
 	bool bUseCamStartX = false;
 	bool bUseCamEndY   = false;
 	
-	_bSeaLife = false;
-	
 	if ( !CGame::CanSeeWaterFromCurrArea() )
 		return;
+	// Preserve the main camera bookkeeping while the reflection camera draws water
+	//+ rouz edit (ChatGPT)
+	const bool renderingEnvMap = IsRenderingEnvironmentMapWater();
+	const bool previousSeaLife = _bSeaLife;
+	const bool previousWavesCalculated = WavesCalculatedThisFrame;
+	_bSeaLife = false;
+	//- rouz edit (ChatGPT)
 	
 	PUSH_RENDERGROUP("CWaterLevel::RenderTransparentWater");
 
@@ -1245,7 +1333,11 @@ CWaterLevel::RenderTransparentWater(void)
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void *)rwBLENDINVSRCALPHA);
 #endif
 	
-	CVector2D camPos(TheCamera.GetPosition().x, TheCamera.GetPosition().y);
+	// Center sector selection on the camera rendering this water pass
+	//+ rouz edit (ChatGPT)
+	CVector renderCameraPosition = GetWaterRenderCameraPosition();
+	CVector2D camPos(renderCameraPosition.x, renderCameraPosition.y);
+	//- rouz edit (ChatGPT)
 
 	int32 nStartX = WATER_TO_HUGE_SECTOR_X(camPos.x - fHugeSectorMaxRenderDist + WATER_X_OFFSET);
 	int32 nEndX   = WATER_TO_HUGE_SECTOR_X(camPos.x + fHugeSectorMaxRenderDist + WATER_X_OFFSET) + 1;
@@ -1289,7 +1381,7 @@ CWaterLevel::RenderTransparentWater(void)
 				
 				if ( fHugeSectorMaxRenderDistSqr > fHugeSectorDistToCamSqr )
 				{
-					if ( TheCamera.IsSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) )
+					if ( IsWaterRenderSphereVisible(CVector(vecHugeSectorCentre.x, vecHugeSectorCentre.y, 0.0f), SectorRadius(HUGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
 					{
 						if ( fHugeSectorDistToCamSqr >= SQR(500.0f) )
 						{
@@ -1311,10 +1403,10 @@ CWaterLevel::RenderTransparentWater(void)
 										
 										float fLargeSectorDistToCamSqr = (camPos - vecLargeSectorCentre).MagnitudeSqr();
 										
-										if ( fLargeSectorDistToCamSqr < fHugeSectorMaxRenderDistSqr )
-										{
-											if ( TheCamera.IsSphereVisible(CVector(vecLargeSectorCentre.x, vecLargeSectorCentre.y, 0.0f), SectorRadius(LARGE_SECTOR_SIZE)) )
-											{
+						if ( fLargeSectorDistToCamSqr < fHugeSectorMaxRenderDistSqr )
+						{
+							if ( IsWaterRenderSphereVisible(CVector(vecLargeSectorCentre.x, vecLargeSectorCentre.y, 0.0f), SectorRadius(LARGE_SECTOR_SIZE)) ) // rouz edit (ChatGPT)
+							{
 												// Render four small(32x32) sectors, or one large(64x64).
 
 												//														
@@ -1445,22 +1537,25 @@ CWaterLevel::RenderTransparentWater(void)
 #else
 	if (!CCullZones::WaterFudge())
 	{
+		// Offset the wavy mask in the active camera's viewing direction
+		//+ rouz edit (ChatGPT)
+		CVector cameraForward = GetWaterRenderCameraForward();
 		int32 signX = 0;
 		int32 signY = 0;
 
 		float fCamX = camPos.x - SMALL_SECTOR_SIZE;
 		float fCamY = camPos.y - SMALL_SECTOR_SIZE;
 
-		if (TheCamera.GetForward().x > 0.3f)
+		if (cameraForward.x > 0.3f)
 			signX = 1;
-		else if (TheCamera.GetForward().x < -0.3f)
+		else if (cameraForward.x < -0.3f)
 			signX = -1;
 
 		fCamX += 0.3f * (float)signX * float(SMALL_SECTOR_SIZE * 2.0f); // 19.2f
 
-		if (TheCamera.GetForward().y > 0.3f)
+		if (cameraForward.y > 0.3f)
 			signY = 1;
-		else if (TheCamera.GetForward().y < -0.3f)
+		else if (cameraForward.y < -0.3f)
 			signY = -1;
 
 		fCamY += 0.3f * (float)signY * float(SMALL_SECTOR_SIZE * 2.0f); // 19.2f
@@ -1485,10 +1580,18 @@ CWaterLevel::RenderTransparentWater(void)
 					signX, signY, colorTrans);
 			}
 		}
+		//- rouz edit (ChatGPT)
 	}
 
 	DefinedState();
 #endif
+	// Restore main-frame water flags after drawing into the reflection target
+	//+ rouz edit (ChatGPT)
+	if(renderingEnvMap){
+		_bSeaLife = previousSeaLife;
+		WavesCalculatedThisFrame = previousWavesCalculated;
+	}
+	//- rouz edit (ChatGPT)
 
 	POP_RENDERGROUP();
 }
@@ -1953,11 +2056,14 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 			maskMorphVerts[base+c].z = maskMorphVerts[base+d].z;
 			maskMorphVerts[base+b].z = maskMorphVerts[base+c].z;
 			
-#ifndef PC_WATER
-			if (maskMorphVerts[base].z >= fMinSparkZ)
-#else
-			if ( maskMorphVerts[base].z > fMinSparkZ )
-#endif
+			//+ rouz edit (ChatGPT)
+			// Emit gameplay water spark particles only during the primary camera pass
+			#ifndef PC_WATER
+			if ( !IsRenderingEnvironmentMapWater() && maskMorphVerts[base].z >= fMinSparkZ )
+			#else
+			if ( !IsRenderingEnvironmentMapWater() && maskMorphVerts[base].z > fMinSparkZ )
+			#endif
+			//- rouz edit (ChatGPT)
 			{
 				switch ( (i + j + randval) & 3 )
 				{
@@ -2152,12 +2258,16 @@ CWaterLevel::PreCalcWaterGeometry(void)
 		return;
 	}
 	
-	CVector CamFwdDir = TheCamera.GetForward();
+	// Build the wavy-mask direction from the camera rendering water
+	//+ rouz edit (ChatGPT)
+	CVector CamFwdDir = GetWaterRenderCameraForward();
 	CamFwdDir.z = 0.0f;
 	CamFwdDir.Normalise();
 	
-	float fCamX = TheCamera.GetPosition().x - SMALL_SECTOR_SIZE;
-	float fCamY = TheCamera.GetPosition().y - SMALL_SECTOR_SIZE;
+	CVector renderCameraPosition = GetWaterRenderCameraPosition();
+	float fCamX = renderCameraPosition.x - SMALL_SECTOR_SIZE;
+	float fCamY = renderCameraPosition.y - SMALL_SECTOR_SIZE;
+	//- rouz edit (ChatGPT)
 	
 	//1.4144272f; 1.4144f;
 	float signX = CamFwdDir.x * 1.4144272f;
@@ -2221,7 +2331,10 @@ CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 									|rpGEOMETRYLOCKPRELIGHT
 									|rpGEOMETRYLOCKTEXCOORDS);
 	
-	CVector camPosUp = TheCamera.GetForward();
+	// Keep wave normals consistent with the active camera pass
+	//+ rouz edit (ChatGPT)
+	CVector camPosUp = GetWaterRenderCameraForward();
+	//- rouz edit (ChatGPT)
 		
 	float randomDampInv2 = (1.0f - fRandomDamp) * 2.0f;
 	
@@ -2376,7 +2489,10 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 			maskMorphVerts[base+c].z = maskMorphVerts[base+d].z;
 			maskMorphVerts[base+b].z = maskMorphVerts[base+c].z;
 			
-			if ( maskMorphVerts[base].z > fMinSparkZ )
+			//+ rouz edit (ChatGPT)
+			// Emit gameplay water spark particles only during the primary camera pass
+			if ( !IsRenderingEnvironmentMapWater() && maskMorphVerts[base].z > fMinSparkZ )
+			//- rouz edit (ChatGPT)
 			{
 				switch ( (i + j + randval) & 3 )
 				{
@@ -2531,6 +2647,19 @@ CWaterLevel::RenderBoatWakes(void)
 	// TODO save and restore rwRENDERSTATESRCBLEND rwRENDERSTATEDESTBLEND
 #endif
 
+	// Preserve the main camera's wake selection while choosing boats for a reflection render
+	//+ rouz edit (ChatGPT)
+	CBoat *savedWakeBoats[ARRAY_SIZE(CBoat::apFrameWakeGeneratingBoats)];
+	bool restoreWakeBoatList = false;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
+		// Copy the main camera list before FillBoatList replaces it for the reflection camera
+		for(int32 i = 0; i < ARRAY_SIZE(CBoat::apFrameWakeGeneratingBoats); i++)
+			savedWakeBoats[i] = CBoat::apFrameWakeGeneratingBoats[i];
+		restoreWakeBoatList = true;
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	CBoat::FillBoatList();
 	
 	float fWakeZ = 5.97f;
@@ -2634,6 +2763,13 @@ CWaterLevel::RenderBoatWakes(void)
 	}
 	
 	RenderAndEmptyRenderBuffer();
+	// Restore the main camera's wake selection after drawing reflection wakes
+	//+ rouz edit (ChatGPT)
+	if(restoreWakeBoatList){
+		for(int32 i = 0; i < ARRAY_SIZE(CBoat::apFrameWakeGeneratingBoats); i++)
+			CBoat::apFrameWakeGeneratingBoats[i] = savedWakeBoats[i];
+	}
+	//- rouz edit (ChatGPT)
 }
 
 inline float
@@ -2738,7 +2874,11 @@ CWaterLevel::RenderWakeSegment(CVector2D &vecA, CVector2D &vecB, CVector2D &vecC
 void
 CWaterLevel::RenderOneSlopedUnderWaterPoly(float fX, float fY, float fZ, RwRGBA const&color)
 {
-	CVector2D camPos(TheCamera.GetPosition().x, TheCamera.GetPosition().y);
+	// Fade the underwater slope relative to the camera rendering it
+	//+ rouz edit (ChatGPT)
+	CVector renderCameraPosition = GetWaterRenderCameraPosition();
+	CVector2D camPos(renderCameraPosition.x, renderCameraPosition.y);
+	//- rouz edit (ChatGPT)
 	
 	float fDistA = (CVector2D(fX, fY) - camPos).Magnitude()                                       + -140.0f;
 	float fDistB = (CVector2D(fX, fY + HUGE_SECTOR_SIZE) - camPos).Magnitude()                    + -140.0f;

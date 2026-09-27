@@ -5,6 +5,12 @@
 #include "Camera.h"
 #include "Sprite.h"
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+#include "SoftwarePolygons.h"
+#endif
+//- rouz edit (ChatGPT)
+
 #ifdef ASPECT_RATIO_SCALE
 #include "Frontend.h"
 #endif
@@ -33,6 +39,13 @@ CSprite::CalcScreenCoors(const RwV3d &in, RwV3d *out, float *outw, float *outh, 
 	float recip = 1.0f/out->z;
 	out->x *= SCREEN_WIDTH * recip;
 	out->y *= SCREEN_HEIGHT * recip;
+	// Match projected world sprites to the software framebuffer's screen Y direction
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::CapturingWorldEffects())
+		out->y = SCREEN_HEIGHT - out->y;
+#endif
+	//- rouz edit (ChatGPT)
 	const float fov = DefaultFOV;
 	// this is used to scale correctly if you zoom in with sniper rifle
 	float fovScale = fov / CDraw::GetFOV();

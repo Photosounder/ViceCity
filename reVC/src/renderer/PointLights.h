@@ -46,5 +46,10 @@ public:
 	static float GenerateLightsAffectingObject(Const CVector *objCoors);
 	static void RemoveLightsAffectingObject(void);
 	static void RenderFogEffect(void);
+	//+ rouz edit (ChatGPT)
+	static void RenderFogEffectForEnvMap(RwCamera *camera);
+	static void RenderFogEffectForEnvMapLights(RwCamera *camera, CRegisteredPointLight *lights, int32 lightCount);
+	static void ResetEnvMapLights(void);
+	//- rouz edit (ChatGPT)
 	static bool ProcessVerticalLineUsingCache(CVector coors, float *groundZ);
 };

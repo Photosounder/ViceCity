@@ -17,6 +17,11 @@ public:
 	static void Shutdown(void);
 	static void Update(void);
 	static void Render(void);
+#ifdef REVC_SOFTWARE_POLYGONS
+	//+ rouz edit (ChatGPT)
+	static void RenderForEnvMap(RwCamera *camera); // rouz edit (ChatGPT)
+	//- rouz edit (ChatGPT)
+#endif
 	static void RenderBackground(int16 topred, int16 topgreen, int16 topblue,
 		int16 botred, int16 botgreen, int16 botblue, int16 alpha);
 	static void RenderHorizon(void);

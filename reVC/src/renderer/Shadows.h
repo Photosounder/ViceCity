@@ -158,7 +158,10 @@ public:
 	static bool StoreStaticShadow              (uint32 nID, uint8 ShadowType, RwTexture *pTexture, Const CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, float fDrawDistance, bool bTempShadow, float fUpDistance);
 	static void StoreShadowToBeRendered        (            uint8 ShadowType,                      CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue);
 	static void StoreShadowToBeRendered        (            uint8 ShadowType, RwTexture *pTexture, CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance, bool bDrawOnWater, float fScale, CCutsceneShadow *pShadow, bool bDrawOnBuildings);
-	static void StoreShadowForVehicle          (CVehicle *pCar, VEH_SHD_TYPE type);
+	//+ rouz edit (ChatGPT)
+	static void StoreShadowForVehicle          (CVehicle *pCar, VEH_SHD_TYPE type,
+		const CVector *pCameraPosition = nil, bool forceTemporary = false);
+	//- rouz edit (ChatGPT)
 	static void StoreCarLightShadow            (CVehicle *pCar, int32 nID, RwTexture *pTexture, CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY,                   uint8 nRed, uint8 nGreen, uint8 nBlue, float fMaxViewAngle);
 	static void StoreShadowForPed              (CPed        *pPed,     float fDisplacementX, float fDisplacementY, float fFrontX, float fFrontY, float fSideX, float fSideY);
 	static void StoreShadowForPedObject        (CEntity *pPedObject,   float fDisplacementX, float fDisplacementY, float fFrontX, float fFrontY, float fSideX, float fSideY);

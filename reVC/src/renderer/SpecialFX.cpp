@@ -25,6 +25,11 @@
 #include "Coronas.h"
 #include "Script.h"
 #include "DMAudio.h"
+//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+#include "custompipes.h"
+#endif
+//- rouz edit (ChatGPT)
 
 RwIm3DVertex StreakVertices[4];
 RwImVertexIndex StreakIndexList[12];
@@ -349,6 +354,18 @@ CMotionBlurStreaks::RegisterStreak(uintptr id, uint8 r, uint8 g, uint8 b, CVecto
 	aStreaks[i].m_isValid[2] = false;
 }
 
+//+ rouz edit (ChatGPT)
+bool
+CMotionBlurStreaks::IsRegisteredForCurrentFrame(uintptr id)
+{
+	// Find a matching streak whose leading sample was refreshed this frame
+	for(int i = 0; i < NUMMBLURSTREAKS; i++)
+		if(aStreaks[i].m_id == id)
+			return aStreaks[i].m_isValid[0];
+	return false;
+}
+//- rouz edit (ChatGPT)
+
 void
 CMotionBlurStreaks::Render(void)
 {
@@ -486,6 +503,23 @@ void CBulletTraces::AddTrace(CVector* start, CVector* end, int32 weaponType, cla
 
 void CBulletTraces::Render(void)
 {
+	// Clip reflected traces against the active environment camera instead of the player camera
+	//+ rouz edit (ChatGPT)
+	CVector traceCameraPosition = TheCamera.GetPosition();
+	CVector traceCameraForward = TheCamera.GetForward();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame)){
+			RwMatrix *effectMatrix = RwFrameGetMatrix(effectFrame);
+			traceCameraPosition = CVector(effectMatrix->pos);
+			traceCameraForward = CVector(effectMatrix->at);
+			traceCameraForward.Normalise();
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUMBULLETTRACES; i++) {
 		if (!aTraces[i].m_bInUse)
 			continue;
@@ -506,8 +540,11 @@ void CBulletTraces::Render(void)
 
 		CVector start = aTraces[i].m_vecStartPos;
 		CVector end = aTraces[i].m_vecEndPos;
-		float startProj = DotProduct(start - TheCamera.GetPosition(), TheCamera.GetForward()) - 0.7f;
-		float endProj = DotProduct(end - TheCamera.GetPosition(), TheCamera.GetForward()) - 0.7f;
+		// Use camera-relative depth for clipping the trace endpoints
+		//+ rouz edit (ChatGPT)
+		float startProj = DotProduct(start - traceCameraPosition, traceCameraForward) - 0.7f;
+		float endProj = DotProduct(end - traceCameraPosition, traceCameraForward) - 0.7f;
+		//- rouz edit (ChatGPT)
 		if (startProj < 0.0f && endProj < 0.0f) //we dont need render trace behind us
 			continue;
 
@@ -726,6 +763,10 @@ C3dMarker::Render()
 C3dMarker C3dMarkers::m_aMarkerArray[NUM3DMARKERS];
 int32 C3dMarkers::NumActiveMarkers;
 RpClump* C3dMarkers::m_pRpClumpArray[NUMMARKERTYPES];
+//+ rouz edit (ChatGPT)
+static int EnvMapMarkerIndices[NUM3DMARKERS];
+static int EnvMapMarkerCount;
+//- rouz edit (ChatGPT)
 
 void
 C3dMarkers::Init()
@@ -750,6 +791,10 @@ C3dMarkers::Init()
 		m_aMarkerArray[i].m_fCameraRange = 0.0f;
 	}
 	NumActiveMarkers = 0;
+	// Drop marker snapshots when initializing a new scene
+	//+ rouz edit (ChatGPT)
+	EnvMapMarkerCount = 0;
+	//- rouz edit (ChatGPT)
 	int txdSlot = CTxdStore::FindTxdSlot("particle");
 	CTxdStore::PushCurrentTxd();
 	CTxdStore::SetCurrentTxd(txdSlot);
@@ -776,6 +821,13 @@ C3dMarkers::Shutdown()
 void
 C3dMarkers::Render()
 {
+	// Save the markers the main pass will draw before it clears their used flags
+	//+ rouz edit (ChatGPT)
+	EnvMapMarkerCount = 0;
+	for(int i = 0; i < NUM3DMARKERS; i++)
+		if(m_aMarkerArray[i].m_bIsUsed && m_aMarkerArray[i].m_pAtomic != nil)
+			EnvMapMarkerIndices[EnvMapMarkerCount++] = i;
+	//- rouz edit (ChatGPT)
 	NumActiveMarkers = 0;
 	ActivateDirectional();
 	for (int i = 0; i < NUM3DMARKERS; i++) {
@@ -796,6 +848,47 @@ C3dMarkers::Render()
 		}
 	}
 }
+
+//+ rouz edit (ChatGPT)
+void
+C3dMarkers::RenderForEnvMap(RwCamera *camera)
+{
+	// Match the directional lighting setup used by the main marker pass
+	if(camera == nil || EnvMapMarkerCount <= 0){
+		EnvMapMarkerCount = 0;
+		return;
+	}
+	// Read the reflection camera position and forward axis without changing the game camera
+	RwFrame *cameraFrame = RwCameraGetFrame(camera);
+	// Discard the marker snapshot if the reflection camera has no matrix
+	if(cameraFrame == nil || RwFrameGetMatrix(cameraFrame) == nil){
+		EnvMapMarkerCount = 0;
+		return;
+	}
+	RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
+	CVector cameraPosition(cameraMatrix->pos);
+	CVector cameraForward(cameraMatrix->at);
+	cameraForward.Normalise();
+	float nearClip = RwCameraGetNearClipPlane(camera);
+	float farClip = RwCameraGetFarClipPlane(camera);
+	ActivateDirectional();
+
+	// Draw captured markers that lie within this camera's range and depth planes
+	for(int i = 0; i < EnvMapMarkerCount; i++){
+		C3dMarker *marker = &m_aMarkerArray[EnvMapMarkerIndices[i]];
+		CVector toMarker = marker->m_Matrix.GetPosition() - cameraPosition;
+		// Skip markers outside the reflection camera's world range
+		if(toMarker.MagnitudeSqr() >= 150.0f*150.0f)
+			continue;
+		float cameraDepth = DotProduct(toMarker, cameraForward);
+		// Skip markers behind the near clip or beyond the far clip
+		if(cameraDepth <= nearClip || cameraDepth >= farClip)
+			continue;
+		marker->Render();
+	}
+	EnvMapMarkerCount = 0;
+}
+//- rouz edit (ChatGPT)
 
 C3dMarker *
 C3dMarkers::PlaceMarker(uint32 identifier, uint16 type, CVector &pos, float size, uint8 r, uint8 g, uint8 b, uint8 a, uint16 pulsePeriod, float pulseFraction, int16 rotateRate)
@@ -954,12 +1047,41 @@ C3dMarkers::Update()
 
 int CBrightLights::NumBrightLights;
 CBrightLight CBrightLights::aBrightLights[NUMBRIGHTLIGHTS];
+//+ rouz edit (ChatGPT)
+static float BrightLightsFlicker[NUMBRIGHTLIGHTS];
+static int BrightLightsEnvMapCount;
+static CBrightLight BrightLightsEnvMap[NUMBRIGHTLIGHTS];
+static float BrightLightsEnvMapFlicker[NUMBRIGHTLIGHTS];
+//- rouz edit (ChatGPT)
 
 void
 CBrightLights::Init(void)
 {
 	NumBrightLights = 0;
+	// Reset the saved light list used by environment reflections
+	//+ rouz edit (ChatGPT)
+	BrightLightsEnvMapCount = 0;
+	//- rouz edit (ChatGPT)
 }
+
+//+ rouz edit (ChatGPT)
+static CVector
+GetBrightLightsCameraPosition(void)
+{
+	// Use the camera that owns the active bright-light registration pass
+	CVector cameraPosition = TheCamera.GetPosition();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	// Read the auxiliary camera origin while collecting reflection lights
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame))
+			cameraPosition = CVector(RwFrameGetMatrix(effectFrame)->pos);
+	}
+#endif
+	return cameraPosition;
+}
+//- rouz edit (ChatGPT)
 
 void
 CBrightLights::RegisterOne(CVector pos, CVector up, CVector side, CVector front,
@@ -968,7 +1090,10 @@ CBrightLights::RegisterOne(CVector pos, CVector up, CVector side, CVector front,
 	if(NumBrightLights >= NUMBRIGHTLIGHTS)
 		return;
 
-	aBrightLights[NumBrightLights].m_camDist = (pos - TheCamera.GetPosition()).Magnitude();
+	// Measure registration distance from the render pass camera
+	//+ rouz edit (ChatGPT)
+	aBrightLights[NumBrightLights].m_camDist = (pos - GetBrightLightsCameraPosition()).Magnitude();
+	//- rouz edit (ChatGPT)
 	if(aBrightLights[NumBrightLights].m_camDist > BRIGHTLIGHTS_MAX_DIST)
 		return;
 
@@ -1008,10 +1133,114 @@ static RwImVertexIndex CubeIndices[12*3] = {
 };
 
 void
-CBrightLights::Render(void)
+//+ rouz edit (ChatGPT)
+CBrightLights::Render(bool reuseFlicker)
+//- rouz edit (ChatGPT)
 {
 	int i, j;
 	CVector pos;
+	// Resolve the active camera before restoring or combining the saved light list
+	//+ rouz edit (ChatGPT)
+	CVector brightLightCameraPosition = GetBrightLightsCameraPosition();
+	bool useReflectionCameraPosition = false;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	useReflectionCameraPosition = reuseFlicker && CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil;
+#endif
+	//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Preserve main-scene lamps while the reflection pass merges its own light list
+	int savedMainBrightLightCount = 0;
+	CBrightLight savedMainBrightLights[NUMBRIGHTLIGHTS];
+	float savedMainBrightLightFlicker[NUMBRIGHTLIGHTS];
+	if(useReflectionCameraPosition){
+		savedMainBrightLightCount = NumBrightLights;
+		for(i = 0; i < savedMainBrightLightCount; i++){
+			savedMainBrightLights[i] = aBrightLights[i];
+			savedMainBrightLightFlicker[i] = BrightLightsFlicker[i];
+		}
+	}
+	//- rouz edit (ChatGPT)
+	// Save main-pass lights and restore them for the later reflection pass
+	//+ rouz edit (ChatGPT)
+	if(!reuseFlicker){
+		BrightLightsEnvMapCount = NumBrightLights;
+		// Copy each light before the main pass clears its queue
+		for(i = 0; i < NumBrightLights; i++){
+			BrightLightsEnvMap[i] = aBrightLights[i];
+		}
+	}else if(BrightLightsEnvMapCount > 0){
+		// Combine reflection-camera registrations with cached vehicle lamps
+		//+ rouz edit (ChatGPT)
+		if(useReflectionCameraPosition && NumBrightLights > 0){
+			int registeredCount = NumBrightLights;
+			// Keep cached flicker phases for lights registered in both passes
+			for(i = 0; i < registeredCount; i++){
+				BrightLightsFlicker[i] = 0.0f;
+				for(j = 0; j < BrightLightsEnvMapCount; j++){
+					if(aBrightLights[i].m_type == BrightLightsEnvMap[j].m_type &&
+					   (aBrightLights[i].m_pos - BrightLightsEnvMap[j].m_pos).MagnitudeSqr() < 0.0001f){
+						BrightLightsFlicker[i] = BrightLightsEnvMapFlicker[j];
+						break;
+					}
+				}
+			}
+			// Retain cached vehicle lamps that the software vehicle path did not register again
+			for(j = 0; j < BrightLightsEnvMapCount && NumBrightLights < NUMBRIGHTLIGHTS; j++){
+				float cameraDistance = (BrightLightsEnvMap[j].m_pos - brightLightCameraPosition).Magnitude();
+				// Skip cached lights that are outside this reflection camera range
+				if(cameraDistance > BRIGHTLIGHTS_MAX_DIST)
+					continue;
+				// Search the current reflection list for the same light
+				for(i = 0; i < NumBrightLights; i++)
+					if(aBrightLights[i].m_type == BrightLightsEnvMap[j].m_type &&
+					   (aBrightLights[i].m_pos - BrightLightsEnvMap[j].m_pos).MagnitudeSqr() < 0.0001f)
+						break;
+				// Append cached lamps that the software vehicle path did not register
+				if(i == NumBrightLights){
+					aBrightLights[i] = BrightLightsEnvMap[j];
+					aBrightLights[i].m_camDist = cameraDistance;
+					BrightLightsFlicker[i] = BrightLightsEnvMapFlicker[j];
+					NumBrightLights++;
+				}
+			}
+		}else{
+			// Restore cached main-view lights when this pass registered none
+			NumBrightLights = BrightLightsEnvMapCount;
+			// Restore the saved lights and their matching flicker values
+			for(i = 0; i < NumBrightLights; i++){
+				aBrightLights[i] = BrightLightsEnvMap[i];
+				BrightLightsFlicker[i] = BrightLightsEnvMapFlicker[i];
+			}
+		}
+		//- rouz edit (ChatGPT)
+	}else if(useReflectionCameraPosition){
+		// Initialize reflection-only lights that have no cached main-pass phase
+		for(i = 0; i < NumBrightLights; i++)
+			BrightLightsFlicker[i] = 0.0f;
+	}
+	//- rouz edit (ChatGPT)
+	// Use the reflection camera origin for auxiliary light-distance fading
+	//+ rouz edit (ChatGPT)
+	CVector brightLightCameraRight = TheCamera.GetRight(); // rouz edit (ChatGPT)
+	CVector brightLightCameraUp = TheCamera.GetUp(); // rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(reuseFlicker && CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam != nil){
+		RwCamera *effectCamera = (RwCamera*)CustomPipes::EnvMapCam;
+		RwFrame *effectFrame = RwCameraGetFrame(effectCamera);
+		if(effectFrame && RwFrameGetMatrix(effectFrame)){
+			const RwMatrix *cameraMatrix = RwFrameGetMatrix(effectFrame);
+			// Keep siren billboards facing the active reflection camera
+			//+ rouz edit (ChatGPT)
+			brightLightCameraRight = CVector(cameraMatrix->right);
+			brightLightCameraUp = CVector(cameraMatrix->up);
+			brightLightCameraRight.Normalise();
+			brightLightCameraUp.Normalise();
+			//- rouz edit (ChatGPT)
+			useReflectionCameraPosition = true;
+		}
+	}
+#endif
+	//- rouz edit (ChatGPT)
 
 	if(NumBrightLights == 0)
 		return;
@@ -1030,7 +1259,19 @@ CBrightLights::Render(void)
 			RenderOutGeometryBuffer();
 
 		int r, g, b, a;
-		float flicker = (CGeneral::GetRandomNumber()&0xFF) * 0.2f;
+		// Reuse the main-pass flicker while drawing the same lights into reflections
+		//+ rouz edit (ChatGPT)
+		float flicker = BrightLightsFlicker[i];
+		if(!reuseFlicker){
+			// Preserve the original randomized flicker for the main scene pass
+			flicker = (CGeneral::GetRandomNumber()&0xFF) * 0.2f;
+			BrightLightsFlicker[i] = flicker;
+			// Keep the reflection copy on the same randomized phase as the main pass
+			//+ rouz edit (ChatGPT)
+			BrightLightsEnvMapFlicker[i] = flicker;
+			//- rouz edit (ChatGPT)
+		}
+		//- rouz edit (ChatGPT)
 		switch(aBrightLights[i].m_type){
 		case BRIGHTLIGHT_TRAFFIC_GREEN:
 			r = flicker; g = 255; b = flicker;
@@ -1063,21 +1304,32 @@ CBrightLights::Render(void)
 			break;
 #ifdef FIX_BUGS  //just to make sure that color never will be undefined
 		default:
-			return;
+			// Skip an invalid light without bypassing reflection queue restoration
+			continue; // rouz edit (ChatGPT)
 #endif
 		}
 
-		if(aBrightLights[i].m_camDist < BRIGHTLIGHTS_FADE_DIST)
+		// Recompute reflection light distances from the auxiliary camera while preserving main-pass cache values
+		//+ rouz edit (ChatGPT)
+		float camDist = useReflectionCameraPosition ?
+			(aBrightLights[i].m_pos - brightLightCameraPosition).Magnitude() : aBrightLights[i].m_camDist;
+		// Ignore cached lights outside the active reflection camera range
+		//+ rouz edit (ChatGPT)
+		if(useReflectionCameraPosition && camDist > BRIGHTLIGHTS_MAX_DIST)
+			continue;
+		//- rouz edit (ChatGPT)
+		if(camDist < BRIGHTLIGHTS_FADE_DIST)
 			a = 255;
 		else
-			a = 255*(1.0f - (aBrightLights[i].m_camDist-BRIGHTLIGHTS_FADE_DIST)/(BRIGHTLIGHTS_MAX_DIST-BRIGHTLIGHTS_FADE_DIST));
+			a = 255*(1.0f - (camDist-BRIGHTLIGHTS_FADE_DIST)/(BRIGHTLIGHTS_MAX_DIST-BRIGHTLIGHTS_FADE_DIST));
 		// fade car lights down to 31 as they come near
 		if(aBrightLights[i].m_type >= BRIGHTLIGHT_FRONT_LONG && aBrightLights[i].m_type <= BRIGHTLIGHT_REAR_TALL){
-			if(aBrightLights[i].m_camDist < CARLIGHTS_FADE_DIST)
+			if(camDist < CARLIGHTS_FADE_DIST)
 				a = 31;
-			else if(aBrightLights[i].m_camDist < CARLIGHTS_MAX_DIST)
-				a = 31 + (255-31)*((aBrightLights[i].m_camDist-CARLIGHTS_FADE_DIST)/(CARLIGHTS_MAX_DIST-CARLIGHTS_FADE_DIST));
+			else if(camDist < CARLIGHTS_MAX_DIST)
+				a = 31 + (255-31)*((camDist-CARLIGHTS_FADE_DIST)/(CARLIGHTS_MAX_DIST-CARLIGHTS_FADE_DIST));
 		}
+		//- rouz edit (ChatGPT)
 
 		switch(aBrightLights[i].m_type){
 		case BRIGHTLIGHT_TRAFFIC_GREEN:
@@ -1162,8 +1414,8 @@ CBrightLights::Render(void)
 
 		case BRIGHTLIGHT_SIREN:
 			for(j = 0; j < 6; j++){
-				pos = SirenLightsSide[j] * TheCamera.GetRight() +
-					SirenLightsUp[j] * TheCamera.GetUp() +
+				pos = SirenLightsSide[j] * brightLightCameraRight + // rouz edit (ChatGPT)
+					SirenLightsUp[j] * brightLightCameraUp + // rouz edit (ChatGPT)
 					aBrightLights[i].m_pos;
 				RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored+j], r, g, b, a);
 				RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored+j], pos.x, pos.y, pos.z);
@@ -1179,7 +1431,17 @@ CBrightLights::Render(void)
 
 	RenderOutGeometryBuffer();
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-	NumBrightLights = 0;
+	//+ rouz edit (ChatGPT)
+	// Restore main-scene lamps so the regular pass can draw them after this reflection
+	if(useReflectionCameraPosition){
+		NumBrightLights = savedMainBrightLightCount;
+		for(i = 0; i < savedMainBrightLightCount; i++){
+			aBrightLights[i] = savedMainBrightLights[i];
+			BrightLightsFlicker[i] = savedMainBrightLightFlicker[i];
+		}
+	}else
+		NumBrightLights = 0;
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -1198,11 +1460,19 @@ CBrightLights::RenderOutGeometryBuffer(void)
 
 int CShinyTexts::NumShinyTexts;
 CShinyText CShinyTexts::aShinyTexts[NUMSHINYTEXTS];
+//+ rouz edit (ChatGPT)
+static CShinyText EnvMapShinyTexts[NUMSHINYTEXTS];
+static int EnvMapShinyTextCount;
+//- rouz edit (ChatGPT)
 
 void
 CShinyTexts::Init(void)
 {
 	NumShinyTexts = 0;
+	// Discard reflection geometry retained from an earlier scene
+	//+ rouz edit (ChatGPT)
+	EnvMapShinyTextCount = 0;
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -1213,7 +1483,15 @@ CShinyTexts::RegisterOne(CVector p0, CVector p1, CVector p2, CVector p3,
 	if(NumShinyTexts >= NUMSHINYTEXTS)
 		return;
 
-	aShinyTexts[NumShinyTexts].m_camDist = (p0 - TheCamera.GetPosition()).Magnitude();
+	// Measure shiny text from the camera that is collecting this pass
+	//+ rouz edit (ChatGPT)
+	CVector shinyTextCameraPosition = TheCamera.GetPosition();
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame())
+		shinyTextCameraPosition = CVector(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
+#endif
+	aShinyTexts[NumShinyTexts].m_camDist = (p0 - shinyTextCameraPosition).Magnitude();
+	//- rouz edit (ChatGPT)
 	if(aShinyTexts[NumShinyTexts].m_camDist > maxDist)
 		return;
 	aShinyTexts[NumShinyTexts].m_verts[0] = p0;
@@ -1250,6 +1528,18 @@ CShinyTexts::Render(void)
 	int i, ix, v;
 	RwTexture *lastTex = nil;
 
+	// Save main-view registrations without replacing them during a reflection replay
+	//+ rouz edit (ChatGPT)
+	bool saveForEnvMap = true;
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	saveForEnvMap = !CustomPipes::bRenderingEnvMap;
+#endif
+	if(saveForEnvMap){
+		EnvMapShinyTextCount = NumShinyTexts;
+		for(i = 0; i < EnvMapShinyTextCount; i++)
+			EnvMapShinyTexts[i] = aShinyTexts[i];
+	}
+	//- rouz edit (ChatGPT)
 	if(NumShinyTexts == 0)
 		return;
 
@@ -1323,6 +1613,30 @@ CShinyTexts::Render(void)
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 }
+
+//+ rouz edit (ChatGPT)
+void
+CShinyTexts::RenderForEnvMap(void)
+{
+	// Fall back to the saved main-view list only when this camera registered no text
+	//+ rouz edit (ChatGPT)
+	if(NumShinyTexts == 0 && EnvMapShinyTextCount > 0){
+		for(int i = 0; i < EnvMapShinyTextCount; i++)
+			aShinyTexts[i] = EnvMapShinyTexts[i];
+		NumShinyTexts = EnvMapShinyTextCount;
+	}
+	//- rouz edit (ChatGPT)
+	if(NumShinyTexts <= 0)
+		return;
+
+	// Draw this camera's registered geometry through the standard renderer
+	Render();
+
+	// Clear reflection-only registrations and release this frame's saved list
+	NumShinyTexts = 0;
+	EnvMapShinyTextCount = 0;
+}
+//- rouz edit (ChatGPT)
 
 void
 CShinyTexts::RenderOutGeometryBuffer(void)

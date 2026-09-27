@@ -76,6 +76,8 @@
 //+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 #include "SoftwarePolygons.h"
+#include "Pools.h" // rouz edit (ChatGPT)
+#include "MBlur.h" // rouz edit (ChatGPT)
 #endif
 //- rouz edit (ChatGPT)
 #include "screendroplets.h"
@@ -289,13 +291,7 @@ DoFade(void)
 		}
 	}
 
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-	// Keep fade timing active while hiding gameplay fades drawn outside the CPU framebuffer
-	if(!FrontEndMenuManager.m_bMenuActive)
-		return;
-#endif
-	//- rouz edit (ChatGPT)
+	// Route gameplay fades through the active framebuffer capture // rouz edit (ChatGPT)
 	if(CDraw::FadeValue != 0 || FrontEndMenuManager.m_PrefsBrightness < 256){
 		CSprite2d *splash = LoadSplash(nil);
 
@@ -367,19 +363,36 @@ RwGrabScreen(RwCamera *camera, RwChar *filename)
 #define TILE_WIDTH 576
 #define TILE_HEIGHT 432
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+static std::atomic<unsigned long long> softwareDisplayedFrames(0);
+#endif
+//- rouz edit (ChatGPT)
+
 void
 DoRWStuffEndOfFrame(void)
 {
-	//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
-	// Hide final debug text and buffered charset drawing in the software target
+	// Include final on-screen diagnostics in the pending software framebuffer // rouz edit (ChatGPT)
 	CDebug::DisplayScreenStrings();	// custom
 	CDebug::DebugDisplayTextBuffer();
 	FlushObrsPrintfs();
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Present the completed software scene and overlays together
+	if(SoftwarePolygons::FramePending()){
+		SoftwarePolygons::EndWorldEffects();
+		SoftwarePolygons::Present();
+	}
 #endif
 	//- rouz edit (ChatGPT)
 	RwCameraEndUpdate(Scene.camera);
 	RsCameraShowRaster(Scene.camera);
+	// Count completed game presentations for the auxiliary FPS display
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	softwareDisplayedFrames.fetch_add(1, std::memory_order_relaxed);
+#endif
+	//- rouz edit (ChatGPT)
 #ifndef MASTER
 	char s[48];
 #ifdef THIS_IS_STUPID
@@ -1249,7 +1262,13 @@ MattRenderScene(void)
 	/// CRenderer::ClearForFrame();		// before ConstructRenderList
 	// CClock::CalcEnvMapTimeMultiplicator
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
-	CWaterLevel::RenderWater();	// actually CMattRenderer::RenderWater
+	// Keep water independent from other world geometry in the software renderer
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
+#endif
+		CWaterLevel::RenderWater();	// actually CMattRenderer::RenderWater
+	//- rouz edit (ChatGPT)
 	// CClock::ms_EnvMapTimeMultiplicator = 1.0f;
 	// cWorldStream::ClearDynamics
 	/// CRenderer::ConstructRenderList();	// before PreRender
@@ -1257,13 +1276,25 @@ if(gbRenderWorld0)
 	CRenderer::RenderWorld(0);	// roads
 	// CMattRenderer::ResetRenderStates
 	/// CRenderer::PreRender();	// has to be called before BeginUpdate because of cutscene shadows
-	CCoronas::RenderReflections();
+	// Avoid building road reflections when world effects are disabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed))
+#endif
+		CCoronas::RenderReflections();
+	//- rouz edit (ChatGPT)
 if(gbRenderWorld1)
 	CRenderer::RenderWorld(1);	// opaque
 if(gbRenderRoads)
 	CRenderer::RenderRoads();
 
-	CRenderer::RenderPeds();
+	// Submit pedestrians only when their software stage is enabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderPedsStage.load(std::memory_order_relaxed))
+#endif
+		CRenderer::RenderPeds();
+	//- rouz edit (ChatGPT)
 
 	// not sure where to put these since LCS has no underwater entities
 if(gbRenderBoats)
@@ -1271,15 +1302,22 @@ if(gbRenderBoats)
 if(gbRenderFadingInUnderwaterEntities)
 	CRenderer::RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
-if(gbRenderWater)
+	// Keep transparent water under the same runtime water switch
+	//+ rouz edit (ChatGPT)
+if(gbRenderWater
+#ifdef REVC_SOFTWARE_POLYGONS
+	&& SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed)
+#endif
+)
 	CRenderer::RenderTransparentWater();
+	//- rouz edit (ChatGPT)
 
 if(gbRenderEverythingBarRoads)
 	CRenderer::RenderEverythingBarRoads();
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 	// Submit vehicle geometry before the scene framebuffer is uploaded
-	if(gbRenderVehicles)
+	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
 		CRenderer::RenderSoftwareVehicles();
 	// Submit the transparent world and fading entities before the framebuffer upload
 	//+ rouz edit (ChatGPT)
@@ -1299,8 +1337,17 @@ void
 RenderScene_new(void)
 {
 	PUSH_RENDERGROUP("RenderScene_new");
+	// Render sky primitives only when their software stage is enabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
+#endif
 	CClouds::Render();
 	DoRWRenderHorizon();
+#ifdef REVC_SOFTWARE_POLYGONS
+	}
+#endif
+	//- rouz edit (ChatGPT)
 
 	MattRenderScene();
 	DefinedState();
@@ -1309,8 +1356,13 @@ RenderScene_new(void)
 	POP_RENDERGROUP();
 }
 
-// TODO
-bool FredIsInFirstPersonCam(void) { return false; }
+//+ rouz edit (ChatGPT)
+bool FredIsInFirstPersonCam(void)
+{
+	// Detect whether the active camera is using the first-person mode
+	return TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_1STPERSON; // rouz edit (ChatGPT)
+}
+//- rouz edit (ChatGPT)
 void
 RenderEffects_new(void)
 {
@@ -1382,30 +1434,167 @@ if(gbRenderFadingInEntities)
 
 //+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-static void PresentSoftwareScene(void)
+static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 {
-	// Apply the game's color filter to CPU pixels instead of drawing a GPU overlay
-#ifdef EXTENDED_COLOURFILTER
-	if(TheCamera.m_BlurType == MOTION_BLUR_LIGHT_SCENE){
-		CPostFX::SmoothColor(TheCamera.m_BlurRed, TheCamera.m_BlurGreen,
-			TheCamera.m_BlurBlue, TheCamera.m_motionBlur);
-		SoftwarePolygons::ApplyColourFilter(CPostFX::EffectSwitch, CPostFX::AvgRed,
-			CPostFX::AvgGreen, CPostFX::AvgBlue, CPostFX::Intensity);
+	// Apply software post-processing before HUD and menu overlays are rasterized
+	if(!SoftwarePolygons::FramePending())
+		return;
+	// Drop temporal history when camera post effects are disabled
+	//+ rouz edit (ChatGPT)
+	if(!SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
+		SoftwarePolygons::SavePreviousFrame(false);
+		return;
 	}
+	//- rouz edit (ChatGPT)
+#ifdef EXTENDED_COLOURFILTER
+	// Apply the configured postfx and temporal overlays before saving a history frame
+	//+ rouz edit (ChatGPT)
+	bool historyActive = false;
+	if(TheCamera.m_BlurType != MOTION_BLUR_NONE){
+		int red = TheCamera.m_BlurRed;
+		int green = TheCamera.m_BlurGreen;
+		int blue = TheCamera.m_BlurBlue;
+		if(TheCamera.m_BlurType == MOTION_BLUR_LIGHT_SCENE){
+			CPostFX::SmoothColor(red, green, blue, TheCamera.m_motionBlur);
+			red = CPostFX::AvgRed;
+			green = CPostFX::AvgGreen;
+			blue = CPostFX::AvgBlue;
+		}
+		const bool applyColourFilter = CPostFX::EffectSwitch == CPostFX::POSTFX_MOBILE ||
+			(CPostFX::EffectSwitch == CPostFX::POSTFX_NORMAL && !CPostFX::MotionBlurOn);
+		if(applyColourFilter && TheCamera.m_BlurType != MOTION_BLUR_SNIPER)
+			SoftwarePolygons::ApplyColourFilter(CPostFX::EffectSwitch, red, green, blue, CPostFX::Intensity);
+		if(TheCamera.m_BlurType == MOTION_BLUR_SNIPER){
+			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, 80); // rouz edit (ChatGPT)
+			historyActive = true;
+		}else if(CPostFX::EffectSwitch == CPostFX::POSTFX_NORMAL && CPostFX::MotionBlurOn){
+			SoftwarePolygons::ApplyPreviousFrameBlur(red, green, blue, CPostFX::BlurOn);
+			historyActive = true;
+		}
+		// Apply drunk-camera blur alongside the active camera postfx mode
+		//+ rouz edit (ChatGPT)
+		if(CMBlur::Drunkness > 0.0f){
+			SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*CMBlur::Drunkness));
+			historyActive = true;
+		}
+		//- rouz edit (ChatGPT)
+	}
+	SoftwarePolygons::SavePreviousFrame(historyActive);
+	//- rouz edit (ChatGPT)
+#else
+	// Preserve classic camera motion blur modes in the CPU framebuffer
+	//+ rouz edit (ChatGPT)
+	bool historyActive = false;
+	// Composite temporal blur according to the active camera mode
+	if(TheCamera.m_BlurType != MOTION_BLUR_NONE){
+		int red = TheCamera.m_BlurRed;
+		int green = TheCamera.m_BlurGreen;
+		int blue = TheCamera.m_BlurBlue;
+		int alpha = TheCamera.m_motionBlur;
+		// Match classic camera tint overrides for special modes
+		switch(TheCamera.m_BlurType){
+		case MOTION_BLUR_SECURITY_CAM: red = 0; green = 255; blue = 0; alpha = 128; break;
+		case MOTION_BLUR_INTRO: red = 100; green = 220; blue = 230; alpha = 158; break;
+		case MOTION_BLUR_INTRO2: red = 80; green = 255; blue = 230; alpha = 138; break;
+		case MOTION_BLUR_INTRO3: red = 255; green = 60; blue = 60; alpha = 200; break;
+		case MOTION_BLUR_INTRO4: red = 255; green = 180; blue = 180; alpha = 128; break;
+		default: break;
+		}
+		if(TheCamera.m_BlurType == MOTION_BLUR_SNIPER)
+			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, 80);
+		else if(CMBlur::BlurOn)
+			SoftwarePolygons::ApplyPreviousFrameBlur(red, green, blue, true);
+		else
+			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, alpha*3/5);
+		historyActive = true;
+	}
+	// Add the drunk-camera tint over the same saved frame
+	if(CMBlur::Drunkness > 0.0f){
+		SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*CMBlur::Drunkness));
+		historyActive = true;
+	}
+	SoftwarePolygons::SavePreviousFrame(historyActive);
+	//- rouz edit (ChatGPT)
 #endif
-	SoftwarePolygons::Present();
 }
 
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+static void RegisterSoftwarePedShadows(void)
+{
+	// Register world-visible pedestrians with the game's current sun-shadow geometry
+	CPedPool *pedPool = CPools::GetPedPool();
+	if(!pedPool)
+		return;
+
+	// Let the existing shadow code skip vehicle occupants, hidden peds, and distant actors
+	for(int i = 0; i < pedPool->GetSize(); i++){
+		CPed *ped = pedPool->GetSlot(i);
+		if(!ped || !ped->bIsVisible)
+			continue;
+		CShadows::StoreShadowForPed(ped,
+			CTimeCycle::GetShadowDisplacementX(), CTimeCycle::GetShadowDisplacementY(),
+			CTimeCycle::GetShadowFrontX(), CTimeCycle::GetShadowFrontY(),
+			CTimeCycle::GetShadowSideX(), CTimeCycle::GetShadowSideY());
+	}
+}
+//- rouz edit (ChatGPT)
+
 static void RenderSoftwareWorldEffects(void)
 {
 	// Draw immediate world effects into CPU pixels before the presentation upload
-	SoftwarePolygons::BeginWorldEffects();
+	// Consume effect queues while capturing only when this stage is enabled
+	//+ rouz edit (ChatGPT)
+	const bool captureEffects = SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed) != 0; // rouz edit (ChatGPT)
+	if(captureEffects) // rouz edit (ChatGPT)
+		SoftwarePolygons::BeginWorldEffects();
+	else
+		SoftwarePolygons::EndWorldEffects();
+	//- rouz edit (ChatGPT)
 	CShadows::RenderStaticShadows();
+	// Add regular pedestrian shadows before capturing and drawing temporary shadows
+	if(captureEffects) // rouz edit (ChatGPT)
+		RegisterSoftwarePedShadows(); // rouz edit (ChatGPT)
+	// Cache temporary shadows before the main software pass consumes the queue
+	//+ rouz edit (ChatGPT)
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	if(captureEffects) // rouz edit (ChatGPT)
+		CustomPipes::CaptureStoredShadowsForEnvMap();
+#endif
+	//- rouz edit (ChatGPT)
 	CShadows::RenderStoredShadows();
 	CSkidmarks::Render();
 	CRubbish::Render();
 	CGlass::Render();
+	// Restore the standard effect states after glass highlights
+	//+ rouz edit (ChatGPT)
+	DefinedState();
+	//- rouz edit (ChatGPT)
+	// Draw sky reflections and rain after deferred transparent world geometry
+	//+ rouz edit (ChatGPT)
+	CCoronas::RenderSunReflection();
+	CWeather::RenderRainStreaks();
+	// Capture world-space rain, water cannon, antenna, special, and rope geometry
+	CWaterCannons::Render();
+	CAntennas::Render();
+	CSpecialFX::Render();
+	// Restore first-person 3D markers skipped by the new renderer special-effects pass
+	//+ rouz edit (ChatGPT)
+	#ifdef NEW_RENDERER
+	if(gbNewRenderer && FredIsInFirstPersonCam())
+		C3dMarkers::Render();
+	#endif
+	//- rouz edit (ChatGPT)
+	CRopes::Render();
+	// Capture sprite based effects and first-person vehicle geometry on the CPU
+	CCoronas::Render();
+	CParticle::Render();
+	CPacManPickups::Render();
+	CWeaponEffects::Render();
+	CPointLights::RenderFogEffect();
+	CMovingThings::Render();
+	CRenderer::RenderFirstPersonVehicle();
+	//- rouz edit (ChatGPT)
 	SoftwarePolygons::EndWorldEffects();
 }
 //- rouz edit (ChatGPT)
@@ -1420,7 +1609,27 @@ RenderScene(void)
 	// Clear the CPU framebuffer with the current sky colors before rendering the scene
 	rw::RGBA softwareSkyTop = { (rw::uint8)CTimeCycle::GetSkyTopRed(), (rw::uint8)CTimeCycle::GetSkyTopGreen(), (rw::uint8)CTimeCycle::GetSkyTopBlue(), 255 };
 	rw::RGBA softwareSkyBottom = { (rw::uint8)CTimeCycle::GetSkyBottomRed(), (rw::uint8)CTimeCycle::GetSkyBottomGreen(), (rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255 };
-	SoftwarePolygons::BeginFrame(Scene.camera->frameBuffer->width, Scene.camera->frameBuffer->height, softwareSkyTop, softwareSkyBottom);
+	// Match the existing white sky clear used during visible lightning flashes
+	//+ rouz edit (ChatGPT)
+	if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+		softwareSkyTop.red = softwareSkyTop.green = softwareSkyTop.blue = 255;
+		softwareSkyBottom.red = softwareSkyBottom.green = softwareSkyBottom.blue = 255;
+	}
+	//- rouz edit (ChatGPT)
+	// Use a flat clear when the software sky stage is disabled
+	//+ rouz edit (ChatGPT)
+	if(!SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed))
+		softwareSkyTop = softwareSkyBottom = { 0, 0, 0, 255 };
+	//- rouz edit (ChatGPT)
+	SoftwarePolygons::BeginFrame(Scene.camera, Scene.camera->frameBuffer->width, Scene.camera->frameBuffer->height, softwareSkyTop, softwareSkyBottom);
+	// Capture 2D and immediate geometry emitted by the ordinary world passes
+	SoftwarePolygons::BeginWorldEffects();
+	// Reproduce the horizon-aware sky background inside the CPU framebuffer
+	//+ rouz edit (ChatGPT)
+	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+		CClouds::RenderBackground(softwareSkyTop.red, softwareSkyTop.green, softwareSkyTop.blue,
+			softwareSkyBottom.red, softwareSkyBottom.green, softwareSkyBottom.blue, 255);
+	//- rouz edit (ChatGPT)
 #endif
 	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
@@ -1428,38 +1637,85 @@ RenderScene(void)
 		RenderScene_new();
 		//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
+		// Composite material transparency after opaque world rendering
+		SoftwarePolygons::FlushTransparentTriangles(); // rouz edit (ChatGPT)
+		// End world-pass capture before the dedicated effects pass begins
+		SoftwarePolygons::EndWorldEffects();
 		// Add world effects to the CPU framebuffer before presenting it
 		RenderSoftwareWorldEffects(); // rouz edit (ChatGPT)
-		// Present the CPU polygons before later effects and HUD passes
-		PresentSoftwareScene(); // rouz edit (ChatGPT)
+		// Resume capture for debug geometry and screen overlays
+		SoftwarePolygons::BeginWorldEffects();
 #endif
 		//- rouz edit (ChatGPT)
 		return;
 	}
 #endif
 	PUSH_RENDERGROUP("RenderScene");
+	// Render sky primitives only when their software stage is enabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
+#endif
 	CClouds::Render();
 	DoRWRenderHorizon();
+#ifdef REVC_SOFTWARE_POLYGONS
+	}
+#endif
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderRoads();
-	CCoronas::RenderReflections();
+	// Avoid building road reflections when world effects are disabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed))
+#endif
+		CCoronas::RenderReflections();
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderEverythingBarRoads();
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	// Submit vehicles deferred outside the new renderer scene path
+	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+		CRenderer::RenderSoftwareVehicles();
+#endif
+	//- rouz edit (ChatGPT)
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
-	CWaterLevel::RenderWater();
+	// Keep water independent from opaque world geometry
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
+#endif
+		CWaterLevel::RenderWater();
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderBoats();
 	CRenderer::RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
-	CWaterLevel::RenderTransparentWater();
+	// Skip transparent water when the water stage is disabled
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
+#endif
+		CWaterLevel::RenderTransparentWater();
+	//- rouz edit (ChatGPT)
 	CRenderer::RenderFadingInEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+	// Leave these effects to the software pass after transparent triangles are composited
+	//+ rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 	CWeather::RenderRainStreaks();
 	CCoronas::RenderSunReflection();
+#endif
+	//- rouz edit (ChatGPT)
 	POP_RENDERGROUP();
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
+	// Composite material transparency after opaque world rendering
+	SoftwarePolygons::FlushTransparentTriangles(); // rouz edit (ChatGPT)
+	// End world-pass capture before the dedicated effects pass begins
+	SoftwarePolygons::EndWorldEffects();
 	// Add world effects to the CPU framebuffer before presenting it
 	RenderSoftwareWorldEffects(); // rouz edit (ChatGPT)
-	// Present the CPU polygons before later effects and HUD passes
-	PresentSoftwareScene(); // rouz edit (ChatGPT)
+	// Resume capture for debug geometry and screen overlays
+	SoftwarePolygons::BeginWorldEffects();
 #endif
 	//- rouz edit (ChatGPT)
 }
@@ -1467,12 +1723,7 @@ RenderScene(void)
 void
 RenderDebugShit(void)
 {
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-	// Hide debug geometry that is drawn after the CPU framebuffer is presented
-	return;
-#endif
-	//- rouz edit (ChatGPT)
+	// Capture world debug lines alongside the software scene // rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("RenderDebugShit");
 	CTheScripts::RenderTheScriptDebugLines();
 #ifndef FINAL
@@ -1523,10 +1774,12 @@ RenderEffects(void)
 void
 Render2dStuff(void)
 {
+	// Rasterize HUD and other screen overlays into the active software frame // rouz edit (ChatGPT)
+	// Leave menu rendering separate from the in-game HUD switch
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-	// Hide the HUD and other screen overlays until they use the CPU framebuffer
-	return;
+	if(SoftwarePolygons::FramePending() && !SoftwarePolygons::renderHudStage.load(std::memory_order_relaxed))
+		return;
 #endif
 	//- rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("Render2dStuff");
@@ -1607,13 +1860,7 @@ Render2dStuff(void)
 void
 RenderMenus(void)
 {
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-	// Leave gameplay without the console overlay while preserving frontend menus
-	if(!FrontEndMenuManager.m_bMenuActive)
-		return;
-#endif
-	//- rouz edit (ChatGPT)
+	// Keep menus and the console on the same active framebuffer path // rouz edit (ChatGPT)
 	if (FrontEndMenuManager.m_bMenuActive)
 	{
 		PUSH_RENDERGROUP("RenderMenus");
@@ -1629,12 +1876,13 @@ RenderMenus(void)
 void
 Render2dStuffAfterFade(void)
 {
+	// Draw post-fade text and credits into the active software frame // rouz edit (ChatGPT)
+	// Skip post-fade HUD elements while keeping the frontend menu available
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-	// Flush frontend text only while the menu is visible
-	if(FrontEndMenuManager.m_bMenuActive)
-		CFont::DrawFonts();
-	return;
+	if(SoftwarePolygons::FramePending() && !SoftwarePolygons::renderHudStage.load(std::memory_order_relaxed) &&
+	   !FrontEndMenuManager.m_bMenuActive)
+		return;
 #endif
 	//- rouz edit (ChatGPT)
 	PUSH_RENDERGROUP("Render2dStuffAfterFade");
@@ -1747,13 +1995,43 @@ Idle(void *arg)
 		tbEndTimer("RenderScene");
 
 		//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
-		// Skip presentation effects that would draw outside the CPU framebuffer
-#ifdef EXTENDED_PIPELINES
-		CustomPipes::EnvMapRender();
+		// Render the auxiliary environment map before software framebuffer presentation
+		//+ rouz edit (ChatGPT)
+	#ifdef EXTENDED_PIPELINES
+		// Generate the vehicle environment map only for advanced material shading
+		//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+		if(SoftwarePolygons::renderAdvancedMaterialsStage.load(std::memory_order_relaxed))
 #endif
+			CustomPipes::EnvMapRender();
+		//- rouz edit (ChatGPT)
+	#endif
+		//- rouz edit (ChatGPT)
 
 		RenderDebugShit();
+		//+ rouz edit (ChatGPT)
+		// Composite screen-space droplets before camera postfx so temporal history includes them
+#ifdef REVC_SOFTWARE_POLYGONS
+#ifdef SCREEN_DROPLETS
+		// Process and draw screen-space droplets after debug geometry and before camera postfx
+		// Skip droplet processing with the software camera post effects
+		//+ rouz edit (ChatGPT)
+		if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
+			ScreenDroplets::Process();
+			ScreenDroplets::Render();
+		}
+		//- rouz edit (ChatGPT)
+		#endif
+		// Composite queued refraction and splash effects over the completed screen-effects image
+		// Skip refraction and splash compositing with camera post effects
+		if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+			CMBlur::OverlayRenderFx(Scene.camera, CMBlur::pFrontBuffer); // rouz edit (ChatGPT)
+		// Apply temporal blur after screen effects and before HUD drawing
+		ApplySoftwarePostFX(); // rouz edit (ChatGPT)
+#endif
+		//- rouz edit (ChatGPT)
+		// Leave duplicate effect and GPU post-processing passes on the existing renderer // rouz edit (ChatGPT)
+#ifndef REVC_SOFTWARE_POLYGONS
 		RenderEffects();
 
 		if((TheCamera.m_BlurType == MOTION_BLUR_NONE || TheCamera.m_BlurType == MOTION_BLUR_LIGHT_SCENE) &&
@@ -1815,13 +2093,11 @@ Idle(void *arg)
 	//- rouz edit (ChatGPT)
 #endif
 
-	// Hide the timebar overlay outside the CPU framebuffer
-	//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
+	// Capture optional timebar diagnostics in the completed software frame // rouz edit (ChatGPT)
+#ifdef TIMEBARS
 	if (gbShowTimebars)
 		tbDisplay();
 #endif
-	//- rouz edit (ChatGPT)
 
 	DoRWStuffEndOfFrame();
 
@@ -1970,6 +2246,24 @@ TheModelViewer(void)
 	DoRWStuffStartOfFrame(CTimeCycle::GetSkyTopRed()*0.5f, CTimeCycle::GetSkyTopGreen()*0.5f, CTimeCycle::GetSkyTopBlue()*0.5f,
 		CTimeCycle::GetSkyBottomRed(), CTimeCycle::GetSkyBottomGreen(), CTimeCycle::GetSkyBottomBlue(),
 		255);
+	// Start the software framebuffer before the animation viewer submits its model
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	rw::RGBA viewerSkyTop = {
+		(rw::uint8)(CTimeCycle::GetSkyTopRed()*0.5f),
+		(rw::uint8)(CTimeCycle::GetSkyTopGreen()*0.5f),
+		(rw::uint8)(CTimeCycle::GetSkyTopBlue()*0.5f), 255
+	};
+	rw::RGBA viewerSkyBottom = {
+		(rw::uint8)CTimeCycle::GetSkyBottomRed(),
+		(rw::uint8)CTimeCycle::GetSkyBottomGreen(),
+		(rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255
+	};
+	SoftwarePolygons::BeginFrame(Scene.camera, Scene.camera->frameBuffer->width,
+		Scene.camera->frameBuffer->height, viewerSkyTop, viewerSkyBottom);
+	SoftwarePolygons::BeginWorldEffects();
+#endif
+	//- rouz edit (ChatGPT)
 
 	CSprite2d::SetRecipNearClip(); // X
 	CSprite2d::InitPerFrame(); // X
@@ -3099,9 +3393,147 @@ void atmosphere_window()
 	init = 0;
 }
 
+//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+void renderer_controls_window()
+{
+	// Build two columns of independent stages and a shared texture sampler
+	static gui_layout_t layout={0};
+	const char *layout_src[] = {
+		"elem 0", "type none", "label Software renderer", "pos 0 0", "dim 8;5 5;2", "off 0 1", "",
+		"elem 10", "type checkbox", "label Sky", "pos 0;3 -0;7", "dim 3;8 0;3", "off 0 1", "",
+		"elem 20", "type checkbox", "label All 3D geometry", "link_pos_id 10._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "", // rouz edit (ChatGPT)
+		"elem 30", "type checkbox", "label Pedestrians", "link_pos_id 20._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "",
+		"elem 40", "type checkbox", "label Vehicles", "link_pos_id 30._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "",
+		"elem 50", "type checkbox", "label Water", "link_pos_id 40._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "",
+		"elem 60", "type checkbox", "label World effects", "link_pos_id 50._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "",
+		"elem 70", "type checkbox", "label HUD / overlay", "link_pos_id 60._b", "pos 0 -0;1", "dim 3;8 0;3", "off 0 1", "",
+		"elem 80", "type checkbox", "label Sort transparent triangles", "pos 4;3 -0;7", "dim 3;9 0;3", "off 0 1", "",
+		"elem 90", "type checkbox", "label Dynamic lights", "link_pos_id 80._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 100", "type checkbox", "label Extra material passes", "link_pos_id 90._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 110", "type checkbox", "label Fog", "link_pos_id 100._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 120", "type checkbox", "label Colour filter", "link_pos_id 110._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 130", "type checkbox", "label Camera post effects", "link_pos_id 120._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 140", "type checkbox", "label Fast preset", "link_pos_id 130._b", "pos 0 -0;1", "dim 3;9 0;3", "off 0 1", "",
+		"elem 150", "type label", "label Texture sampling", "pos 0;3 -4;0", "dim 3;8 0;3", "off 0 1", "",
+		"elem 160", "type selmenu", "link_pos_id 150._b", "pos 0 -0;1", "dim 3;8 0;4", "off 0 1", "",
+		"elem 170", "type label", "label FPS: --", "label_alloc 32", "pos 4;3 -4;0", "dim 3;9 0;4", "off 0 1", "", // rouz edit (ChatGPT)
+	};
+	make_gui_layout(&layout, layout_src, sizeof(layout_src)/sizeof(char *), "Software renderer");
+	static flwindow_t window={0};
+	flwindow_init_defaults(&window);
+	flwindow_init_pinned(&window);
+	window.pinned_sm_preset = 5.;
+	window.draw_bg_always = 1;
+	window.bg_opacity = 0.9;
+	draw_dialog_window_fromlayout(&window, cur_wind_on, &cur_parent_area, &layout, 0);
+
+	// Send manual checkbox changes to the game thread and clear the preset indicator
+	static int sky=1, geometry=1, peds=1, vehicles=1, water=1, effects=1, hud=1;
+	static int sortTransparent=1, dynamicLights=1, advancedMaterials=1, fog=1, colourFilter=1, postEffects=1, fast=0;
+	int changed=0;
+	if(ctrl_checkbox_fromlayout(&sky, &layout, 10)){ SoftwarePolygons::renderSkyStage.store(sky, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&geometry, &layout, 20)){ SoftwarePolygons::renderGeometryStage.store(geometry, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&peds, &layout, 30)){ SoftwarePolygons::renderPedsStage.store(peds, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&vehicles, &layout, 40)){ SoftwarePolygons::renderVehiclesStage.store(vehicles, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&water, &layout, 50)){ SoftwarePolygons::renderWaterStage.store(water, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&effects, &layout, 60)){ SoftwarePolygons::renderWorldEffectsStage.store(effects, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&hud, &layout, 70)){ SoftwarePolygons::renderHudStage.store(hud, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&sortTransparent, &layout, 80)){ SoftwarePolygons::deferTransparentStage.store(sortTransparent, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&dynamicLights, &layout, 90)){ SoftwarePolygons::renderDynamicLightsStage.store(dynamicLights, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&advancedMaterials, &layout, 100)){ SoftwarePolygons::renderAdvancedMaterialsStage.store(advancedMaterials, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&fog, &layout, 110)){ SoftwarePolygons::renderFogStage.store(fog, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&colourFilter, &layout, 120)){ SoftwarePolygons::renderColourFilterStage.store(colourFilter, std::memory_order_relaxed); changed=1; }
+	if(ctrl_checkbox_fromlayout(&postEffects, &layout, 130)){ SoftwarePolygons::renderPostEffectsStage.store(postEffects, std::memory_order_relaxed); changed=1; }
+	if(changed)
+		fast=0;
+
+	// Keep the selection menu synchronized with preset changes
+	static const char *samplingModes[] = { "Nearest", "Bilinear", "RenderWare", "Nearest + mipmaps", "Solid grey" };
+	gui_layout_selmenu_set_count((int)(sizeof(samplingModes)/sizeof(samplingModes[0])), &layout, 160);
+	static int samplingInitialized=0;
+	if(!samplingInitialized){
+		gui_layout_selmenu_set_entry_id(SoftwarePolygons::materialTextureSamplingMode.load(std::memory_order_relaxed), &layout, 160);
+		samplingInitialized=1;
+	}
+
+	// Select either a lightweight scene or all available software stages
+	if(ctrl_checkbox_fromlayout(&fast, &layout, 140)){
+		sky=geometry=peds=vehicles=1;
+		water=effects=hud=sortTransparent=dynamicLights=advancedMaterials=fog=colourFilter=postEffects=fast ? 0 : 1;
+		SoftwarePolygons::renderSkyStage.store(sky, std::memory_order_relaxed);
+		SoftwarePolygons::renderGeometryStage.store(geometry, std::memory_order_relaxed);
+		SoftwarePolygons::renderPedsStage.store(peds, std::memory_order_relaxed);
+		SoftwarePolygons::renderVehiclesStage.store(vehicles, std::memory_order_relaxed);
+		SoftwarePolygons::renderWaterStage.store(water, std::memory_order_relaxed);
+		SoftwarePolygons::renderWorldEffectsStage.store(effects, std::memory_order_relaxed);
+		SoftwarePolygons::renderHudStage.store(hud, std::memory_order_relaxed);
+		SoftwarePolygons::deferTransparentStage.store(sortTransparent, std::memory_order_relaxed);
+		SoftwarePolygons::renderDynamicLightsStage.store(dynamicLights, std::memory_order_relaxed);
+		SoftwarePolygons::renderAdvancedMaterialsStage.store(advancedMaterials, std::memory_order_relaxed);
+		SoftwarePolygons::renderFogStage.store(fog, std::memory_order_relaxed);
+		SoftwarePolygons::renderColourFilterStage.store(colourFilter, std::memory_order_relaxed);
+		SoftwarePolygons::renderPostEffectsStage.store(postEffects, std::memory_order_relaxed);
+		const int mode=fast ? SoftwarePolygons::TEXTURE_SAMPLING_NEAREST : SoftwarePolygons::TEXTURE_SAMPLING_NEAREST_MIP;
+		gui_layout_selmenu_set_entry_id(mode, &layout, 160);
+		SoftwarePolygons::materialTextureSamplingMode.store(mode, std::memory_order_relaxed);
+		SoftwarePolygons::worldEffectTextureSamplingMode.store(mode, std::memory_order_relaxed);
+	}
+	draw_label_fromlayout(&layout, 150, ALIG_LEFT);
+	if(ctrl_selmenu_fromlayout(&layout, 160)){
+		const int mode=get_selmenu_selid_fromlayout(&layout, 160);
+		SoftwarePolygons::materialTextureSamplingMode.store(mode, std::memory_order_relaxed);
+		SoftwarePolygons::worldEffectTextureSamplingMode.store(mode, std::memory_order_relaxed);
+		fast=0;
+	}
+	for(int mode=0; mode<(int)(sizeof(samplingModes)/sizeof(samplingModes[0])); mode++)
+		draw_selmenu_entry_fromlayout(mode, samplingModes[mode], &layout, 160);
+
+	// Sample completed game frames every quarter second and smooth with a time-based exponential average
+	//+ rouz edit (ChatGPT)
+	static double lastFpsTime=0.0, smoothedFps=0.0;
+	static unsigned long long lastFpsFrames=0;
+	static int fpsInitialized=0;
+	const double now=get_time_hr();
+	const unsigned long long completedFrames=softwareDisplayedFrames.load(std::memory_order_relaxed);
+	if(!fpsInitialized){
+		lastFpsTime=now;
+		lastFpsFrames=completedFrames;
+		fpsInitialized=1;
+	}else if(now-lastFpsTime >= 0.25){
+		const double elapsed=now-lastFpsTime;
+		const double measuredFps=(double)(completedFrames-lastFpsFrames)/elapsed;
+		// Start from the first complete sample, then apply an 0.8-second smoothing interval
+		//+ rouz edit (ChatGPT)
+		if(fpsInitialized == 1){
+			smoothedFps=measuredFps;
+			fpsInitialized=2;
+		}else{
+			const double weight=1.0-exp(-elapsed/0.8);
+			smoothedFps += weight*(measuredFps-smoothedFps);
+		}
+		//- rouz edit (ChatGPT)
+		char fpsLabel[32];
+		snprintf(fpsLabel, sizeof(fpsLabel), "FPS: %.1f", smoothedFps);
+		gui_set_control_label(fpsLabel, &layout, 170);
+		lastFpsTime=now;
+		lastFpsFrames=completedFrames;
+	}
+	draw_label_fromlayout(&layout, 170, ALIG_LEFT | MONODIGITS);
+	//- rouz edit (ChatGPT)
+}
+#endif
+//- rouz edit (ChatGPT)
+
 void revc_main()
 {
 	static int init = 1, veh_control_detach=0, cam_pos_detach=0, cheats_detach=0, atmosphere_detach=0, thrust_detach=0;
+	// Keep the renderer panel's detach state across auxiliary window frames
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	static int renderer_detach=0;
+#endif
+	//- rouz edit (ChatGPT)
 
 	if (init)
 	{
@@ -3117,6 +3549,12 @@ void revc_main()
 	window_register(1, cheats_window, NULL, make_rect_off(xy(-16., -9.), xy(5., 5.), xy(0., 0.)), &cheats_detach, 0);
 	window_register(1, atmosphere_window, NULL, make_rect_off(xy(0., 200.), xy(150., 100.), xy(0.5, 0.5)), &atmosphere_detach, 0);
 	window_register(1, flight_thrust_window, NULL, make_rect_off(xy(0., 160.), xy(60., 40.), xy(0.5, 0.5)), &thrust_detach, 0);
+	// Register the software renderer options alongside the other auxiliary windows
+	//+ rouz edit (ChatGPT)
+#ifdef REVC_SOFTWARE_POLYGONS
+	window_register(1, renderer_controls_window, NULL, make_rect_off(xy(9., -9.), xy(7., 7.), xy(1., 0.)), &renderer_detach, 0);
+#endif
+	//- rouz edit (ChatGPT)
 	sleep_hr(1./100.);
 }
 

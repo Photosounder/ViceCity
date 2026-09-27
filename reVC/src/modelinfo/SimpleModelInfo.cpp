@@ -95,8 +95,8 @@ CSimpleModelInfo::SetAtomic(int n, RpAtomic *atomic)
 #ifdef EXTENDED_PIPELINES
 	//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
-	// Attach world models to the CPU polygon pipeline
-	SoftwarePolygons::Attach(atomic);
+	// Attach world models to the CPU pipeline and preserve wet-road gloss state // rouz edit (ChatGPT)
+	SoftwarePolygons::Attach(atomic, m_wetRoadReflection != 0); // rouz edit (ChatGPT)
 #else
 	//- rouz edit (ChatGPT)
 	if(m_wetRoadReflection)

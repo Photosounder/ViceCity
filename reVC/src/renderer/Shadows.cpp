@@ -485,15 +485,22 @@ CShadows::StoreShadowToBeRendered(uint8 ShadowType, RwTexture *pTexture, CVector
 }
 
 
+//+ rouz edit (ChatGPT)
 void
-CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type)
+CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
+	const CVector *pCameraPosition, bool forceTemporary)
+//- rouz edit (ChatGPT)
 {
 	ASSERT(pCar != nil);
 
 	if ( CTimeCycle::GetShadowStrength() != 0 )
 	{
 		CVector CarPos = pCar->GetPosition();
-		float fDistToCamSqr = (CarPos - TheCamera.GetPosition()).MagnitudeSqr2D();
+		// Measure reflection-only shadows from their active camera
+		//+ rouz edit (ChatGPT)
+		const CVector shadowCameraPosition = pCameraPosition ? *pCameraPosition : TheCamera.GetPosition();
+		float fDistToCamSqr = (CarPos - shadowCameraPosition).MagnitudeSqr2D();
+		//- rouz edit (ChatGPT)
 
 		if ( CCutsceneMgr::IsRunning() )
 			fDistToCamSqr /= SQR(TheCamera.LODDistMultiplier) * 4.0f;
@@ -667,7 +674,10 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type)
 				bDrawOnBuildings = true;
 			}
 			
-			if ( pCar->m_vecMoveSpeed.Magnitude() * CTimeStep::ms_fTimeStep > 0.1f || bDrawOnBuildings )
+			// Keep parked reflection-only vehicles in the temporary camera shadow queue
+			//+ rouz edit (ChatGPT)
+			if ( forceTemporary || pCar->m_vecMoveSpeed.Magnitude() * CTimeStep::ms_fTimeStep > 0.1f || bDrawOnBuildings )
+			//- rouz edit (ChatGPT)
 			{
 				if ( pCar->GetUp().z > 0.0f )
 				{
