@@ -661,8 +661,12 @@ CRenderer::RenderBoats(void)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
 		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
 		if(vehiclePool)
-			for(int32 i = 0; i < vehiclePool->GetSize(); i++){
-				CVehicle *vehicle = vehiclePool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int32 i = 0; i < CPool_GetSize(vehiclePool); i++){
+				// Access raw storage through the C store or pool API
+				CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(vehiclePool, i));
+			//- rouz edit (ChatGPT)
 				if(vehicle && vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle)){
 					// Add the Skimmer's seaplane shadow to the reflection-only effect queue
 					//+ rouz edit (ChatGPT)
@@ -859,14 +863,19 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 
 //+ rouz edit (ChatGPT)
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
-template <class PoolType>
-static void RenderSoftwareReflectionBuildingPool(PoolType *pool, int pass, const CVector &cameraPosition)
+//+ rouz edit (ChatGPT)
+static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CVector &cameraPosition)
+//- rouz edit (ChatGPT)
 {
 	// Draw loaded building atomics visible only from the reflection camera
 	if(!pool)
 		return;
-	for(int i = 0; i < pool->GetSize(); i++){
-		CEntity *entity = pool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int i = 0; i < CPool_GetSize(pool); i++){
+		// Access raw storage through the C store or pool API
+		CEntity *entity = ((CEntity*)CPool_GetSlot(pool, i));
+	//- rouz edit (ChatGPT)
 		if(!IsVisibleToSoftwareEnvMap(entity) || RwObjectGetType(entity->m_rwObject) != rpATOMIC)
 			continue;
 		if(!entity->bOffscreen &&
@@ -1033,8 +1042,12 @@ CRenderer::RenderPeds(void)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
 		CPedPool *pedPool = CPools::GetPedPool();
 		if(pedPool)
-			for(i = 0; i < pedPool->GetSize(); i++){
-				CPed *ped = pedPool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(i = 0; i < CPool_GetSize(pedPool); i++){
+				// Access raw storage through the C store or pool API
+				CPed *ped = ((CPed*)CPool_GetSlot(pedPool, i));
+			//- rouz edit (ChatGPT)
 				if(IsVisibleToSoftwareEnvMap(ped))
 					RenderOneNonRoad(ped);
 			}
@@ -1481,8 +1494,12 @@ CRenderer::RenderSoftwareVehicles(void)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
 		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
 		if(vehiclePool)
-			for(int i = 0; i < vehiclePool->GetSize(); i++){
-				CVehicle *vehicle = vehiclePool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int i = 0; i < CPool_GetSize(vehiclePool); i++){
+				// Access raw storage through the C store or pool API
+				CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(vehiclePool, i));
+			//- rouz edit (ChatGPT)
 				if(vehicle && !vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle))
 					RenderSoftwareVehicle(vehicle);
 			}
@@ -1513,14 +1530,19 @@ CRenderer::RenderSoftwareVehicles(void)
 
 //+ rouz edit (ChatGPT)
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
-template <class PoolType>
-static void RegisterSoftwareReflectionLightPool(PoolType *pool)
+//+ rouz edit (ChatGPT)
+static void RegisterSoftwareReflectionLightPool(CPool *pool)
+//- rouz edit (ChatGPT)
 {
 	// Gather light sources from loaded entities visible to the reflection camera
 	if(!pool)
 		return;
-	for(int i = 0; i < pool->GetSize(); i++){
-		CEntity *entity = pool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int i = 0; i < CPool_GetSize(pool); i++){
+		// Access raw storage through the C store or pool API
+		CEntity *entity = ((CEntity*)CPool_GetSlot(pool, i));
+	//- rouz edit (ChatGPT)
 		if(IsVisibleToSoftwareEnvMap(entity))
 			CCoronas::ProcessLightsForEnvMap(entity);
 	}
@@ -1562,8 +1584,12 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 
 		// Gather reflection-visible pedestrians that are not rendered as vehicle occupants
 		if(pedPool)
-			for(int i = 0; i < pedPool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
-				CPed *ped = pedPool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int i = 0; i < CPool_GetSize(pedPool) && entityCount < NUMVISIBLEENTITIES; i++){
+				// Access raw storage through the C store or pool API
+				CPed *ped = ((CPed*)CPool_GetSlot(pedPool, i));
+			//- rouz edit (ChatGPT)
 				if(!ped || ped->m_nPedState == PED_DRIVING || IsSoftwareVehicleOccupant(ped) || !IsVisibleToSoftwareEnvMap(ped)) // rouz edit (ChatGPT)
 					continue;
 				// Add the pedestrian's ground shadow using reflection-camera visibility
@@ -1577,8 +1603,12 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 
 		// Gather reflection-visible cars and aircraft while leaving boats to their dedicated pass
 		if(vehiclePool)
-			for(int i = 0; i < vehiclePool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
-				CVehicle *vehicle = vehiclePool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int i = 0; i < CPool_GetSize(vehiclePool) && entityCount < NUMVISIBLEENTITIES; i++){
+				// Access raw storage through the C store or pool API
+				CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(vehiclePool, i));
+			//- rouz edit (ChatGPT)
 				if(!vehicle || vehicle->IsBoat() || !IsVisibleToSoftwareEnvMap(vehicle))
 					continue;
 				// Add reflection-only vehicle shadows without changing the main scene queue
@@ -1610,8 +1640,12 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 
 		// Gather reflection-visible props into the same transparency ordering
 		if(objectPool)
-			for(int i = 0; i < objectPool->GetSize() && entityCount < NUMVISIBLEENTITIES; i++){
-				CObject *object = objectPool->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int i = 0; i < CPool_GetSize(objectPool) && entityCount < NUMVISIBLEENTITIES; i++){
+				// Access raw storage through the C store or pool API
+				CObject *object = ((CObject*)CPool_GetSlot(objectPool, i));
+			//- rouz edit (ChatGPT)
 				// Let queued underwater objects render before transparent reflection water
 				if(IsQueuedForSoftwareUnderwaterFade(object) || !IsVisibleToSoftwareEnvMap(object))
 					continue;
@@ -1707,8 +1741,12 @@ CRenderer::RenderTransparentWater(void)
 	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
 		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
 		if(vehiclePool)
-			for(int32 poolIndex = 0; poolIndex < vehiclePool->GetSize(); poolIndex++){
-				CVehicle *vehicle = vehiclePool->GetSlot(poolIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for(int32 poolIndex = 0; poolIndex < CPool_GetSize(vehiclePool); poolIndex++){
+				// Access raw storage through the C store or pool API
+				CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(vehiclePool, poolIndex));
+			//- rouz edit (ChatGPT)
 				if(vehicle && vehicle->IsBoat() && IsVisibleToSoftwareEnvMap(vehicle))
 					((CBoat*)vehicle)->RenderWaterOutPolys();
 			}
@@ -2672,8 +2710,12 @@ CRenderer::ScanFarAwayVehicles(void)
 	if(vehiclePool == nil)
 		return;
 
-	for(int i = 0; i < vehiclePool->GetSize(); i++){
-		ent = vehiclePool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int i = 0; i < CPool_GetSize(vehiclePool); i++){
+		// Access raw storage through the C store or pool API
+		ent = ((CVehicle*)CPool_GetSlot(vehiclePool, i));
+	//- rouz edit (ChatGPT)
 		if(ent == nil ||
 		   !ent->bDrawFarAway ||
 		   ent->m_scanCode == CWorld::GetCurrentScanCode())
@@ -2915,8 +2957,12 @@ CRenderer::ScanFarAwayVehicleModels(void)
 	if(vehiclePool == nil)
 		return;
 
-	for(int i = 0; i < vehiclePool->GetSize(); i++){
-		ent = vehiclePool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int i = 0; i < CPool_GetSize(vehiclePool); i++){
+		// Access raw storage through the C store or pool API
+		ent = ((CVehicle*)CPool_GetSlot(vehiclePool, i));
+	//- rouz edit (ChatGPT)
 		if(ent == nil ||
 		   !ent->bDrawFarAway ||
 		   ent->m_scanCode == CWorld::GetCurrentScanCode())

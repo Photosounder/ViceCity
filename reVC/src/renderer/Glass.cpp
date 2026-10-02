@@ -1000,9 +1000,15 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 	sphere.radius = radius;
 	sphere.surface = 0;
 	
-	for ( int32 i = CPools::GetObjectPool()->GetSize() - 1; i >= 0; i-- )
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for ( int32 i = CPool_GetSize(CPools::GetObjectPool()) - 1; i >= 0; i-- )
+	//- rouz edit (ChatGPT)
 	{
-		CObject *object = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *object = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (object)
 		{
 			if ( IsGlass(object->GetModelIndex()) )

@@ -40,7 +40,10 @@ CBaseModelInfo::DeleteCollisionModel(void)
 			// Destroy and release the collision model without invoking C++ delete.
 		{
 			m_colModel->~CColModel();
-			CPools::GetColModelPool()->Delete(m_colModel);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetColModelPool(), m_colModel);
+			//- rouz edit (ChatGPT)
 		}
 //- rouz edit (ChatGPT)
 		m_colModel = nil;
@@ -95,7 +98,10 @@ CBaseModelInfo::Add2dEffect(C2dEffect *fx)
 	if(m_2dEffectsID >= 0)
 		m_num2dEffects++;
 	else{
-		m_2dEffectsID = CModelInfo::Get2dEffectStore().GetIndex(fx);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		m_2dEffectsID = CStore_GetIndex(CModelInfo::Get2dEffectStore(), fx);
+		//- rouz edit (ChatGPT)
 		m_num2dEffects = 1;
 	}
 }
@@ -104,7 +110,10 @@ C2dEffect*
 CBaseModelInfo::Get2dEffect(int n)
 {
 	if(m_2dEffectsID >= 0)
-		return CModelInfo::Get2dEffectStore().GetItem(m_2dEffectsID+n);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		return (C2dEffect*)CStore_GetItem(CModelInfo::Get2dEffectStore(), m_2dEffectsID+n);
+		//- rouz edit (ChatGPT)
 	else
 		return nil;
 }

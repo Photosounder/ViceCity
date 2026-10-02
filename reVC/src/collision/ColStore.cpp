@@ -14,7 +14,9 @@
 #include "VarConsole.h"
 #include "Pools.h"
 
-CPool<ColDef,ColDef> *CColStore::ms_pColPool;
+//+ rouz edit (ChatGPT)
+CPool *CColStore::ms_pColPool;
+//- rouz edit (ChatGPT)
 #ifndef MASTER
 bool bDispColInMem;
 #endif
@@ -26,8 +28,10 @@ CColStore::Initialise(void)
 //+ rouz edit (ChatGPT)
 		// Construct the collision store pool without invoking C++ new.
 	{
-		ms_pColPool = (CPool<ColDef,ColDef>*)malloc(sizeof(CPool<ColDef,ColDef>));
-		std::allocator<CPool<ColDef,ColDef> >().construct(ms_pColPool, COLSTORESIZE, "CollisionFiles");
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ms_pColPool = CPool_Create(COLSTORESIZE, sizeof(ColDef), "CollisionFiles");
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 	AddColSlot("generic");	// slot 0. not streamed
@@ -46,8 +50,10 @@ CColStore::Shutdown(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the collision store pool without invoking C++ delete.
 	{
-		std::allocator<CPool<ColDef,ColDef> >().destroy(ms_pColPool);
-		free(ms_pColPool);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Destroy(ms_pColPool);
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 	ms_pColPool = nil;
@@ -56,7 +62,10 @@ CColStore::Shutdown(void)
 int
 CColStore::AddColSlot(const char *name)
 {
-	ColDef *def = ms_pColPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ColDef *def = ((ColDef*)CPool_New(ms_pColPool));
+	//- rouz edit (ChatGPT)
 	assert(def);
 	def->isLoaded = false;
 	def->unused = 0;
@@ -67,7 +76,10 @@ CColStore::AddColSlot(const char *name)
 	def->minIndex = INT16_MAX;
 	def->maxIndex = INT16_MIN;
 	strcpy(def->name, name);
-	return ms_pColPool->GetJustIndex(def);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	return CPool_GetJustIndex(ms_pColPool, def);
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -76,7 +88,10 @@ CColStore::RemoveColSlot(int slot)
 	if(GetSlot(slot)){
 		if(GetSlot(slot)->isLoaded)
 			RemoveCol(slot);
-		ms_pColPool->Delete(GetSlot(slot));
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(ms_pColPool, GetSlot(slot));
+		//- rouz edit (ChatGPT)
 	}
 }
 
@@ -84,7 +99,10 @@ int
 CColStore::FindColSlot(const char *name)
 {
 	ColDef *def;
-	int size = ms_pColPool->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int size = CPool_GetSize(ms_pColPool);
+	//- rouz edit (ChatGPT)
 	for(int i = 0; i < size; i++){
 		def = GetSlot(i);
 		if(def && !CGeneral::faststricmp(def->name, name))
@@ -200,12 +218,18 @@ CColStore::LoadCollision(const CVector2D &pos)
 				CPhysical* pEntity = nil;
 				cleanup_entity_struct* pCleanup = &CTheScripts::MissionCleanUp.m_sEntities[j];
 				if (pCleanup->type == CLEANUP_CAR) {
-					pEntity = CPools::GetVehiclePool()->GetAt(pCleanup->id);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pEntity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), pCleanup->id));
+					//- rouz edit (ChatGPT)
 					if (!pEntity || pEntity->GetStatus() == STATUS_WRECKED)
 						continue;
 				}
 				else if (pCleanup->type == CLEANUP_CHAR) {
-					pEntity = CPools::GetPedPool()->GetAt(pCleanup->id);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pEntity = ((CPed*)CPool_GetAt(CPools::GetPedPool(), pCleanup->id));
+					//- rouz edit (ChatGPT)
 					if (!pEntity || ((CPed*)pEntity)->DyingOrDead())
 						continue;
 				}

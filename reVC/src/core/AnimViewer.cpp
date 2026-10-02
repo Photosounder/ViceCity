@@ -113,7 +113,10 @@ CAnimViewer::Initialise(void) {
 	CCarCtrl::Init();
 //+ rouz edit (ChatGPT)
 	// Allocate the anim viewer player without invoking C++ new.
-	CPlayerPed *player = (CPlayerPed*)CPools::GetPedPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+	//- rouz edit (ChatGPT)
 	assert(player);
 	std::allocator<CPlayerPed>().construct(player);
 //- rouz edit (ChatGPT)
@@ -265,13 +268,22 @@ CAnimViewer::Update(void)
 				// Destroy and release the anim viewer target without invoking C++ delete.
 				if (pTarget->IsVehicle()) {
 					pTarget->~CEntity();
-					CPools::GetVehiclePool()->Delete((CVehicle*)pTarget);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetVehiclePool(), (CVehicle*)pTarget);
+					//- rouz edit (ChatGPT)
 				} else if (pTarget->IsPed()) {
 					pTarget->~CEntity();
-					CPools::GetPedPool()->Delete((CPed*)pTarget);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetPedPool(), (CPed*)pTarget);
+					//- rouz edit (ChatGPT)
 				} else if (pTarget->IsObject()) {
 					pTarget->~CEntity();
-					CPools::GetObjectPool()->Delete((CObject*)pTarget);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetObjectPool(), (CObject*)pTarget);
+					//- rouz edit (ChatGPT)
 				}
 //- rouz edit (ChatGPT)
 			}
@@ -305,21 +317,30 @@ CAnimViewer::Update(void)
 				if (veh->m_vehicleType == VEHICLE_TYPE_CAR) {
 //+ rouz edit (ChatGPT)
 					// Allocate the anim viewer car without invoking C++ new.
-					pTarget = CPools::GetVehiclePool()->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					//- rouz edit (ChatGPT)
 					assert(pTarget);
 					std::allocator<CAutomobile>().construct((CAutomobile*)pTarget, modelId, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
 				} else if (veh->m_vehicleType == VEHICLE_TYPE_BOAT) {
 //+ rouz edit (ChatGPT)
 					// Allocate the anim viewer boat without invoking C++ new.
-					pTarget = CPools::GetVehiclePool()->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					//- rouz edit (ChatGPT)
 					assert(pTarget);
 					std::allocator<CBoat>().construct((CBoat*)pTarget, modelId, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
 				} else if (veh->m_vehicleType == VEHICLE_TYPE_BIKE) {
 //+ rouz edit (ChatGPT)
 					// Allocate the anim viewer bike without invoking C++ new.
-					pTarget = CPools::GetVehiclePool()->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					//- rouz edit (ChatGPT)
 					assert(pTarget);
 					std::allocator<CBike>().construct((CBike*)pTarget, modelId, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -327,17 +348,30 @@ CAnimViewer::Update(void)
 //+ rouz edit (ChatGPT)
 					// Allocate the anim viewer object without invoking C++ new.
 					CObjectPool *objectPool = CPools::GetObjectPool();
-					pTarget = objectPool->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					pTarget = ((CObject*)CPool_New(objectPool));
+					//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 					if (!pTarget) {
-						for (int32 i = 0; i < objectPool->GetSize(); i++) {
-							CObject *existing = objectPool->GetSlot(i);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+							// Access raw storage through the C store or pool API
+							CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+						//- rouz edit (ChatGPT)
 							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-								int32 handle = objectPool->GetIndex(existing);
+								//+ rouz edit (ChatGPT)
+								// Access raw storage through the C store or pool API
+								int32 handle = CPool_GetIndex(objectPool, existing);
+								//- rouz edit (ChatGPT)
 								CWorld::Remove(existing);
 								existing->~CObject();
-								objectPool->Delete(existing);
-								pTarget = objectPool->New(handle);
+								//+ rouz edit (ChatGPT)
+								// Access raw storage through the C store or pool API
+								CPool_Delete(objectPool, existing);
+								pTarget = ((CObject*)CPool_NewAt(objectPool, handle));
+								//- rouz edit (ChatGPT)
 								break;
 							}
 						}
@@ -355,7 +389,10 @@ CAnimViewer::Update(void)
 			} else if (modelInfo->GetModelType() == MITYPE_PED) {
 //+ rouz edit (ChatGPT)
 				// Allocate the anim viewer ped without invoking C++ new.
-				pTarget = CPools::GetPedPool()->New();
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				pTarget = ((CPed*)CPool_New(CPools::GetPedPool()));
+				//- rouz edit (ChatGPT)
 				assert(pTarget);
 				std::allocator<CPed>().construct((CPed*)pTarget, PEDTYPE_CIVMALE);
 //- rouz edit (ChatGPT)
@@ -364,17 +401,30 @@ CAnimViewer::Update(void)
 //+ rouz edit (ChatGPT)
 				// Allocate the anim viewer object without invoking C++ new.
 				CObjectPool *objectPool = CPools::GetObjectPool();
-				pTarget = objectPool->New();
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				pTarget = ((CObject*)CPool_New(objectPool));
+				//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 				if (!pTarget) {
-					for (int32 i = 0; i < objectPool->GetSize(); i++) {
-						CObject *existing = objectPool->GetSlot(i);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+						// Access raw storage through the C store or pool API
+						CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+					//- rouz edit (ChatGPT)
 						if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-							int32 handle = objectPool->GetIndex(existing);
+							//+ rouz edit (ChatGPT)
+							// Access raw storage through the C store or pool API
+							int32 handle = CPool_GetIndex(objectPool, existing);
+							//- rouz edit (ChatGPT)
 							CWorld::Remove(existing);
 							existing->~CObject();
-							objectPool->Delete(existing);
-							pTarget = objectPool->New(handle);
+							//+ rouz edit (ChatGPT)
+							// Access raw storage through the C store or pool API
+							CPool_Delete(objectPool, existing);
+							pTarget = ((CObject*)CPool_NewAt(objectPool, handle));
+							//- rouz edit (ChatGPT)
 							break;
 						}
 					}
@@ -498,13 +548,22 @@ CAnimViewer::Update(void)
 			// Destroy and release the anim viewer target without invoking C++ delete.
 			if (pTarget->IsVehicle()) {
 				pTarget->~CEntity();
-				CPools::GetVehiclePool()->Delete((CVehicle*)pTarget);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), (CVehicle*)pTarget);
+				//- rouz edit (ChatGPT)
 			} else if (pTarget->IsPed()) {
 				pTarget->~CEntity();
-				CPools::GetPedPool()->Delete((CPed*)pTarget);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetPedPool(), (CPed*)pTarget);
+				//- rouz edit (ChatGPT)
 			} else if (pTarget->IsObject()) {
 				pTarget->~CEntity();
-				CPools::GetObjectPool()->Delete((CObject*)pTarget);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetObjectPool(), (CObject*)pTarget);
+				//- rouz edit (ChatGPT)
 			}
 //- rouz edit (ChatGPT)
 		}
@@ -525,7 +584,10 @@ CAnimViewer::Shutdown(void)
 	if (CWorld::Players[0].m_pPed) {
 		// Destroy and release the anim viewer player without invoking C++ delete.
 		CWorld::Players[0].m_pPed->~CPlayerPed();
-		CPools::GetPedPool()->Delete(CWorld::Players[0].m_pPed);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetPedPool(), CWorld::Players[0].m_pPed);
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 

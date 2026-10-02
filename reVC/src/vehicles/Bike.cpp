@@ -3008,13 +3008,19 @@ void
 CBike::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
-	ZeroSaveBuf(buf, 1260 - 672);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 1260 - 672);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CBike::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
-	SkipSaveBuf(buf, 1260 - 672);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 1260 - 672);
+	//- rouz edit (ChatGPT)
 }
 #endif

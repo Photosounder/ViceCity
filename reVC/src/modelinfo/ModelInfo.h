@@ -13,13 +13,15 @@
 class CModelInfo
 {
 	static CBaseModelInfo *ms_modelInfoPtrs[MODELINFOSIZE];
-	static CStore<CSimpleModelInfo, SIMPLEMODELSIZE> ms_simpleModelStore;
-	static CStore<CTimeModelInfo, TIMEMODELSIZE> ms_timeModelStore;
-	static CStore<CWeaponModelInfo, WEAPONMODELSIZE> ms_weaponModelStore;
-	static CStore<CClumpModelInfo, CLUMPMODELSIZE> ms_clumpModelStore;
-	static CStore<CPedModelInfo, PEDMODELSIZE> ms_pedModelStore;
-	static CStore<CVehicleModelInfo, VEHICLEMODELSIZE> ms_vehicleModelStore;
-	static CStore<C2dEffect, TWODFXSIZE> ms_2dEffectStore;
+	//+ rouz edit (ChatGPT)
+	static CStore ms_simpleModelStore;
+	static CStore ms_timeModelStore;
+	static CStore ms_weaponModelStore;
+	static CStore ms_clumpModelStore;
+	static CStore ms_pedModelStore;
+	static CStore ms_vehicleModelStore;
+	static CStore ms_2dEffectStore;
+	//- rouz edit (ChatGPT)
 
 public:
 	static void Initialise(void);
@@ -32,7 +34,13 @@ public:
 	static CPedModelInfo *AddPedModel(int id);
 	static CVehicleModelInfo *AddVehicleModel(int id);
 
-	static CStore<C2dEffect, TWODFXSIZE> &Get2dEffectStore(void) { return ms_2dEffectStore; }
+	//+ rouz edit (ChatGPT)
+	static CStore *Get2dEffectStore(void)
+	{
+		// Access the store or pool through its C API
+		return &ms_2dEffectStore;
+	}
+	//- rouz edit (ChatGPT)
 
 	static CBaseModelInfo *GetModelInfo(const char *name, int *id);
 	static CBaseModelInfo *GetModelInfo(int id){

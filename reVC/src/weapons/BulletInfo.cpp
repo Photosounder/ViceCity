@@ -237,7 +237,10 @@ void CBulletInfo::Update(void)
 
 //+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+						//- rouz edit (ChatGPT)
 						if (pAudio)
 							std::allocator<cAudioScriptObject>().construct(pAudio);
 //- rouz edit (ChatGPT)
@@ -254,7 +257,10 @@ void CBulletInfo::Update(void)
 
 //+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+						//- rouz edit (ChatGPT)
 						if (pAudio)
 							std::allocator<cAudioScriptObject>().construct(pAudio);
 //- rouz edit (ChatGPT)
@@ -271,7 +277,10 @@ void CBulletInfo::Update(void)
 
 //+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						pAudio = CPools::GetAudioScriptObjectPool()->New();
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+						//- rouz edit (ChatGPT)
 						if (pAudio)
 							std::allocator<cAudioScriptObject>().construct(pAudio);
 //- rouz edit (ChatGPT)

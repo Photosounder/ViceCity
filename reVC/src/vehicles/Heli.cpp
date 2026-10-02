@@ -650,17 +650,30 @@ CHeli::SpawnFlyingComponent(int32 component)
 //+ rouz edit (ChatGPT)
 	// Allocate the flying component object without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	obj = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	obj = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!obj) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				obj = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				obj = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -795,7 +808,10 @@ CHeli::GenerateHeli(bool catalina)
 //+ rouz edit (ChatGPT)
 	else {
 		// Allocate the heli from the vehicle pool without invoking C++ new.
-		heli = (CHeli*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		heli = (CHeli*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(heli);
 		std::allocator<CHeli>().construct(heli, MI_CHOPPER, PERMANENT_VEHICLE);
 	}
@@ -889,7 +905,10 @@ CHeli::UpdateHelis(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
-			CPools::GetVehiclePool()->Delete(pHelis[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
@@ -940,7 +959,10 @@ CHeli::UpdateHelis(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
-			CPools::GetVehiclePool()->Delete(pHelis[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
@@ -1080,7 +1102,10 @@ CHeli::RemoveCatalinaHeli(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release Catalina's heli without invoking C++ delete.
 		pHelis[HELI_CATALINA]->~CHeli();
-		CPools::GetVehiclePool()->Delete(pHelis[HELI_CATALINA]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pHelis[HELI_CATALINA]);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		pHelis[HELI_CATALINA] = nil;
 	}

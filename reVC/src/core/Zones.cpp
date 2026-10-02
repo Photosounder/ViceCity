@@ -664,11 +664,21 @@ CTheZones::SaveAllZones(uint8 *buffer, uint32 *size)
 #undef CZONE_SAVE_SIZE
 
 	uint32 length = 0;
-	WriteSaveHeaderWithLength(buffer, length, 'Z', 'N', 'S', '\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeaderWithLength(&buffer, &length, 'Z', 'N', 'S', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buffer, length, m_CurrLevel);
-	WriteSaveBuf(buffer, length, FindIndex);
-	WriteSaveBuf(buffer, length, (int16)0); // padding
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(&buffer, &length, &m_CurrLevel, sizeof(m_CurrLevel));
+	WriteSaveBufWithLength(&buffer, &length, &FindIndex, sizeof(FindIndex));
+	{
+		// Materialize the saved value with its original serialized type
+		int16 saveValue = (int16)0;
+		WriteSaveBufWithLength(&buffer, &length, &saveValue, sizeof(saveValue)); // padding
+	}
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ARRAY_SIZE(NavigationZoneArray); i++)
 		SaveOneZone(&NavigationZoneArray[i], &buffer, &length, ZONE_NAVIG);
@@ -677,21 +687,37 @@ CTheZones::SaveAllZones(uint8 *buffer, uint32 *size)
 		SaveOneZone(&InfoZoneArray[i], &buffer, &length, ZONE_INFO);
 
 	for(i = 0; i < ARRAY_SIZE(ZoneInfoArray); i++)
-		WriteSaveBuf(buffer, length, ZoneInfoArray[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBufWithLength(&buffer, &length, &ZoneInfoArray[i], sizeof(ZoneInfoArray[i]));
+		//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buffer, length, TotalNumberOfNavigationZones);
-	WriteSaveBuf(buffer, length, TotalNumberOfInfoZones);
-	WriteSaveBuf(buffer, length, TotalNumberOfZoneInfos);
-	WriteSaveBuf(buffer, length, (int16)0); // padding
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(&buffer, &length, &TotalNumberOfNavigationZones, sizeof(TotalNumberOfNavigationZones));
+	WriteSaveBufWithLength(&buffer, &length, &TotalNumberOfInfoZones, sizeof(TotalNumberOfInfoZones));
+	WriteSaveBufWithLength(&buffer, &length, &TotalNumberOfZoneInfos, sizeof(TotalNumberOfZoneInfos));
+	{
+		// Materialize the saved value with its original serialized type
+		int16 saveValue = (int16)0;
+		WriteSaveBufWithLength(&buffer, &length, &saveValue, sizeof(saveValue)); // padding
+	}
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ARRAY_SIZE(MapZoneArray); i++)
 		SaveOneZone(&MapZoneArray[i], &buffer, &length, ZONE_MAPZONE);
 
 	for(i = 0; i < ARRAY_SIZE(AudioZoneArray); i++)
-		WriteSaveBuf(buffer, length, AudioZoneArray[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBufWithLength(&buffer, &length, &AudioZoneArray[i], sizeof(AudioZoneArray[i]));
+		//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buffer, length, TotalNumberOfMapZones);
-	WriteSaveBuf(buffer, length, NumberOfAudioZones);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(&buffer, &length, &TotalNumberOfMapZones, sizeof(TotalNumberOfMapZones));
+	WriteSaveBufWithLength(&buffer, &length, &NumberOfAudioZones, sizeof(NumberOfAudioZones));
+	//- rouz edit (ChatGPT)
 
 	VALIDATESAVEBUF(*size)
 }
@@ -699,28 +725,46 @@ CTheZones::SaveAllZones(uint8 *buffer, uint32 *size)
 void
 CTheZones::SaveOneZone(CZone *zone, uint8 **buffer, uint32 *length, eZoneType zoneType)
 {
-	WriteSaveBuf(*buffer, *length, *(uint32*)&zone->name[0]);
-	WriteSaveBuf(*buffer, *length, *(uint32*)&zone->name[4]);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &(*(uint32*)&zone->name[0]), sizeof(*(uint32*)&zone->name[0]));
+	WriteSaveBufWithLength(buffer, length, &(*(uint32*)&zone->name[4]), sizeof(*(uint32*)&zone->name[4]));
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(*buffer, *length, zone->minx);
-	WriteSaveBuf(*buffer, *length, zone->miny);
-	WriteSaveBuf(*buffer, *length, zone->minz);
-	WriteSaveBuf(*buffer, *length, zone->maxx);
-	WriteSaveBuf(*buffer, *length, zone->maxy);
-	WriteSaveBuf(*buffer, *length, zone->maxz);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &zone->minx, sizeof(zone->minx));
+	WriteSaveBufWithLength(buffer, length, &zone->miny, sizeof(zone->miny));
+	WriteSaveBufWithLength(buffer, length, &zone->minz, sizeof(zone->minz));
+	WriteSaveBufWithLength(buffer, length, &zone->maxx, sizeof(zone->maxx));
+	WriteSaveBufWithLength(buffer, length, &zone->maxy, sizeof(zone->maxy));
+	WriteSaveBufWithLength(buffer, length, &zone->maxz, sizeof(zone->maxz));
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(*buffer, *length, zone->type);
-	WriteSaveBuf(*buffer, *length, zone->level);
-	WriteSaveBuf(*buffer, *length, zone->zoneinfoDay);
-	WriteSaveBuf(*buffer, *length, zone->zoneinfoNight);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &zone->type, sizeof(zone->type));
+	WriteSaveBufWithLength(buffer, length, &zone->level, sizeof(zone->level));
+	WriteSaveBufWithLength(buffer, length, &zone->zoneinfoDay, sizeof(zone->zoneinfoDay));
+	WriteSaveBufWithLength(buffer, length, &zone->zoneinfoNight, sizeof(zone->zoneinfoNight));
+	//- rouz edit (ChatGPT)
 
 	int32 zoneId;
 	zoneId = GetIndexForNavigationZonePointer(zone->child);
-	WriteSaveBuf(*buffer, *length, zoneId);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &zoneId, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 	zoneId = GetIndexForNavigationZonePointer(zone->parent);
-	WriteSaveBuf(*buffer, *length, zoneId);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &zoneId, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 	zoneId = GetIndexForNavigationZonePointer(zone->next);
-	WriteSaveBuf(*buffer, *length, zoneId);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBufWithLength(buffer, length, &zoneId, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -730,11 +774,17 @@ CTheZones::LoadAllZones(uint8 *buffer, uint32 size)
 	int i;
 
 	uint32 length = 0;
-	CheckSaveHeaderWithLength(buffer, length, 'Z', 'N', 'S', '\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeaderWithLength(&buffer, &length, 'Z', 'N', 'S', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
-	ReadSaveBuf(&m_CurrLevel, buffer);
-	ReadSaveBuf(&FindIndex, buffer);
-	SkipSaveBuf(buffer, 2);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&m_CurrLevel, &buffer, sizeof(m_CurrLevel));
+	ReadSaveBuf(&FindIndex, &buffer, sizeof(FindIndex));
+	SkipSaveBuf(&buffer, 2);
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ARRAY_SIZE(NavigationZoneArray); i++)
 		LoadOneZone(&NavigationZoneArray[i], &buffer, &length, ZONE_NAVIG);
@@ -743,21 +793,33 @@ CTheZones::LoadAllZones(uint8 *buffer, uint32 size)
 		LoadOneZone(&InfoZoneArray[i], &buffer, &length, ZONE_INFO);
 
 	for(i = 0; i < ARRAY_SIZE(ZoneInfoArray); i++)
-		ReadSaveBuf(&ZoneInfoArray[i], buffer);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&ZoneInfoArray[i], &buffer, sizeof(ZoneInfoArray[i]));
+		//- rouz edit (ChatGPT)
 
-	ReadSaveBuf(&TotalNumberOfNavigationZones, buffer);
-	ReadSaveBuf(&TotalNumberOfInfoZones, buffer);
-	ReadSaveBuf(&TotalNumberOfZoneInfos, buffer);
-	SkipSaveBuf(buffer, 2);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&TotalNumberOfNavigationZones, &buffer, sizeof(TotalNumberOfNavigationZones));
+	ReadSaveBuf(&TotalNumberOfInfoZones, &buffer, sizeof(TotalNumberOfInfoZones));
+	ReadSaveBuf(&TotalNumberOfZoneInfos, &buffer, sizeof(TotalNumberOfZoneInfos));
+	SkipSaveBuf(&buffer, 2);
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ARRAY_SIZE(MapZoneArray); i++)
 		LoadOneZone(&MapZoneArray[i], &buffer, &length, ZONE_MAPZONE);
 
 	for(i = 0; i < ARRAY_SIZE(AudioZoneArray); i++)
-		ReadSaveBuf(&AudioZoneArray[i], buffer);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&AudioZoneArray[i], &buffer, sizeof(AudioZoneArray[i]));
+		//- rouz edit (ChatGPT)
 
-	ReadSaveBuf(&TotalNumberOfMapZones, buffer);
-	ReadSaveBuf(&NumberOfAudioZones, buffer);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&TotalNumberOfMapZones, &buffer, sizeof(TotalNumberOfMapZones));
+	ReadSaveBuf(&NumberOfAudioZones, &buffer, sizeof(NumberOfAudioZones));
+	//- rouz edit (ChatGPT)
 
 	VALIDATESAVEBUF(size)
 }
@@ -767,34 +829,55 @@ CTheZones::LoadOneZone(CZone *zone, uint8 **buffer, uint32 *length, eZoneType zo
 {
 #ifdef THIS_IS_STUPID
 	uint32 part1, part2;
-	ReadSaveBuf(&part1, *buffer, *length);
-	ReadSaveBuf(&part2, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&part1, buffer, length, sizeof(part1));
+	ReadSaveBufWithLength(&part2, buffer, length, sizeof(part2));
+	//- rouz edit (ChatGPT)
 
 	*(uint64 *)&zone->name[0] = (uint64)part2;
 	*(uint64 *)&zone->name[0] <<= 32;
 	*(uint64 *)&zone->name[0] |= (uint64)part1;
 #else
 	for(int i = 0; i < sizeof(zone->name); i++)
-		ReadSaveBuf(&zone->name[i], *buffer, *length);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBufWithLength(&zone->name[i], buffer, length, sizeof(zone->name[i]));
+		//- rouz edit (ChatGPT)
 #endif
 
-	ReadSaveBuf(&zone->minx, *buffer, *length);
-	ReadSaveBuf(&zone->miny, *buffer, *length);
-	ReadSaveBuf(&zone->minz, *buffer, *length);
-	ReadSaveBuf(&zone->maxx, *buffer, *length);
-	ReadSaveBuf(&zone->maxy, *buffer, *length);
-	ReadSaveBuf(&zone->maxz, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&zone->minx, buffer, length, sizeof(zone->minx));
+	ReadSaveBufWithLength(&zone->miny, buffer, length, sizeof(zone->miny));
+	ReadSaveBufWithLength(&zone->minz, buffer, length, sizeof(zone->minz));
+	ReadSaveBufWithLength(&zone->maxx, buffer, length, sizeof(zone->maxx));
+	ReadSaveBufWithLength(&zone->maxy, buffer, length, sizeof(zone->maxy));
+	ReadSaveBufWithLength(&zone->maxz, buffer, length, sizeof(zone->maxz));
+	//- rouz edit (ChatGPT)
 
-	ReadSaveBuf(&zone->type, *buffer, *length);
-	ReadSaveBuf(&zone->level, *buffer, *length);
-	ReadSaveBuf(&zone->zoneinfoDay, *buffer, *length);
-	ReadSaveBuf(&zone->zoneinfoNight, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&zone->type, buffer, length, sizeof(zone->type));
+	ReadSaveBufWithLength(&zone->level, buffer, length, sizeof(zone->level));
+	ReadSaveBufWithLength(&zone->zoneinfoDay, buffer, length, sizeof(zone->zoneinfoDay));
+	ReadSaveBufWithLength(&zone->zoneinfoNight, buffer, length, sizeof(zone->zoneinfoNight));
+	//- rouz edit (ChatGPT)
 
 	int32 zoneId;
-	ReadSaveBuf(&zoneId, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&zoneId, buffer, length, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 	zone->child = GetPointerForNavigationZoneIndex(zoneId);
-	ReadSaveBuf(&zoneId, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&zoneId, buffer, length, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 	zone->parent = GetPointerForNavigationZoneIndex(zoneId);
-	ReadSaveBuf(&zoneId, *buffer, *length);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBufWithLength(&zoneId, buffer, length, sizeof(zoneId));
+	//- rouz edit (ChatGPT)
 	zone->next = GetPointerForNavigationZoneIndex(zoneId);
 }

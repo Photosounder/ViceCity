@@ -10,16 +10,18 @@
 #include "DummyPed.h"
 #include "AudioScriptObject.h"
 
-typedef CPool<CPtrNode> CCPtrNodePool;
-typedef CPool<CEntryInfoNode> CEntryInfoNodePool;
-typedef CPool<CPed,CPlayerPed> CPedPool;
-typedef CPool<CVehicle,CAutomobile> CVehiclePool;
-typedef CPool<CBuilding> CBuildingPool;
-typedef CPool<CTreadable> CTreadablePool;
-typedef CPool<CObject, CCutsceneObject> CObjectPool;
-typedef CPool<CDummy, CDummyPed> CDummyPool;
-typedef CPool<cAudioScriptObject> CAudioScriptObjectPool;
-typedef CPool<CColModel> CColModelPool;
+//+ rouz edit (ChatGPT)
+typedef CPool CCPtrNodePool;
+typedef CPool CEntryInfoNodePool;
+typedef CPool CPedPool;
+typedef CPool CVehiclePool;
+typedef CPool CBuildingPool;
+typedef CPool CTreadablePool;
+typedef CPool CObjectPool;
+typedef CPool CDummyPool;
+typedef CPool CAudioScriptObjectPool;
+typedef CPool CColModelPool;
+//- rouz edit (ChatGPT)
 
 class CPools
 {

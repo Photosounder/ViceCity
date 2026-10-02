@@ -404,7 +404,10 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 		if (pModelInfo->GetColModel() == &CTempColModels::ms_colModelPed1) {
 //+ rouz edit (ChatGPT)
 			// Construct the cutscene collision model in pool storage without invoking C++ new.
-			CColModel *colModel = CPools::GetColModelPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CColModel *colModel = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+			//- rouz edit (ChatGPT)
 			assert(colModel);
 			std::allocator<CColModel>().construct(colModel);
 //- rouz edit (ChatGPT)
@@ -421,7 +424,10 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 
 //+ rouz edit (ChatGPT)
 	// Allocate a cutscene object from the object pool without invoking C++ new.
-	pCutsceneObject = (CCutsceneObject*)CPools::GetObjectPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	pCutsceneObject = (CCutsceneObject*)((CObject*)CPool_New(CPools::GetObjectPool()));
+	//- rouz edit (ChatGPT)
 	assert(pCutsceneObject);
 	std::allocator<CCutsceneObject>().construct(pCutsceneObject);
 //- rouz edit (ChatGPT)
@@ -449,7 +455,10 @@ CCutsceneMgr::DeleteCutsceneData(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the cutscene object without invoking C++ delete.
 		ms_pCutsceneObjects[ms_numCutsceneObjs]->~CCutsceneObject();
-		CPools::GetObjectPool()->Delete(ms_pCutsceneObjects[ms_numCutsceneObjs]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetObjectPool(), ms_pCutsceneObjects[ms_numCutsceneObjs]);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		ms_pCutsceneObjects[ms_numCutsceneObjs] = nil;
 	}
@@ -462,7 +471,10 @@ CCutsceneMgr::DeleteCutsceneData(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the cutscene collision model without invoking C++ delete.
 			colModel->~CColModel();
-			CPools::GetColModelPool()->Delete(colModel);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetColModelPool(), colModel);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			minfo->SetColModel(&CTempColModels::ms_colModelPed1);
 		}
@@ -637,29 +649,43 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 	CWorld::bProcessCutsceneOnly = true;
 	ms_cutsceneProcessing = true;
 
-	for (int i = CPools::GetPedPool()->GetSize() - 1; i >= 0; i--) {
-		CPed *pPed = CPools::GetPedPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+	//- rouz edit (ChatGPT)
 		if (pPed) {
 			if (!pPed->IsPlayer() && pPed->CanBeDeleted()) {
 				CWorld::Remove(pPed);
 //+ rouz edit (ChatGPT)
 				// Destroy and release the cutscene-cleared ped without invoking C++ delete.
 				pPed->~CPed();
-				CPools::GetPedPool()->Delete(pPed);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetPedPool(), pPed);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
 	}
 
-	for (int i = CPools::GetVehiclePool()->GetSize() - 1; i >= 0; i--) {
-		CVehicle *pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetVehiclePool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+	//- rouz edit (ChatGPT)
 		if (pVehicle) {
 			if (pVehicle->CanBeDeleted()) {
 				CWorld::Remove(pVehicle);
 //+ rouz edit (ChatGPT)
 				// Destroy and release the cutscene-cleared vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -682,20 +708,32 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 
 	CRadar::RemoveRadarSections();
 
-	for (int i = CPools::GetDummyPool()->GetSize() - 1; i >= 0; i--) {
-		CDummy* pDummy = CPools::GetDummyPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetDummyPool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CDummy* pDummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+	//- rouz edit (ChatGPT)
 		if (pDummy)
 			pDummy->DeleteRwObject();
 	}
 
-	for (int i = CPools::GetObjectPool()->GetSize() - 1; i >= 0; i--) {
-		CObject* pObject = CPools::GetObjectPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetObjectPool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+	//- rouz edit (ChatGPT)
 		if (pObject)
 			pObject->DeleteRwObject();
 	}
 
-	for (int i = CPools::GetBuildingPool()->GetSize() - 1; i >= 0; i--) {
-		CBuilding* pBuilding = CPools::GetBuildingPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetBuildingPool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CBuilding* pBuilding = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+	//- rouz edit (ChatGPT)
 		if (pBuilding && pBuilding->m_rwObject != nil && pBuilding->bIsBIGBuilding && pBuilding->bStreamBIGBuilding) {
 			if (pBuilding->bIsBIGBuilding)
 				CStreaming::RequestModel(pBuilding->GetModelIndex(), 0);

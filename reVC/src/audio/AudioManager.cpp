@@ -374,7 +374,10 @@ cAudioManager::DestroyAllGameCreatedEntities()
 //+ rouz edit (ChatGPT)
 						// Destroy and release the pooled audio script object without invoking C++ delete.
 						entity->~cAudioScriptObject();
-						CPools::GetAudioScriptObjectPool()->Delete(entity);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CPool_Delete(CPools::GetAudioScriptObjectPool(), entity);
+						//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 						m_asAudioEntities[i].m_pEntity = nil;
 					}
@@ -596,7 +599,10 @@ cAudioManager::ServiceSoundEffects()
 //+ rouz edit (ChatGPT)
 		// Destroy and release the pooled audio script object without invoking C++ delete.
 		object->~cAudioScriptObject();
-		CPools::GetAudioScriptObjectPool()->Delete(object);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetAudioScriptObjectPool(), object);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		m_asAudioEntities[m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]].m_pEntity = nil;
 		DestroyEntity(m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]);

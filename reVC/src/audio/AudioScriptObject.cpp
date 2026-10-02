@@ -28,20 +28,37 @@ cAudioScriptObject::LoadAllAudioScriptObjects(uint8 *buf, uint32 size)
 {
 	INITSAVEBUF
 
-	CheckSaveHeader(buf, 'A', 'U', 'D', '\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'A', 'U', 'D', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	int32 pool_size;
-	ReadSaveBuf(&pool_size, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&pool_size, &buf, sizeof(pool_size));
+	//- rouz edit (ChatGPT)
 	for (int32 i = 0; i < pool_size; i++) {
 		int32 handle;
-		ReadSaveBuf(&handle, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&handle, &buf, sizeof(handle));
+		//- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 		// Restore the audio script object into its saved pool slot.
-		cAudioScriptObject *p = CPools::GetAudioScriptObjectPool()->New(handle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		cAudioScriptObject *p = ((cAudioScriptObject*)CPool_NewAt(CPools::GetAudioScriptObjectPool(), handle));
+		//- rouz edit (ChatGPT)
 		assert(p != nil);
 		std::allocator<cAudioScriptObject>().construct(p);
 //- rouz edit (ChatGPT)
-		ReadSaveBuf(p, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		*p = *(cAudioScriptObject*)buf;
+		SkipSaveBuf(&buf, sizeof(*p));
+		//- rouz edit (ChatGPT)
 		p->AudioEntity = DMAudio.CreateLoopingScriptObject(p);
 	}
 
@@ -53,17 +70,41 @@ cAudioScriptObject::SaveAllAudioScriptObjects(uint8 *buf, uint32 *size)
 {
 	INITSAVEBUF
 
-	int32 pool_size = CPools::GetAudioScriptObjectPool()->GetNoOfUsedSpaces();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 pool_size = CPool_GetNoOfUsedSpaces(CPools::GetAudioScriptObjectPool());
+	//- rouz edit (ChatGPT)
 	*size = SAVE_HEADER_SIZE + sizeof(int32) + pool_size * (sizeof(cAudioScriptObject) + sizeof(int32));
-	WriteSaveHeader(buf, 'A', 'U', 'D', '\0', *size - SAVE_HEADER_SIZE);
-	WriteSaveBuf(buf, pool_size);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'A', 'U', 'D', '\0', *size - SAVE_HEADER_SIZE);
+	WriteSaveBuf(&buf, &pool_size, sizeof(pool_size));
+	//- rouz edit (ChatGPT)
 
-	int32 i = CPools::GetAudioScriptObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 i = CPool_GetSize(CPools::GetAudioScriptObjectPool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		cAudioScriptObject *p = CPools::GetAudioScriptObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		cAudioScriptObject *p = ((cAudioScriptObject*)CPool_GetSlot(CPools::GetAudioScriptObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (p != nil) {
-			WriteSaveBuf(buf, CPools::GetAudioScriptObjectPool()->GetIndex(p));
-			WriteSaveBuf(buf, *p);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			{
+				// Materialize the saved value with its original serialized type
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 saveValue = CPool_GetIndex(CPools::GetAudioScriptObjectPool(), p);
+				//- rouz edit (ChatGPT)
+				WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+			}
+			// Preserve record assignment semantics and compiler padding behavior
+			*(cAudioScriptObject*)buf = *p;
+			SkipSaveBuf(&buf, sizeof(*p));
+			//- rouz edit (ChatGPT)
 		}
 	}
 
@@ -77,7 +118,10 @@ PlayOneShotScriptObject(uint8 id, CVector const &pos)
 
 //+ rouz edit (ChatGPT)
 	// Allocate a pooled audio script object without invoking C++ new.
-	cAudioScriptObject *audioScriptObject = CPools::GetAudioScriptObjectPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	cAudioScriptObject *audioScriptObject = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+	//- rouz edit (ChatGPT)
 	assert(audioScriptObject != nil);
 	std::allocator<cAudioScriptObject>().construct(audioScriptObject);
 //- rouz edit (ChatGPT)

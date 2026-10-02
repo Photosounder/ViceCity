@@ -172,31 +172,49 @@ CRestart::LoadAllRestartPoints(uint8 *buf, uint32 size)
 	Initialise();
 
 INITSAVEBUF
-	CheckSaveHeader(buf, 'R','S','T','\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'R', 'S', 'T', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	for (int i = 0; i < NUM_RESTART_POINTS; i++) {
-		ReadSaveBuf(&HospitalRestartPoints[i], buf);
-		ReadSaveBuf(&HospitalRestartHeadings[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&HospitalRestartPoints[i], &buf, sizeof(HospitalRestartPoints[i]));
+		ReadSaveBuf(&HospitalRestartHeadings[i], &buf, sizeof(HospitalRestartHeadings[i]));
+		//- rouz edit (ChatGPT)
 	}
 
 	for (int i = 0; i < NUM_RESTART_POINTS; i++) {
-		ReadSaveBuf(&PoliceRestartPoints[i], buf);
-		ReadSaveBuf(&PoliceRestartHeadings[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&PoliceRestartPoints[i], &buf, sizeof(PoliceRestartPoints[i]));
+		ReadSaveBuf(&PoliceRestartHeadings[i], &buf, sizeof(PoliceRestartHeadings[i]));
+		//- rouz edit (ChatGPT)
 	}
 
-	ReadSaveBuf(&NumberOfHospitalRestarts, buf);
-	ReadSaveBuf(&NumberOfPoliceRestarts, buf);
-	ReadSaveBuf(&bOverrideRestart, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumberOfHospitalRestarts, &buf, sizeof(NumberOfHospitalRestarts));
+	ReadSaveBuf(&NumberOfPoliceRestarts, &buf, sizeof(NumberOfPoliceRestarts));
+	ReadSaveBuf(&bOverrideRestart, &buf, sizeof(bOverrideRestart));
+	//- rouz edit (ChatGPT)
 
 	// skip something unused
-	SkipSaveBuf(buf, 3);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 3);
+	//- rouz edit (ChatGPT)
 
-	ReadSaveBuf(&OverridePosition, buf);
-	ReadSaveBuf(&OverrideHeading, buf);
-	ReadSaveBuf(&bFadeInAfterNextDeath, buf);
-	ReadSaveBuf(&bFadeInAfterNextArrest, buf);
-	ReadSaveBuf(&OverrideHospitalLevel, buf);
-	ReadSaveBuf(&OverridePoliceStationLevel, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&OverridePosition, &buf, sizeof(OverridePosition));
+	ReadSaveBuf(&OverrideHeading, &buf, sizeof(OverrideHeading));
+	ReadSaveBuf(&bFadeInAfterNextDeath, &buf, sizeof(bFadeInAfterNextDeath));
+	ReadSaveBuf(&bFadeInAfterNextArrest, &buf, sizeof(bFadeInAfterNextArrest));
+	ReadSaveBuf(&OverrideHospitalLevel, &buf, sizeof(OverrideHospitalLevel));
+	ReadSaveBuf(&OverridePoliceStationLevel, &buf, sizeof(OverridePoliceStationLevel));
+	//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size);
 }
 
@@ -221,30 +239,56 @@ CRestart::SaveAllRestartPoints(uint8 *buf, uint32 *size)
 		+ sizeof(OverridePoliceStationLevel); // == 292
 
 INITSAVEBUF
-	WriteSaveHeader(buf, 'R','S','T','\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'R', 'S', 'T', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	for (int i = 0; i < NUM_RESTART_POINTS; i++) {
-		WriteSaveBuf(buf, HospitalRestartPoints[i]);
-		WriteSaveBuf(buf, HospitalRestartHeadings[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &HospitalRestartPoints[i], sizeof(HospitalRestartPoints[i]));
+		WriteSaveBuf(&buf, &HospitalRestartHeadings[i], sizeof(HospitalRestartHeadings[i]));
+		//- rouz edit (ChatGPT)
 	}
 
 	for (int i = 0; i < NUM_RESTART_POINTS; i++) {
-		WriteSaveBuf(buf, PoliceRestartPoints[i]);
-		WriteSaveBuf(buf, PoliceRestartHeadings[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &PoliceRestartPoints[i], sizeof(PoliceRestartPoints[i]));
+		WriteSaveBuf(&buf, &PoliceRestartHeadings[i], sizeof(PoliceRestartHeadings[i]));
+		//- rouz edit (ChatGPT)
 	}
 
-	WriteSaveBuf(buf, NumberOfHospitalRestarts);
-	WriteSaveBuf(buf, NumberOfPoliceRestarts);
-	WriteSaveBuf(buf, bOverrideRestart);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &NumberOfHospitalRestarts, sizeof(NumberOfHospitalRestarts));
+	WriteSaveBuf(&buf, &NumberOfPoliceRestarts, sizeof(NumberOfPoliceRestarts));
+	WriteSaveBuf(&buf, &bOverrideRestart, sizeof(bOverrideRestart));
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buf, (uint8)0);
-	WriteSaveBuf(buf, (uint16)0);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	{
+		// Materialize the saved value with its original serialized type
+		uint8 saveValue = (uint8)0;
+		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+	}
+	{
+		// Materialize the saved value with its original serialized type
+		uint16 saveValue = (uint16)0;
+		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+	}
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buf, OverridePosition);
-	WriteSaveBuf(buf, OverrideHeading);
-	WriteSaveBuf(buf, bFadeInAfterNextDeath);
-	WriteSaveBuf(buf, bFadeInAfterNextArrest);
-	WriteSaveBuf(buf, OverrideHospitalLevel);
-	WriteSaveBuf(buf, OverridePoliceStationLevel);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &OverridePosition, sizeof(OverridePosition));
+	WriteSaveBuf(&buf, &OverrideHeading, sizeof(OverrideHeading));
+	WriteSaveBuf(&buf, &bFadeInAfterNextDeath, sizeof(bFadeInAfterNextDeath));
+	WriteSaveBuf(&buf, &bFadeInAfterNextArrest, sizeof(bFadeInAfterNextArrest));
+	WriteSaveBuf(&buf, &OverrideHospitalLevel, sizeof(OverrideHospitalLevel));
+	WriteSaveBuf(&buf, &OverridePoliceStationLevel, sizeof(OverridePoliceStationLevel));
+	//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(*size);
 }

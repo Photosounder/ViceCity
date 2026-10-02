@@ -880,17 +880,30 @@ CBoat::BlowUpCar(CEntity *culprit)
 //+ rouz edit (ChatGPT)
 	// Allocate the flying boat component without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	obj = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	obj = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!obj) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				obj = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				obj = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -1372,8 +1385,12 @@ CBoat::FillBoatList()
 	float camDist = camFwd.Magnitude();
 	if(camDist > 0.0f)
 		camFwd /= camDist;
-	for (int i = CPools::GetVehiclePool()->GetSize() - 1; i >= 0; i--) {
-		CBoat *boat = (CBoat *)(CPools::GetVehiclePool()->GetSlot(i));
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetVehiclePool()) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CBoat *boat = (CBoat *)(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)));
+	//- rouz edit (ChatGPT)
 		if (boat && boat->m_vehType == VEHICLE_TYPE_BOAT) {
 			if (boat->m_nNumWakePoints != 0) {
 				CVector2D camToBoat = CVector2D(boat->GetPosition()) - camPos;
@@ -1522,13 +1539,19 @@ void
 CBoat::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
-	ZeroSaveBuf(buf, 1216 - 672);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 1216 - 672);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CBoat::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
-	SkipSaveBuf(buf, 1216 - 672);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 1216 - 672);
+	//- rouz edit (ChatGPT)
 }
 #endif

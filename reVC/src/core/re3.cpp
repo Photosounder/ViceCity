@@ -735,17 +735,26 @@ SpawnCar(int id)
 //+ rouz edit (ChatGPT)
 		if(CModelInfo::IsBoatModel(id)) {
 			// Allocate the debug-spawned boat without invoking C++ new.
-			v = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CBoat>().construct((CBoat*)v, id, RANDOM_VEHICLE);
 		} else if(CModelInfo::IsBikeModel(id)) {
 			// Allocate the debug-spawned bike without invoking C++ new.
-			v = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CBike>().construct((CBike*)v, id, RANDOM_VEHICLE);
 		} else {
 			// Allocate the debug-spawned automobile without invoking C++ new.
-			v = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			v = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CAutomobile>().construct((CAutomobile*)v, id, RANDOM_VEHICLE);
 		}

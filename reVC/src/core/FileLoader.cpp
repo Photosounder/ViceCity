@@ -200,7 +200,10 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 			}else{
 //+ rouz edit (ChatGPT)
 				// Construct the collision model in pool storage without invoking C++ new.
-				CColModel *model = CPools::GetColModelPool()->New();
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+				//- rouz edit (ChatGPT)
 				assert(model);
 				std::allocator<CColModel>().construct(model);
 //- rouz edit (ChatGPT)
@@ -245,7 +248,10 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 			CColStore::IncludeModelIndex(colSlot, modelIndex);
 //+ rouz edit (ChatGPT)
 			// Construct the collision model in pool storage without invoking C++ new.
-			CColModel *model = CPools::GetColModelPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+			//- rouz edit (ChatGPT)
 			assert(model);
 			std::allocator<CColModel>().construct(model);
 //- rouz edit (ChatGPT)
@@ -286,7 +292,10 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 			}else{
 //+ rouz edit (ChatGPT)
 				// Construct the collision model in pool storage without invoking C++ new.
-				CColModel *model = CPools::GetColModelPool()->New();
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+				//- rouz edit (ChatGPT)
 				assert(model);
 				std::allocator<CColModel>().construct(model);
 //- rouz edit (ChatGPT)
@@ -1031,7 +1040,10 @@ CFileLoader::Load2dEffect(const char *line)
 	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("particle"));
 
 	mi = CModelInfo::GetModelInfo(id);
-	effect = CModelInfo::Get2dEffectStore().Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	effect = (C2dEffect*)CStore_Alloc(CModelInfo::Get2dEffectStore());
+	//- rouz edit (ChatGPT)
 	mi->Add2dEffect(effect);
 	effect->pos = CVector(x, y, z);
 	effect->col = CRGBA(r, g, b, a);
@@ -1231,7 +1243,10 @@ CFileLoader::LoadObjectInstance(const char *line)
 		if(ThePaths.IsPathObject(id)){
 //+ rouz edit (ChatGPT)
 			// Allocate a treadable map entity from its pool without invoking C++ new.
-			entity = CPools::GetTreadablePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			entity = ((CTreadable*)CPool_New(CPools::GetTreadablePool()));
+			//- rouz edit (ChatGPT)
 			assert(entity);
 			std::allocator<CTreadable>().construct((CTreadable*)entity);
 //- rouz edit (ChatGPT)
@@ -1239,7 +1254,10 @@ CFileLoader::LoadObjectInstance(const char *line)
 //+ rouz edit (ChatGPT)
 		}else{
 			// Allocate a building map entity from its pool without invoking C++ new.
-			entity = CPools::GetBuildingPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			entity = ((CBuilding*)CPool_New(CPools::GetBuildingPool()));
+			//- rouz edit (ChatGPT)
 			assert(entity);
 			std::allocator<CBuilding>().construct((CBuilding*)entity);
 		}
@@ -1270,7 +1288,10 @@ CFileLoader::LoadObjectInstance(const char *line)
 	}else{
 //+ rouz edit (ChatGPT)
 		// Allocate a dummy map object from its pool without invoking C++ new.
-		entity = CPools::GetDummyPool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		entity = ((CDummy*)CPool_New(CPools::GetDummyPool()));
+		//- rouz edit (ChatGPT)
 		assert(entity);
 		std::allocator<CDummyObject>().construct((CDummyObject*)entity);
 //- rouz edit (ChatGPT)

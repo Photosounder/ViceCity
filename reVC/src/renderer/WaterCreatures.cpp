@@ -116,17 +116,30 @@ CObject *CWaterCreatures::CreateSeaLifeForm(CVector const& pos, int16 modelID, i
 //+ rouz edit (ChatGPT)
 	// Allocate the water creature object without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	CObject *pObj = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject *pObj = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!pObj) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				pObj = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				pObj = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -273,7 +286,10 @@ void CWaterCreatures::UpdateAll() {
 //+ rouz edit (ChatGPT)
 				// Destroy and release the water creature object without invoking C++ delete.
 				aWaterCreatures[i].m_pObj->~CObject();
-				CPools::GetObjectPool()->Delete(aWaterCreatures[i].m_pObj);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetObjectPool(), aWaterCreatures[i].m_pObj);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			FreeFishStructSlot(&aWaterCreatures[i]);
@@ -294,7 +310,10 @@ void CWaterCreatures::RemoveAll() {
 //+ rouz edit (ChatGPT)
 				// Destroy and release the water creature object without invoking C++ delete.
 				aWaterCreatures[i].m_pObj->~CObject();
-				CPools::GetObjectPool()->Delete(aWaterCreatures[i].m_pObj);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetObjectPool(), aWaterCreatures[i].m_pObj);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			FreeFishStructSlot(&aWaterCreatures[i]);

@@ -120,6 +120,12 @@ static bool normalizeRwVector(RwV3d *vector)
 
 static void orthonormalizeRwMatrix(RwMatrix *matrix)
 {
+	// Select the basis orientation used by the active renderer
+#ifdef REVC_SOFTWARE_POLYGONS
+	const float orientation = -1.0f;
+#else
+	const float orientation = 1.0f;
+#endif
 	// Start from the matrix right and forward axes while retaining its translation
 	if(!matrix)
 		return;
@@ -128,9 +134,9 @@ static void orthonormalizeRwMatrix(RwMatrix *matrix)
 	const RwV3d originalUp = matrix->up;
 	RwV3d up;
 	if(!normalizeRwVector(&right)){
-		right.x = forward.y*originalUp.z-forward.z*originalUp.y;
-		right.y = forward.z*originalUp.x-forward.x*originalUp.z;
-		right.z = forward.x*originalUp.y-forward.y*originalUp.x;
+		right.x = orientation*(originalUp.y*forward.z-originalUp.z*forward.y);
+		right.y = orientation*(originalUp.z*forward.x-originalUp.x*forward.z);
+		right.z = orientation*(originalUp.x*forward.y-originalUp.y*forward.x);
 		if(!normalizeRwVector(&right))
 			return;
 	}
@@ -140,16 +146,16 @@ static void orthonormalizeRwMatrix(RwMatrix *matrix)
 	forward.y -= right.y*projection;
 	forward.z -= right.z*projection;
 	if(!normalizeRwVector(&forward)){
-		forward.x = originalUp.y*right.z-originalUp.z*right.y;
-		forward.y = originalUp.z*right.x-originalUp.x*right.z;
-		forward.z = originalUp.x*right.y-originalUp.y*right.x;
+		forward.x = orientation*(right.y*originalUp.z-right.z*originalUp.y);
+		forward.y = orientation*(right.z*originalUp.x-right.x*originalUp.z);
+		forward.z = orientation*(right.x*originalUp.y-right.y*originalUp.x);
 		if(!normalizeRwVector(&forward))
 			return;
 	}
-	// Rebuild the up axis so the output basis is orthogonal and right handed
-	up.x = right.y*forward.z-right.z*forward.y;
-	up.y = right.z*forward.x-right.x*forward.z;
-	up.z = right.x*forward.y-right.y*forward.x;
+	// Rebuild up in native right-up-forward order or the software renderer convention
+	up.x = orientation*(forward.y*right.z-forward.z*right.y);
+	up.y = orientation*(forward.z*right.x-forward.x*right.z);
+	up.z = orientation*(forward.x*right.y-forward.y*right.x);
 	if(!normalizeRwVector(&up))
 		return;
 	// Store the normalized basis and refresh librw's matrix flags

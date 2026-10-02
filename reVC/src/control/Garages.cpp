@@ -1277,9 +1277,15 @@ bool CGarage::EntityHasASphereWayOutsideGarage(CEntity * pEntity, float fMargin)
 
 bool CGarage::IsAnyOtherCarTouchingGarage(CVehicle * pException)
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle || pVehicle == pException || pVehicle->GetStatus() == STATUS_WRECKED)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
@@ -1297,9 +1303,15 @@ bool CGarage::IsAnyOtherCarTouchingGarage(CVehicle * pException)
 
 void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* pException)
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle || pVehicle == pException)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
@@ -1319,9 +1331,15 @@ void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* pException)
 
 bool CGarage::IsAnyOtherPedTouchingGarage(CPed * pException)
 {
-	uint32 i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CPed* pPed = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pPed || pPed == pException)
 			continue;
 		if (!IsEntityTouching3D(pPed))
@@ -1339,9 +1357,15 @@ bool CGarage::IsAnyOtherPedTouchingGarage(CPed * pException)
 
 bool CGarage::IsAnyCarBlockingDoor()
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
@@ -1360,9 +1384,15 @@ bool CGarage::IsAnyCarBlockingDoor()
 int32 CGarage::CountCarsWithCenterPointWithinGarage(CEntity * pException)
 {
 	int32 total = 0;
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle || pVehicle == pException)
 			continue;
 		if (IsPointInsideGarage(pVehicle->GetPosition()))
@@ -1373,9 +1403,15 @@ int32 CGarage::CountCarsWithCenterPointWithinGarage(CEntity * pException)
 
 void CGarage::RemoveCarsBlockingDoorNotInside()
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
@@ -1386,7 +1422,10 @@ void CGarage::RemoveCarsBlockingDoorNotInside()
 //+ rouz edit (ChatGPT)
 				// Destroy and release the vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 #ifndef FIX_BUGS
 				return;
@@ -1523,20 +1562,32 @@ void CGarage::RefreshDoorPointers(bool bCreate)
 	m_bRecreateDoorOnNextRefresh = false;
 	if (m_pDoor1) {
 		if (m_bDoor1IsDummy) {
-			if (CPools::GetDummyPool()->GetIsFree(CPools::GetDummyPool()->GetJustIndex_NoFreeAssert((CDummy*)m_pDoor1)))
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (CPool_GetIsFree(CPools::GetDummyPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)m_pDoor1)))
+			//- rouz edit (ChatGPT)
 				bNeedToFindDoorEntities = true;
 			else {
-				if (m_bDoor1PoolIndex != (CPools::GetDummyPool()->GetIndex((CDummy*)m_pDoor1) & 0x7F))
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				if (m_bDoor1PoolIndex != (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)m_pDoor1) & 0x7F))
+				//- rouz edit (ChatGPT)
 					bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor1->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
 		}
 		else {
-			if (CPools::GetObjectPool()->GetIsFree(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert((CObject*)m_pDoor1)))
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (CPool_GetIsFree(CPools::GetObjectPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)m_pDoor1)))
+			//- rouz edit (ChatGPT)
 				bNeedToFindDoorEntities = true;
 			else {
-				if (m_bDoor1PoolIndex != (CPools::GetObjectPool()->GetIndex((CObject*)m_pDoor1) & 0x7F))
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				if (m_bDoor1PoolIndex != (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)m_pDoor1) & 0x7F))
+				//- rouz edit (ChatGPT)
 					bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor1->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
@@ -1545,20 +1596,32 @@ void CGarage::RefreshDoorPointers(bool bCreate)
 	}
 	if (m_pDoor2) {
 		if (m_bDoor2IsDummy) {
-			if (CPools::GetDummyPool()->GetIsFree(CPools::GetDummyPool()->GetJustIndex_NoFreeAssert((CDummy*)m_pDoor2)))
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (CPool_GetIsFree(CPools::GetDummyPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)m_pDoor2)))
+			//- rouz edit (ChatGPT)
 				bNeedToFindDoorEntities = true;
 			else {
-				if (m_bDoor2PoolIndex != (CPools::GetDummyPool()->GetIndex((CDummy*)m_pDoor2) & 0x7F))
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				if (m_bDoor2PoolIndex != (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)m_pDoor2) & 0x7F))
+				//- rouz edit (ChatGPT)
 					bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor2->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
 		}
 		else {
-			if (CPools::GetObjectPool()->GetIsFree(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert((CObject*)m_pDoor2)))
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (CPool_GetIsFree(CPools::GetObjectPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)m_pDoor2)))
+			//- rouz edit (ChatGPT)
 				bNeedToFindDoorEntities = true;
 			else {
-				if (m_bDoor2PoolIndex != (CPools::GetObjectPool()->GetIndex((CObject*)m_pDoor2) & 0x7F))
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				if (m_bDoor2PoolIndex != (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)m_pDoor2) & 0x7F))
+				//- rouz edit (ChatGPT)
 					bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor2->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
@@ -1783,18 +1846,30 @@ void CGarage::FindDoorsEntitiesSectorList(CPtrList& list, bool dummy)
 			m_pDoor1 = pEntity;
 			m_bDoor1IsDummy = dummy;
 			if (dummy)
-				m_bDoor1PoolIndex = (CPools::GetDummyPool()->GetIndex((CDummy*)pEntity)) & 0x7F;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				m_bDoor1PoolIndex = (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)pEntity)) & 0x7F;
+				//- rouz edit (ChatGPT)
 			else
-				m_bDoor1PoolIndex = (CPools::GetObjectPool()->GetIndex((CObject*)pEntity)) & 0x7F;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				m_bDoor1PoolIndex = (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)pEntity)) & 0x7F;
+				//- rouz edit (ChatGPT)
 			continue;
 		}
 		else {
 			m_pDoor2 = pEntity;
 			m_bDoor2IsDummy = dummy;
 			if (dummy)
-				m_bDoor2PoolIndex = (CPools::GetDummyPool()->GetIndex((CDummy*)pEntity)) & 0x7F;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				m_bDoor2PoolIndex = (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)pEntity)) & 0x7F;
+				//- rouz edit (ChatGPT)
 			else
-				m_bDoor2PoolIndex = (CPools::GetObjectPool()->GetIndex((CObject*)pEntity)) & 0x7F;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				m_bDoor2PoolIndex = (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)pEntity)) & 0x7F;
+				//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -1869,7 +1944,10 @@ CVehicle* CStoredCar::RestoreCar()
 //+ rouz edit (ChatGPT)
 	if (CModelInfo::IsBoatModel(m_nModelIndex)) {
 		// Restore the stored boat without invoking C++ new.
-		pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CBoat>().construct((CBoat*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
 	}
@@ -1878,7 +1956,10 @@ CVehicle* CStoredCar::RestoreCar()
 	{
 //+ rouz edit (ChatGPT)
 		// Restore the stored bike without invoking C++ new.
-		CBike* pBike = (CBike*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CBike* pBike = (CBike*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pBike);
 		std::allocator<CBike>().construct(pBike, m_nModelIndex, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1888,7 +1969,10 @@ CVehicle* CStoredCar::RestoreCar()
 //+ rouz edit (ChatGPT)
 	else {
 		// Restore the stored automobile without invoking C++ new.
-		pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
 	}
@@ -1925,10 +2009,16 @@ void CGarage::StoreAndRemoveCarsForThisHideout(CStoredCar* aCars, int32 nMax)
 {
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++)
 		aCars[i].Clear();
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	int index = 0;
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if (IsPointInsideGarage(pVehicle->GetPosition())) {
@@ -1940,7 +2030,10 @@ void CGarage::StoreAndRemoveCarsForThisHideout(CStoredCar* aCars, int32 nMax)
 //+ rouz edit (ChatGPT)
 				// Destroy and release the stored vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -2017,13 +2110,19 @@ float CGarages::FindDoorHeightForMI(int32 mi)
 
 void CGarage::TidyUpGarage()
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	while (i--) {
 #else
 	while (--i) {
 #endif
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (pVehicle && (pVehicle->IsCar() || pVehicle->IsBike())) {
 			if (IsPointInsideGarage(pVehicle->GetPosition())) {
 				if (pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->GetUp().z < 0.5f) {
@@ -2031,7 +2130,10 @@ void CGarage::TidyUpGarage()
 //+ rouz edit (ChatGPT)
 					// Destroy and release the garage vehicle without invoking C++ delete.
 					pVehicle->~CVehicle();
-					CPools::GetVehiclePool()->Delete(pVehicle);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
 			}
@@ -2041,13 +2143,19 @@ void CGarage::TidyUpGarage()
 
 void CGarage::TidyUpGarageClose()
 {
-	uint32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	while (i--) {
 #else
 	while (--i) {
 #endif
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if ((!pVehicle->IsCar() && !pVehicle->IsBike()) || pVehicle->GetStatus() != STATUS_WRECKED || !IsEntityTouching3D(pVehicle))
@@ -2070,7 +2178,10 @@ void CGarage::TidyUpGarageClose()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the garage vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -2297,65 +2408,95 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 	memset(buf + 7340, 0, *size - 7340); // garbage data is written otherwise
 #endif
 	CloseHideOutGaragesBeforeSave();
-	WriteSaveBuf(buf, NumGarages);
-	WriteSaveBuf(buf, (uint32)BombsAreFree);
-	WriteSaveBuf(buf, (uint32)RespraysAreFree);
-	WriteSaveBuf(buf, CarsCollected);
-	WriteSaveBuf(buf, BankVansCollected);
-	WriteSaveBuf(buf, PoliceCarsCollected);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &NumGarages, sizeof(NumGarages));
+	{
+		// Materialize the saved value with its original serialized type
+		uint32 saveValue = (uint32)BombsAreFree;
+		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+	}
+	{
+		// Materialize the saved value with its original serialized type
+		uint32 saveValue = (uint32)RespraysAreFree;
+		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+	}
+	WriteSaveBuf(&buf, &CarsCollected, sizeof(CarsCollected));
+	WriteSaveBuf(&buf, &BankVansCollected, sizeof(BankVansCollected));
+	WriteSaveBuf(&buf, &PoliceCarsCollected, sizeof(PoliceCarsCollected));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
-		WriteSaveBuf(buf, CarTypesCollected[i]);
-	WriteSaveBuf(buf, LastTimeHelpMessage);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &CarTypesCollected[i], sizeof(CarTypesCollected[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &LastTimeHelpMessage, sizeof(LastTimeHelpMessage));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
 		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
-			WriteSaveBuf(buf, aCarsInSafeHouses[j][i]);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			// Preserve record assignment semantics and compiler padding behavior
+			*(CStoredCar*)buf = aCarsInSafeHouses[j][i];
+			SkipSaveBuf(&buf, sizeof(aCarsInSafeHouses[j][i]));
+			//- rouz edit (ChatGPT)
 		}
 	}
 	for (int i = 0; i < NUM_GARAGES; i++) {
 #ifdef COMPATIBLE_SAVES
-		WriteSaveBuf(buf, aGarages[i].m_eGarageType);
-		WriteSaveBuf(buf, aGarages[i].m_eGarageState);
-		WriteSaveBuf(buf, aGarages[i].m_nMaxStoredCars);
-		WriteSaveBuf(buf, aGarages[i].field_2);
-		WriteSaveBuf(buf, aGarages[i].m_bClosingWithoutTargetCar);
-		WriteSaveBuf(buf, aGarages[i].m_bDeactivated);
-		WriteSaveBuf(buf, aGarages[i].m_bResprayHappened);
-		ZeroSaveBuf(buf, 1);
-		WriteSaveBuf(buf, aGarages[i].m_nTargetModelIndex);
-		ZeroSaveBuf(buf, 4 + 4);
-		WriteSaveBuf(buf, aGarages[i].m_bDoor1PoolIndex);
-		WriteSaveBuf(buf, aGarages[i].m_bDoor2PoolIndex);
-		WriteSaveBuf(buf, aGarages[i].m_bDoor1IsDummy);
-		WriteSaveBuf(buf, aGarages[i].m_bDoor2IsDummy);
-		WriteSaveBuf(buf, aGarages[i].m_bRecreateDoorOnNextRefresh);
-		WriteSaveBuf(buf, aGarages[i].m_bRotatedDoor);
-		WriteSaveBuf(buf, aGarages[i].m_bCameraFollowsPlayer);
-		ZeroSaveBuf(buf, 1);
-		WriteSaveBuf(buf, aGarages[i].m_vecCorner1);
-		WriteSaveBuf(buf, aGarages[i].m_fInfZ);
-		WriteSaveBuf(buf, aGarages[i].m_vDir1);
-		WriteSaveBuf(buf, aGarages[i].m_vDir2);
-		WriteSaveBuf(buf, aGarages[i].m_fSupZ);
-		WriteSaveBuf(buf, aGarages[i].m_fDir1Len);
-		WriteSaveBuf(buf, aGarages[i].m_fDir2Len);
-		WriteSaveBuf(buf, aGarages[i].m_fInfX);
-		WriteSaveBuf(buf, aGarages[i].m_fSupX);
-		WriteSaveBuf(buf, aGarages[i].m_fInfY);
-		WriteSaveBuf(buf, aGarages[i].m_fSupY);
-		WriteSaveBuf(buf, aGarages[i].m_fDoorPos);
-		WriteSaveBuf(buf, aGarages[i].m_fDoorHeight);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor1X);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor1Y);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor2X);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor2Y);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor1Z);
-		WriteSaveBuf(buf, aGarages[i].m_fDoor2Z);
-		WriteSaveBuf(buf, aGarages[i].m_nTimeToStartAction);
-		WriteSaveBuf(buf, aGarages[i].m_bCollectedCarsState);
-		ZeroSaveBuf(buf, 3 + 4);
-		ZeroSaveBuf(buf, sizeof(aGarages[i].m_sStoredCar));
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &aGarages[i].m_eGarageType, sizeof(aGarages[i].m_eGarageType));
+		WriteSaveBuf(&buf, &aGarages[i].m_eGarageState, sizeof(aGarages[i].m_eGarageState));
+		WriteSaveBuf(&buf, &aGarages[i].m_nMaxStoredCars, sizeof(aGarages[i].m_nMaxStoredCars));
+		WriteSaveBuf(&buf, &aGarages[i].field_2, sizeof(aGarages[i].field_2));
+		WriteSaveBuf(&buf, &aGarages[i].m_bClosingWithoutTargetCar, sizeof(aGarages[i].m_bClosingWithoutTargetCar));
+		WriteSaveBuf(&buf, &aGarages[i].m_bDeactivated, sizeof(aGarages[i].m_bDeactivated));
+		WriteSaveBuf(&buf, &aGarages[i].m_bResprayHappened, sizeof(aGarages[i].m_bResprayHappened));
+		ZeroSaveBuf(&buf, 1);
+		WriteSaveBuf(&buf, &aGarages[i].m_nTargetModelIndex, sizeof(aGarages[i].m_nTargetModelIndex));
+		ZeroSaveBuf(&buf, 4 + 4);
+		WriteSaveBuf(&buf, &aGarages[i].m_bDoor1PoolIndex, sizeof(aGarages[i].m_bDoor1PoolIndex));
+		WriteSaveBuf(&buf, &aGarages[i].m_bDoor2PoolIndex, sizeof(aGarages[i].m_bDoor2PoolIndex));
+		WriteSaveBuf(&buf, &aGarages[i].m_bDoor1IsDummy, sizeof(aGarages[i].m_bDoor1IsDummy));
+		WriteSaveBuf(&buf, &aGarages[i].m_bDoor2IsDummy, sizeof(aGarages[i].m_bDoor2IsDummy));
+		WriteSaveBuf(&buf, &aGarages[i].m_bRecreateDoorOnNextRefresh, sizeof(aGarages[i].m_bRecreateDoorOnNextRefresh));
+		WriteSaveBuf(&buf, &aGarages[i].m_bRotatedDoor, sizeof(aGarages[i].m_bRotatedDoor));
+		WriteSaveBuf(&buf, &aGarages[i].m_bCameraFollowsPlayer, sizeof(aGarages[i].m_bCameraFollowsPlayer));
+		ZeroSaveBuf(&buf, 1);
+		WriteSaveBuf(&buf, &aGarages[i].m_vecCorner1, sizeof(aGarages[i].m_vecCorner1));
+		WriteSaveBuf(&buf, &aGarages[i].m_fInfZ, sizeof(aGarages[i].m_fInfZ));
+		WriteSaveBuf(&buf, &aGarages[i].m_vDir1, sizeof(aGarages[i].m_vDir1));
+		WriteSaveBuf(&buf, &aGarages[i].m_vDir2, sizeof(aGarages[i].m_vDir2));
+		WriteSaveBuf(&buf, &aGarages[i].m_fSupZ, sizeof(aGarages[i].m_fSupZ));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDir1Len, sizeof(aGarages[i].m_fDir1Len));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDir2Len, sizeof(aGarages[i].m_fDir2Len));
+		WriteSaveBuf(&buf, &aGarages[i].m_fInfX, sizeof(aGarages[i].m_fInfX));
+		WriteSaveBuf(&buf, &aGarages[i].m_fSupX, sizeof(aGarages[i].m_fSupX));
+		WriteSaveBuf(&buf, &aGarages[i].m_fInfY, sizeof(aGarages[i].m_fInfY));
+		WriteSaveBuf(&buf, &aGarages[i].m_fSupY, sizeof(aGarages[i].m_fSupY));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoorPos, sizeof(aGarages[i].m_fDoorPos));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoorHeight, sizeof(aGarages[i].m_fDoorHeight));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor1X, sizeof(aGarages[i].m_fDoor1X));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor1Y, sizeof(aGarages[i].m_fDoor1Y));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor2X, sizeof(aGarages[i].m_fDoor2X));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor2Y, sizeof(aGarages[i].m_fDoor2Y));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor1Z, sizeof(aGarages[i].m_fDoor1Z));
+		WriteSaveBuf(&buf, &aGarages[i].m_fDoor2Z, sizeof(aGarages[i].m_fDoor2Z));
+		WriteSaveBuf(&buf, &aGarages[i].m_nTimeToStartAction, sizeof(aGarages[i].m_nTimeToStartAction));
+		WriteSaveBuf(&buf, &aGarages[i].m_bCollectedCarsState, sizeof(aGarages[i].m_bCollectedCarsState));
+		ZeroSaveBuf(&buf, 3 + 4);
+		ZeroSaveBuf(&buf, sizeof(aGarages[i].m_sStoredCar));
+		//- rouz edit (ChatGPT)
 #else
-		WriteSaveBuf(buf, aGarages[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		*(CGarage*)buf = aGarages[i];
+		SkipSaveBuf(&buf, sizeof(aGarages[i]));
+		//- rouz edit (ChatGPT)
 #endif
 	}
 //VALIDATESAVEBUF(*size);
@@ -2382,68 +2523,99 @@ void CGarages::Load(uint8* buf, uint32 size)
 	assert(size == 7876);
 	//assert(size == (6 * sizeof(uint32) + TOTAL_COLLECTCARS_GARAGES * sizeof(*CarTypesCollected) + sizeof(uint32) + TOTAL_HIDEOUT_GARAGES * NUM_GARAGE_STORED_CARS * sizeof(CStoredCar) + NUM_GARAGES * sizeof(CGarage)));
 	CloseHideOutGaragesBeforeSave();
-	ReadSaveBuf(&NumGarages, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumGarages, &buf, sizeof(NumGarages));
+	//- rouz edit (ChatGPT)
 	int32 tempInt;
-	ReadSaveBuf(&tempInt, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tempInt, &buf, sizeof(tempInt));
+	//- rouz edit (ChatGPT)
 	BombsAreFree = tempInt ? true : false;
-	ReadSaveBuf(&tempInt, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tempInt, &buf, sizeof(tempInt));
+	//- rouz edit (ChatGPT)
 	RespraysAreFree = tempInt ? true : false;
-	ReadSaveBuf(&CarsCollected, buf);
-	ReadSaveBuf(&BankVansCollected, buf);
-	ReadSaveBuf(&PoliceCarsCollected, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&CarsCollected, &buf, sizeof(CarsCollected));
+	ReadSaveBuf(&BankVansCollected, &buf, sizeof(BankVansCollected));
+	ReadSaveBuf(&PoliceCarsCollected, &buf, sizeof(PoliceCarsCollected));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
-		ReadSaveBuf(&CarTypesCollected[i], buf);
-	ReadSaveBuf(&LastTimeHelpMessage, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&CarTypesCollected[i], &buf, sizeof(CarTypesCollected[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&LastTimeHelpMessage, &buf, sizeof(LastTimeHelpMessage));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
 		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
-			ReadSaveBuf(&aCarsInSafeHouses[j][i], buf);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			// Preserve record assignment semantics and compiler padding behavior
+			aCarsInSafeHouses[j][i] = *(CStoredCar*)buf;
+			SkipSaveBuf(&buf, sizeof(aCarsInSafeHouses[j][i]));
+			//- rouz edit (ChatGPT)
 		}
 	}
 	for (int i = 0; i < NUM_GARAGES; i++) {
 #ifdef COMPATIBLE_SAVES
-		ReadSaveBuf(&aGarages[i].m_eGarageType, buf);
-		ReadSaveBuf(&aGarages[i].m_eGarageState, buf);
-		ReadSaveBuf(&aGarages[i].m_nMaxStoredCars, buf);
-		ReadSaveBuf(&aGarages[i].field_2, buf);
-		ReadSaveBuf(&aGarages[i].m_bClosingWithoutTargetCar, buf);
-		ReadSaveBuf(&aGarages[i].m_bDeactivated, buf);
-		ReadSaveBuf(&aGarages[i].m_bResprayHappened, buf);
-		SkipSaveBuf(buf, 1);
-		ReadSaveBuf(&aGarages[i].m_nTargetModelIndex, buf);
-		SkipSaveBuf(buf, 4 + 4);
-		ReadSaveBuf(&aGarages[i].m_bDoor1PoolIndex, buf);
-		ReadSaveBuf(&aGarages[i].m_bDoor2PoolIndex, buf);
-		ReadSaveBuf(&aGarages[i].m_bDoor1IsDummy, buf);
-		ReadSaveBuf(&aGarages[i].m_bDoor2IsDummy, buf);
-		ReadSaveBuf(&aGarages[i].m_bRecreateDoorOnNextRefresh, buf);
-		ReadSaveBuf(&aGarages[i].m_bRotatedDoor, buf);
-		ReadSaveBuf(&aGarages[i].m_bCameraFollowsPlayer, buf);
-		SkipSaveBuf(buf, 1);
-		ReadSaveBuf(&aGarages[i].m_vecCorner1, buf);
-		ReadSaveBuf(&aGarages[i].m_fInfZ, buf);
-		ReadSaveBuf(&aGarages[i].m_vDir1, buf);
-		ReadSaveBuf(&aGarages[i].m_vDir2, buf);
-		ReadSaveBuf(&aGarages[i].m_fSupZ, buf);
-		ReadSaveBuf(&aGarages[i].m_fDir1Len, buf);
-		ReadSaveBuf(&aGarages[i].m_fDir2Len, buf);
-		ReadSaveBuf(&aGarages[i].m_fInfX, buf);
-		ReadSaveBuf(&aGarages[i].m_fSupX, buf);
-		ReadSaveBuf(&aGarages[i].m_fInfY, buf);
-		ReadSaveBuf(&aGarages[i].m_fSupY, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoorPos, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoorHeight, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor1X, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor1Y, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor2X, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor2Y, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor1Z, buf);
-		ReadSaveBuf(&aGarages[i].m_fDoor2Z, buf);
-		ReadSaveBuf(&aGarages[i].m_nTimeToStartAction, buf);
-		ReadSaveBuf(&aGarages[i].m_bCollectedCarsState, buf);
-		SkipSaveBuf(buf, 3 + 4);
-		SkipSaveBuf(buf, sizeof(aGarages[i].m_sStoredCar));
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&aGarages[i].m_eGarageType, &buf, sizeof(aGarages[i].m_eGarageType));
+		ReadSaveBuf(&aGarages[i].m_eGarageState, &buf, sizeof(aGarages[i].m_eGarageState));
+		ReadSaveBuf(&aGarages[i].m_nMaxStoredCars, &buf, sizeof(aGarages[i].m_nMaxStoredCars));
+		ReadSaveBuf(&aGarages[i].field_2, &buf, sizeof(aGarages[i].field_2));
+		ReadSaveBuf(&aGarages[i].m_bClosingWithoutTargetCar, &buf, sizeof(aGarages[i].m_bClosingWithoutTargetCar));
+		ReadSaveBuf(&aGarages[i].m_bDeactivated, &buf, sizeof(aGarages[i].m_bDeactivated));
+		ReadSaveBuf(&aGarages[i].m_bResprayHappened, &buf, sizeof(aGarages[i].m_bResprayHappened));
+		SkipSaveBuf(&buf, 1);
+		ReadSaveBuf(&aGarages[i].m_nTargetModelIndex, &buf, sizeof(aGarages[i].m_nTargetModelIndex));
+		SkipSaveBuf(&buf, 4 + 4);
+		ReadSaveBuf(&aGarages[i].m_bDoor1PoolIndex, &buf, sizeof(aGarages[i].m_bDoor1PoolIndex));
+		ReadSaveBuf(&aGarages[i].m_bDoor2PoolIndex, &buf, sizeof(aGarages[i].m_bDoor2PoolIndex));
+		ReadSaveBuf(&aGarages[i].m_bDoor1IsDummy, &buf, sizeof(aGarages[i].m_bDoor1IsDummy));
+		ReadSaveBuf(&aGarages[i].m_bDoor2IsDummy, &buf, sizeof(aGarages[i].m_bDoor2IsDummy));
+		ReadSaveBuf(&aGarages[i].m_bRecreateDoorOnNextRefresh, &buf, sizeof(aGarages[i].m_bRecreateDoorOnNextRefresh));
+		ReadSaveBuf(&aGarages[i].m_bRotatedDoor, &buf, sizeof(aGarages[i].m_bRotatedDoor));
+		ReadSaveBuf(&aGarages[i].m_bCameraFollowsPlayer, &buf, sizeof(aGarages[i].m_bCameraFollowsPlayer));
+		SkipSaveBuf(&buf, 1);
+		ReadSaveBuf(&aGarages[i].m_vecCorner1, &buf, sizeof(aGarages[i].m_vecCorner1));
+		ReadSaveBuf(&aGarages[i].m_fInfZ, &buf, sizeof(aGarages[i].m_fInfZ));
+		ReadSaveBuf(&aGarages[i].m_vDir1, &buf, sizeof(aGarages[i].m_vDir1));
+		ReadSaveBuf(&aGarages[i].m_vDir2, &buf, sizeof(aGarages[i].m_vDir2));
+		ReadSaveBuf(&aGarages[i].m_fSupZ, &buf, sizeof(aGarages[i].m_fSupZ));
+		ReadSaveBuf(&aGarages[i].m_fDir1Len, &buf, sizeof(aGarages[i].m_fDir1Len));
+		ReadSaveBuf(&aGarages[i].m_fDir2Len, &buf, sizeof(aGarages[i].m_fDir2Len));
+		ReadSaveBuf(&aGarages[i].m_fInfX, &buf, sizeof(aGarages[i].m_fInfX));
+		ReadSaveBuf(&aGarages[i].m_fSupX, &buf, sizeof(aGarages[i].m_fSupX));
+		ReadSaveBuf(&aGarages[i].m_fInfY, &buf, sizeof(aGarages[i].m_fInfY));
+		ReadSaveBuf(&aGarages[i].m_fSupY, &buf, sizeof(aGarages[i].m_fSupY));
+		ReadSaveBuf(&aGarages[i].m_fDoorPos, &buf, sizeof(aGarages[i].m_fDoorPos));
+		ReadSaveBuf(&aGarages[i].m_fDoorHeight, &buf, sizeof(aGarages[i].m_fDoorHeight));
+		ReadSaveBuf(&aGarages[i].m_fDoor1X, &buf, sizeof(aGarages[i].m_fDoor1X));
+		ReadSaveBuf(&aGarages[i].m_fDoor1Y, &buf, sizeof(aGarages[i].m_fDoor1Y));
+		ReadSaveBuf(&aGarages[i].m_fDoor2X, &buf, sizeof(aGarages[i].m_fDoor2X));
+		ReadSaveBuf(&aGarages[i].m_fDoor2Y, &buf, sizeof(aGarages[i].m_fDoor2Y));
+		ReadSaveBuf(&aGarages[i].m_fDoor1Z, &buf, sizeof(aGarages[i].m_fDoor1Z));
+		ReadSaveBuf(&aGarages[i].m_fDoor2Z, &buf, sizeof(aGarages[i].m_fDoor2Z));
+		ReadSaveBuf(&aGarages[i].m_nTimeToStartAction, &buf, sizeof(aGarages[i].m_nTimeToStartAction));
+		ReadSaveBuf(&aGarages[i].m_bCollectedCarsState, &buf, sizeof(aGarages[i].m_bCollectedCarsState));
+		SkipSaveBuf(&buf, 3 + 4);
+		SkipSaveBuf(&buf, sizeof(aGarages[i].m_sStoredCar));
+		//- rouz edit (ChatGPT)
 #else
-		ReadSaveBuf(&aGarages[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		aGarages[i] = *(CGarage*)buf;
+		SkipSaveBuf(&buf, sizeof(aGarages[i]));
+		//- rouz edit (ChatGPT)
 #endif
 		aGarages[i].m_pDoor1 = nil;
 		aGarages[i].m_pDoor2 = nil;

@@ -3505,17 +3505,30 @@ CWaterLevel::CreateBeachToy(CVector const &vec, eBeachToy beachtoy)
 //+ rouz edit (ChatGPT)
 	// Allocate the beach toy without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	CObject *toy = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject *toy = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!toy) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				toy = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				toy = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}

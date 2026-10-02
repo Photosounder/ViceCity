@@ -20,7 +20,10 @@ CPedModelInfo::~CPedModelInfo(void)
 	if(m_hitColModel){
 		// Destroy and release the hit collision model without invoking C++ delete.
 		m_hitColModel->~CColModel();
-		CPools::GetColModelPool()->Delete(m_hitColModel);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
+		//- rouz edit (ChatGPT)
 	}
 }
 //- rouz edit (ChatGPT)
@@ -34,7 +37,10 @@ CPedModelInfo::DeleteRwObject(void)
 		// Destroy and release the hit collision model without invoking C++ delete.
 	{
 		m_hitColModel->~CColModel();
-		CPools::GetColModelPool()->Delete(m_hitColModel);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 	m_hitColModel = nil;
@@ -107,7 +113,10 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(clump);
 //+ rouz edit (ChatGPT)
 	// Construct the hit collision model in pool storage without invoking C++ new.
-	CColModel *colmodel = CPools::GetColModelPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CColModel *colmodel = ((CColModel*)CPool_New(CPools::GetColModelPool()));
+	//- rouz edit (ChatGPT)
 	assert(colmodel);
 	std::allocator<CColModel>().construct(colmodel);
 //- rouz edit (ChatGPT)

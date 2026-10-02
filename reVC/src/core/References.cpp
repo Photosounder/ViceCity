@@ -120,23 +120,41 @@ CReferences::PruneAllReferencesInWorld(void)
 	int i;
 	CEntity *e;
 
-	i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		e = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e)
 			e->PruneReferences();
 	}
 
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		e = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(e)
 			e->PruneReferences();
 	}
 
-	i = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		e = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e)
 			e->PruneReferences();
 	}

@@ -192,17 +192,30 @@ CProjectileInfo::AddProjectile(CEntity *entity, eWeaponType weapon, CVector pos,
 	// Allocate the projectile from the object pool without invoking C++ new.
 	if (projectileModel != -1) {
 		CObjectPool *objectPool = CPools::GetObjectPool();
-		ms_apProjectile[i] = (CProjectile*)objectPool->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ms_apProjectile[i] = (CProjectile*)((CObject*)CPool_New(objectPool));
+		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		if (!ms_apProjectile[i]) {
-			for (int32 j = 0; j < objectPool->GetSize(); j++) {
-				CObject *existing = objectPool->GetSlot(j);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for (int32 j = 0; j < CPool_GetSize(objectPool); j++) {
+				// Access raw storage through the C store or pool API
+				CObject *existing = ((CObject*)CPool_GetSlot(objectPool, j));
+			//- rouz edit (ChatGPT)
 				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-					int32 handle = objectPool->GetIndex(existing);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					int32 handle = CPool_GetIndex(objectPool, existing);
+					//- rouz edit (ChatGPT)
 					CWorld::Remove(existing);
 					existing->~CObject();
-					objectPool->Delete(existing);
-					ms_apProjectile[i] = (CProjectile*)objectPool->New(handle);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(objectPool, existing);
+					ms_apProjectile[i] = (CProjectile*)((CObject*)CPool_NewAt(objectPool, handle));
+					//- rouz edit (ChatGPT)
 					break;
 				}
 			}
@@ -265,7 +278,10 @@ CProjectileInfo::RemoveProjectile(CProjectileInfo *info, CProjectile *projectile
 //+ rouz edit (ChatGPT)
 	// Destroy and release the projectile without invoking C++ delete.
 	projectile->~CProjectile();
-	CPools::GetObjectPool()->Delete(projectile);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(CPools::GetObjectPool(), projectile);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 }
 
@@ -345,7 +361,10 @@ CProjectileInfo::Update()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the projectile without invoking C++ delete.
 			ms_apProjectile[i]->~CProjectile();
-			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
         	continue;
 		}
@@ -463,7 +482,10 @@ CProjectileInfo::IsProjectileInRange(float x1, float x2, float y1, float y2, flo
 //+ rouz edit (ChatGPT)
 						// Destroy and release the projectile without invoking C++ delete.
 						ms_apProjectile[i]->~CProjectile();
-						CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
+						//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 					}
 				}
@@ -484,7 +506,10 @@ CProjectileInfo::RemoveDetonatorProjectiles()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the projectile without invoking C++ delete.
 			ms_apProjectile[i]->~CProjectile();
-			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -509,7 +534,10 @@ CProjectileInfo::RemoveAllProjectiles()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the projectile without invoking C++ delete.
 			ms_apProjectile[i]->~CProjectile();
-			CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -538,7 +566,10 @@ CProjectileInfo::RemoveIfThisIsAProjectile(CObject *object)
 //+ rouz edit (ChatGPT)
 	// Destroy and release the projectile without invoking C++ delete.
 	ms_apProjectile[i]->~CProjectile();
-	CPools::GetObjectPool()->Delete(ms_apProjectile[i]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	ms_apProjectile[i] = nil;
 	return true;

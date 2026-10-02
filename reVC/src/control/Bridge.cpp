@@ -135,8 +135,12 @@ void CBridge::FindBridgeEntities()
 	pLiftRoad = nil;
 	pLiftPart = nil;
 
-	for (int i = CPools::GetBuildingPool()->GetSize()-1; i >= 0; i--) {
-		CBuilding* entry = CPools::GetBuildingPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetBuildingPool())-1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CBuilding* entry = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+	//- rouz edit (ChatGPT)
 		if (entry)
 		{
 			if (entry->GetModelIndex() == MI_BRIDGELIFT)

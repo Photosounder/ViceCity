@@ -329,14 +329,20 @@ void VehicleCheat(int model)
 #ifdef FIX_BUGS
 //+ rouz edit (ChatGPT)
 		// Allocate the cheat vehicle without invoking C++ new.
-		CAutomobile* vehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		if (vehicle)
 			std::allocator<CAutomobile>().construct(vehicle, model, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
 #else
 //+ rouz edit (ChatGPT)
 		// Allocate the cheat vehicle without invoking C++ new.
-		CAutomobile* vehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CAutomobile* vehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		if (vehicle)
 			std::allocator<CAutomobile>().construct(vehicle, model, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -361,9 +367,15 @@ void BlowUpCarsCheat()
 {
 	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
 
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (i-- > 0) {
-		if (CVehicle *veh = CPools::GetVehiclePool()->GetSlot(i))
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		if (CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)))
+		//- rouz edit (ChatGPT)
 			veh->BlowUpCar(nil);
 	}
 }

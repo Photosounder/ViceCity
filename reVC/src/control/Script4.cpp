@@ -65,7 +65,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_IS_CHAR_IN_PLAYERS_GROUP:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		CPed* pLeader = CWorld::Players[ScriptParams[1]].m_pPed;
 		script_assert(pPed);
 		script_assert(pLeader);
@@ -75,7 +78,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_EXPLODE_CHAR_HEAD:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->InflictDamage(nil, WEAPONTYPE_SNIPERRIFLE, 1000.0f, PEDPIECE_HEAD, 0);
 		return 0;
@@ -91,7 +97,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_ANCHOR_BOAT:
 	{
 		CollectParameters(&m_nIp, 2);
-		CBoat* pBoat = (CBoat*)CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CBoat* pBoat = (CBoat*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pBoat && pBoat->m_vehType == VEHICLE_TYPE_BOAT);
 		pBoat->m_bIsAnchored = (ScriptParams[1] != 0);
 		return 0;
@@ -116,7 +125,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_START_CAR_FIRE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		ScriptParams[0] = gFireManager.StartScriptFire(pVehicle->GetPosition(), pVehicle, 0.8f, 1);
 		StoreParameters(&m_nIp, 1);
@@ -125,7 +137,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_START_CHAR_FIRE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		ScriptParams[0] = gFireManager.StartScriptFire(pPed->GetPosition(), pPed, 0.8f, 1);
 		StoreParameters(&m_nIp, 1);
@@ -135,13 +150,19 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	{
 		CollectParameters(&m_nIp, 5);
 		int handle = -1;
-		uint32 i = CPools::GetVehiclePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		//- rouz edit (ChatGPT)
 		float infX = *(float*)&ScriptParams[0];
 		float infY = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[3];
 		while (i--) {
-			CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			//- rouz edit (ChatGPT)
 			if (!pVehicle)
 				continue;
 			if (pVehicle->GetVehicleAppearance() != VEHICLE_APPEARANCE_CAR && pVehicle->GetVehicleAppearance() != VEHICLE_APPEARANCE_BIKE)
@@ -154,7 +175,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 				continue;
 			if (!pVehicle->IsWithinArea(infX, infY, supX, supY))
 				continue;
-			handle = CPools::GetVehiclePool()->GetIndex(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			handle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 			pVehicle->VehicleCreatedBy = MISSION_VEHICLE;
 			++CCarCtrl::NumMissionCars;
 			--CCarCtrl::NumRandomCars;
@@ -176,9 +200,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CZone* pZone = CTheZones::GetNavigationZone(zone_id);
 		CollectParameters(&m_nIp, 1);
 		int handle = -1;
-		uint32 i = CPools::GetVehiclePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		//- rouz edit (ChatGPT)
 		while (i--) {
-			CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			//- rouz edit (ChatGPT)
 			if (!pVehicle)
 				continue;
 			if (ScriptParams[0] != pVehicle->GetModelIndex() && ScriptParams[0] >= 0)
@@ -187,7 +217,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 				continue;
 			if (!CTheZones::PointLiesWithinZone(&pVehicle->GetPosition(), pZone))
 				continue;
-			handle = CPools::GetVehiclePool()->GetIndex(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			handle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 			pVehicle->VehicleCreatedBy = MISSION_VEHICLE;
 			++CCarCtrl::NumMissionCars;
 			--CCarCtrl::NumRandomCars;
@@ -231,9 +264,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CAR_RAM_CAR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
-		CVehicle* pTarget = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pTarget);
 		CCarAI::TellCarToRamOtherCar(pVehicle, pTarget);
 		return 0;
@@ -242,9 +281,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CAR_BLOCK_CAR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
-		CVehicle* pTarget = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pTarget);
 		CCarAI::TellCarToBlockOtherCar(pVehicle, pTarget);
 		return 0;
@@ -252,7 +297,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_OBJ_CATCH_TRAIN:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_CATCH_TRAIN);
@@ -282,7 +330,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_BLEEDING:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bPedIsBleeding = (ScriptParams[1] != 0);
 		return 0;
@@ -291,7 +342,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CAR_FUNNY_SUSPENSION:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		// no action
 		return 0;
@@ -299,7 +353,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CAR_BIG_WHEELS:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		script_assert(pVehicle->m_vehType == VEHICLE_TYPE_CAR);
 		CAutomobile* pCar = (CAutomobile*)pVehicle;
@@ -322,7 +379,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_VISIBLE:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bIsVisible = (ScriptParams[1] != 0);
 		return 0;
@@ -331,7 +391,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CAR_VISIBLE:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pVehicle->bIsVisible = (ScriptParams[1] != 0);
 		return 0;
@@ -482,7 +545,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_ROTATE_OBJECT:
 	{
 		CollectParameters(&m_nIp, 4);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		float heading = LimitAngleOnCircle(
 			RADTODEG(Atan2(-pObject->GetForward().x, pObject->GetForward().y)));
@@ -536,7 +602,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SLIDE_OBJECT:
 	{
 		CollectParameters(&m_nIp, 8);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		CVector pos = pObject->GetPosition();
 		CVector posTarget = *(CVector*)&ScriptParams[1];
@@ -597,7 +666,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_REMOVE_CHAR_ELEGANTLY:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		if (pPed && pPed->CharCreatedBy == MISSION_CHAR){
 			CWorld::RemoveReferencesToDeletedObject(pPed);
 			if (pPed->bInVehicle && pPed->m_pMyVehicle)
@@ -619,7 +691,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_STAY_IN_SAME_PLACE:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bKindaStayInSamePlace = (ScriptParams[1] != 0);
 		return 0;
@@ -632,7 +707,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_UNDRESS_CHAR:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		char name[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, name);
@@ -645,7 +723,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_DRESS_CHAR:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->Dress();
 		return 0;
@@ -726,9 +807,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_PLACE_OBJECT_RELATIVE_TO_CAR:
 	{
 		CollectParameters(&m_nIp, 5);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		CVector offset = *(CVector*)&ScriptParams[2];
 		CPhysical::PlacePhysicalRelativeToOtherPhysical(pVehicle, pObject, offset);
@@ -737,7 +824,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_MAKE_OBJECT_TARGETTABLE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		CPlayerPed* pPlayerPed = CWorld::Players[CWorld::PlayerInFocus].m_pPed;
 		script_assert(pPlayerPed);
@@ -755,7 +845,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_ADD_ARMOUR_TO_CHAR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->m_fArmour = Clamp(pPed->m_fArmour + ScriptParams[1], 0.0f, 100.0f);
 		return 0;
@@ -775,7 +868,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_WARP_CHAR_FROM_CAR_TO_COORD:
 	{
 		CollectParameters(&m_nIp, 4);
-		CPed *pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
@@ -879,9 +975,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_HAS_CHAR_SPOTTED_CHAR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
-		CPed* pTarget = CPools::GetPedPool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pTarget);
 		UpdateCompareFlag(pPed->OurPedCanSeeThisOne(pTarget));
 		return 0;
@@ -890,7 +992,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_OBJ_HAIL_TAXI:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_HAIL_TAXI);
@@ -899,7 +1004,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_HAS_OBJECT_BEEN_DAMAGED:
 	{
 		CollectParameters(&m_nIp, 1);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		UpdateCompareFlag(pObject->bRenderDamaged || !pObject->bIsVisible);
 		return 0;
@@ -941,7 +1049,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pPed->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, pVehicle);
 		pPed->WarpPedIntoCar(pVehicle);
@@ -950,9 +1061,15 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_WARP_CHAR_INTO_CAR:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pPed->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, pVehicle);
 		pPed->WarpPedIntoCar(pVehicle);
@@ -1000,7 +1117,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_WAIT_STATE:
 	{
 		CollectParameters(&m_nIp, 3);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->SetWaitState((eWaitState)ScriptParams[1], ScriptParams[2] >= 0 ? &ScriptParams[2] : nil);
 		return 0;
@@ -1042,7 +1162,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		}
 //+ rouz edit (ChatGPT)
 		// Allocate the scripted ambient ped without invoking C++ new.
-		CPed* ped = CPools::GetPedPool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* ped = ((CPed*)CPool_New(CPools::GetPedPool()));
+		//- rouz edit (ChatGPT)
 		assert(ped);
 		std::allocator<CCivilianPed>().construct((CCivilianPed*)ped, pedtype, mi);
 //- rouz edit (ChatGPT)
@@ -1062,7 +1185,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CWorld::Add(ped);
 		ped->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pos);
 		CPopulation::ms_nTotalMissionPeds++;
-		ScriptParams[0] = CPools::GetPedPool()->GetIndex(ped);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), ped);
+		//- rouz edit (ChatGPT)
 		StoreParameters(&m_nIp, 1);
 		if (m_bIsMissionScript)
 			CTheScripts::MissionCleanUp.AddEntityToList(ScriptParams[0], CLEANUP_CHAR);
@@ -1071,7 +1197,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_CHAR_OBJ_STEAL_ANY_CAR:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_STEAL_ANY_CAR);
@@ -1171,7 +1300,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_OBJECT_VELOCITY:
 	{
 		CollectParameters(&m_nIp, 4);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		pObject->SetMoveSpeed(*(CVector*)&ScriptParams[1] * METERS_PER_SECOND_TO_GAME_SPEED);
 		return 0;
@@ -1179,7 +1311,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_SET_OBJECT_COLLISION:
 	{
 		CollectParameters(&m_nIp, 2);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		pObject->bUsesCollision = (ScriptParams[1] != 0);
 		return 0;
@@ -1187,7 +1322,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 	case COMMAND_IS_ICECREAM_JINGLE_ON:
 	{
 		CollectParameters(&m_nIp, 1);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		// Adding this check to correspond to command name.
 		// All original game scripts always assume that the vehicle is actually Mr. Whoopee,
@@ -1309,7 +1447,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_ADD_TO_OBJECT_VELOCITY:
 	{
 		CollectParameters(&m_nIp, 4);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		pObject->AddToMoveSpeed(*(CVector*)&ScriptParams[1] * METERS_PER_SECOND_TO_GAME_SPEED);
 		return 0;
@@ -1371,7 +1512,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_OBJECT_DYNAMIC:
 	{
 		CollectParameters(&m_nIp, 2);
-		CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pObject);
 		if (ScriptParams[1]) {
 			if (pObject->bIsStatic) {
@@ -1391,7 +1535,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CHAR_ANIM_SPEED:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		CAnimBlendAssociation* pAssoc = RpAnimBlendClumpGetFirstAssociation(pPed->GetClump());
 		if (pAssoc)
@@ -1422,7 +1569,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SWITCH_CAR_SIREN:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pVehicle->m_bSirenOrAlarm = ScriptParams[1] != 0;
 		return 0;
@@ -1454,7 +1604,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CAR_WATERTIGHT:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		if (pVehicle->IsBike()) {
 			CBike* pBike = (CBike*)pVehicle;
@@ -1490,7 +1643,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CHAR_CANT_BE_DRAGGED_OUT:
 	{
 		CollectParameters(&m_nIp, 2);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bDontDragMeOutCar = ScriptParams[1] != 0;
 		return 0;
@@ -1498,7 +1654,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_TURN_CAR_TO_FACE_COORD:
 	{
 		CollectParameters(&m_nIp, 3);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		const CVector& pos = pVehicle->GetPosition();
 		float heading = CGeneral::GetATanOfXY(pos.x - *(float*)&ScriptParams[1], pos.y - *(float*)&ScriptParams[2]) + HALFPI;
@@ -1511,7 +1670,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_IS_CRANE_LIFTING_CAR:
 	{
 		CollectParameters(&m_nIp, 3);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[2]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[2]));
+		//- rouz edit (ChatGPT)
 		UpdateCompareFlag(CCranes::IsThisCarPickedUp(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], pVehicle));
 		return 0;
 	}
@@ -1530,7 +1692,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CAR_STATUS:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pVehicle->SetStatus(ScriptParams[1]);
 		return 0;
@@ -1538,7 +1703,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_IS_CHAR_MALE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		UpdateCompareFlag(pPed->m_nPedType != PEDTYPE_CIVFEMALE && pPed->m_nPedType != PEDTYPE_PROSTITUTE);
 		return 0;
@@ -1580,7 +1748,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CAR_STRONG:
 	{
 		CollectParameters(&m_nIp, 2);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		pVehicle->bTakeLessDamage = ScriptParams[1] != 0;
 		return 0;
@@ -1694,7 +1865,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_GRAB_CATALINA_HELI:
 	{
 		CHeli* pHeli = CHeli::FindPointerToCatalinasHeli();
-		ScriptParams[0] = pHeli ? CPools::GetVehiclePool()->GetIndex(pHeli) : -1;
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ScriptParams[0] = pHeli ? CPool_GetIndex(CPools::GetVehiclePool(), pHeli) : -1;
+		//- rouz edit (ChatGPT)
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -1765,10 +1939,16 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_STORE_CAR_CHAR_IS_IN_NO_SAVE:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		CVehicle* pVehicle = pPed->bInVehicle ? pPed->m_pMyVehicle : nil;
-		ScriptParams[0] = CPools::GetVehiclePool()->GetIndex(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ScriptParams[0] = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -1778,7 +1958,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
 		CVehicle* pVehicle = pPed->bInVehicle ? pPed->m_pMyVehicle : nil;
-		ScriptParams[0] = CPools::GetVehiclePool()->GetIndex(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ScriptParams[0] = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -1953,7 +2136,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		if (CModelInfo::IsBikeModel(model)) {
 //+ rouz edit (ChatGPT)
 			// Allocate the car-park bike without invoking C++ new.
-			car = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			car = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(car);
 			std::allocator<CBike>().construct((CBike*)car, model, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1962,7 +2148,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 //+ rouz edit (ChatGPT)
 		else {
 			// Allocate the car-park vehicle without invoking C++ new.
-			car = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			car = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(car);
 			std::allocator<CAutomobile>().construct((CAutomobile*)car, model, RANDOM_VEHICLE);
 		}
@@ -2003,7 +2192,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_IS_CAR_VISIBLY_DAMAGED:
 	{
 		CollectParameters(&m_nIp, 1);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		UpdateCompareFlag(pVehicle->bIsDamaged);
 		return 0;
@@ -2011,7 +2203,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	*/
 	case COMMAND_DOES_OBJECT_EXIST:
 		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(CPools::GetObjectPool()->GetAt(ScriptParams[0]));
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		UpdateCompareFlag(((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0])));
+		//- rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_LOAD_SCENE:
 	{
@@ -2033,7 +2228,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_ADD_STUCK_CAR_CHECK:
 	{
 		CollectParameters(&m_nIp, 3);
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pVehicle);
 		CTheScripts::StuckCars.AddCarToCheck(ScriptParams[0], *(float*)&ScriptParams[1], ScriptParams[2]);
 		return 0;
@@ -2132,7 +2330,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CollectParameters(&m_nIp, 3);
 		CObject* pObject = CPickups::aPickUps[CPickups::GetActualPickupIndex(ScriptParams[0])].m_pObject;
 		CRadar::GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		ScriptParams[0] = CRadar::SetEntityBlip(BLIP_OBJECT, CPools::GetObjectPool()->GetIndex(pObject), ScriptParams[1], (eBlipDisplay)ScriptParams[2]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ScriptParams[0] = CRadar::SetEntityBlip(BLIP_OBJECT, CPool_GetIndex(CPools::GetObjectPool(), pObject), ScriptParams[1], (eBlipDisplay)ScriptParams[2]);
+		//- rouz edit (ChatGPT)
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -2142,7 +2343,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CObject* pObject = CPickups::aPickUps[CPickups::GetActualPickupIndex(ScriptParams[0])].m_pObject;
 		CRadar::GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		int handle = CRadar::SetEntityBlip(BLIP_OBJECT, CPools::GetObjectPool()->GetIndex(pObject), 6, BLIP_DISPLAY_BOTH);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int handle = CRadar::SetEntityBlip(BLIP_OBJECT, CPool_GetIndex(CPools::GetObjectPool(), pObject), 6, BLIP_DISPLAY_BOTH);
+		//- rouz edit (ChatGPT)
 		CRadar::ChangeBlipScale(handle, 3);
 		ScriptParams[0] = handle;
 		StoreParameters(&m_nIp, 1);
@@ -2154,7 +2358,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CObject* pObject = CPickups::aPickUps[CPickups::GetActualPickupIndex(ScriptParams[0])].m_pObject;
 		CRadar::GetActualBlipArrayIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
-		int handle = CRadar::SetEntityBlip(BLIP_OBJECT, CPools::GetObjectPool()->GetIndex(pObject), 6, BLIP_DISPLAY_BOTH);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int handle = CRadar::SetEntityBlip(BLIP_OBJECT, CPool_GetIndex(CPools::GetObjectPool(), pObject), 6, BLIP_DISPLAY_BOTH);
+		//- rouz edit (ChatGPT)
 		CRadar::SetBlipSprite(handle, ScriptParams[1]);
 		ScriptParams[0] = handle;
 		StoreParameters(&m_nIp, 1);
@@ -2182,7 +2389,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	case COMMAND_SET_CHAR_OBJ_LEAVE_ANY_CAR:
 	{
 		CollectParameters(&m_nIp, 1);
-		CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+		//- rouz edit (ChatGPT)
 		script_assert(pPed);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_LEAVE_CAR, pPed->m_pMyVehicle);

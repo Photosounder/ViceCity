@@ -87,7 +87,10 @@ void CCarGenerator::DoInternalProcessing()
 	if (CModelInfo::IsBoatModel(mi)){
 //+ rouz edit (ChatGPT)
 		// Allocate the parked boat from the vehicle pool without invoking C++ new.
-		CBoat* pBoat = (CBoat*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CBoat* pBoat = (CBoat*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pBoat);
 		std::allocator<CBoat>().construct(pBoat, mi, PARKED_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -117,7 +120,10 @@ void CCarGenerator::DoInternalProcessing()
 		if (((CVehicleModelInfo*)CModelInfo::GetModelInfo(mi))->m_vehicleType == VEHICLE_TYPE_BIKE) {
 //+ rouz edit (ChatGPT)
 			// Allocate the parked bike from the vehicle pool without invoking C++ new.
-			CBike* pBike = (CBike*)CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CBike* pBike = (CBike*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(pBike);
 			std::allocator<CBike>().construct(pBike, mi, PARKED_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -127,7 +133,10 @@ void CCarGenerator::DoInternalProcessing()
 		else {
 //+ rouz edit (ChatGPT)
 			// Allocate the parked automobile from the vehicle pool without invoking C++ new.
-			CAutomobile* pCar = (CAutomobile*)CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CAutomobile* pCar = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(pCar);
 			std::allocator<CAutomobile>().construct(pCar, mi, PARKED_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -157,7 +166,10 @@ void CCarGenerator::DoInternalProcessing()
 		m_nColor2 = pVehicle->m_currentColour2;
 	}
 	CVisibilityPlugins::SetClumpAlpha(pVehicle->GetClump(), 0);
-	m_nVehicleHandle = CPools::GetVehiclePool()->GetIndex(pVehicle);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	m_nVehicleHandle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
+	//- rouz edit (ChatGPT)
 	/* I don't think this is a correct comparasion */
 #ifdef FIX_BUGS
 	if (m_nUsesRemaining < UINT16_MAX)
@@ -179,7 +191,10 @@ void CCarGenerator::Process()
 		DoInternalProcessing();
 	if (m_nVehicleHandle == -1)
 		return;
-	CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(m_nVehicleHandle);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), m_nVehicleHandle));
+	//- rouz edit (ChatGPT)
 	if (!pVehicle){
 		m_nVehicleHandle = -1;
 		return;
@@ -283,17 +298,38 @@ void CTheCarGenerators::SaveAllCarGenerators(uint8 *buffer, uint32 *size)
 	const uint32 nGeneralDataSize = sizeof(NumOfCarGenerators) + sizeof(CurrentActiveCount) + sizeof(ProcessCounter) + sizeof(GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
 	*size = sizeof(int) + nGeneralDataSize + sizeof(uint32) + sizeof(CarGeneratorArray) + SAVE_HEADER_SIZE;
 INITSAVEBUF
-	WriteSaveHeader(buffer, 'C','G','N','\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buffer, 'C', 'G', 'N', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
-	WriteSaveBuf(buffer, nGeneralDataSize);
-	WriteSaveBuf(buffer, NumOfCarGenerators);
-	WriteSaveBuf(buffer, CurrentActiveCount);
-	WriteSaveBuf(buffer, ProcessCounter);
-	WriteSaveBuf(buffer, GenerateEvenIfPlayerIsCloseCounter);
-	WriteSaveBuf(buffer, (int16)0); // alignment
-	WriteSaveBuf(buffer, (uint32)sizeof(CarGeneratorArray));
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buffer, &nGeneralDataSize, sizeof(nGeneralDataSize));
+	WriteSaveBuf(&buffer, &NumOfCarGenerators, sizeof(NumOfCarGenerators));
+	WriteSaveBuf(&buffer, &CurrentActiveCount, sizeof(CurrentActiveCount));
+	WriteSaveBuf(&buffer, &ProcessCounter, sizeof(ProcessCounter));
+	WriteSaveBuf(&buffer, &GenerateEvenIfPlayerIsCloseCounter, sizeof(GenerateEvenIfPlayerIsCloseCounter));
+	{
+		// Materialize the saved value with its original serialized type
+		int16 saveValue = (int16)0;
+		WriteSaveBuf(&buffer, &saveValue, sizeof(saveValue)); // alignment
+	}
+	{
+		// Materialize the saved value with its original serialized type
+		uint32 saveValue = (uint32)sizeof(CarGeneratorArray);
+		WriteSaveBuf(&buffer, &saveValue, sizeof(saveValue));
+	}
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_CARGENS; i++)
-		WriteSaveBuf(buffer, CarGeneratorArray[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			*(CCarGenerator*)buffer = CarGeneratorArray[i];
+			SkipSaveBuf(&buffer, sizeof(CarGeneratorArray[i]));
+		}
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(*size)
 }
 
@@ -307,18 +343,34 @@ void CTheCarGenerators::LoadAllCarGenerators(uint8* buffer, uint32 size)
 	const int32 nGeneralDataSize = sizeof(NumOfCarGenerators) + sizeof(CurrentActiveCount) + sizeof(ProcessCounter) + sizeof(GenerateEvenIfPlayerIsCloseCounter) + sizeof(int16);
 	Init();
 INITSAVEBUF
-	CheckSaveHeader(buffer, 'C','G','N','\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buffer, 'C', 'G', 'N', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 	uint32 tmp;
-	ReadSaveBuf(&tmp, buffer);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp, &buffer, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	assert(tmp == nGeneralDataSize);
-	ReadSaveBuf(&NumOfCarGenerators, buffer);
-	ReadSaveBuf(&CurrentActiveCount, buffer);
-	ReadSaveBuf(&ProcessCounter, buffer);
-	ReadSaveBuf(&GenerateEvenIfPlayerIsCloseCounter, buffer);
-	SkipSaveBuf(buffer, 2);
-	ReadSaveBuf(&tmp, buffer);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumOfCarGenerators, &buffer, sizeof(NumOfCarGenerators));
+	ReadSaveBuf(&CurrentActiveCount, &buffer, sizeof(CurrentActiveCount));
+	ReadSaveBuf(&ProcessCounter, &buffer, sizeof(ProcessCounter));
+	ReadSaveBuf(&GenerateEvenIfPlayerIsCloseCounter, &buffer, sizeof(GenerateEvenIfPlayerIsCloseCounter));
+	SkipSaveBuf(&buffer, 2);
+	ReadSaveBuf(&tmp, &buffer, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	assert(tmp == sizeof(CarGeneratorArray));
 	for (int i = 0; i < NUM_CARGENS; i++) 
-		ReadSaveBuf(&CarGeneratorArray[i], buffer);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			CarGeneratorArray[i] = *(CCarGenerator*)buffer;
+			SkipSaveBuf(&buffer, sizeof(CarGeneratorArray[i]));
+		}
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size)
 }

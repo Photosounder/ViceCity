@@ -315,7 +315,10 @@ void CCrane::Update(void)
 //+ rouz edit (ChatGPT)
 							// Destroy and release the crane vehicle without invoking C++ delete.
 							m_pVehiclePickedUp->~CVehicle();
-							CPools::GetVehiclePool()->Delete(m_pVehiclePickedUp);
+							//+ rouz edit (ChatGPT)
+							// Access raw storage through the C store or pool API
+							CPool_Delete(CPools::GetVehiclePool(), m_pVehiclePickedUp);
+							//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 						}
 					}
@@ -634,51 +637,87 @@ void CCranes::Save(uint8* buf, uint32* size)
 	INITSAVEBUF
 
 	*size = 2 * sizeof(uint32) + CRANES_SAVE_SIZE;
-	WriteSaveBuf(buf, NumCranes);
-	WriteSaveBuf(buf, CarsCollectedMilitaryCrane);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &NumCranes, sizeof(NumCranes));
+	WriteSaveBuf(&buf, &CarsCollectedMilitaryCrane, sizeof(CarsCollectedMilitaryCrane));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
-		int32 tmp = aCranes[i].m_pCraneEntity != nil ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(aCranes[i].m_pCraneEntity) + 1 : 0;
-		WriteSaveBuf(buf, tmp);
-		tmp = aCranes[i].m_pHook != nil ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aCranes[i].m_pHook) + 1 : 0;
-		WriteSaveBuf(buf, tmp);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupX1);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupX2);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupY1);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupY2);
-		WriteSaveBuf(buf, aCranes[i].m_vecDropoffTarget);
-		WriteSaveBuf(buf, aCranes[i].m_fDropoffHeading);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupAngle);
-		WriteSaveBuf(buf, aCranes[i].m_fDropoffAngle);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupDistance);
-		WriteSaveBuf(buf, aCranes[i].m_fDropoffDistance);
-		WriteSaveBuf(buf, aCranes[i].m_fPickupHeight);
-		WriteSaveBuf(buf, aCranes[i].m_fDropoffHeight);
-		WriteSaveBuf(buf, aCranes[i].m_fHookAngle);
-		WriteSaveBuf(buf, aCranes[i].m_fHookOffset);
-		WriteSaveBuf(buf, aCranes[i].m_fHookHeight);
-		WriteSaveBuf(buf, aCranes[i].m_vecHookInitPos);
-		WriteSaveBuf(buf, aCranes[i].m_vecHookCurPos);
-		WriteSaveBuf(buf, aCranes[i].m_vecHookVelocity);
-		tmp = aCranes[i].m_pVehiclePickedUp != nil ? CPools::GetVehiclePool()->GetJustIndex_NoFreeAssert(aCranes[i].m_pVehiclePickedUp) + 1 : 0;
-		WriteSaveBuf(buf, tmp);
-		WriteSaveBuf(buf, aCranes[i].m_nTimeForNextCheck);
-		WriteSaveBuf(buf, aCranes[i].m_nCraneStatus);
-		WriteSaveBuf(buf, aCranes[i].m_nCraneState);
-		WriteSaveBuf(buf, aCranes[i].m_nVehiclesCollected);
-		WriteSaveBuf(buf, aCranes[i].m_bIsCrusher);
-		WriteSaveBuf(buf, aCranes[i].m_bIsMilitaryCrane);
-		WriteSaveBuf(buf, aCranes[i].m_bWasMilitaryCrane);
-		WriteSaveBuf(buf, aCranes[i].m_bIsTop);
-		ZeroSaveBuf(buf, 1);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int32 tmp = aCranes[i].m_pCraneEntity != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), aCranes[i].m_pCraneEntity) + 1 : 0;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		tmp = aCranes[i].m_pHook != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), aCranes[i].m_pHook) + 1 : 0;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupX1, sizeof(aCranes[i].m_fPickupX1));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupX2, sizeof(aCranes[i].m_fPickupX2));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupY1, sizeof(aCranes[i].m_fPickupY1));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupY2, sizeof(aCranes[i].m_fPickupY2));
+		WriteSaveBuf(&buf, &aCranes[i].m_vecDropoffTarget, sizeof(aCranes[i].m_vecDropoffTarget));
+		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffHeading, sizeof(aCranes[i].m_fDropoffHeading));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupAngle, sizeof(aCranes[i].m_fPickupAngle));
+		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffAngle, sizeof(aCranes[i].m_fDropoffAngle));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupDistance, sizeof(aCranes[i].m_fPickupDistance));
+		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffDistance, sizeof(aCranes[i].m_fDropoffDistance));
+		WriteSaveBuf(&buf, &aCranes[i].m_fPickupHeight, sizeof(aCranes[i].m_fPickupHeight));
+		WriteSaveBuf(&buf, &aCranes[i].m_fDropoffHeight, sizeof(aCranes[i].m_fDropoffHeight));
+		WriteSaveBuf(&buf, &aCranes[i].m_fHookAngle, sizeof(aCranes[i].m_fHookAngle));
+		WriteSaveBuf(&buf, &aCranes[i].m_fHookOffset, sizeof(aCranes[i].m_fHookOffset));
+		WriteSaveBuf(&buf, &aCranes[i].m_fHookHeight, sizeof(aCranes[i].m_fHookHeight));
+		WriteSaveBuf(&buf, &aCranes[i].m_vecHookInitPos, sizeof(aCranes[i].m_vecHookInitPos));
+		WriteSaveBuf(&buf, &aCranes[i].m_vecHookCurPos, sizeof(aCranes[i].m_vecHookCurPos));
+		WriteSaveBuf(&buf, &aCranes[i].m_vecHookVelocity, sizeof(aCranes[i].m_vecHookVelocity));
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		tmp = aCranes[i].m_pVehiclePickedUp != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), aCranes[i].m_pVehiclePickedUp) + 1 : 0;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+		WriteSaveBuf(&buf, &aCranes[i].m_nTimeForNextCheck, sizeof(aCranes[i].m_nTimeForNextCheck));
+		WriteSaveBuf(&buf, &aCranes[i].m_nCraneStatus, sizeof(aCranes[i].m_nCraneStatus));
+		WriteSaveBuf(&buf, &aCranes[i].m_nCraneState, sizeof(aCranes[i].m_nCraneState));
+		WriteSaveBuf(&buf, &aCranes[i].m_nVehiclesCollected, sizeof(aCranes[i].m_nVehiclesCollected));
+		WriteSaveBuf(&buf, &aCranes[i].m_bIsCrusher, sizeof(aCranes[i].m_bIsCrusher));
+		WriteSaveBuf(&buf, &aCranes[i].m_bIsMilitaryCrane, sizeof(aCranes[i].m_bIsMilitaryCrane));
+		WriteSaveBuf(&buf, &aCranes[i].m_bWasMilitaryCrane, sizeof(aCranes[i].m_bWasMilitaryCrane));
+		WriteSaveBuf(&buf, &aCranes[i].m_bIsTop, sizeof(aCranes[i].m_bIsTop));
+		ZeroSaveBuf(&buf, 1);
+		//- rouz edit (ChatGPT)
 #else
-		CCrane *pCrane = WriteSaveBuf(buf, aCranes[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		CCrane *pCrane = (CCrane*)buf;
+		*pCrane = aCranes[i];
+		SkipSaveBuf(&buf, sizeof(aCranes[i]));
+		//- rouz edit (ChatGPT)
 		if (pCrane->m_pCraneEntity != nil)
-			pCrane->m_pCraneEntity = (CBuilding*)(CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pCrane->m_pCraneEntity) + 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pCraneEntity = (CBuilding*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pCrane->m_pCraneEntity) + 1);
+			//- rouz edit (ChatGPT)
 		if (pCrane->m_pHook != nil)
-			pCrane->m_pHook = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pCrane->m_pHook) + 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pHook = (CObject*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), pCrane->m_pHook) + 1);
+			//- rouz edit (ChatGPT)
 		if (pCrane->m_pVehiclePickedUp != nil)
-			pCrane->m_pVehiclePickedUp = (CVehicle*)(CPools::GetVehiclePool()->GetJustIndex_NoFreeAssert(pCrane->m_pVehiclePickedUp) + 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pVehiclePickedUp = (CVehicle*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), pCrane->m_pVehiclePickedUp) + 1);
+			//- rouz edit (ChatGPT)
 #endif
 	}
 
@@ -689,55 +728,93 @@ void CCranes::Load(uint8* buf, uint32 size)
 {
 	INITSAVEBUF
 
-	ReadSaveBuf(&NumCranes, buf);
-	ReadSaveBuf(&CarsCollectedMilitaryCrane, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumCranes, &buf, sizeof(NumCranes));
+	ReadSaveBuf(&CarsCollectedMilitaryCrane, &buf, sizeof(CarsCollectedMilitaryCrane));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_CRANES; i++) {
 #ifdef COMPATIBLE_SAVES
 		int32 tmp;
-		ReadSaveBuf(&tmp, buf);
-		aCranes[i].m_pCraneEntity = tmp != 0 ? CPools::GetBuildingPool()->GetSlot(tmp - 1) : nil;
-		ReadSaveBuf(&tmp, buf);
-		aCranes[i].m_pHook = tmp != 0 ? CPools::GetObjectPool()->GetSlot(tmp - 1) : nil;
-		ReadSaveBuf(&aCranes[i].m_fPickupX1, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupX2, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupY1, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupY2, buf);
-		ReadSaveBuf(&aCranes[i].m_vecDropoffTarget, buf);
-		ReadSaveBuf(&aCranes[i].m_fDropoffHeading, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupAngle, buf);
-		ReadSaveBuf(&aCranes[i].m_fDropoffAngle, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupDistance, buf);
-		ReadSaveBuf(&aCranes[i].m_fDropoffDistance, buf);
-		ReadSaveBuf(&aCranes[i].m_fPickupHeight, buf);
-		ReadSaveBuf(&aCranes[i].m_fDropoffHeight, buf);
-		ReadSaveBuf(&aCranes[i].m_fHookAngle, buf);
-		ReadSaveBuf(&aCranes[i].m_fHookOffset, buf);
-		ReadSaveBuf(&aCranes[i].m_fHookHeight, buf);
-		ReadSaveBuf(&aCranes[i].m_vecHookInitPos, buf);
-		ReadSaveBuf(&aCranes[i].m_vecHookCurPos, buf);
-		ReadSaveBuf(&aCranes[i].m_vecHookVelocity, buf);
-		ReadSaveBuf(&tmp, buf);
-		aCranes[i].m_pVehiclePickedUp = tmp != 0 ? CPools::GetVehiclePool()->GetSlot(tmp - 1) : nil;
-		ReadSaveBuf(&aCranes[i].m_nTimeForNextCheck, buf);
-		ReadSaveBuf(&aCranes[i].m_nCraneStatus, buf);
-		ReadSaveBuf(&aCranes[i].m_nCraneState, buf);
-		ReadSaveBuf(&aCranes[i].m_nVehiclesCollected, buf);
-		ReadSaveBuf(&aCranes[i].m_bIsCrusher, buf);
-		ReadSaveBuf(&aCranes[i].m_bIsMilitaryCrane, buf);
-		ReadSaveBuf(&aCranes[i].m_bWasMilitaryCrane, buf);
-		ReadSaveBuf(&aCranes[i].m_bIsTop, buf);
-		SkipSaveBuf(buf, 1);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		aCranes[i].m_pCraneEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), tmp - 1)) : nil;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		aCranes[i].m_pHook = tmp != 0 ? ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), tmp - 1)) : nil;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&aCranes[i].m_fPickupX1, &buf, sizeof(aCranes[i].m_fPickupX1));
+		ReadSaveBuf(&aCranes[i].m_fPickupX2, &buf, sizeof(aCranes[i].m_fPickupX2));
+		ReadSaveBuf(&aCranes[i].m_fPickupY1, &buf, sizeof(aCranes[i].m_fPickupY1));
+		ReadSaveBuf(&aCranes[i].m_fPickupY2, &buf, sizeof(aCranes[i].m_fPickupY2));
+		ReadSaveBuf(&aCranes[i].m_vecDropoffTarget, &buf, sizeof(aCranes[i].m_vecDropoffTarget));
+		ReadSaveBuf(&aCranes[i].m_fDropoffHeading, &buf, sizeof(aCranes[i].m_fDropoffHeading));
+		ReadSaveBuf(&aCranes[i].m_fPickupAngle, &buf, sizeof(aCranes[i].m_fPickupAngle));
+		ReadSaveBuf(&aCranes[i].m_fDropoffAngle, &buf, sizeof(aCranes[i].m_fDropoffAngle));
+		ReadSaveBuf(&aCranes[i].m_fPickupDistance, &buf, sizeof(aCranes[i].m_fPickupDistance));
+		ReadSaveBuf(&aCranes[i].m_fDropoffDistance, &buf, sizeof(aCranes[i].m_fDropoffDistance));
+		ReadSaveBuf(&aCranes[i].m_fPickupHeight, &buf, sizeof(aCranes[i].m_fPickupHeight));
+		ReadSaveBuf(&aCranes[i].m_fDropoffHeight, &buf, sizeof(aCranes[i].m_fDropoffHeight));
+		ReadSaveBuf(&aCranes[i].m_fHookAngle, &buf, sizeof(aCranes[i].m_fHookAngle));
+		ReadSaveBuf(&aCranes[i].m_fHookOffset, &buf, sizeof(aCranes[i].m_fHookOffset));
+		ReadSaveBuf(&aCranes[i].m_fHookHeight, &buf, sizeof(aCranes[i].m_fHookHeight));
+		ReadSaveBuf(&aCranes[i].m_vecHookInitPos, &buf, sizeof(aCranes[i].m_vecHookInitPos));
+		ReadSaveBuf(&aCranes[i].m_vecHookCurPos, &buf, sizeof(aCranes[i].m_vecHookCurPos));
+		ReadSaveBuf(&aCranes[i].m_vecHookVelocity, &buf, sizeof(aCranes[i].m_vecHookVelocity));
+		ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		aCranes[i].m_pVehiclePickedUp = tmp != 0 ? ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), tmp - 1)) : nil;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&aCranes[i].m_nTimeForNextCheck, &buf, sizeof(aCranes[i].m_nTimeForNextCheck));
+		ReadSaveBuf(&aCranes[i].m_nCraneStatus, &buf, sizeof(aCranes[i].m_nCraneStatus));
+		ReadSaveBuf(&aCranes[i].m_nCraneState, &buf, sizeof(aCranes[i].m_nCraneState));
+		ReadSaveBuf(&aCranes[i].m_nVehiclesCollected, &buf, sizeof(aCranes[i].m_nVehiclesCollected));
+		ReadSaveBuf(&aCranes[i].m_bIsCrusher, &buf, sizeof(aCranes[i].m_bIsCrusher));
+		ReadSaveBuf(&aCranes[i].m_bIsMilitaryCrane, &buf, sizeof(aCranes[i].m_bIsMilitaryCrane));
+		ReadSaveBuf(&aCranes[i].m_bWasMilitaryCrane, &buf, sizeof(aCranes[i].m_bWasMilitaryCrane));
+		ReadSaveBuf(&aCranes[i].m_bIsTop, &buf, sizeof(aCranes[i].m_bIsTop));
+		SkipSaveBuf(&buf, 1);
+		//- rouz edit (ChatGPT)
 #else
-		ReadSaveBuf(&aCranes[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		aCranes[i] = *(CCrane*)buf;
+		SkipSaveBuf(&buf, sizeof(aCranes[i]));
+		//- rouz edit (ChatGPT)
 	}
 	for (int i = 0; i < NUM_CRANES; i++) {
 		CCrane *pCrane = &aCranes[i];
 		if (pCrane->m_pCraneEntity != nil)
-			pCrane->m_pCraneEntity = CPools::GetBuildingPool()->GetSlot((uintptr)pCrane->m_pCraneEntity - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pCraneEntity = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), (uintptr)pCrane->m_pCraneEntity - 1));
+			//- rouz edit (ChatGPT)
 		if (pCrane->m_pHook != nil)
-			pCrane->m_pHook = CPools::GetObjectPool()->GetSlot((uintptr)pCrane->m_pHook - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pHook = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), (uintptr)pCrane->m_pHook - 1));
+			//- rouz edit (ChatGPT)
 		if (pCrane->m_pVehiclePickedUp != nil)
-			pCrane->m_pVehiclePickedUp = CPools::GetVehiclePool()->GetSlot((uintptr)pCrane->m_pVehiclePickedUp - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pCrane->m_pVehiclePickedUp = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), (uintptr)pCrane->m_pVehiclePickedUp - 1));
+			//- rouz edit (ChatGPT)
 #endif
 	}
 

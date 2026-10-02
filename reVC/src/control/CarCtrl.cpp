@@ -383,17 +383,26 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 	if (CModelInfo::IsBoatModel(carModel)) {
 		// Allocate the generated boat from the vehicle pool without invoking C++ new.
-		pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CBoat>().construct((CBoat*)pVehicle, carModel, RANDOM_VEHICLE);
 	} else if (CModelInfo::IsBikeModel(carModel)) {
 		// Allocate the generated bike from the vehicle pool without invoking C++ new.
-		pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CBike>().construct((CBike*)pVehicle, carModel, RANDOM_VEHICLE);
 	} else {
 		// Allocate the generated automobile from the vehicle pool without invoking C++ new.
-		pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, carModel, RANDOM_VEHICLE);
 	}
@@ -464,7 +473,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 		// Destroy and release the generated vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return;
 	}
@@ -604,7 +616,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -623,7 +638,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 		// Destroy and release the generated vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return;
 	}
@@ -658,7 +676,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -669,7 +690,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -678,7 +702,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -686,7 +713,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -700,7 +730,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -711,7 +744,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 		// Destroy and release the generated vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return;
 	}
@@ -721,7 +757,10 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(CGeneral::GetRandomNumberIn
 //+ rouz edit (ChatGPT)
 		// Destroy and release the generated vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return;
 	}
@@ -998,8 +1037,12 @@ CCarCtrl::AddToCarArray(int32 id, int32 vehclass)
 void
 CCarCtrl::RemoveDistantCars()
 {
-	for (int i = CPools::GetVehiclePool()->GetSize()-1; i >= 0; i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetVehiclePool())-1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+	//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		PossiblyRemoveVehicle(pVehicle);
@@ -1017,13 +1060,22 @@ CCarCtrl::RemoveCarsIfThePoolGetsFull(void)
 {
 	if ((CTimer::GetFrameCounter() & 7) != 3)
 		return;
-	if (CPools::GetVehiclePool()->GetNoOfFreeSpaces() >= 8)
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (CPool_GetNoOfFreeSpaces(CPools::GetVehiclePool()) >= 8)
+	//- rouz edit (ChatGPT)
 		return;
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	float md = 10000000.f;
 	CVehicle* pClosestVehicle = nil;
 	while (i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if (IsThisVehicleInteresting(pVehicle) || pVehicle->bIsLocked)
@@ -1041,7 +1093,10 @@ CCarCtrl::RemoveCarsIfThePoolGetsFull(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the closest vehicle without invoking C++ delete.
 		pClosestVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pClosestVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pClosestVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
 }
@@ -1062,7 +1117,10 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -1099,7 +1157,10 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 //+ rouz edit (ChatGPT)
 				// Destroy and release the vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			return;
@@ -1120,7 +1181,10 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the vehicle without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return;
 	}
@@ -1135,7 +1199,10 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 //+ rouz edit (ChatGPT)
 						// Destroy and release the vehicle without invoking C++ delete.
 						pVehicle->~CVehicle();
-						CPools::GetVehiclePool()->Delete(pVehicle);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+						//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 					}
 				}
@@ -1148,8 +1215,12 @@ int32
 CCarCtrl::CountCarsOfType(int32 mi)
 {
 	int32 total = 0;
-	for (int i = CPools::GetVehiclePool()->GetSize()-1; i >= 0; i--) {
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(CPools::GetVehiclePool())-1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+	//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		if (pVehicle->GetModelIndex() == mi)
@@ -3363,7 +3434,10 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 		return false;
 //+ rouz edit (ChatGPT)
 	// Allocate the emergency automobile from the vehicle pool without invoking C++ new.
-	CAutomobile* pVehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CAutomobile* pVehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	assert(pVehicle);
 	std::allocator<CAutomobile>().construct(pVehicle, mi, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -3392,7 +3466,10 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the emergency automobile without invoking C++ delete.
 		pVehicle->~CAutomobile();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return false;
 	}

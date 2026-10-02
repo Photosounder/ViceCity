@@ -10,7 +10,9 @@ struct TxdDef {
 
 class CTxdStore
 {
-	static CPool<TxdDef,TxdDef> *ms_pTxdPool;
+	//+ rouz edit (ChatGPT)
+	static CPool *ms_pTxdPool;
+	//- rouz edit (ChatGPT)
 	static RwTexDictionary *ms_pStoredTxd;
 public:
 	static void Initialise(void);
@@ -37,8 +39,11 @@ public:
 	static TxdDef *GetSlot(int slot) {
 		assert(slot >= 0);
 		assert(ms_pTxdPool);
-		assert(slot < ms_pTxdPool->GetSize());
-		return ms_pTxdPool->GetSlot(slot);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		assert(slot < CPool_GetSize(ms_pTxdPool));
+		return ((TxdDef*)CPool_GetSlot(ms_pTxdPool, slot));
+		//- rouz edit (ChatGPT)
 	}
 	static bool isTxdLoaded(int slot);
 };

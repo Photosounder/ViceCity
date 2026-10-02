@@ -42,62 +42,82 @@ CPools::Initialise(void)
 	CHECKMEM("before pools");
 //+ rouz edit (ChatGPT)
 	// Construct the pointer-node pool without invoking C++ new.
-	ms_pPtrNodePool = (CCPtrNodePool*)malloc(sizeof(CCPtrNodePool));
-	std::allocator<CCPtrNodePool>().construct(ms_pPtrNodePool, NUMPTRNODES, "PtrNode");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pPtrNodePool = CPool_Create(NUMPTRNODES, sizeof(CPtrNode), "PtrNode");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CPtrNodePool");
 //+ rouz edit (ChatGPT)
 	// Construct the entry-info pool without invoking C++ new.
-	ms_pEntryInfoNodePool = (CEntryInfoNodePool*)malloc(sizeof(CEntryInfoNodePool));
-	std::allocator<CEntryInfoNodePool>().construct(ms_pEntryInfoNodePool, NUMENTRYINFOS, "EntryInfoNode");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pEntryInfoNodePool = CPool_Create(NUMENTRYINFOS, sizeof(CEntryInfoNode), "EntryInfoNode");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CEntryInfoNodePool");
 //+ rouz edit (ChatGPT)
 	// Construct the ped pool without invoking C++ new.
-	ms_pPedPool = (CPedPool*)malloc(sizeof(CPedPool));
-	std::allocator<CPedPool>().construct(ms_pPedPool, NUMPEDS, "Peds");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pPedPool = CPool_Create(NUMPEDS, sizeof(CPlayerPed), "Peds");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CPedPool");
 //+ rouz edit (ChatGPT)
 	// Construct the vehicle pool without invoking C++ new.
-	ms_pVehiclePool = (CVehiclePool*)malloc(sizeof(CVehiclePool));
-	std::allocator<CVehiclePool>().construct(ms_pVehiclePool, NUMVEHICLES, "Vehicles");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pVehiclePool = CPool_Create(NUMVEHICLES, sizeof(CAutomobile), "Vehicles");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CVehiclePool");
 //+ rouz edit (ChatGPT)
 	// Construct the building pool without invoking C++ new.
-	ms_pBuildingPool = (CBuildingPool*)malloc(sizeof(CBuildingPool));
-	std::allocator<CBuildingPool>().construct(ms_pBuildingPool, NUMBUILDINGS, "Buildings");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pBuildingPool = CPool_Create(NUMBUILDINGS, sizeof(CBuilding), "Buildings");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CBuildingPool");
 //+ rouz edit (ChatGPT)
 	// Construct the treadable pool without invoking C++ new.
-	ms_pTreadablePool = (CTreadablePool*)malloc(sizeof(CTreadablePool));
-	std::allocator<CTreadablePool>().construct(ms_pTreadablePool, NUMTREADABLES, "Treadables");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pTreadablePool = CPool_Create(NUMTREADABLES, sizeof(CTreadable), "Treadables");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CTreadablePool");
 //+ rouz edit (ChatGPT)
 	// Construct the object pool without invoking C++ new.
-	ms_pObjectPool = (CObjectPool*)malloc(sizeof(CObjectPool));
-	std::allocator<CObjectPool>().construct(ms_pObjectPool, NUMOBJECTS, "Objects");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pObjectPool = CPool_Create(NUMOBJECTS, sizeof(CCutsceneObject), "Objects");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CObjectPool");
 //+ rouz edit (ChatGPT)
 	// Construct the dummy pool without invoking C++ new.
-	ms_pDummyPool = (CDummyPool*)malloc(sizeof(CDummyPool));
-	std::allocator<CDummyPool>().construct(ms_pDummyPool, NUMDUMMIES, "Dummys");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pDummyPool = CPool_Create(NUMDUMMIES, sizeof(CDummyPed), "Dummys");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after CDummyPool");
 //+ rouz edit (ChatGPT)
 	// Construct the audio-script-object pool without invoking C++ new.
-	ms_pAudioScriptObjectPool = (CAudioScriptObjectPool*)malloc(sizeof(CAudioScriptObjectPool));
-	std::allocator<CAudioScriptObjectPool>().construct(ms_pAudioScriptObjectPool, NUMAUDIOSCRIPTOBJECTS, "AudioScriptObj");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pAudioScriptObjectPool = CPool_Create(NUMAUDIOSCRIPTOBJECTS, sizeof(cAudioScriptObject), "AudioScriptObj");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after cAudioScriptObjectPool");
 //+ rouz edit (ChatGPT)
 	// Construct the collision-model pool without invoking C++ new.
-	ms_pColModelPool = (CColModelPool*)malloc(sizeof(CColModelPool));
-	std::allocator<CColModelPool>().construct(ms_pColModelPool, NUMCOLMODELS, "ColModel");
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	ms_pColModelPool = CPool_Create(NUMCOLMODELS, sizeof(CColModel), "ColModel");
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CHECKMEM("after pools");
 	POP_MEMID();
@@ -106,57 +126,82 @@ CPools::Initialise(void)
 void
 CPools::ShutDown(void)
 {
-	debug("PtrNodes left %d\n", ms_pPtrNodePool->GetNoOfUsedSpaces());
-	debug("EntryInfoNodes left %d\n", ms_pEntryInfoNodePool->GetNoOfUsedSpaces());
-	debug("Peds left %d\n", ms_pPedPool->GetNoOfUsedSpaces());
-	debug("Vehicles left %d\n", ms_pVehiclePool->GetNoOfUsedSpaces());
-	debug("Buildings left %d\n", ms_pBuildingPool->GetNoOfUsedSpaces());
-	debug("Treadables left %d\n", ms_pTreadablePool->GetNoOfUsedSpaces());
-	debug("Objects left %d\n", ms_pObjectPool->GetNoOfUsedSpaces());
-	debug("Dummys left %d\n", ms_pDummyPool->GetNoOfUsedSpaces());
-	debug("AudioScriptObjects left %d\n", ms_pAudioScriptObjectPool->GetNoOfUsedSpaces());
-	debug("ColModels left %d\n", ms_pColModelPool->GetNoOfUsedSpaces());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	debug("PtrNodes left %d\n", CPool_GetNoOfUsedSpaces(ms_pPtrNodePool));
+	debug("EntryInfoNodes left %d\n", CPool_GetNoOfUsedSpaces(ms_pEntryInfoNodePool));
+	debug("Peds left %d\n", CPool_GetNoOfUsedSpaces(ms_pPedPool));
+	debug("Vehicles left %d\n", CPool_GetNoOfUsedSpaces(ms_pVehiclePool));
+	debug("Buildings left %d\n", CPool_GetNoOfUsedSpaces(ms_pBuildingPool));
+	debug("Treadables left %d\n", CPool_GetNoOfUsedSpaces(ms_pTreadablePool));
+	debug("Objects left %d\n", CPool_GetNoOfUsedSpaces(ms_pObjectPool));
+	debug("Dummys left %d\n", CPool_GetNoOfUsedSpaces(ms_pDummyPool));
+	debug("AudioScriptObjects left %d\n", CPool_GetNoOfUsedSpaces(ms_pAudioScriptObjectPool));
+	debug("ColModels left %d\n", CPool_GetNoOfUsedSpaces(ms_pColModelPool));
+	//- rouz edit (ChatGPT)
 	printf("Shutdown pool started\n");
 
 //+ rouz edit (ChatGPT)
 	// Destroy and release pool managers without invoking C++ delete.
-	ms_pPtrNodePool->~CCPtrNodePool();
-	free(ms_pPtrNodePool);
-	ms_pEntryInfoNodePool->~CEntryInfoNodePool();
-	free(ms_pEntryInfoNodePool);
-	ms_pPedPool->~CPedPool();
-	free(ms_pPedPool);
-	ms_pVehiclePool->~CVehiclePool();
-	free(ms_pVehiclePool);
-	ms_pBuildingPool->~CBuildingPool();
-	free(ms_pBuildingPool);
-	ms_pTreadablePool->~CTreadablePool();
-	free(ms_pTreadablePool);
-	ms_pObjectPool->~CObjectPool();
-	free(ms_pObjectPool);
-	ms_pDummyPool->~CDummyPool();
-	free(ms_pDummyPool);
-	ms_pAudioScriptObjectPool->~CAudioScriptObjectPool();
-	free(ms_pAudioScriptObjectPool);
-	ms_pColModelPool->~CColModelPool();
-	free(ms_pColModelPool);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Destroy(ms_pPtrNodePool);
+	CPool_Destroy(ms_pEntryInfoNodePool);
+	CPool_Destroy(ms_pPedPool);
+	CPool_Destroy(ms_pVehiclePool);
+	CPool_Destroy(ms_pBuildingPool);
+	CPool_Destroy(ms_pTreadablePool);
+	CPool_Destroy(ms_pObjectPool);
+	CPool_Destroy(ms_pDummyPool);
+	CPool_Destroy(ms_pAudioScriptObjectPool);
+	CPool_Destroy(ms_pColModelPool);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 
 	printf("Shutdown pool done\n");
 }
 
-int32 CPools::GetPedRef(CPed *ped) { return ms_pPedPool->GetIndex(ped); }
-CPed *CPools::GetPed(int32 handle) { return ms_pPedPool->GetAt(handle); }
-int32 CPools::GetVehicleRef(CVehicle *vehicle) { return ms_pVehiclePool->GetIndex(vehicle); }
-CVehicle *CPools::GetVehicle(int32 handle) { return ms_pVehiclePool->GetAt(handle); }
-int32 CPools::GetObjectRef(CObject *object) { return ms_pObjectPool->GetIndex(object); }
-CObject *CPools::GetObject(int32 handle) { return ms_pObjectPool->GetAt(handle); }
+//+ rouz edit (ChatGPT)
+int32 CPools::GetPedRef(CPed *ped)
+{
+	// Access the store or pool through its C API
+	return CPool_GetIndex(ms_pPedPool, ped);
+}
+CPed *CPools::GetPed(int32 handle)
+{
+	// Access the store or pool through its C API
+	return ((CPed*)CPool_GetAt(ms_pPedPool, handle));
+}
+int32 CPools::GetVehicleRef(CVehicle *vehicle)
+{
+	// Access the store or pool through its C API
+	return CPool_GetIndex(ms_pVehiclePool, vehicle);
+}
+CVehicle *CPools::GetVehicle(int32 handle)
+{
+	// Access the store or pool through its C API
+	return ((CVehicle*)CPool_GetAt(ms_pVehiclePool, handle));
+}
+int32 CPools::GetObjectRef(CObject *object)
+{
+	// Access the store or pool through its C API
+	return CPool_GetIndex(ms_pObjectPool, object);
+}
+CObject *CPools::GetObject(int32 handle)
+{
+	// Access the store or pool through its C API
+	return ((CObject*)CPool_GetAt(ms_pObjectPool, handle));
+}
+//- rouz edit (ChatGPT)
 
 void
 CPools::CheckPoolsEmpty()
 {
-	assert(ms_pPedPool->GetNoOfUsedSpaces() == 0);
-	assert(ms_pVehiclePool->GetNoOfUsedSpaces() == 0);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	assert(CPool_GetNoOfUsedSpaces(ms_pPedPool) == 0);
+	assert(CPool_GetNoOfUsedSpaces(ms_pVehiclePool) == 0);
+	//- rouz edit (ChatGPT)
 	printf("pools have been cleared\n");
 }
 
@@ -164,21 +209,33 @@ CPools::CheckPoolsEmpty()
 void
 CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 {
-	if (ms_pObjectPool->GetIsFree(slot)) return;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (CPool_GetIsFree(ms_pObjectPool, slot)) return;
+	//- rouz edit (ChatGPT)
 
-	CObject *object = ms_pObjectPool->GetSlot(slot);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject *object = ((CObject*)CPool_GetSlot(ms_pObjectPool, slot));
+	//- rouz edit (ChatGPT)
 	if (object->ObjectCreatedBy == TEMP_OBJECT) {
 		CWorld::Remove(object);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the temporary object without invoking C++ delete.
 		object->~CObject();
-		ms_pObjectPool->Delete(object);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(ms_pObjectPool, object);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	} else if (!CProjectileInfo::RemoveIfThisIsAProjectile(object)) {
 		// relocate to another slot??
 //+ rouz edit (ChatGPT)
 		// Allocate the relocated object without invoking C++ new.
-		CObject *newObject = ms_pObjectPool->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *newObject = ((CObject*)CPool_New(ms_pObjectPool));
+		//- rouz edit (ChatGPT)
 		assert(newObject);
 		std::allocator<CObject>().construct(newObject, object->GetModelIndex(), false);
 //- rouz edit (ChatGPT)
@@ -186,55 +243,81 @@ CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 #if 0 // todo better
 		*newObject = *object;
 #else
-		memcpy(newObject, object, ms_pObjectPool->GetMaxEntrySize());
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		memcpy(newObject, object, CPool_GetMaxEntrySize(ms_pObjectPool));
+		//- rouz edit (ChatGPT)
 #endif
 		CWorld::Add(newObject);
 		object->m_rwObject = nil;
 //+ rouz edit (ChatGPT)
 		// Destroy and release the old object without invoking C++ delete.
 		object->~CObject();
-		ms_pObjectPool->Delete(object);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(ms_pObjectPool, object);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		newObject->m_pFirstReference = nil;
 	}
 }
 
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+//+ rouz edit (ChatGPT)
+#define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
+#define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
+//- rouz edit (ChatGPT)
 
 void CPools::LoadVehiclePool(uint8* buf, uint32 size)
 {
 INITSAVEBUF
 	int nNumCars, nNumBoats, nNumBikes;
-	ReadSaveBuf(&nNumCars, buf);
-	ReadSaveBuf(&nNumBoats, buf);
-	ReadSaveBuf(&nNumBikes, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&nNumCars, &buf, sizeof(nNumCars));
+	ReadSaveBuf(&nNumBoats, &buf, sizeof(nNumBoats));
+	ReadSaveBuf(&nNumBikes, &buf, sizeof(nNumBikes));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < nNumCars + nNumBoats + nNumBikes; i++) {
 		uint32 type;
 		int16 model;
 		int32 slot;
 
-		ReadSaveBuf(&type, buf);
-		ReadSaveBuf(&model, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&type, &buf, sizeof(type));
+		ReadSaveBuf(&model, &buf, sizeof(model));
+		//- rouz edit (ChatGPT)
 		CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
 		CStreaming::LoadAllRequestedModels(false);
-		ReadSaveBuf(&slot, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&slot, &buf, sizeof(slot));
+		//- rouz edit (ChatGPT)
 		CVehicle* pVehicle;
 #ifdef COMPATIBLE_SAVES
 //+ rouz edit (ChatGPT)
 		if (type == VEHICLE_TYPE_BOAT) {
 			// Restore the boat into its saved vehicle-pool slot.
-			pVehicle = ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pVehicle = ((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pVehicle);
 			std::allocator<CBoat>().construct((CBoat*)pVehicle, model, RANDOM_VEHICLE);
 		} else if (type == VEHICLE_TYPE_CAR) {
 			// Restore the automobile into its saved vehicle-pool slot.
-			pVehicle = ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pVehicle = ((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pVehicle);
 			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, model, RANDOM_VEHICLE);
 		} else if (type == VEHICLE_TYPE_BIKE) {
 			// Restore the bike into its saved vehicle-pool slot.
-			pVehicle = ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pVehicle = ((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pVehicle);
 			std::allocator<CBike>().construct((CBike*)pVehicle, model, RANDOM_VEHICLE);
 		} else
@@ -247,10 +330,16 @@ INITSAVEBUF
 		char* vbuf = (char*)malloc(Max(CBike::nSaveStructSize, Max(CAutomobile::nSaveStructSize, CBoat::nSaveStructSize))); // rouz edit (ChatGPT)
 		if (type == VEHICLE_TYPE_BOAT) {
 			memcpy(vbuf, buf, sizeof(CBoat));
-			SkipSaveBuf(buf, sizeof(CBoat));
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, sizeof(CBoat));
+			//- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 			// Restore the boat into its saved vehicle-pool slot.
-			CBoat* pBoat = (CBoat*)ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CBoat* pBoat = (CBoat*)((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pBoat);
 			std::allocator<CBoat>().construct(pBoat, model, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -259,12 +348,18 @@ INITSAVEBUF
 		}
 		else if (type == VEHICLE_TYPE_CAR) {
 			memcpy(vbuf, buf, sizeof(CAutomobile));
-			SkipSaveBuf(buf, sizeof(CAutomobile));
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, sizeof(CAutomobile));
+			//- rouz edit (ChatGPT)
 			CStreaming::RequestModel(model, 0); // is it needed?
 			CStreaming::LoadAllRequestedModels(false);
 //+ rouz edit (ChatGPT)
 			// Restore the automobile into its saved vehicle-pool slot.
-			CAutomobile* pAutomobile = (CAutomobile*)ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CAutomobile* pAutomobile = (CAutomobile*)((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pAutomobile);
 			std::allocator<CAutomobile>().construct(pAutomobile, model, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -279,10 +374,16 @@ INITSAVEBUF
 #else
 			memcpy(vbuf, buf, sizeof(CAutomobile));
 #endif
-			SkipSaveBuf(buf, sizeof(CBike));
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, sizeof(CBike));
+			//- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 			// Restore the bike into its saved vehicle-pool slot.
-			CBike* pBike = (CBike*)ms_pVehiclePool->New(slot);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CBike* pBike = (CBike*)((CVehicle*)CPool_NewAt(ms_pVehiclePool, slot));
+			//- rouz edit (ChatGPT)
 			assert(pBike);
 			std::allocator<CBike>().construct(pBike, model, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -340,9 +441,15 @@ INITSAVEBUF
 	int nNumCars = 0;
 	int nNumBoats = 0;
 	int nNumBikes = 0;
-	int nPoolSize = GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int nPoolSize = CPool_GetSize(GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < nPoolSize; i++) {
-		CVehicle* pVehicle = GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		bool bHasPassenger = false;
@@ -377,11 +484,17 @@ INITSAVEBUF
 	*size = nNumCars * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CAutomobile::nSaveStructSize) + sizeof(int) +
 		nNumBoats * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBoat::nSaveStructSize) + sizeof(int) +
 		nNumBikes * (sizeof(uint32) + sizeof(int16) + sizeof(int32) + CBike::nSaveStructSize) + sizeof(int);
-	WriteSaveBuf(buf, nNumCars);
-	WriteSaveBuf(buf, nNumBoats);
-	WriteSaveBuf(buf, nNumBikes);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &nNumCars, sizeof(nNumCars));
+	WriteSaveBuf(&buf, &nNumBoats, sizeof(nNumBoats));
+	WriteSaveBuf(&buf, &nNumBikes, sizeof(nNumBikes));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < nPoolSize; i++) {
-		CVehicle* pVehicle = GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pVehicle)
 			continue;
 		bool bHasPassenger = false;
@@ -403,9 +516,20 @@ INITSAVEBUF
 #else
 			if ((pVehicle->IsCar() || pVehicle->IsBoat() || pVehicle->IsBike()) && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
-				WriteSaveBuf(buf, pVehicle->m_vehType);
-				WriteSaveBuf(buf, pVehicle->GetModelIndex());
-				WriteSaveBuf(buf, GetVehicleRef(pVehicle));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				WriteSaveBuf(&buf, &pVehicle->m_vehType, sizeof(pVehicle->m_vehType));
+				{
+					// Materialize the saved value with its original serialized type
+					int16 saveValue = pVehicle->GetModelIndex();
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				{
+					// Materialize the saved value with its original serialized type
+					int32 saveValue = GetVehicleRef(pVehicle);
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				//- rouz edit (ChatGPT)
 				pVehicle->Save(buf);
 			}
 #else
@@ -414,33 +538,75 @@ INITSAVEBUF
 #else
 			if (pVehicle->IsCar() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
-				WriteSaveBuf(buf, pVehicle->m_vehType);
-				WriteSaveBuf(buf, pVehicle->GetModelIndex());
-				WriteSaveBuf(buf, GetVehicleRef(pVehicle));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				WriteSaveBuf(&buf, &pVehicle->m_vehType, sizeof(pVehicle->m_vehType));
+				{
+					// Materialize the saved value with its original serialized type
+					int16 saveValue = pVehicle->GetModelIndex();
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				{
+					// Materialize the saved value with its original serialized type
+					int32 saveValue = GetVehicleRef(pVehicle);
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				//- rouz edit (ChatGPT)
 				memcpy(buf, pVehicle, sizeof(CAutomobile));
-				SkipSaveBuf(buf, sizeof(CAutomobile));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				SkipSaveBuf(&buf, sizeof(CAutomobile));
+				//- rouz edit (ChatGPT)
 			}
 #ifdef MISSION_REPLAY
 			if (pVehicle->IsBoat() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
 			if (pVehicle->IsBoat() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
-				WriteSaveBuf(buf, pVehicle->m_vehType);
-				WriteSaveBuf(buf, pVehicle->GetModelIndex());
-				WriteSaveBuf(buf, GetVehicleRef(pVehicle));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				WriteSaveBuf(&buf, &pVehicle->m_vehType, sizeof(pVehicle->m_vehType));
+				{
+					// Materialize the saved value with its original serialized type
+					int16 saveValue = pVehicle->GetModelIndex();
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				{
+					// Materialize the saved value with its original serialized type
+					int32 saveValue = GetVehicleRef(pVehicle);
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				//- rouz edit (ChatGPT)
 				memcpy(buf, pVehicle, sizeof(CBoat));
-				SkipSaveBuf(buf, sizeof(CBoat));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				SkipSaveBuf(&buf, sizeof(CBoat));
+				//- rouz edit (ChatGPT)
 			}
 #ifdef MISSION_REPLAY
 			if (pVehicle->IsBike() && (pVehicle->VehicleCreatedBy == MISSION_VEHICLE || bForceSaving)) {
 #else
 			if (pVehicle->IsBike() && pVehicle->VehicleCreatedBy == MISSION_VEHICLE) {
 #endif
-				WriteSaveBuf(buf, pVehicle->m_vehType);
-				WriteSaveBuf(buf, pVehicle->GetModelIndex());
-				WriteSaveBuf(buf, GetVehicleRef(pVehicle));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				WriteSaveBuf(&buf, &pVehicle->m_vehType, sizeof(pVehicle->m_vehType));
+				{
+					// Materialize the saved value with its original serialized type
+					int16 saveValue = pVehicle->GetModelIndex();
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				{
+					// Materialize the saved value with its original serialized type
+					int32 saveValue = GetVehicleRef(pVehicle);
+					WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+				}
+				//- rouz edit (ChatGPT)
 				memcpy(buf, pVehicle, sizeof(CBike));
-				SkipSaveBuf(buf, sizeof(CBike));
+				//+ rouz edit (ChatGPT)
+				// Transfer save data through the C buffer API with explicit sizes
+				SkipSaveBuf(&buf, sizeof(CBike));
+				//- rouz edit (ChatGPT)
 			}
 #endif
 		}
@@ -454,9 +620,15 @@ INITSAVEBUF
 	CProjectileInfo::RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	int nObjects = 0;
-	int nPoolSize = GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int nPoolSize = CPool_GetSize(GetObjectPool());
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < nPoolSize; i++) {
-		CObject* pObject = GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetSlot(GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pObject)
 			continue;
 		if (pObject->ObjectCreatedBy == MISSION_OBJECT)
@@ -468,7 +640,10 @@ INITSAVEBUF
 		sizeof(uint32) + 2 * sizeof(uint32)) + sizeof(int);
 	CopyToBuf(buf, nObjects);
 	for (int i = 0; i < nPoolSize; i++) {
-		CObject* pObject = GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_GetSlot(GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pObject)
 			continue;
 		if (pObject->ObjectCreatedBy == MISSION_OBJECT) {
@@ -498,7 +673,10 @@ INITSAVEBUF
 			CopyToBuf(buf, bUseVehicleColours);
 			CopyToBuf(buf, pObject->m_nCostValue);
 			CopyToBuf(buf, pObject->m_nBonusValue);
-			SkipSaveBuf(buf, 1);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, 1);
+			//- rouz edit (ChatGPT)
 			CopyToBuf(buf, pObject->m_fCollisionDamageMultiplier);
 			CopyToBuf(buf, pObject->m_nCollisionDamageEffect);
 			CopyToBuf(buf, pObject->m_nSpecialCollisionResponseCases);
@@ -550,7 +728,10 @@ INITSAVEBUF
 		pBufferObject->bUseVehicleColours = bitFlag;
 		CopyFromBuf(buf, pBufferObject->m_nCostValue);
 		CopyFromBuf(buf, pBufferObject->m_nBonusValue);
-		SkipSaveBuf(buf, 1);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		SkipSaveBuf(&buf, 1);
+		//- rouz edit (ChatGPT)
 		CopyFromBuf(buf, pBufferObject->m_fCollisionDamageMultiplier);
 		CopyFromBuf(buf, pBufferObject->m_nCollisionDamageEffect);
 		CopyFromBuf(buf, pBufferObject->m_nSpecialCollisionResponseCases);
@@ -559,11 +740,18 @@ INITSAVEBUF
 		CopyFromBuf(buf, (pBufferObject->GetAddressOfEntityProperties())[0]);
 		CopyFromBuf(buf, (pBufferObject->GetAddressOfEntityProperties())[1]);
 #endif
-		if (GetObjectPool()->GetSlot(ref >> 8))
-			CPopulation::ConvertToDummyObject(GetObjectPool()->GetSlot(ref >> 8));
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		if (((CObject*)CPool_GetSlot(GetObjectPool(), ref >> 8)))
+			// Access raw storage through the C store or pool API
+			CPopulation::ConvertToDummyObject(((CObject*)CPool_GetSlot(GetObjectPool(), ref >> 8)));
+		//- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 		// Restore the object into its saved object-pool slot.
-		CObject* pObject = GetObjectPool()->New(ref);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* pObject = ((CObject*)CPool_NewAt(GetObjectPool(), ref));
+		//- rouz edit (ChatGPT)
 		assert(pObject);
 		std::allocator<CObject>().construct(pObject, mi, false);
 //- rouz edit (ChatGPT)
@@ -602,9 +790,15 @@ void CPools::SavePedPool(uint8* buf, uint32* size)
 {
 INITSAVEBUF
 	int nNumPeds = 0;
-	int nPoolSize = GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int nPoolSize = CPool_GetSize(GetPedPool());
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < nPoolSize; i++) {
-		CPed* pPed = GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetSlot(GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pPed)
 			continue;
 #ifdef MISSION_REPLAY
@@ -618,7 +812,10 @@ INITSAVEBUF
 		sizeof(CWanted::MaximumWantedLevel) + sizeof(CWanted::nMaximumWantedLevel) + MAX_MODEL_NAME);
 	CopyToBuf(buf, nNumPeds);
 	for (int i = 0; i < nPoolSize; i++) {
-		CPed* pPed = GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetSlot(GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!pPed)
 			continue;
 #ifdef MISSION_REPLAY
@@ -634,12 +831,18 @@ INITSAVEBUF
 			pPed->Save(buf);
 #else
 			memcpy(buf, pPed, sizeof(CPlayerPed));
-			SkipSaveBuf(buf, sizeof(CPlayerPed));
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, sizeof(CPlayerPed));
+			//- rouz edit (ChatGPT)
 #endif
 			CopyToBuf(buf, CWanted::MaximumWantedLevel);
 			CopyToBuf(buf, CWanted::nMaximumWantedLevel);
 			memcpy(buf, CModelInfo::GetModelInfo(pPed->GetModelIndex())->GetModelName(), MAX_MODEL_NAME);
-			SkipSaveBuf(buf, MAX_MODEL_NAME);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, MAX_MODEL_NAME);
+			//- rouz edit (ChatGPT)
 		}
 	}
 VALIDATESAVEBUF(*size);
@@ -672,7 +875,10 @@ INITSAVEBUF
 //+ rouz edit (ChatGPT)
 		if (pedtype == PEDTYPE_PLAYER1) {
 			// Restore the player ped into its saved ped-pool slot.
-			pPed = GetPedPool()->New(ref);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			pPed = ((CPed*)CPool_NewAt(GetPedPool(), ref));
+			//- rouz edit (ChatGPT)
 			assert(pPed);
 			std::allocator<CPlayerPed>().construct((CPlayerPed*)pPed);
 		} else
@@ -683,7 +889,10 @@ INITSAVEBUF
 		if (pedtype == PEDTYPE_PLAYER1) {
 			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
 			CopyFromBuf(buf, CWanted::nMaximumWantedLevel);
-			SkipSaveBuf(buf, MAX_MODEL_NAME);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, MAX_MODEL_NAME);
+			//- rouz edit (ChatGPT)
 		}
 
 		if (pedtype == PEDTYPE_PLAYER1) {
@@ -699,7 +908,10 @@ INITSAVEBUF
 		// the code implies that there was idea to load non-player ped
 		if (pedtype == PEDTYPE_PLAYER1) { // always true
 			memcpy(pbuf, buf, sizeof(CPlayerPed));
-			SkipSaveBuf(buf, sizeof(CPlayerPed));
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			SkipSaveBuf(&buf, sizeof(CPlayerPed));
+			//- rouz edit (ChatGPT)
 			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
 			CopyFromBuf(buf, CWanted::nMaximumWantedLevel);
 			CopyFromBuf(buf, name);
@@ -709,7 +921,10 @@ INITSAVEBUF
 		if (pedtype == PEDTYPE_PLAYER1) {
 //+ rouz edit (ChatGPT)
 			// Restore the player ped into its saved ped-pool slot.
-			CPlayerPed* pPlayerPed = (CPlayerPed*)GetPedPool()->New(ref);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPlayerPed* pPlayerPed = (CPlayerPed*)((CPed*)CPool_NewAt(GetPedPool(), ref));
+			//- rouz edit (ChatGPT)
 			assert(pPlayerPed);
 			std::allocator<CPlayerPed>().construct(pPlayerPed);
 //- rouz edit (ChatGPT)

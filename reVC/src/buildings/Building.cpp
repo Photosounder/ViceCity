@@ -24,18 +24,36 @@ IsBuildingPointerValid(CBuilding* pBuilding)
 	if (!pBuilding)
 		return false;
 	if (pBuilding->GetIsATreadable()) {
-		int index = CPools::GetTreadablePool()->GetJustIndex_NoFreeAssert((CTreadable*)pBuilding);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pBuilding);
+		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-		return index >= 0 && index < CPools::GetTreadablePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		return index >= 0 && index < CPool_GetSize(CPools::GetTreadablePool());
+		//- rouz edit (ChatGPT)
 #else
-		return index >= 0 && index <= CPools::GetTreadablePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		return index >= 0 && index <= CPool_GetSize(CPools::GetTreadablePool());
+		//- rouz edit (ChatGPT)
 #endif
 	} else {
-		int index = CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pBuilding);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pBuilding);
+		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-		return index >= 0 && index < CPools::GetBuildingPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		return index >= 0 && index < CPool_GetSize(CPools::GetBuildingPool());
+		//- rouz edit (ChatGPT)
 #else
-		return index >= 0 && index <= CPools::GetBuildingPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		return index >= 0 && index <= CPool_GetSize(CPools::GetBuildingPool());
+		//- rouz edit (ChatGPT)
 #endif
 	}
 }

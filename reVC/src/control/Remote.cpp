@@ -15,7 +15,10 @@ CRemote::GivePlayerRemoteControlledCar(float x, float y, float z, float rot, uin
 {
 //+ rouz edit (ChatGPT)
 	// Allocate the remote-controlled car without invoking C++ new.
-	CAutomobile *car = (CAutomobile*)CPools::GetVehiclePool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CAutomobile *car = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	assert(car);
 	std::allocator<CAutomobile>().construct(car, model, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)

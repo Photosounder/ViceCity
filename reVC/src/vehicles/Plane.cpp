@@ -901,7 +901,10 @@ CPlane::InitPlanes(void)
 	for(i = 0; i < 3; i++){
 //+ rouz edit (ChatGPT)
 		// Allocate the airtrain from the vehicle pool without invoking C++ new.
-		CPlane *plane = (CPlane*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(plane);
 		std::allocator<CPlane>().construct(plane, MI_AIRTRAIN, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1042,7 +1045,10 @@ CPlane::UpdatePlanes(void)
 				for(i = 0; i < 5; i++){
 //+ rouz edit (ChatGPT)
 					// Allocate the temporary cesna from the vehicle pool without invoking C++ new.
-					CPlane *plane = (CPlane*)CPools::GetVehiclePool()->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					//- rouz edit (ChatGPT)
 					assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_DEADDODO, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1064,7 +1070,10 @@ CPlane::UpdatePlanes(void)
 				for(i = 0; i < 4; i++){
 //+ rouz edit (ChatGPT)
 					// Allocate the temporary chopper from the vehicle pool without invoking C++ new.
-					CPlane *plane = (CPlane*)CPools::GetVehiclePool()->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+					//- rouz edit (ChatGPT)
 					assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_CHOPPER, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1091,15 +1100,24 @@ CPlane::RemoveTemporaryPlanes(void)
 	if(!bHelisActivated && !bCesnasActivated)
 		return;
 
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		CPlane *plane = (CPlane*)CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(plane && plane->IsPlane() && plane->m_bTempPlane){
 			CWorld::Remove(plane);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the temporary plane without invoking C++ delete.
 			plane->~CPlane();
-			CPools::GetVehiclePool()->Delete(plane);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), plane);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -1112,9 +1130,15 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 {
 	int i;
 
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		CPlane *plane = (CPlane*)CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(plane &&
 #ifdef EXPLODING_AIRTRAIN
 		   (plane->GetModelIndex() == MI_AIRTRAIN || plane->GetModelIndex() == MI_DEADDODO) &&
@@ -1142,13 +1166,19 @@ CPlane::CreateIncomingCesna(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the drug-run cesna without invoking C++ delete.
 		pDrugRunCesna->~CPlane();
-		CPools::GetVehiclePool()->Delete(pDrugRunCesna);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pDrugRunCesna);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		pDrugRunCesna = nil;
 	}
 //+ rouz edit (ChatGPT)
 	// Allocate the drug-run cesna from the vehicle pool without invoking C++ new.
-	pDrugRunCesna = (CPlane*)CPools::GetVehiclePool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	pDrugRunCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	assert(pDrugRunCesna);
 	std::allocator<CPlane>().construct(pDrugRunCesna, MI_DEADDODO, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -1174,13 +1204,19 @@ CPlane::CreateDropOffCesna(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the drop-off cesna without invoking C++ delete.
 		pDropOffCesna->~CPlane();
-		CPools::GetVehiclePool()->Delete(pDropOffCesna);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pDropOffCesna);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		pDropOffCesna = nil;
 	}
 //+ rouz edit (ChatGPT)
 	// Allocate the drop-off cesna from the vehicle pool without invoking C++ new.
-	pDropOffCesna = (CPlane*)CPools::GetVehiclePool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	pDropOffCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	assert(pDropOffCesna);
 	std::allocator<CPlane>().construct(pDropOffCesna, MI_DEADDODO, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)

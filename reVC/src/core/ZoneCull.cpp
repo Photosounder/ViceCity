@@ -128,23 +128,41 @@ CCullZones::MarkSubwayAsInvisible(bool visible)
 	CEntity *e;
 	CVehicle *v;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->bIsSubway)
 			e->bIsVisible = visible;
 	}
 
-	n = CPools::GetTreadablePool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetTreadablePool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetTreadablePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->bIsSubway)
 			e->bIsVisible = visible;
 	}
 
-	n = CPools::GetVehiclePool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetVehiclePool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		v = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(v && v->IsTrain() && ((CTrain*)v)->m_nTrackId != TRACK_ELTRAIN)
 			v->bIsVisible = visible;
 	}

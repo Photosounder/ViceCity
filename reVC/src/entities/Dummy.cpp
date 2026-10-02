@@ -53,11 +53,20 @@ IsDummyPointerValid(CDummy* pDummy)
 {
 	if (!pDummy)
 		return false;
-	int index = CPools::GetDummyPool()->GetJustIndex_NoFreeAssert(pDummy);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), pDummy);
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-	if (index < 0 || index >= CPools::GetDummyPool()->GetSize())
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (index < 0 || index >= CPool_GetSize(CPools::GetDummyPool()))
+	//- rouz edit (ChatGPT)
 #else
-	if (index < 0 || index > CPools::GetDummyPool()->GetSize())
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (index < 0 || index > CPool_GetSize(CPools::GetDummyPool()))
+	//- rouz edit (ChatGPT)
 #endif
 		return false;
 	return pDummy->m_entryInfoList.first;

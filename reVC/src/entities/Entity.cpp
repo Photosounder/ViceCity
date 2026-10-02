@@ -843,7 +843,10 @@ CEntity::SaveEntityFlags(uint8*& buf)
 	if (bStreamingDontDelete) tmp |= BIT(30);
 	if (bRemoveFromWorld) tmp |= BIT(31);
 
-	WriteSaveBuf(buf, tmp);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 
 	tmp = 0;
 
@@ -865,14 +868,20 @@ CEntity::SaveEntityFlags(uint8*& buf)
 	if (bHasPreRenderEffects) tmp |= BIT(14);
 	if (bDrawFarAway) tmp |= BIT(15); // rouz edit (ChatGPT)
 
-	WriteSaveBuf(buf, tmp);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 }
 
 void
 CEntity::LoadEntityFlags(uint8*& buf)
 {
 	uint32 tmp;
-	ReadSaveBuf(&tmp, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	m_type = (tmp & ((BIT(3) - 1)));
 	m_status = ((tmp >> 3) & (BIT(5) - 1));
 
@@ -903,7 +912,10 @@ CEntity::LoadEntityFlags(uint8*& buf)
 	bStreamingDontDelete = !!(tmp & BIT(30));
 	bRemoveFromWorld = !!(tmp & BIT(31));
 
-	ReadSaveBuf(&tmp, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 
 	bHasHitWall = !!(tmp & BIT(0));
 	bImBeingRendered = !!(tmp & BIT(1));

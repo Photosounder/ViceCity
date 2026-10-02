@@ -482,7 +482,10 @@ void CRadar::Draw3dMarkers()
 			switch (ms_RadarTrace[i].m_eBlipType) {
 			case BLIP_CAR:
 			{
-				CEntity *entity = CPools::GetVehiclePool()->GetAt(ms_RadarTrace[i].m_nEntityHandle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CEntity *entity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[i].m_nEntityHandle));
+				//- rouz edit (ChatGPT)
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += 1.2f * CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 2.5f;
@@ -492,7 +495,10 @@ void CRadar::Draw3dMarkers()
 			}
 			case BLIP_CHAR:
 			{
-				CEntity *entity = CPools::GetPedPool()->GetAt(ms_RadarTrace[i].m_nEntityHandle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CEntity *entity = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[i].m_nEntityHandle));
+				//- rouz edit (ChatGPT)
 				if (entity != nil) {
 					if (((CPed*)entity)->InVehicle())
 						entity = ((CPed * )entity)->m_pMyVehicle;
@@ -506,7 +512,10 @@ void CRadar::Draw3dMarkers()
 			}
 			case BLIP_OBJECT:
 			{
-				CEntity *entity = CPools::GetObjectPool()->GetAt(ms_RadarTrace[i].m_nEntityHandle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CEntity *entity = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[i].m_nEntityHandle));
+				//- rouz edit (ChatGPT)
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 1.0f + 1.0f;
@@ -984,24 +993,30 @@ void CRadar::LoadAllRadarBlips(uint8 *buf, uint32 size)
 {
 	Initialise();
 INITSAVEBUF
-	CheckSaveHeader(buf, 'R', 'D', 'R', '\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'R', 'D', 'R', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	for (int i = 0; i < NUMRADARBLIPS; i++) {
-		ReadSaveBuf(&ms_RadarTrace[i].m_nColor, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_Radius, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipType, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_nEntityHandle, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.x, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.y, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_vecPos, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_BlipIndex, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_bDim, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_bInUse, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_bShortRange, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_unused, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_wScale, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipDisplay, buf);
-		ReadSaveBuf(&ms_RadarTrace[i].m_eRadarSprite, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&ms_RadarTrace[i].m_nColor, &buf, sizeof(ms_RadarTrace[i].m_nColor));
+		ReadSaveBuf(&ms_RadarTrace[i].m_Radius, &buf, sizeof(ms_RadarTrace[i].m_Radius));
+		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipType, &buf, sizeof(ms_RadarTrace[i].m_eBlipType));
+		ReadSaveBuf(&ms_RadarTrace[i].m_nEntityHandle, &buf, sizeof(ms_RadarTrace[i].m_nEntityHandle));
+		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.x, &buf, sizeof(ms_RadarTrace[i].m_vec2DPos.x));
+		ReadSaveBuf(&ms_RadarTrace[i].m_vec2DPos.y, &buf, sizeof(ms_RadarTrace[i].m_vec2DPos.y));
+		ReadSaveBuf(&ms_RadarTrace[i].m_vecPos, &buf, sizeof(ms_RadarTrace[i].m_vecPos));
+		ReadSaveBuf(&ms_RadarTrace[i].m_BlipIndex, &buf, sizeof(ms_RadarTrace[i].m_BlipIndex));
+		ReadSaveBuf(&ms_RadarTrace[i].m_bDim, &buf, sizeof(ms_RadarTrace[i].m_bDim));
+		ReadSaveBuf(&ms_RadarTrace[i].m_bInUse, &buf, sizeof(ms_RadarTrace[i].m_bInUse));
+		ReadSaveBuf(&ms_RadarTrace[i].m_bShortRange, &buf, sizeof(ms_RadarTrace[i].m_bShortRange));
+		ReadSaveBuf(&ms_RadarTrace[i].m_unused, &buf, sizeof(ms_RadarTrace[i].m_unused));
+		ReadSaveBuf(&ms_RadarTrace[i].m_wScale, &buf, sizeof(ms_RadarTrace[i].m_wScale));
+		ReadSaveBuf(&ms_RadarTrace[i].m_eBlipDisplay, &buf, sizeof(ms_RadarTrace[i].m_eBlipDisplay));
+		ReadSaveBuf(&ms_RadarTrace[i].m_eRadarSprite, &buf, sizeof(ms_RadarTrace[i].m_eRadarSprite));
+		//- rouz edit (ChatGPT)
 	}
 
 VALIDATESAVEBUF(size);
@@ -1012,7 +1027,10 @@ void CRadar::SaveAllRadarBlips(uint8 *buf, uint32 *size)
 	*size = SAVE_HEADER_SIZE + NUMRADARBLIPS * sizeof(sRadarTraceSave);
 
 INITSAVEBUF
-	WriteSaveHeader(buf, 'R', 'D', 'R', '\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'R', 'D', 'R', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 #ifdef MAP_ENHANCEMENTS
 	bool bWaypointDeleted = false;
@@ -1041,7 +1059,10 @@ INITSAVEBUF
 		saveStruct->m_eBlipDisplay = ms_RadarTrace[i].m_eBlipDisplay;
 		saveStruct->m_eRadarSprite = ms_RadarTrace[i].m_eRadarSprite;
 
-		SkipSaveBuf(buf, sizeof(sRadarTraceSave));
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		SkipSaveBuf(&buf, sizeof(sRadarTraceSave));
+		//- rouz edit (ChatGPT)
 	}
 
 #ifdef MAP_ENHANCEMENTS
@@ -1215,13 +1236,22 @@ void CRadar::SetRadarMarkerState(int32 counter, bool flag)
 	CEntity *e;
 	switch (ms_RadarTrace[counter].m_eBlipType) {
 	case BLIP_CAR:
-		e = CPools::GetVehiclePool()->GetAt(ms_RadarTrace[counter].m_nEntityHandle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[counter].m_nEntityHandle));
+		//- rouz edit (ChatGPT)
 		break;
 	case BLIP_CHAR:
-		e = CPools::GetPedPool()->GetAt(ms_RadarTrace[counter].m_nEntityHandle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[counter].m_nEntityHandle));
+		//- rouz edit (ChatGPT)
 		break;
 	case BLIP_OBJECT:
-		e = CPools::GetObjectPool()->GetAt(ms_RadarTrace[counter].m_nEntityHandle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[counter].m_nEntityHandle));
+		//- rouz edit (ChatGPT)
 		break;
 	default:
 		return;
@@ -1528,17 +1558,26 @@ CRadar::DrawEntityBlip(int32 blipId)
 	CEntity *blipEntity;
 	switch (ms_RadarTrace[blipId].m_eBlipType) {
 		case BLIP_CAR:
-			blipEntity = CPools::GetVehiclePool()->GetAt(ms_RadarTrace[blipId].m_nEntityHandle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			blipEntity = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			//- rouz edit (ChatGPT)
 			break;
 		case BLIP_CHAR:
-			blipEntity = CPools::GetPedPool()->GetAt(ms_RadarTrace[blipId].m_nEntityHandle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			blipEntity = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			//- rouz edit (ChatGPT)
 			if (blipEntity != nil) {
 				if (((CPed*)blipEntity)->InVehicle())
 					blipEntity = ((CPed*)blipEntity)->m_pMyVehicle;
 			}
 			break;
 		case BLIP_OBJECT:
-			blipEntity = CPools::GetObjectPool()->GetAt(ms_RadarTrace[blipId].m_nEntityHandle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			blipEntity = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ms_RadarTrace[blipId].m_nEntityHandle));
+			//- rouz edit (ChatGPT)
 			break;
 		default:
 			break;

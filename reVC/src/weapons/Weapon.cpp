@@ -2344,9 +2344,15 @@ CWeapon::TakePhotograph(CEntity *shooter)
 		CStats::PhotosTaken++;
 		bPhotographHasBeenTaken = true;
 		
-		for ( int32 i = CPools::GetPedPool()->GetSize() - 1; i >= 0; i--)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
+		//- rouz edit (ChatGPT)
 		{
-			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			//- rouz edit (ChatGPT)
 			if ( ped )
 			{
 				if ( (ped->GetPosition() - TheCamera.GetPosition()).Magnitude() < 125.0f )
@@ -3152,9 +3158,15 @@ CWeapon::MakePedsJumpAtShot(CPhysical *shooter, CVector *source, CVector *target
 	float minz = Min(source->z, target->z) - 2.0f;
 	float maxz = Max(source->z, target->z) + 2.0f;
 
-	for ( int32 i = CPools::GetPedPool()->GetSize() - 1; i >= 0; i--)
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
+	//- rouz edit (ChatGPT)
 	{
-		CPed *ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 
 		if ( ped )
 		{
@@ -3353,8 +3365,10 @@ CWeapon::CheckForShootingVehicleOccupant(CEntity **victim, CColPoint *point, eWe
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+//+ rouz edit (ChatGPT)
+#define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
+#define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
+//- rouz edit (ChatGPT)
 void
 CWeapon::Save(uint8*& buf)
 {
@@ -3364,7 +3378,10 @@ CWeapon::Save(uint8*& buf)
 	CopyToBuf(buf, m_nAmmoTotal);
 	CopyToBuf(buf, m_nTimer);
 	CopyToBuf(buf, m_bAddRotOffset);
-	ZeroSaveBuf(buf, 3);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 3);
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -3376,7 +3393,10 @@ CWeapon::Load(uint8*& buf)
 	CopyFromBuf(buf, m_nAmmoTotal);
 	CopyFromBuf(buf, m_nTimer);
 	CopyFromBuf(buf, m_bAddRotOffset);
-	SkipSaveBuf(buf, 3);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 3);
+	//- rouz edit (ChatGPT)
 }
 
 #undef CopyFromBuf

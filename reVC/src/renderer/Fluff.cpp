@@ -1141,23 +1141,39 @@ void
 CEscalator::Update(void) {
 	if (!m_bIsActive) {
 		if ((TheCamera.GetPosition() - m_midPoint).Magnitude() < 25.0f) {
-			if (TheCamera.IsSphereVisible(m_midPoint, m_radius) && (m_stepsCount + 10 < CPools::GetObjectPool()->GetNoOfFreeSpaces())) { 
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (TheCamera.IsSphereVisible(m_midPoint, m_radius) && (m_stepsCount + 10 < CPool_GetNoOfFreeSpaces(CPools::GetObjectPool()))) { 
+			//- rouz edit (ChatGPT)
 				m_bIsActive = true;
 				for (int i = 0; i < m_stepsCount; i++) {
 //+ rouz edit (ChatGPT)
 					// Allocate the escalator step without invoking C++ new.
 					CObjectPool *objectPool = CPools::GetObjectPool();
-					m_pSteps[i] = objectPool->New();
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					m_pSteps[i] = ((CObject*)CPool_New(objectPool));
+					//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 					if (!m_pSteps[i]) {
-						for (int32 j = 0; j < objectPool->GetSize(); j++) {
-							CObject *existing = objectPool->GetSlot(j);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						for (int32 j = 0; j < CPool_GetSize(objectPool); j++) {
+							// Access raw storage through the C store or pool API
+							CObject *existing = ((CObject*)CPool_GetSlot(objectPool, j));
+						//- rouz edit (ChatGPT)
 							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-								int32 handle = objectPool->GetIndex(existing);
+								//+ rouz edit (ChatGPT)
+								// Access raw storage through the C store or pool API
+								int32 handle = CPool_GetIndex(objectPool, existing);
+								//- rouz edit (ChatGPT)
 								CWorld::Remove(existing);
 								existing->~CObject();
-								objectPool->Delete(existing);
-								m_pSteps[i] = objectPool->New(handle);
+								//+ rouz edit (ChatGPT)
+								// Access raw storage through the C store or pool API
+								CPool_Delete(objectPool, existing);
+								m_pSteps[i] = ((CObject*)CPool_NewAt(objectPool, handle));
+								//- rouz edit (ChatGPT)
 								break;
 							}
 						}
@@ -1228,7 +1244,10 @@ CEscalator::SwitchOff(void) {
 //+ rouz edit (ChatGPT)
 				// Destroy and release the escalator step without invoking C++ delete.
 				m_pSteps[i]->~CObject();
-				CPools::GetObjectPool()->Delete(m_pSteps[i]);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetObjectPool(), m_pSteps[i]);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				m_pSteps[i] = nil;
 				deletingEscalator = false;
@@ -1476,30 +1495,47 @@ INITSAVEBUF
 
 	for (int32 i = 0; i < 3; i++) {
 #ifdef COMPATIBLE_SAVES
-		ReadSaveBuf(&aArray[i].m_numNodes, buf);
-		SkipSaveBuf(buf, 4);
-		ReadSaveBuf(&aArray[i].m_fTotalLength, buf);
-		ReadSaveBuf(&aArray[i].m_fSpeed, buf);
-		ReadSaveBuf(&aArray[i].m_fPosition, buf);
-		ReadSaveBuf(&aArray[i].m_fObjectLength, buf);
-		ReadSaveBuf(&aArray[i].m_state, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&aArray[i].m_numNodes, &buf, sizeof(aArray[i].m_numNodes));
+		SkipSaveBuf(&buf, 4);
+		ReadSaveBuf(&aArray[i].m_fTotalLength, &buf, sizeof(aArray[i].m_fTotalLength));
+		ReadSaveBuf(&aArray[i].m_fSpeed, &buf, sizeof(aArray[i].m_fSpeed));
+		ReadSaveBuf(&aArray[i].m_fPosition, &buf, sizeof(aArray[i].m_fPosition));
+		ReadSaveBuf(&aArray[i].m_fObjectLength, &buf, sizeof(aArray[i].m_fObjectLength));
+		ReadSaveBuf(&aArray[i].m_state, &buf, sizeof(aArray[i].m_state));
+		//- rouz edit (ChatGPT)
 #else
-		ReadSaveBuf(&aArray[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		aArray[i] = *(CScriptPath*)buf;
+		SkipSaveBuf(&buf, sizeof(aArray[i]));
+		//- rouz edit (ChatGPT)
 #endif
 
 		for (int32 j = 0; j < 6; j++) {
 #ifdef COMPATIBLE_SAVES
 			aArray[i].m_pObjects[j] = nil;
 			int32 tmp;
-			ReadSaveBuf(&tmp, buf);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+			//- rouz edit (ChatGPT)
 			if (tmp != 0) {
-				aArray[i].m_pObjects[j] = CPools::GetObjectPool()->GetSlot(tmp - 1);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				aArray[i].m_pObjects[j] = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), tmp - 1));
+				//- rouz edit (ChatGPT)
 				aArray[i].m_pObjects[j]->m_phy_flagA08 = false;
 			}
 #else
 			CScriptPath *pPath = &aArray[i];
 			if (pPath->m_pObjects[j] != nil) {
-				pPath->m_pObjects[j] = CPools::GetObjectPool()->GetSlot((uintptr)pPath->m_pObjects[j] - 1);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				pPath->m_pObjects[j] = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), (uintptr)pPath->m_pObjects[j] - 1));
+				//- rouz edit (ChatGPT)
 				pPath->m_pObjects[j]->m_phy_flagA08 = false;
 			}
 #endif
@@ -1507,7 +1543,12 @@ INITSAVEBUF
 
 		aArray[i].m_pNode = (CPlaneNode*)malloc(sizeof(CPlaneNode)*aArray[i].m_numNodes); // rouz edit (ChatGPT)
 		for (int32 j = 0; j < aArray[i].m_numNodes; j++) {
-			ReadSaveBuf(&aArray[i].m_pNode[j], buf);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			// Preserve record assignment semantics and compiler padding behavior
+			aArray[i].m_pNode[j] = *(CPlaneNode*)buf;
+			SkipSaveBuf(&buf, sizeof(aArray[i].m_pNode[j]));
+			//- rouz edit (ChatGPT)
 		}
 	}
 VALIDATESAVEBUF(size)
@@ -1518,28 +1559,55 @@ void CScriptPaths::Save(uint8 *buf, uint32 *size) {
 INITSAVEBUF
 	for (int32 i = 0; i < 3; i++) {
 #ifdef COMPATIBLE_SAVES
-		WriteSaveBuf(buf, aArray[i].m_numNodes);
-		ZeroSaveBuf(buf, 4);
-		WriteSaveBuf(buf, aArray[i].m_fTotalLength);
-		WriteSaveBuf(buf, aArray[i].m_fSpeed);
-		WriteSaveBuf(buf, aArray[i].m_fPosition);
-		WriteSaveBuf(buf, aArray[i].m_fObjectLength);
-		WriteSaveBuf(buf, aArray[i].m_state);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &aArray[i].m_numNodes, sizeof(aArray[i].m_numNodes));
+		ZeroSaveBuf(&buf, 4);
+		WriteSaveBuf(&buf, &aArray[i].m_fTotalLength, sizeof(aArray[i].m_fTotalLength));
+		WriteSaveBuf(&buf, &aArray[i].m_fSpeed, sizeof(aArray[i].m_fSpeed));
+		WriteSaveBuf(&buf, &aArray[i].m_fPosition, sizeof(aArray[i].m_fPosition));
+		WriteSaveBuf(&buf, &aArray[i].m_fObjectLength, sizeof(aArray[i].m_fObjectLength));
+		WriteSaveBuf(&buf, &aArray[i].m_state, sizeof(aArray[i].m_state));
+		//- rouz edit (ChatGPT)
 #else
-		CScriptPath *pPath = WriteSaveBuf(buf, aArray[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		CScriptPath *pPath = (CScriptPath*)buf;
+		*pPath = aArray[i];
+		SkipSaveBuf(&buf, sizeof(aArray[i]));
+		//- rouz edit (ChatGPT)
 #endif
 
 		for (int32 j = 0; j < 6; j++) {
 #ifdef COMPATIBLE_SAVES
-			WriteSaveBuf(buf, aArray[i].m_pObjects[j] != nil ? CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(aArray[i].m_pObjects[j]) + 1 : 0);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			{
+				// Materialize the saved value with its original serialized type
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 saveValue = aArray[i].m_pObjects[j] != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), aArray[i].m_pObjects[j]) + 1 : 0;
+				//- rouz edit (ChatGPT)
+				WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+			}
+			//- rouz edit (ChatGPT)
 #else
 			if (pPath->m_pObjects[j] != nil)
-				pPath->m_pObjects[j] = (CObject*)(CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pPath->m_pObjects[j]) + 1);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				pPath->m_pObjects[j] = (CObject*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), pPath->m_pObjects[j]) + 1);
+				//- rouz edit (ChatGPT)
 #endif
 		}
 
 		for (int32 j = 0; j < aArray[i].m_numNodes; j++) {
-			WriteSaveBuf(buf, aArray[i].m_pNode[j]);
+			//+ rouz edit (ChatGPT)
+			// Transfer save data through the C buffer API with explicit sizes
+			// Preserve record assignment semantics and compiler padding behavior
+			*(CPlaneNode*)buf = aArray[i].m_pNode[j];
+			SkipSaveBuf(&buf, sizeof(aArray[i].m_pNode[j]));
+			//- rouz edit (ChatGPT)
 			*size += sizeof(aArray[i].m_pNode[j]);
 		}
 	}

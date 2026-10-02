@@ -1,4 +1,8 @@
 #pragma once
+//+ rouz edit (ChatGPT)
+
+#include "Pool.h"
+//- rouz edit (ChatGPT)
 
 #include "Pools.h"
 #include "World.h"
@@ -277,18 +281,14 @@ private:
 	static uint8 Mode;
 	static CAddressInReplayBuffer Record;
 	static CAddressInReplayBuffer Playback;
-	static uint8* pBuf0;
-	static CAutomobile* pBuf1;
-	static uint8* pBuf2;
-	static CPlayerPed* pBuf3;
-	static uint8* pBuf4;
-	static CCutsceneObject* pBuf5;
-	static uint8* pBuf6;
-	static CPtrNode* pBuf7;
-	static uint8* pBuf8;
-	static CEntryInfoNode* pBuf9;
-	static uint8* pBuf10;
-	static CDummyPed* pBuf11;
+	//+ rouz edit (ChatGPT)
+	static CPoolSnapshot VehiclePoolSnapshot;
+	static CPoolSnapshot PedPoolSnapshot;
+	static CPoolSnapshot ObjectPoolSnapshot;
+	static CPoolSnapshot PtrNodePoolSnapshot;
+	static CPoolSnapshot EntryInfoNodePoolSnapshot;
+	static CPoolSnapshot DummyPoolSnapshot;
+	//- rouz edit (ChatGPT)
 	static uint8* pRadarBlips;
 	static uint8* pStoredCam;
 	static uint8* pWorld1;

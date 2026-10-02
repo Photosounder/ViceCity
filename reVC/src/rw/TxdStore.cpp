@@ -6,7 +6,9 @@
 #include "RwHelper.h"
 #include "TxdStore.h"
 
-CPool<TxdDef,TxdDef> *CTxdStore::ms_pTxdPool;
+//+ rouz edit (ChatGPT)
+CPool *CTxdStore::ms_pTxdPool;
+//- rouz edit (ChatGPT)
 RwTexDictionary *CTxdStore::ms_pStoredTxd;
 
 void
@@ -16,8 +18,10 @@ CTxdStore::Initialise(void)
 //+ rouz edit (ChatGPT)
 		// Construct the TXD pool without invoking C++ new.
 	{
-		ms_pTxdPool = (CPool<TxdDef,TxdDef>*)malloc(sizeof(CPool<TxdDef,TxdDef>));
-		std::allocator<CPool<TxdDef,TxdDef> >().construct(ms_pTxdPool, TXDSTORESIZE, "TexDictionary");
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ms_pTxdPool = CPool_Create(TXDSTORESIZE, sizeof(TxdDef), "TexDictionary");
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 }
@@ -29,8 +33,10 @@ CTxdStore::Shutdown(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the TXD pool without invoking C++ delete.
 	{
-		std::allocator<CPool<TxdDef,TxdDef> >().destroy(ms_pTxdPool);
-		free(ms_pTxdPool);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Destroy(ms_pTxdPool);
+		//- rouz edit (ChatGPT)
 	}
 //- rouz edit (ChatGPT)
 }
@@ -50,12 +56,18 @@ CTxdStore::GameShutdown(void)
 int
 CTxdStore::AddTxdSlot(const char *name)
 {
-	TxdDef *def = ms_pTxdPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	TxdDef *def = ((TxdDef*)CPool_New(ms_pTxdPool));
+	//- rouz edit (ChatGPT)
 	assert(def);
 	def->texDict = nil;
 	def->refCount = 0;
 	strcpy(def->name, name);
-	return ms_pTxdPool->GetJustIndex(def);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	return CPool_GetJustIndex(ms_pTxdPool, def);
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -64,13 +76,19 @@ CTxdStore::RemoveTxdSlot(int slot)
 	TxdDef *def = GetSlot(slot);
 	if(def->texDict)
 		RwTexDictionaryDestroy(def->texDict);
-	ms_pTxdPool->Delete(def);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(ms_pTxdPool, def);
+	//- rouz edit (ChatGPT)
 }
 
 int
 CTxdStore::FindTxdSlot(const char *name)
 {
-	int size = ms_pTxdPool->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int size = CPool_GetSize(ms_pTxdPool);
+	//- rouz edit (ChatGPT)
 	for(int i = 0; i < size; i++){
 		TxdDef *def = GetSlot(i);
 		if(def && !CGeneral::faststricmp(def->name, name))

@@ -240,9 +240,15 @@ void CWaterCannon::PushPeds(void)
 		}
 	}
 	
-	for ( int32 i = CPools::GetPedPool()->GetSize() - 1; i >= 0; i--)
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
+	//- rouz edit (ChatGPT)
 	{
-		CPed *ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if ( ped )
 		{
 			if (   ped->GetPosition().x > minx && ped->GetPosition().x < maxx

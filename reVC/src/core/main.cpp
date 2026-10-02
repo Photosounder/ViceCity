@@ -1033,47 +1033,74 @@ return;
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "PtrNode: %d/%d", CPools::GetPtrNodePool()->GetNoOfUsedSpaces(), CPools::GetPtrNodePool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "PtrNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPtrNodePool()), CPool_GetSize(CPools::GetPtrNodePool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "EntryInfoNode: %d/%d", CPools::GetEntryInfoNodePool()->GetNoOfUsedSpaces(), CPools::GetEntryInfoNodePool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "EntryInfoNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetEntryInfoNodePool()), CPool_GetSize(CPools::GetEntryInfoNodePool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Ped: %d/%d", CPools::GetPedPool()->GetNoOfUsedSpaces(), CPools::GetPedPool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Ped: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPedPool()), CPool_GetSize(CPools::GetPedPool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Vehicle: %d/%d", CPools::GetVehiclePool()->GetNoOfUsedSpaces(), CPools::GetVehiclePool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Vehicle: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetVehiclePool()), CPool_GetSize(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Building: %d/%d", CPools::GetBuildingPool()->GetNoOfUsedSpaces(), CPools::GetBuildingPool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Building: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetBuildingPool()), CPool_GetSize(CPools::GetBuildingPool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Treadable: %d/%d", CPools::GetTreadablePool()->GetNoOfUsedSpaces(), CPools::GetTreadablePool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Treadable: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetTreadablePool()), CPool_GetSize(CPools::GetTreadablePool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Object: %d/%d", CPools::GetObjectPool()->GetNoOfUsedSpaces(), CPools::GetObjectPool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Object: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetObjectPool()), CPool_GetSize(CPools::GetObjectPool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Dummy: %d/%d", CPools::GetDummyPool()->GetNoOfUsedSpaces(), CPools::GetDummyPool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "Dummy: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetDummyPool()), CPool_GetSize(CPools::GetDummyPool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "AudioScriptObjects: %d/%d", CPools::GetAudioScriptObjectPool()->GetNoOfUsedSpaces(), CPools::GetAudioScriptObjectPool()->GetSize());
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	sprintf(gString, "AudioScriptObjects: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetAudioScriptObjectPool()), CPool_GetSize(CPools::GetAudioScriptObjectPool()));
+	//- rouz edit (ChatGPT)
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
@@ -1528,8 +1555,12 @@ static void RegisterSoftwarePedShadows(void)
 		return;
 
 	// Let the existing shadow code skip vehicle occupants, hidden peds, and distant actors
-	for(int i = 0; i < pedPool->GetSize(); i++){
-		CPed *ped = pedPool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int i = 0; i < CPool_GetSize(pedPool); i++){
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(pedPool, i));
+	//- rouz edit (ChatGPT)
 		if(!ped || !ped->bIsVisible)
 			continue;
 		CShadows::StoreShadowForPed(ped,
@@ -2958,10 +2989,16 @@ void revc_pos_track()
 	col = make_colour(0.1, 0.2, 0.4, 1.);
 	if (CPools::GetObjectPool())
 	{
-		int pool_size = CPools::GetObjectPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int pool_size = CPool_GetSize(CPools::GetObjectPool());
+		//- rouz edit (ChatGPT)
 		for (i=0; i < pool_size; i++)
 		{
-			CObject *obj = CPools::GetObjectPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+			//- rouz edit (ChatGPT)
 			if (obj)
 			{
 				pos = CVector_to_xyz(obj->GetPosition());
@@ -2975,10 +3012,16 @@ void revc_pos_track()
 	col = make_colour(0.4, 0.2, 0.1, 1.);
 	if (CPools::GetPedPool())
 	{
-		int pool_size = CPools::GetPedPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int pool_size = CPool_GetSize(CPools::GetPedPool());
+		//- rouz edit (ChatGPT)
 		for (i=0; i < pool_size; i++)
 		{
-			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			//- rouz edit (ChatGPT)
 			if (ped)
 			{
 				pos = CVector_to_xyz(ped->GetPosition());
@@ -2993,10 +3036,16 @@ void revc_pos_track()
 	col = make_colour(0.1, 0.1, 0.1, 1.);
 	if (CPools::GetBuildingPool())
 	{
-		int pool_size = CPools::GetBuildingPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int pool_size = CPool_GetSize(CPools::GetBuildingPool());
+		//- rouz edit (ChatGPT)
 		for (i=0; i < pool_size; i++)
 		{
-			CBuilding *building = CPools::GetBuildingPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CBuilding *building = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+			//- rouz edit (ChatGPT)
 			if (building)
 			{
 				pos = CVector_to_xyz(building->GetPosition());
@@ -3691,28 +3740,52 @@ void move_everything(xyz_t new_offset)
 	//if (((CEntity *) p)->m_modelIndex == 2424)
 
 	if (CPools::GetBuildingPool())
-		for (i=0; i < CPools::GetBuildingPool()->GetSize(); i++)
-			move_entity(CPools::GetBuildingPool()->GetSlot(i), new_offset, 0);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetBuildingPool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i)), new_offset, 0);
+		//- rouz edit (ChatGPT)
 
 	if (CPools::GetObjectPool())
-		for (i=0; i < CPools::GetObjectPool()->GetSize(); i++)
-			move_entity(CPools::GetObjectPool()->GetSlot(i), new_offset, 0);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetObjectPool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i)), new_offset, 0);
+		//- rouz edit (ChatGPT)
 
 	if (CPools::GetTreadablePool())
-		for (i=0; i < CPools::GetTreadablePool()->GetSize(); i++)
-			move_entity(CPools::GetTreadablePool()->GetSlot(i), new_offset, 0);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetTreadablePool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i)), new_offset, 0);
+		//- rouz edit (ChatGPT)
 
 	if (CPools::GetDummyPool())
-		for (i=0; i < CPools::GetDummyPool()->GetSize(); i++)
-			move_entity(CPools::GetDummyPool()->GetSlot(i), new_offset, 0);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetDummyPool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i)), new_offset, 0);
+		//- rouz edit (ChatGPT)
 
 	if (CPools::GetPedPool())
-		for (i=0; i < CPools::GetPedPool()->GetSize(); i++)
-			move_entity(CPools::GetPedPool()->GetSlot(i), new_offset, 1);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetPedPool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CPed*)CPool_GetSlot(CPools::GetPedPool(), i)), new_offset, 1);
+		//- rouz edit (ChatGPT)
 
 	if (CPools::GetVehiclePool())
-		for (i=0; i < CPools::GetVehiclePool()->GetSize(); i++)
-			move_entity(CPools::GetVehiclePool()->GetSlot(i), new_offset, 1);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetVehiclePool()); i++)
+			// Access raw storage through the C store or pool API
+			move_entity(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)), new_offset, 1);
+		//- rouz edit (ChatGPT)
 
 	rouz.world_offset = new_offset;
 }
@@ -3735,20 +3808,32 @@ void rouz_update()
 
 	if (rouz.screwy_gravity || rouz.status_physics)
 	{
-		int veh_count = CPools::GetVehiclePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int veh_count = CPool_GetSize(CPools::GetVehiclePool());
+		//- rouz edit (ChatGPT)
 
 		for (i = 0; i < veh_count; i++)
 		{
-			CVehicle *veh = CPools::GetVehiclePool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			//- rouz edit (ChatGPT)
 			if (veh)
 				if (veh->GetStatus() == STATUS_SIMPLE)
 					veh->SetStatus(STATUS_PHYSICS);
 		}
 
-		int ped_count = CPools::GetPedPool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int ped_count = CPool_GetSize(CPools::GetPedPool());
+		//- rouz edit (ChatGPT)
 		for (i = 0; i < ped_count; i++)
 		{
-			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			//- rouz edit (ChatGPT)
 			if (ped)
 			{
 				ped->bPedPhysics = 1;
@@ -3760,10 +3845,16 @@ void rouz_update()
 
 	// Count driver peds
 	rouz.driver_ped_count = 0;
-	int ped_count = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int ped_count = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	for (i=0; i < ped_count; i++)
 	{
-		CPed *ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (ped)
 			if (ped->InVehicle() && !ped->bCarPassenger && ped != FindPlayerPed())
 				rouz.driver_ped_count++;
@@ -3772,9 +3863,14 @@ void rouz_update()
 	// Count "locked" vehs (vehs that won't despawn)
 	/*rouz.veh_locked_count = 0;
 	if (CPools::GetVehiclePool())
-		for (i=0; i < CPools::GetVehiclePool()->GetSize(); i++)
-			if (CPools::GetVehiclePool()->GetSlot(i))
-				if (CPools::GetVehiclePool()->GetSlot(i)->bIsLocked)
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (i=0; i < CPool_GetSize(CPools::GetVehiclePool()); i++)
+			// Access raw storage through the C store or pool API
+			if (((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)))
+				// Access raw storage through the C store or pool API
+				if (((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i))->bIsLocked)
+		//- rouz edit (ChatGPT)
 					rouz.veh_locked_count++;*/
 
 	// Move everything

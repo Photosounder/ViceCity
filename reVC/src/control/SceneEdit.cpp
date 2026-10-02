@@ -184,7 +184,10 @@ void CSceneEdit::InitPlayback(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the scene vehicle without invoking C++ delete.
 			pVehicles[i]->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicles[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicles[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pVehicles[i] = nil;
 		}
@@ -227,7 +230,10 @@ void CSceneEdit::ReInitialise(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the scene vehicle without invoking C++ delete.
 			pVehicles[i]->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicles[i]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicles[i]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pVehicles[i] = nil;
 		}
@@ -387,7 +393,10 @@ void CSceneEdit::ProcessCommand(void)
 			}
 //+ rouz edit (ChatGPT)
 			// Allocate the scene actor without invoking C++ new.
-			CPed* pPed = CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(pPed);
 			std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
 //- rouz edit (ChatGPT)
@@ -430,7 +439,10 @@ void CSceneEdit::ProcessCommand(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene actor without invoking C++ delete.
 					pActors[m_nActor]->~CPed();
-					CPools::GetPedPool()->Delete(pActors[m_nActor]);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetPedPool(), pActors[m_nActor]);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 					pActors[m_nActor] = nil;
 					m_nActor = -1;
@@ -444,7 +456,10 @@ void CSceneEdit::ProcessCommand(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene actor without invoking C++ delete.
 					pActors[m_nActor]->~CPed();
-					CPools::GetPedPool()->Delete(pActors[m_nActor]);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetPedPool(), pActors[m_nActor]);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
 				pActors[m_nActor] = nil;
@@ -502,7 +517,10 @@ void CSceneEdit::ProcessCommand(void)
 			}
 //+ rouz edit (ChatGPT)
 			// Allocate the scene vehicle without invoking C++ new.
-			CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(pVehicle);
 			std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -545,7 +563,10 @@ void CSceneEdit::ProcessCommand(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene vehicle without invoking C++ delete.
 					pVehicles[m_nVehicle]->~CVehicle();
-					CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 					pVehicles[m_nVehicle] = nil;
 					m_nVehicle = -1;
@@ -559,7 +580,10 @@ void CSceneEdit::ProcessCommand(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the scene vehicle without invoking C++ delete.
 					pVehicles[m_nVehicle]->~CVehicle();
-					CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
 				pVehicles[m_nVehicle] = nil;
@@ -590,7 +614,10 @@ void CSceneEdit::ProcessCommand(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the selected scene vehicle without invoking C++ delete.
 			pVehicles[m_nVehicle]->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicles[m_nVehicle]);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicles[m_nVehicle]);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			m_nCurrentVehicle = 0;
 			--m_nNumVehicles;
@@ -852,7 +879,10 @@ void CSceneEdit::PlayBack(void)
 		}
 //+ rouz edit (ChatGPT)
 		// Allocate the replayed scene actor without invoking C++ new.
-		CPed* pPed = CPools::GetPedPool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_New(CPools::GetPedPool()));
+		//- rouz edit (ChatGPT)
 		assert(pPed);
 		std::allocator<CCivilianPed>().construct((CCivilianPed*)pPed, PEDTYPE_SPECIAL, m_nPedmodelId);
 //- rouz edit (ChatGPT)
@@ -884,7 +914,10 @@ void CSceneEdit::PlayBack(void)
 		}
 //+ rouz edit (ChatGPT)
 		// Allocate the replayed scene vehicle without invoking C++ new.
-		CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nVehiclemodelId, MISSION_VEHICLE);
 //- rouz edit (ChatGPT)

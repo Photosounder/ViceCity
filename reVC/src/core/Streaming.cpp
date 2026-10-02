@@ -826,9 +826,15 @@ CStreaming::RequestBigBuildings(eLevelName level)
 	int i, n;
 	CBuilding *b;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		b = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(b && b->bIsBIGBuilding
 #ifdef NO_ISLAND_LOADING
 		   && (((FrontEndMenuManager.m_PrefsIslandLoading != CMenuManager::ISLAND_LOADING_LOW) && (b != pIslandLODmainlandEntity) &&
@@ -850,9 +856,15 @@ CStreaming::RequestBigBuildings(eLevelName level, const CVector &pos)
 	int i, n;
 	CBuilding *b;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		b = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(b && b->bIsBIGBuilding
 #ifdef NO_ISLAND_LOADING
 		    && (((FrontEndMenuManager.m_PrefsIslandLoading != CMenuManager::ISLAND_LOADING_LOW) && (b != pIslandLODmainlandEntity) && (b != pIslandLODbeachEntity)
@@ -876,9 +888,15 @@ CStreaming::InstanceBigBuildings(eLevelName level, const CVector &pos)
 	int i, n;
 	CBuilding *b;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		b = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		b = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(b && b->bIsBIGBuilding && b->m_level == level &&
 		   b->bStreamBIGBuilding && b->m_rwObject == nil)
 			if(CRenderer::ShouldModelBeStreamed(b, pos))
@@ -1018,23 +1036,38 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 	}
 
 	if(mi->GetNumRefs() > 0){
-		n = CPools::GetPedPool()->GetSize()-1;
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		n = CPool_GetSize(CPools::GetPedPool())-1;
+		//- rouz edit (ChatGPT)
 		for(i = n; i >= 0 && mi->GetNumRefs() > 0; i--){
-			CPed *ped = CPools::GetPedPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+			//- rouz edit (ChatGPT)
 			if(ped && ped->GetModelIndex() == modelId &&
 			   !ped->IsPlayer() && ped->CanBeDeletedEvenInVehicle())
 				CTheScripts::RemoveThisPed(ped);
 		}
-		n = CPools::GetObjectPool()->GetSize()-1;
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		n = CPool_GetSize(CPools::GetObjectPool())-1;
+		//- rouz edit (ChatGPT)
 		for(i = n; i >= 0 && mi->GetNumRefs() > 0; i--){
-			CObject *obj = CPools::GetObjectPool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+			//- rouz edit (ChatGPT)
 			if(obj && obj->GetModelIndex() == modelId && obj->CanBeDeleted()){
 				CWorld::Remove(obj);
 				CWorld::RemoveReferencesToDeletedObject(obj);
 //+ rouz edit (ChatGPT)
 				// Destroy and release the swapped object without invoking C++ delete.
 				obj->~CObject();
-				CPools::GetObjectPool()->Delete(obj);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetObjectPool(), obj);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -1165,9 +1198,15 @@ CStreaming::RemoveBuildings(eLevelName level)
 	CEntity *e;
 	CBaseModelInfo *mi;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
 			if(!e->bImBeingRendered){
@@ -1178,9 +1217,15 @@ CStreaming::RemoveBuildings(eLevelName level)
 		}
 	}
 
-	n = CPools::GetTreadablePool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetTreadablePool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetTreadablePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
 			if(!e->bImBeingRendered){
@@ -1191,9 +1236,15 @@ CStreaming::RemoveBuildings(eLevelName level)
 		}
 	}
 
-	n = CPools::GetObjectPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetObjectPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
 			if(!e->bImBeingRendered && ((CObject*)e)->ObjectCreatedBy == GAME_OBJECT){
@@ -1204,9 +1255,15 @@ CStreaming::RemoveBuildings(eLevelName level)
 		}
 	}
 
-	n = CPools::GetDummyPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetDummyPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
 			if(!e->bImBeingRendered){
@@ -1224,9 +1281,15 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 	int i, n;
 	CEntity *e;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1236,9 +1299,15 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 		}
 	}
 
-	n = CPools::GetTreadablePool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetTreadablePool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetTreadablePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1248,9 +1317,15 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 		}
 	}
 
-	n = CPools::GetObjectPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetObjectPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1260,9 +1335,15 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 		}
 	}
 
-	n = CPools::GetDummyPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetDummyPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
@@ -1307,8 +1388,12 @@ CStreaming::RemoveIslandsNotUsed(eLevelName level)
 {
 	int i;
 	if(pIslandLODmainlandEntity == nil)
-	for(i = CPools::GetBuildingPool()->GetSize()-1; i >= 0; i--){
-		CBuilding *building = CPools::GetBuildingPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(i = CPool_GetSize(CPools::GetBuildingPool())-1; i >= 0; i--){
+		// Access raw storage through the C store or pool API
+		CBuilding *building = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+	//- rouz edit (ChatGPT)
 		if(building == nil)
 			continue;
 		if(building->GetModelIndex() == islandLODmainland)
@@ -1340,9 +1425,15 @@ CStreaming::RemoveBigBuildings(eLevelName level)
 	CEntity *e;
 	CBaseModelInfo *mi;
 
-	n = CPools::GetBuildingPool()->GetSize()-1;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	n = CPool_GetSize(CPools::GetBuildingPool())-1;
+	//- rouz edit (ChatGPT)
 	for(i = n; i >= 0; i--){
-		e = CPools::GetBuildingPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
+		//- rouz edit (ChatGPT)
 		if(e && e->bIsBIGBuilding && e->m_level == level){
 			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
 			if(!e->bImBeingRendered){

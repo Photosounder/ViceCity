@@ -87,7 +87,10 @@ CRoadBlocks::GenerateRoadBlockCopsForCar(CVehicle* pVehicle, int32 roadBlockType
 			copType = COP_STREET;
 //+ rouz edit (ChatGPT)
 		// Allocate the roadblock cop without invoking C++ new.
-		CCopPed* pCopPed = (CCopPed*)CPools::GetPedPool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CCopPed* pCopPed = (CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+		//- rouz edit (ChatGPT)
 		assert(pCopPed);
 		std::allocator<CCopPed>().construct(pCopPed, copType);
 //- rouz edit (ChatGPT)
@@ -243,7 +246,10 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 		if (!colliding) {
 //+ rouz edit (ChatGPT)
 			// Allocate the roadblock vehicle without invoking C++ new.
-			CAutomobile* pVehicle = (CAutomobile*)CPools::GetVehiclePool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CAutomobile* pVehicle = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+			//- rouz edit (ChatGPT)
 			assert(pVehicle);
 			std::allocator<CAutomobile>().construct(pVehicle, vehicleId, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -275,7 +281,10 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 //+ rouz edit (ChatGPT)
 				// Destroy and release the roadblock vehicle without invoking C++ delete.
 				pVehicle->~CAutomobile();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -306,17 +315,30 @@ CRoadBlocks::CreateRoadBlockBetween2Points(CVector point1, CVector point2)
 //+ rouz edit (ChatGPT)
 			// Allocate the roadblock barrier without invoking C++ new.
 			CObjectPool *objectPool = CPools::GetObjectPool();
-			CObject* pObject = objectPool->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CObject* pObject = ((CObject*)CPool_New(objectPool));
+			//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 			if (!pObject) {
-				for (int32 j = 0; j < objectPool->GetSize(); j++) {
-					CObject *existing = objectPool->GetSlot(j);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				for (int32 j = 0; j < CPool_GetSize(objectPool); j++) {
+					// Access raw storage through the C store or pool API
+					CObject *existing = ((CObject*)CPool_GetSlot(objectPool, j));
+				//- rouz edit (ChatGPT)
 					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-						int32 handle = objectPool->GetIndex(existing);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						int32 handle = CPool_GetIndex(objectPool, existing);
+						//- rouz edit (ChatGPT)
 						CWorld::Remove(existing);
 						existing->~CObject();
-						objectPool->Delete(existing);
-						pObject = objectPool->New(handle);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CPool_Delete(objectPool, existing);
+						pObject = ((CObject*)CPool_NewAt(objectPool, handle));
+						//- rouz edit (ChatGPT)
 						break;
 					}
 				}

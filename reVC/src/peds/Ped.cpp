@@ -387,7 +387,10 @@ CPed::~CPed(void)
 	CWorld::Remove(this);
 	if (m_attractor)
 		GetPedAttractorManager()->DeRegisterPed(this, m_attractor);
-	CRadar::ClearBlipForEntity(BLIP_CHAR, CPools::GetPedPool()->GetIndex(this));
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CRadar::ClearBlipForEntity(BLIP_CHAR, CPool_GetIndex(CPools::GetPedPool(), this));
+	//- rouz edit (ChatGPT)
 	if (InVehicle()){
 		uint8 door_flag = GetCarDoorFlag(m_vehDoor);
 		if (m_pMyVehicle->pDriver == this)
@@ -7863,7 +7866,10 @@ IsPedPointerValid_NotInWorld(CPed* pPed)
 {
 	if (!pPed)
 		return false;
-	int index = CPools::GetPedPool()->GetJustIndex_NoFreeAssert(pPed);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetPedPool(), pPed);
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (index < 0 || index >= NUMPEDS)
 #else
@@ -7876,7 +7882,10 @@ IsPedPointerValid_NotInWorld(CPed* pPed)
 bool
 CPed::IsPointerValid(void)
 {
-	int pedIndex = CPools::GetPedPool()->GetIndex(this) >> 8;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int pedIndex = CPool_GetIndex(CPools::GetPedPool(), this) >> 8;
+	//- rouz edit (ChatGPT)
 	if (pedIndex < 0 || pedIndex >= NUMPEDS)
 		return false;
 
@@ -9768,39 +9777,68 @@ CPed::Say(uint16 audio, int32 time)
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+//+ rouz edit (ChatGPT)
+#define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
+#define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
+//- rouz edit (ChatGPT)
 void
 CPed::Save(uint8*& buf)
 {
-	ZeroSaveBuf(buf, 52);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 52);
+	//- rouz edit (ChatGPT)
 	CopyToBuf(buf, GetPosition().x);
 	CopyToBuf(buf, GetPosition().y);
 	CopyToBuf(buf, GetPosition().z);
-	ZeroSaveBuf(buf, 288);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 288);
+	//- rouz edit (ChatGPT)
 	CopyToBuf(buf, CharCreatedBy);
-	ZeroSaveBuf(buf, 499);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 499);
+	//- rouz edit (ChatGPT)
 	CopyToBuf(buf, m_fHealth);
 	CopyToBuf(buf, m_fArmour);
-	ZeroSaveBuf(buf, 172);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 172);
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < 10; i++) // has to be hardcoded
 		m_weapons[i].Save(buf);
-	ZeroSaveBuf(buf, 252);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 252);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CPed::Load(uint8*& buf)
 {
-	SkipSaveBuf(buf, 52);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 52);
+	//- rouz edit (ChatGPT)
 	CopyFromBuf(buf, GetMatrix().GetPosition().x);
 	CopyFromBuf(buf, GetMatrix().GetPosition().y);
 	CopyFromBuf(buf, GetMatrix().GetPosition().z);
-	SkipSaveBuf(buf, 288);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 288);
+	//- rouz edit (ChatGPT)
 	CopyFromBuf(buf, CharCreatedBy);
-	SkipSaveBuf(buf, 499);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 499);
+	//- rouz edit (ChatGPT)
 	CopyFromBuf(buf, m_fHealth);
 	CopyFromBuf(buf, m_fArmour);
-	SkipSaveBuf(buf, 172);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 172);
+	//- rouz edit (ChatGPT)
 	m_currentWeapon = WEAPONTYPE_UNARMED;
 
 	CWeapon bufWeapon;
@@ -9820,7 +9858,10 @@ CPed::Load(uint8*& buf)
 			GiveWeapon(bufWeapon.m_eWeaponType, bufWeapon.m_nAmmoTotal, false);
 		}
 	}
-	SkipSaveBuf(buf, 252);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 252);
+	//- rouz edit (ChatGPT)
 }
 #undef CopyFromBuf
 #undef CopyToBuf

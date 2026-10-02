@@ -56,18 +56,14 @@
 uint8 CReplay::Mode;
 CAddressInReplayBuffer CReplay::Record;
 CAddressInReplayBuffer CReplay::Playback;
-uint8 *CReplay::pBuf0;
-CAutomobile *CReplay::pBuf1;
-uint8 *CReplay::pBuf2;
-CPlayerPed *CReplay::pBuf3;
-uint8 *CReplay::pBuf4;
-CCutsceneObject *CReplay::pBuf5;
-uint8 *CReplay::pBuf6;
-CPtrNode *CReplay::pBuf7;
-uint8 *CReplay::pBuf8;
-CEntryInfoNode *CReplay::pBuf9;
-uint8 *CReplay::pBuf10;
-CDummyPed *CReplay::pBuf11;
+//+ rouz edit (ChatGPT)
+CPoolSnapshot CReplay::VehiclePoolSnapshot;
+CPoolSnapshot CReplay::PedPoolSnapshot;
+CPoolSnapshot CReplay::ObjectPoolSnapshot;
+CPoolSnapshot CReplay::PtrNodePoolSnapshot;
+CPoolSnapshot CReplay::EntryInfoNodePoolSnapshot;
+CPoolSnapshot CReplay::DummyPoolSnapshot;
+//- rouz edit (ChatGPT)
 uint8 *CReplay::pRadarBlips;
 uint8 *CReplay::pStoredCam;
 uint8 *CReplay::pWorld1;
@@ -216,18 +212,15 @@ void PrintElementsInPtrList(void)
 
 void CReplay::Init(void)
 {
-	pBuf0 = nil;
-	pBuf1 = nil;
-	pBuf2 = nil;
-	pBuf3 = nil;
-	pBuf4 = nil;
-	pBuf5 = nil;
-	pBuf6 = nil;
-	pBuf7 = nil;
-	pBuf8 = nil;
-	pBuf9 = nil;
-	pBuf10 = nil;
-	pBuf11 = nil;
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_InitSnapshot(&VehiclePoolSnapshot);
+	CPool_InitSnapshot(&PedPoolSnapshot);
+	CPool_InitSnapshot(&ObjectPoolSnapshot);
+	CPool_InitSnapshot(&PtrNodePoolSnapshot);
+	CPool_InitSnapshot(&EntryInfoNodePoolSnapshot);
+	CPool_InitSnapshot(&DummyPoolSnapshot);
+	//- rouz edit (ChatGPT)
 	pRadarBlips = nil;
 	pStoredCam = nil;
 	pWorld1 = nil;
@@ -305,8 +298,12 @@ void CReplay::RecordThisFrame(void)
 {
 	uint32 memory_required = sizeof(tGeneralPacket) + sizeof(tClockPacket) + sizeof(tWeatherPacket) + sizeof(tTimerPacket) + sizeof(tMiscPacket);
 	CVehiclePool* vehiclesT = CPools::GetVehiclePool();
-	for (int i = 0; i < vehiclesT->GetSize(); i++) {
-		CVehicle* v = vehiclesT->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = 0; i < CPool_GetSize(vehiclesT); i++) {
+		// Access raw storage through the C store or pool API
+		CVehicle* v = ((CVehicle*)CPool_GetSlot(vehiclesT, i));
+	//- rouz edit (ChatGPT)
 		if (v && v->m_rwObject && v->GetModelIndex() != MI_AIRTRAIN && v->GetModelIndex() != MI_TRAIN) {
 			if (v->IsBike())
 				memory_required += sizeof(tBikeUpdatePacket);
@@ -315,8 +312,12 @@ void CReplay::RecordThisFrame(void)
 		}
 	}
 	CPedPool* pedsT = CPools::GetPedPool();
-	for (int i = 0; i < pedsT->GetSize(); i++) {
-		CPed* p = pedsT->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = 0; i < CPool_GetSize(pedsT); i++) {
+		// Access raw storage through the C store or pool API
+		CPed* p = ((CPed*)CPool_GetSlot(pedsT, i));
+	//- rouz edit (ChatGPT)
 		if (!p || !p->m_rwObject)
 			continue;
 		if (!p->bHasAlreadyBeenRecorded) {
@@ -354,8 +355,12 @@ void CReplay::RecordThisFrame(void)
 	timer->timer = CTimer::GetTimeInMilliseconds();
 	Record.m_nOffset += sizeof(*timer);
 	CVehiclePool* vehicles = CPools::GetVehiclePool();
-	for (int i = 0; i < vehicles->GetSize(); i++){
-		CVehicle* v = vehicles->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = 0; i < CPool_GetSize(vehicles); i++){
+		// Access raw storage through the C store or pool API
+		CVehicle* v = ((CVehicle*)CPool_GetSlot(vehicles, i));
+	//- rouz edit (ChatGPT)
 		if (v && v->m_rwObject && v->GetModelIndex() != MI_AIRTRAIN && v->GetModelIndex() != MI_TRAIN) {
 			if (v->IsBike())
 				StoreBikeUpdate(v, i);
@@ -364,8 +369,12 @@ void CReplay::RecordThisFrame(void)
 		}
 	}
 	CPedPool* peds = CPools::GetPedPool();
-	for (int i = 0; i < peds->GetSize(); i++) {
-		CPed* p = peds->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = 0; i < CPool_GetSize(peds); i++) {
+		// Access raw storage through the C store or pool API
+		CPed* p = ((CPed*)CPool_GetSlot(peds, i));
+	//- rouz edit (ChatGPT)
 		if (!p || !p->m_rwObject)
 			continue;
 		if (!p->bHasAlreadyBeenRecorded){
@@ -448,7 +457,10 @@ void CReplay::StorePedUpdate(CPed *ped, int id)
 	pp->is_visible = ped->bIsVisible;
 	/* 	Would be more sane to use GetJustIndex(ped->m_pMyVehicle) in following assignment */
 	if (ped->InVehicle())
-		pp->vehicle_index = (CPools::GetVehiclePool()->GetIndex(ped->m_pMyVehicle) >> 8) + 1;
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pp->vehicle_index = (CPool_GetIndex(CPools::GetVehiclePool(), ped->m_pMyVehicle) >> 8) + 1;
+		//- rouz edit (ChatGPT)
 	else
 		pp->vehicle_index = 0;
 	pp->weapon_model = ped->m_wepModelID;
@@ -574,7 +586,10 @@ void CReplay::ProcessPedUpdate(CPed *ped, float interpolation, CAddressInReplayB
 	ped->GetMatrix().GetPosition() *= (1.0f - interpolation);
 	ped->GetMatrix() += CMatrix(interpolation) * ped_matrix;
 	if (pp->vehicle_index) {
-		ped->m_pMyVehicle = CPools::GetVehiclePool()->GetSlot(pp->vehicle_index - 1);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ped->m_pMyVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), pp->vehicle_index - 1));
+		//- rouz edit (ChatGPT)
 		ped->bInVehicle = true;
 	}
 	else {
@@ -961,7 +976,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 		{
 			tVehicleUpdatePacket* vp = (tVehicleUpdatePacket*)&ptr[offset];
 			for (int i = vehicle_min_index; i < vp->index; i++) {
-				CVehicle* v = CPools::GetVehiclePool()->GetSlot(i);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+				//- rouz edit (ChatGPT)
 				if (!v)
 					continue;
 				/* Removing vehicles not present in this frame. */
@@ -969,11 +987,17 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 				// Destroy and release the missing replay vehicle without invoking C++ delete.
 				v->~CVehicle();
-				CPools::GetVehiclePool()->Delete(v);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), v);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			vehicle_min_index = vp->index + 1;
-			CVehicle* v = CPools::GetVehiclePool()->GetSlot(vp->index);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), vp->index));
+			//- rouz edit (ChatGPT)
 			CVehicle* new_v;
 			if (!v) {
 				int mi = vp->mi;
@@ -985,7 +1009,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_CAR:
 //+ rouz edit (ChatGPT)
 						// Allocate the replay car in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CAutomobile>().construct((CAutomobile*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -993,7 +1020,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_BOAT:
 //+ rouz edit (ChatGPT)
 						// Allocate the replay boat in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CBoat>().construct((CBoat*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1001,7 +1031,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_TRAIN:
 //+ rouz edit (ChatGPT)
 						// Allocate the replay train in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CTrain>().construct((CTrain*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1009,7 +1042,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_HELI:
 //+ rouz edit (ChatGPT)
 						// Allocate the replay heli in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CHeli>().construct((CHeli*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1017,7 +1053,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_PLANE:
 //+ rouz edit (ChatGPT)
 						// Allocate the replay plane in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CPlane>().construct((CPlane*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1025,7 +1064,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					case VEHICLE_TYPE_BIKE: // not possible
 //+ rouz edit (ChatGPT)
 						// Allocate the replay bike in its saved slot without invoking C++ new.
-						new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_v);
 						std::allocator<CBike>().construct((CBike*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1038,7 +1080,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					CWorld::Add(new_v);
 				}
 			}
-			ProcessCarUpdate(CPools::GetVehiclePool()->GetSlot(vp->index), interpolation, buffer);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			ProcessCarUpdate(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), vp->index)), interpolation, buffer);
+			//- rouz edit (ChatGPT)
 			buffer->m_nOffset += sizeof(tVehicleUpdatePacket);
 			break;
 		}
@@ -1046,7 +1091,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 		{
 			tBikeUpdatePacket* vp = (tBikeUpdatePacket*)&ptr[offset];
 			for (int i = vehicle_min_index; i < vp->index; i++) {
-				CVehicle* v = CPools::GetVehiclePool()->GetSlot(i);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+				//- rouz edit (ChatGPT)
 				if (!v)
 					continue;
 				/* Removing vehicles not present in this frame. */
@@ -1054,11 +1102,17 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 				// Destroy and release the missing replay bike without invoking C++ delete.
 				v->~CVehicle();
-				CPools::GetVehiclePool()->Delete(v);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), v);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			vehicle_min_index = vp->index + 1;
-			CVehicle* v = CPools::GetVehiclePool()->GetSlot(vp->index);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), vp->index));
+			//- rouz edit (ChatGPT)
 			CVehicle* new_v;
 			if (!v) {
 				int mi = vp->mi;
@@ -1068,7 +1122,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 				else {
 //+ rouz edit (ChatGPT)
 					// Allocate the replay bike in its saved slot without invoking C++ new.
-					new_v = CPools::GetVehiclePool()->New(vp->index << 8);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					new_v = ((CVehicle*)CPool_NewAt(CPools::GetVehiclePool(), vp->index << 8));
+					//- rouz edit (ChatGPT)
 					assert(new_v);
 					std::allocator<CBike>().construct((CBike*)new_v, mi, 2);
 //- rouz edit (ChatGPT)
@@ -1079,14 +1136,20 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 					CWorld::Add(new_v);
 				}
 			}
-			ProcessBikeUpdate(CPools::GetVehiclePool()->GetSlot(vp->index), interpolation, buffer);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			ProcessBikeUpdate(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), vp->index)), interpolation, buffer);
+			//- rouz edit (ChatGPT)
 			buffer->m_nOffset += sizeof(tBikeUpdatePacket);
 			break;
 		}
 		case REPLAYPACKET_PED_HEADER:
 		{
 			tPedHeaderPacket* ph = (tPedHeaderPacket*)&ptr[offset];
-			if (!CPools::GetPedPool()->GetSlot(ph->index)) {
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			if (!((CPed*)CPool_GetSlot(CPools::GetPedPool(), ph->index))) {
+			//- rouz edit (ChatGPT)
 				if (!CStreaming::HasModelLoaded(ph->mi) || (ph->mi >= MI_SPECIAL01 && ph->mi < MI_LAST_PED)) {
 					CStreaming::RequestModel(ph->mi, 0);
 				}
@@ -1095,12 +1158,18 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 					if (ph->pedtype != PEDTYPE_PLAYER1) {
 						// Allocate the replay ped in its saved slot without invoking C++ new.
-						new_p = CPools::GetPedPool()->New(ph->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_p = ((CPed*)CPool_NewAt(CPools::GetPedPool(), ph->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_p);
 						std::allocator<CCivilianPed>().construct((CCivilianPed*)new_p, (ePedType)ph->pedtype, ph->mi);
 					} else {
 						// Allocate the replay player ped in its saved slot without invoking C++ new.
-						new_p = CPools::GetPedPool()->New(ph->index << 8);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						new_p = ((CPed*)CPool_NewAt(CPools::GetPedPool(), ph->index << 8));
+						//- rouz edit (ChatGPT)
 						assert(new_p);
 						std::allocator<CPlayerPed>().construct((CPlayerPed*)new_p);
 					}
@@ -1117,7 +1186,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 		{
 			tPedUpdatePacket* pu = (tPedUpdatePacket*)&ptr[offset];
 			for (int i = ped_min_index; i < pu->index; i++) {
-				CPed* p = CPools::GetPedPool()->GetSlot(i);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPed* p = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+				//- rouz edit (ChatGPT)
 				if (!p)
 					continue;
 				/* Removing peds not present in this frame. */
@@ -1125,11 +1197,17 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 				// Destroy and release the missing replay ped without invoking C++ delete.
 				p->~CPed();
-				CPools::GetPedPool()->Delete(p);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetPedPool(), p);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 			ped_min_index = pu->index + 1;
-			ProcessPedUpdate(CPools::GetPedPool()->GetSlot(pu->index), interpolation, buffer);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			ProcessPedUpdate(((CPed*)CPool_GetSlot(CPools::GetPedPool(), pu->index)), interpolation, buffer);
+			//- rouz edit (ChatGPT)
 			break;
 		}
 		case REPLAYPACKET_GENERAL:
@@ -1221,8 +1299,12 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 		}
 	}
 	buffer->m_nOffset += 4;
-	for (int i = vehicle_min_index; i < CPools::GetVehiclePool()->GetSize(); i++) {
-		CVehicle* v = CPools::GetVehiclePool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = vehicle_min_index; i < CPool_GetSize(CPools::GetVehiclePool()); i++) {
+		// Access raw storage through the C store or pool API
+		CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+	//- rouz edit (ChatGPT)
 		if (!v)
 			continue;
 		/* Removing vehicles not present in this frame. */
@@ -1230,11 +1312,18 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 		// Destroy and release the trailing replay vehicle without invoking C++ delete.
 		v->~CVehicle();
-		CPools::GetVehiclePool()->Delete(v);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), v);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
-	for (int i = ped_min_index; i < CPools::GetPedPool()->GetSize(); i++) {
-		CPed* p = CPools::GetPedPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = ped_min_index; i < CPool_GetSize(CPools::GetPedPool()); i++) {
+		// Access raw storage through the C store or pool API
+		CPed* p = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+	//- rouz edit (ChatGPT)
 		if (!p)
 			continue;
 		/* Removing peds not present in this frame. */
@@ -1242,7 +1331,10 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 //+ rouz edit (ChatGPT)
 		// Destroy and release the trailing replay ped without invoking C++ delete.
 		p->~CPed();
-		CPools::GetPedPool()->Delete(p);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetPedPool(), p);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
 	ProcessReplayCamera();
@@ -1395,22 +1487,34 @@ void CReplay::StoreStuffInMem(void)
 {
 #ifdef FIX_BUGS
 	for (int i = 0; i < NUMPLAYERS; i++)
-		nHandleOfPlayerPed[i] = CPools::GetPedPool()->GetIndex(CWorld::Players[i].m_pPed);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		nHandleOfPlayerPed[i] = CPool_GetIndex(CPools::GetPedPool(), CWorld::Players[i].m_pPed);
+		//- rouz edit (ChatGPT)
 #endif
-	int i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CPed* ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!ped)
 			continue;
 		if (ped->m_attractor)
 			GetPedAttractorManager()->DeRegisterPed(ped, ped->m_attractor);
 	}
-	CPools::GetVehiclePool()->Store(pBuf0, pBuf1);
-	CPools::GetPedPool()->Store(pBuf2, pBuf3);
-	CPools::GetObjectPool()->Store(pBuf4, pBuf5);
-	CPools::GetPtrNodePool()->Store(pBuf6, pBuf7);
-	CPools::GetEntryInfoNodePool()->Store(pBuf8, pBuf9);
-	CPools::GetDummyPool()->Store(pBuf10, pBuf11);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Store(CPools::GetVehiclePool(), &VehiclePoolSnapshot);
+	CPool_Store(CPools::GetPedPool(), &PedPoolSnapshot);
+	CPool_Store(CPools::GetObjectPool(), &ObjectPoolSnapshot);
+	CPool_Store(CPools::GetPtrNodePool(), &PtrNodePoolSnapshot);
+	CPool_Store(CPools::GetEntryInfoNodePool(), &EntryInfoNodePoolSnapshot);
+	CPool_Store(CPools::GetDummyPool(), &DummyPoolSnapshot);
+	//- rouz edit (ChatGPT)
 	pWorld1 = (uint8*)malloc(sizeof(CSector) * NUMSECTORS_X * NUMSECTORS_Y); // rouz edit (ChatGPT)
 	memcpy(pWorld1, CWorld::GetSector(0, 0), NUMSECTORS_X * NUMSECTORS_Y * sizeof(CSector));
 	WorldPtrList = CWorld::GetMovingEntityList().first; // why
@@ -1458,10 +1562,16 @@ void CReplay::StoreStuffInMem(void)
 	ms_nTotalGangPeds_Stored = CPopulation::ms_nTotalGangPeds;
 	ms_nTotalPeds_Stored = CPopulation::ms_nTotalPeds;
 	ms_nTotalMissionPeds_Stored = CPopulation::ms_nTotalMissionPeds;
-	int size = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int size = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	pPedAnims = (CStoredDetailedAnimationState*)malloc(sizeof(CStoredDetailedAnimationState)*size); // rouz edit (ChatGPT)
 	for (int i = 0; i < size; i++) {
-		CPed* ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (ped)
 			StoreDetailedPedAnimation(ped, &pPedAnims[i]);
 	}
@@ -1479,12 +1589,15 @@ void CReplay::StoreStuffInMem(void)
 
 void CReplay::RestoreStuffFromMem(void)
 {
-	CPools::GetVehiclePool()->CopyBack(pBuf0, pBuf1);
-	CPools::GetPedPool()->CopyBack(pBuf2, pBuf3);
-	CPools::GetObjectPool()->CopyBack(pBuf4, pBuf5);
-	CPools::GetPtrNodePool()->CopyBack(pBuf6, pBuf7);
-	CPools::GetEntryInfoNodePool()->CopyBack(pBuf8, pBuf9);
-	CPools::GetDummyPool()->CopyBack(pBuf10, pBuf11);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_CopyBack(CPools::GetVehiclePool(), &VehiclePoolSnapshot);
+	CPool_CopyBack(CPools::GetPedPool(), &PedPoolSnapshot);
+	CPool_CopyBack(CPools::GetObjectPool(), &ObjectPoolSnapshot);
+	CPool_CopyBack(CPools::GetPtrNodePool(), &PtrNodePoolSnapshot);
+	CPool_CopyBack(CPools::GetEntryInfoNodePool(), &EntryInfoNodePoolSnapshot);
+	CPool_CopyBack(CPools::GetDummyPool(), &DummyPoolSnapshot);
+	//- rouz edit (ChatGPT)
 	memcpy(CWorld::GetSector(0, 0), pWorld1, sizeof(CSector) * NUMSECTORS_X * NUMSECTORS_Y);
 	free(pWorld1); // rouz edit (ChatGPT)
 	pWorld1 = nil;
@@ -1506,7 +1619,10 @@ void CReplay::RestoreStuffFromMem(void)
 	pRadarBlips = nil;
 #ifdef FIX_BUGS
 	for (int i = 0; i < NUMPLAYERS; i++) {
-		CPlayerPed* pPlayerPed = (CPlayerPed*)CPools::GetPedPool()->GetAt(nHandleOfPlayerPed[i]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPlayerPed* pPlayerPed = (CPlayerPed*)((CPed*)CPool_GetAt(CPools::GetPedPool(), nHandleOfPlayerPed[i]));
+		//- rouz edit (ChatGPT)
 		assert(pPlayerPed);
 		CWorld::Players[i].m_pPed = pPlayerPed;
 		pPlayerPed->RegisterReference((CEntity**)&CWorld::Players[i].m_pPed);
@@ -1519,9 +1635,15 @@ void CReplay::RestoreStuffFromMem(void)
 	std::allocator<CWanted>().construct(FindPlayerPed()->m_pWanted, PlayerWanted);
 //- rouz edit (ChatGPT)
 	CWorld::Players[0] = PlayerInfo;
-	int i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CPed* ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!ped)
 			continue;
 		int mi = ped->GetModelIndex();
@@ -1559,9 +1681,15 @@ void CReplay::RestoreStuffFromMem(void)
 		}
 //- rouz edit (ChatGPT)
 	}
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CVehicle* vehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!vehicle)
 			continue;
 		int mi = vehicle->GetModelIndex();
@@ -1630,9 +1758,15 @@ void CReplay::RestoreStuffFromMem(void)
 		}
 	}
 	PrintElementsInPtrList();
-	i = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CObject* object = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* object = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!object)
 			continue;
 		int mi = object->GetModelIndex();
@@ -1641,9 +1775,15 @@ void CReplay::RestoreStuffFromMem(void)
 		object->SetModelIndexNoCreate(mi);
 		object->GetMatrix().m_attachment = nil;
 	}
-	i = CPools::GetDummyPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetDummyPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CDummy* dummy = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CDummy* dummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!dummy)
 			continue;
 		int mi = dummy->GetModelIndex();
@@ -1684,8 +1824,12 @@ void CReplay::RestoreStuffFromMem(void)
 	CPopulation::ms_nTotalGangPeds = ms_nTotalGangPeds_Stored;
 	CPopulation::ms_nTotalPeds = ms_nTotalPeds_Stored;
 	CPopulation::ms_nTotalMissionPeds = ms_nTotalMissionPeds_Stored;
-	for (int i = 0; i < CPools::GetPedPool()->GetSize(); i++) {
-		CPed* ped = CPools::GetPedPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = 0; i < CPool_GetSize(CPools::GetPedPool()); i++) {
+		// Access raw storage through the C store or pool API
+		CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+	//- rouz edit (ChatGPT)
 		if (!ped)
 			continue;
 		RetrieveDetailedPedAnimation(ped, &pPedAnims[i]);
@@ -1714,28 +1858,46 @@ void CReplay::RestoreStuffFromMem(void)
 
 void CReplay::EmptyPedsAndVehiclePools(void)
 {
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CVehicle* v = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!v)
 			continue;
 		CWorld::Remove(v);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the replay vehicle without invoking C++ delete.
 		v->~CVehicle();
-		CPools::GetVehiclePool()->Delete(v);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), v);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
-	i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CPed* p = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* p = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!p)
 			continue;
 		CWorld::Remove(p);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the replay ped without invoking C++ delete.
 		p->~CPed();
-		CPools::GetPedPool()->Delete(p);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetPedPool(), p);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
 }
@@ -1743,44 +1905,74 @@ void CReplay::EmptyPedsAndVehiclePools(void)
 void CReplay::EmptyAllPools(void)
 {
 	EmptyPedsAndVehiclePools();
-	int i = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CObject* o = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject* o = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!o)
 			continue;
 		CWorld::Remove(o);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the replay object without invoking C++ delete.
 		o->~CObject();
-		CPools::GetObjectPool()->Delete(o);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetObjectPool(), o);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
-	i = CPools::GetDummyPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetDummyPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CDummy* d = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CDummy* d = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!d)
 			continue;
 		CWorld::Remove(d);
 //+ rouz edit (ChatGPT)
 		// Destroy and release the replay dummy without invoking C++ delete.
 		d->~CDummy();
-		CPools::GetDummyPool()->Delete(d);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetDummyPool(), d);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	}
 }
 
 void CReplay::MarkEverythingAsNew(void)
 {
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CVehicle* v = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!v)
 			continue;
 		v->bHasAlreadyBeenRecorded = false;
 	}
-	i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CPed* p = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* p = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if (!p)
 			continue;
 		p->bHasAlreadyBeenRecorded = false;

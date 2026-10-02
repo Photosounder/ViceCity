@@ -114,7 +114,10 @@ CPopulation::RemovePed(CPed *ent)
 //+ rouz edit (ChatGPT)
 	// Destroy and release the ped without invoking C++ delete.
 	ent->~CPed();
-	CPools::GetPedPool()->Delete(ent);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(CPools::GetPedPool(), ent);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 }
 
@@ -430,7 +433,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the civilian ped without invoking C++ new.
-			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CCivilianPed *ped = (CCivilianPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
 //- rouz edit (ChatGPT)
@@ -467,7 +473,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the cop ped without invoking C++ new.
-			CCopPed *ped = (CCopPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CCopPed *ped = (CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CCopPed>().construct(ped, (eCopType)miOrCopType, modifier);
 //- rouz edit (ChatGPT)
@@ -488,7 +497,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the gang ped without invoking C++ new.
-			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CCivilianPed *ped = (CCivilianPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
 //- rouz edit (ChatGPT)
@@ -510,7 +522,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the emergency ped without invoking C++ new.
-			CEmergencyPed *ped = (CEmergencyPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CEmergencyPed *ped = (CEmergencyPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CEmergencyPed>().construct(ped, PEDTYPE_EMERGENCY);
 //- rouz edit (ChatGPT)
@@ -523,7 +538,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the fireman ped without invoking C++ new.
-			CEmergencyPed *ped = (CEmergencyPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CEmergencyPed *ped = (CEmergencyPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CEmergencyPed>().construct(ped, PEDTYPE_FIREMAN);
 //- rouz edit (ChatGPT)
@@ -537,7 +555,10 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 		{
 //+ rouz edit (ChatGPT)
 			// Allocate the civilian ped without invoking C++ new.
-			CCivilianPed *ped = (CCivilianPed*)CPools::GetPedPool()->New();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CCivilianPed *ped = (CCivilianPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+			//- rouz edit (ChatGPT)
 			assert(ped);
 			std::allocator<CCivilianPed>().construct(ped, pedType, miOrCopType);
 //- rouz edit (ChatGPT)
@@ -946,9 +967,15 @@ CPopulation::MoveCarsAndPedsOutOfAbandonedZones()
 void
 CPopulation::ConvertAllObjectsToDummyObjects()
 {
-	uint32 i = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	while(i--) {
-		CObject *obj = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (obj) {
 			if (obj->CanBeDeleted())
 				ConvertToDummyObject(obj);
@@ -965,17 +992,30 @@ CPopulation::ConvertToRealObject(CDummyObject *dummy)
 //+ rouz edit (ChatGPT)
 	// Allocate the real object without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	CObject *obj = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject *obj = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!obj) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				obj = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				obj = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -991,7 +1031,10 @@ CPopulation::ConvertToRealObject(CDummyObject *dummy)
 //+ rouz edit (ChatGPT)
 	// Destroy and release the dummy without invoking C++ delete.
 	dummy->~CDummyObject();
-	CPools::GetDummyPool()->Delete(dummy);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(CPools::GetDummyPool(), dummy);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CWorld::Add(obj);
 
@@ -1011,7 +1054,10 @@ CPopulation::ConvertToDummyObject(CObject *obj)
 {
 //+ rouz edit (ChatGPT)
 	// Allocate the dummy object without invoking C++ new.
-	CDummyObject *dummy = (CDummyObject*)CPools::GetDummyPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CDummyObject *dummy = (CDummyObject*)((CDummy*)CPool_New(CPools::GetDummyPool()));
+	//- rouz edit (ChatGPT)
 	assert(dummy);
 	std::allocator<CDummyObject>().construct(dummy, obj);
 //- rouz edit (ChatGPT)
@@ -1028,7 +1074,10 @@ CPopulation::ConvertToDummyObject(CObject *obj)
 //+ rouz edit (ChatGPT)
 	// Destroy and release the real object without invoking C++ delete.
 	obj->~CObject();
-	CPools::GetObjectPool()->Delete(obj);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPool_Delete(CPools::GetObjectPool(), obj);
+	//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 	CWorld::Add(dummy);
 }
@@ -1114,9 +1163,15 @@ CPopulation::ManagePopulation(void)
 	CVector playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
 
 	// Why this code is here?! Delete temporary objects when they got too far, and convert others to "dummy" objects. (like lamp posts)
-	int objectPoolSize = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int objectPoolSize = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	for (int i = objectPoolSize * frameMod32 / 32; i < objectPoolSize * (frameMod32 + 1) / 32; i++) {
-		CObject *obj = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if (obj && obj->CanBeDeleted()) {
 			float objPlayerDist = (obj->GetPosition() - playerPos).Magnitude();
 			if (obj->ObjectCreatedBy == TEMP_OBJECT) {
@@ -1126,7 +1181,10 @@ CPopulation::ManagePopulation(void)
 //+ rouz edit (ChatGPT)
 						// Destroy and release the temporary object without invoking C++ delete.
 						obj->~CObject();
-						CPools::GetObjectPool()->Delete(obj);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CPool_Delete(CPools::GetObjectPool(), obj);
+						//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 					}
 				} else if (objPlayerDist > 120.0f) {
@@ -1134,7 +1192,10 @@ CPopulation::ManagePopulation(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the temporary object without invoking C++ delete.
 					obj->~CObject();
-					CPools::GetObjectPool()->Delete(obj);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetObjectPool(), obj);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
 
@@ -1147,22 +1208,34 @@ CPopulation::ManagePopulation(void)
 	}
 
 	// Convert them back to real objects. Dummy objects don't have collisions, so they need to be converted.
-	int dummyPoolSize = CPools::GetDummyPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int dummyPoolSize = CPool_GetSize(CPools::GetDummyPool());
+	//- rouz edit (ChatGPT)
 	for (int i = dummyPoolSize * frameMod32 / 32; i < dummyPoolSize * (frameMod32 + 1) / 32; i++) {
-		CDummy *dummy = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CDummy *dummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if (dummy && (dummy->m_area == CGame::currArea || dummy->m_area == AREA_EVERYWHERE)) {
 			if ((dummy->GetPosition() - playerPos).Magnitude() < 80.0f)
 				ConvertToRealObject((CDummyObject*)dummy);
 		}
 	}
 
-	int pedPoolSize = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int pedPoolSize = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 #ifndef SQUEEZE_PERFORMANCE
 	for (int poolIndex = pedPoolSize-1; poolIndex >= 0; poolIndex--) {
 #else
 	for (int poolIndex = (pedPoolSize * (frameMod32 + 1) / 32) - 1; poolIndex >= pedPoolSize * frameMod32 / 32; poolIndex--) {
 #endif
-		CPed *ped = CPools::GetPedPool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), poolIndex));
+		//- rouz edit (ChatGPT)
 
 		if (ped && !ped->IsPlayer() && ped->CanBeDeleted() && !ped->bInVehicle) {
 			uint32 timeSinceDeath = CTimer::GetTimeInMilliseconds() - ped->m_bloodyFootprintCountOrDeathTime;
@@ -1301,12 +1374,21 @@ void
 CPopulation::RemovePedsIfThePoolGetsFull(void)
 {
 	if ((CTimer::GetFrameCounter() & 7) == 5) {
-		if (CPools::GetPedPool()->GetNoOfFreeSpaces() < 8) {
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		if (CPool_GetNoOfFreeSpaces(CPools::GetPedPool()) < 8) {
+		//- rouz edit (ChatGPT)
 			CPed *closestPed = nil;
 			float closestDist = 10000000.0;
-			int poolSize = CPools::GetPedPool()->GetSize();
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			int poolSize = CPool_GetSize(CPools::GetPedPool());
+			//- rouz edit (ChatGPT)
 			for (int i = poolSize - 1; i >= 0; i--) {
-				CPed* ped = CPools::GetPedPool()->GetSlot(i);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+				//- rouz edit (ChatGPT)
 				if (ped && ped->CanBeDeleted()) {
 					float dist = (TheCamera.GetPosition() - ped->GetPosition()).Magnitude();
 					if (dist < closestDist) {

@@ -467,7 +467,10 @@ CTrain::InitTrains(void)
 	for(i = 0; i < 5; i++){
 //+ rouz edit (ChatGPT)
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
-		train = (CTrain*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -491,7 +494,10 @@ CTrain::InitTrains(void)
 	for(i = 0; i < 8; i++){
 //+ rouz edit (ChatGPT)
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
-		train = (CTrain*)CPools::GetVehiclePool()->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+		//- rouz edit (ChatGPT)
 		assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -666,7 +672,10 @@ PlayAnnouncement(uint8 sound, uint8 station)
 	// this was gone in a PC version but inlined on PS2
 //+ rouz edit (ChatGPT)
 	// Allocate a pooled audio script object without invoking C++ new.
-	cAudioScriptObject *obj = CPools::GetAudioScriptObjectPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	cAudioScriptObject *obj = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
+	//- rouz edit (ChatGPT)
 	assert(obj);
 	std::allocator<cAudioScriptObject>().construct(obj);
 //- rouz edit (ChatGPT)

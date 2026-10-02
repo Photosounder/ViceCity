@@ -13,7 +13,9 @@ struct ColDef {	// made up name
 
 class CColStore
 {
-	static CPool<ColDef,ColDef> *ms_pColPool;
+	//+ rouz edit (ChatGPT)
+	static CPool *ms_pColPool;
+	//- rouz edit (ChatGPT)
 
 public:
 	static void Initialise(void);
@@ -37,7 +39,10 @@ public:
 	static ColDef *GetSlot(int slot) {
 		assert(slot >= 0);
 		assert(ms_pColPool);
-		assert(slot < ms_pColPool->GetSize());
-		return ms_pColPool->GetSlot(slot);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		assert(slot < CPool_GetSize(ms_pColPool));
+		return ((ColDef*)CPool_GetSlot(ms_pColPool, slot));
+		//- rouz edit (ChatGPT)
 	}
 };

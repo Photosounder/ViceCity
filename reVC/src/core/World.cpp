@@ -117,16 +117,24 @@ void
 CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemoveProjectilesAndTidyUpShadows)
 {
 	CPedPool *pedPool = CPools::GetPedPool();
-	for(int32 i = 0; i < pedPool->GetSize(); i++) {
-		CPed *pPed = pedPool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int32 i = 0; i < CPool_GetSize(pedPool); i++) {
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetSlot(pedPool, i));
+	//- rouz edit (ChatGPT)
 		if(pPed && !pPed->IsPlayer() && pPed->CanBeDeleted() &&
 		   CVector2D(pPed->GetPosition() - pos).MagnitudeSqr() < SQR(radius)) {
 			CPopulation::RemovePed(pPed);
 		}
 	}
 	CVehiclePool *VehiclePool = CPools::GetVehiclePool();
-	for(int32 i = 0; i < VehiclePool->GetSize(); i++) {
-		CVehicle *pVehicle = VehiclePool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int32 i = 0; i < CPool_GetSize(VehiclePool); i++) {
+		// Access raw storage through the C store or pool API
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(VehiclePool, i));
+	//- rouz edit (ChatGPT)
 		if(pVehicle && CVector2D(pVehicle->GetPosition() - pos).MagnitudeSqr() < SQR(radius) &&
 		   !pVehicle->bIsLocked && pVehicle->CanBeDeleted()) {
 			if(pVehicle->pDriver) {
@@ -145,7 +153,10 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 //+ rouz edit (ChatGPT)
 			// Destroy and release the vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -1040,25 +1051,43 @@ CWorld::FindRoofZFor3DCoord(float x, float y, float z, bool *found)
 void
 CWorld::RemoveReferencesToDeletedObject(CEntity *pDeletedObject)
 {
-	int32 i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0) {
-		CPed *pPed = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if(pPed && pPed != pDeletedObject) {
 			pPed->RemoveRefsToEntity(pDeletedObject);
 			if(pPed->m_pCurrentPhysSurface == pDeletedObject) pPed->m_pCurrentPhysSurface = nil;
 		}
 	}
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0) {
-		CVehicle *pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(pVehicle && pVehicle != pDeletedObject) {
 			pVehicle->RemoveRefsToEntity(pDeletedObject);
 			pVehicle->RemoveRefsToVehicle(pDeletedObject);
 		}
 	}
-	i = CPools::GetObjectPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetObjectPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0) {
-		CObject *pObject = CPools::GetObjectPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *pObject = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
+		//- rouz edit (ChatGPT)
 		if(pObject && pObject != pDeletedObject) { pObject->RemoveRefsToEntity(pDeletedObject); }
 	}
 }
@@ -1401,8 +1430,12 @@ void
 CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	CVehiclePool *pVehiclePool = CPools::GetVehiclePool();
-	for(int32 i = 0; i < pVehiclePool->GetSize(); i++) {
-		CVehicle *pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int32 i = 0; i < CPool_GetSize(pVehiclePool); i++) {
+		// Access raw storage through the C store or pool API
+		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+	//- rouz edit (ChatGPT)
 		if(pVehicle) {
 			const CVector &position = pVehicle->GetPosition();
 			if(position.x >= x1 && position.x <= x2 && position.y >= y1 && position.y <= y2 &&
@@ -1423,7 +1456,10 @@ CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, floa
 //+ rouz edit (ChatGPT)
 				// Destroy and release the vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				pVehiclePool->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(pVehiclePool, pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -1434,8 +1470,12 @@ void
 CWorld::ClearPedsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	CPedPool *pPedPool = CPools::GetPedPool();
-	for(int32 i = 0; i < pPedPool->GetSize(); i++) {
-		CPed *pPed = CPools::GetPedPool()->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for(int32 i = 0; i < CPool_GetSize(pPedPool); i++) {
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+	//- rouz edit (ChatGPT)
 		if(pPed) {
 			const CVector &position = pPed->GetPosition();
 			if(!pPed->IsPlayer() && pPed->CanBeDeleted() && position.x >= x1 && position.x <= x2 &&
@@ -1562,20 +1602,35 @@ CWorld::RemoveEntityInsteadOfProcessingIt(CEntity *ent)
 		// Destroy and release the entity without invoking C++ delete.
 		if(ent->IsVehicle()) {
 			ent->~CEntity();
-			CPools::GetVehiclePool()->Delete((CVehicle *)ent);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)ent);
+			//- rouz edit (ChatGPT)
 		} else if(ent->IsObject()) {
 			ent->~CEntity();
-			CPools::GetObjectPool()->Delete((CObject *)ent);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), (CObject *)ent);
+			//- rouz edit (ChatGPT)
 		} else if(ent->IsBuilding()) {
 			bool isTreadable = ((CBuilding *)ent)->GetIsATreadable();
 			ent->~CEntity();
 			if(isTreadable)
-				CPools::GetTreadablePool()->Delete((CTreadable *)ent);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)ent);
+				//- rouz edit (ChatGPT)
 			else
-				CPools::GetBuildingPool()->Delete((CBuilding *)ent);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)ent);
+				//- rouz edit (ChatGPT)
 		} else if(ent->IsDummy()) {
 			ent->~CEntity();
-			CPools::GetDummyPool()->Delete((CDummy *)ent);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetDummyPool(), (CDummy *)ent);
+			//- rouz edit (ChatGPT)
 		}
 //- rouz edit (ChatGPT)
 	}
@@ -1584,9 +1639,15 @@ CWorld::RemoveEntityInsteadOfProcessingIt(CEntity *ent)
 void
 CWorld::RemoveFallenPeds(void)
 {
-	int poolSize = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-		CPed *ped = CPools::GetPedPool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(ped) {
 			if(ped->GetPosition().z < MAP_Z_LOW_LIMIT) {
 				if(ped->CharCreatedBy != RANDOM_CHAR || ped->IsPlayer()) {
@@ -1607,9 +1668,15 @@ CWorld::RemoveFallenPeds(void)
 void
 CWorld::RemoveFallenCars(void)
 {
-	int poolSize = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-		CVehicle *veh = CPools::GetVehiclePool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(veh) {
 			if(veh->GetPosition().z < MAP_Z_LOW_LIMIT) {
 				if(veh->VehicleCreatedBy == MISSION_VEHICLE && !veh->bRenderScorched || veh == FindPlayerVehicle() ||
@@ -1626,7 +1693,10 @@ CWorld::RemoveFallenCars(void)
 //+ rouz edit (ChatGPT)
 					// Destroy and release the fallen vehicle without invoking C++ delete.
 					veh->~CVehicle();
-					CPools::GetVehiclePool()->Delete(veh);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(CPools::GetVehiclePool(), veh);
+					//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 				}
 			}
@@ -1637,9 +1707,15 @@ CWorld::RemoveFallenCars(void)
 void
 CWorld::StopAllLawEnforcersInTheirTracks(void)
 {
-	int poolSize = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-		CVehicle *veh = CPools::GetVehiclePool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(veh) {
 			if(veh->bIsLawEnforcer) veh->SetMoveSpeed(0.0f, 0.0f, 0.0f);
 		}
@@ -1649,9 +1725,15 @@ CWorld::StopAllLawEnforcersInTheirTracks(void)
 void
 CWorld::SetAllCarsCanBeDamaged(bool toggle)
 {
-	int poolSize = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
-		CVehicle *veh = CPools::GetVehiclePool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(veh) veh->bCanBeDamaged = toggle;
 	}
 }
@@ -1659,9 +1741,15 @@ CWorld::SetAllCarsCanBeDamaged(bool toggle)
 void
 CWorld::ExtinguishAllCarFiresInArea(CVector point, float range)
 {
-	int poolSize = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
-		CVehicle *veh = CPools::GetVehiclePool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(veh) {
 			if((point - veh->GetPosition()).MagnitudeSqr() < sq(range)) veh->ExtinguishCarFire();
 		}
@@ -1703,9 +1791,15 @@ CWorld::ShutDown(void)
 			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
 			pEntity->~CEntity();
 			if(isTreadable)
-				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				//- rouz edit (ChatGPT)
 			else
-				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_VEHICLES].first; pNode; pNode = pNode->next) {
@@ -1714,7 +1808,10 @@ CWorld::ShutDown(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the vehicle without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetVehiclePool()->Delete((CVehicle *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_PEDS].first; pNode; pNode = pNode->next) {
@@ -1723,7 +1820,10 @@ CWorld::ShutDown(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the ped without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetPedPool()->Delete((CPed *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetPedPool(), (CPed *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
@@ -1732,7 +1832,10 @@ CWorld::ShutDown(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the object without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetObjectPool()->Delete((CObject *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), (CObject *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
@@ -1741,7 +1844,10 @@ CWorld::ShutDown(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the dummy without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetDummyPool()->Delete((CDummy *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetDummyPool(), (CDummy *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 #ifndef FIX_BUGS
@@ -1760,9 +1866,15 @@ CWorld::ShutDown(void)
 			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
 			pEntity->~CEntity();
 			if(isTreadable)
-				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				//- rouz edit (ChatGPT)
 			else
-				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		ms_bigBuildingsList[i].Flush();
@@ -1823,7 +1935,10 @@ CWorld::ClearForRestart(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the ped without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetPedPool()->Delete((CPed *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetPedPool(), (CPed *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = GetBigBuildingList(LEVEL_GENERIC).first; pNode; pNode = pNode->next) {
@@ -1833,7 +1948,10 @@ CWorld::ClearForRestart(void)
 //+ rouz edit (ChatGPT)
 				// Destroy and release the plane without invoking C++ delete.
 				pVehicle->~CVehicle();
-				CPools::GetVehiclePool()->Delete(pVehicle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			}
 		}
@@ -1843,7 +1961,10 @@ CWorld::ClearForRestart(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the vehicle without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetVehiclePool()->Delete((CVehicle *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), (CVehicle *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -1853,9 +1974,15 @@ CWorld::ClearForRestart(void)
 void
 CWorld::RepositionCertainDynamicObjects()
 {
-	int32 i = CPools::GetDummyPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 i = CPool_GetSize(CPools::GetDummyPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0) {
-		CDummy *dummy = CPools::GetDummyPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CDummy *dummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
+		//- rouz edit (ChatGPT)
 		if(dummy) { RepositionOneObject(dummy); }
 	}
 }
@@ -1920,9 +2047,15 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 void
 CWorld::SetCarsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
-	int poolSize = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-		CVehicle *veh = CPools::GetVehiclePool()->GetSlot(poolIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
+		//- rouz edit (ChatGPT)
 		if(veh && veh->GetStatus() != STATUS_WRECKED && !veh->m_pCarFire && !veh->bFireProof) {
 			if(Abs(veh->GetPosition().z - z) < 5.0f && Abs(veh->GetPosition().x - x) < radius &&
 			   Abs(veh->GetPosition().y - y) < radius)
@@ -1934,9 +2067,15 @@ CWorld::SetCarsOnFire(float x, float y, float z, float radius, CEntity *reason)
 void
 CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 {
-	int32 poolSize = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 poolSize = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	for (int32 i = poolSize - 1; i >= 0; i--) {
-		CPed* pPed = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		// suspicious copypaste
 		if (pPed && pPed->m_nPedState != PED_DEAD && !pPed->bInVehicle && !pPed->m_pFire && !pPed->bFireProof && pPed->CharCreatedBy != MISSION_CHAR) {
 			if (Abs(pPed->GetPosition().z - z) < 5.0f && Abs(pPed->GetPosition().x - x) < radius &&
@@ -1956,9 +2095,15 @@ CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 void
 CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
-	int32 poolSize = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 poolSize = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	for(int32 i = poolSize - 1; i >= 0; i--) {
-		CPed *pPed = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if(pPed && pPed->m_nPedState != PED_DEAD && !pPed->bInVehicle && !pPed->m_pFire && !pPed->bFireProof) {
 			if(Abs(pPed->GetPosition().z - z) < 5.0f && Abs(pPed->GetPosition().x - x) < radius &&
 			   Abs(pPed->GetPosition().y - y) < radius)
@@ -1980,9 +2125,15 @@ CWorld::RemoveStaticObjects()
 			bool isTreadable = ((CBuilding *)pEntity)->GetIsATreadable();
 			pEntity->~CEntity();
 			if(isTreadable)
-				CPools::GetTreadablePool()->Delete((CTreadable *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetTreadablePool(), (CTreadable *)pEntity);
+				//- rouz edit (ChatGPT)
 			else
-				CPools::GetBuildingPool()->Delete((CBuilding *)pEntity);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(CPools::GetBuildingPool(), (CBuilding *)pEntity);
+				//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_OBJECTS].first; pNode; pNode = pNode->next) {
@@ -1991,7 +2142,10 @@ CWorld::RemoveStaticObjects()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the static object without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetObjectPool()->Delete((CObject *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), (CObject *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		for(CPtrNode *pNode = pSector->m_lists[ENTITYLIST_DUMMIES].first; pNode; pNode = pNode->next) {
@@ -2000,7 +2154,10 @@ CWorld::RemoveStaticObjects()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the static dummy without invoking C++ delete.
 			pEntity->~CEntity();
-			CPools::GetDummyPool()->Delete((CDummy *)pEntity);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetDummyPool(), (CDummy *)pEntity);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 		pSector->m_lists[ENTITYLIST_BUILDINGS].Flush();
@@ -2353,12 +2510,21 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 void
 CWorld::UseDetonator(CEntity *pEntity)
 {
-	int32 i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int32 i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0) {
 #ifdef FIX_BUGS
-		CVehicle* pVehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 #else
-		CAutomobile *pVehicle = (CAutomobile *)CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CAutomobile *pVehicle = (CAutomobile *)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 #endif
 		if(pVehicle && pVehicle->m_bombType == CARBOMB_REMOTE &&
 		   pVehicle->m_pBombRigger == pEntity) {

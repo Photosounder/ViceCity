@@ -50,17 +50,30 @@ CStinger::Init(CPed *pPed)
 //+ rouz edit (ChatGPT)
 		// Allocate a stinger segment from the object pool without invoking C++ new.
 		CObjectPool *objectPool = CPools::GetObjectPool();
-		pSpikes[i] = (CStingerSegment*)objectPool->New();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pSpikes[i] = (CStingerSegment*)((CObject*)CPool_New(objectPool));
+		//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 		if (!pSpikes[i]) {
-			for (int32 j = 0; j < objectPool->GetSize(); j++) {
-				CObject *existing = objectPool->GetSlot(j);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			for (int32 j = 0; j < CPool_GetSize(objectPool); j++) {
+				// Access raw storage through the C store or pool API
+				CObject *existing = ((CObject*)CPool_GetSlot(objectPool, j));
+			//- rouz edit (ChatGPT)
 				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-					int32 handle = objectPool->GetIndex(existing);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					int32 handle = CPool_GetIndex(objectPool, existing);
+					//- rouz edit (ChatGPT)
 					CWorld::Remove(existing);
 					existing->~CObject();
-					objectPool->Delete(existing);
-					pSpikes[i] = (CStingerSegment*)objectPool->New(handle);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CPool_Delete(objectPool, existing);
+					pSpikes[i] = (CStingerSegment*)((CObject*)CPool_NewAt(objectPool, handle));
+					//- rouz edit (ChatGPT)
 					break;
 				}
 			}
@@ -111,7 +124,10 @@ CStinger::Remove()
 //+ rouz edit (ChatGPT)
 			// Destroy and release the stinger segment without invoking C++ delete.
 			spikeSegment->~CStingerSegment();
-			CPools::GetObjectPool()->Delete(spikeSegment);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), spikeSegment);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			pSpikes[i] = nil;
 		}
@@ -122,7 +138,10 @@ CStinger::Remove()
 		else {
 			// Destroy and release the stinger segment without invoking C++ delete.
 			spikeSegment->~CStingerSegment();
-			CPools::GetObjectPool()->Delete(spikeSegment);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), spikeSegment);
+			//- rouz edit (ChatGPT)
 		}
 //- rouz edit (ChatGPT)
 #endif

@@ -164,7 +164,10 @@ void CRunningScript::LocatePlayerCharCommand(int32 command, uint32* pIp)
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
 	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
-	CPed* pTarget = CPools::GetPedPool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPlayerInfo->GetPos();
 	if (pTarget->bInVehicle) {
@@ -251,7 +254,10 @@ void CRunningScript::LocatePlayerCarCommand(int32 command, uint32* pIp)
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
 	CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
-	CVehicle* pTarget = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPlayerInfo->GetPos();
 	X = pTarget->GetPosition().x;
@@ -330,7 +336,10 @@ void CRunningScript::LocateCharCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	CVector pos = pPed->InVehicle() ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 	switch (command) {
@@ -431,9 +440,15 @@ void CRunningScript::LocateCharCharCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pPed);
-	CPed* pTarget = CPools::GetPedPool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 	if (pTarget->bInVehicle) {
@@ -520,9 +535,15 @@ void CRunningScript::LocateCharCarCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pPed);
-	CVehicle* pTarget = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 	X = pTarget->GetPosition().x;
@@ -598,9 +619,15 @@ void CRunningScript::LocateCharObjectCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pPed);
-	CObject* pTarget = CPools::GetObjectPool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject* pTarget = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 	X = pTarget->GetPosition().x;
@@ -675,7 +702,10 @@ void CRunningScript::LocateCarCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CVector pos = pVehicle->GetPosition();
 	switch (command) {
@@ -746,7 +776,10 @@ void CRunningScript::LocateObjectCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pObject);
 	CVector pos = pObject->GetPosition();
 	X = *(float*)&ScriptParams[1];
@@ -1090,7 +1123,10 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CPed* pPed = CPools::GetPedPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pPed);
 	CVector pos = pPed->InVehicle() ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 	switch (command) {
@@ -1204,7 +1240,10 @@ void CRunningScript::CarInAreaCheckCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CVector pos = pVehicle->GetPosition();
 	switch (command) {
@@ -1301,7 +1340,10 @@ void CRunningScript::ObjectInAreaCheckCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 8 : 6);
-	CObject* pObject = CPools::GetObjectPool()->GetAt(ScriptParams[0]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
+	//- rouz edit (ChatGPT)
 	script_assert(pObject);
 	CVector pos = pObject->GetPosition();
 	infX = *(float*)&ScriptParams[1];
@@ -1463,7 +1505,10 @@ void CRunningScript::LocateCollectiveCommand(int32 command, uint32* pIp)
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
 			continue;
-		CPed* pPed = CPools::GetPedPool()->GetAt(CTheScripts::CollectiveArray[i].pedIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
 			CTheScripts::CollectiveArray[i].pedIndex = 0;
@@ -1546,7 +1591,10 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CPed* pTarget = CPools::GetPedPool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPed* pTarget = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	if (pTarget->bInVehicle) {
 		X = pTarget->m_pMyVehicle->GetPosition().x;
@@ -1571,7 +1619,10 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
 			continue;
-		CPed* pPed = CPools::GetPedPool()->GetAt(CTheScripts::CollectiveArray[i].pedIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
 			CTheScripts::CollectiveArray[i].pedIndex = 0;
@@ -1637,7 +1688,10 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 		break;
 	}
 	CollectParameters(pIp, b3D ? 6 : 5);
-	CVehicle* pTarget = CPools::GetVehiclePool()->GetAt(ScriptParams[1]);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pTarget = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[1]));
+	//- rouz edit (ChatGPT)
 	script_assert(pTarget);
 	X = pTarget->GetPosition().x;
 	Y = pTarget->GetPosition().y;
@@ -1655,7 +1709,10 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
 			continue;
-		CPed* pPed = CPools::GetPedPool()->GetAt(CTheScripts::CollectiveArray[i].pedIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
 			CTheScripts::CollectiveArray[i].pedIndex = 0;
@@ -1738,7 +1795,10 @@ void CRunningScript::LocateCollectivePlayerCommand(int32 command, uint32* pIp)
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
 			continue;
-		CPed* pPed = CPools::GetPedPool()->GetAt(CTheScripts::CollectiveArray[i].pedIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
 			CTheScripts::CollectiveArray[i].pedIndex = 0;
@@ -1839,7 +1899,10 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
 			continue;
-		CPed* pPed = CPools::GetPedPool()->GetAt(CTheScripts::CollectiveArray[i].pedIndex);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CTheScripts::CollectiveArray[i].pedIndex));
+		//- rouz edit (ChatGPT)
 		if (!pPed) {
 			CTheScripts::CollectiveArray[i].colIndex = -1;
 			CTheScripts::CollectiveArray[i].pedIndex = 0;
@@ -2111,17 +2174,26 @@ INITSAVEBUF
 	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
 		runningScripts++;
 	*size = CRunningScript::nSaveStructSize * runningScripts + varSpace + SCRIPT_DATA_SIZE + SAVE_HEADER_SIZE + 3 * sizeof(uint32);
-	WriteSaveHeader(buf, 'S', 'C', 'R', '\0', *size - SAVE_HEADER_SIZE);
-	WriteSaveBuf(buf, varSpace);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'S', 'C', 'R', '\0', *size - SAVE_HEADER_SIZE);
+	WriteSaveBuf(&buf, &varSpace, sizeof(varSpace));
+	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < varSpace; i++)
-		WriteSaveBuf(buf, ScriptSpace[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &ScriptSpace[i], sizeof(ScriptSpace[i]));
+		//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(SCRIPT_DATA_SIZE == 968, "CTheScripts::SaveAllScripts");
 #endif
 	uint32 script_data_size = SCRIPT_DATA_SIZE;
-	WriteSaveBuf(buf, script_data_size);
-	WriteSaveBuf(buf, OnAMissionFlag);
-	WriteSaveBuf(buf, LastMissionPassedTime);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &script_data_size, sizeof(script_data_size));
+	WriteSaveBuf(&buf, &OnAMissionFlag, sizeof(OnAMissionFlag));
+	WriteSaveBuf(&buf, &LastMissionPassedTime, sizeof(LastMissionPassedTime));
+	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
 		CBuilding* pBuilding = BuildingSwapArray[i].m_pBuilding;
 		uint32 type, handle;
@@ -2130,15 +2202,24 @@ INITSAVEBUF
 			handle = 0;
 		} else if (pBuilding->GetIsATreadable()) {
 			type = 1;
-			handle = CPools::GetTreadablePool()->GetJustIndex_NoFreeAssert((CTreadable*)pBuilding) + 1;
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pBuilding) + 1;
+			//- rouz edit (ChatGPT)
 		} else {
 			type = 2;
-			handle = CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert(pBuilding) + 1;
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), pBuilding) + 1;
+			//- rouz edit (ChatGPT)
 		}
-		WriteSaveBuf(buf, type);
-		WriteSaveBuf(buf, handle);
-		WriteSaveBuf(buf, BuildingSwapArray[i].m_nNewModel);
-		WriteSaveBuf(buf, BuildingSwapArray[i].m_nOldModel);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &type, sizeof(type));
+		WriteSaveBuf(&buf, &handle, sizeof(handle));
+		WriteSaveBuf(&buf, &BuildingSwapArray[i].m_nNewModel, sizeof(BuildingSwapArray[i].m_nNewModel));
+		WriteSaveBuf(&buf, &BuildingSwapArray[i].m_nOldModel, sizeof(BuildingSwapArray[i].m_nOldModel));
+		//- rouz edit (ChatGPT)
 	}
 	for (uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
 		CEntity* pEntity = InvisibilitySettingArray[i];
@@ -2151,33 +2232,55 @@ INITSAVEBUF
 			case ENTITY_TYPE_BUILDING:
 				if (((CBuilding*)pEntity)->GetIsATreadable()) {
 					type = 1;
-					handle = CPools::GetTreadablePool()->GetJustIndex_NoFreeAssert((CTreadable*)pEntity) + 1;
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetTreadablePool(), (CTreadable*)pEntity) + 1;
+					//- rouz edit (ChatGPT)
 				} else {
 					type = 2;
-					handle = CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)pEntity) + 1;
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)pEntity) + 1;
+					//- rouz edit (ChatGPT)
 				}
 				break;
 			case ENTITY_TYPE_OBJECT:
 				type = 3;
-				handle = CPools::GetObjectPool()->GetJustIndex_NoFreeAssert((CObject*)pEntity) + 1;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)pEntity) + 1;
+				//- rouz edit (ChatGPT)
 				break;
 			case ENTITY_TYPE_DUMMY:
 				type = 4;
-				handle = CPools::GetDummyPool()->GetJustIndex_NoFreeAssert((CDummy*)pEntity) + 1;
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				handle = CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)pEntity) + 1;
+				//- rouz edit (ChatGPT)
 			default: break;
 			}
 		}
-		WriteSaveBuf(buf, type);
-		WriteSaveBuf(buf, handle);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &type, sizeof(type));
+		WriteSaveBuf(&buf, &handle, sizeof(handle));
+		//- rouz edit (ChatGPT)
 	}
-	WriteSaveBuf(buf, bUsingAMultiScriptFile);
-	WriteSaveBuf(buf, bPlayerHasMetDebbieHarry);
-	WriteSaveBuf(buf, (uint16)0);
-	WriteSaveBuf(buf, MainScriptSize);
-	WriteSaveBuf(buf, LargestMissionScriptSize);
-	WriteSaveBuf(buf, NumberOfMissionScripts);
-	WriteSaveBuf(buf, NumberOfExclusiveMissionScripts);
-	WriteSaveBuf(buf, runningScripts);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &bUsingAMultiScriptFile, sizeof(bUsingAMultiScriptFile));
+	WriteSaveBuf(&buf, &bPlayerHasMetDebbieHarry, sizeof(bPlayerHasMetDebbieHarry));
+	{
+		// Materialize the saved value with its original serialized type
+		uint16 saveValue = (uint16)0;
+		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue));
+	}
+	WriteSaveBuf(&buf, &MainScriptSize, sizeof(MainScriptSize));
+	WriteSaveBuf(&buf, &LargestMissionScriptSize, sizeof(LargestMissionScriptSize));
+	WriteSaveBuf(&buf, &NumberOfMissionScripts, sizeof(NumberOfMissionScripts));
+	WriteSaveBuf(&buf, &NumberOfExclusiveMissionScripts, sizeof(NumberOfExclusiveMissionScripts));
+	WriteSaveBuf(&buf, &runningScripts, sizeof(runningScripts));
+	//- rouz edit (ChatGPT)
 	for (CRunningScript* pScript = pActiveScripts; pScript; pScript = pScript->GetNext())
 		pScript->Save(buf);
 VALIDATESAVEBUF(*size)
@@ -2187,56 +2290,98 @@ void CTheScripts::LoadAllScripts(uint8* buf, uint32 size)
 {
 	Init();
 INITSAVEBUF
-	CheckSaveHeader(buf, 'S', 'C', 'R', '\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'S', 'C', 'R', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 	uint32 varSpace, type, handle;
 	uint32 tmp;
 
-	ReadSaveBuf(&varSpace, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&varSpace, &buf, sizeof(varSpace));
+	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < varSpace; i++)
-		ReadSaveBuf(&ScriptSpace[i], buf);
-	ReadSaveBuf(&tmp, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&ScriptSpace[i], &buf, sizeof(ScriptSpace[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	script_assert(tmp == SCRIPT_DATA_SIZE);
-	ReadSaveBuf(&OnAMissionFlag, buf);
-	ReadSaveBuf(&LastMissionPassedTime, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&OnAMissionFlag, &buf, sizeof(OnAMissionFlag));
+	ReadSaveBuf(&LastMissionPassedTime, &buf, sizeof(LastMissionPassedTime));
+	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < MAX_NUM_BUILDING_SWAPS; i++) {
-		ReadSaveBuf(&type, buf);
-		ReadSaveBuf(&handle, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&type, &buf, sizeof(type));
+		ReadSaveBuf(&handle, &buf, sizeof(handle));
+		//- rouz edit (ChatGPT)
 		switch (type) {
 		case 0:
 			BuildingSwapArray[i].m_pBuilding = nil;
 			break;
 		case 1:
-			BuildingSwapArray[i].m_pBuilding = CPools::GetTreadablePool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			BuildingSwapArray[i].m_pBuilding = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		case 2:
-			BuildingSwapArray[i].m_pBuilding = CPools::GetBuildingPool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			BuildingSwapArray[i].m_pBuilding = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		default:
 			script_assert(false);
 		}
-		ReadSaveBuf(&BuildingSwapArray[i].m_nNewModel, buf);
-		ReadSaveBuf(&BuildingSwapArray[i].m_nOldModel, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&BuildingSwapArray[i].m_nNewModel, &buf, sizeof(BuildingSwapArray[i].m_nNewModel));
+		ReadSaveBuf(&BuildingSwapArray[i].m_nOldModel, &buf, sizeof(BuildingSwapArray[i].m_nOldModel));
+		//- rouz edit (ChatGPT)
 		if (BuildingSwapArray[i].m_pBuilding)
 			BuildingSwapArray[i].m_pBuilding->ReplaceWithNewModel(BuildingSwapArray[i].m_nNewModel);
 	}
 	for (uint32 i = 0; i < MAX_NUM_INVISIBILITY_SETTINGS; i++) {
-		ReadSaveBuf(&type, buf);
-		ReadSaveBuf(&handle, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&type, &buf, sizeof(type));
+		ReadSaveBuf(&handle, &buf, sizeof(handle));
+		//- rouz edit (ChatGPT)
 		switch (type) {
 		case 0:
 			InvisibilitySettingArray[i] = nil;
 			break;
 		case 1:
-			InvisibilitySettingArray[i] = CPools::GetTreadablePool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			InvisibilitySettingArray[i] = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		case 2:
-			InvisibilitySettingArray[i] = CPools::GetBuildingPool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			InvisibilitySettingArray[i] = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		case 3:
-			InvisibilitySettingArray[i] = CPools::GetObjectPool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			InvisibilitySettingArray[i] = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		case 4:
-			InvisibilitySettingArray[i] = CPools::GetDummyPool()->GetSlot(handle - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			InvisibilitySettingArray[i] = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), handle - 1));
+			//- rouz edit (ChatGPT)
 			break;
 		default:
 			script_assert(false);
@@ -2245,21 +2390,39 @@ INITSAVEBUF
 			InvisibilitySettingArray[i]->bIsVisible = false;
 	}
 	bool tmpBool;
-	ReadSaveBuf(&tmpBool, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmpBool, &buf, sizeof(tmpBool));
+	//- rouz edit (ChatGPT)
 	script_assert(tmpBool == bUsingAMultiScriptFile);
-	ReadSaveBuf(&bPlayerHasMetDebbieHarry, buf);
-	SkipSaveBuf(buf, 2);
-	ReadSaveBuf(&tmp, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&bPlayerHasMetDebbieHarry, &buf, sizeof(bPlayerHasMetDebbieHarry));
+	SkipSaveBuf(&buf, 2);
+	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	script_assert(tmp == MainScriptSize);
-	ReadSaveBuf(&tmp, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+	//- rouz edit (ChatGPT)
 	script_assert(tmp == LargestMissionScriptSize);
 	uint16 tmp16;
-	ReadSaveBuf(&tmp16, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp16, &buf, sizeof(tmp16));
+	//- rouz edit (ChatGPT)
 	script_assert(tmp16 == NumberOfMissionScripts);
-	ReadSaveBuf(&tmp16, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&tmp16, &buf, sizeof(tmp16));
+	//- rouz edit (ChatGPT)
 	script_assert(tmp16 == NumberOfExclusiveMissionScripts);
 	uint32 runningScripts;
-	ReadSaveBuf(&runningScripts, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&runningScripts, &buf, sizeof(runningScripts));
+	//- rouz edit (ChatGPT)
 	for (uint32 i = 0; i < runningScripts; i++)
 		StartNewScript(0)->Load(buf);
 VALIDATESAVEBUF(size)
@@ -2270,72 +2433,124 @@ VALIDATESAVEBUF(size)
 void CRunningScript::Save(uint8*& buf)
 {
 #ifdef COMPATIBLE_SAVES
-	ZeroSaveBuf(buf, 8);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 8);
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < 8; i++)
-		WriteSaveBuf(buf, m_abScriptName[i]);
-	WriteSaveBuf(buf, m_nIp);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &m_abScriptName[i], sizeof(m_abScriptName[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &m_nIp, sizeof(m_nIp));
+	//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(MAX_STACK_DEPTH == 6, "Compatibility loss: MAX_STACK_DEPTH != 6");
 #endif
 	for (int i = 0; i < MAX_STACK_DEPTH; i++)
-		WriteSaveBuf(buf, m_anStack[i]);
-	WriteSaveBuf(buf, m_nStackPointer);
-	ZeroSaveBuf(buf, 2);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &m_anStack[i], sizeof(m_anStack[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &m_nStackPointer, sizeof(m_nStackPointer));
+	ZeroSaveBuf(&buf, 2);
+	//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(NUM_LOCAL_VARS + NUM_TIMERS == 18, "Compatibility loss: NUM_LOCAL_VARS + NUM_TIMERS != 18");
 #endif
 	for (int i = 0; i < NUM_LOCAL_VARS + NUM_TIMERS; i++)
-		WriteSaveBuf(buf, m_anLocalVariables[i]);
-	WriteSaveBuf(buf, m_bIsActive);
-	WriteSaveBuf(buf, m_bCondResult);
-	WriteSaveBuf(buf, m_bIsMissionScript);
-	WriteSaveBuf(buf, m_bSkipWakeTime);
-	WriteSaveBuf(buf, m_nWakeTime);
-	WriteSaveBuf(buf, m_nAndOrState);
-	WriteSaveBuf(buf, m_bNotFlag);
-	WriteSaveBuf(buf, m_bDeatharrestEnabled);
-	WriteSaveBuf(buf, m_bDeatharrestExecuted);
-	WriteSaveBuf(buf, m_bMissionFlag);
-	ZeroSaveBuf(buf, 2);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &m_anLocalVariables[i], sizeof(m_anLocalVariables[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &m_bIsActive, sizeof(m_bIsActive));
+	WriteSaveBuf(&buf, &m_bCondResult, sizeof(m_bCondResult));
+	WriteSaveBuf(&buf, &m_bIsMissionScript, sizeof(m_bIsMissionScript));
+	WriteSaveBuf(&buf, &m_bSkipWakeTime, sizeof(m_bSkipWakeTime));
+	WriteSaveBuf(&buf, &m_nWakeTime, sizeof(m_nWakeTime));
+	WriteSaveBuf(&buf, &m_nAndOrState, sizeof(m_nAndOrState));
+	WriteSaveBuf(&buf, &m_bNotFlag, sizeof(m_bNotFlag));
+	WriteSaveBuf(&buf, &m_bDeatharrestEnabled, sizeof(m_bDeatharrestEnabled));
+	WriteSaveBuf(&buf, &m_bDeatharrestExecuted, sizeof(m_bDeatharrestExecuted));
+	WriteSaveBuf(&buf, &m_bMissionFlag, sizeof(m_bMissionFlag));
+	ZeroSaveBuf(&buf, 2);
+	//- rouz edit (ChatGPT)
 #else
-	WriteSaveBuf(buf, *this);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	// Preserve record assignment semantics and compiler padding behavior
+	*(CRunningScript*)buf = *this;
+	SkipSaveBuf(&buf, sizeof(*this));
+	//- rouz edit (ChatGPT)
 #endif
 }
 
 void CRunningScript::Load(uint8*& buf)
 {
 #ifdef COMPATIBLE_SAVES
-	SkipSaveBuf(buf, 8);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 8);
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < 8; i++)
-		ReadSaveBuf(&m_abScriptName[i], buf);
-	ReadSaveBuf(&m_nIp, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&m_abScriptName[i], &buf, sizeof(m_abScriptName[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&m_nIp, &buf, sizeof(m_nIp));
+	//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(MAX_STACK_DEPTH == 6, "Compatibility loss: MAX_STACK_DEPTH != 6");
 #endif
 	for (int i = 0; i < MAX_STACK_DEPTH; i++)
-		ReadSaveBuf(&m_anStack[i], buf);
-	ReadSaveBuf(&m_nStackPointer, buf);
-	SkipSaveBuf(buf, 2);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&m_anStack[i], &buf, sizeof(m_anStack[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&m_nStackPointer, &buf, sizeof(m_nStackPointer));
+	SkipSaveBuf(&buf, 2);
+	//- rouz edit (ChatGPT)
 #ifdef CHECK_STRUCT_SIZES
 	static_assert(NUM_LOCAL_VARS + NUM_TIMERS == 18, "Compatibility loss: NUM_LOCAL_VARS + NUM_TIMERS != 18");
 #endif
 	for (int i = 0; i < NUM_LOCAL_VARS + NUM_TIMERS; i++)
-		ReadSaveBuf(&m_anLocalVariables[i], buf);
-	ReadSaveBuf(&m_bIsActive, buf);
-	ReadSaveBuf(&m_bCondResult, buf);
-	ReadSaveBuf(&m_bIsMissionScript, buf);
-	ReadSaveBuf(&m_bSkipWakeTime, buf);
-	ReadSaveBuf(&m_nWakeTime, buf);
-	ReadSaveBuf(&m_nAndOrState, buf);
-	ReadSaveBuf(&m_bNotFlag, buf);
-	ReadSaveBuf(&m_bDeatharrestEnabled, buf);
-	ReadSaveBuf(&m_bDeatharrestExecuted, buf);
-	ReadSaveBuf(&m_bMissionFlag, buf);
-	SkipSaveBuf(buf, 2);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&m_anLocalVariables[i], &buf, sizeof(m_anLocalVariables[i]));
+		//- rouz edit (ChatGPT)
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&m_bIsActive, &buf, sizeof(m_bIsActive));
+	ReadSaveBuf(&m_bCondResult, &buf, sizeof(m_bCondResult));
+	ReadSaveBuf(&m_bIsMissionScript, &buf, sizeof(m_bIsMissionScript));
+	ReadSaveBuf(&m_bSkipWakeTime, &buf, sizeof(m_bSkipWakeTime));
+	ReadSaveBuf(&m_nWakeTime, &buf, sizeof(m_nWakeTime));
+	ReadSaveBuf(&m_nAndOrState, &buf, sizeof(m_nAndOrState));
+	ReadSaveBuf(&m_bNotFlag, &buf, sizeof(m_bNotFlag));
+	ReadSaveBuf(&m_bDeatharrestEnabled, &buf, sizeof(m_bDeatharrestEnabled));
+	ReadSaveBuf(&m_bDeatharrestExecuted, &buf, sizeof(m_bDeatharrestExecuted));
+	ReadSaveBuf(&m_bMissionFlag, &buf, sizeof(m_bMissionFlag));
+	SkipSaveBuf(&buf, 2);
+	//- rouz edit (ChatGPT)
 #else
 	CRunningScript* n = next;
 	CRunningScript* p = prev;
-	ReadSaveBuf(this, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	// Preserve record assignment semantics and compiler padding behavior
+	*this = *(CRunningScript*)buf;
+	SkipSaveBuf(&buf, sizeof(*this));
+	//- rouz edit (ChatGPT)
 	next = n;
 	prev = p;
 #endif
@@ -2393,7 +2608,10 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 //+ rouz edit (ChatGPT)
 			// Destroy and release the displaced vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			break;
 		}
@@ -2473,14 +2691,20 @@ int CTheScripts::AddPedsInVehicleToCollective(int index)
 {
 	int colIndex = NextFreeCollectiveIndex;
 	AdvanceCollectiveIndex();
-	CVehicle* pVehicle = CPools::GetVehiclePool()->GetAt(index);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), index));
+	//- rouz edit (ChatGPT)
 	script_assert(pVehicle);
 	CPed* pDriver = pVehicle->pDriver;
 	if (pDriver && !pDriver->IsPlayer() && pDriver->CharCreatedBy != MISSION_CHAR && pDriver->m_nPedType != PEDTYPE_COP) {
 		int index = FindFreeSlotInCollectiveArray();
 		if (index > -1) {
 			CollectiveArray[index].colIndex = colIndex;
-			CollectiveArray[index].pedIndex = CPools::GetPedPool()->GetIndex(pDriver);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pDriver);
+			//- rouz edit (ChatGPT)
 		}
 	}
 	for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
@@ -2489,7 +2713,10 @@ int CTheScripts::AddPedsInVehicleToCollective(int index)
 			int index = FindFreeSlotInCollectiveArray();
 			if (index > -1) {
 				CollectiveArray[index].colIndex = colIndex;
-				CollectiveArray[index].pedIndex = CPools::GetPedPool()->GetIndex(pPassenger);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPassenger);
+				//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -2510,7 +2737,10 @@ int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radi
 				int index = FindFreeSlotInCollectiveArray();
 				if (index > -1) {
 					CollectiveArray[index].colIndex = colIndex;
-					CollectiveArray[index].pedIndex = CPools::GetPedPool()->GetIndex(pPed);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPed);
+					//- rouz edit (ChatGPT)
 				}
 			}
 		}
@@ -2521,7 +2751,10 @@ int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radi
 				int index = FindFreeSlotInCollectiveArray();
 				if (index > -1) {
 					CollectiveArray[index].colIndex = colIndex;
-					CollectiveArray[index].pedIndex = CPools::GetPedPool()->GetIndex(pDriver);
+					//+ rouz edit (ChatGPT)
+					// Access raw storage through the C store or pool API
+					CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pDriver);
+					//- rouz edit (ChatGPT)
 				}
 			}
 			for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
@@ -2530,7 +2763,10 @@ int CTheScripts::AddPedsInAreaToCollective(float x, float y, float z, float radi
 					int index = FindFreeSlotInCollectiveArray();
 					if (index > -1) {
 						CollectiveArray[index].colIndex = colIndex;
-						CollectiveArray[index].pedIndex = CPools::GetPedPool()->GetIndex(pPassenger);
+						//+ rouz edit (ChatGPT)
+						// Access raw storage through the C store or pool API
+						CollectiveArray[index].pedIndex = CPool_GetIndex(CPools::GetPedPool(), pPassenger);
+						//- rouz edit (ChatGPT)
 					}
 				}
 			}
@@ -2552,7 +2788,10 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
-			CPed* pPed = CPools::GetPedPool()->GetAt(CollectiveArray[i].pedIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
 				CollectiveArray[i].pedIndex = 0;
@@ -2569,7 +2808,10 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
-			CPed* pPed = CPools::GetPedPool()->GetAt(CollectiveArray[i].pedIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
 				CollectiveArray[i].pedIndex = 0;
@@ -2586,7 +2828,10 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
-			CPed* pPed = CPools::GetPedPool()->GetAt(CollectiveArray[i].pedIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
 				CollectiveArray[i].pedIndex = 0;
@@ -2603,7 +2848,10 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
-			CPed* pPed = CPools::GetPedPool()->GetAt(CollectiveArray[i].pedIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
 				CollectiveArray[i].pedIndex = 0;
@@ -2620,7 +2868,10 @@ void CTheScripts::SetObjectiveForAllPedsInCollective(int colIndex, eObjective ob
 {
 	for (int i = 0; i < MAX_NUM_COLLECTIVES; i++) {
 		if (CollectiveArray[i].colIndex == colIndex) {
-			CPed* pPed = CPools::GetPedPool()->GetAt(CollectiveArray[i].pedIndex);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), CollectiveArray[i].pedIndex));
+			//- rouz edit (ChatGPT)
 			if (pPed == nil) {
 				CollectiveArray[i].colIndex = -1;
 				CollectiveArray[i].pedIndex = 0;
@@ -2682,7 +2933,10 @@ void CTheScripts::RemoveThisPed(CPed* pPed)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the scripted ped without invoking C++ delete.
 		pPed->~CPed();
-		CPools::GetPedPool()->Delete(pPed);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetPedPool(), pPed);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		if (bWasMissionPed)
 			--CPopulation::ms_nTotalMissionPeds;

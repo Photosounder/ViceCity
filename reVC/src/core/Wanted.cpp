@@ -372,18 +372,30 @@ CWanted::WorkOutPolicePresence(CVector posn, float radius)
 	CVehicle *vehicle;
 	int numPolice = 0;
 
-	i = CPools::GetPedPool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetPedPool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		ped = CPools::GetPedPool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
+		//- rouz edit (ChatGPT)
 		if(ped &&
 		   IsPolicePedModel(ped->GetModelIndex()) &&
 		   (posn - ped->GetPosition()).Magnitude() < radius)
 			numPolice++;
 	}
 
-	i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while(--i >= 0){
-		vehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if(vehicle &&
 		   vehicle->bIsLawEnforcer &&
 		   IsPoliceVehicleModel(vehicle->GetModelIndex()) &&

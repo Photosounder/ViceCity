@@ -59,9 +59,19 @@ void CSetPieces::Update(void)
 void CSetPieces::Save(uint8* buf, uint32* size)
 {
 INITSAVEBUF
-	WriteSaveBuf(buf, NumSetPieces);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &NumSetPieces, sizeof(NumSetPieces));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_SETPIECES; i++)
-		WriteSaveBuf(buf, aSetPieces[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			*(CSetPiece*)buf = aSetPieces[i];
+			SkipSaveBuf(&buf, sizeof(aSetPieces[i]));
+		}
+		//- rouz edit (ChatGPT)
 	*size = sizeof(NumSetPieces) + NUM_SETPIECES * sizeof(CSetPiece);
 VALIDATESAVEBUF(*size)
 }
@@ -69,9 +79,19 @@ VALIDATESAVEBUF(*size)
 void CSetPieces::Load(uint8* buf, uint32 size)
 {
 INITSAVEBUF
-	ReadSaveBuf(&NumSetPieces, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumSetPieces, &buf, sizeof(NumSetPieces));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_SETPIECES; i++)
-		ReadSaveBuf(&aSetPieces[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			aSetPieces[i] = *(CSetPiece*)buf;
+			SkipSaveBuf(&buf, sizeof(aSetPieces[i]));
+		}
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size)
 }
 
@@ -97,7 +117,10 @@ void CSetPiece::Update(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated cop car without invoking C++ delete.
 			pVehicle1->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -199,7 +222,10 @@ void CSetPiece::Update(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated cop without invoking C++ delete.
 			pCop->~CCopPed();
-			CPools::GetPedPool()->Delete(pCop);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetPedPool(), pCop);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -236,7 +262,10 @@ void CSetPiece::Update(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated cop car without invoking C++ delete.
 			pVehicle1->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -278,7 +307,10 @@ void CSetPiece::Update(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the generated cop car without invoking C++ delete.
 			pVehicle1->~CVehicle();
-			CPools::GetVehiclePool()->Delete(pVehicle1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			return;
 		}
@@ -301,7 +333,10 @@ CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
 {
 //+ rouz edit (ChatGPT)
 	// Allocate the set-piece police car without invoking C++ new.
-	CVehicle* pVehicle = CPools::GetVehiclePool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+	//- rouz edit (ChatGPT)
 	assert(pVehicle);
 	std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, MI_POLICE, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
@@ -322,7 +357,10 @@ CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the set-piece police car without invoking C++ delete.
 		pVehicle->~CVehicle();
-		CPools::GetVehiclePool()->Delete(pVehicle);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return nil;
 	}
@@ -335,7 +373,10 @@ CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D vSpawn)
 {
 //+ rouz edit (ChatGPT)
 	// Allocate the set-piece cop without invoking C++ new.
-	CCopPed* pCop = (CCopPed*)CPools::GetPedPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CCopPed* pCop = (CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+	//- rouz edit (ChatGPT)
 	assert(pCop);
 	std::allocator<CCopPed>().construct(pCop, COP_STREET);
 //- rouz edit (ChatGPT)
@@ -351,7 +392,10 @@ CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D vSpawn)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the set-piece cop without invoking C++ delete.
 		pCop->~CCopPed();
-		CPools::GetPedPool()->Delete(pCop);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CPool_Delete(CPools::GetPedPool(), pCop);
+		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		return nil;
 	}

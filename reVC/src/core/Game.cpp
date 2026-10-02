@@ -615,7 +615,10 @@ bool CGame::ShutDown(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the player ped without invoking C++ delete.
 			CWorld::Players[i].m_pPed->~CPlayerPed();
-			CPools::GetPedPool()->Delete(CWorld::Players[i].m_pPed);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetPedPool(), CWorld::Players[i].m_pPed);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 			CWorld::Players[i].m_pPed = nil;
 		}

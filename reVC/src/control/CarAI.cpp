@@ -758,9 +758,15 @@ void CCarAI::MakeWayForCarWithSiren(CVehicle *pVehicle)
 		return;
 	CVector2D forward = pVehicle->GetMoveSpeed() / flatSpeed;
 	float projection = flatSpeed * 45 + 20;
-	int i = CPools::GetVehiclePool()->GetSize();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+	//- rouz edit (ChatGPT)
 	while (--i >= 0) {
-		CVehicle* vehicle = CPools::GetVehiclePool()->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CVehicle* vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+		//- rouz edit (ChatGPT)
 		if (!vehicle)
 			continue;
 		if (!vehicle->IsCar() && !vehicle->IsBike())

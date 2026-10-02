@@ -198,9 +198,15 @@ CPedType::Save(uint8 *buf, uint32 *size)
 {
 	*size = sizeof(CPedType) * NUM_PEDTYPES + SAVE_HEADER_SIZE;
 INITSAVEBUF
-	WriteSaveHeader(buf, 'P','T','P','\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'P', 'T', 'P', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 	for(int i = 0; i < NUM_PEDTYPES; i++)
-		WriteSaveBuf(buf, *ms_apPedType[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &(*ms_apPedType[i]), sizeof(*ms_apPedType[i]));
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(*size)
 }
 
@@ -209,10 +215,16 @@ CPedType::Load(uint8 *buf, uint32 size)
 {
 INITSAVEBUF
 	// original: SkipSaveBuf(buf, SAVE_HEADER_SIZE);
-	CheckSaveHeader(buf, 'P', 'T', 'P', '\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'P', 'T', 'P', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	for(int i = 0; i < NUM_PEDTYPES; i++)
-		ReadSaveBuf(ms_apPedType[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(ms_apPedType[i], &buf, sizeof(*ms_apPedType[i]));
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size)
 }
 

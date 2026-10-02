@@ -2952,9 +2952,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
-		i = CPools::GetVehiclePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		i = CPool_GetSize(CPools::GetVehiclePool());
+		//- rouz edit (ChatGPT)
 		while(--i >= 0){
-			veh = CPools::GetVehiclePool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			//- rouz edit (ChatGPT)
 			if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
@@ -2980,9 +2986,15 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
-		i = CPools::GetVehiclePool()->GetSize();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		i = CPool_GetSize(CPools::GetVehiclePool());
+		//- rouz edit (ChatGPT)
 		while(--i >= 0){
-			veh = CPools::GetVehiclePool()->GetSlot(i);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
+			//- rouz edit (ChatGPT)
 			if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;

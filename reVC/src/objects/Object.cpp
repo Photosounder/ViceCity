@@ -83,7 +83,10 @@ CObject::CObject(CDummyObject *dummy)
 
 CObject::~CObject(void)
 {
-	CRadar::ClearBlipForEntity(BLIP_OBJECT, CPools::GetObjectPool()->GetIndex(this));
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CRadar::ClearBlipForEntity(BLIP_OBJECT, CPool_GetIndex(CPools::GetObjectPool(), this));
+	//- rouz edit (ChatGPT)
 
 	if (m_nRefModelIndex != -1)
 		CModelInfo::GetModelInfo(m_nRefModelIndex)->RemoveRef();
@@ -780,14 +783,21 @@ void
 CObject::DeleteAllMissionObjects()
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	for (int32 i = 0; i < objectPool->GetSize(); i++) {
-		CObject *pObject = objectPool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+		// Access raw storage through the C store or pool API
+		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
+	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == MISSION_OBJECT) {
 			CWorld::Remove(pObject);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the mission object without invoking C++ delete.
 			pObject->~CObject();
-			objectPool->Delete(pObject);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(objectPool, pObject);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -797,14 +807,21 @@ void
 CObject::DeleteAllTempObjects()
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	for (int32 i = 0; i < objectPool->GetSize(); i++) {
-		CObject *pObject = objectPool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+		// Access raw storage through the C store or pool API
+		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
+	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT) {
 			CWorld::Remove(pObject);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the temporary object without invoking C++ delete.
 			pObject->~CObject();
-			objectPool->Delete(pObject);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(objectPool, pObject);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -814,14 +831,21 @@ void
 CObject::DeleteAllTempObjectsInArea(CVector point, float fRadius)
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	for (int32 i = 0; i < objectPool->GetSize(); i++) {
-		CObject *pObject = objectPool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+		// Access raw storage through the C store or pool API
+		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
+	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT && (point - pObject->GetPosition()).MagnitudeSqr() < SQR(fRadius)) {
 			CWorld::Remove(pObject);
 //+ rouz edit (ChatGPT)
 			// Destroy and release the temporary object without invoking C++ delete.
 			pObject->~CObject();
-			objectPool->Delete(pObject);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			CPool_Delete(objectPool, pObject);
+			//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		}
 	}
@@ -832,11 +856,20 @@ IsObjectPointerValid(CObject *pObject)
 {
 	if (!pObject)
 		return false;
-	int index = CPools::GetObjectPool()->GetJustIndex_NoFreeAssert(pObject);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), pObject);
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-	if (index < 0 || index >= CPools::GetObjectPool()->GetSize())
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (index < 0 || index >= CPool_GetSize(CPools::GetObjectPool()))
+	//- rouz edit (ChatGPT)
 #else
-	if (index < 0 || index > CPools::GetObjectPool()->GetSize())
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	if (index < 0 || index > CPool_GetSize(CPools::GetObjectPool()))
+	//- rouz edit (ChatGPT)
 #endif
 		return false;
 	return pObject->bIsBIGBuilding || pObject->m_entryInfoList.first;

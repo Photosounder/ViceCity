@@ -204,25 +204,48 @@ void
 CPhoneInfo::Load(uint8 *buf, uint32 size)
 {
 INITSAVEBUF
-	ReadSaveBuf(&m_nMax, buf);
-	ReadSaveBuf(&m_nScriptPhonesMax, buf);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&m_nMax, &buf, sizeof(m_nMax));
+	ReadSaveBuf(&m_nScriptPhonesMax, &buf, sizeof(m_nScriptPhonesMax));
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUMPHONES; i++) {
 #ifdef COMPATIBLE_SAVES
-		ReadSaveBuf(&m_aPhones[i].m_vecPos, buf);
-		SkipSaveBuf(buf, 6 * 4);
-		ReadSaveBuf(&m_aPhones[i].m_repeatedMessagePickupStart, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&m_aPhones[i].m_vecPos, &buf, sizeof(m_aPhones[i].m_vecPos));
+		SkipSaveBuf(&buf, 6 * 4);
+		ReadSaveBuf(&m_aPhones[i].m_repeatedMessagePickupStart, &buf, sizeof(m_aPhones[i].m_repeatedMessagePickupStart));
+		//- rouz edit (ChatGPT)
 		int32 tmp;
-		ReadSaveBuf(&tmp, buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&tmp, &buf, sizeof(tmp));
+		//- rouz edit (ChatGPT)
 		// It's saved as building pool index in save file, convert it to true entity
-		m_aPhones[i].m_pEntity = tmp != 0 ? CPools::GetBuildingPool()->GetSlot(tmp - 1) : nil;
-		ReadSaveBuf(&m_aPhones[i].m_nState, buf);
-		ReadSaveBuf(&m_aPhones[i].m_visibleToCam, buf);
-		SkipSaveBuf(buf, 3);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		m_aPhones[i].m_pEntity = tmp != 0 ? ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), tmp - 1)) : nil;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		ReadSaveBuf(&m_aPhones[i].m_nState, &buf, sizeof(m_aPhones[i].m_nState));
+		ReadSaveBuf(&m_aPhones[i].m_visibleToCam, &buf, sizeof(m_aPhones[i].m_visibleToCam));
+		SkipSaveBuf(&buf, 3);
+		//- rouz edit (ChatGPT)
 #else
-		ReadSaveBuf(&m_aPhones[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		m_aPhones[i] = *(CPhone*)buf;
+		SkipSaveBuf(&buf, sizeof(m_aPhones[i]));
+		//- rouz edit (ChatGPT)
 		// It's saved as building pool index in save file, convert it to true entity
 		if (m_aPhones[i].m_pEntity) {
-			m_aPhones[i].m_pEntity = CPools::GetBuildingPool()->GetSlot((uintptr)m_aPhones[i].m_pEntity - 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			m_aPhones[i].m_pEntity = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), (uintptr)m_aPhones[i].m_pEntity - 1));
+			//- rouz edit (ChatGPT)
 		}
 #endif
 	}
@@ -300,8 +323,12 @@ CPhoneInfo::Initialise(void)
 	pPhoneDisplayingMessages = nil;
 	m_nMax = 0;
 	m_nScriptPhonesMax = 0;
-	for (int i = pool->GetSize() - 1; i >= 0; i--) {
-		CBuilding *building = pool->GetSlot(i);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int i = CPool_GetSize(pool) - 1; i >= 0; i--) {
+		// Access raw storage through the C store or pool API
+		CBuilding *building = ((CBuilding*)CPool_GetSlot(pool, i));
+	//- rouz edit (ChatGPT)
 		if (building) {
 			if (building->GetModelIndex() == MI_PHONEBOOTH1) {
 				assert(m_nMax < ARRAY_SIZE(m_aPhones) && "NUMPHONES should be increased");
@@ -320,25 +347,46 @@ CPhoneInfo::Save(uint8 *buf, uint32 *size)
 {
 	*size = PHONEINFO_SAVE_SIZE;
 INITSAVEBUF
-	WriteSaveBuf(buf, m_nMax);
-	WriteSaveBuf(buf, m_nScriptPhonesMax);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &m_nMax, sizeof(m_nMax));
+	WriteSaveBuf(&buf, &m_nScriptPhonesMax, sizeof(m_nScriptPhonesMax));
+	//- rouz edit (ChatGPT)
 	for(int phoneId = 0; phoneId < NUMPHONES; phoneId++) {
 #ifdef COMPATIBLE_SAVES
-		WriteSaveBuf(buf, m_aPhones[phoneId].m_vecPos);
-		ZeroSaveBuf(buf, 6 * 4);
-		WriteSaveBuf(buf, m_aPhones[phoneId].m_repeatedMessagePickupStart);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &m_aPhones[phoneId].m_vecPos, sizeof(m_aPhones[phoneId].m_vecPos));
+		ZeroSaveBuf(&buf, 6 * 4);
+		WriteSaveBuf(&buf, &m_aPhones[phoneId].m_repeatedMessagePickupStart, sizeof(m_aPhones[phoneId].m_repeatedMessagePickupStart));
+		//- rouz edit (ChatGPT)
 		// Convert entity pointer to building pool index while saving
-		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
-		WriteSaveBuf(buf, tmp);
-		WriteSaveBuf(buf, m_aPhones[phoneId].m_nState);
-		WriteSaveBuf(buf, m_aPhones[phoneId].m_visibleToCam);
-		ZeroSaveBuf(buf, 3);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		int32 tmp = m_aPhones[phoneId].m_pEntity ? CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)m_aPhones[phoneId].m_pEntity) + 1 : 0;
+		//- rouz edit (ChatGPT)
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
+		WriteSaveBuf(&buf, &m_aPhones[phoneId].m_nState, sizeof(m_aPhones[phoneId].m_nState));
+		WriteSaveBuf(&buf, &m_aPhones[phoneId].m_visibleToCam, sizeof(m_aPhones[phoneId].m_visibleToCam));
+		ZeroSaveBuf(&buf, 3);
+		//- rouz edit (ChatGPT)
 #else
-		CPhone* phone = WriteSaveBuf(buf, m_aPhones[phoneId]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		// Preserve record assignment semantics and compiler padding behavior
+		CPhone* phone = (CPhone*)buf;
+		*phone = m_aPhones[phoneId];
+		SkipSaveBuf(&buf, sizeof(m_aPhones[phoneId]));
+		//- rouz edit (ChatGPT)
 
 		// Convert entity pointer to building pool index while saving
 		if (phone->m_pEntity) {
-			phone->m_pEntity = (CEntity*) (CPools::GetBuildingPool()->GetJustIndex_NoFreeAssert((CBuilding*)phone->m_pEntity) + 1);
+			//+ rouz edit (ChatGPT)
+			// Access raw storage through the C store or pool API
+			phone->m_pEntity = (CEntity*) (CPool_GetJustIndex_NoFreeAssert(CPools::GetBuildingPool(), (CBuilding*)phone->m_pEntity) + 1);
+			//- rouz edit (ChatGPT)
 		}
 #endif
 	}

@@ -5542,17 +5542,30 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 //+ rouz edit (ChatGPT)
 	// Allocate the flying automobile component without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	obj = objectPool->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	obj = ((CObject*)CPool_New(objectPool));
+	//- rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 	if (!obj) {
-		for (int32 i = 0; i < objectPool->GetSize(); i++) {
-			CObject *existing = objectPool->GetSlot(i);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+			// Access raw storage through the C store or pool API
+			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
+		//- rouz edit (ChatGPT)
 			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				int32 handle = objectPool->GetIndex(existing);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				int32 handle = CPool_GetIndex(objectPool, existing);
+				//- rouz edit (ChatGPT)
 				CWorld::Remove(existing);
 				existing->~CObject();
-				objectPool->Delete(existing);
-				obj = objectPool->New(handle);
+				//+ rouz edit (ChatGPT)
+				// Access raw storage through the C store or pool API
+				CPool_Delete(objectPool, existing);
+				obj = ((CObject*)CPool_NewAt(objectPool, handle));
+				//- rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -5977,16 +5990,22 @@ void
 CAutomobile::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
-	WriteSaveBuf(buf, Damage);
-	ZeroSaveBuf(buf, 1500 - 672 - sizeof(CDamageManager));
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveBuf(&buf, &Damage, sizeof(Damage));
+	ZeroSaveBuf(&buf, 1500 - 672 - sizeof(CDamageManager));
+	//- rouz edit (ChatGPT)
 }
 
 void
 CAutomobile::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
-	ReadSaveBuf(&Damage, buf);
-	SkipSaveBuf(buf, 1500 - 672 - sizeof(CDamageManager));
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&Damage, &buf, sizeof(Damage));
+	SkipSaveBuf(&buf, 1500 - 672 - sizeof(CDamageManager));
+	//- rouz edit (ChatGPT)
 	SetupDamageAfterLoad();
 }
 #endif

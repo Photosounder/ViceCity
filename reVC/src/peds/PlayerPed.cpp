@@ -142,7 +142,10 @@ void
 CPlayerPed::MakeObjectTargettable(int32 handle)
 {
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		if (CPools::GetObjectPool()->GetAt(m_nTargettableObjects[i]) == nil) {
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		if (((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i])) == nil) {
+		//- rouz edit (ChatGPT)
 			m_nTargettableObjects[i] = handle;
 			return;
 		}
@@ -185,7 +188,10 @@ CPlayerPed::SetupPlayerPed(int32 index)
 {
 //+ rouz edit (ChatGPT)
 	// Allocate the player ped from the ped pool without invoking C++ new.
-	CPlayerPed *player = (CPlayerPed*)CPools::GetPedPool()->New();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(CPools::GetPedPool()));
+	//- rouz edit (ChatGPT)
 	assert(player);
 	std::allocator<CPlayerPed>().construct(player);
 //- rouz edit (ChatGPT)
@@ -1115,8 +1121,12 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 	CVector distVec = previousTarget->GetPosition() - TheCamera.GetPosition();
 	float referenceBeta = CGeneral::GetATanOfXY(distVec.x, distVec.y);
 
-	for (int h = CPools::GetPedPool()->GetSize() - 1; h >= 0; h--) {
-		CPed *pedToCheck = CPools::GetPedPool()->GetSlot(h);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
+		// Access raw storage through the C store or pool API
+		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
+	//- rouz edit (ChatGPT)
 		if (pedToCheck) {
 			if (pedToCheck != this && pedToCheck != previousTarget) {
 				if (!pedToCheck->DyingOrDead()
@@ -1133,7 +1143,10 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 		}
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		CObject *obj = CPools::GetObjectPool()->GetAt(m_nTargettableObjects[i]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
+		//- rouz edit (ChatGPT)
 		if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateNeighbouringTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, lookToLeft, true);
 	}
@@ -1165,8 +1178,12 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 	// nextTarget = nil; // duplicate
 	float lastCloseness = -10000.0f;
 	float referenceBeta = CGeneral::GetATanOfXY(GetForward().x, GetForward().y);
-	for (int h = CPools::GetPedPool()->GetSize() - 1; h >= 0; h--) {
-		CPed *pedToCheck = CPools::GetPedPool()->GetSlot(h);
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
+		// Access raw storage through the C store or pool API
+		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
+	//- rouz edit (ChatGPT)
 		if (pedToCheck) {
 			if (pedToCheck != this) {
 				if (!pedToCheck->DyingOrDead()
@@ -1183,7 +1200,10 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 		}
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		CObject *obj = CPools::GetObjectPool()->GetAt(m_nTargettableObjects[i]);
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
+		//- rouz edit (ChatGPT)
 		if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, true);
 	}
@@ -2316,34 +2336,54 @@ CPlayerPed::FindMeleeAttackPoint(CPed *victim, CVector &dist, uint32 &endOfAttac
 }
 
 #ifdef COMPATIBLE_SAVES
-#define CopyFromBuf(buf, data) memcpy(&data, buf, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
-#define CopyToBuf(buf, data) memcpy(buf, &data, sizeof(data)); SkipSaveBuf(buf, sizeof(data));
+//+ rouz edit (ChatGPT)
+#define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
+#define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
+//- rouz edit (ChatGPT)
 void
 CPlayerPed::Save(uint8*& buf)
 {
 	CPed::Save(buf);
-	ZeroSaveBuf(buf, 16);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 16);
+	//- rouz edit (ChatGPT)
 	CopyToBuf(buf, m_fMaxStamina);
-	ZeroSaveBuf(buf, 28);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 28);
+	//- rouz edit (ChatGPT)
 	CopyToBuf(buf, m_nTargettableObjects[0]);
 	CopyToBuf(buf, m_nTargettableObjects[1]);
 	CopyToBuf(buf, m_nTargettableObjects[2]);
 	CopyToBuf(buf, m_nTargettableObjects[3]);
-	ZeroSaveBuf(buf, 164);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	ZeroSaveBuf(&buf, 164);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CPlayerPed::Load(uint8*& buf)
 {
 	CPed::Load(buf);
-	SkipSaveBuf(buf, 16);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 16);
+	//- rouz edit (ChatGPT)
 	CopyFromBuf(buf, m_fMaxStamina);
-	SkipSaveBuf(buf, 28);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 28);
+	//- rouz edit (ChatGPT)
 	CopyFromBuf(buf, m_nTargettableObjects[0]);
 	CopyFromBuf(buf, m_nTargettableObjects[1]);
 	CopyFromBuf(buf, m_nTargettableObjects[2]);
 	CopyFromBuf(buf, m_nTargettableObjects[3]);
-	SkipSaveBuf(buf, 164);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	SkipSaveBuf(&buf, 164);
+	//- rouz edit (ChatGPT)
 }
 #undef CopyFromBuf
 #undef CopyToBuf

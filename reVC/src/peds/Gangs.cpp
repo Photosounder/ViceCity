@@ -105,9 +105,19 @@ void CGangs::SaveAllGangData(uint8 *buf, uint32 *size)
 INITSAVEBUF
 
 	*size = SAVE_HEADER_SIZE + sizeof(Gang);
-	WriteSaveHeader(buf, 'G','N','G','\0', *size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	WriteSaveHeader(&buf, 'G', 'N', 'G', '\0', *size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_GANGS; i++)
-		WriteSaveBuf(buf, Gang[i]);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			*(CGangInfo*)buf = Gang[i];
+			SkipSaveBuf(&buf, sizeof(Gang[i]));
+		}
+		//- rouz edit (ChatGPT)
 
 VALIDATESAVEBUF(*size);
 }
@@ -117,9 +127,19 @@ void CGangs::LoadAllGangData(uint8 *buf, uint32 size)
 	Initialise();
 
 INITSAVEBUF
-	CheckSaveHeader(buf, 'G','N','G','\0', size - SAVE_HEADER_SIZE);
+	//+ rouz edit (ChatGPT)
+	// Transfer save data through the C buffer API with explicit sizes
+	CheckSaveHeader(&buf, 'G', 'N', 'G', '\0', size - SAVE_HEADER_SIZE);
+	//- rouz edit (ChatGPT)
 
 	for (int i = 0; i < NUM_GANGS; i++)
-		ReadSaveBuf(&Gang[i], buf);
+		//+ rouz edit (ChatGPT)
+		// Transfer save data through the C buffer API with explicit sizes
+		{
+			// Preserve record assignment semantics and compiler padding behavior
+			Gang[i] = *(CGangInfo*)buf;
+			SkipSaveBuf(&buf, sizeof(Gang[i]));
+		}
+		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size);
 }

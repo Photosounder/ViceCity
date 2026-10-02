@@ -7,13 +7,22 @@
 
 CBaseModelInfo *CModelInfo::ms_modelInfoPtrs[MODELINFOSIZE];
 
-CStore<CSimpleModelInfo, SIMPLEMODELSIZE> CModelInfo::ms_simpleModelStore;
-CStore<CTimeModelInfo, TIMEMODELSIZE> CModelInfo::ms_timeModelStore;
-CStore<CWeaponModelInfo, WEAPONMODELSIZE> CModelInfo::ms_weaponModelStore;
-CStore<CClumpModelInfo, CLUMPMODELSIZE> CModelInfo::ms_clumpModelStore;
-CStore<CPedModelInfo, PEDMODELSIZE> CModelInfo::ms_pedModelStore;
-CStore<CVehicleModelInfo, VEHICLEMODELSIZE> CModelInfo::ms_vehicleModelStore;
-CStore<C2dEffect, TWODFXSIZE> CModelInfo::ms_2dEffectStore;
+//+ rouz edit (ChatGPT)
+static CSimpleModelInfo simpleModelEntries[SIMPLEMODELSIZE];
+CStore CModelInfo::ms_simpleModelStore = { 0, simpleModelEntries, sizeof(CSimpleModelInfo), SIMPLEMODELSIZE };
+static CTimeModelInfo timeModelEntries[TIMEMODELSIZE];
+CStore CModelInfo::ms_timeModelStore = { 0, timeModelEntries, sizeof(CTimeModelInfo), TIMEMODELSIZE };
+static CWeaponModelInfo weaponModelEntries[WEAPONMODELSIZE];
+CStore CModelInfo::ms_weaponModelStore = { 0, weaponModelEntries, sizeof(CWeaponModelInfo), WEAPONMODELSIZE };
+static CClumpModelInfo clumpModelEntries[CLUMPMODELSIZE];
+CStore CModelInfo::ms_clumpModelStore = { 0, clumpModelEntries, sizeof(CClumpModelInfo), CLUMPMODELSIZE };
+static CPedModelInfo pedModelEntries[PEDMODELSIZE];
+CStore CModelInfo::ms_pedModelStore = { 0, pedModelEntries, sizeof(CPedModelInfo), PEDMODELSIZE };
+static CVehicleModelInfo vehicleModelEntries[VEHICLEMODELSIZE];
+CStore CModelInfo::ms_vehicleModelStore = { 0, vehicleModelEntries, sizeof(CVehicleModelInfo), VEHICLEMODELSIZE };
+static C2dEffect effectEntries[TWODFXSIZE];
+CStore CModelInfo::ms_2dEffectStore = { 0, effectEntries, sizeof(C2dEffect), TWODFXSIZE };
+//- rouz edit (ChatGPT)
 
 void
 CModelInfo::Initialise(void)
@@ -21,23 +30,29 @@ CModelInfo::Initialise(void)
 	int i;
 	CSimpleModelInfo *m;
 
-	debug("sizeof SimpleModelStore %d\n", sizeof(ms_simpleModelStore));
-	debug("sizeof TimeModelStore %d\n", sizeof(ms_timeModelStore));
-	debug("sizeof WeaponModelStore %d\n", sizeof(ms_weaponModelStore));
-	debug("sizeof ClumpModelStore %d\n", sizeof(ms_clumpModelStore));
-	debug("sizeof VehicleModelStore %d\n", sizeof(ms_vehicleModelStore));
-	debug("sizeof PedModelStore %d\n", sizeof(ms_pedModelStore));
-	debug("sizeof 2deffectsModelStore %d\n", sizeof(ms_2dEffectStore));
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	debug("sizeof SimpleModelStore %d\n", sizeof(simpleModelEntries));
+	debug("sizeof TimeModelStore %d\n", sizeof(timeModelEntries));
+	debug("sizeof WeaponModelStore %d\n", sizeof(weaponModelEntries));
+	debug("sizeof ClumpModelStore %d\n", sizeof(clumpModelEntries));
+	debug("sizeof VehicleModelStore %d\n", sizeof(vehicleModelEntries));
+	debug("sizeof PedModelStore %d\n", sizeof(pedModelEntries));
+	debug("sizeof 2deffectsModelStore %d\n", sizeof(effectEntries));
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < MODELINFOSIZE; i++)
 		ms_modelInfoPtrs[i] = nil;
-	ms_2dEffectStore.Clear();
-	ms_simpleModelStore.Clear();
-	ms_timeModelStore.Clear();
-	ms_weaponModelStore.Clear();
-	ms_clumpModelStore.Clear();
-	ms_pedModelStore.Clear();
-	ms_vehicleModelStore.Clear();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CStore_Clear(&ms_2dEffectStore);
+	CStore_Clear(&ms_simpleModelStore);
+	CStore_Clear(&ms_timeModelStore);
+	CStore_Clear(&ms_weaponModelStore);
+	CStore_Clear(&ms_clumpModelStore);
+	CStore_Clear(&ms_pedModelStore);
+	CStore_Clear(&ms_vehicleModelStore);
+	//- rouz edit (ChatGPT)
 
 	m = AddSimpleModel(MI_CAR_DOOR);
 	m->SetColModel(&CTempColModels::ms_colModelDoor1);
@@ -93,34 +108,61 @@ CModelInfo::ShutDown(void)
 {
 	int i;
 	for(i = 0; i < ms_simpleModelStore.allocPtr; i++)
-		ms_simpleModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		simpleModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_timeModelStore.allocPtr; i++)
-		ms_timeModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		timeModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_weaponModelStore.allocPtr; i++)
-		ms_weaponModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		weaponModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_clumpModelStore.allocPtr; i++)
-		ms_clumpModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		clumpModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_vehicleModelStore.allocPtr; i++)
-		ms_vehicleModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		vehicleModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_pedModelStore.allocPtr; i++)
-		ms_pedModelStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		pedModelEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 	for(i = 0; i < ms_2dEffectStore.allocPtr; i++)
-		ms_2dEffectStore.store[i].Shutdown();
+		//+ rouz edit (ChatGPT)
+		// Access raw storage through the C store or pool API
+		effectEntries[i].Shutdown();
+		//- rouz edit (ChatGPT)
 
-	ms_2dEffectStore.Clear();
-	ms_simpleModelStore.Clear();
-	ms_timeModelStore.Clear();
-	ms_weaponModelStore.Clear();
-	ms_pedModelStore.Clear();
-	ms_clumpModelStore.Clear();
-	ms_vehicleModelStore.Clear();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CStore_Clear(&ms_2dEffectStore);
+	CStore_Clear(&ms_simpleModelStore);
+	CStore_Clear(&ms_timeModelStore);
+	CStore_Clear(&ms_weaponModelStore);
+	CStore_Clear(&ms_pedModelStore);
+	CStore_Clear(&ms_clumpModelStore);
+	CStore_Clear(&ms_vehicleModelStore);
+	//- rouz edit (ChatGPT)
 }
 
 CSimpleModelInfo*
 CModelInfo::AddSimpleModel(int id)
 {
 	CSimpleModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_simpleModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CSimpleModelInfo*)CStore_Alloc(&CModelInfo::ms_simpleModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->Init();
 	return modelinfo;
@@ -130,7 +172,10 @@ CTimeModelInfo*
 CModelInfo::AddTimeModel(int id)
 {
 	CTimeModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_timeModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CTimeModelInfo*)CStore_Alloc(&CModelInfo::ms_timeModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->Init();
 	return modelinfo;
@@ -140,7 +185,10 @@ CWeaponModelInfo*
 CModelInfo::AddWeaponModel(int id)
 {
 	CWeaponModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_weaponModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CWeaponModelInfo*)CStore_Alloc(&CModelInfo::ms_weaponModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->Init();
 	return modelinfo;
@@ -150,7 +198,10 @@ CClumpModelInfo*
 CModelInfo::AddClumpModel(int id)
 {
 	CClumpModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_clumpModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CClumpModelInfo*)CStore_Alloc(&CModelInfo::ms_clumpModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->m_clump = nil;
 	return modelinfo;
@@ -160,7 +211,10 @@ CPedModelInfo*
 CModelInfo::AddPedModel(int id)
 {
 	CPedModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_pedModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CPedModelInfo*)CStore_Alloc(&CModelInfo::ms_pedModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->m_clump = nil;
 	return modelinfo;
@@ -170,7 +224,10 @@ CVehicleModelInfo*
 CModelInfo::AddVehicleModel(int id)
 {
 	CVehicleModelInfo *modelinfo;
-	modelinfo = CModelInfo::ms_vehicleModelStore.Alloc();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	modelinfo = (CVehicleModelInfo*)CStore_Alloc(&CModelInfo::ms_vehicleModelStore);
+	//- rouz edit (ChatGPT)
 	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
 	modelinfo->m_clump = nil;
 	modelinfo->m_vehicleType = -1;
@@ -249,7 +306,10 @@ CModelInfo::IsPlaneModel(int32 id)
 void
 CModelInfo::ReInit2dEffects()
 {
-	ms_2dEffectStore.Clear();
+	//+ rouz edit (ChatGPT)
+	// Access raw storage through the C store or pool API
+	CStore_Clear(&ms_2dEffectStore);
+	//- rouz edit (ChatGPT)
 
 	for (int i = 0; i < MODELINFOSIZE; i++) {
 		if (ms_modelInfoPtrs[i])

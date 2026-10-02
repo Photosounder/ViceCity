@@ -974,14 +974,20 @@ CPed::ProcessObjective(void)
 											if (CModelInfo::IsBikeModel(chosenModel)) {
 //+ rouz edit (ChatGPT)
 												// Allocate the hijack target bike without invoking C++ new.
-												newVeh = CPools::GetVehiclePool()->New();
+												//+ rouz edit (ChatGPT)
+												// Access raw storage through the C store or pool API
+												newVeh = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+												//- rouz edit (ChatGPT)
 												assert(newVeh);
 												std::allocator<CBike>().construct((CBike*)newVeh, chosenModel, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
 											} else {
 //+ rouz edit (ChatGPT)
 												// Allocate the hijack target car without invoking C++ new.
-												newVeh = CPools::GetVehiclePool()->New();
+												//+ rouz edit (ChatGPT)
+												// Access raw storage through the C store or pool API
+												newVeh = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
+												//- rouz edit (ChatGPT)
 												assert(newVeh);
 												std::allocator<CAutomobile>().construct((CAutomobile*)newVeh, chosenModel, RANDOM_VEHICLE);
 //- rouz edit (ChatGPT)
