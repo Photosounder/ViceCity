@@ -252,6 +252,14 @@ project "reVC"
 		dependson "librw"
 	end
 
+	-- rouz edit (ChatGPT)
+	filter { "files:**.c" }
+		compileas "C"
+		cdialect "C11"
+	filter { "action:vs*", "files:**.c" }
+		buildoptions { "/std:c11" }
+	filter {}
+
 	files { addSrcFiles("src") }
 	files { addSrcFiles("src/animation") }
 	files { addSrcFiles("src/audio") }

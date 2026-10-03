@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Glass.h"
@@ -17,18 +18,15 @@
 #include "main.h"
 #include "soundlist.h"
 #include "SurfaceTable.h"
-//+ rouz edit (ChatGPT)
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 #include "custompipes.h"
 #endif
-//- rouz edit (ChatGPT)
 
 
 uint32 CGlass::NumGlassEntities;
 CEntity *CGlass::apEntitiesToBeRendered[NUM_GLASSENTITIES];
 CFallingGlassPane CGlass::aGlassPanes[NUM_GLASSPANES];
 
-//+ rouz edit (ChatGPT)
 static CVector
 GetGlassRenderCameraPosition(void)
 {
@@ -61,7 +59,6 @@ GetGlassRenderCameraForward(void)
 #endif
 	return TheCamera.GetForward();
 }
-//- rouz edit (ChatGPT)
 
 
 CVector2D CentersWithTriangle[NUM_GLASSTRIANGLES];
@@ -151,7 +148,11 @@ CFallingGlassPane::Update(void)
 
 			pos = CVector(GetPosition().x, GetPosition().y, m_fGroundZ);
 
-			PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_LIGHT_BREAK, pos);
+			{
+				// Evaluate the game position once before passing its components to C
+				const CVector scriptPosition = pos;
+				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_LIGHT_BREAK, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+			}
 
 			RwRGBA color = { 255, 255, 255, 255 };
 
@@ -707,7 +708,11 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 	
 		if ( amount > 300.0f )
 		{
-			PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_L, object->GetPosition());
+			{
+				// Evaluate the game position once before passing its components to C
+				const CVector scriptPosition = object->GetPosition();
+				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_L, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+			}
 	
 			GeneratePanesForWindow(0,
 				pa,
@@ -717,7 +722,11 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 		}
 		else
 		{
-			PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, object->GetPosition());
+			{
+				// Evaluate the game position once before passing its components to C
+				const CVector scriptPosition = object->GetPosition();
+				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+			}
 	
 			GeneratePanesForWindow(1,
 				pa,
@@ -741,7 +750,11 @@ CGlass::WindowRespondsToSoftCollision(CEntity *entity, float amount)
 
 	if ( entity->bUsesCollision && amount > 50.0f && !object->bGlassCracked )
 	{
-		PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, object->GetPosition());
+		{
+			// Evaluate the game position once before passing its components to C
+			const CVector scriptPosition = object->GetPosition();
+			PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+		}
 		object->bGlassCracked = true;
 	}
 }
@@ -759,7 +772,11 @@ CGlass::WasGlassHitByBullet(CEntity *entity, CVector point)
 		{
 			if ( !object->bGlassCracked )
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, object->GetPosition());
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = object->GetPosition();
+					PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				object->bGlassCracked = true;
 			}
 			else
@@ -905,7 +922,11 @@ CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
 	float bound1 = max1 - proj1[originIndex];
 	float bound2  = max2 - proj2[originIndex];
 						
-	PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_L, vehicle->GetPosition());
+	{
+		// Evaluate the game position once before passing its components to C
+		const CVector scriptPosition = vehicle->GetPosition();
+		PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_L, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+	}
 	
 	CVector center = v[originIndex] + ((0.5f*bound1) * vec1) + ((0.5f*bound2) * vec2);
 	CVector speed = vehicle->m_vecMoveSpeed;
@@ -1061,7 +1082,11 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 							CVector pa = object->GetMatrix() * CVector(minx, miny, minz);
 							CVector pb = object->GetMatrix() * CVector(maxx, maxy, minz);
 							
-							PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, object->GetPosition());
+							{
+								// Evaluate the game position once before passing its components to C
+								const CVector scriptPosition = object->GetPosition();
+								PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_BREAK_S, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+							}
 
 							GeneratePanesForWindow(1,
 								pa,
@@ -1075,7 +1100,11 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 						}
 						else
 						{
-							PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, object->GetPosition());
+							{
+								// Evaluate the game position once before passing its components to C
+								const CVector scriptPosition = object->GetPosition();
+								PlayOneShotScriptObject(SCRIPT_SOUND_GLASS_CRACK, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+							}
 							object->bGlassCracked = true;
 						}
 					}
@@ -1084,3 +1113,4 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 		}
 	}
 }
+//- rouz edit (ChatGPT)

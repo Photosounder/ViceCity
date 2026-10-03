@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 CTriggerCaller MemCardAccessTriggerCaller;
 
 void InitialiseTextsInMenuControllerInCar(CMenuPictureAndText *widget, CMenuManager::CONTRCONFIG cont);
@@ -209,7 +210,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 		{
 			if ( !gErrorSampleTriggered )
 			{
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
 				gErrorSampleTriggered = true;
 			}
 			
@@ -779,8 +780,8 @@ TriggerAudio_RadioStation(CMenuMultiChoicePicturedTriggered *widget)
 		if ( CMenuManager::m_PrefsRadioStation != widget->GetMenuSelection() )
 		{
 			CMenuManager::m_PrefsRadioStation = widget->GetMenuSelection();
-			DMAudio.PlayFrontEndTrack(CMenuManager::m_PrefsRadioStation, TRUE);
-			DMAudio.SetRadioInCar(CMenuManager::m_PrefsRadioStation);
+			DMAudio_PlayFrontEndTrack(CMenuManager::m_PrefsRadioStation, TRUE);
+			DMAudio_SetRadioInCar(CMenuManager::m_PrefsRadioStation);
 		}
 	}
 }
@@ -792,13 +793,13 @@ TriggerAudio_StereoMono(CMenuMultiChoiceTriggered *widget)
 	{	
 		if (widget->GetMenuSelection() == 1)
 		{
-			DMAudio.SetMonoMode(TRUE);
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_MONO, 0);
+			DMAudio_SetMonoMode(TRUE);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_MONO, 0);
 		}
 		else
 		{
-			DMAudio.SetMonoMode(FALSE);
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_STEREO, 0);
+			DMAudio_SetMonoMode(FALSE);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_STEREO, 0);
 		}
 	}
 }
@@ -822,7 +823,7 @@ TriggerAudio_SfxVolumeAlways(CMenuSliderTriggered *widget)
 		{
 			if ( bTriggerTest )
 			{
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_AUDIO_TEST, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_AUDIO_TEST, 0);
 				bTriggerTest = false;
 			}
 		}
@@ -861,9 +862,9 @@ TriggerSave_NewGameNewGame(CMenuMultiChoiceTriggered *widget)
 	
 	FrontEndMenuManager.AnaliseMenuContents();
 	
-	DMAudio.SetEffectsFadeVol(0);
-	DMAudio.SetMusicFadeVol(0);
-	DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
+	DMAudio_SetEffectsFadeVol(0);
+	DMAudio_SetMusicFadeVol(0);
+	DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
 }
 
 void
@@ -1003,9 +1004,9 @@ TriggerSave_LoadGameLoadGame(CMenuMultiChoiceTriggered *widget)
 				
 				TheMemoryCard.m_bWantToLoad = true;
 				
-				DMAudio.SetEffectsFadeVol(0);
-				DMAudio.SetMusicFadeVol(0);
-				DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
+				DMAudio_SetEffectsFadeVol(0);
+				DMAudio_SetMusicFadeVol(0);
+				DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
 			}
 			else
 			{
@@ -1391,3 +1392,4 @@ TriggerDisplay_Trails(CMenuOnOffTriggered *widget)
 }
 
 #endif
+//- rouz edit (ChatGPT)

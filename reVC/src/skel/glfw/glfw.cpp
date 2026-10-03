@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #if defined RW_GL3 && !defined LIBRW_SDL2
 
 #ifdef _WIN32
@@ -1557,8 +1558,7 @@ void
 keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	// Forward key repeats as keydown events to match the Windows input path
-	//+ rouz edit (ChatGPT)
-	if (key >= 0 && key <= GLFW_KEY_LAST) {
+		if (key >= 0 && key <= GLFW_KEY_LAST) {
 		RsKeyCodes ks = (RsKeyCodes)keymap[key];
 
 		if (key == GLFW_KEY_LEFT_SHIFT)
@@ -1570,8 +1570,7 @@ keypressCB(GLFWwindow* window, int key, int scancode, int action, int mods)
 		if (action == GLFW_RELEASE) RsKeyboardEventHandler(rsKEYUP, &ks);
 		else if (action == GLFW_PRESS || action == GLFW_REPEAT) RsKeyboardEventHandler(rsKEYDOWN, &ks);
 	}
-	//- rouz edit (ChatGPT)
-}
+	}
 
 #else
 
@@ -2369,7 +2368,7 @@ main(int argc, char *argv[])
 		CPad::ResetCheats();
 		CPad::StopPadsShaking();
 		
-		DMAudio.ChangeMusicMode(MUSICMODE_DISABLE);
+		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
 		
 #ifdef PS2_MENU
 		CGame::ShutDownForRestart();
@@ -2387,7 +2386,7 @@ main(int argc, char *argv[])
 			}
 
 			CGame::InitialiseWhenRestarting();
-			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
 			
 			continue;
@@ -2402,7 +2401,7 @@ main(int argc, char *argv[])
 		{
 			CGame::ShutDownForRestart();
 			CGame::InitialiseWhenRestarting();
-			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
 			FrontEndMenuManager.m_bWantToLoad = false;
 		}
@@ -2443,7 +2442,7 @@ main(int argc, char *argv[])
 	if ( gGameState == GS_PLAYING_GAME )
 		CGame::ShutDown();
 
-	DMAudio.Terminate();
+	DMAudio_Terminate();
 	
 	_psFreeVideoModeList();
 
@@ -2613,3 +2612,5 @@ int strncasecmp(const char *str1, const char *str2, size_t len)
 }
 #endif
 #endif
+
+//- rouz edit (ChatGPT)

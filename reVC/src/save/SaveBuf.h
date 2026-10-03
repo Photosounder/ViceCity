@@ -9,7 +9,13 @@
 #include <string.h>
 
 #ifdef VALIDATE_SAVE_SIZE
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int32_t _saveBufCount;
+#ifdef __cplusplus
+}
+#endif
 #define INITSAVEBUF _saveBufCount = 0;
 #define VALIDATESAVEBUF(b) assert(_saveBufCount == b);
 #else

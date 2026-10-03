@@ -1,0 +1,93 @@
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <new>
+@HEADERS@
+@METHODS@
+
+static uint64_t digest = 1469598103934665603ULL;
+static void record(const void *data, size_t size) {
+    // Compare defined fields independently of padding
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i = 0; i < size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+static void observe(const cPedComments *state) {
+    // Observe every initialized record field and queue cursor
+    for (int q = 0; q < NUM_SOUND_QUEUES; ++q) {
+        // Record both queues including inactive retained records
+        for (int i = 0; i < NUM_PED_COMMENTS_SLOTS; ++i) {
+            // Compare all declared comment fields without tail padding
+            const tPedComment *com = &state->m_aPedCommentQueue[q][i];
+            record(&com->m_nSampleIndex, sizeof(com->m_nSampleIndex));
+            record(&com->m_nEntityIndex, sizeof(com->m_nEntityIndex));
+            record(&com->m_vecPos, sizeof(com->m_vecPos));
+            record(&com->m_fDistance, sizeof(com->m_fDistance));
+            record(&com->m_nVolume, sizeof(com->m_nVolume));
+            record(&com->m_nLoadingTimeout, sizeof(com->m_nLoadingTimeout));
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+            record(&com->m_nEmittingVolume, sizeof(com->m_nEmittingVolume));
+#endif
+        }
+    }
+    record(state->m_aPedCommentOrderList, sizeof(state->m_aPedCommentOrderList));
+    record(state->m_nPedCommentCount, sizeof(state->m_nPedCommentCount));
+    record(&state->m_nActiveQueue, sizeof(state->m_nActiveQueue));
+}
+int main() {
+    // Confirm record and queue layout before running the same operation trace
+    @C_CHECK@
+    const size_t layout[] = {sizeof(tPedComment), alignof(tPedComment), offsetof(tPedComment,m_vecPos), offsetof(tPedComment,m_nLoadingTimeout), sizeof(cPedComments), alignof(cPedComments), offsetof(cPedComments,m_nActiveQueue)};
+    record(layout, sizeof(layout));
+    for (unsigned mode = 0; mode < 8; ++mode) {
+        // Initialize the original lifecycle and every otherwise indeterminate test field
+        cPedComments state;
+        @INIT@;
+        for (int q = 0; q < NUM_SOUND_QUEUES; ++q) {
+            // Preserve constructor-written timeouts while defining the other record fields
+            for (int i = 0; i < NUM_PED_COMMENTS_SLOTS; ++i) {
+                // Seed retained records so rejected and consumed slots are observable
+                tPedComment *com = &state.m_aPedCommentQueue[q][i];
+                com->m_nSampleIndex = 1000 + i;
+                com->m_nEntityIndex = -i;
+                com->m_vecPos.x = 1; com->m_vecPos.y = -2; com->m_vecPos.z = -0.0f;
+                com->m_fDistance = 3.5f; com->m_nVolume = 17;
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+                com->m_nEmittingVolume = 19;
+#endif
+                assert(com->m_nLoadingTimeout == -1);
+            }
+        }
+        observe(&state);
+        uint32_t random = 314159 + mode;
+        for (unsigned step = 0; step < 20000; ++step) {
+            // Mix full queues, ties, replacement, rejection, expiration, and both active queues
+            random = random * 1664525u + 1013904223u;
+            tPedComment comment;
+            comment.m_nSampleIndex = random;
+            comment.m_nEntityIndex = -(int32_t)step;
+            comment.m_vecPos.x = (float)step; comment.m_vecPos.y = -7.5f; comment.m_vecPos.z = -0.0f;
+            comment.m_fDistance = (float)(step % 100);
+            comment.m_nVolume = mode == 0 ? 63 : mode == 1 ? (uint8_t)step : mode == 2 ? (uint8_t)(255-step) : (uint8_t)(random >> 24);
+            const int8_t timeouts[] = {-128, -1, 0, 1, 2, 10, 127};
+            comment.m_nLoadingTimeout = timeouts[(random >> 8) % 7];
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+            comment.m_nEmittingVolume = (uint8_t)(random >> 16);
+#endif
+            @ADD@;
+            if (step % (31 + mode) == 0) {
+                // Carry comments across frames and clear the consumed order list
+                @ADVANCE@;
+            }
+            observe(&state);
+        }
+        for (int frame = 0; frame < 130; ++frame) {
+            // Drain every possible positive loading timeout
+            @ADVANCE@;
+            observe(&state);
+        }
+        assert(state.m_nPedCommentCount[0] == 0 && state.m_nPedCommentCount[1] == 0);
+    }
+    printf("%llu\n", (unsigned long long)digest);
+}

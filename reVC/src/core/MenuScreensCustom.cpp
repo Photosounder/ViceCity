@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
 #include <windows.h>
@@ -37,7 +38,6 @@
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
 
-//+ rouz edit (ChatGPT)
 #define CFO_NEW(TYPE, ...) []() -> TYPE* { \
 	/* Allocate a custom frontend option without invoking C++ new. */ \
 	TYPE *ptr = (TYPE*)malloc(sizeof(TYPE)); \
@@ -53,89 +53,68 @@
 	std::allocator<CCustomScreenLayout>().construct(ptr, CCustomScreenLayout{__VA_ARGS__}); \
 	return ptr; \
 }()
-//- rouz edit (ChatGPT)
 
 #if defined(IMPROVED_VIDEOMODE) && !defined(GTA_HANDHELD)
-//+ rouz edit (ChatGPT)
 	#define VIDEOMODE_SELECTOR MENUACTION_CFO_SELECT, "FEM_SCF", { CFO_NEW(CCFOSelect, (int8*)&FrontEndMenuManager.m_nPrefsWindowed, "VideoMode", "Windowed", screenModes, 2, true, ScreenModeAfterChange, true) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define VIDEOMODE_SELECTOR
 #endif
 
 #ifdef MULTISAMPLING
-//+ rouz edit (ChatGPT)
 	#define MULTISAMPLING_SELECTOR MENUACTION_CFO_DYNAMIC, "FED_AAS", { CFO_NEW(CCFODynamic, (int8*)&FrontEndMenuManager.m_nPrefsMSAALevel, "Graphics", "MultiSampling", MultiSamplingDraw, MultiSamplingButtonPress) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define MULTISAMPLING_SELECTOR
 #endif
 
 #ifdef CUTSCENE_BORDERS_SWITCH
-//+ rouz edit (ChatGPT)
 	#define CUTSCENE_BORDERS_TOGGLE MENUACTION_CFO_SELECT, "FEM_CSB", { CFO_NEW(CCFOSelect, (int8 *)&FrontEndMenuManager.m_PrefsCutsceneBorders, "Display", "CutsceneBorders", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define CUTSCENE_BORDERS_TOGGLE
 #endif
 
 #ifdef FREE_CAM
-//+ rouz edit (ChatGPT)
 	#define FREE_CAM_TOGGLE MENUACTION_CFO_SELECT, "FEC_FRC", { CFO_NEW(CCFOSelect, (int8*)&TheCamera.bFreeCam, "Display", "FreeCam", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define FREE_CAM_TOGGLE
 #endif
 
 #ifdef PS2_ALPHA_TEST
-//+ rouz edit (ChatGPT)
 	#define DUALPASS_SELECTOR MENUACTION_CFO_SELECT, "FEM_2PR", { CFO_NEW(CCFOSelect, (int8*)&gPS2alphaTest, "Graphics", "PS2AlphaTest", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define DUALPASS_SELECTOR 
 #endif
 
 #ifdef PED_CAR_DENSITY_SLIDERS
 	// 0.2f - 3.4f makes it possible to have 1.0f somewhere inbetween
-//+ rouz edit (ChatGPT)
 	#define DENSITY_SLIDERS \
 		MENUACTION_CFO_SLIDER, "FEM_PED", { CFO_NEW(CCFOSlider, &CIniFile::PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange) }, 0, 0, MENUALIGN_LEFT, \
 		MENUACTION_CFO_SLIDER, "FEM_CAR", { CFO_NEW(CCFOSlider, &CIniFile::CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange) }, 0, 0, MENUALIGN_LEFT, 
-//- rouz edit (ChatGPT)
 #else
 	#define DENSITY_SLIDERS 
 #endif
 
 #ifdef NO_ISLAND_LOADING
-//+ rouz edit (ChatGPT)
 	#define ISLAND_LOADING_SELECTOR MENUACTION_CFO_SELECT, "FEM_ISL", { CFO_NEW(CCFOSelect, (int8*)&FrontEndMenuManager.m_PrefsIslandLoading, "Graphics", "IslandLoading", islandLoadingOpts, ARRAY_SIZE(islandLoadingOpts), true, IslandLoadingAfterChange) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define ISLAND_LOADING_SELECTOR 
 #endif
 
 #ifdef EXTENDED_COLOURFILTER
-//+ rouz edit (ChatGPT)
 	#define POSTFX_SELECTORS \
 		MENUACTION_CFO_SELECT, "FED_CLF", { CFO_NEW(CCFOSelect, (int8*)&CPostFX::EffectSwitch, "Graphics", "ColourFilter", filterNames, ARRAY_SIZE(filterNames), false) }, 0, 0, MENUALIGN_LEFT, \
 		MENUACTION_CFO_SELECT, "FED_MBL", { CFO_NEW(CCFOSelect, (int8*)&CPostFX::MotionBlurOn, "Graphics", "MotionBlur", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define POSTFX_SELECTORS
 #endif	
 
 #ifdef INVERT_LOOK_FOR_PAD
-//+ rouz edit (ChatGPT)
 	#define INVERT_PAD_SELECTOR MENUACTION_CFO_SELECT, "FEC_ILU", { CFO_NEW(CCFOSelect, (int8*)&CPad::bInvertLook4Pad, "Controller", "InvertPad", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define INVERT_PAD_SELECTOR
 #endif
 
 #ifdef GAMEPAD_MENU
-//+ rouz edit (ChatGPT)
 	#define SELECT_CONTROLLER_TYPE  MENUACTION_CFO_SELECT, "FEC_TYP", { CFO_NEW(CCFOSelect, (int8*)&FrontEndMenuManager.m_PrefsControllerType, "Controller", "Type", controllerTypes, ARRAY_SIZE(controllerTypes), false, ControllerTypeAfterChange) }, 0, 0, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 #else
 	#define SELECT_CONTROLLER_TYPE
 #endif
@@ -259,8 +238,8 @@ void MultiSamplingButtonPress(int8 action) {
 		if (FrontEndMenuManager.m_nDisplayMSAALevel != FrontEndMenuManager.m_nPrefsMSAALevel) {
 			FrontEndMenuManager.m_nPrefsMSAALevel = FrontEndMenuManager.m_nDisplayMSAALevel;
 			_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode);
-			DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-			DMAudio.Service();
+			DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
+			DMAudio_Service();
 			FrontEndMenuManager.SetHelperText(0);
 			FrontEndMenuManager.SaveSettings();
 		}
@@ -322,8 +301,8 @@ const char* screenModes[] = { "FED_FLS", "FED_WND" };
 void ScreenModeAfterChange(int8 before, int8 after)
 {
 	_psSelectScreenVM(FrontEndMenuManager.m_nPrefsVideoMode); // apply same resolution
-	DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-	DMAudio.Service();
+	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
+	DMAudio_Service();
 	FrontEndMenuManager.SetHelperText(0);
 }
 
@@ -465,9 +444,7 @@ CMenuScreenCustom aScreens[] = {
 
 	// MENUPAGE_DISPLAY_SETTINGS = 4
 #ifndef GRAPHICS_MENU_OPTIONS
-//+ rouz edit (ChatGPT)
 	{ "FEH_DIS", MENUPAGE_OPTIONS, CFO_NEW_LAYOUT(40, 78, 25, true), nil,
-//- rouz edit (ChatGPT)
 		MENUACTION_BRIGHTNESS,	"FED_BRI", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_DRAWDIST,	"FEM_LOD", {nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS}, 0, 0, MENUALIGN_LEFT,
 		DENSITY_SLIDERS
@@ -496,9 +473,7 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_GOBACK,		"FEDS_TB", {nil, SAVESLOT_NONE, MENUPAGE_NONE}, 320, 0, MENUALIGN_CENTER,
 	},
 #else
-//+ rouz edit (ChatGPT)
 	{ "FEH_DIS", MENUPAGE_OPTIONS, CFO_NEW_LAYOUT(40, 78, 25, true), nil,
-//- rouz edit (ChatGPT)
 		MENUACTION_BRIGHTNESS,	"FED_BRI", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_DRAWDIST,	"FEM_LOD", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		DENSITY_SLIDERS
@@ -508,9 +483,7 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_RADARMODE,	"FED_RDR", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_HUD,			"FED_HUD", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 		MENUACTION_SUBTITLES,	"FED_SUB", { nil, SAVESLOT_NONE, MENUPAGE_DISPLAY_SETTINGS }, 0, 0, MENUALIGN_LEFT,
-//+ rouz edit (ChatGPT)
 		MENUACTION_CFO_DYNAMIC,	"FET_DEF", { CFO_NEW(CCFODynamic, nil, nil, nil, nil, RestoreDefDisplay) }, 320, 0, MENUALIGN_CENTER,
-//- rouz edit (ChatGPT)
 		MENUACTION_GOBACK,		"FEDS_TB", { nil, SAVESLOT_NONE, MENUPAGE_NONE}, 320, 0, MENUALIGN_CENTER,
 	},
 #endif
@@ -662,9 +635,7 @@ CMenuScreenCustom aScreens[] = {
 	},
 
 	// MENUPAGE_CONTROLLER_PC = 26
-//+ rouz edit (ChatGPT)
 	{ "FET_CTL", MENUPAGE_OPTIONS, CFO_NEW_LAYOUT(0, 0, MENU_DEFAULT_LINE_HEIGHT, false, false, 150), nil,
-//- rouz edit (ChatGPT)
 #ifdef PC_PLAYER_CONTROLS
 		MENUACTION_CTRLMETHOD,	"FET_STI", {nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_PC}, 320, 150, MENUALIGN_CENTER,
 		MENUACTION_KEYBOARDCTRLS,"FEC_RED", {nil, SAVESLOT_NONE, MENUPAGE_KEYBOARD_CONTROLS}, 0, 0, MENUALIGN_CENTER,
@@ -745,13 +716,9 @@ CMenuScreenCustom aScreens[] = {
 
 #ifdef GAMEPAD_MENU
 #ifdef GTA_HANDHELD
-//+ rouz edit (ChatGPT)
 	{ "FET_AGS", MENUPAGE_OPTIONS, CFO_NEW_LAYOUT(40, 78, 25, true, true), nil,
-//- rouz edit (ChatGPT)
 #else
-//+ rouz edit (ChatGPT)
 	{ "FET_AGS", MENUPAGE_CONTROLLER_PC, CFO_NEW_LAYOUT(40, 78, 25, true, true), nil,
-//- rouz edit (ChatGPT)
 #endif
 		MENUACTION_CTRLCONFIG,		"FEC_CCF", { nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_SETTINGS }, 40, 76, MENUALIGN_LEFT,
 		MENUACTION_CTRLDISPLAY,		"FEC_CDP", { nil, SAVESLOT_NONE, MENUPAGE_CONTROLLER_SETTINGS }, 0, 0, MENUALIGN_LEFT,
@@ -816,9 +783,7 @@ CMenuScreenCustom aScreens[] = {
 
 #ifdef GRAPHICS_MENU_OPTIONS
 	// MENUPAGE_GRAPHICS_SETTINGS
-//+ rouz edit (ChatGPT)
 	{ "FET_GFX", MENUPAGE_OPTIONS, CFO_NEW_LAYOUT(40, 78, 25, true, true), GraphicsGoBack,
-//- rouz edit (ChatGPT)
 
 #ifndef GTA_HANDHELD
 		MENUACTION_SCREENRES,	"FED_RES", { nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS }, 0, 0, MENUALIGN_LEFT,
@@ -838,22 +803,16 @@ CMenuScreenCustom aScreens[] = {
 		MENUACTION_TRAILS,		"FED_TRA", { nil, SAVESLOT_NONE, MENUPAGE_GRAPHICS_SETTINGS }, 0, 0, MENUALIGN_LEFT,
 #endif
 		// re3.cpp inserts here pipeline selectors if neo/neo.txd exists and EXTENDED_PIPELINES defined
-//+ rouz edit (ChatGPT)
 		MENUACTION_CFO_DYNAMIC,	"FET_DEF", { CFO_NEW(CCFODynamic, nil, nil, nil, nil, RestoreDefGraphics) }, 320, 0, MENUALIGN_CENTER,
-//- rouz edit (ChatGPT)
 		MENUACTION_GOBACK,		"FEDS_TB", {nil, SAVESLOT_NONE, MENUPAGE_NONE}, 320, 0, MENUALIGN_CENTER,
 	},
 #endif
 
 #ifdef DETECT_JOYSTICK_MENU
 	// MENUPAGE_DETECT_JOYSTICK
-//+ rouz edit (ChatGPT)
 	{ "FEC_JOD", MENUPAGE_CONTROLLER_PC, CFO_NEW_LAYOUT(0, 0, 0, false, false, 30), DetectJoystickGoBack,
-//- rouz edit (ChatGPT)
 		MENUACTION_LABEL,	"FEC_JPR", { nil, SAVESLOT_NONE, MENUPAGE_NONE }, 0, 0, 0,
-//+ rouz edit (ChatGPT)
 		MENUACTION_CFO_DYNAMIC,	"FEC_JDE", { CFO_NEW(CCFODynamic, nil, nil, nil, DetectJoystickDraw, nil) }, 80, 200, MENUALIGN_LEFT,
-//- rouz edit (ChatGPT)
 		MENUACTION_GOBACK,		"FEDS_TB", {nil, SAVESLOT_NONE, MENUPAGE_NONE}, 320, 225, MENUALIGN_CENTER,
 	},
 #endif
@@ -885,3 +844,5 @@ CMenuScreenCustom aScreens[] = {
 
 #endif
 #endif
+
+//- rouz edit (ChatGPT)

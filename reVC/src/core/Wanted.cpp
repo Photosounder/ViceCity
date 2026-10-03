@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Pools.h"
@@ -303,7 +304,7 @@ CWanted::ReportCrimeNow(eCrimeType type, const CVector &coors, bool policeDoesnt
 		Error("Undefined crime type, RegisterCrime, Wanted.cpp");
 	}
 	m_nChaos = Max(m_nChaos, m_nMinChaos);
-	DMAudio.ReportCrime(type, coors);
+	DMAudio_ReportCrime(type, &coors);
 	UpdateWantedLevel();
 }
 
@@ -372,31 +373,23 @@ CWanted::WorkOutPolicePresence(CVector posn, float radius)
 	CVehicle *vehicle;
 	int numPolice = 0;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetPedPool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetPedPool());
+		while(--i >= 0){
+				// Access raw storage through the C store or pool API
 		ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-		if(ped &&
+				if(ped &&
 		   IsPolicePedModel(ped->GetModelIndex()) &&
 		   (posn - ped->GetPosition()).Magnitude() < radius)
 			numPolice++;
 	}
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+		while(--i >= 0){
+				// Access raw storage through the C store or pool API
 		vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if(vehicle &&
+				if(vehicle &&
 		   vehicle->bIsLawEnforcer &&
 		   IsPoliceVehicleModel(vehicle->GetModelIndex()) &&
 		   vehicle != FindPlayerVehicle() &&
@@ -520,3 +513,5 @@ CWanted::Suspend(void)
 	m_nWantedLevel = 0;
 	ResetPolicePursuit();
 }
+
+//- rouz edit (ChatGPT)

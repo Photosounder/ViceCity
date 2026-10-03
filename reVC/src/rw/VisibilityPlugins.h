@@ -11,21 +11,20 @@ typedef bool (*ClumpVisibilityCB)(RpClump*);
 class CVisibilityPlugins
 {
 public:
-	struct AlphaObjectInfo
-	{
-		union {
-			CEntity *entity;
-			RpAtomic *atomic;
-		};
-		float sort;
-	};
+	//+ rouz edit (ChatGPT)
+	typedef CSortedLinkItem AlphaObjectInfo;
+	//- rouz edit (ChatGPT)
 
-	static CLinkList<AlphaObjectInfo> m_alphaList;
-	static CLinkList<AlphaObjectInfo> m_alphaBoatAtomicList;
-	static CLinkList<AlphaObjectInfo> m_alphaEntityList;
-	static CLinkList<AlphaObjectInfo> m_alphaUnderwaterEntityList;
+	//+ rouz edit (ChatGPT)
+	static CSortedLinkList m_alphaList;
+	static CSortedLinkList m_alphaBoatAtomicList;
+	static CSortedLinkList m_alphaEntityList;
+	static CSortedLinkList m_alphaUnderwaterEntityList;
+	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
-	static CLinkList<AlphaObjectInfo> m_alphaBuildingList;
+	//+ rouz edit (ChatGPT)
+	static CSortedLinkList m_alphaBuildingList;
+	//- rouz edit (ChatGPT)
 #endif
 	static RwCamera *ms_pCamera;
 	static RwV3d *ms_pCameraPosn;
@@ -74,10 +73,14 @@ public:
 	static RpAtomic *RenderPlayerCB(RpAtomic *atomic);
 	static RpAtomic *RenderPedCB(RpAtomic *atomic);	// for skinned models with only one clump
 
-	static void RenderAtomicList(CLinkList<AlphaObjectInfo> &list);
+	//+ rouz edit (ChatGPT)
+	static void RenderAtomicList(CSortedLinkList *list);
+	//- rouz edit (ChatGPT)
 	static void RenderAlphaAtomics(void);
 	static void RenderBoatAlphaAtomics(void);
-	static void RenderFadingEntities(CLinkList<AlphaObjectInfo> &list);
+	//+ rouz edit (ChatGPT)
+	static void RenderFadingEntities(CSortedLinkList *list);
+	//- rouz edit (ChatGPT)
 	static void RenderFadingEntities(void);
 	static void RenderFadingUnderwaterEntities(void);
 

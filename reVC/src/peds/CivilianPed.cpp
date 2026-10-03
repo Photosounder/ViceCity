@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "CivilianPed.h"
@@ -341,7 +342,7 @@ CCivilianPed::ProcessControl(void)
 							m_pMyVehicle->ApplyTurnForce(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(-0.8f, -1.2f) * m_fMass,
 								GetPosition().x - m_pMyVehicle->GetPosition().x, GetPosition().y - m_pMyVehicle->GetPosition().y, 0.0f);
 
-							DMAudio.PlayOneShot(m_pMyVehicle->m_audioEntityId, SOUND_CAR_JERK, 0.0f);
+							DMAudio_PlayOneShot(m_pMyVehicle->m_audioEntityId, SOUND_CAR_JERK, 0.0f);
 							m_pMyVehicle->pDriver->Say(SOUND_PED_PLAYER_BEFORESEX);
 							Say(SOUND_PED_PLAYER_BEFORESEX);
 
@@ -608,3 +609,5 @@ CCivilianPed::IsOnStealWishList(int32 model)
 	}
 	return false;
 }
+
+//- rouz edit (ChatGPT)

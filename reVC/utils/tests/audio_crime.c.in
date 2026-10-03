@@ -1,0 +1,114 @@
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+@HEADERS@
+
+static uint64_t digest = 1469598103934665603ULL;
+static uint32_t wantedCalls;
+static uint32_t gMinTimeToNextReport[NUM_CRIME_TYPES];
+static struct { int m_nMusicMode; } MusicManager;
+struct TestWanted {
+    int level;
+    int GetWantedLevel() {
+        // Observe the real game's short-circuit eligibility lookup
+        wantedCalls++;
+        return level;
+    }
+};
+static TestWanted wanted;
+static struct { TestWanted *m_pWanted; } player;
+static auto FindPlayerPed() -> decltype(&player) {
+    // Supply a player whose wanted state can be varied independently
+    return &player;
+}
+
+class cAudioManager {
+public:
+    uint8_t m_bIsInitialised;
+    uint32_t m_FrameCounter;
+    cAMCrime m_aCrimes[10];
+    void ReportCrime(eCrimeType type, const CVector &pos);
+    @AGE_DECL@
+};
+
+@METHODS@
+
+static void record(const void *data, size_t size)
+{
+    // Compare record state, cooldowns, and game eligibility observations
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i = 0; i < size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+
+static void record_crimes(const cAMCrime *crimes)
+{
+    // Compare defined fields while excluding record tail padding
+    for (int i = 0; i < 10; ++i) {
+        // Observe the type, three coordinates, and uint16 timer independently
+        record(&crimes[i].type, sizeof(crimes[i].type));
+        record(&crimes[i].position, sizeof(crimes[i].position));
+        record(&crimes[i].timer, sizeof(crimes[i].timer));
+    }
+}
+
+int main(void)
+{
+    // Check that a genuine C caller can invoke all current exports
+    @C_CHECK@
+    const size_t layout[] = {sizeof(cAMCrime), alignof(cAMCrime), offsetof(cAMCrime, position), offsetof(cAMCrime, timer)};
+    record(layout, sizeof(layout));
+    player.m_pWanted = &wanted;
+    cAudioManager manager;
+    const uint32_t frames[] = {0, 499, 500, 501, UINT32_MAX - 499, UINT32_MAX};
+    for (uint32_t pattern = 0; pattern < 8; ++pattern) {
+        // Test empty, sparse, duplicate, and fully occupied arrays under every game gate
+        for (int initialized = 0; initialized < 2; ++initialized)
+        for (int cutscene = 0; cutscene < 2; ++cutscene)
+        for (int wantedLevel = 0; wantedLevel < 2; ++wantedLevel)
+        for (uint32_t type = 0; type < NUM_CRIME_TYPES; ++type)
+        for (size_t frame = 0; frame < sizeof(frames) / sizeof(frames[0]); ++frame) {
+            // Populate distinguishable records and cooldown entries before reporting
+            @INIT@(manager.m_aCrimes);
+            for (int i = 0; i < 10; ++i) {
+                // Cover first-match duplicates and the original last-empty slot choice
+                manager.m_aCrimes[i].type = pattern == 0 ? CRIME_NONE : pattern < 4 ? (i % 3 == 0 ? CRIME_NONE : CRIME_HIT_PED) : i + 1;
+                manager.m_aCrimes[i].position.x = i * 0.25f;
+                manager.m_aCrimes[i].position.y = i * -0.5f;
+                manager.m_aCrimes[i].position.z = i * 1.25f;
+                manager.m_aCrimes[i].timer = 100 + i;
+            }
+            for (int i = 0; i < NUM_CRIME_TYPES; ++i) gMinTimeToNextReport[i] = pattern * 100 + i;
+            manager.m_bIsInitialised = initialized;
+            manager.m_FrameCounter = frames[frame];
+            MusicManager.m_nMusicMode = cutscene ? MUSICMODE_CUTSCENE : MUSICMODE_GAME;
+            wanted.level = wantedLevel;
+            wantedCalls = 0;
+            CVector position(3.25f, -7.5f, -0.0f);
+            manager.ReportCrime((eCrimeType)type, position);
+            record_crimes(manager.m_aCrimes);
+            record(gMinTimeToNextReport, sizeof(gMinTimeToNextReport));
+            record(&wantedCalls, sizeof(wantedCalls));
+        }
+    }
+
+    // Exercise exact expiration boundaries and uint16 rollover for active and inactive records
+    const uint16_t ages[] = {0, 1198, 1199, 1200, 1201, 65534, 65535};
+    for (size_t age = 0; age < sizeof(ages) / sizeof(ages[0]); ++age) {
+        // Retain positions and inactive timer values through repeated aging passes
+        @INIT@(manager.m_aCrimes);
+        for (int i = 0; i < 10; ++i) {
+            // Seed active and inactive records with the same boundary age
+            manager.m_aCrimes[i].type = i & 1 ? CRIME_NONE : CRIME_HIT_COP;
+            manager.m_aCrimes[i].timer = ages[age];
+            manager.m_aCrimes[i].position.x = i + 0.5f;
+        }
+        for (int frame = 0; frame < 1300; ++frame) {
+            // Compare every intermediate aging transition rather than only final expiration
+            @AGE@
+            record_crimes(manager.m_aCrimes);
+        }
+    }
+    printf("%llu\n", (unsigned long long)digest);
+    return 0;
+}

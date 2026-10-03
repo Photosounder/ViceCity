@@ -1,0 +1,135 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include "config.h"
+#include "AudioReflectionTypes.h"
+@HEADERS@
+#ifndef MISSION_AUDIO_SLOTS
+#define MISSION_AUDIO_SLOTS (2)
+#endif
+using uint8=uint8_t; using uint32=uint32_t; using bool8=uint8_t;
+#define FALSE 0
+#define nil NULL
+static uint64_t digest=1469598103934665603ULL;
+static void record(const void *data, size_t size) {
+    // Observe geometry calls and defined coordinates independently of padding
+    const uint8_t *bytes=(const uint8_t *)data;
+    for (size_t i=0;i<size;++i) digest=(digest^bytes[i])*1099511628211ULL;
+}
+static void point(const CVector &position) {
+    // Compare the coordinates actually passed to the existing geometry boundary
+    record(&position.x,4); record(&position.y,4); record(&position.z,4);
+}
+struct CEntity {};
+struct CColPoint {CVector point;};
+static CEntity entity;
+static uint32_t cameraCalls, geometryCalls;
+static bool hit;
+static struct Camera {
+    CVector position;
+    const CVector &GetPosition() {
+        // Observe the reflection adapter's camera lookup count
+        ++cameraCalls;
+        return position;
+    }
+} TheCamera;
+static float Distance(const CVector &from, const CVector &to) {
+    // Supply a controlled Euclidean result to both unchanged reflection adapters
+    float x=to.x-from.x, y=to.y-from.y, z=to.z-from.z;
+    return sqrtf(x*x+y*y+z*z);
+}
+struct CWorld {
+    static bool ProcessLineOfSight(const CVector &from, const CVector &to, CColPoint &colpoint, CEntity *&ent, bool a,bool b,bool c,bool d,bool e,bool f,bool g) {
+        // Record the actual endpoints and flags before supplying a controlled hit
+        ++geometryCalls; point(from); point(to);
+        const uint8_t flags[]={a,b,c,d,e,f,g}; record(flags,sizeof(flags));
+        ent=&entity;
+        colpoint.point=CVector(from.x+3.25f,from.y-7.5f,from.z+4.0f);
+        return hit;
+    }
+    static bool ProcessVerticalLine(const CVector &from,float z,CColPoint &colpoint,CEntity *&ent,bool a,bool b,bool c,bool d,bool e,bool f,void *extra) {
+        // Record ceiling traces including their shifted origins and destination height
+        ++geometryCalls; point(from); record(&z,4);
+        const uint8_t flags[]={a,b,c,d,e,f,(uint8_t)(extra!=NULL)}; record(flags,sizeof(flags));
+        ent=&entity;
+        colpoint.point=CVector(from.x+3.25f,from.y-7.5f,from.z+4.0f);
+        return hit;
+    }
+};
+class cAudioManager {
+public:
+    uint8 m_bIsInitialised;
+    @POSITION_TYPE@ m_vecMissionAudioPosition[MISSION_AUDIO_SLOTS];
+    bool8 m_bIsMissionAudio2D[MISSION_AUDIO_SLOTS];
+    @POSITION_TYPE@ m_avecReflectionsPos[MAX_REFLECTIONS];
+    float m_afReflectionsDistances[MAX_REFLECTIONS];
+    uint32 m_FrameCounter;
+    void SetMissionAudioLocation(uint8 slot,float x,float y,float z);
+    void UpdateReflections();
+};
+@METHODS@
+static void observe(const cAudioManager &state) {
+    // Compare all retained and updated positions and their companion state
+    for (int i=0;i<MISSION_AUDIO_SLOTS;++i) {
+        // Observe the exact mission coordinate bits and byte mode
+        record(&state.m_vecMissionAudioPosition[i].x,4);
+        record(&state.m_vecMissionAudioPosition[i].y,4);
+        record(&state.m_vecMissionAudioPosition[i].z,4);
+        record(&state.m_bIsMissionAudio2D[i],1);
+    }
+    for (int i=0;i<MAX_REFLECTIONS;++i) {
+        // Observe reflection coordinates even on frames that do not update that slot
+        record(&state.m_avecReflectionsPos[i].x,4);
+        record(&state.m_avecReflectionsPos[i].y,4);
+        record(&state.m_avecReflectionsPos[i].z,4);
+        record(&state.m_afReflectionsDistances[i],4);
+    }
+    record(&cameraCalls,4); record(&geometryCalls,4);
+}
+int main() {
+    // Confirm C callers and the layout of all affected array fields
+    @C_CHECK@
+    const size_t layout[]={sizeof(cAudioManager),alignof(cAudioManager),offsetof(cAudioManager,m_vecMissionAudioPosition),offsetof(cAudioManager,m_bIsMissionAudio2D),offsetof(cAudioManager,m_avecReflectionsPos),offsetof(cAudioManager,m_afReflectionsDistances),sizeof(((cAudioManager *)0)->m_vecMissionAudioPosition),sizeof(((cAudioManager *)0)->m_avecReflectionsPos)};
+    record(layout,sizeof(layout));
+    cAudioManager state;
+    memset(&state,0,sizeof(state));
+    const uint32_t coords[]={0,0x80000000u,0x3f800000u,0xc0f00000u,0x7f800000u,0xff800000u,0x7fc12345u,0xffc23456u};
+    for (int initialized=0;initialized<3;++initialized) {
+        // Check both valid slots, every invalid byte slot, and nonzero initialization values
+        state.m_bIsInitialised=initialized==2 ? 255 : initialized;
+        for (int slot=0;slot<256;++slot) {
+            // Copy special float values through the actual old and new mission adapters
+            for (int value=0;value<8;++value) {
+                // Seed mode flags to detect accidental writes to the other slot
+                state.m_bIsMissionAudio2D[0]=17; state.m_bIsMissionAudio2D[1]=231;
+                float x,y,z;
+                memcpy(&x,&coords[value],4); memcpy(&y,&coords[(value+1)%8],4); memcpy(&z,&coords[(value+2)%8],4);
+                state.SetMissionAudioLocation(slot,x,y,z);
+                observe(state);
+            }
+        }
+    }
+    for (unsigned pattern=0;pattern<256;++pattern) {
+        // Exercise both hit outcomes for every scheduled reflection slot
+        for (unsigned camera=0;camera<4;++camera) {
+            // Vary camera origin and retain sentinel reflection positions between updates
+            TheCamera.position=CVector(camera*123.25f,-(float)camera*17.5f,camera ? -7.5f : -0.0f);
+            for (int i=0;i<MAX_REFLECTIONS;++i) {
+                // Define all initial reflection fields before the frame schedule runs
+                state.m_avecReflectionsPos[i].x=17+i; state.m_avecReflectionsPos[i].y=-23-i; state.m_avecReflectionsPos[i].z=-0.0f;
+                state.m_afReflectionsDistances[i]=91+i;
+            }
+            for (unsigned frame=0;frame<64;++frame) {
+                // Compare ordinary scheduling and unsigned frame-counter wraparound
+                state.m_FrameCounter=frame<32 ? frame : UINT32_MAX-63+frame;
+                hit=(pattern>>(frame%8))&1;
+                state.UpdateReflections();
+                observe(state);
+            }
+        }
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

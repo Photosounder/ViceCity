@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "ParticleObject.h"
@@ -34,12 +35,12 @@ CAudioHydrant::Add(CParticleObject *particleobject)
 	{
 		if ( List[i].AudioEntity == AEHANDLE_NONE )
 		{
-			List[i].AudioEntity = DMAudio.CreateEntity(AUDIOTYPE_FIREHYDRANT, particleobject);
+			List[i].AudioEntity = DMAudio_CreateEntity(AUDIOTYPE_FIREHYDRANT, particleobject);
 
 			if ( AEHANDLE_IS_FAILED(List[i].AudioEntity) )
 				return false;
 			
-			DMAudio.SetEntityStatus(List[i].AudioEntity, TRUE);
+			DMAudio_SetEntityStatus(List[i].AudioEntity, TRUE);
 			
 			List[i].pParticleObject = particleobject;
 			
@@ -57,7 +58,7 @@ CAudioHydrant::Remove(CParticleObject *particleobject)
 	{
 		if ( List[i].pParticleObject == particleobject )
 		{
-			DMAudio.DestroyEntity(List[i].AudioEntity);
+			DMAudio_DestroyEntity(List[i].AudioEntity);
 			List[i].AudioEntity = AEHANDLE_NONE;
 			List[i].pParticleObject = nil;
 		}
@@ -1343,3 +1344,5 @@ CParticleObject::MoveToList(CParticleObject **from, CParticleObject **to, CParti
 	if ( obj->m_pNext )
 		obj->m_pNext->m_pPrev = obj;
 }
+
+//- rouz edit (ChatGPT)

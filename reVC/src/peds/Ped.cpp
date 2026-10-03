@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -40,11 +41,9 @@
 #include "Clock.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
-//+ rouz edit (ChatGPT)
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 #include "custompipes.h"
 #endif
-//- rouz edit (ChatGPT)
 
 CPed *gapTempPedList[50];
 uint16 gnNumTempPedList;
@@ -124,11 +123,9 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 	m_walkAroundType = 0;
 	m_pCurrentPhysSurface = nil;
 	m_vecOffsetFromPhysSurface = CVector(0.0f, 0.0f, 0.0f);
-	//+ rouz edit (ChatGPT)
-	// Initialise the surface-local carry anchor.
+		// Initialise the surface-local carry anchor.
 	surf_rel_origin = CVector(0.0f, 0.0f, 0.0f);
-	//- rouz edit (ChatGPT)
-	m_pSeekTarget = nil;
+		m_pSeekTarget = nil;
 	m_vecSeekPos = CVector(0.0f, 0.0f, 0.0f);
 	m_wepSkills = 0;
 	m_distanceToCountSeekDone = 1.0f;
@@ -321,8 +318,8 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 	else
 		bCanGiveUpSunbathing = true;
 
-	m_audioEntityId = DMAudio.CreateEntity(AUDIOTYPE_PHYSICAL, this);
-	DMAudio.SetEntityStatus(m_audioEntityId, TRUE);
+	m_audioEntityId = DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL, this);
+	DMAudio_SetEntityStatus(m_audioEntityId, TRUE);
 	m_fearFlags = CPedType::GetThreats(m_nPedType);
 	m_threatEntity = nil;
 	m_eventOrThreat = CVector2D(0.0f, 0.0f);
@@ -376,22 +373,18 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 CPed::~CPed(void)
 {
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
-//+ rouz edit (ChatGPT)
 	if ( m_pRTShadow ) {
 		// Destroy and release the ped cutscene shadow without invoking C++ delete.
 		m_pRTShadow->~CCutsceneShadow();
 		free(m_pRTShadow);
 	}
-//- rouz edit (ChatGPT)
 #endif
 	CWorld::Remove(this);
 	if (m_attractor)
 		GetPedAttractorManager()->DeRegisterPed(this, m_attractor);
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	CRadar::ClearBlipForEntity(BLIP_CHAR, CPool_GetIndex(CPools::GetPedPool(), this));
-	//- rouz edit (ChatGPT)
-	if (InVehicle()){
+		if (InVehicle()){
 		uint8 door_flag = GetCarDoorFlag(m_vehDoor);
 		if (m_pMyVehicle->pDriver == this)
 			m_pMyVehicle->pDriver = nil;
@@ -415,7 +408,7 @@ CPed::~CPed(void)
 	if (bMiamiViceCop)
 		CPopulation::NumMiamiViceCops--;
 	CPopulation::UpdatePedCount((ePedType)m_nPedType, true);
-	DMAudio.DestroyEntity(m_audioEntityId);
+	DMAudio_DestroyEntity(m_audioEntityId);
 
 	// Because of the nature of ped lists in GTA, it can sometimes be outdated.
 	// Remove ourself from nearPeds list of the Peds in our nearPeds list.
@@ -477,12 +470,10 @@ CPed::SetModelIndex(uint32 mi)
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
 	if (!m_pRTShadow)
 	{
-//+ rouz edit (ChatGPT)
 		// Allocate the ped cutscene shadow without invoking C++ new.
 		m_pRTShadow = (CCutsceneShadow*)malloc(sizeof(CCutsceneShadow));
 		assert(m_pRTShadow);
 		std::allocator<CCutsceneShadow>().construct(m_pRTShadow);
-//- rouz edit (ChatGPT)
 		m_pRTShadow->Create(m_rwObject, 10, 1, 1, 1);
 		//m_pRTShadow->Create(m_rwObject, 8, 0, 0, 0);
 	}
@@ -1575,8 +1566,7 @@ CPed::UpdatePosition(void)
 		// or any other surface
 		else
 		{
-			//+ rouz edit (ChatGPT)
-			// Advance the carried foot contact along the vehicle surface before storing its local anchor
+						// Advance the carried foot contact along the vehicle surface before storing its local anchor
 			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle()) {
 				const CMatrix &surfaceMatrix = m_pCurrentPhysSurface->GetMatrix();
 				CVector surfacePoint = surfaceMatrix * surf_rel_origin;
@@ -1607,20 +1597,16 @@ CPed::UpdatePosition(void)
 				SetPosition(carriedPos);
 				GetMatrix().UpdateRW();
 			}
-			//- rouz edit (ChatGPT)
-
+			
 			//debug("m_vecOffsetFromPhysSurface %.3f  %.3f  %.3f\n", m_vecOffsetFromPhysSurface.x, m_vecOffsetFromPhysSurface.y, m_vecOffsetFromPhysSurface.z);
 			//debug("m_pCurrentPhysSurface->GetRight() %.3f  %.3f  %.3f\n", m_pCurrentPhysSurface->GetRight().x, m_pCurrentPhysSurface->GetRight().y, m_pCurrentPhysSurface->GetRight().z);
-			//+ rouz edit (ChatGPT)
-			// Match the ped's vertical speed to the carried vehicle contact point.
+						// Match the ped's vertical speed to the carried vehicle contact point.
 			CVector surfaceVelocity = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface);
 			velocityOfSurface = surfaceVelocity;
 			if (rouz.glue_on_vehs && m_pCurrentPhysSurface->IsVehicle())
 				m_vecMoveSpeed.z = surfaceVelocity.z;
-			//- rouz edit (ChatGPT)
-
-			//+ rouz edit (ChatGPT)
-			// Preserve the local carry anchor while vehicle glue is active.
+			
+						// Preserve the local carry anchor while vehicle glue is active.
 			if (!rouz.glue_on_vehs || !m_pCurrentPhysSurface->IsVehicle()) {
 				CVector surf_rot = m_pCurrentPhysSurface->GetRight();
 				surf_rot.x = -surf_rot.x;
@@ -1629,14 +1615,11 @@ CPed::UpdatePosition(void)
 					surf_rel_origin = CrossProduct(m_vecOffsetFromPhysSurface, surf_rot);
 				//debug("surf_rel_origin %.3f  %.3f  %.3f\n", surf_rel_origin.x, surf_rel_origin.y, surf_rel_origin.z);
 			}
-			//- rouz edit (ChatGPT)
-		}
+					}
 
-		//+ rouz edit (ChatGPT)
-		// Keep vehicle velocity in the ped's physical speed while the local anchor handles relative placement.
+				// Keep vehicle velocity in the ped's physical speed while the local anchor handles relative placement.
 		velocityChange = m_moved + velocityOfSurface - m_vecMoveSpeed;
-		//- rouz edit (ChatGPT)
-		m_fRotationCur += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
+				m_fRotationCur += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 		m_fRotationDest += m_pCurrentPhysSurface->m_vecTurnSpeed.z * CTimer::GetTimeStep();
 	}
 	else if (m_nSurfaceTouched == SURFACE_STEEP_CLIFF && (m_vecDamageNormal.x != 0.0f || m_vecDamageNormal.y != 0.0f))
@@ -1787,7 +1770,7 @@ CPed::ProcessBuoyancy(void)
 					m_vecMoveSpeed.z = -0.02f;
 			} else {
 				m_vecMoveSpeed.z = -0.01f;
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
 				CVector aBitForward = 2.2f * m_vecMoveSpeed + GetPosition();
 				float level = 0.0f;
 				if (CWaterLevel::GetWaterLevel(aBitForward, &level, false))
@@ -1835,11 +1818,9 @@ CPed::ProcessControl(void)
 	CColPoint foundCol;
 	CEntity *foundEnt = nil;
 
-	//+ rouz edit (ChatGPT)
-	// Remember the carried surface before this control pass can refresh standing contact.
+		// Remember the carried surface before this control pass can refresh standing contact.
 	CPhysical *previousPhysSurface = m_pCurrentPhysSurface;
-	//- rouz edit (ChatGPT)
-
+	
 	if (CTimer::GetFrameCounter() + m_randomSeed % 32 == 0)
 		PruneReferences();
 
@@ -2207,16 +2188,14 @@ CPed::ProcessControl(void)
 					if (collidingVeh == m_pMyVehicle)
 						bCollidedWithMyVehicle = true;
 
-					//+ rouz edit (ChatGPT)
-					// Ignore bogus damage impulses from the vehicle carrying or just beneath this ped.
+										// Ignore bogus damage impulses from the vehicle carrying or just beneath this ped.
 					if (collidingVeh == m_pCurrentPhysSurface || (rouz.glue_on_vehs && collidingVeh == m_pCurSurface) || (bWasStanding && collidingVeh == previousPhysSurface)) {
 						m_fDamageImpulse = 0.0f;
 						m_pDamageEntity = nil;
 						bHitSomethingLastFrame = false;
 						break;
 					}
-					//- rouz edit (ChatGPT)
-
+					
 					float oldHealth = m_fHealth;
 					bool playerSufferSound = false;
 
@@ -2297,7 +2276,7 @@ CPed::ProcessControl(void)
 							}
 						}
 						if (m_fMass / 20.0f < adjustedImpulse)
-							DMAudio.PlayOneShot(collidingVeh->m_audioEntityId, SOUND_CAR_PED_COLLISION, adjustedImpulse);
+							DMAudio_PlayOneShot(collidingVeh->m_audioEntityId, SOUND_CAR_PED_COLLISION, adjustedImpulse);
 
 						if (IsPlayer()) {
 							if (adjustedImpulse > 20.0f)
@@ -3002,11 +2981,9 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 	CColPoint intersectionPoint;
 	CColLine ourLine;
 
-	//+ rouz edit (ChatGPT)
-	// Keep the previous surface so same-vehicle contact can preserve its local anchor.
+		// Keep the previous surface so same-vehicle contact can preserve its local anchor.
 	CPhysical *previousPhysSurface = m_pCurrentPhysSurface;
-	//- rouz edit (ChatGPT)
-
+	
 	CColModel *ourCol = CModelInfo::GetColModel(GetModelIndex());
 	CColModel *hisCol = CModelInfo::GetColModel(collidingEnt->GetModelIndex());
 
@@ -3102,16 +3079,14 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 								m_pCurrentPhysSurface = (CPhysical*)collidingEnt;
 								collidingEnt->RegisterReference((CEntity**)&m_pCurrentPhysSurface);
 								m_vecOffsetFromPhysSurface = intersectionPoint.point - collidingEnt->GetPosition();
-								//+ rouz edit (ChatGPT)
-								// Initialise the local carry anchor when stepping onto a new physical surface.
+																// Initialise the local carry anchor when stepping onto a new physical surface.
 								bool sameCarrySurface = previousPhysSurface == m_pCurrentPhysSurface || m_pCurSurface == collidingEnt;
 								if (!sameCarrySurface || !bWasStanding) {
 									CMatrix surfaceInv;
 									Invert(m_pCurrentPhysSurface->GetMatrix(), surfaceInv);
 									surf_rel_origin = surfaceInv * intersectionPoint.point;
 								}
-								//- rouz edit (ChatGPT)
-								m_pCurSurface = collidingEnt;
+																m_pCurSurface = collidingEnt;
 								collidingEnt->RegisterReference((CEntity**)&m_pCurSurface);
 								m_collPoly.valid = false;
 								if (collidingEnt->IsVehicle() && ((CVehicle*)collidingEnt)->IsBoat()) {
@@ -3135,20 +3110,17 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 
 						float upperSpeedLimit = 0.33f;
 						float lowerSpeedLimit = -0.25f;
-						//+ rouz edit (ChatGPT)
-						// Measure landing impact relative to the vehicle at the actual foot contact
+												// Measure landing impact relative to the vehicle at the actual foot contact
 						CVector landingVelocity = m_vecMoveSpeed;
 						if (rouz.glue_on_vehs && collidingEnt->IsVehicle() && !collidedWithBoat)
 							landingVelocity -= ((CPhysical*)collidingEnt)->GetSpeed(intersectionPoint.point - collidingEnt->GetPosition());
 						float speed = landingVelocity.Magnitude2D();
-						//- rouz edit (ChatGPT)
-						if (m_nPedState == PED_IDLE) {
+												if (m_nPedState == PED_IDLE) {
 							upperSpeedLimit *= 2.0f;
 							lowerSpeedLimit *= 1.5f;
 						}
 						CAnimBlendAssociation *fallAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL);
-						//+ rouz edit (ChatGPT)
-						// Use relative impact speed for both landing damage paths and the hit direction
+												// Use relative impact speed for both landing damage paths and the hit direction
 						if (!bWasStanding && ((speed > upperSpeedLimit && !bPushedAlongByCar) || (landingVelocity.z < lowerSpeedLimit))
 							&& m_pCollidingEntity != collidingEnt) {
 
@@ -3172,11 +3144,9 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 						} else if (!bWasStanding && fallAnim && -0.016f * CTimer::GetTimeStep() > landingVelocity.z) {
 							InflictDamage(collidingEnt, WEAPONTYPE_FALL, 15.0f, PEDPIECE_TORSO, 2);
 						}
-						//- rouz edit (ChatGPT)
-						m_vecMoveSpeed.z = 0.0f;
+												m_vecMoveSpeed.z = 0.0f;
 						bIsStanding = true;
-						//+ rouz edit (ChatGPT)
-						// Keep the resolved support height and vertical carrier motion for subsequent collision passes
+												// Keep the resolved support height and vertical carrier motion for subsequent collision passes
 						if (rouz.glue_on_vehs && m_pCurrentPhysSurface == collidingEnt
 							&& collidingEnt->IsVehicle() && !collidedWithBoat) {
 							CVector footPoint = GetPosition() - CVector(0.0f, 0.0f, FEET_OFFSET);
@@ -3185,8 +3155,7 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 							m_vecOffsetFromPhysSurface = footPoint - collidingEnt->GetPosition();
 							m_vecMoveSpeed.z = m_pCurrentPhysSurface->GetSpeed(m_vecOffsetFromPhysSurface).z;
 						}
-						//- rouz edit (ChatGPT)
-				} else {
+										} else {
 					bOnBoat = false;
 				}
 			}
@@ -3194,8 +3163,7 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 	}
 
 	int ourCollidedSpheres = CCollision::ProcessColModels(GetMatrix(), *ourCol, collidingEnt->GetMatrix(), *hisCol, collidingPoints, nil, nil);
-	//+ rouz edit (ChatGPT)
-	// Let the standing contact support the feet without pushing the carrier and ped apart
+		// Let the standing contact support the feet without pushing the carrier and ped apart
 	if (rouz.glue_on_vehs && bIsStanding && m_pCurrentPhysSurface == collidingEnt
 		&& collidingEnt->IsVehicle() && !collidedWithBoat) {
 		float footHeight = GetPosition().z - FEET_OFFSET;
@@ -3207,8 +3175,7 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 		}
 		ourCollidedSpheres = solidContacts;
 	}
-	//- rouz edit (ChatGPT)
-	if (ourCollidedSpheres > 0 || belowTorsoCollided) {
+		if (ourCollidedSpheres > 0 || belowTorsoCollided) {
 		AddCollisionRecord(collidingEnt);
 		if (!collidingEnt->IsBuilding())
 			((CPhysical*)collidingEnt)->AddCollisionRecord(this);
@@ -3362,10 +3329,10 @@ CPed::PlayFootSteps(void)
 					break;
 			}
 			if (soundVolume > 0.2f && currentTime > moveStart && currentTime - walkRunAssoc->timeStep <= moveStart) {
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_SKATING, ((int)(127.f * soundVolume) | (walkRunAssoc->animId << 8)));
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SKATING, ((int)(127.f * soundVolume) | (walkRunAssoc->animId << 8)));
 			} else if (soundVolume > 0.2f) {
 				if (currentTime > skateTime && currentTime - walkRunAssoc->timeStep <= skateTime) {
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_SKATING, ((int)(127.f * soundVolume) | (walkRunAssoc->animId << 8)));
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_SKATING, ((int)(127.f * soundVolume) | (walkRunAssoc->animId << 8)));
 				}
 			}
 
@@ -3382,12 +3349,12 @@ CPed::PlayFootSteps(void)
 			if (stepPart != 0) {
 				CVector adjustedFootPos;
 				if (stepPart == 1) {
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_STEP_START, 1.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_STEP_START, 1.0f);
 					TransformToNode(footPosL, PED_FOOTL);
 					footPosLok = true;
 					adjustedFootPos = footPosL;
 				} else {
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_STEP_END, 1.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_STEP_END, 1.0f);
 					TransformToNode(footPosR, PED_FOOTR);
 					footPosRok = true;
 					adjustedFootPos = footPosR;
@@ -4168,7 +4135,7 @@ CPed::PedSetOutCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 		if (ped->m_nPedType == PEDTYPE_COP) {
 			ped->SetIdle();
 			if (((CCopPed*)ped)->m_nCopType == COP_MIAMIVICE && ped->m_pMyVehicle && ped->m_pMyVehicle->pDriver == ped) {
-				DMAudio.PlayOneShot(ped->m_audioEntityId, SOUND_PED_MIAMIVICE_EXITING_CAR, 0.f);
+				DMAudio_PlayOneShot(ped->m_audioEntityId, SOUND_PED_MIAMIVICE_EXITING_CAR, 0.f);
 			}
 		} else
 			ped->RestorePreviousState();
@@ -4528,7 +4495,7 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 
 		if (!veh->bEngineOn) {
 			veh->bEngineOn = true;
-			DMAudio.PlayOneShot(ped->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
+			DMAudio_PlayOneShot(ped->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
 		}
 		if (ped->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && ped->CharCreatedBy == RANDOM_CHAR
 			&& ped != FindPlayerPed() && ped->m_nPedType != PEDTYPE_EMERGENCY) {
@@ -4950,7 +4917,7 @@ CPed::PreRender(void)
 			fWindMult = DotProduct(m_pMyVehicle->m_vecMoveSpeed, GetForward());
 			if (fWindMult > 0.4f) {
 				float volume = (fWindMult - 0.4f) / 0.6f;
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_SHIRT_WIND_FLAP, volume);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SHIRT_WIND_FLAP, volume);
 			}
 		}
 
@@ -5164,15 +5131,13 @@ CPed::Render(void)
 
 		if (!m_pMyVehicle->IsBike() && !IsPlayer()) {
 			// Use the active reflection camera when deciding whether a seated ped is too distant
-			//+ rouz edit (ChatGPT)
-			CVector pedRenderCameraPosition = TheCamera.GetPosition();
+						CVector pedRenderCameraPosition = TheCamera.GetPosition();
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(EXTENDED_PIPELINES) && defined(LIBRW)
 			if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam && CustomPipes::EnvMapCam->getFrame())
 				pedRenderCameraPosition = CVector(CustomPipes::EnvMapCam->getFrame()->getLTM()->pos);
 #endif
 			float camDistSq = (pedRenderCameraPosition - GetPosition()).MagnitudeSqr();
-			//- rouz edit (ChatGPT)
-			if (camDistSq > SQR((m_pMyVehicle->IsBoat() ? 40.0f : 25.0f) * TheCamera.LODDistMultiplier))
+						if (camDistSq > SQR((m_pMyVehicle->IsBoat() ? 40.0f : 25.0f) * TheCamera.LODDistMultiplier))
 				return;
 		}
 	}
@@ -5475,14 +5440,12 @@ CPed::InTheAir(void)
 	CColPoint foundCol;
 	CEntity *foundEnt;
 
-	//+ rouz edit (ChatGPT)
-	// Finish the landing handoff if collision already accepted this airborne ped as standing.
+		// Finish the landing handoff if collision already accepted this airborne ped as standing.
 	if (bIsStanding && !bIsPedDieAnimPlaying && !DyingOrDead()) {
 		SetLanding();
 		return;
 	}
-	//- rouz edit (ChatGPT)
-
+	
 	CVector ourPos = GetPosition();
 	CVector bitBelow = GetPosition();
 	bitBelow.z -= 4.04f;
@@ -5515,7 +5478,7 @@ CPed::SetLanding(void)
 	RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
 	if (fallAssoc || m_nPedType == PEDTYPE_COP && bKnockedUpIntoAir) {
 		landAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_GET_UP);	// rouz edit, used ANIM_STD_FALL_COLLAPSE before
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_FALL_COLLAPSE, 1.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_FALL_COLLAPSE, 1.0f);
 
 		if (IsPlayer())
 			Say(SOUND_PED_LAND);
@@ -5527,7 +5490,7 @@ CPed::SetLanding(void)
 
 	} else {
 		landAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_FALL_LAND);
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_FALL_LAND, 1.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_FALL_LAND, 1.0f);
 	}
 
 	landAssoc->SetFinishCallback(PedLandCB, this);
@@ -7866,11 +7829,9 @@ IsPedPointerValid_NotInWorld(CPed* pPed)
 {
 	if (!pPed)
 		return false;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetPedPool(), pPed);
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+	#ifdef FIX_BUGS
 	if (index < 0 || index >= NUMPEDS)
 #else
 	if (index < 0 || index > NUMPEDS)
@@ -7882,11 +7843,9 @@ IsPedPointerValid_NotInWorld(CPed* pPed)
 bool
 CPed::IsPointerValid(void)
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	int pedIndex = CPool_GetIndex(CPools::GetPedPool(), this) >> 8;
-	//- rouz edit (ChatGPT)
-	if (pedIndex < 0 || pedIndex >= NUMPEDS)
+		if (pedIndex < 0 || pedIndex >= NUMPEDS)
 		return false;
 
 	if (m_entryInfoList.first || FindPlayerPed() == this)
@@ -9519,7 +9478,7 @@ CPed::SetRadioStation(void)
 				m_pMyVehicle->m_nRadioStation = modelInfo->radio2;
 		}
 	} else {
-		m_pMyVehicle->m_nRadioStation = DMAudio.GetFavouriteRadioStation();
+		m_pMyVehicle->m_nRadioStation = DMAudio_GetFavouriteRadioStation();
 	}
 }
 
@@ -9576,7 +9535,7 @@ CPed::WarpPedIntoCar(CVehicle *car)
 	}
 	if (!car->bEngineOn) {
 		car->bEngineOn = true;
-		DMAudio.PlayOneShot(car->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
+		DMAudio_PlayOneShot(car->m_audioEntityId, SOUND_CAR_ENGINE_START, 1.0f);
 	}
 
 	RpAnimBlendClumpSetBlendDeltas(GetClump(), ASSOC_PARTIAL, -1000.0f);
@@ -9777,69 +9736,49 @@ CPed::Say(uint16 audio, int32 time)
 }
 
 #ifdef COMPATIBLE_SAVES
-//+ rouz edit (ChatGPT)
 #define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
 #define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
-//- rouz edit (ChatGPT)
 void
 CPed::Save(uint8*& buf)
 {
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 52);
-	//- rouz edit (ChatGPT)
-	CopyToBuf(buf, GetPosition().x);
+		CopyToBuf(buf, GetPosition().x);
 	CopyToBuf(buf, GetPosition().y);
 	CopyToBuf(buf, GetPosition().z);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 288);
-	//- rouz edit (ChatGPT)
-	CopyToBuf(buf, CharCreatedBy);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		CopyToBuf(buf, CharCreatedBy);
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 499);
-	//- rouz edit (ChatGPT)
-	CopyToBuf(buf, m_fHealth);
+		CopyToBuf(buf, m_fHealth);
 	CopyToBuf(buf, m_fArmour);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 172);
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < 10; i++) // has to be hardcoded
+		for (int i = 0; i < 10; i++) // has to be hardcoded
 		m_weapons[i].Save(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 252);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CPed::Load(uint8*& buf)
 {
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 52);
-	//- rouz edit (ChatGPT)
-	CopyFromBuf(buf, GetMatrix().GetPosition().x);
+		CopyFromBuf(buf, GetMatrix().GetPosition().x);
 	CopyFromBuf(buf, GetMatrix().GetPosition().y);
 	CopyFromBuf(buf, GetMatrix().GetPosition().z);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 288);
-	//- rouz edit (ChatGPT)
-	CopyFromBuf(buf, CharCreatedBy);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		CopyFromBuf(buf, CharCreatedBy);
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 499);
-	//- rouz edit (ChatGPT)
-	CopyFromBuf(buf, m_fHealth);
+		CopyFromBuf(buf, m_fHealth);
 	CopyFromBuf(buf, m_fArmour);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 172);
-	//- rouz edit (ChatGPT)
-	m_currentWeapon = WEAPONTYPE_UNARMED;
+		m_currentWeapon = WEAPONTYPE_UNARMED;
 
 	CWeapon bufWeapon;
 	for (int i = 0; i < 10; i++) { // has to be hardcoded
@@ -9858,11 +9797,11 @@ CPed::Load(uint8*& buf)
 			GiveWeapon(bufWeapon.m_eWeaponType, bufWeapon.m_nAmmoTotal, false);
 		}
 	}
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 252);
-	//- rouz edit (ChatGPT)
-}
+	}
 #undef CopyFromBuf
 #undef CopyToBuf
 #endif
+
+//- rouz edit (ChatGPT)

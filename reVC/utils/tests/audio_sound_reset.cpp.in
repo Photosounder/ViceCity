@@ -1,0 +1,84 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "AudioSoundGame.h"
+#include "sampman.h"
+using uint8=uint8_t;
+#define FALSE 0
+extern "C" void TestAudioSoundResetC(void);
+class cAudioManager {
+public:
+    uint8 m_nActiveSamples;
+    uint8 m_nActiveQueue;
+    tSound m_aRequestedQueue[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8 m_aRequestedOrderList[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8 m_nRequestedCount[NUM_SOUND_QUEUES];
+    tSound m_asActiveSamples[NUM_CHANNELS_GENERIC];
+    void ClearRequestedQueue();
+    void ClearActiveSamples();
+};
+@METHODS@
+static uint64_t digest=1469598103934665603ULL;
+static void record(const void *data,size_t size) {
+    // Compare every defined scalar field without depending on struct padding
+    const uint8_t *bytes=(const uint8_t *)data;
+    for (size_t i=0;i<size;++i) digest=(digest^bytes[i])*1099511628211ULL;
+}
+static void observe_sound(const tSound *sound) {
+    // Include fields retained by reset as well as the fields deliberately overwritten
+    @FIELDS@
+}
+static void seed_sound(tSound *sound,unsigned seed) {
+    // Define every record field before comparing live and partial resets
+    @SEEDS@
+}
+static void observe(const cAudioManager &state) {
+    // Observe requested records, order tails, both counts, and every active record
+    for (int q=0;q<NUM_SOUND_QUEUES;++q) {
+        // Verify that clearing metadata leaves all requested sound contents unchanged
+        for (int i=0;i<NUM_CHANNELS_GENERIC;++i) observe_sound(&state.m_aRequestedQueue[q][i]);
+    }
+    record(state.m_aRequestedOrderList,sizeof(state.m_aRequestedOrderList));
+    record(state.m_nRequestedCount,sizeof(state.m_nRequestedCount));
+    for (int i=0;i<NUM_CHANNELS_GENERIC;++i) observe_sound(&state.m_asActiveSamples[i]);
+}
+int main() {
+    // Confirm actual C callers before running the original and current reset trace
+    @C_CHECK@
+    static cAudioManager state;
+    for (unsigned capacity=0;capacity<=NUM_CHANNELS_GENERIC;++capacity) {
+        // Exercise empty and partial resets at every supported active capacity
+        for (int queue=0;queue<NUM_SOUND_QUEUES;++queue) {
+            // Seed both queues and their retained inactive metadata distinctly
+            state.m_nActiveSamples=capacity;
+            state.m_nActiveQueue=queue;
+            for (int q=0;q<NUM_SOUND_QUEUES;++q) {
+                // Define requested records and all order slots before live reset
+                for (int i=0;i<NUM_CHANNELS_GENERIC;++i) {
+                    // Preserve high byte values and unrelated fields as reset sentinels
+                    seed_sound(&state.m_aRequestedQueue[q][i],17+q*19+i);
+                    state.m_aRequestedOrderList[q][i]=(uint8)(211-i-q);
+                }
+                state.m_nRequestedCount[q]=201+q;
+            }
+            for (int i=0;i<NUM_CHANNELS_GENERIC;++i) seed_sound(&state.m_asActiveSamples[i],37+i);
+            observe(state);
+            @CLEAR_QUEUE@
+            observe(state);
+            @CLEAR_ACTIVE@
+            observe(state);
+            for (int i=0;i<(int)capacity;++i) {
+                // Confirm positive-zero coordinate bits for every cleared record
+                uint32_t bits;
+                memcpy(&bits,&state.m_asActiveSamples[i].m_vecPos.x,4); assert(bits==0);
+                memcpy(&bits,&state.m_asActiveSamples[i].m_vecPos.y,4); assert(bits==0);
+                memcpy(&bits,&state.m_asActiveSamples[i].m_vecPos.z,4); assert(bits==0);
+            }
+            @CLEAR_QUEUE@
+            @CLEAR_ACTIVE@
+            observe(state);
+        }
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

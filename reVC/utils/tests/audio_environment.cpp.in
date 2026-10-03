@@ -1,0 +1,159 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint32=uint32_t;
+#define TRUE 1
+@CHANNEL_MACRO@
+static void event(unsigned);
+struct CVehicle {};
+struct EntityId {
+    int32_t value;
+    operator int32_t() const {
+        // Observe each original audio-entity field read independently
+        event(6);return value;
+    }
+};
+struct InVehicle {
+    uint8_t value;
+    operator uint8_t() const {
+        // Observe the live vehicle flag read after the entering-car callback
+        event(7);return value;
+    }
+};
+struct CPlayerPed {
+    EntityId m_audioEntityId;
+    InVehicle bInVehicle;
+    uint8_t entering;
+    uint8_t EnteringCar();
+};
+struct Remote {
+    CVehicle *pointer;
+    operator CVehicle *() const {
+        // Observe the remote vehicle capture before the separate player lookup
+        event(8);return pointer;
+    }
+};
+struct WorldPlayer {Remote m_pRemoteVehicle;};
+struct CWorld {static WorldPlayer Players[2];static unsigned PlayerInFocus;};
+WorldPlayer CWorld::Players[2];unsigned CWorld::PlayerInFocus;
+struct cAudioManager {
+@FIELDS@
+    void ProcessReverb();
+    void ProcessSpecial();
+    void ProcessPlayerMood();
+};
+static cAudioManager owners[2];static cAudioManager *active;
+static CPlayerPed player;static CVehicle remote;
+cSampleManager SampleManager;
+static unsigned seedValue,cases,callbacks;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioEnvironment_Reverb(cAudioManager *);
+extern "C" void AudioEnvironment_Special(cAudioManager *);
+extern "C" void TestEnvironmentC(cAudioManager *);
+static void value(uint32_t v) {
+    // Hash exact field bytes and callback tokens in service order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe(void) {
+    // Observe every zero-padded owner field and the host state without raw pointer identities
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);++i) value(bytes[i]);
+    value((uint32_t)player.m_audioEntityId.value);value(player.bInVehicle.value);value(player.entering);
+    value(CWorld::PlayerInFocus);
+    for(unsigned i=0;i<2;++i) value(CWorld::Players[i].m_pRemoteVehicle.pointer!=NULL);
+}
+static void event(unsigned token) {
+    // Capture each game or backend boundary before its controlled state mutation
+    ++callbacks;value(token);observe();
+}
+struct CReplay {
+    static uint8_t IsPlayingBack(void) {
+        // Exercise zero and noncanonical nonzero replay flags
+        event(1);return seedValue%3==0?0:seedValue%3==1?1:255;
+    }
+};
+void cAudioManager::ProcessPlayerMood(void) {
+    // Change live owner state after entering the original unpaused branch
+    event(2);m_nPlayerMoodTimer+=10;if(seedValue&32) m_bIsPaused=1;
+}
+static CPlayerPed *FindPlayerPed(void) {
+    // Change remote world state after its snapshot has already been taken
+    event(3);CWorld::PlayerInFocus^=1;
+    return seedValue%5==0?NULL:&player;
+}
+extern "C" CPlayerPed *AudioPoliceHost_FindPlayer(void) {
+    // Reuse the existing player lookup adapter with identical callback behavior
+    return FindPlayerPed();
+}
+uint8_t CPlayerPed::EnteringCar(void) {
+    // Change the later live vehicle flag while retaining the entering result
+    event(4);if(seedValue&64) bInVehicle.value^=1;
+    return entering;
+}
+extern "C" uint8_t SampleManager_UpdateReverb(cSampleManager *manager) {
+    // Change dynamic modeling after update so the following short-circuit operand stays live
+    value(manager==&SampleManager);event(9);
+#ifdef FIX_BUGS
+    active->m_bDynamicAcousticModelingStatus=(seedValue>>2)&1;
+#else
+    // Gate off the original vanilla loop that reads one past the active-sample array
+    active->m_bDynamicAcousticModelingStatus=0;
+#endif
+    return seedValue%3==0?0:seedValue%3==1?1:255;
+}
+extern "C" void SampleManager_SetChannelReverbFlag(cSampleManager *manager,uint32_t id,uint8_t flag) {
+    // Observe channel selection before changing a later record's reverb eligibility
+    value(manager==&SampleManager);value(id);value(flag);event(10);
+#ifdef AUDIO_REVERB
+    if(id+1<NUM_CHANNELS_GENERIC && (seedValue&16)) active->m_asActiveSamples[id+1].m_bReverb^=1;
+#endif
+}
+extern "C" void SampleManager_SetEffectsFadeVolume(cSampleManager *manager,uint8_t volume) {
+    // Change pause flags after the effects fade to expose unwanted music fade regating
+    value(manager==&SampleManager);value(volume);event(11);
+    active->m_bIsPaused=0;active->m_bWasPaused=1;
+}
+extern "C" void SampleManager_SetMusicFadeVolume(cSampleManager *manager,uint8_t volume) {
+    // Observe music fading after the original pause-transition effects call
+    value(manager==&SampleManager);value(volume);event(12);
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t id) {
+    // Observe the dedicated player engine stop only after all player and remote gates
+    value(manager==&SampleManager);value(id);event(13);
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed all pause, replay, player, entity, entering and remote combinations
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&player,0,sizeof(player));
+    active->m_bIsPaused=seed&1;active->m_bWasPaused=(seed>>1)&1;
+    active->m_bDynamicAcousticModelingStatus=(seed>>2)&1;
+    active->m_nActiveSamples=seed%4+1;
+    for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+#ifdef AUDIO_REVERB
+        active->m_asActiveSamples[i].m_bReverb=(seed+i)%3==0?0:(seed+i)%3==1?1:255;
+#endif
+    }
+    player.m_audioEntityId.value=seed%7==0?-1:(int32_t)(seed%5);
+    for(unsigned i=0;i<5;++i) active->m_asAudioEntities[i].m_bIsUsed=(seed+i)%3!=0;
+    player.entering=(seed>>3)&1;player.bInVehicle.value=(seed>>4)&1;
+    CWorld::PlayerInFocus=(seed>>5)&1;
+    CWorld::Players[0].m_pRemoteVehicle.pointer=(seed>>6)&1?&remote:NULL;
+    CWorld::Players[1].m_pRemoteVehicle.pointer=(seed>>7)&1?&remote:NULL;
+}
+int main(void) {
+    // Compare independent and combined operations, repeated service and direct C callers
+    for(unsigned seed=0;seed<512;++seed) {
+        prepare(seed);@REVERB@;observe();++cases;
+        @SPECIAL@;observe();++cases;
+        @SPECIAL@;observe();++cases;
+        prepare(seed);@CALLER@;observe();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

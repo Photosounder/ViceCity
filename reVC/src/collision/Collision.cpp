@@ -69,12 +69,17 @@ GetVUresult(CVuVector &point, CVuVector &normal, float &dist)
 #endif
 
 eLevelName CCollision::ms_collisionInMemory;
-CLinkList<CColModel*> CCollision::ms_colModelCache;
+//+ rouz edit (ChatGPT)
+CLinkList CCollision::ms_colModelCache;
+//- rouz edit (ChatGPT)
 
 void
 CCollision::Init(void)
 {
-	ms_colModelCache.Init(NUMCOLCACHELINKS);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CLinkList_Init(&ms_colModelCache, (CLink*)calloc(NUMCOLCACHELINKS, sizeof(CLink)), NUMCOLCACHELINKS);
+	//- rouz edit (ChatGPT)
 	ms_collisionInMemory = LEVEL_GENERIC;
 	CColStore::Initialise();
 }
@@ -82,7 +87,11 @@ CCollision::Init(void)
 void
 CCollision::Shutdown(void)
 {
-	ms_colModelCache.Shutdown();
+	// Free the subsystem node array and reset its list sentinels
+	//+ rouz edit (ChatGPT)
+	free(ms_colModelCache.links);
+	CLinkList_Init(&ms_colModelCache, NULL, 0);
+	//- rouz edit (ChatGPT)
 	CColStore::Shutdown();
 }
 
@@ -2147,23 +2156,38 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 	if(model->numTriangles == 0)
 		return;
 
-	CLink<CColModel*> *lptr;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CLink *lptr;
+	//- rouz edit (ChatGPT)
 	if(model->trianglePlanes){
 		// re-insert at front so it's not removed again soon
 		lptr = model->GetLinkPtr();
-		lptr->Remove();
-		ms_colModelCache.head.Insert(lptr);
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		CLink_Remove(lptr);
+		CLink_Insert(&ms_colModelCache.head, lptr);
+		//- rouz edit (ChatGPT)
 	}else{
-		lptr = ms_colModelCache.Insert(model);
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		lptr = CLinkList_Insert(&ms_colModelCache, model);
+		//- rouz edit (ChatGPT)
 		if(lptr == nil){
 			// make room if we have to, remove last in list
 			lptr = ms_colModelCache.tail.prev;
 			assert(lptr);
 			assert(lptr->item);
-			lptr->item->RemoveTrianglePlanes();
-			ms_colModelCache.Remove(lptr);
+			// Access the object payload through the C list node
+			//+ rouz edit (ChatGPT)
+			((CColModel*)lptr->item)->RemoveTrianglePlanes();
+			CLinkList_Remove(&ms_colModelCache, lptr);
+			//- rouz edit (ChatGPT)
 			// now this cannot fail
-			lptr = ms_colModelCache.Insert(model);
+			// Use the C linked-list functions and node types
+			//+ rouz edit (ChatGPT)
+			lptr = CLinkList_Insert(&ms_colModelCache, model);
+			//- rouz edit (ChatGPT)
 			assert(lptr);
 		}
 		model->CalculateTrianglePlanes();
@@ -2175,7 +2199,10 @@ void
 CCollision::RemoveTrianglePlanes(CColModel *model)
 {
 	if(model->trianglePlanes){
-		ms_colModelCache.Remove(model->GetLinkPtr());
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		CLinkList_Remove(&ms_colModelCache, model->GetLinkPtr());
+		//- rouz edit (ChatGPT)
 		model->RemoveTrianglePlanes();
 	}
 }

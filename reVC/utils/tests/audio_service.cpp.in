@@ -1,0 +1,160 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint32=uint32_t;
+#define FALSE 0
+struct cAudioManager {
+@FIELDS@
+    void Service();
+    void ResetAudioLogicTimers(uint32);
+    void ServiceSoundEffects();
+};
+extern "C" cAudioManager AudioManager;
+cAudioManager AudioManager;
+static cAudioManager other;
+static cAudioManager *active;
+cSampleManager SampleManager;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned cases,callbacks,rngCalls;
+static unsigned rngIndex;
+static uint8_t paused,enableAfterReset;
+static void snapshot(void);
+static void event(unsigned token);
+static void pedWrite(uint8_t kind);
+struct TimerField {
+    uint32_t value;
+    uint8_t kind;
+    TimerField &operator=(uint32_t time) {
+        // Observe the original field write and expose the following random-table read
+        value=time;pedWrite(kind);return *this;
+    }
+};
+class CPed {
+public:
+    TimerField m_lastSoundStart,m_soundStart;
+    bool isPed;
+    bool IsPed(void) {
+        // Observe the original game type test before either sound timer is written
+        event(2);return isPed;
+    }
+};
+static CPed peds[8];
+extern "C" void AudioService_Run(cAudioManager *);
+extern "C" void AudioService_ResetLogicTimers(cAudioManager *,uint32_t);
+extern "C" void AudioManager_GenerateRandomTable(int32_t *);
+extern "C" void AudioMission_Clear(cAudioManager *,uint8_t);
+extern "C" void AudioReflections_Update(cAudioManager *);
+extern "C" void TestAudioServiceC(void);
+extern "C" void AudioServiceHost_ResetMusicTimers(uint32_t);
+extern "C" uint8_t AudioServiceHost_UserPaused(void);
+extern "C" void AudioServiceHost_SoundEffects(cAudioManager *);
+extern "C" void AudioServiceHost_Music(void);
+extern "C" uint8_t AudioServiceHost_IsPed(CPed *);
+extern "C" void AudioServiceHost_PedLastStart(CPed *,uint32_t);
+extern "C" void AudioServiceHost_PedSoundStart(CPed *,uint32_t);
+static void value(uint32_t v) {
+    // Hash callback tokens and scalar values independently of addresses
+    digest=(digest^v)*1099511628211ULL;
+}
+static void snapshot(void) {
+    // Normalize opaque ped identities while observing complete zero-padded owner bytes
+    cAudioManager copy=*active;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        uintptr_t pointer=(uintptr_t)copy.m_asAudioEntities[i].m_pEntity;
+        uintptr_t base=(uintptr_t)peds;
+        if(pointer>=base && pointer<base+sizeof(peds))
+            copy.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)(((pointer-base)/sizeof(*peds))+1);
+    }
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+    for(unsigned i=0;i<8;++i) {
+        value(peds[i].m_lastSoundStart.value);value(peds[i].m_soundStart.value);value(peds[i].isPed);
+    }
+}
+static void event(unsigned token) {
+    // Observe callback-visible fields and mutate the retained live timer
+    ++callbacks;value(token);snapshot();active->m_nTimer+=token;
+}
+static void pedWrite(uint8_t kind) {
+    // Change the random input after the previous-start write to detect premature next-start evaluation
+    event(kind?4:3);
+    if(!kind) active->m_anRandomTable[0]=-1234;
+}
+extern "C" int myrand(void) {
+    // Observe every unconditional RNG draw and return signed boundary inputs
+    ++rngCalls;value(1);snapshot();
+    const int draws[]={-3001,0,1,INT32_MIN,INT32_MAX,3001};
+    return draws[rngIndex++%6];
+}
+extern "C" void SampleManager_StopStreamedFile(cSampleManager *manager,uint8_t slot) {
+    // Observe mission reset order while changing the timer subsequently read by music
+    value(manager==&SampleManager);value(slot);event(5);
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t channel) {
+    // Observe the unconditional police stop at the end of deferred game timer reset
+    value(manager==&SampleManager);value(channel);event(6);
+}
+struct FakeMusic {
+    void ResetTimers(uint32_t time) {
+        // Observe the fresh timer argument and change initialization before the next service gate
+        value(time);event(7);active->m_bIsInitialised=enableAfterReset;
+    }
+    void Service(void) {
+        // Observe final music service after sound effects completes
+        event(11);
+    }
+};
+static FakeMusic MusicManager;
+struct CTimer {
+    static bool GetIsUserPaused(void) {
+        // Observe previous pause capture and change initialization after its enclosing gate
+        event(8);active->m_bIsInitialised=0;return paused!=0;
+    }
+};
+extern "C" void AudioReflections_Update(cAudioManager *manager) {
+    // Retain the controlled reflection callback while actual reflection arithmetic is tested separately
+    value(manager==active);event(9);active->m_FrameCounter+=31;
+}
+void cAudioManager::ServiceSoundEffects(void) {
+    // Retain the controlled sound service callback before final music service
+    event(10);m_bIsPaused^=1;
+}
+@METHODS@
+@HOST@
+static void prepare(unsigned seed,bool global) {
+    // Seed all gates, bounded entity orders, signed random inputs and retained timer fields
+    active=global?&AudioManager:&other;memset(active,0,sizeof(*active));memset(peds,0,sizeof(peds));
+    active->m_bIsInitialised=seed&1;active->m_bTimerJustReset=(seed>>1)&1;
+    active->m_bIsPaused=(seed>>2)&1;active->m_bWasPaused=3;
+    active->m_nTimer=seed%3==0?UINT32_MAX:seed*1234567U;active->m_FrameCounter=seed;
+    active->m_nAudioEntitiesCount=seed%9;active->m_anRandomTable[0]=seed&1?INT32_MIN:INT32_MAX;
+    enableAfterReset=(seed>>3)&1;paused=(seed>>4)&1;rngIndex=seed%6;
+    for(unsigned i=0;i<8;++i) {
+        peds[i].isPed=(seed+i)%3!=0;peds[i].m_lastSoundStart.value=100+i;peds[i].m_soundStart.value=200+i;
+        peds[i].m_lastSoundStart.kind=0;peds[i].m_soundStart.kind=1;
+        unsigned id=NUM_AUDIOENTITIES-1-i;
+        active->m_aAudioEntityOrderList[i]=id;
+        active->m_asAudioEntities[id].m_nType=i%3==0?AUDIOTYPE_WEATHER:AUDIOTYPE_PHYSICAL;
+        active->m_asAudioEntities[id].m_bIsUsed=i&1;
+        active->m_asAudioEntities[id].m_pEntity=&peds[i];
+    }
+    for(unsigned i=0;i<2;++i) {
+        active->m_nMissionAudioSampleIndex[i]=400+i;active->m_nMissionAudioLoadingStatus[i]=LOADING_STATUS_LOADED;
+        active->m_bIsMissionAudioPlaying[i]=1;active->m_bIsMissionAudioAllowedToPlay[i]=1;
+    }
+}
+int main(void) {
+    // Exercise service gates and deferred resets independently with alternating owners and public facades
+    for(unsigned seed=0;seed<256;++seed) {
+        uint32_t time=seed%3==0?UINT32_MAX:seed*9876543U;
+        prepare(seed,false);@SERVICE@;snapshot();++cases;
+        @SERVICE@;snapshot();++cases;
+        prepare(seed,false);@RESET@;snapshot();++cases;
+        prepare(seed,true);@FACADE@;snapshot();++cases;
+    }
+    printf("%u cases %u callbacks %u RNG draws : %llu\n",cases,callbacks,rngCalls,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

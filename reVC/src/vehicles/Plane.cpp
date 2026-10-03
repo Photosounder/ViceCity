@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -58,7 +59,6 @@ enum
 	CESNA_STATUS_LANDED,
 };
 
-//+ rouz edit (ChatGPT)
 static float
 GetPlanePathSegmentLength(CPlaneNode *nodes, int32 numNodes, float totalLength, int32 start, int32 end)
 {
@@ -104,7 +104,6 @@ InterpolatePlanePathPosition(CPlaneNode *nodes, int32 numNodes, float totalLengt
 		nodes[next].p*(-2.0f*f3 + 3.0f*f2) +
 		tangent1*(f3 - f2);
 }
-//- rouz edit (ChatGPT)
 
 int32 CesnaMissionStatus;
 int32 CesnaMissionStartTime;
@@ -126,12 +125,10 @@ CPlane::CPlane(int32 id, uint8 CreatedBy)
 	m_fAirResistance = 0.9994f;
 	m_fElasticity = 0.05f;
 
-	//+ rouz edit (ChatGPT)
-	bUsesCollision = true;
+		bUsesCollision = true;
 	bInfiniteMass = true;
 	bDrawFarAway = true;
-	//- rouz edit (ChatGPT)
-	m_bHasBeenHit = false;
+		m_bHasBeenHit = false;
 	m_bIsDrugRunCesna = false;
 	m_bIsDropOffCesna = false;
 	m_bTempPlane = false;
@@ -197,8 +194,7 @@ CPlane::ProcessControl(void)
 	if(CReplay::IsPlayingBack())
 		return;
 
-	//+ rouz edit (ChatGPT)
-	bHasContacted = false;
+		bHasContacted = false;
 	bIsInSafePosition = false;
 	bWasPostponed = false;
 	bHasHitWall = false;
@@ -207,14 +203,11 @@ CPlane::ProcessControl(void)
 	m_nDamagePieceType = 0;
 	m_fDamageImpulse = 0.0f;
 	m_pDamageEntity = nil;
-	//- rouz edit (ChatGPT)
-
-	//+ rouz edit (ChatGPT)
-	CMatrix previousCollisionMatrix(GetMatrix());
+	
+		CMatrix previousCollisionMatrix(GetMatrix());
 	bool hadCollisionVelocity = m_bHasCollisionVelocity;
 	bool updatedCollisionMatrix = false;
-	//- rouz edit (ChatGPT)
-
+	
 	if(GetModelIndex() == MI_AIRTRAIN){
 		if(GetPosition().z > 100.0f)
 			CPlaneTrails::RegisterPoint(GetPosition(), m_nPlaneId);
@@ -395,7 +388,7 @@ CPlane::ProcessControl(void)
 			}
 			bool bothOnGround = pPathNodes[m_nCurPathNode].bOnGround && pPathNodes[nextTrackNode].bOnGround;
 			if(PlanePathPosition[m_nPlaneId] >= LandingPoint && OldPlanePathPosition[m_nPlaneId] < LandingPoint)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_PLANE_ON_GROUND, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_PLANE_ON_GROUND, 0.0f);
 			float dist = pPathNodes[nextTrackNode].t - pPathNodes[m_nCurPathNode].t;
 			if(dist < 0.0f)
 				dist += TotalLengthOfFlightPath;
@@ -627,8 +620,7 @@ CPlane::ProcessControl(void)
 		}
 	}
 
-	//+ rouz edit (ChatGPT)
-	if(updatedCollisionMatrix){
+		if(updatedCollisionMatrix){
 		if(hadCollisionVelocity && CTimer::GetTimeStep() > 0.0f){
 			float invTimeStep = 1.0f/CTimer::GetTimeStep();
 			m_vecMoveSpeed = (GetPosition() - previousCollisionMatrix.GetPosition()) * invTimeStep;
@@ -638,8 +630,7 @@ CPlane::ProcessControl(void)
 		}
 		m_bHasCollisionVelocity = true;
 	}
-	//- rouz edit (ChatGPT)
-
+	
 	GetMatrix().UpdateRW();
 	UpdateRwFrame();
 	RemoveAndAdd(); // rouz edit (ChatGPT)
@@ -682,7 +673,6 @@ CPlane::ProcessControl(void)
 	}
 }
 
-//+ rouz edit (ChatGPT)
 void
 CPlane::ProcessCollision(void)
 {
@@ -703,7 +693,6 @@ CPlane::ProcessCollision(void)
 	bIsInSafePosition = true;
 	RemoveAndAdd();
 }
-//- rouz edit (ChatGPT)
 
 void
 CPlane::PreRender(void)
@@ -899,15 +888,11 @@ CPlane::InitPlanes(void)
 
 	// NB: 3 hardcoded also in CPlaneTrails
 	for(i = 0; i < 3; i++){
-//+ rouz edit (ChatGPT)
 		// Allocate the airtrain from the vehicle pool without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(plane);
+				assert(plane);
 		std::allocator<CPlane>().construct(plane, MI_AIRTRAIN, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 		plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 		plane->SetStatus(STATUS_ABANDONED);
 		plane->bIsLocked = true;
@@ -1043,15 +1028,11 @@ CPlane::UpdatePlanes(void)
 		if(!bCesnasActivated){
 			if(CStreaming::HasModelLoaded(MI_DEADDODO)){
 				for(i = 0; i < 5; i++){
-//+ rouz edit (ChatGPT)
 					// Allocate the temporary cesna from the vehicle pool without invoking C++ new.
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
+										// Access raw storage through the C store or pool API
 					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-					//- rouz edit (ChatGPT)
-					assert(plane);
+										assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_DEADDODO, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 					plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 					plane->SetStatus(STATUS_ABANDONED);
 					plane->bIsLocked = true;
@@ -1068,15 +1049,11 @@ CPlane::UpdatePlanes(void)
 		if(!bHelisActivated){
 			if(CStreaming::HasModelLoaded(MI_CHOPPER)){
 				for(i = 0; i < 4; i++){
-//+ rouz edit (ChatGPT)
 					// Allocate the temporary chopper from the vehicle pool without invoking C++ new.
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
+										// Access raw storage through the C store or pool API
 					CPlane *plane = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-					//- rouz edit (ChatGPT)
-					assert(plane);
+										assert(plane);
 					std::allocator<CPlane>().construct(plane, MI_CHOPPER, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 					plane->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 					plane->SetStatus(STATUS_ABANDONED);
 					plane->bIsLocked = true;
@@ -1100,26 +1077,18 @@ CPlane::RemoveTemporaryPlanes(void)
 	if(!bHelisActivated && !bCesnasActivated)
 		return;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+		while(--i >= 0){
+				// Access raw storage through the C store or pool API
 		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if(plane && plane->IsPlane() && plane->m_bTempPlane){
+				if(plane && plane->IsPlane() && plane->m_bTempPlane){
 			CWorld::Remove(plane);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the temporary plane without invoking C++ delete.
 			plane->~CPlane();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetVehiclePool(), plane);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		}
+					}
 	}
 	bCesnasActivated = false;
 	bHelisActivated = false;
@@ -1130,16 +1099,12 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 {
 	int i;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	i = CPool_GetSize(CPools::GetVehiclePool());
+		while(--i >= 0){
+				// Access raw storage through the C store or pool API
 		CPlane *plane = (CPlane*)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if(plane &&
+				if(plane &&
 #ifdef EXPLODING_AIRTRAIN
 		   (plane->GetModelIndex() == MI_AIRTRAIN || plane->GetModelIndex() == MI_DEADDODO) &&
 #else
@@ -1163,25 +1128,17 @@ CPlane::CreateIncomingCesna(void)
 {
 	if(CesnaMissionStatus == CESNA_STATUS_FLYING){
 		CWorld::Remove(pDrugRunCesna);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the drug-run cesna without invoking C++ delete.
 		pDrugRunCesna->~CPlane();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetVehiclePool(), pDrugRunCesna);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		pDrugRunCesna = nil;
+				pDrugRunCesna = nil;
 	}
-//+ rouz edit (ChatGPT)
 	// Allocate the drug-run cesna from the vehicle pool without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	pDrugRunCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-	//- rouz edit (ChatGPT)
-	assert(pDrugRunCesna);
+		assert(pDrugRunCesna);
 	std::allocator<CPlane>().construct(pDrugRunCesna, MI_DEADDODO, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 	pDrugRunCesna->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 	pDrugRunCesna->SetStatus(STATUS_ABANDONED);
 	pDrugRunCesna->bIsLocked = true;
@@ -1201,25 +1158,17 @@ CPlane::CreateDropOffCesna(void)
 {
 	if(DropOffCesnaMissionStatus == CESNA_STATUS_FLYING){
 		CWorld::Remove(pDropOffCesna);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the drop-off cesna without invoking C++ delete.
 		pDropOffCesna->~CPlane();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetVehiclePool(), pDropOffCesna);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		pDropOffCesna = nil;
+				pDropOffCesna = nil;
 	}
-//+ rouz edit (ChatGPT)
 	// Allocate the drop-off cesna from the vehicle pool without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	pDropOffCesna = (CPlane*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-	//- rouz edit (ChatGPT)
-	assert(pDropOffCesna);
+		assert(pDropOffCesna);
 	std::allocator<CPlane>().construct(pDropOffCesna, MI_DEADDODO, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 	pDropOffCesna->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 	pDropOffCesna->SetStatus(STATUS_ABANDONED);
 	pDropOffCesna->bIsLocked = true;
@@ -1251,3 +1200,5 @@ CPlane::Save(void)
 {
 	RemoveTemporaryPlanes();
 }
+
+//- rouz edit (ChatGPT)

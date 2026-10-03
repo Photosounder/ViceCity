@@ -1,12 +1,12 @@
 #ifndef ALDEVICELIST_H
 #define ALDEVICELIST_H
 
-#include "oal_utils.h"
-#include <stdlib.h> // rouz edit (ChatGPT)
-
+//+ rouz edit (ChatGPT)
 #ifdef AUDIO_OAL
-#pragma warning(disable: 4786)  //disable warning "identifier was truncated to '255' characters in the browser information"
-
+#include <stdbool.h>
+#include <AL/al.h>
+#include <AL/alc.h>
+#define AL_DEVICE_CAPACITY 64
 enum
 {
 	ADEXT_EXT_CAPTURE = (1 << 0),
@@ -21,63 +21,41 @@ enum
 	ADEXT_EAX_RAM = (1 << 9),
 };
 
-struct ALDEVICEINFO {
+typedef struct ALDEVICEINFO {
 	char		   *strDeviceName;
 	int				iMajorVersion;
 	int				iMinorVersion;
 	unsigned int	uiSourceCount;
 	unsigned short  Extensions;
 	bool			bSelected;
-
-	ALDEVICEINFO() : iMajorVersion(0), iMinorVersion(0), uiSourceCount(0), bSelected(false)
-	{
-		strDeviceName = NULL;
-		Extensions = 0;
-	}
-
-	~ALDEVICEINFO()
-	{
-		free(strDeviceName); // rouz edit (ChatGPT)
-		strDeviceName = NULL;
-	}
-
-	void SetName(const char *name)
-	{
-		if(strDeviceName) free(strDeviceName); // rouz edit (ChatGPT)
-		strDeviceName = (char*)malloc(strlen(name) + 1); // rouz edit (ChatGPT)
-		strcpy(strDeviceName, name);
-	}
-};
-
+} ALDEVICEINFO;
 typedef ALDEVICEINFO *LPALDEVICEINFO;
-
-class ALDeviceList
-{
-private:
-	ALDEVICEINFO aDeviceInfo[64];
-	unsigned int nNumOfDevices;
-	int defaultDeviceIndex;
-	int filterIndex;
-
-public:
-	ALDeviceList ();
-	~ALDeviceList ();
-	unsigned int GetNumDevices();
-	const char *GetDeviceName(unsigned int index);
-	void GetDeviceVersion(unsigned int index, int *major, int *minor);
-	unsigned int GetMaxNumSources(unsigned int index);
-	bool IsExtensionSupported(int index, unsigned short ext);
-	int GetDefaultDevice();
-	void FilterDevicesMinVer(int major, int minor);
-	void FilterDevicesMaxVer(int major, int minor);
-	void FilterDevicesExtension(unsigned short ext);
-	void ResetFilters();
-	int GetFirstFilteredDevice();
-	int GetNextFilteredDevice();
-
-private:
-	unsigned int GetMaxNumSources();
-};
+typedef struct ALDeviceList {
+    ALDEVICEINFO aDeviceInfo[AL_DEVICE_CAPACITY];
+    unsigned int nNumOfDevices;
+    int defaultDeviceIndex;
+    int filterIndex;
+} ALDeviceList;
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-#endif // ALDEVICELIST_H
+void ALDeviceList_Init(ALDeviceList *list);
+void ALDeviceList_Destroy(ALDeviceList *list);
+unsigned int ALDeviceList_GetNumDevices(ALDeviceList *list);
+const char * ALDeviceList_GetDeviceName(ALDeviceList *list, unsigned int index);
+void ALDeviceList_GetDeviceVersion(ALDeviceList *list, unsigned int index, int *major, int *minor);
+unsigned int ALDeviceList_GetMaxNumSources(ALDeviceList *list, unsigned int index);
+bool ALDeviceList_IsExtensionSupported(ALDeviceList *list, int index, unsigned short ext);
+int ALDeviceList_GetDefaultDevice(ALDeviceList *list);
+void ALDeviceList_FilterDevicesMinVer(ALDeviceList *list, int major, int minor);
+void ALDeviceList_FilterDevicesMaxVer(ALDeviceList *list, int major, int minor);
+void ALDeviceList_FilterDevicesExtension(ALDeviceList *list, unsigned short ext);
+void ALDeviceList_ResetFilters(ALDeviceList *list);
+int ALDeviceList_GetFirstFilteredDevice(ALDeviceList *list);
+int ALDeviceList_GetNextFilteredDevice(ALDeviceList *list);
+#ifdef __cplusplus
+}
+#endif
+#endif
+//- rouz edit (ChatGPT)
+#endif

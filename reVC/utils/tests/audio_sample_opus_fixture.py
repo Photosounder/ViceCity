@@ -1,0 +1,14 @@
+"""Extract Opus mission and ped loaders to exercise their actual decode paths."""
+from pathlib import Path
+import re, sys
+root = Path(__file__).resolve().parents[2]
+source = (root / 'src/audio/sampman_oal.c').read_text()
+functions = []
+for name in ['LoadMissionAudio','LoadPedComment']:
+    match = re.search(r'bool8\s+SampleManager_' + name + r'\([^)]*\)\s*\{',source)
+    end = source.index('{',match.start())+1; depth=1
+    while depth:
+        depth += (source[end] == '{')-(source[end] == '}'); end+=1
+    functions.append(source[match.start():end])
+fixture=(root / 'utils/tests/audio_sample_opus.c.in').read_text()
+Path(sys.argv[1]).write_text(fixture.replace('@LOADERS@','\n'.join(functions)),newline='\n')

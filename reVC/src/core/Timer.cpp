@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #include "crossplatform.h"
@@ -76,7 +77,7 @@ void CTimer::Initialise(void)
 	
 	m_FrameCounter = 0;
 	
-	DMAudio.ResetTimers(m_snPreviousTimeInMilliseconds);
+	DMAudio_ResetTimers(m_snPreviousTimeInMilliseconds);
 	
 	debug("CTimer ready\n");
 }
@@ -329,3 +330,5 @@ uint32 CTimer::GetCyclesPerFrame()
 	return 20;
 }
 
+
+//- rouz edit (ChatGPT)

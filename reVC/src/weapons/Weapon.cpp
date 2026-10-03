@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Weapon.h"
@@ -337,7 +338,7 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 						isPlayer = true;
 				}
 				
-				DMAudio.PlayOneShot(shooterPed->m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+				DMAudio_PlayOneShot(shooterPed->m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 				
 				if ( isPlayer )
 				{
@@ -389,7 +390,7 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 				m_nAmmoTotal--;
 
 			if (m_eWeaponState == WEAPONSTATE_READY && m_eWeaponType == WEAPONTYPE_FLAMETHROWER)
-				DMAudio.PlayOneShot(((CPhysical*)shooter)->m_audioEntityId, SOUND_WEAPON_FLAMETHROWER_FIRE, 0.0f);
+				DMAudio_PlayOneShot(((CPhysical*)shooter)->m_audioEntityId, SOUND_WEAPON_FLAMETHROWER_FIRE, 0.0f);
 
 			m_eWeaponState = WEAPONSTATE_FIRING;
 
@@ -429,7 +430,7 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 
 			if (shooter->IsPed() && m_eWeaponType != WEAPONTYPE_CHAINSAW)
 			{
-				DMAudio.PlayOneShot(((CPed*)shooter)->m_audioEntityId, SOUND_MELEE_ATTACK_START, m_eWeaponType << 8);
+				DMAudio_PlayOneShot(((CPed*)shooter)->m_audioEntityId, SOUND_MELEE_ATTACK_START, m_eWeaponType << 8);
 			}
 		}
 
@@ -455,7 +456,7 @@ CWeapon::FireFromCar(CVehicle *shooter, bool left, bool right)
 
 	if ( FireInstantHitFromCar(shooter, left, right) )
 	{
-		DMAudio.PlayOneShot(shooter->m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+		DMAudio_PlayOneShot(shooter->m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 
 		if ( m_nAmmoInClip > 0 )
 			m_nAmmoInClip--;
@@ -1614,31 +1615,43 @@ CWeapon::DoBulletImpact(CEntity *shooter, CEntity *victim,
 		{
 			case ENTITY_TYPE_BUILDING:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, point->point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point->point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case ENTITY_TYPE_VEHICLE:
 			{
 				CStats::BulletsThatHit++;
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 				break;
 			}
 			case ENTITY_TYPE_PED:
 			{
 				CStats::BulletsThatHit++;
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 				((CPed*)victim)->Say(SOUND_PED_BULLET_HIT);
 				break;
 			}
 			case ENTITY_TYPE_OBJECT:
 			{
 				CStats::BulletsThatHit++;
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, point->point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point->point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case ENTITY_TYPE_DUMMY:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, point->point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point->point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			default: break;
@@ -2020,7 +2033,11 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 			{
 				case ENTITY_TYPE_BUILDING:
 				{
-					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, point.point);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = point.point;
+						PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 					break;
 				}
 				case ENTITY_TYPE_VEHICLE:
@@ -2029,7 +2046,7 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 						CStats::BulletsThatHit++;
 						statUpdated = true;
 					}
-					DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
+					DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 					break;
 				}
 				case ENTITY_TYPE_PED:
@@ -2038,7 +2055,7 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 						CStats::BulletsThatHit++;
 						statUpdated = true;
 					}
-					DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
+					DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 					((CPed*)victim)->Say(SOUND_PED_BULLET_HIT);
 					break;
 				}
@@ -2048,12 +2065,20 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 						CStats::BulletsThatHit++;
 						statUpdated = true;
 					}
-					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, point.point);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = point.point;
+						PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 					break;
 				}
 				case ENTITY_TYPE_DUMMY:
 				{
-					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, point.point);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = point.point;
+						PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 					break;
 				}
 				default: break;
@@ -2344,16 +2369,12 @@ CWeapon::TakePhotograph(CEntity *shooter)
 		CStats::PhotosTaken++;
 		bPhotographHasBeenTaken = true;
 		
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
-		//- rouz edit (ChatGPT)
-		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+				{
+						// Access raw storage through the C store or pool API
 			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-			//- rouz edit (ChatGPT)
-			if ( ped )
+						if ( ped )
 			{
 				if ( (ped->GetPosition() - TheCamera.GetPosition()).Magnitude() < 125.0f )
 				{
@@ -2661,28 +2682,40 @@ CWeapon::FireInstantHitFromCar(CVehicle *shooter, bool left, bool right)
 		{
 			case ENTITY_TYPE_BUILDING:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case ENTITY_TYPE_VEHICLE:
 			{
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 				break;
 			}
 			case ENTITY_TYPE_PED:
 			{
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 				((CPed*)victim)->Say(SOUND_PED_BULLET_HIT);
 				break;
 			}
 			case ENTITY_TYPE_OBJECT:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case ENTITY_TYPE_DUMMY:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			default: break;
@@ -2948,7 +2981,7 @@ CWeapon::Update(int32 audioEntity, CPed *pedToAdjustSound)
 			{
 				uint32 timePassed = m_nTimer - CWeaponInfo::ms_aReloadSampleTime[m_eWeaponType];
 				if ( CTimer::GetPreviousTimeInMilliseconds() < timePassed && CTimer::GetTimeInMilliseconds() >= timePassed )
-					DMAudio.PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, 0.0f);
+					DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, 0.0f);
 			}
 
 			if ( CTimer::GetTimeInMilliseconds() > m_nTimer )
@@ -2999,14 +3032,14 @@ CWeapon::Update(int32 audioEntity, CPed *pedToAdjustSound)
 							break;
 					}
 					if (reloadAssoc->GetProgress() >= soundStart && (reloadAssoc->currentTime - reloadAssoc->timeStep) / reloadAssoc->hierarchy->totalLength < soundStart)
-						DMAudio.PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
+						DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
 					if (CTimer::GetTimeInMilliseconds() > m_nTimer && reloadAssoc->GetProgress() < 0.9f) {
 						m_nTimer = CTimer::GetTimeInMilliseconds();
 					}
 				} else {
 					uint32 timePassed = m_nTimer - CWeaponInfo::ms_aReloadSampleTime[m_eWeaponType];
 					if (CTimer::GetPreviousTimeInMilliseconds() < timePassed && CTimer::GetTimeInMilliseconds() >= timePassed)
-						DMAudio.PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
+						DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
 				}
 			}
 
@@ -3088,32 +3121,44 @@ FireOneInstantHitRound(CVector *source, CVector *target, int32 damage)
 		{
 			case ENTITY_TYPE_BUILDING:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_1, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				CParticle::AddParticle(PARTICLE_SMOKE, point.point, CVector(0.0f, 0.0f, 0.01f));
 				break;
 			}
 			case ENTITY_TYPE_VEHICLE:
 			{
 				CStats::BulletsThatHit++;
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 				break;
 			}
 			case ENTITY_TYPE_PED:
 			{
 				CStats::BulletsThatHit++;
-				DMAudio.PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
+				DMAudio_PlayOneShot(((CPhysical*)victim)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 				((CPed*)victim)->Say(SOUND_PED_BULLET_HIT);
 				break;
 			}
 			case ENTITY_TYPE_OBJECT:
 			{
 				CStats::BulletsThatHit++;
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case ENTITY_TYPE_DUMMY:
 			{
-				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, point.point);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = point.point;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_GROUND_3, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			default: break;
@@ -3125,7 +3170,11 @@ FireOneInstantHitRound(CVector *source, CVector *target, int32 damage)
 		if ( CWaterLevel::GetWaterLevel((*target).x, (*target).y, (*target).z + 10.0f, &waterLevel, false) )
 		{
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, CVector((*target).x, (*target).y, waterLevel), CVector(0.0f, 0.0f, 0.01f));
-			PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_WATER, point.point); // no sound(empty)
+			{
+				// Evaluate the game position once before passing its components to C
+				const CVector scriptPosition = point.point;
+				PlayOneShotScriptObject(SCRIPT_SOUND_BULLET_HIT_WATER, scriptPosition.x, scriptPosition.y, scriptPosition.z); // no sound(empty)
+			}
 		}
 	}
 }
@@ -3158,16 +3207,12 @@ CWeapon::MakePedsJumpAtShot(CPhysical *shooter, CVector *source, CVector *target
 	float minz = Min(source->z, target->z) - 2.0f;
 	float maxz = Max(source->z, target->z) + 2.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
-	//- rouz edit (ChatGPT)
-	{
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
+		{
+				// Access raw storage through the C store or pool API
 		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-
+		
 		if ( ped )
 		{
 			if (   ped->GetPosition().x > minx && ped->GetPosition().x < maxx
@@ -3352,7 +3397,7 @@ CWeapon::CheckForShootingVehicleOccupant(CEntity **victim, CColPoint *point, eWe
 						car->Damage.ProgressPanelDamage(VEHPANEL_WINDSCREEN);
 
 					car->SetPanelDamage(CAR_WINDSCREEN, VEHPANEL_WINDSCREEN, true);
-					DMAudio.PlayOneShot(veh->m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.f);
+					DMAudio_PlayOneShot(veh->m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.f);
 				}
 			}
 		}
@@ -3365,10 +3410,8 @@ CWeapon::CheckForShootingVehicleOccupant(CEntity **victim, CColPoint *point, eWe
 }
 
 #ifdef COMPATIBLE_SAVES
-//+ rouz edit (ChatGPT)
 #define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
 #define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
-//- rouz edit (ChatGPT)
 void
 CWeapon::Save(uint8*& buf)
 {
@@ -3378,11 +3421,9 @@ CWeapon::Save(uint8*& buf)
 	CopyToBuf(buf, m_nAmmoTotal);
 	CopyToBuf(buf, m_nTimer);
 	CopyToBuf(buf, m_bAddRotOffset);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 3);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CWeapon::Load(uint8*& buf)
@@ -3393,12 +3434,11 @@ CWeapon::Load(uint8*& buf)
 	CopyFromBuf(buf, m_nAmmoTotal);
 	CopyFromBuf(buf, m_nTimer);
 	CopyFromBuf(buf, m_bAddRotOffset);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 3);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 #undef CopyFromBuf
 #undef CopyToBuf
 #endif
+//- rouz edit (ChatGPT)

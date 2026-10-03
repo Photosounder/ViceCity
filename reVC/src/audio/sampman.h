@@ -1,17 +1,18 @@
 #pragma once
+#include <stdint.h> // rouz edit (ChatGPT)
+#include "../core/config.h" // rouz edit (ChatGPT)
 #include "AudioSamples.h"
+#include "AudioSampleConfig.h" // rouz edit (ChatGPT)
 #include "audio_enums.h"
 
-#define MAX_VOLUME 127
-#define MAX_FREQ DIGITALRATE
 
-struct tSample {
-	uint32 nOffset;
-	uint32 nSize;
-	uint32 nFrequency;
-	uint32 nLoopStart;
-	int32 nLoopEnd;
-};
+typedef struct tSample {
+	uint32_t nOffset;
+	uint32_t nSize;
+	uint32_t nFrequency;
+	uint32_t nLoopStart;
+	int32_t nLoopEnd;
+} tSample;
 
 #ifdef GTA_PS2
 #define PS2BANK(e) e
@@ -112,7 +113,6 @@ enum
 #endif
 };
 #define MAX_PEDSFX                 7
-#define PED_BLOCKSIZE              79000
 
 #define MAXPROVIDERS               64
 
@@ -128,9 +128,6 @@ enum
 
 #define MAX_STREAMS                3
 
-#define DIGITALRATE                32000
-#define DIGITALBITS                16
-#define DIGITALCHANNELS            2
 
 #ifdef FIX_BUGS
 #define MAX_DIGITAL_MIXER_CHANNELS (MAXCHANNELS+MAX_STREAMS*2+MAX2DCHANNELS)
@@ -138,19 +135,26 @@ enum
 #define MAX_DIGITAL_MIXER_CHANNELS (MAXCHANNELS+MAX_STREAMS*2)
 #endif 
 
-static_assert( NUM_CHANNELS == MAXCHANNELS + MAX2DCHANNELS, "The number of channels doesn't match with an enum" );
+//+ rouz edit (ChatGPT)
+#ifdef __cplusplus
+static_assert(NUM_CHANNELS == MAXCHANNELS + MAX2DCHANNELS, "The number of channels doesn't match with an enum");
+#else
+_Static_assert(NUM_CHANNELS == MAXCHANNELS + MAX2DCHANNELS, "The number of channels doesn't match with an enum");
+#endif
+//- rouz edit (ChatGPT)
 
-class cSampleManager
-{
-	uint8   m_nEffectsVolume;
-	uint8   m_nMusicVolume;
-	uint8   m_nMP3BoostVolume;
-	uint8   m_nEffectsFadeVolume;
-	uint8   m_nMusicFadeVolume;
-	bool8   m_nMonoMode;
+//+ rouz edit (ChatGPT)
+typedef struct cSampleManager {
+
+	uint8_t   m_nEffectsVolume;
+	uint8_t   m_nMusicVolume;
+	uint8_t   m_nMP3BoostVolume;
+	uint8_t   m_nEffectsFadeVolume;
+	uint8_t   m_nMusicFadeVolume;
+	uint8_t   m_nMonoMode;
 	char    m_szCDRomRootPath[80];
-	bool8   m_bInitialised;
-	uint8   m_nNumberOfProviders;
+	uint8_t   m_bInitialised;
+	uint8_t   m_nNumberOfProviders;
 	char   *m_aAudioProviders[MAXPROVIDERS];
 	tSample m_aSamples[TOTAL_AUDIO_SAMPLES];
 	char    m_MiscomPath[260];
@@ -158,107 +162,125 @@ class cSampleManager
 	char    m_MP3FilesPath[188];
 	void   *m_aChannels[18];
 
-public:
-	
-	
-
-	cSampleManager(void);
-	~cSampleManager(void);
-
-#ifdef EXTERNAL_3D_SOUND
-	void SetSpeakerConfig(int32 nConfig);
-	uint32 GetMaximumSupportedChannels(void);
-	
-	uint32 GetNum3DProvidersAvailable(void);
-	void SetNum3DProvidersAvailable(uint32 num);
-	
-	char *Get3DProviderName(uint8 id);
-	void Set3DProviderName(uint8 id, char *name);
-	
-	int8 GetCurrent3DProviderIndex(void);
-	int8 SetCurrent3DProvider(uint8 which);
-
-	int8 AutoDetect3DProviders();
+} cSampleManager;
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-	bool8 IsMP3RadioChannelAvailable(void);
 	
-	void ReleaseDigitalHandle  (void);
-	void ReacquireDigitalHandle(void);
 	
-	bool8 Initialise(void);
-	void  Terminate (void);
-		
-	bool8 CheckForAnAudioFileOnCD(void);
-	char  GetCDAudioDriveLetter  (void);
-	
-	void UpdateEffectsVolume(void);
 
-	void SetEffectsMasterVolume(uint8 nVolume);
-	void SetMusicMasterVolume  (uint8 nVolume);
-	void SetMP3BoostVolume     (uint8 nVolume);
-	void SetEffectsFadeVolume  (uint8 nVolume);
-	void SetMusicFadeVolume    (uint8 nVolume);
-	void SetMonoMode           (bool8 nMode);
+#ifdef EXTERNAL_3D_SOUND
+	void SampleManager_SetSpeakerConfig(cSampleManager *manager, int32_t nConfig);
+	uint32_t SampleManager_GetMaximumSupportedChannels(cSampleManager *manager);
 	
-	bool8 LoadSampleBank    (uint8 nBank);
-	void  UnloadSampleBank  (uint8 nBank);
-	int8  IsSampleBankLoaded(uint8 nBank);
+	uint32_t SampleManager_GetNum3DProvidersAvailable(cSampleManager *manager);
+	void SampleManager_SetNum3DProvidersAvailable(cSampleManager *manager, uint32_t num);
+	
+	char * SampleManager_Get3DProviderName(cSampleManager *manager, uint8_t id);
+	void SampleManager_Set3DProviderName(cSampleManager *manager, uint8_t id, char *name);
+	
+	int8_t SampleManager_GetCurrent3DProviderIndex(cSampleManager *manager);
+	int8_t SampleManager_SetCurrent3DProvider(cSampleManager *manager, uint8_t which);
+
+	int8_t SampleManager_AutoDetect3DProviders(cSampleManager *manager);
+#endif
+
+	uint8_t SampleManager_IsMP3RadioChannelAvailable(cSampleManager *manager);
+	
+	void SampleManager_ReleaseDigitalHandle(cSampleManager *manager);
+	void SampleManager_ReacquireDigitalHandle(cSampleManager *manager);
+	
+	uint8_t SampleManager_Initialise(cSampleManager *manager);
+	void SampleManager_Terminate(cSampleManager *manager);
+		
+	uint8_t SampleManager_CheckForAnAudioFileOnCD(cSampleManager *manager);
+	char SampleManager_GetCDAudioDriveLetter(cSampleManager *manager);
+	
+	void SampleManager_UpdateEffectsVolume(cSampleManager *manager);
+
+	void SampleManager_SetEffectsMasterVolume(cSampleManager *manager, uint8_t nVolume);
+	void SampleManager_SetMusicMasterVolume(cSampleManager *manager, uint8_t nVolume);
+	void SampleManager_SetMP3BoostVolume(cSampleManager *manager, uint8_t nVolume);
+	void SampleManager_SetEffectsFadeVolume(cSampleManager *manager, uint8_t nVolume);
+	void SampleManager_SetMusicFadeVolume(cSampleManager *manager, uint8_t nVolume);
+	void SampleManager_SetMonoMode(cSampleManager *manager, uint8_t nMode);
+	
+	uint8_t SampleManager_LoadSampleBank(cSampleManager *manager, uint8_t nBank);
+	void SampleManager_UnloadSampleBank(cSampleManager *manager, uint8_t nBank);
+	int8_t SampleManager_IsSampleBankLoaded(cSampleManager *manager, uint8_t nBank);
 
 #if defined (GTA_PS2) || defined (FIX_BUGS)
-	uint8 IsMissionAudioLoaded(uint8 nSlot, uint32 nSample);
-	bool8 LoadMissionAudio    (uint8 nSlot, uint32 nSample);
+	uint8_t SampleManager_IsMissionAudioLoaded(cSampleManager *manager, uint8_t nSlot, uint32_t nSample);
+	uint8_t SampleManager_LoadMissionAudio(cSampleManager *manager, uint8_t nSlot, uint32_t nSample);
 #endif
 	
-	uint8 IsPedCommentLoaded(uint32 nComment);
-	bool8 LoadPedComment    (uint32 nComment);
-	int32 GetBankContainingSound(uint32 offset);
+	uint8_t SampleManager_IsPedCommentLoaded(cSampleManager *manager, uint32_t nComment);
+	uint8_t SampleManager_LoadPedComment(cSampleManager *manager, uint32_t nComment);
+	int32_t SampleManager_GetBankContainingSound(cSampleManager *manager, uint32_t offset);
 
-	int32 _GetPedCommentSlot(uint32 nComment);
+	int32_t SampleManager__GetPedCommentSlot(cSampleManager *manager, uint32_t nComment);
 	
-	uint32 GetSampleBaseFrequency  (uint32 nSample);
-	uint32 GetSampleLoopStartOffset(uint32 nSample);
-	int32  GetSampleLoopEndOffset  (uint32 nSample);
-	uint32 GetSampleLength         (uint32 nSample);
+	uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager, uint32_t nSample);
+	uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager, uint32_t nSample);
+	int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager, uint32_t nSample);
+	uint32_t SampleManager_GetSampleLength(cSampleManager *manager, uint32_t nSample);
 	
-	bool8  UpdateReverb(void);
+	uint8_t SampleManager_UpdateReverb(cSampleManager *manager);
 	
-	void  SetChannelReverbFlag    (uint32 nChannel, bool8 nReverbFlag);
-	bool8 InitialiseChannel       (uint32 nChannel, uint32 nSfx, uint8 nBank);
+	void SampleManager_SetChannelReverbFlag(cSampleManager *manager, uint32_t nChannel, uint8_t nReverbFlag);
+	uint8_t SampleManager_InitialiseChannel(cSampleManager *manager, uint32_t nChannel, uint32_t nSfx, uint8_t nBank);
 #ifdef EXTERNAL_3D_SOUND
-	void  SetChannelEmittingVolume(uint32 nChannel, uint32 nVolume);
-	void  SetChannel3DPosition    (uint32 nChannel, float fX, float fY, float fZ);
-	void  SetChannel3DDistances   (uint32 nChannel, float fMax, float fMin);
+	void SampleManager_SetChannelEmittingVolume(cSampleManager *manager, uint32_t nChannel, uint32_t nVolume);
+	void SampleManager_SetChannel3DPosition(cSampleManager *manager, uint32_t nChannel, float fX, float fY, float fZ);
+	void SampleManager_SetChannel3DDistances(cSampleManager *manager, uint32_t nChannel, float fMax, float fMin);
 #endif
-	void  SetChannelVolume        (uint32 nChannel, uint32 nVolume);
-	void  SetChannelPan           (uint32 nChannel, uint32 nPan);
-	void  SetChannelFrequency     (uint32 nChannel, uint32 nFreq);
-	void  SetChannelLoopPoints    (uint32 nChannel, uint32 nLoopStart, int32 nLoopEnd);
-	void  SetChannelLoopCount     (uint32 nChannel, uint32 nLoopCount);
-	bool8 GetChannelUsedFlag      (uint32 nChannel);
-	void  StartChannel            (uint32 nChannel);
-	void  StopChannel             (uint32 nChannel);
+	void SampleManager_SetChannelVolume(cSampleManager *manager, uint32_t nChannel, uint32_t nVolume);
+	void SampleManager_SetChannelPan(cSampleManager *manager, uint32_t nChannel, uint32_t nPan);
+	void SampleManager_SetChannelFrequency(cSampleManager *manager, uint32_t nChannel, uint32_t nFreq);
+	void SampleManager_SetChannelLoopPoints(cSampleManager *manager, uint32_t nChannel, uint32_t nLoopStart, int32_t nLoopEnd);
+	void SampleManager_SetChannelLoopCount(cSampleManager *manager, uint32_t nChannel, uint32_t nLoopCount);
+	uint8_t SampleManager_GetChannelUsedFlag(cSampleManager *manager, uint32_t nChannel);
+	void SampleManager_StartChannel(cSampleManager *manager, uint32_t nChannel);
+	void SampleManager_StopChannel(cSampleManager *manager, uint32_t nChannel);
 	
-	void  PreloadStreamedFile                                    (uint32 nFile, uint8 nStream = 0);
-	void  PauseStream                                        (bool8 nPauseFlag, uint8 nStream = 0);
-	void  StartPreloadedStreamedFile                                           (uint8 nStream = 0);
-	bool8 StartStreamedFile                         (uint32 nFile, uint32 nPos, uint8 nStream = 0);
-	void  StopStreamedFile                                                     (uint8 nStream = 0);
-	int32 GetStreamedFilePosition                                              (uint8 nStream = 0);
-	void  SetStreamedVolumeAndPan(uint8 nVolume, uint8 nPan, bool8 nEffectFlag, uint8 nStream = 0);
-	int32 GetStreamedFileLength                                                (uint8 nStream = 0);
-	bool8 IsStreamPlaying                                                      (uint8 nStream = 0);
-	void  SetStreamedFileLoopFlag                             (bool8 nLoopFlag, uint8 nStream = 0);
+	void SampleManager_PreloadStreamedFile(cSampleManager *manager, uint32_t nFile, uint8_t nStream);
+	void SampleManager_PauseStream(cSampleManager *manager, uint8_t nPauseFlag, uint8_t nStream);
+	void SampleManager_StartPreloadedStreamedFile(cSampleManager *manager, uint8_t nStream);
+	uint8_t SampleManager_StartStreamedFile(cSampleManager *manager, uint32_t nFile, uint32_t nPos, uint8_t nStream);
+	void SampleManager_StopStreamedFile(cSampleManager *manager, uint8_t nStream);
+	int32_t SampleManager_GetStreamedFilePosition(cSampleManager *manager, uint8_t nStream);
+	void SampleManager_SetStreamedVolumeAndPan(cSampleManager *manager, uint8_t nVolume, uint8_t nPan, uint8_t nEffectFlag, uint8_t nStream);
+	int32_t SampleManager_GetStreamedFileLength(cSampleManager *manager, uint8_t nStream);
+	uint8_t SampleManager_IsStreamPlaying(cSampleManager *manager, uint8_t nStream);
+	void SampleManager_SetStreamedFileLoopFlag(cSampleManager *manager, uint8_t nLoopFlag, uint8_t nStream);
 #ifdef AUDIO_OAL
-	void  Service(void);
+	void SampleManager_Service(cSampleManager *manager);
 #endif
-	bool8 InitialiseSampleBanks(void);
+	uint8_t SampleManager_InitialiseSampleBanks(cSampleManager *manager);
 
-	uint8 GetMusicVolume() const { return m_nMusicVolume;  }
-};
+	
 
+static inline uint8_t SampleManager_GetMusicVolume(const cSampleManager *manager)
+{
+    // Read the current music volume through the C state interface
+    return manager->m_nMusicVolume;
+}
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern cSampleManager SampleManager;
-extern uint32 BankStartOffset[MAX_SFX_BANKS];
+extern uint32_t BankStartOffset[MAX_SFX_BANKS];
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)
 
 #ifdef PS2_AUDIO_PATHS
 static char PS2StreamedNameTable[][40] =

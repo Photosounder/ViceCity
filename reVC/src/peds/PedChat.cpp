@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "Camera.h"
 #include "DMAudio.h"
@@ -84,7 +85,7 @@ CPed::ServiceTalking(void)
 			m_soundStart = CTimer::GetTimeInMilliseconds() - 1;
 
 		if (CTimer::GetTimeInMilliseconds() > m_soundStart) {
-			DMAudio.PlayOneShot(m_audioEntityId, m_queuedSound, 1.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, m_queuedSound, 1.0f);
 			m_lastSoundStart = CTimer::GetTimeInMilliseconds();
 			m_soundStart =
 				CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nFixedDelayTime
@@ -151,3 +152,4 @@ CPed::Say(uint16 audio)
 		}
 	}
 }
+//- rouz edit (ChatGPT)

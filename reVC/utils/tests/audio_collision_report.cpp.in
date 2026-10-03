@@ -1,0 +1,121 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioGeometry.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <float.h>
+using bool8=uint8_t;
+using uint8=uint8_t;
+#define SQR(x) ((x)*(x))
+#define COLLISION_MAX_DIST 60
+struct CVector {
+    float x,y,z;
+    CVector()=default;
+    CVector(float a,float b,float c):x(a),y(b),z(c) {}
+};
+static CVector operator+(const CVector &a,const CVector &b) {
+    // Store each original vector sum in float coordinates
+    return CVector(a.x+b.x,a.y+b.y,a.z+b.z);
+}
+static CVector operator*(const CVector &a,float b) {
+    // Scale the stored vector components independently
+    return CVector(a.x*b,a.y*b,a.z*b);
+}
+class CEntity {public:unsigned id;bool building;CVector position;bool IsBuilding();const CVector &GetPosition();};
+struct cAudioManager {
+@FIELDS@
+    void ReportCollision(CEntity *,CEntity *,uint8_t,uint8_t,float,float);
+};
+extern "C" { cAudioManager AudioManager; }
+static cAudioManager other,*active;
+static CEntity entities[2];
+static unsigned seedValue,cases,callbacks,buildings,positions,cameras;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioCollisionReport_Report(cAudioManager *,CEntity *,CEntity *,uint8_t,uint8_t,float,float);
+extern "C" void TestCollisionReportC(cAudioManager *,CEntity *,CEntity *,uint8_t,uint8_t,float,float,int);
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &p) {
+    // Copy game coordinates into the plain C position record
+    return {p.x,p.y,p.z};
+}
+static float AudioGeometry_DistanceVector(const CVector &p) {
+    // Use the same production C distance kernel in both implementations
+    AudioSoundPosition copy=AudioSoundPosition_FromVector(p);return AudioGeometry_DistanceSquared(&copy);
+}
+static void value(uint32_t v) {
+    // Hash scalar state and callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static unsigned identity(CEntity *p) {
+    // Replace process addresses with stable entity identities
+    return p==&entities[0]?1:p==&entities[1]?2:0;
+}
+static void observe() {
+    // Observe every owner byte after normalizing collision entity pointers
+    cAudioManager copy=*active;auto &m=copy.m_sCollisionManager;
+    for(unsigned i=0;i<NUMAUDIOCOLLISIONS;++i) {
+        m.m_asCollisions1[i].m_pEntity1=(CEntity *)(uintptr_t)identity(m.m_asCollisions1[i].m_pEntity1);
+        m.m_asCollisions1[i].m_pEntity2=(CEntity *)(uintptr_t)identity(m.m_asCollisions1[i].m_pEntity2);
+        m.m_asCollisions2[i].m_pEntity1=(CEntity *)(uintptr_t)identity(m.m_asCollisions2[i].m_pEntity1);
+        m.m_asCollisions2[i].m_pEntity2=(CEntity *)(uintptr_t)identity(m.m_asCollisions2[i].m_pEntity2);
+    }
+    m.m_sQueue.m_pEntity1=(CEntity *)(uintptr_t)identity(m.m_sQueue.m_pEntity1);
+    m.m_sQueue.m_pEntity2=(CEntity *)(uintptr_t)identity(m.m_sQueue.m_pEntity2);
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+}
+bool CEntity::IsBuilding() {
+    // Change entry gates after their original single check to detect unintended rechecks
+    ++callbacks;++buildings;value(10+id);
+    if(seedValue&1024) {active->m_bIsInitialised=0;active->m_bIsPaused=1;}
+    return building;
+}
+const CVector &CEntity::GetPosition() {
+    // Mutate positions on repeated queries to expose copy order and aliasing
+    ++callbacks;++positions;value(20+id);
+    if(seedValue&2048) position.x+=1.0f;
+    return position;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *p) {
+    // Observe the distance query and modify a previously checked collision entity
+    ++callbacks;++cameras;value(30);*p={0,0,0};
+    if(seedValue&4096) active->m_nCollisionEntity=-1;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *p) {
+    // Supply the unused translation adapter required by the production geometry object
+    memset(p,0,sizeof(*p));
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+int main() {
+    // Exercise thresholds, queue capacities, building shortcuts, aliasing and float edge cases
+    const float powers[]={0.0f,0.009999f,0.01f,0.010001f,-1.0f,NAN,INFINITY};
+    const float speeds[]={0.0f,0.001599f,0.0016f,0.001601f,-1.0f,NAN,INFINITY};
+    const float coordinates[]={0.0f,-0.0f,59.999f,60.0f,60.001f,-60.0f,300.0f,FLT_MAX,NAN,INFINITY};
+    for(unsigned seed=0;seed<8192;++seed) {
+        seedValue=seed;active=(seed&1)?&other:&AudioManager;memset(active,0,sizeof(*active));
+        AudioCollisionManager_Init(&active->m_sCollisionManager);
+        active->m_bIsInitialised=seed%11!=0;active->m_bIsPaused=seed%13==0;
+        active->m_nCollisionEntity=seed%17==0?-1:5;
+        for(unsigned i=0;i<seed%14;++i) {
+            auto &q=active->m_sCollisionManager.m_sQueue;q.m_pEntity1=&entities[0];q.m_pEntity2=&entities[1];
+            q.m_nBaseVolume=7;q.m_fDistance=(float)((i*37+seed)%3600);
+            AudioCollisionManager_AddCollisionToRequestedQueue(&active->m_sCollisionManager);
+        }
+        for(unsigned i=0;i<2;++i) {
+            entities[i].id=i;entities[i].building=(seed>>(i+1))&1;
+            entities[i].position=CVector(coordinates[(seed/8+i)%10],coordinates[(seed/80+i*3)%10],coordinates[(seed/800+i*5)%10]);
+        }
+        CEntity *a=&entities[0],*b=&entities[(seed>>3)&1];
+        float power=powers[(seed/7)%7],speed=speeds[seed%7];
+        if(!active->m_bIsInitialised || active->m_bIsPaused || active->m_nCollisionEntity<0 || (speed<0.0016f && power<0.01f)) a=b=NULL;
+        @CALL@
+        observe();++cases;
+    }
+    // Require all game query boundaries to be exercised
+    if(!buildings || !positions || !cameras) return 2;
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "../core/config.h" // rouz edit (ChatGPT)
 
 #define FIRST_PLAYER_COMMENT(e) PLAYER_COMMENTS_START, e = PLAYER_COMMENTS_START
 #define LAST_PLAYER_COMMENT(e) e, PLAYER_COMMENTS_END = e

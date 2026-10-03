@@ -28,6 +28,15 @@ CDummyPool *CPools::ms_pDummyPool;
 CAudioScriptObjectPool *CPools::ms_pAudioScriptObjectPool;
 CColModelPool *CPools::ms_pColModelPool;
 
+//+ rouz edit (ChatGPT)
+CPool *
+CPools_GetAudioScriptObjectPool(void)
+{
+	// Expose the existing game pool to C audio script code
+	return CPools::GetAudioScriptObjectPool();
+}
+//- rouz edit (ChatGPT)
+
 #if defined GTA_PS2 && !defined MASTER	// or USE_CUSTOM_ALLOCATOR
 // not in VC. perhaps ifdef'ed away
 #define CHECKMEM(msg) CMemCheck::AllocateMemCheckBlock(msg)

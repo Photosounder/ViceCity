@@ -1,0 +1,124 @@
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <stddef.h>
+#include <stdint.h>
+@HEADERS@
+
+#ifdef __cplusplus
+#define STATE_ALIGNMENT(type) alignof(type)
+#else
+#define STATE_ALIGNMENT(type) _Alignof(type)
+#endif
+
+static uint64_t digest = 1469598103934665603ULL;
+
+static void record(const void *bytes, size_t size)
+{
+    // Compare defined field values and queue behavior byte for byte
+    const uint8_t *p = (const uint8_t *)bytes;
+    for (size_t i = 0; i < size; ++i) digest = (digest ^ p[i]) * 1099511628211ULL;
+}
+
+@ADAPTERS@
+
+static void record_queue(const cPoliceRadioQueue *queue)
+{
+    // Observe initialized samples and cursors without reading struct padding
+    record(queue->m_aSamples, sizeof(queue->m_aSamples));
+    record(&queue->m_nSamplesInQueue, sizeof(queue->m_nSamplesInQueue));
+    record(&queue->m_nAddOffset, sizeof(queue->m_nAddOffset));
+    record(&queue->m_nRemoveOffset, sizeof(queue->m_nRemoveOffset));
+}
+
+static void record_params(const cPedParams *ped, const cVehicleParams *vehicle)
+{
+    // Observe every constructor-initialized field without relying on padding bytes
+    record(&ped->m_bDistanceCalculated, sizeof(ped->m_bDistanceCalculated));
+    record(&ped->m_fDistance, sizeof(ped->m_fDistance));
+    record(&ped->m_pPed, sizeof(ped->m_pPed));
+    record(&vehicle->m_VehicleType, sizeof(vehicle->m_VehicleType));
+    record(&vehicle->m_bDistanceCalculated, sizeof(vehicle->m_bDistanceCalculated));
+    record(&vehicle->m_fDistance, sizeof(vehicle->m_fDistance));
+    record(&vehicle->m_pVehicle, sizeof(vehicle->m_pVehicle));
+    record(&vehicle->m_pTransmission, sizeof(vehicle->m_pTransmission));
+    record(&vehicle->m_nIndex, sizeof(vehicle->m_nIndex));
+    record(&vehicle->m_fVelocityChange, sizeof(vehicle->m_fVelocityChange));
+}
+
+int main(void)
+{
+    // Observe the original sizes and offsets under each native ABI
+    const size_t layout[] = {
+        sizeof(cAudioScriptObjectManager), sizeof(cPedParams), sizeof(cVehicleParams), sizeof(cPoliceRadioQueue),
+        STATE_ALIGNMENT(cAudioScriptObjectManager), STATE_ALIGNMENT(cPedParams),
+        STATE_ALIGNMENT(cVehicleParams), STATE_ALIGNMENT(cPoliceRadioQueue),
+        offsetof(cPedParams, m_pPed), offsetof(cVehicleParams, m_pVehicle),
+        offsetof(cVehicleParams, m_pTransmission), offsetof(cVehicleParams, m_nIndex),
+        offsetof(cPoliceRadioQueue, m_nSamplesInQueue), offsetof(cPoliceRadioQueue, m_nAddOffset),
+        offsetof(cPoliceRadioQueue, m_nRemoveOffset)
+    };
+    record(layout, sizeof(layout));
+    cAudioScriptObjectManager manager;
+    cPedParams pedestrian;
+    cVehicleParams vehicle;
+    cPoliceRadioQueue queue;
+    for (unsigned int seed = 0; seed < 256; ++seed) {
+        // Compare constructor-initialized fields under varied preceding storage values
+        memset((void *)&manager, seed, sizeof(manager));
+        memset((void *)&pedestrian, seed, sizeof(pedestrian));
+        memset((void *)&vehicle, seed, sizeof(vehicle));
+        memset((void *)&queue, seed, sizeof(queue));
+        @MANAGER_INIT@(&manager);
+        @PED_INIT@(&pedestrian);
+        @VEHICLE_INIT@(&vehicle);
+        @QUEUE_INIT@(&queue);
+        // Initialize retained storage while its object lifetime is active
+        for (int i = 0; i < NUM_SCRIPT_MAX_ENTITIES; ++i) manager.m_anScriptObjectEntityIndices[i] = seed * 100 + i;
+        for (int i = 0; i < POLICE_RADIO_QUEUE_MAX_SAMPLES; ++i) queue.m_aSamples[i] = seed * 200 + i;
+        assert(manager.m_nScriptObjectEntityTotal == 0);
+        assert(!pedestrian.m_bDistanceCalculated && pedestrian.m_fDistance == 0 && pedestrian.m_pPed == NULL);
+        assert(vehicle.m_VehicleType == -1 && !vehicle.m_bDistanceCalculated && vehicle.m_pVehicle == NULL);
+        assert(vehicle.m_pTransmission == NULL && vehicle.m_fDistance == 0 && vehicle.m_nIndex == 0 && vehicle.m_fVelocityChange == 0);
+        record(&manager, sizeof(manager)); record_params(&pedestrian, &vehicle);
+        record_queue(&queue);
+        manager.m_nScriptObjectEntityTotal = 37;
+        @MANAGER_RESET@(&manager);
+        for (int i = 0; i < NUM_SCRIPT_MAX_ENTITIES; ++i) assert(manager.m_anScriptObjectEntityIndices[i] == (int32_t)(seed * 100 + i));
+        record(&manager, sizeof(manager));
+    }
+
+    // Exercise empty, full, and wraparound transitions at every starting offset
+    @QUEUE_RESET@(&queue);
+    assert(@REMOVE@(&queue) == NO_SAMPLE);
+    for (uint32_t turn = 0; turn < 180; ++turn) {
+        // Fill the queue and confirm overflow leaves all storage untouched
+        for (uint32_t i = 0; i < POLICE_RADIO_QUEUE_MAX_SAMPLES; ++i) assert(@ADD@(&queue, turn * 100 + i));
+        uint8_t saved[sizeof(queue)];
+        memcpy(saved, &queue, sizeof(queue));
+        assert(!@ADD@(&queue, UINT32_MAX));
+        assert(!memcmp(saved, &queue, sizeof(queue)));
+        for (uint32_t i = 0; i < POLICE_RADIO_QUEUE_MAX_SAMPLES; ++i) assert(@REMOVE@(&queue) == turn * 100 + i);
+        assert(@REMOVE@(&queue) == NO_SAMPLE);
+        assert(@ADD@(&queue, NO_SAMPLE));
+        assert(@REMOVE@(&queue) == NO_SAMPLE);
+        record_queue(&queue);
+    }
+
+    // Compare a long mixed trace with retained samples and occasional resets
+    uint32_t random = 0x93b217a5;
+    for (uint32_t i = 0; i < 200000; ++i) {
+        // Alternate producer and consumer pressure using a deterministic generator
+        random = random * 1664525u + 1013904223u;
+        uint32_t result;
+        if ((random & 4095u) == 0) { @QUEUE_RESET@(&queue); result = 17; }
+        else if ((random >> 16) % 5 < 3) result = @ADD@(&queue, random);
+        else result = @REMOVE@(&queue);
+        record(&result, sizeof(result));
+        assert(queue.m_nSamplesInQueue <= POLICE_RADIO_QUEUE_MAX_SAMPLES);
+        assert(queue.m_nAddOffset < POLICE_RADIO_QUEUE_MAX_SAMPLES && queue.m_nRemoveOffset < POLICE_RADIO_QUEUE_MAX_SAMPLES);
+        if (i % 17 == 0) record_queue(&queue);
+    }
+    printf("%llu\n", (unsigned long long)digest);
+    return 0;
+}

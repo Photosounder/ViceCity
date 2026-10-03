@@ -17,7 +17,9 @@ CAnimBlendHierarchy CAnimManager::ms_aAnimations[NUMANIMATIONS];
 int32 CAnimManager::ms_numAnimBlocks;
 int32 CAnimManager::ms_numAnimations;
 CAnimBlendAssocGroup *CAnimManager::ms_aAnimAssocGroups;
-CLinkList<CAnimBlendHierarchy*> CAnimManager::ms_animCache;
+//+ rouz edit (ChatGPT)
+CLinkList CAnimManager::ms_animCache;
+//- rouz edit (ChatGPT)
 
 AnimAssocDesc aStdAnimDescs[] = {
 	{ ANIM_STD_WALK, ASSOC_REPEAT | ASSOC_MOVEMENT | ASSOC_HAS_TRANSLATION | ASSOC_WALK },
@@ -972,7 +974,10 @@ CAnimManager::Initialise(void)
 {
 	ms_numAnimations = 0;
 	ms_numAnimBlocks = 0;
-	ms_animCache.Init(25);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CLinkList_Init(&ms_animCache, (CLink*)calloc(25, sizeof(CLink)), 25);
+	//- rouz edit (ChatGPT)
 }
 
 void
@@ -986,7 +991,12 @@ CAnimManager::Shutdown(void)
 	for(i = 0; i < ms_numAnimations; i++)
 		ms_aAnimations[i].Shutdown();
 
-	ms_animCache.Shutdown();
+	// Free the subsystem node array and reset its list sentinels
+	//+ rouz edit (ChatGPT)
+	free(ms_animCache.links);
+
+	CLinkList_Init(&ms_animCache, NULL, 0);
+	//- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 	// Destroy and release association groups without invoking C++ array delete.
@@ -1005,17 +1015,32 @@ CAnimManager::UncompressAnimation(CAnimBlendHierarchy *hier)
 	}else{
 		if(!hier->compressed){
 			if(hier->linkPtr){
-				hier->linkPtr->Remove();
-				ms_animCache.head.Insert(hier->linkPtr);
+				// Use the C linked-list functions and node types
+				//+ rouz edit (ChatGPT)
+				CLink_Remove(hier->linkPtr);
+				CLink_Insert(&ms_animCache.head, hier->linkPtr);
+				//- rouz edit (ChatGPT)
 			}
 		}else{
-			CLink<CAnimBlendHierarchy*> *link = ms_animCache.Insert(hier);
+			// Use the C linked-list functions and node types
+			//+ rouz edit (ChatGPT)
+			CLink *link = CLinkList_Insert(&ms_animCache, hier);
+			//- rouz edit (ChatGPT)
 			if(link == nil){
-				CAnimBlendHierarchy *lastHier = ms_animCache.tail.prev->item;
+				// Access the object payload through the C list node
+				//+ rouz edit (ChatGPT)
+				CAnimBlendHierarchy *lastHier = (CAnimBlendHierarchy*)ms_animCache.tail.prev->item;
+				//- rouz edit (ChatGPT)
 				lastHier->RemoveUncompressedData();
-				ms_animCache.Remove(ms_animCache.tail.prev);
+				// Use the C linked-list functions and node types
+				//+ rouz edit (ChatGPT)
+				CLinkList_Remove(&ms_animCache, ms_animCache.tail.prev);
+				//- rouz edit (ChatGPT)
 				lastHier->linkPtr = nil;
-				link = ms_animCache.Insert(hier);
+				// Use the C linked-list functions and node types
+				//+ rouz edit (ChatGPT)
+				link = CLinkList_Insert(&ms_animCache, hier);
+				//- rouz edit (ChatGPT)
 			}
 			hier->linkPtr = link;
 			hier->Uncompress();
@@ -1027,7 +1052,10 @@ void
 CAnimManager::RemoveFromUncompressedCache(CAnimBlendHierarchy *hier)
 {
 	if(hier->linkPtr){
-		ms_animCache.Remove(hier->linkPtr);
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		CLinkList_Remove(&ms_animCache, hier->linkPtr);
+		//- rouz edit (ChatGPT)
 		hier->linkPtr = nil;
 	}
 }

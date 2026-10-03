@@ -27,7 +27,9 @@ class CCollision
 {
 public:
 	static eLevelName ms_collisionInMemory;
-	static CLinkList<CColModel*> ms_colModelCache;
+	//+ rouz edit (ChatGPT)
+	static CLinkList ms_colModelCache;
+	//- rouz edit (ChatGPT)
 
 	static void Init(void);
 	static void Shutdown(void);

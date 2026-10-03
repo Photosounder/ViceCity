@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "GameLogic.h"
@@ -207,15 +208,15 @@ CGameLogic::Update()
 				pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_LOADING;
 				char name[12];
 				sprintf(name, pPlayerInfo.m_nCurrentBustedAudio >= 10 ? "bust_%d" : "bust_0%d", pPlayerInfo.m_nCurrentBustedAudio);
-				DMAudio.ClearMissionAudio(0);
-				DMAudio.PreloadMissionAudio(0, name);
+				DMAudio_ClearMissionAudio(0);
+				DMAudio_PreloadMissionAudio(0, name);
 				pPlayerInfo.m_nCurrentBustedAudio = pPlayerInfo.m_nCurrentBustedAudio % TOTAL_BUSTED_AUDIO + 1;
 			}
 		}
 		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > 4000 &&
 			pPlayerInfo.m_nBustedAudioStatus == BUSTEDAUDIO_LOADING &&
-			DMAudio.GetMissionAudioLoadingStatus(0) == 1) {
-			DMAudio.PlayLoadedMissionAudio(0);
+			DMAudio_GetMissionAudioLoadingStatus(0) == 1) {
+			DMAudio_PlayLoadedMissionAudio(0);
 			pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_DONE;
 		}
 		
@@ -413,11 +414,9 @@ CGameLogic::ClearShortCut()
 			--CCarCtrl::NumMissionCars;
 			++CCarCtrl::NumRandomCars;
 		}
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi));
-		//- rouz edit (ChatGPT)
-		pShortCutTaxi = nil;
+				pShortCutTaxi = nil;
 	}
 	CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_SHORTCUT_TAXI);
 }
@@ -467,15 +466,11 @@ CGameLogic::UpdateShortCut()
 			CStreaming::RequestModel(MI_KAUFMAN, 0);
 			return;
 		}
-//+ rouz edit (ChatGPT)
 		// Allocate the shortcut taxi without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		pShortCutTaxi = (CAutomobile*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		if (pShortCutTaxi)
+				if (pShortCutTaxi)
 			std::allocator<CAutomobile>().construct(pShortCutTaxi, MI_KAUFMAN, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
 		if (!pShortCutTaxi)
 			return;
 		pShortCutTaxi->SetPosition(ShortCutStart);
@@ -490,11 +485,9 @@ CGameLogic::UpdateShortCut()
 		--CCarCtrl::NumRandomCars;
 		CTheScripts::ClearSpaceForMissionEntity(ShortCutStart, pShortCutTaxi);
 		CWorld::Add(pShortCutTaxi);
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CRadar::SetEntityBlip(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi), 0, BLIP_DISPLAY_MARKER_ONLY);
-		//- rouz edit (ChatGPT)
-		ShortCutState = SHORTCUT_IDLE;
+				ShortCutState = SHORTCUT_IDLE;
 		break;
 	case SHORTCUT_IDLE:
 		if (FindPlayerPed()->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && FindPlayerPed()->m_carInObjective == pShortCutTaxi) {
@@ -557,11 +550,9 @@ CGameLogic::UpdateShortCut()
 			pShortCutTaxi->VehicleCreatedBy = RANDOM_VEHICLE;
 			++CCarCtrl::NumRandomCars;
 			--CCarCtrl::NumMissionCars;
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), pShortCutTaxi));
-			//- rouz edit (ChatGPT)
-			ShortCutState = SHORTCUT_NONE;
+						ShortCutState = SHORTCUT_NONE;
 			pShortCutTaxi = nil;
 		}
 		AbandonShortCutIfTaxiHasBeenMessedWith();
@@ -619,32 +610,22 @@ void
 CGameLogic::Save(uint8* buf, uint32* size)
 {
 INITSAVEBUF
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &NumAfterDeathStartPoints, sizeof(NumAfterDeathStartPoints));
-	//- rouz edit (ChatGPT)
-	*size += sizeof(NumAfterDeathStartPoints);
+		*size += sizeof(NumAfterDeathStartPoints);
 	for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].x, sizeof(AfterDeathStartPoints[i].x));
-		//- rouz edit (ChatGPT)
-		*size += sizeof(AfterDeathStartPoints[i].x);
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				*size += sizeof(AfterDeathStartPoints[i].x);
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].y, sizeof(AfterDeathStartPoints[i].y));
-		//- rouz edit (ChatGPT)
-		*size += sizeof(AfterDeathStartPoints[i].y);
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				*size += sizeof(AfterDeathStartPoints[i].y);
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &AfterDeathStartPoints[i].z, sizeof(AfterDeathStartPoints[i].z));
-		//- rouz edit (ChatGPT)
-		*size += sizeof(AfterDeathStartPoints[i].z);
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				*size += sizeof(AfterDeathStartPoints[i].z);
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &AfterDeathStartPointOrientation[i], sizeof(AfterDeathStartPointOrientation[i]));
-		//- rouz edit (ChatGPT)
-		*size += sizeof(AfterDeathStartPointOrientation[i]);
+				*size += sizeof(AfterDeathStartPointOrientation[i]);
 	}
 VALIDATESAVEBUF(*size)
 }
@@ -653,18 +634,16 @@ void
 CGameLogic::Load(uint8* buf, uint32 size)
 {
 INITSAVEBUF
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&NumAfterDeathStartPoints, &buf, sizeof(NumAfterDeathStartPoints));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
-		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
+	ReadSaveBuf(&NumAfterDeathStartPoints, &buf, sizeof(NumAfterDeathStartPoints));
+		for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&AfterDeathStartPoints[i].x, &buf, sizeof(AfterDeathStartPoints[i].x));
 		ReadSaveBuf(&AfterDeathStartPoints[i].y, &buf, sizeof(AfterDeathStartPoints[i].y));
 		ReadSaveBuf(&AfterDeathStartPoints[i].z, &buf, sizeof(AfterDeathStartPoints[i].z));
 		ReadSaveBuf(&AfterDeathStartPointOrientation[i], &buf, sizeof(AfterDeathStartPointOrientation[i]));
-		//- rouz edit (ChatGPT)
-	}
+			}
 VALIDATESAVEBUF(size)
 }
+
+//- rouz edit (ChatGPT)

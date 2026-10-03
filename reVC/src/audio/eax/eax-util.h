@@ -12,6 +12,12 @@
 #define EAXUTIL_INCLUDED
 
 #include <eax.h>
+//+ rouz edit (ChatGPT)
+#include <stdbool.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+//- rouz edit (ChatGPT)
 
 /***********************************************************************************************
 * Function	:	EAX3ListenerInterpolate
@@ -23,7 +29,7 @@
 								- default == false (no checking)
 ************************************************************************************************/
 bool EAX3ListenerInterpolate(EAXLISTENERPROPERTIES *lpStartEAX3LP, EAXLISTENERPROPERTIES *lpFinishEAX3LP,
-			float flRatio, EAXLISTENERPROPERTIES *lpResultEAX3LP, bool bCheckValues = false);
+			float flRatio, EAXLISTENERPROPERTIES *lpResultEAX3LP, bool bCheckValues); // rouz edit (ChatGPT)
 
 
 /***********************************************************************************************\
@@ -761,5 +767,11 @@ extern EAXLISTENERPROPERTIES EAX30_MISC_PRESETS[];
 #define EAX_MATERIAL_CURTAINLF             0.15f
 #define EAX_MATERIAL_CURTAINROOMRATIO      1.00f
 
+
+//+ rouz edit (ChatGPT)
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)
 
 #endif // EAXUTIL_INCLUDED

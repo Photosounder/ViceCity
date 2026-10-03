@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -400,11 +401,9 @@ CPed::SetAttack(CEntity *victim)
 				CAnimBlendAssociation* curMoveAssoc = RpAnimBlendClumpGetAssociation(GetClump(), GetCrouchFireAnim(curWeapon));
 				if (curMoveAssoc) {
 					if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, GetCrouchFireAnim(curWeapon))->hierarchy->name, curMoveAssoc->hierarchy->name) != 0) {
-//+ rouz edit (ChatGPT)
 						// Destroy the stale crouch fire animation without invoking C++ delete.
 						curMoveAssoc->~CAnimBlendAssociation();
 						free(curMoveAssoc);
-//- rouz edit (ChatGPT)
 					}
 				}
 				animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, GetCrouchFireAnim(curWeapon), 8.0f);
@@ -430,11 +429,9 @@ CPed::SetAttack(CEntity *victim)
 				CAnimBlendAssociation* curFireAssoc = RpAnimBlendClumpGetAssociation(GetClump(), fireAnim);
 				if (curFireAssoc) {
 					if (strcmp(CAnimManager::GetAnimAssociation(curWeapon->m_AnimToPlay, fireAnim)->hierarchy->name, curFireAssoc->hierarchy->name) != 0) {
-//+ rouz edit (ChatGPT)
 						// Destroy the stale fire animation without invoking C++ delete.
 						curFireAssoc->~CAnimBlendAssociation();
 						free(curFireAssoc);
-//- rouz edit (ChatGPT)
 					}
 				}
 				animAssoc = CAnimManager::BlendAnimation(GetClump(), curWeapon->m_AnimToPlay, fireAnim, animDelta);
@@ -846,7 +843,7 @@ CPed::Attack(void)
 		|| weaponAnimAssoc->currentTime - weaponAnimAssoc->timeStep > delayBetweenAnimAndFire) {
 
 		if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW) {
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
 		} else if (weaponAnimTime <= delayBetweenAnimAndFire || weaponAnimTime - weaponAnimAssoc->timeStep > delayBetweenAnimAndFire || !weaponAnimAssoc->IsRunning()) {
 			if (weaponAnimAssoc->speed < 1.0f)
 				weaponAnimAssoc->speed = 1.0f;
@@ -885,13 +882,13 @@ CPed::Attack(void)
 				switch (ourWeapon->m_AnimToPlay) {
 					case ASSOCGRP_UNARMED:
 						if (weaponAnimAssoc->animId == ANIM_MELEE_ATTACK || weaponAnimAssoc->animId == ANIM_MELEE_ATTACK_START) 
-							DMAudio.PlayOneShot(m_audioEntityId, SOUND_FIGHT_46, (damagerType | (GetWeapon()->m_eWeaponType << 8)));
+							DMAudio_PlayOneShot(m_audioEntityId, SOUND_FIGHT_46, (damagerType | (GetWeapon()->m_eWeaponType << 8)));
 						break;
 					case ASSOCGRP_KNIFE:
 					case ASSOCGRP_BASEBALLBAT:
 					case ASSOCGRP_GOLFCLUB:
 					case ASSOCGRP_CHAINSAW:
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_BAT_ATTACK, (damagerType | (GetWeapon()->m_eWeaponType << 8)));
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_BAT_ATTACK, (damagerType | (GetWeapon()->m_eWeaponType << 8)));
 						break;
 					default:
 						break;
@@ -917,12 +914,12 @@ CPed::Attack(void)
 			if (m_pDamageEntity)
 				damagerType = m_pDamageEntity->GetType();
 
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_MADECONTACT, (float)damagerType);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_MADECONTACT, (float)damagerType);
 			if (IsPlayer()) {
 				CPad::GetPad(0)->StartShake(240, 180);
 			}
 		} else {
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_ATTACK, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_ATTACK, 0.0f);
 			if (IsPlayer()) {
 				CPad::GetPad(0)->StartShake(240, 90);
 			}
@@ -994,7 +991,7 @@ CPed::Attack(void)
 				bIsAttacking = false;
 				bIsPointingGunAt = false;
 				m_shootTimer = CTimer::GetTimeInMilliseconds();
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
 				return;
 			}
 		}
@@ -1048,7 +1045,7 @@ CPed::Attack(void)
 
 			// Echoes of bullets, at the end of the attack. (Bug: doesn't play while reloading)
 			if (weaponAnimAssoc->currentTime - weaponAnimAssoc->timeStep < animLoopEnd) 
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
 
 			// Fun fact: removing this part leds to reloading flamethrower
 			if (GetWeapon()->m_eWeaponType == WEAPONTYPE_FLAMETHROWER && weaponAnimAssoc->IsRunning()) {
@@ -1470,7 +1467,7 @@ CPed::Fight(void)
 			if (animTime > curMove.startFireTime && animTime - currentAssoc->timeStep < curMove.startFireTime &&
 				(IsPlayer() || weapon != WEAPONTYPE_UNARMED)) {
 
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_MELEE_ATTACK_START, weapon << 8);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_MELEE_ATTACK_START, weapon << 8);
 			}
 
 			CVector touchingNodePos(0.0f, 0.0f, 0.0f);
@@ -2032,9 +2029,9 @@ CPed::PlayHitSound(CPed *hitTo)
 	if (weaponInfo->m_AnimToPlay == ASSOCGRP_KNIFE) {
 		if (m_curFightMove >= FIGHTMOVE_MELEE1) {
 			if (m_curFightMove == FIGHTMOVE_MELEE3) {
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_BAT_ATTACK, (weapon << 8) | ENTITY_TYPE_PED);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_BAT_ATTACK, (weapon << 8) | ENTITY_TYPE_PED);
 			} else {
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_KNIFE_ATTACK, (weapon << 8) | ENTITY_TYPE_PED);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_KNIFE_ATTACK, (weapon << 8) | ENTITY_TYPE_PED);
 			}
 			return;
 		}
@@ -2059,7 +2056,7 @@ CPed::PlayHitSound(CPed *hitTo)
 	}
 
 	if (soundId != NO_SND)
-		DMAudio.PlayOneShot(m_audioEntityId, soundId, (weapon << 8) | ENTITY_TYPE_PED);
+		DMAudio_PlayOneShot(m_audioEntityId, soundId, (weapon << 8) | ENTITY_TYPE_PED);
 }
 
 bool
@@ -3564,7 +3561,7 @@ CPed::CollideWithPed(CPed *collideWith)
 					animAssoc->flags |= ASSOC_FADEOUTWHENDONE;
 					collideWith->m_nPedStateTimer = CTimer::GetTimeInMilliseconds() + 1000;
 					if (m_nPedState == PED_ATTACK)
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_49, 0.0f);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_49, 0.0f);
 				}
 			} else {
 				// We're at his right side
@@ -3587,7 +3584,7 @@ CPed::CollideWithPed(CPed *collideWith)
 				}
 
 				if (m_nPedState == PED_ATTACK && collideWith->IsPedInControl())
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_49, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_49, 0.0f);
 
 				collideWith->SetFall(3000, animToPlay, 0);
 			}
@@ -3639,12 +3636,10 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 	PedNode nodeToDamage;
 	eWeaponType killMethod;
 
-	//+ rouz edit (ChatGPT)
-	// Ignore car-hit damage from the vehicle carrying or just beneath this ped.
+		// Ignore car-hit damage from the vehicle carrying or just beneath this ped.
 	if (car == m_pCurrentPhysSurface || (rouz.glue_on_vehs && car == m_pCurSurface))
 		return;
-	//- rouz edit (ChatGPT)
-
+	
 	if (m_nPedState == PED_FALL || m_nPedState == PED_DIE) {
 		if (!m_pCollidingEntity || car->GetStatus() == STATUS_PLAYER)
 			m_pCollidingEntity = car;
@@ -3690,7 +3685,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 			if (damageDir == 1 || damageDir == 3)
 				damageDir = 2;
 			if (CGame::nastyGame)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
 
 		// Car doesn't look to us
 		} else if (DotProduct(car->m_vecMoveSpeed, car->GetForward()) >= 0.0f){
@@ -3710,7 +3705,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 					if (damageDir == 1 || damageDir == 3)
 						damageDir = 2;
 					if (CGame::nastyGame)
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
 
 				}
 			} else {
@@ -3726,7 +3721,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 						damageDir = 2;
 
 					if (CGame::nastyGame)
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
 
 				} else {
 					nodeToDamage = PED_MID;
@@ -4215,3 +4210,5 @@ CPed::RemoveWeaponAnims(int unused, float animDelta)
 			CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, -animDelta);
 	}
 }
+
+//- rouz edit (ChatGPT)

@@ -1,0 +1,225 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#ifndef AUDIO_OAL
+#define AUDIO_OAL
+#endif
+#define AL_LIBTYPE_STATIC
+#ifdef __cplusplus
+#define CITA_TLS thread_local
+#endif
+#include <AL/al.h>
+#include <AL/alc.h>
+static uint64_t trace = UINT64_C(1469598103934665603);
+static unsigned allocations, opens, contexts, scenario, requestedCount;
+static bool enumeration = true, failCleanup;
+static unsigned currentIndex = 999, generated;
+static ALenum error;
+static bool sourceLive[257];
+static char names[80][32], enumerationNames[3000];
+struct ALCdevice { unsigned index; bool live; } devices[80];
+struct ALCcontext { unsigned index; bool live; } deviceContexts[80];
+static struct { void *pointer; size_t size; } owned[128];
+static void record(unsigned value) {
+    // Hash observable device operations and query results without pointer addresses
+    trace = (trace ^ value) * UINT64_C(1099511628211);
+}
+static void *test_malloc(size_t size) {
+    // Count owned names and preserve their allocation sizes for cleanup validation
+    void *p = malloc(size); assert(p);
+    for(unsigned i = 0; i < 128; i++) if(!owned[i].pointer) {
+        owned[i].pointer = p; owned[i].size = size; allocations++; record((unsigned)size); return p;
+    }
+    abort();
+}
+static void test_free(void *p) {
+    // Reject excess frees and trace destructor ordering through the owned name content
+    if(!p) return;
+    for(unsigned i = 0; i < 128; i++) if(owned[i].pointer == p) {
+        record((unsigned)owned[i].size);
+        for(const char *c = (const char*)p; *c; c++) record((unsigned char)*c);
+        owned[i].pointer = NULL; allocations--; free(p); return;
+    }
+    abort();
+}
+#ifdef __cplusplus
+extern "C" {
+#endif
+void *cita_win_malloc(size_t size, const char *file, const char *func, int line) {
+    // Retain the production CITA call site while allocating names in the quiet fixture
+    (void)file; (void)func; (void)line; return test_malloc(size);
+}
+void cita_win_free(void *p, const char *file, const char *func, int line) {
+    // Verify CITA releases exactly the names allocated by enumeration
+    (void)file; (void)func; (void)line; test_free(p);
+}
+ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const ALCchar *name) {
+    // Expose enumeration availability and deterministic per-device ALC extensions
+    if(!device) { assert(!strcmp(name,"ALC_ENUMERATION_EXT")); return enumeration; }
+    assert(device->live);
+    unsigned bit = !strcmp(name,"ALC_EXT_CAPTURE") ? 0 : 1;
+    return ((device->index * 17 + scenario) & (1u << bit)) != 0;
+}
+const ALCchar *ALC_APIENTRY alcGetString(ALCdevice *device, ALCenum param) {
+    // Return a double-null enumeration list, a default name or the device's actual name
+    if(!device) return param == ALC_ALL_DEVICES_SPECIFIER ? enumerationNames : names[0];
+    assert(device->live && param == ALC_ALL_DEVICES_SPECIFIER);
+    if(scenario < 1000 && scenario % 7 == 3 && device->index % 11 == 4) return NULL;
+    if(scenario < 1000 && scenario % 3 == 0 && device->index % 7 == 3) return "";
+    return names[device->index % 5 == 4 ? device->index - 1 : device->index];
+}
+ALCdevice *ALC_APIENTRY alcOpenDevice(const ALCchar *name) {
+    // Model devices that open successfully and devices rejected by the driver
+    unsigned i;
+    for(i = 0; i < requestedCount; i++) if(!strcmp(name,names[i])) break;
+    assert(i < requestedCount); record(i);
+    if(scenario < 1000 && scenario % 2 && i % 9 == 2) return NULL;
+    assert(!devices[i].live); devices[i].live = true; opens++; return &devices[i];
+}
+ALCcontext *ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attributes) {
+    // Model context failures separately from device-open failures
+    (void)attributes;
+    if(scenario < 1000 && scenario % 4 == 0 && device->index % 11 == 5) return NULL;
+    deviceContexts[device->index].live = true; contexts++; return &deviceContexts[device->index];
+}
+ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context) {
+    // Track the context consulted by AL extension and source-capacity queries
+    currentIndex = context ? context->index : 999;
+    generated = 0; error = AL_NO_ERROR; return ALC_TRUE;
+}
+void ALC_APIENTRY alcDestroyContext(ALCcontext *context) {
+    // Reject context leaks and use after destruction
+    assert(context->live && currentIndex == 999); context->live = false; contexts--;
+}
+ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *device) {
+    // Require all contexts and probe sources to be released before closing a device
+    assert(device->live && !deviceContexts[device->index].live);
+    for(unsigned i = 1; i <= 256; i++) assert(!sourceLive[i]);
+    device->live = false; opens--; return ALC_TRUE;
+}
+void ALC_APIENTRY alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values) {
+    // Preserve the production version query and its existing buffer-size argument
+    assert(size == sizeof(int));
+    *values = param == ALC_MAJOR_VERSION ? (int)(device->index % 3 + 1) : (int)(device->index % 4);
+}
+ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *name) {
+    // Expose all eight AL extension flags through independent bits
+    const char *ext[] = {"AL_EXT_OFFSET","AL_EXT_LINEAR_DISTANCE","AL_EXT_EXPONENT_DISTANCE","EAX2.0","EAX3.0","EAX4.0","EAX5.0","EAX-RAM"};
+    for(unsigned i = 0; i < 8; i++) if(!strcmp(name,ext[i])) return ((currentIndex * 17 + scenario) & (1u << (i+2))) != 0;
+    abort();
+}
+ALenum AL_APIENTRY alGetError(void) {
+    // Consume the current probe error exactly as the driver API does
+    ALenum result = error; error = AL_NO_ERROR; record(result); return result;
+}
+void AL_APIENTRY alGenSources(ALsizei count, ALuint *sources) {
+    // Exercise empty, partial and full 256-source probe capacities
+    assert(count == 1 && currentIndex < requestedCount);
+    unsigned caps[] = {0,1,7,255,256};
+    unsigned cap = scenario == 1001 ? 7 : caps[(scenario + currentIndex) % 5];
+    if(generated == cap) { error = AL_OUT_OF_MEMORY; return; }
+    *sources = ++generated; assert(!sourceLive[*sources]); sourceLive[*sources] = true; record(*sources);
+}
+void AL_APIENTRY alDeleteSources(ALsizei count, const ALuint *sources) {
+    // Validate cleanup only touches generated handles, including the retry failure path
+    record((unsigned)count);
+    if(failCleanup && count > 1) { error = AL_INVALID_OPERATION; return; }
+    for(int i = 0; i < count; i++) { assert(sources[i] && sources[i] <= 256 && sourceLive[sources[i]]); sourceLive[sources[i]] = false; record(sources[i]); }
+}
+#ifdef __cplusplus
+}
+#endif
+#ifdef BASELINE_DEVICE
+#define malloc test_malloc
+#define free test_free
+#endif
+#include "@HEADER@"
+@SOURCE@
+@HOST_TEST@
+#ifdef BASELINE_DEVICE
+#define D0(n) list.n()
+#define D1(n,a) list.n(a)
+#define D2(n,a,b) list.n(a,b)
+#define D3(n,a,b,c) list.n(a,b,c)
+#else
+#define D0(n) ALDeviceList_##n(&list)
+#define D1(n,a) ALDeviceList_##n(&list,a)
+#define D2(n,a,b) ALDeviceList_##n(&list,a,b)
+#define D3(n,a,b,c) ALDeviceList_##n(&list,a,b,c)
+#endif
+static void configure(unsigned test, unsigned count) {
+    // Construct deterministic enumeration inputs without opening any real device
+    assert(allocations == 0 && opens == 0 && contexts == 0);
+    scenario = test; requestedCount = count; enumeration = test != 0;
+    char *cursor = enumerationNames;
+    for(unsigned i = 0; i < count; i++) {
+        devices[i].index = deviceContexts[i].index = i;
+        snprintf(names[i],sizeof(names[i]),"Device-%u-%s",i,i % 3 ? "short" : "longer-name");
+        strcpy(cursor,names[i]); cursor += strlen(cursor) + 1;
+    }
+    *cursor = 0;
+    if(count == 0) cursor[1] = 0;
+}
+int main(void) {
+    // Compare normal enumeration, duplicates, failures, capabilities and composed filters
+    for(unsigned test = 0; test < 101; test++) {
+        configure(test == 100 ? 1002 : test,test == 100 ? 64 : test % 33);
+        {
+            ALDeviceList list;
+#ifndef BASELINE_DEVICE
+            ALDeviceList_Init(&list);
+#endif
+            unsigned count = D0(GetNumDevices); record(count); record(D0(GetDefaultDevice));
+            for(unsigned i = 0; i < count; i++) {
+                const char *name = D1(GetDeviceName,i);
+                for(const char *c = name; *c; c++) record((unsigned char)*c);
+                int major = -1, minor = -1; D3(GetDeviceVersion,i,&major,&minor); record(major); record(minor);
+                D3(GetDeviceVersion,i,NULL,NULL);
+                record(D1(GetMaxNumSources,i));
+                for(unsigned ext = 1; ext < 1024; ext <<= 1) record(D2(IsExtensionSupported,i,ext));
+            }
+            assert(D1(GetDeviceName,count) == NULL && D1(GetMaxNumSources,count) == 0);
+            int major = 77, minor = 88; D3(GetDeviceVersion,count,&major,&minor); assert(major == 77 && minor == 88);
+            for(unsigned mode = 0; mode < 8; mode++) {
+                D0(ResetFilters);
+                if(mode & 1) D2(FilterDevicesMinVer,2,1);
+                if(mode & 2) D2(FilterDevicesMaxVer,2,2);
+                if(mode & 4) D1(FilterDevicesExtension,ADEXT_EXT_EFX);
+                int index = D0(GetFirstFilteredDevice);
+                while((unsigned)index < count) { record(index); index = D0(GetNextFilteredDevice); }
+                record(index);
+            }
+#ifndef BASELINE_DEVICE
+            ALDeviceList_Destroy(&list);
+            ALDeviceList_Destroy(&list);
+#endif
+        }
+        assert(allocations == 0 && opens == 0 && contexts == 0);
+    }
+    // Keep baseline comparisons separate from the repaired invalid-input paths
+    printf("%llu\n", (unsigned long long)trace);
+#ifndef BASELINE_DEVICE
+    configure(1000,72);
+    struct { uint64_t before; ALDeviceList list; uint64_t after; } guarded;
+    guarded.before = guarded.after = UINT64_C(0x123456789abcdef0);
+    ALDeviceList_Init(&guarded.list);
+    assert(ALDeviceList_GetNumDevices(&guarded.list) == 64 && allocations == 64);
+    assert(guarded.before == guarded.after && guarded.before == UINT64_C(0x123456789abcdef0));
+    assert(!ALDeviceList_IsExtensionSupported(&guarded.list,-1,1));
+    assert(!ALDeviceList_IsExtensionSupported(&guarded.list,64,1));
+    ALDeviceList_Destroy(&guarded.list);
+    assert(allocations == 0 && opens == 0 && contexts == 0);
+    configure(1001,3); failCleanup = true;
+    ALDeviceList list; ALDeviceList_Init(&list); ALDeviceList_Destroy(&list); failCleanup = false;
+    assert(allocations == 0 && opens == 0 && contexts == 0);
+#endif
+#if defined(__cplusplus) && !defined(BASELINE_DEVICE)
+    // Verify provider names remain valid across repeated initialization until the exit callback
+    check_cache_lifetime();
+#endif
+    return 0;
+}

@@ -111,7 +111,9 @@ class CAnimManager
 	static int32 ms_numAnimBlocks;
 	static int32 ms_numAnimations;
 	static CAnimBlendAssocGroup *ms_aAnimAssocGroups;
-	static CLinkList<CAnimBlendHierarchy*> ms_animCache;
+	//+ rouz edit (ChatGPT)
+	static CLinkList ms_animCache;
+	//- rouz edit (ChatGPT)
 public:
 
 	static void Initialise(void);

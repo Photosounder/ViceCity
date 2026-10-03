@@ -1,0 +1,42 @@
+
+static void seed(cAudioManager *m,uint8_t initialized,uint32_t frame) {
+    // Define retained queue samples and crime fields before each partial reset
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=initialized;m->m_FrameCounter=frame;
+    m->m_sPoliceRadioQueue.m_nSamplesInQueue=57;m->m_sPoliceRadioQueue.m_nAddOffset=39;m->m_sPoliceRadioQueue.m_nRemoveOffset=11;
+    for(unsigned i=0;i<POLICE_RADIO_QUEUE_MAX_SAMPLES;++i) {m->m_sPoliceRadioQueue.m_aSamples[i]=i*113+1;}
+    for(unsigned i=0;i<AUDIO_CRIME_COUNT;++i) {
+        // Make retained position and timer writes visible
+        m->m_aCrimes[i].type=i+1;m->m_aCrimes[i].timer=65530-i;
+        m->m_aCrimes[i].position={-7.5f,42.0f+i,-0.0f};
+    }
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) {gMinTimeToNextReport[i]=i*119+1;}
+    gSpecialSuspectLastSeenReport=255;
+    for(unsigned i=0;i<NUMAUDIOZONES;++i) {
+        // Preserve unused zone fields while testing complete name initialization
+        memset(ZoneSfx[i].m_aName,0xab,8);ZoneSfx[i].m_nSampleIndex=100+i;ZoneSfx[i].field_12=-73-i;
+    }
+}
+extern "C" void TestPoliceStateC(void);
+int main() {
+    // Confirm actual C linkage and initializers before mutating shared state
+    active=&AudioManager;TestPoliceStateC();snapshot(active);
+    for(cAudioManager *m:{&AudioManager,&other}) for(unsigned initialized=0;initialized<256;++initialized)
+        for(unsigned bits=0;bits<256;++bits) for(uint32_t sfx:{0u,1u,(uint32_t)NO_SAMPLE,0x7fffffffu,0xffffffffu}) {
+            // Cover every signed status representation, gate byte, and full sample ID width
+            seed(m,initialized,0);uint8_t status=bits;memcpy(&g_nMissionAudioPlayingStatus,&status,1);
+            g_nMissionAudioSfx=0xaabbccddu;@SET@;value((int32_t)(@GET@));
+            value(g_nMissionAudioSfx);value((int32_t)g_nMissionAudioPlayingStatus);value(m->m_bIsInitialised);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint32_t frame:{0u,1u,0x7fffffffu,0xffffffffu})
+        for(uint8_t initialized:{0,1,255}) for(uint8_t used:{0,1,255}) {
+            // Compare partial initialization and conditional stop order for both owners
+            active=m;channelUsed=used;seed(m,initialized,frame);@INIT@;snapshot(m);
+            seed(m,initialized,frame);@RESET@;snapshot(m);
+            seed(m,initialized,frame);@ZONES@;snapshot(m);
+        }
+    for(uint8_t initialized:{0,1,255}) for(uint8_t used:{0,1,255}) {
+        // Exercise the public reset facade against the global owner
+        active=&AudioManager;channelUsed=used;seed(active,initialized,17);DMAudio_ResetPoliceRadio();snapshot(active);
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

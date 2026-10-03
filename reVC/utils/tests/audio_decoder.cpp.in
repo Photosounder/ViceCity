@@ -1,0 +1,221 @@
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <vector>
+#define AUDIO_OAL
+#define MULTITHREADED_AUDIO
+#define nil nullptr
+#define ASSERT assert
+#define DEV(...) ((void)0)
+using uint32 = uint32_t;
+using uint16 = uint16_t;
+using int16 = int16_t;
+using uint8 = uint8_t;
+using int8 = int8_t;
+using int32 = int32_t;
+template<class A, class B> static auto Min(A a, B b) -> decltype(a + b)
+{
+    // Preserve the production minimum operation for mixed integer widths
+    return a < b ? a : b;
+}
+template<class T, class U> static auto Clamp(T value, U low, U high) -> decltype(value + low)
+{
+    // Preserve the production clipping operation
+    return value < low ? low : value > high ? high : value;
+}
+static void debug(const char*, ...)
+{
+    // Suppress diagnostics for deliberately invalid fixture files
+}
+#ifndef BASELINE_DECODER
+extern "C" void re3_debug(const char*, ...) {
+    // Suppress decoder diagnostics while retaining the production C linkage
+}
+#endif
+#include "@HEADER@"
+@DECODERS@
+@STREAM_METHODS@
+
+#ifdef BASELINE_DECODER
+using Handle = IDecoder;
+#define CALL0(name) decoder->name()
+#define CALL1(name, arg) decoder->name(arg)
+#else
+using Handle = AudioDecoder;
+#define CALL0(name) AudioDecoder_##name(decoder)
+#define CALL1(name, arg) AudioDecoder_##name(decoder, arg)
+#endif
+
+static Handle *open_wave(const char *path)
+{
+    // Select and bind WAV through the actual owning stream Open method
+    ALuint sources[2] = {1, 2};
+    ALuint buffers[NUM_STREAMBUFFERS] = {};
+#ifdef BASELINE_DECODER
+    CStream stream(sources, buffers);
+    stream.Open(path);
+#else
+    CStream stream;
+    CStream_Init(&stream, sources, buffers);
+    CStream_Open(&stream, path, 32000);
+#endif
+    Handle *decoder = stream.m_pSoundFile;
+    stream.m_bIExist = false;
+    free(stream.m_pBuffer);
+#ifndef BASELINE_DECODER
+    // Release the explicitly initialized stream while retaining its transferred decoder
+    CStream_Destroy(&stream);
+#endif
+    return decoder;
+}
+static Handle *open_vb(const char *path)
+{
+    // Select and bind VB through the actual owning stream Open method
+    return open_wave(path);
+}
+static void close_decoder(Handle *decoder)
+{
+    // Release real decoder resources and then free their owning state
+#ifdef BASELINE_DECODER
+    decoder->~IDecoder();
+    free(decoder);
+#else
+    void *state = decoder->state;
+    AudioDecoder_Close(decoder);
+    free(state);
+#endif
+}
+static void write16(FILE *file, uint16_t value)
+{
+    // Encode the fixture's little-endian sixteen-bit field
+    unsigned char bytes[2] = {(unsigned char)value, (unsigned char)(value >> 8)};
+    assert(fwrite(bytes, 1, 2, file) == 2);
+}
+static void write32(FILE *file, uint32_t value)
+{
+    // Encode the fixture's little-endian thirty-two-bit field
+    write16(file, (uint16_t)value);
+    write16(file, (uint16_t)(value >> 16));
+}
+static void write_wave(const char *path, bool adpcm, unsigned channels)
+{
+    // Generate a short PCM or IMA ADPCM file with deterministic channel samples
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    uint32_t size = adpcm ? channels * 8 : channels * 64;
+    fwrite("RIFF", 1, 4, file); write32(file, 36 + size);
+    fwrite("WAVEfmt ", 1, 8, file); write32(file, 16);
+    write16(file, adpcm ? 0x11 : 1); write16(file, (uint16_t)channels);
+    write32(file, 32000); write32(file, 32000 * channels * 2);
+    write16(file, (uint16_t)(channels * (adpcm ? 8 : 2)));
+    write16(file, adpcm ? 4 : 16);
+    fwrite("data", 1, 4, file); write32(file, size);
+    if(adpcm) {
+        for(unsigned c = 0; c < channels; c++) {
+            write16(file, (uint16_t)(100 + c * 100)); write16(file, 0);
+        }
+        for(unsigned c = 0; c < channels; c++) write32(file, 0);
+    } else {
+        for(unsigned i = 0; i < 32; i++)
+            for(unsigned c = 0; c < channels; c++) write16(file, (uint16_t)(i + c * 100));
+    }
+    fclose(file);
+}
+static void transcript(Handle *decoder, const char *name)
+{
+    // Record real metadata, decoded output, EOF and repeat-after-seek behavior
+    assert(CALL0(IsOpened));
+    printf("%s %u %u %u %u %u\n", name, CALL0(GetSampleRate), CALL0(GetChannels), CALL0(GetSampleCount), CALL0(GetBufferSize), CALL0(GetLength));
+    std::vector<unsigned char> buffer(CALL0(GetBufferSize));
+    uint32_t firstSize = CALL1(Decode, buffer.data());
+    uint32_t hash = 2166136261u;
+    for(uint32_t i = 0; i < firstSize; i++) hash = (hash ^ buffer[i]) * 16777619u;
+    printf("decode %u %u tell %u\n", firstSize, hash, CALL0(Tell));
+    CALL1(Seek, 0);
+    uint32_t repeatSize = CALL1(Decode, buffer.data());
+    uint32_t repeatHash = 2166136261u;
+    for(uint32_t i = 0; i < repeatSize; i++) repeatHash = (repeatHash ^ buffer[i]) * 16777619u;
+    assert(firstSize == repeatSize && hash == repeatHash);
+    unsigned chunks = 0;
+    while(CALL1(Decode, buffer.data())) assert(++chunks < 1000);
+    assert(CALL1(Decode, buffer.data()) == 0);
+    printf("eof %u\n", CALL0(Tell));
+    close_decoder(decoder);
+}
+int main(int argc, char **argv)
+{
+    // Compare varied IMA step indices and saturation histories with the saved production baseline
+    uint32_t imaHash = 2166136261u;
+    int16_t starts[] = {-32760, -10000, -1, 0, 1, 10000, 32760};
+    for(int step = 0; step < 89; step++) {
+        for(int16_t initial : starts) {
+            CImaADPCMDecoder state;
+#ifdef BASELINE_DECODER
+            state.Init(initial, (int16_t)step);
+#else
+            CImaADPCMDecoder_Init(&state, initial, (int16_t)step);
+#endif
+            for(unsigned nibble = 0; nibble < 512; nibble++) {
+#ifdef BASELINE_DECODER
+                int16_t value = state.DecodeSample((uint8_t)(nibble & 15));
+#else
+                int16_t value = CImaADPCMDecoder_DecodeSample(&state, (uint8_t)(nibble & 15));
+#endif
+                imaHash = (imaHash ^ (uint16_t)value) * 16777619u;
+            }
+        }
+    }
+    // Compare all valid VAG predictors and shifts across repeated nonzero input lines
+    uint32_t vagHash = 2166136261u;
+    for(unsigned predictor = 0; predictor < 5; predictor++) {
+        for(unsigned shift = 0; shift < 13; shift++) {
+            CVagDecoder state;
+#ifdef BASELINE_DECODER
+            state.ResetState();
+#else
+            CVagDecoder_ResetState(&state);
+#endif
+            for(unsigned block = 0; block < 64; block++) {
+                uint8_t line[16] = {(uint8_t)((predictor << 4) | shift), 0};
+                int16_t samples[28];
+                for(unsigned i = 2; i < 16; i++) line[i] = (uint8_t)(block * 31 + i * 19);
+#ifdef BASELINE_DECODER
+                state.Decode(line, samples, sizeof(line));
+#else
+                CVagDecoder_Decode(&state, line, samples, sizeof(line));
+#endif
+                for(int16_t sample : samples) vagHash = (vagHash ^ (uint16_t)sample) * 16777619u;
+            }
+        }
+    }
+    printf("IMA %u VAG %u\n", imaHash, vagHash);
+    // Use an explicit fixture output directory so production assets stay untouched
+    assert(argc == 2);
+    char path[1024];
+    for(unsigned channels = 1; channels <= 2; channels++) {
+        for(unsigned adpcm = 0; adpcm <= 1; adpcm++) {
+            snprintf(path, sizeof(path), "%s/test-%u-%u.wav", argv[1], channels, adpcm);
+            write_wave(path, adpcm != 0, channels);
+            transcript(open_wave(path), path);
+        }
+    }
+    // Decode a silent raw VAG block pair through the real VB implementation
+    snprintf(path, sizeof(path), "%s/test.vb", argv[1]);
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    for(unsigned i = 0; i < 0x4000; i++) fputc(0, file);
+    fclose(file);
+    transcript(open_vb(path), path);
+    // Verify unopened concrete decoders can still be cleaned up through dispatch
+    snprintf(path, sizeof(path), "%s/missing.wav", argv[1]);
+    Handle *decoder = open_wave(path);
+    assert(!CALL0(IsOpened));
+    close_decoder(decoder);
+    decoder = open_vb(path);
+    assert(!CALL0(IsOpened));
+    close_decoder(decoder);
+}

@@ -1,0 +1,221 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <assert.h>
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using int8=int8_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define Min(a,b) ((a) < (b) ? (a) : (b))
+#define Max(a,b) ((a) > (b) ? (a) : (b))
+#define Clamp2(v,center,radius) ((v) > (center) ? Min(v, center + radius) : Max(v, center - radius))
+struct CVector {float x,y,z;};
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Retain the original sound-position copy at the game vector boundary
+    return {p->x,p->y,p->z};
+}
+static void AudioGeometry_TranslateVector(const CVector *p,CVector *out) {
+    // Drive the existing C transform through the original scalar copy adapter
+    AudioSoundPosition plain={p->x,p->y,p->z},result;
+    AudioGeometry_Translate(&plain,&result);
+    *out={result.x,result.y,result.z};
+}
+struct cAudioManager {
+@FIELDS@
+    void ProcessActiveQueues();
+};
+struct Channel {
+    uint32_t used,sample,bank,frequency,volume,pan,loopStart,loopCount,reverb;
+    int32_t loopEnd;
+    float x,y,z,maxDistance,minDistance;
+};
+static cAudioManager owners[2];
+static cAudioManager *active;
+cSampleManager SampleManager;
+static Channel channels[NUM_CHANNELS];
+static unsigned seedValue,cases,callbacks;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioActive_Process(cAudioManager *);
+extern "C" uint8_t AudioActiveHost_CameraSwitched(void);
+extern "C" float AudioPoliceHost_TimeScale(void);
+extern "C" void TestActiveC(cAudioManager *);
+static void value(uint32_t v) {
+    // Hash scalar observations in backend callback order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe(void) {
+    // Observe all zero-padded owner and controlled backend bytes at every boundary
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);++i) value(bytes[i]);
+    bytes=(const unsigned char *)channels;
+    for(unsigned i=0;i<sizeof(channels);++i) value(bytes[i]);
+}
+static void event(unsigned token) {
+    // Retain observable callback ordering before backend state changes
+    ++callbacks;value(token);observe();
+}
+static Channel &channel(unsigned token,cSampleManager *manager,uint32_t id) {
+    // Validate each actual backend argument and observe the selected channel
+    assert(id<NUM_CHANNELS);value(manager==&SampleManager);value(id);event(token);
+    return channels[id];
+}
+static void floating(float v) {
+    // Observe exact scalar argument bits without changing their precision
+    uint32_t bits;memcpy(&bits,&v,sizeof(bits));value(bits);
+}
+struct CTimer {
+    static float GetTimeScale(void) {
+        // Observe the single scale query before any channel flag clearing
+        event(1);active->m_bIsPaused^=1;
+        const float scales[]={0,0.5f,1,1.25f,2};return scales[seedValue%5];
+    }
+};
+struct FakeCamera {
+    uint8_t Get_Just_Switched_Status(void) {
+        // Observe each doppler camera query after the active distance write
+        event(2);return seedValue%3==0?0:seedValue%3==1?1:255;
+    }
+};
+static FakeCamera TheCamera;
+extern "C" float AudioPoliceHost_TimeScale(void) {
+    // Use the same time-scale boundary already exposed by the audio game adapter
+    return CTimer::GetTimeScale();
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Supply the unused distance entry point linked with the actual transform module
+    *position={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Observe translated input snapshots with a nontrivial basis and camera translation
+    event(3);*matrix={0.75f,0.25f,0, -0.25f,0.75f,0, 0,0,1, 1,2,3};
+}
+extern "C" uint8_t SampleManager_GetChannelUsedFlag(cSampleManager *manager,uint32_t id) {
+    // Expose alternating completed and playing channels during parity-based checks
+    return (uint8_t)channel(4,manager,id).used;
+}
+extern "C" uint32_t SampleManager_GetSampleLength(cSampleManager *manager,uint32_t sample) {
+    // Preserve the getter before zero-frequency skips and unsigned loop-length multiplication
+    value(manager==&SampleManager);value(sample);event(5);
+    const uint32_t lengths[]={0,1,22050,UINT32_MAX};return lengths[seedValue%4];
+}
+extern "C" uint8_t SampleManager_InitialiseChannel(cSampleManager *manager,uint32_t id,uint32_t sample,uint8_t bank) {
+    // Observe startup after the active-record copy and change live phone-call state
+    Channel &c=channel(6,manager,id);value(sample);value(bank);
+    c.sample=sample;c.bank=bank;
+    if(seedValue&32) active->m_bIsMissionAudioPhoneCall[1]^=1;
+    const uint8_t results[]={0,1,2,255};return results[(seedValue+id)%4];
+}
+extern "C" void SampleManager_SetChannelFrequency(cSampleManager *manager,uint32_t id,uint32_t frequency) {
+    // Observe each frequency write and change the multiplier before later live volume reads
+    Channel &c=channel(7,manager,id);value(frequency);c.frequency=frequency;
+    if(seedValue&16) active->m_nGlobalSfxVolumeMultiplier=63;
+}
+extern "C" void SampleManager_SetChannelVolume(cSampleManager *manager,uint32_t id,uint32_t volume) {
+    // Observe the original software channel index and volume argument
+    Channel &c=channel(8,manager,id);value(volume);c.volume=volume;
+}
+extern "C" void SampleManager_SetChannelEmittingVolume(cSampleManager *manager,uint32_t id,uint32_t volume) {
+    // Observe the original external channel index and emitting-volume argument
+    Channel &c=channel(9,manager,id);value(volume);c.volume=volume;
+}
+extern "C" void SampleManager_SetChannelPan(cSampleManager *manager,uint32_t id,uint32_t pan) {
+    // Observe the selected software channel and its exact pan value
+    Channel &c=channel(10,manager,id);value(pan);c.pan=pan;
+}
+extern "C" void SampleManager_SetChannel3DPosition(cSampleManager *manager,uint32_t id,float x,float y,float z) {
+    // Observe translated and synthetic two-dimensional spatial coordinates
+    Channel &c=channel(11,manager,id);floating(x);floating(y);floating(z);c.x=x;c.y=y;c.z=z;
+}
+extern "C" void SampleManager_SetChannel3DDistances(cSampleManager *manager,uint32_t id,float maximum,float minimum) {
+    // Observe the maximum distance rewrite and original quarter-distance argument
+    Channel &c=channel(12,manager,id);floating(maximum);floating(minimum);c.maxDistance=maximum;c.minDistance=minimum;
+}
+extern "C" void SampleManager_SetChannelLoopPoints(cSampleManager *manager,uint32_t id,uint32_t start,int32_t end) {
+    // Observe desktop loop points before loop count and reverb setup
+    Channel &c=channel(13,manager,id);value(start);value((uint32_t)end);c.loopStart=start;c.loopEnd=end;
+}
+extern "C" void SampleManager_SetChannelLoopCount(cSampleManager *manager,uint32_t id,uint32_t count) {
+    // Observe the original repeated-play count after frequency and volume setup
+    Channel &c=channel(14,manager,id);value(count);c.loopCount=count;
+}
+extern "C" void SampleManager_SetChannelReverbFlag(cSampleManager *manager,uint32_t id,uint8_t flag) {
+    // Observe reverb before spatial setup or the end of a reused-channel update
+    Channel &c=channel(15,manager,id);value(flag);c.reverb=flag;
+}
+extern "C" void SampleManager_StartChannel(cSampleManager *manager,uint32_t id) {
+    // Observe all startup configuration before the owner marks the channel occupied
+    channel(16,manager,id).used=1;
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t id) {
+    // Observe stale-channel stop before clearing its active record identity
+    channel(17,manager,id).used=0;
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed bounded records, both queues, rotated channels and every startup eligibility gate
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(channels,0,sizeof(channels));
+    active->m_nActiveSamples=seed%4==0?1:seed%4==1?2:seed%4==2?4:8;
+    active->m_nActiveQueue=(seed>>1)&1;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%(active->m_nActiveSamples+1);
+    active->m_nChannelOffset=(seed>>2)%active->m_nActiveSamples;
+    active->m_nTimeSpent=40;active->m_fSpeedOfSound=343.0f/40;
+    active->m_FrameCounter=seed;active->m_bIsPaused=(seed>>3)&1;
+    active->m_bDoubleVolume=(seed>>4)&1;
+    const uint8_t multipliers[]={0,63,127,200};active->m_nGlobalSfxVolumeMultiplier=multipliers[(seed>>5)%4];
+    active->m_bIsMissionAudioPhoneCall[0]=(seed>>6)&1;
+    active->m_bIsMissionAudioPhoneCall[1]=(seed>>7)&1;
+    for(unsigned i=0;i<active->m_nActiveSamples;++i) {
+        active->m_aRequestedOrderList[active->m_nActiveQueue][i]=active->m_nActiveSamples-1-i;
+        tSound &requested=active->m_aRequestedQueue[active->m_nActiveQueue][i];
+        requested.m_nEntityIndex=i+1;requested.m_nCounter=10+i;
+        requested.m_nSampleIndex=(seed+i)%13==0?NO_SAMPLE:1+i;
+        requested.m_bIs2D=(seed+i)&1;requested.m_bStatic=(seed+i)%4==0;
+        requested.m_nLoopCount=(seed+i)%3;
+        const uint32_t frequencies[]={0,39,100,10000,22050,48000};requested.m_nFrequency=frequencies[(seed+i)%6];
+        requested.m_nVolume=(seed+i*17)%128;requested.m_fDistance=20.0f+i*5;
+        requested.m_fSpeedMultiplier=(seed+i)%3==0?0.0f:1.0f;
+        requested.m_MaxDistance=100;requested.m_vecPos={(float)i-3,(float)i+2,(float)i-1};
+        requested.m_nPan=(seed+i)%128;
+        requested.m_bIsPlayingFinished=(seed+i)%11==0;requested.m_bIsBeingPlayed=1;
+        requested.m_nFramesToPlay=(seed+i)%3;requested.m_nVolumeChange=3;
+#ifndef GTA_PS2
+        requested.m_nLoopStart=123+i;requested.m_nLoopEnd=-1;
+#endif
+#ifdef EXTERNAL_3D_SOUND
+        requested.m_nEmittingVolume=(seed+i*13)%128;
+#endif
+#if !defined(GTA_PS2) || defined(AUDIO_REVERB)
+        requested.m_bReverb=(seed+i)%3;
+#endif
+#ifdef AUDIO_REFLECTIONS
+        if((seed+i)%5==0) requested.m_nCounter=300+i;
+        requested.m_nReflectionDelay=(seed+i)%3;
+#endif
+        active->m_asAudioEntities[i+1].m_bIsUsed=(seed+i)%5!=0;
+        tSound &playing=active->m_asActiveSamples[i];playing=requested;
+        playing.m_nFrequency=16000+i*1000;playing.m_fDistance=25.0f+i*3;
+        playing.m_nVolume=(seed+i*7)%128;
+#ifdef EXTERNAL_3D_SOUND
+        playing.m_nEmittingVolume=(seed+i*11)%128;
+#endif
+        if((seed+i)%3==0) playing.m_nSampleIndex=NO_SAMPLE;
+        else if((seed+i)%3==1) playing.m_nCounter+=1000;
+        channels[i].used=(seed+i)%3==0?0:(seed+i)%3==1?1:255;
+        channels[i].frequency=12345;channels[i].volume=63;
+    }
+}
+int main(void) {
+    // Compare direct calls, repeated channel processing and the actual C declaration
+    for(unsigned seed=0;seed<512;++seed) {
+        prepare(seed);@PROCESS@;observe();++cases;
+        @PROCESS@;observe();++cases;
+        prepare(seed);@CALLER@;observe();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

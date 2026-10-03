@@ -1,0 +1,121 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#ifdef AUDIO_REVERB
+#define SET_SOUND_REVERB(b) m_sQueueSample.m_bReverb = b
+#else
+#define SET_SOUND_REVERB(b)
+#endif
+struct CPhysical {int32_t type;int32_t GetType();};
+struct CVehicle : CPhysical {};
+struct AreaField {int32_t value;operator int32_t();};
+struct CGame {static AreaField currArea;};
+AreaField CGame::currArea;
+struct cAudioManager {
+@FIELDS@
+    void ProcessEntity(int32);
+    void ProcessPhysical(int32);
+@DECLARATIONS@
+    void ProcessVehicle(CVehicle *);
+    void ProcessPed(CPhysical *);
+};
+static cAudioManager owners[2];static cAudioManager *active;
+static CVehicle objects[2];
+static unsigned seedValue,cases,callbacks,areaReads,currentId;
+static unsigned visits[64];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioDispatch_Entity(cAudioManager *,int32_t);
+extern "C" void AudioDispatch_Physical(cAudioManager *,int32_t);
+extern "C" void TestDispatchC(cAudioManager *,int32_t);
+static unsigned identity(void *pointer) {
+    // Normalize opaque object identities without inspecting the derived pointer
+    return pointer==NULL?0:pointer==&objects[0]?1:pointer==&objects[1]?2:3;
+}
+static void value(uint32_t v) {
+    // Hash scalar values and callback tokens in their original routing order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe(void) {
+    // Normalize stored object pointers before observing every zero-padded owner field
+    cAudioManager copy=*active;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i)
+        copy.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)identity(copy.m_asAudioEntities[i].m_pEntity);
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+    value((uint32_t)CGame::currArea.value);value((uint32_t)objects[0].type);value((uint32_t)objects[1].type);
+}
+static void event(unsigned token) {
+    // Observe the scratch entity/reverb writes before entering each game callback
+    ++callbacks;++visits[token];value(token);observe();
+}
+AreaField::operator int32_t() {
+    // Change the next area read to expose a cached replacement for the original short circuit
+    event(1);int32_t result=value;
+    if(areaReads++==0 && (seedValue&32)) value=AREA_EVERYWHERE;
+    return result;
+}
+int32_t CPhysical::GetType(void) {
+    // Change the stored pointer after the type query while returning the original object's kind
+    ::value(identity(this));event(2);
+    if(seedValue&256) active->m_asAudioEntities[currentId].m_pEntity=(seedValue&512)?NULL:&objects[1];
+    return type;
+}
+static void generator(unsigned token) {
+    // Change retained scratch state after observing each selected sound generator
+    event(token);active->m_sQueueSample.m_nSampleIndex=token;
+}
+@GENERATORS@
+void cAudioManager::ProcessVehicle(CVehicle *vehicle) {
+    // Observe the reloaded stored pointer at the vehicle generator boundary
+    value(identity(vehicle));generator(40);
+}
+void cAudioManager::ProcessPed(CPhysical *ped) {
+    // Observe the reloaded stored pointer at the pedestrian generator boundary
+    value(identity(ped));generator(41);
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed every audio kind, status and pause combination with bounded entity indices
+    seedValue=seed;areaReads=0;currentId=seed%13;active=&owners[seed&1];memset(active,0,sizeof(*active));
+    active->m_bIsPaused=(seed>>4)&1;active->m_bIsInitialised=(seed>>5)&1;
+    tAudioEntity &entity=active->m_asAudioEntities[currentId];
+    entity.m_bStatus=seed%3==0?0:seed%3==1?1:255;
+    entity.m_bIsUsed=(seed>>6)&1;
+    // Cover unsupported kinds inside the original C++ enum's representable range
+    unsigned typeRange=1;while(typeRange<=(unsigned)TOTAL_AUDIO_TYPES) typeRange*=2;
+    entity.m_nType=(eAudioType)(seed%typeRange);
+    objects[0].type=(seed>>5)%8;objects[1].type=(seed>>7)%8;
+    entity.m_pEntity=seed%5==0?NULL:&objects[0];
+    active->m_sQueueSample.m_nEntityIndex=-123;active->m_sQueueSample.m_nSampleIndex=777;
+#ifdef AUDIO_REVERB
+    active->m_sQueueSample.m_bReverb=seed%3==0?0:seed%3==1?1:255;
+#endif
+    const int32_t areas[]={AREA_MAIN_MAP,AREA_EVERYWHERE,AREA_HOTEL,AREA_DIRT,-1,INT32_MAX};
+    CGame::currArea.value=areas[(seed>>5)%6];
+}
+int main(void) {
+    // Compare both switches, repeated routing and actual C callers across two owners
+    for(unsigned seed=0;seed<1024;++seed) {
+        prepare(seed);@ENTITY@;observe();++cases;
+        @ENTITY@;observe();++cases;
+        prepare(seed);@PHYSICAL@;observe();++cases;
+        prepare(seed);@CALLER@;observe();++cases;
+    }
+    // Verify every supported generator and both physical routes were reached
+    for(unsigned token=10;token<=20;++token) if(!visits[token]) return 1;
+    if(!visits[1] || !visits[2] || !visits[40] || !visits[41]) return 2;
+#ifdef GTA_BRIDGE
+    if(!visits[21]) return 3;
+#endif
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

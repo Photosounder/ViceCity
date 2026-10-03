@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Automobile.h"
@@ -35,9 +36,9 @@ CExplosion::Initialise()
 {
 	debug("Initialising CExplosion...\n");
 	ClearAllExplosions();
-	AudioHandle = DMAudio.CreateEntity(AUDIOTYPE_EXPLOSION, (void*)1);
+	AudioHandle = DMAudio_CreateEntity(AUDIOTYPE_EXPLOSION, (void*)1);
 	if (AudioHandle >= 0)
-		DMAudio.SetEntityStatus(AudioHandle, TRUE);
+		DMAudio_SetEntityStatus(AudioHandle, TRUE);
 	debug("CExplosion ready\n");
 }
 
@@ -65,7 +66,7 @@ CExplosion::Shutdown()
 {
 	debug("Shutting down CExplosion...\n");
 	if (AudioHandle >= 0) {
-		DMAudio.DestroyEntity(AudioHandle);
+		DMAudio_DestroyEntity(AudioHandle);
 		AudioHandle = AEHANDLE_NONE;
 	}
 	debug("CExplosion shut down\n");
@@ -512,3 +513,4 @@ CExplosion::RemoveAllExplosionsInArea(CVector pos, float radius)
 		}
 	}
 }
+//- rouz edit (ChatGPT)

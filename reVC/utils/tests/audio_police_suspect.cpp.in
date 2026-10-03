@@ -1,0 +1,45 @@
+static void seed(cAudioManager *m,uint8_t count) {
+    // Populate valid retained queue storage and unrelated report state
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=255;
+    m->m_sPoliceRadioQueue.m_nSamplesInQueue=count;
+    m->m_sPoliceRadioQueue.m_nAddOffset=(count+57)%60;m->m_sPoliceRadioQueue.m_nRemoveOffset=57;
+    for(unsigned i=0;i<60;++i) {m->m_sPoliceRadioQueue.m_aSamples[i]=1000+i;}
+    for(unsigned i=0;i<AUDIO_CRIME_COUNT;++i) {
+        // Make unrelated crime resets visible in the comparison
+        m->m_aCrimes[i].type=i;m->m_aCrimes[i].timer=100+i;m->m_aCrimes[i].position={-7.5f,42,-0.0f};
+    }
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) {gMinTimeToNextReport[i]=700+i;}
+    gSpecialSuspectLastSeenReport=255;
+    MusicManager.m_nMusicMode=MUSICMODE_GAME;hasVehicle=true;
+}
+static void report(cAudioManager *m) {
+    // Invoke the original member or actual C report against the same live owner
+    active=m;@REPORT@;snapshot(m);
+}
+extern "C" int32_t TestModelIdsC(unsigned);
+extern "C" void TestSuspectReportC(void);
+int main() {
+    // Check every model constant across the original enums, shared header, and C caller
+    for(unsigned i=0;i<sizeof(modelValues)/sizeof(modelValues[0]);++i) {assert(modelValues[i]==TestModelIdsC(i));value(modelValues[i]);}
+    for(cAudioManager *m:{&AudioManager,&other}) for(unsigned color=0;color<256;++color)
+        for(int model=0;model<NUM_DEFAULT_MODELS;++model) {
+            // Cover all color bytes and every fixed default model including unknown report models
+            seed(m,0);vehicle.m_currentColour1=color;vehicle.model=model;
+            m->m_anRandomTable[3]=model%3-1;report(m);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint8_t count:{0,1,49,50,51,55,59,60})
+        for(bool veh:{false,true}) for(uint8_t mode:{0,1,2,3,255})
+        for(int32_t random:{-2147483647-1,-1,0,1,2147483647}) {
+            // Compare vehicle and foot capacity gates, music modes and signed random remainders
+            seed(m,count);hasVehicle=veh;MusicManager.m_nMusicMode=mode;
+            vehicle.m_currentColour1=8;vehicle.model=MI_POLICE;m->m_anRandomTable[3]=random;
+            m->m_bIsInitialised=0;report(m);
+        }
+    for(int16_t model:{-32768,-1,32767}) {
+        // Preserve unknown signed model behavior without adding a fallback report
+        seed(&AudioManager,0);vehicle.m_currentColour1=0;vehicle.model=model;report(&AudioManager);
+    }
+    seed(&AudioManager,0);active=&AudioManager;vehicle.m_currentColour1=8;vehicle.model=MI_POLICE;
+    TestSuspectReportC();snapshot(active);
+    printf("%llu\n",(unsigned long long)digest);
+}

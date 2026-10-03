@@ -1,0 +1,192 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint8=uint8_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+@CONSTANTS@
+struct CVector {float x,y,z;};
+struct CEntity {CVector position;const CVector &GetPosition();};
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &p) {
+    // Copy the original game position into its existing plain sound representation
+    return {p.x,p.y,p.z};
+}
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Retain the existing world-query vector boundary without changing coordinates
+    return {p->x,p->y,p->z};
+}
+static float sq(float x) {
+    // Drive the original float square helper with its original argument conversion
+    return x*x;
+}
+static int Min(int a,int b) {
+    // Retain the original integer minimum after the byte volume conversion
+    return a<b?a:b;
+}
+struct cAudioManager {
+@FIELDS@
+    void AddReleasingSounds();
+    float Sqrt(float v) const {
+        // Retain the original owner clamp and single-precision square root
+        return v<=0.0f?0.0f:sqrtf(v);
+    }
+};
+static cAudioManager owners[2];
+static cAudioManager *active;
+static CEntity entities[8];
+static unsigned seedValue,cases,callbacks;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioRelease_Add(cAudioManager *);
+extern "C" void TestReleaseC(cAudioManager *);
+extern "C" float AudioReleaseHost_TimeStep(void);
+extern "C" void AudioReleaseHost_Position(void *,AudioSoundPosition *);
+extern "C" uint8_t AudioReleaseHost_LineClear(const AudioSoundPosition *);
+extern "C" void AudioRequests_Submit(cAudioManager *);
+static void value(uint32_t v) {
+    // Hash each scalar or byte in observable callback order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe(void) {
+    // Normalize opaque entity pointers before hashing every zero-padded owner byte
+    cAudioManager copy=*active;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        uintptr_t pointer=(uintptr_t)copy.m_asAudioEntities[i].m_pEntity;
+        uintptr_t base=(uintptr_t)entities;
+        if(pointer>=base && pointer<base+sizeof(entities))
+            copy.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)((pointer-base)/sizeof(*entities)+1);
+    }
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+    // Include the host-owned positions after every attachment lookup
+    bytes=(const unsigned char *)entities;
+    for(unsigned i=0;i<sizeof(entities);++i) value(bytes[i]);
+}
+static void event(unsigned token) {
+    // Observe exact subsystem boundaries before any controlled host mutation
+    ++callbacks;value(token);observe();
+}
+struct CTimer {
+    static float GetTimeStepFix(void) {
+        // Observe every time-step query independently and change unrelated live state
+        event(1);active->m_nTimer+=3;
+        const float steps[]={0.0f,0.25f,0.5f,1.0f,2.0f};
+        return steps[seedValue%5];
+    }
+};
+const CVector &CEntity::GetPosition(void) {
+    // Observe attachment before coordinates and distance are rewritten
+    event(2);return position;
+}
+struct FakeCamera {
+    CVector GetPosition(void) {
+        // Retain the original pure camera argument for the pedestrian ray
+        return {0,0,0};
+    }
+};
+static FakeCamera TheCamera;
+struct CWorld {
+    static bool GetIsLineOfSightClear(CVector start,CVector end,bool a,bool b,bool c,bool d,bool e,bool f) {
+        // Observe the exact ray coordinates and collision flags before pedestrian volume selection
+        event(3);value(start.x==0 && start.y==0 && start.z==0);
+        const unsigned char *bytes=(const unsigned char *)&end;
+        for(unsigned i=0;i<sizeof(end);++i) value(bytes[i]);
+        value(a);value(b);value(c);value(d);value(e);value(f);
+        return (seedValue&2)!=0;
+    }
+};
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Observe the position copy before weighted distance calculation and fading
+    event(4);*position={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation entry point required by the actual geometry object
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom(void) {
+    // Observe actual request submission after the complete scratch sound copy
+    event(5);return (seedValue>>3)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion(void) {
+    // Supply the reflection expansion boundary without changing its known tested behavior
+    event(6);return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed both queue roles, current matches and bounded attachment/fading arithmetic
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));
+    memset(entities,0,sizeof(entities));
+    active->m_nActiveQueue=(seed>>1)&1;
+    active->m_nActiveSamples=seed%4==0?2:seed%4==1?4:seed%4==2?8:NUM_CHANNELS_GENERIC;
+    active->m_bIsInitialised=(seed>>2)&1;
+    active->m_bReduceReleasingPriority=(seed>>3)&1;
+    active->m_bDynamicAcousticModelingStatus=(seed>>4)&1;
+    unsigned previous=active->m_nActiveQueue^1;
+    active->m_nRequestedCount[previous]=8;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%3==0?active->m_nActiveSamples:seed%3==1?0:1;
+    for(unsigned queue=0;queue<2;++queue)
+        for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+            active->m_aRequestedOrderList[queue][i]=i;
+            tSound &sound=active->m_aRequestedQueue[queue][i];
+            sound.m_nEntityIndex=100+i;sound.m_nCounter=200+i;
+            sound.m_nSampleIndex=1;sound.m_nFinalPriority=10000+i;
+        }
+    for(unsigned i=0;i<8;++i) {
+        active->m_aRequestedOrderList[previous][i]=7-i;
+        tSound &sound=active->m_aRequestedQueue[previous][i];
+        sound.m_nEntityIndex=i==6?-1:(int32_t)i;
+        sound.m_nCounter=i==2?300:10+i;
+        sound.m_nSampleIndex=(seed+i)%3==0?SAMPLEBANK_PED_START:(seed+i)%3==1?SAMPLEBANK_PED_END:1;
+        sound.m_nPriority=(seed+i)%25;sound.m_nFrequency=22050;
+        sound.m_nVolume=(seed+i)%32;sound.m_fDistance=(float)((seed+i)%3)*25.0f;
+        sound.m_MaxDistance=100.0f;sound.m_vecPos={9,8,7};
+        sound.m_bIs2D=(seed+i)%4==0 || i==7;
+        sound.m_nLoopCount=(seed+i)%3==0?0:1;
+        sound.m_bIsPlayingFinished=i==0 && (seed&16);
+        sound.m_bStatic=1;sound.m_nVolumeChange=(seed+i)%3==0?-1:(seed+i)%3==1?0:3;
+#ifdef FIX_BUGS
+        const float frames[]={-1.0f,0.0f,0.25f,0.5f,1.0f,2.0f,5.0f,20.0f,100.0f};
+        sound.m_nFramesToPlay=frames[(seed+i)%9];
+        // Keep fractional lifetimes while avoiding the original out-of-range byte conversion
+        if(sound.m_nFramesToPlay>0.0f && sound.m_nFramesToPlay<1.0f && sound.m_nVolumeChange==-1)
+            sound.m_nVolumeChange=3;
+#else
+        const uint32_t frames[]={0,1,2,5,20,100};
+        sound.m_nFramesToPlay=frames[(seed+i)%6];
+#endif
+#ifdef EXTERNAL_3D_SOUND
+        sound.m_nEmittingVolume=(seed+i)%32;
+#ifdef FIX_BUGS
+        sound.m_nEmittingVolumeChange=2;
+#endif
+#endif
+#ifdef AUDIO_REFLECTIONS
+        sound.m_nReflectionDelay=i==2 && (seed&32)?3:0;
+        sound.m_bReflections=0;
+#endif
+        entities[i].position={(float)((seed+i)%7)*20.0f,0,0};
+        active->m_asAudioEntities[i].m_bIsUsed=1;
+        active->m_asAudioEntities[i].m_nType=i==5?AUDIOTYPE_FRONTEND:AUDIOTYPE_PHYSICAL;
+        active->m_asAudioEntities[i].m_pEntity=i==3?NULL:&entities[i];
+    }
+    // Match by entity and counter alone while deliberately changing the current sample index
+    active->m_aRequestedQueue[active->m_nActiveQueue][0].m_nEntityIndex=1;
+    active->m_aRequestedQueue[active->m_nActiveQueue][0].m_nCounter=11;
+    active->m_aRequestedQueue[active->m_nActiveQueue][0].m_nSampleIndex=2;
+}
+int main(void) {
+    // Compare direct C operations, repeated carryover and actual C callers for both owners
+    for(unsigned seed=0;seed<256;++seed) {
+        prepare(seed);@RELEASE@;observe();++cases;
+        @RELEASE@;observe();++cases;
+        prepare(seed);@CALLER@;observe();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

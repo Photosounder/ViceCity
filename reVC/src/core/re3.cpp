@@ -1324,5 +1324,9 @@ void re3_usererror(const char *format, ...)
 #endif
 
 #ifdef VALIDATE_SAVE_SIZE
+//+ rouz edit (ChatGPT)
+extern "C" {
 int32 _saveBufCount;
+}
+//- rouz edit (ChatGPT)
 #endif

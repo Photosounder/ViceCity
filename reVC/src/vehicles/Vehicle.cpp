@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -145,9 +146,9 @@ CVehicle::CVehicle(uint8 CreatedBy)
 	m_nLastWeaponDamage = -1;
 	m_pLastDamageEntity = nil;
 	m_fMapObjectHeightAhead = m_fMapObjectHeightBehind = 0.0f;
-	m_audioEntityId = DMAudio.CreateEntity(AUDIOTYPE_PHYSICAL, this);
+	m_audioEntityId = DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL, this);
 	if(m_audioEntityId >= 0)
-		DMAudio.SetEntityStatus(m_audioEntityId, TRUE);
+		DMAudio_SetEntityStatus(m_audioEntityId, TRUE);
 	//m_nRadioStation = CGeneral::GetRandomNumber() % NUM_RADIOS;
 	switch(GetModelIndex()){
 	case MI_HUNTER:
@@ -186,14 +187,12 @@ CVehicle::~CVehicle()
 {
 	m_nAlarmState = 0;
 	if (m_audioEntityId >= 0){
-		DMAudio.DestroyEntity(m_audioEntityId);
+		DMAudio_DestroyEntity(m_audioEntityId);
 		m_audioEntityId = -5;
 	}
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	CRadar::ClearBlipForEntity(BLIP_CAR, CPool_GetIndex(CPools::GetVehiclePool(), this));
-	//- rouz edit (ChatGPT)
-	if (pDriver)
+		if (pDriver)
 		pDriver->FlagToDestroyWhenNextProcessed();
 	for (int i = 0; i < m_nNumMaxPassengers; i++){
 		if (pPassengers[i])
@@ -762,7 +761,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 			}
 
 			if(hadCollision && !entity->IsPed())
-				DMAudio.ReportCollision(this, entity, SURFACE_CAR_PANEL, SURFACE_TARMAC, 50.0f, 0.09f);
+				DMAudio_ReportCollision(this, entity, SURFACE_CAR_PANEL, SURFACE_TARMAC, 50.0f, 0.09f);
 			m_fElasticity = savedElasticity;
 		}
 	}
@@ -1379,7 +1378,7 @@ CVehicle::FireFixedMachineGuns(void)
 	CWeapon::DoTankDoomAiming(this, pDriver, &source, &target);
 	FireOneInstantHitRound(&source, &target, 15);
 
-	DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+	DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 
 	m_nAmmoInClip--;
 	if (m_nAmmoInClip == 0) {
@@ -1396,11 +1395,11 @@ CVehicle::ActivateBomb(void)
 		m_nBombTimer = 7000;
 		m_pBlowUpEntity = FindPlayerPed();
 		CGarages::TriggerMessage("GA_12", -1, 3000, -1);
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_BOMB_TIMED_ACTIVATED, 1.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_BOMB_TIMED_ACTIVATED, 1.0f);
 	}else if(m_bombType == CARBOMB_ONIGNITION){
 		m_bombType = CARBOMB_ONIGNITIONACTIVE;
 		CGarages::TriggerMessage("GA_12", -1, 3000, -1);
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_BOMB_ONIGNITION_ACTIVATED, 1.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_BOMB_ONIGNITION_ACTIVATED, 1.0f);
 	}
 }
 
@@ -1414,7 +1413,7 @@ CVehicle::ActivateBombWhenEntered(void)
 			m_pBlowUpEntity = m_pBombRigger;
 			if(m_pBlowUpEntity)
 				m_pBlowUpEntity->RegisterReference((CEntity**)&m_pBlowUpEntity);
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_BOMB_TICK, 1.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_BOMB_TICK, 1.0f);
 		}
 		bDriverLastFrame = true;
 	}else
@@ -1571,7 +1570,7 @@ CVehicle::ProcessDelayedExplosion(void)
 		m_nBombTimer -= tick;
 
 	if(IsCar() && ((CAutomobile*)this)->m_bombType == CARBOMB_TIMEDACTIVE && (m_nBombTimer & 0xFE00) != (prev & 0xFE00))
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_BOMB_TICK, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_BOMB_TICK, 0.0f);
 
 	if (m_nBombTimer == 0)
 		BlowUpCar(m_pBlowUpEntity);
@@ -2364,22 +2363,17 @@ DestroyVehicleAndDriverAndPassengers(CVehicle* pVehicle)
 		}
 	}
 	CWorld::Remove(pVehicle);
-//+ rouz edit (ChatGPT)
 	// Destroy and release the vehicle without invoking C++ delete.
 	pVehicle->~CVehicle();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-	//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-}
+	}
 
 #ifdef COMPATIBLE_SAVES
 void
 CVehicle::Save(uint8*& buf)
 {
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 4);
 	WriteSaveBuf(&buf, &(GetRight().x), sizeof(GetRight().x));
 	WriteSaveBuf(&buf, &(GetRight().y), sizeof(GetRight().y));
@@ -2397,15 +2391,11 @@ CVehicle::Save(uint8*& buf)
 	WriteSaveBuf(&buf, &(GetPosition().y), sizeof(GetPosition().y));
 	WriteSaveBuf(&buf, &(GetPosition().z), sizeof(GetPosition().z));
 	ZeroSaveBuf(&buf, 16);
-	//- rouz edit (ChatGPT)
-	SaveEntityFlags(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		SaveEntityFlags(buf);
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 208);
-	//- rouz edit (ChatGPT)
-	AutoPilot.Save(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		AutoPilot.Save(buf);
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &m_currentColour1, sizeof(m_currentColour1));
 	WriteSaveBuf(&buf, &m_currentColour2, sizeof(m_currentColour2));
 	ZeroSaveBuf(&buf, 2);
@@ -2422,16 +2412,14 @@ CVehicle::Save(uint8*& buf)
 	WriteSaveBuf(&buf, &m_fGasPedal, sizeof(m_fGasPedal));
 	WriteSaveBuf(&buf, &m_fBrakePedal, sizeof(m_fBrakePedal));
 	WriteSaveBuf(&buf, &VehicleCreatedBy, sizeof(VehicleCreatedBy));
-	//- rouz edit (ChatGPT)
-	uint8 flags = 0;
+		uint8 flags = 0;
 	if (bIsLawEnforcer) flags |= BIT(0);
 	if (bIsLocked) flags |= BIT(3);
 	if (bEngineOn) flags |= BIT(4);
 	if (bIsHandbrakeOn) flags |= BIT(5);
 	if (bLightsOn) flags |= BIT(6);
 	if (bFreebies) flags |= BIT(7);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &flags, sizeof(flags));
 	ZeroSaveBuf(&buf, 10);
 	WriteSaveBuf(&buf, &m_fHealth, sizeof(m_fHealth));
@@ -2445,15 +2433,13 @@ CVehicle::Save(uint8*& buf)
 	ZeroSaveBuf(&buf, 12);
 	WriteSaveBuf(&buf, &m_nDoorLock, sizeof(m_nDoorLock));
 	ZeroSaveBuf(&buf, 108);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CVehicle::Load(uint8*& buf)
 {
 	CMatrix tmp;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 4);
 	ReadSaveBuf(&tmp.GetRight().x, &buf, sizeof(tmp.GetRight().x));
 	ReadSaveBuf(&tmp.GetRight().y, &buf, sizeof(tmp.GetRight().y));
@@ -2470,20 +2456,14 @@ CVehicle::Load(uint8*& buf)
 	ReadSaveBuf(&tmp.GetPosition().x, &buf, sizeof(tmp.GetPosition().x));
 	ReadSaveBuf(&tmp.GetPosition().y, &buf, sizeof(tmp.GetPosition().y));
 	ReadSaveBuf(&tmp.GetPosition().z, &buf, sizeof(tmp.GetPosition().z));
-	//- rouz edit (ChatGPT)
-	m_matrix = tmp;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		m_matrix = tmp;
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 16);
-	//- rouz edit (ChatGPT)
-	LoadEntityFlags(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		LoadEntityFlags(buf);
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 208);
-	//- rouz edit (ChatGPT)
-	AutoPilot.Load(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		AutoPilot.Load(buf);
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&m_currentColour1, &buf, sizeof(m_currentColour1));
 	ReadSaveBuf(&m_currentColour2, &buf, sizeof(m_currentColour2));
 	SkipSaveBuf(&buf, 2);
@@ -2500,20 +2480,16 @@ CVehicle::Load(uint8*& buf)
 	ReadSaveBuf(&m_fGasPedal, &buf, sizeof(m_fGasPedal));
 	ReadSaveBuf(&m_fBrakePedal, &buf, sizeof(m_fBrakePedal));
 	ReadSaveBuf(&VehicleCreatedBy, &buf, sizeof(VehicleCreatedBy));
-	//- rouz edit (ChatGPT)
-	uint8 flags;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		uint8 flags;
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&flags, &buf, sizeof(flags));
-	//- rouz edit (ChatGPT)
-	bIsLawEnforcer = !!(flags & BIT(0));
+		bIsLawEnforcer = !!(flags & BIT(0));
 	bIsLocked = !!(flags & BIT(3));
 	bEngineOn = !!(flags & BIT(4));
 	bIsHandbrakeOn = !!(flags & BIT(5));
 	bLightsOn = !!(flags & BIT(6));
 	bFreebies = !!(flags & BIT(7));
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 10);
 	ReadSaveBuf(&m_fHealth, &buf, sizeof(m_fHealth));
 	ReadSaveBuf(&m_nCurrentGear, &buf, sizeof(m_nCurrentGear));
@@ -2526,8 +2502,7 @@ CVehicle::Load(uint8*& buf)
 	SkipSaveBuf(&buf, 12);
 	ReadSaveBuf(&m_nDoorLock, &buf, sizeof(m_nDoorLock));
 	SkipSaveBuf(&buf, 108);
-	//- rouz edit (ChatGPT)
-}
+	}
 #endif
 
 eVehicleAppearance
@@ -2552,11 +2527,9 @@ IsVehiclePointerValid(CVehicle* pVehicle)
 {
 	if (!pVehicle)
 		return false;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	int index = CPool_GetJustIndex_NoFreeAssert(CPools::GetVehiclePool(), pVehicle);
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+	#ifdef FIX_BUGS
 	if (index < 0 || index >= NUMVEHICLES)
 #else
 	if (index < 0 || index > NUMVEHICLES)
@@ -2564,3 +2537,5 @@ IsVehiclePointerValid(CVehicle* pVehicle)
 		return false;
 	return pVehicle->m_vehType == VEHICLE_TYPE_PLANE || pVehicle->m_entryInfoList.first;
 }
+
+//- rouz edit (ChatGPT)

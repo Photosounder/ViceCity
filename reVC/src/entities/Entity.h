@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "ModelInfo.h"
@@ -6,15 +7,7 @@
 struct CReference;
 class CPtrList;
 
-enum eEntityType
-{
-	ENTITY_TYPE_NOTHING = 0,
-	ENTITY_TYPE_BUILDING,
-	ENTITY_TYPE_VEHICLE,
-	ENTITY_TYPE_PED,
-	ENTITY_TYPE_OBJECT,
-	ENTITY_TYPE_DUMMY,
-};
+#include "EntityTypes.h"
 
 enum eEntityStatus
 {
@@ -183,3 +176,5 @@ public:
 };
 
 bool IsEntityPointerValid(CEntity*);
+
+//- rouz edit (ChatGPT)

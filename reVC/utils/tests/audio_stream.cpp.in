@@ -1,0 +1,469 @@
+#include <cassert>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <iostream>
+#include <mutex>
+#include <new>
+#include <queue>
+#include <thread>
+#include <utility>
+#include <cstdint>
+#define AUDIO_OAL
+#define MULTITHREADED_AUDIO
+#define AUDIO_OAL_USE_MPG123
+#define AL_LIBTYPE_STATIC
+#define nil nullptr
+#define ASSERT assert
+using uint32 = uint32_t;
+using uint8 = uint8_t;
+using int32 = int32_t;
+#include "src/audio/oal/stream.h"
+#include "src/audio/oal/AudioStereoBuffer.h"
+#include "src/audio/oal/AudioJobQueue.h"
+static CSortStereoBuffer SortStereoBuffer = {nullptr, 0};
+
+struct { int m_nMusicMode = 0; } MusicManager;
+extern "C" bool AudioStream_IsCutscene(void) {
+    // Supply fixture music state through the production C host boundary
+    return MusicManager.m_nMusicMode == 1;
+}
+enum { MUSICMODE_CUTSCENE = 1 };
+AudioThread gAudioThread;
+AudioMutex gAudioThreadQueueMutex;
+AudioWakeSignal gAudioThreadCv;
+bool gAudioThreadTerm = false;
+AudioProcessQueue gStreamsToProcess = {nullptr, nullptr};
+AudioCloseQueue gStreamsToClose = {nullptr, nullptr};
+static std::atomic<bool> decoderLibraryAlive{false};
+static std::atomic<unsigned> fixtureAllocations{0};
+static void *fixture_malloc(size_t size)
+{
+    // Count explicit scheduling nodes and caller-owned decoder allocations
+    void *memory = std::malloc(size);
+    if(memory) fixtureAllocations++;
+    return memory;
+}
+static void fixture_free(void *memory)
+{
+    // Detect missing or excess frees across worker and synchronous shutdown paths
+    if(memory) {
+        assert(fixtureAllocations.fetch_sub(1) > 0);
+        std::free(memory);
+    }
+}
+#define malloc fixture_malloc
+#define free fixture_free
+static int mpg123_init()
+{
+    // Keep the fixture decoder library alive across decoding and cleanup
+    decoderLibraryAlive = true;
+    return 0;
+}
+static void mpg123_exit()
+{
+    // Record the actual library shutdown point from production Terminate
+    assert(AudioCloseQueue_IsEmpty(&gStreamsToClose));
+    decoderLibraryAlive = false;
+}
+static std::deque<ALuint> device[2];
+static ALint sourceState[2] = {AL_STOPPED, AL_STOPPED};
+static bool processDevice = false;
+
+extern "C" void AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei count, const ALuint* buffers)
+{
+    // Enforce unique physical buffer ownership and the device capacity
+    for(int i = 0; i < count; i++) {
+        auto& queue = device[source - 1];
+        for(ALuint existing : queue) assert(existing != buffers[i]);
+        assert(queue.size() < AUDIO_BUFFER_PAIR_CAPACITY);
+        queue.push_back(buffers[i]);
+    }
+}
+extern "C" void AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei count, ALuint* buffers)
+{
+    // Return device buffers in FIFO order
+    for(int i = 0; i < count; i++) {
+        auto& queue = device[source - 1];
+        assert(!queue.empty());
+        buffers[i] = queue.front();
+        queue.pop_front();
+    }
+}
+extern "C" void AL_APIENTRY alGetSourcei(ALuint source, ALenum property, ALint* value)
+{
+    // Expose only the device state consumed by production stream methods
+    if(property == AL_SOURCE_STATE) *value = sourceState[source - 1];
+    else if(property == AL_BUFFERS_QUEUED) *value = (ALint)device[source - 1].size();
+    else if(property == AL_BUFFERS_PROCESSED) *value = processDevice ? (ALint)device[source - 1].size() : 0;
+    else assert(false);
+}
+extern "C" void AL_APIENTRY alSourcePlay(ALuint source)
+{
+    // Record playback without opening an audio device
+    sourceState[source - 1] = AL_PLAYING;
+}
+extern "C" void AL_APIENTRY alSourceStop(ALuint source)
+{
+    // Record stopping without opening an audio device
+    sourceState[source - 1] = AL_STOPPED;
+}
+extern "C" void AL_APIENTRY alBufferData(ALuint, ALenum, const ALvoid*, ALsizei, ALsizei)
+{
+    // Accept PCM uploads without audio hardware
+}
+void CStream_SetPitch(CStream *stream, float)
+{
+    // Leave pitch outside the queue test
+}
+void CStream_SetPan(CStream *stream, uint8) {
+    // Leave source panning outside the synchronization fixture
+}
+void CStream_SetVolume(CStream *stream, uint32) {
+    // Leave source gain outside the synchronization fixture
+}
+void CStream_SetLoopCount(CStream *stream, int32 count) {
+    // Preserve the loop count restored by provider initialization
+    stream->m_nLoopCount = count;
+}
+void CStream_Pause(CStream *stream) {
+    // Leave the provider pause device operation outside the synchronization fixture
+}
+uint32 CStream_GetPosMS(CStream *stream)
+{
+    // Supply a stable saved position for provider resets
+    return 100;
+}
+
+struct Gate {
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool entered = false, released = false;
+    std::atomic<unsigned> decoded{0};
+    std::atomic<bool> destroyed{false};
+};
+class Decoder {
+    Gate& gate;
+public:
+    AudioDecoder decoder;
+    explicit Decoder(Gate& g) : gate(g) {}
+    ~Decoder() {
+        // Signal completion of decoder ownership transfer
+        assert(decoderLibraryAlive);
+        assert(!gate.destroyed);
+        gate.destroyed = true;
+    }
+    bool IsOpened() {
+        // Keep the fixture decoder open throughout playback
+        return true;
+    }
+    void FileOpen() {}
+    uint32 GetSampleSize() {
+        // Describe one signed sixteen-bit sample
+        return 2;
+    }
+    uint32 GetSampleCount() {
+        // Keep the stream longer than the test playback
+        return 100000;
+    }
+    uint32 GetSampleRate() {
+        // Supply the fixture sample rate
+        return 32000;
+    }
+    uint32 GetChannels() {
+        // Exercise both buffer channels
+        return 2;
+    }
+    void Seek(uint32) {}
+    uint32 Tell() {
+        // Leave decoder position outside the queue test
+        return 0;
+    }
+    uint32 Decode(void* buffer) {
+        // Pause the first decode while the main thread exercises a production reset
+        assert(decoderLibraryAlive);
+        if(gate.decoded.fetch_add(1) == 0) {
+            std::unique_lock<std::mutex> lock(gate.mutex);
+            gate.entered = true;
+            gate.cv.notify_one();
+            gate.cv.wait(lock, [&] { return gate.released; });
+        }
+        // Provide a stereo sample to the real FillBuffer method
+        assert(decoderLibraryAlive);
+        memset(buffer, 0, 4);
+        return 4;
+    }
+};
+
+static void Decoder_Close(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    ((Decoder*)state)->~Decoder();
+}
+
+static bool Decoder_IsOpened(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->IsOpened();
+}
+
+static void Decoder_FileOpen(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    ((Decoder*)state)->FileOpen();
+}
+
+static uint32 Decoder_GetSampleSize(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->GetSampleSize();
+}
+
+static uint32 Decoder_GetSampleCount(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->GetSampleCount();
+}
+
+static uint32 Decoder_GetSampleRate(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->GetSampleRate();
+}
+
+static uint32 Decoder_GetChannels(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->GetChannels();
+}
+
+static void Decoder_Seek(void *state, uint32 milliseconds)
+{
+    // Route the C function table to the gated fixture decoder
+    ((Decoder*)state)->Seek(milliseconds);
+}
+
+static uint32 Decoder_Tell(void *state)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->Tell();
+}
+
+static uint32 Decoder_Decode(void *state, void *buffer)
+{
+    // Route the C function table to the gated fixture decoder
+    return ((Decoder*)state)->Decode(buffer);
+}
+
+static const AudioDecoderOps decoderOps = {
+    Decoder_Close, Decoder_IsOpened, Decoder_FileOpen, Decoder_GetSampleSize, Decoder_GetSampleCount, Decoder_GetSampleRate, Decoder_GetChannels, Decoder_Seek, Decoder_Tell, Decoder_Decode
+};
+
+static AudioDecoder *make_decoder(Gate& gate)
+{
+    // Construct and bind externally owned fixture decoder state
+    Decoder *state = new(malloc(sizeof(Decoder))) Decoder(gate);
+    AudioDecoder_Init(&state->decoder, &decoderOps, state);
+    return &state->decoder;
+}
+
+@METHODS@
+
+template<class Predicate> static void wait_for(Predicate predicate)
+{
+    // Bound synchronization waits so a broken worker fails quietly
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while(!predicate()) {
+        assert(std::chrono::steady_clock::now() < deadline);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+int main()
+{
+    // Exercise decoding across start, seek, provider reset and close
+    ALuint sources[2] = {1, 2};
+    ALuint buffers[NUM_STREAMBUFFERS] = {11, 12, 21, 22, 31, 32, 41, 42};
+    for(int scenario = 0; scenario < 4; scenario++) {
+        // Start a worker whose lifetime ends before the fixture stream is destroyed
+        CStream_Initialise();
+        Gate gate;
+        CStream stream;
+        CStream_Init(&stream, sources, buffers);
+        stream.m_pSoundFile = make_decoder(gate);
+        stream.m_pBuffer = malloc(4);
+        stream.m_bIExist = true;
+        assert(CStream_Setup(&stream, false, true));
+        CStream_Start(&stream);
+        wait_for([&] {
+            std::lock_guard<std::mutex> lock(gate.mutex);
+            return gate.entered;
+        });
+        if(scenario == 0) CStream_Start(&stream);
+        else if(scenario == 1) { CStream_SetPosMS(&stream, 100); CStream_Start(&stream); }
+        else if(scenario == 2) CStream_ProviderTerm(&stream);
+        else CStream_Close(&stream);
+        {
+            // Resume the stale decode after resetting its queue
+            std::lock_guard<std::mutex> lock(gate.mutex);
+            gate.released = true;
+            gate.cv.notify_one();
+        }
+        if(scenario < 2) {
+            wait_for([&] {
+                AudioMutex_Lock(&stream.m_mutex);
+                bool ready = stream.m_fillBuffers.count == 0 && stream.m_queueBuffers.count == 4;
+                AudioMutex_Unlock(&stream.m_mutex);
+                return ready;
+            });
+            assert(gate.decoded == 5);
+            assert(CStream_QueueBuffers(&stream));
+            for(unsigned i = 0; i < 4; i++) {
+                assert(device[0][i] == buffers[i * 2]);
+                assert(device[1][i] == buffers[i * 2 + 1]);
+            }
+            // Recycle all four pairs repeatedly through the actual Update and worker paths
+            for(unsigned cycle = 0; cycle < 200; cycle++) {
+                processDevice = true;
+                CStream_Update(&stream);
+                processDevice = false;
+                wait_for([&] {
+                    AudioMutex_Lock(&stream.m_mutex);
+                    bool ready = stream.m_queueBuffers.count == 4;
+                    AudioMutex_Unlock(&stream.m_mutex);
+                    return ready;
+                });
+                assert(CStream_QueueBuffers(&stream));
+            }
+            CStream_Close(&stream);
+        } else if(scenario == 2) {
+            wait_for([&] { return gate.decoded.load() == 1; });
+            CStream_Close(&stream);
+        }
+        wait_for([&] { return gate.destroyed.load(); });
+        // Join before destroying a stream that duplicate scheduling entries may reference
+        CStream_Terminate();
+        // Drain duplicate scheduling entries before destroying the stream object
+        {
+            assert(AudioProcessQueue_IsEmpty(&gStreamsToProcess));
+            assert(AudioCloseQueue_IsEmpty(&gStreamsToClose));
+            assert(stream.m_fillBuffers.count == 0 && stream.m_queueBuffers.count == 0);
+        }
+        assert(device[0].empty() && device[1].empty());
+        assert(fixtureAllocations == 0);
+        // Destroy stream synchronization after scheduler shutdown
+        CStream_Destroy(&stream);
+    }
+    // Exercise both provider initialization branches and release locks before subsequent calls
+    {
+        Gate gate;
+        gate.released = true;
+        CStream_Initialise();
+        CStream stream;
+        CStream_Init(&stream, sources, buffers);
+        stream.m_bReset = true;
+        CStream_ProviderInit(&stream);
+        assert(!stream.m_bReset && !CStream_IsPlaying(&stream));
+        stream.m_pSoundFile = make_decoder(gate);
+        stream.m_pBuffer = malloc(4);
+        stream.m_bIExist = true;
+        CStream_ProviderTerm(&stream);
+        CStream_ProviderInit(&stream);
+        assert(!stream.m_bReset);
+        AudioMutex_Lock(&stream.m_mutex);
+        AudioBufferPair pair = {buffers[0], buffers[1]};
+        assert(AudioBufferQueue_Push(&stream.m_fillBuffers, pair));
+        AudioMutex_Unlock(&stream.m_mutex);
+        assert(CStream_IsPlaying(&stream));
+        CStream_ProviderTerm(&stream);
+        assert(!CStream_IsPlaying(&stream));
+        CStream_Close(&stream);
+        CStream_Terminate();
+        assert(gate.destroyed && fixtureAllocations == 0);
+        // Destroy stream synchronization after scheduler shutdown
+        CStream_Destroy(&stream);
+    }
+    // Exercise synchronous cutscene filling and recycling through the same pair representation
+    {
+        Gate gate;
+        gate.released = true;
+        MusicManager.m_nMusicMode = MUSICMODE_CUTSCENE;
+        CStream_Initialise();
+        CStream stream;
+        CStream_Init(&stream, sources, buffers);
+        stream.m_pSoundFile = make_decoder(gate);
+        stream.m_pBuffer = malloc(4);
+        stream.m_bIExist = true;
+        assert(CStream_Setup(&stream, false, true));
+        CStream_Start(&stream);
+        for(unsigned cycle = 0; cycle < 100; cycle++) {
+            assert(device[0].size() == 4 && device[1].size() == 4);
+            processDevice = true;
+            CStream_Update(&stream);
+            processDevice = false;
+        }
+        assert(gate.decoded == 404);
+        CStream_Close(&stream);
+        wait_for([&] { return gate.destroyed.load(); });
+        CStream_Terminate();
+        MusicManager.m_nMusicMode = 0;
+        assert(device[0].empty() && device[1].empty());
+        assert(fixtureAllocations == 0);
+        // Destroy stream synchronization after scheduler shutdown
+        CStream_Destroy(&stream);
+    }
+    // Hold decoding open while shutdown must discard duplicate work and finish queued cleanup
+    {
+        Gate gate;
+        Gate pendingGate;
+        CStream_Initialise();
+        CStream stream;
+        CStream_Init(&stream, sources, buffers);
+        stream.m_pSoundFile = make_decoder(gate);
+        stream.m_pBuffer = malloc(4);
+        stream.m_bIExist = true;
+        CStream_Start(&stream);
+        wait_for([&] {
+            std::lock_guard<std::mutex> lock(gate.mutex);
+            return gate.entered;
+        });
+        for(unsigned request = 0; request < 100; request++) CStream_FlagAsToBeProcessed(&stream, false);
+        CStream_Close(&stream);
+        CStream pending;
+        CStream_Init(&pending, sources, buffers);
+        pending.m_pSoundFile = make_decoder(pendingGate);
+        pending.m_pBuffer = malloc(4);
+        pending.m_bIExist = true;
+        CStream_Close(&pending);
+        std::atomic<bool> finished{false};
+        std::thread shutdown([&] {
+            CStream_Terminate();
+            finished = true;
+        });
+        wait_for([&] {
+            AudioMutex_Lock(&gAudioThreadQueueMutex);
+            bool stopping = gAudioThreadTerm;
+            AudioMutex_Unlock(&gAudioThreadQueueMutex);
+            return stopping;
+        });
+        assert(!finished && !pendingGate.destroyed && decoderLibraryAlive);
+        {
+            // Allow the borrowed decoder and all captured cleanup requests to finish
+            std::lock_guard<std::mutex> lock(gate.mutex);
+            gate.released = true;
+            gate.cv.notify_one();
+        }
+        shutdown.join();
+        assert(finished && gate.destroyed && pendingGate.destroyed && !decoderLibraryAlive);
+        assert(AudioProcessQueue_IsEmpty(&gStreamsToProcess));
+        assert(AudioCloseQueue_IsEmpty(&gStreamsToClose));
+        assert(fixtureAllocations == 0);
+        // Destroy stream synchronization after scheduler shutdown
+        CStream_Destroy(&pending);
+        CStream_Destroy(&stream);
+    }
+    std::cout << "Production worker reset, recycling, cutscene and pending-job shutdown passed\n";
+}

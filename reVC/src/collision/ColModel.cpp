@@ -69,17 +69,27 @@ CColModel::RemoveTrianglePlanes(void)
 }
 
 void
-CColModel::SetLinkPtr(CLink<CColModel*> *lptr)
+//+ rouz edit (ChatGPT)
+CColModel::SetLinkPtr(CLink *lptr)
+//- rouz edit (ChatGPT)
 {
 	assert(trianglePlanes);
-	*(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]) = lptr;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	*(CLink**)ALIGNPTR(&trianglePlanes[numTriangles]) = lptr;
+	//- rouz edit (ChatGPT)
 }
 
-CLink<CColModel*>*
+//+ rouz edit (ChatGPT)
+CLink*
+//- rouz edit (ChatGPT)
 CColModel::GetLinkPtr(void)
 {
 	assert(trianglePlanes);
-	return *(CLink<CColModel*>**)ALIGNPTR(&trianglePlanes[numTriangles]);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	return *(CLink**)ALIGNPTR(&trianglePlanes[numTriangles]);
+	//- rouz edit (ChatGPT)
 }
 
 void

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "World.h"
@@ -331,7 +332,6 @@ CPhysical::PlacePhysicalRelativeToOtherPhysical(CPhysical *other, CPhysical *phy
 	CWorld::Add(phys);
 }
 
-//+ rouz edit (ChatGPT)
 static void
 ResyncPedsCarriedByVehicle(CPhysical *surface)
 {
@@ -366,7 +366,6 @@ ResyncPedsCarriedByVehicle(CPhysical *surface)
 		ped->RemoveAndAdd();
 	}
 }
-//- rouz edit (ChatGPT)
 
 int32
 CPhysical::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
@@ -626,7 +625,6 @@ CPhysical::ApplyAirResistance(void)
 	}
 }
 
-//+ rouz edit (ChatGPT)
 static bool
 IsKinematicCollisionSurface(CEntity *ent)
 {
@@ -642,7 +640,6 @@ GetKinematicCollisionSurfaceSpeed(CEntity *ent, const CVector &point)
 	}
 	return CVector(0.0f, 0.0f, 0.0f);
 }
-//- rouz edit (ChatGPT)
 
 bool
 CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, float &impulseB)
@@ -658,13 +655,11 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 	float massFactorA;
 	if(B->bPedPhysics){
 		massFactorA = 10.0f;
-		//+ rouz edit (ChatGPT)
-		// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
+				// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
 		bool bPedCarriedByA = B->IsPed() && (((CPed*)B)->m_pCurrentPhysSurface == A || (A->IsVehicle() && rouz.glue_on_vehs && ((CPed*)B)->m_pCurSurface == A));
 		if(bPedCarriedByA)
 			ispedcontactA = true;
-		//- rouz edit (ChatGPT)
-	}else
+			}else
 		massFactorA = A->bIsHeavy ? 2.0f : 1.0f;
 
 	float massFactorB;
@@ -675,13 +670,11 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 		else
 			massFactorB = 10.0f;
 
-		//+ rouz edit (ChatGPT)
-		// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
+				// Treat a remembered vehicle surface as carried contact while vehicle glue is active.
 		bool bPedCarriedByB = A->IsPed() && (((CPed*)A)->m_pCurrentPhysSurface == B || (B->IsVehicle() && rouz.glue_on_vehs && ((CPed*)A)->m_pCurSurface == B));
 		if(bPedCarriedByB)
 			ispedcontactB = true;
-		//- rouz edit (ChatGPT)
-	}else
+			}else
 		massFactorB = B->bIsHeavy ? 2.0f : 1.0f;
 
 	if(B->bInfiniteMass && !B->m_phy_flagA08){
@@ -851,16 +844,14 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			impulseB = -(eB - speedB) * mB;
 			CVector fA = colpoint.normal*(impulseA/massFactorA);
 			CVector fB = colpoint.normal*(-impulseB/massFactorB);
-			//+ rouz edit (ChatGPT)
-			// Suppress carrier self-collision impulses while the anchor carries the ped.
+						// Suppress carrier self-collision impulses while the anchor carries the ped.
 			if(ispedcontactB){
 				impulseA = 0.0f;
 				impulseB = 0.0f;
 				fA = CVector(0.0f, 0.0f, 0.0f);
 				fB = CVector(0.0f, 0.0f, 0.0f);
 			}
-			//- rouz edit (ChatGPT)
-			if(!A->bInfiniteMass){
+						if(!A->bInfiniteMass){
 				if(fA.z < 0.0f) fA.z = 0.0f;
 				A->ApplyMoveForce(fA);
 			}
@@ -891,16 +882,14 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			impulseB = -(eB - speedB) * mB;
 			CVector fA = colpoint.normal*(impulseA/massFactorA);
 			CVector fB = colpoint.normal*(-impulseB/massFactorB);
-			//+ rouz edit (ChatGPT)
-			// Suppress carrier self-collision impulses while the anchor carries the ped.
+						// Suppress carrier self-collision impulses while the anchor carries the ped.
 			if(ispedcontactA){
 				impulseA = 0.0f;
 				impulseB = 0.0f;
 				fA = CVector(0.0f, 0.0f, 0.0f);
 				fB = CVector(0.0f, 0.0f, 0.0f);
 			}
-			//- rouz edit (ChatGPT)
-			if(!A->bInfiniteMass && !ispedcontactA){
+						if(!A->bInfiniteMass && !ispedcontactA){
 				if(fA.z < 0.0f) fA.z = 0.0f;
 				A->ApplyMoveForce(fA);
 				A->ApplyTurnForce(fA, pointposA);
@@ -1025,15 +1014,13 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 	CVector speed;
 	CVector vImpulse;
 	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(B, colpoint.point); // rouz edit (ChatGPT)
-	//+ rouz edit (ChatGPT)
-	// Resolve carrier obstacles using relative motion even when the vehicle is stuck or shifted
+		// Resolve carrier obstacles using relative motion even when the vehicle is stuck or shifted
 	if (rouz.glue_on_vehs && IsPed() && B->IsVehicle() && !((CVehicle*)B)->IsBoat()) {
 		CPed *ped = (CPed*)this;
 		if ((ped->bIsStanding || ped->bWasStanding) && ped->m_pCurrentPhysSurface == B)
 			surfaceSpeed = ((CPhysical*)B)->GetSpeed(colpoint.point - B->GetPosition());
 	}
-	//- rouz edit (ChatGPT)
-	CVector relativeMoveSpeed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
+		CVector relativeMoveSpeed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_BEACHBALL && B != (CEntity*)FindPlayerPed())
 		((CObject*)this)->m_nBeachballBounces = 0;
@@ -1564,7 +1551,7 @@ collision:
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-			DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 		}
 	}else if(A->bHasContacted){
 		CVector savedMoveFriction = A->m_vecMoveFriction;
@@ -1586,7 +1573,7 @@ collision:
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-			DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 				A->bHasContacted = true;
@@ -1619,7 +1606,7 @@ collision:
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-			DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 				A->bHasContacted = true;
@@ -1646,7 +1633,7 @@ collision:
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-			DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 				A->bHasContacted = true;
@@ -1833,9 +1820,9 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 							if(A->GetUp().z < -0.6f &&
 							   Abs(A->m_vecMoveSpeed.x) < 0.05f &&
 							   Abs(A->m_vecMoveSpeed.y) < 0.05f)
-								DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, 0.1f*impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+								DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, 0.1f*impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 							else
-								DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+								DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 						}else{
 							if(impulseA > A->m_fDamageImpulse)
@@ -1844,7 +1831,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
 							float moveSpeedDiff = A->m_vecMoveSpeed.MagnitudeSqr();
 
-							DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+							DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 						}
 					}
 				}else{
@@ -1871,9 +1858,9 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 							if(A->GetUp().z < -0.6f &&
 							   Abs(A->m_vecMoveSpeed.x) < 0.05f &&
 							   Abs(A->m_vecMoveSpeed.y) < 0.05f)
-								DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, 0.1f*impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+								DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, 0.1f*impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 							else
-								DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+								DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 
 							if(A->GetModelIndex() == MI_RCBANDIT)
@@ -1898,7 +1885,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
 							float moveSpeedDiff = A->m_vecMoveSpeed.MagnitudeSqr();
 
-							DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+							DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 						}
 
 						if(A->ApplyFriction(adhesion, aColPoints[i], B)) // rouz edit (ChatGPT)
@@ -1953,7 +1940,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-						DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 					}
 				}else if(A->bHasContacted){
 					CVector savedMoveFriction = A->m_vecMoveFriction;
@@ -1978,7 +1965,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-						DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 							A->bHasContacted = true;
@@ -2014,7 +2001,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-						DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 							A->bHasContacted = true;
@@ -2044,7 +2031,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
-						DMAudio.ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
+						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
 						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
 							A->bHasContacted = true;
@@ -2153,12 +2140,10 @@ CPhysical::ProcessShift(void)
 		ApplyMoveSpeed();
 		ApplyTurnSpeed();
 		GetMatrix().Reorthogonalise();
-		//+ rouz edit (ChatGPT)
-		// Carry standing peds through vehicle shift movement before checking contacts.
+				// Carry standing peds through vehicle shift movement before checking contacts.
 		if(IsVehicle())
 			ResyncPedsCarriedByVehicle(this);
-		//- rouz edit (ChatGPT)
-
+		
 		CWorld::AdvanceCurrentScanCode();
 
 		if(IsVehicle())
@@ -2176,23 +2161,19 @@ CPhysical::ProcessShift(void)
 				if(ProcessCollisionSectorList(node->sector->m_lists)){
 					if(!CWorld::bSecondShift){
 						GetMatrix() = matrix;
-						//+ rouz edit (ChatGPT)
-						// Return carried peds with the vehicle when the shift is rolled back.
+												// Return carried peds with the vehicle when the shift is rolled back.
 						if(IsVehicle())
 							ResyncPedsCarriedByVehicle(this);
-						//- rouz edit (ChatGPT)
-						return;
+												return;
 					}
 					hadCollision = true;
 				}
 			if(hadCollision){
 				GetMatrix() = matrix;
-				//+ rouz edit (ChatGPT)
-				// Return carried peds with the vehicle when the shift is rolled back.
+								// Return carried peds with the vehicle when the shift is rolled back.
 				if(IsVehicle())
 					ResyncPedsCarriedByVehicle(this);
-				//- rouz edit (ChatGPT)
-				return;
+								return;
 			}
 		}
 		bIsStuck = false;
@@ -2275,12 +2256,10 @@ CPhysical::ProcessCollision(void)
 			ApplyMoveSpeed();
 			ApplyTurnSpeed();
 			GetMatrix().Reorthogonalise();
-			//+ rouz edit (ChatGPT)
-			// Carry standing peds with this vehicle before the fast collision probe.
+						// Carry standing peds with this vehicle before the fast collision probe.
 			if(IsVehicle())
 				ResyncPedsCarriedByVehicle(this);
-			//- rouz edit (ChatGPT)
-			bSkipLineCol = false;
+						bSkipLineCol = false;
 			m_bIsVehicleBeingShifted = false;
 
 			bJustCheckCollision = true;
@@ -2306,12 +2285,10 @@ CPhysical::ProcessCollision(void)
 			bUsesCollision = savedUsesCollision;
 			GetMatrix() = savedMatrix;
 			m_vecMoveSpeed = savedMoveSpeed;
-			//+ rouz edit (ChatGPT)
-			// Return carried peds when the fast collision probe rolls the vehicle back.
+						// Return carried peds when the fast collision probe rolls the vehicle back.
 			if(IsVehicle())
 				ResyncPedsCarriedByVehicle(this);
-			//- rouz edit (ChatGPT)
-			if(IsVehicle() && ((CVehicle*)this)->bIsLawEnforcer)
+						if(IsVehicle() && ((CVehicle*)this)->bIsLawEnforcer)
 				m_fElasticity *= HIGHSPEED_ELASTICITY_MULT_COPCAR;
 		}
 	}else if(IsObject() && ((CObject*)this)->ObjectCreatedBy != TEMP_OBJECT){
@@ -2353,12 +2330,10 @@ CPhysical::ProcessCollision(void)
 		CTimer::SetTimeStep(i * step);
 		ApplyMoveSpeed();
 		ApplyTurnSpeed();
-		//+ rouz edit (ChatGPT)
-		// Carry standing peds through each vehicle collision substep.
+				// Carry standing peds through each vehicle collision substep.
 		if(IsVehicle())
 			ResyncPedsCarriedByVehicle(this);
-		//- rouz edit (ChatGPT)
-		// TODO: get rid of copy paste?
+				// TODO: get rid of copy paste?
 		if(CheckCollision()){
 			if(IsPed() && m_vecMoveSpeed.z == 0.0f &&
 			   !ped->bWasStanding &&
@@ -2366,12 +2341,10 @@ CPhysical::ProcessCollision(void)
 				savedMatrix.GetPosition().z = GetPosition().z;
 			GetMatrix() = savedMatrix;
 			CTimer::SetTimeStep(savedTimeStep);
-			//+ rouz edit (ChatGPT)
-			// Return carried peds when this substep collision rolls the vehicle back.
+						// Return carried peds when this substep collision rolls the vehicle back.
 			if(IsVehicle())
 				ResyncPedsCarriedByVehicle(this);
-			//- rouz edit (ChatGPT)
-			m_fElasticity = savedElasticity;
+						m_fElasticity = savedElasticity;
 			return;
 		}
 		if(IsPed() && m_vecMoveSpeed.z == 0.0f &&
@@ -2380,12 +2353,10 @@ CPhysical::ProcessCollision(void)
 			savedMatrix.GetPosition().z = GetPosition().z;
 		GetMatrix() = savedMatrix;
 		CTimer::SetTimeStep(savedTimeStep);
-		//+ rouz edit (ChatGPT)
-		// Return carried peds after the temporary vehicle substep probe.
+				// Return carried peds after the temporary vehicle substep probe.
 		if(IsVehicle())
 			ResyncPedsCarriedByVehicle(this);
-		//- rouz edit (ChatGPT)
-		if(IsVehicle()){
+				if(IsVehicle()){
 			CVehicle *veh = (CVehicle*)this;
 			if(veh->m_vehType == VEHICLE_TYPE_CAR){
 				CAutomobile *car = (CAutomobile*)this;
@@ -2406,12 +2377,10 @@ CPhysical::ProcessCollision(void)
 	ApplyMoveSpeed();
 	ApplyTurnSpeed();
 	GetMatrix().Reorthogonalise();
-	//+ rouz edit (ChatGPT)
-	// Carry standing peds with the vehicle before the final collision check.
+		// Carry standing peds with the vehicle before the final collision check.
 	if(IsVehicle())
 		ResyncPedsCarriedByVehicle(this);
-	//- rouz edit (ChatGPT)
-	m_bIsVehicleBeingShifted = false;
+		m_bIsVehicleBeingShifted = false;
 	bSkipLineCol = false;
 	if(!m_vecMoveSpeed.IsZero() ||
 	   !m_vecTurnSpeed.IsZero() ||
@@ -2423,12 +2392,10 @@ CPhysical::ProcessCollision(void)
 			((CVehicle*)this)->bVehicleColProcessed = true;
 		if(CheckCollision()){
 			GetMatrix() = savedMatrix;
-			//+ rouz edit (ChatGPT)
-			// Return carried peds when the final collision check rolls the vehicle back.
+						// Return carried peds when the final collision check rolls the vehicle back.
 			if(IsVehicle())
 				ResyncPedsCarriedByVehicle(this);
-			//- rouz edit (ChatGPT)
-			m_fElasticity = savedElasticity;
+						m_fElasticity = savedElasticity;
 			return;
 		}
 	}
@@ -2441,3 +2408,5 @@ CPhysical::ProcessCollision(void)
 	m_fElasticity = savedElasticity;
 	RemoveAndAdd();
 }
+
+//- rouz edit (ChatGPT)

@@ -1,0 +1,13 @@
+# EAX and null backend as C11
+
+`src/audio/eax/eax-util.c` and `src/audio/sampman_null.c` are actual C translation units. The EAX header no longer has a C++ default argument; both production callers pass the validation flag explicitly. The two private EAX helpers have local C names. Existing preset data and interpolation formulas remain intact. The null backend depends only on C headers and the existing C assertion boundary, with no game classes.
+
+Run `powershell -ExecutionPolicy Bypass -File utils/tests/test_audio_eax_null.ps1` from the repository root. Saved C++ sources in `build/audio-eax-null-c-tests/before` are the baseline. Null baseline function bodies remain intact; its unrelated game headers are replaced with `audio_null_compat.h`, which supplies exactly the primitive types, constants and assertion macro it uses. This avoids linking unused rouziclib header definitions into the quiet test program.
+
+The EAX fixture compares 337,991 calls: every pair of all 114 presets, 13 ratios including extrapolation/endpoints/fractions, validation both enabled and disabled, nonzero vectors requiring normalization, and both out-of-range endpoints for every one of the 21 validated scalar fields. It hashes the accepted flag and every byte of the initialized result, preserving rejection sentinels. The null fixture calls all 61 exported APIs plus its inline music-volume getter, and checks repeated initialization and unchanged no-op volume state.
+
+Sixteen clang/GCC O0/O2 comparisons exercise production C modules linked to C11 and C++17 callers. Native MSVC x86/x64 also compiles and links both modules to the same C++ callers and matches the saved C++ output exactly. EAX additionally compiles in Miles mode on both Microsoft architectures. The phase report records 120 consumer syntax checks, six additional C variants (MASTER null, non-3D null, Miles EAX), four null/Miles checks and four existing host callback/EAX link tests.
+
+The comparisons exposed compiler-specific math behavior in the original `<math.h>`: clang/GCC C++ select float overloads, while MSVC uses double functions. Explicit C math choices preserve each tested compiler's original results. Preserving this distinction is required for exact behavior, especially fractional interpolation.
+
+CMake/premake discover the renamed files; the existing Visual Studio project explicitly selects C11 for both. Sources use LF line endings. These tests are quiet and use no sound device. Full linked game builds, native POSIX builds and in-game audio remain unverified. The Miles backend has since been converted to C11; all three sample-manager backends are now C sources.

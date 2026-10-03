@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define FORCE_PC_SCALING
 #define WITHWINDOWS
 #define WITHDINPUT
@@ -270,7 +271,7 @@ CMenuManager::PageUpList(bool playSoundOnSuccess)
 	if (m_nTotalListRow > MAX_VISIBLE_OPTION_ON_SCREEN) {
 		if (m_nFirstVisibleRowOnList > 0) {
 			if(playSoundOnSuccess)
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 
 			m_nFirstVisibleRowOnList = Max(0, m_nFirstVisibleRowOnList - MAX_VISIBLE_OPTION_ON_SCREEN);
 			m_nSelectedListRow = Min(m_nSelectedListRow, m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION_ON_SCREEN - 1);
@@ -288,7 +289,7 @@ CMenuManager::PageDownList(bool playSoundOnSuccess)
 	if (m_nTotalListRow > MAX_VISIBLE_OPTION_ON_SCREEN) {
 		if (m_nFirstVisibleRowOnList < m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN) {
 			if(playSoundOnSuccess)
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 
 			m_nFirstVisibleRowOnList = Min(m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION_ON_SCREEN, m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN);
 			m_nSelectedListRow = Max(m_nSelectedListRow, m_nFirstVisibleRowOnList);
@@ -319,9 +320,9 @@ CMenuManager::ThingsToDoBeforeLeavingPage()
 
 	} else if (m_nCurrScreen == MENUPAGE_SOUND_SETTINGS) {
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER)
-			m_nPrefsAudio3DProviderIndex = DMAudio.GetCurrent3DProviderIndex();
+			m_nPrefsAudio3DProviderIndex = DMAudio_GetCurrent3DProviderIndex();
 
-		DMAudio.StopFrontEndTrack();
+		DMAudio_StopFrontEndTrack();
 		OutputDebugString("FRONTEND AUDIO TRACK STOPPED");
 
 	} else if (ScreenHasOption(m_nCurrScreen, "FED_RES")) {
@@ -387,9 +388,9 @@ CMenuManager::ThingsToDoBeforeLeavingPage()
 	switch (m_nCurrScreen) {
 		case MENUPAGE_SOUND_SETTINGS:
 			if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER)
-				m_nPrefsAudio3DProviderIndex = DMAudio.GetCurrent3DProviderIndex();
+				m_nPrefsAudio3DProviderIndex = DMAudio_GetCurrent3DProviderIndex();
 
-			DMAudio.StopFrontEndTrack();
+			DMAudio_StopFrontEndTrack();
 			OutputDebugString("FRONTEND AUDIO TRACK STOPPED");
 			break;
 		case MENUPAGE_DISPLAY_SETTINGS:
@@ -525,7 +526,7 @@ CMenuManager::CMenuManager()
 	m_bShowMouse = true;
 	m_nHoverOption = HOVEROPTION_NOT_HOVERING;
 
-	DMAudio.SetMP3BoostVolume(m_PrefsMP3BoostVolume);
+	DMAudio_SetMP3BoostVolume(m_PrefsMP3BoostVolume);
 	m_bMenuActive = false;
 	m_bActivateSaveMenu = false;
 	m_bWantToLoad = false;
@@ -534,8 +535,8 @@ CMenuManager::CMenuManager()
 	m_fMapSize = MENU_Y(162.0f); // Y because of HOR+
 	m_fMapCenterX = MENU_X_LEFT_ALIGNED(320.0f);
 	m_fMapCenterY = MENU_Y(225.0f);
-	DMAudio.SetMusicMasterVolume(m_PrefsMusicVolume);
-	DMAudio.SetEffectsMasterVolume(m_PrefsSfxVolume);
+	DMAudio_SetMusicMasterVolume(m_PrefsMusicVolume);
+	DMAudio_SetEffectsMasterVolume(m_PrefsSfxVolume);
 
 #ifdef NO_ISLAND_LOADING
 	m_PrefsIslandLoading = ISLAND_LOADING_LOW;
@@ -598,22 +599,22 @@ CMenuManager::Initialise(void)
 		m_nCurrScreen = MENUPAGE_NONE;
 #endif
 
-	DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-	DMAudio.PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
-	DMAudio.Service();
-	DMAudio.SetMusicMasterVolume(m_PrefsMusicVolume);
-	DMAudio.SetEffectsMasterVolume(m_PrefsSfxVolume);
+	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
+	DMAudio_PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
+	DMAudio_Service();
+	DMAudio_SetMusicMasterVolume(m_PrefsMusicVolume);
+	DMAudio_SetEffectsMasterVolume(m_PrefsSfxVolume);
 #ifdef FIX_BUGS
 	static bool firstTime = true;
 	if (firstTime) {
-		DMAudio.SetRadioInCar(m_PrefsRadioStation);
+		DMAudio_SetRadioInCar(m_PrefsRadioStation);
 		firstTime = false;
 	} else
 #endif
-	m_PrefsRadioStation = DMAudio.GetRadioInCar();
+	m_PrefsRadioStation = DMAudio_GetRadioInCar();
 
-	DMAudio.SetMP3BoostVolume(m_PrefsMP3BoostVolume);
-	if (DMAudio.IsMP3RadioChannelAvailable()) {
+	DMAudio_SetMP3BoostVolume(m_PrefsMP3BoostVolume);
+	if (DMAudio_IsMP3RadioChannelAvailable()) {
 		if (m_PrefsRadioStation < WILDSTYLE || m_PrefsRadioStation > USERTRACK)
 			m_PrefsRadioStation = CGeneral::GetRandomNumber() % (USERTRACK + 1);
 	} else if (m_PrefsRadioStation < WILDSTYLE || m_PrefsRadioStation > WAVE)
@@ -742,22 +743,22 @@ CMenuManager::CheckSliderMovement(int value)
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 			m_PrefsMusicVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
 			m_PrefsMusicVolume = Clamp(m_PrefsMusicVolume, 0, 65);
-			DMAudio.SetMusicMasterVolume(m_PrefsMusicVolume);
+			DMAudio_SetMusicMasterVolume(m_PrefsMusicVolume);
 		}
 		break;
 	case MENUACTION_SFXVOLUME:
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 			m_PrefsSfxVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
 			m_PrefsSfxVolume = Clamp(m_PrefsSfxVolume, 0, 65);
-			DMAudio.SetEffectsMasterVolume(m_PrefsSfxVolume);
+			DMAudio_SetEffectsMasterVolume(m_PrefsSfxVolume);
 		}
 		break;
 	case MENUACTION_MP3VOLUMEBOOST:
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
-			if (DMAudio.IsMP3RadioChannelAvailable()) {
+			if (DMAudio_IsMP3RadioChannelAvailable()) {
 				m_PrefsMP3BoostVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
 				m_PrefsMP3BoostVolume = Clamp(m_PrefsMP3BoostVolume, 0, 65);
-				DMAudio.SetMP3BoostVolume(m_PrefsMP3BoostVolume);
+				DMAudio_SetMP3BoostVolume(m_PrefsMP3BoostVolume);
 			}
 		}
 		break;
@@ -923,17 +924,17 @@ CMenuManager::DoSettingsBeforeStartingAGame()
 	if (m_PrefsVsyncDisp != m_PrefsVsync)
 		m_PrefsVsync = m_PrefsVsyncDisp;
 #endif
-	DMAudio.DestroyAllGameCreatedEntities();
-	DMAudio.Service();
+	DMAudio_DestroyAllGameCreatedEntities();
+	DMAudio_Service();
 	m_bShutDownFrontEndRequested = true;
 	m_bWantToRestart = true;
-	DMAudio.SetEffectsFadeVol(0);
-	DMAudio.SetMusicFadeVol(0);
+	DMAudio_SetEffectsFadeVol(0);
+	DMAudio_SetMusicFadeVol(0);
 	for (int i = 0; i < NUM_RADIOS; i++)
 		CStats::FavoriteRadioStationList[i] = 0.0f;
 
 	SwitchMenuOnAndOff();
-	DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
+	DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
 }
 
 void
@@ -1304,7 +1305,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 					else if (m_nPrefsAudio3DProviderIndex == -1)
 						rightText = TheText.Get("FEA_ADP");
 					else {
-						char *rawProvider = DMAudio.Get3DProviderName(m_nPrefsAudio3DProviderIndex);
+						char *rawProvider = DMAudio_Get3DProviderName(m_nPrefsAudio3DProviderIndex);
 						AsciiToUnicode(rawProvider, unicodeTemp);
 						char *provider = UnicodeToAscii(unicodeTemp); // genius
 						strupr(provider);
@@ -1356,7 +1357,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 					}
 					break;
 				case MENUACTION_MP3VOLUMEBOOST:
-					if (!DMAudio.IsMP3RadioChannelAvailable()) {
+					if (!DMAudio_IsMP3RadioChannelAvailable()) {
 						rightText = TheText.Get("FEA_NM3");
 					}
 					break;
@@ -1510,7 +1511,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 						CFont::PrintString(MENU_X_LEFT_ALIGNED(DEFAULT_SCREEN_WIDTH - RIGHT_ALIGNED_TEXT_RIGHT_MARGIN(xMargin)), MENU_Y(aScreens[m_nCurrScreen].m_aEntries[i].m_Y MINUS_SCROLL_OFFSET), rightText);
 					}
 
-					if (m_nPrefsAudio3DProviderIndex == DMAudio.GetCurrent3DProviderIndex()) {
+					if (m_nPrefsAudio3DProviderIndex == DMAudio_GetCurrent3DProviderIndex()) {
 						if (!strcmp(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_EntryName, "FEA_3DH") && m_nHelperTextMsgId == 1)
 							ResetHelperText();
 					}
@@ -1518,7 +1519,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 						if (!strcmp(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_EntryName, "FED_RES") && m_nHelperTextMsgId == 1)
 							ResetHelperText();
 					}
-					if (m_nPrefsAudio3DProviderIndex != DMAudio.GetCurrent3DProviderIndex()) {
+					if (m_nPrefsAudio3DProviderIndex != DMAudio_GetCurrent3DProviderIndex()) {
 						if (!strcmp(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_EntryName, "FEA_3DH"))
 							SetHelperText(1);
 					}
@@ -1526,7 +1527,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 						if (!strcmp(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_EntryName, "FED_RES"))
 							SetHelperText(1);
 					}
-					if (m_nPrefsAudio3DProviderIndex != DMAudio.GetCurrent3DProviderIndex()) {
+					if (m_nPrefsAudio3DProviderIndex != DMAudio_GetCurrent3DProviderIndex()) {
 						if (strcmp(aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_EntryName, "FEA_3DH") != 0
 #ifdef CUSTOM_FRONTEND_OPTIONS
 							&& ScreenHasOption(m_nCurrScreen, "FEA_3DH")
@@ -1535,7 +1536,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 #endif
 							&& m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 
-							m_nPrefsAudio3DProviderIndex = DMAudio.GetCurrent3DProviderIndex();
+							m_nPrefsAudio3DProviderIndex = DMAudio_GetCurrent3DProviderIndex();
 							SetHelperText(3);
 						}
 					}
@@ -1577,7 +1578,7 @@ CMenuManager::DrawStandardMenus(bool activeScreen)
 							ProcessSlider(TheCamera.m_fMouseAccelHorzntl * 200.0f, SLIDER_Y(170.0f), HOVEROPTION_INCREASE_MOUSESENS, HOVEROPTION_DECREASE_MOUSESENS, SCREEN_WIDTH, false);
 							break;
 						case MENUACTION_MP3VOLUMEBOOST:
-							if(m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER && DMAudio.IsMP3RadioChannelAvailable())
+							if(m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER && DMAudio_IsMP3RadioChannelAvailable())
 								ProcessSlider(m_PrefsMP3BoostVolume / 64.f, SLIDER_Y(128.0f), HOVEROPTION_INCREASE_MP3BOOST, HOVEROPTION_DECREASE_MP3BOOST, SCREEN_WIDTH, true);
 							break;
 #ifdef CUSTOM_FRONTEND_OPTIONS
@@ -2554,12 +2555,10 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 		OutputDebugString("Enumerating skin filenames from skins...");
 		m_pSkinListHead.nextSkin = nil;
 		m_pSelectedSkin = &m_pSkinListHead;
-//+ rouz edit (ChatGPT)
 		// Allocate the default skin node without invoking C++ new.
 		m_pSelectedSkin->nextSkin = (tSkinInfo*)malloc(sizeof(tSkinInfo));
 		assert(m_pSelectedSkin->nextSkin);
 		std::allocator<tSkinInfo>().construct(m_pSelectedSkin->nextSkin);
-//- rouz edit (ChatGPT)
 		m_pSelectedSkin = m_pSelectedSkin->nextSkin;
 		m_pSelectedSkin->skinId = 0;
 		strcpy(m_pSelectedSkin->skinNameOriginal, DEFAULT_SKIN_NAME);
@@ -2572,12 +2571,10 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 		HANDLE handle = FindFirstFile("skins\\*.bmp", &FindFileData);
 		for (int i = 1; handle != INVALID_HANDLE_VALUE && i; i = FindNextFile(handle, &FindFileData)) {
 			if (strcmp(FindFileData.cFileName, DEFAULT_SKIN_NAME) != 0) {
-//+ rouz edit (ChatGPT)
 				// Allocate the enumerated skin node without invoking C++ new.
 				m_pSelectedSkin->nextSkin = (tSkinInfo*)malloc(sizeof(tSkinInfo));
 				assert(m_pSelectedSkin->nextSkin);
 				std::allocator<tSkinInfo>().construct(m_pSelectedSkin->nextSkin);
-//- rouz edit (ChatGPT)
 				m_pSelectedSkin = m_pSelectedSkin->nextSkin;
 				m_pSelectedSkin->skinId = nextSkinId;
 				strcpy(m_pSelectedSkin->skinNameOriginal, FindFileData.cFileName);
@@ -3522,7 +3519,7 @@ CMenuManager::Process(void)
 	if (m_bMenuActive) {
 		UserInput();
 		ProcessFileActions();
-		DMAudio.Service();
+		DMAudio_Service();
 #ifdef USE_TEXTURE_POOL
 		// TODO
 #endif
@@ -3602,7 +3599,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 						float x = ((mapCrosshair.x - diffX) / (m_fMapSize * 2)) * (WORLD_SIZE_X / MENU_MAP_WIDTH_SCALE) - (WORLD_SIZE_X / 2 + MENU_MAP_LEFT_OFFSET * MENU_MAP_LENGTH_UNIT);
 						float y = (WORLD_SIZE_Y / 2 - MENU_MAP_TOP_OFFSET * MENU_MAP_LENGTH_UNIT) - ((mapCrosshair.y - diffY) / (m_fMapSize * 2)) * (WORLD_SIZE_Y / MENU_MAP_HEIGHT_SCALE);
 						CRadar::ToggleTargetMarker(x, y);
-						DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+						DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 					}
 				}
 			}
@@ -3894,7 +3891,7 @@ CMenuManager::PrintRadioSelector(void)
 		MENU_X_LEFT_ALIGNED(238.f), MENU_Y(MENURADIO_SELECTOR_START_Y), CRGBA(RADIO_SELECTOR_COLOR.r, RADIO_SELECTOR_COLOR.g, RADIO_SELECTOR_COLOR.b, FadeIn(180)));
 
 	int rightMostSprite, rightMostStation;
-	if (DMAudio.IsMP3RadioChannelAvailable()) {
+	if (DMAudio_IsMP3RadioChannelAvailable()) {
 		rightMostSprite = MENUSPRITE_MP3;
 		rightMostStation = USERTRACK;
 	} else {
@@ -4051,8 +4048,8 @@ CMenuManager::PrintRadioSelector(void)
 	CSprite2d::Draw2DPolygon(MENU_X_LEFT_ALIGNED(443.f), MENU_Y(MENURADIO_SELECTOR_START_Y + 45.f), MENU_X_LEFT_ALIGNED(463.f), MENU_Y(MENURADIO_SELECTOR_START_Y + 33.f), MENU_X_LEFT_ALIGNED(443.f), MENU_Y(MENURADIO_SELECTOR_START_Y + 19.f), MENU_X_LEFT_ALIGNED(463.f), MENU_Y(MENURADIO_SELECTOR_START_Y + 33.f), CRGBA(97, 194, 247, FadeIn(255)));
 	if (radioChangeRequested) {
 		if (CTimer::GetTimeInMillisecondsPauseMode() - lastRadioChange > 50) {
-			DMAudio.SetRadioInCar(m_PrefsRadioStation);
-			DMAudio.PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
+			DMAudio_SetRadioInCar(m_PrefsRadioStation);
+			DMAudio_PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
 			OutputDebugString("FRONTEND RADIO STATION CHANGED");
 			lastRadioChange = CTimer::GetTimeInMillisecondsPauseMode();
 			radioChangeRequested = false;
@@ -4105,7 +4102,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 	}
 
 	if (CPad::GetPad(0)->GetTabJustDown()) {
-		DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 		m_bShowMouse = false;
 		switch (m_nCurrExLayer) {
 		case HOVEROPTION_BACK:
@@ -4141,7 +4138,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		if (!m_bPressedUpOnList) {
 			m_bPressedUpOnList = true;
 			lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 			ScrollUpListByOne();
 		}
 	} else {
@@ -4163,7 +4160,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		if (!m_bPressedDownOnList) {
 			m_bPressedDownOnList = true;
 			lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 			ScrollDownListByOne();
 		}
 	} else {
@@ -4179,7 +4176,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 				m_bPressedPgUpOnList = true;
 				lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
 				m_bShowMouse = false;
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 				PageUpList(false);
 			}
 		}
@@ -4191,14 +4188,14 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 				m_bPressedPgDnOnList = true;
 				lastTimeClickedScrollButton = CTimer::GetTimeInMillisecondsPauseMode();
 				m_bShowMouse = false;
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 				PageDownList(false);
 			}
 		}
 		if (CPad::GetPad(0)->GetHome()) {
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 			if (m_nTotalListRow >= MAX_VISIBLE_OPTION_ON_SCREEN) {
 				m_nFirstVisibleRowOnList = 0;
 			}
@@ -4208,7 +4205,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		if (CPad::GetPad(0)->GetEnd()) {
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 			if (m_nTotalListRow >= MAX_VISIBLE_OPTION_ON_SCREEN) {
 				m_nFirstVisibleRowOnList = m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN;
 			}
@@ -4356,7 +4353,7 @@ CMenuManager::UserInput(void)
 				++m_nOptionMouseHovering;
 			}
 			m_nOptionHighlightTransitionBlend = 0;
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 		}
 	}
 
@@ -4468,11 +4465,11 @@ CMenuManager::UserInput(void)
 				|| option == MENUACTION_CFO_SLIDER
 #endif
 				)
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 			else if (option == MENUACTION_SFXVOLUME)
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_AUDIO_TEST, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_AUDIO_TEST, 0);
 			else if (option == MENUACTION_DRAWDIST || option == MENUACTION_MOUSESENS)
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 
 		}
 		if (CPad::GetPad(0)->GetBackJustDown() || CPad::GetPad(0)->GetEscapeJustDown()) {
@@ -4567,7 +4564,7 @@ CMenuManager::UserInput(void)
 			&& aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action != MENUACTION_DRAWDIST
 			&& aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action != MENUACTION_MOUSESENS
 			&& aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action != MENUACTION_MP3VOLUMEBOOST) {
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 		}
 	}
 	ProcessUserInput(goDown, goUp, optionSelected, goBack, changeValueBy);
@@ -4669,7 +4666,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 	int oldOption = m_nCurrOption;
 	if (goDown) {
 		if (m_nCurrScreen != MENUPAGE_MAP)
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 
 		m_nCurrOption++;
 		if (m_nCurrOption == NUM_MENUROWS || (aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action == MENUACTION_NOTHING)) {
@@ -4680,7 +4677,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 	}
 	if (goUp) {
 		if (m_nCurrScreen != MENUPAGE_MAP)
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 
 		if (m_nCurrOption == (aScreens[m_nCurrScreen].m_aEntries[0].m_Action == MENUACTION_LABEL)) {
 			while (m_nCurrOption != NUM_MENUROWS - 1
@@ -4821,7 +4818,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 			case MENUACTION_LOADRADIO:
 				if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 					SwitchToNewScreen(MENUPAGE_SOUND_SETTINGS);
-				        DMAudio.PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
+				        DMAudio_PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
 					OutputDebugString("STARTED PLAYING FRONTEND AUDIO TRACK");
 				}
 				break;
@@ -4868,7 +4865,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				pControlEdit = &m_KeyPressedCode;
 				break;
 			case MENUACTION_CANCELGAME:
-				DMAudio.Service();
+				DMAudio_Service();
 				SwitchToNewScreen(MENUPAGE_OUTRO);
 				break;
 			case MENUACTION_RESUME:
@@ -4886,8 +4883,8 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				if (m_nDisplayVideoMode != m_nPrefsVideoMode) {
 					m_nPrefsVideoMode = m_nDisplayVideoMode;
 					_psSelectScreenVM(m_nPrefsVideoMode);
-					DMAudio.ChangeMusicMode(MUSICMODE_FRONTEND);
-					DMAudio.Service();
+					DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
+					DMAudio_Service();
 					CentreMousePointer();
 					m_bShowMouse = true;
 					m_nCurrOption = 5; // TODO(Miami): Because selected option is resetted after res. change. We'll need to revisit that.
@@ -4900,9 +4897,9 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				int selectedProvider = m_nPrefsAudio3DProviderIndex;
 				if (selectedProvider != NO_AUDIO_PROVIDER) {
 					if (selectedProvider == -1)
-						selectedProvider = m_nPrefsAudio3DProviderIndex = DMAudio.AutoDetect3DProviders();
+						selectedProvider = m_nPrefsAudio3DProviderIndex = DMAudio_AutoDetect3DProviders();
 
-					m_nPrefsAudio3DProviderIndex = DMAudio.SetCurrent3DProvider(m_nPrefsAudio3DProviderIndex);
+					m_nPrefsAudio3DProviderIndex = DMAudio_SetCurrent3DProvider(m_nPrefsAudio3DProviderIndex);
 					if (selectedProvider != m_nPrefsAudio3DProviderIndex) {
 						SetHelperText(5);
 					}
@@ -4914,7 +4911,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 					if (--m_PrefsSpeakers < 0)
 						m_PrefsSpeakers = 2;
-					DMAudio.SetSpeakerConfig(m_PrefsSpeakers);
+					DMAudio_SetSpeakerConfig(m_PrefsSpeakers);
 					SaveSettings();
 				}
 				break;
@@ -4926,19 +4923,19 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				break;
 			case MENUACTION_RESTOREDEF:
 				if (m_nCurrScreen == MENUPAGE_SOUND_SETTINGS) {
-					m_nPrefsAudio3DProviderIndex = DMAudio.AutoDetect3DProviders();
-					DMAudio.SetCurrent3DProvider(m_nPrefsAudio3DProviderIndex);
+					m_nPrefsAudio3DProviderIndex = DMAudio_AutoDetect3DProviders();
+					DMAudio_SetCurrent3DProvider(m_nPrefsAudio3DProviderIndex);
 					m_PrefsSfxVolume = 49;
 					m_PrefsMusicVolume = 49;
 					m_PrefsRadioStation = EMOTION;
 					m_PrefsMP3BoostVolume = 0;
 					m_PrefsStereoMono = 1;
 					m_PrefsSpeakers = 0;
-					DMAudio.SetMP3BoostVolume(m_PrefsMP3BoostVolume);
-					DMAudio.SetMusicMasterVolume(m_PrefsMusicVolume);
-					DMAudio.SetEffectsMasterVolume(m_PrefsSfxVolume);
-					DMAudio.SetRadioInCar(m_PrefsRadioStation);
-				        DMAudio.PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
+					DMAudio_SetMP3BoostVolume(m_PrefsMP3BoostVolume);
+					DMAudio_SetMusicMasterVolume(m_PrefsMusicVolume);
+					DMAudio_SetEffectsMasterVolume(m_PrefsSfxVolume);
+					DMAudio_SetRadioInCar(m_PrefsRadioStation);
+				        DMAudio_PlayFrontEndTrack(m_PrefsRadioStation, TRUE);
 					SaveSettings();
 				} else if (m_nCurrScreen == MENUPAGE_DISPLAY_SETTINGS) {
 					m_PrefsBrightness = 256;
@@ -5057,21 +5054,21 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 			int saveSlot = aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_SaveSlot;
 			if (saveSlot >= SAVESLOT_1 && saveSlot <= SAVESLOT_8 && Slots[m_nCurrOption] != SLOT_OK)
 #endif
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
 			else
-				DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 		}
 	}
 
 	if (goBack) {
 		if (m_NoEmptyBinding) {
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_BACK, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_BACK, 0);
 			SwitchToNewScreen(-2);
 			if (hasNativeList(m_nCurrScreen)) {
 				m_nTotalListRow = 0;
 			}
 		} else {
-			DMAudio.PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
+			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_FAIL, 0);
 			m_ShowEmptyBindingError = true;
 		}
 	}
@@ -5141,13 +5138,13 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 						checkIfForbidden = false;
 
 						if (m_nPrefsAudio3DProviderIndex < -1)
-							m_nPrefsAudio3DProviderIndex = DMAudio.GetNum3DProvidersAvailable() - 1;
-						else if (m_nPrefsAudio3DProviderIndex > DMAudio.GetNum3DProvidersAvailable() - 1)
+							m_nPrefsAudio3DProviderIndex = DMAudio_GetNum3DProvidersAvailable() - 1;
+						else if (m_nPrefsAudio3DProviderIndex > DMAudio_GetNum3DProvidersAvailable() - 1)
 							m_nPrefsAudio3DProviderIndex = -1;
 
 						// what a retarded move...
 						if (m_nPrefsAudio3DProviderIndex != -1) {
-							char* provider = DMAudio.Get3DProviderName(m_nPrefsAudio3DProviderIndex);
+							char* provider = DMAudio_Get3DProviderName(m_nPrefsAudio3DProviderIndex);
 							strupr(provider);
 							if (!strcmp(provider, "MILES FAST 2D POSITIONAL AUDIO")) {
 								m_nPrefsAudio3DProviderIndex += changeAmount;
@@ -5169,7 +5166,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 					m_PrefsSpeakers -= changeAmount;
 					m_PrefsSpeakers = Clamp(m_PrefsSpeakers, 0, 2);
-					DMAudio.SetSpeakerConfig(m_PrefsSpeakers);
+					DMAudio_SetSpeakerConfig(m_PrefsSpeakers);
 					SaveSettings();
 				}
 				break;
@@ -5296,7 +5293,7 @@ CMenuManager::ProcessOnOffMenuOptions()
 		break;
 	case MENUACTION_DYNAMICACOUSTIC:
 		m_PrefsDMA = !m_PrefsDMA;
-		DMAudio.SetDynamicAcousticModelingStatus(m_PrefsDMA);
+		DMAudio_SetDynamicAcousticModelingStatus(m_PrefsDMA);
 		SaveSettings();
 		break;
 	case MENUACTION_MOUSESTEER:
@@ -5732,10 +5729,10 @@ void
 CMenuManager::UnloadTextures()
 {
 	if (m_nCurrScreen == MENUPAGE_SOUND_SETTINGS)
-		DMAudio.StopFrontEndTrack();
+		DMAudio_StopFrontEndTrack();
 
-	DMAudio.PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
-	DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+	DMAudio_PlayFrontEndSound(SOUND_FRONTEND_MENU_STARTING, 0);
+	DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 	if (m_bSpritesLoaded) {
 		printf("REMOVE frontend\n");
 		int frontend = CTxdStore::FindTxdSlot("frontend1");
@@ -5968,14 +5965,14 @@ CMenuManager::ChangeRadioStation(int8 increaseBy)
 	m_PrefsRadioStation += increaseBy;
 	m_ScrollRadioBy = increaseBy;
 	if (m_ScrollRadioBy == 1) {
-		DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 		m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X);
 	} else {
-		DMAudio.PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
+		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 		m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - (2 * MENURADIO_ICON_SIZE));
 	}
 
-	if (DMAudio.IsMP3RadioChannelAvailable()) {
+	if (DMAudio_IsMP3RadioChannelAvailable()) {
 		if (m_PrefsRadioStation < WILDSTYLE)
 			m_PrefsRadioStation = USERTRACK;
 		if (m_PrefsRadioStation > USERTRACK)
@@ -5986,8 +5983,8 @@ CMenuManager::ChangeRadioStation(int8 increaseBy)
 		if (m_PrefsRadioStation > WAVE)
 			m_PrefsRadioStation = WILDSTYLE;
 	}
-	DMAudio.StopFrontEndTrack();
-	DMAudio.PlayFrontEndSound(SOUND_RADIO_CHANGE, 0);
+	DMAudio_StopFrontEndTrack();
+	DMAudio_PlayFrontEndSound(SOUND_RADIO_CHANGE, 0);
 }
 
 #if 0
@@ -6774,3 +6771,5 @@ CMenuManager::LoadController(int8 type)
 
 #undef GetBackJustUp
 #undef GetBackJustDown
+
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include <time.h>
 #include "rpmatfx.h"
@@ -73,13 +74,11 @@
 #include "Ropes.h"
 #include "postfx.h"
 #include "custompipes.h"
-//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 #include "SoftwarePolygons.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 #include "MBlur.h" // rouz edit (ChatGPT)
 #endif
-//- rouz edit (ChatGPT)
 #include "screendroplets.h"
 #include "VarConsole.h"
 #ifdef USE_OUR_VERSIONING
@@ -363,11 +362,9 @@ RwGrabScreen(RwCamera *camera, RwChar *filename)
 #define TILE_WIDTH 576
 #define TILE_HEIGHT 432
 
-//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 static std::atomic<unsigned long long> softwareDisplayedFrames(0);
 #endif
-//- rouz edit (ChatGPT)
 
 void
 DoRWStuffEndOfFrame(void)
@@ -376,24 +373,20 @@ DoRWStuffEndOfFrame(void)
 	CDebug::DisplayScreenStrings();	// custom
 	CDebug::DebugDisplayTextBuffer();
 	FlushObrsPrintfs();
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Present the completed software scene and overlays together
 	if(SoftwarePolygons::FramePending()){
 		SoftwarePolygons::EndWorldEffects();
 		SoftwarePolygons::Present();
 	}
 #endif
-	//- rouz edit (ChatGPT)
-	RwCameraEndUpdate(Scene.camera);
+		RwCameraEndUpdate(Scene.camera);
 	RsCameraShowRaster(Scene.camera);
 	// Count completed game presentations for the auxiliary FPS display
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	softwareDisplayedFrames.fetch_add(1, std::memory_order_relaxed);
 #endif
-	//- rouz edit (ChatGPT)
-#ifndef MASTER
+	#ifndef MASTER
 	char s[48];
 #ifdef THIS_IS_STUPID
 	if (CPad::GetPad(1)->GetLeftShockJustDown()) {
@@ -1033,75 +1026,57 @@ return;
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "PtrNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPtrNodePool()), CPool_GetSize(CPools::GetPtrNodePool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "EntryInfoNode: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetEntryInfoNodePool()), CPool_GetSize(CPools::GetEntryInfoNodePool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Ped: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetPedPool()), CPool_GetSize(CPools::GetPedPool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Vehicle: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetVehiclePool()), CPool_GetSize(CPools::GetVehiclePool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Building: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetBuildingPool()), CPool_GetSize(CPools::GetBuildingPool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Treadable: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetTreadablePool()), CPool_GetSize(CPools::GetTreadablePool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Object: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetObjectPool()), CPool_GetSize(CPools::GetObjectPool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "Dummy: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetDummyPool()), CPool_GetSize(CPools::GetDummyPool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	sprintf(gString, "AudioScriptObjects: %d/%d", CPool_GetNoOfUsedSpaces(CPools::GetAudioScriptObjectPool()), CPool_GetSize(CPools::GetAudioScriptObjectPool()));
-	//- rouz edit (ChatGPT)
-	AsciiToUnicode(gString, gUString);
+		AsciiToUnicode(gString, gUString);
 	CFont::PrintString(400.0f, y, gUString);
 	y += 12.0f;
 }
@@ -1290,13 +1265,11 @@ MattRenderScene(void)
 	// CClock::CalcEnvMapTimeMultiplicator
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Keep water independent from other world geometry in the software renderer
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
 		CWaterLevel::RenderWater();	// actually CMattRenderer::RenderWater
-	//- rouz edit (ChatGPT)
-	// CClock::ms_EnvMapTimeMultiplicator = 1.0f;
+		// CClock::ms_EnvMapTimeMultiplicator = 1.0f;
 	// cWorldStream::ClearDynamics
 	/// CRenderer::ConstructRenderList();	// before PreRender
 if(gbRenderWorld0)
@@ -1304,25 +1277,21 @@ if(gbRenderWorld0)
 	// CMattRenderer::ResetRenderStates
 	/// CRenderer::PreRender();	// has to be called before BeginUpdate because of cutscene shadows
 	// Avoid building road reflections when world effects are disabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed))
 #endif
 		CCoronas::RenderReflections();
-	//- rouz edit (ChatGPT)
-if(gbRenderWorld1)
+	if(gbRenderWorld1)
 	CRenderer::RenderWorld(1);	// opaque
 if(gbRenderRoads)
 	CRenderer::RenderRoads();
 
 	// Submit pedestrians only when their software stage is enabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderPedsStage.load(std::memory_order_relaxed))
 #endif
 		CRenderer::RenderPeds();
-	//- rouz edit (ChatGPT)
-
+	
 	// not sure where to put these since LCS has no underwater entities
 if(gbRenderBoats)
 	CRenderer::RenderBoats();
@@ -1330,32 +1299,26 @@ if(gbRenderFadingInUnderwaterEntities)
 	CRenderer::RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Keep transparent water under the same runtime water switch
-	//+ rouz edit (ChatGPT)
-if(gbRenderWater
+	if(gbRenderWater
 #ifdef REVC_SOFTWARE_POLYGONS
 	&& SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed)
 #endif
 )
 	CRenderer::RenderTransparentWater();
-	//- rouz edit (ChatGPT)
-
+	
 if(gbRenderEverythingBarRoads)
 	CRenderer::RenderEverythingBarRoads();
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Submit vehicle geometry before the scene framebuffer is uploaded
 	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
 		CRenderer::RenderSoftwareVehicles();
 	// Submit the transparent world and fading entities before the framebuffer upload
-	//+ rouz edit (ChatGPT)
-	if(gbRenderWorld2)
+		if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);
 	if(gbRenderFadingInEntities)
 		CRenderer::RenderFadingInEntities();
-	//- rouz edit (ChatGPT)
-#endif
-	//- rouz edit (ChatGPT)
-	// seam fixer
+	#endif
+		// seam fixer
 	// moved this:
 	// CRenderer::RenderFadingInEntities();
 }
@@ -1365,8 +1328,7 @@ RenderScene_new(void)
 {
 	PUSH_RENDERGROUP("RenderScene_new");
 	// Render sky primitives only when their software stage is enabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
 #endif
 	CClouds::Render();
@@ -1374,8 +1336,7 @@ RenderScene_new(void)
 #ifdef REVC_SOFTWARE_POLYGONS
 	}
 #endif
-	//- rouz edit (ChatGPT)
-
+	
 	MattRenderScene();
 	DefinedState();
 	// CMattRenderer::ResetRenderStates
@@ -1383,13 +1344,11 @@ RenderScene_new(void)
 	POP_RENDERGROUP();
 }
 
-//+ rouz edit (ChatGPT)
 bool FredIsInFirstPersonCam(void)
 {
 	// Detect whether the active camera is using the first-person mode
 	return TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_1STPERSON; // rouz edit (ChatGPT)
 }
-//- rouz edit (ChatGPT)
 void
 RenderEffects_new(void)
 {
@@ -1409,23 +1368,19 @@ RenderEffects_new(void)
 		C3dMarkers::Render();	// normally rendered in CSpecialFX::Render()
 if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);	// transparent
-		//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
+		#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
 		CRenderer::RenderVehicles();
 #endif
-		//- rouz edit (ChatGPT)
-	}else{
+			}else{
 		// flipped these two, seems to give the best result
 if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);	// transparent
-		//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
+		#ifndef REVC_SOFTWARE_POLYGONS
 if(gbRenderVehicles)
 		CRenderer::RenderVehicles();
 #endif
-		//- rouz edit (ChatGPT)
-	}
+			}
 	// better render these after transparent world
 if(gbRenderFadingInEntities)
 	CRenderer::RenderFadingInEntities();
@@ -1459,7 +1414,6 @@ if(gbRenderFadingInEntities)
 }
 #endif
 
-//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 {
@@ -1467,16 +1421,13 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 	if(!SoftwarePolygons::FramePending())
 		return;
 	// Drop temporal history when camera post effects are disabled
-	//+ rouz edit (ChatGPT)
-	if(!SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
+		if(!SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
 		SoftwarePolygons::SavePreviousFrame(false);
 		return;
 	}
-	//- rouz edit (ChatGPT)
-#ifdef EXTENDED_COLOURFILTER
+	#ifdef EXTENDED_COLOURFILTER
 	// Apply the configured postfx and temporal overlays before saving a history frame
-	//+ rouz edit (ChatGPT)
-	bool historyActive = false;
+		bool historyActive = false;
 	if(TheCamera.m_BlurType != MOTION_BLUR_NONE){
 		int red = TheCamera.m_BlurRed;
 		int green = TheCamera.m_BlurGreen;
@@ -1499,19 +1450,15 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 			historyActive = true;
 		}
 		// Apply drunk-camera blur alongside the active camera postfx mode
-		//+ rouz edit (ChatGPT)
-		if(CMBlur::Drunkness > 0.0f){
+				if(CMBlur::Drunkness > 0.0f){
 			SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*CMBlur::Drunkness));
 			historyActive = true;
 		}
-		//- rouz edit (ChatGPT)
-	}
+			}
 	SoftwarePolygons::SavePreviousFrame(historyActive);
-	//- rouz edit (ChatGPT)
-#else
+	#else
 	// Preserve classic camera motion blur modes in the CPU framebuffer
-	//+ rouz edit (ChatGPT)
-	bool historyActive = false;
+		bool historyActive = false;
 	// Composite temporal blur according to the active camera mode
 	if(TheCamera.m_BlurType != MOTION_BLUR_NONE){
 		int red = TheCamera.m_BlurRed;
@@ -1541,12 +1488,9 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 		historyActive = true;
 	}
 	SoftwarePolygons::SavePreviousFrame(historyActive);
-	//- rouz edit (ChatGPT)
-#endif
+	#endif
 }
 
-//+ rouz edit (ChatGPT)
-//+ rouz edit (ChatGPT)
 static void RegisterSoftwarePedShadows(void)
 {
 	// Register world-visible pedestrians with the game's current sun-shadow geometry
@@ -1555,13 +1499,11 @@ static void RegisterSoftwarePedShadows(void)
 		return;
 
 	// Let the existing shadow code skip vehicle occupants, hidden peds, and distant actors
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	for(int i = 0; i < CPool_GetSize(pedPool); i++){
 		// Access raw storage through the C store or pool API
 		CPed *ped = ((CPed*)CPool_GetSlot(pedPool, i));
-	//- rouz edit (ChatGPT)
-		if(!ped || !ped->bIsVisible)
+			if(!ped || !ped->bIsVisible)
 			continue;
 		CShadows::StoreShadowForPed(ped,
 			CTimeCycle::GetShadowDisplacementX(), CTimeCycle::GetShadowDisplacementY(),
@@ -1569,54 +1511,44 @@ static void RegisterSoftwarePedShadows(void)
 			CTimeCycle::GetShadowSideX(), CTimeCycle::GetShadowSideY());
 	}
 }
-//- rouz edit (ChatGPT)
 
 static void RenderSoftwareWorldEffects(void)
 {
 	// Draw immediate world effects into CPU pixels before the presentation upload
 	// Consume effect queues while capturing only when this stage is enabled
-	//+ rouz edit (ChatGPT)
-	const bool captureEffects = SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed) != 0; // rouz edit (ChatGPT)
+		const bool captureEffects = SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed) != 0; // rouz edit (ChatGPT)
 	if(captureEffects) // rouz edit (ChatGPT)
 		SoftwarePolygons::BeginWorldEffects();
 	else
 		SoftwarePolygons::EndWorldEffects();
-	//- rouz edit (ChatGPT)
-	CShadows::RenderStaticShadows();
+		CShadows::RenderStaticShadows();
 	// Add regular pedestrian shadows before capturing and drawing temporary shadows
 	if(captureEffects) // rouz edit (ChatGPT)
 		RegisterSoftwarePedShadows(); // rouz edit (ChatGPT)
 	// Cache temporary shadows before the main software pass consumes the queue
-	//+ rouz edit (ChatGPT)
-#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 	if(captureEffects) // rouz edit (ChatGPT)
 		CustomPipes::CaptureStoredShadowsForEnvMap();
 #endif
-	//- rouz edit (ChatGPT)
-	CShadows::RenderStoredShadows();
+		CShadows::RenderStoredShadows();
 	CSkidmarks::Render();
 	CRubbish::Render();
 	CGlass::Render();
 	// Restore the standard effect states after glass highlights
-	//+ rouz edit (ChatGPT)
-	DefinedState();
-	//- rouz edit (ChatGPT)
-	// Draw sky reflections and rain after deferred transparent world geometry
-	//+ rouz edit (ChatGPT)
-	CCoronas::RenderSunReflection();
+		DefinedState();
+		// Draw sky reflections and rain after deferred transparent world geometry
+		CCoronas::RenderSunReflection();
 	CWeather::RenderRainStreaks();
 	// Capture world-space rain, water cannon, antenna, special, and rope geometry
 	CWaterCannons::Render();
 	CAntennas::Render();
 	CSpecialFX::Render();
 	// Restore first-person 3D markers skipped by the new renderer special-effects pass
-	//+ rouz edit (ChatGPT)
-	#ifdef NEW_RENDERER
+		#ifdef NEW_RENDERER
 	if(gbNewRenderer && FredIsInFirstPersonCam())
 		C3dMarkers::Render();
 	#endif
-	//- rouz edit (ChatGPT)
-	CRopes::Render();
+		CRopes::Render();
 	// Capture sprite based effects and first-person vehicle geometry on the CPU
 	CCoronas::Render();
 	CParticle::Render();
@@ -1625,49 +1557,37 @@ static void RenderSoftwareWorldEffects(void)
 	CPointLights::RenderFogEffect();
 	CMovingThings::Render();
 	CRenderer::RenderFirstPersonVehicle();
-	//- rouz edit (ChatGPT)
-	SoftwarePolygons::EndWorldEffects();
+		SoftwarePolygons::EndWorldEffects();
 }
-//- rouz edit (ChatGPT)
 #endif
-//- rouz edit (ChatGPT)
 
 void
 RenderScene(void)
 {
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Clear the CPU framebuffer with the current sky colors before rendering the scene
 	rw::RGBA softwareSkyTop = { (rw::uint8)CTimeCycle::GetSkyTopRed(), (rw::uint8)CTimeCycle::GetSkyTopGreen(), (rw::uint8)CTimeCycle::GetSkyTopBlue(), 255 };
 	rw::RGBA softwareSkyBottom = { (rw::uint8)CTimeCycle::GetSkyBottomRed(), (rw::uint8)CTimeCycle::GetSkyBottomGreen(), (rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255 };
 	// Match the existing white sky clear used during visible lightning flashes
-	//+ rouz edit (ChatGPT)
-	if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+		if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
 		softwareSkyTop.red = softwareSkyTop.green = softwareSkyTop.blue = 255;
 		softwareSkyBottom.red = softwareSkyBottom.green = softwareSkyBottom.blue = 255;
 	}
-	//- rouz edit (ChatGPT)
-	// Use a flat clear when the software sky stage is disabled
-	//+ rouz edit (ChatGPT)
-	if(!SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed))
+		// Use a flat clear when the software sky stage is disabled
+		if(!SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed))
 		softwareSkyTop = softwareSkyBottom = { 0, 0, 0, 255 };
-	//- rouz edit (ChatGPT)
-	SoftwarePolygons::BeginFrame(Scene.camera, Scene.camera->frameBuffer->width, Scene.camera->frameBuffer->height, softwareSkyTop, softwareSkyBottom);
+		SoftwarePolygons::BeginFrame(Scene.camera, Scene.camera->frameBuffer->width, Scene.camera->frameBuffer->height, softwareSkyTop, softwareSkyBottom);
 	// Capture 2D and immediate geometry emitted by the ordinary world passes
 	SoftwarePolygons::BeginWorldEffects();
 	// Reproduce the horizon-aware sky background inside the CPU framebuffer
-	//+ rouz edit (ChatGPT)
-	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
+		if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
 		CClouds::RenderBackground(softwareSkyTop.red, softwareSkyTop.green, softwareSkyTop.blue,
 			softwareSkyBottom.red, softwareSkyBottom.green, softwareSkyBottom.blue, 255);
-	//- rouz edit (ChatGPT)
-#endif
-	//- rouz edit (ChatGPT)
-#ifdef NEW_RENDERER
+	#endif
+	#ifdef NEW_RENDERER
 	if(gbNewRenderer){
 		RenderScene_new();
-		//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+		#ifdef REVC_SOFTWARE_POLYGONS
 		// Composite material transparency after opaque world rendering
 		SoftwarePolygons::FlushTransparentTriangles(); // rouz edit (ChatGPT)
 		// End world-pass capture before the dedicated effects pass begins
@@ -1677,14 +1597,12 @@ RenderScene(void)
 		// Resume capture for debug geometry and screen overlays
 		SoftwarePolygons::BeginWorldEffects();
 #endif
-		//- rouz edit (ChatGPT)
-		return;
+				return;
 	}
 #endif
 	PUSH_RENDERGROUP("RenderScene");
 	// Render sky primitives only when their software stage is enabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
 #endif
 	CClouds::Render();
@@ -1692,53 +1610,41 @@ RenderScene(void)
 #ifdef REVC_SOFTWARE_POLYGONS
 	}
 #endif
-	//- rouz edit (ChatGPT)
-	CRenderer::RenderRoads();
+		CRenderer::RenderRoads();
 	// Avoid building road reflections when world effects are disabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWorldEffectsStage.load(std::memory_order_relaxed))
 #endif
 		CCoronas::RenderReflections();
-	//- rouz edit (ChatGPT)
-	CRenderer::RenderEverythingBarRoads();
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+		CRenderer::RenderEverythingBarRoads();
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Submit vehicles deferred outside the new renderer scene path
 	if(gbRenderVehicles && SoftwarePolygons::renderVehiclesStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
 		CRenderer::RenderSoftwareVehicles();
 #endif
-	//- rouz edit (ChatGPT)
-	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
+		RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Keep water independent from opaque world geometry
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
 		CWaterLevel::RenderWater();
-	//- rouz edit (ChatGPT)
-	CRenderer::RenderBoats();
+		CRenderer::RenderBoats();
 	CRenderer::RenderFadingInUnderwaterEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Skip transparent water when the water stage is disabled
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderWaterStage.load(std::memory_order_relaxed))
 #endif
 		CWaterLevel::RenderTransparentWater();
-	//- rouz edit (ChatGPT)
-	CRenderer::RenderFadingInEntities();
+		CRenderer::RenderFadingInEntities();
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Leave these effects to the software pass after transparent triangles are composited
-	//+ rouz edit (ChatGPT)
-#ifndef REVC_SOFTWARE_POLYGONS
+	#ifndef REVC_SOFTWARE_POLYGONS
 	CWeather::RenderRainStreaks();
 	CCoronas::RenderSunReflection();
 #endif
-	//- rouz edit (ChatGPT)
-	POP_RENDERGROUP();
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+		POP_RENDERGROUP();
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Composite material transparency after opaque world rendering
 	SoftwarePolygons::FlushTransparentTriangles(); // rouz edit (ChatGPT)
 	// End world-pass capture before the dedicated effects pass begins
@@ -1748,8 +1654,7 @@ RenderScene(void)
 	// Resume capture for debug geometry and screen overlays
 	SoftwarePolygons::BeginWorldEffects();
 #endif
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 RenderDebugShit(void)
@@ -1770,13 +1675,11 @@ RenderDebugShit(void)
 void
 RenderEffects(void)
 {
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	// Hide effects that are still drawn outside the CPU framebuffer
 	return;
 #endif
-	//- rouz edit (ChatGPT)
-#ifdef NEW_RENDERER
+	#ifdef NEW_RENDERER
 	if(gbNewRenderer){
 		RenderEffects_new();
 		return;
@@ -1807,13 +1710,11 @@ Render2dStuff(void)
 {
 	// Rasterize HUD and other screen overlays into the active software frame // rouz edit (ChatGPT)
 	// Leave menu rendering separate from the in-game HUD switch
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::FramePending() && !SoftwarePolygons::renderHudStage.load(std::memory_order_relaxed))
 		return;
 #endif
-	//- rouz edit (ChatGPT)
-	PUSH_RENDERGROUP("Render2dStuff");
+		PUSH_RENDERGROUP("Render2dStuff");
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
@@ -1909,14 +1810,12 @@ Render2dStuffAfterFade(void)
 {
 	// Draw post-fade text and credits into the active software frame // rouz edit (ChatGPT)
 	// Skip post-fade HUD elements while keeping the frontend menu available
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::FramePending() && !SoftwarePolygons::renderHudStage.load(std::memory_order_relaxed) &&
 	   !FrontEndMenuManager.m_bMenuActive)
 		return;
 #endif
-	//- rouz edit (ChatGPT)
-	PUSH_RENDERGROUP("Render2dStuffAfterFade");
+		PUSH_RENDERGROUP("Render2dStuffAfterFade");
 #ifndef MASTER
 	DisplayGameDebugText();
 #endif
@@ -1949,7 +1848,7 @@ Idle(void *arg)
 	POP_MEMID();
 
 	tbStartTimer(0, "DMAudio.Service");
-	DMAudio.Service();
+	DMAudio_Service();
 	tbEndTimer("DMAudio.Service");
 
 	if(CGame::bDemoMode && CTimer::GetTimeInMilliseconds() > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing()){
@@ -2025,34 +1924,26 @@ Idle(void *arg)
 		RenderScene();
 		tbEndTimer("RenderScene");
 
-		//+ rouz edit (ChatGPT)
-		// Render the auxiliary environment map before software framebuffer presentation
-		//+ rouz edit (ChatGPT)
-	#ifdef EXTENDED_PIPELINES
+				// Render the auxiliary environment map before software framebuffer presentation
+			#ifdef EXTENDED_PIPELINES
 		// Generate the vehicle environment map only for advanced material shading
-		//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+		#ifdef REVC_SOFTWARE_POLYGONS
 		if(SoftwarePolygons::renderAdvancedMaterialsStage.load(std::memory_order_relaxed))
 #endif
 			CustomPipes::EnvMapRender();
-		//- rouz edit (ChatGPT)
-	#endif
-		//- rouz edit (ChatGPT)
-
+			#endif
+		
 		RenderDebugShit();
-		//+ rouz edit (ChatGPT)
-		// Composite screen-space droplets before camera postfx so temporal history includes them
+				// Composite screen-space droplets before camera postfx so temporal history includes them
 #ifdef REVC_SOFTWARE_POLYGONS
 #ifdef SCREEN_DROPLETS
 		// Process and draw screen-space droplets after debug geometry and before camera postfx
 		// Skip droplet processing with the software camera post effects
-		//+ rouz edit (ChatGPT)
-		if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
+				if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)){
 			ScreenDroplets::Process();
 			ScreenDroplets::Render();
 		}
-		//- rouz edit (ChatGPT)
-		#endif
+				#endif
 		// Composite queued refraction and splash effects over the completed screen-effects image
 		// Skip refraction and splash compositing with camera post effects
 		if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
@@ -2060,8 +1951,7 @@ Idle(void *arg)
 		// Apply temporal blur after screen effects and before HUD drawing
 		ApplySoftwarePostFX(); // rouz edit (ChatGPT)
 #endif
-		//- rouz edit (ChatGPT)
-		// Leave duplicate effect and GPU post-processing passes on the existing renderer // rouz edit (ChatGPT)
+				// Leave duplicate effect and GPU post-processing passes on the existing renderer // rouz edit (ChatGPT)
 #ifndef REVC_SOFTWARE_POLYGONS
 		RenderEffects();
 
@@ -2079,8 +1969,7 @@ Idle(void *arg)
 		TheCamera.RenderMotionBlur();
 		tbEndTimer("RenderMotionBlur");
 #endif
-		//- rouz edit (ChatGPT)
-
+		
 		tbStartTimer(0, "Render2dStuff");
 		Render2dStuff();
 		tbEndTimer("Render2dStuff");
@@ -2116,13 +2005,11 @@ Idle(void *arg)
 	// CCredits::Render(); // They added it to function above and also forgot it here
 #ifdef XBOX_MESSAGE_SCREEN
 	// Keep frontend overlays tied to the visible menu in the software target
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	if(FrontEndMenuManager.m_bMenuActive)
 #endif
 		FrontEndMenuManager.DrawOverlays();
-	//- rouz edit (ChatGPT)
-#endif
+	#endif
 
 	// Capture optional timebar diagnostics in the completed software frame // rouz edit (ChatGPT)
 #ifdef TIMEBARS
@@ -2246,7 +2133,7 @@ AppEventHandler(RsEvent event, void *param)
 
 		case rsACTIVATE:
 		{
-			param ? DMAudio.ReacquireDigitalHandle() : DMAudio.ReleaseDigitalHandle();
+			param ? DMAudio_ReacquireDigitalHandle() : DMAudio_ReleaseDigitalHandle();
 
 			return rsEVENTPROCESSED;
 		}
@@ -2278,8 +2165,7 @@ TheModelViewer(void)
 		CTimeCycle::GetSkyBottomRed(), CTimeCycle::GetSkyBottomGreen(), CTimeCycle::GetSkyBottomBlue(),
 		255);
 	// Start the software framebuffer before the animation viewer submits its model
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	rw::RGBA viewerSkyTop = {
 		(rw::uint8)(CTimeCycle::GetSkyTopRed()*0.5f),
 		(rw::uint8)(CTimeCycle::GetSkyTopGreen()*0.5f),
@@ -2294,8 +2180,7 @@ TheModelViewer(void)
 		Scene.camera->frameBuffer->height, viewerSkyTop, viewerSkyBottom);
 	SoftwarePolygons::BeginWorldEffects();
 #endif
-	//- rouz edit (ChatGPT)
-
+	
 	CSprite2d::SetRecipNearClip(); // X
 	CSprite2d::InitPerFrame(); // X
 	CFont::InitPerFrame(); // X
@@ -2370,7 +2255,7 @@ void TheGame(void)
 			CGame::Process();
 			POP_MEMID();
 
-			DMAudio.Service();
+			DMAudio_Service();
 
 			if (CGame::bDemoMode && CTimer::GetTimeInMilliseconds() > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing())
 			{
@@ -2457,7 +2342,7 @@ void TheGame(void)
 
 		CPad::ResetCheats();
 		CPad::StopPadsShaking();
-		DMAudio.ChangeMusicMode(MUSICMODE_DISABLE);
+		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
 		CGame::ShutDownForRestart();
 		CTimer::Stop();
 
@@ -2470,7 +2355,7 @@ void TheGame(void)
 			}
 
 			CGame::InitialiseWhenRestarting();
-			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
 
 			continue;
@@ -2479,7 +2364,7 @@ void TheGame(void)
 		break;
 	}
 
-	DMAudio.Terminate();
+	DMAudio_Terminate();
 }
 
 
@@ -2989,17 +2874,13 @@ void revc_pos_track()
 	col = make_colour(0.1, 0.2, 0.4, 1.);
 	if (CPools::GetObjectPool())
 	{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		int pool_size = CPool_GetSize(CPools::GetObjectPool());
-		//- rouz edit (ChatGPT)
-		for (i=0; i < pool_size; i++)
+				for (i=0; i < pool_size; i++)
 		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
-			//- rouz edit (ChatGPT)
-			if (obj)
+						if (obj)
 			{
 				pos = CVector_to_xyz(obj->GetPosition());
 				xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos, pos_hist[pos_count-1])), set_xy(map_scale));
@@ -3012,17 +2893,13 @@ void revc_pos_track()
 	col = make_colour(0.4, 0.2, 0.1, 1.);
 	if (CPools::GetPedPool())
 	{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		int pool_size = CPool_GetSize(CPools::GetPedPool());
-		//- rouz edit (ChatGPT)
-		for (i=0; i < pool_size; i++)
+				for (i=0; i < pool_size; i++)
 		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-			//- rouz edit (ChatGPT)
-			if (ped)
+						if (ped)
 			{
 				pos = CVector_to_xyz(ped->GetPosition());
 				xy_t p0 = mul_xy(xyz_to_xy(sub_xyz(pos, pos_hist[pos_count-1])), set_xy(map_scale));
@@ -3036,17 +2913,13 @@ void revc_pos_track()
 	col = make_colour(0.1, 0.1, 0.1, 1.);
 	if (CPools::GetBuildingPool())
 	{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		int pool_size = CPool_GetSize(CPools::GetBuildingPool());
-		//- rouz edit (ChatGPT)
-		for (i=0; i < pool_size; i++)
+				for (i=0; i < pool_size; i++)
 		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CBuilding *building = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
-			//- rouz edit (ChatGPT)
-			if (building)
+						if (building)
 			{
 				pos = CVector_to_xyz(building->GetPosition());
 				CColModel *model = CModelInfo::GetColModel(building->m_modelIndex);
@@ -3442,7 +3315,6 @@ void atmosphere_window()
 	init = 0;
 }
 
-//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 void renderer_controls_window()
 {
@@ -3539,8 +3411,7 @@ void renderer_controls_window()
 		draw_selmenu_entry_fromlayout(mode, samplingModes[mode], &layout, 160);
 
 	// Sample completed game frames every quarter second and smooth with a time-based exponential average
-	//+ rouz edit (ChatGPT)
-	static double lastFpsTime=0.0, smoothedFps=0.0;
+		static double lastFpsTime=0.0, smoothedFps=0.0;
 	static unsigned long long lastFpsFrames=0;
 	static int fpsInitialized=0;
 	const double now=get_time_hr();
@@ -3553,37 +3424,31 @@ void renderer_controls_window()
 		const double elapsed=now-lastFpsTime;
 		const double measuredFps=(double)(completedFrames-lastFpsFrames)/elapsed;
 		// Start from the first complete sample, then apply an 0.8-second smoothing interval
-		//+ rouz edit (ChatGPT)
-		if(fpsInitialized == 1){
+				if(fpsInitialized == 1){
 			smoothedFps=measuredFps;
 			fpsInitialized=2;
 		}else{
 			const double weight=1.0-exp(-elapsed/0.8);
 			smoothedFps += weight*(measuredFps-smoothedFps);
 		}
-		//- rouz edit (ChatGPT)
-		char fpsLabel[32];
+				char fpsLabel[32];
 		snprintf(fpsLabel, sizeof(fpsLabel), "FPS: %.1f", smoothedFps);
 		gui_set_control_label(fpsLabel, &layout, 170);
 		lastFpsTime=now;
 		lastFpsFrames=completedFrames;
 	}
 	draw_label_fromlayout(&layout, 170, ALIG_LEFT | MONODIGITS);
-	//- rouz edit (ChatGPT)
-}
+	}
 #endif
-//- rouz edit (ChatGPT)
 
 void revc_main()
 {
 	static int init = 1, veh_control_detach=0, cam_pos_detach=0, cheats_detach=0, atmosphere_detach=0, thrust_detach=0;
 	// Keep the renderer panel's detach state across auxiliary window frames
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	static int renderer_detach=0;
 #endif
-	//- rouz edit (ChatGPT)
-
+	
 	if (init)
 	{
 		init = 0;
@@ -3599,12 +3464,10 @@ void revc_main()
 	window_register(1, atmosphere_window, NULL, make_rect_off(xy(0., 200.), xy(150., 100.), xy(0.5, 0.5)), &atmosphere_detach, 0);
 	window_register(1, flight_thrust_window, NULL, make_rect_off(xy(0., 160.), xy(60., 40.), xy(0.5, 0.5)), &thrust_detach, 0);
 	// Register the software renderer options alongside the other auxiliary windows
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
+	#ifdef REVC_SOFTWARE_POLYGONS
 	window_register(1, renderer_controls_window, NULL, make_rect_off(xy(9., -9.), xy(7., 7.), xy(1., 0.)), &renderer_detach, 0);
 #endif
-	//- rouz edit (ChatGPT)
-	sleep_hr(1./100.);
+		sleep_hr(1./100.);
 }
 
 int sdl_main_loop_thread(void *ptr)
@@ -3740,53 +3603,41 @@ void move_everything(xyz_t new_offset)
 	//if (((CEntity *) p)->m_modelIndex == 2424)
 
 	if (CPools::GetBuildingPool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetBuildingPool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i)), new_offset, 0);
-		//- rouz edit (ChatGPT)
-
+		
 	if (CPools::GetObjectPool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetObjectPool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i)), new_offset, 0);
-		//- rouz edit (ChatGPT)
-
+		
 	if (CPools::GetTreadablePool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetTreadablePool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i)), new_offset, 0);
-		//- rouz edit (ChatGPT)
-
+		
 	if (CPools::GetDummyPool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetDummyPool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i)), new_offset, 0);
-		//- rouz edit (ChatGPT)
-
+		
 	if (CPools::GetPedPool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetPedPool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CPed*)CPool_GetSlot(CPools::GetPedPool(), i)), new_offset, 1);
-		//- rouz edit (ChatGPT)
-
+		
 	if (CPools::GetVehiclePool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetVehiclePool()); i++)
 			// Access raw storage through the C store or pool API
 			move_entity(((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)), new_offset, 1);
-		//- rouz edit (ChatGPT)
-
+		
 	rouz.world_offset = new_offset;
 }
 
@@ -3796,45 +3647,37 @@ void rouz_update()
 
 	if (rouz.remote_bomb==2)
 	{
-		DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
+		DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
 		rouz.remote_bomb = 1;
 	}
 
 	if (rouz.remote_control==2)
 	{
-		DMAudio.PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 1.f);
+		DMAudio_PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 1.f);
 		rouz.remote_control = 1;
 	}
 
 	if (rouz.screwy_gravity || rouz.status_physics)
 	{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		int veh_count = CPool_GetSize(CPools::GetVehiclePool());
-		//- rouz edit (ChatGPT)
-
+		
 		for (i = 0; i < veh_count; i++)
 		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-			//- rouz edit (ChatGPT)
-			if (veh)
+						if (veh)
 				if (veh->GetStatus() == STATUS_SIMPLE)
 					veh->SetStatus(STATUS_PHYSICS);
 		}
 
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		int ped_count = CPool_GetSize(CPools::GetPedPool());
-		//- rouz edit (ChatGPT)
-		for (i = 0; i < ped_count; i++)
+				for (i = 0; i < ped_count; i++)
 		{
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-			//- rouz edit (ChatGPT)
-			if (ped)
+						if (ped)
 			{
 				ped->bPedPhysics = 1;
 				//if (ped->GetStatus() == STATUS_SIMPLE)
@@ -3845,17 +3688,13 @@ void rouz_update()
 
 	// Count driver peds
 	rouz.driver_ped_count = 0;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int ped_count = CPool_GetSize(CPools::GetPedPool());
-	//- rouz edit (ChatGPT)
-	for (i=0; i < ped_count; i++)
-	{
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	int ped_count = CPool_GetSize(CPools::GetPedPool());
+		for (i=0; i < ped_count; i++)
+	{
+				// Access raw storage through the C store or pool API
 		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-		if (ped)
+				if (ped)
 			if (ped->InVehicle() && !ped->bCarPassenger && ped != FindPlayerPed())
 				rouz.driver_ped_count++;
 	}
@@ -3863,15 +3702,13 @@ void rouz_update()
 	// Count "locked" vehs (vehs that won't despawn)
 	/*rouz.veh_locked_count = 0;
 	if (CPools::GetVehiclePool())
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		for (i=0; i < CPool_GetSize(CPools::GetVehiclePool()); i++)
 			// Access raw storage through the C store or pool API
 			if (((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i)))
 				// Access raw storage through the C store or pool API
 				if (((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i))->bIsLocked)
-		//- rouz edit (ChatGPT)
-					rouz.veh_locked_count++;*/
+							rouz.veh_locked_count++;*/
 
 	// Move everything
 	/*static double last_time=0.;
@@ -4208,3 +4045,5 @@ double get_game_time()
 {
 	return (double) CTimer::GetTimeInMilliseconds() * 1e-3;
 }
+
+//- rouz edit (ChatGPT)

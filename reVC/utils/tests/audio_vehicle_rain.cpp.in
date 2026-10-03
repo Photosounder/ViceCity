@@ -1,0 +1,123 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+using uint8=uint8_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {RAIN_ON_VEHICLE_MAX_DIST=22,RAIN_ON_VEHICLE_VOLUME=30};
+class CVehicle {public:uint8_t m_bRainAudioCounter,m_bRainSamplesCounter;};
+struct cAudioManager {
+@FIELDS@
+    void ProcessRainOnVehicle(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static cVehicleParams params;
+static CVehicle vehicles[2];
+static unsigned seedValue,cases,callbacks,rainQueries,cameraQueries,playerQueries,requests;
+static unsigned reads;
+static float rain;
+static bool cameraNoRain,playerNoRain;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" void AudioVehicleRain_Process(cAudioManager *,cVehicleParams *);
+extern "C" void TestVehicleRainC(cAudioManager *,cVehicleParams *);
+static void value(uint32_t v) {
+    // Hash scalar state and query order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Observe complete owner and parameter bytes with stable vehicle identities
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&vehicles[0]?1:params.m_pVehicle==&vehicles[1]?2:0);
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);i+=4) {uint32_t word;memcpy(&word,bytes+i,4);value(word);}
+    bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);i+=4) {uint32_t word;memcpy(&word,bytes+i,4);value(word);}
+    value(vehicles[0].m_bRainAudioCounter);value(vehicles[0].m_bRainSamplesCounter);
+    value(vehicles[1].m_bRainAudioCounter);value(vehicles[1].m_bRainSamplesCounter);
+}
+struct RainValue {
+    operator float() const {
+        // Change the parameter's vehicle on the volume read after the generator captures its counters
+        ++callbacks;++rainQueries;value(1);observe();
+        if(++reads==2 && (seedValue&2048)) params.m_pVehicle=&vehicles[1];
+        return rain;
+    }
+};
+class CWeather {public:static RainValue Rain;};RainValue CWeather::Rain;
+class CCullZones {public:
+    static bool CamNoRain() {
+        // Modify rainfall and vehicle selection after the original rain eligibility read
+        ++callbacks;++cameraQueries;value(2);observe();
+        if(seedValue&1024) {rain=0.25f;params.m_pVehicle=&vehicles[1];}
+        return cameraNoRain;
+    }
+    static bool PlayerNoRain() {
+        // Observe that the player check only occurs after a true camera exclusion
+        ++callbacks;++playerQueries;value(3);observe();return playerNoRain;
+    }
+};
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual request insertion and mutate previously captured game state
+    ++callbacks;++requests;value(4);observe();vehicles[0].m_bRainSamplesCounter^=(seedValue>>12)&1;
+    return (seedValue>>4)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection path dependency while rain requests disable reflections
+    return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed rainfall and distance boundaries, both owners, all counter bytes and queue capacities
+    seedValue=seed;reads=0;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(vehicles,0,sizeof(vehicles));
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_bIsInitialised=(seed>>2)&1;active->m_bIsPaused=(seed>>3)&1;
+    for(unsigned i=0;i<6;++i) {active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*800;}
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<5;++i) active->m_anRandomTable[i]=(int)(seed*37+i*13)%10000-5000;
+    const float rains[]={0.0f,0.009999f,0.01f,0.010001f,0.033333f,0.25f,0.5f,1.0f,-1.0f,NAN};
+    const float distances[]={-1.0f,-0.0f,0.0f,19.0f,19.36f,100.0f,483.99f,484.0f,484.01f,NAN,INFINITY};
+    const uint8_t calculated[]={0,1,2,127,255};
+    rain=rains[(seed/4)%10];cameraNoRain=(seed>>5)&1;playerNoRain=(seed>>6)&1;
+    params.m_fDistance=distances[(seed/40)%11];params.m_bDistanceCalculated=calculated[(seed/440)%5];params.m_pVehicle=&vehicles[0];
+    params.m_VehicleType=-3;params.m_nIndex=seed;params.m_fVelocityChange=-2;
+    active->m_sQueueSample.m_fDistance=(float)(seed%23)-1.0f;active->m_sQueueSample.m_nVolume=77;active->m_sQueueSample.m_nFrequency=54321;
+    active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nFramesToPlay=17;
+    vehicles[0].m_bRainAudioCounter=seed&255;vehicles[0].m_bRainSamplesCounter=(seed/16)&255;
+    vehicles[1].m_bRainAudioCounter=1;vehicles[1].m_bRainSamplesCounter=255;
+    if(!(params.m_fDistance<484.0f && rain>0.01f && (!cameraNoRain || !playerNoRain))) params.m_pVehicle=NULL;
+}
+int main() {
+    // Compare weather gates and repeated calls across cached distance and callback-visible changes
+    for(unsigned seed=0;seed<8192;++seed) {
+        prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;
+    }
+    // Exercise every audio counter byte against all sample counter boundary values with audible rain
+    const unsigned sampleEdges[]={0,1,4,5,67,68,255};
+    for(unsigned audio=0;audio<256;++audio) for(unsigned sample:sampleEdges) {
+        prepare(0);rain=1.0f;cameraNoRain=playerNoRain=false;params.m_fDistance=0;params.m_bDistanceCalculated=0;params.m_pVehicle=&vehicles[0];
+        vehicles[0].m_bRainAudioCounter=audio;vehicles[0].m_bRainSamplesCounter=sample;
+        @RUN@;observe();++cases;
+    }
+    // Exercise every sample counter byte at normal and wrapping audio counter states
+    const unsigned audioEdges[]={0,1,2,255};
+    for(unsigned sample=0;sample<256;++sample) for(unsigned audio:audioEdges) {
+        prepare(0);rain=1.0f;cameraNoRain=playerNoRain=false;params.m_fDistance=0;params.m_bDistanceCalculated=0;params.m_pVehicle=&vehicles[0];
+        vehicles[0].m_bRainAudioCounter=audio;vehicles[0].m_bRainSamplesCounter=sample;
+        @RUN@;observe();++cases;
+    }
+    // Require every weather boundary and request submission where reflections expose the callback
+    if(!rainQueries || !cameraQueries || !playerQueries) return 2;
+#ifdef AUDIO_REFLECTIONS
+    if(!requests) return 3;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

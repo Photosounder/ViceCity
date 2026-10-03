@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -212,7 +213,7 @@ CTrain::ProcessControl(void)
 			if(m_bTrainStopping){
 				m_nDoorTimer = CTimer::GetTimeInMilliseconds() + 1000;
 				m_nDoorState = TRAIN_DOOR_OPENING;
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_CLOSE, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_CLOSE, 0.0f);
 			}
 			break;
 
@@ -229,7 +230,7 @@ CTrain::ProcessControl(void)
 			if(!m_bTrainStopping){
 				m_nDoorTimer = CTimer::GetTimeInMilliseconds() + 1000;
 				m_nDoorState = TRAIN_DOOR_CLOSING;
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_OPEN, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_OPEN, 0.0f);
 			}
 			break;
 
@@ -465,15 +466,11 @@ CTrain::InitTrains(void)
 	int8 lastWagon[]   = { 0, 0, 1,  0, 1 };
 	int16 wagonGroup[] = { 0, 0, 0,  1, 1 };
 	for(i = 0; i < 5; i++){
-//+ rouz edit (ChatGPT)
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(train);
+				assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 		train->SetStatus(STATUS_ABANDONED);
 		train->bIsLocked = true;
@@ -492,15 +489,11 @@ CTrain::InitTrains(void)
 	int8 lastWagon_S[]   = { 0, 1,  0, 1,  0, 1,  0, 1 };
 	int16 wagonGroup_S[] = { 0, 0,  1, 1,  2, 2,  3, 3 };
 	for(i = 0; i < 8; i++){
-//+ rouz edit (ChatGPT)
 		// Allocate the train wagon from the vehicle pool without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		train = (CTrain*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(train);
+				assert(train);
 		std::allocator<CTrain>().construct(train, MI_TRAIN, PERMANENT_VEHICLE);
-//- rouz edit (ChatGPT)
 		train->GetMatrix().SetTranslate(0.0f, 0.0f, 0.0f);
 		train->SetStatus(STATUS_ABANDONED);
 		train->bIsLocked = true;
@@ -670,19 +663,19 @@ void
 PlayAnnouncement(uint8 sound, uint8 station)
 {
 	// this was gone in a PC version but inlined on PS2
-//+ rouz edit (ChatGPT)
 	// Allocate a pooled audio script object without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	cAudioScriptObject *obj = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
-	//- rouz edit (ChatGPT)
-	assert(obj);
-	std::allocator<cAudioScriptObject>().construct(obj);
-//- rouz edit (ChatGPT)
+		assert(obj);
+	AudioScriptObject_Reset(obj);
 	obj->AudioId = sound;
-	obj->Posn = CTrain::aStationCoors[station];
+	// Copy the position components into the C audio script record
+	const CVector scriptPosition = CTrain::aStationCoors[station];
+	obj->Posn.x = scriptPosition.x;
+	obj->Posn.y = scriptPosition.y;
+	obj->Posn.z = scriptPosition.z;
 	obj->AudioEntity = AEHANDLE_NONE;
-	DMAudio.CreateOneShotScriptObject(obj);
+	DMAudio_CreateOneShotScriptObject(obj);
 }
 
 void
@@ -789,3 +782,4 @@ CTrain::UpdateTrains(void)
 	}
 #endif
 }
+//- rouz edit (ChatGPT)

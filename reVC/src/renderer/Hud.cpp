@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Camera.h"
@@ -1233,7 +1234,7 @@ void CHud::Draw()
 					m_HelpMessageDisplayTime = CMessages::GetWideStringLength(m_HelpMessage) * 0.05f + 3.0f;
 
 					if (TheCamera.m_ScreenReductionPercentage == 0.0f)
-						DMAudio.PlayFrontEndSound(SOUND_HUD, 0);
+						DMAudio_PlayFrontEndSound(SOUND_HUD, 0);
 					break;
 				case 1:
 				case 2:
@@ -2087,3 +2088,5 @@ CHud::ResetWastedText(void)
 	m_BigMessage[2][0] = 0;
 	m_BigMessage[0][0] = 0;
 }
+
+//- rouz edit (ChatGPT)

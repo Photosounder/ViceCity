@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "DMAudio.h"
@@ -5,404 +6,286 @@
 #include "AudioManager.h"
 #include "AudioScriptObject.h"
 #include "sampman.h"
+#include "AudioControls.h"
+#include "AudioProvider.h"
 
-cDMAudio DMAudio;
 
-void
-cDMAudio::Initialise(void)
-{
-	AudioManager.Initialise();
-}
 
-void
-cDMAudio::Terminate(void)
-{
-	AudioManager.Terminate();
-}
 
-void
-cDMAudio::Service(void)
-{
-	AudioManager.Service();
-}
 
-int32
-cDMAudio::CreateEntity(eAudioType type, void *UID)
-{
-	return AudioManager.CreateEntity(type, (CPhysical *)UID);
-}
 
-void
-cDMAudio::DestroyEntity(int32 audioEntity)
-{
-	AudioManager.DestroyEntity(audioEntity);
-}
 
-bool8
-cDMAudio::GetEntityStatus(int32 audioEntity)
-{
-	return AudioManager.GetEntityStatus(audioEntity);
-}
 
-void
-cDMAudio::SetEntityStatus(int32 audioEntity, bool8 status)
-{
-	AudioManager.SetEntityStatus(audioEntity, status);
-}
 
-void
-cDMAudio::PlayOneShot(int32 audioEntity, uint16 oneShot, float volume)
-{
-	AudioManager.PlayOneShot(audioEntity, oneShot, volume);
-}
 
-void
-cDMAudio::DestroyAllGameCreatedEntities(void)
-{
-	AudioManager.DestroyAllGameCreatedEntities();
-}
 
-void
-cDMAudio::SetOutputMode(bool8 surround)
-{
-	AudioManager.SetOutputMode(surround);
-}
 
-void
-cDMAudio::SetMP3BoostVolume(uint8 volume)
-{
-	uint8 vol = volume;
-	if (vol > MAX_VOLUME) vol = MAX_VOLUME;
 
-	AudioManager.SetMP3BoostVolume(vol);
-}
 
-void
-cDMAudio::SetEffectsMasterVolume(uint8 volume)
-{
-	uint8 vol = volume;
-	if ( vol > MAX_VOLUME ) vol = MAX_VOLUME;
-	
-	AudioManager.SetEffectsMasterVolume(vol);
-}
 
-void
-cDMAudio::SetMusicMasterVolume(uint8 volume)
-{
-	uint8 vol = volume;
-	if ( vol > MAX_VOLUME ) vol = MAX_VOLUME;
-	
-	AudioManager.SetMusicMasterVolume(vol);
-}
 
-void
-cDMAudio::SetEffectsFadeVol(uint8 volume)
-{
-	uint8 vol = volume;
-	if ( vol > MAX_VOLUME ) vol = MAX_VOLUME;
-	
-	AudioManager.SetEffectsFadeVol(vol);
-}
 
-void
-cDMAudio::SetMusicFadeVol(uint8 volume)
-{
-	uint8 vol = volume;
-	if ( vol > MAX_VOLUME ) vol = MAX_VOLUME;
-	
-	AudioManager.SetMusicFadeVol(vol);
-}
 
 uint8
-cDMAudio::GetNum3DProvidersAvailable(void)
+DMAudio_GetNum3DProvidersAvailable(void)
 {
-	return AudioManager.GetNum3DProvidersAvailable();
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_GetNum3DProvidersAvailable(AudioManager.m_bIsInitialised);
 }
 
 char *
-cDMAudio::Get3DProviderName(uint8 id)
+DMAudio_Get3DProviderName(uint8 id)
 {
-	return AudioManager.Get3DProviderName(id);
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_Get3DProviderName(AudioManager.m_bIsInitialised, id);
 }
 
-int8 cDMAudio::AutoDetect3DProviders(void)
+int8 DMAudio_AutoDetect3DProviders(void)
 {
-	return AudioManager.AutoDetect3DProviders();
-}
-
-int8
-cDMAudio::GetCurrent3DProviderIndex(void)
-{
-	return AudioManager.GetCurrent3DProviderIndex();
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_AutoDetect3DProviders(AudioManager.m_bIsInitialised);
 }
 
 int8
-cDMAudio::SetCurrent3DProvider(uint8 which)
+DMAudio_GetCurrent3DProviderIndex(void)
 {
-	return AudioManager.SetCurrent3DProvider(which);
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_GetCurrent3DProviderIndex(AudioManager.m_bIsInitialised);
+}
+
+int8
+DMAudio_SetCurrent3DProvider(uint8 which)
+{
+	// Preserve the original game audio operation through the C interface
+	return AudioProvider_SetCurrent(AudioManager.m_bIsInitialised, which, &AudioManager.m_nActiveSamples, &AudioManager.m_nActiveQueue, AudioManager.m_aRequestedOrderList, AudioManager.m_nRequestedCount, AudioManager.m_asActiveSamples);
 }
 
 void
-cDMAudio::SetSpeakerConfig(int32 config)
+DMAudio_SetSpeakerConfig(int32 config)
 {
-	AudioManager.SetSpeakerConfig(config);
+	// Preserve the original game audio operation through the C interface
+	AudioControls_SetSpeakerConfig(config);
 }
 
 bool8
-cDMAudio::IsMP3RadioChannelAvailable(void)
+DMAudio_IsMP3RadioChannelAvailable(void)
 {
-	return AudioManager.IsMP3RadioChannelAvailable();
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_IsMP3RadioChannelAvailable(AudioManager.m_bIsInitialised);
 }
 
 void
-cDMAudio::ReleaseDigitalHandle(void)
+DMAudio_ReleaseDigitalHandle(void)
 {
-	AudioManager.ReleaseDigitalHandle();
+	// Preserve the original game audio operation through the C interface
+	AudioControls_ReleaseDigitalHandle(AudioManager.m_bIsInitialised);
 }
 
 void
-cDMAudio::ReacquireDigitalHandle(void)
+DMAudio_ReacquireDigitalHandle(void)
 {
-	AudioManager.ReacquireDigitalHandle();
+	// Preserve the original game audio operation through the C interface
+	AudioControls_ReacquireDigitalHandle(AudioManager.m_bIsInitialised);
 }
 
 void
-cDMAudio::SetDynamicAcousticModelingStatus(bool8 status)
+DMAudio_SetDynamicAcousticModelingStatus(bool8 status)
 {
+	// Preserve the original game audio operation through the C interface
 #ifdef AUDIO_REFLECTIONS
-	AudioManager.SetDynamicAcousticModelingStatus(status);
+	AudioManager.m_bDynamicAcousticModelingStatus = status;
 #endif
 }
 
 bool8
-cDMAudio::CheckForAnAudioFileOnCD(void)
+DMAudio_CheckForAnAudioFileOnCD(void)
 {
-	return AudioManager.CheckForAnAudioFileOnCD();
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_CheckForAnAudioFileOnCD();
 }
 
 char
-cDMAudio::GetCDAudioDriveLetter(void)
+DMAudio_GetCDAudioDriveLetter(void)
 {
-	return AudioManager.GetCDAudioDriveLetter();
+	// Preserve the original game audio operation through the C interface
+	return AudioControls_GetCDAudioDriveLetter(AudioManager.m_bIsInitialised);
 }
 
 bool8
-cDMAudio::IsAudioInitialised(void)
+DMAudio_IsAudioInitialised(void)
 {
-	return AudioManager.IsAudioInitialised();
+	// Preserve the original game audio operation through the C interface
+	return AudioManager.m_bIsInitialised;
 }
 
-void
-cDMAudio::ResetPoliceRadio()
-{
-	AudioManager.ResetPoliceRadio();
-}
 
-void
-cDMAudio::ReportCrime(eCrimeType crime, const CVector &pos)
-{
-	AudioManager.ReportCrime(crime, pos);
-}
 
 int32
-cDMAudio::CreateLoopingScriptObject(cAudioScriptObject *scriptObject)
+DMAudio_CreateLoopingScriptObject(cAudioScriptObject *scriptObject)
 {
-	int32 audioEntity = AudioManager.CreateEntity(AUDIOTYPE_SCRIPTOBJECT, scriptObject);
+	// Preserve the original game audio operation through the C interface
+	int32 audioEntity = AudioManager_CreateEntity(&AudioManager, AUDIOTYPE_SCRIPTOBJECT, scriptObject);
 
 	if ( AEHANDLE_IS_OK(audioEntity) )
-		AudioManager.SetEntityStatus(audioEntity, TRUE);
+		AudioEntities_SetStatus(AudioManager.m_asAudioEntities, AudioManager.m_bIsInitialised, audioEntity, TRUE);
 	
 	return audioEntity;
 }
 
 void
-cDMAudio::DestroyLoopingScriptObject(int32 audioEntity)
+DMAudio_DestroyLoopingScriptObject(int32 audioEntity)
 {
-	AudioManager.DestroyEntity(audioEntity);
+	// Preserve the original game audio operation through the C interface
+	AudioEntities_Destroy(AudioManager.m_asAudioEntities, AudioManager.m_aAudioEntityOrderList, &AudioManager.m_nAudioEntitiesCount, AudioManager.m_bIsInitialised, audioEntity);
 }
 
 void
-cDMAudio::CreateOneShotScriptObject(cAudioScriptObject *scriptObject)
+DMAudio_CreateOneShotScriptObject(cAudioScriptObject *scriptObject)
 {
-	int32 audioEntity = AudioManager.CreateEntity(AUDIOTYPE_SCRIPTOBJECT, scriptObject);
+	// Preserve the original game audio operation through the C interface
+	int32 audioEntity = AudioManager_CreateEntity(&AudioManager, AUDIOTYPE_SCRIPTOBJECT, scriptObject);
 
 	if ( AEHANDLE_IS_OK(audioEntity) )
 	{
-		AudioManager.SetEntityStatus(audioEntity, TRUE);
-		AudioManager.PlayOneShot(audioEntity, scriptObject->AudioId, 0.0f);
+		AudioEntities_SetStatus(AudioManager.m_asAudioEntities, AudioManager.m_bIsInitialised, audioEntity, TRUE);
+		AudioEntities_PlayOneShot(AudioManager.m_asAudioEntities, &AudioManager.m_sAudioScriptObjectManager, AudioManager.m_bIsInitialised, audioEntity, scriptObject->AudioId, 0.0f);
 	}
 }
 
+
+
 void
-cDMAudio::PlaySuspectLastSeen(float x, float y, float z)
+DMAudio_PlayFrontEndSound(uint16 frontend, uint32 volume)
 {
-	AudioManager.PlaySuspectLastSeen(x, y, z);
+	// Preserve the original game audio operation through the C interface
+	AudioEntities_PlayOneShot(AudioManager.m_asAudioEntities, &AudioManager.m_sAudioScriptObjectManager, AudioManager.m_bIsInitialised, AudioManager.m_nFrontEndEntity, frontend, (float)volume);
 }
 
 void
-cDMAudio::ReportCollision(CEntity *entityA, CEntity *entityB, uint8 surfaceTypeA, uint8 surfaceTypeB, float collisionPower, float velocity)
+DMAudio_PlayRadioAnnouncement(uint32 announcement)
 {
-	AudioManager.ReportCollision(entityA, entityB, surfaceTypeA, surfaceTypeB, collisionPower, velocity);
-}
-
-void
-cDMAudio::PlayFrontEndSound(uint16 frontend, uint32 volume)
-{
-	AudioManager.PlayOneShot(AudioManager.m_nFrontEndEntity, frontend, (float)volume);
-}
-
-void
-cDMAudio::PlayRadioAnnouncement(uint32 announcement)
-{
+	// Preserve the original game audio operation through the C interface
 	MusicManager.PlayAnnouncement(announcement);
 }
 
 void
-cDMAudio::PlayFrontEndTrack(uint32 track, bool8 frontendFlag)
+DMAudio_PlayFrontEndTrack(uint32 track, bool8 frontendFlag)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.PlayFrontEndTrack(track, frontendFlag);
 }
 
 void
-cDMAudio::StopFrontEndTrack(void)
+DMAudio_StopFrontEndTrack(void)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.StopFrontEndTrack();
 }
 
-void
-cDMAudio::ResetTimers(uint32 time)
-{
-	AudioManager.ResetTimers(time);
-}
 
 void
-cDMAudio::ChangeMusicMode(uint8 mode)
+DMAudio_ChangeMusicMode(uint8 mode)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.ChangeMusicMode(mode);
 }
 
 void
-cDMAudio::PreloadCutSceneMusic(uint32 track)
+DMAudio_PreloadCutSceneMusic(uint32 track)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.PreloadCutSceneMusic(track);
 }
 
 void
-cDMAudio::PlayPreloadedCutSceneMusic(void)
+DMAudio_PlayPreloadedCutSceneMusic(void)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.PlayPreloadedCutSceneMusic();
 }
 
 void
-cDMAudio::StopCutSceneMusic(void)
+DMAudio_StopCutSceneMusic(void)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.StopCutSceneMusic();
 }
 
-void
-cDMAudio::PreloadMissionAudio(uint8 slot, Const char *missionAudio)
-{
-	AudioManager.PreloadMissionAudio(slot, missionAudio);
-}
+
+
+
+
+
+
+
 
 uint8
-cDMAudio::GetMissionAudioLoadingStatus(uint8 slot)
+DMAudio_GetRadioInCar(void)
 {
-	return AudioManager.GetMissionAudioLoadingStatus(slot);
-}
-
-void
-cDMAudio::SetMissionAudioLocation(uint8 slot, float x, float y, float z)
-{
-	AudioManager.SetMissionAudioLocation(slot, x, y, z);
-}
-
-void
-cDMAudio::PlayLoadedMissionAudio(uint8 slot)
-{
-	AudioManager.PlayLoadedMissionAudio(slot);
-}
-
-bool8
-cDMAudio::IsMissionAudioSamplePlaying(uint8 slot)
-{
-	return AudioManager.IsMissionAudioSamplePlaying(slot);
-}
-
-bool8
-cDMAudio::IsMissionAudioSampleFinished(uint8 slot)
-{
-	return AudioManager.IsMissionAudioSampleFinished(slot);
-}
-
-void
-cDMAudio::ClearMissionAudio(uint8 slot)
-{
-	AudioManager.ClearMissionAudio(slot);
-}
-
-const char *
-cDMAudio::GetMissionAudioLoadedLabel(uint8 slot)
-{
-	return AudioManager.GetMissionAudioLoadedLabel(slot);
-}
-
-uint8
-cDMAudio::GetRadioInCar(void)
-{
+	// Preserve the original game audio operation through the C interface
 	return MusicManager.GetRadioInCar();
 }
 
 void
-cDMAudio::SetRadioInCar(uint32 radio)
+DMAudio_SetRadioInCar(uint32 radio)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.SetRadioInCar(radio);
 }
 
 void
-cDMAudio::SetRadioChannel(uint32 radio, int32 pos)
+DMAudio_SetRadioChannel(uint32 radio, int32 pos)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.SetRadioChannelByScript(radio, pos);
 }
 
 void
-cDMAudio::SetStartingTrackPositions(bool8 isStartGame)
+DMAudio_SetStartingTrackPositions(bool8 isStartGame)
 {
+	// Preserve the original game audio operation through the C interface
 	MusicManager.SetStartingTrackPositions(isStartGame);
 }
 
 float *
-cDMAudio::GetListenTimeArray()
+DMAudio_GetListenTimeArray()
 {
+	// Preserve the original game audio operation through the C interface
 	return MusicManager.GetListenTimeArray();
 }
 
 uint32
-cDMAudio::GetFavouriteRadioStation()
+DMAudio_GetFavouriteRadioStation()
 {
+	// Preserve the original game audio operation through the C interface
 	return MusicManager.GetFavouriteRadioStation();
 }
 
 int32
-cDMAudio::GetRadioPosition(uint32 station)
+DMAudio_GetRadioPosition(uint32 station)
 {
+	// Preserve the original game audio operation through the C interface
 	return MusicManager.GetRadioPosition(station);
 }
 
 void
-cDMAudio::SetPedTalkingStatus(CPed *ped, bool8 status)
+DMAudio_SetPedTalkingStatus(CPed *ped, bool8 status)
 {
+	// Preserve the original game audio operation through the C interface
 	return AudioManager.SetPedTalkingStatus(ped, status);
 }
 
 void
-cDMAudio::SetPlayersMood(uint8 mood, uint32 time)
+DMAudio_SetPlayersMood(uint8 mood, uint32 time)
 {
+	// Preserve the original game audio operation through the C interface
 	return AudioManager.SetPlayersMood(mood, time);
 }
 
 void
-cDMAudio::ShutUpPlayerTalking(bool8 state)
+DMAudio_ShutUpPlayerTalking(bool8 state)
 {
+	// Preserve the original game audio operation through the C interface
 	AudioManager.m_bIsPlayerShutUp = state;
 }
+//- rouz edit (ChatGPT)

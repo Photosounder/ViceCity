@@ -1,0 +1,54 @@
+static void seed(cAudioManager *m,uint8_t initialized,uint32_t frame) {
+    // Define crime records, report deadlines and valid game objects before each operation
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=initialized;m->m_FrameCounter=frame;
+    for(unsigned i=0;i<AUDIO_CRIME_COUNT;++i) {
+        // Retain distinct record coordinates and timers for update selection
+        m->m_aCrimes[i].type=i%NUM_CRIME_TYPES;m->m_aCrimes[i].timer=100+i;
+        m->m_aCrimes[i].position={-7.5f,42,-0.0f};
+    }
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) {gMinTimeToNextReport[i]=500;}
+    MusicManager.m_nMusicMode=MUSICMODE_GAME;wanted.level=1;player.m_pWanted=&wanted;
+    hasPlayer=1;hasDirect=0;attachment=0;mutateWanted=0;lookupCalls=0;
+    directVehicle.vehicle=true;attachedVehicle.vehicle=true;object.vehicle=false;player.m_attachedTo=NULL;
+    position=CVector(1,2,-0.0f);
+}
+static uint32_t token(CVehicle *vehicle) {
+    // Compare returned object identity without hashing addresses
+    if(vehicle==NULL)return 0;if(vehicle==&directVehicle)return 1;if(vehicle==&attachedVehicle)return 2;
+    assert(false);return 3;
+}
+static void lookup(cAudioManager *m) {
+    // Drive the original member or actual C operation with identical game state
+    active=m;value(token(@LOOKUP@));value(lookupCalls);snapshot(m);
+}
+static void report(cAudioManager *m,eCrimeType type) {
+    // Compare gates, post-wanted coordinates, record selection and cooldown writes
+    active=m;@CRIME@;snapshot(m);real(position.x);real(position.y);real(position.z);
+}
+extern "C" CVehicle *TestGameEntriesC(const CVector *);
+int main() {
+    // Exercise both owners and every direct/player/attachment lookup combination
+    for(cAudioManager *m:{&AudioManager,&other}) for(unsigned direct=0;direct<2;++direct)
+        for(unsigned ped=0;ped<2;++ped) for(unsigned attached=0;attached<3;++attached) {
+            // Use a nonzero CEntity base offset to verify the C++ cast adapter preserves object identity
+            seed(m,1,500);hasDirect=direct;hasPlayer=ped;
+            player.m_attachedTo=attached==0?NULL:attached==1?&object:(CEntity*)&attachedVehicle;
+            assert((void*)(CEntity*)&attachedVehicle!=(void*)&attachedVehicle);lookup(m);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint8_t initialized:{0,1,255})
+        for(uint8_t mode:{0,1,2,3,255}) for(int32_t level:{-2147483647-1,-1,0,1,2147483647})
+        for(uint32_t frame:{0u,499u,500u,501u,0xffffffffu}) for(int t=CRIME_NONE;t<NUM_CRIME_TYPES;++t)
+        for(unsigned mutation=0;mutation<2;++mutation) {
+            // Cover short-circuit gates, every safe crime index and exact cooldown boundaries
+            seed(m,initialized,frame);MusicManager.m_nMusicMode=mode;wanted.level=level;mutateWanted=mutation;
+            report(m,(eCrimeType)t);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) {
+        // Exercise repeated crime replacement, full records and public facade access
+        seed(m,1,500);active=m;
+        for(unsigned frame=0;frame<1200;++frame) {m->m_FrameCounter=frame;report(m,CRIME_HIT_PED);}
+    }
+    seed(&AudioManager,1,500);active=&AudioManager;hasDirect=1;
+    value(token(TestGameEntriesC(&position)));snapshot(active);
+    printf("%llu\n",(unsigned long long)digest);
+}

@@ -1,0 +1,80 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+@HEADERS@
+class cAudioManager {
+public:
+    tSound m_aRequestedQueue[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8_t m_aRequestedOrderList[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8_t m_nActiveQueue;
+    uint8_t m_nActiveSamples;
+    void AddDetailsToRequestedOrderList(uint8_t sample);
+};
+@METHOD@
+static uint64_t digest = 1469598103934665603ULL;
+static void record(const void *data, size_t size) {
+    // Compare defined record fields without depending on padding
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i=0; i<size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+static void observe(const tSound *sound) {
+    // Compare every present field across the platform-specific layouts
+    @FIELDS@
+}
+int main() {
+    // Verify C linkage, sizes, alignment, and every field offset
+    @C_CHECK@
+    const size_t layout[] = {sizeof(tSound),alignof(tSound)};
+    record(layout,sizeof(layout));
+    @LAYOUT@
+    const uint32_t coordinates[] = {0,0x80000000u,0x3f800000u,0xc0f00000u,0x7f800000u,0xff800000u,0x7fc12345u,0xffc23456u,0x00800000u,0x7f7fffffu};
+    for (unsigned x=0; x<10; ++x) {
+        // Preserve exact coordinate bits through both game/vector boundaries
+        for (unsigned y=0; y<10; ++y) {
+            // Compare copied sound records and returned game vectors
+            tSound sound;
+            memset(&sound,0,sizeof(sound));
+            CVector position;
+            memcpy(&position.x,&coordinates[x],4);
+            memcpy(&position.y,&coordinates[y],4);
+            memcpy(&position.z,&coordinates[(x+y)%10],4);
+            sound.m_vecPos = @POSITION_FROM@;
+            tSound copy = sound;
+            observe(&copy);
+            CVector result = @POSITION_TO@;
+            record(&result.x,4); record(&result.y,4); record(&result.z,4);
+            assert(memcmp(&result.x,&position.x,4)==0 && memcmp(&result.y,&position.y,4)==0 && memcmp(&result.z,&position.z,4)==0);
+        }
+    }
+    static cAudioManager state;
+    uint32_t random=314159;
+    for (unsigned capacity=1; capacity<=NUM_CHANNELS_GENERIC; ++capacity) {
+        // Exercise every active capacity, physical insertion slot, and both queues
+        state.m_nActiveSamples=capacity;
+        for (unsigned mode=0; mode<4; ++mode) {
+            // Cover ascending, descending, tied, and random final priorities
+            memset(state.m_aRequestedQueue,0,sizeof(state.m_aRequestedQueue));
+            for (int q=0; q<NUM_SOUND_QUEUES; ++q) {
+                // Define every initial order slot including unused tail entries
+                for (int i=0; i<NUM_CHANNELS_GENERIC; ++i) state.m_aRequestedOrderList[q][i]=i;
+            }
+            for (unsigned step=0; step<1000; ++step) {
+                // Revisit existing physical slots to preserve the original replacement stopping rule
+                random=random*1664525u+1013904223u;
+                state.m_nActiveQueue=step%NUM_SOUND_QUEUES;
+                uint8_t sample=step%capacity;
+                tSound &sound=state.m_aRequestedQueue[state.m_nActiveQueue][sample];
+                sound.m_nFinalPriority=mode==0 ? step : mode==1 ? 1000-step : mode==2 ? 17 : random;
+                sound.m_nEntityIndex=step;
+                sound.m_nCounter=random;
+                sound.m_vecPos.x=3.25f; sound.m_vecPos.y=-7.5f; sound.m_vecPos.z=-0.0f;
+                @INSERT@
+                record(state.m_aRequestedOrderList,sizeof(state.m_aRequestedOrderList));
+                observe(&sound);
+            }
+        }
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

@@ -14,12 +14,16 @@
 #include "custompipes.h"
 #include "MemoryHeap.h"
 
-CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaList;
-CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaBoatAtomicList;
-CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaEntityList;
-CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaUnderwaterEntityList;
+//+ rouz edit (ChatGPT)
+CSortedLinkList CVisibilityPlugins::m_alphaList;
+CSortedLinkList CVisibilityPlugins::m_alphaBoatAtomicList;
+CSortedLinkList CVisibilityPlugins::m_alphaEntityList;
+CSortedLinkList CVisibilityPlugins::m_alphaUnderwaterEntityList;
+//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
-CLinkList<CVisibilityPlugins::AlphaObjectInfo> CVisibilityPlugins::m_alphaBuildingList;
+//+ rouz edit (ChatGPT)
+CSortedLinkList CVisibilityPlugins::m_alphaBuildingList;
+//- rouz edit (ChatGPT)
 #endif
 
 int32 CVisibilityPlugins::ms_atomicPluginOffset = -1;
@@ -42,29 +46,47 @@ float CVisibilityPlugins::ms_pedFadeDist;
 void
 CVisibilityPlugins::Initialise(void)
 {
-	m_alphaList.Init(NUMALPHALIST);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaList, (CSortedLink*)calloc(NUMALPHALIST, sizeof(CSortedLink)), NUMALPHALIST);
+	//- rouz edit (ChatGPT)
 	m_alphaList.head.item.sort = 0.0f;
 	m_alphaList.tail.item.sort = 100000000.0f;
 
-	m_alphaBoatAtomicList.Init(NUMBOATALPHALIST);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaBoatAtomicList, (CSortedLink*)calloc(NUMBOATALPHALIST, sizeof(CSortedLink)), NUMBOATALPHALIST);
+	//- rouz edit (ChatGPT)
 	m_alphaBoatAtomicList.head.item.sort = 0.0f;
 	m_alphaBoatAtomicList.tail.item.sort = 100000000.0f;
 
 #ifdef ASPECT_RATIO_SCALE
 	// default 150 is not enough for bigger FOVs
-	m_alphaEntityList.Init(NUMALPHAENTITYLIST * 3);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaEntityList, (CSortedLink*)calloc(NUMALPHAENTITYLIST * 3, sizeof(CSortedLink)), NUMALPHAENTITYLIST * 3);
+	//- rouz edit (ChatGPT)
 #else
-	m_alphaEntityList.Init(NUMALPHAENTITYLIST);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaEntityList, (CSortedLink*)calloc(NUMALPHAENTITYLIST, sizeof(CSortedLink)), NUMALPHAENTITYLIST);
+	//- rouz edit (ChatGPT)
 #endif // ASPECT_RATIO_SCALE
 	m_alphaEntityList.head.item.sort = 0.0f;
 	m_alphaEntityList.tail.item.sort = 100000000.0f;
 
-	m_alphaUnderwaterEntityList.Init(NUMALPHAUNTERWATERENTITYLIST);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaUnderwaterEntityList, (CSortedLink*)calloc(NUMALPHAUNTERWATERENTITYLIST, sizeof(CSortedLink)), NUMALPHAUNTERWATERENTITYLIST);
+	//- rouz edit (ChatGPT)
 	m_alphaUnderwaterEntityList.head.item.sort = 0.0f;
 	m_alphaUnderwaterEntityList.tail.item.sort = 100000000.0f;
 
 #ifdef NEW_RENDERER
-	m_alphaBuildingList.Init(NUMALPHAENTITYLIST);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&m_alphaBuildingList, (CSortedLink*)calloc(NUMALPHAENTITYLIST, sizeof(CSortedLink)), NUMALPHAENTITYLIST);
+	//- rouz edit (ChatGPT)
 	m_alphaBuildingList.head.item.sort = 0.0f;
 	m_alphaBuildingList.tail.item.sort = 100000000.0f;
 #endif
@@ -73,23 +95,40 @@ CVisibilityPlugins::Initialise(void)
 void
 CVisibilityPlugins::Shutdown(void)
 {
-	m_alphaList.Shutdown();
-	m_alphaBoatAtomicList.Shutdown();
-	m_alphaEntityList.Shutdown();
-	m_alphaUnderwaterEntityList.Shutdown();
+	// Free the subsystem node array and reset its list sentinels
+	//+ rouz edit (ChatGPT)
+	free(m_alphaList.links);
+	CSortedLinkList_Init(&m_alphaList, NULL, 0);
+	free(m_alphaBoatAtomicList.links);
+	CSortedLinkList_Init(&m_alphaBoatAtomicList, NULL, 0);
+	free(m_alphaEntityList.links);
+	CSortedLinkList_Init(&m_alphaEntityList, NULL, 0);
+	free(m_alphaUnderwaterEntityList.links);
+	CSortedLinkList_Init(&m_alphaUnderwaterEntityList, NULL, 0);
+	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
-	m_alphaBuildingList.Shutdown();
+	// Free the subsystem node array and reset its list sentinels
+	//+ rouz edit (ChatGPT)
+	free(m_alphaBuildingList.links);
+	CSortedLinkList_Init(&m_alphaBuildingList, NULL, 0);
+	//- rouz edit (ChatGPT)
 #endif
 }
 
 void
 CVisibilityPlugins::InitAlphaEntityList(void)
 {
-	m_alphaEntityList.Clear();
-	m_alphaBoatAtomicList.Clear();
-	m_alphaUnderwaterEntityList.Clear();
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Clear(&m_alphaEntityList);
+	CSortedLinkList_Clear(&m_alphaBoatAtomicList);
+	CSortedLinkList_Clear(&m_alphaUnderwaterEntityList);
+	//- rouz edit (ChatGPT)
 #ifdef NEW_RENDERER
-	m_alphaBuildingList.Clear();
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Clear(&m_alphaBuildingList);
+	//- rouz edit (ChatGPT)
 #endif
 }
 
@@ -101,39 +140,66 @@ CVisibilityPlugins::InsertEntityIntoSortedList(CEntity *e, float dist)
 #endif
 
 	AlphaObjectInfo item;
-	item.entity = e;
+	// Access the object payload through the C list node
+	//+ rouz edit (ChatGPT)
+	item.object = e;
+	//- rouz edit (ChatGPT)
 	item.sort = dist;
 #ifdef NEW_RENDERER
 	if(gbNewRenderer && e->IsBuilding())
-		return !!m_alphaBuildingList.InsertSorted(item);
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		return !!CSortedLinkList_InsertSorted(&m_alphaBuildingList, &item);
+		//- rouz edit (ChatGPT)
 #endif
-	if(e->bUnderwater && m_alphaUnderwaterEntityList.InsertSorted(item))
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	if(e->bUnderwater && CSortedLinkList_InsertSorted(&m_alphaUnderwaterEntityList, &item))
+	//- rouz edit (ChatGPT)
 		return true;
-	return !!m_alphaEntityList.InsertSorted(item);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	return !!CSortedLinkList_InsertSorted(&m_alphaEntityList, &item);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CVisibilityPlugins::InitAlphaAtomicList(void)
 {
-	m_alphaList.Clear();
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Clear(&m_alphaList);
+	//- rouz edit (ChatGPT)
 }
 
 bool
 CVisibilityPlugins::InsertAtomicIntoSortedList(RpAtomic *a, float dist)
 {
 	AlphaObjectInfo item;
-	item.atomic = a;
+	// Access the object payload through the C list node
+	//+ rouz edit (ChatGPT)
+	item.object = a;
+	//- rouz edit (ChatGPT)
 	item.sort = dist;
-	return !!m_alphaList.InsertSorted(item);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	return !!CSortedLinkList_InsertSorted(&m_alphaList, &item);
+	//- rouz edit (ChatGPT)
 }
 
 bool
 CVisibilityPlugins::InsertAtomicIntoBoatSortedList(RpAtomic *a, float dist)
 {
 	AlphaObjectInfo item;
-	item.atomic = a;
+	// Access the object payload through the C list node
+	//+ rouz edit (ChatGPT)
+	item.object = a;
+	//- rouz edit (ChatGPT)
 	item.sort = dist;
-	return !!m_alphaBoatAtomicList.InsertSorted(item);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	return !!CSortedLinkList_InsertSorted(&m_alphaBoatAtomicList, &item);
+	//- rouz edit (ChatGPT)
 }
 
 // can't increase this yet unfortunately...
@@ -191,34 +257,53 @@ SetTextureCB(RpMaterial *material, void *data)
 }
 
 void
-CVisibilityPlugins::RenderAtomicList(CLinkList<AlphaObjectInfo> &list)
+//+ rouz edit (ChatGPT)
+CVisibilityPlugins::RenderAtomicList(CSortedLinkList *list)
+//- rouz edit (ChatGPT)
 {
-	CLink<AlphaObjectInfo> *node;
-	for(node = list.tail.prev; node != &list.head; node = node->prev)
-		RENDERCALLBACK(node->item.atomic);
+	// Access the object payload through the C list node
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	for(node = list->tail.prev; node != &list->head; node = node->prev)
+		RENDERCALLBACK((RpAtomic*)node->item.object);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CVisibilityPlugins::RenderAlphaAtomics(void)
 {
-	RenderAtomicList(m_alphaList);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	RenderAtomicList(&m_alphaList);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CVisibilityPlugins::RenderBoatAlphaAtomics(void)
 {
 	SetCullMode(rwCULLMODECULLNONE);
-	RenderAtomicList(m_alphaBoatAtomicList);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	RenderAtomicList(&m_alphaBoatAtomicList);
+	//- rouz edit (ChatGPT)
 	SetCullMode(rwCULLMODECULLBACK);
 }
 
 void
-CVisibilityPlugins::RenderFadingEntities(CLinkList<AlphaObjectInfo> &list)
+//+ rouz edit (ChatGPT)
+CVisibilityPlugins::RenderFadingEntities(CSortedLinkList *list)
+//- rouz edit (ChatGPT)
 {
-	CLink<AlphaObjectInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 	CSimpleModelInfo *mi;
-	for(node = list.tail.prev; node != &list.head; node = node->prev){
-		CEntity *e = node->item.entity;
+	// Access the object payload through the C list node
+	//+ rouz edit (ChatGPT)
+	for(node = list->tail.prev; node != &list->head; node = node->prev){
+		CEntity *e = (CEntity*)node->item.object;
+	//- rouz edit (ChatGPT)
 		if(e->m_rwObject == nil)
 			continue;
 #ifdef EXTENDED_PIPELINES
@@ -248,14 +333,20 @@ CVisibilityPlugins::RenderFadingEntities(CLinkList<AlphaObjectInfo> &list)
 void
 CVisibilityPlugins::RenderFadingEntities(void)
 {
-	RenderFadingEntities(m_alphaEntityList);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	RenderFadingEntities(&m_alphaEntityList);
+	//- rouz edit (ChatGPT)
 	RenderBoatAlphaAtomics();
 }
 
 void
 CVisibilityPlugins::RenderFadingUnderwaterEntities(void)
 {
-	RenderFadingEntities(m_alphaUnderwaterEntityList);
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	RenderFadingEntities(&m_alphaUnderwaterEntityList);
+	//- rouz edit (ChatGPT)
 }
 
 RpAtomic*

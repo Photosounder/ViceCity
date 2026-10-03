@@ -1,0 +1,20 @@
+int main() {
+    // Confirm the owner consumes five generator calls between its neighboring startup probes
+    assert(rngCalls==5);@C_CHECK@;value(30);bytes(&AudioManager,sizeof(AudioManager));
+    for(unsigned seed=0;seed<64;++seed) {
+        // Compare partial initialization on distinct prefilled storage without blanket zeroing
+        void *storage=malloc(sizeof(cAudioManager));assert(storage);
+        cAudioManager *object=new(storage)cAudioManager;
+        memset(object,seed*3,sizeof(cAudioManager));
+        @INIT@;
+        bytes(object,sizeof(*object));value(rngCalls);
+        for(unsigned iteration=0;iteration<7;++iteration) {
+            // Keep every subsequent table update and generator advance in its original order
+            @GENERATE@;bytes(object->m_anRandomTable,sizeof(object->m_anRandomTable));value(rngCalls);
+        }
+        object->m_bIsInitialised=seed%2;object->m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal=seed;
+        object->~cAudioManager();free(storage);
+    }
+    AudioManager.m_bIsInitialised=1;AudioManager.m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal=123;
+    value(40);value(rngCalls);
+}

@@ -1,0 +1,71 @@
+
+static void seed(cAudioManager *m,uint32_t sample,uint8_t loading,uint8_t playing,uint32_t flags) {
+    // Define distinct live state while retaining the shared persistent playback counters
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=(flags&1)?255:0;
+    m->m_bIsPaused=(flags>>1)&1;m->m_bWasPaused=(flags>>2)&1;m->m_bTimerJustReset=(flags>>3)&1;
+    m->m_nGlobalSfxVolumeMultiplier=97;
+    for(unsigned i=0;i<2;++i) {
+        // Populate both slots to expose ordering and other-slot corruption
+        m->m_nMissionAudioSampleIndex[i]=sample;m->m_nMissionAudioLoadingStatus[i]=loading;
+        m->m_nMissionAudioPlayStatus[i]=playing;m->m_bIsMissionAudioPlaying[i]=(flags>>4)&1;
+        m->m_nMissionAudioFramesToPlay[i]=71+i;m->m_bIsMissionAudioAllowedToPlay[i]=(flags>>5)&1;
+        m->m_bIsMissionAudio2D[i]=(flags>>6)&1;m->m_bIsMissionAudioPhoneCall[i]=(flags>>7)&1;
+        g_bMissionAudioLoadFailed[i]=(flags>>8)&1;
+        m->m_vecMissionAudioPosition[i]={-7.5f,42.0f+i,-0.0f};
+    }
+}
+static void slotStep(cAudioManager *m,uint8_t slot) {
+    // Invoke the original member or actual C operation against the same live owner
+    active=m;@SLOT@;snapshot(m);
+}
+static void process(cAudioManager *m) {
+    // Observe the ordered two-slot service and global volume update
+    active=m;@PROCESS@;snapshot(m);
+}
+extern "C" void TestMissionPlaybackC(void);
+int main() {
+    // Verify linkage and live owner access through both playback exports from C
+    active=&AudioManager;TestMissionPlaybackC();snapshot(&AudioManager);
+    // Cover status gates, special samples, all Boolean combinations, and both live owners
+    const uint32_t samples[]={NO_SAMPLE,STREAMED_SOUND_MISSION_CAMERAL,STREAMED_SOUND_MISSION_CAMERAR,
+        STREAMED_SOUND_MISSION_MOB_01A,STREAMED_SOUND_MISSION_MOB_99A,STREAMED_SOUND_MISSION_ROK2_01,0xffffffffu};
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint32_t sample:samples)
+        for(uint8_t loading:{0,1,2,3,255}) for(uint8_t playing:{0,1,2,255}) for(unsigned flags=0;flags<512;++flags) {
+            // Preserve history across all seeded owners and slots as the original statics do
+            seed(m,sample,loading,playing,flags);distanceSquared=25;panX=flags%2?13:-17;
+            streamPlaying=(flags%3)?255:0;slotStep(m,flags%2);
+        }
+    for(float d:{-1.0f,0.0f,0.0001f,6399.0f,6400.0f,6401.0f,INFINITY,NAN}) for(float x:{-80.0f,-13.0f,-0.0f,13.0f,80.0f}) {
+        // Cover both startup and continuous playback attenuation without undefined pan conversions
+        for(uint8_t status:{PLAY_STATUS_STOPPED,PLAY_STATUS_PLAYING}) {
+            // Keep the active stream available during spatial updates
+            seed(&AudioManager,STREAMED_SOUND_MISSION_MOB_01A,LOADING_STATUS_LOADED,status,1|16|32);
+            distanceSquared=d;panX=x;streamPlaying=1;slotStep(&AudioManager,0);
+        }
+    }
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint8_t slot:{0,1}) {
+        // Drive timeout, pretend playback, delayed start, wraparound, and natural completion
+        seed(m,STREAMED_SOUND_MISSION_MOB_01A,LOADING_STATUS_LOADING,PLAY_STATUS_STOPPED,1|32|64);
+        for(unsigned frame=0;frame<520;++frame) {slotStep(m,slot);}
+        seed(m,STREAMED_SOUND_MISSION_ROK2_01,LOADING_STATUS_LOADED,PLAY_STATUS_STOPPED,1|32|64);
+        streamPlaying=0;
+        for(unsigned frame=0;frame<520;++frame) {
+            // Alternate pause edges and stream status around delayed startup and restart
+            m->m_bIsPaused=frame%43==0;m->m_bWasPaused=frame%43==1;
+            streamPlaying=frame%47<8;slotStep(m,slot);
+        }
+        m->m_bTimerJustReset=1;slotStep(m,slot);
+        seed(m,STREAMED_SOUND_MISSION_MOB_01A,LOADING_STATUS_LOADED,PLAY_STATUS_PLAYING,1|16|32|64);
+        streamPlaying=0;slotStep(m,slot);
+    }
+    for(unsigned volume=0;volume<256;++volume) for(unsigned phone=0;phone<4;++phone) {
+        // Observe volume restoration and phone ducking after ordered processing of two slots
+        seed(&AudioManager,NO_SAMPLE,LOADING_STATUS_NOT_LOADED,PLAY_STATUS_STOPPED,1);
+        AudioManager.m_nGlobalSfxVolumeMultiplier=volume;
+        AudioManager.m_bIsMissionAudioPhoneCall[0]=phone&1;AudioManager.m_bIsMissionAudioPhoneCall[1]=phone&2;
+        for(unsigned frame=0;frame<30;++frame) {process(&AudioManager);}
+    }
+    seed(&AudioManager,STREAMED_SOUND_MISSION_CAMERAL,LOADING_STATUS_NOT_LOADED,PLAY_STATUS_STOPPED,32);
+    process(&AudioManager);
+    printf("%llu\n",(unsigned long long)digest);
+}

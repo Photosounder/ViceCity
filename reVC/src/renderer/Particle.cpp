@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -1636,7 +1637,11 @@ void CParticle::Update()
 												nil,
 												particle->m_fSize, color, particle->m_nRotationStep, 0, 0, 0);
 									
-									PlayOneShotScriptObject(SCRIPT_SOUND_GUNSHELL_DROP, particle->m_vecPosition);
+									{
+										// Evaluate the game position once before passing its components to C
+										const CVector scriptPosition = particle->m_vecPosition;
+										PlayOneShotScriptObject(SCRIPT_SOUND_GUNSHELL_DROP, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+									}
 								}
 								break;
 							
@@ -1655,7 +1660,11 @@ void CParticle::Update()
 												nil,
 												particle->m_fSize, color, 0, 0, 0, 0);
 									
-									PlayOneShotScriptObject(SCRIPT_SOUND_GUNSHELL_DROP_SOFT, particle->m_vecPosition);
+									{
+										// Evaluate the game position once before passing its components to C
+										const CVector scriptPosition = particle->m_vecPosition;
+										PlayOneShotScriptObject(SCRIPT_SOUND_GUNSHELL_DROP_SOFT, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+									}
 								}
 								break;
 								
@@ -2306,7 +2315,6 @@ void CParticle::Render()
 	POP_RENDERGROUP();
 }
 
-//+ rouz edit (ChatGPT)
 void CParticle::RenderForEnvMap(RwCamera *camera)
 {
 	// Skip particle reflections when the auxiliary camera has no usable frame
@@ -2464,7 +2472,6 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
 	POP_RENDERGROUP();
 }
-//- rouz edit (ChatGPT)
 
 void CParticle::RemovePSystem(tParticleType type)
 {
@@ -2693,3 +2700,4 @@ CEntity::AddSteamsFromGround(CVector *unused)
 		}
 	}
 }
+//- rouz edit (ChatGPT)

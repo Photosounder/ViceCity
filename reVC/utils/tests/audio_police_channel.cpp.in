@@ -1,0 +1,61 @@
+static void seed(cAudioManager *m,uint32_t flags,uint32_t sample) {
+    // Define sound fields and a valid retained radio queue before each sequence
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=(flags&1)?255:0;
+    m->m_bIsPaused=(flags>>1)&1;m->m_bWasPaused=(flags>>2)&1;m->m_nPoliceChannelEntity=-13;
+    m->m_sQueueSample.m_vecPos={-7.5f,42,-0.0f};m->m_sQueueSample.m_MaxDistance=317;
+    m->m_sQueueSample.m_fDistance=22;m->m_sQueueSample.m_fSpeedMultiplier=3.5f;
+    for(unsigned i=0;i<5;++i) {m->m_anRandomTable[i]=(flags*119+i*91)^0x7fffffff;}
+    m->m_sPoliceRadioQueue.m_nSamplesInQueue=3;m->m_sPoliceRadioQueue.m_nAddOffset=3;
+    m->m_sPoliceRadioQueue.m_aSamples[0]=sample;m->m_sPoliceRadioQueue.m_aSamples[1]=SFX_POLICE_RADIO_MESSAGE_NOISE_1;
+    m->m_sPoliceRadioQueue.m_aSamples[2]=NO_SAMPLE;
+    g_nMissionAudioSfx=(flags&8)?77:NO_SAMPLE;
+    g_nMissionAudioPlayingStatus=(flags&16)?PLAY_STATUS_PLAYING:PLAY_STATUS_STOPPED;
+    gSpecialSuspectLastSeenReport=(flags&32)?255:0;channelUsed=(flags&64)?255:0;streamPlaying=(flags&128)?255:0;
+}
+static void service(cAudioManager *m,uint8_t wanted) {
+    // Invoke the member or C implementation while retaining shared local statics
+    active=m;@SERVICE@;snapshot(m);
+}
+static void crackle(cAudioManager *m) {
+    // Compare every prepared and retained field around queue submission
+    active=m;@CRACKLE@;snapshot(m);
+}
+extern "C" void TestPoliceChannelC(void);
+int main() {
+    // Verify the C ABI before the longer transition trace
+    active=&AudioManager;TestPoliceChannelC();snapshot(active);
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint32_t flags=0;flags<256;++flags) {
+        // Cover state gates, queue sentinels, and requested sound preparation
+        for(uint32_t sample:{(uint32_t)NO_SAMPLE,(uint32_t)SFX_POLICE_RADIO_MESSAGE_NOISE_1,7u,0xffffffffu}) {
+            // Advance waits by one until the explicit overshoot tests at the end
+            seed(m,flags,sample);logicalFrames=1;timeScale=flags%3?0.5f:2.0f;
+            for(unsigned frame=0;frame<35;++frame) {service(m,flags%3?255:0);}
+        }
+        seed(m,flags,7);crackle(m);m->m_anRandomTable[2]=-1;crackle(m);
+    }
+    for(cAudioManager *m:{&AudioManager,&other}) {
+        // Drive mission startup, physical playing, pause/resume, crackle and completion
+        seed(m,1|8,7);channelUsed=0;streamPlaying=0;
+        for(unsigned frame=0;frame<40;++frame) {service(m,1);}
+        streamPlaying=1;
+        for(unsigned frame=0;frame<8;++frame) {service(m,1);}
+        m->m_bIsPaused=1;service(m,1);m->m_bIsPaused=0;m->m_bWasPaused=1;service(m,1);m->m_bWasPaused=0;
+        streamPlaying=0;
+        for(unsigned frame=0;frame<40;++frame) {service(m,1);}
+    }
+    for(float scale:{0.0f,0.25f,0.5f,1.0f,2.0f}) {
+        // Exercise frequency truncation with representable nonnegative products
+        seed(&AudioManager,1,7);timeScale=scale;logicalFrames=1;
+        for(unsigned frame=0;frame<40;++frame) {service(&AudioManager,1);}
+    }
+#ifdef FIX_BUGS
+    seed(&AudioManager,1,NO_SAMPLE);timeScale=1;logicalFrames=1;
+    for(unsigned frame=0;frame<31;++frame) {service(&AudioManager,1);}
+    seed(&AudioManager,1,NO_SAMPLE);service(&AudioManager,1);
+    logicalFrames=0;service(&AudioManager,1);
+    logicalFrames=31;service(&AudioManager,1);
+    logicalFrames=0xffffffffu;service(&AudioManager,1);
+    logicalFrames=1;service(&AudioManager,1);
+#endif
+    printf("%llu\n",(unsigned long long)digest);
+}

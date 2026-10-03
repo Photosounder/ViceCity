@@ -1,0 +1,80 @@
+#include "AudioSampleHost.h"
+#include "AudioStreamHost.h"
+#include "audio_enums.h"
+#include <assert.h>
+static uint8_t providerChosen;
+static struct {
+    int m_nMusicMode, track, radio; bool initialised, interrupted;
+    int GetMusicMode() { return m_nMusicMode; }
+    int GetCurrentTrack() { return track; }
+    int GetRadioInCar() { return radio; }
+    bool IsInitialised() { return initialised; }
+    bool CheckForMusicInterruptions() { return interrupted; }
+} MusicManager;
+static struct {
+    bool initialised; int32_t m_anRandomTable[5]; uint32_t m_FrameCounter;
+    float m_afReflectionsDistances[MAX_REFLECTIONS];
+    bool IsAudioInitialised() { return initialised; }
+    void SetCurrent3DProvider(uint8_t index) {
+        // Record the provider selected through the actual game adapter
+        providerChosen=index;
+    }
+} AudioManager;
+struct CTimer { static bool paused; static bool GetIsCodePaused() { return paused; } };
+bool CTimer::paused;
+extern "C" void AudioSampleHost_TestConfigure(unsigned value) {
+    // Configure all game queries consumed by the actual extracted host callbacks
+    MusicManager.m_nMusicMode = value%3; MusicManager.track = value+100;
+    MusicManager.radio = value%8; MusicManager.initialised = value%2;
+    MusicManager.interrupted = value%5 == 0; AudioManager.initialised = value%3 == 0;
+    CTimer::paused = value%7 == 0; AudioManager.m_FrameCounter = UINT32_MAX-value;
+    for(unsigned i=0; i<5; i++) AudioManager.m_anRandomTable[i] = -(int32_t)(value+i);
+    for(unsigned i=0; i<MAX_REFLECTIONS; i++) AudioManager.m_afReflectionsDistances[i] = (float)(value+i);
+}
+#ifdef AUDIO_MSS
+static unsigned cd_events;
+static struct {
+    bool m_bQuitGameNoCD;
+    uint8_t m_PrefsMusicVolume,m_PrefsSfxVolume;
+    void WaitForUserCD() {
+        // Simulate the menu decision without opening a window
+        cd_events++; m_bQuitGameNoCD=true;
+    }
+} FrontEndMenuManager;
+static struct {
+    uint8_t music,effects;
+    void SetMusicMasterVolume(uint8_t value) {
+        // Retain the first volume restoration event
+        assert(cd_events==1 || cd_events==4);cd_events++;music=value;
+    }
+    void SetEffectsMasterVolume(uint8_t value) {
+        // Retain the second volume restoration event
+        assert(cd_events==2 || cd_events==5);cd_events++;effects=value;
+    }
+    void Service() {
+        // Require the service pass to follow both volume changes
+        assert(cd_events==3 || cd_events==6);cd_events++;
+    }
+} DMAudio;
+static void DMAudio_SetMusicMasterVolume(uint8_t value) {
+    // Capture the facade call made by the actual Miles game callback
+    DMAudio.SetMusicMasterVolume(value);
+}
+static void DMAudio_SetEffectsMasterVolume(uint8_t value) {
+    // Capture the effects facade call made by the actual Miles game callback
+    DMAudio.SetEffectsMasterVolume(value);
+}
+static void DMAudio_Service(void) {
+    // Capture the final audio service call made by the actual game callback
+    DMAudio.Service();
+}
+extern "C" void AudioSampleHost_TestCDCallbacks(void) {
+    // Exercise the production Miles-specific callbacks against controlled game state
+    AudioSample_SetCurrent3DProvider(7);assert(providerChosen==7);
+    assert(AudioSample_WaitForUserCD() && cd_events==1);
+    FrontEndMenuManager.m_PrefsMusicVolume=93;FrontEndMenuManager.m_PrefsSfxVolume=51;
+    AudioSample_ApplyCDVolume(true);assert(DMAudio.music==93 && DMAudio.effects==51 && cd_events==4);
+    AudioSample_ApplyCDVolume(false);assert(DMAudio.music==0 && DMAudio.effects==0 && cd_events==7);
+}
+#endif
+@HOST_CALLBACKS@

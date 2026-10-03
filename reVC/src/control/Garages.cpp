@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Garages.h"
@@ -151,9 +152,9 @@ void CGarages::Init(void)
 		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++)
 			aCarsInSafeHouses[j][i].Init();
 	}
-	hGarages = DMAudio.CreateEntity(AUDIOTYPE_GARAGE, (void*)1);
+	hGarages = DMAudio_CreateEntity(AUDIOTYPE_GARAGE, (void*)1);
 	if (hGarages >= 0)
-		DMAudio.SetEntityStatus(hGarages, TRUE);
+		DMAudio_SetEntityStatus(hGarages, TRUE);
 }
 
 void CGarages::Shutdown(void)
@@ -161,7 +162,7 @@ void CGarages::Shutdown(void)
 	NumGarages = 0;
 	if (hGarages < 0)
 		return;
-	DMAudio.DestroyEntity(hGarages);
+	DMAudio_DestroyEntity(hGarages);
 	hGarages = AEHANDLE_NONE;
 }
 
@@ -399,13 +400,13 @@ void CGarage::Update()
 					else {
 						CGarages::TriggerMessage("GA_3", -1, 4000, -1); // No more freebies. $100 to respray!
 						m_eGarageState = GS_OPENEDCONTAINSCAR;
-						DMAudio.PlayFrontEndSound(SOUND_GARAGE_NO_MONEY, 1);
+						DMAudio_PlayFrontEndSound(SOUND_GARAGE_NO_MONEY, 1);
 					}
 				}
 				else {
 					CGarages::TriggerMessage("GA_1", -1, 4000, -1); // Whoa! I don't touch nothing THAT hot!
 					m_eGarageState = GS_OPENEDCONTAINSCAR;
-					DMAudio.PlayFrontEndSound(SOUND_GARAGE_BAD_VEHICLE, 1);
+					DMAudio_PlayFrontEndSound(SOUND_GARAGE_BAD_VEHICLE, 1);
 				}
 			}
 			if (FindPlayerVehicle()) {
@@ -424,7 +425,7 @@ void CGarage::Update()
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				m_nTimeToStartAction = CTimer::GetTimeInMilliseconds() + TIME_TO_RESPRAY;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				CStats::CheckPointReachedSuccessfully();
 			}
 			UpdateDoorsHeight();
@@ -443,7 +444,7 @@ void CGarage::Update()
 		case GS_FULLYCLOSED:
 			if (CTimer::GetTimeInMilliseconds() > m_nTimeToStartAction) {
 				m_eGarageState = GS_OPENING;
-				DMAudio.PlayFrontEndSound(SOUND_GARAGE_OPENING, 1);
+				DMAudio_PlayFrontEndSound(SOUND_GARAGE_OPENING, 1);
 				bool bTakeMoney = false;
 				if (FindPlayerPed()->m_pWanted->GetWantedLevel() != 0) {
 					bTakeMoney = true;
@@ -528,7 +529,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENEDCONTAINSCAR;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -551,13 +552,13 @@ void CGarage::Update()
 				if (!FindPlayerVehicle() || FindPlayerVehicle()->m_bombType) {
 					CGarages::TriggerMessage("GA_5", -1, 4000, -1); //"Your car is already fitted with a bomb"
 					m_eGarageState = GS_OPENEDCONTAINSCAR;
-					DMAudio.PlayFrontEndSound(SOUND_GARAGE_BOMB_ALREADY_SET, 1);
+					DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB_ALREADY_SET, 1);
 					break;
 				}
 				if (!CGarages::BombsAreFree && CWorld::Players[CWorld::PlayerInFocus].m_nMoney < BOMB_PRICE) {
 					CGarages::TriggerMessage("GA_4", -1, 4000, -1); // "Car bombs are $1000 each" - weird that the price is hardcoded in message
 					m_eGarageState = GS_OPENEDCONTAINSCAR;
-					DMAudio.PlayFrontEndSound(SOUND_GARAGE_NO_MONEY, 1);
+					DMAudio_PlayFrontEndSound(SOUND_GARAGE_NO_MONEY, 1);
 					break;
 				}
 				m_eGarageState = GS_CLOSING;
@@ -572,7 +573,7 @@ void CGarage::Update()
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				m_nTimeToStartAction = CTimer::GetTimeInMilliseconds() + TIME_TO_SETUP_BOMB;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			if (m_eGarageType == GARAGE_BOMBSHOP3)
@@ -582,9 +583,9 @@ void CGarage::Update()
 			if (CTimer::GetTimeInMilliseconds() > m_nTimeToStartAction) {
 				if (m_eGarageType != GARAGE_BOMBSHOP3 || CStreaming::HasModelLoaded(MI_BOMB)) {
 					switch (m_eGarageType) {
-					case GARAGE_BOMBSHOP1: DMAudio.PlayFrontEndSound(SOUND_GARAGE_BOMB1_SET, 1); break;
-					case GARAGE_BOMBSHOP2: DMAudio.PlayFrontEndSound(SOUND_GARAGE_BOMB2_SET, 1); break;
-					case GARAGE_BOMBSHOP3: DMAudio.PlayFrontEndSound(SOUND_GARAGE_BOMB3_SET, 1); break;
+					case GARAGE_BOMBSHOP1: DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB1_SET, 1); break;
+					case GARAGE_BOMBSHOP2: DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB2_SET, 1); break;
+					case GARAGE_BOMBSHOP3: DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB3_SET, 1); break;
 					}
 					m_eGarageState = GS_OPENING;
 					if (!CGarages::BombsAreFree)
@@ -647,7 +648,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENEDCONTAINSCAR;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -687,7 +688,7 @@ void CGarage::Update()
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				if (m_bClosingWithoutTargetCar)
 					m_eGarageState = GS_FULLYCLOSED;
 				else {
@@ -717,7 +718,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -770,7 +771,7 @@ void CGarage::Update()
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				if (m_pTarget) {
 					MarkThisCarAsCollectedForCraig(m_pTarget->GetModelIndex());
 					DestroyVehicleAndDriverAndPassengers(m_pTarget);
@@ -810,7 +811,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -831,7 +832,7 @@ void CGarage::Update()
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 			}
 			if (!IsGarageEmpty())
 				m_eGarageState = GS_OPENING;
@@ -842,7 +843,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -876,7 +877,7 @@ void CGarage::Update()
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				if (m_bClosingWithoutTargetCar)
 					m_eGarageState = GS_FULLYCLOSED;
 				else {
@@ -905,7 +906,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -925,7 +926,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -945,7 +946,7 @@ void CGarage::Update()
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -953,7 +954,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -1004,7 +1005,7 @@ void CGarage::Update()
 			if (!IsPlayerOutsideGarage())
 				m_eGarageState = GS_OPENING;
 			else if (m_fDoorPos == 0.0f) {
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				m_eGarageState = GS_FULLYCLOSED;
 				StoreAndRemoveCarsForThisHideout(CGarages::aCarsInSafeHouses[CGarages::FindSafeHouseIndexForGarageType(m_eGarageType)], NUM_GARAGE_STORED_CARS);
 			}
@@ -1035,7 +1036,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + HIDEOUT_DOOR_SPEED_COEFFICIENT * (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -1062,7 +1063,7 @@ void CGarage::Update()
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -1078,7 +1079,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -1104,7 +1105,7 @@ void CGarage::Update()
 			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_GARAGE);
 			}
 			UpdateDoorsHeight();
@@ -1115,7 +1116,7 @@ void CGarage::Update()
 			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * CTimer::GetTimeStep());
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
-				DMAudio.PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
+				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
 			}
 			UpdateDoorsHeight();
 			break;
@@ -1277,16 +1278,12 @@ bool CGarage::EntityHasASphereWayOutsideGarage(CEntity * pEntity, float fMargin)
 
 bool CGarage::IsAnyOtherCarTouchingGarage(CVehicle * pException)
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle || pVehicle == pException || pVehicle->GetStatus() == STATUS_WRECKED)
+				if (!pVehicle || pVehicle == pException || pVehicle->GetStatus() == STATUS_WRECKED)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
 			continue;
@@ -1303,16 +1300,12 @@ bool CGarage::IsAnyOtherCarTouchingGarage(CVehicle * pException)
 
 void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* pException)
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle || pVehicle == pException)
+				if (!pVehicle || pVehicle == pException)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
 			continue;
@@ -1331,16 +1324,12 @@ void CGarage::ThrowCarsNearDoorOutOfGarage(CVehicle* pException)
 
 bool CGarage::IsAnyOtherPedTouchingGarage(CPed * pException)
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetPedPool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetPedPool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CPed* pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pPed || pPed == pException)
+				if (!pPed || pPed == pException)
 			continue;
 		if (!IsEntityTouching3D(pPed))
 			continue;
@@ -1357,16 +1346,12 @@ bool CGarage::IsAnyOtherPedTouchingGarage(CPed * pException)
 
 bool CGarage::IsAnyCarBlockingDoor()
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle)
+				if (!pVehicle)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
 			continue;
@@ -1384,16 +1369,12 @@ bool CGarage::IsAnyCarBlockingDoor()
 int32 CGarage::CountCarsWithCenterPointWithinGarage(CEntity * pException)
 {
 	int32 total = 0;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle || pVehicle == pException)
+				if (!pVehicle || pVehicle == pException)
 			continue;
 		if (IsPointInsideGarage(pVehicle->GetPosition()))
 			total++;
@@ -1403,31 +1384,23 @@ int32 CGarage::CountCarsWithCenterPointWithinGarage(CEntity * pException)
 
 void CGarage::RemoveCarsBlockingDoorNotInside()
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
+		while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle)
+				if (!pVehicle)
 			continue;
 		if (!IsEntityTouching3D(pVehicle))
 			continue;
 		if (!IsPointInsideGarage(pVehicle->GetPosition())) {
 			if (!pVehicle->bIsLocked && pVehicle->CanBeDeleted()) {
 				CWorld::Remove(pVehicle);
-//+ rouz edit (ChatGPT)
 				// Destroy and release the vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-				//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-#ifndef FIX_BUGS
+				#ifndef FIX_BUGS
 				return;
 #endif
 			}
@@ -1562,33 +1535,25 @@ void CGarage::RefreshDoorPointers(bool bCreate)
 	m_bRecreateDoorOnNextRefresh = false;
 	if (m_pDoor1) {
 		if (m_bDoor1IsDummy) {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			if (CPool_GetIsFree(CPools::GetDummyPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)m_pDoor1)))
-			//- rouz edit (ChatGPT)
-				bNeedToFindDoorEntities = true;
+							bNeedToFindDoorEntities = true;
 			else {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				if (m_bDoor1PoolIndex != (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)m_pDoor1) & 0x7F))
-				//- rouz edit (ChatGPT)
-					bNeedToFindDoorEntities = true;
+									bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor1->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
 		}
 		else {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			if (CPool_GetIsFree(CPools::GetObjectPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)m_pDoor1)))
-			//- rouz edit (ChatGPT)
-				bNeedToFindDoorEntities = true;
+							bNeedToFindDoorEntities = true;
 			else {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				if (m_bDoor1PoolIndex != (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)m_pDoor1) & 0x7F))
-				//- rouz edit (ChatGPT)
-					bNeedToFindDoorEntities = true;
+									bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor1->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
@@ -1596,33 +1561,25 @@ void CGarage::RefreshDoorPointers(bool bCreate)
 	}
 	if (m_pDoor2) {
 		if (m_bDoor2IsDummy) {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			if (CPool_GetIsFree(CPools::GetDummyPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetDummyPool(), (CDummy*)m_pDoor2)))
-			//- rouz edit (ChatGPT)
-				bNeedToFindDoorEntities = true;
+							bNeedToFindDoorEntities = true;
 			else {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				if (m_bDoor2PoolIndex != (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)m_pDoor2) & 0x7F))
-				//- rouz edit (ChatGPT)
-					bNeedToFindDoorEntities = true;
+									bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor2->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
 		}
 		else {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			if (CPool_GetIsFree(CPools::GetObjectPool(), CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), (CObject*)m_pDoor2)))
-			//- rouz edit (ChatGPT)
-				bNeedToFindDoorEntities = true;
+							bNeedToFindDoorEntities = true;
 			else {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				if (m_bDoor2PoolIndex != (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)m_pDoor2) & 0x7F))
-				//- rouz edit (ChatGPT)
-					bNeedToFindDoorEntities = true;
+									bNeedToFindDoorEntities = true;
 				if (!CGarages::IsModelIndexADoor(m_pDoor2->GetModelIndex()))
 					bNeedToFindDoorEntities = true;
 			}
@@ -1846,31 +1803,23 @@ void CGarage::FindDoorsEntitiesSectorList(CPtrList& list, bool dummy)
 			m_pDoor1 = pEntity;
 			m_bDoor1IsDummy = dummy;
 			if (dummy)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				m_bDoor1PoolIndex = (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)pEntity)) & 0x7F;
-				//- rouz edit (ChatGPT)
-			else
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+							else
+								// Access raw storage through the C store or pool API
 				m_bDoor1PoolIndex = (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)pEntity)) & 0x7F;
-				//- rouz edit (ChatGPT)
-			continue;
+							continue;
 		}
 		else {
 			m_pDoor2 = pEntity;
 			m_bDoor2IsDummy = dummy;
 			if (dummy)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				m_bDoor2PoolIndex = (CPool_GetIndex(CPools::GetDummyPool(), (CDummy*)pEntity)) & 0x7F;
-				//- rouz edit (ChatGPT)
-			else
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+							else
+								// Access raw storage through the C store or pool API
 				m_bDoor2PoolIndex = (CPool_GetIndex(CPools::GetObjectPool(), (CObject*)pEntity)) & 0x7F;
-				//- rouz edit (ChatGPT)
-		}
+						}
 	}
 }
 
@@ -1941,42 +1890,30 @@ CVehicle* CStoredCar::RestoreCar()
 		CVehicleModelInfo::SetComponentsToUse(m_nVariationA, m_nVariationB);
 	}
 	CVehicle* pVehicle;
-//+ rouz edit (ChatGPT)
 	if (CModelInfo::IsBoatModel(m_nModelIndex)) {
 		// Restore the stored boat without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(pVehicle);
+				assert(pVehicle);
 		std::allocator<CBoat>().construct((CBoat*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
 	}
-//- rouz edit (ChatGPT)
 	else if (CModelInfo::IsBikeModel(m_nModelIndex))
 	{
-//+ rouz edit (ChatGPT)
 		// Restore the stored bike without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CBike* pBike = (CBike*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(pBike);
+				assert(pBike);
 		std::allocator<CBike>().construct(pBike, m_nModelIndex, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
 		pBike->bIsStanding = true;
 		pVehicle = pBike;
 	}
-//+ rouz edit (ChatGPT)
 	else {
 		// Restore the stored automobile without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(pVehicle);
+				assert(pVehicle);
 		std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, m_nModelIndex, RANDOM_VEHICLE);
 	}
-//- rouz edit (ChatGPT)
 	pVehicle->SetPosition(m_vecPos);
 	pVehicle->SetStatus(STATUS_ABANDONED);
 	pVehicle->GetForward() = m_vecAngle;
@@ -2009,17 +1946,13 @@ void CGarage::StoreAndRemoveCarsForThisHideout(CStoredCar* aCars, int32 nMax)
 {
 	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++)
 		aCars[i].Clear();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	int index = 0;
-	while (i--) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	int i = CPool_GetSize(CPools::GetVehiclePool());
+		int index = 0;
+	while (i--) {
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle)
+				if (!pVehicle)
 			continue;
 		if (IsPointInsideGarage(pVehicle->GetPosition())) {
 			if (pVehicle->VehicleCreatedBy != MISSION_VEHICLE) {
@@ -2027,15 +1960,11 @@ void CGarage::StoreAndRemoveCarsForThisHideout(CStoredCar* aCars, int32 nMax)
 					aCars[index++].StoreCar(pVehicle);
 				CWorld::Players[CWorld::PlayerInFocus].CancelPlayerEnteringCars(pVehicle);
 				CWorld::Remove(pVehicle);
-//+ rouz edit (ChatGPT)
 				// Destroy and release the stored vehicle without invoking C++ delete.
 				pVehicle->~CVehicle();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-				//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			}
+							}
 		}
 	}
 	// why?
@@ -2110,32 +2039,24 @@ float CGarages::FindDoorHeightForMI(int32 mi)
 
 void CGarage::TidyUpGarage()
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+	#ifdef FIX_BUGS
 	while (i--) {
 #else
 	while (--i) {
 #endif
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (pVehicle && (pVehicle->IsCar() || pVehicle->IsBike())) {
+				if (pVehicle && (pVehicle->IsCar() || pVehicle->IsBike())) {
 			if (IsPointInsideGarage(pVehicle->GetPosition())) {
 				if (pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->GetUp().z < 0.5f) {
 					CWorld::Remove(pVehicle);
-//+ rouz edit (ChatGPT)
 					// Destroy and release the garage vehicle without invoking C++ delete.
 					pVehicle->~CVehicle();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
+										// Access raw storage through the C store or pool API
 					CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-					//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-				}
+									}
 			}
 		}
 	}
@@ -2143,20 +2064,16 @@ void CGarage::TidyUpGarage()
 
 void CGarage::TidyUpGarageClose()
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	uint32 i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+	#ifdef FIX_BUGS
 	while (i--) {
 #else
 	while (--i) {
 #endif
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle)
+				if (!pVehicle)
 			continue;
 		if ((!pVehicle->IsCar() && !pVehicle->IsBike()) || pVehicle->GetStatus() != STATUS_WRECKED || !IsEntityTouching3D(pVehicle))
 			continue;
@@ -2175,15 +2092,11 @@ void CGarage::TidyUpGarageClose()
 		if (bRemove) {
 			// no MISSION_VEHICLE check???
 			CWorld::Remove(pVehicle);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the garage vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		}
+					}
 	}
 }
 
@@ -2408,8 +2321,7 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 	memset(buf + 7340, 0, *size - 7340); // garbage data is written otherwise
 #endif
 	CloseHideOutGaragesBeforeSave();
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &NumGarages, sizeof(NumGarages));
 	{
 		// Materialize the saved value with its original serialized type
@@ -2424,30 +2336,22 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 	WriteSaveBuf(&buf, &CarsCollected, sizeof(CarsCollected));
 	WriteSaveBuf(&buf, &BankVansCollected, sizeof(BankVansCollected));
 	WriteSaveBuf(&buf, &PoliceCarsCollected, sizeof(PoliceCarsCollected));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &CarTypesCollected[i], sizeof(CarTypesCollected[i]));
-		//- rouz edit (ChatGPT)
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &LastTimeHelpMessage, sizeof(LastTimeHelpMessage));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
+		for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
 		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
-			//+ rouz edit (ChatGPT)
-			// Transfer save data through the C buffer API with explicit sizes
+						// Transfer save data through the C buffer API with explicit sizes
 			// Preserve record assignment semantics and compiler padding behavior
 			*(CStoredCar*)buf = aCarsInSafeHouses[j][i];
 			SkipSaveBuf(&buf, sizeof(aCarsInSafeHouses[j][i]));
-			//- rouz edit (ChatGPT)
-		}
+					}
 	}
 	for (int i = 0; i < NUM_GARAGES; i++) {
 #ifdef COMPATIBLE_SAVES
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &aGarages[i].m_eGarageType, sizeof(aGarages[i].m_eGarageType));
 		WriteSaveBuf(&buf, &aGarages[i].m_eGarageState, sizeof(aGarages[i].m_eGarageState));
 		WriteSaveBuf(&buf, &aGarages[i].m_nMaxStoredCars, sizeof(aGarages[i].m_nMaxStoredCars));
@@ -2489,15 +2393,12 @@ void CGarages::Save(uint8 * buf, uint32 * size)
 		WriteSaveBuf(&buf, &aGarages[i].m_bCollectedCarsState, sizeof(aGarages[i].m_bCollectedCarsState));
 		ZeroSaveBuf(&buf, 3 + 4);
 		ZeroSaveBuf(&buf, sizeof(aGarages[i].m_sStoredCar));
-		//- rouz edit (ChatGPT)
-#else
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		#else
+				// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
 		*(CGarage*)buf = aGarages[i];
 		SkipSaveBuf(&buf, sizeof(aGarages[i]));
-		//- rouz edit (ChatGPT)
-#endif
+		#endif
 	}
 //VALIDATESAVEBUF(*size);
 }
@@ -2523,50 +2424,35 @@ void CGarages::Load(uint8* buf, uint32 size)
 	assert(size == 7876);
 	//assert(size == (6 * sizeof(uint32) + TOTAL_COLLECTCARS_GARAGES * sizeof(*CarTypesCollected) + sizeof(uint32) + TOTAL_HIDEOUT_GARAGES * NUM_GARAGE_STORED_CARS * sizeof(CStoredCar) + NUM_GARAGES * sizeof(CGarage)));
 	CloseHideOutGaragesBeforeSave();
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&NumGarages, &buf, sizeof(NumGarages));
-	//- rouz edit (ChatGPT)
-	int32 tempInt;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		int32 tempInt;
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tempInt, &buf, sizeof(tempInt));
-	//- rouz edit (ChatGPT)
-	BombsAreFree = tempInt ? true : false;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		BombsAreFree = tempInt ? true : false;
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&tempInt, &buf, sizeof(tempInt));
-	//- rouz edit (ChatGPT)
-	RespraysAreFree = tempInt ? true : false;
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		RespraysAreFree = tempInt ? true : false;
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&CarsCollected, &buf, sizeof(CarsCollected));
 	ReadSaveBuf(&BankVansCollected, &buf, sizeof(BankVansCollected));
 	ReadSaveBuf(&PoliceCarsCollected, &buf, sizeof(PoliceCarsCollected));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		for (int i = 0; i < TOTAL_COLLECTCARS_GARAGES; i++)
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&CarTypesCollected[i], &buf, sizeof(CarTypesCollected[i]));
-		//- rouz edit (ChatGPT)
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&LastTimeHelpMessage, &buf, sizeof(LastTimeHelpMessage));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
+		for (int i = 0; i < NUM_GARAGE_STORED_CARS; i++) {
 		for (int j = 0; j < TOTAL_HIDEOUT_GARAGES; j++) {
-			//+ rouz edit (ChatGPT)
-			// Transfer save data through the C buffer API with explicit sizes
+						// Transfer save data through the C buffer API with explicit sizes
 			// Preserve record assignment semantics and compiler padding behavior
 			aCarsInSafeHouses[j][i] = *(CStoredCar*)buf;
 			SkipSaveBuf(&buf, sizeof(aCarsInSafeHouses[j][i]));
-			//- rouz edit (ChatGPT)
-		}
+					}
 	}
 	for (int i = 0; i < NUM_GARAGES; i++) {
 #ifdef COMPATIBLE_SAVES
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&aGarages[i].m_eGarageType, &buf, sizeof(aGarages[i].m_eGarageType));
 		ReadSaveBuf(&aGarages[i].m_eGarageState, &buf, sizeof(aGarages[i].m_eGarageState));
 		ReadSaveBuf(&aGarages[i].m_nMaxStoredCars, &buf, sizeof(aGarages[i].m_nMaxStoredCars));
@@ -2608,15 +2494,12 @@ void CGarages::Load(uint8* buf, uint32 size)
 		ReadSaveBuf(&aGarages[i].m_bCollectedCarsState, &buf, sizeof(aGarages[i].m_bCollectedCarsState));
 		SkipSaveBuf(&buf, 3 + 4);
 		SkipSaveBuf(&buf, sizeof(aGarages[i].m_sStoredCar));
-		//- rouz edit (ChatGPT)
-#else
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		#else
+				// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
 		aGarages[i] = *(CGarage*)buf;
 		SkipSaveBuf(&buf, sizeof(aGarages[i]));
-		//- rouz edit (ChatGPT)
-#endif
+		#endif
 		aGarages[i].m_pDoor1 = nil;
 		aGarages[i].m_pDoor2 = nil;
 		aGarages[i].m_pTarget = nil;
@@ -2699,3 +2582,5 @@ bool CGarage::IsPlayerEntirelyInsideGarage()
 {
 	return IsEntityEntirelyInside3D(FindPlayerVehicle() ? (CEntity*)FindPlayerVehicle() : (CEntity*)FindPlayerPed(), 0.0f);
 }
+
+//- rouz edit (ChatGPT)

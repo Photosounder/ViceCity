@@ -1,0 +1,102 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include "sampman.h"
+typedef uint8_t uint8; typedef uint16_t uint16; typedef uint32_t uint32;
+typedef int32_t int32; typedef int8_t int8; typedef uint8_t bool8;
+#define TRUE 1
+#define FALSE 0
+#define ASSERT assert
+#define SMP_PLAYING 4
+uint32 BankStartOffset[MAX_SFX_BANKS];
+static bool8 _bSampmanInitialised;
+static uint8 nChannelVolume[NUM_CHANNELS];
+typedef struct { int volume,pan,used; } TestSound;
+static TestSound channels[NUM_CHANNELS], streams[MAX_STREAMS];
+static TestSound *opened_samples[MAXCHANNELS], *opened_2dsamples[MAX2DCHANNELS], *mp3Stream[MAX_STREAMS];
+static int8 nStreamVolume[MAX_STREAMS],nStreamPan[MAX_STREAMS];
+static int test_radio,test_interrupted;
+#ifdef __cplusplus
+static struct {
+    int GetRadioInCar() { return test_radio; }
+    bool CheckForMusicInterruptions() { return test_interrupted != 0; }
+} MusicManager;
+#endif
+static int AudioSample_GetRadioInCar(void) {
+    // Supply the selected radio station through the C boundary
+    return test_radio;
+}
+static bool AudioSample_CheckForMusicInterruptions(void) {
+    // Supply interruption state through the C boundary
+    return test_interrupted != 0;
+}
+static int AIL_sample_status(TestSound *sound) {
+    // Preserve the SDK playback status used by production volume updates
+    return sound->used ? SMP_PLAYING : 0;
+}
+static int AIL_3D_sample_status(TestSound *sound) {
+    // Preserve the 3D playback status used by the production manager
+    return AIL_sample_status(sound);
+}
+static void AIL_set_sample_volume(TestSound *sound,int volume) {
+    // Capture the actual 2D channel volume calculation
+    sound->volume=volume;
+}
+static void AIL_set_3D_sample_volume(TestSound *sound,int volume) {
+    // Capture the actual 3D channel volume calculation
+    sound->volume=volume;
+}
+static void AIL_set_stream_volume(TestSound *sound,int volume) {
+    // Capture the actual streamed volume calculation
+    sound->volume=volume;
+}
+static void AIL_set_stream_pan(TestSound *sound,int pan) {
+    // Capture the pan forwarded to the Miles SDK
+    sound->pan=pan;
+}
+@METHODS@
+int main(void) {
+    // Populate active, inactive and silent channel handles without a sound driver
+    static cSampleManager manager;
+    for(unsigned i=0;i<MAXCHANNELS;i++) { opened_samples[i]=&channels[i]; channels[i].used=i%3!=0; nChannelVolume[i]=i%2?127:0; }
+    for(unsigned i=0;i<MAX2DCHANNELS;i++) { opened_2dsamples[i]=&channels[MAXCHANNELS+i]; channels[MAXCHANNELS+i].used=1; }
+    for(unsigned step=0;step<256;step++) {
+        // Sweep every byte volume, both initialization gates and all stream/effects paths
+        _bSampmanInitialised=step%2; manager.m_bInitialised=step%3!=0;
+        SampleManager_SetEffectsMasterVolume(&manager,step);
+        SampleManager_SetEffectsFadeVolume(&manager,255-step);
+        SampleManager_SetMusicMasterVolume(&manager,step);
+        SampleManager_SetMusicFadeVolume(&manager,255-step);
+        SampleManager_SetMP3BoostVolume(&manager,step);
+        SampleManager_SetMonoMode(&manager,step%2);
+        test_radio=step%2?USERTRACK:0; test_interrupted=step%5==0;
+        printf("state %u %u %u %u %u %u\n",manager.m_nEffectsVolume,manager.m_nEffectsFadeVolume,manager.m_nMusicVolume,manager.m_nMusicFadeVolume,manager.m_nMP3BoostVolume,manager.m_nMonoMode);
+        for(unsigned i=0;i<NUM_CHANNELS;i++) printf("channel %u %d %u\n",i,channels[i].volume,SampleManager_GetChannelUsedFlag(&manager,i));
+        for(unsigned slot=0;slot<MAX_STREAMS;slot++) {
+            // Include closed streams and pan values beyond the nominal range
+            mp3Stream[slot]=step%7?&streams[slot]:NULL;
+            for(unsigned effect=0;effect<2;effect++) {
+                SampleManager_SetStreamedVolumeAndPan(&manager,step,255-step,effect,slot);
+                printf("stream %u %u %d %d %d %d\n",slot,effect,streams[slot].volume,streams[slot].pan,nStreamVolume[slot],nStreamPan[slot]);
+            }
+        }
+    }
+    // Compare all sample metadata and sound bank boundaries
+    BankStartOffset[SFX_BANK_0]=100;BankStartOffset[SFX_BANK_PED_COMMENTS]=1000;
+    for(unsigned i=0;i<TOTAL_AUDIO_SAMPLES;i++) {
+        manager.m_aSamples[i].nFrequency=8000+i;manager.m_aSamples[i].nLoopStart=i*3;
+        manager.m_aSamples[i].nLoopEnd=i%2?-1:(int32)(i*4);manager.m_aSamples[i].nSize=i*5;
+        printf("sample %u %u %d %u\n",SampleManager_GetSampleBaseFrequency(&manager,i),SampleManager_GetSampleLoopStartOffset(&manager,i),SampleManager_GetSampleLoopEndOffset(&manager,i),SampleManager_GetSampleLength(&manager,i));
+    }
+    for(unsigned i=0;i<1100;i++) printf("bank %d\n",SampleManager_GetBankContainingSound(&manager,i));
+    // Retain provider publication and borrowed name ownership
+    for(unsigned i=0;i<MAXPROVIDERS;i++) {
+        char name[]="provider";SampleManager_Set3DProviderName(&manager,i,name);
+        assert(SampleManager_Get3DProviderName(&manager,i)==name);
+        SampleManager_SetNum3DProvidersAvailable(&manager,i);assert(SampleManager_GetNum3DProvidersAvailable(&manager)==i);
+        SampleManager_Set3DProviderName(&manager,i,NULL);assert(!SampleManager_Get3DProviderName(&manager,i));
+    }
+    return 0;
+}

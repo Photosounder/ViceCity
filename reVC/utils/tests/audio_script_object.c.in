@@ -1,0 +1,142 @@
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include "Pool.h"
+#include "DMAudio.h"
+#include "SaveBuf.h"
+@TYPE_HEADER@
+
+int32_t _saveBufCount;
+static CPool testPool;
+static uint8_t audioActive;
+static int32_t nextEntity;
+static uint64_t digest = 1469598103934665603ULL;
+
+void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func)
+{
+    // Fail quietly if a production game assertion detects invalid fixture data
+    fprintf(stderr, "%s:%u %s: %s\n", filename, lineno, func, expr);
+    abort();
+}
+
+static int occupied_count(unsigned int value)
+{
+    // Count selected slots without a compiler-specific intrinsic
+    int count = 0;
+    while (value) { count += value & 1; value >>= 1; }
+    return count;
+}
+
+static void mix_bytes(const void *data, size_t size)
+{
+    // Record save bytes and observed audio callback fields deterministically
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i = 0; i < size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+
+CPool *CPools_GetAudioScriptObjectPool(void)
+{
+    // Supply the real C pool implementation to both production variants
+    return &testPool;
+}
+
+uint8_t DMAudio_IsAudioInitialised(void)
+{
+    // Select the inactive and active one-shot paths
+    return audioActive;
+}
+
+static void trace_object(cAudioScriptObject *object)
+{
+    // Observe fields without treating compiler padding as object state
+    mix_bytes(&object->AudioId, sizeof(object->AudioId));
+    mix_bytes(&object->Posn, sizeof(object->Posn));
+    mix_bytes(&object->AudioEntity, sizeof(object->AudioEntity));
+}
+
+int32_t DMAudio_CreateLoopingScriptObject(cAudioScriptObject *object)
+{
+    // Record the loaded entity value before returning its replacement handle
+    trace_object(object);
+    return nextEntity++;
+}
+
+void DMAudio_CreateOneShotScriptObject(cAudioScriptObject *object)
+{
+    // Observe the real one-shot initialization and retained pool record
+    trace_object(object);
+}
+
+@BASELINE_IMPLEMENTATION@
+
+int main(void)
+{
+    // Compare resets, sparse save blocks, generations, and loaded audio handles
+    union { uint32_t alignment; uint8_t bytes[4096]; } saved;
+    union { uint32_t alignment; uint8_t bytes[4096]; } reSaved;
+    for (int round = 0; round < 256; ++round) {
+        // Seed slot padding and generation bits before selecting occupied slots
+        assert(CPool_Init(&testPool, 8, sizeof(cAudioScriptObject), "test"));
+        memset(testPool.m_entries, 0xa5, 8 * sizeof(cAudioScriptObject));
+        nextEntity = round % 2 ? -3 : 100;
+        for (int slot = 0; slot < 8; ++slot) {
+            // Restore deliberately varied pool handles and record values
+            if (!(round & (1 << slot))) continue;
+            int32_t handle = (slot << 8) | ((round + slot) & 0x7f);
+            cAudioScriptObject *object = (cAudioScriptObject *)CPool_NewAt(&testPool, handle);
+            @RESET@(object);
+            assert(object->AudioId == SCRIPT_SOUND_INVALID && object->AudioEntity == AEHANDLE_NONE);
+            assert(object->Posn.x == 0 && object->Posn.y == 0 && object->Posn.z == 0);
+            object->AudioId = (int16_t)(round * 151 - 19000);
+            object->Posn.x = round * 0.125f;
+            object->Posn.y = slot * -2.5f;
+            object->Posn.z = slot * 10.25f;
+            object->AudioEntity = -round - slot;
+        }
+        uint32_t size = 0;
+        memset(saved.bytes, 0x5a, sizeof(saved.bytes));
+        @SAVE@(saved.bytes, &size);
+        assert(size == SAVE_HEADER_SIZE + sizeof(int32_t) + CPool_GetNoOfUsedSpaces(&testPool) * 24);
+        assert(!memcmp(saved.bytes, "AUD\0", 4));
+        mix_bytes(&size, sizeof(size));
+        mix_bytes(saved.bytes, size + 16);
+        CPool_Flush(&testPool);
+
+        // Load into differently seeded slots to expose record-copy differences
+        assert(CPool_Init(&testPool, 8, sizeof(cAudioScriptObject), "test"));
+        memset(testPool.m_entries, 0x3c, 8 * sizeof(cAudioScriptObject));
+        @LOAD@(saved.bytes, size);
+        assert(CPool_GetNoOfUsedSpaces(&testPool) == occupied_count((unsigned int)round));
+        for (int slot = 0; slot < 8; ++slot) {
+            // Check saved generations and refreshed audio entity handles
+            if (!(round & (1 << slot))) continue;
+            int32_t handle = (slot << 8) | ((round + slot) & 0x7f);
+            cAudioScriptObject *object = (cAudioScriptObject *)CPool_GetAt(&testPool, handle);
+            assert(object && object->AudioId == (int16_t)(round * 151 - 19000));
+            trace_object(object);
+        }
+        memset(reSaved.bytes, 0x5a, sizeof(reSaved.bytes));
+        uint32_t newSize;
+        @SAVE@(reSaved.bytes, &newSize);
+        assert(size == newSize);
+        mix_bytes(reSaved.bytes, newSize + 16);
+        CPool_Flush(&testPool);
+    }
+
+    // Confirm inactive audio does not allocate and active audio fills one record
+    assert(CPool_Init(&testPool, 8, sizeof(cAudioScriptObject), "test"));
+    memset(testPool.m_entries, 0xa5, 8 * sizeof(cAudioScriptObject));
+    audioActive = 0;
+    @ONESHOT@(239, 1.25f, -2.5f, 3.75f);
+    assert(CPool_GetNoOfUsedSpaces(&testPool) == 0);
+    audioActive = 1;
+    @ONESHOT@(239, 1.25f, -2.5f, 3.75f);
+    assert(CPool_GetNoOfUsedSpaces(&testPool) == 1);
+    cAudioScriptObject *object = (cAudioScriptObject *)CPool_GetSlot(&testPool, 0);
+    assert(object && object->AudioId == 239 && object->AudioEntity == AEHANDLE_NONE);
+    @RESET@(object);
+    trace_object(object);
+    CPool_Flush(&testPool);
+    printf("%llu\n", (unsigned long long)digest);
+    return 0;
+}

@@ -1,0 +1,114 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <math.h>
+#define nil NULL
+struct CVector {
+    float x,y,z;
+    CVector() {}
+    CVector(float a,float b,float c):x(a),y(b),z(c) {}
+    float Magnitude(void) const {
+        // Retain the original unclamped magnitude operation for the baseline distance
+        return sqrtf(x*x+y*y+z*z);
+    }
+};
+static CVector operator-(const CVector &left,const CVector &right) {
+    // Use the original coordinate subtraction order before taking the magnitude
+    return CVector(left.x-right.x,left.y-right.y,left.z-right.z);
+}
+static float Distance(const CVector &v1,const CVector &v2) {
+    // Drive the original distance helper from its actual vector operations
+    return (v2-v1).Magnitude();
+}
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &v) {
+    // Copy game coordinates at the original plain position boundary
+    return {v.x,v.y,v.z};
+}
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *v) {
+    // Copy plain coordinates at the original game query boundary
+    return CVector(v->x,v->y,v->z);
+}
+struct cAudioManager {
+@FIELDS@
+    void UpdateReflections();
+};
+struct CEntity {};
+struct CStoredCollPoly {};
+struct CColPoint {CVector point;};
+static cAudioManager owners[2];
+static cAudioManager *active;
+static CVector cameraPosition,hitPosition;
+static uint8_t hitResult;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned cases,cameraReads,lineReads,verticalReads;
+static void value(uint32_t v) {
+    // Hash callback arguments in their original evaluation order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void real(float v) {
+    // Observe float bits without converting NaNs or signed zeros
+    uint32_t bits;memcpy(&bits,&v,4);value(bits);
+}
+static void snapshot(void) {
+    // Observe complete owner storage seeded with zeroed padding at every callback
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);++i) value(bytes[i]);
+}
+struct Camera {
+    const CVector &GetPosition(void) {
+        // Observe camera access before the selected reflection endpoint changes
+        ++cameraReads;value(1);snapshot();return cameraPosition;
+    }
+};
+static Camera TheCamera;
+struct CWorld {
+    static bool ProcessLineOfSight(const CVector &start,const CVector &end,CColPoint &point,CEntity *&entity,bool a,bool b,bool c,bool d,bool e,bool f,bool g=false,bool h=false) {
+        // Observe every original line flag and the live endpoint before completing the hit
+        ++lineReads;value(2);real(start.x);real(start.y);real(start.z);real(end.x);real(end.y);real(end.z);
+        value(a);value(b);value(c);value(d);value(e);value(f);value(g);value(h);snapshot();
+        entity=nil;
+        if(hitResult) point.point=hitPosition;
+        cameraPosition.x+=1;active->m_FrameCounter+=11;
+        return hitResult!=0;
+    }
+    static bool ProcessVerticalLine(const CVector &start,float endZ,CColPoint &point,CEntity *&entity,bool a,bool b,bool c,bool d,bool e,bool f,CStoredCollPoly *poly) {
+        // Observe the ceiling offset, original flags and null polygon output
+        ++verticalReads;value(3);real(start.x);real(start.y);real(start.z);real(endZ);
+        value(a);value(b);value(c);value(d);value(e);value(f);value(poly==nil);snapshot();
+        entity=nil;
+        if(hitResult) point.point=hitPosition;
+        cameraPosition.y-=1;active->m_FrameCounter+=13;
+        return hitResult!=0;
+    }
+};
+extern "C" void TestReflectionUpdateC(cAudioManager *);
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *);
+extern "C" uint8_t AudioReflectionsHost_Line(const AudioSoundPosition *,const AudioSoundPosition *,AudioSoundPosition *);
+extern "C" uint8_t AudioReflectionsHost_Vertical(const AudioSoundPosition *,float,float *);
+@METHOD@
+@HOST@
+@CAMERA@
+int main(void)
+{
+#ifdef AUDIO_REFLECTIONS
+    // Cover every scheduled probe, misses, frame overflow, hit distances and alternating owners
+    const uint32_t frames[]={0,1,2,3,4,5,6,7,8,9,UINT32_MAX,UINT32_MAX-1,UINT32_MAX-2,UINT32_MAX-3,UINT32_MAX-4,UINT32_MAX-5,UINT32_MAX-6,UINT32_MAX-7};
+    for(unsigned seed=0;seed<1024;++seed) {
+        active=&owners[seed&1];memset(active,0,sizeof(*active));
+        active->m_FrameCounter=frames[seed%(sizeof(frames)/sizeof(*frames))];
+        cameraPosition=CVector((float)(seed%31)-15,(float)(seed%17)-8,(float)(seed%13)-6);
+        hitPosition=CVector(cameraPosition.x+3,cameraPosition.y-4,cameraPosition.z+(seed%5==0?-12.0f:seed%5==1?0.0f:23.5f));
+        hitResult=(seed>>1)&1;
+        for(unsigned i=0;i<MAX_REFLECTIONS;++i) {
+            active->m_avecReflectionsPos[i]={(float)i+31,(float)i-41,(float)i*3+51};
+            active->m_afReflectionsDistances[i]=(float)i+61;
+        }
+        @UPDATE@;snapshot();++cases;
+    }
+#endif
+    printf("%u cases %u camera %u line %u vertical : %llu\n",cases,cameraReads,lineReads,verticalReads,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

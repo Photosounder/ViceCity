@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "RwHelper.h"
@@ -49,14 +50,12 @@ GetPadFromPlayer(CPlayerPed*)
 
 CPlayerPed::~CPlayerPed()
 {
-//+ rouz edit (ChatGPT)
 	// Destroy and release the wanted data without invoking C++ delete.
 	if(m_pWanted){
 		m_pWanted->~CWanted();
 		free(m_pWanted);
 		m_pWanted = nil;
 	}
-//- rouz edit (ChatGPT)
 }
 
 CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
@@ -68,12 +67,10 @@ CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
 #endif
 	SetInitialState();
 
-//+ rouz edit (ChatGPT)
 	// Allocate wanted data without invoking C++ new.
 	m_pWanted = (CWanted*)malloc(sizeof(CWanted));
 	assert(m_pWanted);
 	std::allocator<CWanted>().construct(m_pWanted);
-//- rouz edit (ChatGPT)
 	m_pWanted->Initialise();
 	m_pArrestingCop = nil;
 	m_currentWeapon = WEAPONTYPE_UNARMED;
@@ -142,11 +139,9 @@ void
 CPlayerPed::MakeObjectTargettable(int32 handle)
 {
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		if (((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i])) == nil) {
-		//- rouz edit (ChatGPT)
-			m_nTargettableObjects[i] = handle;
+					m_nTargettableObjects[i] = handle;
 			return;
 		}
 	}
@@ -186,15 +181,11 @@ CPlayerPed::GetPlayerInfoForThisPlayerPed()
 void
 CPlayerPed::SetupPlayerPed(int32 index)
 {
-//+ rouz edit (ChatGPT)
 	// Allocate the player ped from the ped pool without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(CPools::GetPedPool()));
-	//- rouz edit (ChatGPT)
-	assert(player);
+		assert(player);
 	std::allocator<CPlayerPed>().construct(player);
-//- rouz edit (ChatGPT)
 	CWorld::Players[index].m_pPed = player;
 #ifdef FIX_BUGS
 	player->RegisterReference((CEntity**)&CWorld::Players[index].m_pPed);
@@ -429,7 +420,6 @@ CPlayerPed::SetRealMoveAnim(void)
 				if (curRunAssoc)
 					curRunAssoc->SetCurrentTime(0.0f);
 
-//+ rouz edit (ChatGPT)
 				// Destroy optional movement associations without invoking C++ delete.
 				curIdleAssoc->~CAnimBlendAssociation();
 				free(curIdleAssoc);
@@ -449,25 +439,20 @@ CPlayerPed::SetRealMoveAnim(void)
 					curSprintAssoc->~CAnimBlendAssociation();
 					free(curSprintAssoc);
 				}
-//- rouz edit (ChatGPT)
 
 				curSprintAssoc = nil;
 				m_nMoveState = PEDMOVE_WALK;
 			}
 			if (curRunStopAssoc) {
-//+ rouz edit (ChatGPT)
 				// Destroy the run-stop animation without invoking C++ delete.
 				curRunStopAssoc->~CAnimBlendAssociation();
 				free(curRunStopAssoc);
-//- rouz edit (ChatGPT)
 				RestoreHeadingRate();
 			}
 			if (curRunStopRAssoc) {
-//+ rouz edit (ChatGPT)
 				// Destroy the alternate run-stop animation without invoking C++ delete.
 				curRunStopRAssoc->~CAnimBlendAssociation();
 				free(curRunStopRAssoc);
-//- rouz edit (ChatGPT)
 				RestoreHeadingRate();
 			}
 			if (!curWalkAssoc) {
@@ -479,11 +464,9 @@ CPlayerPed::SetRealMoveAnim(void)
 				curRunAssoc->blendAmount = 0.0f;
 			}
 			if (curWalkStartAssoc && !(curWalkStartAssoc->IsRunning())) {
-//+ rouz edit (ChatGPT)
 				// Destroy the walk-start animation without invoking C++ delete.
 				curWalkStartAssoc->~CAnimBlendAssociation();
 				free(curWalkStartAssoc);
-//- rouz edit (ChatGPT)
 				curWalkStartAssoc = nil;
 				curWalkAssoc->SetRun();
 				curRunAssoc->SetRun();
@@ -752,7 +735,7 @@ CPlayerPed::PlayerControlSniper(CPad *padUsed)
 		CTimer::GetTimeInMilliseconds() - CTimer::GetTimeStepInMilliseconds() < m_nPadDownPressedInMilliseconds + firingRate && padUsed->GetWeapon()) {
 		
 		if (GetWeapon()->m_nAmmoTotal > 0) {
-			DMAudio.PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
+			DMAudio_PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
 		}
 	}
 	GetWeapon()->Update(m_audioEntityId, nil);
@@ -881,7 +864,7 @@ CPlayerPed::PlayerControlM16(CPad *padUsed)
 
 	if (padUsed->GetWeapon() && CTimer::GetTimeInMilliseconds() > GetWeapon()->m_nTimer) {
 		if (GetWeapon()->m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO) {
-			DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 0.f);
+			DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 0.f);
 			GetWeapon()->m_nTimer = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nFiringRate + CTimer::GetTimeInMilliseconds();
 		} else {
 			CVector firePos(0.0f, 0.0f, 0.6f);
@@ -891,7 +874,7 @@ CPlayerPed::PlayerControlM16(CPad *padUsed)
 		}
 	} else if (CTimer::GetTimeInMilliseconds() > GetWeapon()->m_nTimer &&
 		CTimer::GetTimeInMilliseconds() - CTimer::GetTimeStepInMilliseconds() < GetWeapon()->m_nTimer && GetWeapon()->m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO) {
-		DMAudio.PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
+		DMAudio_PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
 	}
 	GetWeapon()->Update(m_audioEntityId, nil);
 }
@@ -1121,13 +1104,11 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 	CVector distVec = previousTarget->GetPosition() - TheCamera.GetPosition();
 	float referenceBeta = CGeneral::GetATanOfXY(distVec.x, distVec.y);
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
 		// Access raw storage through the C store or pool API
 		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
-	//- rouz edit (ChatGPT)
-		if (pedToCheck) {
+			if (pedToCheck) {
 			if (pedToCheck != this && pedToCheck != previousTarget) {
 				if (!pedToCheck->DyingOrDead()
 #ifndef AIMING_VEHICLE_OCCUPANTS // Mobile thing
@@ -1143,11 +1124,9 @@ CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 		}
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
-		//- rouz edit (ChatGPT)
-		if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
+				if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateNeighbouringTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, lookToLeft, true);
 	}
 	if (!nextTarget)
@@ -1178,13 +1157,11 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 	// nextTarget = nil; // duplicate
 	float lastCloseness = -10000.0f;
 	float referenceBeta = CGeneral::GetATanOfXY(GetForward().x, GetForward().y);
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
+		// Access raw storage through the C store or pool API
 	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
 		// Access raw storage through the C store or pool API
 		CPed *pedToCheck = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), h));
-	//- rouz edit (ChatGPT)
-		if (pedToCheck) {
+			if (pedToCheck) {
 			if (pedToCheck != this) {
 				if (!pedToCheck->DyingOrDead()
 #ifndef AIMING_VEHICLE_OCCUPANTS // Mobile thing
@@ -1200,11 +1177,9 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 		}
 	}
 	for (int i = 0; i < ARRAY_SIZE(m_nTargettableObjects); i++) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CObject *obj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), m_nTargettableObjects[i]));
-		//- rouz edit (ChatGPT)
-		if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
+				if (obj && !obj->bHasBeenDamaged && CanIKReachThisTarget(obj->GetPosition(), GetWeapon(), true))
 			EvaluateTarget(obj, &nextTarget, &lastCloseness, weaponRange, referenceBeta, true);
 	}
 	if (!nextTarget)
@@ -1820,21 +1795,21 @@ CPlayerPed::ProcessControl(void)
 			}
 
 			if (padUsed->GetWeapon() && GetWeapon()->m_nAmmoTotal > 0 && fireAnim->currentTime >= weaponInfo->m_fAnimLoopStart) {
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_ATTACK, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_ATTACK, 0.0f);
 			} else {
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_2, m_fGunSpinSpeed * (20.f / 9));
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_2, m_fGunSpinSpeed * (20.f / 9));
 			}
 		} else {
 			if (m_fGunSpinSpeed > 0.0f) {
 				if (m_fGunSpinSpeed >= 0.45f) {
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_3,  0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_3,  0.0f);
 				}
 				m_fGunSpinSpeed = Max(0.0f, m_fGunSpinSpeed - CTimer::GetTimeStep() * 0.003f);
 			}
 		}
 	}
 	if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW && m_nPedState != PED_ATTACK && !bInVehicle) {
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
 	}
 
 	if (m_nMoveState != PEDMOVE_RUN && m_nMoveState != PEDMOVE_SPRINT)
@@ -1890,9 +1865,9 @@ CPlayerPed::ProcessControl(void)
 		// ...Really?
 		eWeaponType playerWeapon = FindPlayerPed()->GetWeapon()->m_eWeaponType;
 		if (playerWeapon == WEAPONTYPE_SNIPERRIFLE || playerWeapon == WEAPONTYPE_LASERSCOPE) {
-			DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 0);
+			DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 0);
 		} else if (playerWeapon == WEAPONTYPE_ROCKETLAUNCHER) {
-			DMAudio.PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 0);
+			DMAudio_PlayFrontEndSound(SOUND_WEAPON_ROCKET_SHOT_NO_ZOOM, 0);
 		}
 	}
 
@@ -2336,55 +2311,43 @@ CPlayerPed::FindMeleeAttackPoint(CPed *victim, CVector &dist, uint32 &endOfAttac
 }
 
 #ifdef COMPATIBLE_SAVES
-//+ rouz edit (ChatGPT)
 #define CopyFromBuf(buf, data) ReadSaveBuf(&(data), &(buf), sizeof(data));
 #define CopyToBuf(buf, data) WriteSaveBuf(&(buf), &(data), sizeof(data));
-//- rouz edit (ChatGPT)
 void
 CPlayerPed::Save(uint8*& buf)
 {
 	CPed::Save(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 16);
-	//- rouz edit (ChatGPT)
-	CopyToBuf(buf, m_fMaxStamina);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		CopyToBuf(buf, m_fMaxStamina);
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 28);
-	//- rouz edit (ChatGPT)
-	CopyToBuf(buf, m_nTargettableObjects[0]);
+		CopyToBuf(buf, m_nTargettableObjects[0]);
 	CopyToBuf(buf, m_nTargettableObjects[1]);
 	CopyToBuf(buf, m_nTargettableObjects[2]);
 	CopyToBuf(buf, m_nTargettableObjects[3]);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 164);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CPlayerPed::Load(uint8*& buf)
 {
 	CPed::Load(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 16);
-	//- rouz edit (ChatGPT)
-	CopyFromBuf(buf, m_fMaxStamina);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		CopyFromBuf(buf, m_fMaxStamina);
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 28);
-	//- rouz edit (ChatGPT)
-	CopyFromBuf(buf, m_nTargettableObjects[0]);
+		CopyFromBuf(buf, m_nTargettableObjects[0]);
 	CopyFromBuf(buf, m_nTargettableObjects[1]);
 	CopyFromBuf(buf, m_nTargettableObjects[2]);
 	CopyFromBuf(buf, m_nTargettableObjects[3]);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 164);
-	//- rouz edit (ChatGPT)
-}
+	}
 #undef CopyFromBuf
 #undef CopyToBuf
 #endif
+
+//- rouz edit (ChatGPT)

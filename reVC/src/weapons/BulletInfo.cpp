@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "BulletInfo.h"
@@ -232,73 +233,79 @@ void CBulletInfo::Update(void)
 				cAudioScriptObject* pAudio;
 				switch (pHitEntity->GetType()) {
 					case ENTITY_TYPE_BUILDING:
-						if (!DMAudio.IsAudioInitialised())
+						if (!DMAudio_IsAudioInitialised())
 							break;
 
-//+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+												// Access raw storage through the C store or pool API
 						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
-						//- rouz edit (ChatGPT)
+												if (pAudio)
+							AudioScriptObject_Reset(pAudio);
 						if (pAudio)
-							std::allocator<cAudioScriptObject>().construct(pAudio);
-//- rouz edit (ChatGPT)
-						if (pAudio)
-							pAudio->Reset();
-						pAudio->Posn = pHitEntity->GetPosition();
+							AudioScriptObject_Reset(pAudio);
+						{
+							// Copy the game position into the C audio script record
+							const CVector scriptPosition = pHitEntity->GetPosition();
+							pAudio->Posn.x = scriptPosition.x;
+							pAudio->Posn.y = scriptPosition.y;
+							pAudio->Posn.z = scriptPosition.z;
+						}
 						pAudio->AudioId = SCRIPT_SOUND_BULLET_HIT_GROUND_1;
 						pAudio->AudioEntity = AEHANDLE_NONE;
-						DMAudio.CreateOneShotScriptObject(pAudio);
+						DMAudio_CreateOneShotScriptObject(pAudio);
 						break;
 					case ENTITY_TYPE_OBJECT:
-						if (!DMAudio.IsAudioInitialised())
+						if (!DMAudio_IsAudioInitialised())
 							break;
 
-//+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+												// Access raw storage through the C store or pool API
 						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
-						//- rouz edit (ChatGPT)
+												if (pAudio)
+							AudioScriptObject_Reset(pAudio);
 						if (pAudio)
-							std::allocator<cAudioScriptObject>().construct(pAudio);
-//- rouz edit (ChatGPT)
-						if (pAudio)
-							pAudio->Reset();
-						pAudio->Posn = pHitEntity->GetPosition();
+							AudioScriptObject_Reset(pAudio);
+						{
+							// Copy the game position into the C audio script record
+							const CVector scriptPosition = pHitEntity->GetPosition();
+							pAudio->Posn.x = scriptPosition.x;
+							pAudio->Posn.y = scriptPosition.y;
+							pAudio->Posn.z = scriptPosition.z;
+						}
 						pAudio->AudioId = SCRIPT_SOUND_BULLET_HIT_GROUND_2;
 						pAudio->AudioEntity = AEHANDLE_NONE;
-						DMAudio.CreateOneShotScriptObject(pAudio);
+						DMAudio_CreateOneShotScriptObject(pAudio);
 						break;
 					case ENTITY_TYPE_DUMMY:
-						if (!DMAudio.IsAudioInitialised())
+						if (!DMAudio_IsAudioInitialised())
 							break;
 
-//+ rouz edit (ChatGPT)
 						// Allocate a pooled audio script object without invoking C++ new.
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+												// Access raw storage through the C store or pool API
 						pAudio = ((cAudioScriptObject*)CPool_New(CPools::GetAudioScriptObjectPool()));
-						//- rouz edit (ChatGPT)
+												if (pAudio)
+							AudioScriptObject_Reset(pAudio);
 						if (pAudio)
-							std::allocator<cAudioScriptObject>().construct(pAudio);
-//- rouz edit (ChatGPT)
-						if (pAudio)
-							pAudio->Reset();
-						pAudio->Posn = pHitEntity->GetPosition();
+							AudioScriptObject_Reset(pAudio);
+						{
+							// Copy the game position into the C audio script record
+							const CVector scriptPosition = pHitEntity->GetPosition();
+							pAudio->Posn.x = scriptPosition.x;
+							pAudio->Posn.y = scriptPosition.y;
+							pAudio->Posn.z = scriptPosition.z;
+						}
 						pAudio->AudioId = SCRIPT_SOUND_BULLET_HIT_GROUND_3;
 						pAudio->AudioEntity = AEHANDLE_NONE;
-						DMAudio.CreateOneShotScriptObject(pAudio);
+						DMAudio_CreateOneShotScriptObject(pAudio);
 						break;
 					case ENTITY_TYPE_PED:
 						++CStats::BulletsThatHit;
-						DMAudio.PlayOneShot(((CPed*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
+						DMAudio_PlayOneShot(((CPed*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 						((CPed*)pHitEntity)->Say(SOUND_PED_BULLET_HIT);
 						break;
 					case ENTITY_TYPE_VEHICLE:
 						++CStats::BulletsThatHit;
-						DMAudio.PlayOneShot(((CVehicle*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
+						DMAudio_PlayOneShot(((CVehicle*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 						break;
 						default: break;
 				}
@@ -367,3 +374,4 @@ bool CBulletInfo::TestForSniperBullet(float x1, float x2, float y1, float y2, fl
 	return minP <= maxP;
 #endif
 }
+//- rouz edit (ChatGPT)

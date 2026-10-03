@@ -18,7 +18,9 @@ public:
 	bool compressed;
 	bool keepCompressed;
 	float totalLength;
-	CLink<CAnimBlendHierarchy*> *linkPtr;
+	//+ rouz edit (ChatGPT)
+	CLink *linkPtr;
+	//- rouz edit (ChatGPT)
 
 	CAnimBlendHierarchy(void);
 	void Shutdown(void);

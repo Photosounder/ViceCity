@@ -1,0 +1,91 @@
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include "sampman.h"
+#include "AudioReflectionTypes.h"
+#include <opusfile.h>
+typedef uint8_t bool8; typedef uint8_t uint8; typedef uint32_t uint32; typedef int32_t int32;
+typedef uintptr_t uintptr;
+#define ASSERT assert
+#define FALSE 0
+#define TRUE 1
+static OggOpusFile *fpSampleDataHandle;
+static uint32 gPlayerTalkSfx;
+static void *gPlayerTalkData;
+static uintptr nSampleBankMemoryStartAddress[MAX_SFX_BANKS];
+static int32 nPedSlotSfx[MAX_PEDSFX];
+static uint8 nCurrentPedSlot;
+static unsigned seek_calls, read_calls, decode_limit, failure_read;
+static int seek_error, decode_error;
+static opus_int64 decode_position;
+static bool AudioSample_IsCodePaused(void) {
+    // Allow speech through the production pause gate
+    return false;
+}
+static bool AudioSample_IsMusicInitialised(void) {
+    // Leave the cutscene gate open for the ped bank ownership check
+    return false;
+}
+static int AudioSample_GetMusicMode(void) {
+    // Supply a valid non-cutscene mode to the actual loader
+    return MUSICMODE_GAME;
+}
+int op_pcm_seek(OggOpusFile *handle, opus_int64 position) {
+    // Record sample-unit seeks and supply deterministic seek failures
+    assert(handle == fpSampleDataHandle); seek_calls++; decode_position=position;
+    return seek_error;
+}
+int op_read(OggOpusFile *handle, opus_int16 *output, int remaining, int *link) {
+    // Decode bounded chunks and inject EOF or decoder errors before publication
+    assert(handle == fpSampleDataHandle && link == NULL && remaining > 0);
+    read_calls++;
+    if(failure_read == read_calls) return decode_error;
+    unsigned count=(unsigned)remaining < decode_limit ? (unsigned)remaining : decode_limit;
+    for(unsigned i=0; i<count; i++) output[i]=(opus_int16)(decode_position++);
+    return (int)count;
+}
+@LOADERS@
+int main(void) {
+    // Exercise the production mission loader with exact byte counts and guarded PCM output
+    static cSampleManager manager;
+    static uintptr_t decoder_token; fpSampleDataHandle=(OggOpusFile *)&decoder_token;
+    opus_int16 guarded[8]; gPlayerTalkData=&guarded[1];
+    manager.m_aSamples[0].nOffset=20; manager.m_aSamples[0].nSize=12;
+    for(unsigned chunk=1; chunk<=6; chunk++) {
+        // Accept partial reads without crossing either output guard
+        memset(guarded,0x77,sizeof(guarded)); seek_calls=read_calls=0; decode_limit=chunk;
+        seek_error=0; failure_read=0; gPlayerTalkSfx=UINT32_MAX;
+        assert(SampleManager_LoadMissionAudio(&manager,MISSION_AUDIO_PLAYER_COMMENT,0));
+        assert(seek_calls == 1 && read_calls == (6+chunk-1)/chunk && gPlayerTalkSfx == 0);
+        assert(guarded[0] == 0x7777 && guarded[7] == 0x7777);
+        for(unsigned i=0; i<6; i++) assert(guarded[i+1] == (opus_int16)(10+i));
+    }
+    for(int error=-1; error<=0; error++) {
+        // Reject decoder errors and early EOF while retaining the previously published mission
+        seek_calls=read_calls=0; decode_limit=2; failure_read=2; decode_error=error; gPlayerTalkSfx=99;
+        assert(!SampleManager_LoadMissionAudio(&manager,MISSION_AUDIO_PLAYER_COMMENT,0));
+        assert(gPlayerTalkSfx == 99 && read_calls == 2);
+    }
+    // Reject bad seeks and non-PCM byte alignment before writing output
+    failure_read=0; read_calls=0; seek_error=-1; gPlayerTalkSfx=99;
+    assert(!SampleManager_LoadMissionAudio(&manager,MISSION_AUDIO_PLAYER_COMMENT,0));
+    assert(gPlayerTalkSfx == 99 && read_calls == 0);
+    seek_error=0; seek_calls=0; manager.m_aSamples[0].nSize=11;
+    assert(!SampleManager_LoadMissionAudio(&manager,MISSION_AUDIO_PLAYER_COMMENT,0));
+    assert(seek_calls == 0 && gPlayerTalkSfx == 99);
+    manager.m_aSamples[0].nSize=12; manager.m_aSamples[0].nOffset=21;
+    assert(!SampleManager_LoadMissionAudio(&manager,MISSION_AUDIO_PLAYER_COMMENT,0));
+    assert(seek_calls == 0 && gPlayerTalkSfx == 99);
+    // Verify ped comments land in their own bank and slot through the corrected Opus branch
+    static opus_int16 bank[(PED_BLOCKSIZE*MAX_PEDSFX)/2];
+    nSampleBankMemoryStartAddress[SFX_BANK_PED_COMMENTS]=(uintptr)bank;
+    manager.m_aSamples[0].nOffset=20; decode_limit=2;
+    for(unsigned slot=0; slot<MAX_PEDSFX; slot++) {
+        read_calls=0; nCurrentPedSlot=slot;
+        assert(SampleManager_LoadPedComment(&manager,0));
+        assert(nCurrentPedSlot == (slot+1)%MAX_PEDSFX && nPedSlotSfx[slot] == 0);
+        for(unsigned i=0; i<6; i++) assert(bank[(PED_BLOCKSIZE/2)*slot+i] == (opus_int16)(10+i));
+    }
+    return 0;
+}

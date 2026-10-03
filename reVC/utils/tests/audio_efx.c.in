@@ -1,0 +1,107 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#define AUDIO_OAL
+#define AL_LIBTYPE_STATIC
+#ifndef BASELINE_EFX
+#define AL_ALEXT_PROTOTYPES
+#endif
+#include "@HEADER@"
+
+static uint64_t trace = UINT64_C(1469598103934665603);
+static unsigned calls, lookups;
+static void record(uint32_t value) {
+    // Hash exact integer and float representations emitted to the mock device
+    trace = (trace ^ value) * UINT64_C(1099511628211);
+}
+static void effect_i(ALuint object, ALenum param, ALint value) {
+    // Record effect and filter integer setters without opening a device
+    calls++; record(object); record(param); record((uint32_t)value);
+}
+static void effect_f(ALuint object, ALenum param, ALfloat value) {
+    // Preserve exact float output bits for baseline comparison
+    uint32_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    calls++; record(object); record(param); record(bits);
+}
+static void effect_fv(ALuint object, ALenum param, const ALfloat *value) {
+    // Record all three components of reflection and reverb pan vectors
+    for(unsigned i = 0; i < 3; i++) effect_f(object, param, value[i]);
+}
+static void unused_proc(void) {
+    // Reject calls to procedures not used by the tested effect operations
+    assert(0);
+}
+#ifdef __cplusplus
+extern "C"
+#endif
+void *AL_APIENTRY alGetProcAddress(const ALchar *name) {
+    // Verify lookup uses SDK names and return controlled procedure pointers
+    assert(strncmp(name, "al", 2) == 0);
+    assert(strstr(name, "AudioEFX_") == NULL);
+    lookups++;
+    for(const char *c = name; *c; c++) record((unsigned char)*c);
+    if(!strcmp(name, "alEffecti") || !strcmp(name, "alFilteri")) return (void*)effect_i;
+    if(!strcmp(name, "alEffectf") || !strcmp(name, "alFilterf")) return (void*)effect_f;
+    if(!strcmp(name, "alEffectfv")) return (void*)effect_fv;
+    return (void*)unused_proc;
+}
+#ifndef BASELINE_EFX
+#ifdef __cplusplus
+extern "C"
+#endif
+void AL_APIENTRY alGenEffects(ALsizei count, ALuint *effects) {
+    // Coexist with a static OpenAL export of the same SDK name
+    (void)count; (void)effects; assert(0);
+}
+#endif
+#ifdef BASELINE_EFX
+static float Min(float a, float b) {
+    // Supply the original helper used by the saved C++ effect source
+    return a < b ? a : b;
+}
+#endif
+@SOURCE@
+
+int main(void) {
+    // Load every effect, filter and auxiliary-slot procedure through the production loader
+    EFXInit();
+    assert(lookups == 33);
+    // Exercise varied listener parameters and gains across conversion and clamp boundaries
+    for(unsigned i = 0; i < 4096; i++) {
+        EAXLISTENERPROPERTIES props;
+        memset(&props, 0, sizeof(props));
+        props.flEnvironmentSize = (float)(i % 300) / 10.0f;
+        props.flEnvironmentDiffusion = (float)(i % 101) / 100.0f;
+        props.lRoom = -12000 + (long)(i % 14001);
+        props.lRoomHF = -10000 + (long)(i % 12001);
+        props.lRoomLF = -10000 + (long)(i % 10001);
+        props.flDecayTime = (float)(i % 200) / 10.0f;
+        props.flDecayHFRatio = 0.1f + (float)(i % 190) / 100.0f;
+        props.flDecayLFRatio = 0.2f + (float)(i % 180) / 100.0f;
+        props.lReflections = -12000 + (long)(i % 18001);
+        props.flReflectionsDelay = (float)(i % 300) / 1000.0f;
+        props.vReflectionsPan.x = -0.4f; props.vReflectionsPan.y = 0.6f;
+        props.vReflectionsPan.z = -0.3f;
+        props.lReverb = -11000 + (long)(i % 21001);
+        props.flReverbDelay = (float)(i % 100) / 1000.0f;
+        props.vReverbPan.x = 0.2f; props.vReverbPan.y = -0.7f; props.vReverbPan.z = 0.5f;
+        props.flEchoTime = 0.075f; props.flEchoDepth = 0.7f;
+        props.flModulationTime = 0.9f; props.flModulationDepth = 0.4f;
+        props.flAirAbsorptionHF = -100.0f + (float)(i % 101);
+        props.flHFReference = 5000.0f; props.flLFReference = 250.0f;
+        props.flRoomRolloffFactor = 0.5f;
+        props.ulFlags = i & 1 ? EAXLISTENERFLAGS_DECAYHFLIMIT : 0;
+        EAX3_Set(1, &props);
+        EFX_Set(2, &props);
+        SetEffectsLevel(3, (float)(i % 101) / 100.0f);
+        EAX3_SetReverbMix(4, (float)(i % 151) / 100.0f);
+    }
+    // Cover silence, the conversion threshold, ordinary gain and positive millibels
+    const float gains[] = {-1.0f, 0.0f, 0.000001f, 0.00001f, 0.00002f, 0.5f, 1.0f, 2.0f};
+    for(unsigned i = 0; i < sizeof(gains) / sizeof(gains[0]); i++) EAX3_SetReverbMix(5, gains[i]);
+    printf("%llu %u %u\n", (unsigned long long)trace, calls, lookups);
+    return 0;
+}

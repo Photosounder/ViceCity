@@ -1,8 +1,11 @@
 #pragma once
+//+ rouz edit (ChatGPT)
+#include <stdint.h>
+#include "../core/config.h"
 
 #include "audio_enums.h"
 #include "soundlist.h"
-#include "Crime.h"
+#include "../core/CrimeTypes.h"
 
 #define AEHANDLE_IS_FAILED(h) ((h)<0)
 #define AEHANDLE_IS_OK(h)     ((h)>=0)
@@ -10,98 +13,106 @@
 #define NO_AUDIO_PROVIDER -3
 #define AUDIO_PROVIDER_NOT_DETERMINED -99
 
-class cAudioScriptObject;
+#ifdef __cplusplus
+typedef struct cAudioScriptObject cAudioScriptObject;
 class CEntity;
+class CPed;
+class CVector;
+extern "C" {
+#else
+typedef struct cAudioScriptObject cAudioScriptObject;
+typedef struct CEntity CEntity;
+typedef struct CPed CPed;
+typedef struct CVector CVector;
+#endif
 
-class cDMAudio
-{
-public:
-	~cDMAudio()
-	{ }
 
-	void Initialise(void);
-	void Terminate(void);
-	void Service(void);
+	void DMAudio_Initialise(void);
+	void DMAudio_Terminate(void);
+	void DMAudio_Service(void);
 	
-	int32 CreateEntity(eAudioType type, void *UID);
-	void DestroyEntity(int32 audioEntity);
-	bool8 GetEntityStatus(int32 audioEntity);
-	void SetEntityStatus(int32 audioEntity, bool8 status);
-	void PlayOneShot(int32 audioEntity, uint16 oneShot, float volume);
-	void DestroyAllGameCreatedEntities(void);
+	int32_t DMAudio_CreateEntity(enum eAudioType type, void *UID);
+	void DMAudio_DestroyEntity(int32_t audioEntity);
+	uint8_t DMAudio_GetEntityStatus(int32_t audioEntity);
+	void DMAudio_SetEntityStatus(int32_t audioEntity, uint8_t status);
+	void DMAudio_PlayOneShot(int32_t audioEntity, uint16_t oneShot, float volume);
+	void DMAudio_DestroyAllGameCreatedEntities(void);
 	
-	void SetOutputMode(bool8 surround);
-	void SetMP3BoostVolume(uint8 volume);
-	void SetEffectsMasterVolume(uint8 volume);
-	void SetMusicMasterVolume(uint8 volume);
-	void SetEffectsFadeVol(uint8 volume);
-	void SetMusicFadeVol(uint8 volume);
+	void DMAudio_SetOutputMode(uint8_t surround);
+	void DMAudio_SetMP3BoostVolume(uint8_t volume);
+	void DMAudio_SetEffectsMasterVolume(uint8_t volume);
+	void DMAudio_SetMusicMasterVolume(uint8_t volume);
+	void DMAudio_SetEffectsFadeVol(uint8_t volume);
+	void DMAudio_SetMusicFadeVol(uint8_t volume);
 	
-	uint8 GetNum3DProvidersAvailable(void);
-	char *Get3DProviderName(uint8 id);
+	uint8_t DMAudio_GetNum3DProvidersAvailable(void);
+	char *DMAudio_Get3DProviderName(uint8_t id);
 	
-	int8 AutoDetect3DProviders(void);
+	int8_t DMAudio_AutoDetect3DProviders(void);
 	
-	int8 GetCurrent3DProviderIndex(void);
-	int8 SetCurrent3DProvider(uint8 which);
+	int8_t DMAudio_GetCurrent3DProviderIndex(void);
+	int8_t DMAudio_SetCurrent3DProvider(uint8_t which);
 	
-	void SetSpeakerConfig(int32 config);
+	void DMAudio_SetSpeakerConfig(int32_t config);
 	
-	bool8 IsMP3RadioChannelAvailable(void);
+	uint8_t DMAudio_IsMP3RadioChannelAvailable(void);
 	
-	void ReleaseDigitalHandle(void);
-	void ReacquireDigitalHandle(void);
+	void DMAudio_ReleaseDigitalHandle(void);
+	void DMAudio_ReacquireDigitalHandle(void);
 	
-	void SetDynamicAcousticModelingStatus(bool8 status);
+	void DMAudio_SetDynamicAcousticModelingStatus(uint8_t status);
 	
-	bool8 CheckForAnAudioFileOnCD(void);
+	uint8_t DMAudio_CheckForAnAudioFileOnCD(void);
 	
-	char GetCDAudioDriveLetter(void);
-	bool8 IsAudioInitialised(void);
+	char DMAudio_GetCDAudioDriveLetter(void);
+	uint8_t DMAudio_IsAudioInitialised(void);
 
-	void ResetPoliceRadio();
-	void ReportCrime(eCrimeType crime, CVector const &pos);
+	void DMAudio_ResetPoliceRadio(void);
+	void DMAudio_ReportCrime(enum eCrimeType crime, const CVector *pos);
 	
-	int32 CreateLoopingScriptObject(cAudioScriptObject *scriptObject);
-	void DestroyLoopingScriptObject(int32 audioEntity);
-	void CreateOneShotScriptObject(cAudioScriptObject *scriptObject);
+	int32_t DMAudio_CreateLoopingScriptObject(cAudioScriptObject *scriptObject);
+	void DMAudio_DestroyLoopingScriptObject(int32_t audioEntity);
+	void DMAudio_CreateOneShotScriptObject(cAudioScriptObject *scriptObject);
 	
-	void PlaySuspectLastSeen(float x, float y, float z);
+	void DMAudio_PlaySuspectLastSeen(float x, float y, float z);
 	
-	void ReportCollision(CEntity *entityA, CEntity *entityB, uint8 surfaceTypeA, uint8 surfaceTypeB, float collisionPower, float velocity);
+	void DMAudio_ReportCollision(CEntity *entityA, CEntity *entityB, uint8_t surfaceTypeA, uint8_t surfaceTypeB, float collisionPower, float velocity);
 	
-	void PlayFrontEndSound(uint16 frontend, uint32 volume);
-	void PlayRadioAnnouncement(uint32 announcement);
-	void PlayFrontEndTrack(uint32 track, bool8 frontendFlag);
-	void StopFrontEndTrack(void);
+	void DMAudio_PlayFrontEndSound(uint16_t frontend, uint32_t volume);
+	void DMAudio_PlayRadioAnnouncement(uint32_t announcement);
+	void DMAudio_PlayFrontEndTrack(uint32_t track, uint8_t frontendFlag);
+	void DMAudio_StopFrontEndTrack(void);
 	
-	void ResetTimers(uint32 time);
+	void DMAudio_ResetTimers(uint32_t time);
 	
-	void ChangeMusicMode(uint8 mode);
+	void DMAudio_ChangeMusicMode(uint8_t mode);
 	
-	void PreloadCutSceneMusic(uint32 track);
-	void PlayPreloadedCutSceneMusic(void);
-	void StopCutSceneMusic(void);
+	void DMAudio_PreloadCutSceneMusic(uint32_t track);
+	void DMAudio_PlayPreloadedCutSceneMusic(void);
+	void DMAudio_StopCutSceneMusic(void);
 	
-	void PreloadMissionAudio(uint8 slot, Const char *missionAudio);
-	uint8 GetMissionAudioLoadingStatus(uint8 slot);
-	void SetMissionAudioLocation(uint8 slot, float x, float y, float z);
-	void PlayLoadedMissionAudio(uint8 slot);
-	bool8 IsMissionAudioSamplePlaying(uint8 slot);
-	bool8 IsMissionAudioSampleFinished(uint8 slot);
-	void ClearMissionAudio(uint8 slot);
-	const char *GetMissionAudioLoadedLabel(uint8 slot);
+	void DMAudio_PreloadMissionAudio(uint8_t slot, const char *missionAudio);
+	uint8_t DMAudio_GetMissionAudioLoadingStatus(uint8_t slot);
+	void DMAudio_SetMissionAudioLocation(uint8_t slot, float x, float y, float z);
+	void DMAudio_PlayLoadedMissionAudio(uint8_t slot);
+	uint8_t DMAudio_IsMissionAudioSamplePlaying(uint8_t slot);
+	uint8_t DMAudio_IsMissionAudioSampleFinished(uint8_t slot);
+	void DMAudio_ClearMissionAudio(uint8_t slot);
+	const char *DMAudio_GetMissionAudioLoadedLabel(uint8_t slot);
 
-	uint8 GetRadioInCar(void);
-	void SetRadioInCar(uint32 radio);
-	void SetRadioChannel(uint32 radio, int32 pos);
+	uint8_t DMAudio_GetRadioInCar(void);
+	void DMAudio_SetRadioInCar(uint32_t radio);
+	void DMAudio_SetRadioChannel(uint32_t radio, int32_t pos);
 
-	void SetStartingTrackPositions(bool8 isStartGame);
-	float *GetListenTimeArray();
-	uint32 GetFavouriteRadioStation();
-	int32 GetRadioPosition(uint32 station);
-	void SetPedTalkingStatus(class CPed *ped, bool8 status);
-	void SetPlayersMood(uint8 mood, uint32 time);
-	void ShutUpPlayerTalking(bool8 state);
-};
-extern cDMAudio DMAudio;
+	void DMAudio_SetStartingTrackPositions(uint8_t isStartGame);
+	float *DMAudio_GetListenTimeArray(void);
+	uint32_t DMAudio_GetFavouriteRadioStation(void);
+	int32_t DMAudio_GetRadioPosition(uint32_t station);
+	void DMAudio_SetPedTalkingStatus(CPed *ped, uint8_t status);
+	void DMAudio_SetPlayersMood(uint8_t mood, uint32_t time);
+	void DMAudio_ShutUpPlayerTalking(uint8_t state);
+
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

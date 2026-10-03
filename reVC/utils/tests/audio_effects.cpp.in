@@ -1,0 +1,198 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint32=uint32_t;
+using int32=int32_t;
+#define nil NULL
+struct cAudioManager {
+@FIELDS@
+    void ServiceSoundEffects();
+    void InterrogateAudioEntities();
+    void ProcessReverb();
+    void ProcessSpecial();
+    void ServiceCollisions();
+    void AddReleasingSounds();
+    void ProcessActiveQueues();
+    void ProcessEntity(int32);
+};
+static cAudioManager owners[2];
+static cAudioManager *active;
+cSampleManager SampleManager;
+static cAudioScriptObject scripts[NUM_AUDIOENTITIES];
+static uint8_t poolFlags[NUM_AUDIOENTITIES];
+static CPool pool;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned cases,callbacks,seedValue,entityCalls;
+extern "C" void AudioEffects_Service(cAudioManager *);
+extern "C" void AudioEffects_Interrogate(cAudioManager *);
+extern "C" void TestAudioEffectsC(cAudioManager *,uint8_t);
+static void value(uint32_t v) {
+    // Hash callback tokens and scalar observations in their original order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void snapshot(void) {
+    // Normalize pooled pointer identities before hashing every zero-padded owner field
+    cAudioManager copy=*active;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        uintptr_t pointer=(uintptr_t)copy.m_asAudioEntities[i].m_pEntity;
+        uintptr_t base=(uintptr_t)scripts;
+        if(pointer>=base && pointer<base+sizeof(scripts))
+            copy.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)(((pointer-base)/sizeof(*scripts))+1);
+    }
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+    // Observe script reset bytes, pool generation flags and the deletion cursor
+    bytes=(const unsigned char *)scripts;
+    for(unsigned i=0;i<sizeof(scripts);++i) value(bytes[i]);
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) value(poolFlags[i]);
+    value(pool.m_allocPtr);
+}
+static void event(unsigned token) {
+    // Capture each subsystem boundary before its controlled state mutation
+    ++callbacks;value(token);snapshot();
+}
+extern "C" uint32_t AudioPoliceHost_LogicalFramesPassed(void) {
+    // Exercise zero and nonzero logical frame gates without gating later service work
+    event(1);return seedValue%3;
+}
+struct CTimer {
+    static uint32 GetLogicalFramesPassed(void) {
+        // Drive the original frame query through the identical instrumented boundary
+        return AudioPoliceHost_LogicalFramesPassed();
+    }
+};
+extern "C" CPool *CPools_GetAudioScriptObjectPool(void) {
+    // Observe reset before deletion and vary the later live script-index reads
+    event(2);
+    if(seedValue&32) {
+        int32_t &index=active->m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[0];
+        if(index==9) index=14;
+    }
+    return &pool;
+}
+struct CPools {
+    static CPool *GetAudioScriptObjectPool(void) {
+        // Retain the same pure pool lookup for the old member implementation
+        return CPools_GetAudioScriptObjectPool();
+    }
+};
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t channel) {
+    // Observe all channel stops before queue clearing and priority updates
+    value(manager==&SampleManager);value(channel);event(3);
+}
+extern "C" void SampleManager_SetChannelFrequency(cSampleManager *manager,uint32_t channel,uint32_t frequency) {
+    // Observe the PS2 reserved-channel frequency writes and exact zero argument
+    value(manager==&SampleManager);value(channel);value(frequency);event(4);
+}
+extern "C" void SampleManager_Service(cSampleManager *manager) {
+    // Observe optional backend service after active queues and before pooled cleanup
+    value(manager==&SampleManager);event(5);
+}
+void cAudioManager::ProcessReverb(void) {
+    // Observe reverb before special handling and the current queue reset
+    event(6);m_nTimer+=7;
+}
+void cAudioManager::ProcessSpecial(void) {
+    // Switch queues during special handling to expose cached queue assumptions
+    event(7);if(seedValue&16) m_nActiveQueue^=1;
+}
+void cAudioManager::ProcessEntity(int32 id) {
+    // Change the traversed slot and loop bound after observing the original entity argument
+    value(id);event(8);
+    if(entityCalls++==0 && (seedValue&4)) m_aAudioEntityOrderList[0]=15;
+    if(entityCalls==1 && (seedValue&8)) m_nAudioEntitiesCount=3;
+}
+extern "C" void PedComments_Process(cPedComments *comments) {
+    // Observe ped comments only after traversal has reset the live ordered event fields
+    value(comments==&active->m_sPedComments);event(9);
+}
+extern "C" void AudioPolice_Service(cAudioManager *manager) {
+    // Observe police service between comments and collision handling
+    value(manager==active);event(10);
+}
+static void enqueue(unsigned slot) {
+    // Add bounded mixed-dimensional sounds for the actual final volume adjustment
+    uint8_t queue=active->m_nActiveQueue;
+    unsigned count=active->m_nRequestedCount[queue]++;
+    active->m_aRequestedOrderList[queue][count]=(uint8_t)slot;
+    tSound &sound=active->m_aRequestedQueue[queue][slot];
+    sound.m_bIs2D=slot&1;sound.m_nVolume=90;sound.m_fDistance=25.0f;
+    sound.m_MaxDistance=100.0f;
+#ifdef EXTERNAL_3D_SOUND
+    sound.m_nEmittingVolume=100;
+#endif
+}
+void cAudioManager::ServiceCollisions(void) {
+    // Add a collision request before releasing sounds and mission processing
+    event(11);enqueue(2);
+}
+void cAudioManager::AddReleasingSounds(void) {
+    // Add a two-dimensional request to expose unintended volume adjustments
+    event(12);enqueue(3);
+}
+extern "C" void AudioMission_Process(cAudioManager *manager) {
+    // Add a mission request after releasing sounds and before volume adjustment
+    value(manager==active);event(13);enqueue(4);
+}
+void cAudioManager::ProcessActiveQueues(void) {
+    // Observe adjusted requests before backend service and script cleanup
+    event(14);
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed every pause combination, both queues, frame wrap and valid real pool entries
+    seedValue=seed;entityCalls=0;active=&owners[seed&1];memset(active,0,sizeof(*active));
+    memset(scripts,0,sizeof(scripts));
+    pool.m_entries=(uint8_t *)scripts;pool.m_flags=poolFlags;pool.m_size=NUM_AUDIOENTITIES;
+    pool.m_entrySize=sizeof(*scripts);pool.m_allocPtr=NUM_AUDIOENTITIES-1;
+    active->m_bIsInitialised=(seed>>6)&1;active->m_bIsPaused=seed&1;
+    active->m_bWasPaused=(seed>>1)&1;active->m_bIsSurround=(seed>>2)&1;
+    active->m_FrameCounter=seed%7==0?UINT32_MAX:seed;
+    active->m_bReduceReleasingPriority=seed%2;
+    active->m_nActiveQueue=(seed>>3)&1;active->m_nActiveSamples=8;
+    active->m_nAudioEntitiesCount=9;
+    for(unsigned queue=0;queue<2;++queue) {
+        active->m_nRequestedCount[queue]=3;
+        for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+            active->m_aRequestedOrderList[queue][i]=i;
+            active->m_aRequestedQueue[queue][i].m_nSampleIndex=i+1;
+        }
+    }
+    for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+        active->m_asActiveSamples[i].m_nSampleIndex=i+10;
+        active->m_asActiveSamples[i].m_fDistance=31.5f;
+    }
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        active->m_aAudioEntityOrderList[i]=NUM_AUDIOENTITIES;
+        active->m_asAudioEntities[i].m_bIsUsed=1;
+        active->m_asAudioEntities[i].m_AudioEvents=i%4+1;
+        scripts[i].AudioId=33;scripts[i].Posn={1,2,3};scripts[i].AudioEntity=i;
+        poolFlags[i]=i&POOLFLAG_ID;
+    }
+    for(unsigned i=0;i<6;++i) active->m_aAudioEntityOrderList[i]=5-i;
+    active->m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal=seed%4;
+    for(unsigned i=0;i<3;++i) {
+        unsigned id=9+i*2;
+        active->m_aAudioEntityOrderList[6+i]=id;
+        active->m_asAudioEntities[id].m_pEntity=&scripts[id];
+        active->m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices[i]=id;
+    }
+    active->m_asAudioEntities[14].m_pEntity=(void *)(uintptr_t)0x123;
+}
+int main(void) {
+    // Compare direct traversal, repeated service and C callers across both owner instances
+    for(unsigned seed=0;seed<256;++seed) {
+        prepare(seed);@INTERROGATE@;snapshot();++cases;
+        prepare(seed);@SERVICE@;snapshot();++cases;
+        @SERVICE@;snapshot();++cases;
+        prepare(seed);@CALLER@;snapshot();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

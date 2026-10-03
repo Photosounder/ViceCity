@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 
@@ -141,7 +142,7 @@ COnscreenTimerEntry::Process()
 		else {
 			int32 oldTimeSeconds = oldTime / 1000;
 			if (oldTimeSeconds < 12 && newTime / 1000 != oldTimeSeconds && !TheCamera.m_WideScreenOn) {
-				DMAudio.PlayFrontEndSound(SOUND_CLOCK_TICK, newTime / 1000);
+				DMAudio_PlayFrontEndSound(SOUND_CLOCK_TICK, newTime / 1000);
 			}
 		}
 	}
@@ -163,3 +164,5 @@ COnscreenCounterEntry::ProcessForDisplayCounter()
 	uint32 counter = *CTheScripts::GetPointerToScriptVariable(m_nCounterOffset);
 	sprintf(m_aCounterBuffer, "%d", counter);
 }
+
+//- rouz edit (ChatGPT)

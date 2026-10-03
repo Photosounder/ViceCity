@@ -115,7 +115,8 @@ typedef uint8 bool8;
 typedef uint16 bool16;
 typedef uint32 bool32;
 
-#if defined(_MSC_VER) || defined (__MWERKS__)
+// Use rouziclib's SSIZE_T definition on MSVC to avoid the Win32 int/long typedef conflict // rouz edit (ChatGPT)
+#if defined (__MWERKS__)
 typedef ptrdiff_t ssize_t;
 #endif
 
@@ -333,13 +334,12 @@ inline float sq(float x) { return x*x; }
 #define MYRAND_MAX		32767
 #endif
 
-int myrand(void);
-void mysrand(unsigned int seed);
+#include "Random.h" // rouz edit (ChatGPT)
 
-void re3_debug(const char *format, ...);
-void re3_trace(const char *filename, unsigned int lineno, const char *func, const char *format, ...);
-void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func);
-void re3_usererror(const char *format, ...);
+extern "C" void re3_debug(const char *format, ...); // rouz edit (ChatGPT)
+extern "C" void re3_trace(const char *filename, unsigned int lineno, const char *func, const char *format, ...); // rouz edit (ChatGPT)
+extern "C" void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func); // rouz edit (ChatGPT)
+extern "C" void re3_usererror(const char *format, ...); // rouz edit (ChatGPT)
 
 #define DEBUGBREAK() __debugbreak();
 
@@ -382,15 +382,9 @@ __inline__ void TRACE(char *f, ...) { } // this is re3 only, and so the function
 #define _TODO(x)
 #define _TODOCONST(x) (x)
 
-#ifdef CHECK_STRUCT_SIZES
-template<int s, int t> struct check_size {
-	static_assert(s == t, "Invalid structure size");
-};
-#define VALIDATE_SIZE(struc, size) check_size<sizeof(struc), size> struc ## Check
-#else
-#define VALIDATE_SIZE(struc, size)
-#endif
-#define VALIDATE_OFFSET(struc, member, offset) static_assert(offsetof(struc, member) == offset, "The offset of " #member " in " #struc " is not " #offset "...")
+//+ rouz edit (ChatGPT)
+#include "Validate.h"
+//- rouz edit (ChatGPT)
 
 #define PERCENT(x, p)                    ((float(x) * (float(p) / 100.0f)))
 #define ARRAY_SIZE(array)                (sizeof(array) / sizeof(array[0]))

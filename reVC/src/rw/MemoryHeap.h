@@ -41,17 +41,9 @@ enum {
 	NUM_FIXED_MEMBLOCKS = 6
 };
 
-template<typename T, uint32 N>
-class CStack
-{
-public:
-	T values[N];
-	uint32 sp;
-
-	CStack() : sp(0) {}
-	void push(const T& val) { values[sp++] = val; }
-	T& pop() { return values[--sp]; }
-};
+//+ rouz edit (ChatGPT)
+#include "IntStack.h"
+//- rouz edit (ChatGPT)
 
 
 struct HeapBlockDesc
@@ -152,14 +144,20 @@ public:
 	HeapBlockList m_freeList;
 	CommonSize m_fixedSize[NUM_FIXED_MEMBLOCKS];
 	uint32 m_totalMemUsed;
-	CStack<int32, 16> m_idStack;
+	CIntStack16 m_idStack; // rouz edit (ChatGPT)
 	uint32 m_currentMemID;
 	uint32 *m_memUsed;
 	uint32 m_totalBlocksUsed;
 	uint32 *m_blocksUsed;
 	uint32 m_unkMemId;
 
-	CMemoryHeap(void) : m_start(nil) {}
+	//+ rouz edit (ChatGPT)
+	CMemoryHeap(void) : m_start(nil)
+	{
+		// Initialize the embedded stack counter for heaps with automatic storage
+		CIntStack16_Init(&m_idStack);
+	}
+	//- rouz edit (ChatGPT)
 	void Init(uint32 total);
 	void RegisterMalloc(HeapBlockDesc *block);
 	void RegisterFree(HeapBlockDesc *block);

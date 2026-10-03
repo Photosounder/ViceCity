@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -149,7 +150,11 @@ CObject::ProcessControl(void)
 						playerSpeed.y * BEACHBALL_SPEED_PROPORTION,
 						0.3f          * BEACHBALL_SPEED_PROPORTION
 					);
-					PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, GetPosition());
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = GetPosition();
+						PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 					m_vecTurnSpeed += CVector(
 						((CGeneral::GetRandomNumber() % 16) - 7) / 10.0f,
 						((CGeneral::GetRandomNumber() % 16) - 7) / 10.0f,
@@ -168,7 +173,11 @@ CObject::ProcessControl(void)
 				m_vecMoveSpeed.x += (CGeneral::GetRandomNumber() % 8 - 3) / 100.0f;
 				m_vecMoveSpeed.y += (CGeneral::GetRandomNumber() % 8 - 3) / 100.0f;
 				m_vecMoveSpeed.z = Max(m_vecMoveSpeed.z + 0.3f, 0.2f);
-				PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, GetPosition());
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = GetPosition();
+					PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				m_vecTurnSpeed.x += (CGeneral::GetRandomNumber() % 16 - 7) / 10.0f;
 				m_vecTurnSpeed.y += (CGeneral::GetRandomNumber() % 16 - 7) / 10.0f;
 				m_nBeachballBounces++;
@@ -392,7 +401,11 @@ CObject::ObjectDamage(float amount)
 					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-0.40f, 0.40f);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, pos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, min);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = min;
+					PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_CHANGE_THEN_SMASH: {
@@ -454,7 +467,11 @@ CObject::ObjectDamage(float amount)
 					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, randomColor, nRotationSpeed, 0, currentFrame, 0);
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, vecPos);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = vecPos;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_SMASH_WOODENBOX_COMPLETELY:
@@ -484,7 +501,11 @@ CObject::ObjectDamage(float amount)
 					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, randomColor, nRotationSpeed, 0, currentFrame, 0);
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_1, vecPos);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = vecPos;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_1, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_SMASH_TRAFFICCONE_COMPLETELY:
@@ -517,9 +538,17 @@ CObject::ObjectDamage(float amount)
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
 				if (m_nCollisionDamageEffect == DAMAGE_EFFECT_BURST_BEACHBALL) {
-					PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, vecPos);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = vecPos;
+						PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 				} else {
-					PlayOneShotScriptObject(SCRIPT_SOUND_TIRE_COLLISION, vecPos);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = vecPos;
+						PlayOneShotScriptObject(SCRIPT_SOUND_TIRE_COLLISION, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 				}
 				break;
 			}
@@ -551,7 +580,11 @@ CObject::ObjectDamage(float amount)
 					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, vecPos);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = vecPos;
+					PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_SMASH_NEWSTANDNEW1:
@@ -618,7 +651,11 @@ CObject::ObjectDamage(float amount)
 						CParticle::AddParticle(PARTICLE_DEBRIS, vecPos, vecDir, nil, 0.1f, secondParticleColor, nSecondRotationSpeed, 0, 1, 0);
 					}
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, vecPos);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = vecPos;
+					PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_SMASH_VEGPALM:
@@ -654,7 +691,11 @@ CObject::ObjectDamage(float amount)
 						CParticle::AddParticle(PARTICLE_DEBRIS, particlePos, particleDir, nil, 0.3f, secondaryColor, nRotationSpeed);
 					}
 				}
-				PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, vecPos);
+				{
+					// Evaluate the game position once before passing its components to C
+					const CVector scriptPosition = vecPos;
+					PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+				}
 				break;
 			}
 			case DAMAGE_EFFECT_SMASH_BLACKBAG:
@@ -700,9 +741,17 @@ CObject::ObjectDamage(float amount)
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, selectedColor, nRotationSpeed, 0, nCurFrame, 0);
 				}
 				if (m_nCollisionDamageEffect == DAMAGE_EFFECT_SMASH_BLACKBAG) {
-					PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, vecPos);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = vecPos;
+						PlayOneShotScriptObject(SCRIPT_SOUND_BOX_DESTROYED_2, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 				} else if (m_nCollisionDamageEffect == DAMAGE_EFFECT_SMASH_BEACHLOUNGE_WOOD) {
-					PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, vecPos);
+					{
+						// Evaluate the game position once before passing its components to C
+						const CVector scriptPosition = vecPos;
+						PlayOneShotScriptObject(SCRIPT_SOUND_METAL_COLLISION, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+					}
 				}
 				break;
 			}
@@ -791,14 +840,12 @@ CObject::DeleteAllMissionObjects()
 	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == MISSION_OBJECT) {
 			CWorld::Remove(pObject);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the mission object without invoking C++ delete.
 			pObject->~CObject();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
 			CPool_Delete(objectPool, pObject);
 			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -815,14 +862,12 @@ CObject::DeleteAllTempObjects()
 	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT) {
 			CWorld::Remove(pObject);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the temporary object without invoking C++ delete.
 			pObject->~CObject();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
 			CPool_Delete(objectPool, pObject);
 			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -839,14 +884,12 @@ CObject::DeleteAllTempObjectsInArea(CVector point, float fRadius)
 	//- rouz edit (ChatGPT)
 		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT && (point - pObject->GetPosition()).MagnitudeSqr() < SQR(fRadius)) {
 			CWorld::Remove(pObject);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the temporary object without invoking C++ delete.
 			pObject->~CObject();
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
 			CPool_Delete(objectPool, pObject);
 			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
 		}
 	}
 }
@@ -874,3 +917,4 @@ IsObjectPointerValid(CObject *pObject)
 		return false;
 	return pObject->bIsBIGBuilding || pObject->m_entryInfoList.first;
 }
+//- rouz edit (ChatGPT)

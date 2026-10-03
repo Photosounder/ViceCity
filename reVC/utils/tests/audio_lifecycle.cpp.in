@@ -1,0 +1,146 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint32=uint32_t;
+#define FALSE 0
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+struct cAudioManager {
+@FIELDS@
+    void Initialise();
+    void Terminate();
+    void PreInitialiseGameSpecificSetup();
+    void PostInitialiseGameSpecificSetup();
+    void PreTerminateGameSpecificShutdown();
+    void PostTerminateGameSpecificShutdown();
+};
+extern "C" cAudioManager AudioManager;
+cAudioManager AudioManager;
+static cAudioManager other;
+static cAudioManager *active;
+cSampleManager SampleManager;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned cases,callbacks;
+static uint8_t initializeResult;
+static uint32_t maximumChannels;
+static int8_t loadedBanks[MAX_SFX_BANKS];
+extern "C" void AudioLifecycle_Initialise(cAudioManager *);
+extern "C" void AudioLifecycle_Terminate(cAudioManager *);
+extern "C" void TestLifecycleC(void);
+extern "C" void AudioPolice_Init(cAudioManager *);
+extern "C" void AudioPolice_InitZones(void);
+extern "C" void AudioLifecycleHost_PreInitialise(cAudioManager *);
+extern "C" void AudioLifecycleHost_PostInitialise(cAudioManager *);
+extern "C" void AudioLifecycleHost_PreTerminate(cAudioManager *);
+extern "C" void AudioLifecycleHost_PostTerminate(cAudioManager *);
+extern "C" void AudioLifecycleHost_MusicInitialise(void);
+extern "C" void AudioLifecycleHost_MusicTerminate(void);
+static void value(uint32_t v) {
+    // Hash callback tokens and scalar values without pointer representations
+    digest=(digest^v)*1099511628211ULL;
+}
+static void snapshot(void) {
+    // Observe complete zero-padded owner records and police state before and after callbacks
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);++i) value(bytes[i]);
+    bytes=(const unsigned char *)ZoneSfx;
+    for(unsigned i=0;i<sizeof(ZoneSfx);++i) value(bytes[i]);
+    value(gSpecialSuspectLastSeenReport);value(g_nMissionAudioSfx);value(g_nMissionAudioPlayingStatus);
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) value(gMinTimeToNextReport[i]);
+    for(unsigned i=0;i<MAX_SFX_BANKS;++i) value(loadedBanks[i]);
+}
+static void event(unsigned token) {
+    // Observe exact lifecycle ordering and mutate the timer to expose retained callback effects
+    ++callbacks;value(token);snapshot();active->m_nTimer+=token;
+}
+void cAudioManager::PreInitialiseGameSpecificSetup() {
+    // Supply controlled game setup at the original pre-backend callback
+    event(1);
+}
+void cAudioManager::PostInitialiseGameSpecificSetup() {
+    // Supply controlled game setup after channel reservation and before police initialization
+    event(4);m_nAudioEntitiesCount=3;
+}
+void cAudioManager::PreTerminateGameSpecificShutdown() {
+    // Observe cleared entity flags and script count before backend bank unloading
+    event(7);
+}
+void cAudioManager::PostTerminateGameSpecificShutdown() {
+    // Observe backend termination and the cleared initialized flag at the final callback
+    event(11);
+}
+struct FakeMusic {
+    void Initialise(void) {
+        // Observe police initialization and the reserved channel count before music starts
+        event(5);
+    }
+    void Terminate(void) {
+        // Observe shutdown entry before the entity records are cleared
+        event(6);
+    }
+};
+static FakeMusic MusicManager;
+extern "C" uint8_t SampleManager_Initialise(cSampleManager *manager) {
+    // Preserve the backend's raw byte result at the original initialized-flag assignment
+    value(manager==&SampleManager);event(2);return initializeResult;
+}
+extern "C" uint32_t SampleManager_GetMaximumSupportedChannels(cSampleManager *manager) {
+    // Supply boundary counts which expose narrowing before the low-channel shutdown gate
+    value(manager==&SampleManager);event(3);return maximumChannels;
+}
+extern "C" int8_t SampleManager_IsSampleBankLoaded(cSampleManager *manager,uint8_t bank) {
+    // Observe each bank lookup and retain negative nonzero loaded results
+    value(manager==&SampleManager);value(bank);event(8);return loadedBanks[bank];
+}
+extern "C" void SampleManager_UnloadSampleBank(cSampleManager *manager,uint8_t bank) {
+    // Observe the loaded bank before clearing it at its original ordered unload point
+    value(manager==&SampleManager);value(bank);event(9);loadedBanks[bank]=0;
+}
+extern "C" void SampleManager_Terminate(cSampleManager *manager) {
+    // Observe all bank unloads before the initialized flag is cleared
+    value(manager==&SampleManager);event(10);
+}
+extern "C" void SampleManager_SetChannelReverbFlag(cSampleManager *manager,uint32_t channel,uint8_t enabled) {
+    // Observe police initialization and mutate the frame used by its following crime deadlines
+    value(manager==&SampleManager);value(channel);value(enabled);event(12);active->m_FrameCounter+=5;
+}
+extern "C" uint8_t SampleManager_GetChannelUsedFlag(cSampleManager *,uint32_t) {
+    // Keep the unchanged police reset helper linkable without exercising its separate behavior
+    return 0;
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *,uint32_t) {
+    // Keep the unchanged police reset helper linkable without an audio device
+}
+@METHODS@
+@HOST@
+static void prepare(unsigned seed,bool global) {
+    // Seed retained records, global police fields and signed bank results for each lifecycle entry
+    active=global?&AudioManager:&other;memset(active,0,sizeof(*active));memset(ZoneSfx,0x3b,sizeof(ZoneSfx));
+    active->m_bIsInitialised=seed&1;active->m_nActiveSamples=19;active->m_nTimer=UINT32_MAX-seed;active->m_FrameCounter=seed*5;
+    active->m_nAudioEntitiesCount=NUM_AUDIOENTITIES;active->m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal=33;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        active->m_asAudioEntities[i].m_bIsUsed=1;active->m_asAudioEntities[i].m_bStatus=1;
+        active->m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)0x123;
+        active->m_aAudioEntityOrderList[i]=i;
+    }
+    for(unsigned i=0;i<MAX_SFX_BANKS;++i) loadedBanks[i]=(seed+i)%3==0?0:(seed+i)%3==1?1:-1;
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) gMinTimeToNextReport[i]=0xabc000+i;
+    gSpecialSuspectLastSeenReport=3;g_nMissionAudioSfx=123;g_nMissionAudioPlayingStatus=PLAY_STATUS_PLAYING;
+    const uint32_t limits[]={0,1,2,255,256,257,42,UINT32_MAX};
+    const uint8_t results[]={0,1,2,255};
+    maximumChannels=limits[(seed>>1)%8];initializeResult=results[(seed>>4)%4];
+}
+int main(void) {
+    // Exercise failures, channel boundary counts, repeated entries and global public facades
+    for(unsigned seed=0;seed<128;++seed) {
+        prepare(seed,false);@INITIALISE@;snapshot();++cases;
+        @INITIALISE@;snapshot();++cases;
+        @TERMINATE@;snapshot();++cases;
+        @TERMINATE@;snapshot();++cases;
+        prepare(seed,true);@FACADE@;snapshot();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

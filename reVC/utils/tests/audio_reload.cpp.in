@@ -1,0 +1,139 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using uint32=uint32_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+struct cAudioManager {
+@FIELDS@
+    void ResetTimers(uint32);
+    void DestroyAllGameCreatedEntities();
+};
+extern "C" cAudioManager AudioManager;
+cAudioManager AudioManager;
+static cAudioManager other;
+static cAudioManager *active;
+cSampleManager SampleManager;
+static cAudioScriptObject scripts[NUM_AUDIOENTITIES];
+static uint8_t poolFlags[NUM_AUDIOENTITIES];
+static CPool pool;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned cases,callbacks;
+extern "C" void AudioReload_ResetTimers(cAudioManager *,uint32_t);
+extern "C" void AudioReload_DestroyEntities(cAudioManager *);
+extern "C" void TestReloadFacadesC(uint32_t);
+extern "C" void AudioMission_Clear(cAudioManager *,uint8_t);
+static void value(uint32_t v) {
+    // Hash deterministic callback tokens and scalar values
+    digest=(digest^v)*1099511628211ULL;
+}
+static void snapshot(void) {
+    // Normalize entity pointer identities before observing all zero-padded owner bytes
+    cAudioManager copy=*active;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        uintptr_t pointer=(uintptr_t)copy.m_asAudioEntities[i].m_pEntity;
+        uintptr_t base=(uintptr_t)scripts;
+        if(pointer>=base && pointer<base+sizeof(scripts))
+            copy.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)(((pointer-base)/sizeof(*scripts))+1);
+    }
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+    // Observe real pooled script storage, flags and the allocation cursor after each reset or deletion
+    bytes=(const unsigned char *)scripts;
+    for(unsigned i=0;i<sizeof(scripts);++i) value(bytes[i]);
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) value(poolFlags[i]);
+    value(pool.m_allocPtr);
+}
+extern "C" CPool *CPools_GetAudioScriptObjectPool(void) {
+    // Observe the script reset before the original pool deletion and entity pointer clearing
+    ++callbacks;value(7);snapshot();return &pool;
+}
+struct CPools {
+    static CPool *GetAudioScriptObjectPool(void) {
+        // Drive the original pure pool lookup through the same instrumented pool boundary
+        return CPools_GetAudioScriptObjectPool();
+    }
+};
+struct FakeMusic {
+    void ResetMusicAfterReload(void) {
+        // Observe all earlier stops and fades before the player speech flag is cleared
+        ++callbacks;value(6);snapshot();active->m_nTimer+=5;
+    }
+};
+static FakeMusic MusicManager;
+extern "C" void AudioReloadHost_ResetMusic(void) {
+    // Retain the same callback-visible music reset operation for the converted owner
+    MusicManager.ResetMusicAfterReload();
+}
+extern "C" void SampleManager_StopStreamedFile(cSampleManager *manager,uint8_t slot) {
+    // Observe each mission slot reset and mutate the retained timer to detect early copying
+    ++callbacks;value(1);value(manager==&SampleManager);value(slot);snapshot();active->m_nTimer+=3;
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t channel) {
+    // Observe police channel stop after both mission slots have been cleared
+    ++callbacks;value(2);value(manager==&SampleManager);value(channel);snapshot();
+}
+extern "C" void SampleManager_SetEffectsFadeVolume(cSampleManager *manager,uint8_t volume) {
+    // Observe the original effects fade position and byte argument
+    ++callbacks;value(3);value(manager==&SampleManager);value(volume);snapshot();
+}
+extern "C" void SampleManager_SetMusicFadeVolume(cSampleManager *manager,uint8_t volume) {
+    // Observe the original music fade position and byte argument
+    ++callbacks;value(4);value(manager==&SampleManager);value(volume);snapshot();
+}
+extern "C" void SampleManager_Service(cSampleManager *manager) {
+    // Observe the optional OpenAL service after the player speech flag is cleared
+    ++callbacks;value(5);value(manager==&SampleManager);snapshot();
+}
+@METHODS@
+static void prepare(unsigned seed,bool global) {
+    // Seed valid queue bounds, mixed entity types and real pool slots with retained sentinel fields
+    active=global?&AudioManager:&other;memset(active,0,sizeof(*active));memset(scripts,0,sizeof(scripts));
+    pool.m_entries=(uint8_t *)scripts;pool.m_flags=poolFlags;pool.m_size=NUM_AUDIOENTITIES;pool.m_entrySize=sizeof(*scripts);pool.m_allocPtr=NUM_AUDIOENTITIES-1;
+    active->m_bIsInitialised=seed&1;active->m_nActiveQueue=(seed>>1)&1;active->m_nActiveSamples=seed%4==0?1:seed%4==1?2:8;
+    active->m_bIsPlayerShutUp=1;active->m_nTimer=0x87654321U;active->m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal=17;
+    for(unsigned queue=0;queue<2;++queue) {
+        active->m_nRequestedCount[queue]=active->m_nActiveSamples;
+        for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+            active->m_aRequestedOrderList[queue][i]=i;
+            active->m_aRequestedQueue[queue][i].m_nSampleIndex=i+1;
+        }
+    }
+    for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+        active->m_asActiveSamples[i].m_nSampleIndex=i+10;
+        active->m_asActiveSamples[i].m_fDistance=31.5f;
+    }
+    for(unsigned i=0;i<2;++i) {
+        active->m_nMissionAudioSampleIndex[i]=400+i;
+        active->m_nMissionAudioLoadingStatus[i]=LOADING_STATUS_LOADED;
+        active->m_bIsMissionAudioPlaying[i]=1;
+        active->m_bIsMissionAudioAllowedToPlay[i]=1;
+        active->m_nMissionAudioFramesToPlay[i]=17;
+    }
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        active->m_aAudioEntityOrderList[i]=NUM_AUDIOENTITIES;
+        scripts[i].AudioId=33;scripts[i].Posn={1,2,3};scripts[i].AudioEntity=i;
+        poolFlags[i]=i&POOLFLAG_ID;
+        tAudioEntity &entity=active->m_asAudioEntities[i];
+        entity.m_bIsUsed=(seed+i)%3!=0;entity.m_bStatus=1;
+        entity.m_nType=(eAudioType)((seed+i)%(TOTAL_AUDIO_TYPES+3));
+        entity.m_pEntity=entity.m_nType==AUDIOTYPE_SCRIPTOBJECT?((seed+i)%7==0?NULL:&scripts[i]):(void *)(uintptr_t)0x123;
+        if(entity.m_bIsUsed) active->m_aAudioEntityOrderList[active->m_nAudioEntitiesCount++]=i;
+    }
+}
+int main(void) {
+    // Compare direct helpers, repeated cleanup and live facades with all initialization and queue gates
+    for(unsigned seed=0;seed<128;++seed) {
+        uint32_t time=seed%5==0?UINT32_MAX:seed*1234567U;
+        prepare(seed,false);@RESET@;snapshot();++cases;
+        @DESTROY@;snapshot();++cases;
+        @DESTROY@;snapshot();++cases;
+        prepare(seed,true);@FACADE@;snapshot();++cases;
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

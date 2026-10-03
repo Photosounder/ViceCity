@@ -1,0 +1,203 @@
+#include <assert.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+@HEADERS@
+#include "SurfaceTypes.h"
+
+#ifdef __cplusplus
+#define TEST_ALIGN(type) alignof(type)
+#else
+#define TEST_ALIGN(type) _Alignof(type)
+#endif
+
+struct CEntity { uint32_t token; };
+static struct CEntity entities[8];
+static uint64_t digest = 1469598103934665603ULL;
+
+static void record(const void *data, size_t size)
+{
+    // Compare defined collision fields and queue transitions deterministically
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i = 0; i < size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+
+static void record_ratio(float ratio)
+{
+    // Compare finite results exactly and NaNs by their floating-point classification
+    uint32_t bits;
+    if (isnan(ratio)) bits = UINT32_C(0x7fc00000);
+    else memcpy(&bits, &ratio, sizeof(bits));
+    record(&bits, sizeof(bits));
+}
+
+static void record_collision(const cAudioCollision *collision)
+{
+    // Observe pointer identities and every scalar field without reading padding
+    uint32_t first = collision->m_pEntity1 ? collision->m_pEntity1->token : UINT32_MAX;
+    uint32_t second = collision->m_pEntity2 ? collision->m_pEntity2->token : UINT32_MAX;
+    record(&first, sizeof(first)); record(&second, sizeof(second));
+    record(&collision->m_bSurface1, sizeof(collision->m_bSurface1));
+    record(&collision->m_bSurface2, sizeof(collision->m_bSurface2));
+    record(&collision->m_fIntensity1, sizeof(collision->m_fIntensity1));
+    record(&collision->m_fIntensity2, sizeof(collision->m_fIntensity2));
+    record(&collision->m_vecPosition, sizeof(collision->m_vecPosition));
+    record(&collision->m_fDistance, sizeof(collision->m_fDistance));
+    record(&collision->m_nBaseVolume, sizeof(collision->m_nBaseVolume));
+}
+
+static void record_manager(const cAudioCollisionManager *manager)
+{
+    // Compare both record arrays, the request, and the complete index table
+    for (int i = 0; i < NUMAUDIOCOLLISIONS; ++i) {
+        // Retain field-level observations for both current and prior-frame records
+        record_collision(&manager->m_asCollisions1[i]);
+        record_collision(&manager->m_asCollisions2[i]);
+    }
+    record_collision(&manager->m_sQueue);
+    record(manager->m_bIndicesTable, sizeof(manager->m_bIndicesTable));
+    record(&manager->m_bCollisionsInQueue, sizeof(manager->m_bCollisionsInQueue));
+}
+
+static void set_request(cAudioCollision *collision, uint32_t sequence, float distance)
+{
+    // Populate all request fields with distinguishable records and repeated identities
+    collision->m_pEntity1 = &entities[sequence & 7];
+    collision->m_pEntity2 = &entities[(sequence >> 3) & 7];
+    collision->m_bSurface1 = (uint8_t)(sequence % 35);
+    collision->m_bSurface2 = (uint8_t)((sequence + 7) % 35);
+    collision->m_fIntensity1 = sequence * 0.25f;
+    collision->m_fIntensity2 = sequence * -0.125f;
+    collision->m_vecPosition.x = sequence * 0.5f;
+    collision->m_vecPosition.y = sequence * -0.25f;
+    collision->m_vecPosition.z = sequence * 0.125f;
+    collision->m_fDistance = distance;
+    collision->m_nBaseVolume = (int32_t)sequence - 100;
+}
+
+@ADAPTERS@
+
+int main(void)
+{
+    // Verify C++ callers link to the actual C module where applicable
+    @CPP_CHECK@
+
+    // Compare sizes, alignments, and offsets in the current target ABI
+    const size_t layout[] = {
+        sizeof(cAudioCollision), sizeof(cAudioCollisionManager), TEST_ALIGN(cAudioCollision), TEST_ALIGN(cAudioCollisionManager),
+        offsetof(cAudioCollision, m_bSurface1), offsetof(cAudioCollision, m_fIntensity1),
+        offsetof(cAudioCollision, m_vecPosition), offsetof(cAudioCollision, m_nBaseVolume),
+        offsetof(cAudioCollisionManager, m_asCollisions2), offsetof(cAudioCollisionManager, m_bIndicesTable),
+        offsetof(cAudioCollisionManager, m_sQueue)
+    };
+    record(layout, sizeof(layout));
+    for (int i = 0; i < 8; ++i) entities[i].token = 17 + i;
+    cAudioCollision collision;
+    cAudioCollisionManager manager;
+    for (uint32_t seed = 0; seed < 256; ++seed) {
+        // Check live resets preserve base volume while clearing the original fields
+        set_request(&collision, seed, seed * 1.5f);
+        @RESET@(&collision);
+        assert(collision.m_nBaseVolume == (int32_t)seed - 100);
+        assert(!collision.m_pEntity1 && !collision.m_pEntity2);
+        assert(collision.m_fDistance == 0 && collision.m_vecPosition.x == 0 && collision.m_vecPosition.y == 0 && collision.m_vecPosition.z == 0);
+        record_collision(&collision);
+
+        // Initialize the manager and define the historically untouched base-volume fields
+        @INIT@(&manager);
+        assert(manager.m_bCollisionsInQueue == 0);
+        for (int i = 0; i < NUMAUDIOCOLLISIONS; ++i) {
+            // Verify constructor initialization across both arrays and empty index sentinels
+            assert(manager.m_bIndicesTable[i] == NUMAUDIOCOLLISIONS);
+            assert(manager.m_asCollisions1[i].m_pEntity1 == NULL && manager.m_asCollisions2[i].m_pEntity2 == NULL);
+            manager.m_asCollisions1[i].m_nBaseVolume = seed + i;
+            manager.m_asCollisions2[i].m_nBaseVolume = seed - i;
+        }
+        manager.m_sQueue.m_nBaseVolume = (int32_t)seed;
+        record_manager(&manager);
+
+        // Fill and overfill with ascending, descending, tied, and irregular distances
+        for (uint32_t request = 0; request < 48; ++request) {
+            // Exercise exact full-queue rejection and replacement decisions
+            float distance;
+            switch (seed & 3) {
+            case 0: distance = (float)request; break;
+            case 1: distance = (float)(48 - request); break;
+            case 2: distance = 7.0f; break;
+            default: distance = (float)((request * 17) % 23); break;
+            }
+            set_request(&manager.m_sQueue, seed * 100 + request, distance);
+            @ADD@(&manager);
+            assert(manager.m_bCollisionsInQueue <= NUMAUDIOCOLLISIONS);
+            record_manager(&manager);
+        }
+    }
+
+    // Compare repeated frame resets, special floating values, and long replacement traces
+    uint32_t random = 0x77b6fe23;
+    for (uint32_t request = 0; request < 100000; ++request) {
+        // Reuse the same frame reset fields as the existing game service code
+        if (request % 71 == 0) {
+            // Retain both record arrays while clearing only request ordering and count
+            manager.m_bCollisionsInQueue = 0;
+            for (int i = 0; i < NUMAUDIOCOLLISIONS; ++i) manager.m_bIndicesTable[i] = NUMAUDIOCOLLISIONS;
+        }
+        random = random * 1664525u + 1013904223u;
+        float distance = (random % 10000) * 0.125f;
+        switch (request % 131) {
+        case 0: distance = INFINITY; break;
+        case 1: distance = NAN; break;
+        case 2: distance = -0.0f; break;
+        default: break;
+        }
+        set_request(&manager.m_sQueue, request, distance);
+        @ADD@(&manager);
+        assert(manager.m_bCollisionsInQueue <= NUMAUDIOCOLLISIONS);
+        for (int i = 0; i < manager.m_bCollisionsInQueue; ++i) assert(manager.m_bIndicesTable[i] < NUMAUDIOCOLLISIONS);
+        if (request % 13 == 0) record_manager(&manager);
+    }
+
+    // Compare every surface mapping across thresholds and special floating values
+    const float thresholds[] = {0.0f, 0.0001f, 0.02f, 0.09f, 0.1f, 0.5f, 1.0f, 2.0f, 4.0f, 5.0f, 6.0f, 8.0f, 10.0f, 15.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 100.0f, 130.0f};
+    for (uint32_t surface = 0; surface < 37; ++surface) {
+        // Cover values immediately below, at, and above each collision threshold
+        for (size_t i = 0; i < sizeof(thresholds) / sizeof(thresholds[0]); ++i) {
+            // Preserve exact float boundaries through the same library operations
+            const float values[] = {nextafterf(thresholds[i], -INFINITY), thresholds[i], nextafterf(thresholds[i], INFINITY)};
+            for (size_t j = 0; j < 3; ++j) {
+                // Compare both surface-based ratio helpers as raw float results
+                float ratio = @ONE_SHOT_RATIO@(surface, values[j]);
+                record_ratio(ratio);
+                ratio = @LOOP_RATIO@(surface, surface + 1, values[j]);
+                record_ratio(ratio);
+            }
+        }
+        for (int i = -1000; i <= 10000; i += 7) {
+            // Sample the ordinary intensity range for every surface and invalid enum
+            float ratio = @ONE_SHOT_RATIO@(surface, i * 0.125f);
+            record_ratio(ratio);
+        }
+        const float special[] = {-INFINITY, INFINITY, NAN, -0.0f};
+        for (size_t i = 0; i < 4; ++i) {
+            // Preserve the existing infinity, NaN, and signed-zero behavior
+            float ratio = @ONE_SHOT_RATIO@(surface, special[i]);
+            record_ratio(ratio);
+            ratio = @LOOP_RATIO@(surface, UINT32_MAX, special[i]);
+            record_ratio(ratio);
+        }
+    }
+    const float clampInputs[] = {-1.0f, -0.0f, 0.0f, 0.01f, 1.0f, 2.0f, INFINITY, NAN};
+    for (size_t i = 0; i < 8; ++i) {
+        // Compare the primitive clamp with normal, reversed, and zero ranges
+        const float ranges[][3] = {{0.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, {2.0f, 1.0f, -1.0f}, {NAN, INFINITY, 3.5f}};
+        for (size_t j = 0; j < 4; ++j) {
+            // Observe the unchanged subtraction, comparison, and division order
+            float ratio = @RATIO@(clampInputs[i], ranges[j][0], ranges[j][1], ranges[j][2]);
+            record_ratio(ratio);
+        }
+    }
+    printf("%llu\n", (unsigned long long)digest);
+    return 0;
+}

@@ -1,0 +1,163 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "../src/modelinfo/VehicleTypes.h"
+#include "../src/vehicles/WheelStatus.h"
+#include "SurfaceTypes.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+static float Abs(float v) {
+    // Use the game's existing scalar absolute value implementation
+    return fabsf(v);
+}
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v;unsigned token;operator uint8_t() const {event(token);return v;}};
+struct FloatValue {float v;unsigned token;operator float() const {event(token);return v;}};
+class CVehicle {public:ByteValue m_nSurfaceTouched;};
+struct DamageRecord {ByteValue status[4];uint8_t GetWheelStatus(int i) {return status[i];}};
+class CAutomobile:public CVehicle {public:DamageRecord Damage;FloatValue m_aWheelTimer[4];ByteValue m_nWheelsOnGround;};
+class CBike:public CVehicle {public:ByteValue m_wheelStatus[2];FloatValue m_aWheelTimer[2];ByteValue m_nWheelsOnGround;};
+class cTransmission {public:FloatValue fMaxVelocity;};
+class CWeather {public:static FloatValue WetRoads;};FloatValue CWeather::WetRoads;
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessVehicleFlatTyre(cVehicleParams &);
+    bool8 ProcessVehicleRoadNoise(cVehicleParams &);
+    bool8 ProcessWetRoadNoise(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static cVehicleParams params;
+static CAutomobile cars[2];static CBike bikes[2];static cTransmission transmissions[2];
+static unsigned seedValue,cases,callbacks,statusCalls,timerCalls,groundCalls,maxCalls,surfaceCalls,wetCalls,baseCalls,offsetCalls,requestCalls;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t AudioVehicleRoad_FlatTyre(cAudioManager *,cVehicleParams *);
+extern "C" uint8_t AudioVehicleRoad_Dry(cAudioManager *,cVehicleParams *);
+extern "C" uint8_t AudioVehicleRoad_Wet(cAudioManager *,cVehicleParams *);
+extern "C" uint8_t TestVehicleRoadC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash state and callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe every initialized scalar and padding byte in four-byte words
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4) {uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Normalize game pointer identities before observing owner, parameters and vehicle data
+    cVehicleParams copy=params;
+    unsigned id=params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:params.m_pVehicle==&bikes[0]?3:params.m_pVehicle==&bikes[1]?4:0;
+    copy.m_pVehicle=(CVehicle *)(uintptr_t)id;
+    copy.m_pTransmission=(cTransmission *)(uintptr_t)(params.m_pTransmission==&transmissions[0]?1:params.m_pTransmission==&transmissions[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(bikes,sizeof(bikes));bytes(transmissions,sizeof(transmissions));bytes(&CWeather::WetRoads,sizeof(CWeather::WetRoads));
+}
+static void event(unsigned token) {
+    // Observe exact game field reads and change later reads without unsequenced velocity writes
+    ++callbacks;value(token);observe();
+    if(token>=10 && token<20) {
+        ++statusCalls;
+        if(seedValue&1024) params.m_pVehicle=params.m_VehicleType==VEHICLE_TYPE_CAR?(CVehicle *)&cars[1]:(CVehicle *)&bikes[1];
+    } else if(token>=20 && token<30) ++timerCalls;
+    else if(token==30) ++groundCalls;
+    else if(token==40) {
+        ++maxCalls;
+        if(seedValue&2048) params.m_pTransmission=&transmissions[1];
+    } else if(token==50) ++surfaceCalls;
+    else if(token==60) {
+        ++wetCalls;
+        if(seedValue&4096) active->m_sQueueSample.m_nCounter=777;
+    }
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Observe road sample selection and mutate the live sample index before offset queries
+    ++baseCalls;event(70);value(sample);
+    if(seedValue&1024) active->m_sQueueSample.m_nSampleIndex=SFX_BOAT_WATER_LOOP;
+    return 8000+seedValue%10000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample index between the original loop offset queries
+    ++offsetCalls;event(71);value(sample);
+    if(seedValue&2048) active->m_sQueueSample.m_nSampleIndex=SFX_RAIN;
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe constant tyre offsets or reread road offsets at the original query point
+    ++offsetCalls;event(72);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C queue insertion with reflection generation disabled by these sounds
+    ++requestCalls;event(73);return (seedValue>>4)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection path dependency
+    return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Seed all vehicle kinds, wheels, velocity thresholds, transmission gates and retained sound fields
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));memset(bikes,0,sizeof(bikes));memset(transmissions,0,sizeof(transmissions));
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_bIsInitialised=(seed>>2)&1;active->m_bIsPaused=(seed>>3)&1;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i) {active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*800;}
+    const int types[]={VEHICLE_TYPE_CAR,VEHICLE_TYPE_BIKE,VEHICLE_TYPE_BOAT,-1,99};
+    const float speeds[]={0.0f,-0.0f,0.001f,0.02999f,0.03f,0.03001f,0.1f,-0.1f,1.0f,-10.0f,INFINITY,NAN};
+    const float maxima[]={0.0f,0.1f,1.0f,10.0f,100.0f};
+    const float ranges[]={-1.0f,0.0f,4.0f,100.0f,3599.0f,3600.0f,3601.0f,899.99f,900.0f,900.01f,9024.99f,9025.0f,9025.01f,INFINITY,NAN};
+    const float timers[]={-1.0f,0.0f,0.01f,1.0f,NAN};
+    const float wetness[]={0.0f,0.01f,0.5f,1.0f};
+    params.m_VehicleType=types[seed%5];params.m_pVehicle=params.m_VehicleType==VEHICLE_TYPE_BIKE?(CVehicle *)&bikes[0]:(CVehicle *)&cars[0];
+    params.m_fVelocityChange=speeds[(seed/5)%12];params.m_fDistance=ranges[(seed/60)%15];params.m_bDistanceCalculated=(seed/900)%4==0?0:(seed/900)%4==1?1:255;
+    params.m_pTransmission=&transmissions[0];params.m_nIndex=seed;params.m_VehicleType=types[seed%5];
+    for(unsigned obj=0;obj<2;++obj) {
+        transmissions[obj].fMaxVelocity={obj?100.0f:maxima[(seed/11)%5],40};
+        cars[obj].m_nSurfaceTouched={uint8_t((seed&128)?SURFACE_WATER:SURFACE_TARMAC),50};bikes[obj].m_nSurfaceTouched=cars[obj].m_nSurfaceTouched;
+        cars[obj].m_nWheelsOnGround={uint8_t((seed/17+obj)%5),30};bikes[obj].m_nWheelsOnGround=cars[obj].m_nWheelsOnGround;
+        for(unsigned wheel=0;wheel<4;++wheel) {
+            cars[obj].Damage.status[wheel]={uint8_t((seed/19+wheel+obj)%3),10+wheel};cars[obj].m_aWheelTimer[wheel]={timers[(seed/23+wheel+obj)%5],20+wheel};
+            if(wheel<2) {bikes[obj].m_wheelStatus[wheel]=cars[obj].Damage.status[wheel];bikes[obj].m_aWheelTimer[wheel]=cars[obj].m_aWheelTimer[wheel];}
+        }
+    }
+    CWeather::WetRoads={wetness[(seed/29)%4],60};
+    active->m_sQueueSample.m_fDistance=(float)(seed%31);active->m_sQueueSample.m_nVolume=77;active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_nFrequency=54321;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nFramesToPlay=17;
+    if(kind && seed%13==0) params.m_pTransmission=NULL;
+    // Reject NaN tyre modifiers before undefined float conversion while preserving dry/wet NaN velocity gates
+    if(!kind && isnan(params.m_fVelocityChange)) params.m_fVelocityChange=0.0f;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet instead of opening a Windows crash dialog
+    SetErrorMode(3);
+#endif
+    // Compare all three generators across actual C callers and original in-range return values
+    for(unsigned seed=0;seed<8192;++seed) for(unsigned kind=0;kind<3;++kind) {
+        prepare(seed,kind);value(@RUN@);observe();++cases;
+    }
+    // Require wheel status, contact, transmission, wetness and sample selection boundaries
+    if(!statusCalls || !timerCalls || !groundCalls || !maxCalls || !surfaceCalls || !wetCalls || !baseCalls) return 2;
+#ifndef GTA_PS2
+    if(!offsetCalls) return 3;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    if(!requestCalls) return 4;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

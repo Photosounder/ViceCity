@@ -1,0 +1,42 @@
+static void seed(uint8_t initialized,uint8_t time) {
+    // Define distinct retained state before each preload attempt
+    memset(&AudioManager,0,sizeof(AudioManager));AudioManager.m_bIsInitialised=initialized;
+    AudioManager.m_nTimeSpent=time;
+    for(unsigned i=0;i<MISSION_AUDIO_SLOTS;++i) {
+        // Make unrelated resets and failure-flag ordering visible
+        AudioManager.m_nMissionAudioSampleIndex[i]=NO_SAMPLE;
+        AudioManager.m_nMissionAudioLoadingStatus[i]=255;AudioManager.m_nMissionAudioPlayStatus[i]=255;
+        AudioManager.m_bIsMissionAudioPlaying[i]=255;AudioManager.m_nMissionAudioFramesToPlay[i]=4321+i;
+        AudioManager.m_bIsMissionAudioAllowedToPlay[i]=17;AudioManager.m_bIsMissionAudio2D[i]=9;
+        AudioManager.m_bIsMissionAudioPhoneCall[i]=255;g_bMissionAudioLoadFailed[i]=255;
+        AudioManager.m_vecMissionAudioPosition[i].x=-7.5f;AudioManager.m_vecMissionAudioPosition[i].y=42+i;
+        AudioManager.m_vecMissionAudioPosition[i].z=-0.0f;
+    }
+}
+int main() {
+    // Test every table entry, its canonical lookup, and both mission slots
+    char variant[128];
+    for(unsigned index=0;index<sizeof(labels)/sizeof(labels[0]);++index) {
+        // Compare original spelling, uppercase, mixed case, and shortened/extended names
+        const char *name=labels[index];assert(strlen(name)+2<sizeof(variant));
+        value(@FIND@(name));
+        strcpy(variant,name);for(unsigned i=0;variant[i];++i)variant[i]=toupper(variant[i]);value(@FIND@(variant));
+        for(unsigned i=0;variant[i];++i)variant[i]=i%2?tolower(variant[i]):toupper(variant[i]);value(@FIND@(variant));
+        strcpy(variant,name);strcat(variant,"!");value(@FIND@(variant));
+        strcpy(variant,name);if(strlen(variant))variant[strlen(variant)-1]=0;value(@FIND@(variant));
+        for(uint8_t slot: {0,1}) for(uint8_t time: {0,1,40,255}) for(int32_t length: {-12345,-1,0,1,999,1001,1000000}) {
+            // Keep signed products representable while covering integer truncation and multiplication order
+            seed(255,time);duration=length;DMAudio_PreloadMissionAudio(slot,name);snapshot();
+            string(DMAudio_GetMissionAudioLoadedLabel(slot));
+        }
+        seed(1,40);AudioManager.m_nMissionAudioSampleIndex[0]=ids[index];string(DMAudio_GetMissionAudioLoadedLabel(0));
+    }
+    for(unsigned slotValue=0;slotValue<256;++slotValue) {
+        // Invalid initialized slots and uninitialized null names must leave state untouched
+        uint8_t slot=slotValue;seed(0,40);DMAudio_PreloadMissionAudio(slot,0);snapshot();string(DMAudio_GetMissionAudioLoadedLabel(slot));
+        if(slot>=MISSION_AUDIO_SLOTS) {seed(1,40);DMAudio_PreloadMissionAudio(slot,0);snapshot();string(DMAudio_GetMissionAudioLoadedLabel(slot));}
+    }
+    seed(1,40);duration=12345;DMAudio_PreloadMissionAudio(0,"missing mission label");snapshot();
+    AudioManager.m_nMissionAudioSampleIndex[0]=0xffffffffu;string(DMAudio_GetMissionAudioLoadedLabel(0));
+    printf("%llu\n",(unsigned long long)digest);
+}

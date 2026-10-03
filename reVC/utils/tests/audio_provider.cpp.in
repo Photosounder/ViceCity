@@ -1,0 +1,35 @@
+int main() {
+    // Exercise every valid active capacity and both queue orientations
+    for (unsigned count=0;count<=NUM_CHANNELS_GENERIC;++count) {
+        // Preserve byte-valued initialization gates including noncanonical true values
+        for (unsigned flag: {0u,1u,255u}) for (unsigned queue: {0u,1u}) {
+            // Cover signed provider failures, index zero, and positive success
+            for(int result: {-128,-1,0,1,127}) for(uint32_t channels: {0u,1u,2u,43u,256u,0xffffffffu}) {
+                // Compare old-count resets independently of returned channel-count narrowing
+                uint8_t which=(count*7+queue*3)&255;
+                seed(flag,count,queue);providerResult=result;channelResult=channels;
+                value((uint8_t)@SWITCH@);snapshot();
+            }
+        }
+    }
+    for (unsigned id=0;id<256;++id) {
+        // Forward every provider ID unchanged and repeat switches on the resulting state
+        uint8_t which=id;seed(1,3,id&1);providerResult=1;channelResult=4;
+        value((uint8_t)@SWITCH@);snapshot();value((uint8_t)@SWITCH@);snapshot();
+    }
+#ifdef EXTERNAL_3D_SOUND
+    for(unsigned count=0;count<=NUM_CHANNELS_GENERIC;++count) for(unsigned queue: {0u,1u}) {
+        // Cover reordered and duplicate indices while retaining 2D records and inactive tails
+        seed(1,count,queue);state.m_nRequestedCount[queue]=count;
+        for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+            // Use defined attenuation inputs at each curve segment and volume byte
+            tSound *sound=&state.m_aRequestedQueue[queue][i];
+            sound->m_bIs2D=i%4;sound->m_nEmittingVolume=(i*17)&255;
+            sound->m_MaxDistance=100.0f;sound->m_fDistance=i*100.0f/NUM_CHANNELS_GENERIC;
+            state.m_aRequestedOrderList[queue][i]=(i*3)%NUM_CHANNELS_GENERIC;
+        }
+        @ADJUST@;snapshot();@ADJUST@;snapshot();
+    }
+#endif
+    printf("%llu\n",(unsigned long long)digest);
+}

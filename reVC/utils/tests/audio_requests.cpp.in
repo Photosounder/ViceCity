@@ -1,0 +1,130 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+using uint32=uint32_t;using uint8=uint8_t;using int32=int32_t;using bool8=uint8_t;
+#define FALSE 0
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+#ifdef EXTERNAL_3D_SOUND
+#define SET_EMITTING_VOLUME(vol) m_sQueueSample.m_nEmittingVolume = vol
+#else
+#define SET_EMITTING_VOLUME(vol)
+#endif
+struct CVector {float x,y,z;CVector(float a,float b,float c):x(a),y(b),z(c) {}};
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Copy the original three coordinates at the pre-conversion vector boundary
+    return CVector(p->x,p->y,p->z);
+}
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &p) {
+    // Copy the original three coordinates back into the plain sound position
+    return {p.x,p.y,p.z};
+}
+struct cAudioManager {
+@FIELDS@
+    void AddSampleToRequestedQueue();
+    void AddReflectionsToRequestedQueue();
+};
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" void AudioRequests_AddReflections(cAudioManager *);
+extern "C" void TestRequestsC(cAudioManager *);
+static cAudioManager owners[2];
+static cAudioManager *active;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned callbacks,cases;
+static uint8_t room,slow;
+static void observe(void)
+{
+    // Observe all owner bytes at callbacks and after each operation with zeroed padding
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);++i) digest=(digest^bytes[i])*1099511628211ULL;
+}
+struct CCullZones {
+    static bool InRoomForAudio() {
+        // Observe queue and sound mutations before returning the controlled room flag
+        ++callbacks;observe();return room!=0;
+    }
+};
+struct CTimer {
+    static bool GetIsSlowMotionActive() {
+        // Observe the original repeated slow-motion queries without changing time state
+        ++callbacks;observe();return slow!=0;
+    }
+};
+extern "C" uint8_t AudioRequestsHost_InRoom(void) {
+    // Preserve the room callback behavior used by the original owner method
+    return CCullZones::InRoomForAudio();
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion(void) {
+    // Preserve the slow-motion callback behavior used by the original reflection method
+    return CTimer::GetIsSlowMotionActive();
+}
+@METHODS@
+static void prepare(unsigned seed)
+{
+    // Seed complete owner storage and bounded queue indices independently of each operation
+    active=&owners[seed&1];memset(active,0,sizeof(*active));
+    active->m_nActiveQueue=(seed>>1)&1;
+    active->m_nActiveSamples=(seed%4)==0?1:(seed%4)==1?2:(seed%4)==2?8:NUM_CHANNELS_GENERIC;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%(active->m_nActiveSamples+1);
+    for(unsigned queue=0;queue<2;++queue)
+        for(unsigned i=0;i<NUM_CHANNELS_GENERIC;++i) {
+            active->m_aRequestedOrderList[queue][i]=i;
+            active->m_aRequestedQueue[queue][i].m_nFinalPriority=100+i*200;
+            active->m_aRequestedQueue[queue][i].m_nSampleIndex=i+1;
+        }
+    active->m_sQueueSample.m_nSampleIndex=seed%7==0?TOTAL_AUDIO_SAMPLES:seed%7==1?UINT_MAX:1;
+    active->m_sQueueSample.m_nPriority=seed%9==0?UINT_MAX:seed%100;
+    active->m_sQueueSample.m_nVolume=seed%256;
+    active->m_sQueueSample.m_nFrequency=22050+seed;
+    active->m_sQueueSample.m_nCounter=seed%13==0?UINT_MAX:seed;
+    active->m_sQueueSample.m_nLoopCount=seed%3;
+    active->m_sQueueSample.m_bIs2D=(seed>>3)&1;
+    active->m_sQueueSample.m_bIsPlayingFinished=1;
+    active->m_sQueueSample.m_fDistance=23.25f;
+    active->m_sQueueSample.m_MaxDistance=(seed%5==0)?0:(seed%5==1)?25:240;
+    active->m_sQueueSample.m_vecPos={1,-2,3};
+    active->m_bDynamicAcousticModelingStatus=(seed>>4)&1;
+    active->m_bIsSurround=(seed>>5)&1;
+    room=(seed>>6)&1;slow=(seed>>7)&1;
+#ifdef AUDIO_REVERB
+    active->m_sQueueSample.m_bReverb=1;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    active->m_sQueueSample.m_nReflectionDelay=17;
+    active->m_sQueueSample.m_bReflections=(seed>>8)&1;
+#if !defined(FIX_BUGS) && defined(USE_TIME_SCALE_FOR_AUDIO)
+    // Exclude the original uninitialized oldFreq path from defined runtime comparisons
+    active->m_sQueueSample.m_bReflections=0;
+#elif !defined(FIX_BUGS)
+    if(!slow) active->m_sQueueSample.m_bReflections=0;
+#endif
+    const float distances[]={-1,0,4,8,20,50,99,100,150};
+    for(unsigned i=0;i<MAX_REFLECTIONS;++i) {
+        active->m_afReflectionsDistances[i]=distances[(seed+i)%9];
+        active->m_avecReflectionsPos[i]={(float)i+7,(float)i-3,(float)i*2};
+    }
+#endif
+    for(unsigned i=0;i<5;++i) active->m_anRandomTable[i]=(int32_t)((seed*17+i*101)%10000);
+}
+int main(void)
+{
+    // Exercise rejection, bounded capacities, overwrite order, room gates and recursive reflections
+    for(unsigned seed=0;seed<4096;++seed) {
+        prepare(seed);@SUBMIT@;observe();++cases;
+#ifdef AUDIO_REFLECTIONS
+#if defined(FIX_BUGS) || !defined(USE_TIME_SCALE_FOR_AUDIO)
+        // Exercise direct reflection entry only where the original oldFreq input is defined
+        prepare(seed+10000);
+#ifndef FIX_BUGS
+        if(!slow) continue;
+#endif
+        @REFLECT@;observe();++cases;
+#endif
+#endif
+    }
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

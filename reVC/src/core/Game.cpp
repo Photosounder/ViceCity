@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "platform.h"
 
@@ -331,27 +332,27 @@ bool CGame::InitialiseOnceAfterRW(void)
 #ifdef GTA_PS2
 	LoadingScreen("Loading the Game", "Initialising audio", GetRandomSplashScreen());
 #endif
-	DMAudio.Initialise();
+	DMAudio_Initialise();
 
 #ifndef GTA_PS2
 #ifdef EXTERNAL_3D_SOUND
-	if ( DMAudio.GetNum3DProvidersAvailable() == 0 )
+	if ( DMAudio_GetNum3DProvidersAvailable() == 0 )
 		FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = NO_AUDIO_PROVIDER;
 
 	if ( FrontEndMenuManager.m_nPrefsAudio3DProviderIndex == AUDIO_PROVIDER_NOT_DETERMINED || FrontEndMenuManager.m_nPrefsAudio3DProviderIndex == -2 )
 	{
 		FrontEndMenuManager.m_PrefsSpeakers = 0;
-		FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = DMAudio.AutoDetect3DProviders();
+		FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = DMAudio_AutoDetect3DProviders();
 	}
 
-	DMAudio.SetCurrent3DProvider(FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
-	DMAudio.SetSpeakerConfig(FrontEndMenuManager.m_PrefsSpeakers);
+	DMAudio_SetCurrent3DProvider(FrontEndMenuManager.m_nPrefsAudio3DProviderIndex);
+	DMAudio_SetSpeakerConfig(FrontEndMenuManager.m_PrefsSpeakers);
 #endif
-	DMAudio.SetDynamicAcousticModelingStatus(FrontEndMenuManager.m_PrefsDMA);
-	DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
-	DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
-	DMAudio.SetEffectsFadeVol(127);
-	DMAudio.SetMusicFadeVol(127);
+	DMAudio_SetDynamicAcousticModelingStatus(FrontEndMenuManager.m_PrefsDMA);
+	DMAudio_SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+	DMAudio_SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+	DMAudio_SetEffectsFadeVol(127);
+	DMAudio_SetMusicFadeVol(127);
 #endif
 	return true;
 }
@@ -584,8 +585,8 @@ bool CGame::Initialise(const char* datFile)
 #endif
 
 
-	DMAudio.SetStartingTrackPositions(TRUE);
-	DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+	DMAudio_SetStartingTrackPositions(TRUE);
+	DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 	return true;
 }
 
@@ -612,15 +613,11 @@ bool CGame::ShutDown(void)
 		if ( CWorld::Players[i].m_pPed )
 		{
 			CWorld::Remove(CWorld::Players[i].m_pPed);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the player ped without invoking C++ delete.
 			CWorld::Players[i].m_pPed->~CPlayerPed();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetPedPool(), CWorld::Players[i].m_pPed);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			CWorld::Players[i].m_pPed = nil;
+						CWorld::Players[i].m_pPed = nil;
 		}
 		
 		CWorld::Players[i].Clear();
@@ -628,7 +625,7 @@ bool CGame::ShutDown(void)
 	
 	CRenderer::Shutdown();
 	CWorld::ShutDown();
-	DMAudio.DestroyAllGameCreatedEntities();
+	DMAudio_DestroyAllGameCreatedEntities();
 	CModelInfo::ShutDown();
 	CAnimManager::Shutdown();
 	CCutsceneMgr::Shutdown();
@@ -751,7 +748,7 @@ void CGame::ShutDownForRestart(void)
 #endif
 	CReplay::FinishPlayback();
 	CReplay::EmptyReplayBuffer();
-	DMAudio.DestroyAllGameCreatedEntities();
+	DMAudio_DestroyAllGameCreatedEntities();
 	CMovingThings::Shutdown();
 	
 	for (int i = 0; i < NUMPLAYERS; i++)
@@ -815,7 +812,7 @@ void CGame::InitialiseWhenRestarting(void)
 		InitRadioStationPositionList();
 		if ( GenericLoad() == true )
 		{
-			DMAudio.ResetTimers(CTimer::GetTimeInMilliseconds());
+			DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
 			CTrain::InitTrains();
 			CPlane::InitPlanes();
 		}
@@ -843,7 +840,7 @@ void CGame::InitialiseWhenRestarting(void)
 	
 	CTimer::Update();
 	
-	DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+	DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(true);
 #endif
@@ -1340,7 +1337,7 @@ void
 CGame::InitAfterFocusLoss()
 {
 	FrontEndMenuManager.m_nPrefsAudio3DProviderIndex = FrontEndMenuManager.m_lastWorking3DAudioProvider;
-	DMAudio.SetCurrent3DProvider(FrontEndMenuManager.m_lastWorking3DAudioProvider);
+	DMAudio_SetCurrent3DProvider(FrontEndMenuManager.m_lastWorking3DAudioProvider);
 
 	if (!FrontEndMenuManager.m_bGameNotLoaded && !FrontEndMenuManager.m_bMenuActive)
 		FrontEndMenuManager.m_bStartUpFrontEndRequested = true;
@@ -1359,3 +1356,5 @@ CGame::CanSeeOutSideFromCurrArea(void)
 	return currArea == AREA_MAIN_MAP || currArea == AREA_MALL ||
 		currArea == AREA_MANSION || currArea == AREA_HOTEL;
 }
+
+//- rouz edit (ChatGPT)

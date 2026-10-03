@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -471,7 +472,7 @@ CHeli::ProcessControl(void)
 		if (m_fSearchLightIntensity < 0.9f || sq(FindPlayerCoors().x - m_fSearchLightX) + sq(FindPlayerCoors().y - m_fSearchLightY) > sq(7.0f))
 			m_nShootTimer = CTimer::GetTimeInMilliseconds();
 		else if (CTimer::GetTimeInMilliseconds() > m_nPoliceShoutTimer) {
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_PED_HELI_PLAYER_FOUND, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_PED_HELI_PLAYER_FOUND, 0.0f);
 			m_nPoliceShoutTimer = CTimer::GetTimeInMilliseconds() + 4500 + (CGeneral::GetRandomNumber() & 0xFFF);
 		}
 #ifdef FIX_BUGS
@@ -526,7 +527,7 @@ CHeli::ProcessControl(void)
 					CVector shotSource = GetPosition();
 					shotSource += 3.0f * direction;
 					FireOneInstantHitRound(&shotSource, &shotTarget, 20);
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 					m_nLastShotTime = CTimer::GetTimeInMilliseconds();
 				}
 			}
@@ -647,41 +648,31 @@ CHeli::SpawnFlyingComponent(int32 component)
 	if(atomic == nil)
 		return nil;
 
-//+ rouz edit (ChatGPT)
 	// Allocate the flying component object without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	obj = ((CObject*)CPool_New(objectPool));
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
-	if (!obj) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	obj = ((CObject*)CPool_New(objectPool));
+	#ifdef FIX_BUGS
+	if (!obj) {
+				// Access raw storage through the C store or pool API
 		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
 			// Access raw storage through the C store or pool API
 			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-		//- rouz edit (ChatGPT)
-			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+								// Access raw storage through the C store or pool API
 				int32 handle = CPool_GetIndex(objectPool, existing);
-				//- rouz edit (ChatGPT)
-				CWorld::Remove(existing);
+								CWorld::Remove(existing);
 				existing->~CObject();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				CPool_Delete(objectPool, existing);
 				obj = ((CObject*)CPool_NewAt(objectPool, handle));
-				//- rouz edit (ChatGPT)
-				break;
+								break;
 			}
 		}
 	}
 	if (obj)
 #endif
 		std::allocator<CObject>().construct(obj);
-//- rouz edit (ChatGPT)
 	if(obj == nil)
 		return nil;
 
@@ -805,17 +796,13 @@ CHeli::GenerateHeli(bool catalina)
 
 	if(catalina)
 		assert(0 && "can't create catalina's heli");
-//+ rouz edit (ChatGPT)
 	else {
 		// Allocate the heli from the vehicle pool without invoking C++ new.
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		heli = (CHeli*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-		//- rouz edit (ChatGPT)
-		assert(heli);
+				assert(heli);
 		std::allocator<CHeli>().construct(heli, MI_CHOPPER, PERMANENT_VEHICLE);
 	}
-//- rouz edit (ChatGPT)
 
 	if(catalina)
 		heliPos = CVector(-224.0f, 201.0f, 83.0f);
@@ -902,15 +889,11 @@ CHeli::UpdateHelis(void)
 	for(i = 0; i < NUM_HELIS; i++)
 		if(pHelis[i] && pHelis[i]->m_heliStatus == HELI_STATUS_FLY_AWAY && pHelis[i]->GetPosition().z > 150.0f){
 			CWorld::Remove(pHelis[i]);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			pHelis[i] = nil;
+						pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
 		}
@@ -956,15 +939,11 @@ CHeli::UpdateHelis(void)
 
 			CDarkel::RegisterCarBlownUpByPlayer(pHelis[i]);
 			CWorld::Remove(pHelis[i]);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the heli without invoking C++ delete.
 			pHelis[i]->~CHeli();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetVehiclePool(), pHelis[i]);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			pHelis[i] = nil;
+						pHelis[i] = nil;
 			if(i != HELI_SCRIPT && i != HELI_CATALINA)
 				NumRandomHelis--;
 			if(i == HELI_CATALINA)
@@ -1099,15 +1078,11 @@ CHeli::RemoveCatalinaHeli(void)
 	CatalinaHeliOn = false;
 	if(pHelis[HELI_CATALINA]){
 		CWorld::Remove(pHelis[HELI_CATALINA]);
-//+ rouz edit (ChatGPT)
 		// Destroy and release Catalina's heli without invoking C++ delete.
 		pHelis[HELI_CATALINA]->~CHeli();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetVehiclePool(), pHelis[HELI_CATALINA]);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		pHelis[HELI_CATALINA] = nil;
+				pHelis[HELI_CATALINA] = nil;
 	}
 }
 
@@ -1117,3 +1092,5 @@ void CHeli::MakeCatalinaHeliFlyAway(void) { pHelis[HELI_CATALINA]->m_pathState =
 bool CHeli::HasCatalinaBeenShotDown(void) { return CatalinaHasBeenShotDown; }
 
 void CHeli::ActivateHeli(bool activate) { ScriptHeliOn = activate; }
+
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Stats.h"
@@ -780,7 +781,7 @@ void CStats::LoadStats(uint8 *buf, uint32 size)
 void
 CStats::PopulateFavoriteRadioStationList()
 {
-	float* pListenTimeArray = DMAudio.GetListenTimeArray();
+	float* pListenTimeArray = DMAudio_GetListenTimeArray();
 	for (int i = 0; i < NUM_RADIOS; i++)
 		FavoriteRadioStationList[i] = pListenTimeArray[i];
 }
@@ -1296,7 +1297,7 @@ CStats::ConstructStatLine(int rowIdx)
 		STAT_LINE_1(int, "SEAGULL", SeagullsKilled, 0);
 
 	bool playerHatesRadio = true;
-	float* pListenTimeArray = DMAudio.GetListenTimeArray();
+	float* pListenTimeArray = DMAudio_GetListenTimeArray();
 	for (int i = 0; i < NUM_RADIOS; i++) {
 		FavoriteRadioStationList[i] = pListenTimeArray[i];
 		if (FavoriteRadioStationList[i] != 0.0) // double
@@ -1356,7 +1357,7 @@ CStats::ConstructStatLine(int rowIdx)
 		int leastListenedRadio = 0;
 		for (int i = 0; i < NUM_RADIOS; i++) {
 #ifdef FIX_BUGS
-			if (!DMAudio.IsMP3RadioChannelAvailable() && i == USERTRACK)
+			if (!DMAudio_IsMP3RadioChannelAvailable() && i == USERTRACK)
 				continue;
 #endif
 			if (FavoriteRadioStationList[i] < leastListenTime) {
@@ -1365,7 +1366,7 @@ CStats::ConstructStatLine(int rowIdx)
 			}
 		}
 #ifndef FIX_BUGS
-		if (!DMAudio.IsMP3RadioChannelAvailable() && leastListenedRadio == USERTRACK)
+		if (!DMAudio_IsMP3RadioChannelAvailable() && leastListenedRadio == USERTRACK)
 			leastListenedRadio = WAVE;
 #endif
 
@@ -1441,3 +1442,5 @@ CStats::ConstructStatLine(int rowIdx)
 #undef TEXT_ON_RIGHT
 #undef FASTEST_TIME
 }
+
+//- rouz edit (ChatGPT)

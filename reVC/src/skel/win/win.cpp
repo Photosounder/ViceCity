@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
 
 #define _WIN32_WINDOWS 0x0500
@@ -238,8 +239,7 @@ psCameraBeginUpdate(RwCamera *camera)
 void
 psCameraShowRaster(RwCamera *camera)
 {
-	//+ rouz edit (ChatGPT)
-	RwUInt32 rasterFlags;
+		RwUInt32 rasterFlags;
 
 #ifdef LEGACY_MENU_OPTIONS
 	if (FrontEndMenuManager.m_PrefsVsync || FrontEndMenuManager.m_bMenuActive)
@@ -258,8 +258,7 @@ psCameraShowRaster(RwCamera *camera)
 	}
 
 	RwCameraShowRaster(camera, PSGLOBAL(window), rasterFlags);
-	//- rouz edit (ChatGPT)
-
+	
 	return;
 }
 
@@ -979,7 +978,6 @@ void HandleGraphEvent(void)
 /*
  *****************************************************************************
  */ 
-//+ rouz edit (ChatGPT)
 static void
 RefreshCameraSizeFromClient(HWND window, RwBool forceResize)
 {
@@ -1030,7 +1028,6 @@ RestoreFromMinimize(HWND window, RwBool restoredMaximized)
 /*
  *****************************************************************************
  */ 
-//- rouz edit (ChatGPT)
 LRESULT CALLBACK
 MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -1065,8 +1062,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		case WM_SIZE:
 		{
-			//+ rouz edit (ChatGPT)
-			if (wParam == SIZE_MINIMIZED)
+						if (wParam == SIZE_MINIMIZED)
 			{
 				WindowMinimized = TRUE;
 				return 0L;
@@ -1076,8 +1072,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				RestoreFromMinimize(window, wParam == SIZE_MAXIMIZED);
 			}
-			//- rouz edit (ChatGPT)
-
+			
 			RwRect r;
 
 			r.x = 0;
@@ -1116,8 +1111,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 			return 0L;
 		}
 
-		//+ rouz edit (ChatGPT)
-		case WM_REVC_RESTORE_MAXIMIZE:
+				case WM_REVC_RESTORE_MAXIMIZE:
 		{
 			if (RestoreMaximizePending)
 			{
@@ -1128,8 +1122,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 
 			return 0L;
 		}
-		//- rouz edit (ChatGPT)
-
+		
 		case WM_SIZING:
 		{
 			/* 
@@ -1398,12 +1391,12 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 				if (pDev->dbch_devicetype != DBT_DEVTYP_VOLUME)
 					break;
 
-				if ( DMAudio.IsAudioInitialised() )
+				if ( DMAudio_IsAudioInitialised() )
 				{
 					PDEV_BROADCAST_VOLUME pVol = (PDEV_BROADCAST_VOLUME)pDev;
 					if ( pVol->dbcv_flags & DBTF_MEDIA )
 					{
-						char c = DMAudio.GetCDAudioDriveLetter();
+						char c = DMAudio_GetCDAudioDriveLetter();
 						
 						if ( c >= 'A' && pVol->dbcv_unitmask & (1 << (c - 'A')) )
 						{
@@ -1415,7 +1408,7 @@ MainWndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
 								
 								if ( !FrontEndMenuManager.m_bQuitGameNoCD )
 								{
-									if ( DMAudio.CheckForAnAudioFileOnCD() )
+									if ( DMAudio_CheckForAnAudioFileOnCD() )
 									{
 										OutputDebugString("GTA3 Audio CD has been inserted");
 										break;
@@ -2670,7 +2663,7 @@ WinMain(HINSTANCE instance,
 		CPad::ResetCheats();
 		CPad::StopPadsShaking();
 		
-		DMAudio.ChangeMusicMode(MUSICMODE_DISABLE);
+		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
 		
 #ifdef PS2_MENU
 		CGame::ShutDownForRestart();
@@ -2687,7 +2680,7 @@ WinMain(HINSTANCE instance,
 			}
 
 			CGame::InitialiseWhenRestarting();
-			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			FrontEndMenuManager.m_bWantToRestart = false;
 			
 			continue;
@@ -2702,7 +2695,7 @@ WinMain(HINSTANCE instance,
 		{
 			CGame::ShutDownForRestart();
 			CGame::InitialiseWhenRestarting();
-			DMAudio.ChangeMusicMode(MUSICMODE_GAME);
+			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			LoadSplash(GetLevelSplashScreen(CGame::currLevel));
 			FrontEndMenuManager.m_bWantToLoad = false;
 		}
@@ -2744,7 +2737,7 @@ WinMain(HINSTANCE instance,
 	if ( gGameState == GS_PLAYING_GAME )
 		CGame::ShutDown();
 
-	DMAudio.Terminate();
+	DMAudio_Terminate();
 	
 	_psFreeVideoModeList();
 
@@ -3604,3 +3597,5 @@ int strncasecmp(const char *str1, const char *str2, size_t len)
 }
 #endif
 #endif
+
+//- rouz edit (ChatGPT)

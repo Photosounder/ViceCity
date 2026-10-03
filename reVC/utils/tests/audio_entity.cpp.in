@@ -1,0 +1,159 @@
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+@HEADERS@
+struct tSound {int32 m_nEntityIndex;};
+class cAudioManager {
+public:
+    bool8 m_bIsInitialised;
+    tAudioEntity m_asAudioEntities[NUM_AUDIOENTITIES];
+    uint32 m_aAudioEntityOrderList[NUM_AUDIOENTITIES];
+    uint32 m_nAudioEntitiesCount;
+    cAudioScriptObjectManager m_sAudioScriptObjectManager;
+    tSound m_aRequestedQueue[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8 m_aRequestedOrderList[NUM_SOUND_QUEUES][NUM_CHANNELS_GENERIC];
+    uint8 m_nRequestedCount[NUM_SOUND_QUEUES];
+    int32 CreateEntity(eAudioType type, void *entity);
+    void DestroyEntity(int32 id);
+    bool8 GetEntityStatus(int32 id);
+    void SetEntityStatus(int32 id, bool8 status);
+    void *GetEntityPointer(int32 id);
+    void PlayOneShot(int32 index, uint16 sound, float vol);
+};
+@METHODS@
+static uint64_t digest = 1469598103934665603ULL;
+static int objects[NUM_AUDIOENTITIES];
+static void record(const void *data, size_t size) {
+    // Compare defined scalar fields independently of padding and pointer addresses
+    const uint8_t *bytes = (const uint8_t *)data;
+    for (size_t i=0; i<size; ++i) digest = (digest ^ bytes[i]) * 1099511628211ULL;
+}
+static void observe(cAudioManager &state) {
+    // Observe retained record contents as well as active entity order
+    for (int i=0; i<NUM_AUDIOENTITIES; ++i) {
+        // Normalize real object pointers to their stable array index
+        const tAudioEntity &entity = state.m_asAudioEntities[i];
+        ptrdiff_t pointer = entity.m_pEntity ? (int *)entity.m_pEntity - objects : -1;
+        record(&pointer,sizeof(pointer));
+        record(&entity.m_nType,sizeof(entity.m_nType));
+        record(&entity.m_bIsUsed,sizeof(entity.m_bIsUsed));
+        record(&entity.m_bStatus,sizeof(entity.m_bStatus));
+        record(entity.m_awAudioEvent,sizeof(entity.m_awAudioEvent));
+        record(entity.m_afVolume,sizeof(entity.m_afVolume));
+        record(&entity.m_AudioEvents,sizeof(entity.m_AudioEvents));
+    }
+    record(state.m_aAudioEntityOrderList,sizeof(state.m_aAudioEntityOrderList));
+    record(&state.m_nAudioEntitiesCount,sizeof(state.m_nAudioEntitiesCount));
+    record(&state.m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal,sizeof(int32));
+    record(state.m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices,sizeof(state.m_sAudioScriptObjectManager.m_anScriptObjectEntityIndices));
+}
+int main() {
+    // Verify real C callers and original/new record layout
+    @C_CHECK@
+    const size_t layout[] = {sizeof(tAudioEntity), alignof(tAudioEntity), offsetof(tAudioEntity,m_pEntity), offsetof(tAudioEntity,m_awAudioEvent), offsetof(tAudioEntity,m_afVolume), offsetof(tAudioEntity,m_AudioEvents)};
+    record(layout,sizeof(layout));
+    static cAudioManager state;
+    state.m_bIsInitialised = 1;
+    for (int i=0; i<NUM_AUDIOENTITIES; ++i) {
+        // Define every record field while keeping every slot initially free
+        tAudioEntity &entity = state.m_asAudioEntities[i];
+        entity.m_nType = AUDIOTYPE_WEATHER; entity.m_pEntity = &objects[i];
+        entity.m_bIsUsed = 0; entity.m_bStatus = 201; entity.m_AudioEvents = 0;
+        for (int j=0; j<NUM_AUDIOENTITY_EVENTS; ++j) {
+            // Seed fields whose contents are deliberately retained by creation and removal
+            entity.m_awAudioEvent[j] = SOUND_NO_SOUND;
+            entity.m_afVolume[j] = j == 0 ? -0.0f : 17.5f+j;
+        }
+        state.m_aAudioEntityOrderList[i] = NUM_AUDIOENTITIES;
+    }
+    for (int q=0; q<NUM_SOUND_QUEUES; ++q) {
+        // Reserve queued references to otherwise free entity IDs
+        state.m_nRequestedCount[q] = 4;
+        for (int j=0; j<4; ++j) {
+            // Include repeated and negative queued references in the original allocation scan
+            state.m_aRequestedOrderList[q][j] = j;
+            state.m_aRequestedQueue[q][j].m_nEntityIndex = j == 0 ? -1 : j == 3 ? 7 : q*4+j;
+        }
+    }
+    for (int enabled=0; enabled<2; ++enabled) {
+        // Observe creation errors, missing pointers, and out-of-range audio types
+        state.m_bIsInitialised = enabled;
+        int result = state.CreateEntity(AUDIOTYPE_PHYSICAL, NULL); record(&result,sizeof(result));
+        result = state.CreateEntity((eAudioType)TOTAL_AUDIO_TYPES, &objects[0]); record(&result,sizeof(result));
+        state.DestroyEntity(-1); state.DestroyEntity(NUM_AUDIOENTITIES);
+        state.SetEntityStatus(-1,255); state.PlayOneShot(-1,0,0);
+        uint8 status = state.GetEntityStatus(NUM_AUDIOENTITIES); record(&status,sizeof(status));
+    }
+    for (int i=0; i<NUM_AUDIOENTITIES+1; ++i) {
+        // Fill all available slots and verify the no-free-slot result
+        int result=state.CreateEntity((eAudioType)(i%TOTAL_AUDIO_TYPES),&objects[i%NUM_AUDIOENTITIES]);
+        record(&result,sizeof(result));
+    }
+    observe(state);
+    uint32 random=271828;
+    for (unsigned step=0; step<20000; ++step) {
+        // Mix lifecycle operations with every event ID, full event queues, and script capacity limits
+        random=random*1664525u+1013904223u;
+        int id=(random>>8)%NUM_AUDIOENTITIES;
+        if (step%7==0) {
+            // Recycle records while keeping queued references and retained volume fields
+            state.DestroyEntity(id);
+            int result=state.CreateEntity((eAudioType)(step%TOTAL_AUDIO_TYPES),&objects[id]);
+            record(&result,sizeof(result));
+        }
+        state.SetEntityStatus(id,(uint8)random);
+        uint8 status=state.GetEntityStatus(id); record(&status,sizeof(status));
+        void *pointer=state.GetEntityPointer(id);
+        ptrdiff_t index=pointer ? (int *)pointer-objects : -1; record(&index,sizeof(index));
+        float volume=step%3==0 ? -0.0f : (float)(int32)random;
+        state.PlayOneShot(id,(uint16)(step%(SOUND_TOTAL_SOUNDS+2)),volume);
+        if (step%300==0) {
+            // Compare the complete state at regular checkpoints without hashing padding
+            observe(state);
+        }
+    }
+    observe(state);
+    // Exhaust every pair of sound priorities with empty and full event queues
+    state.m_asAudioEntities[0].m_bIsUsed = 1;
+    state.m_asAudioEntities[0].m_nType = AUDIOTYPE_PHYSICAL;
+    for (int first = 0; first < SOUND_TOTAL_SOUNDS; ++first) {
+        // Compare tie handling, append, insertion, and full-queue replacement
+        for (int second = 0; second < SOUND_TOTAL_SOUNDS; ++second) {
+            // Compare every event slot and copied volume without record padding
+            tAudioEntity &entity = state.m_asAudioEntities[0];
+            entity.m_AudioEvents = 0;
+            for (int slot=0; slot<NUM_AUDIOENTITY_EVENTS; ++slot) {
+                // Define unused event storage before testing retained full-queue contents
+                entity.m_awAudioEvent[slot] = SOUND_NO_SOUND;
+                entity.m_afVolume[slot] = -0.0f;
+            }
+            state.PlayOneShot(0, (uint16)first, 1.5f);
+            state.PlayOneShot(0, (uint16)second, -0.0f);
+            record(entity.m_awAudioEvent,sizeof(entity.m_awAudioEvent));
+            record(entity.m_afVolume,sizeof(entity.m_afVolume));
+            assert(entity.m_AudioEvents == 2);
+            for (int slot=0; slot<NUM_AUDIOENTITY_EVENTS; ++slot) {
+                // Fill all slots with the same priority before offering another event
+                entity.m_awAudioEvent[slot] = second;
+                entity.m_afVolume[slot] = 17.5f + slot;
+            }
+            entity.m_AudioEvents = NUM_AUDIOENTITY_EVENTS;
+            state.PlayOneShot(0, (uint16)first, -7.25f);
+            assert(entity.m_AudioEvents == NUM_AUDIOENTITY_EVENTS);
+            record(entity.m_awAudioEvent,sizeof(entity.m_awAudioEvent));
+            record(entity.m_afVolume,sizeof(entity.m_afVolume));
+        }
+    }
+    // Exercise the exact final script slot and the full-list rejection boundary
+    state.m_asAudioEntities[0].m_nType = AUDIOTYPE_SCRIPTOBJECT;
+    state.m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal = NUM_SCRIPT_MAX_ENTITIES - 1;
+    state.PlayOneShot(0, 0, 3.5f);
+    assert(state.m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal == NUM_SCRIPT_MAX_ENTITIES);
+    observe(state);
+    state.PlayOneShot(0, 1, 7.5f);
+    assert(state.m_asAudioEntities[0].m_awAudioEvent[0] == 0);
+    observe(state);
+    printf("%llu\n",(unsigned long long)digest);
+}

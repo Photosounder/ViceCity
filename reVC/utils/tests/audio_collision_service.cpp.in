@@ -1,0 +1,120 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+class CEntity {public:int id;};
+struct cAudioManager {
+@FIELDS@
+    void ServiceCollisions();
+    void SetUpOneShotCollisionSound(const cAudioCollision &);
+    void SetUpLoopingCollisionSound(const cAudioCollision &,uint8_t);
+};
+static cAudioManager owners[2];static cAudioManager *active;
+static CEntity entities[6];
+static unsigned seedValue,cases,callbacks,loopCalls,oneShots,loops;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" void AudioCollisionService_Run(cAudioManager *);
+extern "C" void TestCollisionServiceC(cAudioManager *);
+static unsigned identity(CEntity *pointer) {
+    // Normalize ordered collision entity identities without dereferencing opaque game objects
+    if(!pointer) return 0;
+    for(unsigned i=0;i<6;++i) if(pointer==&entities[i]) return i+1;
+    return 7;
+}
+static void value(uint32_t v) {
+    // Hash callback tokens, record identities and full scalar state in service order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe(void) {
+    // Normalize collision pointers before observing every zero-padded owner field
+    cAudioManager copy=*active;
+    cAudioCollisionManager &manager=copy.m_sCollisionManager;
+    for(unsigned i=0;i<NUMAUDIOCOLLISIONS;++i) {
+        manager.m_asCollisions1[i].m_pEntity1=(CEntity *)(uintptr_t)identity(manager.m_asCollisions1[i].m_pEntity1);
+        manager.m_asCollisions1[i].m_pEntity2=(CEntity *)(uintptr_t)identity(manager.m_asCollisions1[i].m_pEntity2);
+        manager.m_asCollisions2[i].m_pEntity1=(CEntity *)(uintptr_t)identity(manager.m_asCollisions2[i].m_pEntity1);
+        manager.m_asCollisions2[i].m_pEntity2=(CEntity *)(uintptr_t)identity(manager.m_asCollisions2[i].m_pEntity2);
+    }
+    manager.m_sQueue.m_pEntity1=(CEntity *)(uintptr_t)identity(manager.m_sQueue.m_pEntity1);
+    manager.m_sQueue.m_pEntity2=(CEntity *)(uintptr_t)identity(manager.m_sQueue.m_pEntity2);
+    const unsigned char *bytes=(const unsigned char *)&copy;
+    for(unsigned i=0;i<sizeof(copy);++i) value(bytes[i]);
+}
+static void event(unsigned token,const cAudioCollision &collision) {
+    // Observe the exact aliased request record and prior history mutation at each generator boundary
+    ++callbacks;value(token);
+    value((uint32_t)(&collision-active->m_sCollisionManager.m_asCollisions1));
+    observe();
+}
+void cAudioManager::SetUpOneShotCollisionSound(const cAudioCollision &collision) {
+    // Mutate the same request before the following looping callback and retain its captured index
+    ++oneShots;event(1,collision);
+    cAudioCollision &live=const_cast<cAudioCollision &>(collision);live.m_nBaseVolume+=2;
+    if(seedValue&16) m_sCollisionManager.m_bIndicesTable[0]=(m_sCollisionManager.m_bIndicesTable[0]+1)%NUMAUDIOCOLLISIONS;
+    ++m_nCollisionEntity;
+}
+void cAudioManager::SetUpLoopingCollisionSound(const cAudioCollision &collision,uint8_t counter) {
+    // Reduce the live request count after the first loop to expose cached traversal bounds
+    ++loops;value(counter);event(2,collision);
+    if(loopCalls++==0 && (seedValue&32)) m_sCollisionManager.m_bCollisionsInQueue/=2;
+    m_sQueueSample.m_nCounter=counter;
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed bounded queues and varied collision identity, surfaces and retained history fields
+    seedValue=seed;loopCalls=0;active=&owners[seed&1];memset(active,0,sizeof(*active));
+    AudioCollisionManager_Init(&active->m_sCollisionManager);
+    active->m_bIsInitialised=(seed>>1)&1;active->m_bIsPaused=(seed>>2)&1;
+    active->m_nCollisionEntity=seed%3==0?-1:seed%3==1?0:17;
+    active->m_sQueueSample.m_nEntityIndex=-123;
+    cAudioCollisionManager &manager=active->m_sCollisionManager;
+    const int32_t volumes[]={-3,0,1,127,1000,INT32_MAX-50};
+    for(unsigned i=0;i<NUMAUDIOCOLLISIONS;++i) {
+        cAudioCollision &history=manager.m_asCollisions2[i];
+        history.m_pEntity1=(seed+i)%7==0?NULL:&entities[(seed+i)%6];
+        history.m_pEntity2=(seed+i)%5==0?NULL:&entities[(seed+2*i)%6];
+        history.m_bSurface1=(seed+i)%35;history.m_bSurface2=(seed+3*i)%35;
+        history.m_fIntensity1=1.0f+i;history.m_fIntensity2=2.0f+i;
+        history.m_vecPosition={(float)i+1,(float)i+2,(float)i+3};history.m_fDistance=7.0f+i;
+        history.m_nBaseVolume=volumes[(seed+i)%6];
+        // Include duplicate historical identities with independently retained base volumes
+        if(i==1 && (seed&64)) {
+            history.m_pEntity1=manager.m_asCollisions2[0].m_pEntity1;history.m_pEntity2=manager.m_asCollisions2[0].m_pEntity2;
+            history.m_bSurface1=manager.m_asCollisions2[0].m_bSurface1;history.m_bSurface2=manager.m_asCollisions2[0].m_bSurface2;
+        }
+    }
+    for(unsigned i=0;i<seed%14;++i) {
+        manager.m_sQueue=manager.m_asCollisions2[i%NUMAUDIOCOLLISIONS];
+        if(i%3==1) {
+            CEntity *first=manager.m_sQueue.m_pEntity1;manager.m_sQueue.m_pEntity1=manager.m_sQueue.m_pEntity2;manager.m_sQueue.m_pEntity2=first;
+        } else if(i%3==2) {
+            manager.m_sQueue.m_bSurface1=(manager.m_sQueue.m_bSurface1+1)%35;
+        }
+        manager.m_sQueue.m_nBaseVolume=3;
+        manager.m_sQueue.m_fIntensity1=0.25f+i;manager.m_sQueue.m_fIntensity2=0.5f+i;
+        manager.m_sQueue.m_vecPosition={(float)i-7,(float)i+8,(float)i+9};
+        manager.m_sQueue.m_fDistance=(float)((seed*7+i*3)%17);
+        AudioCollisionManager_AddCollisionToRequestedQueue(&manager);
+    }
+}
+int main(void) {
+    // Compare direct service, repeated empty service and actual C callers using both owners
+    for(unsigned seed=0;seed<512;++seed) {
+        prepare(seed);@SERVICE@;observe();++cases;
+        @SERVICE@;observe();++cases;
+        prepare(seed);@CALLER@;observe();++cases;
+    }
+    // Require both new one-shot and looping collision generator boundaries to be exercised
+    if(!oneShots || !loops) return 1;
+    printf("%u cases %u callbacks : %llu\n",cases,callbacks,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

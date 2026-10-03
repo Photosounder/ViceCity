@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"	// rouz edit
 #include "General.h"
@@ -1192,9 +1193,9 @@ CBike::ProcessControl(void)
 #else
 				if(m_wheelStatus[i] == WHEEL_STATUS_BURST)
 #endif
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP_2, suspChange);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP_2, suspChange);
 				else
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, suspChange);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, suspChange);
 				if(suspChange > suspShake)
 					suspShake = suspChange;
 			}
@@ -2502,7 +2503,7 @@ CBike::BurstTyre(uint8 wheel, bool applyForces)
 #ifdef FIX_BUGS
 		CStats::TyresPopped++;
 #endif
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_TYRE_POP, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_TYRE_POP, 0.0f);
 
 		if(GetStatus() == STATUS_SIMPLE){
 			SetStatus(STATUS_PHYSICS);
@@ -2737,7 +2738,7 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		color.green = (0.5f * CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen_Obj())*0.45f*255;
 		color.blue = (0.5f * CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue_Obj())*0.45f*255;
 		color.alpha = CGeneral::GetRandomNumberInRange(48, 96);
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
 		CVector splashPos = ped->GetPosition() + 2.2f*ped->m_vecMoveSpeed;
 		float waterZ = 0.0f;
 		if(CWaterLevel::GetWaterLevel(splashPos, &waterZ, false))
@@ -3008,19 +3009,17 @@ void
 CBike::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 1260 - 672);
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CBike::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 1260 - 672);
-	//- rouz edit (ChatGPT)
-}
+	}
 #endif
+
+//- rouz edit (ChatGPT)

@@ -1,0 +1,48 @@
+static void seed(uint8_t flag,uint8_t loading,uint8_t status,uint32_t sound) {
+    // Define every field before comparing gates, partial writes, and retained state
+    memset(&AudioManager,0,sizeof(AudioManager));AudioManager.m_bIsInitialised=flag;
+    for(unsigned i=0;i<MISSION_AUDIO_SLOTS;++i) {
+        // Use distinct values so clearing one slot cannot silently reset the other
+        AudioManager.m_nMissionAudioSampleIndex[i]=sound;
+        AudioManager.m_nMissionAudioLoadingStatus[i]=loading;
+        AudioManager.m_nMissionAudioPlayStatus[i]=status;
+        AudioManager.m_bIsMissionAudioPlaying[i]=255;AudioManager.m_bIsMissionAudioAllowedToPlay[i]=17;
+        AudioManager.m_bIsMissionAudio2D[i]=9;AudioManager.m_nMissionAudioFramesToPlay[i]=1234+i;
+        AudioManager.m_bIsMissionAudioPhoneCall[i]=2;AudioManager.m_vecMissionAudioPosition[i].x=100+i;
+        AudioManager.m_vecMissionAudioPosition[i].y=-7.5f;AudioManager.m_vecMissionAudioPosition[i].z=-0.0f;
+    }
+    observed=&AudioManager;
+}
+int main() {
+    // Exercise the existing C facade declarations and callback-visible global record
+    observed=&AudioManager;TestMissionStateC();
+    // Cover initialized and uninitialized gates with canonical and noncanonical true bytes
+    for(uint8_t flag: {0,1,255}) for(uint8_t loading: {0,1,2,255}) for(uint8_t status: {0,1,2,255}) {
+        // Exercise sample validity, the ducking exception, and generic samples
+        for(uint32_t sound: {0u,(uint32_t)NO_SAMPLE,(uint32_t)STREAMED_SOUND_MISSION_ROK2_01}) for(uint8_t slot: {0,1}) {
+            // Reach all six public C exports in the same original sequence
+            seed(flag,loading,status,sound);value(DMAudio_GetMissionAudioLoadingStatus(slot));
+            value(DMAudio_IsMissionAudioSamplePlaying(slot));value(DMAudio_IsMissionAudioSampleFinished(slot));
+            cAudioManager *state=&AudioManager;value(@DUCK@);value(@POLICY@);
+            DMAudio_PlayLoadedMissionAudio(slot);snapshot(state);
+            DMAudio_SetMissionAudioLocation(slot,11.5f,-23.0f,44.0f);snapshot(state);
+            DMAudio_ClearMissionAudio(slot);snapshot(state);
+        }
+    }
+    for(unsigned slotValue=MISSION_AUDIO_SLOTS;slotValue<256;++slotValue) {
+        // Preserve initialized invalid-slot query results and no-op writes
+        uint8_t slot=slotValue;seed(1,255,255,0);
+        value(DMAudio_GetMissionAudioLoadingStatus(slot));value(DMAudio_IsMissionAudioSamplePlaying(slot));
+        value(DMAudio_IsMissionAudioSampleFinished(slot));DMAudio_PlayLoadedMissionAudio(slot);
+        DMAudio_SetMissionAudioLocation(slot,1,2,3);DMAudio_ClearMissionAudio(slot);snapshot(&AudioManager);
+    }
+    cAudioManager alternate;
+    memset(&alternate,0,sizeof(alternate));
+    for(unsigned step=0;step<10000;++step) {
+        // Share each separate query history across owner instances and ducking calls
+        cAudioManager *state=step%3?&AudioManager:&alternate;uint8_t slot=step%MISSION_AUDIO_SLOTS;
+        state->m_bIsInitialised=0;state->m_nMissionAudioSampleIndex[slot]=step%5?0:STREAMED_SOUND_MISSION_ROK2_01;
+        value(@PLAYING@);if(step%2)value(@DUCK@);value(@FINISHED@);
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

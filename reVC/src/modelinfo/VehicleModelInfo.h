@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "ClumpModelInfo.h"
@@ -24,15 +25,7 @@ enum {
 	ATOMIC_FLAG_NOCULL	= 0x800,
 };
 
-enum eVehicleType {
-	VEHICLE_TYPE_CAR,
-	VEHICLE_TYPE_BOAT,
-	VEHICLE_TYPE_TRAIN,
-	VEHICLE_TYPE_HELI,
-	VEHICLE_TYPE_PLANE,
-	VEHICLE_TYPE_BIKE,
-	NUM_VEHICLE_TYPES
-};
+#include "VehicleTypes.h"
 
 enum eCarPositions
 {
@@ -164,3 +157,5 @@ public:
 
 extern bool gbBlackCars;
 extern bool gbPinkCars;
+
+//- rouz edit (ChatGPT)

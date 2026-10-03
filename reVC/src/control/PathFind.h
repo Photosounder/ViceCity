@@ -192,12 +192,9 @@ struct CTempNodeExternal	// made up name
 	bool isCross;
 };
 
-// from mobile
-template<typename T>
-class CRoute
-{
-	T m_node[8];
-};
+//+ rouz edit (ChatGPT)
+#include "Route.h"
+//- rouz edit (ChatGPT)
 
 
 class CPathFind
@@ -283,7 +280,7 @@ public:
 
 	// Following methods are present on mobile but are unused. TODO: implement them
 	void SavePathFindData(void);
-	void ComputeRoute(uint8, const CVector&, const CVector&, CRoute<CPathNode*>&);
+	void ComputeRoute(uint8, const CVector&, const CVector&, CRoute*); // rouz edit (ChatGPT)
 	void RecordNodesClosestToCoors(CVector, uint8, int, CPathNode**, float, bool, bool, bool);
 	void RecordNodesInCircle(const CVector&, float, uint8, int, CPathNode**, bool, bool, bool, bool);
 	void ArrangeOneNodeList(CPathInfoForObject*, int16);

@@ -1,0 +1,66 @@
+//+ rouz edit (ChatGPT)
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+typedef uint8_t bool8;
+#define TRUE 1
+inline float Sqrt(float x) { return sqrtf(x); }
+class cAudioManager {
+public:
+    struct {float m_fDistance;} m_sQueueSample;
+    void CalculateDistance(bool8 &distCalculated, float dist);
+    @WRAPPER@
+};
+@MEMBER@
+extern "C" void TestDistanceFromC(uint8_t *,float *,float);
+static uint64_t digest=1469598103934665603ULL;
+static uint64_t cases;
+static void compare(uint8_t flag, uint32_t inputBits, uint32_t savedBits)
+{
+    // Compare all output bits and flags including skipped writes and repeated calls
+    float input,actual;
+    memcpy(&input,&inputBits,4);
+    memcpy(&actual,&savedBits,4);
+    cAudioManager original;
+    original.m_sQueueSample.m_fDistance=actual;
+    uint8_t before=flag,after=flag;
+    original.CalculateDistance(before,input);
+    TestDistanceFromC(&after,&actual,input);
+    if(before!=after || memcmp(&original.m_sQueueSample.m_fDistance,&actual,4)) {
+        fprintf(stderr,"Mismatch flag=%u input=%08x saved=%08x\n",flag,inputBits,savedBits);
+        exit(1);
+    }
+    uint32_t output;
+    memcpy(&output,&actual,4);
+    digest=(digest^output)*1099511628211ULL;
+    digest=(digest^after)*1099511628211ULL;
+    ++cases;
+    uint32_t alternateBits=inputBits^0x80000000U;
+    memcpy(&input,&alternateBits,4);
+    original.CalculateDistance(before,input);
+    TestDistanceFromC(&after,&actual,input);
+    if(before!=after || memcmp(&original.m_sQueueSample.m_fDistance,&actual,4)) exit(2);
+}
+int main(void)
+{
+    // Exercise every flag byte with zeros, negative values, infinities and quiet NaNs
+    const uint32_t inputs[]={0,0x80000000U,1,0x80000001U,0x3f800000U,0xbf800000U,0x40800000U,0xc0800000U,0x7f7fffffU,0xff7fffffU,0x7f800000U,0xff800000U,0x7fc00001U,0xffc00023U};
+    const uint32_t saved[]={0,0x80000000U,0x41200000U,0x7fc03456U};
+    for(unsigned flag=0;flag<256;++flag)
+        for(unsigned i=0;i<sizeof(inputs)/sizeof(*inputs);++i)
+            for(unsigned j=0;j<sizeof(saved)/sizeof(*saved);++j)
+                compare((uint8_t)flag,inputs[i],saved[j]);
+    // Cover finite float bit patterns across the exponent range with a fixed generator
+    uint32_t random=0x87654321U;
+    for(unsigned i=0;i<4096;++i) {
+        random=random*1664525U+1013904223U;
+        uint32_t input=(random&0x807fffffU)|(((random>>24)%255U)<<23);
+        for(unsigned flag=0;flag<256;++flag)
+            compare((uint8_t)flag,input,random);
+    }
+    printf("%llu cases : %llu\n",(unsigned long long)cases,(unsigned long long)digest);
+    return 0;
+}
+//- rouz edit (ChatGPT)

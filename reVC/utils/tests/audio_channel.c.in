@@ -1,0 +1,235 @@
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <float.h>
+#include <math.h>
+#ifndef AUDIO_OAL
+#define AUDIO_OAL
+#endif
+#define AL_LIBTYPE_STATIC
+#include "config.h"
+#include "audio_enums.h"
+#ifdef BASELINE_CHANNEL
+#define MAX_VOLUME 127
+#define MAX_FREQ 32000
+#define PED_BLOCKSIZE 79000
+#else
+#include "AudioSampleConfig.h"
+#endif
+typedef uint32_t uint32;
+typedef int32_t int32;
+typedef uint8_t uint8;
+typedef int16_t int16;
+#define nil NULL
+#define Sqrt sqrtf
+#ifdef BASELINE_CHANNEL
+#define SQR(x) ((x)*(x))
+#endif
+#define debug(format, ...) re3_debug("[DBG]: " format, __VA_ARGS__)
+#include "@HEADER@"
+static uint64_t trace = UINT64_C(1469598103934665603);
+static unsigned calls;
+static ALint states[128], offsets[128];
+static bool effects = true;
+static void record(uint32_t value) {
+    // Hash device operations and their exact parameter bits
+    trace = (trace ^ value) * UINT64_C(1099511628211);
+}
+static void record_f(float value) {
+    // Preserve float output bits rather than rounded text
+    uint32_t bits; memcpy(&bits, &value, sizeof(bits)); record(bits);
+}
+static void gen(ALsizei count, ALuint *objects, unsigned base) {
+    // Generate deterministic sources, buffers and filters without a device
+    calls++; record(base); record(count);
+    for(int i = 0; i < count; i++) objects[i] = base + (unsigned)i;
+}
+static void remove_objects(ALsizei count, const ALuint *objects) {
+    // Record resource cleanup so duplicate destruction changes the trace
+    calls++; record(count);
+    for(int i = 0; i < count; i++) record(objects[i]);
+}
+static void gen_filters(ALsizei count, ALuint *objects) {
+    // Supply the extension procedure used by production channel initialization
+    gen(count, objects, 201);
+}
+static void delete_filters(ALsizei count, const ALuint *objects) {
+    // Supply the extension procedure used by production channel destruction
+    remove_objects(count, objects);
+}
+#ifdef __cplusplus
+extern "C" {
+#endif
+LPALGENFILTERS AudioEFX_alGenFilters = gen_filters;
+LPALDELETEFILTERS AudioEFX_alDeleteFilters = delete_filters;
+bool IsFXSupported(void) {
+    // Select supported and unsupported effects paths deterministically
+    return effects;
+}
+void re3_debug(const char *format, ...) {
+    // Record the unexpected-stopped-loop diagnostic without user-visible output
+    record((unsigned char)format[0]);
+}
+void re3_assert(const char *expr, const char *file, unsigned line, const char *func) {
+    // Fail if production loop accounting invokes the game assertion handler
+    (void)expr; (void)file; (void)line; (void)func; abort();
+}
+void EAX3_SetReverbMix(ALuint filter, float mix) {
+    // Verify persisted reverb mix reaches the effects boundary unchanged
+    calls++; record(filter); record_f(mix);
+}
+void AL_APIENTRY alGenSources(ALsizei count, ALuint *objects) { gen(count, objects, 1); }
+void AL_APIENTRY alGenBuffers(ALsizei count, ALuint *objects) { gen(count, objects, 101); }
+void AL_APIENTRY alDeleteSources(ALsizei count, const ALuint *objects) { remove_objects(count, objects); }
+void AL_APIENTRY alDeleteBuffers(ALsizei count, const ALuint *objects) { remove_objects(count, objects); }
+void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value) {
+    // Capture looping, source-relative state and buffer attachment commands
+    calls++; record(source); record(param); record((uint32_t)value);
+}
+void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint a, ALint b, ALint c) {
+    // Capture effect send and filter attachment commands
+    calls++; record(source); record(param); record(a); record(b); record(c);
+}
+void AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value) {
+    // Capture source gain, pitch and distance parameters
+    calls++; record(source); record(param); record_f(value);
+}
+void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat a, ALfloat b, ALfloat c) {
+    // Capture positions including calculated pan depth
+    calls++; record(source); record(param); record_f(a); record_f(b); record_f(c);
+}
+void AL_APIENTRY alSourcePlay(ALuint source) {
+    // Advance the mock source state after playback starts
+    calls++; record(source); states[source] = AL_PLAYING;
+}
+void AL_APIENTRY alSourceStop(ALuint source) {
+    // Advance the mock source state after playback stops
+    calls++; record(source); states[source] = AL_STOPPED;
+}
+void AL_APIENTRY alGetSourcei(ALuint source, ALenum param, ALint *value) {
+    // Return controlled playback states and sample offsets to production loop tracking
+    assert(source < 128);
+    if(param == AL_SOURCE_STATE) *value = states[source];
+    else if(param == AL_SAMPLE_OFFSET) *value = offsets[source];
+    else abort();
+    calls++; record(source); record(param); record(*value);
+}
+void AL_APIENTRY alBufferiv(ALuint buffer, ALenum param, const ALint *values) {
+    // Capture loop-point uploads as an ordered pair
+    calls++; record(buffer); record(param); record(values[0]); record(values[1]);
+}
+void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei rate) {
+    // Verify stereo duplication and hash every uploaded PCM byte
+    calls++; record(buffer); record(format); record(size); record(rate);
+    if(format == AL_FORMAT_STEREO16) {
+        const int16_t *samples = (const int16_t*)data;
+        assert(size % 4 == 0);
+        for(int i = 0; i < size / 2; i += 2) assert(samples[i] == samples[i+1]);
+    } else assert(format == AL_FORMAT_MONO16);
+    for(int i = 0; i < size; i++) record(((const unsigned char*)data)[i]);
+}
+#ifdef __cplusplus
+}
+#endif
+@SOURCE@
+#ifdef BASELINE_CHANNEL
+#define C0(c,n) ((c)->n())
+#define C1(c,n,a) ((c)->n(a))
+#define C2(c,n,a,b) ((c)->n(a,b))
+#define C3(c,n,a,b,d) ((c)->n(a,b,d))
+#define SERVICE CChannel::channelsThatNeedService
+#define INIT_ALL() CChannel::InitChannels()
+#define DESTROY_ALL() CChannel::DestroyChannels()
+#else
+#define C0(c,n) CChannel_##n(c)
+#define C1(c,n,a) CChannel_##n(c,a)
+#define C2(c,n,a,b) CChannel_##n(c,a,b)
+#define C3(c,n,a,b,d) CChannel_##n(c,a,b,d)
+#define SERVICE CChannel_channelsThatNeedService
+#define INIT_ALL() CChannel_InitChannels()
+#define DESTROY_ALL() CChannel_DestroyChannels()
+#endif
+int main(void) {
+    // Initialize caller-owned channels and test finite loops and uploads against the original implementation
+    CChannel channels[2];
+#ifndef BASELINE_CHANNEL
+    for(unsigned i = 0; i < 2; i++) CChannel_InitializeState(&channels[i]);
+#endif
+    int16_t samples[PED_BLOCKSIZE / 2];
+    for(unsigned i = 0; i < sizeof(samples)/sizeof(samples[0]); i++) samples[i] = (int16_t)(i * 173u);
+    INIT_ALL();
+    for(unsigned i = 0; i < 2; i++) C2(&channels[i], Init, i, i == 1);
+    for(unsigned cycle = 0; cycle < 400; cycle++) {
+        for(unsigned i = 0; i < 2; i++) {
+            CChannel *c = &channels[i];
+            C0(c, Start);
+            C3(c, SetSampleData, samples, cycle == 399 ? PED_BLOCKSIZE : (cycle % 32 + 1) * 2, 32000);
+            C1(c, SetVolume, cycle % 128);
+            C1(c, SetCurrentFreq, 16000 + cycle);
+            C1(c, SetPitch, 1.2f);
+            C2(c, SetLoopPoints, cycle % 3 ? 2 : -1, 16);
+            C3(c, SetPosition, 1.0f, -2.0f, 3.0f);
+            C2(c, SetDistances, 40.0f, 2.0f);
+            C1(c, SetPan, cycle % 128);
+            C1(c, SetLoopCount, 2 + cycle % 4);
+            assert(SERVICE == 1);
+            C0(c, Start);
+            assert(C0(c, IsUsed));
+            for(unsigned step = 0; SERVICE; step++) {
+                offsets[i+1] = step % 2 ? 0 : 100;
+                assert(C0(c, Update));
+                assert(step < 20);
+            }
+            assert(!C0(c, Update));
+            C1(c, SetLoopCount, 0);
+            assert(SERVICE == 0 && !C0(c, Update));
+            C1(c, SetLoopCount, 3);
+            C1(c, SetLoopCount, 4);
+            assert(SERVICE == 1);
+            C1(c, SetLoopCount, 1);
+            assert(SERVICE == 0);
+            C1(c, SetLoopCount, 3);
+            states[i+1] = AL_STOPPED;
+            assert(C0(c, Update) && SERVICE == 0);
+            C2(c, SetReverbMix, 7, (float)(cycle % 101)/100.0f);
+            C1(c, UpdateReverb, 8);
+            C0(c, Stop);
+            assert(!C0(c, IsUsed) && SERVICE == 0);
+        }
+    }
+    // Verify absent filter objects suppress reverb updates even when effects are supported
+    ALuint savedFilter = alFilters[0];
+    alFilters[0] = AL_FILTER_NULL;
+    unsigned savedCalls = calls;
+    C2(&channels[0], SetReverbMix, 12, 0.5f);
+    C1(&channels[0], UpdateReverb, 13);
+    assert(calls == savedCalls);
+    alFilters[0] = savedFilter;
+    // Preserve source reuse without rerunning the former global constructors
+    for(unsigned i = 0; i < 2; i++) C0(&channels[i], Term);
+    DESTROY_ALL(); DESTROY_ALL();
+    effects = false;
+    INIT_ALL();
+    for(unsigned i = 0; i < 2; i++) {
+        CChannel *c = &channels[i];
+        C2(c, Init, i, false);
+        C3(c, SetSampleData, samples, 32, 16000);
+        C2(c, SetReverbMix, 9, 0.8f);
+        C1(c, UpdateReverb, 10);
+        C1(c, SetLoopCount, 3);
+        C0(c, Start); C0(c, Term);
+        assert(SERVICE == 0);
+    }
+    DESTROY_ALL();
+    // Verify missing sources prevent device operations after provider destruction
+    for(unsigned i = 0; i < 2; i++) {
+        CChannel *c = &channels[i];
+        assert(!C0(c, HasSource) && !C0(c, IsUsed) && !C0(c, Update));
+        C1(c, SetPitch, 1.0f); C1(c, SetGain, 1.0f); C0(c, Start); C0(c, Stop);
+    }
+    printf("%llu %u %d\n", (unsigned long long)trace, calls, SERVICE);
+    return 0;
+}

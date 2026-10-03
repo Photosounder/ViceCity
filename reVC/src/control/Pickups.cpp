@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -162,7 +163,7 @@ CPickup::ExtractAmmoFromPickup(CPlayerPed *player)
 			goto removeAmmo;
 	}
 	player->GrantAmmo(weaponType, ammo);
-	DMAudio.PlayOneShot(player->m_audioEntityId, SOUND_WEAPON_RELOAD, weaponType); // BUG? weapon type as volume, wtf?
+	DMAudio_PlayOneShot(player->m_audioEntityId, SOUND_WEAPON_RELOAD, weaponType); // BUG? weapon type as volume, wtf?
 removeAmmo:
 	m_nQuantity = 0;
 	m_bWasAmmoCollected = true;
@@ -196,58 +197,41 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 		CPools::MakeSureSlotInObjectPoolIsEmpty(handle);
 		if (extraHandle >= 0)
 			CPools::MakeSureSlotInObjectPoolIsEmpty(extraHandle);
-//+ rouz edit (ChatGPT)
 		if (object == nil) {
 			// Allocate the handled pickup object without invoking C++ new.
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			object = ((CObject*)CPool_NewAt(CPools::GetObjectPool(), handle));
-			//- rouz edit (ChatGPT)
-			assert(object);
+						assert(object);
 			std::allocator<CObject>().construct(object, m_eModelIndex, false);
 		}
-//- rouz edit (ChatGPT)
 
-//+ rouz edit (ChatGPT)
 		if (extraHandle >= 0 && modelId != -1 && extraObject == nil) {
 			// Allocate the handled extra pickup object without invoking C++ new.
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			extraObject = ((CObject*)CPool_NewAt(CPools::GetObjectPool(), extraHandle));
-			//- rouz edit (ChatGPT)
-			assert(extraObject);
+						assert(extraObject);
 			std::allocator<CObject>().construct(extraObject, modelId, false);
 		}
-//- rouz edit (ChatGPT)
 	} else {
-//+ rouz edit (ChatGPT)
 		// Allocate the pickup object without invoking C++ new.
 		CObjectPool *objectPool = CPools::GetObjectPool();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		object = ((CObject*)CPool_New(objectPool));
-		//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+		#ifdef FIX_BUGS
 		if (!object) {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
 				// Access raw storage through the C store or pool API
 				CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-			//- rouz edit (ChatGPT)
-				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
+							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+										// Access raw storage through the C store or pool API
 					int32 tempHandle = CPool_GetIndex(objectPool, existing);
-					//- rouz edit (ChatGPT)
-					CWorld::Remove(existing);
+										CWorld::Remove(existing);
 					existing->~CObject();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
+										// Access raw storage through the C store or pool API
 					CPool_Delete(objectPool, existing);
 					object = ((CObject*)CPool_NewAt(objectPool, tempHandle));
-					//- rouz edit (ChatGPT)
-					break;
+										break;
 				}
 			}
 		}
@@ -256,31 +240,23 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 			std::allocator<CObject>().construct(object, m_eModelIndex, false);
 		if (modelId != -1) {
 			// Allocate the extra pickup object without invoking C++ new.
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			extraObject = ((CObject*)CPool_New(objectPool));
-			//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+			#ifdef FIX_BUGS
 			if (!extraObject) {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
 					// Access raw storage through the C store or pool API
 					CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-				//- rouz edit (ChatGPT)
-					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+									if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+												// Access raw storage through the C store or pool API
 						int32 tempHandle = CPool_GetIndex(objectPool, existing);
-						//- rouz edit (ChatGPT)
-						CWorld::Remove(existing);
+												CWorld::Remove(existing);
 						existing->~CObject();
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+												// Access raw storage through the C store or pool API
 						CPool_Delete(objectPool, existing);
 						extraObject = ((CObject*)CPool_NewAt(objectPool, tempHandle));
-						//- rouz edit (ChatGPT)
-						break;
+												break;
 					}
 				}
 			}
@@ -288,7 +264,6 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 #endif
 				std::allocator<CObject>().construct(extraObject, modelId, false);
 		}
-//- rouz edit (ChatGPT)
 	}
 
 	if (object == nil) return nil;
@@ -520,7 +495,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 							break; 
 						player->GiveWeapon(weaponType, AmmoForWeapon[weaponType]);
 						player->m_nSelectedWepSlot = player->GetWeaponSlot(weaponType);
-						DMAudio.PlayFrontEndSound(SOUND_PICKUP_WEAPON_BOUGHT, m_pObject->GetModelIndex() - MI_GRENADE);
+						DMAudio_PlayFrontEndSound(SOUND_PICKUP_WEAPON_BOUGHT, m_pObject->GetModelIndex() - MI_GRENADE);
 					}
 					result = true;
 					Remove();
@@ -537,9 +512,9 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 						if (player->m_nSelectedWepSlot == player->GetWeaponSlot(WEAPONTYPE_UNARMED)) 
 							player->m_nSelectedWepSlot = player->GetWeaponSlot(weaponType);
 
-						DMAudio.PlayFrontEndSound(SOUND_PICKUP_WEAPON, m_pObject->GetModelIndex() - MI_GRENADE);
+						DMAudio_PlayFrontEndSound(SOUND_PICKUP_WEAPON, m_pObject->GetModelIndex() - MI_GRENADE);
 					} else if (m_pObject->GetModelIndex() == MI_PICKUP_CAMERA && vehicle != nil) {
-						DMAudio.PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
+						DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 						CPickups::bPickUpcamActivated = true;
 						CPickups::pPlayerVehicle = FindPlayerVehicle();
 						CPickups::StaticCamCoors = m_pObject->GetPosition();
@@ -574,7 +549,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 							player->m_nSelectedWepSlot = player->GetWeaponSlot(weaponType);
 					}
 					if (MI_PICKUP_SAVEGAME != m_pObject->GetModelIndex())
-						DMAudio.PlayFrontEndSound(SOUND_PICKUP_WEAPON, m_pObject->GetModelIndex() - MI_GRENADE);
+						DMAudio_PlayFrontEndSound(SOUND_PICKUP_WEAPON, m_pObject->GetModelIndex() - MI_GRENADE);
 				}
 				result = true;
 				Remove();
@@ -592,7 +567,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 
 				result = true;
 				Remove();
-				DMAudio.PlayFrontEndSound(SOUND_PICKUP_HIDDEN_PACKAGE, 0);
+				DMAudio_PlayFrontEndSound(SOUND_PICKUP_HIDDEN_PACKAGE, 0);
 				break;
 			case PICKUP_MONEY:
 				CWorld::Players[playerId].m_nMoney += m_nQuantity;
@@ -602,13 +577,13 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 #endif
 				result = true;
 				Remove();
-				DMAudio.PlayFrontEndSound(SOUND_PICKUP_MONEY, 0);
+				DMAudio_PlayFrontEndSound(SOUND_PICKUP_MONEY, 0);
 				player->Say(SOUND_PED_MUGGING);
 				break;
 			case PICKUP_ASSET_REVENUE:
 				CWorld::Players[CWorld::PlayerInFocus].m_nMoney += m_fRevenue;
 				m_fRevenue = 0.0f;
-				DMAudio.PlayFrontEndSound(SOUND_PICKUP_MONEY, 0);
+				DMAudio_PlayFrontEndSound(SOUND_PICKUP_MONEY, 0);
 				break;
 			case PICKUP_PROPERTY_LOCKED:
 				if (!m_bWasControlMessageShown) {
@@ -659,13 +634,11 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			m_pObject->UpdateRwFrame();
 
 			bool touched = false;
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			for (int32 i = CPool_GetSize(CPools::GetVehiclePool())-1; i >= 0; i--) {
 				// Access raw storage through the C store or pool API
 				CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-			//- rouz edit (ChatGPT)
-				if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 1.5f)) {
+							if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 1.5f)) {
 					touched = true;
 #ifdef FIX_BUGS
 					break; // added break here
@@ -695,13 +668,11 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			else// added else here since vehicle lookup is useless
 #endif
 			{
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				for (int32 i = CPool_GetSize(CPools::GetVehiclePool())-1; i >= 0; i--) {
 					// Access raw storage through the C store or pool API
 					CVehicle *vehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-				//- rouz edit (ChatGPT)
-					if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 1.5f)) {
+									if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 1.5f)) {
 						explode = true;
 #ifdef FIX_BUGS
 						break; // added break here
@@ -733,7 +704,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 2.0f)) {
 				Remove();
 				result = true;
-				DMAudio.PlayFrontEndSound(SOUND_PICKUP_FLOAT_PACKAGE, 0);
+				DMAudio_PlayFrontEndSound(SOUND_PICKUP_FLOAT_PACKAGE, 0);
 			}
 			break;
 		default: break;
@@ -757,15 +728,11 @@ CPickup::ProcessGunShot(CVector *vec1, CVector *vec2)
 		if (CCollision::TestLineSphere(line, sphere)) {
 			CExplosion::AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
 			CWorld::Remove(m_pObject);
-//+ rouz edit (ChatGPT)
 			// Destroy and release the pickup object without invoking C++ delete.
 			m_pObject->~CObject();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetObjectPool(), m_pObject);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			m_pObject = nil;
+						m_pObject = nil;
 			m_bRemoved = true;
 			m_eType = PICKUP_NONE;
 		}
@@ -777,27 +744,19 @@ CPickup::GetRidOfObjects()
 {
 	if (m_pObject) {
 		CWorld::Remove(m_pObject);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the pickup object without invoking C++ delete.
 		m_pObject->~CObject();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetObjectPool(), m_pObject);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		m_pObject = nil;
+				m_pObject = nil;
 	}
 	if (m_pExtraObject) {
 		CWorld::Remove(m_pExtraObject);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the extra pickup object without invoking C++ delete.
 		m_pExtraObject->~CObject();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetObjectPool(), m_pExtraObject);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		m_pExtraObject = nil;
+				m_pExtraObject = nil;
 	}
 }
 
@@ -887,29 +846,29 @@ CPickups::GivePlayerGoodiesWithPickUpMI(int16 modelIndex, int playerIndex)
 		player->m_bAdrenalineActive = true;
 		player->m_nAdrenalineTime = CTimer::GetTimeInMilliseconds() + 20000;
 		player->m_fCurrentStamina = player->m_fMaxStamina;
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_ADRENALINE, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_ADRENALINE, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_BODYARMOUR) {
 		player->m_fArmour = CWorld::Players[playerIndex].m_nMaxArmour;
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_ARMOUR, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_ARMOUR, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_INFO) {
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_HEALTH) {
 		player->m_fHealth = CWorld::Players[playerIndex].m_nMaxHealth;
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_HEALTH, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_HEALTH, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_BONUS) {
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_BRIBE) {
 		int32 level = Max(FindPlayerPed()->m_pWanted->GetWantedLevel() - 1, 0);
 		player->SetWantedLevel(level);
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_KILLFRENZY) {
-		DMAudio.PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
+		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
 	}
 	return false;
@@ -923,27 +882,19 @@ CPickups::RemovePickUp(int32 pickupIndex)
 
 	if (aPickUps[index].m_pObject) {
 		CWorld::Remove(aPickUps[index].m_pObject);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the pickup object without invoking C++ delete.
 		aPickUps[index].m_pObject->~CObject();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetObjectPool(), aPickUps[index].m_pObject);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		aPickUps[index].m_pObject = nil;
+				aPickUps[index].m_pObject = nil;
 	}
 	if (aPickUps[index].m_pExtraObject) {
 		CWorld::Remove(aPickUps[index].m_pExtraObject);
-//+ rouz edit (ChatGPT)
 		// Destroy and release the extra pickup object without invoking C++ delete.
 		aPickUps[index].m_pExtraObject->~CObject();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetObjectPool(), aPickUps[index].m_pExtraObject);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		aPickUps[index].m_pExtraObject = nil;
+				aPickUps[index].m_pExtraObject = nil;
 	}
 	aPickUps[index].m_eType = PICKUP_NONE;
 	aPickUps[index].m_bRemoved = true;
@@ -1536,15 +1487,11 @@ CPickups::RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType weaponType
 					if (CWeaponInfo::GetWeaponInfo(WeaponForModel(aPickUps[slot].m_pObject->GetModelIndex()))->m_nWeaponSlot == weaponSlot &&
 						aPickUps[slot].m_nQuantity == 0) {
 						CWorld::Remove(aPickUps[slot].m_pObject);
-//+ rouz edit (ChatGPT)
 						// Destroy and release the empty weapon pickup without invoking C++ delete.
 						aPickUps[slot].m_pObject->~CObject();
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
+												// Access raw storage through the C store or pool API
 						CPool_Delete(CPools::GetObjectPool(), aPickUps[slot].m_pObject);
-						//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-						aPickUps[slot].m_bRemoved = true;
+												aPickUps[slot].m_bRemoved = true;
 						aPickUps[slot].m_pObject = nil;
 						aPickUps[slot].m_eType = PICKUP_NONE;
 					}
@@ -1584,86 +1531,62 @@ INITSAVEBUF
 
 	for (int32 i = 0; i < NUMPICKUPS; i++) {
 #ifdef COMPATIBLE_SAVES
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&aPickUps[i].m_vecPos, &buf, sizeof(aPickUps[i].m_vecPos));
 		ReadSaveBuf(&aPickUps[i].m_fRevenue, &buf, sizeof(aPickUps[i].m_fRevenue));
-		//- rouz edit (ChatGPT)
-		int32 tmp_pObject;
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				int32 tmp_pObject;
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&tmp_pObject, &buf, sizeof(tmp_pObject));
-		//- rouz edit (ChatGPT)
-		int32 tmp_pExtraObject;
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				int32 tmp_pExtraObject;
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&tmp_pExtraObject, &buf, sizeof(tmp_pExtraObject));
 		ReadSaveBuf(&aPickUps[i].m_nQuantity, &buf, sizeof(aPickUps[i].m_nQuantity));
 		ReadSaveBuf(&aPickUps[i].m_nTimer, &buf, sizeof(aPickUps[i].m_nTimer));
 		ReadSaveBuf(&aPickUps[i].m_nMoneySpeed, &buf, sizeof(aPickUps[i].m_nMoneySpeed));
 		ReadSaveBuf(&aPickUps[i].m_eModelIndex, &buf, sizeof(aPickUps[i].m_eModelIndex));
 		ReadSaveBuf(&aPickUps[i].m_nIndex, &buf, sizeof(aPickUps[i].m_nIndex));
-		//- rouz edit (ChatGPT)
-		memcpy(aPickUps[i].m_sTextKey, buf, sizeof(aPickUps[i].m_sTextKey));
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				memcpy(aPickUps[i].m_sTextKey, buf, sizeof(aPickUps[i].m_sTextKey));
+				// Transfer save data through the C buffer API with explicit sizes
 		SkipSaveBuf(&buf, sizeof(aPickUps[i].m_sTextKey));
 		ReadSaveBuf(&aPickUps[i].m_eType, &buf, sizeof(aPickUps[i].m_eType));
 		ReadSaveBuf(&aPickUps[i].m_bRemoved, &buf, sizeof(aPickUps[i].m_bRemoved));
-		//- rouz edit (ChatGPT)
-		uint8 flags;
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				uint8 flags;
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&flags, &buf, sizeof(flags));
-		//- rouz edit (ChatGPT)
-		aPickUps[i].m_bWasAmmoCollected = !!(flags & BIT(0));
+				aPickUps[i].m_bWasAmmoCollected = !!(flags & BIT(0));
 		aPickUps[i].m_bWasControlMessageShown = !!(flags & BIT(1));
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		SkipSaveBuf(&buf, 3);
-		//- rouz edit (ChatGPT)
-
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+		
+				// Access raw storage through the C store or pool API
 		aPickUps[i].m_pObject = aPickUps[i].m_eType != PICKUP_NONE && tmp_pObject != 0 ? ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), tmp_pObject - 1)) : nil;
 		aPickUps[i].m_pExtraObject = aPickUps[i].m_eType != PICKUP_NONE && tmp_pExtraObject != 0 ? ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), tmp_pExtraObject - 1)) : nil;
-		//- rouz edit (ChatGPT)
-#else
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		#else
+				// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
 		aPickUps[i] = *(CPickup*)buf;
 		SkipSaveBuf(&buf, sizeof(aPickUps[i]));
-		//- rouz edit (ChatGPT)
-
+		
 		if (aPickUps[i].m_eType != PICKUP_NONE) {
 			if (aPickUps[i].m_pObject != nil)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				aPickUps[i].m_pObject = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), (uintptr)aPickUps[i].m_pObject - 1));
-				//- rouz edit (ChatGPT)
-			if (aPickUps[i].m_pExtraObject != nil)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+							if (aPickUps[i].m_pExtraObject != nil)
+								// Access raw storage through the C store or pool API
 				aPickUps[i].m_pExtraObject = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), (uintptr)aPickUps[i].m_pExtraObject - 1));
-				//- rouz edit (ChatGPT)
-		}
+						}
 #endif
 	}
 
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&CollectedPickUpIndex, &buf, sizeof(CollectedPickUpIndex));
 	SkipSaveBuf(&buf, 2);
-	//- rouz edit (ChatGPT)
-	NumMessages = 0;
+		NumMessages = 0;
 
 	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		ReadSaveBuf(&aPickUpsCollected[i], &buf, sizeof(aPickUpsCollected[i]));
-		//- rouz edit (ChatGPT)
-
+		
 VALIDATESAVEBUF(size)
 }
 
@@ -1677,86 +1600,62 @@ INITSAVEBUF
 
 	for (int32 i = 0; i < NUMPICKUPS; i++) {
 #ifdef COMPATIBLE_SAVES
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &aPickUps[i].m_vecPos, sizeof(aPickUps[i].m_vecPos));
 		WriteSaveBuf(&buf, &aPickUps[i].m_fRevenue, sizeof(aPickUps[i].m_fRevenue));
-		//- rouz edit (ChatGPT)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 		int32 tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pObject != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), aPickUps[i].m_pObject) + 1 : 0;
-		//- rouz edit (ChatGPT)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+						// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
-		//- rouz edit (ChatGPT)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+						// Access raw storage through the C store or pool API
 		tmp = aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_pExtraObject != nil ? CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), aPickUps[i].m_pExtraObject) + 1 : 0;
-		//- rouz edit (ChatGPT)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+						// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &tmp, sizeof(tmp));
 		WriteSaveBuf(&buf, &aPickUps[i].m_nQuantity, sizeof(aPickUps[i].m_nQuantity));
 		WriteSaveBuf(&buf, &aPickUps[i].m_nTimer, sizeof(aPickUps[i].m_nTimer));
 		WriteSaveBuf(&buf, &aPickUps[i].m_nMoneySpeed, sizeof(aPickUps[i].m_nMoneySpeed));
 		WriteSaveBuf(&buf, &aPickUps[i].m_eModelIndex, sizeof(aPickUps[i].m_eModelIndex));
 		WriteSaveBuf(&buf, &aPickUps[i].m_nIndex, sizeof(aPickUps[i].m_nIndex));
-		//- rouz edit (ChatGPT)
-		memcpy(buf, aPickUps[i].m_sTextKey, sizeof(aPickUps[i].m_sTextKey));
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				memcpy(buf, aPickUps[i].m_sTextKey, sizeof(aPickUps[i].m_sTextKey));
+				// Transfer save data through the C buffer API with explicit sizes
 		SkipSaveBuf(&buf, sizeof(aPickUps[i].m_sTextKey));
 		WriteSaveBuf(&buf, &aPickUps[i].m_eType, sizeof(aPickUps[i].m_eType));
 		WriteSaveBuf(&buf, &aPickUps[i].m_bRemoved, sizeof(aPickUps[i].m_bRemoved));
-		//- rouz edit (ChatGPT)
-		uint8 flags = 0;
+				uint8 flags = 0;
 		if (aPickUps[i].m_bWasAmmoCollected) flags |= BIT(0);
 		if (aPickUps[i].m_bWasControlMessageShown) flags |= BIT(1);
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &flags, sizeof(flags));
 		ZeroSaveBuf(&buf, 3);
-		//- rouz edit (ChatGPT)
-#else
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+		#else
+				// Transfer save data through the C buffer API with explicit sizes
 		// Preserve record assignment semantics and compiler padding behavior
 		CPickup *buf_pickup = (CPickup*)buf;
 		*buf_pickup = aPickUps[i];
 		SkipSaveBuf(&buf, sizeof(aPickUps[i]));
-		//- rouz edit (ChatGPT)
-		if (buf_pickup->m_eType != PICKUP_NONE) {
+				if (buf_pickup->m_eType != PICKUP_NONE) {
 			if (buf_pickup->m_pObject != nil)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				buf_pickup->m_pObject = (CObject*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), buf_pickup->m_pObject) + 1);
-				//- rouz edit (ChatGPT)
-			if (buf_pickup->m_pExtraObject != nil)
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+							if (buf_pickup->m_pExtraObject != nil)
+								// Access raw storage through the C store or pool API
 				buf_pickup->m_pExtraObject = (CObject*)(CPool_GetJustIndex_NoFreeAssert(CPools::GetObjectPool(), buf_pickup->m_pExtraObject) + 1);
-				//- rouz edit (ChatGPT)
-		}
+						}
 #endif
 	}
 
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &CollectedPickUpIndex, sizeof(CollectedPickUpIndex));
 	{
 		// Materialize the saved value with its original serialized type
 		uint16 saveValue = (uint16)0;
 		WriteSaveBuf(&buf, &saveValue, sizeof(saveValue)); // possibly was NumMessages
 	}
-	//- rouz edit (ChatGPT)
-
+	
 	for (uint16 i = 0; i < NUMCOLLECTEDPICKUPS; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
+				// Transfer save data through the C buffer API with explicit sizes
 		WriteSaveBuf(&buf, &aPickUpsCollected[i], sizeof(aPickUpsCollected[i]));
-		//- rouz edit (ChatGPT)
-
+		
 VALIDATESAVEBUF(*size)
 }
 
@@ -1955,3 +1854,5 @@ CPed::CreateDeadPedPickupCoors(float *x, float *y, float *z)
 	*z = GetPosition().z + 0.4f;
 #undef NUMBER_OF_ATTEMPTS
 }
+
+//- rouz edit (ChatGPT)

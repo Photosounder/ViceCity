@@ -1,5 +1,15 @@
 #pragma once
 
+//+ rouz edit (ChatGPT)
+#include "Pool.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+CPool *CPools_GetAudioScriptObjectPool(void);
+#ifdef __cplusplus
+}
+//- rouz edit (ChatGPT)
+
 #include "templates.h"
 #include "Lists.h"
 #include "Treadable.h"
@@ -64,3 +74,4 @@ public:
 	static void SavePedPool(uint8 *buf, uint32 *size);
 	static void SaveVehiclePool(uint8 *buf, uint32 *size);
 };
+#endif // rouz edit (ChatGPT)

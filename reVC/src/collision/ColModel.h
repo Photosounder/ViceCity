@@ -29,8 +29,10 @@ struct CColModel
 	void RemoveCollisionVolumes(void);
 	void CalculateTrianglePlanes(void);
 	void RemoveTrianglePlanes(void);
-	CLink<CColModel*> *GetLinkPtr(void);
-	void SetLinkPtr(CLink<CColModel*>*);
+	//+ rouz edit (ChatGPT)
+	CLink *GetLinkPtr(void);
+	void SetLinkPtr(CLink*);
+	//- rouz edit (ChatGPT)
 	void GetTrianglePoint(CVector &v, int i) const;
 
 	CColModel& operator=(const CColModel& other);

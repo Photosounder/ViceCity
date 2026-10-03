@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Phones.h"
@@ -93,7 +94,11 @@ CPhoneInfo::Update(void)
 					if (scratchTheCabinet) {
 						m_aPhones[phoneId].m_pEntity->GetUp().z = (CGeneral::GetRandomNumber() % 1024) / 16000.0f + 1.0f;
 						if (!phoneRings)
-						    PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, m_aPhones[phoneId].m_pEntity->GetPosition());
+						    {
+						    	// Evaluate the game position once before passing its components to C
+						    	const CVector scriptPosition = m_aPhones[phoneId].m_pEntity->GetPosition();
+						    	PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+						    }
 					} else {
 						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f;
 					}
@@ -132,7 +137,11 @@ CPhoneInfo::Update(void)
 					if (scratchTheCabinet) {
 						m_aPhones[phoneId].m_pEntity->GetUp().z = (CGeneral::GetRandomNumber() % 1024) / 16000.0f + 1.0f;
 						if (!phoneRings)
-						    PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, m_aPhones[phoneId].m_pEntity->GetPosition());
+						    {
+						    	// Evaluate the game position once before passing its components to C
+						    	const CVector scriptPosition = m_aPhones[phoneId].m_pEntity->GetPosition();
+						    	PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, scriptPosition.x, scriptPosition.y, scriptPosition.z);
+						    }
 					} else {
 						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f;
 					}
@@ -450,3 +459,4 @@ PhonePickUpCB(CAnimBlendAssociation *assoc, void *arg)
 
 	CPhoneInfo::pCallBackPed = nil;
 }
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -1760,7 +1761,7 @@ CCamera::CamControl(void)
 		   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 		   !m_WideScreenOn &&
 		   (WhoIsInControlOfTheCamera != CAMCONTROL_OBBE || bSwitchedToObbeCam))
-			DMAudio.PlayFrontEndSound(SOUND_HUD, 0);
+			DMAudio_PlayFrontEndSound(SOUND_HUD, 0);
 }
 
 // What a mess!
@@ -2952,16 +2953,12 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		i = CPool_GetSize(CPools::GetVehiclePool());
-		//- rouz edit (ChatGPT)
-		while(--i >= 0){
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+				while(--i >= 0){
+						// Access raw storage through the C store or pool API
 			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-			//- rouz edit (ChatGPT)
-			if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
+						if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
 				float dist = (veh->GetPosition() - FindPlayerCoors()).Magnitude();
@@ -2986,16 +2983,12 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			return false;
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
+				// Access raw storage through the C store or pool API
 		i = CPool_GetSize(CPools::GetVehiclePool());
-		//- rouz edit (ChatGPT)
-		while(--i >= 0){
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
+				while(--i >= 0){
+						// Access raw storage through the C store or pool API
 			veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-			//- rouz edit (ChatGPT)
-			if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
+						if(veh && veh->IsCar() && veh != FindPlayerVehicle() && veh->bIsLawEnforcer){
 				float dx = veh->GetPosition().x - FindPlayerCoors().x;
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
 				float dist = (veh->GetPosition() - FindPlayerCoors()).Magnitude();
@@ -3812,8 +3805,8 @@ CCamera::ProcessMusicFade(void)
 				m_fFLOATingFadeMusic = 255.0f;
 			}
 		}
-		DMAudio.SetEffectsFadeVol(127 - m_fFLOATingFadeMusic/255.0f * 127);
-		DMAudio.SetMusicFadeVol(127 - m_fFLOATingFadeMusic/255.0f * 127);
+		DMAudio_SetEffectsFadeVol(127 - m_fFLOATingFadeMusic/255.0f * 127);
+		DMAudio_SetMusicFadeVol(127 - m_fFLOATingFadeMusic/255.0f * 127);
 	}
 }
 
@@ -4145,3 +4138,5 @@ CCamPathSplines::CCamPathSplines(void)
 {
 	m_arr_PathData = nil;
 }
+
+//- rouz edit (ChatGPT)

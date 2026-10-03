@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -207,7 +208,7 @@ CDarkel::RegisterCarBlownUpByPlayer(CVehicle *vehicle)
 		int32 model = vehicle->GetModelIndex();
 		if (ModelToKill == FRENZY_ANY_CAR || ModelToKill == model || ModelToKill2 == model || ModelToKill3 == model || ModelToKill4 == model) {
 			KillsNeeded--;
-			DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_CAR_BLOWN, 0);
+			DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_CAR_BLOWN, 0);
 		}
 	}
 	RegisteredKills[vehicle->GetModelIndex()]++;
@@ -244,7 +245,7 @@ CDarkel::RegisterKillByPlayer(CPed *victim, eWeaponType weapon, bool headshot)
 		if (ModelToKill == FRENZY_ANY_PED || ModelToKill == model || ModelToKill2 == model || ModelToKill3 == model || ModelToKill4 == model) {
 			if (!bNeedHeadShot || headshot) {
 				KillsNeeded--;
-				DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_KILL, 0);
+				DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_KILL, 0);
 			}
 		}
 	}
@@ -342,7 +343,7 @@ CDarkel::StartFrenzy(eWeaponType weaponType, int32 time, uint16 kill, int32 mode
 		}
 	}
 	if (CDarkel::bStandardSoundAndMessages)
-		DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_START, 0);
+		DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_START, 0);
 }
 
 void
@@ -359,13 +360,13 @@ CDarkel::Update()
 	int32 FrameTime = TimeLimit - (CTimer::GetTimeInMilliseconds() - TimeOfFrenzyStart);
 	if (FrameTime > 0 || TimeLimit < 0) {
 
-		DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_ONGOING, FrameTime);
+		DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_ONGOING, FrameTime);
 
 		int32 PrevTime = FrameTime / 1000;
 
 		if (PrevTime != PreviousTime) {
 			if (PreviousTime < 12)
-				DMAudio.PlayFrontEndSound(SOUND_CLOCK_TICK, PrevTime);
+				DMAudio_PlayFrontEndSound(SOUND_CLOCK_TICK, PrevTime);
 			PreviousTime = PrevTime;
 		}
 
@@ -376,7 +377,7 @@ CDarkel::Update()
 		DealWithWeaponChangeAtEndOfFrenzy();
 
 		if (bStandardSoundAndMessages)
-			DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_FAILED, 0);
+			DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_FAILED, 0);
 	}
 
 	if (KillsNeeded <= 0) {
@@ -393,7 +394,7 @@ CDarkel::Update()
 		DealWithWeaponChangeAtEndOfFrenzy();
 
 		if (bStandardSoundAndMessages)
-			DMAudio.PlayFrontEndSound(SOUND_RAMPAGE_PASSED, 0);
+			DMAudio_PlayFrontEndSound(SOUND_RAMPAGE_PASSED, 0);
 	}
 }
 
@@ -437,3 +438,5 @@ CDarkel::DealWithWeaponChangeAtEndOfFrenzy()
 		player->RemoveDrivebyAnims();
 	}
 }
+
+//- rouz edit (ChatGPT)

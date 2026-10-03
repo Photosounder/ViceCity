@@ -1,0 +1,107 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <math.h>
+#include "AudioMath.h"
+using uint8=uint8_t; using int8=int8_t; using int32=int32_t; using uint32=uint32_t; using bool8=uint8_t;
+#define TRUE 1
+#define Const const
+struct CVector {float x,y,z;};
+static struct Camera {
+    uint8 flag;
+    bool Get_Just_Switched_Status() { return flag != 0; }
+} TheCamera;
+class cAudioManager {
+public:
+    uint8 m_nTimeSpent;
+    float m_fSpeedOfSound;
+    int32 m_anRandomTable[5];
+    uint8 ComputeVolume(uint8,float,float);
+    uint8 ComputeEmittingVolume(uint8,float,float);
+    int32 ComputePan(float,CVector *);
+    int32 ComputeFrontRearMix(float,CVector *);
+    uint32 ComputeDopplerEffectedFrequency(uint32,float,float,float);
+    int32 RandomDisplacement(uint32);
+};
+@METHODS@
+extern "C" void TestAudioMathC(void);
+static uint64_t digest=1469598103934665603ULL;
+static void record(uint32_t value) {
+    // Compare integer outputs from the original and C numeric kernels
+    digest=(digest^value)*1099511628211ULL;
+}
+int main() {
+    // Exercise actual C exports before running the same defined-input trace
+    @C_CHECK@
+    cAudioManager state;
+    const float maxima[]={0.125f,1,10,55,100,1000,1e-10f};
+    for (unsigned volume=0;volume<256;++volume) {
+        // Cover every byte volume and each attenuation curve segment
+        record(@VOLUME@(volume,0,0)); record(@VOLUME@(volume,-10,0));
+        for (float maximum:maxima) {
+            // Sample both sides of the minimum-distance and emitting-distance thresholds
+            for (unsigned step=0;step<=256;++step) {
+                // Keep casts representable while exercising the entire attenuation interval
+                float distance=maximum*(float)step/256.0f;
+                record(@VOLUME@(volume,maximum,distance));
+                record(@EMITTING@(volume,maximum,distance));
+            }
+            const float boundaries[]={maximum/5,maximum*.75f,maximum};
+            for (float boundary:boundaries) {
+                // Stress immediate neighboring floats without crossing into out-of-range casts
+                float low=nextafterf(boundary,-INFINITY);
+                float high=boundary==maximum ? maximum : nextafterf(boundary,INFINITY);
+                record(@VOLUME@(volume,maximum,low)); record(@VOLUME@(volume,maximum,high));
+                record(@EMITTING@(volume,maximum,low)); record(@EMITTING@(volume,maximum,high));
+            }
+        }
+    }
+    const float distances[]={-256,-64,-.25f,.25f,1,25,55,64,1000};
+    for (float dist:distances) {
+        // Exercise every pan-table index, saturation, sign, and signed-zero center
+        for (int index=-128;index<=128;++index) {
+            // Probe the exact float boundary and its immediate neighbors
+            float boundary=(float)index*(dist/64.0f);
+            const float coordinates[]={nextafterf(boundary,-INFINITY),boundary,nextafterf(boundary,INFINITY)};
+            for (float coordinate:coordinates) {
+                // Compare horizontal and front/rear mappings independently
+                CVector position={coordinate,coordinate,-0.0f};
+                record(@PAN@); record(@FRONT@);
+            }
+        }
+    }
+    const uint32 frequencies[]={0,1,50,44100,48000,192000,1000000,16777217,20000000};
+    const uint8 times[]={1,2,40,255};
+    const float speeds[]={4,8.575f,343};
+    for (uint8 time:times) {
+        // Compare Doppler gates, clamping, and integer frequency rounding
+        state.m_nTimeSpent=time;
+        for (float speed:speeds) {
+            // Use frequencies and sound speeds whose resulting uint32 casts remain representable
+            state.m_fSpeedOfSound=speed;
+            for (int switched=0;switched<2;++switched) {
+                // Preserve both camera-switch outcomes and the zero-multiplier shortcut
+                TheCamera.flag=switched;
+                for (uint32 frequency:frequencies) {
+                    // Cover positive and negative motion including near sound-speed and clamp boundaries
+                    for (int delta=-128;delta<=128;++delta) {
+                        // Vary the multiplier while maintaining finite defined arithmetic
+                        for (int multiplier=-4;multiplier<=4;++multiplier) {
+                            record(@DOPPLER@(frequency,17.5f,17.5f+delta*.25f,multiplier*.5f));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    const int32 tables[2][5]={{0,1,17,32767,2147483647},{2147483647,1000000,42,7,3}};
+    uint32 random=314159;
+    for (unsigned step=0;step<300000;++step) {
+        // Preserve shared random history across alternating manager-table contents and unsigned wraparound
+        for (int i=0;i<5;++i) state.m_anRandomTable[i]=tables[step%2][i];
+        random=random*1664525u+1013904223u;
+        const uint32 seeds[]={0,1,2,750,2147483647u,4294967295u,random};
+        uint32 seed=seeds[step%7];
+        record((uint32)@RANDOM@);
+    }
+    printf("%llu\n",(unsigned long long)digest);
+}

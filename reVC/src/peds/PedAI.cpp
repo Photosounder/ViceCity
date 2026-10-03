@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -972,25 +973,17 @@ CPed::ProcessObjective(void)
 										CVehicle *newVeh = nil;
 										if (chosenModel != -1) {
 											if (CModelInfo::IsBikeModel(chosenModel)) {
-//+ rouz edit (ChatGPT)
 												// Allocate the hijack target bike without invoking C++ new.
-												//+ rouz edit (ChatGPT)
-												// Access raw storage through the C store or pool API
+																								// Access raw storage through the C store or pool API
 												newVeh = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-												//- rouz edit (ChatGPT)
-												assert(newVeh);
+																								assert(newVeh);
 												std::allocator<CBike>().construct((CBike*)newVeh, chosenModel, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
 											} else {
-//+ rouz edit (ChatGPT)
 												// Allocate the hijack target car without invoking C++ new.
-												//+ rouz edit (ChatGPT)
-												// Access raw storage through the C store or pool API
+																								// Access raw storage through the C store or pool API
 												newVeh = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-												//- rouz edit (ChatGPT)
-												assert(newVeh);
+																								assert(newVeh);
 												std::allocator<CAutomobile>().construct((CAutomobile*)newVeh, chosenModel, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
 											}
 										}
 										if (newVeh) {
@@ -4041,9 +4034,9 @@ CPed::EnterCar(void)
 				if (m_pVehicleAnim->currentTime > 0.4f && m_pVehicleAnim->currentTime - m_pVehicleAnim->timeStep <= 0.4f) {
 					int anim = m_pVehicleAnim->animId;
 					if (anim == ANIM_BIKE_KICK) {
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_187, 3.0f);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_187, 3.0f);
 					} else if (anim == ANIM_STD_BIKE_ELBOW_LHS || anim == ANIM_STD_BIKE_ELBOW_RHS) {
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_186, 3.0f);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_186, 3.0f);
 					}
 				}
 			}
@@ -6963,3 +6956,5 @@ CPed::CanBeDamagedByThisGangMember(CPed* who)
 {
 	return m_gangFlags & (1 << (who->m_nPedType - PEDTYPE_GANG1));
 }
+
+//- rouz edit (ChatGPT)

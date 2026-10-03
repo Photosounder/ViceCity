@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -543,7 +544,7 @@ CAutomobile::ProcessControl(void)
 
 			if (yield > 0.f)
 			{
-				DMAudio.PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
+				DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
 				BlowUpCar(nil);
 				CExplosion::AddExplosion(this, nil, EXPLOSION_HELI2, GetPosition(), 0);
 				rouz.remote_bomb = 0;
@@ -714,8 +715,8 @@ CAutomobile::ProcessControl(void)
 			   m_aSuspensionSpringRatio[0] < 1.0f &&
 			   CPad::GetPad(0)->HornJustDown()){
 
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, 1.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, 1.0f);
 
 				CParticle::AddParticle(PARTICLE_ENGINE_STEAM,
 					m_aWheelColPoints[0].point + 0.5f*GetUp(),
@@ -1540,7 +1541,7 @@ CAutomobile::ProcessControl(void)
 					gun.FireProjectile(this, &source, 0.0f);
 
 					CStats::RoundsFiredByPlayer++;
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 					m_nGunFiringTime = CTimer::GetTimeInMilliseconds();
 				// Hunter gun
 				}else if(CPad::GetPad(0)->GetHandBrake() && CTimer::GetTimeInMilliseconds() > m_nGunFiringTime+60){
@@ -1550,7 +1551,7 @@ CAutomobile::ProcessControl(void)
 					gun.FireInstantHit(this, &source);
 					gun.AddGunshell(this, source, CVector2D(0.0f, 0.1f), 0.025f);
 					CStats::RoundsFiredByPlayer++;
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 					m_nGunFiringTime = CTimer::GetTimeInMilliseconds();
 				}
 			}else if(GetModelIndex() == MI_SEASPAR && GetStatus() == STATUS_PLAYER){
@@ -1562,7 +1563,7 @@ CAutomobile::ProcessControl(void)
 					gun.FireInstantHit(this, &source);
 					gun.AddGunshell(this, source, CVector2D(0.0f, 0.1f), 0.025f);
 					CStats::RoundsFiredByPlayer++;
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.0f);
 					m_nGunFiringTime = CTimer::GetTimeInMilliseconds();
 				}
 			}
@@ -1583,7 +1584,7 @@ CAutomobile::ProcessControl(void)
 				blade = Multiply3x3(GetMatrix(), blade);
 				camDist /= Max(Sqrt(distSq), 0.01f);
 				if(Abs(DotProduct(camDist, blade)) > HELI_ROTOR_DOTPROD_LIMIT){
-					DMAudio.PlayOneShot(m_audioEntityId, SOUND_HELI_BLADE, 0.0f);
+					DMAudio_PlayOneShot(m_audioEntityId, SOUND_HELI_BLADE, 0.0f);
 					m_fPropellerRotation = m_aWheelRotation[1];
 				}
 			}
@@ -1666,9 +1667,9 @@ CAutomobile::ProcessControl(void)
 		float suspChange = m_aSuspensionSpringRatioPrev[i] - m_aSuspensionSpringRatio[i];
 		if(suspChange > 0.3f && !drivingInSand && speedsq > SQR(0.2f)){
 			if(Damage.GetWheelStatus(i) == WHEEL_STATUS_BURST)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP_2, suspChange);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP_2, suspChange);
 			else
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, suspChange);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_JUMP, suspChange);
 			if(suspChange > suspShake)
 				suspShake = suspChange;
 		}
@@ -3388,7 +3389,7 @@ CAutomobile::TankControl(void)
 	if(m_fCarGunLR > TWOPI)
 		m_fCarGunLR -= TWOPI;
 	if(m_fCarGunLR != prevAngle)
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_TANK_TURRET_ROTATE, Abs(m_fCarGunLR - prevAngle));
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_TANK_TURRET_ROTATE, Abs(m_fCarGunLR - prevAngle));
 
 	// Shoot
 	if(CPad::GetPad(0)->CarGunJustDown() &&
@@ -3491,9 +3492,9 @@ CAutomobile::HydraulicControl(void)
 		}
 
 		if(m_hydraulicState == 0)
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
 		else if(m_hydraulicState >= 100)
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 
 		if(playerInfo->m_pVehicleEx == this)
 			playerInfo->m_pVehicleEx = nil;
@@ -3527,7 +3528,7 @@ CAutomobile::HydraulicControl(void)
 			m_hydraulicState = 0;
 			normalUpperLimit += HYDRAULIC_UPPER_EXT;
 			normalSpringLength = normalUpperLimit - (normalLowerLimit+HYDRAULIC_LOWER_EXT);
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 		}
 
 		// Setup suspension
@@ -3549,7 +3550,7 @@ CAutomobile::HydraulicControl(void)
 					m_aSuspensionSpringRatio[i] = 1.0f;
 			}
 		}
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 
 		// Adjust col model
 		mi->GetWheelPosn(0, pos);
@@ -3569,7 +3570,7 @@ CAutomobile::HydraulicControl(void)
 	if(m_hydraulicState < 20 && m_fVelocityChangeForAudio > 0.2f){
 		if(m_hydraulicState == 0){
 			m_hydraulicState = 20;
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
 			setPrevRatio = true;
 		}else{
 			m_hydraulicState++;
@@ -3578,7 +3579,7 @@ CAutomobile::HydraulicControl(void)
 		if(m_hydraulicState < 21 && m_fVelocityChangeForAudio < 0.1f){
 			m_hydraulicState--;
 			if(m_hydraulicState == 0)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 		}
 	}
 
@@ -3620,7 +3621,7 @@ CAutomobile::HydraulicControl(void)
 						m_aSuspensionSpringRatio[i] = 1.0f;
 				}
 			}
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 		}else{
 			// Reset suspension to extended
 			float extendedLineLength = extendedSpringLength + wheelRadius;
@@ -3643,7 +3644,7 @@ CAutomobile::HydraulicControl(void)
 
 				setPrevRatio = true;
 			}
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 		}
 	}else{
 		float suspChange[4];
@@ -3736,13 +3737,13 @@ CAutomobile::HydraulicControl(void)
 		if(limitDiff != 0.0f && Abs(maxDelta/limitDiff) > 0.01f){
 			float f = (maxDelta + limitDiff)/2.0f/limitDiff;
 			f = Clamp(f, 0.0f, 1.0f);
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_3, f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_3, f);
 			if(f < 0.4f || f > 0.6f)
 				setPrevRatio = true;
 			if(f < 0.25f)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_2, 0.0f);
 			else if(f > 0.75f)
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_HYDRAULIC_1, 0.0f);
 		}
 	}
 
@@ -3848,7 +3849,7 @@ CAutomobile::ProcessBuoyancy(void)
 
 			if(m_vecMoveSpeed.z < -0.2f)
 				m_vecMoveSpeed.z = -0.2f;
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_WATER_FALL, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_WATER_FALL, 0.0f);
 		}
 
 		if(nGenerateWaterCircles > 0 && nGenerateWaterCircles <= CTimer::GetTimeInMilliseconds()){
@@ -3915,7 +3916,7 @@ CAutomobile::ProcessBuoyancy(void)
 						nil, size, smokeCol, 0, 0, 0, 0);
 				
 					if((CTimer::GetFrameCounter() & 0xF) == 0)
-						DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_SPLASH, 2000.0f*fSpeed);
+						DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_SPLASH, 2000.0f*fSpeed);
 				}
 			}
 		}
@@ -4316,7 +4317,7 @@ CAutomobile::VehicleDamage(float impulse, uint16 damagedPiece)
 					uint8 oldStatus = Damage.GetPanelStatus(VEHPANEL_WINDSCREEN);
 					SetPanelDamage(CAR_WINDSCREEN, VEHPANEL_WINDSCREEN);
 					if(oldStatus != Damage.GetPanelStatus(VEHPANEL_WINDSCREEN)){
-					//	DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.0f);
+					//	DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.0f);
 					}
 				}
 				break;
@@ -4359,7 +4360,7 @@ CAutomobile::VehicleDamage(float impulse, uint16 damagedPiece)
 		// play sound if a light broke
 		for(i = 0; i < 4; i++)
 			if(oldLightStatus[i] != 1 && Damage.GetLightStatus((eLights)i) == 1){
-				DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_LIGHT_BREAK, i);	// BUG? i?
+				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_LIGHT_BREAK, i);	// BUG? i?
 				break;
 			}
 	}
@@ -4654,7 +4655,7 @@ CAutomobile::OpenDoor(int32 component, eDoors door, float openRatio)
 		HideAllComps();
 		// turn off angle cull for swinging door
 		RwFrameForAllObjects(m_aCarNodes[component], CVehicleModelInfo::SetAtomicFlagCB, (void*)ATOMIC_FLAG_NOCULL);
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_DOOR_OPEN_BONNET + door, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_DOOR_OPEN_BONNET + door, 0.0f);
 	}
 
 	if(!wasClosed && openRatio == 0.0f){
@@ -4662,7 +4663,7 @@ CAutomobile::OpenDoor(int32 component, eDoors door, float openRatio)
 		if(Damage.GetDoorStatus(door) == DOOR_STATUS_SWINGING)
 			Damage.SetDoorStatus(door, DOOR_STATUS_OK);	// huh?
 		ShowAllComps();
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_DOOR_CLOSE_BONNET + door, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_DOOR_CLOSE_BONNET + door, 0.0f);
 	}
 
 	axes[Doors[door].m_nAxis] = Doors[door].m_fAngle;
@@ -4980,7 +4981,7 @@ CAutomobile::BurstTyre(uint8 wheel, bool applyForces)
 	if(status == WHEEL_STATUS_OK){
 		Damage.SetWheelStatus(wheel, WHEEL_STATUS_BURST);
 		CStats::TyresPopped++;
-		DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_TYRE_POP, 0.0f);
+		DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_TYRE_POP, 0.0f);
 
 		if(GetStatus() == STATUS_SIMPLE){
 			SetStatus(STATUS_PHYSICS);
@@ -5290,7 +5291,7 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 									if ((wheelPos - GetPosition()).MagnitudeSqr2D() < 1.0f) {
 										if (CGame::nastyGame) {
 											car->m_aWheelSkidmarkBloody[wheel] = true;
-											DMAudio.PlayOneShot(car->m_audioEntityId, SOUND_SPLATTER, 0.0f);
+											DMAudio_PlayOneShot(car->m_audioEntityId, SOUND_SPLATTER, 0.0f);
 										}
 										if (car->m_fMass > 500.f) {
 											car->ApplyMoveForce(CVector(0.0f, 0.0f, 50.0f * Min(1.0f, m_fMass * 0.001f)));
@@ -5328,7 +5329,7 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 									if ((wheelPos - GetPosition()).MagnitudeSqr2D() < 1.0f) {
 										if (CGame::nastyGame) {
 											bike->m_aWheelSkidmarkBloody[wheel] = true;
-											DMAudio.PlayOneShot(bike->m_audioEntityId, SOUND_SPLATTER, 0.0f);
+											DMAudio_PlayOneShot(bike->m_audioEntityId, SOUND_SPLATTER, 0.0f);
 										}
 										if (bike->m_fMass > 100.0f) {
 											bike->ApplyMoveForce(CVector(0.0f, 0.0f, 10.0f));
@@ -5539,41 +5540,31 @@ CAutomobile::SpawnFlyingComponent(int32 component, uint32 type)
 	if(atomic == nil)
 		return nil;
 
-//+ rouz edit (ChatGPT)
 	// Allocate the flying automobile component without invoking C++ new.
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	obj = ((CObject*)CPool_New(objectPool));
-	//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
-	if (!obj) {
-		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
+	obj = ((CObject*)CPool_New(objectPool));
+	#ifdef FIX_BUGS
+	if (!obj) {
+				// Access raw storage through the C store or pool API
 		for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
 			// Access raw storage through the C store or pool API
 			CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-		//- rouz edit (ChatGPT)
-			if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+					if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
+								// Access raw storage through the C store or pool API
 				int32 handle = CPool_GetIndex(objectPool, existing);
-				//- rouz edit (ChatGPT)
-				CWorld::Remove(existing);
+								CWorld::Remove(existing);
 				existing->~CObject();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
+								// Access raw storage through the C store or pool API
 				CPool_Delete(objectPool, existing);
 				obj = ((CObject*)CPool_NewAt(objectPool, handle));
-				//- rouz edit (ChatGPT)
-				break;
+								break;
 			}
 		}
 	}
 	if (obj)
 #endif
 		std::allocator<CObject>().construct(obj);
-//- rouz edit (ChatGPT)
 	if(obj == nil)
 		return nil;
 
@@ -5723,7 +5714,7 @@ CAutomobile::SetPanelDamage(int32 component, ePanels panel, bool noFlyingCompone
 		return;
 	if(status == PANEL_STATUS_SMASHED1){
 		if(panel == VEHPANEL_WINDSCREEN)
-			DMAudio.PlayOneShot(m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.0f);
+			DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_WINDSHIELD_CRACK, 0.0f);
 		// show damaged part
 		SetComponentVisibility(m_aCarNodes[component], ATOMIC_FLAG_DAM);
 	}else if(status == PANEL_STATUS_MISSING){
@@ -5990,22 +5981,20 @@ void
 CAutomobile::Save(uint8*& buf)
 {
 	CVehicle::Save(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &Damage, sizeof(Damage));
 	ZeroSaveBuf(&buf, 1500 - 672 - sizeof(CDamageManager));
-	//- rouz edit (ChatGPT)
-}
+	}
 
 void
 CAutomobile::Load(uint8*& buf)
 {
 	CVehicle::Load(buf);
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
+		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&Damage, &buf, sizeof(Damage));
 	SkipSaveBuf(&buf, 1500 - 672 - sizeof(CDamageManager));
-	//- rouz edit (ChatGPT)
-	SetupDamageAfterLoad();
+		SetupDamageAfterLoad();
 }
 #endif
+
+//- rouz edit (ChatGPT)

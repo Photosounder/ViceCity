@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Weather.h"
@@ -20,11 +21,9 @@
 #include "ZoneCull.h"
 #include "SpecialFX.h"
 #include "Replay.h"
-//+ rouz edit (ChatGPT)
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 #include "custompipes.h"
 #endif
-//- rouz edit (ChatGPT)
 
 int32 CWeather::SoundHandle = -1;
 
@@ -108,11 +107,9 @@ const float Windyness[] = {
 #define MIN_TIME_BETWEEN_LIGHTNING_FLASH_CHANGES (50)
 
 #define RAIN_CHANGE_SPEED (0.003f)
-//+ rouz edit (ChatGPT)
 #define STREAM_AFTER_RAIN_TIME (800.0f * (1000.0f / 30.0f))
 #define HEAT_HAZE_ADD_INTERVAL (8.0f * (1000.0f / 30.0f))
 #define BEASTIE_ADD_INTERVAL (10.0f * (1000.0f / 30.0f))
-//- rouz edit (ChatGPT)
 
 #define DROPLETS_LEFT_OFFSET (10.0f)
 #define DROPLETS_RIGHT_OFFSET (10.0f)
@@ -136,13 +133,11 @@ const float Windyness[] = {
 #define RAIN_COLOUR_B (256)
 #define RAIN_ALPHA (255)
 
-//+ rouz edit (ChatGPT)
 static float
 WeatherTimeStep()
 {
 	return CTimer::GetTimeStepInSeconds() * 30.0f;
 }
-//- rouz edit (ChatGPT)
 
 void CWeather::Init(void)
 {
@@ -153,21 +148,19 @@ void CWeather::Init(void)
 	WhenToPlayLightningSound = 0;
 	WeatherTypeInList = 0;
 	ForcedWeatherType = WEATHER_RANDOM;
-	SoundHandle = DMAudio.CreateEntity(AUDIOTYPE_WEATHER, (void*)1);
+	SoundHandle = DMAudio_CreateEntity(AUDIOTYPE_WEATHER, (void*)1);
 	if (SoundHandle >= 0)
-		DMAudio.SetEntityStatus(SoundHandle, TRUE);
+		DMAudio_SetEntityStatus(SoundHandle, TRUE);
 }
 
 void CWeather::Update(void)
 {
-	//+ rouz edit (ChatGPT)
-	static float lightningUpdateCounter;
+		static float lightningUpdateCounter;
 
 	lightningUpdateCounter += WeatherTimeStep();
 	int32 lightningUpdates = int32(lightningUpdateCounter);
 	lightningUpdateCounter -= lightningUpdates;
-	//- rouz edit (ChatGPT)
-
+	
 	if(!CReplay::IsPlayingBack()){
 		float fNewInterpolation = (CClock::GetMinutes() + CClock::GetSeconds()/60.0f)/60.0f;
 		if (fNewInterpolation < InterpolationValue) {
@@ -195,8 +188,7 @@ void CWeather::Update(void)
 		LightningFlash = false;
 		LightningBurst = false;
 	}
-	//+ rouz edit (ChatGPT)
-	else {
+		else {
 		for (int32 i = 0; i < lightningUpdates; i++) {
 			if (LightningBurst) {
 				if ((CGeneral::GetRandomNumber() & 255) >= 32) {
@@ -227,12 +219,11 @@ void CWeather::Update(void)
 					LightningFlashLastChange = CTimer::GetTimeInMilliseconds();
 					LightningFlash = true;
 				}
-				//- rouz edit (ChatGPT)
-			}
+							}
 		}
 	}
 	if (WhenToPlayLightningSound && CTimer::GetTimeInMilliseconds() > WhenToPlayLightningSound) {
-		DMAudio.PlayOneShot(SoundHandle, SOUND_LIGHTNING, LightningDuration);
+		DMAudio_PlayOneShot(SoundHandle, SOUND_LIGHTNING, LightningDuration);
 		CPad::GetPad(0)->StartShake(40 * LightningDuration + 100, 2 * LightningDuration + 80);
 		WhenToPlayLightningSound = 0;
 	}
@@ -335,13 +326,11 @@ void CWeather::Update(void)
 
 	AddRain();
 
-	//+ rouz edit (ChatGPT)
-	static uint32 nextHeatHazeAddTime;
+		static uint32 nextHeatHazeAddTime;
 	if ((NewWeatherType == WEATHER_SUNNY || NewWeatherType == WEATHER_EXTRA_SUNNY) &&
 		!CGame::IsInInterior() && !CCutsceneMgr::IsRunning() && CTimer::GetTimeInMilliseconds() >= nextHeatHazeAddTime) {
 		nextHeatHazeAddTime = CTimer::GetTimeInMilliseconds() + HEAT_HAZE_ADD_INTERVAL;
-		//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
+		#ifdef FIX_BUGS
 		if (FindPlayerPed() && (!FindPlayerPed()->CheckIfInTheAir() || FindPlayerPed()->CheckIfInTheAir() && FindPlayerPed()->GetPosition().z < 7.5f &&
 			CClock::GetHours() > 6 && CClock::GetHours() < 18))
 #else
@@ -372,8 +361,7 @@ void CWeather::AddHeatHaze()
 
 void CWeather::AddBeastie()
 {
-	//+ rouz edit (ChatGPT)
-	static uint32 nextBeastieAddTime;
+		static uint32 nextBeastieAddTime;
 	if(FindPlayerVehicle() || CTimer::GetTimeInMilliseconds() < nextBeastieAddTime)
 		return;
 
@@ -381,8 +369,7 @@ void CWeather::AddBeastie()
 
 	if((CGeneral::GetRandomNumber()&5) == 0)
 		return;
-	//- rouz edit (ChatGPT)
-
+	
 	CVector pos = TheCamera.GetPosition();
 	float dist = CGeneral::GetRandomNumberInRange(90.0f, 60.0f);
 	int angle = CGeneral::GetRandomNumber() % CParticle::SIN_COS_TABLE_SIZE;
@@ -481,8 +468,7 @@ void CWeather::AddRain()
 		}
 	}
 
-	//+ rouz edit (ChatGPT)
-	particleUpdateCounter += WeatherTimeStep();
+		particleUpdateCounter += WeatherTimeStep();
 	int32 particleUpdates = int32(particleUpdateCounter);
 	particleUpdateCounter -= particleUpdates;
 
@@ -506,16 +492,14 @@ void CWeather::AddRain()
 	if (Wind > 1.1f)
 		for(int i = 0; i < particleUpdates; i++)
 			AddSplashesDuringHurricane();
-	//- rouz edit (ChatGPT)
-
+	
 	if (Rain <= 0.1f)
 		return;
 	static RwRGBA colour;
 	int numDrops = 5.0f * Rain;
 	int numSplashes = 2.0f * Rain;
 	CVector pos, dir;
-	//+ rouz edit (ChatGPT)
-	for(int update = 0; update < particleUpdates; update++){
+		for(int update = 0; update < particleUpdates; update++){
 		for(int i = 0; i < numDrops; i++){
 			pos.x = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_WIDTH);
 			pos.y = CGeneral::GetRandomNumberInRange(0, (int)SCREEN_HEIGHT/5);
@@ -564,16 +548,13 @@ void CWeather::AddRain()
 					else
 						CParticle::AddParticle(PARTICLE_RAIN_SPLASHUP, pos2, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colour);
 				}
-				//- rouz edit (ChatGPT)
-			}
+							}
 		}
 	}
 }
 
-//+ rouz edit (ChatGPT)
 void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale, float distance,
 	const CVector &cameraRight, const CVector &cameraUp)
-//- rouz edit (ChatGPT)
 {
 	static float RandomTex;
 	static float RandomTexX;
@@ -590,8 +571,7 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 	TempBufferRenderIndexList[TempBufferIndicesStored + 9] = TempBufferVerticesStored + 2;
 	TempBufferRenderIndexList[TempBufferIndicesStored + 10] = TempBufferVerticesStored + 3;
 	TempBufferRenderIndexList[TempBufferIndicesStored + 11] = TempBufferVerticesStored + 4;
-	//+ rouz edit (ChatGPT)
-	// Build the rain streak around the camera basis selected by the current render pass
+		// Build the rain streak around the camera basis selected by the current render pass
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 0], 0, 0, 0, 0);
 	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 0], pos.x + 11.0f * cameraUp.x, pos.y + 11.0f * cameraUp.y, pos.z + 11.0f * cameraUp.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 1], 0, 0, 0, 0);
@@ -602,8 +582,7 @@ void RenderOneRainStreak(CVector pos, CVector unused, int intensity, bool scale,
 	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 3], pos.x + 9.0f * cameraRight.x, pos.y + 9.0f * cameraRight.y, pos.z + 9.0f * cameraRight.z);
 	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored + 4], 0, 0, 0, 0); 
 	RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored + 4], pos.x - 11.0f * cameraUp.x, pos.y - 11.0f * cameraUp.y, pos.z - 11.0f * cameraUp.z);
-	//- rouz edit (ChatGPT)
-	float u = STREAK_U;
+		float u = STREAK_U;
 	float v = STREAK_V;
 	if (scale) {
 		u *= LARGE_STREAK_COEFFICIENT;
@@ -641,13 +620,11 @@ void CWeather::RenderRainStreaks(void)
 {
 	static float streakGenerationCounter; // rouz edit (ChatGPT)
 	// Keep auxiliary reflection renders from advancing rain streak state
-	//+ rouz edit (ChatGPT)
-	bool renderOnlyExistingStreaks = false;
+		bool renderOnlyExistingStreaks = false;
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 	renderOnlyExistingStreaks = CustomPipes::bRenderingEnvMap;
 #endif
-	//- rouz edit (ChatGPT)
-
+	
 	if (CTimer::GetIsCodePaused())
 		return;
 	int base_intensity = (64.0f - CTimeCycle::GetFogReduction()) / 64.0f * int(255 * Rain);
@@ -656,8 +633,7 @@ void CWeather::RenderRainStreaks(void)
 	if (TheCamera.m_CameraAverageSpeed > 1.75f)
 		return;
 	// Use the active reflection camera basis when replaying existing streaks
-	//+ rouz edit (ChatGPT)
-	CVector streakCameraPosition = TheCamera.GetPosition();
+		CVector streakCameraPosition = TheCamera.GetPosition();
 	CVector streakCameraRight = TheCamera.GetRight();
 	CVector streakCameraUp = TheCamera.GetUp();
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
@@ -674,29 +650,24 @@ void CWeather::RenderRainStreaks(void)
 		}
 	}
 #endif
-	//- rouz edit (ChatGPT)
-	// Advance streak generation only while rendering the primary camera
-	//+ rouz edit (ChatGPT)
-	int32 streakGenerationUpdates = 0;
+		// Advance streak generation only while rendering the primary camera
+		int32 streakGenerationUpdates = 0;
 	if(!renderOnlyExistingStreaks){
 		streakGenerationCounter += WeatherTimeStep();
 		streakGenerationUpdates = int32(streakGenerationCounter);
 		streakGenerationCounter -= streakGenerationUpdates;
 	}
-	//- rouz edit (ChatGPT)
-	TempBufferIndicesStored = 0;
+		TempBufferIndicesStored = 0;
 	TempBufferVerticesStored = 0;
 	for (int i = 0; i < NUM_RAIN_STREAKS; i++) {
 		if (Streaks[i].timer) {
 			float secondsElapsed = (CTimer::GetTimeInMilliseconds() - Streaks[i].timer) / 1024.0f;
 			// Retire expired streaks only in the primary camera pass
-			//+ rouz edit (ChatGPT)
-			if (secondsElapsed > STREAK_LIFETIME){
+						if (secondsElapsed > STREAK_LIFETIME){
 				if(!renderOnlyExistingStreaks)
 					Streaks[i].timer = 0;
 			}
-			//- rouz edit (ChatGPT)
-			else{
+						else{
 				int intensity;
 				if (secondsElapsed < STREAK_INTEROLATION_TIME)
 					intensity = base_intensity * 0.25f * secondsElapsed / STREAK_INTEROLATION_TIME;
@@ -708,26 +679,20 @@ void CWeather::RenderRainStreaks(void)
 				dir.Normalise();
 				CVector pos = Streaks[i].position + secondsElapsed * Streaks[i].direction;
 				// Keep distance fade and billboard orientation aligned with this render camera
-				//+ rouz edit (ChatGPT)
-				RenderOneRainStreak(pos, dir, intensity, false, (pos - streakCameraPosition).Magnitude(), streakCameraRight, streakCameraUp);
-				//- rouz edit (ChatGPT)
-#ifndef FIX_BUGS // remove useless code
+								RenderOneRainStreak(pos, dir, intensity, false, (pos - streakCameraPosition).Magnitude(), streakCameraRight, streakCameraUp);
+				#ifndef FIX_BUGS // remove useless code
 				// Keep the legacy random-number side effect out of reflection rendering
-				//+ rouz edit (ChatGPT)
-				if(!renderOnlyExistingStreaks && secondsElapsed > 1.0f && secondsElapsed < STREAK_LIFETIME - 1.0f) {
+								if(!renderOnlyExistingStreaks && secondsElapsed > 1.0f && secondsElapsed < STREAK_LIFETIME - 1.0f) {
 					CGeneral::GetRandomNumber(), CGeneral::GetRandomNumber();
 				}
-				//- rouz edit (ChatGPT)
-#endif
+				#endif
 			}
 		}
 		// Generate new streaks only during the primary camera pass
-		//+ rouz edit (ChatGPT)
-		else if(!renderOnlyExistingStreaks) for (int32 update = 0; update < streakGenerationUpdates; update++) {
+				else if(!renderOnlyExistingStreaks) for (int32 update = 0; update < streakGenerationUpdates; update++) {
 			if ((CGeneral::GetRandomNumber() & 0xF00) != 0)
 				continue;
-			//- rouz edit (ChatGPT)
-			// 1/16 probability
+						// 1/16 probability
 			Streaks[i].direction = CVector(0.0f, 0.0f, -12.0f);
 			Streaks[i].position = 6.0f * TheCamera.GetForward() + TheCamera.GetPosition() + CVector(-1.8f * Streaks[i].direction.x, -1.8f * Streaks[i].direction.y, 8.0f);
 			if (!CCutsceneMgr::IsRunning()) {
@@ -781,3 +746,5 @@ void CWeather::ForceHurricaneWeather()
 	CWeather::ForcedWeatherType = WEATHER_HURRICANE;
 }
 #endif
+
+//- rouz edit (ChatGPT)

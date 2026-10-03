@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "common.h"
@@ -28,12 +29,7 @@ enum ePanelStatus
 	PANEL_STATUS_MISSING,
 };
 
-enum eWheelStatus
-{
-	WHEEL_STATUS_OK,
-	WHEEL_STATUS_BURST,
-	WHEEL_STATUS_MISSING
-};
+#include "WheelStatus.h"
 
 enum eLightStatus
 {
@@ -113,3 +109,5 @@ public:
 	bool ProgressEngineDamage(void);
 };
 VALIDATE_SIZE(CDamageManager, 0x1C);
+
+//- rouz edit (ChatGPT)

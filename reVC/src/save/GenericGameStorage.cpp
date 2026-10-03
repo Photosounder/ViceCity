@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #include "crossplatform.h"
@@ -90,7 +91,7 @@ void
 PopulateRadioStationPositionList()
 {
 	for (int i = 0; i < NUM_RADIOS; i++)
-		RadioStationPosition[i] = DMAudio.GetRadioPosition(i);
+		RadioStationPosition[i] = DMAudio_GetRadioPosition(i);
 }
 
 #define ReadDataFromBufferPointer(buf, to) memcpy(&to, buf, sizeof(to)); buf += align4bytes(sizeof(to));
@@ -247,7 +248,7 @@ GenericSave(int file)
 	WriteSaveDataBlock(CGangs::SaveAllGangData, "AllGangDataSize");
 	WriteSaveDataBlock(CTheCarGenerators::SaveAllCarGenerators, "AllCarGeneratorsSize");
 	WriteSaveDataBlock(CParticleObject::SaveParticle, "ParticlesSize");
-	WriteSaveDataBlock(cAudioScriptObject::SaveAllAudioScriptObjects, "AllAudioScriptObjectsSize");
+	WriteSaveDataBlock(AudioScriptObject_SaveAll, "AllAudioScriptObjectsSize");
 	WriteSaveDataBlock(CScriptPaths::Save, "ScriptPathsSize");
 	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo, "PlayerInfoSize");
 	WriteSaveDataBlock(CStats::SaveStats, "StatsSize");
@@ -406,7 +407,7 @@ GenericLoad()
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Particles \n", CParticleObject::LoadParticle);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading AudioScript Objects \n", cAudioScriptObject::LoadAllAudioScriptObjects);
+	ReadDataFromBlock("Loading AudioScript Objects \n", AudioScriptObject_LoadAll);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading ScriptPaths \n", CScriptPaths::Load);
 	LoadSaveDataBlock();
@@ -420,8 +421,8 @@ GenericLoad()
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading PedType Stuff \n", CPedType::Load);
 
-	DMAudio.SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
-	DMAudio.SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
+	DMAudio_SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
+	DMAudio_SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
 	if (!CloseFile(file)) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_CLOSE;
 		return false;
@@ -1247,3 +1248,4 @@ bool SaveGameForPause(int type)
 	return true;
 }
 #endif
+//- rouz edit (ChatGPT)

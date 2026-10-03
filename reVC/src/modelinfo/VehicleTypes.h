@@ -1,0 +1,12 @@
+//+ rouz edit (ChatGPT)
+#pragma once
+enum eVehicleType {
+	VEHICLE_TYPE_CAR,
+	VEHICLE_TYPE_BOAT,
+	VEHICLE_TYPE_TRAIN,
+	VEHICLE_TYPE_HELI,
+	VEHICLE_TYPE_PLANE,
+	VEHICLE_TYPE_BIKE,
+	NUM_VEHICLE_TYPES
+};
+//- rouz edit (ChatGPT)

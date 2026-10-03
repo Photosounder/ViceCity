@@ -1,0 +1,82 @@
+static void seed(cAudioManager *m,uint8_t initialized,uint8_t count,int32_t crime,float x,float y) {
+    // Define valid queue cursors, retained crime fields and report history
+    memset(m,0,sizeof(*m));m->m_bIsInitialised=initialized;
+    m->m_sPoliceRadioQueue.m_nSamplesInQueue=count;m->m_sPoliceRadioQueue.m_nAddOffset=count%60;
+    for(unsigned i=0;i<60;++i) {m->m_sPoliceRadioQueue.m_aSamples[i]=1000+i;}
+    for(unsigned i=0;i<AUDIO_CRIME_COUNT;++i) {
+        // Preserve untouched record fields while selecting the first active crime
+        m->m_aCrimes[i].type=CRIME_NONE;m->m_aCrimes[i].position={x,y,-0.0f};m->m_aCrimes[i].timer=100+i;
+    }
+    m->m_aCrimes[3].type=crime;
+    m->m_anRandomTable[0]=-1;m->m_anRandomTable[1]=-999;
+    strcpy(zone.name,"VICE_C");zone.minx=-40;zone.maxx=40;zone.miny=-80;zone.maxy=80;
+    for(unsigned i=0;i<NUM_CRIME_TYPES;++i) {gMinTimeToNextReport[i]=700+i;}
+    gSpecialSuspectLastSeenReport=255;
+    MusicManager.m_nMusicMode=MUSICMODE_GAME;zoneId=0;replayFlag=0;
+    playerCalls=0;playerPattern=2;player.m_pWanted=&wanted;noWanted.m_pWanted=NULL;wanted.level=1;
+}
+static void service(cAudioManager *m) {
+    // Compare the full scheduler against the original member with shared history
+    active=m;playerCalls=0;@SERVICE@;snapshot(m);
+}
+static void crime(cAudioManager *m) {
+    // Compare return flags, remapping, aging, and exact report queue contents
+    active=m;value(@CRIME@);snapshot(m);
+}
+static void coordinate(cAudioManager *m,float x,float y,float z) {
+    // Observe live zone reads and coordinate-based queue generation
+    active=m;@COORD@;snapshot(m);
+}
+extern "C" void TestPoliceReportsC(void);
+int main() {
+    // Verify the C interface before mutating the longer report trace
+    active=&AudioManager;TestPoliceReportsC();snapshot(active);AudioPolice_InitZones();
+    for(cAudioManager *m:{&AudioManager,&other}) for(uint8_t count:{0,1,49,50,51,55,59,60})
+        for(int32_t type=CRIME_NONE;type<NUM_CRIME_TYPES;++type)
+        for(float x:{-41.0f,-20.01f,-20.0f,0.0f,20.0f,20.01f,41.0f})
+        for(float y:{-81.0f,-40.01f,-40.0f,0.0f,40.0f,40.01f,81.0f}) {
+            // Cover capacity gates, every crime code, and strict quarter-zone boundaries
+            seed(m,255,count,type,x,y);crime(m);
+            seed(m,255,count,type,x,y);coordinate(m,x,y,-0.0f);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(int16_t id:{-1,0,13,14,32767})
+        for(unsigned name=0;name<3;++name) for(uint8_t init:{0,1,255}) {
+            // Cover unmatched names, invalid IDs, and initialization differences between report APIs
+            seed(m,init,0,CRIME_HIT_PED,25,50);zoneId=id;
+            if(name==1)strcpy(zone.name,"HAITI");
+            if(name==2)strcpy(zone.name,"UNKNOWN");
+            crime(m);coordinate(m,25,50,3);
+            MusicManager.m_nMusicMode=MUSICMODE_CUTSCENE;crime(m);coordinate(m,25,50,3);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(unsigned pattern=0;pattern<4;++pattern)
+        for(unsigned pause=0;pause<2;++pause) for(unsigned replay=0;replay<2;++replay)
+        for(int32_t level:{-2147483647-1,-1,0,1,255,256,2147483647}) {
+            // Preserve replay/player short circuits, wanted narrowing, and paused channel service
+            seed(m,1,0,CRIME_HIT_PED,25,50);playerPattern=pattern;wanted.level=level;
+            m->m_bIsPaused=pause;replayFlag=replay;
+#ifndef FIX_BUGS
+            if(pattern==1 && !pause)continue;
+#endif
+            service(m);
+        }
+    for(cAudioManager *m:{&AudioManager,&other}) for(int32_t random:{-2147483647-1,-1000,-1,0,1000,2147483647}) {
+        // Drive shared scheduling across owners using representable random report delays
+        seed(m,1,0,CRIME_NONE,0,0);m->m_anRandomTable[1]=random;logicalFrames=1;
+        for(unsigned frame=0;frame<3400;++frame) {
+            // Keep the mocked vehicle report from filling the queue during timing comparisons
+            m->m_sPoliceRadioQueue.m_nSamplesInQueue=0;
+            for(unsigned i=0;i<AUDIO_CRIME_COUNT;++i) {m->m_aCrimes[i].type=CRIME_NONE;}
+            service(m);
+        }
+    }
+#ifdef FIX_BUGS
+    seed(&AudioManager,1,0,CRIME_NONE,0,0);
+    logicalFrames=0;service(&AudioManager);
+    logicalFrames=301;service(&AudioManager);
+    logicalFrames=0xffffffffu;service(&AudioManager);
+    logicalFrames=1;service(&AudioManager);
+#endif
+    seed(&AudioManager,1,0,CRIME_NONE,0,0);active=&AudioManager;
+    DMAudio_PlaySuspectLastSeen(25,50,3);snapshot(active);
+    printf("%llu\n",(unsigned long long)digest);
+}

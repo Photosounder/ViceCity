@@ -1,0 +1,91 @@
+static uint64_t digest=1469598103934665603ULL;
+static void value(uint64_t v) {
+    // Compare defined field values without padding or process-dependent pointer addresses
+    digest=(digest^v)*1099511628211ULL;
+}
+static void snapshot() {
+    // Observe creation state, retained event/volume fields, and both requested queues
+    value(AudioManager.m_nAudioEntitiesCount);
+    value(AudioManager.m_sAudioScriptObjectManager.m_nScriptObjectEntityTotal);
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        // Normalize the controlled opaque pointer tokens while preserving all entity fields
+        const tAudioEntity *entity=&AudioManager.m_asAudioEntities[i];
+        value(AudioManager.m_aAudioEntityOrderList[i]);value(entity->m_nType);
+        value((uintptr_t)entity->m_pEntity);value(entity->m_bIsUsed);value(entity->m_bStatus);
+        value(entity->m_AudioEvents);
+        for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j) {
+            // Compare every event slot and exact finite volume bits
+            uint32_t volume;memcpy(&volume,&entity->m_afVolume[j],sizeof(volume));
+            value((uint16_t)entity->m_awAudioEvent[j]);value(volume);
+        }
+    }
+    for(unsigned q=0;q<NUM_SOUND_QUEUES;++q) {
+        // Keep queued-ID scan inputs observable independently of which slots are allocated
+        value(AudioManager.m_nRequestedCount[q]);
+        for(unsigned j=0;j<NUM_CHANNELS_GENERIC;++j) {
+            // Preserve physical records, duplicate order entries, and unused order tails
+            value(AudioManager.m_aRequestedOrderList[q][j]);
+            value((uint32_t)AudioManager.m_aRequestedQueue[q][j].m_nEntityIndex);
+        }
+    }
+}
+static void seed(unsigned used) {
+    // Define all state and seed volume fields that creation must retain
+    memset(&AudioManager,0,sizeof(AudioManager));AudioManager.m_bIsInitialised=1;
+    AudioManager.m_nAudioEntitiesCount=used;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i) {
+        // Model a consistent live order list while leaving nonempty retained event storage
+        AudioManager.m_asAudioEntities[i].m_bIsUsed=i<used;
+        AudioManager.m_aAudioEntityOrderList[i]=i<used?i:NUM_AUDIOENTITIES;
+        for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j) {
+            // Make accidental blanket entity resets visible
+            AudioManager.m_asAudioEntities[i].m_afVolume[j]=(i*4+j)*0.125f;
+            AudioManager.m_asAudioEntities[i].m_awAudioEvent[j]=SOUND_FRONTEND_RADIO_TURN_ON;
+        }
+    }
+}
+int main() {
+    // Link every public operation from C before exercising the same baseline trace
+    TestOwnerEntityC();snapshot();
+    for(unsigned used=0;used<=NUM_AUDIOENTITIES;++used) {
+        // Verify the first available slot or complete-capacity failure
+        seed(used);value((uint32_t)DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL,(void*)(uintptr_t)8));snapshot();
+    }
+    for(unsigned count=0;count<=NUM_CHANNELS_GENERIC;++count) {
+        // Cover both queued-ID exclusion scans and repeated physical/order indices
+        seed(0);
+        for(unsigned q=0;q<NUM_SOUND_QUEUES;++q) {
+            // Reserve free entity IDs still referenced by current requested sounds
+            AudioManager.m_nRequestedCount[q]=count;
+            for(unsigned j=0;j<NUM_CHANNELS_GENERIC;++j) {
+                // Include negative handles, duplicate IDs, and permuted physical record indices
+                AudioManager.m_aRequestedOrderList[q][j]=(j*7)%NUM_CHANNELS_GENERIC;
+                AudioManager.m_aRequestedQueue[q][j].m_nEntityIndex=j%5==0?-1:(j+q*3)%NUM_AUDIOENTITIES;
+            }
+        }
+        for(unsigned j=0;j<NUM_CHANNELS_GENERIC;++j) {
+            // Repeated creation must skip queued IDs without modifying requested records
+            value((uint32_t)DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL,(void*)(uintptr_t)(8+j*8)));snapshot();
+        }
+    }
+    seed(0);AudioManager.m_bIsInitialised=0;
+    value((uint32_t)DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL,0));snapshot();
+    AudioManager.m_bIsInitialised=1;
+    value((uint32_t)DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL,0));snapshot();
+    value((uint32_t)DMAudio_CreateEntity(TOTAL_AUDIO_TYPES,(void*)(uintptr_t)8));snapshot();
+    uint32_t random=1;
+    for(unsigned step=0;step<12000;++step) {
+        // Compare realistic creation, deletion, byte status, and event insertion on the live owner
+        random=random*1664525u+1013904223u;
+        int32_t id=(random>>8)%NUM_AUDIOENTITIES;
+        switch(random%5) {
+        case 0:value((uint32_t)DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL,(void*)(uintptr_t)(8+id*8)));break;
+        case 1:DMAudio_DestroyEntity(id);break;
+        case 2:DMAudio_SetEntityStatus(id,random>>16);break;
+        case 3:value(DMAudio_GetEntityStatus(id));break;
+        default:DMAudio_PlayOneShot(id,SOUND_FRONTEND_RADIO_TURN_OFF,(random&255)*0.25f);break;
+        }
+        if(step%31==0)snapshot();
+    }
+    snapshot();printf("%llu\n",(unsigned long long)digest);
+}

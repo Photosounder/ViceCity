@@ -1,0 +1,123 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+#define COLLISION_MAX_DIST 60
+#define Min(a,b) ((a)<(b)?(a):(b))
+struct cAudioManager {
+@FIELDS@
+    void SetUpOneShotCollisionSound(const cAudioCollision &);
+    void SetUpLoopingCollisionSound(const cAudioCollision &,uint8);
+    uint32 SetLoopingCollisionRequestedSfxFreqAndGetVol(const cAudioCollision &);
+    void ServiceCollisions();
+    float Sqrt(float v) const {
+        // Apply the production owner's nonpositive distance clamp
+        return v<=0.0f?0.0f:sqrtf(v);
+    }
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static cAudioCollision collision,*live;
+static unsigned seedValue,cases,callbacks,requests,frequencies,loopOffsets;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;
+cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" void AudioCollisionSounds_OneShot(cAudioManager *,const cAudioCollision *);
+extern "C" void AudioCollisionSounds_Looping(cAudioManager *,const cAudioCollision *,uint8_t);
+extern "C" uint32_t AudioCollisionSounds_LoopingVolume(cAudioManager *,const cAudioCollision *);
+extern "C" void AudioCollisionService_Run(cAudioManager *);
+extern "C" uint32_t TestCollisionSoundsC(cAudioManager *,const cAudioCollision *,uint8_t,unsigned);
+static void value(uint32_t v) {
+    // Observe scalar returns and callback order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash complete zero-padded owner and current collision records
+    const unsigned char *bytes=(const unsigned char *)active;
+    for(unsigned i=0;i<sizeof(*active);i+=4) {uint32_t word;memcpy(&word,bytes+i,4);value(word);}
+    bytes=(const unsigned char *)live;
+    for(unsigned i=0;i<sizeof(*live);i+=4) {uint32_t word;memcpy(&word,bytes+i,4);value(word);}
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Observe sample selection before mutating the shared collision and random table
+    ++callbacks;++frequencies;value(1);value(sample);observe();
+    if(seedValue&1024) {live->m_bSurface1=(live->m_bSurface1+1)%35;live->m_fDistance=144.0f;active->m_anRandomTable[1]+=3;}
+    return 8000+(sample%40)*251;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample index between original start and end offset queries
+    ++callbacks;++loopOffsets;value(2);value(sample);observe();
+    if(seedValue&2048) active->m_sQueueSample.m_nSampleIndex=SFX_RAIN;
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the reread sample index and current sound state
+    ++callbacks;++loopOffsets;value(3);value(sample);observe();return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual request submission and mutate collision fields before the next generator pass
+    ++callbacks;++requests;value(4);observe();
+    if(seedValue&4096) {live->m_bSurface2=(live->m_bSurface2+2)%35;live->m_fIntensity1=40.0f;}
+    return (seedValue>>3)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the reflection helper dependency while generators keep reflections disabled
+    return 0;
+}
+@TABLE@
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed every surface pair, threshold, queue size and retained sample field
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&collision,0,sizeof(collision));live=&collision;
+    AudioCollisionManager_Init(&active->m_sCollisionManager);active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;
+    active->m_bIsInitialised=(seed>>2)&1;active->m_bIsPaused=(seed>>3)&1;active->m_nCollisionEntity=9;
+    for(unsigned i=0;i<5;++i) active->m_anRandomTable[i]=(seed*19+i*67)%9000;
+    for(unsigned i=0;i<6;++i) {
+        active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;
+        active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*800;
+    }
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    const float powers[]={0.0f,0.1f,1.0f,4.0f,6.0f,10.0f,29.0f,50.0f,130.0f,-1.0f};
+    const float speeds[]={0.0f,0.001599f,0.0016f,0.001601f,0.02f,0.09f,1.0f,-1.0f};
+    const float distances[]={-1.0f,0.0f,143.99f,144.0f,900.0f,3599.0f,3600.0f,3601.0f};
+    const int volumes[]={-4,-1,0,1,2,9,127};
+    collision.m_bSurface1=seed%35;collision.m_bSurface2=(seed/35)%35;
+    collision.m_fIntensity1=powers[(seed/13)%10];collision.m_fIntensity2=speeds[(seed/17)%8];
+    collision.m_fDistance=distances[(seed/19)%8];collision.m_nBaseVolume=volumes[(seed/23)%7];
+    collision.m_vecPosition={(float)(seed%100)-50,17,-3};
+    active->m_sQueueSample.m_fDistance=distances[(seed/29)%8];active->m_sQueueSample.m_nSampleIndex=SFX_COL_GATE;
+    active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nVolume=73;
+    active->m_sQueueSample.m_vecPos={3,4,5};active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_nFramesToPlay=17;
+}
+int main() {
+    // Compare all three generators and collision service with actual C queue submission
+    for(unsigned seed=0;seed<9800;++seed) {
+        prepare(seed);@ONESHOT@;observe();++cases;
+        prepare(seed);@LOOPING@;observe();++cases;
+        prepare(seed);value(@VOLUME@);observe();++cases;
+        prepare(seed);
+        active->m_sCollisionManager.m_sQueue=collision;
+        AudioCollisionManager_AddCollisionToRequestedQueue(&active->m_sCollisionManager);
+        if(seed&64) active->m_sCollisionManager.m_asCollisions2[0]=collision;
+        live=&active->m_sCollisionManager.m_asCollisions1[0];
+        @SERVICE@;observe();++cases;
+    }
+    // Require backend frequency and loop queries wherever their configuration enables them
+    if(!frequencies) return 2;
+#ifndef GTA_PS2
+    if(!loopOffsets) return 3;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    if(!requests) return 4;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

@@ -22,7 +22,7 @@ void **gPtrList[4000];
 int32 numPtrs;
 int32 gPosnInList;
 // indices into the ptr list in here are free
-CStack<int32, 4000> m_ptrListIndexStack;
+CIntStack4000 m_ptrListIndexStack; // rouz edit (ChatGPT)
 // how much memory we've moved
 uint32 memMoved;
 
@@ -283,7 +283,10 @@ CMemoryHeap::Free(void *ptr)
 	if(block->m_ptrListIndex != -1){
 		int32 idx = block->m_ptrListIndex;
 		gPtrList[idx] = nil;
-		m_ptrListIndexStack.push(idx);
+		// Return the freed pointer-list index to the embedded C stack
+		//+ rouz edit (ChatGPT)
+		CIntStack4000_Push(&m_ptrListIndexStack, idx);
+		//- rouz edit (ChatGPT)
 	}
 	block->m_ptrListIndex = -1;
 }
@@ -353,7 +356,10 @@ CMemoryHeap::RegisterMemPointer(void *ptr)
 	int index;
 	if(m_ptrListIndexStack.sp > 0){
 		// re-use a previously free'd index
-		index = m_ptrListIndexStack.pop();
+		// Reuse the most recently freed pointer-list index
+		//+ rouz edit (ChatGPT)
+		index = CIntStack4000_Pop(&m_ptrListIndexStack);
+		//- rouz edit (ChatGPT)
 	}else{
 		// have to find a new index
 		index = gPosnInList;
@@ -436,7 +442,10 @@ void
 CMemoryHeap::PopMemId(void)
 {
 	assert(m_idStack.sp > 0);
-	m_currentMemID = m_idStack.pop();
+	// Restore the previous memory identifier from the embedded C stack
+	//+ rouz edit (ChatGPT)
+	m_currentMemID = CIntStack16_Pop(&m_idStack);
+	//- rouz edit (ChatGPT)
 	assert(m_currentMemID != MEMID_FREE);
 }
 
@@ -445,7 +454,10 @@ CMemoryHeap::PushMemId(int32 id)
 {
 	MEMORYHEAP_ASSERT(id != MEMID_FREE);
 	assert(m_idStack.sp < 16);
-	m_idStack.push(m_currentMemID);
+	// Save the current memory identifier in the embedded C stack
+	//+ rouz edit (ChatGPT)
+	CIntStack16_Push(&m_idStack, m_currentMemID);
+	//- rouz edit (ChatGPT)
 	m_currentMemID = id;
 }
 

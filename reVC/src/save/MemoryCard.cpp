@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #ifdef PS2_MENU
@@ -487,7 +488,7 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(CParticleObject::LoadParticle);
 	
 	printf("Loading AudioScript Objects \n");
-	ReadDataFromBlock(cAudioScriptObject::LoadAllAudioScriptObjects);
+	ReadDataFromBlock(AudioScriptObject_LoadAll);
 	
 	printf("Loading Player Info \n");
 	ReadDataFromBlock(CWorld::Players[CWorld::PlayerInFocus].LoadPlayerInfo);
@@ -1837,7 +1838,7 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(CParticleObject::SaveParticle);
 	printf("Particles Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(cAudioScriptObject::SaveAllAudioScriptObjects);
+	WriteSaveDataBlock(AudioScriptObject_SaveAll);
 	printf("Audio Script Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo);
@@ -3082,3 +3083,4 @@ CMemoryCard::DoClassSaveRoutine(int32 file, uint8 *data, uint32 size)
 }
 
 #endif
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -5432,7 +5433,7 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 		}
 
 		if (car->GetModelIndex() == MI_RHINO && carGunLR != angleToFace) {
-			DMAudio.PlayOneShot(car->m_audioEntityId, SOUND_CAR_TANK_TURRET_ROTATE, Abs(angleToFace - carGunLR));
+			DMAudio_PlayOneShot(car->m_audioEntityId, SOUND_CAR_TANK_TURRET_ROTATE, Abs(angleToFace - carGunLR));
 		}
 		carGunLR = angleToFace;
 
@@ -5473,3 +5474,5 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 	}
 }
 #endif
+
+//- rouz edit (ChatGPT)

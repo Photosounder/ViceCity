@@ -64,13 +64,13 @@ bool gbDontRenderVehicles;
 int16 TestCloseThings;
 int16 TestBigThings;
 
-struct EntityInfo
-{
-	CEntity *ent;
-	float sort;
-};
+//+ rouz edit (ChatGPT)
+typedef CSortedLinkItem EntityInfo;
+//- rouz edit (ChatGPT)
 
-CLinkList<EntityInfo> gSortedVehiclesAndPeds;
+//+ rouz edit (ChatGPT)
+CSortedLinkList gSortedVehiclesAndPeds;
+//- rouz edit (ChatGPT)
 
 int32 CRenderer::ms_nNoOfVisibleEntities;
 CEntity *CRenderer::ms_aVisibleEntityPtrs[NUMVISIBLEENTITIES];
@@ -96,21 +96,31 @@ BlockedRange* CRenderer::pEmptyBlockedRanges;
 void
 CRenderer::Init(void)
 {
-	gSortedVehiclesAndPeds.Init(40);
+	// Zero-initialize list nodes here so CITA records the owning subsystem
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Init(&gSortedVehiclesAndPeds, (CSortedLink*)calloc(40, sizeof(CSortedLink)), 40);
+	//- rouz edit (ChatGPT)
 	SortBIGBuildings();
 }
 
 void
 CRenderer::Shutdown(void)
 {
-	gSortedVehiclesAndPeds.Shutdown();
+	// Free the subsystem node array and reset its list sentinels
+	//+ rouz edit (ChatGPT)
+	free(gSortedVehiclesAndPeds.links);
+	CSortedLinkList_Init(&gSortedVehiclesAndPeds, NULL, 0);
+	//- rouz edit (ChatGPT)
 }
 
 void
 CRenderer::PreRender(void)
 {
 	int i;
-	CLink<CVisibilityPlugins::AlphaObjectInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++)
 		ms_aVisibleEntityPtrs[i]->PreRender();
@@ -125,7 +135,10 @@ CRenderer::PreRender(void)
 		for(node = CVisibilityPlugins::m_alphaBuildingList.head.next;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.tail;
 		    node = node->next)
-			((CEntity*)node->item.entity)->PreRender();
+			// Access the object payload through the C list node
+			//+ rouz edit (ChatGPT)
+			((CEntity*)node->item.object)->PreRender();
+			//- rouz edit (ChatGPT)
 	}
 #endif
 
@@ -139,7 +152,10 @@ CRenderer::PreRender(void)
 	for(node = CVisibilityPlugins::m_alphaEntityList.head.next;
 	    node != &CVisibilityPlugins::m_alphaEntityList.tail;
 	    node = node->next)
-		((CEntity*)node->item.entity)->PreRender();
+		// Access the object payload through the C list node
+		//+ rouz edit (ChatGPT)
+		((CEntity*)node->item.object)->PreRender();
+		//- rouz edit (ChatGPT)
 
 	CHeli::SpecialHeliPreRender();
 	CShadows::RenderExtraPlayerShadows();
@@ -495,10 +511,16 @@ static bool IsQueuedForSoftwareUnderwaterFade(CEntity *entity)
 	if(!entity)
 		return false;
 	// Search the queued underwater entries for this entity
-	CLink<CVisibilityPlugins::AlphaObjectInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 	for(node = CVisibilityPlugins::m_alphaUnderwaterEntityList.head.next;
 	    node != &CVisibilityPlugins::m_alphaUnderwaterEntityList.tail; node = node->next)
-		if(node->item.entity == entity)
+		// Access the object payload through the C list node
+		//+ rouz edit (ChatGPT)
+		if(node->item.object == entity)
+		//- rouz edit (ChatGPT)
 			return true;
 	// Report when no underwater fade entry matches
 	return false;
@@ -608,7 +630,10 @@ CRenderer::RenderEverythingBarRoads(void)
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
-	gSortedVehiclesAndPeds.Clear();
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
+	//- rouz edit (ChatGPT)
 
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
 		e = ms_aVisibleEntityPtrs[i];
@@ -631,9 +656,15 @@ CRenderer::RenderEverythingBarRoads(void)
 		if(e->IsVehicle() ||
 		   e->IsPed() && CVisibilityPlugins::GetClumpAlpha((RpClump*)e->m_rwObject) != 255){
 			if(e->IsVehicle() && PutIntoSortedVehicleList((CVehicle*)e)){
-				ei.ent = e;
+				// Access the object payload through the C list node
+				//+ rouz edit (ChatGPT)
+				ei.object = e;
+				//- rouz edit (ChatGPT)
 				ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
-				gSortedVehiclesAndPeds.InsertSorted(ei);
+				// Use the C linked-list functions and node types
+				//+ rouz edit (ChatGPT)
+				CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
+				//- rouz edit (ChatGPT)
 			}else{
 				if(!CVisibilityPlugins::InsertEntityIntoSortedList(e, (ms_vecCameraPosition - e->GetPosition()).Magnitude())){
 					printf("Ran out of space in alpha entity list");
@@ -649,7 +680,10 @@ CRenderer::RenderEverythingBarRoads(void)
 void
 CRenderer::RenderBoats(void)
 {
-	CLink<EntityInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 
 	PUSH_RENDERGROUP("CRenderer::RenderBoats");
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
@@ -687,14 +721,23 @@ CRenderer::RenderBoats(void)
 	CEntity *e;
 	EntityInfo ei;
 	if(gbNewRenderer){
-		gSortedVehiclesAndPeds.Clear();
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
+		//- rouz edit (ChatGPT)
 		// not the real thing
 		for(i = 0; i < ms_nNoOfVisibleVehicles; i++){
 			e = ms_aVisibleVehiclePtrs[i];
 			if(e->IsVehicle() && PutIntoSortedVehicleList((CVehicle*)e)){
-				ei.ent = e;
+				// Access the object payload through the C list node
+				//+ rouz edit (ChatGPT)
+				ei.object = e;
+				//- rouz edit (ChatGPT)
 				ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
-				gSortedVehiclesAndPeds.InsertSorted(ei);
+				// Use the C linked-list functions and node types
+				//+ rouz edit (ChatGPT)
+				CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
+				//- rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -703,7 +746,10 @@ CRenderer::RenderBoats(void)
 	for(node = gSortedVehiclesAndPeds.tail.prev;
 	    node != &gSortedVehiclesAndPeds.head;
 	    node = node->prev){
-		CVehicle *v = (CVehicle*)node->item.ent;
+		// Access the object payload through the C list node
+		//+ rouz edit (ChatGPT)
+		CVehicle *v = (CVehicle*)node->item.object;
+		//- rouz edit (ChatGPT)
 		//+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
 		// Submit boat clumps through the CPU renderer
@@ -952,7 +998,10 @@ CRenderer::RenderWorld(int pass)
 {
 	int i;
 	CEntity *e;
-	CLink<CVisibilityPlugins::AlphaObjectInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
@@ -973,7 +1022,10 @@ CRenderer::RenderWorld(int pass)
 		for(node = CVisibilityPlugins::m_alphaBuildingList.tail.prev;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.head;
 		    node = node->prev){
-			e = node->item.entity;
+			// Access the object payload through the C list node
+			//+ rouz edit (ChatGPT)
+			e = (CEntity*)node->item.object;
+			//- rouz edit (ChatGPT)
 			if(e->bIsBIGBuilding || IsRoad(e))
 				RenderOneBuilding(e, node->item.sort);
 		}
@@ -997,7 +1049,10 @@ CRenderer::RenderWorld(int pass)
 		for(node = CVisibilityPlugins::m_alphaBuildingList.tail.prev;
 		    node != &CVisibilityPlugins::m_alphaBuildingList.head;
 		    node = node->prev){
-			e = node->item.entity;
+			// Access the object payload through the C list node
+			//+ rouz edit (ChatGPT)
+			e = (CEntity*)node->item.object;
+			//- rouz edit (ChatGPT)
 			if(!(e->bIsBIGBuilding || IsRoad(e)))
 				RenderOneBuilding(e, node->item.sort);
 		}
@@ -1070,7 +1125,10 @@ CRenderer::RenderVehicles(void)
 	int i;
 	CEntity *e;
 	EntityInfo ei;
-	CLink<EntityInfo> *node;
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLink *node;
+	//- rouz edit (ChatGPT)
 
 	PUSH_RENDERGROUP("CRenderer::RenderVehicles");
 	// not the real thing
@@ -1080,15 +1138,24 @@ CRenderer::RenderVehicles(void)
 			continue;
 		if(PutIntoSortedVehicleList((CVehicle*)e))
 			continue;	// boats handled elsewhere
-		ei.ent = e;
+		// Access the object payload through the C list node
+		//+ rouz edit (ChatGPT)
+		ei.object = e;
+		//- rouz edit (ChatGPT)
 		ei.sort = (ms_vecCameraPosition - e->GetPosition()).MagnitudeSqr();
-		gSortedVehiclesAndPeds.InsertSorted(ei);
+		// Use the C linked-list functions and node types
+		//+ rouz edit (ChatGPT)
+		CSortedLinkList_InsertSorted(&gSortedVehiclesAndPeds, &ei);
+		//- rouz edit (ChatGPT)
 	}
 
 	for(node = gSortedVehiclesAndPeds.tail.prev;
 	    node != &gSortedVehiclesAndPeds.head;
 	    node = node->prev)
-		RenderOneNonRoad(node->item.ent);
+		// Access the object payload through the C list node
+		//+ rouz edit (ChatGPT)
+		RenderOneNonRoad((CEntity*)node->item.object);
+		//- rouz edit (ChatGPT)
 	POP_RENDERGROUP();
 }
 
@@ -1596,7 +1663,10 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 				//+ rouz edit (ChatGPT)
 				CustomPipes::StorePedShadowForEnvMap(ped);
 				//- rouz edit (ChatGPT)
-				entityInfo.ent = ped;
+				// Access the object payload through the C sorting record
+				//+ rouz edit (ChatGPT)
+				entityInfo.object = ped;
+				//- rouz edit (ChatGPT)
 				entityInfo.sort = (cameraPosition - ped->GetPosition()).MagnitudeSqr();
 				entities[entityCount++] = entityInfo;
 			}
@@ -1633,7 +1703,10 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 					CAntennas::RegisterOneForEnvMap((uintptr)vehicle, vehicle->GetUp(), antennaPosition, 1.0f);
 				}
 				//- rouz edit (ChatGPT)
-				entityInfo.ent = vehicle;
+				// Access the object payload through the C sorting record
+				//+ rouz edit (ChatGPT)
+				entityInfo.object = vehicle;
+				//- rouz edit (ChatGPT)
 				entityInfo.sort = (cameraPosition - vehicle->GetPosition()).MagnitudeSqr();
 				entities[entityCount++] = entityInfo;
 			}
@@ -1679,7 +1752,10 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 				if(object->GetModelIndex() == MI_BEACHBALL)
 					CustomPipes::StoreBeachBallShadowForEnvMap(object);
 				//- rouz edit (ChatGPT)
-				entityInfo.ent = object;
+				// Access the object payload through the C sorting record
+				//+ rouz edit (ChatGPT)
+				entityInfo.object = object;
+				//- rouz edit (ChatGPT)
 				entityInfo.sort = (cameraPosition - object->GetPosition()).MagnitudeSqr();
 				entities[entityCount++] = entityInfo;
 			}
@@ -1689,7 +1765,10 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 
 		// Draw farthest entities first while preserving vehicle occupant handling
 		for(int i = entityCount - 1; i >= 0; i--){
-			CEntity *entity = entities[i].ent;
+			// Access the object payload through the C sorting record
+			//+ rouz edit (ChatGPT)
+			CEntity *entity = (CEntity*)entities[i].object;
+			//- rouz edit (ChatGPT)
 			if(entity->IsVehicle())
 				RenderSoftwareVehicle((CVehicle*)entity);
 			else if(entity->IsObject())
@@ -1778,7 +1857,10 @@ CRenderer::ClearForFrame(void)
 	ms_nNoOfVisibleVehicles = 0;
 	ms_nNoOfVisibleBuildings = 0;
 	ms_nNoOfInVisibleEntities = 0;
-	gSortedVehiclesAndPeds.Clear();
+	// Use the C linked-list functions and node types
+	//+ rouz edit (ChatGPT)
+	CSortedLinkList_Clear(&gSortedVehiclesAndPeds);
+	//- rouz edit (ChatGPT)
 
 	WorldRender::numBlendInsts[PASS_NOZ] = 0;
 	WorldRender::numBlendInsts[PASS_ADD] = 0;
