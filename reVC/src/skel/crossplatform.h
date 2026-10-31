@@ -1,17 +1,11 @@
+//+ rouz edit (ChatGPT)
 #include <time.h>
 #include <limits.h>
 
 // This is the common include for platform/renderer specific skeletons(glfw.cpp, win.cpp etc.) and using cross platform things (like Windows directories wrapper, platform specific global arrays etc.) 
 // Functions that's different on glfw and win but have same signature, should be located on platform.h.
 
-enum eWinVersion
-{
-    OS_WIN95 = 0,
-    OS_WIN98,
-    OS_WINNT,
-    OS_WIN2000,
-    OS_WINXP,
-};
+#include "crossplatform_constants.h"
 
 #if !defined(_MSC_VER) && !defined(__CWCC__)
 char *_strdate(char *buf);
@@ -186,3 +180,4 @@ void GetDateFormat(int, int, SYSTEMTIME*, int, char*, int);
 #define GLFW_GAMEPAD_BUTTON_Y 2
 
 #endif
+//- rouz edit (ChatGPT)

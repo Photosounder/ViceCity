@@ -1,0 +1,229 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "@MODEL_IDS@"
+#include "@VEHICLE_TYPES@"
+#include "@APPEARANCE@"
+#include "@ENTITY_STATUS@"
+#include "@GAME_AREAS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using bool8=uint8_t;
+#define FALSE 0
+#define nil NULL
+static void event(unsigned token);
+struct IntValue {int32_t v;unsigned token;operator int32_t() const {
+    // Observe each original direct integer field read
+    event(token);return v;
+}};
+struct ShortValue {int32_t v;unsigned token;operator int16_t() const {
+    // Observe each direct model read without changing signed narrowing
+    event(token);return (int16_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe original floating field reads on Clang and GCC
+    event(token);
+#endif
+    // Retain pure field reads in the native MSVC fixture
+    return v;
+}};
+struct CVector {float x,y,z;};
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &v) {
+    // Copy the same three coordinates as the production vector boundary
+    return {v.x,v.y,v.z};
+}
+static float DotProduct(const CVector &a,const CVector &b) {
+    // Apply the original full three-term dot product
+    return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+class cTransmission {public:uint32_t identity;};
+struct tHandlingData {cTransmission Transmission;};
+struct HandlingValue {tHandlingData *pointer;operator tHandlingData *() const {
+    // Observe the original handling-pointer comparison or selected second read
+    event(15);return pointer;
+}tHandlingData *operator->() const {
+    // Observe the selected original transmission address access
+    event(15);return pointer;
+}};
+class CVehicle {public:ShortValue m_modelIndex;IntValue status,m_vehType;FloatValue trafficSpeed;HandlingValue pHandling;CVector position,m_vecMoveSpeed,forward;float m_fVelocityChangeForAudio;int32_t appearance;
+    const CVector &GetPosition() {
+        // Resolve the live position at the original query point
+        event(11);return position;
+    }
+    CVector &GetForward() {
+        // Resolve the direction reference before the original dot product
+        event(12);return forward;
+    }
+    uint8_t GetStatus() const {
+        // Read the original status field with its byte result
+        return (uint8_t)(int32_t)status;
+    }
+    int16_t GetModelIndex() const {
+        // Read the original signed model field
+        return m_modelIndex;
+    }
+    int32_t GetVehicleAppearance() {
+        // Resolve the original appearance query independently of captured type
+        event(13);return appearance;
+    }
+    struct Pilot {FloatValue m_fMaxTrafficSpeed;} AutoPilot;
+};
+using CAutomobile=CVehicle;using CBike=CVehicle;
+struct CGame {static IntValue currArea;};IntValue CGame::currArea;
+struct CWeather {static FloatValue WetRoads;};FloatValue CWeather::WetRoads;
+struct cAudioManager {
+@FIELDS@
+    void ProcessVehicle(CVehicle *);void ProcessVehicleOneShots(cVehicleParams &);
+};
+static cAudioManager owners[2],*active;static CVehicle cars[2];static tHandlingData handling[2];
+static AudioSoundPosition camera;
+static unsigned seedValue,cases,callbacks,findReads,gasCalls,carWrites,bikeWrites,oneShots,mutations,layers[23],areaRejects;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestVehicleC(cAudioManager *,CVehicle *);
+@PROTOTYPES@
+static void value(uint32_t v) {
+    // Hash query ordering and scalar results reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe complete initialized records using the independently optimized observer
+    digest=TestAircraftHash(digest,p,size);
+}
+static unsigned identity(const void *p) {
+    // Normalize retained game pointers for repeatable before and after comparisons
+    if(p==&cars[0])return 1;if(p==&cars[1])return 2;
+    if(p==&handling[0]||p==&handling[0].Transmission)return 3;
+    if(p==&handling[1]||p==&handling[1].Transmission)return 4;
+    return 0;
+}
+static void observe() {
+    // Normalize handling pointers before hashing both complete vehicle and owner records
+    CVehicle copy[2];memcpy(copy,cars,sizeof(copy));
+    for(unsigned i=0;i<2;++i)copy[i].pHandling.pointer=(tHandlingData *)(uintptr_t)identity(cars[i].pHandling.pointer);
+    bytes(active,sizeof(*active));bytes(copy,sizeof(copy));bytes(handling,sizeof(handling));bytes(&CGame::currArea,sizeof(CGame::currArea));bytes(&CWeather::WetRoads,sizeof(CWeather::WetRoads));bytes(&camera,sizeof(camera));
+}
+static void parameters(cVehicleParams *p) {
+    // Compare initialized parameter fields while excluding unspecified automatic-storage padding
+    cVehicleParams copy;memset(&copy,0,sizeof(copy));copy.m_VehicleType=p->m_VehicleType;copy.m_bDistanceCalculated=p->m_bDistanceCalculated;copy.m_fDistance=p->m_fDistance;copy.m_pVehicle=(CVehicle *)(uintptr_t)identity(p->m_pVehicle);copy.m_pTransmission=(cTransmission *)(uintptr_t)identity(p->m_pTransmission);copy.m_nIndex=p->m_nIndex;copy.m_fVelocityChange=p->m_fVelocityChange;
+    bytes(&copy,sizeof(copy));
+}
+static void event(unsigned token) {
+    // Observe original live field reads and model camera-query effects
+    ++callbacks;value(token);observe();
+    if(token==12&&(seedValue&128)){cars[0].m_vecMoveSpeed={0.25f,-0.5f,0.75f};cars[0].forward={1,0.5f,-1};}
+    if(token==25&&(seedValue&256)){CGame::currArea.v=AREA_MALL;cars[0].m_modelIndex.v=MI_RCBANDIT;}
+}
+extern "C" CVehicle *AudioGame_FindVehicle() {
+    // Exercise both the initial player exemption and the later live mall lookup
+    event(20);unsigned read=findReads++;return seedValue%3==0?&cars[0]:seedValue%3==1?NULL:(read%2?&cars[0]:&cars[1]);
+}
+extern "C" int32_t AudioDispatchHost_Area() {
+    // Read each current-area expression independently
+    return CGame::currArea;
+}
+extern "C" void AudioReleaseHost_Position(void *vehicle,AudioSoundPosition *out) {
+    // Query the original captured vehicle position before copying it
+    *out=AudioSoundPosition_FromVector(((CVehicle *)vehicle)->GetPosition());
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *vehicle) {
+    // Read each live original model field
+    return vehicle->GetModelIndex();
+}
+extern "C" int32_t AudioVehicleEngineHost_Status(const CVehicle *vehicle) {
+    // Read the original status byte
+    return vehicle->GetStatus();
+}
+extern "C" float AudioVehicleRoadHost_WetRoads() {
+    // Read the wet-road field after preceding generators have run
+    return CWeather::WetRoads;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Resolve the camera after the captured vehicle sound position is set
+    event(25);*out=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the linked geometry transform dependency
+    memset(out,0,sizeof(*out));
+}
+extern "C" void *AudioVehicleHost_Handling(CVehicle *vehicle) {
+    // Read each original handling-pointer expression
+    return (tHandlingData *)vehicle->pHandling;
+}
+extern "C" cTransmission *AudioVehicleHost_Transmission(void *record) {
+    // Address the selected original transmission field
+    return &((tHandlingData *)record)->Transmission;
+}
+extern "C" float AudioVehicleHost_TrafficSpeed(CVehicle *vehicle) {
+    // Read the original simple-traffic speed expression
+    return vehicle->AutoPilot.m_fMaxTrafficSpeed;
+}
+extern "C" void AudioVehicleHost_VelocityVectors(CVehicle *vehicle,AudioSoundPosition *speed,AudioSoundPosition *direction) {
+    // Resolve the direction reference before copying the current movement vector
+    const CVector &forward=vehicle->GetForward();*speed=AudioSoundPosition_FromVector(vehicle->m_vecMoveSpeed);*direction=AudioSoundPosition_FromVector(forward);
+}
+extern "C" int32_t AudioVehicleHost_Type(CVehicle *vehicle) {
+    // Capture the same original vehicle type
+    return vehicle->m_vehType;
+}
+extern "C" int32_t AudioVehicleHost_Appearance(CVehicle *vehicle) {
+    // Query appearance at the original car-routing position
+    return vehicle->GetVehicleAppearance();
+}
+extern "C" void AudioVehiclePlayer_UpdateGas(CVehicle *vehicle,int32_t type) {
+    // Observe captured vehicle and type forwarding while changing subsequent live routing reads
+    ++gasCalls;event(27);value(identity(vehicle));value(type);
+    if(seedValue&512){vehicle->m_modelIndex.v=MI_RCGOBLIN;CWeather::WetRoads.v=1;}
+}
+static uint8_t generator(cAudioManager *manager,cVehicleParams *p,unsigned token) {
+    // Observe every routing boundary and apply realistic parameter and scratch changes
+    ++layers[token];event(40+token);parameters(p);value(manager==active);
+    manager->m_sQueueSample.m_nCounter=token;manager->m_sQueueSample.m_nFrequency+=token;manager->m_sQueueSample.m_fDistance+=(float)token/4;
+    if(seedValue&1024){++mutations;p->m_pVehicle=&cars[1];p->m_VehicleType=VEHICLE_TYPE_PLANE;p->m_nIndex=(seedValue/17)%126;p->m_fVelocityChange+=0.125f;p->m_fDistance+=1;p->m_bDistanceCalculated=1;p->m_pTransmission=&handling[1].Transmission;CWeather::WetRoads.v=-1;}
+    return (seedValue+token)%3!=0;
+}
+@GENERATORS@
+void cAudioManager::ProcessVehicleOneShots(cVehicleParams &p) {
+    // Observe the remaining original member boundary
+    ++oneShots;generator(this,&p,19);
+}
+extern "C" void AudioVehicleHost_OneShots(cAudioManager *manager,cVehicleParams *p) {
+    // Forward the same parameter record to the original one-shot boundary
+    manager->ProcessVehicleOneShots(*p);
+}
+extern "C" void AudioVehicleHost_CarVelocity(CVehicle *vehicle,float velocity) {
+    // Write the final parameter velocity to the captured car
+    vehicle->m_fVelocityChangeForAudio=velocity;
+}
+extern "C" void AudioVehicleHost_BikeVelocity(CVehicle *vehicle,float velocity) {
+    // Write the final parameter velocity to the captured bike
+    vehicle->m_fVelocityChangeForAudio=velocity;
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Sweep all areas, types, appearances and model branches with repeatable initialized storage
+    seedValue=seed;findReads=0;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(cars,0,sizeof(cars));memset(handling,0,sizeof(handling));
+    const int models[]={MI_LANDSTAL,MI_RCBANDIT,MI_RCBARON,MI_RCRAIDER,MI_RCGOBLIN,MI_SKIMMER,MI_HUNTER,MI_PREDATOR,MI_AIRTRAIN,MI_DEADDODO,MI_BUS,MI_FIRST_VEHICLE-1};
+    for(unsigned i=0;i<2;++i){cars[i].m_modelIndex={models[(seed/3+i)%12],14};cars[i].status={(int32_t)((seed/5+i)%13),16};cars[i].m_vehType={(int32_t)((seed/7+i)%8)-1,17};cars[i].AutoPilot.m_fMaxTrafficSpeed={(float)((int32_t)(seed%151)-50),18};cars[i].pHandling.pointer=(seed/11+i)%3==0?NULL:&handling[(seed/13+i)%2];cars[i].appearance=(seed/17+i)%7-1;cars[i].position={(float)(seed%43),-3,5};cars[i].m_vecMoveSpeed={-0.25f,(float)(seed%11)/10,0.75f};cars[i].forward={0.5f,-0.25f,1};cars[i].m_fVelocityChangeForAudio=-99;handling[i].Transmission.identity=i+1;}
+    cars[0].m_vehType.v=(seed/7)%8-1;CGame::currArea={(int32_t)((seed/19)%21)-1,22};CWeather::WetRoads={(seed/23)%3==0?-1.0f:(seed/23)%3==1?0.0f:1.0f,23};camera={-5,4,1};
+    active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_fDistance=17;active->m_sQueueSample.m_vecPos={1,2,3};
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare complete routing runs over both owner layouts and changing game state
+    for(unsigned seed=0;seed<32768;++seed){prepare(seed);observe();@RUN@;observe();if(cars[0].m_fVelocityChangeForAudio!=-99){if((seed/7)%8-1==VEHICLE_TYPE_CAR)++carWrites;else ++bikeWrites;}if(active->m_sQueueSample.m_nCounter==777)++areaRejects;++cases;}
+    // Require every generator family and the early-return and captured-velocity paths
+    for(unsigned i=0;i<23;++i)if(!layers[i])return 2;
+    if(!carWrites||!bikeWrites||!oneShots||!gasCalls||!mutations||!areaRejects)return 3;
+    printf("%u cases %u callbacks %u car %u bike %llu\n",cases,callbacks,carWrites,bikeWrites,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

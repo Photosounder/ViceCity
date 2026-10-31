@@ -4,13 +4,14 @@ from audio_controls_migration import function
 CTOR='cAudioManager::cAudioManager()\n{\n\t// Initialize live owner state at the original C++ startup callback\n\tAudioManager_InitState(this);\n}'
 def owner(source):
     # Preserve the original lifecycle callback while replacing its verified state setup
-    source=source.replace(function(source,'cAudioManager::','cAudioManager'),CTOR)
+    if 'cAudioManager::cAudioManager(' in source:source=source.replace(function(source,'cAudioManager::','cAudioManager'),CTOR)
     source=source.replace(function(source,'cAudioManager::','GenerateIntegerRandomNumberTable')+'\n','')
     return source.replace('GenerateIntegerRandomNumberTable();','AudioManager_GenerateRandomTable(m_anRandomTable);')
 def fields(source):
     # Extract only stored members independently of C++ method and access declarations
     start=source.index('class cAudioManager') if 'class cAudioManager' in source else source.index('typedef struct cAudioManager')
-    data=source[source.index('{',start)+1:source.index('\tcAudioManager();')]
+    end=source.index('\tcAudioManager();') if '\tcAudioManager();' in source else source.index('\n} cAudioManager;',start)
+    data=source[source.index('{',start)+1:end]
     data=data.replace('public:','').removesuffix('#ifdef __cplusplus\n')
     for a,b in [('bool8','uint8_t'),('uint8','uint8_t'),('uint32','uint32_t'),('int32','int32_t')]:data=re.sub(r'\b'+a+r'\b',b,data)
     return data

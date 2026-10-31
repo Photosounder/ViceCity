@@ -1,0 +1,162 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include "@VEHICLE_TYPES@"
+#include "@ENTITY_STATUS@"
+#include "@BOMB_TYPES@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe original engine, drowning and bomb field queries
+    event(token);return (uint8_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating reads on Clang and GCC
+    event(token);
+#endif
+    // Keep floating game fields pure in the native MSVC fixture
+    return v;
+}};
+struct ShortValue {int32_t v;unsigned token;operator int16_t() const {
+    // Observe the original direct model-index read
+    event(token);return (int16_t)v;
+}};
+class CVehicle {public:ByteValue bEngineOn,bIsDrowning,m_bombType,status;FloatValue m_fHealth;ShortValue m_modelIndex;
+    int32_t GetStatus() const {
+        // Observe the original status getter
+        return status;
+    }
+    int16_t GetModelIndex() const {
+        // Preserve the original model getter's direct field read
+        return m_modelIndex;
+    }
+};
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessEngineDamage(cVehicleParams &);bool8 ProcessCarBombTick(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CVehicle cars[2];
+static unsigned seedValue,cases,callbacks,baseReads,offsetReads,requests,diagnostics;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestVehicleConditionC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash results and exact callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized records without type punning
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4){uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Include complete owner and vehicle storage while normalizing parameter pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));
+}
+static void event(unsigned token) {
+    // Change live parameters after individual queries without replacing a captured field expression
+    ++callbacks;value(token);observe();if((token==10||token==12||token==14)&&(seedValue&512))params.m_pVehicle=&cars[1];
+}
+extern "C" uint8_t AudioVehicleReverseHost_Engine(const CVehicle *v) {
+    // Read the current engine flag
+    return v->bEngineOn;
+}
+extern "C" uint8_t AudioVehicleModelHost_Drowning(const CVehicle *v) {
+    // Read the live vehicle's drowning flag after backend callbacks
+    return v->bIsDrowning;
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *v) {
+    // Match the original direct model read through the existing game getter
+    return v->GetModelIndex();
+}
+extern "C" int32_t AudioVehicleEngineHost_Status(const CVehicle *v) {
+    // Query the original current vehicle status
+    return v->GetStatus();
+}
+extern "C" float AudioVehicleConditionHost_Health(const CVehicle *v) {
+    // Evaluate each original health comparison
+    return v->m_fHealth;
+}
+extern "C" uint8_t AudioVehicleConditionHost_Bomb(const CVehicle *v) {
+    // Read bomb type only for a supported active-engine vehicle
+    return v->m_bombType;
+}
+extern "C" void AudioVehicleConditionHost_Unknown(int32_t type) {
+    // Observe the preserved unsupported vehicle diagnostic
+    ++diagnostics;event(25);value(type);
+}
+static void debug(const char *,int32_t type) {
+    // Dispatch the original diagnostic through the same observer
+    AudioVehicleConditionHost_Unknown(type);
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Change live vehicle and distance state before later attenuation and loop setup
+    ++baseReads;event(20);value(sample);if(seedValue&256){params.m_pVehicle=&cars[1];params.m_fDistance=100.0f;params.m_bDistanceCalculated=0;active->m_sQueueSample.m_nSampleIndex=SFX_COUNTDOWN;}
+    return seedValue%7==0?0:sample*31+22050;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live loop sample after the first backend query
+    ++offsetReads;event(21);value(sample);if(seedValue&128)active->m_sQueueSample.m_nSampleIndex=SFX_PALM_TREE_LO;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the live end-offset argument
+    ++offsetReads;event(22);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after vehicle-condition sound setup
+    ++requests;event(23);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Cover both health thresholds, every bomb type and live vehicle changes on all early gates
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    const float health[]={-INFINITY,-1.0f,0.0f,249.99f,250.0f,250.01f,389.99f,390.0f,390.01f,1000.0f,INFINITY,NAN};
+    const int models[]={MI_CADDY,MI_CADDY-1,MI_CADDY+1,MI_CADDY,0,-1,32767};
+    for(unsigned i=0;i<2;++i){cars[i].bEngineOn={uint32_t((seed/3+i)%3!=0),10};cars[i].bIsDrowning={uint32_t((seed/5+i)%2),11};cars[i].m_fHealth={health[(seed/7+i)%12],12};cars[i].status={uint32_t((seed/11+i)%10),13};cars[i].m_modelIndex={models[(seed/13+i)%7],14};cars[i].m_bombType={uint32_t((seed/17+i)%8),15};}
+    const float distances[]={-1.0f,0.0f,100.0f,1599.0f,1600.0f,1601.0f,NAN,INFINITY};params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/19)%8];params.m_bDistanceCalculated=(seed/23)%3;const int types[]={-1,VEHICLE_TYPE_CAR,VEHICLE_TYPE_BOAT,VEHICLE_TYPE_TRAIN,VEHICLE_TYPE_HELI,VEHICLE_TYPE_PLANE,VEHICLE_TYPE_BIKE,NUM_VEHICLE_TYPES,INT32_MIN,INT32_MAX};params.m_VehicleType=types[(seed/29)%10];
+    active->m_nActiveSamples=1+(seed/31)%8;active->m_sQueueSample.m_fDistance=(seed/37)%41;active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=1;
+#ifndef GTA_PS2
+    // Seed desktop loop offsets before backend queries
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Seed owner random storage to detect unintended writes
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*(i+1)%10001)-5000;
+    if(!(params.m_fDistance<1600.0f))params.m_pVehicle=NULL;
+    (void)kind;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare repeated complete generators on alternating owners
+    for(unsigned seed=0;seed<4096;++seed)for(unsigned kind=0;kind<2;++kind){prepare(seed,kind);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+    // Require backend sound selection and the preserved unsupported-vehicle diagnostic
+    if(!baseReads||!diagnostics)return 2;
+#ifndef GTA_PS2
+    // Require both live loop-offset queries
+    if(!offsetReads)return 3;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

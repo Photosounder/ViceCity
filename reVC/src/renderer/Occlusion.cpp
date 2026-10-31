@@ -1,4 +1,6 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 #include "Entity.h"
@@ -40,7 +42,7 @@ COcclusion::Init(void)
 {
 	NumOccludersOnMap = 0;
 #ifndef MASTER
-	VarConsole.Add("Occlusion debug", &bDispayOccDebugStuff, true);
+	VarConsole_AddBool(&VarConsole,"Occlusion debug", &bDispayOccDebugStuff, true); // rouz edit (ChatGPT)
 #endif
 	FarAwayList = -1;
 	NearbyList = -1;
@@ -103,7 +105,7 @@ bool CalcScreenCoors(CVector const &in, CVector *out, float *outw, float *outh) 
 	out->x *= SCREEN_WIDTH * recip;
 	out->y *= SCREEN_HEIGHT * recip;
 
-	float fovScale = DefaultFOV / CDraw::GetFOV();
+	float fovScale = DefaultFOV / Draw_GetFOV();
 
 	*outw = fovScale * recip * SCREEN_WIDTH;
 	*outh = fovScale * recip * SCREEN_HEIGHT;
@@ -459,7 +461,7 @@ bool COcclusion::IsPositionOccluded(CVector pos, float side) {
 RwIm2DVertex vertexbufferT[2];
 
 void COcclusion::Render() {
-	if (!bDispayOccDebugStuff || !(CTimer::GetTimeInMilliseconds() & 0x200))
+	if (!bDispayOccDebugStuff || !((*Timer_GetTimeInMilliseconds()) & 0x200))
 		return;
 
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
@@ -513,8 +515,8 @@ bool CEntity::IsEntityOccluded(void) {
 			}
 
 			if (COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
-				CVector min = m_matrix * CModelInfo::GetColModel(m_modelIndex)->boundingBox.min;
-				CVector max = m_matrix * CModelInfo::GetColModel(m_modelIndex)->boundingBox.max;
+				CVector min = m_matrix * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingBox.min);
+				CVector max = m_matrix * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingBox.max);
 
 				if (CalcScreenCoors(min, &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
 				if (CalcScreenCoors(CVector(max.x, max.y, min.z), &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
@@ -528,3 +530,4 @@ bool CEntity::IsEntityOccluded(void) {
 
 	return false;
 }
+//- rouz edit (ChatGPT)

@@ -1,93 +1,56 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
 #include "AnimBlendList.h"
 #include "AnimBlendNode.h"
 #include "AnimBlendHierarchy.h"
-
-enum {
-	ASSOC_RUNNING = 1,
-	ASSOC_REPEAT = 2,
-	ASSOC_DELETEFADEDOUT = 4,
-	ASSOC_FADEOUTWHENDONE = 8,
-	ASSOC_PARTIAL = 0x10,
-	ASSOC_MOVEMENT = 0x20,	// ???
-	ASSOC_HAS_TRANSLATION = 0x40,
-	ASSOC_HAS_X_TRANSLATION = 0x80,	// for 2d velocity extraction
-	ASSOC_WALK = 0x100,	// for CPed::PlayFootSteps(void)
-	ASSOC_IDLE = 0x200,	// only xpress scratch has it by default, but game adds it to player's idle animations later
-	ASSOC_NOWALK = 0x400,	// see CPed::PlayFootSteps(void)
-	ASSOC_BLOCK = 0x800,	// unused in assoc description, blocks other anims from being played
-	ASSOC_FRONTAL = 0x1000, // anims that we fall to front
-	ASSOC_DRIVING = 0x2000,	// new in VC
-};
-
-// Anim hierarchy associated with a clump
-// Holds the interpolated state of all nodes.
-// Also used as template for other clumps.
-class CAnimBlendAssociation
-{
-public:
-	enum {
-		// callbackType
-		CB_NONE,
-		CB_FINISH,
-		CB_DELETE
-	};
-
-	CAnimBlendLink link;
-
-	int16 numNodes;			// taken from CAnimBlendClumpData::numFrames
-	int16 groupId;		// ID of CAnimBlendAssocGroup this is in
-	// NB: Order of these depends on order of nodes in Clump this was built from
-	CAnimBlendNode *nodes;
-	CAnimBlendHierarchy *hierarchy;
-	float blendAmount;
-	float blendDelta;	// how much blendAmount changes over time
-	float currentTime;
-	float speed;
-	float timeStep;
-	int16 animId;
-	int16 flags;
-	int32 callbackType;
-	void (*callback)(CAnimBlendAssociation*, void*);
-	void *callbackArg;
-
-	bool IsRunning(void) { return !!(flags & ASSOC_RUNNING); }
-	bool IsRepeating(void) { return !!(flags & ASSOC_REPEAT); }
-	bool IsPartial(void) { return !!(flags & ASSOC_PARTIAL); }
-	bool IsMovement(void) { return !!(flags & ASSOC_MOVEMENT); }
-	bool HasTranslation(void) { return !!(flags & ASSOC_HAS_TRANSLATION); }
-	bool HasXTranslation(void) { return !!(flags & ASSOC_HAS_X_TRANSLATION); }
-
-	float GetBlendAmount(float weight) { return IsPartial() ? blendAmount : blendAmount*weight; }
-	CAnimBlendNode *GetNode(int i) { return &nodes[i]; }
-
-	CAnimBlendAssociation(void);
-	CAnimBlendAssociation(CAnimBlendAssociation &other);
-#ifndef FIX_BUGS
-	virtual
+#include "AnimBlendAssociation_flags.h"
+enum {ANIM_ASSOC_CB_NONE=0,ANIM_ASSOC_CB_FINISH=1,ANIM_ASSOC_CB_DELETE=2};
+typedef struct CAnimBlendAssociation {
+    CAnimBlendLink link;
+    int16_t numNodes,groupId;
+    CAnimBlendNode *nodes;
+    CAnimBlendHierarchy *hierarchy;
+    float blendAmount,blendDelta,currentTime,speed,timeStep;
+    int16_t animId,flags;
+    int32_t callbackType;
+    void (*callback)(struct CAnimBlendAssociation*,void*);
+    void *callbackArg;
+} CAnimBlendAssociation;
+typedef void (*AnimAssociationCallback)(CAnimBlendAssociation*,void*);
+#ifdef __cplusplus
+extern "C" {
 #endif
-	~CAnimBlendAssociation(void);
-	void AllocateAnimBlendNodeArray(int n);
-	void FreeAnimBlendNodeArray(void);
-	void Init(RpClump *clump, CAnimBlendHierarchy *hier);
-	void Init(CAnimBlendAssociation &assoc);
-	void SetBlend(float amount, float delta);
-	void SetFinishCallback(void (*callback)(CAnimBlendAssociation*, void*), void *arg);
-	void SetDeleteCallback(void (*callback)(CAnimBlendAssociation*, void*), void *arg);
-	void SetCurrentTime(float time);
-	void SyncAnimation(CAnimBlendAssociation *other);
-	void Start(float time);
-	void UpdateTimeStep(float timeDelta, float relSpeed);
-	bool UpdateTime(float timeDelta, float relSpeed);
-	bool UpdateBlend(float timeDelta);
-
-	void SetRun(void) { flags |= ASSOC_RUNNING; }
-
-	float GetTimeLeft() { return hierarchy->totalLength - currentTime; }
-	float GetProgress() { return currentTime / hierarchy->totalLength; }
-
-	static CAnimBlendAssociation *FromLink(CAnimBlendLink *l) {
-		return (CAnimBlendAssociation*)((uint8*)l - offsetof(CAnimBlendAssociation, link));
-	}
-};
+void AnimAssociation_Init(CAnimBlendAssociation *self);
+void AnimAssociation_CopyConstruct(CAnimBlendAssociation *self,CAnimBlendAssociation *other);
+void AnimAssociation_Destroy(CAnimBlendAssociation *self);
+void AnimAssociation_AllocateAnimBlendNodeArray(CAnimBlendAssociation *self,int32_t n);
+void AnimAssociation_FreeAnimBlendNodeArray(CAnimBlendAssociation *self);
+void AnimAssociation_BindClump(CAnimBlendAssociation *self,void *clump,CAnimBlendHierarchy *hier);
+void AnimAssociation_InitFrom(CAnimBlendAssociation *self,CAnimBlendAssociation *other);
+void AnimAssociation_SetBlend(CAnimBlendAssociation *self,float amount,float delta);
+void AnimAssociation_SetFinishCallback(CAnimBlendAssociation *self,AnimAssociationCallback cb,void *arg);
+void AnimAssociation_SetDeleteCallback(CAnimBlendAssociation *self,AnimAssociationCallback cb,void *arg);
+void AnimAssociation_SetCurrentTime(CAnimBlendAssociation *self,float time);
+void AnimAssociation_SyncAnimation(CAnimBlendAssociation *self,CAnimBlendAssociation *other);
+void AnimAssociation_Start(CAnimBlendAssociation *self,float time);
+void AnimAssociation_UpdateTimeStep(CAnimBlendAssociation *self,float timeDelta,float relSpeed);
+bool AnimAssociation_UpdateTime(CAnimBlendAssociation *self,float timeDelta,float relSpeed);
+bool AnimAssociation_UpdateBlend(CAnimBlendAssociation *self,float timeDelta);
+bool AnimAssociation_IsRunning(CAnimBlendAssociation *self);
+bool AnimAssociation_IsRepeating(CAnimBlendAssociation *self);
+bool AnimAssociation_IsPartial(CAnimBlendAssociation *self);
+bool AnimAssociation_IsMovement(CAnimBlendAssociation *self);
+bool AnimAssociation_HasTranslation(CAnimBlendAssociation *self);
+bool AnimAssociation_HasXTranslation(CAnimBlendAssociation *self);
+float AnimAssociation_GetBlendAmount(CAnimBlendAssociation *self,float weight);
+CAnimBlendNode * AnimAssociation_GetNode(CAnimBlendAssociation *self,int32_t i);
+void AnimAssociation_SetRun(CAnimBlendAssociation *self);
+float AnimAssociation_GetTimeLeft(CAnimBlendAssociation *self);
+float AnimAssociation_GetProgress(CAnimBlendAssociation *self);
+CAnimBlendAssociation * AnimAssociation_FromLink(CAnimBlendLink *link);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

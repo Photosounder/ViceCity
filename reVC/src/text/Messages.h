@@ -1,69 +1,66 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
+typedef struct tMessage {
+	uint16_t *m_pText;
+	uint16_t m_nFlag;
+	uint32_t m_nTime;
+	uint32_t m_nStartTime;
+	int32_t m_nNumber[6];
+	uint16_t *m_pString;
+} tMessage;
 
-struct tMessage 
-{
-	wchar *m_pText;
-	uint16 m_nFlag;
-	uint32 m_nTime;
-	uint32 m_nStartTime;
-	int32 m_nNumber[6];
-	wchar *m_pString;
-};
-
-struct tBigMessage 
-{
+typedef struct tBigMessage {
 	tMessage m_Stack[4];
-};
+} tBigMessage;
 
-struct tPreviousBrief 
-{
-	wchar *m_pText;
-	int32 m_nNumber[6];
-	wchar *m_pString;
-};
+typedef struct tPreviousBrief {
+	uint16_t *m_pText;
+	int32_t m_nNumber[6];
+	uint16_t *m_pString;
+} tPreviousBrief;
 
 #define NUMBRIEFMESSAGES 8
 #define NUMBIGMESSAGES 6
 #define NUMPREVIOUSBRIEFS 5
 
-class CMessages 
-{
-public:
-	static tMessage BriefMessages[NUMBRIEFMESSAGES];
-	static tBigMessage BIGMessages[NUMBIGMESSAGES];
-	static tPreviousBrief PreviousBriefs[NUMPREVIOUSBRIEFS];
-	static char PreviousMissionTitle[16]; // unused
-public:
-	static void Init(void);
-	static uint16 GetWideStringLength(wchar *src);
-	static void WideStringCopy(wchar *dst, wchar *src, uint16 size);
-	static bool WideStringCompare(wchar *str1, wchar *str2, uint16 size);
-	static void Process(void);
-	static void Display(void);
-	static void AddMessage(wchar *key, uint32 time, uint16 pos);
-	static void AddMessageJumpQ(wchar *key, uint32 time, uint16 pos);
-	static void AddMessageSoon(wchar *key, uint32 time, uint16 pos);
-	static void ClearMessages(void);
-	static void ClearSmallMessagesOnly(void);
-	static void AddBigMessage(wchar *key, uint32 time, uint16 pos);
-	static void AddBigMessageQ(wchar *key, uint32 time, uint16 pos);
-	static void AddToPreviousBriefArray(wchar *text, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *string);
-	static void InsertNumberInString(wchar *src, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6, wchar *dst);
-	static void InsertStringInString(wchar *str1, wchar *str2);
-	static void InsertPlayerControlKeysInString(wchar *src);
-	static void AddMessageWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
-	static void AddMessageJumpQWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
-	static void AddMessageSoonWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
-	static void AddBigMessageWithNumber(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
-	static void AddBigMessageWithNumberQ(wchar *key, uint32 time, uint16 pos, int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6);
-	static void AddMessageWithString(wchar *text, uint32 time, uint16 flag, wchar *str);
-	static void AddMessageJumpQWithString(wchar *text, uint32 time, uint16 flag, wchar *str);
-	static void ClearThisPrint(wchar *str);
-	static void ClearThisBigPrint(wchar *str);
-	static void ClearAllMessagesDisplayedByGame(void);
 
-	// unused or cut
-	//static void AddMessageSoonWithString(wchar*, uint32, uint16, wchar*);
-	//static void CutString(int16, char*, char**);
-	//static void PrintString(char*, int16, int16, int16);
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern tMessage Messages_BriefMessages[NUMBRIEFMESSAGES];
+extern tBigMessage Messages_BIGMessages[NUMBIGMESSAGES];
+extern tPreviousBrief Messages_PreviousBriefs[NUMPREVIOUSBRIEFS];
+extern char Messages_PreviousMissionTitle[16];
+void Messages_Init(void);
+uint16_t Messages_GetWideStringLength(uint16_t *src);
+void Messages_WideStringCopy(uint16_t *dst, uint16_t *src, uint16_t size);
+bool Messages_WideStringCompare(uint16_t *str1, uint16_t *str2, uint16_t size);
+void Messages_Process(void);
+void Messages_Display(void);
+void Messages_AddMessage(uint16_t *key, uint32_t time, uint16_t pos);
+void Messages_AddMessageJumpQ(uint16_t *key, uint32_t time, uint16_t pos);
+void Messages_AddMessageSoon(uint16_t *key, uint32_t time, uint16_t pos);
+void Messages_ClearMessages(void);
+void Messages_ClearSmallMessagesOnly(void);
+void Messages_AddBigMessage(uint16_t *key, uint32_t time, uint16_t pos);
+void Messages_AddBigMessageQ(uint16_t *key, uint32_t time, uint16_t pos);
+void Messages_AddToPreviousBriefArray(uint16_t *text, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6, uint16_t *string);
+void Messages_InsertNumberInString(uint16_t *src, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6, uint16_t *dst);
+void Messages_InsertStringInString(uint16_t *str1, uint16_t *str2);
+void Messages_InsertPlayerControlKeysInString(uint16_t *src);
+void Messages_AddMessageWithNumber(uint16_t *key, uint32_t time, uint16_t pos, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6);
+void Messages_AddMessageJumpQWithNumber(uint16_t *key, uint32_t time, uint16_t pos, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6);
+void Messages_AddMessageSoonWithNumber(uint16_t *key, uint32_t time, uint16_t pos, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6);
+void Messages_AddBigMessageWithNumber(uint16_t *key, uint32_t time, uint16_t pos, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6);
+void Messages_AddBigMessageWithNumberQ(uint16_t *key, uint32_t time, uint16_t pos, int32_t n1, int32_t n2, int32_t n3, int32_t n4, int32_t n5, int32_t n6);
+void Messages_AddMessageWithString(uint16_t *text, uint32_t time, uint16_t flag, uint16_t *str);
+void Messages_AddMessageJumpQWithString(uint16_t *text, uint32_t time, uint16_t flag, uint16_t *str);
+void Messages_ClearThisPrint(uint16_t *str);
+void Messages_ClearThisBigPrint(uint16_t *str);
+void Messages_ClearAllMessagesDisplayedByGame(void);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

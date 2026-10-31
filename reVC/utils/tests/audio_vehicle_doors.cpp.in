@@ -1,0 +1,130 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@DOOR_TYPES@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using int8=int8_t;using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#define Min(a,b) ((a)<(b)?(a):(b))
+inline float Abs(float x) { return fabsf(x); }
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator int32_t() const {
+    // Observe original damage and signed door-state queries
+    event(token);return (int32_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating reads on Clang and GCC
+    event(token);
+#endif
+    // Keep floating game fields pure in the native MSVC fixture
+    return v;
+}};
+struct CDoor {ByteValue m_nDoorState;FloatValue m_fAngVel;};
+struct CDamageManager {uint8_t status[VEHICLE_DOOR_COUNT];int32_t GetDoorStatus(int32_t i) {
+    // Observe every original damage lookup
+    event(10+i);return status[i];
+}};
+class CVehicle {};
+class CAutomobile:public CVehicle {public:CDoor Doors[VEHICLE_DOOR_COUNT];CDamageManager Damage;};
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessVehicleDoors(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CAutomobile cars[2];
+static unsigned seedValue,cases,callbacks,baseReads,requests,reflectedRequests;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestVehicleDoorsC(cAudioManager *,cVehicleParams *);
+static void value(uint32_t v) {
+    // Hash results and exact callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized records without type punning
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4){uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Include complete owner and vehicle storage while normalizing parameter pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));
+}
+static void event(unsigned token) {
+    // Change live parameters after the automobile capture while observing original read order
+    ++callbacks;value(token);observe();if(token>=10&&token<16&&(seedValue&512))params.m_pVehicle=&cars[1];
+}
+extern "C" int32_t AudioVehicleDoorsHost_Status(CVehicle *v,uint8_t i) {
+    // Query the same original damage operation
+    return ((CAutomobile *)v)->Damage.GetDoorStatus(i);
+}
+extern "C" int8_t AudioVehicleDoorsHost_State(const CVehicle *v,uint8_t i) {
+    // Preserve the signed byte conversion from the captured door
+    return ((const CAutomobile *)v)->Doors[i].m_nDoorState;
+}
+extern "C" float AudioVehicleDoorsHost_Velocity(const CVehicle *v,uint8_t i) {
+    // Evaluate each original angular velocity expression
+    return ((const CAutomobile *)v)->Doors[i].m_fAngVel;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Alter later doors and the live parameter pointer after the current sample has been selected
+    ++baseReads;event(20);value(sample);if(seedValue&256){params.m_pVehicle=&cars[1];cars[0].Doors[5].m_fAngVel.v=0.3f;cars[0].Damage.status[5]=DOOR_STATUS_SWINGING;cars[0].Doors[5].m_nDoorState.v=DOORST_OPEN;}
+    return seedValue%7==0?0:sample*31+22050;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion and reflection recursion
+    ++requests;if(active->m_sQueueSample.m_nCounter>=256&&active->m_sQueueSample.m_nCounter<2048)++reflectedRequests;event(23);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Cover reflection frequency and distance updates when time scaling is disabled
+    event(24);return (seedValue/3)&1;
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Cover every door gate, signed state and exact angular velocity boundary on both automobiles
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    const float speeds[]={-INFINITY,-0.31f,-0.3f,-0.299f,-0.00351f,-0.0035f,-0.00349f,-0.0f,0.0f,0.00349f,0.0035f,0.00351f,0.299f,0.3f,0.31f,INFINITY,NAN};
+    const int states[]={-128,-1,DOORST_SWINGING,DOORST_OPEN,DOORST_CLOSED,3,127};
+    for(unsigned c=0;c<2;++c)for(unsigned i=0;i<VEHICLE_DOOR_COUNT;++i){cars[c].Damage.status[i]=(seed/3+c+i)%5;cars[c].Doors[i].m_nDoorState={(uint32_t)states[(seed/5+c+i)%7],30+i};cars[c].Doors[i].m_fAngVel={speeds[(seed/7+c+i)%17],40+i};}
+    const float distances[]={-1.0f,0.0f,1.0f,100.0f,1599.0f,1600.0f,1601.0f,NAN,INFINITY};params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/11)%9];params.m_bDistanceCalculated=(seed/13)%3;
+    active->m_nActiveSamples=1+(seed/17)%8;active->m_sQueueSample.m_fDistance=(seed/19)%41;active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=(seed/23)&1;active->m_bIsSurround=(seed/29)&1;
+#ifndef GTA_PS2
+    // Seed desktop loop offsets before the one-shot reset
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Seed shared random history inputs and reflection coordinates
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*(i+1)%10001)-5000;
+    #ifdef AUDIO_REFLECTIONS
+    // Initialize only the configured reflection records
+    for(unsigned i=0;i<MAX_REFLECTIONS;++i){active->m_afReflectionsDistances[i]=(i+1)*4.0f;active->m_avecReflectionsPos[i]={float(i*10),float(i*20),float(i*30)};}
+#endif
+    if(!(params.m_fDistance<1600.0f))params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare repeated complete six-door passes on alternating owners
+    for(unsigned seed=0;seed<8192;++seed){prepare(seed);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+    // Require sound selection and request insertion
+    if(!baseReads)return 2;
+#ifdef AUDIO_REFLECTIONS
+    // Require reflection-capable request insertion
+    if(!requests||!reflectedRequests)return 3;
+#endif
+    printf("%u cases %u callbacks %u samples %u reflections %llu\n",cases,callbacks,baseReads,reflectedRequests,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

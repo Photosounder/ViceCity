@@ -1,4 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "GameLogic.h"
@@ -65,27 +68,27 @@ CGameLogic::PassTime(uint32 time)
 {
 	int32 minutes, hours, days;
 
-	minutes = time + CClock::GetMinutes();
-	hours = CClock::GetHours();
+	minutes = time + Clock_GetMinutes();
+	hours = Clock_GetHours();
 
 	for (; minutes >= 60; minutes -= 60)
 		hours++;
 
 	if (hours > 23) {
-		days = CStats::DaysPassed;
+		days = Stats_DaysPassed;
 		for (; hours >= 24; hours -= 24)
 			days++;
-		CStats::DaysPassed = days;
+		Stats_DaysPassed = days;
 	}
 
-	CClock::SetGameClock(hours, minutes);
+	Clock_SetGameClock(hours, minutes);
 	CPickups::PassTime(time * 1000);
 }
 
 void 
 CGameLogic::SortOutStreamingAndMemory(const CVector &pos)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	CStreaming::FlushRequestList();
 	CStreaming::DeleteRwObjectsAfterDeath(pos);
 	CStreaming::RemoveUnusedModelsInLoadedList();
@@ -94,7 +97,7 @@ CGameLogic::SortOutStreamingAndMemory(const CVector &pos)
 	CStreaming::LoadSceneCollision(pos);
 	CStreaming::LoadScene(pos);
 	CWorld::Players[CWorld::PlayerInFocus].m_pPed->Dress();
-	CTimer::Update();
+	Timer_Update();
 }
 
 void
@@ -107,7 +110,7 @@ CGameLogic::Update()
 	// what a place to check!
 	if (gbTryingPorn4Again) {
 		CRunningScript* pScript = CTheScripts::pActiveScripts;
-		if (pScript && !CGeneral::faststricmp(pScript->m_abScriptName, "porno4"))
+		if (pScript && !General_faststricmp(pScript->m_abScriptName, "porno4"))
 			gbTryingPorn4Again = false;
 	}
 #endif
@@ -130,18 +133,18 @@ CGameLogic::Update()
 		break;
 	case WBSTATE_WASTED:
 #ifdef MISSION_REPLAY
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
 #else
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
 #endif
 			TheCamera.SetFadeColour(200, 200, 200);
 			TheCamera.Fade(2.0f, FADE_OUT);
 		}
 
 #ifdef MISSION_REPLAY
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
 #else
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= 0x1000) {
 #endif
 			pPlayerInfo.m_WBState = WBSTATE_PLAYING;
 			if (pPlayerInfo.m_bGetOutOfHospitalFree) {
@@ -162,16 +165,16 @@ CGameLogic::Update()
 						pVehicle->RemovePassenger(pPlayerInfo.m_pPed);
 				}
 			}
-			CEventList::Initialise();
+			Events_Initialise();
 #ifdef SCREEN_DROPLETS
 			ScreenDroplets::Initialise();
 #endif
-			CMessages::ClearMessages();
+			Messages_ClearMessages();
 			CCarCtrl::ClearInterestingVehicleList();
 			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
-			CRestart::FindClosestHospitalRestartPoint(pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat);
-			CRestart::OverrideHospitalLevel = LEVEL_GENERIC;
-			CRestart::OverridePoliceStationLevel = LEVEL_GENERIC;
+			Restart_FindClosestHospitalRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
+			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
+			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			PassTime(720);
 			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
 			AfterDeathArrestSetUpShortCutTaxi();
@@ -179,22 +182,22 @@ CGameLogic::Update()
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
-			CReferences::RemoveReferencesToPlayer();
+			References_RemoveReferencesToPlayer();
 			CPopulation::m_CountDownToPedsAtStart = 10;
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
-			if (CRestart::bFadeInAfterNextDeath) { 
+			if (Restart_bFadeInAfterNextDeath) {  // rouz edit (ChatGPT)
 				TheCamera.SetFadeColour(200, 200, 200);
 				TheCamera.Fade(4.0f, FADE_IN);
 			} else
-				CRestart::bFadeInAfterNextDeath = true;
+				Restart_bFadeInAfterNextDeath = true; // rouz edit (ChatGPT)
 		}
 		break;
 	case WBSTATE_BUSTED:
 #ifdef MISSION_REPLAY
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
 #else
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
 #endif
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(2.0f, FADE_OUT);
@@ -202,7 +205,7 @@ CGameLogic::Update()
 
 
 		if (!CTheScripts::IsPlayerOnAMission() && pPlayerInfo.m_nBustedAudioStatus == BUSTEDAUDIO_NONE) {
-			if (CGeneral::GetRandomNumberInRange(0, 4) == 0)
+			if (General_GetRandomNumberInRangeInt(0, 4) == 0)
 				pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_DONE;
 			else {
 				pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_LOADING;
@@ -213,7 +216,7 @@ CGameLogic::Update()
 				pPlayerInfo.m_nCurrentBustedAudio = pPlayerInfo.m_nCurrentBustedAudio % TOTAL_BUSTED_AUDIO + 1;
 			}
 		}
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > 4000 &&
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > 4000 &&
 			pPlayerInfo.m_nBustedAudioStatus == BUSTEDAUDIO_LOADING &&
 			DMAudio_GetMissionAudioLoadingStatus(0) == 1) {
 			DMAudio_PlayLoadedMissionAudio(0);
@@ -221,9 +224,9 @@ CGameLogic::Update()
 		}
 		
 #ifdef MISSION_REPLAY
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
 #else
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= 0x1000) {
 #endif
 #ifdef FIX_BUGS
 			pPlayerInfo.m_nBustedAudioStatus = BUSTEDAUDIO_NONE;
@@ -231,7 +234,7 @@ CGameLogic::Update()
 			pPlayerInfo.m_WBState = WBSTATE_PLAYING;
 			int takeMoney;
 
-			switch (pPlayerInfo.m_pPed->m_pWanted->GetWantedLevel()) {
+			switch (Wanted_GetWantedLevel(pPlayerInfo.m_pPed->m_pWanted)) {
 			case 0:
 			case 1:
 				takeMoney = 100;
@@ -271,16 +274,16 @@ CGameLogic::Update()
 						pVehicle->RemovePassenger(pPlayerInfo.m_pPed);
 				}
 			}
-			CEventList::Initialise();
+			Events_Initialise();
 #ifdef SCREEN_DROPLETS
 			ScreenDroplets::Initialise();
 #endif
-			CMessages::ClearMessages();
+			Messages_ClearMessages();
 			CCarCtrl::ClearInterestingVehicleList();
 			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
-			CRestart::FindClosestPoliceRestartPoint(pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat);
-			CRestart::OverrideHospitalLevel = LEVEL_GENERIC;
-			CRestart::OverridePoliceStationLevel = LEVEL_GENERIC;
+			Restart_FindClosestPoliceRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
+			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
+			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			PassTime(720);
 			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
 			AfterDeathArrestSetUpShortCutTaxi();
@@ -289,30 +292,30 @@ CGameLogic::Update()
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
-			CReferences::RemoveReferencesToPlayer();
+			References_RemoveReferencesToPlayer();
 			CPopulation::m_CountDownToPedsAtStart = 10;
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
-			if (CRestart::bFadeInAfterNextArrest) {
+			if (Restart_bFadeInAfterNextArrest) { // rouz edit (ChatGPT)
 				TheCamera.SetFadeColour(0, 0, 0);
 				TheCamera.Fade(4.0f, FADE_IN);
 			} else
-				CRestart::bFadeInAfterNextArrest = true;
+				Restart_bFadeInAfterNextArrest = true; // rouz edit (ChatGPT)
 		}
 		break;
 	case WBSTATE_FAILED_CRITICAL_MISSION:
 #ifdef MISSION_REPLAY
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > AddExtraDeathDelay() + 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= AddExtraDeathDelay() + 0x800)) {
 #else
-		if ((CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime > 0x800) && (CTimer::GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
+		if (((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime > 0x800) && (Timer_GetPreviousTimeInMilliseconds() - pPlayerInfo.m_nWBTime <= 0x800)) {
 #endif
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(2.0f, FADE_OUT);
 		}
 #ifdef MISSION_REPLAY
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= AddExtraDeathDelay() + 0x1000) {
 #else
-		if (CTimer::GetTimeInMilliseconds() - pPlayerInfo.m_nWBTime >= 0x1000) {
+		if ((*Timer_GetTimeInMilliseconds()) - pPlayerInfo.m_nWBTime >= 0x1000) {
 #endif
 			pPlayerInfo.m_WBState = WBSTATE_PLAYING;
 			if (pPlayerInfo.m_pPed->bInVehicle) {
@@ -326,22 +329,22 @@ CGameLogic::Update()
 						pVehicle->RemovePassenger(pPlayerInfo.m_pPed);
 				}
 			}
-			CEventList::Initialise();
+			Events_Initialise();
 #ifdef SCREEN_DROPLETS
 			ScreenDroplets::Initialise();
 #endif
-			CMessages::ClearMessages();
+			Messages_ClearMessages();
 			CCarCtrl::ClearInterestingVehicleList();
 			CWorld::ClearExcitingStuffFromArea(pPlayerInfo.GetPos(), 4000.0f, true);
-			CRestart::FindClosestPoliceRestartPoint(pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat);
-			CRestart::OverridePoliceStationLevel = LEVEL_GENERIC;
-			CRestart::OverrideHospitalLevel = LEVEL_GENERIC;
+			Restart_FindClosestPoliceRestartPoint(&pPlayerInfo.GetPos(), &vecRestartPos, &fRestartFloat); // rouz edit (ChatGPT)
+			Restart_OverridePoliceStationLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
+			Restart_OverrideHospitalLevel = LEVEL_GENERIC; // rouz edit (ChatGPT)
 			RestorePlayerStuffDuringResurrection(pPlayerInfo.m_pPed, vecRestartPos, fRestartFloat);
 			SortOutStreamingAndMemory(pPlayerInfo.GetPos());
 			TheCamera.m_fCamShakeForce = 0.0f;
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
-			CReferences::RemoveReferencesToPlayer();
+			References_RemoveReferencesToPlayer();
 			CPopulation::m_CountDownToPedsAtStart = 10;
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
@@ -366,16 +369,17 @@ CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed *pPlayerPed, CVector
 	pPlayerPed->bDoBloodyFootprints = false;
 	pPlayerPed->m_nDrunkenness = 0;
 	pPlayerPed->m_nFadeDrunkenness = 0;
-	CMBlur::ClearDrunkBlur();
+	// Use the complete C motion-blur owner and its live shared state
+	MBlur_ClearDrunkBlur();
 	pPlayerPed->m_nDrunkCountdown = 0;
 	pPlayerPed->ClearAdrenaline();
 	pPlayerPed->m_fCurrentStamina = pPlayerPed->m_fMaxStamina;
 	if (pPlayerPed->m_pFire)
-		pPlayerPed->m_pFire->Extinguish();
+		Fire_Extinguish(pPlayerPed->m_pFire);
 	pPlayerPed->bInVehicle = false;
 	pPlayerPed->m_pMyVehicle = nil;
 	pPlayerPed->m_pVehicleAnim = nil;
-	pPlayerPed->m_pWanted->Reset();
+	Wanted_Reset(pPlayerPed->m_pWanted);
 	pPlayerPed->bCancelEnteringCar = false;
 	pPlayerPed->RestartNonPartialAnims();
 	pPlayerInfo->MakePlayerSafe(false);
@@ -395,9 +399,9 @@ CGameLogic::RestorePlayerStuffDuringResurrection(CPlayerPed *pPlayerPed, CVector
 	CStreaming::RemoveBuildingsNotInArea(AREA_MAIN_MAP);
 	TheCamera.SetCameraDirectlyInFrontForFollowPed_CamOnAString();
 	TheCamera.Restore();
-	CReferences::RemoveReferencesToPlayer();
+	References_RemoveReferencesToPlayer();
 	CGarages::PlayerArrestedOrDied();
-	CStats::CheckPointReachedUnsuccessfully();
+	Stats_CheckPointReachedUnsuccessfully();
 	CWorld::Remove(pPlayerPed);
 	CWorld::Add(pPlayerPed);
 	CHud::ResetWastedText();
@@ -503,18 +507,18 @@ CGameLogic::UpdateShortCut()
 			pShortCutTaxi->pPassengers[1] == FindPlayerPed() ||
 			pShortCutTaxi->pPassengers[2] == FindPlayerPed()) {
 			pShortCutTaxi->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-			pShortCutTaxi->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 2500;
+			pShortCutTaxi->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2500;
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(2.5f, FADE_OUT);
 			ShortCutState = SHORTCUT_TRANSITION;
-			ShortCutTimer = CTimer::GetTimeInMilliseconds() + 3000;
-			CMessages::AddBigMessage(TheText.Get("TAXI"), 4500, 1);
+			ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 3000;
+			Messages_AddBigMessage(Text_Get(&TheText,"TAXI"), 4500, 1);
 		}
 		AbandonShortCutIfTaxiHasBeenMessedWith();
 		break;
 	case SHORTCUT_TRANSITION:
-		if (CTimer::GetTimeInMilliseconds() > ShortCutTimer) {
-			CTimer::Suspend();
+		if ((*Timer_GetTimeInMilliseconds()) > ShortCutTimer) {
+			Timer_Suspend();
 			CColStore::RequestCollision(ShortCutDestination);
 			CStreaming::LoadSceneCollision(ShortCutDestination);
 			CStreaming::LoadScene(ShortCutDestination);
@@ -523,15 +527,15 @@ CGameLogic::UpdateShortCut()
 			pShortCutTaxi->SetHeading(DEGTORAD(ShortCutDestinationOrientation));
 			pShortCutTaxi->PlaceOnRoadProperly();
 			pShortCutTaxi->SetMoveSpeed(pShortCutTaxi->GetForward() * 0.4f);
-			ShortCutTimer = CTimer::GetTimeInMilliseconds() + 1500;
+			ShortCutTimer = (*Timer_GetTimeInMilliseconds()) + 1500;
 			TheCamera.SetFadeColour(0, 0, 0);
 			TheCamera.Fade(1.0f, FADE_IN);
 			ShortCutState = SHORTCUT_ARRIVING;
-			CTimer::Resume();
+			Timer_Resume();
 		}
 		break;
 	case SHORTCUT_ARRIVING:
-		if (CTimer::GetTimeInMilliseconds() > ShortCutTimer) {
+		if ((*Timer_GetTimeInMilliseconds()) > ShortCutTimer) {
 			CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - SHORTCUT_TAXI_COST);
 			FindPlayerPed()->SetObjective(OBJECTIVE_LEAVE_CAR, pShortCutTaxi);
 			FindPlayerPed()->m_carInObjective = pShortCutTaxi;
@@ -646,4 +650,9 @@ INITSAVEBUF
 VALIDATESAVEBUF(size)
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

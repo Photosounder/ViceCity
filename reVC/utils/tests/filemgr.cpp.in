@@ -1,0 +1,207 @@
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <errno.h>
+#include <direct.h>
+#include <vector>
+#ifndef _WIN32
+#ifndef __FILE_NAME__
+#define __FILE_NAME__ __FILE__
+#endif
+#define CITA_TLS thread_local
+extern "C" {
+#include <cita_windows.h>
+}
+#undef malloc
+#undef free
+#undef calloc
+#undef realloc
+#endif
+
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t checks,assertions,folderCalls,pathCalls,openCalls;
+static char initialDir[128];
+static bool missingPath;
+
+static void require(bool condition)
+{
+    // Return a quiet failure without invoking the game's graphical assertion handler
+    if(!condition)exit(2);
+    checks++;
+}
+static void word(uint64_t value)
+{
+    // Record each original return value and resulting file or buffer state
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void bytes(const void *ptr,size_t n)
+{
+    // Compare complete byte buffers including guards and embedded SUB characters
+    const unsigned char *p=(const unsigned char *)ptr;
+    for(size_t i=0;i<n;i++)word(p[i]);
+}
+extern "C" void re3_assert(const char *expr,const char *file,unsigned int line,const char *function)
+{
+    // Observe the original continue-after-handler convention without opening an assertion window
+    require(strcmp(expr,"len < maxlen")==0);require(strstr(function,"LoadFile")!=NULL);
+    assertions++;word(0xa55e);
+}
+const char *_psGetUserFilesFolder(void)
+{
+    // Verify the folder provider runs after SetDir has restored the root directory
+    char cwd[128];require(_getcwd(cwd,128)!=NULL);require(strcmp(cwd,initialDir)==0);
+    folderCalls++;word(0xf01d);return "documents";
+}
+#ifndef _WIN32
+static unsigned char *pathAllocation;
+static size_t pathAllocationSize;
+static uint32_t pathAllocations,pathReleases;
+extern "C" void *cita_win_malloc(size_t size,const char *file,const char *function,int line)
+{
+    // Guard the path allocation and require the original allocator metadata
+    require(pathAllocation==NULL);require(file!=NULL && line>0);require(strcmp(function,"casepath")==0);
+    pathAllocation=(unsigned char *)malloc(size+32);require(pathAllocation!=NULL);
+    pathAllocationSize=size;memset(pathAllocation,0xa5,size+32);pathAllocations++;
+    return pathAllocation+16;
+}
+extern "C" void cita_win_free(void *pointer,const char *file,const char *function,int line)
+{
+    // Reject CRT ownership or a changed release site before freeing the guarded path
+    require(pathAllocation!=NULL && pointer==pathAllocation+16);
+    require(file!=NULL && line>0);require(strcmp(function,"mychdir")==0);
+    for(unsigned i=0;i<16;i++)require(pathAllocation[i]==0xa5 && pathAllocation[16+pathAllocationSize+i]==0xa5);
+    free(pathAllocation);pathAllocation=NULL;pathReleases++;
+}
+char *casepath(const char *path,bool checkPathFirst)
+{
+    // Model the unchanged platform allocator while recording its exact arguments
+    require(!checkPathFirst);pathCalls++;word(0xca5e);bytes(path,strlen(path));
+    if(missingPath)return NULL;
+    char *result=(char *)cita_win_malloc(strlen(path)+1,__FILE_NAME__,__func__,__LINE__);require(result!=NULL);strcpy(result,path);
+    for(char *p=result;*p;p++)if(*p=='\\')*p='/';
+    return result;
+}
+FILE *_fcaseopen(const char *filename,const char *mode)
+{
+    // Observe the non-Windows case-open boundary and use real binary CRT file operations
+    require(strchr(mode,'b')!=NULL && strchr(mode,'t')==NULL);openCalls++;word(0x0f3e);bytes(mode,strlen(mode));
+    return fopen(filename,mode);
+}
+#endif
+static void rawFile(const char *name,const std::vector<unsigned char> &data)
+{
+    // Create only fixture-owned files in the isolated child-process working directory
+    FILE *f=fopen(name,"wb");require(f!=NULL);require(fwrite(data.data(),1,data.size(),f)==data.size());require(fclose(f)==0);
+}
+static std::vector<unsigned char> rawRead(const char *name)
+{
+    // Observe actual physical bytes independently of the file-manager text adapter
+    FILE *f=fopen(name,"rb");require(f!=NULL);std::vector<unsigned char> data;int c;
+    while((c=fgetc(f))!=EOF)data.push_back((unsigned char)c);
+    require(fclose(f)==0);return data;
+}
+static std::vector<unsigned char> translated(const std::vector<unsigned char> &data)
+{
+    // Compute the independent read expectation by removing CR only when immediately followed by LF
+    std::vector<unsigned char> result;
+    for(size_t i=0;i<data.size();i++){
+        if(data[i]==13 && i+1<data.size() && data[i+1]==10)continue;
+        result.push_back(data[i]);
+    }
+    return result;
+}
+static void checkRead(const char *name,const char *mode,const std::vector<unsigned char> &expected,unsigned chunk)
+{
+    // Read real files through guarded buffers, varying chunk size and tracking EOF separately
+    int fd=TestFileMgr_OpenFile(name,mode);require(fd==1);std::vector<unsigned char> actual;
+    for(;;){
+        std::vector<unsigned char> buf(chunk+16,0xa5);size_t n=TestFileMgr_Read(fd,(const char *)buf.data()+8,chunk);
+        word(n);bytes(buf.data(),buf.size());require(n<=chunk);
+        for(unsigned j=0;j<8;j++)require(buf[j]==0xa5 && buf[buf.size()-1-j]==0xa5);
+        actual.insert(actual.end(),buf.begin()+8,buf.begin()+8+n);word(TestFileMgr_GetErrorReadWrite(fd));
+        if(n==0)break;
+    }
+    require(actual==expected);word(TestFileMgr_Seek(fd,0,SEEK_SET));require(TestFileMgr_GetErrorReadWrite(fd)==0);
+    require(!TestFileMgr_Seek(fd,0,SEEK_END));require(TestFileMgr_Seek(fd,-1,SEEK_SET));
+    word(TestFileMgr_CloseFile(fd));require(TestFileMgr_CloseFile(fd)==EOF);
+}
+int main(void)
+{
+    // Exercise mutable root storage and directory operations inside the test sandbox
+    require(_getcwd(initialDir,128)!=NULL);_mkdir("sub");_mkdir("sub/deep");_mkdir("documents");
+    char *root=TestFileMgr_GetRootDirName();require(root[0]==0);TestFileMgr_Initialise();
+    require(root==TestFileMgr_GetRootDirName());require(strlen(root)==strlen(initialDir)+1);require(root[strlen(root)-1]=='\\');
+    char saved=root[0];root[0]='X';require(TestFileMgr_GetRootDirName()[0]=='X');root[0]=saved;
+    TestFileMgr_SetDir("sub");TestFileMgr_ChangeDir("deep");char cwd[128];require(_getcwd(cwd,128)!=NULL);require(strstr(cwd,"deep")!=NULL);
+    TestFileMgr_ChangeDir("");TestFileMgr_ChangeDir("\\");require(_getcwd(cwd,128)!=NULL);require(strcmp(cwd,initialDir)==0);
+    TestFileMgr_SetDir("sub\\");TestFileMgr_SetDirMyDocuments();require(_getcwd(cwd,128)!=NULL);require(strstr(cwd,"documents")!=NULL);
+    TestFileMgr_SetDir("");require(folderCalls==1);
+#ifndef _WIN32
+    // Preserve the null-casepath ENOENT branch without changing the actual directory
+    missingPath=true;errno=0;TestFileMgr_SetDir("sub");require(errno==ENOENT);missingPath=false;TestFileMgr_SetDir("");
+#endif
+
+    // Check all usable slots, exhaustion, lowest-slot reuse and failed-open reuse
+    require(TestFileMgr_OpenFile("missing-filemgr-test.xyz","rb")==0);require(TestFileMgr_CloseFile(0)==EOF);
+    rawFile("fixture.bin",{0,13,10,26,255});int slots[19];
+    for(int i=0;i<19;i++){slots[i]=TestFileMgr_OpenFileDefault("fixture.bin");require(slots[i]==i+1);}
+    require(TestFileMgr_OpenFileDefault("fixture.bin")==0);require(TestFileMgr_CloseFile(slots[8])==0);
+    slots[8]=TestFileMgr_OpenFileDefault("fixture.bin");require(slots[8]==9);
+    for(int fd:slots)require(TestFileMgr_CloseFile(fd)==0);
+
+    // Compare binary and translated text reads at boundaries across all byte values
+    std::vector<unsigned char> input;
+    for(unsigned k=0;k<17;k++)for(unsigned v=0;v<256;v++)input.push_back((unsigned char)v);
+    input.insert(input.end(),{13,10,13,13,10,26,0,10,13});rawFile("fixture.bin",input);
+    for(unsigned chunk:{1u,2u,3u,17u,257u,1024u}){
+        checkRead("fixture.bin","rb",input,chunk);checkRead("fixture.bin","rt",translated(input),chunk);
+    }
+
+    // Verify text writes insert CR before every LF and binary writes preserve every input byte
+    for(const char *mode:{"wb","wt","w","r+b"}){
+        int fd=TestFileMgr_OpenFile("fixture-write.bin",mode);
+        if(!fd){rawFile("fixture-write.bin",{});fd=TestFileMgr_OpenFile("fixture-write.bin",mode);}
+        require(fd==1);require(TestFileMgr_Write(fd,(const char *)input.data(),input.size())==input.size());require(TestFileMgr_CloseFile(fd)==0);
+        auto physical=rawRead("fixture-write.bin");bool binary=strchr(mode,'b')!=NULL;std::vector<unsigned char> expected;
+        for(unsigned char c:input){if(!binary && c==10)expected.push_back(13);expected.push_back(c);}
+        if(strcmp(mode,"r+b")==0){require(physical.size()>=expected.size());physical.resize(expected.size());}
+        require(physical==expected);bytes(physical.data(),physical.size());
+    }
+    int fd=TestFileMgr_OpenFileForWriting("fixture-writing.bin");require(fd==1);require(TestFileMgr_Write(fd,"\n\x1a",2)==2);require(TestFileMgr_CloseFile(fd)==0);
+    require(rawRead("fixture-writing.bin")==std::vector<unsigned char>({10,26}));
+
+    // Check ReadLine's newline inclusion, truncated lines, EOF preservation and length-one behavior
+    rawFile("fixture-lines.bin",{'a',13,10,26,'b',13,'c',10,'x'});
+    for(const char *mode:{"r","rb"}){
+        fd=TestFileMgr_OpenFile("fixture-lines.bin",mode);require(fd==1);char buf[20];memset(buf,0xa5,sizeof(buf));
+        require(TestFileMgr_ReadLine(fd,buf+4,1));require(buf[4]==0);require(!TestFileMgr_Seek(fd,0,SEEK_SET));
+        while(TestFileMgr_ReadLine(fd,buf+4,4)){bytes(buf,sizeof(buf));require((unsigned char)buf[3]==0xa5 && (unsigned char)buf[8]==0xa5);}
+        require(TestFileMgr_GetErrorReadWrite(fd)!=0);word(TestFileMgr_CloseFile(fd));
+    }
+
+    // Exercise LoadFile's chunk loop, trailing NUL, failed-open result and existing assertions
+    for(unsigned length:{0u,1u,16383u,16384u,16385u,32768u,40001u}){
+        std::vector<unsigned char> source(length);for(unsigned i=0;i<length;i++)source[i]=(unsigned char)(i*17);
+        rawFile("fixture-load.bin",source);
+        for(const char *mode:{"rb","r"}){
+            std::vector<unsigned char> buf(65552,0xa5);auto expected=strchr(mode,'b')?source:translated(source);
+            auto n=TestFileMgr_LoadFile("fixture-load.bin",buf.data()+8,65536,mode);require(n==(FileMgrSize)expected.size());
+            require(memcmp(buf.data()+8,expected.data(),expected.size())==0 && buf[8+n]==0);bytes(buf.data(),buf.size());
+        }
+    }
+    std::vector<unsigned char> buf(65552,0xa5);require(TestFileMgr_LoadFile("missing-filemgr-test.xyz",buf.data()+8,65536,"r")==-1);
+    uint32_t start=assertions;require(TestFileMgr_LoadFile("fixture-load.bin",buf.data()+8,2,"rb")==40001);
+#ifndef MASTER
+    require(assertions-start==3);
+#else
+    require(assertions==start);
+#endif
+    // Report evidence only after all handles are closed and all operations meet independent expectations
+#ifndef _WIN32
+    // Verify every successful path allocation was released through the same allocator
+    require(pathAllocation==NULL && pathAllocations==pathReleases);require(pathAllocations+1==pathCalls);
+#endif
+    require(root==TestFileMgr_GetRootDirName());printf("%016llx checks=%u assertions=%u folders=%u paths=%u opens=%u\n",(unsigned long long)hash,checks,assertions,folderCalls,pathCalls,openCalls);
+}

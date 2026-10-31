@@ -1,0 +1,156 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeQuaternionDefault(void *memory);
+extern "C" void NativeQuaternionMatrix(CQuaternion *value,RwMatrix *matrix);
+extern "C" void NativeQuaternionAxis(CQuaternion *value,RwV3d *axis,float angle);
+void FrameUpdateCallBackNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackOffscreen(AnimBlendFrameData*,void*);
+static uint64_t hashValue=1469598103934665603ULL;
+static uint32_t randomState=0x93a2b3c4U;
+static unsigned states=0,checks=0;
+static CQuaternion staticQuaternions[3];
+static void require(bool condition)
+{
+    // Report the first failed invariant without opening a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations across independent executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence fixture inputs independently of C++ argument evaluation order
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Cover full stored bit patterns without evaluating arbitrary floating-point representations
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static float finiteValue()
+{
+    // Keep matrix branch and animation inputs finite and exactly representable
+    return ((int32_t)(nextBits()%8193)-4096)/1024.0f;
+}
+static void canonical(float &value)
+{
+    // Compare arithmetic NaNs without imposing a new payload propagation policy
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void result(CQuaternion value)
+{
+    // Retain finite and signed-zero results while canonicalizing arithmetic NaN payloads
+    canonical(value.x);canonical(value.y);canonical(value.z);canonical(value.w);observe(&value,16);
+}
+static void vectorResult(RwV3d value)
+{
+    // Compare all three initialized arithmetic coordinates
+    canonical(value.x);canonical(value.y);canonical(value.z);observe(&value,12);
+}
+static void matrixResult(RwMatrix matrix)
+{
+    // Include every matrix byte while canonicalizing only the nine arithmetic outputs
+    canonical(matrix.right.x);canonical(matrix.right.y);canonical(matrix.right.z);canonical(matrix.up.x);canonical(matrix.up.y);canonical(matrix.up.z);canonical(matrix.at.x);canonical(matrix.at.y);canonical(matrix.at.z);observe(&matrix,64);
+}
+static void lifetimes()
+{
+    // Inspect no-write default construction during the constructed object's lifetime
+    alignas(CQuaternion) unsigned char memory[16],expected[16];memset(memory,0xa5,16);memset(expected,0xa5,16);CQuaternion *value=(CQuaternion*)NativeQuaternionDefault(memory);require(value==(void*)memory&&memcmp(memory,expected,16)==0);observe(memory,16);value->~CQuaternion();++states;
+    // Keep static quaternion storage zero-filled without introducing initialization policy
+    unsigned char zero[48]={0};require(memcmp(staticQuaternions,zero,48)==0);observe(staticQuaternions,48);++states;
+}
+static void operations(CQuaternion initial,CQuaternion other,float scalar)
+{
+    // Compare all value-returning operators and their complete independent C11 boundaries
+    CQuaternion actual;
+    for(unsigned op=0;op<7;++op){Run_Value(op,&actual,&initial,&other,scalar,initial.x,initial.y,initial.z,initial.w);if(op==0)require(memcmp(&actual,&initial,16)==0);result(actual);}
+    for(unsigned op=0;op<3;++op){float value=Run_Scalar(op,&initial,&other);canonical(value);observe(&value,4);}
+    // Preserve mutation return identities, self-aliases and ordered multiply reads
+    for(unsigned op=0;op<8;++op)for(unsigned alias=0;alias<4;++alias){
+        CQuaternion a=initial,b=other;actual=initial;const CQuaternion *left=(alias&1)?&actual:&a,*right=(alias&2)?&actual:&b;
+        float theta=(alias==0)?0.0f:(alias==1)?PI*0.25f:(alias==2)?PI*0.75f:PI;float inverse=(alias==3)?0.0f:1.25f;
+        require(Run_Mutate(op,&actual,left,right,scalar,theta,inverse,0.3f)==&actual);require(memcmp(&a,&initial,16)==0&&memcmp(&b,&other,16)==0);result(actual);
+        if(op==0&&Run_Scalar(1,&initial,&other)==0.0f){
+            // The original zero-length fallback changes only W
+            require(memcmp(&actual,&initial,12)==0&&actual.w==1.0f);
+        }
+    }
+    ++states;
+}
+static void numericOperations()
+{
+    // Cover signed zero, denormals, infinities, NaNs and overflow in each quaternion component
+    const uint32_t special[]={0,0x80000000U,1,0x80000001U,0x3f800000U,0xbf800000U,0x3f000000U,0x7f7fffffU,0xff7fffffU,0x7f800000U,0xff800000U,0x7fc12345U,0xffc98765U,0x7f812345U};
+    for(unsigned test=0;test<38416;++test){
+        uint32_t n=test,bits[4];for(unsigned i=0;i<4;++i){bits[i]=special[n%14];n/=14;}CQuaternion value,other;memcpy(&value,bits,16);fill(&other,16);float scalar;uint32_t s=special[test%14];memcpy(&scalar,&s,4);operations(value,other,scalar);
+    }
+    // Add full-width stored payloads that do not follow the structured IEEE grid
+    for(unsigned test=0;test<4096;++test){CQuaternion value,other;fill(&value,16);fill(&other,16);float scalar=finiteValue();operations(value,other,scalar);}
+}
+static void conversions()
+{
+    // Compare every overloaded conversion and preserve matrix padding, flags and position
+    for(unsigned test=0;test<4096;++test){
+        CQuaternion original;original.x=finiteValue();original.y=finiteValue();original.z=finiteValue();original.w=finiteValue();CQuaternion actual=original;RwMatrix matrix,prior;fill(&matrix,64);memcpy(&prior,&matrix,64);Run_Matrix(0,&actual,&matrix);
+        require(memcmp(&actual,&original,16)==0&&matrix.flags==prior.flags&&matrix.pad1==prior.pad1&&matrix.pad2==prior.pad2&&memcmp(&matrix.pos,&prior.pos,16)==0);matrixResult(matrix);
+        // Validate the actual native matrix adapter against the independent C11 caller
+        RwMatrix native;memcpy(&native,&prior,64);NativeQuaternionMatrix(&actual,&native);require(memcmp(&native,&matrix,64)==0);
+        // Exercise every trace-based matrix-to-quaternion branch and Euler round trips
+        if((test&3)==0){matrix.right.x=2;matrix.up.y=-2;matrix.at.z=-2;}else if((test&3)==1){matrix.right.x=-2;matrix.up.y=2;matrix.at.z=-2;}else if((test&3)==2){matrix.right.x=-2;matrix.up.y=-2;matrix.at.z=2;}
+        memcpy(&prior,&matrix,64);Run_Matrix(1,&actual,&matrix);require(memcmp(&prior,&matrix,64)==0);result(actual);
+        float a=finiteValue(),b=finiteValue(),c=finiteValue();Run_Euler(1,&actual,&a,&b,&c);result(actual);Run_Euler(0,&actual,&a,&b,&c);canonical(a);canonical(b);canonical(c);observe(&a,4);observe(&b,4);observe(&c,4);
+        // Preserve ordered writes when Euler outputs alias each other or actual quaternion fields
+        actual=original;Run_Euler(0,&actual,&actual.x,&actual.y,&actual.w);result(actual);actual=original;float shared=1;Run_Euler(0,&actual,&shared,&shared,&shared);canonical(shared);observe(&shared,4);
+        // Keep axis-angle angle outputs live when they alias source or axis coordinates
+        RwV3d axis={finiteValue(),finiteValue(),finiteValue()},savedAxis=axis;float angle=finiteValue();actual=original;Run_Axis(1,&actual,&axis,&angle);require(memcmp(&axis,&savedAxis,12)==0);result(actual);CQuaternion nativeAxis=original;NativeQuaternionAxis(&nativeAxis,&axis,angle);require(memcmp(&nativeAxis,&actual,16)==0);
+        actual=original;Run_Axis(0,&actual,&axis,&actual.w);result(actual);vectorResult(axis);actual=original;axis=savedAxis;Run_Axis(0,&actual,&axis,&axis.x);result(actual);vectorResult(axis);++states;
+    }
+}
+static void animation()
+{
+    // Execute complete original and converted animation methods and every frame callback
+    typedef void (*Callback)(AnimBlendFrameData*,void*);const Callback callbacks[]={FrameUpdateCallBackNonSkinned,FrameUpdateCallBackWithVelocityExtractionNonSkinned,FrameUpdateCallBackWith3dVelocityExtractionNonSkinned,FrameUpdateCallBackSkinned,FrameUpdateCallBackWithVelocityExtractionSkinned,FrameUpdateCallBackWith3dVelocityExtractionSkinned,FrameUpdateCallBackNonSkinnedCompressed,FrameUpdateCallBackSkinnedCompressed,FrameUpdateCallBackOffscreen};
+    for(unsigned test=0;test<2048;++test)for(unsigned which=0;which<9;++which){
+        CAnimBlendSequence sequences[2];KeyFrameTrans frames[2][3];KeyFrameTransCompressed packed[2][3];KeyFrame rotations[2][3];KeyFrameCompressed packedRotations[2][3];CAnimBlendAssociation associations[2];CAnimBlendNode nodes[2][2];CAnimBlendNode *pointers[3]={nodes[0],nodes[1],NULL};
+        for(unsigned channel=0;channel<2;++channel){
+            // Supply initialized keyframes with alternating quaternion signs and safe packed ranges
+            for(unsigned key=0;key<3;++key){
+                float sign=((test+channel+key)&1)?-1.0f:1.0f;Run_Value(0,&frames[channel][key].rotation,NULL,NULL,0,sign*0.1f*(key+1),sign*0.2f,sign*0.3f,sign*0.8f);frames[channel][key].deltaTime=0.25f+key*0.125f;frames[channel][key].translation=CVector((float)key+channel,-0.3f*(key+1),0.2f*(key+1));packed[channel][key].SetRotation(frames[channel][key].rotation);packed[channel][key].SetTime(frames[channel][key].deltaTime);packed[channel][key].SetTranslation(frames[channel][key].translation);
+            }
+            sequences[channel].type=CAnimBlendSequence::KF_ROT|((test&16)?CAnimBlendSequence::KF_TRANS:0);sequences[channel].numFrames=3;sequences[channel].keyFrames=frames[channel];sequences[channel].keyFramesCompressed=packed[channel];
+            // Keep rotation-only fixture arrays at the correct original record stride
+            if(!(test&16)){
+                for(unsigned k=0;k<3;++k){rotations[channel][k]=frames[channel][k];packedRotations[channel][k]=packed[channel][k];}sequences[channel].keyFrames=rotations[channel];sequences[channel].keyFramesCompressed=packedRotations[channel];
+            }
+            sequences[channel].RemoveQuaternionFlips();associations[channel].blendAmount=(test&32)?0.7f:0.25f;associations[channel].timeStep=(test&64)?0.6f:0.05f;associations[channel].flags=((test>>5)+channel)&31;
+            nodes[channel][0].Init();nodes[channel][0].sequence=&sequences[channel];nodes[channel][0].association=&associations[channel];nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;nodes[channel][0].remainingTime=0.2f;nodes[channel][0].CalcDeltas();nodes[channel][1].Init();
+            // Exercise compressed sign correction and actual scalar interpolation before frame accumulation
+            CVector translation;CQuaternion rotation;nodes[channel][0].CalcDeltasCompressed();nodes[channel][0].UpdateCompressed(translation,rotation,0.75f);result(rotation);vectorResult(translation);nodes[channel][0].remainingTime=0.2f;nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;nodes[channel][0].CalcDeltas();
+        }
+        // Cover ignore flags, velocity extraction, partial weights, looping and native frame output
+        RwFrame frame;fill(&frame.matrix,64);RpHAnimStdInterpFrame skin;memset(&skin,0x5a,sizeof(skin));AnimBlendFrameData data;data.flag=test&15;data.frame=&frame;data.hanimFrame=&skin;data.resetPos=CVector(0.5f,-1.25f,0.3f);AnimBlendFrameUpdateData update={(test&128)!=0,pointers};CVector2D velocity2(0.125f,-0.5f);CVector velocity3(0.25f,-0.5f,0.75f);CAnimBlendClumpData clump;clump.velocity2d=((test&256)&&(which==0||which==3||which>=6))?NULL:&velocity2;clump.velocity3d=&velocity3;gpAnimBlendClump=&clump;callbacks[which](&data,&update);matrixResult(frame.matrix);vectorResult(skin.q.imag);float real=skin.q.real;canonical(real);observe(&real,4);vectorResult(skin.t);canonical(velocity2.x);canonical(velocity2.y);observe(&velocity2,8);vectorResult(velocity3);
+        for(unsigned channel=0;channel<2;++channel){
+            // Observe complete animation state without comparing implementation-owned pointer values
+            require(pointers[channel]==nodes[channel]||pointers[channel]==nodes[channel]+1);unsigned advanced=(unsigned)(pointers[channel]-nodes[channel]);observe(&advanced,4);CAnimBlendNode &node=nodes[channel][0];canonical(node.theta);canonical(node.invSin);observe(&node.theta,20);observe(sequences[channel].keyFrames,(test&16)?sizeof(frames[channel]):3*sizeof(KeyFrame));observe(sequences[channel].keyFramesCompressed,(test&16)?sizeof(packed[channel]):3*sizeof(KeyFrameCompressed));
+        }
+        ++states;
+    }
+}
+int main()
+{
+    // Compare complete quaternion ownership and its actual animation consumers
+    lifetimes();numericOperations();conversions();animation();printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #include "crossplatform.h"
@@ -47,14 +48,14 @@ C_PcSave::SaveSlot(int32 slot)
 	MakeValidSaveName(slot);
 	PcSaveHelper.nErrorCode = SAVESTATUS_SUCCESSFUL;
 	_psGetUserFilesFolder();
-	int file = CFileMgr::OpenFile(ValidSaveName, "wb");
+	int file = FileMgr_OpenFile(ValidSaveName, "wb");
 	if (file != 0) {
 #ifdef MISSION_REPLAY
 		if (!IsQuickSave)
 #endif
 			DoGameSpecificStuffBeforeSave();
 		if (GenericSave(file)) {
-			if (!!CFileMgr::CloseFile(file))
+			if (!!FileMgr_CloseFile(file))
 				nErrorCode = SAVESTATUS_ERR_SAVE_CLOSE;
 			return 0;
 		}
@@ -68,14 +69,14 @@ C_PcSave::SaveSlot(int32 slot)
 bool
 C_PcSave::PcClassSaveRoutine(int32 file, uint8 *data, uint32 size)
 {
-	CFileMgr::Write(file, (const char*)&size, sizeof(size));
-	if (CFileMgr::GetErrorReadWrite(file)) {
+	FileMgr_Write(file, (const char*)&size, sizeof(size));
+	if (FileMgr_GetErrorReadWrite(file)) {
 		nErrorCode = SAVESTATUS_ERR_SAVE_WRITE;
 		strncpy(SaveFileNameJustSaved, ValidSaveName, sizeof(ValidSaveName) - 1);
 		return false;
 	}
 
-	CFileMgr::Write(file, (const char*)data, align4bytes(size));
+	FileMgr_Write(file, (const char*)data, align4bytes(size));
 	CheckSum += (uint8) size;
 	CheckSum += (uint8) (size >> 8);
 	CheckSum += (uint8) (size >> 16);
@@ -83,7 +84,7 @@ C_PcSave::PcClassSaveRoutine(int32 file, uint8 *data, uint32 size)
 	for (int i = 0; i < align4bytes(size); i++) {
 		CheckSum += *data++;
 	}
-	if (CFileMgr::GetErrorReadWrite(file)) {
+	if (FileMgr_GetErrorReadWrite(file)) {
 		nErrorCode = SAVESTATUS_ERR_SAVE_WRITE;
 		strncpy(SaveFileNameJustSaved, ValidSaveName, sizeof(ValidSaveName) - 1);
 		return false;
@@ -115,9 +116,9 @@ C_PcSave::PopulateSlotInfo()
 			SYSTEMTIME SaveDateTime;
 		} header;
 		sprintf(savename, "%s%i%s", DefaultPCSaveFileName, i + 1, ".b");
-		int file = CFileMgr::OpenFile(savename, "rb");
+		int file = FileMgr_OpenFile(savename, "rb");
 		if (file != 0) {
-			CFileMgr::Read(file, (char*)&header, sizeof(header));
+			FileMgr_Read(file, (char*)&header, sizeof(header));
 			if (strncmp((char*)&header, TopLineEmptyFile, sizeof(TopLineEmptyFile)-1) != 0) {
 				Slots[i] = SLOT_OK;
 #ifdef START_FROM_LAST_SAVE
@@ -127,13 +128,13 @@ C_PcSave::PopulateSlotInfo()
 				
 				SlotFileName[i][24] = '\0';
 			}
-			CFileMgr::CloseFile(file);
+			FileMgr_CloseFile(file);
 		}
 		if (Slots[i] == SLOT_OK) {
 			if (CheckDataNotCorrupt(i, savename)) {
 #ifdef FIX_INCOMPATIBLE_SAVES
 				if (!FixSave(i, GetSaveType(savename))) {
-					CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i + 1, -1, -1, -1, -1, -1, SlotFileName[i]);
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_SLC"), i + 1, -1, -1, -1, -1, -1, SlotFileName[i]);
 					Slots[i] = SLOT_CORRUPTED;
 					continue;
 				}
@@ -171,13 +172,14 @@ C_PcSave::PopulateSlotInfo()
 					sprintf(date, "%02d %02d %04d %02d:%02d:%02d", st.wDay, st.wMonth, st.wYear, st.wHour, st.wMinute, st.wSecond);
 				else
 #endif // MORE_LANGUAGES
-					sprintf(date, "%02d %s %04d %02d:%02d:%02d", st.wDay, UnicodeToAsciiForSaveLoad(TheText.Get(month)), st.wYear, st.wHour, st.wMinute, st.wSecond);
+					sprintf(date, "%02d %s %04d %02d:%02d:%02d", st.wDay, UnicodeToAsciiForSaveLoad(Text_Get(&TheText,month)), st.wYear, st.wHour, st.wMinute, st.wSecond);
 				AsciiToUnicode(date, SlotSaveDate[i]);
 
 			} else {
-				CMessages::InsertNumberInString(TheText.Get("FEC_SLC"), i + 1, -1, -1, -1, -1, -1, SlotFileName[i]);
+				Messages_InsertNumberInString(Text_Get(&TheText,"FEC_SLC"), i + 1, -1, -1, -1, -1, -1, SlotFileName[i]);
 				Slots[i] = SLOT_CORRUPTED;
 			}
 		}
 	}
 }
+//- rouz edit (ChatGPT)

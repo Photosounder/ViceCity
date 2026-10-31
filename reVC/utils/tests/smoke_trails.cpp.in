@@ -1,0 +1,231 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+extern "C" { uint32_t Timer_timeMs;int32_t TempBufferVerticesStored,TempBufferIndicesStored; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap; }
+float CWeather::Wind;
+VertexBufferUnion TempVertexBuffer;
+static CPlayerPed peds[3];
+static RwMatrix matrices[4];
+static bool cameraVisible,transformSuccess,firstPerson,pedPresent,vehiclePresent,cutscene,clumpPresent,triggered;
+static bool changingPeds;
+static int hook,activeRecord,updateDepth=-1,pointCounts[8],pedQueries,boneIndex;
+static RwV3d *pointOwners[8][2];
+static unsigned states,calls,registrations,updates,renders,queries,pointTransforms,transforms,draws,ends;
+static uint64_t hash=1469598103934665603ULL;
+static uint16_t initialIndices[32];
+static float initialRandom[16];
+
+static void require(bool condition)
+{
+    // Stop immediately if a required callback or legal fixture precondition is missed
+    if(!condition)abort();
+}
+static void word(uint32_t value)
+{
+    // Compare exact scalar bits using a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(i*8))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Observe float representations without numeric tolerances or C++ record casts
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vector(const RwV3d &v)
+{
+    // Read actual declared native vector components only while their owner is alive
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void event(unsigned id)
+{
+    // Retain the exact number and ordering of original owner operations
+    calls++;word(id);
+}
+static void vertex(RwIm3DVertex &v)
+{
+    // Observe real native D3D9 or GL3 fields through their corresponding accessors
+    floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());
+}
+static void snapshot(void)
+{
+    // Observe every retained record field, both complete tables and native shared-buffer state
+    states++;word(Timer_timeMs);word(TestSm_Flag());word(CustomPipes::bRenderingEnvMap);floating(CWeather::Wind);word(TempBufferVerticesStored);word(TempBufferIndicesStored);
+    for(int index=0;index<3;index++){
+        // Include all retained unused bytes and stale opacity/position values after partial initialization
+        SmokeTrail t=TestSm_Get(index);for(int i=0;i<16;i++){floating(t.m_pos[i].x);floating(t.m_pos[i].y);floating(t.m_pos[i].z);floating(t.m_opacity[i]);word(t.m_time[i]);}for(int i=0;i<536;i++)word((unsigned char)t.m_unused[i]);word(t.m_seed);
+    }
+    uint16_t indices[32];float random[16];TestSm_Tables(indices,random);for(int i=0;i<32;i++)word(indices[i]);for(int i=0;i<16;i++)floating(random[i]);for(int i=0;i<32;i++)vertex(TempBufferRenderVertices[i]);vertex(TempBufferRenderVertices[511]);
+    if(updateDepth>=0){
+        // Observe native temporary objects only within the complete original update lifetime
+        word(pointCounts[updateDepth]);for(int i=0;i<pointCounts[updateDepth];i++)vector(*pointOwners[updateDepth][i]);
+    }
+}
+static void update(void)
+{
+    // Give each nested update its own independently observed native point lifetimes
+    updates++;require(++updateDepth<8);pointCounts[updateDepth]=0;pointOwners[updateDepth][0]=NULL;pointOwners[updateDepth][1]=NULL;pedQueries=0;TestSm_Update();pointCounts[updateDepth]=0;pointOwners[updateDepth][0]=NULL;pointOwners[updateDepth][1]=NULL;updateDepth--;snapshot();
+}
+static void renderOne(int index)
+{
+    // Retain the selected actual record across any nested owner callbacks
+    renders++;int saved=activeRecord;activeRecord=index;TestSm_RenderOne(index);activeRecord=saved;snapshot();
+}
+static void mutation(int point)
+{
+    // Apply one defined live mutation at an actual original query or rendering boundary
+    if(triggered)return;
+    if(hook==1 && point==1){triggered=true;CustomPipes::bRenderingEnvMap=true;SmokeTrail t=TestSm_Get(activeRecord);t.m_time[1]=(int32_t)(Timer_timeMs-2251);TestSm_Set(activeRecord,&t);}
+    else if(hook==2 && point==2){triggered=true;Timer_timeMs+=73;CWeather::Wind=-.7f;TestSm_SetRandom(14,17.f);SmokeTrail t=TestSm_Get(activeRecord);t.m_pos[0].x+=39.f;TestSm_Set(activeRecord,&t);}
+    else if(hook==3 && point==3){triggered=true;renderOne(1);}
+    else if(hook==4 && point==4){triggered=true;TestSm_SetIndex(0,15);SmokeTrail t=TestSm_Get(0);t.m_time[0]=0;TestSm_Set(0,&t);}
+    else if(hook==5 && point==5){triggered=true;TestSm_SetIndex(2,11);renderOne(1);}
+    else if(hook==6 && point==6){triggered=true;Timer_timeMs+=151;TestSm_SetFlag(false);}
+    else if(hook==7 && point==7 && pointCounts[updateDepth]==2){triggered=true;pointOwners[updateDepth][0]->x+=23.f;matrices[boneIndex].pos.y+=7.f;}
+    else if(hook==8 && point==7){triggered=true;Timer_timeMs+=151;update();}
+    else if(hook==9 && point==2 && updateDepth>=0 && pointCounts[updateDepth]==2){triggered=true;pointOwners[updateDepth][0]->x+=37.f;pointOwners[updateDepth][1]->z-=19.f;}
+    else if(hook==10 && point==8){triggered=true;changingPeds=true;}
+    else if(hook==11 && point==9){triggered=true;boneIndex=3;matrices[3].pos.x=71.f;}
+    else if(hook==12 && point==1){triggered=true;TestSm_Init();}
+}
+bool CCamera::Using1stPersonWeaponMode(void)
+{
+    // Preserve the original first-person gate before any player query
+    event(1);queries++;word(firstPerson);return firstPerson;
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Observe the original camera input before live flag or timestamp mutation
+    event(2);queries++;vector(center);floating(radius);mutation(1);word(cameraVisible);return cameraVisible;
+}
+CPlayerPed *FindPlayerPed(void)
+{
+    // Retain every repeated player lookup and its actual selected owner
+    event(3);queries++;int index=changingPeds?pedQueries%3:0;pedQueries++;word(index);word(pedPresent);return pedPresent?&peds[index]:NULL;
+}
+CVehicle *FindPlayerVehicle(void)
+{
+    // Preserve the vehicle gate without introducing any derived-to-base layout assumption
+    event(4);queries++;word(vehiclePresent);return vehiclePresent?(CVehicle *)0x2000:NULL;
+}
+bool CCutsceneMgr::IsRunning(void)
+{
+    // Retain the cutscene gate and its original short-circuit position
+    event(5);queries++;word(cutscene);return cutscene;
+}
+RpClump *CPlayerPed::GetClump(void)
+{
+    // Observe the actual typed player owner independently at both clump queries
+    event(6);queries++;word(identity);mutation(8);word(clumpPresent);return clumpPresent?(RpClump *)(uintptr_t)(0x3000+identity*0x100):NULL;
+}
+RpHAnimHierarchy *GetAnimHierarchyFromSkinClump(RpClump *clump)
+{
+    // Preserve the actual third player lookup and the selected clump argument
+    event(7);queries++;word((uint32_t)(uintptr_t)clump);mutation(6);return (RpHAnimHierarchy *)0x4000;
+}
+int ConvertPedNode2BoneTag(int node)
+{
+    // Retain the original head-node conversion before hierarchy index lookup
+    event(8);queries++;word(node);require(node==PED_HEAD);return 5;
+}
+RwInt32 RpHAnimIDGetIndex(RpHAnimHierarchy *hier,RwInt32 tag)
+{
+    // Observe the exact hierarchy and bone-tag argument before selecting an index
+    event(9);queries++;require(hier==(RpHAnimHierarchy *)0x4000);word(tag);mutation(9);word(boneIndex);return boneIndex;
+}
+RwMatrix *RpHAnimHierarchyGetMatrixArray(RpHAnimHierarchy *hier)
+{
+    // Return an actual native matrix array for the original typed pointer arithmetic
+    event(10);queries++;require(hier==(RpHAnimHierarchy *)0x4000);return matrices;
+}
+RwV3d *RwV3dTransformPoints(RwV3d *out,const RwV3d *in,RwInt32 count,const RwMatrix *matrix)
+{
+    // Compare exact in-place aliasing and keep both actual native objects alive through later callbacks
+    event(11);pointTransforms++;require(updateDepth>=0 && pointCounts[updateDepth]<2 && count==1);word(out==in);require(out==in);word((uint32_t)(matrix-matrices));vector(*in);RwV3d value=*in;int index=pointCounts[updateDepth]++;pointOwners[updateDepth][index]=out;word(index==0 || out!=pointOwners[updateDepth][0]);if(updateDepth>0)word(out!=pointOwners[updateDepth-1][0]);mutation(7);out->x=value.x+matrix->pos.x;out->y=value.y+matrix->pos.y;out->z=value.z+matrix->pos.z;vector(*out);snapshot();return out;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Preserve state order and reentrant writes to the same shared native buffer
+    event(12);word(state);word((uint32_t)(uintptr_t)value);mutation(3);return TRUE;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Keep original sparse destination indices and integer-to-byte alpha narrowing
+    event(13);word((uint32_t)(v-TempBufferRenderVertices));word(r);word(g);word(b);word(a);mutation(2);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Observe captured trail coordinates or live native point fields at the original write point
+    event(14);word((uint32_t)(v-TempBufferRenderVertices));floating(x);floating(y);floating(z);v->setX(x);v->setY(y);v->setZ(z);
+}
+void *RwIm3DTransform(RwIm3DVertex *v,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Compare the exact original vertex count including untouched holes before native submission
+    event(15);transforms++;require(v==TempBufferRenderVertices && count<=16 && matrix==NULL);word(count);word(flags);for(unsigned i=0;i<count;i++)vertex(v[i]);mutation(4);snapshot();word(transformSuccess);return transformSuccess?v:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Preserve the original polyline count and the actual mutable index array through nested callbacks
+    event(16);draws++;require(count>=2 && count<=30);word(type);word(count);for(int i=0;i<count;i++)word(indices[i]);mutation(5);for(int i=0;i<count;i++)word(indices[i]);snapshot();return TRUE;
+}
+RwBool RwIm3DEnd(void)
+{
+    // End only successful native transformations without adding buffer cleanup
+    event(17);ends++;snapshot();return TRUE;
+}
+static void reset(unsigned seed)
+{
+    // Seed every real field, native vertex and table while retaining valid gate preconditions
+    hook=0;triggered=false;activeRecord=0;pedQueries=0;boneIndex=1;changingPeds=false;cameraVisible=true;transformSuccess=true;firstPerson=false;pedPresent=true;vehiclePresent=false;cutscene=false;clumpPresent=true;CustomPipes::bRenderingEnvMap=false;Timer_timeMs=10001+seed*97;TestSm_SetFlag(true);CWeather::Wind=.3f;
+    for(int index=0;index<3;index++){
+        // Include opacity, unused bytes and nonuniform positions in all retained records
+        peds[index].identity=index;SmokeTrail t;for(int i=0;i<16;i++){t.m_pos[i].x=index*101.f+i*.17f;t.m_pos[i].y=i*-.23f;t.m_pos[i].z=50.f+index+i*.11f;t.m_time[i]=(int32_t)(Timer_timeMs-100-i*120);t.m_opacity[i]=.1f+(i%7)*.13f;}for(int i=0;i<536;i++)t.m_unused[i]=(char)((i+index+seed)&255);t.m_seed=index*2+(int)seed%13;TestSm_Set(index,&t);
+    }
+    for(int i=0;i<4;i++){matrices[i].pos.x=i*17.f;matrices[i].pos.y=-i*7.f;matrices[i].pos.z=80.f+i;}for(int i=0;i<32;i++)TestSm_SetIndex(i,initialIndices[i]);for(int i=0;i<16;i++)TestSm_SetRandom(i,initialRandom[i]);
+    for(int i=0;i<512;i++){
+        // Seed stale native positions and UV fields that sparse rendering must leave untouched
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.125f);v.setY(-i*.25f);v.setZ(17.f);v.setColor(13,27,41,55);v.setU(.25f);v.setV(.75f);
+    }TempBufferVerticesStored=17;TempBufferIndicesStored=31;
+}
+int main(void)
+{
+    // Observe actual static storage and both partial initialization paths before any rendering
+    TestSm_Tables(initialIndices,initialRandom);snapshot();reset(0);TestSm_InitOne(1,-3);snapshot();TestSm_Init();snapshot();require(TestSm_Flag());
+    const int32_t ages[]={-3000,-1,0,1,149,150,151,2249,2250,2251,10000};
+    for(int a=0;a<11;a++)for(int reflect=0;reflect<2;reflect++)for(int transform=0;transform<2;transform++){
+        // Cover exact expiry, future timestamps, zero slots and both native transform outcomes
+        reset(a);CustomPipes::bRenderingEnvMap=reflect!=0;transformSuccess=transform!=0;SmokeTrail t=TestSm_Get(0);for(int i=0;i<16;i++)t.m_time[i]=(int32_t)(Timer_timeMs-ages[(a+i)%11]);t.m_time[5]=0;t.m_time[9]=0;TestSm_Set(0,&t);renderOne(0);
+    }
+    const uint32_t times[]={0,1,149,150,151,2250,2251,0x7fffffff,0x80000000U,0xfffffff0U};
+    const float opacities[]={0.f,.25f,.5f,1.f,2.f};
+    for(int t=0;t<10;t++)for(int opacity=0;opacity<5;opacity++)for(int id=0;id<3;id++){
+        // Preserve shift thresholds, unsigned timer wrap, aliased input capture and density clamping
+        reset(t);Timer_timeMs=times[t];SmokeTrail record=TestSm_Get(id);record.m_time[0]=(int32_t)(Timer_timeMs-150);if(opacity==0)record.m_pos[1]=record.m_pos[2];TestSm_Set(id,&record);SmokeTrailVector p={31.f,-47.f,63.f};registrations++;TestSm_Register(id,p,opacities[opacity]);snapshot();Timer_timeMs++;registrations++;TestSm_Alias(id,(id+3)%16,opacities[opacity]);snapshot();renderOne(id);
+    }
+    for(int opacity=0;opacity<5;opacity++){
+        // Retain the original infinite zero-distance density followed by finite opacity saturation
+        reset(opacity);SmokeTrail t=TestSm_Get(0);t.m_time[0]=0;t.m_pos[1]=t.m_pos[2];TestSm_Set(0,&t);SmokeTrailVector p={31.f,-47.f,63.f};registrations++;TestSm_Register(0,p,opacities[opacity]);t=TestSm_Get(0);require(t.m_opacity[1]==opacities[opacity]);snapshot();
+    }
+    for(int mask=0;mask<17;mask++){
+        // Verify sparse writes retain original indices instead of compacting active points
+        reset(mask);SmokeTrail t=TestSm_Get(0);for(int i=0;i<16;i++)t.m_time[i]=i<mask && i%3!=1?(int32_t)Timer_timeMs:0;TestSm_Set(0,&t);renderOne(0);
+    }
+    for(int gate=0;gate<7;gate++){
+        // Exercise every ordered controller early return independently and one complete successful path
+        reset(gate);TestSm_SetFlag(gate!=0);firstPerson=gate==1;pedPresent=gate!=2;vehiclePresent=gate==3;cutscene=gate==4;clumpPresent=gate!=5;update();
+    }
+    for(int h=1;h<=12;h++){
+        // Preserve live timer/table/record reads, player selection and nested native point lifetimes
+        reset(h);hook=h;if(h>=6 && h<=11)update();else renderOne(0);require(triggered);snapshot();
+    }
+    reset(0);TestSm_Init();
+    for(int frame=0;frame<900;frame++){
+        // Keep real retained positions and opacity across mixed registration, expiry and reflection frames
+        Timer_timeMs+=frame%7==0?151:73;TestSm_SetFlag(frame%17!=0);firstPerson=frame%29==0;vehiclePresent=frame%31==0;cutscene=frame%37==0;clumpPresent=frame%41!=0;changingPeds=frame%3==0;CWeather::Wind=(frame%13-6)*.13f;CustomPipes::bRenderingEnvMap=frame%5==0;transformSuccess=frame%11!=0;cameraVisible=frame%19!=0;matrices[1].pos.x=frame*.11f;update();renders++;TestSm_Render();snapshot();if(frame%97==0){TestSm_Init();snapshot();}
+    }
+    require(states>5000 && transforms>1000 && pointTransforms>1000 && draws==ends);printf("states=%u calls=%u registrations=%u updates=%u renders=%u queries=%u pointTransforms=%u transforms=%u draws=%u hash=%016llx\n",states,calls,registrations,updates,renders,queries,pointTransforms,transforms,draws,(unsigned long long)hash);
+}

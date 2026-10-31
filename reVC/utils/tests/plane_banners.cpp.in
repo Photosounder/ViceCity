@@ -1,0 +1,213 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+extern "C" { float Timer_timeStep;int32_t TempBufferVerticesStored,TempBufferIndicesStored;uint16_t TempBufferRenderIndexList[1024];void *gpRubbishTexture[4]; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+VertexBufferUnion TempVertexBuffer;
+static RwMatrix matrices[2];
+static bool framePresent,matrixPresent,cameraVisible,transformSuccess,triggered;
+static int hook,activeRecord,matrixQueries;
+static unsigned states,calls,registrations,updates,renders,queries,transforms,draws,ends;
+static uint64_t hash=1469598103934665603ULL;
+static uintptr_t renderStates[40];
+
+static void require(bool condition)
+{
+    // Reject missed callback preconditions or invalid test buffer ranges immediately
+    if(!condition)abort();
+}
+static void word(uint32_t value)
+{
+    // Compare every scalar bit through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(i*8))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Compare exact float representations without tolerance or record layout assumptions
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void event(unsigned id)
+{
+    // Retain the exact sequence of original observable owner calls
+    calls++;word(id);
+}
+static void vector(const RwV3d &v)
+{
+    // Observe named components of an actual typed camera or matrix vector
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void vertex(RwIm3DVertex &v)
+{
+    // Observe actual native vertex fields through the corresponding D3D9 or GL3 accessors
+    floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());
+}
+static void snapshot(void)
+{
+    // Compare all records, live shared counters, every shared index and affected native vertices
+    states++;floating(Timer_timeStep);word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(CustomPipes::bRenderingEnvMap);word(CustomPipes::EnvMapCam!=NULL);word(framePresent);word(matrixPresent);vector(TheCamera.position);vector(matrices[0].pos);vector(matrices[1].pos);
+    for(int index=0;index<5;index++){
+        // Retain every inactive and active position field in all five real records
+        PlaneBanner b=TestPb_Get(index);for(int i=0;i<8;i++){floating(b.m_pos[i].x);floating(b.m_pos[i].y);floating(b.m_pos[i].z);}
+    }
+    for(int i=0;i<1024;i++)word(TempBufferRenderIndexList[i]);for(int i=0;i<64;i++)vertex(TempBufferRenderVertices[i]);vertex(TempBufferRenderVertices[511]);for(int i=0;i<4;i++)word((uint32_t)(uintptr_t)gpRubbishTexture[i]);for(int i=0;i<40;i++)word((uint32_t)renderStates[i]);
+}
+static void renderOne(int index)
+{
+    // Preserve the selected actual record through any nested rendering callbacks
+    renders++;int saved=activeRecord;activeRecord=index;TestPb_RenderOne(index);activeRecord=saved;snapshot();
+}
+static void mutateAnchor(float delta)
+{
+    // Change the actual source record while retaining all other live vector fields
+    PlaneBanner b=TestPb_Get(activeRecord);b.m_pos[0].x+=delta;b.m_pos[2].y-=delta*.5f;TestPb_Set(activeRecord,&b);
+}
+static void mutation(int point)
+{
+    // Mutate only at defined original owner boundaries and allow at most one nested action
+    if(triggered)return;
+    if(hook==1 && point==1){triggered=true;mutateAnchor(37.f);TheCamera.position.y+=13.f;}
+    else if(hook==2 && point==2){triggered=true;mutateAnchor(-19.f);matrices[0].pos.x+=29.f;}
+    else if(hook==3 && point==3 && matrixQueries==2){triggered=true;mutateAnchor(23.f);matrices[1].pos.x=211.f;matrices[1].pos.z=607.f;}
+    else if(hook==4 && point==4){triggered=true;mutateAnchor(600.f);}
+    else if(hook==5 && point==5){triggered=true;mutateAnchor(47.f);TempBufferVerticesStored+=4;TempBufferIndicesStored+=9;}
+    else if(hook==6 && point==6){triggered=true;TempBufferVerticesStored+=2;}
+    else if(hook==7 && point==7){triggered=true;renderOne(1);}
+    else if(hook==8 && point==8){triggered=true;TestPb_Init();}
+    else if(hook==9 && point==9){triggered=true;renderOne(1);}
+    else if(hook==10 && point==10){triggered=true;TempBufferVerticesStored=32;TempBufferIndicesStored=60;gpRubbishTexture[2]=(void *)0x4100;}
+    else if(hook==11 && point==11){triggered=true;TempBufferRenderIndexList[0]=93;TempBufferIndicesStored=12;TempBufferVerticesStored=5;}
+    else if(hook==12 && point==12){triggered=true;renderOne(1);TempBufferRenderIndexList[3]=35;}
+    else if(hook==13 && point==13){triggered=true;TempBufferVerticesStored=77;TempBufferIndicesStored=89;}
+    else if(hook==14 && point==1){triggered=true;updates++;TestPb_Update();}
+    else if(hook==15 && point==2){triggered=true;framePresent=false;}
+    else if(hook==16 && point==3){triggered=true;matrixPresent=false;}
+}
+CVector &CCamera::GetPosition(void)
+{
+    // Retain fallback camera reads and source-record mutations before vector copying
+    event(1);queries++;mutation(1);vector(position);return position;
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Observe the original visibility input before subsequent record changes
+    event(2);queries++;vector(center);floating(radius);mutation(4);word(cameraVisible);return cameraVisible;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Keep the exact reflection-camera frame gate and its fallback timing
+    event(3);queries++;require(camera==(RwCamera *)0x5000);mutation(2);word(framePresent);return framePresent?(RwFrame *)0x6000:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Preserve the two original matrix queries and use the second returned matrix for copying
+    event(4);queries++;matrixQueries++;require(frame==(RwFrame *)0x6000);mutation(3);int index=hook==3 && matrixQueries==2?1:0;word(index);word(matrixPresent);return matrixPresent?&matrices[index]:NULL;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Preserve every state transition including the duplicated vertex-alpha disable
+    event(5);word(state);word((uint32_t)(uintptr_t)value);mutation(9);require(state<40);renderStates[state]=(uintptr_t)value;return TRUE;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Capture the original destination before a callback changes the live shared count
+    event(6);word((uint32_t)(v-TempBufferRenderVertices));word(r);word(g);word(b);word(a);mutation(5);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Keep the original captured destination and position arguments across live counter changes
+    event(7);word((uint32_t)(v-TempBufferRenderVertices));floating(x);floating(y);floating(z);mutation(6);v->setX(x);v->setY(y);v->setZ(z);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal u)
+{
+    // Retain original UV writes after nested rendering changes the same native buffer
+    event(8);word((uint32_t)(v-TempBufferRenderVertices));floating(u);mutation(7);v->setU(u);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Preserve the live source-state changes between original U and V writes
+    event(9);word((uint32_t)(v-TempBufferRenderVertices));floating(value);mutation(8);v->setV(value);
+}
+extern "C" void *Rubbish_BackendRaster(void *texture)
+{
+    // Capture the actual texture argument before changes to its canonical C-owned slot
+    event(10);queries++;word((uint32_t)(uintptr_t)texture);mutation(10);return (void *)((uintptr_t)texture+0x100);
+}
+void *RwIm3DTransform(RwIm3DVertex *v,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Compare all original native geometry, flags and live transform-count reads
+    event(11);transforms++;require(v==TempBufferRenderVertices && count<=64 && matrix==NULL);word(count);word(flags);for(unsigned i=0;i<count;i++)vertex(v[i]);mutation(11);snapshot();word(transformSuccess);return transformSuccess?v:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Borrow the actual shared index buffer through mutations and nested render calls
+    event(12);draws++;require(indices==TempBufferRenderIndexList && count>=0 && count<=96);word(type);word(count);for(int i=0;i<count;i++)word(indices[i]);mutation(12);for(int i=0;i<count;i++)word(indices[i]);snapshot();return TRUE;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Preserve end timing and subsequent unconditional shared-counter cleanup
+    event(13);ends++;mutation(13);snapshot();return TRUE;
+}
+static void reset(unsigned seed)
+{
+    // Seed legal actual records, native fields, resource slots and all shared indices
+    hook=0;triggered=false;activeRecord=0;matrixQueries=0;framePresent=true;matrixPresent=true;cameraVisible=true;transformSuccess=true;CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=(RwCamera *)0x5000;Timer_timeStep=1.f;TheCamera.position=CVector(100.f,0.f,600.f);matrices[0].pos.x=125.f;matrices[0].pos.y=3.f;matrices[0].pos.z=600.f;matrices[1].pos.x=175.f;matrices[1].pos.y=7.f;matrices[1].pos.z=601.f;
+    for(int index=0;index<5;index++){
+        // Include nonuniform positions so every segment normalization and stale value remains observable
+        PlaneBanner b;for(int i=0;i<8;i++){b.m_pos[i].x=index*7.f+i*(7.f+seed*.01f);b.m_pos[i].y=i*.3f;b.m_pos[i].z=600.f+i*.1f;}TestPb_Set(index,&b);
+    }
+    for(int i=0;i<512;i++){
+        // Initialize even untouched native tail fields through their actual typed accessors
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.125f);v.setY(-i*.25f);v.setZ(17.f);v.setColor(13,27,41,55);v.setU(.25f);v.setV(.75f);
+    }
+    for(int i=0;i<1024;i++)TempBufferRenderIndexList[i]=(i*7+seed)&65535;for(int i=0;i<4;i++)gpRubbishTexture[i]=(void *)(uintptr_t)(0x3000+i*0x100);for(int i=0;i<40;i++)renderStates[i]=0;TempBufferVerticesStored=37;TempBufferIndicesStored=73;
+}
+int main(void)
+{
+    // Observe actual static initialization and both complete initializers before registration
+    snapshot();reset(0);TestPb_InitOne(3);snapshot();TestPb_Init();snapshot();
+    const float heights[]={-100.f,-60.f,-50.0001f,-50.f,-49.9999f,0.f,600.f};
+    const float steps[]={-10.f,0.f,1.f,20.f,1000.f,5000.f};
+    for(int h=0;h<7;h++)for(int s=0;s<6;s++){
+        // Verify the strict activity gate, original fall/clamp and continued segment updates after clamping
+        reset(h);PlaneBanner b=TestPb_Get(0);for(int i=0;i<8;i++)b.m_pos[i].z=heights[h]+i*.2f;TestPb_Set(0,&b);Timer_timeStep=steps[s];updates++;TestPb_UpdateOne(0);snapshot();renderOne(0);
+    }
+    const float distances[]={0.f,1.f,249.999f,250.f,250.001f,275.f,299.99f,300.f,300.01f,500.f};
+    for(int d=0;d<10;d++)for(int visible=0;visible<2;visible++)for(int transform=0;transform<2;transform++){
+        // Exercise exact fade/distance gates, sphere rejection, alpha narrowing and failed transforms
+        reset(d);TheCamera.position=CVector(distances[d],0.f,600.f);cameraVisible=visible!=0;transformSuccess=transform!=0;renderOne(0);
+    }
+    const float lengths[]={0.f,7.9999f,8.f,8.0001f,19.f,100.f};
+    for(int n=0;n<6;n++)for(int axis=0;axis<3;axis++){
+        // Keep zero-length and exact eight-unit links plus every component of successive normalized segments
+        reset(n);PlaneBanner b=TestPb_Get(0);for(int i=0;i<8;i++){b.m_pos[i].x=axis==0?i*lengths[n]:0.f;b.m_pos[i].y=axis==1?i*lengths[n]:0.f;b.m_pos[i].z=600.f+(axis==2?i*lengths[n]:0.f);}TestPb_Set(0,&b);Timer_timeStep=0.f;updates++;TestPb_UpdateOne(0);snapshot();
+    }
+    for(int id=0;id<5;id++)for(int slot=0;slot<8;slot++){
+        // Capture by-value records, same-record aliases and the actual typed application input
+        reset(id);registrations++;PlaneBannerVector p={13.25f,-17.5f,623.f};TestPb_Register(p,id);snapshot();registrations++;TestPb_RegisterAlias(id,slot,id);snapshot();CVector actual(31.f,-47.f,611.f);registrations++;TestPb_RegisterVector(&actual,id);snapshot();
+    }
+    for(int reflect=0;reflect<2;reflect++)for(int camera=0;camera<2;camera++)for(int frame=0;frame<2;frame++)for(int matrix=0;matrix<2;matrix++){
+        // Verify every auxiliary-camera null gate and the main-camera fallback without collapsing matrix reads
+        reset(0);CustomPipes::bRenderingEnvMap=reflect!=0;CustomPipes::EnvMapCam=camera?(RwCamera *)0x5000:NULL;framePresent=frame!=0;matrixPresent=matrix!=0;PlaneBannerVector position=TestPb_Camera();floating(position.x);floating(position.y);floating(position.z);snapshot();renderOne(0);
+    }
+    for(int h=1;h<=16;h++){
+        // Exercise live camera/anchor ordering, counters, colors, UVs, resources, indices and nested rendering
+        reset(h);hook=h;CustomPipes::bRenderingEnvMap=h==2 || h==3 || h==15 || h==16;renderOne(0);
+#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+        require(triggered);
+#else
+        if(h!=2 && h!=3 && h!=15 && h!=16)require(triggered);
+#endif
+        snapshot();
+    }
+    reset(0);TestPb_Init();
+    for(int frame=0;frame<750;frame++){
+        // Keep all five records across mixed registration, motion, visibility and reflection rendering
+        PlaneBannerVector p={frame*.3f,-frame*.17f,600.f+frame%13};registrations++;TestPb_Register(p,frame%5);Timer_timeStep=frame%29==0?50.f:.5f+(frame%7)*.1f;updates++;TestPb_Update();TheCamera.position=CVector(p.x+frame%301,p.y,600.f);matrices[0].pos.x=TheCamera.position.x+17.f;matrices[0].pos.y=p.y+3.f;matrices[0].pos.z=604.f;CustomPipes::bRenderingEnvMap=frame%7==0;framePresent=frame%13!=0;matrixPresent=frame%17!=0;cameraVisible=frame%11!=0;transformSuccess=frame%19!=0;renders++;TestPb_Render();snapshot();if(frame%91==0){TestPb_InitOne(frame%5);snapshot();}
+    }
+    require(states>5000 && transforms>1000 && draws==ends);printf("states=%u calls=%u registrations=%u updates=%u renders=%u queries=%u transforms=%u draws=%u hash=%016llx\n",states,calls,registrations,updates,renders,queries,transforms,draws,(unsigned long long)hash);
+}

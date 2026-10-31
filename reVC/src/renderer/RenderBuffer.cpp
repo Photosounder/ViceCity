@@ -1,52 +1,30 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "RenderBuffer.h"
-
-int32 TempBufferVerticesStored;
-int32 TempBufferIndicesStored;
-
+#include "RenderBuffer_backend.h"
 VertexBufferUnion TempVertexBuffer;
-RwImVertexIndex TempBufferRenderIndexList[TEMPBUFFERINDEXSIZE];
-
-int RenderBuffer::VerticesToBeStored;
-int RenderBuffer::IndicesToBeStored;
-
-void
-RenderBuffer::ClearRenderBuffer(void)
+void *RenderBuffer_BackendVertex(int32_t index)
 {
-	TempBufferVerticesStored = 0;
-	TempBufferIndicesStored = 0;
+    // Address the actual typed vertex array without guessing its stride
+    return &TempBufferRenderVertices[index];
 }
-
-void
-RenderBuffer::StartStoring(int numIndices, int numVertices, RwImVertexIndex **indexStart, RwIm3DVertex **vertexStart)
+void RenderBuffer_BackendWriteVertex(void *output,int32_t index)
 {
-	if(TempBufferIndicesStored + numIndices >= TEMPBUFFERINDEXSIZE)
-		RenderStuffInBuffer();
-	if(TempBufferVerticesStored + numVertices >= TEMPBUFFERVERTSIZE)
-		RenderStuffInBuffer();
-        *indexStart = &TempBufferRenderIndexList[TempBufferIndicesStored];
-        *vertexStart = &TempBufferRenderVertices[TempBufferVerticesStored];
-        IndicesToBeStored = numIndices;
-        VerticesToBeStored = numVertices;
+    // Publish the original typed pointer at the C algorithm's ordered write point
+    *(RwIm3DVertex **)output=&TempBufferRenderVertices[index];
 }
-
-void
-RenderBuffer::StopStoring(void)
+bool RenderBuffer_BackendTransform(int32_t vertices)
 {
-	int i;
-	for(i = TempBufferIndicesStored; i < TempBufferIndicesStored+IndicesToBeStored; i++)
-		TempBufferRenderIndexList[i] += TempBufferVerticesStored;
-	TempBufferIndicesStored += IndicesToBeStored;
-	TempBufferVerticesStored += VerticesToBeStored;
+    // Preserve the original typed buffer, count, null matrix and UV flags
+    return RwIm3DTransform(TempBufferRenderVertices,vertices,nil,rwIM3D_VERTEXUV)!=nil;
 }
-
-void
-RenderBuffer::RenderStuffInBuffer(void)
+void RenderBuffer_BackendRenderIndexed(int32_t indices)
 {
-	if(TempBufferVerticesStored && RwIm3DTransform(TempBufferRenderVertices, TempBufferVerticesStored, nil, rwIM3D_VERTEXUV)){
-		RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, TempBufferRenderIndexList, TempBufferIndicesStored);
-		RwIm3DEnd();
-	}
-	ClearRenderBuffer();
+    // Render the original shared index array using the live C-selected count
+    RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST,TempBufferRenderIndexList,indices);
 }
+void RenderBuffer_BackendEnd(void)
+{
+    // Complete the original successful immediate draw
+    RwIm3DEnd();
+}
+//- rouz edit (ChatGPT)

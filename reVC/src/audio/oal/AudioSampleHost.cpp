@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -31,37 +32,32 @@ extern "C" bool AudioSample_IsAudioInitialised(void)
 extern "C" bool AudioSample_IsMusicInitialised(void)
 {
     // Query game state at the C audio boundary
-    return MusicManager.IsInitialised();
+    return MusicState_IsInitialised(&MusicManager);
 }
 
 extern "C" bool AudioSample_IsCodePaused(void)
 {
     // Query game state at the C audio boundary
-    return CTimer::GetIsCodePaused();
+    return Timer_GetIsCodePaused();
 }
 
 extern "C" int AudioSample_GetMusicMode(void)
 {
     // Query game state at the C audio boundary
-    return MusicManager.GetMusicMode();
+    return MusicState_GetMusicMode(&MusicManager);
 }
 
 extern "C" int AudioSample_GetCurrentTrack(void)
 {
     // Query game state at the C audio boundary
-    return MusicManager.GetCurrentTrack();
+    return MusicState_GetCurrentTrack(&MusicManager);
 }
 
-extern "C" int AudioSample_GetRadioInCar(void)
-{
-    // Query game state at the C audio boundary
-    return MusicManager.GetRadioInCar();
-}
 
 extern "C" bool AudioSample_CheckForMusicInterruptions(void)
 {
     // Query game state at the C audio boundary
-    return MusicManager.CheckForMusicInterruptions();
+    return MusicState_CheckForMusicInterruptions(&MusicManager);
 }
 
 extern "C" int32_t AudioSample_GetRandomValue(unsigned index)
@@ -151,5 +147,7 @@ extern "C" void AudioSample_FindClose(void *handle)
 }
 #endif
 #endif
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)

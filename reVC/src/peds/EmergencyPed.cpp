@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "EmergencyPed.h"
@@ -95,10 +97,10 @@ CEmergencyPed::FiremanAI(void)
 
 	switch (m_nEmergencyPedState) {
 		case EMERGENCY_PED_READY:
-			nearestFire = gFireManager.FindNearestFire(GetPosition(), &fireDist);
+			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
 			if (nearestFire) {
 				SetPedState(PED_NONE);
-				SetSeek(nearestFire->m_vecPos, 1.0f);
+				SetSeek(Fire_VectorToNative(nearestFire->m_vecPos), 1.0f);
 				SetMoveState(PEDMOVE_RUN);
 				m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 				m_pAttendedFire = nearestFire;
@@ -108,10 +110,10 @@ CEmergencyPed::FiremanAI(void)
 			}
 			break;
 		case EMERGENCY_PED_DETERMINE_NEXT_STATE:
-			nearestFire = gFireManager.FindNearestFire(GetPosition(), &fireDist);
+			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
 			if (nearestFire && nearestFire != m_pAttendedFire) {
 				SetPedState(PED_NONE);
-				SetSeek(nearestFire->m_vecPos, 1.0f);
+				SetSeek(Fire_VectorToNative(nearestFire->m_vecPos), 1.0f);
 				SetMoveState(PEDMOVE_RUN);
 #ifdef FIX_BUGS
 				bIsRunning = true;
@@ -136,10 +138,10 @@ CEmergencyPed::FiremanAI(void)
 
 			// Leftover
 			// fireDist = 30.0f;
-			nearestFire = gFireManager.FindNearestFire(GetPosition(), &fireDist);
+			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
 			if (nearestFire) {
 #ifdef FIX_BUGS
-				if(nearestFire != m_pAttendedFire && (nearestFire->m_vecPos - GetPosition()).Magnitude() < 30.0f)
+				if(nearestFire != m_pAttendedFire && (Fire_VectorToNative(nearestFire->m_vecPos) - GetPosition()).Magnitude() < 30.0f)
 #endif
 					m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 			}
@@ -150,7 +152,7 @@ CEmergencyPed::FiremanAI(void)
 			bIsRunning = false;
 #endif
 			SetPedState(PED_NONE);
-			SetWanderPath(CGeneral::GetRandomNumber() & 7);
+			SetWanderPath(General_GetRandomNumber() & 7);
 			m_pAttendedFire = nil;
 			m_nEmergencyPedState = EMERGENCY_PED_READY;
 			SetMoveState(PEDMOVE_WALK);
@@ -165,7 +167,7 @@ CEmergencyPed::MedicAI(void)
 	float distToEmergency;
 	if (!bInVehicle && IsPedInControl()) {
 		ScanForDelayedResponseThreats();
-		if (m_threatFlags && CTimer::GetTimeInMilliseconds() > m_threatCheckTimer) {
+		if (m_threatFlags && (*Timer_GetTimeInMilliseconds()) > m_threatCheckTimer) {
 			CheckThreatValidity();
 			m_threatFlags = 0;
 			m_threatCheckTimer = 0;
@@ -183,14 +185,14 @@ CEmergencyPed::MedicAI(void)
 
 	if (InVehicle()) {
 		if (m_pMyVehicle->IsCar() && m_objective != OBJECTIVE_LEAVE_CAR) {
-			if (gAccidentManager.FindNearestAccident(m_pMyVehicle->GetPosition(), &distToEmergency)
+			if (AccidentManager_FindNearestAccident(&gAccidentManager,Events_VectorFromNative(m_pMyVehicle->GetPosition()),&distToEmergency)
 				&& distToEmergency < 25.0f && m_pMyVehicle->m_vecMoveSpeed.Magnitude() < 0.01f) {
 
 				m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_NONE;
 				SetObjective(OBJECTIVE_LEAVE_CAR, m_pMyVehicle);
 				Say(SOUND_PED_LEAVE_VEHICLE);
 			} else if (m_pMyVehicle->pDriver == this && m_nPedState == PED_DRIVING
-				&& m_pMyVehicle->AutoPilot.m_nCarMission == MISSION_NONE && !(CGeneral::GetRandomNumber() & 31)) {
+				&& m_pMyVehicle->AutoPilot.m_nCarMission == MISSION_NONE && !(General_GetRandomNumber() & 31)) {
 
 				bool waitUntilMedicEntersCar = false;
 				for (int i = 0; i < m_numNearPeds; ++i) {
@@ -223,7 +225,7 @@ CEmergencyPed::MedicAI(void)
 	if (IsPedInControl()) {
 		switch (m_nEmergencyPedState) {
 			case EMERGENCY_PED_READY:
-				nearestAccident = gAccidentManager.FindNearestAccident(GetPosition(), &distToEmergency);
+				nearestAccident = AccidentManager_FindNearestAccident(&gAccidentManager,Events_VectorFromNative(GetPosition()),&distToEmergency);
 				field_1360 = 0;
 				if (nearestAccident) {
 					m_pRevivedPed = nearestAccident->m_pVictim;
@@ -254,12 +256,12 @@ CEmergencyPed::MedicAI(void)
 							}
 						}
 					} else if (m_nPedState != PED_WANDER_PATH) {
-						SetWanderPath(CGeneral::GetRandomNumber() & 7);
+						SetWanderPath(General_GetRandomNumber() & 7);
 					}
 				}
 				break;
 			case EMERGENCY_PED_DETERMINE_NEXT_STATE:
-				nearestAccident = gAccidentManager.FindNearestAccident(GetPosition(), &distToEmergency);
+				nearestAccident = AccidentManager_FindNearestAccident(&gAccidentManager,Events_VectorFromNative(GetPosition()),&distToEmergency);
 				if (nearestAccident) {
 					if (nearestAccident != m_pAttendedAccident || m_nPedState != PED_SEEK_POS) {
 						m_pRevivedPed = nearestAccident->m_pVictim;
@@ -298,7 +300,7 @@ CEmergencyPed::MedicAI(void)
 				if (!m_pRevivedPed || m_pRevivedPed->m_fHealth > 0.0f || m_pRevivedPed->bFadeOut) {
 					m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 				} else {
-					m_pRevivedPed->m_bloodyFootprintCountOrDeathTime = CTimer::GetTimeInMilliseconds();
+					m_pRevivedPed->m_bloodyFootprintCountOrDeathTime = (*Timer_GetTimeInMilliseconds());
 					SetMoveState(PEDMOVE_STILL);
 					SetPedState(PED_CPR);
 					m_nLastPedState = PED_CPR;
@@ -310,7 +312,8 @@ CEmergencyPed::MedicAI(void)
 						m_nEmergencyPedState = EMERGENCY_PED_STAND_STILL;
 					} else {
 						m_nEmergencyPedState = EMERGENCY_PED_FACE_TO_PATIENT;
-						m_pVehicleAnim = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_MEDIC, ANIM_MEDIC_CPR, 4.0f);
+						// Use the complete C animation manager at the original call boundary
+						m_pVehicleAnim = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_MEDIC, ANIM_MEDIC_CPR, 4.0f);
 						bIsDucking = true;
 					}
 					SetLookTimer(2000);
@@ -325,10 +328,10 @@ CEmergencyPed::MedicAI(void)
 					m_pRevivedPed->m_pedIK.GetComponentPosition(midPos, PED_MID);
 					m_pRevivedPed->m_pedIK.GetComponentPosition(headPos, PED_HEAD);
 					midPos = (headPos + midPos) * 0.5f;
-					m_fRotationDest = CGeneral::GetRadianAngleBetweenPoints(
+					m_fRotationDest = General_GetRadianAngleBetweenPoints(
 						midPos.x, midPos.y,
 						GetPosition().x, GetPosition().y);
-					m_fRotationDest = CGeneral::LimitAngle(m_fRotationDest);
+					m_fRotationDest = General_LimitAngle(m_fRotationDest);
 					m_pLookTarget = m_pRevivedPed;
 					m_pLookTarget->RegisterReference((CEntity**)&m_pLookTarget);
 					TurnBody();
@@ -347,14 +350,14 @@ CEmergencyPed::MedicAI(void)
 				m_pRevivedPed->m_pedIK.GetComponentPosition(midPos, PED_MID);
 				m_pRevivedPed->m_pedIK.GetComponentPosition(headPos, PED_HEAD);
 				midPos = (headPos + midPos) * 0.5f;
-				m_fRotationDest = CGeneral::GetRadianAngleBetweenPoints(
+				m_fRotationDest = General_GetRadianAngleBetweenPoints(
 					midPos.x, midPos.y,
 					GetPosition().x, GetPosition().y);
-				m_fRotationDest = CGeneral::LimitAngle(m_fRotationDest);
+				m_fRotationDest = General_LimitAngle(m_fRotationDest);
 				m_pLookTarget = m_pRevivedPed;
 				m_pLookTarget->RegisterReference((CEntity**)&m_pLookTarget);
 				TurnBody();
-				if (CTimer::GetTimeInMilliseconds() <= m_lookTimer) {
+				if ((*Timer_GetTimeInMilliseconds()) <= m_lookTimer) {
 					SetMoveState(PEDMOVE_STILL);
 					break;
 				}
@@ -389,7 +392,7 @@ CEmergencyPed::MedicAI(void)
 						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 					if (!m_pAttendedAccident->m_nMedicsPerformingCPR)
 						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-					if (gAccidentManager.UnattendedAccidents())
+					if (AccidentManager_UnattendedAccidents(&gAccidentManager))
 						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 				}
 				break;
@@ -401,7 +404,7 @@ CEmergencyPed::MedicAI(void)
 					--m_pAttendedAccident->m_nMedicsAttending;
 					m_pAttendedAccident = nil;
 				}
-				SetWanderPath(CGeneral::GetRandomNumber() & 7);
+				SetWanderPath(General_GetRandomNumber() & 7);
 				m_pRevivedPed = nil;
 				m_nEmergencyPedState = EMERGENCY_PED_READY;
 				SetMoveState(PEDMOVE_WALK);
@@ -410,3 +413,6 @@ CEmergencyPed::MedicAI(void)
 		}
 	}
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

@@ -1,0 +1,5018 @@
+[
+  {
+    "id": 0,
+    "source": "src/control/CarAI.cpp",
+    "offset": 24976,
+    "line": 606,
+    "arguments": "200, 400",
+    "kind": "INT"
+  },
+  {
+    "id": 1,
+    "source": "src/control/CarAI.cpp",
+    "offset": 25724,
+    "line": 633,
+    "arguments": "200, 400",
+    "kind": "INT"
+  },
+  {
+    "id": 2,
+    "source": "src/control/CarAI.cpp",
+    "offset": 27621,
+    "line": 687,
+    "arguments": "12, 16",
+    "kind": "INT"
+  },
+  {
+    "id": 3,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 11311,
+    "line": 316,
+    "arguments": "0.f, 1.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 4,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 16082,
+    "line": 423,
+    "arguments": "12, 16",
+    "kind": "INT"
+  },
+  {
+    "id": 5,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 16608,
+    "line": 436,
+    "arguments": "4, 16",
+    "kind": "INT"
+  },
+  {
+    "id": 6,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 16915,
+    "line": 442,
+    "arguments": "9, 14",
+    "kind": "INT"
+  },
+  {
+    "id": 7,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 17029,
+    "line": 444,
+    "arguments": "12, 18",
+    "kind": "INT"
+  },
+  {
+    "id": 8,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 17149,
+    "line": 446,
+    "arguments": "7, 10",
+    "kind": "INT"
+  },
+  {
+    "id": 9,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 34177,
+    "line": 776,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 10,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 35859,
+    "line": 829,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 11,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 37408,
+    "line": 871,
+    "arguments": "0, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 12,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 37734,
+    "line": 882,
+    "arguments": "0, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 13,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 38145,
+    "line": 895,
+    "arguments": "0, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 14,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 38869,
+    "line": 930,
+    "arguments": "0, CarFreqArrays[vehclass][NumOfLoadedCarsOfRating[vehclass] - 1]",
+    "kind": "INT"
+  },
+  {
+    "id": 15,
+    "source": "src/control/CarCtrl.cpp",
+    "offset": 40233,
+    "line": 973,
+    "arguments": "0, TotalNumOfCarsOfRating[rating]",
+    "kind": "INT"
+  },
+  {
+    "id": 16,
+    "source": "src/control/GameLogic.cpp",
+    "offset": 6373,
+    "line": 207,
+    "arguments": "0, 4",
+    "kind": "INT"
+  },
+  {
+    "id": 17,
+    "source": "src/control/Garages.cpp",
+    "offset": 16176,
+    "line": 499,
+    "arguments": "m_fInfX + 0.5f, m_fSupX - 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 18,
+    "source": "src/control/Garages.cpp",
+    "offset": 16258,
+    "line": 500,
+    "arguments": "m_fInfY + 0.5f, m_fSupY - 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 19,
+    "source": "src/control/Garages.cpp",
+    "offset": 16340,
+    "line": 501,
+    "arguments": "m_fDoor1Z - 3.0f, m_fDoor1Z + 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 20,
+    "source": "src/control/Script.cpp",
+    "offset": 65008,
+    "line": 2099,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 21,
+    "source": "src/control/Script.cpp",
+    "offset": 68742,
+    "line": 2205,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 22,
+    "source": "src/control/Script.cpp",
+    "offset": 68798,
+    "line": 2207,
+    "arguments": "0, 7",
+    "kind": "INT"
+  },
+  {
+    "id": 23,
+    "source": "src/control/Script3.cpp",
+    "offset": 3742,
+    "line": 135,
+    "arguments": "*(float*)&ScriptParams[0], *(float*)&ScriptParams[1]",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 24,
+    "source": "src/control/Script3.cpp",
+    "offset": 3968,
+    "line": 140,
+    "arguments": "ScriptParams[0], ScriptParams[1]",
+    "kind": "INT"
+  },
+  {
+    "id": 25,
+    "source": "src/control/Script4.cpp",
+    "offset": 67601,
+    "line": 1881,
+    "arguments": "0, MAXVEHICLESLOADED",
+    "kind": "INT"
+  },
+  {
+    "id": 26,
+    "source": "src/control/Script8.cpp",
+    "offset": 15417,
+    "line": 443,
+    "arguments": "0, cards_left",
+    "kind": "INT"
+  },
+  {
+    "id": 27,
+    "source": "src/core/Cam.cpp",
+    "offset": 151283,
+    "line": 4428,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 28,
+    "source": "src/core/Cam.cpp",
+    "offset": 152145,
+    "line": 4450,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 29,
+    "source": "src/core/Cam.cpp",
+    "offset": 154133,
+    "line": 4509,
+    "arguments": "0.0f, 5.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 30,
+    "source": "src/core/Fire.cpp",
+    "offset": 3660,
+    "line": 133,
+    "arguments": "0.0125f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 31,
+    "source": "src/core/Fire.cpp",
+    "offset": 8371,
+    "line": 292,
+    "arguments": "4000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 32,
+    "source": "src/core/Fire.cpp",
+    "offset": 8492,
+    "line": 294,
+    "arguments": "10000, 11000",
+    "kind": "INT"
+  },
+  {
+    "id": 33,
+    "source": "src/core/Pad.cpp",
+    "offset": 14605,
+    "line": 398,
+    "arguments": "0, MI_PGA",
+    "kind": "INT"
+  },
+  {
+    "id": 34,
+    "source": "src/core/Streaming.cpp",
+    "offset": 51611,
+    "line": 1829,
+    "arguments": "0, NUMMODELSPERPEDGROUP",
+    "kind": "INT"
+  },
+  {
+    "id": 35,
+    "source": "src/core/Streaming.cpp",
+    "offset": 52466,
+    "line": 1854,
+    "arguments": "0, NUMMODELSPERPEDGROUP",
+    "kind": "INT"
+  },
+  {
+    "id": 36,
+    "source": "src/core/Wanted.cpp",
+    "offset": 10470,
+    "line": 475,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 37,
+    "source": "src/core/main.cpp",
+    "offset": 14342,
+    "line": 642,
+    "arguments": "0, 2",
+    "kind": "INT"
+  },
+  {
+    "id": 38,
+    "source": "src/entities/Physical.cpp",
+    "offset": 18822,
+    "line": 700,
+    "arguments": "30, 60",
+    "kind": "INT"
+  },
+  {
+    "id": 39,
+    "source": "src/entities/Physical.cpp",
+    "offset": 21515,
+    "line": 774,
+    "arguments": "30, 60",
+    "kind": "INT"
+  },
+  {
+    "id": 40,
+    "source": "src/extras/screendroplets.cpp",
+    "offset": 10839,
+    "line": 414,
+    "arguments": "MINSIZE, MAXSIZE",
+    "kind": "INT"
+  },
+  {
+    "id": 41,
+    "source": "src/extras/screendroplets.cpp",
+    "offset": 11317,
+    "line": 431,
+    "arguments": "MINSIZE, MAXSIZE",
+    "kind": "INT"
+  },
+  {
+    "id": 42,
+    "source": "src/extras/screendroplets.cpp",
+    "offset": 14343,
+    "line": 521,
+    "arguments": "MINSIZE, MAXSIZE",
+    "kind": "INT"
+  },
+  {
+    "id": 43,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 23329,
+    "line": 692,
+    "arguments": "0, CountCompsInRule(comps)",
+    "kind": "INT"
+  },
+  {
+    "id": 44,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 23465,
+    "line": 696,
+    "arguments": "0, CountCompsInRule(comps)",
+    "kind": "INT"
+  },
+  {
+    "id": 45,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 23577,
+    "line": 699,
+    "arguments": "0, 1+CountCompsInRule(comps)",
+    "kind": "INT"
+  },
+  {
+    "id": 46,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 23739,
+    "line": 705,
+    "arguments": "0, 6",
+    "kind": "INT"
+  },
+  {
+    "id": 47,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 23794,
+    "line": 707,
+    "arguments": "0, 5",
+    "kind": "INT"
+  },
+  {
+    "id": 48,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 25141,
+    "line": 765,
+    "arguments": "0, 3",
+    "kind": "INT"
+  },
+  {
+    "id": 49,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 25291,
+    "line": 768,
+    "arguments": "0, n",
+    "kind": "INT"
+  },
+  {
+    "id": 50,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 25820,
+    "line": 789,
+    "arguments": "0, 3",
+    "kind": "INT"
+  },
+  {
+    "id": 51,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 25971,
+    "line": 793,
+    "arguments": "0, n",
+    "kind": "INT"
+  },
+  {
+    "id": 52,
+    "source": "src/modelinfo/VehicleModelInfo.cpp",
+    "offset": 29354,
+    "line": 929,
+    "arguments": "0, m_numColours",
+    "kind": "INT"
+  },
+  {
+    "id": 53,
+    "source": "src/objects/Object.cpp",
+    "offset": 7110,
+    "line": 227,
+    "arguments": "196, 225",
+    "kind": "INT"
+  },
+  {
+    "id": 54,
+    "source": "src/objects/Object.cpp",
+    "offset": 7899,
+    "line": 246,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 55,
+    "source": "src/objects/Object.cpp",
+    "offset": 7945,
+    "line": 246,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 56,
+    "source": "src/objects/Object.cpp",
+    "offset": 8429,
+    "line": 259,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 57,
+    "source": "src/objects/Object.cpp",
+    "offset": 8475,
+    "line": 259,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 58,
+    "source": "src/objects/Object.cpp",
+    "offset": 8812,
+    "line": 267,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 59,
+    "source": "src/objects/Object.cpp",
+    "offset": 8858,
+    "line": 267,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 60,
+    "source": "src/objects/Object.cpp",
+    "offset": 9195,
+    "line": 275,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 61,
+    "source": "src/objects/Object.cpp",
+    "offset": 9241,
+    "line": 275,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 62,
+    "source": "src/objects/Object.cpp",
+    "offset": 9974,
+    "line": 294,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 63,
+    "source": "src/objects/Object.cpp",
+    "offset": 10020,
+    "line": 294,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 64,
+    "source": "src/objects/Object.cpp",
+    "offset": 10504,
+    "line": 307,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 65,
+    "source": "src/objects/Object.cpp",
+    "offset": 10550,
+    "line": 307,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 66,
+    "source": "src/objects/Object.cpp",
+    "offset": 10887,
+    "line": 315,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 67,
+    "source": "src/objects/Object.cpp",
+    "offset": 10933,
+    "line": 315,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 68,
+    "source": "src/objects/Object.cpp",
+    "offset": 12757,
+    "line": 390,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 69,
+    "source": "src/objects/Object.cpp",
+    "offset": 12812,
+    "line": 391,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 70,
+    "source": "src/objects/Object.cpp",
+    "offset": 12867,
+    "line": 392,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 71,
+    "source": "src/objects/Object.cpp",
+    "offset": 13042,
+    "line": 397,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 72,
+    "source": "src/objects/Object.cpp",
+    "offset": 13116,
+    "line": 398,
+    "arguments": "0.6f, 1.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 73,
+    "source": "src/objects/Object.cpp",
+    "offset": 13289,
+    "line": 402,
+    "arguments": "-0.40f, 0.40f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 74,
+    "source": "src/objects/Object.cpp",
+    "offset": 14620,
+    "line": 446,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 75,
+    "source": "src/objects/Object.cpp",
+    "offset": 14675,
+    "line": 447,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 76,
+    "source": "src/objects/Object.cpp",
+    "offset": 14730,
+    "line": 448,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 77,
+    "source": "src/objects/Object.cpp",
+    "offset": 15010,
+    "line": 455,
+    "arguments": "0.01f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 78,
+    "source": "src/objects/Object.cpp",
+    "offset": 15358,
+    "line": 467,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 79,
+    "source": "src/objects/Object.cpp",
+    "offset": 15434,
+    "line": 468,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 80,
+    "source": "src/objects/Object.cpp",
+    "offset": 16330,
+    "line": 493,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 81,
+    "source": "src/objects/Object.cpp",
+    "offset": 16385,
+    "line": 494,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 82,
+    "source": "src/objects/Object.cpp",
+    "offset": 16440,
+    "line": 495,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 83,
+    "source": "src/objects/Object.cpp",
+    "offset": 16589,
+    "line": 499,
+    "arguments": "0.5f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 84,
+    "source": "src/objects/Object.cpp",
+    "offset": 16784,
+    "line": 501,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 85,
+    "source": "src/objects/Object.cpp",
+    "offset": 16860,
+    "line": 502,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 86,
+    "source": "src/objects/Object.cpp",
+    "offset": 17799,
+    "line": 528,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 87,
+    "source": "src/objects/Object.cpp",
+    "offset": 17854,
+    "line": 529,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 88,
+    "source": "src/objects/Object.cpp",
+    "offset": 17909,
+    "line": 530,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 89,
+    "source": "src/objects/Object.cpp",
+    "offset": 18130,
+    "line": 537,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 90,
+    "source": "src/objects/Object.cpp",
+    "offset": 18206,
+    "line": 538,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 91,
+    "source": "src/objects/Object.cpp",
+    "offset": 19503,
+    "line": 573,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 92,
+    "source": "src/objects/Object.cpp",
+    "offset": 19558,
+    "line": 574,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 93,
+    "source": "src/objects/Object.cpp",
+    "offset": 19613,
+    "line": 575,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 94,
+    "source": "src/objects/Object.cpp",
+    "offset": 19820,
+    "line": 580,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 95,
+    "source": "src/objects/Object.cpp",
+    "offset": 19896,
+    "line": 581,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 96,
+    "source": "src/objects/Object.cpp",
+    "offset": 21704,
+    "line": 632,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 97,
+    "source": "src/objects/Object.cpp",
+    "offset": 21759,
+    "line": 633,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 98,
+    "source": "src/objects/Object.cpp",
+    "offset": 21814,
+    "line": 634,
+    "arguments": "0.10f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 99,
+    "source": "src/objects/Object.cpp",
+    "offset": 21902,
+    "line": 636,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 100,
+    "source": "src/objects/Object.cpp",
+    "offset": 21978,
+    "line": 637,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 101,
+    "source": "src/objects/Object.cpp",
+    "offset": 22641,
+    "line": 651,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 102,
+    "source": "src/objects/Object.cpp",
+    "offset": 23623,
+    "line": 678,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 103,
+    "source": "src/objects/Object.cpp",
+    "offset": 23678,
+    "line": 679,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 104,
+    "source": "src/objects/Object.cpp",
+    "offset": 23733,
+    "line": 680,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 105,
+    "source": "src/objects/Object.cpp",
+    "offset": 23860,
+    "line": 683,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 106,
+    "source": "src/objects/Object.cpp",
+    "offset": 23962,
+    "line": 685,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 107,
+    "source": "src/objects/Object.cpp",
+    "offset": 24064,
+    "line": 687,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 108,
+    "source": "src/objects/Object.cpp",
+    "offset": 25814,
+    "line": 733,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 109,
+    "source": "src/objects/Object.cpp",
+    "offset": 25869,
+    "line": 734,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 110,
+    "source": "src/objects/Object.cpp",
+    "offset": 25924,
+    "line": 735,
+    "arguments": "0.10f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 111,
+    "source": "src/objects/Object.cpp",
+    "offset": 26149,
+    "line": 740,
+    "arguments": "0.02f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 112,
+    "source": "src/objects/Object.cpp",
+    "offset": 26225,
+    "line": 741,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 113,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 11854,
+    "line": 524,
+    "arguments": "0.0125f*size, 0.1f*size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 114,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 12057,
+    "line": 531,
+    "arguments": "0.625f*-size, size*0.625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 115,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 12137,
+    "line": 532,
+    "arguments": "0.625f*-size, size*0.625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 116,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 12217,
+    "line": 533,
+    "arguments": "0.625f* size, size*2.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 117,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 12673,
+    "line": 553,
+    "arguments": "0.0125f*s, 0.1f*s",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 118,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 12961,
+    "line": 564,
+    "arguments": "0.625f*-size, 0.625f*size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 119,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 13042,
+    "line": 565,
+    "arguments": "0.625f*-size, 0.625f*size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 120,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 13123,
+    "line": 566,
+    "arguments": "0.625f* size, 3.5f  *size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 121,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 14028,
+    "line": 597,
+    "arguments": "-veloffset.x, veloffset.x",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 122,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 14113,
+    "line": 598,
+    "arguments": "-veloffset.y, veloffset.y",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 123,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 14198,
+    "line": 599,
+    "arguments": "-veloffset.z, veloffset.z",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 124,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 15329,
+    "line": 643,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 125,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 15450,
+    "line": 646,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 126,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 15571,
+    "line": 649,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 127,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 15753,
+    "line": 652,
+    "arguments": "-6.0f, 6.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 128,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 16356,
+    "line": 675,
+    "arguments": "0.04f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 129,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 16498,
+    "line": 678,
+    "arguments": "0.1f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 130,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 16641,
+    "line": 680,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 131,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 16832,
+    "line": 684,
+    "arguments": "0.04f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 132,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 16981,
+    "line": 688,
+    "arguments": "0.1f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 133,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17124,
+    "line": 690,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 134,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17321,
+    "line": 694,
+    "arguments": "0.04f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 135,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17470,
+    "line": 698,
+    "arguments": "0.1f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 136,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17613,
+    "line": 700,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 137,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17812,
+    "line": 704,
+    "arguments": "0.04f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 138,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 17954,
+    "line": 707,
+    "arguments": "0.1f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 139,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18097,
+    "line": 709,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 140,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18511,
+    "line": 724,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 141,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18588,
+    "line": 725,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 142,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18665,
+    "line": 726,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 143,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18804,
+    "line": 729,
+    "arguments": "0.4f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 144,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 18986,
+    "line": 734,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 145,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19064,
+    "line": 735,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 146,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19142,
+    "line": 736,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 147,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19275,
+    "line": 739,
+    "arguments": "0.4f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 148,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19457,
+    "line": 744,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 149,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19535,
+    "line": 745,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 150,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19613,
+    "line": 746,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 151,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19746,
+    "line": 749,
+    "arguments": "0.4f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 152,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 19929,
+    "line": 754,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 153,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20007,
+    "line": 755,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 154,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20085,
+    "line": 756,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 155,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20218,
+    "line": 759,
+    "arguments": "0.4f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 156,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20503,
+    "line": 772,
+    "arguments": "1.0f, 2.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 157,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20887,
+    "line": 786,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 158,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 20962,
+    "line": 787,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 159,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 21037,
+    "line": 788,
+    "arguments": "0.01f, 0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 160,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 21409,
+    "line": 796,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 161,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 21484,
+    "line": 797,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 162,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 21560,
+    "line": 798,
+    "arguments": "0.01f, 0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 163,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 21925,
+    "line": 805,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 164,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 22001,
+    "line": 806,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 165,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 22076,
+    "line": 807,
+    "arguments": "0.01f, 0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 166,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 22442,
+    "line": 814,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 167,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 22518,
+    "line": 815,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 168,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 22594,
+    "line": 816,
+    "arguments": "0.01f, 0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 169,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23207,
+    "line": 835,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 170,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23282,
+    "line": 836,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 171,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23357,
+    "line": 837,
+    "arguments": "0.26f, 0.53f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 172,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23625,
+    "line": 842,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 173,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23700,
+    "line": 843,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 174,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 23776,
+    "line": 844,
+    "arguments": "0.26f, 0.53f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 175,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24044,
+    "line": 849,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 176,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24120,
+    "line": 850,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 177,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24195,
+    "line": 851,
+    "arguments": "0.26f, 0.53f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 178,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24458,
+    "line": 856,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 179,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24534,
+    "line": 857,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 180,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 24610,
+    "line": 858,
+    "arguments": "0.26f, 0.53f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 181,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 25034,
+    "line": 874,
+    "arguments": "-size, size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 182,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 25102,
+    "line": 875,
+    "arguments": "-size, size",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 183,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26050,
+    "line": 909,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 184,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26195,
+    "line": 912,
+    "arguments": "0.005f, 0.0075f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 185,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26395,
+    "line": 915,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 186,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26540,
+    "line": 918,
+    "arguments": "0.005f, 0.0075f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 187,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26740,
+    "line": 921,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 188,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 26885,
+    "line": 924,
+    "arguments": "0.005f, 0.0075f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 189,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 27086,
+    "line": 927,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 190,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 27231,
+    "line": 930,
+    "arguments": "0.005f, 0.0075f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 191,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 27987,
+    "line": 956,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 192,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 28126,
+    "line": 959,
+    "arguments": "0.001f, 0.005f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 193,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 28340,
+    "line": 962,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 194,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 28479,
+    "line": 965,
+    "arguments": "0.001f, 0.005f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 195,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 28693,
+    "line": 968,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 196,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 28832,
+    "line": 971,
+    "arguments": "0.001f, 0.005f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 197,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 29048,
+    "line": 974,
+    "arguments": "0.004f, 0.008f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 198,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 29187,
+    "line": 977,
+    "arguments": "0.001f, 0.005f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 199,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 29842,
+    "line": 1005,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 200,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 29966,
+    "line": 1008,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 201,
+    "source": "src/objects/ParticleObject.cpp",
+    "offset": 30090,
+    "line": 1011,
+    "arguments": "-this->m_fRandVal, this->m_fRandVal",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 202,
+    "source": "src/peds/CivilianPed.cpp",
+    "offset": 872,
+    "line": 38,
+    "arguments": "MI_LANDSTAL, MI_LAST_VEHICLE",
+    "kind": "INT"
+  },
+  {
+    "id": 203,
+    "source": "src/peds/CivilianPed.cpp",
+    "offset": 968,
+    "line": 40,
+    "arguments": "MI_LANDSTAL, MI_LANDSTAL + VEHICLEMODELSIZE",
+    "kind": "INT"
+  },
+  {
+    "id": 204,
+    "source": "src/peds/CivilianPed.cpp",
+    "offset": 1280,
+    "line": 48,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 205,
+    "source": "src/peds/CivilianPed.cpp",
+    "offset": 11346,
+    "line": 343,
+    "arguments": "-0.8f, -1.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 206,
+    "source": "src/peds/CopPed.cpp",
+    "offset": 10733,
+    "line": 374,
+    "arguments": "500.0f, 1000.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 207,
+    "source": "src/peds/CopPed.cpp",
+    "offset": 10807,
+    "line": 375,
+    "arguments": "200.0f, 300.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 208,
+    "source": "src/peds/CopPed.cpp",
+    "offset": 15282,
+    "line": 504,
+    "arguments": "500, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 209,
+    "source": "src/peds/CopPed.cpp",
+    "offset": 15355,
+    "line": 506,
+    "arguments": "200, 300",
+    "kind": "INT"
+  },
+  {
+    "id": 210,
+    "source": "src/peds/CopPed.cpp",
+    "offset": 24592,
+    "line": 800,
+    "arguments": "0,8",
+    "kind": "INT"
+  },
+  {
+    "id": 211,
+    "source": "src/peds/Ped.cpp",
+    "offset": 4318,
+    "line": 179,
+    "arguments": "250, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 212,
+    "source": "src/peds/Ped.cpp",
+    "offset": 7617,
+    "line": 318,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 213,
+    "source": "src/peds/Ped.cpp",
+    "offset": 37926,
+    "line": 1378,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 214,
+    "source": "src/peds/Ped.cpp",
+    "offset": 50511,
+    "line": 1728,
+    "arguments": "48.0f, 96.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 215,
+    "source": "src/peds/Ped.cpp",
+    "offset": 53052,
+    "line": 1795,
+    "arguments": "-0.75f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 216,
+    "source": "src/peds/Ped.cpp",
+    "offset": 53115,
+    "line": 1796,
+    "arguments": "-0.75f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 217,
+    "source": "src/peds/Ped.cpp",
+    "offset": 103020,
+    "line": 3223,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 218,
+    "source": "src/peds/Ped.cpp",
+    "offset": 103086,
+    "line": 3224,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 219,
+    "source": "src/peds/Ped.cpp",
+    "offset": 103709,
+    "line": 3244,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 220,
+    "source": "src/peds/Ped.cpp",
+    "offset": 103777,
+    "line": 3245,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 221,
+    "source": "src/peds/Ped.cpp",
+    "offset": 111330,
+    "line": 3496,
+    "arguments": "0.01f, 0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 222,
+    "source": "src/peds/Ped.cpp",
+    "offset": 111918,
+    "line": 3507,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 223,
+    "source": "src/peds/Ped.cpp",
+    "offset": 111987,
+    "line": 3508,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 224,
+    "source": "src/peds/Ped.cpp",
+    "offset": 112056,
+    "line": 3509,
+    "arguments": "0.025f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 225,
+    "source": "src/peds/Ped.cpp",
+    "offset": 131751,
+    "line": 4064,
+    "arguments": "0.f, 8.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 226,
+    "source": "src/peds/Ped.cpp",
+    "offset": 134588,
+    "line": 4164,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 227,
+    "source": "src/peds/Ped.cpp",
+    "offset": 135607,
+    "line": 4188,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 228,
+    "source": "src/peds/Ped.cpp",
+    "offset": 158990,
+    "line": 4935,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 229,
+    "source": "src/peds/Ped.cpp",
+    "offset": 159078,
+    "line": 4936,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 230,
+    "source": "src/peds/Ped.cpp",
+    "offset": 159166,
+    "line": 4937,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 231,
+    "source": "src/peds/Ped.cpp",
+    "offset": 159472,
+    "line": 4944,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 232,
+    "source": "src/peds/Ped.cpp",
+    "offset": 159560,
+    "line": 4945,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 233,
+    "source": "src/peds/Ped.cpp",
+    "offset": 159648,
+    "line": 4946,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 234,
+    "source": "src/peds/Ped.cpp",
+    "offset": 160347,
+    "line": 4961,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 235,
+    "source": "src/peds/Ped.cpp",
+    "offset": 160435,
+    "line": 4962,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 236,
+    "source": "src/peds/Ped.cpp",
+    "offset": 160523,
+    "line": 4963,
+    "arguments": "1.0f - fScaleOffset, 1.0f + fScaleOffset",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 237,
+    "source": "src/peds/Ped.cpp",
+    "offset": 166520,
+    "line": 5112,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 238,
+    "source": "src/peds/Ped.cpp",
+    "offset": 166591,
+    "line": 5113,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 239,
+    "source": "src/peds/Ped.cpp",
+    "offset": 170226,
+    "line": 5226,
+    "arguments": "2000, 4000",
+    "kind": "INT"
+  },
+  {
+    "id": 240,
+    "source": "src/peds/Ped.cpp",
+    "offset": 196357,
+    "line": 6173,
+    "arguments": "1, 7",
+    "kind": "INT"
+  },
+  {
+    "id": 241,
+    "source": "src/peds/Ped.cpp",
+    "offset": 202158,
+    "line": 6352,
+    "arguments": "500, 800",
+    "kind": "INT"
+  },
+  {
+    "id": 242,
+    "source": "src/peds/Ped.cpp",
+    "offset": 232013,
+    "line": 7325,
+    "arguments": "0.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 243,
+    "source": "src/peds/Ped.cpp",
+    "offset": 232709,
+    "line": 7352,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 244,
+    "source": "src/peds/Ped.cpp",
+    "offset": 257140,
+    "line": 8151,
+    "arguments": "8000, 10 * effect->attractor.probability + 8500",
+    "kind": "INT"
+  },
+  {
+    "id": 245,
+    "source": "src/peds/Ped.cpp",
+    "offset": 258120,
+    "line": 8183,
+    "arguments": "0, amount",
+    "kind": "INT"
+  },
+  {
+    "id": 246,
+    "source": "src/peds/Ped.cpp",
+    "offset": 258496,
+    "line": 8190,
+    "arguments": "3000, 8000",
+    "kind": "INT"
+  },
+  {
+    "id": 247,
+    "source": "src/peds/Ped.cpp",
+    "offset": 262827,
+    "line": 8329,
+    "arguments": "2000,5000",
+    "kind": "INT"
+  },
+  {
+    "id": 248,
+    "source": "src/peds/Ped.cpp",
+    "offset": 267933,
+    "line": 8462,
+    "arguments": "25000, 30000",
+    "kind": "INT"
+  },
+  {
+    "id": 249,
+    "source": "src/peds/Ped.cpp",
+    "offset": 268601,
+    "line": 8476,
+    "arguments": "50000, 100000",
+    "kind": "INT"
+  },
+  {
+    "id": 250,
+    "source": "src/peds/Ped.cpp",
+    "offset": 274461,
+    "line": 8672,
+    "arguments": "1500, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 251,
+    "source": "src/peds/Ped.cpp",
+    "offset": 276387,
+    "line": 8733,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 252,
+    "source": "src/peds/Ped.cpp",
+    "offset": 280865,
+    "line": 8878,
+    "arguments": "0.f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 253,
+    "source": "src/peds/Ped.cpp",
+    "offset": 282584,
+    "line": 8927,
+    "arguments": "0.f,1.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 254,
+    "source": "src/peds/Ped.cpp",
+    "offset": 287456,
+    "line": 9117,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 255,
+    "source": "src/peds/Ped.cpp",
+    "offset": 287555,
+    "line": 9120,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 256,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 17112,
+    "line": 592,
+    "arguments": "0,8",
+    "kind": "INT"
+  },
+  {
+    "id": 257,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 24602,
+    "line": 835,
+    "arguments": "0.f, 8.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 258,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 24808,
+    "line": 838,
+    "arguments": "0.f, 8.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 259,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 26088,
+    "line": 876,
+    "arguments": "500, 1500",
+    "kind": "INT"
+  },
+  {
+    "id": 260,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 43455,
+    "line": 1344,
+    "arguments": "500, 2000",
+    "kind": "INT"
+  },
+  {
+    "id": 261,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 43587,
+    "line": 1346,
+    "arguments": "2000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 262,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 43671,
+    "line": 1348,
+    "arguments": "50, 300",
+    "kind": "INT"
+  },
+  {
+    "id": 263,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 46469,
+    "line": 1429,
+    "arguments": "500.0f, 1500.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 264,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 72913,
+    "line": 2178,
+    "arguments": "3000, 6000",
+    "kind": "INT"
+  },
+  {
+    "id": 265,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 73569,
+    "line": 2194,
+    "arguments": "1000, 3000",
+    "kind": "INT"
+  },
+  {
+    "id": 266,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 73931,
+    "line": 2205,
+    "arguments": "3000, 6000",
+    "kind": "INT"
+  },
+  {
+    "id": 267,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 74402,
+    "line": 2217,
+    "arguments": "100, 300",
+    "kind": "INT"
+  },
+  {
+    "id": 268,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 75490,
+    "line": 2248,
+    "arguments": "0, 5",
+    "kind": "INT"
+  },
+  {
+    "id": 269,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 76799,
+    "line": 2274,
+    "arguments": "1000,3000",
+    "kind": "INT"
+  },
+  {
+    "id": 270,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 93171,
+    "line": 2715,
+    "arguments": "0.f, 8.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 271,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 106158,
+    "line": 3135,
+    "arguments": "1.f, 1.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 272,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 166003,
+    "line": 5082,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 273,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 169597,
+    "line": 5190,
+    "arguments": "0.0f, 8.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 274,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 182366,
+    "line": 5605,
+    "arguments": "20000,30000",
+    "kind": "INT"
+  },
+  {
+    "id": 275,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 186549,
+    "line": 5730,
+    "arguments": "10000, 15000",
+    "kind": "INT"
+  },
+  {
+    "id": 276,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 187361,
+    "line": 5763,
+    "arguments": "3000, 6000",
+    "kind": "INT"
+  },
+  {
+    "id": 277,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 187445,
+    "line": 5765,
+    "arguments": "2000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 278,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 210205,
+    "line": 6500,
+    "arguments": "500, 2000",
+    "kind": "INT"
+  },
+  {
+    "id": 279,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 210563,
+    "line": 6508,
+    "arguments": "200, 500",
+    "kind": "INT"
+  },
+  {
+    "id": 280,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 210771,
+    "line": 6514,
+    "arguments": "200, 500",
+    "kind": "INT"
+  },
+  {
+    "id": 281,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 210886,
+    "line": 6517,
+    "arguments": "2000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 282,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 214829,
+    "line": 6637,
+    "arguments": "600.0f, 1500.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 283,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 214948,
+    "line": 6641,
+    "arguments": "100.0f, 500.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 284,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 215015,
+    "line": 6643,
+    "arguments": "1500.0f, 3000.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 285,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 215378,
+    "line": 6654,
+    "arguments": "1000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 286,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 224664,
+    "line": 6928,
+    "arguments": "0.f, 500.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 287,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 224792,
+    "line": 6932,
+    "arguments": "100.0f, 1500.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 288,
+    "source": "src/peds/PedAI.cpp",
+    "offset": 224911,
+    "line": 6934,
+    "arguments": "400.0f, 1500.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 289,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 6282,
+    "line": 200,
+    "arguments": "1, 51",
+    "kind": "INT"
+  },
+  {
+    "id": 290,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 6386,
+    "line": 205,
+    "arguments": "-m_fMaxHeadingDisplacement, m_fMaxHeadingDisplacement",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 291,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 6533,
+    "line": 210,
+    "arguments": "-m_fMaxPositionDisplacement, m_fMaxPositionDisplacement",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 292,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 7221,
+    "line": 237,
+    "arguments": "0.0f, TWOPI",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 293,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 7293,
+    "line": 238,
+    "arguments": "0.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 294,
+    "source": "src/peds/PedAttractor.cpp",
+    "offset": 8313,
+    "line": 272,
+    "arguments": "0.0f, TWOPI",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 295,
+    "source": "src/peds/PedChat.cpp",
+    "offset": 2578,
+    "line": 94,
+    "arguments": "0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nOverrideFixedDelayTime",
+    "kind": "INT"
+  },
+  {
+    "id": 296,
+    "source": "src/peds/PedChat.cpp",
+    "offset": 4007,
+    "line": 146,
+    "arguments": "0, CommentWaitTime[audio - SOUND_PED_DEATH].m_nMaxRandomDelayTime",
+    "kind": "INT"
+  },
+  {
+    "id": 297,
+    "source": "src/peds/PedChat.cpp",
+    "offset": 4211,
+    "line": 149,
+    "arguments": "0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nMaxRandomDelayTime",
+    "kind": "INT"
+  },
+  {
+    "id": 298,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 44902,
+    "line": 1224,
+    "arguments": "1000, 3000",
+    "kind": "INT"
+  },
+  {
+    "id": 299,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 67737,
+    "line": 1931,
+    "arguments": "0,4",
+    "kind": "INT"
+  },
+  {
+    "id": 300,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 67794,
+    "line": 1933,
+    "arguments": "0,3",
+    "kind": "INT"
+  },
+  {
+    "id": 301,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 85269,
+    "line": 2472,
+    "arguments": "1500, 4000",
+    "kind": "INT"
+  },
+  {
+    "id": 302,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 85499,
+    "line": 2478,
+    "arguments": "1000, 2500",
+    "kind": "INT"
+  },
+  {
+    "id": 303,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 86112,
+    "line": 2496,
+    "arguments": "1000, 2500",
+    "kind": "INT"
+  },
+  {
+    "id": 304,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 86317,
+    "line": 2500,
+    "arguments": "2500, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 305,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 87127,
+    "line": 2523,
+    "arguments": "1500, 4000",
+    "kind": "INT"
+  },
+  {
+    "id": 306,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 87642,
+    "line": 2537,
+    "arguments": "1000, 2500",
+    "kind": "INT"
+  },
+  {
+    "id": 307,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 88009,
+    "line": 2549,
+    "arguments": "1000, 2500",
+    "kind": "INT"
+  },
+  {
+    "id": 308,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 88743,
+    "line": 2572,
+    "arguments": "2000, 5000",
+    "kind": "INT"
+  },
+  {
+    "id": 309,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 89432,
+    "line": 2591,
+    "arguments": "1000, 2500",
+    "kind": "INT"
+  },
+  {
+    "id": 310,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 116193,
+    "line": 3489,
+    "arguments": "250, 450",
+    "kind": "INT"
+  },
+  {
+    "id": 311,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 137057,
+    "line": 4067,
+    "arguments": "-6.0f * velocityFwdDotProd, 6.0f * velocityFwdDotProd",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 312,
+    "source": "src/peds/PedFight.cpp",
+    "offset": 137229,
+    "line": 4068,
+    "arguments": "-6.0f * velocityFwdDotProd, 6.0f * velocityFwdDotProd",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 313,
+    "source": "src/peds/PlayerPed.cpp",
+    "offset": 10565,
+    "line": 379,
+    "arguments": "2500, 4000",
+    "kind": "INT"
+  },
+  {
+    "id": 314,
+    "source": "src/peds/PlayerPed.cpp",
+    "offset": 11210,
+    "line": 394,
+    "arguments": "2500, 4000",
+    "kind": "INT"
+  },
+  {
+    "id": 315,
+    "source": "src/peds/PlayerPed.cpp",
+    "offset": 69282,
+    "line": 2122,
+    "arguments": "0, ARRAY_SIZE(idleAnims)",
+    "kind": "INT"
+  },
+  {
+    "id": 316,
+    "source": "src/peds/PlayerPed.cpp",
+    "offset": 75224,
+    "line": 2306,
+    "arguments": "1000, 2000",
+    "kind": "INT"
+  },
+  {
+    "id": 317,
+    "source": "src/peds/PlayerPed.cpp",
+    "offset": 75341,
+    "line": 2308,
+    "arguments": "500, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 318,
+    "source": "src/peds/Population.cpp",
+    "offset": 3574,
+    "line": 132,
+    "arguments": "0, NUMMODELSPERPEDGROUP",
+    "kind": "INT"
+  },
+  {
+    "id": 319,
+    "source": "src/peds/Population.cpp",
+    "offset": 3828,
+    "line": 141,
+    "arguments": "0, NUMMODELSPERPEDGROUP",
+    "kind": "INT"
+  },
+  {
+    "id": 320,
+    "source": "src/peds/Population.cpp",
+    "offset": 13269,
+    "line": 514,
+    "arguments": "0, 100",
+    "kind": "INT"
+  },
+  {
+    "id": 321,
+    "source": "src/peds/Population.cpp",
+    "offset": 17778,
+    "line": 630,
+    "arguments": "0, 1000",
+    "kind": "INT"
+  },
+  {
+    "id": 322,
+    "source": "src/peds/Population.cpp",
+    "offset": 18140,
+    "line": 643,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 323,
+    "source": "src/peds/Population.cpp",
+    "offset": 20100,
+    "line": 696,
+    "arguments": "0.f, 1.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 324,
+    "source": "src/peds/Population.cpp",
+    "offset": 21914,
+    "line": 746,
+    "arguments": "offsetMin, offsetMin + offsetMax",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 325,
+    "source": "src/peds/Population.cpp",
+    "offset": 22003,
+    "line": 747,
+    "arguments": "offsetMin, offsetMin + offsetMax",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 326,
+    "source": "src/peds/Population.cpp",
+    "offset": 24710,
+    "line": 814,
+    "arguments": "0.f, 1.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 327,
+    "source": "src/peds/Population.cpp",
+    "offset": 25350,
+    "line": 829,
+    "arguments": "-2.f, 2.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 328,
+    "source": "src/peds/Population.cpp",
+    "offset": 25395,
+    "line": 829,
+    "arguments": "-2.f, 2.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 329,
+    "source": "src/peds/Population.cpp",
+    "offset": 25515,
+    "line": 833,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 330,
+    "source": "src/peds/Population.cpp",
+    "offset": 46298,
+    "line": 1529,
+    "arguments": "3, 6",
+    "kind": "INT"
+  },
+  {
+    "id": 331,
+    "source": "src/peds/Population.cpp",
+    "offset": 46969,
+    "line": 1560,
+    "arguments": "0, NUMMODELSPERPEDGROUP",
+    "kind": "INT"
+  },
+  {
+    "id": 332,
+    "source": "src/peds/Population.cpp",
+    "offset": 48120,
+    "line": 1595,
+    "arguments": "0.f, 1.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 333,
+    "source": "src/peds/Population.cpp",
+    "offset": 49218,
+    "line": 1618,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 334,
+    "source": "src/peds/Population.cpp",
+    "offset": 51812,
+    "line": 1696,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 335,
+    "source": "src/peds/Population.cpp",
+    "offset": 51889,
+    "line": 1697,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 336,
+    "source": "src/peds/Population.cpp",
+    "offset": 56119,
+    "line": 1807,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 337,
+    "source": "src/peds/Population.cpp",
+    "offset": 58192,
+    "line": 1870,
+    "arguments": "0, 4",
+    "kind": "INT"
+  },
+  {
+    "id": 338,
+    "source": "src/peds/Population.cpp",
+    "offset": 58734,
+    "line": 1887,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 339,
+    "source": "src/peds/Population.cpp",
+    "offset": 58811,
+    "line": 1888,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 340,
+    "source": "src/renderer/Glass.cpp",
+    "offset": 4392,
+    "line": 166,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 341,
+    "source": "src/renderer/Glass.cpp",
+    "offset": 4454,
+    "line": 167,
+    "arguments": "-0.35f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 342,
+    "source": "src/renderer/Glass.cpp",
+    "offset": 4516,
+    "line": 168,
+    "arguments": "0.05f, 0.20f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 343,
+    "source": "src/renderer/Glass.cpp",
+    "offset": 4654,
+    "line": 174,
+    "arguments": "0.02f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 344,
+    "source": "src/renderer/Glass.cpp",
+    "offset": 4720,
+    "line": 176,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 345,
+    "source": "src/renderer/Hud.cpp",
+    "offset": 13265,
+    "line": 388,
+    "arguments": "0, 37",
+    "kind": "INT"
+  },
+  {
+    "id": 346,
+    "source": "src/renderer/Hud.cpp",
+    "offset": 13334,
+    "line": 390,
+    "arguments": "0, 35",
+    "kind": "INT"
+  },
+  {
+    "id": 347,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 22331,
+    "line": 661,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 348,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 22412,
+    "line": 662,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 349,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 22495,
+    "line": 663,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 350,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 22579,
+    "line": 664,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 351,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 31468,
+    "line": 845,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 352,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 31524,
+    "line": 846,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 353,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 31580,
+    "line": 847,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 354,
+    "source": "src/renderer/MBlur.cpp",
+    "offset": 31636,
+    "line": 848,
+    "arguments": "-0.002f, 0.002f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 355,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 24855,
+    "line": 975,
+    "arguments": "-psystem->m_InitialColorVariation, psystem->m_InitialColorVariation",
+    "kind": "INT"
+  },
+  {
+    "id": 356,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 27086,
+    "line": 1024,
+    "arguments": "-psystem->m_nRotationRateError, psystem->m_nRotationRateError",
+    "kind": "INT"
+  },
+  {
+    "id": 357,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 28900,
+    "line": 1094,
+    "arguments": "0.5f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 358,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 29193,
+    "line": 1100,
+    "arguments": "0.3f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 359,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 29272,
+    "line": 1101,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 360,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 29565,
+    "line": 1107,
+    "arguments": "0.8f, 1.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 361,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 29644,
+    "line": 1108,
+    "arguments": "-0.3f, 0.3f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 362,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 32415,
+    "line": 1215,
+    "arguments": "0.01f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 363,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 32488,
+    "line": 1216,
+    "arguments": "0.01f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 364,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 34877,
+    "line": 1292,
+    "arguments": "0.75f, 1.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 365,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 34960,
+    "line": 1293,
+    "arguments": "0.75f, 1.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 366,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 36366,
+    "line": 1341,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 367,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 36421,
+    "line": 1342,
+    "arguments": "0.1f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 368,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 36615,
+    "line": 1349,
+    "arguments": "50, int32(SCREEN_WIDTH) - 50",
+    "kind": "INT"
+  },
+  {
+    "id": 369,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 36722,
+    "line": 1351,
+    "arguments": "200, int32(SCREEN_WIDTH) - 200",
+    "kind": "INT"
+  },
+  {
+    "id": 370,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 36921,
+    "line": 1354,
+    "arguments": "SCREEN_HEIGHT / 2, SCREEN_HEIGHT",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 371,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 37093,
+    "line": 1358,
+    "arguments": "0, int32(SCREEN_HEIGHT)",
+    "kind": "INT"
+  },
+  {
+    "id": 372,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 37198,
+    "line": 1360,
+    "arguments": "150, int32(SCREEN_HEIGHT) - 200",
+    "kind": "INT"
+  },
+  {
+    "id": 373,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 37434,
+    "line": 1369,
+    "arguments": "0.1f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 374,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 44940,
+    "line": 1635,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 375,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 45002,
+    "line": 1636,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 376,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 45064,
+    "line": 1637,
+    "arguments": "0.05f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 377,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 45884,
+    "line": 1661,
+    "arguments": "0.03f, 0.06f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 378,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 53002,
+    "line": 1916,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 379,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 53143,
+    "line": 1917,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 380,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 53305,
+    "line": 1921,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 381,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 53411,
+    "line": 1922,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 382,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 59506,
+    "line": 2085,
+    "arguments": "1.0f, 7.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 383,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 59598,
+    "line": 2086,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 384,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 59722,
+    "line": 2090,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 385,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 59814,
+    "line": 2091,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 386,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 60488,
+    "line": 2112,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 387,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 60578,
+    "line": 2113,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 388,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 75630,
+    "line": 2509,
+    "arguments": "-0.4f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 389,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 75679,
+    "line": 2510,
+    "arguments": "-0.4f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 390,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 75728,
+    "line": 2511,
+    "arguments": "0.1f, 0.3f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 391,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 75973,
+    "line": 2524,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 392,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76028,
+    "line": 2525,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 393,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76083,
+    "line": 2526,
+    "arguments": "-0.02f, 0.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 394,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76264,
+    "line": 2535,
+    "arguments": "-0.04f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 395,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76319,
+    "line": 2536,
+    "arguments": "-0.04f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 396,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76374,
+    "line": 2537,
+    "arguments": "0.0f, 0.07f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 397,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76554,
+    "line": 2546,
+    "arguments": "-0.04f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 398,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76609,
+    "line": 2547,
+    "arguments": "-0.04f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 399,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 76664,
+    "line": 2548,
+    "arguments": "0.0f, 0.07f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 400,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 77112,
+    "line": 2569,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 401,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 77170,
+    "line": 2570,
+    "arguments": "-0.5f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 402,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 79544,
+    "line": 2646,
+    "arguments": "-3.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 403,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 79604,
+    "line": 2647,
+    "arguments": "-3.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 404,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 79664,
+    "line": 2648,
+    "arguments": "-3.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 405,
+    "source": "src/renderer/Particle.cpp",
+    "offset": 79803,
+    "line": 2653,
+    "arguments": "20, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 406,
+    "source": "src/renderer/WaterCannon.cpp",
+    "offset": 8451,
+    "line": 285,
+    "arguments": "0.f, 10.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 407,
+    "source": "src/renderer/WaterCannon.cpp",
+    "offset": 8496,
+    "line": 285,
+    "arguments": "0.f, 90.f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 408,
+    "source": "src/renderer/WaterCreatures.cpp",
+    "offset": 6721,
+    "line": 184,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 409,
+    "source": "src/renderer/WaterCreatures.cpp",
+    "offset": 7242,
+    "line": 199,
+    "arguments": "0, 64",
+    "kind": "INT"
+  },
+  {
+    "id": 410,
+    "source": "src/renderer/WaterCreatures.cpp",
+    "offset": 7413,
+    "line": 203,
+    "arguments": "0.0f, creature->fFwdSpeed",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 411,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 56910,
+    "line": 1840,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 412,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 57089,
+    "line": 1844,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 413,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 64940,
+    "line": 2089,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 414,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 65422,
+    "line": 2112,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 415,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 65904,
+    "line": 2135,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 416,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 66386,
+    "line": 2158,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 417,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 73186,
+    "line": 2369,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 418,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 73366,
+    "line": 2373,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 419,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 78403,
+    "line": 2518,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 420,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 78885,
+    "line": 2541,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 421,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 79367,
+    "line": 2564,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 422,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 79849,
+    "line": 2587,
+    "arguments": "-90, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 423,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 100883,
+    "line": 3175,
+    "arguments": "90.0f, 150.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 424,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 101218,
+    "line": 3184,
+    "arguments": "10.0f, 30.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 425,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 101290,
+    "line": 3186,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 426,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 101345,
+    "line": 3187,
+    "arguments": "-1.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 427,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 102258,
+    "line": 3224,
+    "arguments": "450.0f, 750.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 428,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 102821,
+    "line": 3244,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 429,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 103668,
+    "line": 3281,
+    "arguments": "15.0f, 30.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 430,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 105111,
+    "line": 3334,
+    "arguments": "20.0f, 35.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 431,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 106260,
+    "line": 3378,
+    "arguments": "20.0f, 35.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 432,
+    "source": "src/renderer/WaterLevel.cpp",
+    "offset": 107107,
+    "line": 3404,
+    "arguments": "0.0f, 359.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 433,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 12387,
+    "line": 357,
+    "arguments": "SCREEN_HEIGHT*0.25f, SCREEN_HEIGHT*0.9f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 434,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 12478,
+    "line": 359,
+    "arguments": "SCREEN_HEIGHT*0.4f, SCREEN_HEIGHT*0.9f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 435,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 13003,
+    "line": 376,
+    "arguments": "90.0f, 60.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 436,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 13265,
+    "line": 382,
+    "arguments": "7.5f, 30.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 437,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 14103,
+    "line": 413,
+    "arguments": "-10.0f, 30.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 438,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 15132,
+    "line": 441,
+    "arguments": "-10.0f, 30.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 439,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 16999,
+    "line": 506,
+    "arguments": "0, (int)SCREEN_WIDTH",
+    "kind": "INT"
+  },
+  {
+    "id": 440,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17066,
+    "line": 507,
+    "arguments": "0, (int)SCREEN_HEIGHT/5",
+    "kind": "INT"
+  },
+  {
+    "id": 441,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17170,
+    "line": 510,
+    "arguments": "30.0f, 40.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 442,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17298,
+    "line": 512,
+    "arguments": "0.1f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 443,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17380,
+    "line": 514,
+    "arguments": "0, (int)SCREEN_WIDTH",
+    "kind": "INT"
+  },
+  {
+    "id": 444,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17447,
+    "line": 515,
+    "arguments": "(int)SCREEN_HEIGHT/5, (int)SCREEN_HEIGHT/2",
+    "kind": "INT"
+  },
+  {
+    "id": 445,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17570,
+    "line": 518,
+    "arguments": "30.0f, 40.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 446,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17698,
+    "line": 520,
+    "arguments": "0.1f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 447,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17780,
+    "line": 522,
+    "arguments": "0, (int)SCREEN_WIDTH",
+    "kind": "INT"
+  },
+  {
+    "id": 448,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 17898,
+    "line": 526,
+    "arguments": "30.0f, 40.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 449,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 18026,
+    "line": 528,
+    "arguments": "0.1f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 450,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 18113,
+    "line": 530,
+    "arguments": "0.0f, Max(10.0f*Rain, 40.0f)/2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 451,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 18791,
+    "line": 546,
+    "arguments": "-15.0f, 15.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 452,
+    "source": "src/renderer/Weather.cpp",
+    "offset": 18855,
+    "line": 547,
+    "arguments": "-15.0f, 15.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 453,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 3869,
+    "line": 153,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 454,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 25660,
+    "line": 825,
+    "arguments": "0, (uint16)(40*fwdSpeed) + 98",
+    "kind": "INT"
+  },
+  {
+    "id": 455,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 56727,
+    "line": 1633,
+    "arguments": "0.01125f, 0.09f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 456,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 56838,
+    "line": 1637,
+    "arguments": "-0.5625f, 0.5625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 457,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 56904,
+    "line": 1638,
+    "arguments": "-0.5625f, 0.5625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 458,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 56970,
+    "line": 1639,
+    "arguments": "0.5625f, 2.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 459,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 71317,
+    "line": 2052,
+    "arguments": "-0.4f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 460,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 71364,
+    "line": 2052,
+    "arguments": "-0.4f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 461,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 71980,
+    "line": 2071,
+    "arguments": "-0.06f, -0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 462,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 72390,
+    "line": 2088,
+    "arguments": "1.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 463,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 97538,
+    "line": 2683,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 464,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 97590,
+    "line": 2684,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 465,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 99352,
+    "line": 2724,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 466,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 99404,
+    "line": 2725,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 467,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 106887,
+    "line": 2925,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 468,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 106940,
+    "line": 2926,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 469,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 108781,
+    "line": 2966,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 470,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 108834,
+    "line": 2967,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 471,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 123871,
+    "line": 3445,
+    "arguments": "0.3f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 472,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 123928,
+    "line": 3446,
+    "arguments": "0.5f, 1.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 473,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 138073,
+    "line": 3836,
+    "arguments": "0, 32",
+    "kind": "INT"
+  },
+  {
+    "id": 474,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 138160,
+    "line": 3837,
+    "arguments": "0.15f, 0.45f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 475,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 139331,
+    "line": 3868,
+    "arguments": "-2.5f, 2.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 476,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 139390,
+    "line": 3869,
+    "arguments": "-2.5f, 2.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 477,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 140837,
+    "line": 3913,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 478,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 140890,
+    "line": 3914,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 479,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 157893,
+    "line": 4404,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 480,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 157951,
+    "line": 4405,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 481,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158110,
+    "line": 4410,
+    "arguments": "-1.2f, 1.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 482,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158176,
+    "line": 4411,
+    "arguments": "-1.2f, 1.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 483,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158404,
+    "line": 4418,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 484,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158464,
+    "line": 4419,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 485,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158524,
+    "line": 4420,
+    "arguments": "0.1f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 486,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158583,
+    "line": 4422,
+    "arguments": "0.02f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 487,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158697,
+    "line": 4424,
+    "arguments": "-40, 40",
+    "kind": "INT"
+  },
+  {
+    "id": 488,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 158749,
+    "line": 4426,
+    "arguments": "0, 4",
+    "kind": "INT"
+  },
+  {
+    "id": 489,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 160443,
+    "line": 4484,
+    "arguments": "0.0f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 490,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 160976,
+    "line": 4493,
+    "arguments": "0.0f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 491,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 162360,
+    "line": 4522,
+    "arguments": "0.0f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 492,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 163721,
+    "line": 4558,
+    "arguments": "0.03f, 0.06f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 493,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 163847,
+    "line": 4560,
+    "arguments": "0.02f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 494,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164050,
+    "line": 4567,
+    "arguments": "0.03f, 0.06f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 495,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164176,
+    "line": 4569,
+    "arguments": "0.05f, 0.09f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 496,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164382,
+    "line": 4576,
+    "arguments": "0.03f, 0.06f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 497,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164508,
+    "line": 4578,
+    "arguments": "0.02f, 0.06f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 498,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164700,
+    "line": 4584,
+    "arguments": "CWeather::WetRoads, 1.01f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 499,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 164884,
+    "line": 4589,
+    "arguments": "0.02f, 0.055f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 500,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 165282,
+    "line": 4600,
+    "arguments": "0.005f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 501,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 165347,
+    "line": 4602,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 502,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 177110,
+    "line": 4994,
+    "arguments": "-fBurstForceMult, fBurstForceMult",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 503,
+    "source": "src/vehicles/Automobile.cpp",
+    "offset": 177225,
+    "line": 4995,
+    "arguments": "-fBurstForceMult, fBurstForceMult",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 504,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 18727,
+    "line": 653,
+    "arguments": "0, (uint16)(40*fwdSpeed) + 98",
+    "kind": "INT"
+  },
+  {
+    "id": 505,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 36249,
+    "line": 1096,
+    "arguments": "0.5f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 506,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 38415,
+    "line": 1154,
+    "arguments": "0.01125f, 0.09f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 507,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 38624,
+    "line": 1158,
+    "arguments": "0.02025f, 0.09f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 508,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 38702,
+    "line": 1159,
+    "arguments": "0.02025f, 0.18f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 509,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 38783,
+    "line": 1160,
+    "arguments": "0.00225f, 0.018f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 510,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 39074,
+    "line": 1169,
+    "arguments": "-0.5625f, 0.5625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 511,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 39144,
+    "line": 1170,
+    "arguments": "-0.5625f, 0.5625f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 512,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 39214,
+    "line": 1171,
+    "arguments": "0.5625f, 2.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 513,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 60926,
+    "line": 1735,
+    "arguments": "-0.06f, -0.03f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 514,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 61366,
+    "line": 1753,
+    "arguments": "1.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 515,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 79865,
+    "line": 2318,
+    "arguments": "0.03f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 516,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 79991,
+    "line": 2320,
+    "arguments": "minSize, maxSize",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 517,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 80199,
+    "line": 2327,
+    "arguments": "0.03f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 518,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 80325,
+    "line": 2329,
+    "arguments": "minSize, maxSize",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 519,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 80535,
+    "line": 2336,
+    "arguments": "0.03f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 520,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 80661,
+    "line": 2338,
+    "arguments": "minSize, maxSize",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 521,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 80939,
+    "line": 2348,
+    "arguments": "0.02f, 0.055f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 522,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 81295,
+    "line": 2358,
+    "arguments": "0.005f, 0.04f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 523,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 81358,
+    "line": 2360,
+    "arguments": "0.1f, 0.5f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 524,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 84965,
+    "line": 2516,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 525,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 85060,
+    "line": 2517,
+    "arguments": "-0.02f, 0.02f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 526,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 89807,
+    "line": 2654,
+    "arguments": "0, 8",
+    "kind": "INT"
+  },
+  {
+    "id": 527,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 92671,
+    "line": 2742,
+    "arguments": "48, 96",
+    "kind": "INT"
+  },
+  {
+    "id": 528,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 93317,
+    "line": 2757,
+    "arguments": "3.0f, 7.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 529,
+    "source": "src/vehicles/Bike.cpp",
+    "offset": 94005,
+    "line": 2776,
+    "arguments": "minForceZ, maxForceZ",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 530,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 4846,
+    "line": 172,
+    "arguments": "160, 196",
+    "kind": "INT"
+  },
+  {
+    "id": 531,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 5293,
+    "line": 183,
+    "arguments": "196, 228",
+    "kind": "INT"
+  },
+  {
+    "id": 532,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 8629,
+    "line": 302,
+    "arguments": "2.25f/200.0f, 0.09f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 533,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 8752,
+    "line": 305,
+    "arguments": "-2.25f/4.0f, 2.25f/4.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 534,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 8829,
+    "line": 306,
+    "arguments": "-2.25f/4.0f, 2.25f/4.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 535,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 8906,
+    "line": 307,
+    "arguments": "2.25f/4.0f, 2.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 536,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 15190,
+    "line": 461,
+    "arguments": "0, 5",
+    "kind": "INT"
+  },
+  {
+    "id": 537,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 15238,
+    "line": 462,
+    "arguments": "0, 90",
+    "kind": "INT"
+  },
+  {
+    "id": 538,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 15411,
+    "line": 465,
+    "arguments": "0, 30",
+    "kind": "INT"
+  },
+  {
+    "id": 539,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 15460,
+    "line": 466,
+    "arguments": "0, 45",
+    "kind": "INT"
+  },
+  {
+    "id": 540,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 22497,
+    "line": 627,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 541,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 22544,
+    "line": 627,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 542,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 22737,
+    "line": 630,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 543,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 22783,
+    "line": 630,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 544,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 24843,
+    "line": 684,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 545,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 24890,
+    "line": 684,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 546,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25083,
+    "line": 687,
+    "arguments": "0.0f, 0.4f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 547,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25129,
+    "line": 687,
+    "arguments": "0.0f, 45.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 548,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25469,
+    "line": 696,
+    "arguments": "-0.25f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 549,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25518,
+    "line": 696,
+    "arguments": "1.0f, 0.75f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 550,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25682,
+    "line": 700,
+    "arguments": "50, (int)SCREEN_WIDTH-50",
+    "kind": "INT"
+  },
+  {
+    "id": 551,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25758,
+    "line": 701,
+    "arguments": "50, (int)SCREEN_HEIGHT-50",
+    "kind": "INT"
+  },
+  {
+    "id": 552,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25845,
+    "line": 703,
+    "arguments": "200, (int)SCREEN_WIDTH-200",
+    "kind": "INT"
+  },
+  {
+    "id": 553,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 25923,
+    "line": 704,
+    "arguments": "150, (int)SCREEN_HEIGHT-150",
+    "kind": "INT"
+  },
+  {
+    "id": 554,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 26120,
+    "line": 710,
+    "arguments": "0.35f, TheCamera.m_CameraAverageSpeed",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 555,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 26225,
+    "line": 712,
+    "arguments": "0.35f, TheCamera.m_CameraAverageSpeed",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 556,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 26365,
+    "line": 715,
+    "arguments": "0.35f, TheCamera.m_CameraAverageSpeed",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 557,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 26470,
+    "line": 717,
+    "arguments": "0.35f, TheCamera.m_CameraAverageSpeed",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 558,
+    "source": "src/vehicles/Boat.cpp",
+    "offset": 26631,
+    "line": 721,
+    "arguments": "0.1f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 559,
+    "source": "src/vehicles/CarGen.cpp",
+    "offset": 4454,
+    "line": 157,
+    "arguments": "0, 100",
+    "kind": "INT"
+  },
+  {
+    "id": 560,
+    "source": "src/vehicles/CarGen.cpp",
+    "offset": 4544,
+    "line": 159,
+    "arguments": "0, 100",
+    "kind": "INT"
+  },
+  {
+    "id": 561,
+    "source": "src/vehicles/Heli.cpp",
+    "offset": 28107,
+    "line": 923,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 562,
+    "source": "src/vehicles/Heli.cpp",
+    "offset": 28166,
+    "line": 924,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 563,
+    "source": "src/vehicles/Heli.cpp",
+    "offset": 28225,
+    "line": 925,
+    "arguments": "0.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 564,
+    "source": "src/vehicles/Heli.cpp",
+    "offset": 28290,
+    "line": 926,
+    "arguments": "10, 30",
+    "kind": "INT"
+  },
+  {
+    "id": 565,
+    "source": "src/vehicles/Heli.cpp",
+    "offset": 28497,
+    "line": 931,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 566,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 6500,
+    "line": 240,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 567,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 6560,
+    "line": 241,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 568,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 6620,
+    "line": 242,
+    "arguments": "0.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 569,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 6686,
+    "line": 243,
+    "arguments": "10, 30",
+    "kind": "INT"
+  },
+  {
+    "id": 570,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 6934,
+    "line": 248,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 571,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 8434,
+    "line": 294,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 572,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 8494,
+    "line": 295,
+    "arguments": "-2.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 573,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 8554,
+    "line": 296,
+    "arguments": "0.0f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 574,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 8620,
+    "line": 297,
+    "arguments": "30.0f, 20.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 575,
+    "source": "src/vehicles/Plane.cpp",
+    "offset": 8874,
+    "line": 302,
+    "arguments": "0.1f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 576,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 3289,
+    "line": 134,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 577,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 28838,
+    "line": 829,
+    "arguments": "-fBurstTyreMod, fBurstTyreMod",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 578,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 33433,
+    "line": 992,
+    "arguments": "-fBurstBikeTyreMod, fBurstBikeTyreMod",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 579,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 37827,
+    "line": 1143,
+    "arguments": "5, 25",
+    "kind": "INT"
+  },
+  {
+    "id": 580,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 41266,
+    "line": 1270,
+    "arguments": "0.0f, 1.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 581,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 49672,
+    "line": 1548,
+    "arguments": "300.0f, 600.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 582,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 64382,
+    "line": 2175,
+    "arguments": "8, 32",
+    "kind": "INT"
+  },
+  {
+    "id": 583,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 64667,
+    "line": 2182,
+    "arguments": "0.0f, 10.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 584,
+    "source": "src/vehicles/Vehicle.cpp",
+    "offset": 64720,
+    "line": 2183,
+    "arguments": "0.0f, 90.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 585,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 4745,
+    "line": 171,
+    "arguments": "0, 64",
+    "kind": "INT"
+  },
+  {
+    "id": 586,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 15230,
+    "line": 417,
+    "arguments": "-3.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 587,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 15277,
+    "line": 417,
+    "arguments": "-180.0f, 180.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 588,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 17567,
+    "line": 456,
+    "arguments": "0.5f, 0.8f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 589,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 17775,
+    "line": 459,
+    "arguments": "0.5f, 2.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 590,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 18449,
+    "line": 474,
+    "arguments": "-3.0f, 3.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 591,
+    "source": "src/weapons/Explosion.cpp",
+    "offset": 18496,
+    "line": 474,
+    "arguments": "-180.0f, 180.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 592,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 17531,
+    "line": 648,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 593,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 17598,
+    "line": 649,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 594,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 17730,
+    "line": 652,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 595,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 17797,
+    "line": 653,
+    "arguments": "-0.05f, 0.05f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 596,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 18757,
+    "line": 675,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 597,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 18806,
+    "line": 675,
+    "arguments": "0.1f, 0.35f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 598,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 18884,
+    "line": 676,
+    "arguments": "SCREEN_STRETCH_X(50.0f), SCREEN_STRETCH_FROM_RIGHT(50.0f)",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 599,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 18987,
+    "line": 677,
+    "arguments": "SCREEN_STRETCH_Y(50.0f), SCREEN_STRETCH_FROM_BOTTOM(50.0f)",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 600,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 19162,
+    "line": 678,
+    "arguments": "0.1f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 601,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 27963,
+    "line": 923,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 602,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 28044,
+    "line": 924,
+    "arguments": "-0.15f, 0.15f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 603,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 28125,
+    "line": 925,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 604,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 28502,
+    "line": 935,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 605,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 28578,
+    "line": 936,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 606,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 28654,
+    "line": 937,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 607,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 31861,
+    "line": 1038,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 608,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 31940,
+    "line": 1039,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 609,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 32019,
+    "line": 1040,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 610,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 36748,
+    "line": 1172,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 611,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 41953,
+    "line": 1286,
+    "arguments": "0.05f, 0.25f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 612,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 42324,
+    "line": 1298,
+    "arguments": "0.02f, 0.08f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 613,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 42704,
+    "line": 1310,
+    "arguments": "-20.0f, 20.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 614,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 42837,
+    "line": 1315,
+    "arguments": "-20.0f, 20.0f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 615,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 50233,
+    "line": 1532,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 616,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 50299,
+    "line": 1533,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 617,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 50365,
+    "line": 1534,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 618,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 65634,
+    "line": 1999,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 619,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 65701,
+    "line": 2000,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 620,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 65768,
+    "line": 2001,
+    "arguments": "-0.2f, 0.2f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 621,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 84602,
+    "line": 2662,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 622,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 84664,
+    "line": 2663,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 623,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 84726,
+    "line": 2664,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 624,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 97816,
+    "line": 3107,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 625,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 97878,
+    "line": 3108,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  },
+  {
+    "id": 626,
+    "source": "src/weapons/Weapon.cpp",
+    "offset": 97940,
+    "line": 3109,
+    "arguments": "-0.1f, 0.1f",
+    "kind": "FLOAT"
+  }
+]

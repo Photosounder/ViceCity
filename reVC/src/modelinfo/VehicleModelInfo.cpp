@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include <rpmatfx.h>
 
@@ -269,7 +273,8 @@ CVehicleModelInfo::ConvertAnimFileIndex(void)
 {
 	if(m_animFileIndex != -1){
 		// we have a string pointer in that union
-		int32 index = CAnimManager::GetAnimationBlockIndex(m_animFileName);
+		// Use the complete C animation manager at the original call boundary
+		int32 index = AnimManager_GetAnimationBlockIndex(m_animFileName);
 		free(m_animFileName); // rouz edit (ChatGPT)
 		m_animFileIndex = index;
 	}
@@ -334,7 +339,7 @@ CVehicleModelInfo::SetAtomicRendererCB(RpAtomic *atomic, void *data)
 	name = GetFrameNodeName(RpAtomicGetFrame(atomic));
 	alpha = false;
 	RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), HasAlphaMaterialCB, &alpha);
-	if(strstr(name, "_hi") || !CGeneral::faststrncmp(name, "extra", 5)) {
+	if(strstr(name, "_hi") || !General_faststrncmp(name, "extra", 5)) {
 		if(alpha || strncmp(name, "windscreen", 10) == 0)
 			CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB);
 		else
@@ -360,7 +365,7 @@ CVehicleModelInfo::SetAtomicRendererCB_BigVehicle(RpAtomic *atomic, void *data)
 	name = GetFrameNodeName(RpAtomicGetFrame(atomic));
 	alpha = false;
 	RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), HasAlphaMaterialCB, &alpha);
-	if(strstr(name, "_hi") || !CGeneral::faststrncmp(name, "extra", 5)) {
+	if(strstr(name, "_hi") || !General_faststrncmp(name, "extra", 5)) {
 		if(alpha)
 			CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_BigVehicle);
 		else
@@ -411,7 +416,7 @@ CVehicleModelInfo::SetAtomicRendererCB_Boat(RpAtomic *atomic, void *data)
 	name = GetFrameNodeName(RpAtomicGetFrame(atomic));
 	alpha = false;
 	RpGeometryForAllMaterials(RpAtomicGetGeometry(atomic), HasAlphaMaterialCB, &alpha);
-	if(strcmp(name, "boat_hi") == 0 || !CGeneral::faststrncmp(name, "extra", 5))
+	if(strcmp(name, "boat_hi") == 0 || !General_faststrncmp(name, "extra", 5))
 		CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailCB_Boat);
 	else if(strstr(name, "_hi")){
 		if(alpha)
@@ -464,7 +469,7 @@ CVehicleModelInfo::SetAtomicRendererCB_RealHeli(RpAtomic *atomic, void *data)
 		CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleRotorAlphaCB);
 	else if(strncmp(name, "rearrotor", 9) == 0)
 		CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleTailRotorAlphaCB);
-	else if(strstr(name, "_hi") || !CGeneral::faststrncmp(name, "extra", 5)) {
+	else if(strstr(name, "_hi") || !General_faststrncmp(name, "extra", 5)) {
 		if(alpha || strncmp(name, "windscreen", 10) == 0)
 			CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderVehicleHiDetailAlphaCB);
 		else
@@ -566,7 +571,8 @@ CVehicleModelInfo::PreprocessHierarchy(void)
 				RwV3dTransformPoints(rwvec, rwvec, 1, RwFrameGetMatrix(f));
 			RwFrameDestroy(assoc.frame);
 		}else{
-			atomic = (RpAtomic*)GetFirstObject(assoc.frame);
+			// Use the C helper and retain the original typed SDK result
+			atomic = (RpAtomic*)((RwObject*)GetFirstObject(assoc.frame));
 			RpClumpRemoveAtomic(m_clump, atomic);
 			RwFrameRemoveChild(assoc.frame);
 			SetVehicleComponentFlags(assoc.frame, desc[i].flags);
@@ -667,8 +673,8 @@ bool
 IsValidCompRule(int rule)
 {
 	if(rule == 2)
-		return CWeather::OldWeatherType == WEATHER_RAINY ||
-		       CWeather::NewWeatherType == WEATHER_RAINY;
+		return Weather_OldWeatherType == WEATHER_RAINY ||
+		       Weather_NewWeatherType == WEATHER_RAINY;
 	return true;
 }
 
@@ -689,22 +695,22 @@ ChooseComponent(int32 rule, int32 comps)
 	switch(rule){
 	// identical cases....
 	case 1:
-		n = CGeneral::GetRandomNumberInRange(0, CountCompsInRule(comps));
+		n = General_GetRandomNumberInRangeInt(0, CountCompsInRule(comps));
 		return COMPRULE_COMPN(comps, n);
 	case 2:
 		// only valid in rain
-		n = CGeneral::GetRandomNumberInRange(0, CountCompsInRule(comps));
+		n = General_GetRandomNumberInRangeInt(0, CountCompsInRule(comps));
 		return COMPRULE_COMPN(comps, n);
 	case 3:
-		n = CGeneral::GetRandomNumberInRange(0, 1+CountCompsInRule(comps));
+		n = General_GetRandomNumberInRangeInt(0, 1+CountCompsInRule(comps));
 		if(n != 0)
 			return COMPRULE_COMPN(comps, n-1);
 		return -1;
 	case 4:
 #ifdef FIX_BUGS
-		return CGeneral::GetRandomNumberInRange(0, 6);
+		return General_GetRandomNumberInRangeInt(0, 6);
 #else
-		return CGeneral::GetRandomNumberInRange(0, 5);
+		return General_GetRandomNumberInRangeInt(0, 5);
 #endif
 	}
 	return -1;
@@ -762,10 +768,10 @@ CVehicleModelInfo::ChooseComponent(void)
 	if(ms_compsToUse[0] == -2){
 		if(COMPRULE_RULE(m_compRules) && IsValidCompRule(COMPRULE_RULE(m_compRules)))
 			comp = ::ChooseComponent(COMPRULE_RULE(m_compRules), COMPRULE_COMPS(m_compRules));
-		else if(CGeneral::GetRandomNumberInRange(0, 3) < 2){
+		else if(General_GetRandomNumberInRangeInt(0, 3) < 2){
 			n = GetListOfComponentsNotUsedByRules(m_compRules, m_numComps, comps);
 			if(n)
-				comp = comps[(int)CGeneral::GetRandomNumberInRange(0, n)];
+				comp = comps[(int)General_GetRandomNumberInRangeInt(0, n)];
 		}
 	}else{
 		comp = ms_compsToUse[0];
@@ -786,11 +792,11 @@ CVehicleModelInfo::ChooseSecondComponent(void)
 		if(COMPRULE2_RULE(m_compRules) && IsValidCompRule(COMPRULE2_RULE(m_compRules)))
 			comp = ::ChooseComponent(COMPRULE2_RULE(m_compRules), COMPRULE2_COMPS(m_compRules));
 		else if(COMPRULE_RULE(m_compRules) && IsValidCompRule(COMPRULE_RULE(m_compRules)) &&
-		        CGeneral::GetRandomNumberInRange(0, 3) < 2){
+		        General_GetRandomNumberInRangeInt(0, 3) < 2){
 
 			n = GetListOfComponentsNotUsedByRules(m_compRules, m_numComps, comps);
 			if(n)
-				comp = comps[(int)CGeneral::GetRandomNumberInRange(0, n)];
+				comp = comps[(int)General_GetRandomNumberInRangeInt(0, n)];
 		}
 	}else{
 		comp = ms_compsToUse[1];
@@ -926,7 +932,7 @@ CVehicleModelInfo::AvoidSameVehicleColour(uint8 *col1, uint8 *col2)
 			for(i = 0; i < 8; i++){
 				if(*col1 != m_lastColour1 || *col2 != m_lastColour2)
 					break;
-				n = CGeneral::GetRandomNumberInRange(0, m_numColours);
+				n = General_GetRandomNumberInRangeInt(0, m_numColours);
 				*col1 = m_colours1[n];
 				*col2 = m_colours2[n];
 			}
@@ -994,16 +1000,16 @@ CVehicleModelInfo::LoadVehicleColours(void)
 	int colors[16];
 	int n;
 
-	CFileMgr::ChangeDir("\\DATA\\");
-	fd = CFileMgr::OpenFile("CARCOLS.DAT", "r");
-	CFileMgr::ChangeDir("\\");
+	FileMgr_ChangeDir("\\DATA\\");
+	fd = FileMgr_OpenFile("CARCOLS.DAT", "r");
+	FileMgr_ChangeDir("\\");
 
 	for(i = 0; i < 256; i++)
 		ms_colourTextureTable[i] = nil;
 
 	section = 0;
 	numCols = 0;
-	while(CFileMgr::ReadLine(fd, line, sizeof(line))){
+	while(FileMgr_ReadLine(fd, line, sizeof(line))){
 		// find first valid character in line
 		for(start = 0; ; start++)
 			if(line[start] > ' ' || line[start] == '\0' || line[start] == '\n')
@@ -1058,7 +1064,7 @@ CVehicleModelInfo::LoadVehicleColours(void)
 		}
 	}
 
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
 
 void
@@ -1162,15 +1168,19 @@ CVehicleModelInfo::LoadEnvironmentMaps(void)
 {
 	int32 txdslot;
 
-	txdslot = CTxdStore::FindTxdSlot("particle");
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(txdslot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	txdslot = TxdStore_FindTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(txdslot);
 	if(gpWhiteTexture == nil){
 		gpWhiteTexture = RwTextureRead("white", nil);
 		RwTextureGetName(gpWhiteTexture)[0] = '@';
 		RwTextureSetFilterMode(gpWhiteTexture, rwFILTERLINEAR);
 	}
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 }
 
 void
@@ -1209,3 +1219,7 @@ CVehicleModelInfo::GetMaximumNumberOfPassengersFromNumberOfDoors(int id)
 
 	return n - 1;
 }
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

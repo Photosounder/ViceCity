@@ -1,0 +1,309 @@
+#include "owners.h"
+#include <initializer_list>
+#include <limits.h>
+#undef assert
+static unsigned states,checks,japaneseCalls,asciiCalls,keyCalls,bigCalls,smallCalls,definedCalls,hudClears,pagerClears,callbacks;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static uint16_t textRows[16][256],keyRows[MAX_CONTROLLERACTIONS][256];
+static int callbackMode;
+static bool armed;
+static unsigned clearOrder;
+static void require(bool value,const char *expression,int line)
+{
+    // Keep every independent assertion enabled in MASTER as well as development profiles
+    checks++;if(!value){fprintf(stderr,"%d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+static void bytes(const void *pointer,size_t size)
+{
+    // Hash initialized state bytes without process-dependent pointer representations
+    const uint8_t *p=(const uint8_t *)pointer;for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Normalize scalar observations to four bytes on both native architectures
+    bytes(&value,4);
+}
+static uint32_t textId(const uint16_t *pointer)
+{
+    // Preserve exact borrowed source and interior-alias identity without hashing addresses
+    if(!pointer)return 0;uintptr_t p=(uintptr_t)pointer,a=(uintptr_t)&textRows[0][0];
+    assert(p>=a&&p<a+sizeof(textRows));return 1+(uint32_t)((p-a)/2);
+}
+static unsigned length(const uint16_t *text)
+{
+    // Inspect a bounded initialized fixture string without invoking another public operation
+    unsigned size=0;if(text)while(text[size])size++;return size;
+}
+static void wide(const uint16_t *text)
+{
+    // Compare exact UTF-16 payloads including their original terminator
+    bytes(text,(length(text)+1)*2);
+}
+static tMessage *briefs()
+{
+    // Borrow the actual original or canonical C brief table
+#ifdef TEST_MESSAGES_ORIGINAL
+    return CMessages::BriefMessages;
+#else
+    return Messages_BriefMessages;
+#endif
+}
+static tBigMessage *bigs()
+{
+    // Borrow all six actual original or canonical C big-message stacks
+#ifdef TEST_MESSAGES_ORIGINAL
+    return CMessages::BIGMessages;
+#else
+    return Messages_BIGMessages;
+#endif
+}
+static tPreviousBrief *previous()
+{
+    // Borrow the actual original or canonical C history table
+#ifdef TEST_MESSAGES_ORIGINAL
+    return CMessages::PreviousBriefs;
+#else
+    return Messages_PreviousBriefs;
+#endif
+}
+static char *title()
+{
+    // Observe the original retained public mission-title array as well as the active queues
+#ifdef TEST_MESSAGES_ORIGINAL
+    return CMessages::PreviousMissionTitle;
+#else
+    return Messages_PreviousMissionTitle;
+#endif
+}
+uint32_t Timer_timeMs;
+uint8 CFont::LanguageSet;
+CControllerConfigManager ControlsManager;
+wchar CHud::m_BigMessage[6][128],CHud::m_Message[256],LastBigMessage[6][128];
+float CHud::BigMessageInUse[6],CHud::OddJob2OffTimer;
+int16 CHud::OddJob2On;
+CPager Pager_state;
+static void record(const tMessage &message)
+{
+    // Include every scalar and original padding byte while normalizing both borrowed pointers
+    number(textId(message.m_pText));number(textId(message.m_pString));
+    bytes((const uint8_t *)&message+sizeof(message.m_pText),offsetof(tMessage,m_pString)-sizeof(message.m_pText));
+}
+static void observe()
+{
+    // Observe complete canonical queues/history/title and all consumed native output/input storage
+    for(int i=0;i<8;i++)record(briefs()[i]);
+    for(int i=0;i<6;i++)for(int j=0;j<4;j++)record(bigs()[i].m_Stack[j]);
+    for(int i=0;i<5;i++){number(textId(previous()[i].m_pText));bytes(previous()[i].m_nNumber,24);number(textId(previous()[i].m_pString));}
+    bytes(title(),16);number(Timer_timeMs);bytes(CHud::m_BigMessage,sizeof(CHud::m_BigMessage));bytes(CHud::m_Message,sizeof(CHud::m_Message));bytes(LastBigMessage,sizeof(LastBigMessage));
+    bytes(CHud::BigMessageInUse,sizeof(CHud::BigMessageInUse));bytes(&CHud::OddJob2OffTimer,4);number((uint16_t)CHud::OddJob2On);bytes(ControlsManager.m_aActionNames,sizeof(ControlsManager.m_aActionNames));
+}
+static void snapshot()
+{
+    // Record every canonical field and retained byte after an operation
+    observe();states++;
+}
+static void ascii(uint16_t *output,const char *input)
+{
+    // Initialize persistent fixture text without invoking a native boundary under observation
+    unsigned i=0;while(input[i]){output[i]=(uint8_t)input[i];i++;}output[i]=0;
+}
+static void seedRecord(tMessage &message,int index,bool filled)
+{
+    // Give all consumed fields valid values while retaining nonzero original record padding
+    memset(&message,0x5a,sizeof(message));message.m_pText=filled?textRows[1+index%2]:NULL;message.m_nFlag=(uint16_t)(123+index);message.m_nTime=50+(unsigned)index;
+    message.m_nStartTime=100;for(int n=0;n<6;n++)message.m_nNumber[n]=index*7+n-3;message.m_pString=NULL;
+}
+static void seed(bool filled=false)
+{
+    // Supply bounded writable source buffers, native inputs and complete canonical records
+    memset(textRows,0,sizeof(textRows));const char *strings[]={"","Alpha","Beta","<~1~>|~1~|~1~|~1~|~1~|~1~|~1~","~k~~ACT0~!","pre~a~post","clear-me","clear-me","~1~","~k~~ACT0~","","prefix","A","AB","GHOST","Title"};
+    for(int i=0;i<16;i++)ascii(textRows[i],strings[i]);for(int i=0;i<3;i++)textRows[8][i]|=0x8000;for(int i=0;i<4;i++)textRows[9][i]|=0x8000;
+    textRows[10][0]=0x00e9;textRows[10][1]=0x03bb;textRows[10][2]=0x4e2d;
+    for(int i=0;i<8;i++)seedRecord(briefs()[i],i,filled);
+    for(int i=0;i<6;i++)for(int j=0;j<4;j++)seedRecord(bigs()[i].m_Stack[j],i*4+j,filled);
+    memset(previous(),0x6b,sizeof(tPreviousBrief)*5);for(int i=0;i<5;i++){previous()[i].m_pText=filled?textRows[1+i%2]:NULL;previous()[i].m_pString=filled?textRows[0]:NULL;for(int n=0;n<6;n++)previous()[i].m_nNumber[n]=i*11+n;}
+    memset(title(),0x37,16);Timer_timeMs=1234;CFont::LanguageSet=0;callbackMode=0;armed=true;clearOrder=0;
+    memset(ControlsManager.m_aActionNames,0,sizeof(ControlsManager.m_aActionNames));memset(keyRows,0,sizeof(keyRows));
+    ascii(ControlsManager.m_aActionNames[0],"ACT0");ascii(ControlsManager.m_aActionNames[1],"ACT");ascii(ControlsManager.m_aActionNames[2],"ACT2");ascii(keyRows[0],"K0");ascii(keyRows[1],"K1");ascii(keyRows[2],"K2");
+    memset(CHud::m_BigMessage,0x31,sizeof(CHud::m_BigMessage));memset(CHud::m_Message,0x32,sizeof(CHud::m_Message));memset(LastBigMessage,0x33,sizeof(LastBigMessage));
+    for(int i=0;i<6;i++)CHud::BigMessageInUse[i]=0.0f;CHud::OddJob2On=7;CHud::OddJob2OffTimer=9.0f;memset(&Pager_state,0,sizeof(Pager_state));Pager_state.m_nNumDisplayLetters=19;
+}
+bool CFont::IsJapanese()
+{
+    // Observe each original pure locale read without inventing side effects in unordered character operands
+    japaneseCalls++;number(1);number(LanguageSet);return LanguageSet==FONT_LANGSET_JAPANESE;
+}
+void AsciiToUnicode(const char *source,wchar *output)
+{
+    // Execute the complete original bounded numeric conversion before any eager-work callback
+    number(2);bytes(source,strlen(source)+1);observe();asciiCalls++;RealAsciiToUnicode(source,output);wide(output);
+    if(callbackMode==4&&armed){briefs()[0].m_pText=textRows[1];Timer_timeMs=777;armed=false;callbacks++;}
+}
+void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action,wchar *output,uint16 size)
+{
+    // Resolve the captured action using deterministic native input-owner storage
+    assert(action<MAX_CONTROLLERACTIONS&&size==256);number(3);number(action);number(size);observe();keyCalls++;
+    unsigned i=0;while(i+1<size&&keyRows[action][i]){output[i]=keyRows[action][i];i++;}output[i]=0;
+    if(callbackMode==5&&armed){briefs()[0].m_pText=textRows[2];Timer_timeMs=888;armed=false;callbacks++;}
+    if(callbackMode==7&&armed){ascii(m_aActionNames[2],"NEW");ascii(keyRows[2],"N2");armed=false;callbacks++;}
+}
+void DefinedState()
+{
+    // Observe the original graphics-state boundary without opening a graphics device
+    number(4);observe();definedCalls++;
+    if(callbackMode==1&&armed){bigs()[0].m_Stack[0].m_pText=textRows[2];briefs()[0].m_pText=textRows[1];armed=false;callbacks++;}
+}
+void CHud::SetBigMessage(wchar *message,uint16 style)
+{
+    // Execute the whole native HUD gating/copy operation with the original style and initialized payload
+    assert(style<6&&length(message)<128);number(5);number(style);wide(message);observe();bigCalls++;RealSetBigMessage(message,style);
+    if(callbackMode==2&&style==0&&armed){bigs()[1].m_Stack[0].m_pText=textRows[2];armed=false;callbacks++;}
+    if(callbackMode==6&&style==5&&armed){briefs()[0].m_pText=textRows[2];armed=false;callbacks++;}
+}
+void CHud::SetMessage(wchar *message)
+{
+    // Execute the complete native brief HUD copy without changing message ownership
+    assert(length(message)<256);number(6);wide(message);observe();smallCalls++;RealSetMessage(message);
+}
+void CHud::GetRidOfAllHudMessages()
+{
+    // Observe the original HUD reset boundary after all three canonical pointer-table clears
+    number(7);observe();hudClears++;assert(clearOrder==0);clearOrder=1;
+    for(int i=0;i<8;i++)assert(!briefs()[i].m_pText&&!briefs()[i].m_pString);
+    for(int i=0;i<5;i++)assert(!previous()[i].m_pText&&!previous()[i].m_pString);
+    if(callbackMode==3&&armed){briefs()[0].m_pText=textRows[1];armed=false;callbacks++;}
+}
+extern "C" void Pager_ClearMessages(CPager *self)
+{
+    // Preserve the existing subordinate C API after the full original HUD reset
+    assert(self==&Pager_state&&clearOrder==1);number(8);observe();pagerClears++;clearOrder=2;
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Report any violated native precondition quietly without creating a Windows dialog
+    fprintf(stderr,"%s %s:%u %s\n",expression,file,line,function);abort();
+}
+static uint32_t randomState=0x31187151;
+static uint32_t random32()
+{
+    // Generate explicitly sequenced reproducible operations without compiler-dependent argument ordering
+    randomState^=randomState<<13;randomState^=randomState>>17;randomState^=randomState<<5;return randomState;
+}
+static void add(unsigned kind,uint16_t *text,uint32_t time,uint16_t flag,uint16_t *string)
+{
+    // Exercise every registration operation with all six original signed numeric arguments
+    switch(kind){
+    case 0:Run_Messages_AddMessage(text,time,flag);break;
+    case 1:Run_Messages_AddMessageJumpQ(text,time,flag);break;
+    case 2:Run_Messages_AddMessageSoon(text,time,flag);break;
+    case 3:Run_Messages_AddBigMessage(text,time,(uint16_t)(flag%6));break;
+    case 4:Run_Messages_AddBigMessageQ(text,time,(uint16_t)(flag%6));break;
+    case 5:Run_Messages_AddMessageWithNumber(text,time,flag,12,-3,456,0,9999999,-12345678);break;
+    case 6:Run_Messages_AddMessageJumpQWithNumber(text,time,flag,12,-3,456,0,9999999,-12345678);break;
+    case 7:Run_Messages_AddMessageSoonWithNumber(text,time,flag,12,-3,456,0,9999999,-12345678);break;
+    case 8:Run_Messages_AddBigMessageWithNumber(text,time,(uint16_t)(flag%6),12,-3,456,0,9999999,-12345678);break;
+    case 9:Run_Messages_AddBigMessageWithNumberQ(text,time,(uint16_t)(flag%6),12,-3,456,0,9999999,-12345678);break;
+    case 10:Run_Messages_AddMessageWithString(text,time,flag,string);break;
+    case 11:Run_Messages_AddMessageJumpQWithString(text,time,flag,string);break;
+    }
+}
+int main()
+{
+    // Verify exact static zero state before any fixture seeding touches canonical storage
+    for(size_t i=0;i<sizeof(tMessage)*8;i++)assert(((uint8_t *)briefs())[i]==0);
+    for(size_t i=0;i<sizeof(tBigMessage)*6;i++)assert(((uint8_t *)bigs())[i]==0);
+    for(size_t i=0;i<sizeof(tPreviousBrief)*5;i++)assert(((uint8_t *)previous())[i]==0);
+    for(int i=0;i<16;i++)assert(title()[i]==0);
+    seed(true);tMessage oldBrief[8];tBigMessage oldBig[6];tPreviousBrief oldHistory[5];memcpy(oldBrief,briefs(),sizeof(oldBrief));memcpy(oldBig,bigs(),sizeof(oldBig));memcpy(oldHistory,previous(),sizeof(oldHistory));
+    Run_Messages_Init();for(int i=0;i<8;i++){oldBrief[i].m_pText=NULL;oldBrief[i].m_pString=NULL;}for(int i=0;i<6;i++)for(int j=0;j<4;j++){oldBig[i].m_Stack[j].m_pText=NULL;oldBig[i].m_Stack[j].m_pString=NULL;}
+    for(int i=0;i<5;i++){oldHistory[i].m_pText=NULL;oldHistory[i].m_pString=NULL;}assert(memcmp(oldBrief,briefs(),sizeof(oldBrief))==0&&memcmp(oldBig,bigs(),sizeof(oldBig))==0&&memcmp(oldHistory,previous(),sizeof(oldHistory))==0&&title()[0]==0x37);snapshot();
+    seed(true);Run_Messages_ClearSmallMessagesOnly();for(int i=0;i<8;i++)assert(!briefs()[i].m_pText&&!briefs()[i].m_pString);assert(bigs()[0].m_Stack[0].m_pText&&previous()[0].m_pText);snapshot();
+    seed(true);Run_Messages_ClearMessages();assert(!briefs()[0].m_pText&&!bigs()[5].m_Stack[3].m_pText&&previous()[0].m_pText&&title()[0]==0x37);snapshot();
+    uint16_t buffer[512],other[512];
+    for(uint16_t size:{(uint16_t)0,(uint16_t)1,(uint16_t)2,(uint16_t)6,(uint16_t)16,(uint16_t)256})for(bool nullSource:{false,true}){
+        // Preserve zero-size termination, null-source filling and unchanged tails after short copies
+        seed();for(int i=0;i<512;i++)buffer[i]=0x5a;Run_Messages_WideStringCopy(buffer,nullSource?NULL:textRows[1],size);unsigned count=size?size:1;
+        assert(buffer[count-1]==0||!nullSource&&size>6);if(nullSource)for(unsigned i=0;i<count;i++)assert(buffer[i]==0);
+        if(!nullSource){unsigned copied=size?size-1:0;if(copied>5)copied=5;assert(memcmp(buffer,textRows[1],copied*2)==0&&buffer[copied]==0);count=copied+1;}
+        assert(buffer[count]==0x5a);bytes(buffer,sizeof(buffer));snapshot();
+    }
+    static uint16_t longText[65537];for(int i=0;i<65536;i++)longText[i]='x';longText[65536]=0;assert(Run_Messages_GetWideStringLength(longText)==0);
+    for(int locale:{0,(int)FONT_LANGSET_JAPANESE})for(uint16_t size:{(uint16_t)0,(uint16_t)1,(uint16_t)2,(uint16_t)5,(uint16_t)256}){
+        // Compare exact-prefix, length and high-bit normalization behavior through the original locale reads
+        seed();CFont::LanguageSet=(uint8)locale;assert(Run_Messages_GetWideStringLength(textRows[1])==5);bool prefix=Run_Messages_WideStringCompare(textRows[12],textRows[13],size);assert(prefix==(size<=1));
+        ascii(buffer,"A");ascii(other,"A");buffer[0]|=0x8000;number(Run_Messages_WideStringCompare(buffer,other,size));snapshot();
+    }
+    for(int locale:{0,(int)FONT_LANGSET_JAPANESE})for(int text:{0,1,3,8,10}){
+        // Exercise null/empty input, all six numbers, repeated sixth substitution and native Unicode conversion
+        seed();CFont::LanguageSet=(uint8)locale;for(int i=0;i<512;i++)buffer[i]=0x6e;
+        Run_Messages_InsertNumberInString(textRows[text],12,-3,456,0,9999999,-12345678,buffer);
+        assert(length(buffer)<128&&buffer[length(buffer)+1]==0x6e);if(text==3&&locale==0)assert(buffer[0]=='<'&&buffer[1]=='1'&&buffer[2]=='2');bytes(buffer,sizeof(buffer));snapshot();
+    }
+    seed();for(int i=0;i<512;i++)buffer[i]=0x61;Run_Messages_InsertNumberInString(NULL,INT_MIN,INT_MAX,0,0,0,0,buffer);assert(buffer[0]==0&&buffer[1]==0x61);bytes(buffer,sizeof(buffer));snapshot();
+    for(bool nullPayload:{false,true})for(int locale:{0,(int)FONT_LANGSET_JAPANESE}){
+        // Preserve the original total-length loop using fully initialized trailing source storage
+        seed();CFont::LanguageSet=(uint8)locale;for(int i=0;i<512;i++)buffer[i]=0x7e;ascii(buffer,"pre~a~post");ascii(other,"XYZ");
+        Run_Messages_InsertStringInString(buffer,nullPayload?NULL:other);if(!nullPayload)assert(buffer[0]=='p'&&buffer[3]=='X'&&buffer[6]=='p'&&buffer[10]==0);bytes(buffer,sizeof(buffer));snapshot();
+    }
+    seed();Run_Messages_InsertStringInString(NULL,textRows[1]);Run_Messages_InsertPlayerControlKeysInString(NULL);snapshot();
+    for(int locale:{0,(int)FONT_LANGSET_JAPANESE})for(const char *input:{"plain","~k~~ACT0~!","~k~~GHOST~","~k~~ACT0EXTRA~","~k~~ACT2~+~k~~ACT0~"}){
+        // Preserve first-match prefixes, unknown tokens and complete initialized output padding
+        seed();CFont::LanguageSet=(uint8)locale;memset(buffer,0x5a,sizeof(buffer));ascii(buffer,input);Run_Messages_InsertPlayerControlKeysInString(buffer);
+        assert(length(buffer)<128&&buffer[255]==0&&buffer[256]==0x5a5a);bytes(buffer,sizeof(buffer));snapshot();
+    }
+    for(unsigned kind=0;kind<12;kind++)for(bool filled:{false,true}){
+        // Register or reject every complete public variant with the original eager preprocessing and borrowed pointers
+        seed(filled);unsigned k=keyCalls;add(kind,textRows[4],UINT32_MAX,65535,kind>=10?textRows[0]:NULL);assert(keyCalls>k);snapshot();
+    }
+    seed();for(int i=0;i<10;i++){Run_Messages_AddMessage(textRows[1+i%2],100+i,(uint16_t)(1000+i));snapshot();}for(int i=0;i<8;i++)assert(briefs()[i].m_nFlag==1000+i);
+    Run_Messages_AddMessageSoon(textRows[6],200,900);assert(briefs()[0].m_nFlag==1000&&briefs()[1].m_nFlag==900&&briefs()[7].m_nFlag==1006);snapshot();
+    Run_Messages_AddMessageJumpQ(textRows[2],300,901);assert(briefs()[0].m_pText==textRows[2]&&briefs()[1].m_nFlag==900);snapshot();
+    for(int style=0;style<6;style++){
+        // Fill and overflow every independent big stack while retaining queued versus replacement semantics
+        seed();for(int i=0;i<5;i++)Run_Messages_AddBigMessageQ(textRows[1+i%2],100+i,(uint16_t)style);assert(bigs()[style].m_Stack[3].m_nTime==103);
+        Run_Messages_AddBigMessage(textRows[6],900,(uint16_t)style);assert(bigs()[style].m_Stack[0].m_pText==textRows[6]&&bigs()[style].m_Stack[1].m_nTime==101);snapshot();
+    }
+    for(uint32_t now:{149u,150u,151u,UINT32_MAX}){
+        // Distinguish strict expiry and preserve complete shifts plus retained pointer tails
+        seed(true);Timer_timeMs=now;Run_Messages_Process();assert(briefs()[0].m_pText==(now>150?textRows[2]:textRows[1]));if(now>150)assert(briefs()[0].m_nStartTime==now);snapshot();
+    }
+    seed();briefs()[0].m_pText=textRows[1];briefs()[0].m_nTime=10;briefs()[0].m_nStartTime=UINT32_MAX-5;Timer_timeMs=5;Run_Messages_Process();assert(!briefs()[0].m_pText&&briefs()[0].m_nStartTime==5);snapshot();
+    seed(true);briefs()[1].m_pText=NULL;Timer_timeMs=151;Run_Messages_Process();assert(!briefs()[0].m_pText&&briefs()[2].m_pText==textRows[1]);snapshot();
+    seed();for(int i=0;i<8;i++){Run_Messages_AddToPreviousBriefArray(textRows[1+i%2],i,-i,3,4,5,6,i%2?textRows[0]:NULL);snapshot();}
+    tPreviousBrief history[5];memcpy(history,previous(),sizeof(history));Run_Messages_AddToPreviousBriefArray(previous()[2].m_pText,previous()[2].m_nNumber[0],previous()[2].m_nNumber[1],3,4,5,6,previous()[2].m_pString);assert(memcmp(history,previous(),sizeof(history))==0);snapshot();
+    seed();for(int i=0;i<8;i++)Run_Messages_AddMessage(i%3?textRows[6]:textRows[2],100,0);Run_Messages_ClearThisPrint(textRows[7]);assert(briefs()[0].m_pText==textRows[2]&&briefs()[1].m_pText==textRows[2]&&briefs()[2].m_pText==textRows[2]&&!briefs()[3].m_pText);snapshot();
+    seed();bigs()[2].m_Stack[0].m_pText=textRows[6];Run_Messages_ClearThisBigPrint(textRows[7]);assert(bigs()[2].m_Stack[0].m_pText==textRows[6]);snapshot();
+    seed(true);bigs()[0].m_Stack[1].m_pText=textRows[6];Run_Messages_ClearThisBigPrint(textRows[7]);assert(bigs()[0].m_Stack[1].m_pText==textRows[1]&&!bigs()[0].m_Stack[3].m_pText);snapshot();
+    seed(true);CHud::BigMessageInUse[0]=1.0f;uint16_t oldHud=CHud::m_BigMessage[0][0];Run_Messages_Display();assert(CHud::m_BigMessage[0][0]==oldHud&&CHud::m_Message[0]=='A'&&CHud::OddJob2On==0&&CHud::OddJob2OffTimer==0.0f);snapshot();
+    for(int mode=1;mode<=7;mode++){
+        // Change canonical storage only at original stateful native boundaries
+        seed();callbackMode=mode;
+        if(mode==1){Run_Messages_Display();assert(CHud::m_BigMessage[0][0]=='B'&&CHud::m_Message[0]=='A');}
+        if(mode==2){Run_Messages_Display();assert(CHud::m_BigMessage[1][0]=='B');}
+        if(mode==3){Run_Messages_ClearAllMessagesDisplayedByGame();assert(briefs()[0].m_pText==textRows[1]&&clearOrder==2);}
+        if(mode==4){Run_Messages_AddMessageWithNumber(textRows[3],10,42,12,-3,456,0,9999999,-12345678);assert(briefs()[1].m_pText==textRows[3]&&briefs()[1].m_nStartTime==777);}
+        if(mode==5){Run_Messages_AddMessage(textRows[4],10,42);assert(briefs()[1].m_pText==textRows[4]&&briefs()[1].m_nStartTime==888);}
+        if(mode==6){Run_Messages_Display();assert(CHud::m_Message[0]=='B');}
+        if(mode==7){memset(buffer,0,sizeof(buffer));ascii(buffer,"~k~~ACT0~+~k~~NEW~");Run_Messages_InsertPlayerControlKeysInString(buffer);assert(buffer[0]=='K'&&buffer[3]=='N'&&buffer[4]=='2');bytes(buffer,sizeof(buffer));}
+        snapshot();
+    }
+    seed(true);Run_Messages_ClearAllMessagesDisplayedByGame();assert(clearOrder==2&&title()[0]==0x37&&!briefs()[0].m_pText&&!bigs()[0].m_Stack[0].m_pText&&!previous()[0].m_pText);snapshot();
+    seed();Run_Messages_AddMessageJumpQWithString(NULL,123,7,textRows[1]);assert(!briefs()[0].m_pText&&briefs()[0].m_pString==textRows[1]);snapshot();Run_Messages_ClearMessages();
+    seed();
+    for(int iteration=0;iteration<4000;iteration++){
+        // Compare interleaved complete APIs with bounded initialized inputs and original valid index/arithmetic contracts
+        callbackMode=0;Timer_timeMs=random32();uint32_t operation=random32()%20;uint32_t source=random32()%3;uint16_t flag=(uint16_t)random32();uint32_t duration=random32();
+        if(operation<12)add(operation,textRows[source],duration,flag,operation>=10?textRows[0]:NULL);
+        else if(operation==12)Run_Messages_Process();
+        else if(operation==13)Run_Messages_Display();
+        else if(operation==14)Run_Messages_ClearThisPrint(textRows[1+random32()%2]);
+        else if(operation==15)Run_Messages_ClearThisBigPrint(textRows[1+random32()%2]);
+        else if(operation==16)Run_Messages_ClearSmallMessagesOnly();
+        else if(operation==17)Run_Messages_ClearMessages();
+        else if(operation==18)Run_Messages_Init();
+        else {clearOrder=0;Run_Messages_ClearAllMessagesDisplayedByGame();}
+        snapshot();
+    }
+    printf("states=%u checks=%u japanese=%u ascii=%u keys=%u big=%u small=%u defined=%u hudClears=%u pagerClears=%u callbacks=%u actions=%u hash=%016llx\n",states,checks,japaneseCalls,asciiCalls,keyCalls,bigCalls,smallCalls,definedCalls,hudClears,pagerClears,callbacks,(unsigned)MAX_CONTROLLERACTIONS,(unsigned long long)hashValue);
+}

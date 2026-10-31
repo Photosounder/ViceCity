@@ -1,0 +1,110 @@
+#include "common.h"
+#include "Pools.h"
+#include <new>
+#ifdef ORIGINAL
+@MACROS@
+#endif
+
+static uint64_t digest=1469598103934665603ULL;
+static unsigned checks,states;
+static CPool ptrPool,entryPool;
+static bool exiting;
+static int items[16];
+static void value(uint64_t input){digest=(digest^input)*1099511628211ULL;}
+static void require(bool ok){++checks;if(!ok){fprintf(stderr,"Check %u failed at state %u\n",checks,states);abort();}}
+extern "C" void re3_assert(const char *expr,const char *file,unsigned int line,const char *func){fprintf(stderr,"%s:%u %s %s\n",file,line,func,expr);abort();}
+static uint64_t allocationMask(){uint64_t mask=0;for(int i=0;i<64;++i)if(!(ptrPool.m_flags[i]&POOLFLAG_ISFREE))mask|=uint64_t(1)<<i;return mask;}
+extern "C" CPool *CPools_GetPtrNodePool(void){if(exiting)value(allocationMask());return &ptrPool;}
+extern "C" CPool *CPools_GetEntryInfoNodePool(void){return &entryPool;}
+static void finalObserver(){require(allocationMask()==0);printf("shutdown checks=%u hash=%016llx\n",checks,(unsigned long long)digest);CPool_Flush(&ptrPool);CPool_Flush(&entryPool);}
+static int registerObserver(){return atexit(finalObserver);}
+static int observerRegistration=registerObserver();
+#define NUM_LEVELS 5
+#define NUMSECTORS_X 160
+#define NUMSECTORS_Y 160
+#define NUMSECTORENTITYLISTS 10
+#ifdef ORIGINAL
+class CSector {public:CPtrList m_lists[NUMSECTORENTITYLISTS];};
+#else
+struct CSector {CPtrList m_lists[NUMSECTORENTITYLISTS];};
+#endif
+class CWorld {public:
+static CPtrList ms_bigBuildingsList[NUM_LEVELS];
+static CPtrList ms_listMovingEntityPtrs;
+static CSector ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
+static int ms_bigBuildingsListLifetime,ms_movingListLifetime,ms_sectorListsLifetime;
+};
+@DEFINITIONS@
+
+static int ptrIndex(CPtrNode *node){return node?int(((unsigned char*)node-ptrPool.m_entries)/sizeof(CPtrNode)):-1;}
+static int entryIndex(CEntryInfoNode *node){return node?int(((unsigned char*)node-entryPool.m_entries)/sizeof(CEntryInfoNode)):-1;}
+static void observe(CPtrList *lists,CEntryInfoList *entries){
+    ++states;
+    for(int l=0;l<3;++l){
+        CPtrNode *previous=NULL;unsigned count=0;
+        for(CPtrNode *node=lists[l].first;node;node=node->next){
+            require(++count<=64 && node->prev==previous);
+            value(ptrIndex(node)+1);value(node->item?((int*)node->item-items)+1:0);previous=node;
+        }
+        value(count);
+    }
+    CEntryInfoNode *previous=NULL;unsigned count=0;
+    for(CEntryInfoNode *node=entries->first;node;node=node->next){
+        require(++count<=64 && node->prev==previous);value(entryIndex(node)+1);value(node->list-lists);value(ptrIndex(node->listnode)+1);value(node->sector?1:0);previous=node;
+    }
+    value(count);value(ptrPool.m_allocPtr);value(entryPool.m_allocPtr);
+    for(int i=0;i<64;++i){value(ptrPool.m_flags[i]);value(entryPool.m_flags[i]);}
+}
+static uint32_t randomState=0x51ed270b;
+static uint32_t randomValue(){randomState=randomState*1664525+1013904223;return randomState;}
+int main(){
+    require(observerRegistration==0);
+    require(CPool_Init(&ptrPool,64,sizeof(CPtrNode),"ptr") && CPool_Init(&entryPool,64,sizeof(CEntryInfoNode),"entry"));
+    for(int i=0;i<NUM_LEVELS;++i)require(CWorld::ms_bigBuildingsList[i].first==NULL);
+    require(CWorld::ms_listMovingEntityPtrs.first==NULL);
+    for(int y=0;y<NUMSECTORS_Y;++y)for(int x=0;x<NUMSECTORS_X;++x)for(int l=0;l<10;++l)require(CWorld::ms_aSectors[y][x].m_lists[l].first==NULL);
+    {
+        CPtrList lists[3];CEntryInfoList entries;
+        for(int i=0;i<3;++i)PtrList_Init(&lists[i]);EntryInfoList_Init(&entries);
+        observe(lists,&entries);
+        for(unsigned step=0;step<12000;++step){
+            CPtrList *list=&lists[randomValue()%3];void *item=(randomValue()%9)?&items[randomValue()%16]:NULL;
+            switch(randomValue()%10){
+            case 0:case 1:case 2:
+                if(CPool_GetNoOfUsedSpaces(&ptrPool)<50){CPtrNode *node=PtrList_InsertItem(list,item);require(node==list->first && node->item==item);}break;
+            case 3:{
+                CPtrNode *expected=list->first;while(expected && expected->item!=item)expected=expected->next;
+                require(PtrList_FindItem(list,item)==expected);break;
+            }
+            case 4:PtrList_RemoveItem(list,item);for(CPtrNode *n=list->first;n;n=n->next)require(n->item!=item);break;
+            case 5:
+                if(list->first){CPtrNode *node=list->first;CPtrNode *prev=node->prev,*next=node->next;PtrList_RemoveNode(list,node);require(node->prev==prev && node->next==next);PtrList_InsertNode(&lists[(list-lists+1)%3],node);}break;
+            case 6:
+                if(list->first)PtrList_DeleteNode(list,list->first);break;
+            case 7:PtrList_Flush(list);require(list->first==NULL);break;
+            case 8:
+                if(CPool_GetNoOfUsedSpaces(&entryPool)<50){CEntryInfoNode *node=EntryInfoList_InsertItem(&entries,list,list->first,(randomValue()%2)?&CWorld::ms_aSectors[0][0]:NULL);require(node==entries.first && node->list==list && node->listnode==list->first);}break;
+            case 9:
+                if(entries.first){CEntryInfoNode *node=entries.first,*prev=node->prev,*next=node->next;EntryInfoList_RemoveNode(&entries,node);require(node->prev==prev && node->next==next);EntryInfoList_InsertNode(&entries,node);EntryInfoList_DeleteNode(&entries,node);}break;
+            }
+            observe(lists,&entries);
+        }
+        // Include duplicate and null item removal with middle and tail nodes
+        for(int i=0;i<16;++i)PtrList_InsertItem(&lists[0],i%2?NULL:&items[0]);
+        PtrList_RemoveItem(&lists[0],NULL);PtrList_RemoveItem(&lists[0],&items[0]);observe(lists,&entries);
+        EntryInfoList_Flush(&entries);EntryInfoList_Destroy(&entries);
+        for(int i=0;i<3;++i)PtrList_Destroy(&lists[i]);
+        require(CPool_GetNoOfUsedSpaces(&ptrPool)==0 && CPool_GetNoOfUsedSpaces(&entryPool)==0);
+    }
+    // Leave allocated global nodes for the original and explicit exit handlers
+    PtrList_InsertItem(&CWorld::ms_bigBuildingsList[0],&items[0]);
+    PtrList_InsertItem(&CWorld::ms_bigBuildingsList[4],&items[1]);
+    PtrList_InsertItem(&CWorld::ms_listMovingEntityPtrs,&items[2]);
+    PtrList_InsertItem(&CWorld::ms_aSectors[0][0].m_lists[0],&items[3]);
+    PtrList_InsertItem(&CWorld::ms_aSectors[0][0].m_lists[9],&items[4]);
+    PtrList_InsertItem(&CWorld::ms_aSectors[159][159].m_lists[0],&items[5]);
+    PtrList_InsertItem(&CWorld::ms_aSectors[159][159].m_lists[9],&items[6]);
+    require(CPool_GetNoOfUsedSpaces(&ptrPool)==7);
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+    exiting=true;
+}

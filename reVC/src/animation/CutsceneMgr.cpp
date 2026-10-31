@@ -1,5 +1,12 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "KeyFrames_native.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
 
 #include "General.h"
 #include "CutsceneMgr.h"
@@ -109,7 +116,7 @@ int
 FindCutsceneAudioTrackId(const char *szCutsceneName)
 {
 	for (int i = 0; musicNameIdAssoc[i].szTrackName; i++) {
-		if (!CGeneral::faststricmp(musicNameIdAssoc[i].szTrackName, szCutsceneName))
+		if (!General_faststricmp(musicNameIdAssoc[i].szTrackName, szCutsceneName))
 			return musicNameIdAssoc[i].iTrackId;
 	}
 	return -1;
@@ -124,7 +131,7 @@ bool CCutsceneMgr::ms_loaded;
 bool CCutsceneMgr::ms_animLoaded;
 bool CCutsceneMgr::ms_useLodMultiplier;
 char CCutsceneMgr::ms_cutsceneName[CUTSCENENAMESIZE];
-CAnimBlendAssocGroup CCutsceneMgr::ms_cutsceneAssociations;
+CAnimBlendAssocGroup CCutsceneMgr::ms_cutsceneAssociations=AnimGroup_InitStaticCutscene(&CCutsceneMgr::ms_cutsceneAssociations);
 CVector CCutsceneMgr::ms_cutsceneOffset;
 float CCutsceneMgr::ms_cutsceneTimer;
 bool CCutsceneMgr::ms_wasCutsceneSkipped;
@@ -169,8 +176,8 @@ CCutsceneMgr::Initialise(void)
 	// Allocate the cutscene directory without invoking C++ new.
 	ms_pCutsceneDir = (CDirectory*)malloc(sizeof(CDirectory));
 	assert(ms_pCutsceneDir);
-	std::allocator<CDirectory>().construct(ms_pCutsceneDir, CUTSCENEDIRSIZE);
-	ms_pCutsceneDir->ReadDirFile("ANIM\\CUTS.DIR");
+	Directory_Initialize(ms_pCutsceneDir, CUTSCENEDIRSIZE);
+	Directory_ReadDirFile(ms_pCutsceneDir, "ANIM\\CUTS.DIR");
 
 	numUncompressedAnims = 0;
 	uncompressedAnims[0][0] = '\0';
@@ -181,7 +188,7 @@ CCutsceneMgr::Shutdown(void)
 {
 	// Destroy and release the cutscene directory without invoking C++ delete.
 	if(ms_pCutsceneDir){
-		ms_pCutsceneDir->~CDirectory();
+		Directory_Shutdown(ms_pCutsceneDir);
 		free(ms_pCutsceneDir);
 		ms_pCutsceneDir = nil;
 	}
@@ -197,12 +204,12 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 
 	ms_cutsceneProcessing = true;
 	ms_wasCutsceneSkipped = false;
-	CTimer::Suspend();
+	Timer_Suspend();
 	if (!bIsEverythingRemovedFromTheWorldForTheBiggestFuckoffCutsceneEver)
 		CStreaming::RemoveCurrentZonesModels();
 
 	ms_pCutsceneDir->numEntries = 0;
-	ms_pCutsceneDir->ReadDirFile("ANIM\\CUTS.DIR");
+	Directory_ReadDirFile(ms_pCutsceneDir, "ANIM\\CUTS.DIR");
 
 	CStreaming::RemoveUnusedModelsInLoadedList();
 	CGame::DrasticTidyUpMemory(true);
@@ -215,12 +222,14 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 
 	// Load animations
 	sprintf(gString, "%s.IFP", szCutsceneName);
-	if (ms_pCutsceneDir->FindItem(gString, offset, size)) {
+	if (Directory_FindItem(ms_pCutsceneDir, gString, &offset, &size)) {
 		CStreaming::MakeSpaceFor(size << 11);
 		CStreaming::ImGonnaUseStreamingMemory();
 		RwStreamSkip(stream,  offset << 11);
-		CAnimManager::LoadAnimFile(stream, true, uncompressedAnims);
-		ms_cutsceneAssociations.CreateAssociations(szCutsceneName);
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_LoadAnimStream(stream, true, uncompressedAnims);
+		// Use complete C group ownership at the original native call boundary
+		AnimGroup_CreateForModels(&ms_cutsceneAssociations,szCutsceneName);
 		CStreaming::IHaveUsedStreamingMemory();
 		ms_animLoaded = true;
 	} else {
@@ -229,11 +238,11 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 	RwStreamClose(stream, nil);
 
 	// Load camera data
-	file = CFileMgr::OpenFile("ANIM\\CUTS.IMG", "rb");
+	file = FileMgr_OpenFile("ANIM\\CUTS.IMG", "rb");
 	sprintf(gString, "%s.DAT", szCutsceneName);
-	if (ms_pCutsceneDir->FindItem(gString, offset, size)) {
+	if (Directory_FindItem(ms_pCutsceneDir, gString, &offset, &size)) {
 		CStreaming::ImGonnaUseStreamingMemory();
-		CFileMgr::Seek(file, offset << 11, SEEK_SET);
+		FileMgr_Seek(file, offset << 11, SEEK_SET);
 		TheCamera.LoadPathSplines(file);
 		CStreaming::IHaveUsedStreamingMemory();
 		bCamLoaded = true;
@@ -241,9 +250,9 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 		bCamLoaded = false;
 	}
 
-	CFileMgr::CloseFile(file);
+	FileMgr_CloseFile(file);
 
-	if (CGeneral::faststricmp(ms_cutsceneName, "finale")) {
+	if (General_faststricmp(ms_cutsceneName, "finale")) {
 		DMAudio_ChangeMusicMode(MUSICMODE_CUTSCENE);
 		int trackId = FindCutsceneAudioTrackId(szCutsceneName);
 		if (trackId != -1) {
@@ -258,13 +267,13 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 	ms_cutsceneOffset = CVector(0.0f, 0.0f, 0.0f);
 
 	pPlayerPed = FindPlayerPed();
-	pPlayerPed->m_pWanted->ClearQdCrimes();
+	Wanted_ClearQdCrimes(pPlayerPed->m_pWanted);
 	pPlayerPed->bIsVisible = false;
 	pPlayerPed->m_fCurrentStamina = pPlayerPed->m_fMaxStamina;
 	CPad::GetPad(0)->SetDisablePlayerControls(PLAYERCONTROL_CUTSCENE);
 	CWorld::Players[CWorld::PlayerInFocus].MakePlayerSafe(true);
 
-	CTimer::Resume();
+	Timer_Resume();
 }
 
 void
@@ -294,21 +303,28 @@ CCutsceneMgr::SetupCutsceneToStart(void)
 	for (int i = ms_numCutsceneObjs - 1; i >= 0; i--) {
 		assert(RwObjectGetType(ms_pCutsceneObjects[i]->m_rwObject) == rpCLUMP);
 		if (CAnimBlendAssociation *pAnimBlendAssoc = RpAnimBlendClumpGetFirstAssociation((RpClump*)ms_pCutsceneObjects[i]->m_rwObject)) {
-			assert(pAnimBlendAssoc->hierarchy->sequences[0].HasTranslation());
+			// Use the complete C sequence at the original native operation boundary
+			assert(AnimSequence_HasTranslation(&pAnimBlendAssoc->hierarchy->sequences[0]));
 			if (ms_pCutsceneObjects[i]->m_pAttachTo != nil) {
 				pAnimBlendAssoc->flags &= (~ASSOC_HAS_TRANSLATION);
 			} else {
-				if (pAnimBlendAssoc->hierarchy->IsCompressed()){
-					KeyFrameTransCompressed *keyFrames = ((KeyFrameTransCompressed*)pAnimBlendAssoc->hierarchy->sequences[0].GetKeyFrameCompressed(0));
+				// Use the complete C hierarchy at the original native operation boundary
+				if (AnimHierarchy_IsCompressed(pAnimBlendAssoc->hierarchy)){
+					// Use the complete C sequence at the original native operation boundary
+					KeyFrameTransCompressed *keyFrames = ((KeyFrameTransCompressed*)AnimSequence_GetKeyFrameCompressed(&pAnimBlendAssoc->hierarchy->sequences[0],0));
 					CVector trans;
-					keyFrames->GetTranslation(&trans);
+					// Use the C keyframe operation and its actual embedded base fields
+					KeyFrameTransCompressed_GetTranslation(keyFrames,KeyFrame_VectorOut(trans));
 					ms_pCutsceneObjects[i]->SetPosition(ms_cutsceneOffset + trans);
 				}else{
-					KeyFrameTrans *keyFrames = ((KeyFrameTrans*)pAnimBlendAssoc->hierarchy->sequences[0].GetKeyFrame(0));
-					ms_pCutsceneObjects[i]->SetPosition(ms_cutsceneOffset + keyFrames->translation);
+					// Use the complete C sequence at the original native operation boundary
+					KeyFrameTrans *keyFrames = ((KeyFrameTrans*)AnimSequence_GetKeyFrame(&pAnimBlendAssoc->hierarchy->sequences[0],0));
+					// Use the C keyframe operation and its actual embedded base fields
+					ms_pCutsceneObjects[i]->SetPosition(ms_cutsceneOffset + KeyFrame_ToNative(keyFrames->translation));
 				}
 			}
-			pAnimBlendAssoc->SetRun();
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetRun(pAnimBlendAssoc);
 		} else {
 			ms_pCutsceneObjects[i]->SetPosition(ms_cutsceneOffset);
 		}
@@ -318,8 +334,8 @@ CCutsceneMgr::SetupCutsceneToStart(void)
 		}
 	}
 
-	CTimer::Update();
-	CTimer::Update();
+	Timer_Update();
+	Timer_Update();
 	ms_running = true;
 	ms_cutsceneTimer = 0.0f;
 }
@@ -334,34 +350,41 @@ CCutsceneMgr::SetCutsceneAnim(const char *animName, CObject *pObject)
 	debug("Give cutscene anim %s\n", animName);
 	RpAnimBlendClumpRemoveAllAssociations((RpClump*)pObject->m_rwObject);
 
-	pNewAnim = ms_cutsceneAssociations.GetAnimation(animName);
+	// Use complete C group ownership at the original native call boundary
+	pNewAnim = AnimGroup_GetByName(&ms_cutsceneAssociations,animName);
 	if (!pNewAnim) {
 		debug("\n\nHaven't I told you I can't find the fucking animation %s\n\n\n", animName);
 		return;
 	}
 
-	if (pNewAnim->hierarchy->IsCompressed())
+	// Use the complete C hierarchy at the original native operation boundary
+	if (AnimHierarchy_IsCompressed(pNewAnim->hierarchy))
 		pNewAnim->hierarchy->keepCompressed = true;
 
 	CStreaming::ImGonnaUseStreamingMemory();
-	pNewAnim = ms_cutsceneAssociations.CopyAnimation(animName);
+	// Use complete C group ownership at the original native call boundary
+	pNewAnim = AnimGroup_CopyByName(&ms_cutsceneAssociations,animName);
 	CStreaming::IHaveUsedStreamingMemory();
 
-	pNewAnim->SetCurrentTime(0.0f);
+	// Use the complete C association at the original native operation boundary
+	AnimAssociation_SetCurrentTime(pNewAnim,0.0f);
 	pNewAnim->flags |= ASSOC_HAS_TRANSLATION;
 	pNewAnim->flags &= ~ASSOC_RUNNING;
 
 	pAnimBlendClumpData = *RPANIMBLENDCLUMPDATA(pObject->m_rwObject);
-	pAnimBlendClumpData->link.Prepend(&pNewAnim->link);
+	// Use the C animation owner at the original native operation boundary
+	AnimBlendLink_Prepend(&pAnimBlendClumpData->link,&pNewAnim->link);
 
 	if (pNewAnim->hierarchy->keepCompressed)
-		pAnimBlendClumpData->frames->flag |= AnimBlendFrameData::COMPRESSED;
+		// Use the C animation frame while retaining the original live SDK objects
+		pAnimBlendClumpData->frames->flag |= ANIM_FRAME_COMPRESSED;
 }
 
 void
 CCutsceneMgr::SetCutsceneAnimToLoop(const char* animName)
 {
-	ms_cutsceneAssociations.GetAnimation(animName)->flags |= ASSOC_REPEAT;
+	// Use complete C group ownership at the original native call boundary
+	AnimGroup_GetByName(&ms_cutsceneAssociations,animName)->flags |= ASSOC_REPEAT;
 }
 
 CCutsceneHead *
@@ -377,8 +400,8 @@ void UpdateCutsceneObjectBoundingBox(RpClump* clump, int modelId)
 		float radius = 0.0f;
 		RpClumpForAllAtomics(clump, CalculateBoundingSphereRadiusCB, &radius);
 		pColModel->boundingSphere.radius = radius;
-		pColModel->boundingBox.min = CVector(-radius, -radius, -radius);
-		pColModel->boundingBox.max = CVector(radius, radius, radius);
+		pColModel->boundingBox.min = CollisionVector_FromNative(CVector(-radius, -radius, -radius));
+		pColModel->boundingBox.max = CollisionVector_FromNative(CVector(radius, radius, radius));
 	}
 }
 
@@ -403,16 +426,17 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 						// Access raw storage through the C store or pool API
 			CColModel *colModel = ((CColModel*)CPool_New(CPools::GetColModelPool()));
 						assert(colModel);
-			std::allocator<CColModel>().construct(colModel);
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			ColModel_Init(colModel);
 			colModel->boundingSphere.radius = 2.0f;
-			colModel->boundingSphere.center = CVector(0.0f, 0.0f, 0.0f);
+			colModel->boundingSphere.center = CollisionVector_FromNative(CVector(0.0f, 0.0f, 0.0f));
 			pModelInfo->SetColModel(colModel, true);
 		}
 		pColModel = pModelInfo->GetColModel();
 		float radius = 2.0f;
 		pColModel->boundingSphere.radius = radius;
-		pColModel->boundingBox.min = CVector(-radius, -radius, -radius);
-		pColModel->boundingBox.max = CVector(radius, radius, radius);
+		pColModel->boundingBox.min = CollisionVector_FromNative(CVector(-radius, -radius, -radius));
+		pColModel->boundingBox.max = CollisionVector_FromNative(CVector(radius, radius, radius));
 	}
 
 	// Allocate a cutscene object from the object pool without invoking C++ new.
@@ -432,7 +456,7 @@ void
 CCutsceneMgr::DeleteCutsceneData(void)
 {
 	if (!ms_loaded) return;
-	CTimer::Suspend();
+	Timer_Suspend();
 
 	ms_cutsceneProcessing = false;
 	ms_useLodMultiplier = false;
@@ -454,7 +478,8 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		CColModel *colModel = minfo->GetColModel();
 		if (colModel != &CTempColModels::ms_colModelPed1) {
 			// Destroy and release the cutscene collision model without invoking C++ delete.
-			colModel->~CColModel();
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			ColModel_Destroy(colModel);
 						// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetColModelPool(), colModel);
 						minfo->SetColModel(&CTempColModels::ms_colModelPed1);
@@ -462,7 +487,8 @@ CCutsceneMgr::DeleteCutsceneData(void)
 	}
 
 	if (ms_animLoaded)
-		CAnimManager::RemoveLastAnimFile();
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_RemoveLastAnimFile();
 
 	ms_animLoaded = false;
 	numUncompressedAnims = 0;
@@ -480,7 +506,7 @@ CCutsceneMgr::DeleteCutsceneData(void)
 	CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_CUTSCENE);
 	CWorld::Players[CWorld::PlayerInFocus].MakePlayerSafe(false);
 
-	if (CGeneral::faststricmp(ms_cutsceneName, "finale")) {
+	if (General_faststricmp(ms_cutsceneName, "finale")) {
 		DMAudio_StopCutSceneMusic();
 		DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 	}
@@ -500,12 +526,12 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		
 		CPlayerPed *pPlayerPed = FindPlayerPed();
 		for (int i = 0; i < NumberOfSavedWeapons; i++) {
-			int32 weaponModelId = CWeaponInfo::GetWeaponInfo(SavedWeaponIDs[i])->m_nModelId;
+			int32 weaponModelId = WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModelId;
 			uint8 flags = CStreaming::ms_aInfoForModel[weaponModelId].m_flags;
 			CStreaming::RequestModel(weaponModelId, STREAMFLAGS_DONT_REMOVE);
 			CStreaming::LoadAllRequestedModels(false);
-			if (CWeaponInfo::GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id != -1) {
-				CStreaming::RequestModel(CWeaponInfo::GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id, 0);
+			if (WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id != -1) {
+				CStreaming::RequestModel(WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id, 0);
 				CStreaming::LoadAllRequestedModels(false);
 			}
 			if (!(flags & STREAMFLAGS_DONT_REMOVE))
@@ -515,7 +541,7 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		NumberOfSavedWeapons = 0;
 	}
 
-	CTimer::Resume();
+	Timer_Resume();
 }
 
 void
@@ -532,7 +558,7 @@ CCutsceneMgr::Update(void)
 	switch (ms_cutsceneLoadStatus) {
 	case CUTSCENE_LOADING_AUDIO:
 		SetupCutsceneToStart();
-		if (CGeneral::faststricmp(ms_cutsceneName, "finale"))
+		if (General_faststricmp(ms_cutsceneName, "finale"))
 			DMAudio_PlayPreloadedCutSceneMusic();
 		ms_cutsceneLoadStatus++;
 		break;
@@ -549,7 +575,7 @@ CCutsceneMgr::Update(void)
 
 	if (!ms_running) return;
 
-	ms_cutsceneTimer += CTimer::GetTimeStepNonClippedInSeconds();
+	ms_cutsceneTimer += Timer_GetTimeStepNonClippedInSeconds();
 
 	for (int i = 0; i < ms_numCutsceneObjs; i++) {
 		int modelId = ms_pCutsceneObjects[i]->GetModelIndex();
@@ -561,7 +587,7 @@ CCutsceneMgr::Update(void)
 	}
 
 	if (bCamLoaded)
-		if (CGeneral::faststricmp(ms_cutsceneName, "finale") && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_FLYBY && ms_cutsceneLoadStatus == CUTSCENE_LOADING_0) {
+		if (General_faststricmp(ms_cutsceneName, "finale") && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_FLYBY && ms_cutsceneLoadStatus == CUTSCENE_LOADING_0) {
 			if (CPad::GetPad(0)->GetCrossJustDown()
 				|| (CGame::playingIntro && CPad::GetPad(0)->GetStartJustDown())
 				|| CPad::GetPad(0)->GetLeftMouseJustDown()
@@ -605,14 +631,16 @@ CCutsceneMgr::AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const ch
 	if (RwObjectGetType(pObject->m_rwObject) == rpCLUMP) {
 		RpClump *clump = (RpClump*)pObject->m_rwObject;
 		if (IsClumpSkinned(clump))
-			RpAtomicGetBoundingSphere(GetFirstAtomic(clump))->radius *= 1.1f;
+			// Use the C helper and retain the original typed SDK result
+			RpAtomicGetBoundingSphere(((RpAtomic*)GetFirstAtomic(clump)))->radius *= 1.1f;
 	}
 }
 
 void
 CCutsceneMgr::AttachObjectToBone(CObject *pObject, CObject *pAttachTo, int bone)
 {
-	RpHAnimHierarchy *hanim = GetAnimHierarchyFromSkinClump(pAttachTo->GetClump());
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy *hanim = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(pAttachTo->GetClump()));
 	RwInt32 id = RpHAnimIDGetIndex(hanim, bone);
 	RwMatrix *matrixArray = RpHAnimHierarchyGetMatrixArray(hanim);
 	((CCutsceneObject*)pObject)->m_pAttachmentObject = pAttachTo;
@@ -721,4 +749,9 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 	CGame::DrasticTidyUpMemory(true);
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

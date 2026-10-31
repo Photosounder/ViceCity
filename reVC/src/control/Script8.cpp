@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -29,13 +31,15 @@
 #include "WaterLevel.h"
 #include "World.h"
 #include "Zones.h"
+#include "CarCtrl.h"
+#include "Gangs.h"
 
 int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 {
 	switch (command) {
 	case COMMAND_REGISTER_VIGILANTE_LEVEL:
 		CollectParameters(&m_nIp, 1);
-		CStats::RegisterLevelVigilanteMission(ScriptParams[0]);
+		Stats_RegisterLevelVigilanteMission(ScriptParams[0]);
 		return 0;
 	case COMMAND_CLEAR_ALL_CHAR_ANIMS:
 	{
@@ -57,7 +61,8 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 				((CPlayerPed*)pPed)->m_fMoveSpeed = 0.0f;
 			else
 				pPed->m_nStoredMoveState = PEDMOVE_STILL;
-			CAnimManager::AddAnimation(pPed->GetClump(), pPed->m_animGroup, ANIM_STD_IDLE);
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_AddAnimation(pPed->GetClump(), pPed->m_animGroup, ANIM_STD_IDLE);
 			pPed->bIsPedDieAnimPlaying = false;
 		}
 		return 0;
@@ -69,12 +74,12 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	case COMMAND_WANTED_STARS_ARE_FLASHING:
 	{
 		CWanted* pWanted = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted;
-		UpdateCompareFlag(pWanted->m_nMinWantedLevel - pWanted->GetWantedLevel() > 0);
+		UpdateCompareFlag(pWanted->m_nMinWantedLevel - Wanted_GetWantedLevel(pWanted) > 0);
 		return 0;
 	}
 	case COMMAND_SET_ALLOW_HURRICANES:
 		CollectParameters(&m_nIp, 1);
-		CStats::NoMoreHurricanes = ScriptParams[0];
+		Stats_NoMoreHurricanes = ScriptParams[0];
 		return 0;
 	case COMMAND_PLAY_ANNOUNCEMENT:
 	{
@@ -129,7 +134,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		return 0;
 	case COMMAND_REGISTER_BEST_POSITION:
 		CollectParameters(&m_nIp, 2);
-		CStats::RegisterBestPosition(ScriptParams[0], ScriptParams[1]);
+		Stats_RegisterBestPosition(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	case COMMAND_IS_PLAYER_IN_INFO_ZONE:
 	{
@@ -140,7 +145,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		CVector pos = pPlayerInfo->GetPos();
-		CZone* infoZone = CTheZones::FindInformationZoneForPosition(&pos);
+		CZone* infoZone = Zones_FindInformationZoneForPosition(ZonesPosition_FromVector(*(&pos)));
 		UpdateCompareFlag(strncmp(key, infoZone->name, 8) == 0); // original code doesn't seem to be using strncmp in here and compare 2 ints instead
 		return 0;
 	}
@@ -231,7 +236,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		return 0;
 	}
 	case COMMAND_GET_PROGRESS_PERCENTAGE:
-		*(float*)&ScriptParams[0] = CStats::GetPercentageProgress();
+		*(float*)&ScriptParams[0] = Stats_GetPercentageProgress();
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	case COMMAND_SET_SHORTCUT_PICKUP_POINT:
@@ -324,7 +329,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	}
 	case COMMAND_SET_GANG_ATTACK_PLAYER_WITH_COPS:
 		CollectParameters(&m_nIp, 2);
-		CGangs::SetWillAttackPlayerWithCops((ePedType)((int)PEDTYPE_GANG1 + ScriptParams[0]), !!ScriptParams[1]);
+		Gangs_SetWillAttackPlayerWithCops((ePedType)((int)PEDTYPE_GANG1 + ScriptParams[0]), !!ScriptParams[1]);
 		return 0;
 	case COMMAND_SET_CHAR_FRIGHTENED_IN_JACKED_CAR:
 	{
@@ -345,9 +350,9 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		return 0;
 	}
 	case COMMAND_REGISTER_ODDJOB_MISSION_PASSED:
-		++CStats::MissionsPassed;
-		CStats::CheckPointReachedSuccessfully();
-		CTheScripts::LastMissionPassedTime = CTimer::GetTimeInMilliseconds();
+		++Stats_MissionsPassed;
+		Stats_CheckPointReachedSuccessfully();
+		CTheScripts::LastMissionPassedTime = (*Timer_GetTimeInMilliseconds());
 		CGameLogic::RemoveShortCutDropOffPointForMission();
 		return 0;
 	case COMMAND_IS_PLAYER_IN_SHORTCUT_TAXI:
@@ -388,7 +393,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	}
 	case COMMAND_REGISTER_FIRE_LEVEL:
 		CollectParameters(&m_nIp, 1);
-		CStats::RegisterLevelFireMission(ScriptParams[0]);
+		Stats_RegisterLevelFireMission(ScriptParams[0]);
 		return 0;
 	case COMMAND_IS_AUSTRALIAN_GAME:
 		UpdateCompareFlag(false); // should we make some check?
@@ -420,7 +425,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		script_assert(CTheScripts::ScriptSpace[m_nIp++] == ARGUMENT_GLOBALVAR);
 		uint16 var = CTheScripts::Read2BytesFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 1);
-		//CUserDisplay::OnscnTimer.SetCounterFlashWhenFirstDisplayed(var, ScriptParams[0]);
+		//OnscreenTimer_state.SetCounterFlashWhenFirstDisplayed(var, ScriptParams[0]);
 		return 0;
 	}
 #endif
@@ -437,7 +442,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		int cards_left = CARDS_IN_DECK * ScriptParams[0];
 		for (int k = 1; k < CARDS_IN_DECK + 1; k++) {
 			for (int deck = 0; deck < ScriptParams[0]; deck++) {
-				int index = CGeneral::GetRandomNumberInRange(0, cards_left);
+				int index = General_GetRandomNumberInRangeInt(0, cards_left);
 				CTheScripts::CardStack[seq[index]] = k;
 				for (int l = index; l < cards_left; l++) {
 					if (l + 1 < CARDS_IN_STACK)
@@ -557,7 +562,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 		CollectParameters(&m_nIp, 4);
 				// Access raw storage through the C store or pool API
 		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
-				CVector vecAddition = *(CVector*)&ScriptParams[1] * CTimer::GetTimeStep() / GAME_SPEED_TO_METERS_PER_SECOND;
+				CVector vecAddition = *(CVector*)&ScriptParams[1] * (*Timer_GetTimeStep()) / GAME_SPEED_TO_METERS_PER_SECOND;
 		if (!pObject->bIsStatic) {
 			CVector vecCurrSpeed = pObject->GetSpeed();
 			vecCurrSpeed.Normalise();
@@ -644,4 +649,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 	return -1;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

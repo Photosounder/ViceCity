@@ -1,34 +1,25 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "General.h"
-#include "ModelIndices.h"
-
-#define X(name, var) int16 var = -1;
-	MODELINDICES
-#undef X
-
-void
-InitModelIndices(void)
+#include "ModelInfo.h"
+#include "ModelIndices_backend.h"
+ModelIndexModel *ModelIndices_BackendModel(int16_t id)
 {
-#define X(name, var) var = -1;
-	MODELINDICES
-#undef X
+    // Capture the same actual model entry with the original typed native downcast
+    return (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
 }
-
-void
-MatchModelString(const char *modelname, int16 id)
+bool ModelIndices_BackendBuilding(ModelIndexModel *model)
 {
-#define X(name, var) \
-	if(!CGeneral::faststrcmp(name, modelname)){ \
-		var = id; \
-		return; \
-	}
-	MODELINDICES
-#undef X
+    // Read the original native building predicate without copying model state
+    return model->IsBuilding();
 }
-
-void
-TestModelIndices(void)
+bool ModelIndices_BackendCodeGlass(const ModelIndexModel *model)
 {
-	;
+    // Read the same captured model's original code-glass flag
+    return model->m_isCodeGlass;
 }
+bool ModelIndices_BackendArtistGlass(const ModelIndexModel *model)
+{
+    // Read the same captured model's original artist-glass flag
+    return model->m_isArtistGlass;
+}
+//- rouz edit (ChatGPT)

@@ -1,5 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 #include "General.h"
@@ -56,6 +60,8 @@ const uint32 CBoat::nSaveStructSize =
 
 CBoat::CBoat(int mi, uint8 owner) : CVehicle(owner)
 {
+    // Initialize the boom at the former door-constructor boundary
+    Door_Init(&m_boom);
 	CVehicleModelInfo *minfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(mi);
 	m_vehType = VEHICLE_TYPE_BOAT;
 	m_fAccelerate = 0.0f;
@@ -65,7 +71,7 @@ CBoat::CBoat(int mi, uint8 owner) : CVehicle(owner)
 	m_fMovingRotation = 0.0f;
 	m_fMovingSpeed = 0.0f;
 	m_skimmerThingTimer = 0.0f;
-	m_nPoliceShoutTimer = CTimer::GetTimeInMilliseconds();
+	m_nPoliceShoutTimer = (*Timer_GetTimeInMilliseconds());
 	SetModelIndex(mi);
 
 	pHandling = mod_HandlingManager.GetHandlingData((tVehicleType)minfo->m_handlingId);
@@ -110,9 +116,9 @@ CBoat::CBoat(int mi, uint8 owner) : CVehicle(owner)
 	m_nAmmoInClip = 20;
 
 	if(GetModelIndex() == MI_MARQUIS)
-		m_boom.Init(-PI/10.0f, PI/10.0f, 0, 2);
+		Door_SetLimits(&m_boom, -PI/10.0f, PI/10.0f, 0, 2);
 	else
-		m_boom.Init(-PI/5.0f, PI/5.0f, 0, 2);
+		Door_SetLimits(&m_boom, -PI/5.0f, PI/5.0f, 0, 2);
 }
 
 void
@@ -139,9 +145,9 @@ CBoat::ProcessControl(void)
 		m_fBuoyancy *= 0.99f;
 
 #ifdef FIX_BUGS
-	if(FindPlayerPed() && FindPlayerPed()->m_pWanted->GetWantedLevel() > 0 && GetModelIndex() == MI_PREDATOR && pDriver && IsPolicePedModel(pDriver->GetModelIndex())) {
+	if(FindPlayerPed() && Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) > 0 && GetModelIndex() == MI_PREDATOR && pDriver && IsPolicePedModel(pDriver->GetModelIndex())) {
 #else
-	if(FindPlayerPed()->m_pWanted->GetWantedLevel() > 0 && GetModelIndex() == MI_PREDATOR){
+	if(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) > 0 && GetModelIndex() == MI_PREDATOR){
 #endif
 		CVehicle *playerVeh = FindPlayerVehicle();
 		if(playerVeh && playerVeh->GetVehicleAppearance() == VEHICLE_APPEARANCE_BOAT &&
@@ -150,38 +156,38 @@ CBoat::ProcessControl(void)
 		    AutoPilot.m_nCarMission == MISSION_BLOCKPLAYER_FARAWAY || 
 		    AutoPilot.m_nCarMission == MISSION_BLOCKPLAYER_CLOSE || 
 		    AutoPilot.m_nCarMission == MISSION_ATTACKPLAYER) &&
-		   CTimer::GetTimeInMilliseconds() > m_nPoliceShoutTimer){
+		   (*Timer_GetTimeInMilliseconds()) > m_nPoliceShoutTimer){
 			DMAudio_PlayOneShot(m_audioEntityId, SOUND_PED_VCPA_PLAYER_FOUND, 0.0f);
-			m_nPoliceShoutTimer = CTimer::GetTimeInMilliseconds() + 4500 + (CGeneral::GetRandomNumber()&0xFFF);
+			m_nPoliceShoutTimer = (*Timer_GetTimeInMilliseconds()) + 4500 + (General_GetRandomNumber()&0xFFF);
 		}
 	}
 
 	int r, g, b;
 	RwRGBA dropColor = { 0, 0, 0, 0 };
 	RwRGBA splashColor, jetColor;
-	r = 127.5f*(CTimeCycle::GetAmbientRed_Obj() + 0.5f*CTimeCycle::GetDirectionalRed());
-	g = 127.5f*(CTimeCycle::GetAmbientGreen_Obj() + 0.5f*CTimeCycle::GetDirectionalGreen());
-	b = 127.5f*(CTimeCycle::GetAmbientBlue_Obj() + 0.5f*CTimeCycle::GetDirectionalBlue());
+	r = 127.5f*(TimeCycle_GetAmbientRed_Obj() + 0.5f*TimeCycle_GetDirectionalRed());
+	g = 127.5f*(TimeCycle_GetAmbientGreen_Obj() + 0.5f*TimeCycle_GetDirectionalGreen());
+	b = 127.5f*(TimeCycle_GetAmbientBlue_Obj() + 0.5f*TimeCycle_GetDirectionalBlue());
 	r = Clamp(r, 0, 255);
 	g = Clamp(g, 0, 255);
 	b = Clamp(b, 0, 255);
 	splashColor.red = r;
 	splashColor.green = g;
 	splashColor.blue = b;
-	splashColor.alpha = CGeneral::GetRandomNumberInRange(160, 196);
+	splashColor.alpha = General_GetRandomNumberInRangeInt(160, 196);
 
-	r = 229.5f*(CTimeCycle::GetAmbientRed() + 0.85f*CTimeCycle::GetDirectionalRed());
-	g = 229.5f*(CTimeCycle::GetAmbientGreen() + 0.85f*CTimeCycle::GetDirectionalGreen());
-	b = 229.5f*(CTimeCycle::GetAmbientBlue() + 0.85f*CTimeCycle::GetDirectionalBlue());
+	r = 229.5f*(TimeCycle_GetAmbientRed() + 0.85f*TimeCycle_GetDirectionalRed());
+	g = 229.5f*(TimeCycle_GetAmbientGreen() + 0.85f*TimeCycle_GetDirectionalGreen());
+	b = 229.5f*(TimeCycle_GetAmbientBlue() + 0.85f*TimeCycle_GetDirectionalBlue());
 	r = Clamp(r, 0, 255);
 	g = Clamp(g, 0, 255);
 	b = Clamp(b, 0, 255);
 	jetColor.red = r;
 	jetColor.green = g;
 	jetColor.blue = b;
-	jetColor.alpha = CGeneral::GetRandomNumberInRange(196, 228);
+	jetColor.alpha = General_GetRandomNumberInRangeInt(196, 228);
 
-	CGeneral::GetRandomNumber();	// unused
+	General_GetRandomNumber();	// unused
 
 	UpdateClumpAlpha();
 	ProcessCarAlarm();
@@ -235,7 +241,7 @@ CBoat::ProcessControl(void)
 
 	float collisionDamage = pHandling->fCollisionDamageMultiplier * m_fDamageImpulse;
 #ifdef FIX_BUGS
-	if(GetStatus() == STATUS_PLAYER && CStats::GetPercentageProgress() >= 100.0f)
+	if(GetStatus() == STATUS_PLAYER && Stats_GetPercentageProgress() >= 100.0f)
 		collisionDamage *= 0.5f;
 	if (collisionDamage > 25.0f && GetStatus() != STATUS_WRECKED && !bCollisionProof) {
 #else
@@ -245,7 +251,7 @@ CBoat::ProcessControl(void)
 		if(prevHealth >= 250.0f){
 #ifndef FIX_BUGS
 			// if collisionDamage < 50 we actually increase health here...
-			if(GetStatus() == STATUS_PLAYER && CStats::GetPercentageProgress() >= 100.0f)
+			if(GetStatus() == STATUS_PLAYER && Stats_GetPercentageProgress() >= 100.0f)
 				collisionDamage *= 0.5f;
 #endif
 			if(this == FindPlayerVehicle()){
@@ -298,20 +304,20 @@ CBoat::ProcessControl(void)
 		// On fire
 		if(m_fHealth < 250.0f){
 			CParticle::AddParticle(PARTICLE_CARFLAME, smokePos,
-				CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(2.25f/200.0f, 0.09f)),
+				CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(2.25f/200.0f, 0.09f)),
 				nil, 0.9f);
 			CVector smokePos2 = smokePos;
-			smokePos2.x += CGeneral::GetRandomNumberInRange(-2.25f/4.0f, 2.25f/4.0f);
-			smokePos2.y += CGeneral::GetRandomNumberInRange(-2.25f/4.0f, 2.25f/4.0f);
-			smokePos2.z += CGeneral::GetRandomNumberInRange(2.25f/4.0f, 2.25f);
+			smokePos2.x += General_GetRandomNumberInRangeFloat(-2.25f/4.0f, 2.25f/4.0f);
+			smokePos2.y += General_GetRandomNumberInRangeFloat(-2.25f/4.0f, 2.25f/4.0f);
+			smokePos2.z += General_GetRandomNumberInRangeFloat(2.25f/4.0f, 2.25f);
 			CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, smokePos2, CVector(0.0f, 0.0f, 0.0f));
 
-			m_fDamage += CTimer::GetTimeStepInMilliseconds();
+			m_fDamage += Timer_GetTimeStepInMilliseconds();
 			if(m_fDamage > 5000.0f)
 				BlowUpCar(m_pSetOnFireEntity);
 		}
 
-		if(speedSq < 0.25f && (CTimer::GetFrameCounter() + m_randomSeed) & 1)
+		if(speedSq < 0.25f && ((*Timer_GetFrameCounter()) + m_randomSeed) & 1)
 			CParticle::AddParticle(PARTICLE_ENGINE_STEAM, smokePos, smokeDir);
 		if(speedSq < 0.25f && m_fHealth <= 390.0f)
 			CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, smokePos, 1.25f*smokeDir);
@@ -324,14 +330,14 @@ CBoat::ProcessControl(void)
 	CVector buoyancePoint(0.0f, 0.0f, 0.0f);
 	if(mod_Buoyancy.ProcessBuoyancyBoat(this, pHandling->fBuoyancy, &buoyancePoint, &buoyanceImpulse, bSeparateTurnForce)){
 		// Process boat in water
-		if(0.1f * m_fMass * GRAVITY*CTimer::GetTimeStep() < buoyanceImpulse.z){
+		if(0.1f * m_fMass * GRAVITY*(*Timer_GetTimeStep()) < buoyanceImpulse.z){
 			bBoatInWater = true;
 			bIsInWater = true;
 			if (GetUp().z < -0.6f && Abs(GetMoveSpeed().x) < 0.05 && Abs(GetMoveSpeed().y) < 0.05) {
 				bIsDrowning = true;
 				if (pDriver){
 					pDriver->bTouchingWater = true;
-					pDriver->InflictDamage(nil, WEAPONTYPE_DROWNING, CTimer::GetTimeStep(), PEDPIECE_TORSO, 0);
+					pDriver->InflictDamage(nil, WEAPONTYPE_DROWNING, (*Timer_GetTimeStep()), PEDPIECE_TORSO, 0);
 				}
 			}
 			else
@@ -355,29 +361,29 @@ CBoat::ProcessControl(void)
 		if(GetModelIndex() == MI_SKIMMER)
 			if(m_skimmerThingTimer != 0.0f ||
 			   GetForward().z < -0.5f && GetUp().z > -0.5f && m_vecMoveSpeed.z < -0.15f &&
-			   buoyanceImpulse.z > 0.01f*m_fMass * GRAVITY*CTimer::GetTimeStep() &&
-			   buoyanceImpulse.z < 0.4f*m_fMass * GRAVITY*CTimer::GetTimeStep()){
-				float turnImpulse = -0.00017f*GetForward().z*buoyanceImpulse.z * m_fMass*CTimer::GetTimeStep();
+			   buoyanceImpulse.z > 0.01f*m_fMass * GRAVITY*(*Timer_GetTimeStep()) &&
+			   buoyanceImpulse.z < 0.4f*m_fMass * GRAVITY*(*Timer_GetTimeStep())){
+				float turnImpulse = -0.00017f*GetForward().z*buoyanceImpulse.z * m_fMass*(*Timer_GetTimeStep());
 				ApplyTurnForce(turnImpulse*GetForward(), GetUp());
 				bBoatInWater = false;
 				//BUG? aren't we forgetting the timestep here?
 				float moveImpulse = -0.5f*DotProduct(m_vecMoveSpeed, GetForward()) * m_fMass;
 				ApplyMoveForce(moveImpulse*GetForward());
 				if(m_skimmerThingTimer == 0.0f)
-					m_skimmerThingTimer = CTimer::GetTimeInMilliseconds() + 300.0f;
-				else if(m_skimmerThingTimer < CTimer::GetTimeInMilliseconds())
+					m_skimmerThingTimer = (*Timer_GetTimeInMilliseconds()) + 300.0f;
+				else if(m_skimmerThingTimer < (*Timer_GetTimeInMilliseconds()))
 					m_skimmerThingTimer = 0.0f;
 			}
 
 		if(!onLand && bBoatInWater && GetUp().z > 0.0f){
-			float impulse = m_vecMoveSpeed.MagnitudeSqr()*pBoatHandling->fAqPlaneForce*buoyanceImpulse.z*CTimer::GetTimeStep()*0.5f;
+			float impulse = m_vecMoveSpeed.MagnitudeSqr()*pBoatHandling->fAqPlaneForce*buoyanceImpulse.z*(*Timer_GetTimeStep())*0.5f;
 			if(GetModelIndex() == MI_SKIMMER)
 				impulse *= 1.0f + m_fGasPedal;
 			else if(m_fGasPedal > 0.05f)
 				impulse *= m_fGasPedal;
 			else
 				impulse = 0.0f;
-			impulse = Min(impulse, GRAVITY*pBoatHandling->fAqPlaneLimit*m_fMass*CTimer::GetTimeStep());
+			impulse = Min(impulse, GRAVITY*pBoatHandling->fAqPlaneLimit*m_fMass*(*Timer_GetTimeStep()));
 			ApplyMoveForce(impulse*GetUp());
 			ApplyTurnForce(impulse*GetUp(), buoyancePoint - pBoatHandling->fAqPlaneOffset*GetForward());
 		}
@@ -397,7 +403,7 @@ CBoat::ProcessControl(void)
 				steerFactor = Clamp(steerFactor, 0.0f, 1.0f);
 			}
 
-			CVector boundMin = GetColModel()->boundingBox.min;
+			CVector boundMin = CollisionVector_ToNative(GetColModel()->boundingBox.min);
 			CVector propeller(0.0f, boundMin.y*pBoatHandling->fThrustY, boundMin.z*pBoatHandling->fThrustZ);
 			propeller = Multiply3x3(GetMatrix(), propeller);
 			CVector propellerWorld = GetPosition() + propeller;
@@ -430,26 +436,26 @@ CBoat::ProcessControl(void)
 						}
 						if(force.z < 0.0f)
 							force.z = 0.0f;
-						ApplyMoveForce(force * CTimer::GetTimeStep());
+						ApplyMoveForce(force * (*Timer_GetTimeStep()));
 					}else{
-						ApplyMoveForce(force * CTimer::GetTimeStep());
-						ApplyTurnForce(force * CTimer::GetTimeStep(), propeller - pBoatHandling->fThrustAppZ*GetUp());
+						ApplyMoveForce(force * (*Timer_GetTimeStep()));
+						ApplyTurnForce(force * (*Timer_GetTimeStep()), propeller - pBoatHandling->fThrustAppZ*GetUp());
 						float rightForce = -DotProduct(GetRight(), force)*pHandling->fTractionMultiplier;
-						ApplyTurnForce(rightForce*GetRight() * CTimer::GetTimeStep(), GetUp());
+						ApplyTurnForce(rightForce*GetRight() * (*Timer_GetTimeStep()), GetUp());
 					}
 
 					// Spray some particles
 					CVector jetDir = -0.04f * force;
 					if(m_fGasPedal > 0.0f){
 						if(GetStatus() == STATUS_PLAYER){
-							CVector sternPos = GetColModel()->boundingBox.min;
+							CVector sternPos = CollisionVector_ToNative(GetColModel()->boundingBox.min);
 							sternPos.x = 0.0f;
 							sternPos.z = 0.0f;
 							sternPos = Multiply3x3(GetMatrix(), sternPos);
 
 							CVector wakePos = GetPosition() + sternPos;
 							// no actual particles for player...
-						}else if(IsVisible() && ((CTimer::GetFrameCounter() + m_randomSeed) & 1) &&
+						}else if(IsVisible() && (((*Timer_GetFrameCounter()) + m_randomSeed) & 1) &&
 						         CVisibilityPlugins::GetDistanceSquaredFromCamera(&propellerWorld) < SQR(70.0f * TheCamera.GenerationDistMultiplier)){
 							jetDir.z = 0.015f;
 							jetDir.x *= 3.5f;
@@ -457,12 +463,12 @@ CBoat::ProcessControl(void)
 							propellerWorld.z += 0.5f;
 							
 							CParticle::AddParticle(PARTICLE_BOAT_SPLASH, propellerWorld, jetDir, nil, 1.25f, jetColor,
-								CGeneral::GetRandomNumberInRange(0, 5),
-								CGeneral::GetRandomNumberInRange(0, 90), 1, 500);
+								General_GetRandomNumberInRangeInt(0, 5),
+								General_GetRandomNumberInRangeInt(0, 90), 1, 500);
 							
 							CParticle::AddParticle(PARTICLE_CAR_SPLASH, propellerWorld, 0.75f * jetDir, nil, 0.5f, splashColor,
-								CGeneral::GetRandomNumberInRange(0, 30),
-								CGeneral::GetRandomNumberInRange(0, 45), 3, 500);
+								General_GetRandomNumberInRangeInt(0, 30),
+								General_GetRandomNumberInRangeInt(0, 45), 3, 500);
 						}
 					}
 				}else
@@ -480,9 +486,9 @@ CBoat::ProcessControl(void)
 					if(m_fGasPedal < 0.0f && force > 0.0f || m_fGasPedal > 0.0f && force < 0.0f)
 						force *= -1.0f;
 					CVector propellerForce = propellerDepth * Multiply3x3(GetMatrix(), force*CVector(-steerSin, 0.0f, 0.0f));
-					ApplyMoveForce(propellerForce * CTimer::GetTimeStep());
-					ApplyTurnForce(propellerForce * CTimer::GetTimeStep(), propeller);
-					float rightForce = -steerSin * force * 0.75f/steerFactor * Max(CTimer::GetTimeStep(), 0.01f);
+					ApplyMoveForce(propellerForce * (*Timer_GetTimeStep()));
+					ApplyTurnForce(propellerForce * (*Timer_GetTimeStep()), propeller);
+					float rightForce = -steerSin * force * 0.75f/steerFactor * Max((*Timer_GetTimeStep()), 0.01f);
 					ApplyTurnForce(GetRight() * rightForce, GetUp());
 				}
 			}else
@@ -491,14 +497,14 @@ CBoat::ProcessControl(void)
 			if(pHandling->fSuspensionBias != 0.0f){
 				CVector right = CrossProduct(GetForward(), CVector(0.0f, 0.0f, 1.0f));
 				float rightSpeed = DotProduct(m_vecMoveSpeed, right);
-				float impulse = 0.1f*pHandling->fSuspensionBias * m_fMass * m_fVolumeUnderWater * rightSpeed * CTimer::GetTimeStep();
+				float impulse = 0.1f*pHandling->fSuspensionBias * m_fMass * m_fVolumeUnderWater * rightSpeed * (*Timer_GetTimeStep());
 				ApplyMoveForce(right - impulse * 0.3f * CVector(-right.y, right.x, 0.0f));
 			}
 
 			if(GetStatus() == STATUS_PLAYER && CPad::GetPad(0)->GetHandBrake()){
 				float fwdSpeed = DotProduct(m_vecMoveSpeed, GetForward());
 				if(fwdSpeed > 0.0f){
-					float impulse = -0.1f*pHandling->fSuspensionLowerLimit * m_fMass * m_fVolumeUnderWater * fwdSpeed * CTimer::GetTimeStep();
+					float impulse = -0.1f*pHandling->fSuspensionLowerLimit * m_fMass * m_fVolumeUnderWater * fwdSpeed * (*Timer_GetTimeStep());
 					ApplyMoveForce(impulse * GetForward());
 				}
 			}
@@ -515,9 +521,9 @@ CBoat::ProcessControl(void)
 
 		if((GetModelIndex() != MI_SKIMMER || m_skimmerThingTimer == 0.0f) && !bSeparateTurnForce){
 			// No idea what exactly is going on here besides drag in YZ
-			float fx = Pow(pBoatHandling->vecTurnRes.x, CTimer::GetTimeStep());
-			float fy = Pow(pBoatHandling->vecTurnRes.y, CTimer::GetTimeStep());
-			float fz = Pow(pBoatHandling->vecTurnRes.z, CTimer::GetTimeStep());
+			float fx = Pow(pBoatHandling->vecTurnRes.x, (*Timer_GetTimeStep()));
+			float fy = Pow(pBoatHandling->vecTurnRes.y, (*Timer_GetTimeStep()));
+			float fz = Pow(pBoatHandling->vecTurnRes.z, (*Timer_GetTimeStep()));
 			m_vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());	// invert - to local space
 			// TODO: figure this out
 			float magic = 1.0f/(1000.0f * SQR(m_vecTurnSpeed.x) + 1.0f) * fx;
@@ -554,7 +560,7 @@ CBoat::ProcessControl(void)
 		// Splashes
 		float speed = m_vecMoveSpeed.Magnitude();
 		if(speed > 0.05f && GetUp().x > 0.0f && !TheCamera.GetLookingForwardFirstPerson() && IsVisible() &&
-		   (AutoPilot.m_nCarMission != MISSION_CRUISE || (CTimer::GetFrameCounter()&2) == 0)){
+		   (AutoPilot.m_nCarMission != MISSION_CRUISE || ((*Timer_GetFrameCounter())&2) == 0)){
 			CVector splashPos, splashDir;
 			float splashSize, front, waterLevel;
 
@@ -623,10 +629,10 @@ CBoat::ProcessControl(void)
 			   CVisibilityPlugins::GetDistanceSquaredFromCamera(&splashPos) < SQR(70.0f * TheCamera.GenerationDistMultiplier)){
 				splashPos.z = waterLevel + 0.1f;
 				CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashPos, 0.75f*splashDir, nil, splashSize+0.1f,  splashColor,
-					CGeneral::GetRandomNumberInRange(0.0f, 10.0f), CGeneral::GetRandomNumberInRange(0.0f, 90.0f),
+					General_GetRandomNumberInRangeFloat(0.0f, 10.0f), General_GetRandomNumberInRangeFloat(0.0f, 90.0f),
 					1, lifeBase + splashDir.z*lifeMult);
 				CParticle::AddParticle(PARTICLE_BOAT_SPLASH, splashPos, splashDir, nil, splashSize,  jetColor,
-					CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f),
+					General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f),
 					0, lifeBase + splashDir.z*lifeMult);
 			}
 
@@ -680,10 +686,10 @@ CBoat::ProcessControl(void)
 			   CVisibilityPlugins::GetDistanceSquaredFromCamera(&splashPos) < SQR(70.0f * TheCamera.GenerationDistMultiplier)){
 				splashPos.z = waterLevel + 0.1f;
 				CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashPos, 0.75f*splashDir, nil, splashSize+0.1f,  splashColor,
-					CGeneral::GetRandomNumberInRange(0.0f, 10.0f), CGeneral::GetRandomNumberInRange(0.0f, 90.0f),
+					General_GetRandomNumberInRangeFloat(0.0f, 10.0f), General_GetRandomNumberInRangeFloat(0.0f, 90.0f),
 					1, lifeBase + splashDir.z*lifeMult);
 				CParticle::AddParticle(PARTICLE_BOAT_SPLASH, splashPos, splashDir, nil, splashSize,  jetColor,
-					CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f),
+					General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f),
 					0, lifeBase + splashDir.z*lifeMult);
 			}
 		}
@@ -692,32 +698,32 @@ CBoat::ProcessControl(void)
 		if(TheCamera.GetLookingForwardFirstPerson() && FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() &&
 		   m_nDeltaVolumeUnderWater > 0 && numWaterDropOnScreen < 20){
 			CVector dropPos;
-			CVector dropDir(CGeneral::GetRandomNumberInRange(-0.25f, 0.25f), CGeneral::GetRandomNumberInRange(1.0f, 0.75f), 0.0f);
+			CVector dropDir(General_GetRandomNumberInRangeFloat(-0.25f, 0.25f), General_GetRandomNumberInRangeFloat(1.0f, 0.75f), 0.0f);
 
-			int frm = CGeneral::GetRandomNumber() & 1;
+			int frm = General_GetRandomNumber() & 1;
 			if(TheCamera.m_CameraAverageSpeed < 0.35f){
-				dropPos.x = CGeneral::GetRandomNumberInRange(50, (int)SCREEN_WIDTH-50);
-				dropPos.y = CGeneral::GetRandomNumberInRange(50, (int)SCREEN_HEIGHT-50);
+				dropPos.x = General_GetRandomNumberInRangeInt(50, (int)SCREEN_WIDTH-50);
+				dropPos.y = General_GetRandomNumberInRangeInt(50, (int)SCREEN_HEIGHT-50);
 			}else{
-				dropPos.x = CGeneral::GetRandomNumberInRange(200, (int)SCREEN_WIDTH-200);
-				dropPos.y = CGeneral::GetRandomNumberInRange(150, (int)SCREEN_HEIGHT-150);
+				dropPos.x = General_GetRandomNumberInRangeInt(200, (int)SCREEN_WIDTH-200);
+				dropPos.y = General_GetRandomNumberInRangeInt(150, (int)SCREEN_HEIGHT-150);
 			}
 			dropPos.z = 1.0f;
 
 			if(TheCamera.m_CameraAverageSpeed > 0.35f){
 				if((int)SCREEN_WIDTH / 2 < dropPos.x)
-					dropPos.x += CGeneral::GetRandomNumberInRange(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
+					dropPos.x += General_GetRandomNumberInRangeFloat(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
 				else
-					dropPos.x -= CGeneral::GetRandomNumberInRange(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
+					dropPos.x -= General_GetRandomNumberInRangeFloat(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
 
 				if((int)SCREEN_HEIGHT / 2 < dropPos.y)
-					dropPos.y += CGeneral::GetRandomNumberInRange(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
+					dropPos.y += General_GetRandomNumberInRangeFloat(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
 				else
-					dropPos.y -= CGeneral::GetRandomNumberInRange(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
+					dropPos.y -= General_GetRandomNumberInRangeFloat(0.35f, TheCamera.m_CameraAverageSpeed)*7.5f;
 			}
 
 			if(CParticle::AddParticle(PARTICLE_WATERDROP, dropPos, dropDir, nil,
-					CGeneral::GetRandomNumberInRange(0.1f, 0.15f), dropColor, 0, 0, frm))
+					General_GetRandomNumberInRangeFloat(0.1f, 0.15f), dropColor, 0, 0, frm))
 				numWaterDropOnScreen++;
 		}
 
@@ -739,14 +745,14 @@ CBoat::ProcessControl(void)
 #endif
 	}
 
-	if(m_modelIndex == MI_SKIMMER && CTimer::GetTimeStep() > 0.0f){
+	if(m_modelIndex == MI_SKIMMER && (*Timer_GetTimeStep()) > 0.0f){
 		if(GetStatus() == STATUS_PLAYER){
 			if(m_fMovingSpeed < 0.22f)
-				m_fMovingSpeed += 0.001f*CTimer::GetTimeStep();
+				m_fMovingSpeed += 0.001f*(*Timer_GetTimeStep());
 			FlyingControl(FLIGHT_MODEL_SEAPLANE);
 		}else{
-			if(m_fMovingSpeed > 0.0005f*CTimer::GetTimeStep())
-				m_fMovingSpeed -= 0.0005f*CTimer::GetTimeStep();
+			if(m_fMovingSpeed > 0.0005f*(*Timer_GetTimeStep()))
+				m_fMovingSpeed -= 0.0005f*(*Timer_GetTimeStep());
 			else
 				m_fMovingSpeed = 0.0f;
 		}
@@ -807,9 +813,9 @@ CBoat::ApplyWaterResistance(void)
 	float fwdSpeed = DotProduct(GetMoveSpeed(), GetForward());
 	float magic = (SQR(fwdSpeed) + 0.05f) * resistance + 1.0f;
 	magic = Abs(magic);
-	float fx = Pow(pBoatHandling->vecMoveRes.x/magic, 0.5f*CTimer::GetTimeStep());
-	float fy = Pow(pBoatHandling->vecMoveRes.y/magic, 0.5f*CTimer::GetTimeStep());
-	float fz = Pow(pBoatHandling->vecMoveRes.z/magic, 0.5f*CTimer::GetTimeStep());
+	float fx = Pow(pBoatHandling->vecMoveRes.x/magic, 0.5f*(*Timer_GetTimeStep()));
+	float fy = Pow(pBoatHandling->vecMoveRes.y/magic, 0.5f*(*Timer_GetTimeStep()));
+	float fz = Pow(pBoatHandling->vecMoveRes.z/magic, 0.5f*(*Timer_GetTimeStep()));
 
 	m_vecMoveSpeed = Multiply3x3(m_vecMoveSpeed, GetMatrix());	// invert - to local space
 	m_vecMoveSpeed.x *= fx;
@@ -865,7 +871,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 	ChangeLawEnforcerState(false);
 
 	CExplosion::AddExplosion(this, culprit, EXPLOSION_BOAT, GetPosition(), 0);
-	CDarkel::RegisterCarBlownUpByPlayer(this);
+	Darkel_RegisterCarBlownUpByPlayer(this);
 	if(m_aBoatNodes[BOAT_MOVING] == nil)
 		return;
 
@@ -931,7 +937,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 
 	// life time
 	CObject::nNoTempObjects++;
-	obj->m_nEndOfLifeTime = CTimer::GetTimeInMilliseconds() + 20000;
+	obj->m_nEndOfLifeTime = (*Timer_GetTimeInMilliseconds()) + 20000;
 
 	obj->m_vecMoveSpeed = m_vecMoveSpeed;
 	if(GetUp().z > 0.0f)
@@ -965,7 +971,7 @@ CBoat::PreRender(void)
 	RpAtomic *atomic;
 
 	if(GetModelIndex() == MI_SKIMMER){
-		m_fMovingRotation += m_fMovingSpeed*CTimer::GetTimeStep();
+		m_fMovingRotation += m_fMovingSpeed*(*Timer_GetTimeStep());
 		if(m_fMovingRotation > TWOPI) m_fMovingRotation -= TWOPI;
 		int alpha = (1.0f - Min(2.0f*m_fMovingSpeed*8.0f/PI, 1.0f))*255.0f;
 		if(GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_PLAYER_REMOTE || GetStatus() == STATUS_PLAYER_PLAYBACKFROMBUFFER){
@@ -998,7 +1004,7 @@ CBoat::PreRender(void)
 #ifdef FREE_CAM
 			if(!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController))
 #endif
-			steeringUpDown += ((Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f ? (-CPad::GetPad(0)->GetCarGunUpDown()/128.0f) : (-CPad::GetPad(0)->GetSteeringUpDown()/128.0f)) - steeringUpDown) * Min(1.f, CTimer::GetTimeStep()/5.f);
+			steeringUpDown += ((Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f ? (-CPad::GetPad(0)->GetCarGunUpDown()/128.0f) : (-CPad::GetPad(0)->GetSteeringUpDown()/128.0f)) - steeringUpDown) * Min(1.f, (*Timer_GetTimeStep())/5.f);
 #ifdef FREE_CAM
 			else
 				steeringUpDown = -CPad::GetPad(0)->GetSteeringUpDown()/128.0f;
@@ -1073,7 +1079,7 @@ CBoat::PreRender(void)
 
 	if(GetModelIndex() == MI_RIO || GetModelIndex() == MI_MARQUIS){
 		float axes[3] = { 0.0f, 0.0f, 0.0f };
-		m_boom.Process(this);
+		Door_Process(&m_boom, this);
 		axes[m_boom.m_nAxis] = m_boom.m_fAngle;
 		matrix.Attach(RwFrameGetMatrix(m_aBoatNodes[BOAT_FLAP_LEFT]));
 		pos = matrix.GetPosition();
@@ -1092,14 +1098,14 @@ CBoat::PreRender(void)
 			float boatHeading = GetForward().Heading();
 			float rot = -DEGTORAD(45.0f) - (flapHeading + boatHeading);
 			// eh what?
-			rot = CGeneral::LimitRadianAngle(rot);
+			rot = General_LimitRadianAngle(rot);
 			if(rot > HALFPI) rot = PI;
 			else if(rot < -HALFPI) rot = -PI;
 			rot = Clamp(rot, -DEGTORAD(63.0f), DEGTORAD(63.0f));
-			m_fMovingSpeed += (0.008f * CWeather::Wind + 0.002f) * rot;
-			m_fMovingSpeed *= Pow(0.9985f, CTimer::GetTimeStep())/(500.0f*SQR(m_fMovingSpeed) + 1.0f);
+			m_fMovingSpeed += (0.008f * Weather_Wind + 0.002f) * rot;
+			m_fMovingSpeed *= Pow(0.9985f, (*Timer_GetTimeStep()))/(500.0f*SQR(m_fMovingSpeed) + 1.0f);
 
-			matrix.SetRotateZ(flapHeading + m_fMovingSpeed*CTimer::GetTimeStep());
+			matrix.SetRotateZ(flapHeading + m_fMovingSpeed*(*Timer_GetTimeStep()));
 			matrix.Translate(pos);
 			matrix.UpdateRW();
 		}
@@ -1110,8 +1116,8 @@ CBoat::PreRender(void)
 			matrix.Translate(pos);
 			matrix.UpdateRW();
 
-			CVector wind  = CVector(0.707f, 0.707f, 0.0f) * (CWeather::Wind + 0.15f)*0.4f;
-			m_fMovingRotation += (m_vecMoveSpeed + wind).Magnitude()*CTimer::GetTimeStep();
+			CVector wind  = CVector(0.707f, 0.707f, 0.0f) * (Weather_Wind + 0.15f)*0.4f;
+			m_fMovingRotation += (m_vecMoveSpeed + wind).Magnitude()*(*Timer_GetTimeStep());
 		}
 	}else if(GetModelIndex() == MI_PREDATOR || GetModelIndex() == MI_REEFER){
 		if (m_aBoatNodes[BOAT_MOVING] != nil) {
@@ -1123,10 +1129,11 @@ CBoat::PreRender(void)
 
 			matrix.UpdateRW();
 			if (CVehicle::bWheelsOnlyCheat) {
-				RpAtomicRender((RpAtomic*)GetFirstObject(m_aBoatNodes[BOAT_MOVING]));
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicRender((RpAtomic*)((RwObject*)GetFirstObject(m_aBoatNodes[BOAT_MOVING])));
 			}
 		}
-		m_fMovingRotation += 0.02f * CTimer::GetTimeStep();
+		m_fMovingRotation += 0.02f * (*Timer_GetTimeStep());
 	}
 }
 
@@ -1137,7 +1144,7 @@ void
 CBoat::Render()
 {
 	((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->SetVehicleColour(m_currentColour1, m_currentColour2);
-	m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 3000;
+	m_nSetPieceExtendedRangeTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 	if (!CVehicle::bWheelsOnlyCheat)
 		CEntity::Render();
 #ifdef NEW_RENDERER
@@ -1415,11 +1422,11 @@ CBoat::PruneWakeTrail(void)
 	for(i = 0; i < ARRAY_SIZE(m_afWakePointLifeTime); i++){
 		if(m_afWakePointLifeTime[i] <= 0.0f)
 			break;
-		if(m_afWakePointLifeTime[i] <= CTimer::GetTimeStep()){
+		if(m_afWakePointLifeTime[i] <= (*Timer_GetTimeStep())){
 			m_afWakePointLifeTime[i] = 0.0f;
 			break;
 		}
-		m_afWakePointLifeTime[i] -= CTimer::GetTimeStep();
+		m_afWakePointLifeTime[i] -= (*Timer_GetTimeStep());
 	}
 	m_nNumWakePoints = i;
 }
@@ -1465,7 +1472,7 @@ CBoat::DoDriveByShootings(void)
 		return;
 
 	CWeapon *weapon = pDriver->GetWeapon();
-	if(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != 5)
+	if(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType)->m_nWeaponSlot != 5)
 		return;
 
 	weapon->Update(pDriver->m_audioEntityId, nil);
@@ -1492,20 +1499,23 @@ CBoat::DoDriveByShootings(void)
 				anim->blendDelta = -1000.0f;
 			anim = RpAnimBlendClumpGetAssociation(pDriver->GetClump(), ANIM_STD_CAR_DRIVEBY_LEFT);
 			if(anim == nil || anim->blendDelta < 0.0f)
-				anim = CAnimManager::AddAnimation(pDriver->GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_DRIVEBY_LEFT);
+				// Use the complete C animation manager at the original call boundary
+				anim = AnimManager_AddAnimation(pDriver->GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_DRIVEBY_LEFT);
 		}else if(pDriver->m_pMyVehicle->pPassengers[0] == nil || TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_1STPERSON){
 			anim = RpAnimBlendClumpGetAssociation(pDriver->GetClump(), ANIM_STD_CAR_DRIVEBY_LEFT);
 			if(anim)
 				anim->blendDelta = -1000.0f;
 			anim = RpAnimBlendClumpGetAssociation(pDriver->GetClump(), ANIM_STD_CAR_DRIVEBY_RIGHT);
 			if(anim == nil || anim->blendDelta < 0.0f)
-				anim = CAnimManager::AddAnimation(pDriver->GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_DRIVEBY_RIGHT);
+				// Use the complete C animation manager at the original call boundary
+				anim = AnimManager_AddAnimation(pDriver->GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_DRIVEBY_RIGHT);
 		}
 
-		if (!anim || !anim->IsRunning()) {
-			if (CPad::GetPad(0)->GetCarGunFired() && CTimer::GetTimeInMilliseconds() > weapon->m_nTimer) {
+		// Use the complete C association at the original native operation boundary
+		if (!anim || !AnimAssociation_IsRunning(anim)) {
+			if (CPad::GetPad(0)->GetCarGunFired() && (*Timer_GetTimeInMilliseconds()) > weapon->m_nTimer) {
 				weapon->FireFromCar(this, lookingLeft, true);
-				weapon->m_nTimer = CTimer::GetTimeInMilliseconds() + 70;
+				weapon->m_nTimer = (*Timer_GetTimeInMilliseconds()) + 70;
 			}
 		}
 	}else{
@@ -1537,4 +1547,8 @@ CBoat::Load(uint8*& buf)
 	}
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

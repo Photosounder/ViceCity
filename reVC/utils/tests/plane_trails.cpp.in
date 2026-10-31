@@ -1,0 +1,220 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <climits>
+
+extern "C" { uint32_t Timer_timeMs;uint8_t Clock_hours; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap; }
+float CWeather::Foggyness,CWeather::CloudCoverage,CWeather::Rain;
+int32 CTimeCycle::colors[3];
+VertexBufferUnion TempVertexBuffer;
+extern "C" { int32_t TempBufferVerticesStored,TempBufferIndicesStored; }
+static uint64_t hash=1469598103934665603ULL;
+static unsigned calls,states,registrations,updates,renders,queries,transforms,draws,ends,coronas;
+static bool cameraVisible=true,transformSuccess=true,triggered;
+static int hook,updateDepth=-1,activeRecord;
+static const CVector *owners[8];
+static uint16_t initialIndices[32];
+
+static void require(bool condition)
+{
+    // Stop immediately if a corpus precondition or required callback is missed
+    if(!condition)abort();
+}
+static void word(uint32_t value)
+{
+    // Compare exact scalar bits through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(i*8))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Compare finite floating-point values without numeric tolerances or layout casts
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void event(unsigned id)
+{
+    // Preserve the exact ordering and number of observable owner operations
+    calls++;word(id);
+}
+static void vertex(RwIm3DVertex &v)
+{
+    // Observe actual native D3D9 or GL3 fields through their own accessors
+    floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());
+}
+static void snapshot(void)
+{
+    // Compare every retained trail field, index and affected shared native vertex
+    states++;word(Timer_timeMs);word(Clock_hours);word(CustomPipes::bRenderingEnvMap);floating(CWeather::Foggyness);floating(CWeather::CloudCoverage);floating(CWeather::Rain);for(int i=0;i<3;i++)word(CTimeCycle::colors[i]);
+    for(int index=0;index<6;index++){
+        // Include inactive records and stale positions retained by partial initialization
+        PlaneTrail trail=TestPt_Get(index);for(int i=0;i<16;i++){floating(trail.m_pos[i].x);floating(trail.m_pos[i].y);floating(trail.m_pos[i].z);word(trail.m_time[i]);}
+    }
+    uint16_t indices[32];TestPt_Indices(indices);for(int i=0;i<32;i++)word(indices[i]);for(int i=0;i<32;i++)vertex(TempBufferRenderVertices[i]);vertex(TempBufferRenderVertices[511]);word(TempBufferVerticesStored);word(TempBufferIndicesStored);
+}
+static void update(void)
+{
+    // Retain a distinct observed temporary-vector lifetime for every nested update
+    updates++;require(++updateDepth<8);owners[updateDepth]=NULL;TestPt_Update();owners[updateDepth]=NULL;updateDepth--;snapshot();
+}
+static void renderOne(int index,float visibility)
+{
+    // Exercise the complete record path with a known legal record index
+    renders++;int saved=activeRecord;activeRecord=index;TestPt_RenderOne(index,visibility);activeRecord=saved;snapshot();
+}
+static void registration(PlaneTrailVector position,uint32_t id)
+{
+    // Enter the independent C caller or original by-value controller wrapper
+    registrations++;TestPt_Register(position,id);snapshot();
+}
+static void mutation(int point,const CVector *position=NULL)
+{
+    // Perform one defined mutation only at an existing original owner call
+    if(triggered)return;
+    if(hook==1 && point==1){triggered=true;PlaneTrail t=TestPt_Get(activeRecord);t.m_pos[0].x+=91.f;t.m_time[1]=(int32_t)(Timer_timeMs-30001);TestPt_Set(activeRecord,&t);CustomPipes::bRenderingEnvMap=true;}
+    else if(hook==2 && point==2){triggered=true;PlaneTrail t=TestPt_Get(activeRecord);t.m_pos[0].y-=27.f;t.m_time[1]=(int32_t)(Timer_timeMs-30001);TestPt_Set(activeRecord,&t);Timer_timeMs+=13;}
+    else if(hook==3 && point==3){triggered=true;renderOne(1,.6f);}
+    else if(hook==4 && point==4){triggered=true;TestPt_SetIndex(0,15);PlaneTrail t=TestPt_Get(0);t.m_time[0]=0;TestPt_Set(0,&t);}
+    else if(hook==5 && point==5){triggered=true;TestPt_SetIndex(2,11);renderOne(1,.3f);}
+    else if(hook==6 && point==6){triggered=true;Timer_timeMs=131071;Clock_hours=12;const_cast<CVector *>(position)->x+=53.f;}
+    else if(hook==7 && point==6){triggered=true;Timer_timeMs+=2049;update();}
+    else if(hook==8 && point==6){triggered=true;registrations++;TestPt_RegisterVector(position,0);}
+    else if(hook==9 && point==7){triggered=true;Clock_hours=6;Timer_timeMs+=512;}
+    else if(hook==10 && point==8){triggered=true;CTimeCycle::colors[0]=241;CTimeCycle::colors[1]=17;CTimeCycle::colors[2]=193;CWeather::Rain=.95f;}
+    else if(hook==11 && point==1){triggered=true;TestPt_Init();}
+    else if(hook==12 && point==2){triggered=true;TestPt_Init();}
+}
+extern "C" uint8_t Clock_GetHours(void)
+{
+    // Compare each original short-circuit hour query and any defined live mutation
+    event(1);queries++;mutation(7);word(Clock_hours);return Clock_hours;
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Observe the original pure camera input before subsequent record or flag changes
+    event(2);queries++;floating(center.x);floating(center.y);floating(center.z);floating(radius);mutation(1);word(cameraVisible);return cameraVisible;
+}
+static int32 sky(int channel)
+{
+    // Retain the original macro's repeated getter evaluations rather than caching them
+    event(3);queries++;word(channel);mutation(8);word(CTimeCycle::colors[channel]);return CTimeCycle::colors[channel];
+}
+int32 CTimeCycle::GetSkyTopRed(void)
+{
+    // Read the same live red channel through the actual mocked getter
+    return sky(0);
+}
+int32 CTimeCycle::GetSkyTopGreen(void)
+{
+    // Read the same live green channel through the actual mocked getter
+    return sky(1);
+}
+int32 CTimeCycle::GetSkyTopBlue(void)
+{
+    // Read the same live blue channel through the actual mocked getter
+    return sky(2);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe original state order and shared-buffer changes caused by nested rendering
+    event(4);word(state);word((uint32_t)(uintptr_t)value);mutation(3);return TRUE;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Narrow the original integer alpha at the actual native setter boundary
+    event(5);word((uint32_t)(v-TempBufferRenderVertices));word(r);word(g);word(b);word(a);mutation(2);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Observe position reads after the preceding color setter and its callbacks
+    event(6);word((uint32_t)(v-TempBufferRenderVertices));floating(x);floating(y);floating(z);v->setX(x);v->setY(y);v->setZ(z);
+}
+void *RwIm3DTransform(RwIm3DVertex *v,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Compare the complete typed native stream and exact transform flags before submission
+    event(7);transforms++;require(v==TempBufferRenderVertices && count<=16 && matrix==NULL);word(count);word(flags);for(unsigned i=0;i<count;i++)vertex(v[i]);mutation(4);snapshot();word(transformSuccess);return transformSuccess?v:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Borrow the actual mutable index array through the complete draw and nested callbacks
+    event(8);draws++;require(count>=2 && count<=30);word(type);word(count);for(int i=0;i<count;i++)word(indices[i]);mutation(5);for(int i=0;i<count;i++)word(indices[i]);snapshot();return TRUE;
+}
+RwBool RwIm3DEnd(void)
+{
+    // End only the original successful transform path without restoring extra states
+    event(9);ends++;snapshot();return TRUE;
+}
+static void corona(uint32 id,const CVector &position)
+{
+    // Compare the original shared local vector identity within each complete update lifetime
+    require(updateDepth>=0);if(!owners[updateDepth])owners[updateDepth]=&position;word(owners[updateDepth]==&position);word(id);floating(position.x);floating(position.y);floating(position.z);mutation(6,&position);floating(position.x);floating(position.y);floating(position.z);snapshot();
+}
+void CCoronas::RegisterCorona(uint32 id,uint8 r,uint8 g,uint8 b,uint8 a,const CVector &position,float size,float distance,uint8 type,int8 flare,uint8 reflection,uint8 los,uint8 streak,float angle,bool useNear,float nearDistance)
+{
+    // Compare every original corona argument including overload enum values and defaults
+    event(10);coronas++;word(r);word(g);word(b);word(a);floating(size);floating(distance);word(type);word(flare);word(reflection);word(los);word(streak);floating(angle);word(useNear);floating(nearDistance);corona(id,position);
+}
+void CCoronas::UpdateCoronaCoors(uint32 id,const CVector &position,float distance,float angle)
+{
+    // Compare the nonflashing coordinate update with the same original borrowed vector
+    event(11);coronas++;floating(distance);floating(angle);corona(id,position);
+}
+static void reset(unsigned seed)
+{
+    // Seed all actual fields and native vertices without invoking instrumented rendering operations
+    hook=0;triggered=false;cameraVisible=true;transformSuccess=true;CustomPipes::bRenderingEnvMap=false;activeRecord=0;Timer_timeMs=60001+seed*97;Clock_hours=23;CWeather::Foggyness=.1f;CWeather::CloudCoverage=.2f;CWeather::Rain=.3f;CTimeCycle::colors[0]=150;CTimeCycle::colors[1]=210;CTimeCycle::colors[2]=170;
+    for(int index=0;index<6;index++){
+        // Preserve independent stale and live positions across all sixteen slots
+        PlaneTrail t;for(int i=0;i<16;i++){t.m_pos[i].x=seed*.25f+index*101.f+i*3.f;t.m_pos[i].y=index*-29.f+i*5.f;t.m_pos[i].z=550.f+i;t.m_time[i]=(int32_t)(Timer_timeMs-1000-i*1500);}TestPt_Set(index,&t);
+    }
+    for(int i=0;i<32;i++)TestPt_SetIndex(i,initialIndices[i]);for(int i=0;i<512;i++){
+        // Include untouched UV values and native tail vertices in state comparisons
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.125f);v.setY(-i*.25f);v.setZ(17.f);v.setColor(13,27,41,55);v.setU(.25f);v.setV(.75f);
+    }TempBufferVerticesStored=17;TempBufferIndicesStored=31;
+}
+int main(void)
+{
+    // Observe static initialization before any explicit seeding of C or C++ trail records
+    TestPt_Indices(initialIndices);snapshot();reset(0);TestPt_InitOne(3);snapshot();TestPt_Init();snapshot();
+    const int32_t ages[]={-3000,-1,0,1,9999,10000,10001,29999,30000,30001,60000,60001};
+    for(int a=0;a<12;a++)for(int reflect=0;reflect<2;reflect++)for(int transform=0;transform<2;transform++){
+        // Exercise strict expiry/fade boundaries, zero entries and both transform outcomes
+        reset(a);CustomPipes::bRenderingEnvMap=reflect!=0;transformSuccess=transform!=0;PlaneTrail t=TestPt_Get(0);for(int i=0;i<16;i++)t.m_time[i]=(int32_t)(Timer_timeMs-ages[(a+i)%12]);t.m_time[5]=0;TestPt_Set(0,&t);renderOne(0,.73f);
+    }
+    const float visibility[]={-1.f,0.f,.0001f,.00908f,.0091f,.5f,1.f,2.f,4.f};
+    for(int v=0;v<9;v++)for(int visible=0;visible<2;visible++){
+        // Retain sphere rejection and integer-zero alpha before timestamp expiry processing
+        reset(v);cameraVisible=visible!=0;renderOne(0,visibility[v]);
+    }
+    const uint32_t times[]={0,1,1999,2000,2001,30000,30001,0x7fffffff,0x80000000U,0xfffffff0U};
+    for(int t=0;t<10;t++)for(int id=0;id<6;id++){
+        // Cover by-value aliases, descending shifts, zero timer and unsigned wraparound arithmetic
+        reset(t);Timer_timeMs=times[t];PlaneTrail before=TestPt_Get(id);before.m_time[0]=(int32_t)(Timer_timeMs-2000);TestPt_Set(id,&before);PlaneTrailVector position={-7.25f,13.5f,599.f};registration(position,id);Timer_timeMs++;registrations++;TestPt_RegisterAlias(id,(id+3)%16,id);snapshot();CVector actual(31.f,-47.f,611.f);registrations++;TestPt_RegisterVector(&actual,id);snapshot();renderOne(id,.67f);
+    }
+    for(int count=0;count<=16;count++){
+        // Verify exact zero/one/multiple-vertex transform gating and every indexed segment count
+        reset(count);PlaneTrail t=TestPt_Get(0);for(int i=0;i<16;i++)t.m_time[i]=i<count?(int32_t)Timer_timeMs:0;TestPt_Set(0,&t);renderOne(0,.7f);
+    }
+    for(int hour=0;hour<24;hour++)for(int blink=0;blink<2;blink++){
+        // Exercise every hour with both flash phases and all three procedural flight paths
+        reset(hour);Timer_timeMs=(hour*8001U & ~0x200U)+(blink?0x200:0);Clock_hours=hour;update();
+    }
+    const float weather[]={0.f,.25f,.9998f,.9999f,1.f,1.1f};
+    for(int fog=0;fog<6;fog++)for(int rain=0;rain<6;rain++)for(int skyValue=0;skyValue<3;skyValue++){
+        // Retain controller visibility threshold, sky maxima and complete six-record traversal
+        reset(fog);CWeather::Foggyness=weather[fog];CWeather::CloudCoverage=weather[(fog+2)%6];CWeather::Rain=weather[rain];CTimeCycle::colors[0]=skyValue*127;CTimeCycle::colors[1]=(2-skyValue)*101;CTimeCycle::colors[2]=skyValue==1?0:73;renders++;TestPt_Render();snapshot();
+    }
+    for(int h=1;h<=12;h++){
+        // Verify live records, indices, timer, weather, flags and nested vector ownership at callbacks
+        reset(h);hook=h;if(h>=6 && h<=9)update();else if(h==10){renders++;TestPt_Render();snapshot();}else renderOne(0,.71f);require(triggered);snapshot();
+    }
+    reset(0);
+    for(int frame=0;frame<900;frame++){
+        // Keep retained records across mixed registration, expiry, animation and reflection passes
+        Timer_timeMs+=(frame%7==0?2011:137);Clock_hours=(frame/17)%24;CustomPipes::bRenderingEnvMap=frame%5==0;CWeather::Foggyness=(frame%9)*.1f;CWeather::CloudCoverage=(frame%7)*.11f;CWeather::Rain=(frame%6)*.13f;CTimeCycle::colors[frame%3]=(frame*37)%256;transformSuccess=frame%11!=0;cameraVisible=frame%13!=0;PlaneTrailVector p={frame*.3f,-frame*.7f,510.f+frame%67};registration(p,frame%3);update();renders++;TestPt_Render();snapshot();if(frame%97==0){TestPt_Init();snapshot();}
+    }
+    require(states>3000 && transforms>100 && coronas>100 && draws==ends);printf("states=%u calls=%u registrations=%u updates=%u renders=%u queries=%u transforms=%u draws=%u coronas=%u hash=%016llx\n",states,calls,registrations,updates,renders,queries,transforms,draws,coronas,(unsigned long long)hash);
+}

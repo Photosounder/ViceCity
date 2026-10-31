@@ -1,5 +1,8 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 #include "Lights.h"
@@ -108,13 +111,13 @@ CObject::ProcessControl(void)
 		SetIsStatic(false);
 		ApplyMoveForce(impulse);
 		ApplyTurnForce(impulse, point);
-		float fTimeStep = Pow(0.97f, CTimer::GetTimeStep());
+		float fTimeStep = Pow(0.97f, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= fTimeStep;
 		m_vecTurnSpeed *= fTimeStep;
 	}
 	int16 mi = GetModelIndex();
 	if ((mi == MI_EXPLODINGBARREL || mi == MI_PETROLPUMP || mi == MI_PETROLPUMP2) && bHasBeenDamaged && bIsVisible
-		&& (CGeneral::GetRandomNumber() & 0x1F) == 10) {
+		&& (General_GetRandomNumber() & 0x1F) == 10) {
 		bExplosionProof = true;
 		bIsVisible = false;
 		bUsesCollision = false;
@@ -125,11 +128,11 @@ CObject::ProcessControl(void)
 		float fTurnForce = -(m_fTurnMass / 20.0f);
 		CPhysical::ApplyTurnForce(m_vecMoveSpeed * fTurnForce, -GetForward());
 		float fScalar = 1.0f - m_vecMoveSpeed.MagnitudeSqr() / 5.0f;
-		float fScalarTimed = Pow(fScalar, CTimer::GetTimeStep());
+		float fScalarTimed = Pow(fScalar, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= fScalarTimed;
 	}
 	if (mi == MI_BEACHBALL) {
-		float fTimeStep = Pow(0.95f, CTimer::GetTimeStep());
+		float fTimeStep = Pow(0.95f, (*Timer_GetTimeStep()));
 		float fPreviousVecSpeedMag = m_vecMoveSpeed.Magnitude2D();
 		m_vecMoveSpeed.x *= fTimeStep;
 		m_vecMoveSpeed.y *= fTimeStep;
@@ -156,35 +159,37 @@ CObject::ProcessControl(void)
 						PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 					}
 					m_vecTurnSpeed += CVector(
-						((CGeneral::GetRandomNumber() % 16) - 7) / 10.0f,
-						((CGeneral::GetRandomNumber() % 16) - 7) / 10.0f,
+						((General_GetRandomNumber() % 16) - 7) / 10.0f,
+						((General_GetRandomNumber() % 16) - 7) / 10.0f,
 						0.0f);
 					if (m_nBeachballBounces > 0) {
 						m_nBeachballBounces++;
 					}
 					if (m_nBeachballBounces > 0) {
 						sprintf(gString, "%d", m_nBeachballBounces);
-						CMoneyMessages::RegisterOne(GetPosition(), gString, 255, 50, 0, 0.6f, 0.5f);
-						CStats::RegisterHighestScore(3, m_nBeachballBounces);
+						// Enter the C money-message algorithm with the original arguments
+						MoneyMessages_RegisterOneLegacy(GetPosition(), gString, 255, 50, 0, 0.6f, 0.5f);
+						Stats_RegisterHighestScore(3, m_nBeachballBounces);
 					}
 				}
 			}
 			if (distance.z > -1.05 && distance.z < -0.6 && m_vecMoveSpeed.z < 0.0f && distance.Magnitude2D() < 0.9f) {
-				m_vecMoveSpeed.x += (CGeneral::GetRandomNumber() % 8 - 3) / 100.0f;
-				m_vecMoveSpeed.y += (CGeneral::GetRandomNumber() % 8 - 3) / 100.0f;
+				m_vecMoveSpeed.x += (General_GetRandomNumber() % 8 - 3) / 100.0f;
+				m_vecMoveSpeed.y += (General_GetRandomNumber() % 8 - 3) / 100.0f;
 				m_vecMoveSpeed.z = Max(m_vecMoveSpeed.z + 0.3f, 0.2f);
 				{
 					// Evaluate the game position once before passing its components to C
 					const CVector scriptPosition = GetPosition();
 					PlayOneShotScriptObject(SCRIPT_SOUND_HIT_BALL, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 				}
-				m_vecTurnSpeed.x += (CGeneral::GetRandomNumber() % 16 - 7) / 10.0f;
-				m_vecTurnSpeed.y += (CGeneral::GetRandomNumber() % 16 - 7) / 10.0f;
+				m_vecTurnSpeed.x += (General_GetRandomNumber() % 16 - 7) / 10.0f;
+				m_vecTurnSpeed.y += (General_GetRandomNumber() % 16 - 7) / 10.0f;
 				m_nBeachballBounces++;
 				m_nBeachballBounces = Min(m_nBeachballBounces, BEACHBALL_MAX_SCORE);
 				sprintf(gString, "%d", m_nBeachballBounces);
-				CMoneyMessages::RegisterOne(GetPosition(), gString, 255, 50, 0, 0.6f, 0.5f);
-				CStats::RegisterHighestScore(3, m_nBeachballBounces);
+				// Enter the C money-message algorithm with the original arguments
+				MoneyMessages_RegisterOneLegacy(GetPosition(), gString, 255, 50, 0, 0.6f, 0.5f);
+				Stats_RegisterHighestScore(3, m_nBeachballBounces);
 			}
 		}
 	}
@@ -215,15 +220,15 @@ CObject::Render(void)
 		mi->SetVehicleColour(m_colour1, m_colour2);
 	}
 
-	float red = (0.8f * CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed_Obj()) * 165.75f;
-	float green = (0.8f * CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen_Obj()) * 165.75f;
-	float blue = (0.8f * CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue_Obj()) * 165.75f;
+	float red = (0.8f * TimeCycle_GetDirectionalRed() + TimeCycle_GetAmbientRed_Obj()) * 165.75f;
+	float green = (0.8f * TimeCycle_GetDirectionalGreen() + TimeCycle_GetAmbientGreen_Obj()) * 165.75f;
+	float blue = (0.8f * TimeCycle_GetDirectionalBlue() + TimeCycle_GetAmbientBlue_Obj()) * 165.75f;
 
 	red = Clamp(red, 0.0f, 255.0f);
 	green = Clamp(green, 0.0f, 255.0f);
 	blue = Clamp(blue, 0.0f, 255.0f);
 
-	int alpha = CGeneral::GetRandomNumberInRange(196, 225);
+	int alpha = General_GetRandomNumberInRangeInt(196, 225);
 
 	RwRGBA color = { (uint8)red, (uint8)green, (uint8)blue, (uint8)alpha };
 
@@ -242,7 +247,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.75f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 1.2f * moveSpeedMagnitude, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 
 			float scaleMin = GetColModel()->boundingBox.min.y;
 
@@ -255,7 +260,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 
 			pos = scaleMin * 1.1f * this->GetForward() + 2.25f * this->GetRight() + this->GetPosition();
 
@@ -263,7 +268,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 
 			pos = scaleMin * 1.1f * this->GetForward() - 0.05f * this->GetRight() + this->GetPosition();
 
@@ -271,7 +276,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 		}
 	}
 
@@ -290,7 +295,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.75f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 1.2f * moveSpeedMagnitude, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 
 			float scaleMin = GetColModel()->boundingBox.min.y;
 
@@ -303,7 +308,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 
 			pos = scaleMin * 1.1f * this->GetForward() - 2.25f * this->GetRight() + this->GetPosition();
 
@@ -311,7 +316,7 @@ CObject::Render(void)
 			pos.z = fWaterLevel + 0.55f;
 
 			CParticle::AddParticle(PARTICLE_BOAT_SPLASH, pos, dir, nil, 0.9f, color,
-				CGeneral::GetRandomNumberInRange(0.0f, 0.4f), CGeneral::GetRandomNumberInRange(0.0f, 45.0f), 0, 0);
+				General_GetRandomNumberInRangeFloat(0.0f, 0.4f), General_GetRandomNumberInRangeFloat(0.0f, 45.0f), 0, 0);
 		}
 	}
 
@@ -322,14 +327,18 @@ bool
 CObject::SetupLighting(void)
 {
 	if (bRenderScorched) {
-		WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
 		return true;
 	} else if (bIsPickup) {
-		SetFullAmbient();
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_SetFullAmbient();
 		return true;
 	} else if (bIsWeapon) {
-		ActivateDirectional();
-		SetAmbientColoursForPedsCarsAndObjects();
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_ActivateDirectional();
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_SetAmbientColoursForPedsCarsAndObjects();
 		return true;
 	}
 	return false;
@@ -339,8 +348,10 @@ void
 CObject::RemoveLighting(bool reset)
 {
 	if (reset) {
-		SetAmbientColours();
-		DeActivateDirectional();
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_SetAmbientColours();
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_DeActivateDirectional();
 	}
 }
 
@@ -378,27 +389,27 @@ CObject::ObjectDamage(float amount)
 					break;
 				}
 				bRenderDamaged = true;
-				CVector min = 0.85f * GetColModel()->boundingBox.min;
-				CVector max = 0.85f * GetColModel()->boundingBox.max;
+				CVector min = 0.85f * CollisionVector_ToNative(GetColModel()->boundingBox.min);
+				CVector max = 0.85f * CollisionVector_ToNative(GetColModel()->boundingBox.max);
 				min.z = max.z;
 				min = GetMatrix() * min;
 				max = GetMatrix() * max;
 				CVector temp = (max - min) * 0.02f;
 				for (int32 i = 0; i < 50; i++) {
 					CVector vecDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f)
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f)
 					);
 					++nFrameGen;
 					int32 currentFrame = nFrameGen & 3;
 					CVector pos = min + temp * (float)i;
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					float fColorFactor = CGeneral::GetRandomNumberInRange(0.6f, 1.2f);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					float fColorFactor = General_GetRandomNumberInRangeFloat(0.6f, 1.2f);
 					RwRGBA color = debrisColor;
 					color.red *= fColorFactor;
 					color.green *= fColorFactor;
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-0.40f, 0.40f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeFloat(-0.40f, 0.40f);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, pos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
 				{
@@ -442,16 +453,16 @@ CObject::ObjectDamage(float amount)
 				const RwRGBA color = { 96, 48, 0, 255 };
 				for (int32 i = 0; i < 25; i++) {
 					CVector vecDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f) + fDirectionZ
 					);
 					++nFrameGen;
 					int32 currentFrame = nFrameGen & 3;
 					RwRGBA randomColor = color;
 					switch (m_nCollisionDamageEffect) {
 						case DAMAGE_EFFECT_SMASH_CARDBOARD_COMPLETELY: {
-							float fRandom = CGeneral::GetRandomNumberInRange(0.01f, 1.0f);
+							float fRandom = General_GetRandomNumberInRangeFloat(0.01f, 1.0f);
 							randomColor.red *= fRandom;
 							randomColor.green *= fRandom;
 							randomColor.blue *= fRandom;
@@ -463,8 +474,8 @@ CObject::ObjectDamage(float amount)
 							break;
 						}
 					}
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, randomColor, nRotationSpeed, 0, currentFrame, 0);
 				}
 				{
@@ -489,16 +500,16 @@ CObject::ObjectDamage(float amount)
 				CVector position = GetPosition();
 				for (int32 i = 0; i < 45; i++) {
 					CVector vecDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f) + fDirectionZ
 					);
 					++nFrameGen;
 					int32 currentFrame = nFrameGen & 3;
-					float fRandom = CGeneral::GetRandomNumberInRange(0.5f, 1.0f);
+					float fRandom = General_GetRandomNumberInRangeFloat(0.5f, 1.0f);
 					RwRGBA randomColor = { uint8(color.red * fRandom), uint8(color.green * fRandom), uint8(color.blue * fRandom), color.alpha };
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, randomColor, nRotationSpeed, 0, currentFrame, 0);
 				}
 				{
@@ -524,17 +535,17 @@ CObject::ObjectDamage(float amount)
 				const RwRGBA color2 = { 200, 200, 200, 255 };
 				for (int32 i = 0; i < 10; i++) {
 					CVector vecDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f) + fDirectionZ
 					);
 					++nFrameGen;
 					int32 currentFrame = nFrameGen & 3;
 					RwRGBA color = color2;
 					if (nFrameGen & 1)
 						color = color1;
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
 				if (m_nCollisionDamageEffect == DAMAGE_EFFECT_BURST_BEACHBALL) {
@@ -569,15 +580,15 @@ CObject::ObjectDamage(float amount)
 				SetTurnSpeed(0.0f, 0.0f, 0.0f);
 				for (int32 i = 0; i < 32; i++) {
 					CVector vecDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f) + fDirectionZ
 					);
 					++nFrameGen;
 					int32 currentFrame = nFrameGen & 3;
 					const RwRGBA &color = nFrameGen & 1 ? color1 : color2;
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, color, nRotationSpeed, 0, currentFrame, 0);
 				}
 				{
@@ -628,12 +639,12 @@ CObject::ObjectDamage(float amount)
 				}
 				for (int32 i = 0; i < 16; i++) {
 					CVector vecDir(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.15f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.15f) + fDirectionZ
 					);
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					++nFrameGen;
 					int32 nCurFrame = nFrameGen & 0x3;
 					CRGBA &selectedColor = nFrameGen & 0x1 ? possibleColor1 : possibleColor2;
@@ -647,7 +658,7 @@ CObject::ObjectDamage(float amount)
 						};
 						vecDir *= 0.5f;
 						CRGBA &secondParticleColor = secondParticleColors[nFrameGen & 3];
-						int32 nSecondRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+						int32 nSecondRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 						CParticle::AddParticle(PARTICLE_DEBRIS, vecPos, vecDir, nil, 0.1f, secondParticleColor, nSecondRotationSpeed, 0, 1, 0);
 					}
 				}
@@ -674,16 +685,16 @@ CObject::ObjectDamage(float amount)
 				float fRadius = GetColModel()->boundingSphere.radius;
 				for (int32 i = 0; i < 32; i++) {
 					CVector particleDir = CVector(
-						CGeneral::GetRandomNumberInRange(-0.25f, 0.25f),
-						CGeneral::GetRandomNumberInRange(-0.25f, 0.25f),
-						CGeneral::GetRandomNumberInRange(-0.05f, 0.05f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.25f, 0.25f),
+						General_GetRandomNumberInRangeFloat(-0.25f, 0.25f),
+						General_GetRandomNumberInRangeFloat(-0.05f, 0.05f) + fDirectionZ
 					);
 					CVector particlePos = vecPos;
-					particlePos.z += CGeneral::GetRandomNumberInRange(0.0f, 1.0f) * fRadius;
+					particlePos.z += General_GetRandomNumberInRangeFloat(0.0f, 1.0f) * fRadius;
 					++nFrameGen;
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					int32 nCurFrame = nFrameGen & 0x3;
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
 					RwRGBA& particleColor = nFrameGen & 1 ? primaryColor1 : primaryColor2;
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, particlePos, particleDir, nil, fSize, particleColor, nRotationSpeed, 0, nCurFrame, 0);
 					if ((i % 7) == 0) {
@@ -729,15 +740,15 @@ CObject::ObjectDamage(float amount)
 				}
 				for (int32 i = 0; i < 16; i++) {
 					CVector vecDir(
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(-0.35f, 0.35f),
-						CGeneral::GetRandomNumberInRange(0.10f, 0.25f) + fDirectionZ
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
+						General_GetRandomNumberInRangeFloat(0.10f, 0.25f) + fDirectionZ
 					);
 					++nFrameGen;
 					int32 nCurFrame = nFrameGen & 0x3;
 					CRGBA &selectedColor = nFrameGen & 0x1 ? possibleColor1 : possibleColor2;
-					float fSize = CGeneral::GetRandomNumberInRange(0.02f, 0.20f);
-					int32 nRotationSpeed = CGeneral::GetRandomNumberInRange(-40, 40);
+					float fSize = General_GetRandomNumberInRangeFloat(0.02f, 0.20f);
+					int32 nRotationSpeed = General_GetRandomNumberInRangeInt(-40, 40);
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS, vecPos, vecDir, nil, fSize, selectedColor, nRotationSpeed, 0, nCurFrame, 0);
 				}
 				if (m_nCollisionDamageEffect == DAMAGE_EFFECT_SMASH_BLACKBAG) {
@@ -917,4 +928,7 @@ IsObjectPointerValid(CObject *pObject)
 		return false;
 	return pObject->bIsBIGBuilding || pObject->m_entryInfoList.first;
 }
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

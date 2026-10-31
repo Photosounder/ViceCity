@@ -1,0 +1,104 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "shape.h"
+typedef int32_t int32;
+#include "maths.h"
+#include "rw-vector.h"
+#include "Vector.h"
+#include "Vector2D.h"
+@OWNER@
+@BRIDGE@
+static uint64_t digest=UINT64_C(1469598103934665603);
+static uint64_t groups;
+#ifdef CURVES_TRACE
+static FILE *trace;
+#endif
+static void word(uint32_t value)
+{
+#ifdef CURVES_TRACE
+    // Preserve each raw comparison word for diagnosis of a failed runtime pair
+    fwrite(&value,sizeof(value),1,trace);
+#endif
+    // Compare numeric bits exactly and keep NaN classification independent of compiler operand choices
+    if((value & UINT32_C(0x7f800000))==UINT32_C(0x7f800000) && (value & UINT32_C(0x007fffff)))value=UINT32_C(0x7fc00000);
+    digest^=value;digest*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Include signed zero and all finite or infinite result bits in the comparison
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static float real(uint32_t bits)
+{
+    // Construct precise float boundary inputs without arithmetic conversions
+    float value;memcpy(&value,&bits,4);return value;
+}
+static void require(bool ok,const char *message)
+{
+    // Fail an independent algorithm invariant before comparing hashes
+    if(!ok){fprintf(stderr,"%s\n",message);exit(1);}
+}
+static void observe(const CVector &vector)
+{
+    // Observe all input and output components after possible aliasing writes
+    floating(vector.x);floating(vector.y);floating(vector.z);
+}
+static void run(CVector a,CVector b,CVector da,CVector db,float between,int32_t time,unsigned position,unsigned direction)
+{
+    // Exercise both functions and retain the full vector state across output aliases
+    CVector vectors[]={a,b,da,db,CVector(37.f,41.f,43.f),CVector(-47.f,-53.f,-59.f)};
+    floating(TestCurves_Speed(vectors,vectors+1,da.x,da.y,db.x,db.y));
+    TestCurves_Point(vectors,vectors+1,vectors+2,vectors+3,between,time,vectors+position,vectors+direction);
+    for(const CVector &vector:vectors)observe(vector);++groups;
+}
+int main(void)
+{
+#ifdef CURVES_TRACE
+    // Open a separate diagnostic stream without changing the tested operations
+    trace=fopen(getenv("CURVES_TRACE"),"wb");require(trace!=NULL,"Trace file");
+#endif
+    // Check known planar distances and the exact direction dot-product threshold
+    CVector a(0.f,0.f,7.f),b(3.f,4.f,8.f),da(1.f,0.f,0.f),db(1.f,0.f,0.f),position,direction;
+    require(TestCurves_Speed(&a,&b,1.f,0.f,0.9f,0.f)==5.125f,"Dot threshold equality");
+    require(TestCurves_Speed(&a,&b,1.f,0.f,nextafterf(0.9f,1.f),0.f)==9.f,"Dot threshold upper branch");
+    b=CVector(10.f,0.f,8.f);TestCurves_Point(&a,&b,&da,&db,0.5f,2000,&position,&direction);
+    require(position.x==5.f && position.y==0.f && position.z==0.f && direction.x==5.f && direction.y==0.f && direction.z==0.f,"Straight curve");
+    // Check the two coefficient equalities that intentionally differ under FIX_BUGS
+    db=CVector(0.f,0.f,0.f);TestCurves_Point(&a,&b,&da,&db,1.f,2000,&position,&direction);
+#ifdef FIX_BUGS
+    require(position.x==12.5f && direction.x==6.25f,"Inclusive first coefficient boundary");
+#else
+    require(isnan(position.x) && isnan(direction.x),"Strict first coefficient boundary");
+#endif
+    da=CVector(0.f,0.f,0.f);db=CVector(1.f,0.f,0.f);TestCurves_Point(&a,&b,&da,&db,0.f,2000,&position,&direction);
+#ifdef FIX_BUGS
+    require(position.x==-2.5f && direction.x==6.25f,"Inclusive second coefficient boundary");
+#else
+    require(isnan(position.x) && isnan(direction.x),"Strict second coefficient boundary");
+#endif
+    // Compare finite varied curves, out-of-range interpolation, zero/negative times and all output aliases
+    for(uint32_t seed=0;seed<256;++seed)for(uint32_t pass=0;pass<256;++pass){
+        a=CVector((int)((seed*37+pass*11)%2049)-1024.f,(int)((seed*41+pass*13)%2049)-1024.f,(int)seed-128.f);
+        b=CVector((int)((seed*47+pass*17)%2049)-1024.f,(int)((seed*53+pass*19)%2049)-1024.f,(int)pass-128.f);
+        da=CVector(((int)(pass%17)-8)/8.f,((int)(seed%17)-8)/8.f,0.125f*seed);
+        db=CVector(((int)((pass+seed)%19)-9)/9.f,((int)((pass*seed)%19)-9)/9.f,-0.25f*pass);
+        float between=((int)(pass%25)-4)/16.f;int32_t time=(int32_t)((seed*113+pass*43)%6001)-3000;
+        run(a,b,da,db,between,time,pass%6,(pass/6)%6);
+    }
+    // Compare coincident points, zero directions, subnormals, signed zeros, infinities and NaNs
+    const uint32_t special[]={0,0x80000000,1,0x80000001,0x00800000,0x80800000,0x7f7fffff,0xff7fffff,0x7f800000,0xff800000,0x7fc00000};
+    for(uint32_t bits:special)for(unsigned mode=0;mode<12;++mode){
+        float value=real(bits);a=CVector(value,-value,value);b=CVector(mode%2?value:1.f,value,-value);
+        da=CVector(mode%3?1.f:value,mode%3?value:0.f,value);db=CVector(value,mode%4?1.f:0.f,-value);
+        run(a,b,da,db,mode/11.f,(int32_t)mode-6,mode%6,(mode+1)%6);
+        run(a,a,CVector(0.f,0.f,0.f),CVector(0.f,0.f,0.f),mode/11.f,(int32_t)mode-6,mode%6,mode%6);
+    }
+    printf("%016llx groups=%llu\n",(unsigned long long)digest,(unsigned long long)groups);
+#ifdef CURVES_TRACE
+    // Complete the diagnostic stream before the process exits
+    fclose(trace);
+#endif
+}

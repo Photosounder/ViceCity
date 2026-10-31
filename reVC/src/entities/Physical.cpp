@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "World.h"
 #include "General.h"
@@ -29,6 +31,8 @@ bool gGravityCheat;
 
 CPhysical::CPhysical(void)
 {
+	// Initialize sector membership at the former list constructor boundary
+	EntryInfoList_Init(&m_entryInfoList);
 	int i;
 
 #ifdef FIX_BUGS
@@ -87,7 +91,9 @@ CPhysical::CPhysical(void)
 
 CPhysical::~CPhysical(void)
 {
-	m_entryInfoList.Flush();
+	// Preserve the explicit flush followed by the former member destructor
+	EntryInfoList_Flush(&m_entryInfoList);
+	EntryInfoList_Destroy(&m_entryInfoList);
 }
 
 void
@@ -138,9 +144,9 @@ CPhysical::Add(void)
 			default:
 				assert(0);
 			}
-			CPtrNode *node = list->InsertItem(this);
+			CPtrNode *node = PtrList_InsertItem(list, this);
 			assert(node);
-			m_entryInfoList.InsertItem(list, node, s);
+			EntryInfoList_InsertItem(&m_entryInfoList, list, node, s);
 		}
 }
 
@@ -150,8 +156,8 @@ CPhysical::Remove(void)
 	CEntryInfoNode *node, *next;
 	for(node = m_entryInfoList.first; node; node = next){
 		next = node->next;
-		node->list->DeleteNode(node->listnode);
-		m_entryInfoList.DeleteNode(node);
+		PtrList_DeleteNode(node->list, node->listnode);
+		EntryInfoList_DeleteNode(&m_entryInfoList, node);
 	}
 }
 
@@ -204,14 +210,14 @@ CPhysical::RemoveAndAdd(void)
 			}
 			if(next){
 				// If we still have old nodes, use them
-				next->list->RemoveNode(next->listnode);
-				list->InsertNode(next->listnode);
+				PtrList_RemoveNode(next->list, next->listnode);
+				PtrList_InsertNode(list, next->listnode);
 				next->list = list;
 				next->sector = s;
 				next = next->next;
 			}else{
-				CPtrNode *node = list->InsertItem(this);
-				m_entryInfoList.InsertItem(list, node, s);
+				CPtrNode *node = PtrList_InsertItem(list, this);
+				EntryInfoList_InsertItem(&m_entryInfoList, list, node, s);
 			}
 		}
 
@@ -219,8 +225,8 @@ CPhysical::RemoveAndAdd(void)
 	CEntryInfoNode *node;
 	for(node = next; node; node = next){
 		next = node->next;
-		node->list->DeleteNode(node->listnode);
-		m_entryInfoList.DeleteNode(node);
+		PtrList_DeleteNode(node->list, node->listnode);
+		EntryInfoList_DeleteNode(&m_entryInfoList, node);
 	}
 }
 
@@ -231,21 +237,21 @@ CPhysical::GetBoundRect(void)
 	float radius;
 	center = GetBoundCentre();
 	radius = GetBoundRadius();
-	return CRect(center.x-radius, center.y-radius, center.x+radius, center.y+radius);
+	return Rect_Make(center.x-radius, center.y-radius, center.x+radius, center.y+radius);
 }
 
 void
 CPhysical::AddToMovingList(void)
 {
 	if (!bIsStaticWaitingForCollision)
-		m_movingListNode = CWorld::GetMovingEntityList().InsertItem(this);
+		m_movingListNode = PtrList_InsertItem(&CWorld::GetMovingEntityList(), this);
 }
 
 void
 CPhysical::RemoveFromMovingList(void)
 {
 	if(m_movingListNode){
-		CWorld::GetMovingEntityList().DeleteNode(m_movingListNode);
+		PtrList_DeleteNode(&CWorld::GetMovingEntityList(), m_movingListNode);
 		m_movingListNode = nil;
 	}
 }
@@ -266,7 +272,7 @@ CPhysical::AddCollisionRecord(CEntity *ent)
 	AddCollisionRecord_Treadable(ent);
 	this->bHasCollided = true;
 	ent->bHasCollided = true;
-	this->m_nLastTimeCollided = CTimer::GetTimeInMilliseconds();
+	this->m_nLastTimeCollided = (*Timer_GetTimeInMilliseconds());
 	if(IsVehicle() && ent->IsVehicle()){
 		if(((CVehicle*)this)->m_nAlarmState == -1)
 			((CVehicle*)this)->m_nAlarmState = 15000;
@@ -320,7 +326,7 @@ void
 CPhysical::PlacePhysicalRelativeToOtherPhysical(CPhysical *other, CPhysical *phys, CVector localPos)
 {
 	CVector worldPos = other->GetMatrix() * localPos;
-	float step = 0.9f * CTimer::GetTimeStep();
+	float step = 0.9f * (*Timer_GetTimeStep());
 	CVector pos = other->m_vecMoveSpeed*step + worldPos;
 
 	CWorld::Remove(phys);
@@ -410,7 +416,7 @@ CPhysical::ProcessControl(void)
 		   IsPed() && !bPedPhysics){
 			m_vecMoveSpeedAvg = (m_vecMoveSpeedAvg + m_vecMoveSpeed)/2.0f;
 			m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
-			float step = CTimer::GetTimeStep() * 0.003f;
+			float step = (*Timer_GetTimeStep()) * 0.003f;
 			if(m_vecMoveSpeedAvg.MagnitudeSqr() < step*step &&
 			   m_vecTurnSpeedAvg.MagnitudeSqr() < step*step){
 				m_nStaticFrames++;
@@ -459,7 +465,7 @@ CPhysical::ApplyMoveSpeed(void)
 	if(bIsFrozen)
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	else
-		GetMatrix().Translate(m_vecMoveSpeed * CTimer::GetTimeStep());
+		GetMatrix().Translate(m_vecMoveSpeed * (*Timer_GetTimeStep()));
 }
 
 void
@@ -470,7 +476,7 @@ CPhysical::ApplyTurnSpeed(void)
 	}else{
 		// Move the coordinate axes by their speed
 		// Note that this denormalizes the matrix
-		CVector turnvec = m_vecTurnSpeed*CTimer::GetTimeStep();
+		CVector turnvec = m_vecTurnSpeed*(*Timer_GetTimeStep());
 		GetRight() += CrossProduct(turnvec, GetRight());
 		GetForward() += CrossProduct(turnvec, GetForward());
 		GetUp() += CrossProduct(turnvec, GetUp());
@@ -510,7 +516,7 @@ CPhysical::ApplySpringCollision(float springConst, CVector &springDir, CVector &
 {
 	float compression = 1.0f - springRatio;
 	if(compression > 0.0f){
-		float step = Min(CTimer::GetTimeStep(), 3.0f);
+		float step = Min((*Timer_GetTimeStep()), 3.0f);
 		float impulse = -GRAVITY*m_fMass*step * springConst * compression * bias*2.0f;
 		ApplyMoveForce(springDir*impulse);
 		ApplyTurnForce(springDir*impulse, point);
@@ -519,18 +525,19 @@ CPhysical::ApplySpringCollision(float springConst, CVector &springDir, CVector &
 }
 
 bool
-CPhysical::ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CVector &forceDir)
+CPhysical::ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CColPoint &contact)
 {
+    // Update the actual contact normal before either force application
 	float compression = 1.0f - springRatio;
 	if(compression > 0.0f){
-		if(DotProduct(springDir, forceDir) > 0.0f)
-			forceDir *= -1.0f;
-		float step = Min(CTimer::GetTimeStep(), 3.0f);
+		if(DotProduct(springDir, CollisionVector_ToNative(contact.normal)) > 0.0f)
+			ColPoint_ReverseNormal(&contact);
+		float step = Min((*Timer_GetTimeStep()), 3.0f);
 		float impulse = GRAVITY*m_fMass*step * springConst * compression * bias*2.0f;
 		if(bIsHeavy)
 			impulse *= 0.75f;
-		ApplyMoveForce(forceDir*impulse);
-		ApplyTurnForce(forceDir*impulse, point);
+		ApplyMoveForce(CollisionVector_ToNative(contact.normal)*impulse);
+		ApplyTurnForce(CollisionVector_ToNative(contact.normal)*impulse, point);
 	}
 	return true;
 }
@@ -545,7 +552,7 @@ CPhysical::ApplySpringDampening(float damping, CVector &springDir, CVector &poin
 	if (speedB == 0.0f)
 		return true;
 #endif
-	float step = Min(CTimer::GetTimeStep(), 3.0f);
+	float step = Min((*Timer_GetTimeStep()), 3.0f);
 	float impulse = -damping * (speedA + speedB)/2.0f * m_fMass * step * 0.53f;
 	if(bIsHeavy)
 		impulse *= 2.0f;
@@ -579,20 +586,20 @@ CPhysical::ApplyGravity(void)
 		CColPoint point;
 		CEntity* entity;
 		if (CWorld::ProcessLineOfSight(GetPosition(), belowCar, point, entity, true, false, false, false, false, false))
-			surfaceUp = point.normal;
+			surfaceUp = CollisionVector_ToNative(point.normal);
 		else
 			surfaceUp = CVector(0.0f, 0.0f, 1.0f);
-		float t = Clamp(CTimer::GetTimeStep() * 0.5f, 0.05f, 0.8f);
+		float t = Clamp((*Timer_GetTimeStep()) * 0.5f, 0.05f, 0.8f);
 		gravityUp = gravityUp * (1.0f - t) + surfaceUp * t;
 		if (gravityUp.MagnitudeSqr() < 0.1f)
 			gravityUp = CVector(0.0f, 0.0f, 1.0f);
 		else
 			gravityUp.Normalise();
-		m_vecMoveSpeed -= GRAVITY * CTimer::GetTimeStep() * gravityUp;
+		m_vecMoveSpeed -= GRAVITY * (*Timer_GetTimeStep()) * gravityUp;
 		return;
 	}
 #endif
-	m_vecMoveSpeed.z -= GRAVITY * CTimer::GetTimeStep();
+	m_vecMoveSpeed.z -= GRAVITY * (*Timer_GetTimeStep());
 }
 
 void
@@ -613,15 +620,15 @@ CPhysical::ApplyAirResistance(void)
 		return;
 
 	if(m_fAirResistance > 0.1f){
-		float f = Pow(m_fAirResistance, CTimer::GetTimeStep());
+		float f = Pow(m_fAirResistance, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= f;
 		m_vecTurnSpeed *= f;
 	}else if(GetStatus() != STATUS_GHOST){ 
-		float f = Pow(1.0f/Abs(1.0f + m_fAirResistance*0.5f*m_vecMoveSpeed.MagnitudeSqr()), CTimer::GetTimeStep());
+		float f = Pow(1.0f/Abs(1.0f + m_fAirResistance*0.5f*m_vecMoveSpeed.MagnitudeSqr()), (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= f;
 		//rouz edit, this fixes spin decay depending on FPS
 		//m_vecTurnSpeed *= 0.99f;
-		m_vecTurnSpeed *= Pow(0.99f, CTimer::GetTimeStep());
+		m_vecTurnSpeed *= Pow(0.99f, (*Timer_GetTimeStep()));
 	}
 }
 
@@ -685,24 +692,24 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 	float speedA, speedB;
 	if(B->GetIsStatic() && !foo){
 		if(A->bPedPhysics){
-			speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
+			speedA = DotProduct(A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
 			if(speedA < 0.0f){
 				if(B->IsObject()){
 					impulseA = -speedA * A->m_fMass;
 					impulseB = impulseA;
 					if(impulseA > Bobj->m_fUprootLimit){
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, colpoint.point, false);
+							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
 						else if(!B->bInfiniteMass){
 							B->SetIsStatic(false);
 							CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
-							CStats::PropertyDestroyed += CGeneral::GetRandomNumberInRange(30, 60);
+							Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(30, 60);
 						}
 					}else{
 						if(IsGlass(B->GetModelIndex()))
 							CGlass::WindowRespondsToSoftCollision(B, impulseA);
 						if(!A->bInfiniteMass)
-							A->ApplyMoveForce(colpoint.GetNormal() * (1.0f + A->m_fElasticity) * impulseA);
+							A->ApplyMoveForce(CollisionVector_ToNative(*ColPoint_GetNormal(&colpoint)) * (1.0f + A->m_fElasticity) * impulseA);
 						return true;
 					}
 				}else if(!B->bInfiniteMass)
@@ -712,28 +719,28 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					impulseA = -speedA * A->m_fMass;
 					impulseB = 0.0f;
 					if(!A->bInfiniteMass)
-						A->ApplyMoveForce(colpoint.normal*(1.0f + A->m_fElasticity)*impulseA);
+						A->ApplyMoveForce(CollisionVector_ToNative(colpoint.normal)*(1.0f + A->m_fElasticity)*impulseA);
 					return true;
 				}
 			}
 		}else{
-			CVector pointposA = colpoint.point - A->GetPosition();
-			speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
+			CVector pointposA = CollisionVector_ToNative(colpoint.point) - A->GetPosition();
+			speedA = DotProduct(A->GetSpeed(pointposA), CollisionVector_ToNative(colpoint.normal));
 			if(speedA < 0.0f){
 				if(B->IsObject()){
 					if(A->bHasHitWall)
 						eA = -1.0f;
 					else
 						eA = -(1.0f + A->m_fElasticity);
-					impulseA = eA * speedA * A->GetMass(pointposA, colpoint.normal);
+					impulseA = eA * speedA * A->GetMass(pointposA, CollisionVector_ToNative(colpoint.normal));
 					impulseB = impulseA;
 
 					if(Bobj->m_nCollisionDamageEffect && impulseA > 20.0f){
 						Bobj->ObjectDamage(impulseA);
 						if(!B->bUsesCollision){
 							if(!A->bInfiniteMass){
-								A->ApplyMoveForce(colpoint.normal*0.2f*impulseA);
-								A->ApplyTurnForce(colpoint.normal*0.2f*impulseA, pointposA);
+								A->ApplyMoveForce(CollisionVector_ToNative(colpoint.normal)*0.2f*impulseA);
+								A->ApplyTurnForce(CollisionVector_ToNative(colpoint.normal)*0.2f*impulseA, pointposA);
 							}
 							return false;
 						}
@@ -742,7 +749,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					if((impulseA > Bobj->m_fUprootLimit || A->bIsStuck) &&
 					   !B->bInfiniteMass){
 						if(IsGlass(B->GetModelIndex()))
-							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, colpoint.point, false);
+							CGlass::WindowRespondsToCollision(B, impulseA, A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.point), false);
 						else
 							B->SetIsStatic(false);
 						int16 model = B->GetModelIndex();
@@ -750,14 +757,14 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 							CParticleObject::AddObject(POBJECT_FIRE_HYDRANT, B->GetPosition() - CVector(0.0f, 0.0f, 0.5f), true);
 							Bobj->bHasBeenDamaged = true;
 						}else if((model == MI_PARKINGMETER || model == MI_PARKINGMETER2) && !Bobj->bHasBeenDamaged){
-							CPickups::CreateSomeMoney(GetPosition(), CGeneral::GetRandomNumber()%100);
+							CPickups::CreateSomeMoney(GetPosition(), General_GetRandomNumber()%100);
 							Bobj->bHasBeenDamaged = true;
 						}else if(B->IsObject() && !IsExplosiveThingModel(model))
 							Bobj->bHasBeenDamaged = true;
 					}else{
 						if(IsGlass(B->GetModelIndex()))
 							CGlass::WindowRespondsToSoftCollision(B, impulseA);
-						CVector f = colpoint.GetNormal() * impulseA;
+						CVector f = CollisionVector_ToNative(*ColPoint_GetNormal(&colpoint)) * impulseA;
 						if(A->IsVehicle() && colpoint.normal.z < 0.7f)
 							f.z *= 0.3f;
 						if(!A->bInfiniteMass){
@@ -770,7 +777,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				}else if(!B->bInfiniteMass){
 					B->SetIsStatic(false);
 					CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
-					CStats::PropertyDestroyed += CGeneral::GetRandomNumberInRange(30, 60);
+					Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(30, 60);
 				}
 			}
 		}
@@ -785,9 +792,9 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 
 	if(A->bPedPhysics && B->bPedPhysics){
 		// negative if A is moving towards B
-		speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
+		speedA = DotProduct(A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
 		// positive if B is moving towards A
-		speedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
+		speedB = DotProduct(B->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
 
 		bool affectB = false;
 		float mA = A->m_fMass;
@@ -807,7 +814,7 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				eA = speedSum - (speedA - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			impulseA = (eA-speedA) * mA;
 			if(!A->bInfiniteMass)
-				A->ApplyMoveForce(colpoint.normal*impulseA);
+				A->ApplyMoveForce(CollisionVector_ToNative(colpoint.normal)*impulseA);
 			if(affectB && speedB < speedSum){
 				if(B->bHasHitWall)
 					eB = speedSum;
@@ -815,17 +822,17 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 					eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 				impulseB = -(eB-speedB) * mB;
 				if(!B->bInfiniteMass)
-					B->ApplyMoveForce(colpoint.normal*-impulseB);
+					B->ApplyMoveForce(CollisionVector_ToNative(colpoint.normal)*-impulseB);
 			}
 			return true;
 		}
 	}else if(A->bPedPhysics){
-		CVector pointposB = colpoint.point - B->GetPosition();
-		speedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
-		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
+		CVector pointposB = CollisionVector_ToNative(colpoint.point) - B->GetPosition();
+		speedA = DotProduct(A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
+		speedB = DotProduct(B->GetSpeed(pointposB), CollisionVector_ToNative(colpoint.normal));
 
 		float mA = A->m_fMass*massFactorA;
-		float mB = B->GetMassTweak(pointposB, colpoint.normal, massFactorB);
+		float mB = B->GetMassTweak(pointposB, CollisionVector_ToNative(colpoint.normal), massFactorB);
 		float speedSum;
 		if(foo)
 			speedSum = speedB;
@@ -842,8 +849,8 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			impulseA = (eA - speedA) * mA;
 			impulseB = -(eB - speedB) * mB;
-			CVector fA = colpoint.normal*(impulseA/massFactorA);
-			CVector fB = colpoint.normal*(-impulseB/massFactorB);
+			CVector fA = CollisionVector_ToNative(colpoint.normal)*(impulseA/massFactorA);
+			CVector fB = CollisionVector_ToNative(colpoint.normal)*(-impulseB/massFactorB);
 						// Suppress carrier self-collision impulses while the anchor carries the ped.
 			if(ispedcontactB){
 				impulseA = 0.0f;
@@ -862,11 +869,11 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			return true;
 		}
 	}else if(B->bPedPhysics){
-		CVector pointposA = colpoint.point - A->GetPosition();
-		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
-		speedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
+		CVector pointposA = CollisionVector_ToNative(colpoint.point) - A->GetPosition();
+		speedA = DotProduct(A->GetSpeed(pointposA), CollisionVector_ToNative(colpoint.normal));
+		speedB = DotProduct(B->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
 
-		float mA = A->GetMassTweak(pointposA, colpoint.normal, massFactorA);
+		float mA = A->GetMassTweak(pointposA, CollisionVector_ToNative(colpoint.normal), massFactorA);
 		float mB = B->m_fMass*massFactorB;
 		float speedSum = (mB*speedB + mA*speedA)/(mA + mB);
 		if(speedA < speedSum){
@@ -880,8 +887,8 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			impulseA = (eA - speedA) * mA;
 			impulseB = -(eB - speedB) * mB;
-			CVector fA = colpoint.normal*(impulseA/massFactorA);
-			CVector fB = colpoint.normal*(-impulseB/massFactorB);
+			CVector fA = CollisionVector_ToNative(colpoint.normal)*(impulseA/massFactorA);
+			CVector fB = CollisionVector_ToNative(colpoint.normal)*(-impulseB/massFactorB);
 						// Suppress carrier self-collision impulses while the anchor carries the ped.
 			if(ispedcontactA){
 				impulseA = 0.0f;
@@ -905,12 +912,12 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 			return true;
 		}
 	}else{
-		CVector pointposA = colpoint.point - A->GetPosition();
-		CVector pointposB = colpoint.point - B->GetPosition();
-		speedA = DotProduct(A->GetSpeed(pointposA), colpoint.normal);
-		speedB = DotProduct(B->GetSpeed(pointposB), colpoint.normal);
-		float mA = A->GetMassTweak(pointposA, colpoint.normal, massFactorA);
-		float mB = B->GetMassTweak(pointposB, colpoint.normal, massFactorB);
+		CVector pointposA = CollisionVector_ToNative(colpoint.point) - A->GetPosition();
+		CVector pointposB = CollisionVector_ToNative(colpoint.point) - B->GetPosition();
+		speedA = DotProduct(A->GetSpeed(pointposA), CollisionVector_ToNative(colpoint.normal));
+		speedB = DotProduct(B->GetSpeed(pointposB), CollisionVector_ToNative(colpoint.normal));
+		float mA = A->GetMassTweak(pointposA, CollisionVector_ToNative(colpoint.normal), massFactorA);
+		float mB = B->GetMassTweak(pointposB, CollisionVector_ToNative(colpoint.normal), massFactorB);
 		float speedSum = (mB*speedB + mA*speedA)/(mA + mB);
 		if(speedA < speedSum){
 			if(A->bHasHitWall)
@@ -923,8 +930,8 @@ CPhysical::ApplyCollision(CPhysical *B, CColPoint &colpoint, float &impulseA, fl
 				eB = speedSum - (speedB - speedSum) * (A->m_fElasticity+B->m_fElasticity)/2.0f;
 			impulseA = (eA - speedA) * mA;
 			impulseB = -(eB - speedB) * mB;
-			CVector fA = colpoint.normal*(impulseA/massFactorA);
-			CVector fB = colpoint.normal*(-impulseB/massFactorB);
+			CVector fA = CollisionVector_ToNative(colpoint.normal)*(impulseA/massFactorA);
+			CVector fB = CollisionVector_ToNative(colpoint.normal)*(-impulseB/massFactorB);
 			if(A->IsVehicle() && !A->bHasHitWall){
 				fA.x *= 1.4f;
 				fA.y *= 1.4f;
@@ -975,20 +982,20 @@ CPhysical::ApplyCollision(CColPoint &colpoint, float &impulse)
 {
 	float speed;
 	if(bPedPhysics){
-		speed = DotProduct(m_vecMoveSpeed, colpoint.normal);
+		speed = DotProduct(m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
 		if(speed < 0.0f){
 			impulse = -speed * m_fMass;
-			ApplyMoveForce(colpoint.normal*impulse);
+			ApplyMoveForce(CollisionVector_ToNative(colpoint.normal)*impulse);
 			return true;
 		}
 	}else{
-		CVector pointpos = colpoint.point - GetPosition();
-		speed = DotProduct(GetSpeed(pointpos), colpoint.normal);
+		CVector pointpos = CollisionVector_ToNative(colpoint.point) - GetPosition();
+		speed = DotProduct(GetSpeed(pointpos), CollisionVector_ToNative(colpoint.normal));
 
 		if(speed < 0.0f){
-			float mass = GetMass(pointpos, colpoint.normal);
+			float mass = GetMass(pointpos, CollisionVector_ToNative(colpoint.normal));
 			impulse = -(m_fElasticity + 1.0f) * speed * mass;
-			CVector f = colpoint.normal*impulse;
+			CVector f = CollisionVector_ToNative(colpoint.normal)*impulse;
 			if(IsVehicle()){
 				f.x *= 1.4f;
 				f.y *= 1.4f;
@@ -1013,12 +1020,12 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 	float normalSpeed;
 	CVector speed;
 	CVector vImpulse;
-	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(B, colpoint.point); // rouz edit (ChatGPT)
+	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(B, CollisionVector_ToNative(colpoint.point)); // rouz edit (ChatGPT)
 		// Resolve carrier obstacles using relative motion even when the vehicle is stuck or shifted
 	if (rouz.glue_on_vehs && IsPed() && B->IsVehicle() && !((CVehicle*)B)->IsBoat()) {
 		CPed *ped = (CPed*)this;
 		if ((ped->bIsStanding || ped->bWasStanding) && ped->m_pCurrentPhysSurface == B)
-			surfaceSpeed = ((CPhysical*)B)->GetSpeed(colpoint.point - B->GetPosition());
+			surfaceSpeed = ((CPhysical*)B)->GetSpeed(CollisionVector_ToNative(colpoint.point) - B->GetPosition());
 	}
 		CVector relativeMoveSpeed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
 
@@ -1026,20 +1033,20 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 		((CObject*)this)->m_nBeachballBounces = 0;
 
 	if(bPedPhysics){
-		normalSpeed = DotProduct(relativeMoveSpeed, colpoint.normal); // rouz edit (ChatGPT)
+		normalSpeed = DotProduct(relativeMoveSpeed, CollisionVector_ToNative(colpoint.normal)); // rouz edit (ChatGPT)
 		if(normalSpeed < 0.0f){
 			impulse = -normalSpeed * m_fMass;
-			ApplyMoveForce(colpoint.normal * impulse);
+			ApplyMoveForce(CollisionVector_ToNative(colpoint.normal) * impulse);
 			return true;
 		}
 	}else{
-		CVector pointpos = colpoint.point - GetPosition();
+		CVector pointpos = CollisionVector_ToNative(colpoint.point) - GetPosition();
 		speed = GetSpeed(pointpos) - surfaceSpeed; // rouz edit (ChatGPT)
-		normalSpeed = DotProduct(speed, colpoint.normal);
+		normalSpeed = DotProduct(speed, CollisionVector_ToNative(colpoint.normal));
 		if(normalSpeed < 0.0f){
 			int16 elasticityType = 0;
-			float mass = GetMass(pointpos, colpoint.normal);
-			float minspeed = GRAVITY * CTimer::GetTimeStep();
+			float mass = GetMass(pointpos, CollisionVector_ToNative(colpoint.normal));
+			float minspeed = GRAVITY * (*Timer_GetTimeStep());
 
 			if(IsObject())
 				elasticityType = 1;
@@ -1083,7 +1090,7 @@ CPhysical::ApplyCollisionAlt(CEntity *B, CColPoint &colpoint, float &impulse, CV
 				impulse = -(m_fElasticity + 1.0f) * normalSpeed * mass;
 
 			// ApplyMoveForce
-			vImpulse = colpoint.normal*impulse;
+			vImpulse = CollisionVector_ToNative(colpoint.normal)*impulse;
 			if(IsVehicle()){
 				if(!bHasHitWall ||
 				   !(m_vecMoveSpeed.MagnitudeSqr() > 0.1 || !(B->IsBuilding() || ((CPhysical*)B)->bInfiniteMass)))
@@ -1119,10 +1126,10 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 	CPhysical *A = this;
 
 	if(A->bPedPhysics && B->bPedPhysics){
-		normalSpeedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
-		normalSpeedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
-		vOtherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
-		vOtherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
+		normalSpeedA = DotProduct(A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
+		normalSpeedB = DotProduct(B->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
+		vOtherSpeedA = A->m_vecMoveSpeed - CollisionVector_ToNative(colpoint.normal)*normalSpeedA;
+		vOtherSpeedB = B->m_vecMoveSpeed - CollisionVector_ToNative(colpoint.normal)*normalSpeedB;
 
 		fOtherSpeedA = vOtherSpeedA.Magnitude();
 		fOtherSpeedB = vOtherSpeedB.Magnitude();
@@ -1138,7 +1145,7 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(fOtherSpeedA > speedSum){
 			impulseA = (speedSum - fOtherSpeedA) * A->m_fMass;
 			impulseB = (speedSum - fOtherSpeedB) * B->m_fMass;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep();
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep());
 			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
 #ifdef FIX_BUGS
 			if(impulseB > impulseLimit) impulseB = impulseLimit;
@@ -1152,13 +1159,13 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 	}else if(A->bPedPhysics){
 		if(B->IsVehicle())
 			return false;
-		CVector pointposB = colpoint.point - B->GetPosition();
+		CVector pointposB = CollisionVector_ToNative(colpoint.point) - B->GetPosition();
 		speedB = B->GetSpeed(pointposB);
 
-		normalSpeedA = DotProduct(A->m_vecMoveSpeed, colpoint.normal);
-		normalSpeedB = DotProduct(speedB, colpoint.normal);
-		vOtherSpeedA = A->m_vecMoveSpeed - colpoint.normal*normalSpeedA;
-		vOtherSpeedB = speedB - colpoint.normal*normalSpeedB;
+		normalSpeedA = DotProduct(A->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
+		normalSpeedB = DotProduct(speedB, CollisionVector_ToNative(colpoint.normal));
+		vOtherSpeedA = A->m_vecMoveSpeed - CollisionVector_ToNative(colpoint.normal)*normalSpeedA;
+		vOtherSpeedB = speedB - CollisionVector_ToNative(colpoint.normal)*normalSpeedB;
 
 		fOtherSpeedA = vOtherSpeedA.Magnitude();
 		fOtherSpeedB = vOtherSpeedB.Magnitude();
@@ -1174,7 +1181,7 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(fOtherSpeedA > speedSum){
 			impulseA = (speedSum - fOtherSpeedA) * A->m_fMass;
 			impulseB = (speedSum - fOtherSpeedB) * massB;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep();
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep());
 			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
 			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
@@ -1185,13 +1192,13 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 	}else if(B->bPedPhysics){
 		if(A->IsVehicle())
 			return false;
-		CVector pointposA = colpoint.point - A->GetPosition();
+		CVector pointposA = CollisionVector_ToNative(colpoint.point) - A->GetPosition();
 		speedA = A->GetSpeed(pointposA);
 
-		normalSpeedA = DotProduct(speedA, colpoint.normal);
-		normalSpeedB = DotProduct(B->m_vecMoveSpeed, colpoint.normal);
-		vOtherSpeedA = speedA - colpoint.normal*normalSpeedA;
-		vOtherSpeedB = B->m_vecMoveSpeed - colpoint.normal*normalSpeedB;
+		normalSpeedA = DotProduct(speedA, CollisionVector_ToNative(colpoint.normal));
+		normalSpeedB = DotProduct(B->m_vecMoveSpeed, CollisionVector_ToNative(colpoint.normal));
+		vOtherSpeedA = speedA - CollisionVector_ToNative(colpoint.normal)*normalSpeedA;
+		vOtherSpeedB = B->m_vecMoveSpeed - CollisionVector_ToNative(colpoint.normal)*normalSpeedB;
 
 		fOtherSpeedA = vOtherSpeedA.Magnitude();
 		fOtherSpeedB = vOtherSpeedB.Magnitude();
@@ -1207,7 +1214,7 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(fOtherSpeedA > speedSum){
 			impulseA = (speedSum - fOtherSpeedA) * massA;
 			impulseB = (speedSum - fOtherSpeedB) * B->m_fMass;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep();
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep());
 			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
 			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
@@ -1216,15 +1223,15 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 			return true;
 		}
 	}else{
-		CVector pointposA = colpoint.point - A->GetPosition();
-		CVector pointposB = colpoint.point - B->GetPosition();
+		CVector pointposA = CollisionVector_ToNative(colpoint.point) - A->GetPosition();
+		CVector pointposB = CollisionVector_ToNative(colpoint.point) - B->GetPosition();
 		speedA = A->GetSpeed(pointposA);
 		speedB = B->GetSpeed(pointposB);
 
-		normalSpeedA = DotProduct(speedA, colpoint.normal);
-		normalSpeedB = DotProduct(speedB, colpoint.normal);
-		vOtherSpeedA = speedA - colpoint.normal*normalSpeedA;
-		vOtherSpeedB = speedB - colpoint.normal*normalSpeedB;
+		normalSpeedA = DotProduct(speedA, CollisionVector_ToNative(colpoint.normal));
+		normalSpeedB = DotProduct(speedB, CollisionVector_ToNative(colpoint.normal));
+		vOtherSpeedA = speedA - CollisionVector_ToNative(colpoint.normal)*normalSpeedA;
+		vOtherSpeedB = speedB - CollisionVector_ToNative(colpoint.normal)*normalSpeedB;
 
 		fOtherSpeedA = vOtherSpeedA.Magnitude();
 		fOtherSpeedB = vOtherSpeedB.Magnitude();
@@ -1241,7 +1248,7 @@ CPhysical::ApplyFriction(CPhysical *B, float adhesiveLimit, CColPoint &colpoint)
 		if(fOtherSpeedA > speedSum){
 			impulseA = (speedSum - fOtherSpeedA) * massA;
 			impulseB = (speedSum - fOtherSpeedB) * massB;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep();
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep());
 			if(impulseA < -impulseLimit) impulseA = -impulseLimit;
 			if(impulseB > impulseLimit) impulseB = impulseLimit;
 			A->ApplyFrictionMoveForce(frictionDir*impulseA);
@@ -1258,7 +1265,7 @@ bool
 CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surface) // rouz edit (ChatGPT)
 {
 	CVector speed;
-	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(surface, colpoint.point); // rouz edit (ChatGPT)
+	CVector surfaceSpeed = GetKinematicCollisionSurfaceSpeed(surface, CollisionVector_ToNative(colpoint.point)); // rouz edit (ChatGPT)
 	float normalSpeed;
 	CVector vOtherSpeed;
 	float fOtherSpeed;
@@ -1268,8 +1275,8 @@ CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surf
 
 	if(bPedPhysics){
 		speed = m_vecMoveSpeed - surfaceSpeed; // rouz edit (ChatGPT)
-		normalSpeed = DotProduct(speed, colpoint.normal); // rouz edit (ChatGPT)
-		vOtherSpeed = speed - colpoint.normal*normalSpeed; // rouz edit (ChatGPT)
+		normalSpeed = DotProduct(speed, CollisionVector_ToNative(colpoint.normal)); // rouz edit (ChatGPT)
+		vOtherSpeed = speed - CollisionVector_ToNative(colpoint.normal)*normalSpeed; // rouz edit (ChatGPT)
 
 		fOtherSpeed = vOtherSpeed.Magnitude();
 		if(fOtherSpeed > 0.0f){
@@ -1282,17 +1289,17 @@ CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surf
 			// not really impulse but speed
 			// maybe use ApplyFrictionMoveForce instead?
 			fImpulse = -fOtherSpeed;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep() / m_fMass;
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep()) / m_fMass;
 			if(fImpulse < -impulseLimit) fImpulse = -impulseLimit;
 			CVector vImpulse = frictionDir*fImpulse;
 			m_vecMoveFriction += CVector(vImpulse.x, vImpulse.y, 0.0f);
 			return true;
 		}
 	}else{
-		CVector pointpos = colpoint.point - GetPosition();
+		CVector pointpos = CollisionVector_ToNative(colpoint.point) - GetPosition();
 		speed = GetSpeed(pointpos) - surfaceSpeed; // rouz edit (ChatGPT)
-		normalSpeed = DotProduct(speed, colpoint.normal);
-		vOtherSpeed = speed - colpoint.normal*normalSpeed;
+		normalSpeed = DotProduct(speed, CollisionVector_ToNative(colpoint.normal));
+		vOtherSpeed = speed - CollisionVector_ToNative(colpoint.normal)*normalSpeed;
 
 		fOtherSpeed = vOtherSpeed.Magnitude();
 		if(fOtherSpeed > 0.0f){
@@ -1303,17 +1310,17 @@ CPhysical::ApplyFriction(float adhesiveLimit, CColPoint &colpoint, CEntity *surf
 			frictionDir = vOtherSpeed * (1.0f/fOtherSpeed);
 #endif
 			fImpulse = -fOtherSpeed * m_fMass;
-			impulseLimit = adhesiveLimit*CTimer::GetTimeStep() * 1.5;
+			impulseLimit = adhesiveLimit*(*Timer_GetTimeStep()) * 1.5;
 			if(fImpulse < -impulseLimit) fImpulse = -impulseLimit;
 			ApplyFrictionMoveForce(frictionDir*fImpulse);
 			ApplyFrictionTurnForce(frictionDir*fImpulse, pointpos);
 
 			if(fOtherSpeed > 0.1f &&
 			   colpoint.surfaceB != SURFACE_GRASS && colpoint.surfaceB != SURFACE_MUD_DRY &&
-			   CSurfaceTable::GetAdhesionGroup(colpoint.surfaceA) == ADHESIVE_HARD){
+			   SurfaceTable_GetAdhesionGroup(colpoint.surfaceA) == ADHESIVE_HARD){ // rouz edit (ChatGPT)
 				CVector v = frictionDir * fOtherSpeed * 0.25f;
 				for(int i = 0; i < 4; i++)
-					CParticle::AddParticle(PARTICLE_SPARK_SMALL, colpoint.point, v);
+					CParticle::AddParticle(PARTICLE_SPARK_SMALL, CollisionVector_ToNative(colpoint.point), v);
 			}
 			return true;
 		}
@@ -1388,7 +1395,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 						Aobj->m_pCollidingEntity = nil;
 				}else if(Aobj->m_pCollidingEntity != B){
 					CMatrix inv;
-					CVector size = CModelInfo::GetColModel(A->GetModelIndex())->boundingBox.GetSize();
+					CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
 					size = A->GetMatrix() * size;
 					if(size.z < B->GetPosition().z ||
 					   (Invert(B->GetMatrix(), inv) * size).z < 0.0f){
@@ -1406,7 +1413,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 						Bobj->m_pCollidingEntity = nil;
 				}else if(Bobj->m_pCollidingEntity != A){
 					CMatrix inv;
-					CVector size = CModelInfo::GetColModel(B->GetModelIndex())->boundingBox.GetSize();
+					CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
 					size = B->GetMatrix() * size;
 					if(size.z < A->GetPosition().z ||
 					   (Invert(A->GetMatrix(), inv) * size).z < 0.0f)
@@ -1434,43 +1441,43 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 
 			mostColliding = 0;
 			for(j = 1; j < numCollisions; j++)
-				if (colpoints[j].GetDepth() > colpoints[mostColliding].GetDepth())
+				if (ColPoint_GetDepth(&colpoints[j]) > ColPoint_GetDepth(&colpoints[mostColliding]))
 					mostColliding = j;
 
 			if(CWorld::bSecondShift)
 				for(j = 0; j < numCollisions; j++)
-					shift += colpoints[j].GetNormal() * colpoints[j].GetDepth() * 1.5f / numCollisions;
+					shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[j])) * ColPoint_GetDepth(&colpoints[j]) * 1.5f / numCollisions;
 			else
 				for(j = 0; j < numCollisions; j++)
-					shift += colpoints[j].GetNormal() * colpoints[j].GetDepth() * 1.2f / numCollisions;
+					shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[j])) * ColPoint_GetDepth(&colpoints[j]) * 1.2f / numCollisions;
 
 			if(A->IsVehicle() && B->IsVehicle()){
 				CVector dir = A->GetPosition() - B->GetPosition();
 				dir.Normalise();
 				if(dir.z < 0.0f && dir.z < A->GetForward().z && dir.z < A->GetRight().z)
 					dir.z = Min(0.0f, Min(A->GetForward().z, A->GetRight().z));
-				shift += dir * colpoints[mostColliding].GetDepth() * 0.5f;
+				shift += dir * ColPoint_GetDepth(&colpoints[mostColliding]) * 0.5f;
 			}else if(A->IsPed() && B->IsVehicle() && ((CVehicle*)B)->IsBoat()){
-				CVector dir = colpoints[mostColliding].GetNormal();
+				CVector dir = CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding]));
 				float f = Min(Abs(dir.z), 0.9f);
 				dir.z = 0.0f;
 				dir.Normalise();
-				shift += dir * colpoints[mostColliding].GetDepth() / (1.0f - f);
+				shift += dir * ColPoint_GetDepth(&colpoints[mostColliding]) / (1.0f - f);
 				boat = B;
 			}else if(B->IsPed() && A->IsVehicle() && ((CVehicle*)A)->IsBoat()){
-				CVector dir = colpoints[mostColliding].GetNormal() * -1.0f;
+				CVector dir = CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding])) * -1.0f;
 				float f = Min(Abs(dir.z), 0.9f);
 				dir.z = 0.0f;
 				dir.Normalise();
-				B->GetMatrix().Translate(dir * colpoints[mostColliding].GetDepth() / (1.0f - f));
+				B->GetMatrix().Translate(dir * ColPoint_GetDepth(&colpoints[mostColliding]) / (1.0f - f));
 				// BUG? how can that ever happen? A is a Ped
 				if(B->IsVehicle())
 					B->ProcessEntityCollision(A, colpoints);
 			}else{
 				if(CWorld::bSecondShift)
-					shift += colpoints[mostColliding].GetNormal() * colpoints[mostColliding].GetDepth() * 0.4f;
+					shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding])) * ColPoint_GetDepth(&colpoints[mostColliding]) * 0.4f;
 				else
-					shift += colpoints[mostColliding].GetNormal() * colpoints[mostColliding].GetDepth() * 0.2f;
+					shift += CollisionVector_ToNative(*ColPoint_GetNormal(&colpoints[mostColliding])) * ColPoint_GetDepth(&colpoints[mostColliding]) * 0.2f;
 			}
 
 			doShift = true;
@@ -1543,10 +1550,10 @@ collision:
 				continue;
 
 			if(impulseA > A->m_fDamageImpulse)
-				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 			if(impulseB > B->m_fDamageImpulse)
-				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
@@ -1565,17 +1572,17 @@ collision:
 				continue;
 
 			if(impulseA > A->m_fDamageImpulse)
-				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 			if(impulseB > B->m_fDamageImpulse)
-				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+			if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 				A->bHasContacted = true;
 				B->bHasContacted = true;
 			}
@@ -1598,17 +1605,17 @@ collision:
 				continue;
 
 			if(impulseA > A->m_fDamageImpulse)
-				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 			if(impulseB > B->m_fDamageImpulse)
-				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+			if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 				A->bHasContacted = true;
 				B->bHasContacted = true;
 			}
@@ -1625,17 +1632,17 @@ collision:
 				continue;
 
 			if(impulseA > A->m_fDamageImpulse)
-				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+				A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 			if(impulseB > B->m_fDamageImpulse)
-				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+				B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 			float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 			float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 			DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-			if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+			if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 				A->bHasContacted = true;
 				B->bHasContacted = true;
 			}
@@ -1730,7 +1737,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						skipCollision = true;
 					else if(Aobj->m_nCollisionDamageEffect < DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CModelInfo::GetColModel(A->GetModelIndex())->boundingBox.GetSize();
+						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
 						size = A->GetMatrix() * size;
 						if(size.z < B->GetPosition().z ||
 						   (Invert(B->GetMatrix(), inv) * size).z < 0.0f){
@@ -1749,7 +1756,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						skipCollision = true;
 					else if(Bobj->m_nCollisionDamageEffect < DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CModelInfo::GetColModel(B->GetModelIndex())->boundingBox.GetSize();
+						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
 						size = B->GetMatrix() * size;
 						if(size.z < A->GetPosition().z ||
 						   (Invert(A->GetMatrix(), inv) * size).z < 0.0f){
@@ -1809,9 +1816,9 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						if(A->IsVehicle()){
 							if(!(((CVehicle*)A)->IsBoat() && aColPoints[i].surfaceB == SURFACE_WOOD_SOLID) &&
 							   impulseA > A->m_fDamageImpulse)
-								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
-							if(CSurfaceTable::GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND)
+							if(SurfaceTable_GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND) // rouz edit (ChatGPT)
 								aColPoints[i].surfaceB = SURFACE_SAND;
 
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
@@ -1826,7 +1833,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 
 						}else{
 							if(impulseA > A->m_fDamageImpulse)
-								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
 							float moveSpeedDiff = A->m_vecMoveSpeed.MagnitudeSqr();
@@ -1841,15 +1848,15 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 
 						numResponses++;
 						if(impulseA > maxImpulseA) maxImpulseA = impulseA;
-						float adhesion = CSurfaceTable::GetAdhesiveLimit(aColPoints[i]) / numCollisions;
+						float adhesion = SurfaceTable_GetAdhesiveLimit(&(aColPoints[i])) / numCollisions; // rouz edit (ChatGPT)
 
 						if(A->IsVehicle()){
 							if(((CVehicle*)A)->IsBoat() && aColPoints[i].surfaceB == SURFACE_WOOD_SOLID)
 								adhesion = 0.0f;
 							else if(impulseA > A->m_fDamageImpulse)
-								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
-							if(CSurfaceTable::GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND)
+							if(SurfaceTable_GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND) // rouz edit (ChatGPT)
 								aColPoints[i].surfaceB = SURFACE_SAND;
 
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
@@ -1867,8 +1874,8 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 								adhesion *= 0.2f;
 							else if(((CVehicle*)A)->IsBoat()){
 								if(aColPoints[i].normal.z > 0.6f){
-									if(CSurfaceTable::GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_LOOSE ||
-									   CSurfaceTable::GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND)
+									if(SurfaceTable_GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_LOOSE || // rouz edit (ChatGPT)
+									   SurfaceTable_GetAdhesionGroup(aColPoints[i].surfaceB) == ADHESIVE_SAND) // rouz edit (ChatGPT)
 										adhesion *= 3.0f;
 								}else
 									adhesion = 0.0f;
@@ -1880,7 +1887,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 								adhesion *= Min(5.0f, 0.03f*impulseA + 1.0f);
 						}else{
 							if(impulseA > A->m_fDamageImpulse)
-								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+								A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 							float turnSpeedDiff = A->m_vecTurnSpeed.MagnitudeSqr();
 							float moveSpeedDiff = A->m_vecMoveSpeed.MagnitudeSqr();
@@ -1932,10 +1939,10 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						if(impulseB > maxImpulseB) maxImpulseB = impulseB;
 
 						if(impulseA > A->m_fDamageImpulse)
-							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 						if(impulseB > B->m_fDamageImpulse)
-							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
@@ -1957,17 +1964,17 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						if(impulseB > maxImpulseB) maxImpulseB = impulseB;
 
 						if(impulseA > A->m_fDamageImpulse)
-							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 						if(impulseB > B->m_fDamageImpulse)
-							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+						if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 							A->bHasContacted = true;
 							B->bHasContacted = true;
 						}
@@ -1993,17 +2000,17 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						if(impulseB > maxImpulseB) maxImpulseB = impulseB;
 
 						if(impulseA > A->m_fDamageImpulse)
-							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 						if(impulseB > B->m_fDamageImpulse)
-							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+						if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 							A->bHasContacted = true;
 							B->bHasContacted = true;
 						}
@@ -2023,17 +2030,17 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						if(impulseB > maxImpulseB) maxImpulseB = impulseB;
 
 						if(impulseA > A->m_fDamageImpulse)
-							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, aColPoints[i].normal);
+							A->SetDamagedPieceRecord(aColPoints[i].pieceA, impulseA, B, CollisionVector_ToNative(aColPoints[i].normal));
 
 						if(impulseB > B->m_fDamageImpulse)
-							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, aColPoints[i].normal);
+							B->SetDamagedPieceRecord(aColPoints[i].pieceB, impulseB, A, CollisionVector_ToNative(aColPoints[i].normal));
 
 						float turnSpeedDiff = (B->m_vecTurnSpeed - A->m_vecTurnSpeed).MagnitudeSqr();
 						float moveSpeedDiff = (B->m_vecMoveSpeed - A->m_vecMoveSpeed).MagnitudeSqr();
 
 						DMAudio_ReportCollision(A, B, aColPoints[i].surfaceA, aColPoints[i].surfaceB, impulseA, Max(turnSpeedDiff, moveSpeedDiff));
 
-						if(A->ApplyFriction(B, CSurfaceTable::GetAdhesiveLimit(aColPoints[i])/numCollisions, aColPoints[i])){
+						if(A->ApplyFriction(B, SurfaceTable_GetAdhesiveLimit(&(aColPoints[i]))/numCollisions, aColPoints[i])){ // rouz edit (ChatGPT)
 							A->bHasContacted = true;
 							B->bHasContacted = true;
 						}
@@ -2052,7 +2059,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						Bobj->ObjectDamage(maxImpulseB);
 					else if(Bobj->m_nCollisionDamageEffect >= DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CModelInfo::GetColModel(B->GetModelIndex())->boundingBox.GetSize();
+						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
 						size = B->GetMatrix() * size;
 						if(size.z < A->GetPosition().z ||
 						   (Invert(A->GetMatrix(), inv) * size).z < 0.0f)
@@ -2067,7 +2074,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 					else if(Bobj->m_nCollisionDamageEffect >= DAMAGE_EFFECT_SMASH_COMPLETELY){
 #endif
 						CMatrix inv;
-						CVector size = CModelInfo::GetColModel(A->GetModelIndex())->boundingBox.GetSize();
+						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
 						size = A->GetMatrix() * size;
 						if(size.z < B->GetPosition().z ||
 						   (Invert(B->GetMatrix(), inv) * size).z < 0.0f)
@@ -2132,8 +2139,8 @@ CPhysical::ProcessShift(void)
 		CPhysical *surf;
 		if(bHasHitWall && (IsPed() && (surf = ((CPed*)this)->m_pCurrentPhysSurface, surf == nil || !surf->bInfiniteMass || surf->m_phy_flagA08) ||
 		   CWorld::bSecondShift)){
-			m_vecMoveSpeed *= Pow(PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
-			m_vecTurnSpeed *= Pow(PHYSICAL_SHIFT_SPEED_DAMP, CTimer::GetTimeStep());
+			m_vecMoveSpeed *= Pow(PHYSICAL_SHIFT_SPEED_DAMP, (*Timer_GetTimeStep()));
+			m_vecTurnSpeed *= Pow(PHYSICAL_SHIFT_SPEED_DAMP, (*Timer_GetTimeStep()));
 		}
 
 		CMatrix matrix(GetMatrix());
@@ -2222,11 +2229,11 @@ CPhysical::ProcessCollision(void)
 	CMatrix savedMatrix(GetMatrix());
 	float savedElasticity = m_fElasticity;
 	CVector savedMoveSpeed = m_vecMoveSpeed;
-	float savedTimeStep = CTimer::GetTimeStep();
+	float savedTimeStep = (*Timer_GetTimeStep());
 
 	int8 n = 1;	// The number of steps we divide the time step into
 	float step = 0.0f;	// divided time step
-	float distSq = m_vecMoveSpeed.MagnitudeSqr() * sq(CTimer::GetTimeStep());
+	float distSq = m_vecMoveSpeed.MagnitudeSqr() * sq((*Timer_GetTimeStep()));
 
 	if(IsPed() && (distSq >= sq(0.3f) || ped->IsPlayer())){
 		if(ped->IsPlayer()){
@@ -2246,10 +2253,10 @@ CPhysical::ProcessCollision(void)
 			n = distSq > 0.32f ? NUMSTEPS(0.3f) : NUMSTEPS(0.4f);
 		step = savedTimeStep / n;
 
-		CVector bbox = GetColModel()->boundingBox.GetSize();
-		float relDistX = Abs(DotProduct(m_vecMoveSpeed, GetRight())) * CTimer::GetTimeStep() / bbox.x;
-		float relDistY = Abs(DotProduct(m_vecMoveSpeed, GetForward())) * CTimer::GetTimeStep() / bbox.y;
-		float relDistZ = Abs(DotProduct(m_vecMoveSpeed, GetUp())) * CTimer::GetTimeStep() / bbox.z;
+		CVector bbox = CollisionVector_ToNative(Box_GetSize(&GetColModel()->boundingBox));
+		float relDistX = Abs(DotProduct(m_vecMoveSpeed, GetRight())) * (*Timer_GetTimeStep()) / bbox.x;
+		float relDistY = Abs(DotProduct(m_vecMoveSpeed, GetForward())) * (*Timer_GetTimeStep()) / bbox.y;
+		float relDistZ = Abs(DotProduct(m_vecMoveSpeed, GetUp())) * (*Timer_GetTimeStep()) / bbox.z;
 		if(Max(relDistX, Max(relDistY, relDistZ)) < 1.0f){
 			// check if we can get away with simplified processing
 
@@ -2303,7 +2310,7 @@ CPhysical::ProcessCollision(void)
 			speedDown = Multiply3x3(GetMatrix(), speedDown);
 			speedUp = GetSpeed(speedUp);
 			speedDown = GetSpeed(speedDown);
-			distSq = Max(speedUp.MagnitudeSqr(), speedDown.MagnitudeSqr()) * sq(CTimer::GetTimeStep());
+			distSq = Max(speedUp.MagnitudeSqr(), speedDown.MagnitudeSqr()) * sq((*Timer_GetTimeStep()));
 			if(distSq >= sq(0.3f)){
 				n = NUMSTEPS(0.3f);
 				step = savedTimeStep / n;
@@ -2327,7 +2334,7 @@ CPhysical::ProcessCollision(void)
 	}
 
 	for(i = 1; i < n; i++){
-		CTimer::SetTimeStep(i * step);
+		Timer_SetTimeStep(i * step);
 		ApplyMoveSpeed();
 		ApplyTurnSpeed();
 				// Carry standing peds through each vehicle collision substep.
@@ -2340,7 +2347,7 @@ CPhysical::ProcessCollision(void)
 			   ped->bIsStanding)
 				savedMatrix.GetPosition().z = GetPosition().z;
 			GetMatrix() = savedMatrix;
-			CTimer::SetTimeStep(savedTimeStep);
+			Timer_SetTimeStep(savedTimeStep);
 						// Return carried peds when this substep collision rolls the vehicle back.
 			if(IsVehicle())
 				ResyncPedsCarriedByVehicle(this);
@@ -2352,7 +2359,7 @@ CPhysical::ProcessCollision(void)
 		   ped->bIsStanding)
 			savedMatrix.GetPosition().z = GetPosition().z;
 		GetMatrix() = savedMatrix;
-		CTimer::SetTimeStep(savedTimeStep);
+		Timer_SetTimeStep(savedTimeStep);
 				// Return carried peds after the temporary vehicle substep probe.
 		if(IsVehicle())
 			ResyncPedsCarriedByVehicle(this);
@@ -2408,5 +2415,7 @@ CPhysical::ProcessCollision(void)
 	m_fElasticity = savedElasticity;
 	RemoveAndAdd();
 }
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)

@@ -1,52 +1,36 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "ShadowCamera.h"
-
-class CCutsceneShadow
-{
-public:
-	enum
-	{
-		RASTER = 0,
-		RESAMPLE,
-		BLUR,
-		GRADIENT,
-	};
-
-	CShadowCamera m_Camera;
-	bool          m_bResample;
-	CShadowCamera m_ResampleCamera;
-	int32         m_nBlurPasses;
-	CShadowCamera m_BlurCamera;
-	bool          m_bGradient;
-	CShadowCamera m_GradientCamera;
-	
-	union
-	{
-		RwObject *m_pObject;
-		RpAtomic *m_pAtomic;
-		RpClump  *m_pClump;
-	};
-	
-	int32    m_nRwObjectType;
-	RpLight *m_pLight;
-	RwSphere m_BoundingSphere;
-	RwSphere m_BaseSphere;
-	
-	CCutsceneShadow();
-	~CCutsceneShadow();
-	
-	RwSphere GetBaseSphere()
-	{
-		return m_BaseSphere;
-	}
-
-	bool Create(RwObject *object, int32 rasterSize, bool resample, int32 blurPasses, bool gradient);
-	RwFrame *SetLightProperties(float angleY, float angleX, bool setLight);
-	bool IsInitialized();
-	void Destroy();
-	RwRaster *Update();
-	RwTexture *UpdateForCutscene();
-	CShadowCamera *GetShadowCamera(int32 camType = RASTER);
-	RwTexture *GetShadowRwTexture();
-	void DrawBorderAroundTexture(RwRGBA  const& color);
-};
+enum {CUTSCENE_SHADOW_RASTER,CUTSCENE_SHADOW_RESAMPLE,CUTSCENE_SHADOW_BLUR,CUTSCENE_SHADOW_GRADIENT};
+typedef struct CutsceneShadow {
+    ShadowCamera m_Camera;
+    bool m_bResample;
+    ShadowCamera m_ResampleCamera;
+    int32_t m_nBlurPasses;
+    ShadowCamera m_BlurCamera;
+    bool m_bGradient;
+    ShadowCamera m_GradientCamera;
+    union {void *m_pObject;void *m_pAtomic;void *m_pClump;};
+    int32_t m_nRwObjectType;
+    void *m_pLight;
+    ShadowSphere m_BoundingSphere,m_BaseSphere;
+} CutsceneShadow;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void CutsceneShadow_Init(CutsceneShadow *self);
+void CutsceneShadow_Deinit(CutsceneShadow *self);
+ShadowSphere CutsceneShadow_GetBaseSphere(const CutsceneShadow *self);
+bool CutsceneShadow_Create(CutsceneShadow *self,void *object,int32_t rasterSize,bool resample,int32_t blurPasses,bool gradient);
+void *CutsceneShadow_SetLightProperties(CutsceneShadow *self,float angleY,float angleX,bool setLight);
+bool CutsceneShadow_IsInitialized(const CutsceneShadow *self);
+void CutsceneShadow_Destroy(CutsceneShadow *self);
+void *CutsceneShadow_Update(CutsceneShadow *self);
+void *CutsceneShadow_UpdateForCutscene(CutsceneShadow *self);
+ShadowCamera *CutsceneShadow_GetShadowCamera(CutsceneShadow *self,int32_t type);
+void *CutsceneShadow_GetShadowRwTexture(const CutsceneShadow *self);
+void CutsceneShadow_DrawBorderAroundTexture(CutsceneShadow *self,const ShadowColour *colour);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

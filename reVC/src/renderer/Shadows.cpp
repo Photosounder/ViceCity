@@ -1,4 +1,11 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 #include "TxdStore.h"
@@ -65,10 +72,13 @@ bool gbCountPolysInShadow;
 void
 CShadows::Init(void)
 {
-	CTxdStore::PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
 
-	int32 slut = CTxdStore::FindTxdSlot("particle");
-	CTxdStore::SetCurrentTxd(slut);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int32 slut = TxdStore_FindTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(slut);
 
 	gpShadowCarTex        = RwTextureRead("shad_car",     nil);
 	gpShadowPedTex        = RwTextureRead("shad_ped",     nil);
@@ -86,7 +96,8 @@ CShadows::Init(void)
 	gpCrackedGlassTex     = RwTextureRead("wincrack_32",  nil);
 	gpPostShadowTex       = RwTextureRead("lamp_shad_64", nil);
 
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 
 	ASSERT(gpShadowCarTex != nil);
 	ASSERT(gpShadowPedTex != nil);
@@ -160,7 +171,7 @@ CShadows::Init(void)
 	}
 
 #ifndef MASTER
-	VarConsole.Add("Count polys in shadow", &gbCountPolysInShadow, true);
+	VarConsole_AddBool(&VarConsole,"Count polys in shadow", &gbCountPolysInShadow, true); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -230,7 +241,7 @@ CShadows::AddPermanentShadow(uint8 ShadowType, RwTexture *pTexture, CVector *pPo
 		aPermanentShadows[nSlot].m_nBlue        = nBlue;
 		aPermanentShadows[nSlot].m_fZDistance   = fZDistance;
 		aPermanentShadows[nSlot].m_nLifeTime    = nTime;
-		aPermanentShadows[nSlot].m_nTimeCreated = CTimer::GetTimeInMilliseconds();
+		aPermanentShadows[nSlot].m_nTimeCreated = (*Timer_GetTimeInMilliseconds());
 	}
 }
 
@@ -284,7 +295,7 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 				aStaticShadows[nSlot].m_fZDistance       = fZDistance;
 				aStaticShadows[nSlot].m_fScale           = fScale;
 				aStaticShadows[nSlot].m_bTemp            = bTempShadow;
-				aStaticShadows[nSlot].m_nTimeCreated     = CTimer::GetTimeInMilliseconds();
+				aStaticShadows[nSlot].m_nTimeCreated     = (*Timer_GetTimeInMilliseconds());
 				
 				return true;
 			}
@@ -307,7 +318,7 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 				aStaticShadows[nSlot].m_fZDistance       = fZDistance;
 				aStaticShadows[nSlot].m_fScale           = fScale;
 				aStaticShadows[nSlot].m_bTemp            = bTempShadow;
-				aStaticShadows[nSlot].m_nTimeCreated     = CTimer::GetTimeInMilliseconds();
+				aStaticShadows[nSlot].m_nTimeCreated     = (*Timer_GetTimeInMilliseconds());
 				
 				return true;
 			}
@@ -331,7 +342,7 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 				aStaticShadows[nSlot].m_vecSide.y        = fSideY;
 				aStaticShadows[nSlot].m_bJustCreated     = true;
 				aStaticShadows[nSlot].m_bTemp            = bTempShadow;
-				aStaticShadows[nSlot].m_nTimeCreated     = CTimer::GetTimeInMilliseconds();
+				aStaticShadows[nSlot].m_nTimeCreated     = (*Timer_GetTimeInMilliseconds());
 
 				GeneratePolysForStaticShadow(nSlot);
 				
@@ -362,7 +373,7 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 				aStaticShadows[nSlot].m_vecSide.y        = fSideY;
 				aStaticShadows[nSlot].m_bJustCreated     = true;
 				aStaticShadows[nSlot].m_bTemp            = bTempShadow;
-				aStaticShadows[nSlot].m_nTimeCreated     = CTimer::GetTimeInMilliseconds();
+				aStaticShadows[nSlot].m_nTimeCreated     = (*Timer_GetTimeInMilliseconds());
 
 				GeneratePolysForStaticShadow(nSlot);
 				
@@ -456,7 +467,7 @@ void
 CShadows::StoreShadowToBeRendered(uint8 ShadowType, RwTexture *pTexture, CVector *pPosn,
 								float fFrontX, float fFrontY, float fSideX, float fSideY,
 								int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue,
-								float fZDistance, bool bDrawOnWater, float fScale, CCutsceneShadow *pShadow, bool bDrawOnBuildings)
+								float fZDistance, bool bDrawOnWater, float fScale, CutsceneShadow *pShadow, bool bDrawOnBuildings)
 {
 	ASSERT(pTexture != nil);
 	ASSERT(pPosn != nil);
@@ -493,7 +504,7 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 {
 	ASSERT(pCar != nil);
 
-	if ( CTimeCycle::GetShadowStrength() != 0 )
+	if ( TimeCycle_GetShadowStrength() != 0 )
 	{
 		CVector CarPos = pCar->GetPosition();
 		// Measure reflection-only shadows from their active camera
@@ -533,13 +544,13 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 			int32 nColorStrength;
 
 			if ( fDistToCam >= (fDrawDistance*(1.0f-(1.0f/4.0f))) )
-				nColorStrength = (int32)(fMult * CTimeCycle::GetShadowStrength());
+				nColorStrength = (int32)(fMult * TimeCycle_GetShadowStrength());
 			else
-				nColorStrength = CTimeCycle::GetShadowStrength();
+				nColorStrength = TimeCycle_GetShadowStrength();
 			
 			
-			float fVehicleHeight  = pCar->GetColModel()->boundingBox.GetSize().y;
-			float fVehicleWidth   = pCar->GetColModel()->boundingBox.GetSize().x;
+			float fVehicleHeight  = CollisionVector_ToNative(Box_GetSize(&pCar->GetColModel()->boundingBox)).y;
+			float fVehicleWidth   = CollisionVector_ToNative(Box_GetSize(&pCar->GetColModel()->boundingBox)).x;
 			
 			float size = 1.0f;
 			
@@ -620,7 +631,7 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 					break;
 				
 				case VEH_SHD_TYPE_SEAPLANE:
-					nColorStrength = CTimeCycle::GetShadowStrength();
+					nColorStrength = TimeCycle_GetShadowStrength();
 					tex = gpShadowBaronTex;
 					break;
 				
@@ -676,7 +687,7 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 			
 			// Keep parked reflection-only vehicles in the temporary camera shadow queue
 			//+ rouz edit (ChatGPT)
-			if ( forceTemporary || pCar->m_vecMoveSpeed.Magnitude() * CTimeStep::ms_fTimeStep > 0.1f || bDrawOnBuildings )
+			if ( forceTemporary || pCar->m_vecMoveSpeed.Magnitude() * TimeStep_timeStep > 0.1f || bDrawOnBuildings )
 			//- rouz edit (ChatGPT)
 			{
 				if ( pCar->GetUp().z > 0.0f )
@@ -761,7 +772,7 @@ CShadows::StoreCarLightShadow(CVehicle *pCar, int32 nID, RwTexture *pTexture, CV
 				nBlue  = (int32)(nBlue  * fMult);
 			}
 
-			if ( pCar->m_vecMoveSpeed.Magnitude() * CTimeStep::ms_fTimeStep > 0.4f || pCar == FindPlayerVehicle() )
+			if ( pCar->m_vecMoveSpeed.Magnitude() * TimeStep_timeStep > 0.4f || pCar == FindPlayerVehicle() )
 			{
 				StoreShadowToBeRendered(SHADOWTYPE_ADDITIVE, pTexture, pPosn,
 						fFrontX, fFrontY,
@@ -791,12 +802,13 @@ StoreShadowForCutscenePedObject(CPed *pObject, float fDisplacementX, float fDisp
 {
 	ASSERT(pObject != nil);
 	
-	CCutsceneShadow *shadow = pObject->m_pRTShadow;
+	CutsceneShadow *shadow = pObject->m_pRTShadow;
 	
 	if ( shadow == nil )
 		return;
 	
-	if ( !shadow->IsInitialized() )
+	// Use the C shadow operation with its canonical record and explicit lifecycle
+	if ( !CutsceneShadow_IsInitialized(shadow) )
 		return;
 	
 	CVector pos = pObject->GetPosition();
@@ -815,27 +827,31 @@ StoreShadowForCutscenePedObject(CPed *pObject, float fDisplacementX, float fDisp
 			int32 nColorStrength;
 
 			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) )
-				nColorStrength = (int32)(CTimeCycle::GetShadowStrength() * fMult);
+				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
 			else
-				nColorStrength = CTimeCycle::GetShadowStrength();
+				nColorStrength = TimeCycle_GetShadowStrength();
 
 			int32 color = int32(nColorStrength * 0.8f);
 			
 			pos.x += fDisplacementX;
 			pos.y += fDisplacementY;
 			
-			RwTexture *texture = shadow->GetShadowRwTexture();
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			RwTexture *texture = (RwTexture*)CutsceneShadow_GetShadowRwTexture(shadow);
 			ASSERT(texture);
-			RwRGBA bordercolor = {0, 0, 0, 0};
-			shadow->DrawBorderAroundTexture(bordercolor);
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			ShadowColour bordercolor = {0, 0, 0, 0};
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			CutsceneShadow_DrawBorderAroundTexture(shadow,&bordercolor);
 			
 			pos.x -= fDisplacementX;
 			pos.y -= fDisplacementY;
 			
-			float angleY = 360.0f - RADTODEG((CClock::ms_nGameClockMinutes
-					+60*CClock::ms_nGameClockHours+CClock::ms_nGameClockSeconds/60)*(HALFPI/360.0f));
+			float angleY = 360.0f - RADTODEG((Clock_minutes
+					+60*Clock_hours+Clock_seconds/60)*(HALFPI/360.0f));
 			 
-			RwFrame *frame = shadow->SetLightProperties(angleY, -85.0f, true);
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			RwFrame *frame = (RwFrame*)CutsceneShadow_SetLightProperties(shadow,angleY, -85.0f, true);
 			ASSERT(frame);
 			CVector at(RwFrameGetMatrix(frame)->at);
 			at.Normalise();
@@ -866,15 +882,17 @@ CShadows::StoreShadowForPed(CPed *pPed, float fDisplacementX, float fDisplacemen
 	{
 		if ( !(pPed->bInVehicle && pPed->m_nPedState != PED_DRAG_FROM_CAR && pPed->m_nPedState != PED_EXIT_CAR) )
 		{
-			if ( CTimeCycle::GetShadowStrength() != 0 )
+			if ( TimeCycle_GetShadowStrength() != 0 )
 			{
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
-					CCutsceneShadow *pShadow = pPed->m_pRTShadow;
+					CutsceneShadow *pShadow = pPed->m_pRTShadow;
 				
 					if (pShadow)
 					{
-						if (pShadow->IsInitialized())
-							pShadow->UpdateForCutscene();
+						// Use the C shadow operation with its canonical record and explicit lifecycle
+						if (CutsceneShadow_IsInitialized(pShadow))
+							// Use the C shadow operation with its canonical record and explicit lifecycle
+							CutsceneShadow_UpdateForCutscene(pShadow);
 						::StoreShadowForCutscenePedObject(pPed, fDisplacementX, fDisplacementY, fFrontX, fFrontY, fSideX, fSideY);
 					}
 					
@@ -914,9 +932,9 @@ CShadows::StoreShadowForPedObject(CEntity *pPedObject, float fDisplacementX, flo
 			int32 nColorStrength;
 
 			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) ) // BUG ? negative
-				nColorStrength = (int32)(CTimeCycle::GetShadowStrength() * fMult);
+				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
 			else
-				nColorStrength = CTimeCycle::GetShadowStrength();
+				nColorStrength = TimeCycle_GetShadowStrength();
 
 			PedPos.x += fDisplacementX;
 			PedPos.y += fDisplacementY;
@@ -940,12 +958,13 @@ CShadows::StoreShadowForCutscenePedObject(CCutsceneObject *pObject, float fDispl
 #endif
 	ASSERT(pObject != nil);
 	
-	CCutsceneShadow *shadow = pObject->m_pShadow;
+	CutsceneShadow *shadow = pObject->m_pShadow;
 	
 	if ( shadow == nil )
 		return;
 	
-	if ( !shadow->IsInitialized() )
+	// Use the C shadow operation with its canonical record and explicit lifecycle
+	if ( !CutsceneShadow_IsInitialized(shadow) )
 		return;
 	
 	CVector pos = pObject->GetPosition();
@@ -964,27 +983,31 @@ CShadows::StoreShadowForCutscenePedObject(CCutsceneObject *pObject, float fDispl
 			int32 nColorStrength;
 
 			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) )
-				nColorStrength = (int32)(CTimeCycle::GetShadowStrength() * fMult);
+				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
 			else
-				nColorStrength = CTimeCycle::GetShadowStrength();
+				nColorStrength = TimeCycle_GetShadowStrength();
 
 			int32 color = int32(nColorStrength * 0.8f);
 			
 			pos.x += fDisplacementX;
 			pos.y += fDisplacementY;
 			
-			RwTexture *texture = shadow->GetShadowRwTexture();
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			RwTexture *texture = (RwTexture*)CutsceneShadow_GetShadowRwTexture(shadow);
 			ASSERT(texture);
-			RwRGBA bordercolor = {0, 0, 0, 0};
-			shadow->DrawBorderAroundTexture(bordercolor);
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			ShadowColour bordercolor = {0, 0, 0, 0};
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			CutsceneShadow_DrawBorderAroundTexture(shadow,&bordercolor);
 			
 			pos.x -= fDisplacementX;
 			pos.y -= fDisplacementY;
 			
-			float angleY = 360.0f - RADTODEG((CClock::ms_nGameClockMinutes+60*
-					CClock::ms_nGameClockHours+CClock::ms_nGameClockSeconds/60)*(HALFPI/360.0f));
+			float angleY = 360.0f - RADTODEG((Clock_minutes+60*
+					Clock_hours+Clock_seconds/60)*(HALFPI/360.0f));
 			 
-			RwFrame *frame = shadow->SetLightProperties(angleY, -85.0f, true);
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			RwFrame *frame = (RwFrame*)CutsceneShadow_SetLightProperties(shadow,angleY, -85.0f, true);
 			ASSERT(frame);
 			CVector at(RwFrameGetMatrix(frame)->at);
 			at.Normalise();
@@ -1016,7 +1039,7 @@ CShadows::StoreShadowForPole(CEntity *pPole, float fOffsetX, float fOffsetY, flo
 {
 	ASSERT(pPole != nil);
 
-	if ( CTimeCycle::GetShadowStrength() != 0 )
+	if ( TimeCycle_GetShadowStrength() != 0 )
 	{
 		if ( pPole->GetUp().z < 0.5f )
 			return;
@@ -1027,15 +1050,15 @@ CShadows::StoreShadowForPole(CEntity *pPole, float fOffsetX, float fOffsetY, flo
 		PolePos.y += fOffsetX * pPole->GetRight().y + fOffsetY * pPole->GetForward().y;
 		PolePos.z += fOffsetZ;
 
-		PolePos.x += -CTimeCycle::GetSunDirection().x * (fPoleHeight / 2);
-		PolePos.y += -CTimeCycle::GetSunDirection().y * (fPoleHeight / 2);
+		PolePos.x += -TimeCycle_GetSunDirection()->x * (fPoleHeight / 2);
+		PolePos.y += -TimeCycle_GetSunDirection()->y * (fPoleHeight / 2);
 
 		StoreStaticShadow((uintptr)pPole + nID + _TODOCONST(51), SHADOWTYPE_DARK, gpPostShadowTex, &PolePos,
-				-CTimeCycle::GetSunDirection().x * (fPoleHeight / 2),
-				-CTimeCycle::GetSunDirection().y * (fPoleHeight / 2),
-				CTimeCycle::GetShadowSideX()    * fPoleWidth,
-				CTimeCycle::GetShadowSideY()    * fPoleWidth,
-				2 * (int32)((pPole->GetUp().z - 0.5f) * CTimeCycle::GetShadowStrength() * 2.0f) / 3,
+				-TimeCycle_GetSunDirection()->x * (fPoleHeight / 2),
+				-TimeCycle_GetSunDirection()->y * (fPoleHeight / 2),
+				TimeCycle_GetShadowSideX()    * fPoleWidth,
+				TimeCycle_GetShadowSideY()    * fPoleWidth,
+				2 * (int32)((pPole->GetUp().z - 0.5f) * TimeCycle_GetShadowStrength() * 2.0f) / 3,
 				0, 0, 0,
 				15.0f, 1.0f, 40.0f, false, 0.0f);
 	}
@@ -1075,7 +1098,8 @@ CShadows::RenderStoredShadows(void)
 {
 	PUSH_RENDERGROUP("CShadows::RenderStoredShadows");
 
-	RenderBuffer::ClearRenderBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_ClearRenderBuffer();
 
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      (void *)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       (void *)TRUE);
@@ -1238,7 +1262,8 @@ CShadows::RenderStoredShadows(void)
 				}
 			}
 
-			RenderBuffer::RenderStuffInBuffer();
+			// Enter the C shared-buffer algorithm with the original arguments
+			RenderBuffer_RenderStuffInBuffer();
 		}
 	}
 
@@ -1258,7 +1283,8 @@ CShadows::RenderStaticShadows(void)
 {
 	PUSH_RENDERGROUP("CShadows::RenderStaticShadows");
 
-	RenderBuffer::ClearRenderBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_ClearRenderBuffer();
 
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      (void *)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE,       (void *)TRUE);
@@ -1289,7 +1315,8 @@ CShadows::RenderStaticShadows(void)
 						RwImVertexIndex *pIndexes;
 						RwIm3DVertex *pVerts;
 
-						RenderBuffer::StartStoring(3 * (bunch->m_nNumVerts - 2), bunch->m_nNumVerts, &pIndexes, &pVerts);
+						// Enter the C shared-buffer algorithm with the original arguments
+						RenderBuffer_StartStoringLegacy(3 * (bunch->m_nNumVerts - 2), bunch->m_nNumVerts, &pIndexes, &pVerts);
 
 						ASSERT(pIndexes != nil);
 						ASSERT(pVerts != nil);
@@ -1300,7 +1327,7 @@ CShadows::RenderStaticShadows(void)
 									aStaticShadows[j].m_nRed,
 									aStaticShadows[j].m_nGreen,
 									aStaticShadows[j].m_nBlue,
-									(int32)(aStaticShadows[j].m_nIntensity * (1.0f - CWeather::Foggyness * 0.5f)));
+									(int32)(aStaticShadows[j].m_nIntensity * (1.0f - Weather_Foggyness * 0.5f)));
 
 							RwIm3DVertexSetU  (&pVerts[k], bunch->m_aU[k] / 200.0f);
 							RwIm3DVertexSetV  (&pVerts[k], bunch->m_aV[k] / 200.0f);
@@ -1310,14 +1337,16 @@ CShadows::RenderStaticShadows(void)
 						for ( int32 k = 0; k < 3 * (bunch->m_nNumVerts - 2); k++ )
 							pIndexes[k] = ShadowIndexList[k];
 
-						RenderBuffer::StopStoring();
+						// Enter the C shared-buffer algorithm with the original arguments
+						RenderBuffer_StopStoring();
 					}
 
 					aStaticShadows[j].m_bRendered = true;
 				}
 			}
 
-			RenderBuffer::RenderStuffInBuffer();
+			// Enter the C shared-buffer algorithm with the original arguments
+			RenderBuffer_RenderStuffInBuffer();
 		}
 	}
 	RestoreAlphaTest();
@@ -1398,6 +1427,8 @@ CShadows::CastShadowSectorList(CPtrList &PtrList, float fStartX, float fStartY, 
 	CPtrNode *pNode = PtrList.first;
 
 	CRect Bound;
+	// Initialize rectangle bounds at the former local constructor boundary
+	Rect_Init(&Bound);
 
 	while ( pNode != nil )
 	{
@@ -1453,6 +1484,8 @@ CShadows::CastPlayerShadowSectorList(CPtrList &PtrList, float fStartX, float fSt
 	CPtrNode *pNode = PtrList.first;
 
 	CRect Bound;
+	// Initialize rectangle bounds at the former local constructor boundary
+	Rect_Init(&Bound);
 
 	while ( pNode != nil )
 	{
@@ -1501,7 +1534,7 @@ void
 CShadows::CastCutsceneShadowSectorList(CPtrList &PtrList, float fStartX, float fStartY, float fEndX, float fEndY, CVector *pPosn,
 								float fFrontX, float fFrontY, float fSideX, float fSideY,
 								int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue,
-								float fZDistance, float fScale, CPolyBunch **ppPolyBunch, CCutsceneShadow *pShadow)
+								float fZDistance, float fScale, CPolyBunch **ppPolyBunch, CutsceneShadow *pShadow)
 {
 	ASSERT(pPosn != nil);
 	ASSERT(pShadow != nil);
@@ -1509,6 +1542,8 @@ CShadows::CastCutsceneShadowSectorList(CPtrList &PtrList, float fStartX, float f
 	CPtrNode *pNode = PtrList.first;
 
 	CRect Bound;
+	// Initialize rectangle bounds at the former local constructor boundary
+	Rect_Init(&Bound);
 
 	while ( pNode != nil )
 	{
@@ -1572,8 +1607,8 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 			pCol->numTriangles,
 			pEntity->GetPosition().x,
 			pEntity->GetPosition().y,
-			pCol->boundingBox.GetSize().x,
-			pCol->boundingBox.GetSize().y);
+			CollisionVector_ToNative(Box_GetSize(&pCol->boundingBox)).x,
+			CollisionVector_ToNative(Box_GetSize(&pCol->boundingBox)).y);
 #endif
 	
 	CCollision::CalculateTrianglePlanes(pCol);
@@ -1612,7 +1647,7 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 		ASSERT(pColTriPlanes != nil);
 
 		CVector normal;
-		pColTriPlanes[i].GetNormal(normal);
+		ColTrianglePlane_GetNormal(&pColTriPlanes[i],&normal.x,&normal.y,&normal.z);
 		if ( Abs(normal.z) > 0.1f )
 		{
 			CColTriangle *pColTri = pCol->triangles;
@@ -1620,9 +1655,12 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 
 			CVector PointA, PointB, PointC;
 
-			pCol->GetTrianglePoint(PointA, pColTri[i].a);
-			pCol->GetTrianglePoint(PointB, pColTri[i].b);
-			pCol->GetTrianglePoint(PointC, pColTri[i].c);
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			PointA = CollisionVector_ToNative(ColModel_GetTrianglePoint(pCol,pColTri[i].a));
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			PointB = CollisionVector_ToNative(ColModel_GetTrianglePoint(pCol,pColTri[i].b));
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			PointC = CollisionVector_ToNative(ColModel_GetTrianglePoint(pCol,pColTri[i].c));
 
 			if (   (PointA.x > MinX || PointB.x > MinX || PointC.x > MinX)
 				&& (PointA.x < MaxX || PointB.x < MaxX || PointC.x < MaxX)
@@ -1993,7 +2031,7 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 				{
 					CVector norm;
 
-					pColTriPlanes[i].GetNormal(norm);
+					ColTrianglePlane_GetNormal(&pColTriPlanes[i],&norm.x,&norm.y,&norm.z);
 
 					float dot = DotProduct(norm, PointA);
 
@@ -2044,7 +2082,8 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 						RwImVertexIndex *pIndexes;
 						RwIm3DVertex *pVerts;
 
-						RenderBuffer::StartStoring(3 * (numVerts3 - 2), numVerts3, &pIndexes, &pVerts);
+						// Enter the C shared-buffer algorithm with the original arguments
+						RenderBuffer_StartStoringLegacy(3 * (numVerts3 - 2), numVerts3, &pIndexes, &pVerts);
 
 						ASSERT(pIndexes != nil);
 						ASSERT(pVerts != nil);
@@ -2063,7 +2102,8 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 						for ( int32 j = 0; j < 3*(numVerts3 - 2); j++ )
 							pIndexes[j] = ShadowIndexList[j];
 
-						RenderBuffer::StopStoring();
+						// Enter the C shared-buffer algorithm with the original arguments
+						RenderBuffer_StopStoring();
 					}
 				}
 			}
@@ -2128,7 +2168,8 @@ RwV3d *ShadowRenderTriangleCB(RwV3d *points, RwV3d *normal, ProjectionParam *par
 	RwIm3DVertex *imv = nil;
 	RwImVertexIndex *imi = nil;
 	
-	RenderBuffer::StartStoring(3, 3, &imi, &imv);
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_StartStoringLegacy(3, 3, &imi, &imv);
 	
 	/*
 	 *  Set the immediate mode vertices for this triangle
@@ -2188,7 +2229,8 @@ RwV3d *ShadowRenderTriangleCB(RwV3d *points, RwV3d *normal, ProjectionParam *par
 	imi[1] = 1;
 	imi[2] = 2;
 	
-	RenderBuffer::StopStoring();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_StopStoring();
 	
 	return points;
 }
@@ -2197,7 +2239,7 @@ void
 CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 								float fFrontX, float fFrontY, float fSideX, float fSideY,
 								int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue,
-								float fZDistance, float fScale, CPolyBunch **ppPolyBunch, CCutsceneShadow *pShadow)
+								float fZDistance, float fScale, CPolyBunch **ppPolyBunch, CutsceneShadow *pShadow)
 {
 	ASSERT(pEntity != nil);
 	ASSERT(pPosn != nil);
@@ -2208,13 +2250,15 @@ CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 		RwV3d scl;
 		RwV3d tr;
 		
-		CShadowCamera *shadow = pShadow->GetShadowCamera();
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		ShadowCamera *shadow = CutsceneShadow_GetShadowCamera(pShadow,CUTSCENE_SHADOW_RASTER);
 		CColModel *collision  = pEntity->GetColModel();
 		
 		CCollision::CalculateTrianglePlanes(collision);
 		
 		RwMatrix mat;
-		mat = *RwFrameGetMatrix(RwCameraGetFrame(shadow->GetRwCamera()));
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		mat = *RwFrameGetMatrix(RwCameraGetFrame((RwCamera*)ShadowCamera_GetRwCamera(shadow)));
 		
 		RwV3d        Xaxis = { 1.0f, 0.0f, 0.0f };
 
@@ -2224,7 +2268,8 @@ CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 		pEntity->GetMatrix().CopyToRwMatrix(&proj.entityMatrix);
 
 		RwMatrixInvert(&proj.invMatrix, &mat);		
-		RwReal radius = RwCameraGetViewWindow(shadow->GetRwCamera())->x;
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		RwReal radius = RwCameraGetViewWindow((RwCamera*)ShadowCamera_GetRwCamera(shadow))->x;
 		
 		scl.x = scl.y = -0.5f / (radius*0.9f);
 		scl.z = 1.0f / (radius*0.8f);
@@ -2243,30 +2288,46 @@ CShadows::CastShadowEntityXYZ(CEntity *pEntity, CVector *pPosn,
 		RwMatrixInvert(&invMatrix, &matrix);
 		
 
-		CVector center(pShadow->GetBaseSphere().center);
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		const ShadowSphere baseSphere=CutsceneShadow_GetBaseSphere(pShadow);
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		CVector center(baseSphere.center.x,baseSphere.center.y,baseSphere.center.z);
 		center += CVector(-fFrontX * 1.1f, -fFrontY * 1.1f, -0.5f);
 		
 		CSphere sphere;
-		sphere.Set(2.0f, center);
+		{
+		    // Keep the native center expression alive at the former member-call boundary
+		    const CVector &sphereCenter0=center;
+		    Sphere_Set(&sphere,2.0f,COLLISION_POINT_REF(sphereCenter0));
+		}
 
 		RwV3d point;
 		RwV3dTransformPoints(&point, &center, 1, &invMatrix);
 		
 		CColSphere colSphere;
-		colSphere.Set(2.0f, CVector(point), 0, 0);
+		{
+		    // Keep the native center expression alive at the former member-call boundary
+		    const CVector &sphereCenter1=CVector(point);
+		    ColSphere_Set(&colSphere,2.0f,COLLISION_POINT_REF(sphereCenter1),0,0);
+		}
 		
 		int i = 0;
 		while ( i < collision->numTriangles )
         {
 			CVector p[3];
 
-			collision->GetTrianglePoint(p[0], collision->triangles[i].a);
-			collision->GetTrianglePoint(p[1], collision->triangles[i].b);
-			collision->GetTrianglePoint(p[2], collision->triangles[i].c);
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			p[0] = CollisionVector_ToNative(ColModel_GetTrianglePoint(collision,collision->triangles[i].a));
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			p[1] = CollisionVector_ToNative(ColModel_GetTrianglePoint(collision,collision->triangles[i].b));
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			p[2] = CollisionVector_ToNative(ColModel_GetTrianglePoint(collision,collision->triangles[i].c));
 			
 			if ( CCollision::TestSphereTriangle(colSphere, collision->vertices, collision->triangles[i], collision->trianglePlanes[i]) )
 			{
-				CVector n(collision->trianglePlanes[i].GetNormalX(), collision->trianglePlanes[i].GetNormalY(), collision->trianglePlanes[i].GetNormalZ());
+				CVector n;
+                // Read the complete normal through the representation-independent C operation
+                ColTrianglePlane_GetNormal(&collision->trianglePlanes[i],&n.x,&n.y,&n.z);
 				CVector offset = n * 0.028f;
 				
 				p[0] += offset;
@@ -2287,7 +2348,7 @@ CShadows::UpdateStaticShadows(void)
 	for ( int32 i = 0; i < MAX_STATICSHADOWS; i++ )
 	{
 		if ( aStaticShadows[i].m_pPolyBunch != nil && !aStaticShadows[i].m_bJustCreated
-			&& (!aStaticShadows[i].m_bTemp || CTimer::GetTimeInMilliseconds() > aStaticShadows[i].m_nTimeCreated + 5000) )
+			&& (!aStaticShadows[i].m_bTemp || (*Timer_GetTimeInMilliseconds()) > aStaticShadows[i].m_nTimeCreated + 5000) )
 		{
 			aStaticShadows[i].Free();
 		}
@@ -2303,7 +2364,7 @@ CShadows::UpdatePermanentShadows(void)
 	{
 		if ( aPermanentShadows[i].m_nType != SHADOWTYPE_NONE )
 		{
-			uint32 timePassed = CTimer::GetTimeInMilliseconds() - aPermanentShadows[i].m_nTimeCreated;
+			uint32 timePassed = (*Timer_GetTimeInMilliseconds()) - aPermanentShadows[i].m_nTimeCreated;
 
 			if ( timePassed >= aPermanentShadows[i].m_nLifeTime )
 				aPermanentShadows[i].m_nType = SHADOWTYPE_NONE;
@@ -2423,7 +2484,7 @@ CShadows::RenderExtraPlayerShadows(void)
 	if (CReplay::IsPlayingBack())
 		return;
 #endif
-	if ( CTimeCycle::GetLightShadowStrength() != 0 )
+	if ( TimeCycle_GetLightShadowStrength() != 0 )
 	{
 		CVehicle *pCar = FindPlayerVehicle();
 		if ( pCar == nil )
@@ -2434,17 +2495,17 @@ CShadows::RenderExtraPlayerShadows(void)
 				&& pCar->GetVehicleAppearance() != VEHICLE_APPEARANCE_BIKE
 				&& !pCar->IsBike() && !pCar->IsPlane() && !pCar->IsBoat() )
 			{
-				for ( int32 i = 0; i < CPointLights::NumLights; i++ )
+				for ( int32 i = 0; i < PointLights_NumLights; i++ )
 				{
-					if (  CPointLights::aLights[i].type == CPointLights::LIGHT_POINT
-						&& CPointLights::aLights[i].castExtraShadows
-						&&(0.0f != CPointLights::aLights[i].red
-						|| 0.0f != CPointLights::aLights[i].green
-						|| 0.0f != CPointLights::aLights[i].blue) )
+					if (  PointLights_aLights[i].type == POINTLIGHTS_LIGHT_POINT
+						&& PointLights_aLights[i].castExtraShadows
+						&&(0.0f != PointLights_aLights[i].red
+						|| 0.0f != PointLights_aLights[i].green
+						|| 0.0f != PointLights_aLights[i].blue) )
 					{
-						CVector vecLight = CPointLights::aLights[i].coors - FindPlayerCoors();
+						CVector vecLight = PointLights_VectorToLegacy(PointLights_aLights[i].coors) - FindPlayerCoors();
 						float fLightDist = vecLight.Magnitude();
-						float fRadius = CPointLights::aLights[i].radius;
+						float fRadius = PointLights_aLights[i].radius;
 
 						if ( fLightDist < fRadius )
 						{
@@ -2454,9 +2515,9 @@ CShadows::RenderExtraPlayerShadows(void)
 
 							int32 nColorStrength;
 							if ( fLightDist < fRadius*0.5f )
-								nColorStrength = (5*CTimeCycle::GetLightShadowStrength()/8);
+								nColorStrength = (5*TimeCycle_GetLightShadowStrength()/8);
 							else
-								nColorStrength = int32((5*CTimeCycle::GetLightShadowStrength()/8) * fMult);
+								nColorStrength = int32((5*TimeCycle_GetLightShadowStrength()/8) * fMult);
 
 							float fInv = 1.0f / fLightDist;
 							vecLight.x *= fInv;
@@ -2468,8 +2529,8 @@ CShadows::RenderExtraPlayerShadows(void)
 							shadowPos.x -= vecLight.x * 1.2f;
 							shadowPos.y -= vecLight.y * 1.2f;
 
-							float fVehicleWidth   = pCar->GetColModel()->boundingBox.GetSize().x;
-							float fVehicleHeight  = pCar->GetColModel()->boundingBox.GetSize().y;
+							float fVehicleWidth   = CollisionVector_ToNative(Box_GetSize(&pCar->GetColModel()->boundingBox)).x;
+							float fVehicleHeight  = CollisionVector_ToNative(Box_GetSize(&pCar->GetColModel()->boundingBox)).y;
 
 							shadowPos.x -= ((fVehicleHeight/2) - pCar->GetColModel()->boundingBox.max.y)
 											* pCar->GetForward().x;
@@ -2519,7 +2580,15 @@ CShadows::RenderIndicatorShadow(uint32 nID, uint8 ShadowType, RwTexture *pTextur
 {
 	ASSERT(pPosn != nil);
 
-	C3dMarkers::PlaceMarkerSet(nID, MARKERTYPE_CYLINDER, *pPosn, Max(fFrontX, -fSideY),
+	// Enter the C 3D-marker controller with the original arguments
+	Markers3D_PlaceMarkerSetLegacy(nID, MARKERTYPE_CYLINDER, *pPosn, Max(fFrontX, -fSideY),
 		SPHERE_MARKER_R, SPHERE_MARKER_G, SPHERE_MARKER_B,
 		SPHERE_MARKER_A, SPHERE_MARKER_PULSE_PERIOD, 0.2f, 0);
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

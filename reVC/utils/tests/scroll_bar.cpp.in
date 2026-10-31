@@ -1,0 +1,293 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+CCamera TheCamera;
+RwTexture *gpCoronaTexture[1];
+static RwMatrix matrices[2];
+static const char *messages[9];
+static char externalMessage[64];
+static uint16_t randomValues[32];
+static unsigned randomRead,randomCount,randomState=1234567,clockHours,clockMinutes;
+static unsigned states,calls,updates,renders,reflections,projects,sprites,transforms,draws,randoms;
+static uint64_t hash=1469598103934665603ULL;
+static int hook,renderDepth=-1,matrixQueries;
+static bool triggered,cameraVisible=true,framePresent=true,matrixPresent=true,secondMatrix,transformSuccess=true,signStarted;
+static int projectMode;
+static float nearClip=.1f,farClip=200.f;
+static const RwV3d *retainedInput[4];
+static RwV3d *retainedOutput[4];
+static float *retainedWidth[4],*retainedHeight[4];
+
+static void check(bool condition,int line)
+{
+    // Reject invalid corpus preconditions and unexpected native-owner identities immediately
+    if(!condition){fprintf(stderr,"Scrolling-sign corpus check failed at line %d (hook %d)\n",line,hook);abort();}
+}
+#define require(condition) check((condition),__LINE__)
+static void word(uint32_t value)
+{
+    // Compare each scalar through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Compare exact float bits without representation casts or a tolerance
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vector(float x,float y,float z)
+{
+    // Observe all three declared coordinates in their original arithmetic order
+    floating(x);floating(y);floating(z);
+}
+static void bytes(const char *value)
+{
+    // Include the complete message and its terminator while preserving mutable time aliases
+    if(!value){word(0);return;}size_t size=strlen(value)+1;word((uint32_t)size);for(size_t i=0;i<size;i++)word((uint8_t)value[i]);
+}
+static int messageId(const char *value)
+{
+    // Normalize actual module pointer identities rather than comparing message contents
+    if(!value)return -1;for(int i=0;i<9;i++)if(messages[i] && value==messages[i])return i;if(value==TestSc_Time())return 8;if(value==externalMessage)return 9;require(false);return -2;
+}
+static void snapshot(void)
+{
+    // Observe every sign field, persistent message, glyph byte and shared-buffer counter
+    states++;ScrollBar v=TestSc_Get();word(v.m_Counter);word(messageId(v.m_pMessage));bytes(v.m_pMessage);word(v.m_MessageCurrentChar);word(v.m_MessageLength);vector(v.m_Position.x,v.m_Position.y,v.m_Position.z);vector(v.m_Size.x,v.m_Size.y,v.m_Size.z);floating(v.m_fIntensity);for(int i=0;i<40;i++)word(v.m_MessageBar[i]);word(v.m_Type);word(v.m_bVisible);word(v.m_uRed);word(v.m_uGreen);word(v.m_uBlue);floating(v.m_fScale);word(TestSc_Event());bytes(TestSc_Time());for(int i=0;i<59;i++)for(int j=0;j<5;j++)word(TestSc_Glyph(i,j));word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(RenderBuffer_VerticesToBeStored);word(RenderBuffer_IndicesToBeStored);
+}
+static void event(unsigned id)
+{
+    // Preserve the exact order and number of original external operations
+    calls++;word(id);
+}
+extern "C" void TestSc_Bind(int32_t kind,const char *value)
+{
+    // Capture each algorithm's own literal address without changing its message pointer
+    require(kind>=0 && kind<9);require(!messages[kind] || messages[kind]==value);messages[kind]=value;
+}
+static void renderMain(void)
+{
+    // Keep nested native projection owners distinct until their enclosing render returns
+    require(renderDepth<2);renderDepth++;retainedInput[renderDepth]=NULL;retainedOutput[renderDepth]=NULL;retainedWidth[renderDepth]=retainedHeight[renderDepth]=NULL;renders++;TestSc_Render();snapshot();renderDepth--;
+}
+static void renderEnv(void *camera=(void *)0x5000)
+{
+    // Enter the complete reflection pass independently of the main visibility flag
+    matrixQueries=0;signStarted=false;reflections++;TestSc_Env(camera);snapshot();
+}
+static void update(void)
+{
+    // Observe the complete message transition and bitmap shift after each frame
+    updates++;TestSc_Update();snapshot();
+}
+static void mutation(int point)
+{
+    // Apply one bounded live-state change at an original external callback
+    if(triggered)return;ScrollBar v=TestSc_Get();
+    if((hook==1 && point==1)||(hook==2 && point==2)||(hook==3 && point==3)||(hook==4 && point==4)||(hook==7 && point==7)||(hook==14 && point==14)){
+        // Change live geometry and bitmap while exposing incorrectly cached scale or colors
+        triggered=true;v.m_Position.x+=.125f;v.m_Position.z+=.25f;v.m_Size.y+=.0625f;v.m_fScale=.47f;v.m_fIntensity=.25f;v.m_uRed=77;v.m_uGreen=183;v.m_uBlue=231;v.m_MessageBar[5]^=31;TestSc_Set(&v);gpCoronaTexture[0]=(RwTexture *)0x1100;
+    }else if(hook==5 && point==5){
+        // Mutate borrowed actual native vectors and C width outputs while they remain alive
+        triggered=true;require(renderDepth>=0 && retainedInput[renderDepth] && retainedOutput[renderDepth]);RwV3d *input=const_cast<RwV3d *>(retainedInput[renderDepth]);input->x+=17.f;retainedOutput[renderDepth]->z=37.f;*retainedWidth[renderDepth]=71.f;*retainedHeight[renderDepth]=53.f;
+    }else if(hook==6 && point==6 && signStarted){
+        // Change the next sign pixels during a real shared-buffer capacity flush
+        triggered=true;v.m_Position.y+=.75f;v.m_Size.x=.125f;v.m_fScale=.19f;v.m_MessageBar[38]^=15;TestSc_Set(&v);
+    }else if((hook==8 && point==8)||(hook==9 && point==9)){
+        // Keep camera basis copies and fade strength stable across later owner mutations
+        triggered=true;matrices[0].right.x=7.f;matrices[0].up.y=-4.f;v.m_uRed=91;v.m_fIntensity=.1f;v.m_Position.z+=.125f;TestSc_Set(&v);
+    }else if(hook==11 && point==11){
+        // Expose the event value only after the selection random query has completed
+        triggered=true;TestSc_SetEvent(2);
+    }else if(hook==13 && point==2){
+        // Reenter the same sign before the outer render caches its current colors
+        triggered=true;renderMain();update();
+    }else if(hook==15 && point==15){
+        // Replace the texture after its original raster-query argument was captured
+        triggered=true;gpCoronaTexture[0]=(RwTexture *)0x1100;
+    }
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Observe the original center and conditional-absolute-value radius before mutation
+    event(1);vector(center.x,center.y,center.z);floating(radius);mutation(1);word(cameraVisible);return cameraVisible;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Keep selection retries and the independent display-glitch draw in their original order
+    event(11);randoms++;mutation(11);uint16_t value;if(randomRead<randomCount)value=randomValues[randomRead++];else{randomState=randomState*1664525U+1013904223U;value=(uint16_t)(randomState>>16);}word(value);return value;
+}
+extern "C" uint8_t Clock_GetHours(void)
+{
+    // Return changing values so both original live hour queries remain observable
+    event(12);uint8_t value=(clockHours++%2)?23:12;word(value);return value;
+}
+extern "C" uint8_t Clock_GetMinutes(void)
+{
+    // Return changing values so both original live minute queries remain observable
+    event(13);uint8_t value=(clockMinutes++%2)?59:34;word(value);return value;
+}
+void CSprite::InitSpriteBuffer(void)
+{
+    // Retain the original sprite initialization before color narrowing
+    event(2);mutation(2);
+}
+void CSprite::FlushSpriteBuffer(void)
+{
+    // Read retained native owners after every lit and unlit pixel has visited the loop
+    event(16);if(renderDepth>=0 && retainedInput[renderDepth]){const RwV3d &in=*retainedInput[renderDepth];RwV3d &out=*retainedOutput[renderDepth];vector(in.x,in.y,in.z);vector(out.x,out.y,out.z);floating(*retainedWidth[renderDepth]);floating(*retainedHeight[renderDepth]);}
+}
+bool CSprite::CalcScreenCoors(const RwV3d &in,RwV3d *out,float *width,float *height,bool farclip)
+{
+    // Preserve actual input/output owner identity and lifetime across later sprite callbacks
+    event(4);projects++;require(renderDepth>=0);int depth=renderDepth;require(&in!=out);if(retainedInput[depth]){require(retainedInput[depth]==&in && retainedOutput[depth]==out && retainedWidth[depth]==width && retainedHeight[depth]==height);}if(depth>0 && retainedInput[depth-1])require(retainedInput[depth-1]!=&in);retainedInput[depth]=&in;retainedOutput[depth]=out;retainedWidth[depth]=width;retainedHeight[depth]=height;vector(in.x,in.y,in.z);word(farclip);out->x=in.x*.75f;out->y=in.y*1.25f;out->z=in.z+2.f;*width=7.f+in.x*.01f;*height=9.f+in.y*.01f;mutation(4);bool result=projectMode==0 || (projectMode==1 && (projects%3)!=0);word(result);return result;
+}
+void CSprite::RenderBufferedOneXLUSprite(float x,float y,float z,float width,float height,uint8 r,uint8 g,uint8 b,int16 intensity,float reciprocal,uint8 alpha)
+{
+    // Capture current and trailing pixel sizes and cached integer colors before mutation
+    event(5);sprites++;vector(x,y,z);floating(width);floating(height);word(r);word(g);word(b);word(intensity);floating(reciprocal);word(alpha);mutation(5);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Compare complete native state order including the final reflection restore
+    event(3);word(state);word((uint32_t)(uintptr_t)value);mutation(3);return TRUE;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture)
+{
+    // Preserve the captured texture argument even if its canonical slot changes
+    event(15);require(texture==(RwTexture *)0x1000 || texture==(RwTexture *)0x1100);word((uint32_t)(uintptr_t)texture);mutation(15);return (RwRaster *)((uintptr_t)texture+0x1000);
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Observe the exact camera before the original frame-null gate
+    event(17);require(camera==(RwCamera *)0x5000);word(framePresent);return framePresent?(RwFrame *)0x6000:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Expose both original matrix queries and a distinct second returned owner
+    event(18);require(frame==(RwFrame *)0x6000);matrixQueries++;word(matrixQueries);word(matrixPresent);int index=secondMatrix && matrixQueries==2?1:0;word(index);return matrixPresent?&matrices[index]:NULL;
+}
+RwReal RwCameraGetNearClipPlane(const RwCamera *camera)
+{
+    // Keep copied basis vectors and distance calculations ahead of the near-clip callback
+    event(8);require(camera==(RwCamera *)0x5000);mutation(8);floating(nearClip);return nearClip;
+}
+RwReal RwCameraGetFarClipPlane(const RwCamera *camera)
+{
+    // Retain the far-plane query before original color narrowing
+    event(9);require(camera==(RwCamera *)0x5000);mutation(9);floating(farClip);return farClip;
+}
+void TestSF_Push(const char *name)
+{
+    // Preserve the original reflection profiling label and pending-flush position
+    event(19);bytes(name);require(strcmp(name,"CScrollBar::RenderForEnvMap")==0);signStarted=true;
+}
+void TestSF_Pop(void)
+{
+    // Complete the original profiling group after all state restoration
+    event(20);signStarted=false;
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Compare every original corner and captured native vertex destination
+    event(7);word((uint32_t)(v-TempBufferRenderVertices));vector(x,y,z);mutation(7);v->setX(x);v->setY(y);v->setZ(z);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Preserve current and trailing integer colors through their byte-wide native setters
+    event(21);word((uint32_t)(v-TempBufferRenderVertices));word(r);word(g);word(b);word(a);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal u)
+{
+    // Retain original U writes and later live changes to sign scale and bitmap
+    event(14);word((uint32_t)(v-TempBufferRenderVertices));floating(u);mutation(14);v->setU(u);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Retain the original V write order for every corner
+    event(22);word((uint32_t)(v-TempBufferRenderVertices));floating(value);v->setV(value);
+}
+void *RwIm3DTransform(RwIm3DVertex *v,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Observe the actual shared-buffer batches including pending and capacity-flushed geometry
+    event(6);transforms++;require(v==TempBufferRenderVertices && count<=512 && matrix==NULL);word(count);word(flags);for(unsigned i=0;i<count;i++){RwIm3DVertex &a=v[i];vector(a.getX(),a.getY(),a.getZ());RwRGBA c=a.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(a.getU());floating(a.getV());}mutation(6);word(transformSuccess);return transformSuccess?v:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Compare every rebased shared index after the real C reservation algorithm
+    event(23);draws++;require(indices==TempBufferRenderIndexList && count>=0 && count<=1024);word(type);word(count);for(int i=0;i<count;i++)word(indices[i]);return TRUE;
+}
+RwBool RwIm3DEnd(void)
+{
+    // End only successful original native transformations
+    event(24);return TRUE;
+}
+static void script(uint16_t a,uint16_t b=0,uint16_t c=2,uint16_t d=3,uint16_t e=0x0d)
+{
+    // Supply a deterministic selection/retry sequence followed by independent glitch values
+    randomRead=0;randomCount=5;randomValues[0]=a;randomValues[1]=b;randomValues[2]=c;randomValues[3]=d;randomValues[4]=e;
+}
+static void reset(unsigned seed)
+{
+    // Seed every real field and retained native buffer byte with valid deterministic values
+    hook=0;triggered=false;cameraVisible=framePresent=matrixPresent=transformSuccess=true;secondMatrix=signStarted=false;projectMode=0;matrixQueries=0;nearClip=.1f;farClip=200.f;randomRead=randomCount=0;randomState=1234567+seed;clockHours=clockMinutes=0;gpCoronaTexture[0]=(RwTexture *)0x1000;TestSc_SetEvent(seed%3);ScrollBarVector first={10.f,20.f,30.f},last={10.f,42.f,34.f};TestSc_Init(first,last,0,123,197,251,.3f);ScrollBar v=TestSc_Get();v.m_fIntensity=.75f;for(int i=0;i<40;i++)v.m_MessageBar[i]=(uint8_t)((i+seed)%4==0?31:((i+seed)%4==1?5:0));TestSc_Set(&v);TheCamera.position=CVector(10.f,20.f,30.f);
+    for(int i=0;i<2;i++){
+        // Include a different second camera matrix and nonorthogonal normalized axes
+        matrices[i].pos.x=10.f+i;matrices[i].pos.y=20.f-i;matrices[i].pos.z=20.f;matrices[i].right.x=1.f;matrices[i].right.y=.1f;matrices[i].right.z=0.f;matrices[i].up.x=.1f;matrices[i].up.y=1.f;matrices[i].up.z=.2f;matrices[i].at.x=0.f;matrices[i].at.y=0.f;matrices[i].at.z=2.f;
+    }
+    for(int i=0;i<512;i++){
+        // Initialize stale native fields so any unintended overwrite remains observable
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.125f);v.setY(-i*.25f);v.setZ(17.f);v.setColor(13,27,41,55);v.setU(.25f);v.setV(.75f);
+    }
+    for(int i=0;i<1024;i++)TempBufferRenderIndexList[i]=(uint16_t)((i*7+seed)&65535);TempBufferVerticesStored=3;TempBufferIndicesStored=3;RenderBuffer_VerticesToBeStored=7;RenderBuffer_IndicesToBeStored=11;
+}
+int main(void)
+{
+    // Compare static initialization before capturing each module's actual message literals
+    snapshot();reset(0);snapshot();for(int kind=1;kind<9;kind++){
+        // Capture all event, ticket, stadium and mutable-time messages through real updates
+        ScrollBar v=TestSc_Get();v.m_pMessage=messages[0];v.m_MessageLength=2;v.m_MessageCurrentChar=1;v.m_Counter=7;TestSc_Set(&v);int option=kind<=3?0:kind<=6?1:kind==7?2:3;TestSc_SetEvent(kind<=3?kind-1:kind<=6?kind-4:0);script((uint16_t)option);update();require(messageId(TestSc_Get().m_pMessage)==kind);
+    }
+    require(strcmp(TestSc_Time(),"THE TIME IS 13:39    ")==0);
+    for(int previous=0;previous<9;previous++)for(int stadium=-1;stadium<4;stadium++)for(int option=0;option<4;option++){
+        // Exercise literal-identity repeats, invalid events and repeated mutable-time selection
+        reset(previous*17+stadium+2);ScrollBar v=TestSc_Get();v.m_pMessage=messages[previous];v.m_MessageLength=(uint32_t)strlen(v.m_pMessage);v.m_MessageCurrentChar=v.m_MessageLength-1;v.m_Counter=7;TestSc_Set(&v);TestSc_SetEvent(stadium);script((uint16_t)option,(uint16_t)option);update();require(TestSc_Get().m_pMessage!=messages[previous]);
+    }
+    // Equal text at a different address must accept selection without another retry draw
+    reset(0);strcpy(externalMessage,messages[1]);ScrollBar duplicate=TestSc_Get();duplicate.m_pMessage=externalMessage;duplicate.m_MessageLength=(uint32_t)strlen(externalMessage);duplicate.m_MessageCurrentChar=duplicate.m_MessageLength-1;duplicate.m_Counter=7;TestSc_Set(&duplicate);TestSc_SetEvent(0);script(0);update();require(TestSc_Get().m_pMessage==messages[1] && randomRead==2);
+    const uint16_t glitches[]={0,0x0d,0xe3,0x64};
+    for(int glyph=0;glyph<59;glyph++)for(int column=0;column<8;column++)for(int glitch=0;glitch<4;glitch++){
+        // Cover every glyph column, blank spacing and all three intentional display glitches
+        reset(glyph);externalMessage[0]=(char)(' '+glyph);externalMessage[1]=0;ScrollBar v=TestSc_Get();v.m_pMessage=externalMessage;v.m_MessageLength=1;v.m_MessageCurrentChar=0;v.m_Counter=(uint8_t)((column+7)%8);v.m_Type=255;TestSc_Set(&v);script(glitches[glitch]);update();
+    }
+    const float distances[]={0.f,74.99999f,75.f,75.00001f,99.99999f,100.f,100.00001f};
+    for(int distance=0;distance<7;distance++)for(int counter=0;counter<256;counter+=17){
+        // Check strict fade/culling boundaries and byte-promotion before modulo reduction
+        reset(counter);TheCamera.position.x+=distances[distance];ScrollBar v=TestSc_Get();v.m_Counter=(uint8_t)counter;if(counter==255)v.m_MessageCurrentChar=0xffffffffU;TestSc_Set(&v);update();
+    }
+    for(int distance=0;distance<7;distance++)for(int mode=0;mode<3;mode++)for(int visible=0;visible<2;visible++){
+        // Preserve the absent visibility gate and partial projection failures in the main pass
+        reset(distance);cameraVisible=visible!=0;projectMode=mode;TheCamera.position.x+=distances[distance];update();renderMain();TestSc_Visibility(visible!=0);require(TestSc_Visible()==(visible!=0));snapshot();
+    }
+    for(int mode=0;mode<12;mode++)for(int transform=0;transform<2;transform++){
+        // Cover optional camera gates, changed second matrix, zero axes and strict depth clipping
+        reset(mode);transformSuccess=transform!=0;ScrollBar v=TestSc_Get();for(int i=0;i<40;i++)v.m_MessageBar[i]=31;TestSc_Set(&v);if(mode==1)gpCoronaTexture[0]=NULL;if(mode==2)framePresent=false;if(mode==3)matrixPresent=false;if(mode==4)secondMatrix=true;if(mode==5){matrices[0].right.x=matrices[0].right.y=matrices[0].right.z=0;matrices[0].up.x=matrices[0].up.y=matrices[0].up.z=0;matrices[0].at.x=matrices[0].at.y=matrices[0].at.z=0;}if(mode==6)nearClip=10.f;if(mode==7)farClip=10.f;if(mode>=8)matrices[0].pos.x+=distances[mode-5];renderEnv(mode==0?NULL:(void *)0x5000);
+    }
+    for(int h=1;h<=15;h++){
+        // Change live state at native call boundaries and exercise nested same-sign rendering
+        reset(h);hook=h;if(h==11){ScrollBar v=TestSc_Get();v.m_Counter=7;v.m_MessageCurrentChar=v.m_MessageLength-1;TestSc_Set(&v);script(0);update();require(triggered);}else if(h==6 || h==7 || h==8 || h==9 || h==14){ScrollBar v=TestSc_Get();for(int i=0;i<40;i++)v.m_MessageBar[i]=31;TestSc_Set(&v);renderEnv();
+#ifdef REVC_SOFTWARE_POLYGONS
+        require(triggered);
+#endif
+        }else if(h!=10 && h!=12){renderMain();require(triggered);}
+    }
+    reset(0);externalMessage[0]='A';externalMessage[1]=0;ScrollBar v=TestSc_Get();v.m_pMessage=externalMessage;v.m_MessageLength=1;v.m_Type=255;TestSc_Set(&v);uint8_t saved=TestSc_Glyph(33,1);TestSc_SetGlyph(33,1,(uint8_t)~saved);update();TestSc_SetGlyph(33,1,saved);snapshot();
+    for(unsigned frame=0;frame<5000;frame++){
+        // Sustain real message cycles with changing events, visibility, fades and both render passes
+        if(frame==0)reset(23);TestSc_SetEvent(frame%3);TheCamera.position.x=10.f+(frame%131);update();if(frame%47==0)renderMain();if(frame%97==0)renderEnv();
+    }
+    printf("states=%u calls=%u updates=%u renders=%u reflections=%u projects=%u sprites=%u transforms=%u draws=%u randoms=%u hash=%016llx\n",states,calls,updates,renders,reflections,projects,sprites,transforms,draws,randoms,(unsigned long long)hash);return 0;
+}

@@ -1,0 +1,131 @@
+#include <string>
+#include <vector>
+#include <cstdio>
+#include "owners.h"
+#include "caller.h"
+uint8_t work_buff[55000];
+alignas(16) static uint8_t particleTokens[MAX_PARTICLES*16],rasterTokens[MAX_PARTICLES*16];
+static std::string input,replacement;static int hook;static bool triggered;
+static unsigned states,calls,loads,initializations,colours;static uint64_t hash=1469598103934665603ULL;
+static void require(bool condition)
+{
+    // Stop quietly at an invalid corpus, buffer contract or record representation
+    if(!condition){fprintf(stderr,"Particle configuration corpus failed at state %u, call %u, hook %d\n",states,calls,hook);abort();}
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Preserve original assertion failures without launching a debug dialog
+    fprintf(stderr,"Particle configuration assertion at %u: %s\n",line,expression);abort();
+}
+static void byte(uint8_t value)
+{
+    // Preserve every defined scalar bit and retained record byte
+    hash^=value;hash*=1099511628211ULL;
+}
+static void word(uint32_t value)
+{
+    // Encode scalar observations independently of machine endianness
+    for(int i=0;i<4;i++)byte((uint8_t)(value>>(i*8)));
+}
+static void text(const char *value)
+{
+    // Compare each borrowed current filename and file-owner argument by content
+    for(;*value;value++)byte((uint8_t)*value);byte(0);
+}
+static void records(void)
+{
+    // Compare every canonical record byte after normalizing only the two native pointer addresses
+    uint8_t buffer[sizeof(ParticleSystemMgr)];require(TestPm_Size()==sizeof(buffer));TestPm_Copy(buffer);
+    for(int i=0;i<MAX_PARTICLES;i++){
+        // Verify each real retained pointer still identifies its original borrowed token slot
+        size_t positions[]={offsetof(tParticleSystemData,m_ppRaster),offsetof(tParticleSystemData,m_pParticles)};uintptr_t bases[]={(uintptr_t)rasterTokens,(uintptr_t)particleTokens};
+        for(int p=0;p<2;p++){
+            // Include null and non-null identities without depending on process relocation
+            uintptr_t pointer;memcpy(&pointer,buffer+i*sizeof(tParticleSystemData)+positions[p],sizeof(pointer));if(pointer){require(pointer>=bases[p] && pointer<bases[p]+MAX_PARTICLES*16 && (pointer-bases[p])%16==0);word((uint32_t)((pointer-bases[p])/16+1));}else word(0);memset(buffer+i*sizeof(tParticleSystemData)+positions[p],0,sizeof(pointer));
+        }
+    }
+    for(size_t i=0;i<sizeof(buffer);i++)byte(buffer[i]);
+}
+static void event(unsigned id)
+{
+    // Preserve file-owner order and the live records visible before each external operation
+    calls++;word(id);text(TestPm_GetFilename());records();
+}
+static void snapshot(void)
+{
+    // Include all records, actual filename state, color transfers and the complete shared work buffer
+    states++;word(states);text(TestPm_GetFilename());records();for(size_t i=0;i<sizeof(work_buff);i++)byte(work_buff[i]);
+    for(int i=0;i<MAX_PARTICLES;i++){
+        // Execute both actual renderer transfer sites with all retained or parsed color channels
+        RwRGBA render,fade;TestPm_RenderColour(i,&render);TestPm_FadeColour(i,&fade);byte(render.red);byte(render.green);byte(render.blue);byte(render.alpha);byte(fade.red);byte(fade.green);byte(fade.blue);byte(fade.alpha);colours+=2;
+    }
+}
+extern "C" void FileMgr_SetDir(const char *directory)
+{
+    // Observe the original DATA and root-directory calls before optional owner mutations
+    event(*directory?1:3);text(directory);require(strcmp(directory,"DATA")==0 || *directory==0);
+    if(!triggered && hook==1 && *directory){
+        // Preserve a filename replacement before the actual file load argument is evaluated
+        triggered=true;TestPm_Filename("alternate.cfg");
+    }else if(!triggered && hook==3 && !*directory){
+        // Let the parser observe later shared-buffer contents and newly seeded retained fields
+        triggered=true;require(replacement.size()<sizeof(work_buff));memcpy(work_buff,replacement.data(),replacement.size());TestPm_Seed(71,particleTokens,rasterTokens);
+    }else if(!triggered && hook==4 && !*directory){
+        // Reenter the complete loader before the outer parser obtains its original shared-buffer cursor
+        triggered=true;loads++;TestPm_RunLoad();
+    }
+}
+extern "C" FileMgrSize FileMgr_LoadFile(const char *filename,uint8_t *buffer,int capacity,const char *mode)
+{
+    // Verify the actual shared destination, original capacity, live name and text mode
+    event(2);text(filename);text(mode);word(capacity);require(buffer==work_buff && capacity==55000 && strcmp(mode,"r")==0 && strcmp(filename,TestPm_GetFilename())==0 && input.size()<sizeof(work_buff));memcpy(buffer,input.data(),input.size());
+    if(!triggered && hook==2){
+        // Preserve the original ignored negative load result when valid shared input remains available
+        triggered=true;return -1;
+    }
+    return (FileMgrSize)input.size();
+}
+static std::string row(unsigned seed,unsigned index,unsigned count=41)
+{
+    // Exercise exact integer narrowing, float rounding, range squaring and capped color variation
+    const char *integers[]={"-1","0","1","100","101","255","256","32767","32768","-32769","65535","65536","2147483647","-2147483647","2.5tail","nonnumeric"};
+    const char *floats[]={"-0","0","0.125","1.23456789012345","-2.5e+2","1e-10","3.75tail","nonnumeric"};std::string result="P"+std::to_string(index);
+    for(unsigned param=1;param<count;param++){
+        // Retain the original forty-one-column ordering and space/tab token delimiters
+        bool floating=param==9 || param==10 || param==20 || param==22 || param==27 || param==30 || param==31 || param==32 || param==35 || param==36 || param==37 || param==38 || param==39;result+=(param%2?" ":"\t");result+=floating?floats[(seed+index+param)%8]:integers[(seed+index+param)%16];
+    }
+    require(result.size()<500);return result;
+}
+static void run(const std::string &configuration,bool initialise,unsigned seed,int mutation=0)
+{
+    // Reset only fixture-owned inputs while preserving canonical state through the complete real operation
+    input=configuration;hook=mutation;triggered=false;memset(work_buff,0x6d,sizeof(work_buff));TestPm_Filename("PARTICLE.CFG");TestPm_Seed(seed,particleTokens,rasterTokens);snapshot();
+    if(initialise){
+        // Preserve initialization's distinct post-parse clearing of every particle-list pointer
+        initializations++;TestPm_RunInitialise();
+    }else{
+        // Exercise direct reload with all original live pointers and unrelated fields retained
+        loads++;TestPm_RunLoad();
+    }
+    if(mutation)require(triggered);snapshot();
+}
+int main(void)
+{
+    // Verify true static zero state before any seeded records or parser calls
+    require(MAX_PARTICLES==83);uint8_t initial[sizeof(ParticleSystemMgr)];TestPm_Copy(initial);for(size_t i=0;i<sizeof(initial);i++)require(initial[i]==0);snapshot();
+    for(unsigned seed=0;seed<16;seed++){
+        // Load every record and every parameter with varied finite conversions and retained alpha channels
+        std::string configuration=";Particle configuration corpus\n";for(unsigned i=0;i<MAX_PARTICLES;i++)configuration+=row(seed,i)+"\n";configuration+=";the end\n";run(configuration,false,seed);run(configuration,true,seed+100);
+    }
+    for(unsigned count: {1u,2u,5u,8u,13u,20u,27u,35u,40u}){
+        // Retain all unspecified columns on valid short rows and clear only list pointers during initialization
+        std::string configuration=row(count,0,count)+" \t\n"+row(count,1,count)+"\n;the end\n";run(configuration,false,count);run(configuration,true,count+100);
+    }
+    run(";the end\n",false,7);run(";the end\n",true,8);run(";"+std::string(498,'x')+"\n;the end\n",false,9);
+    std::string paired=row(0,0,3)+" "+row(1,1,41)+"\n;the end\n";
+    // Wrap parameter indices across two complete entries on one original short physical line
+    paired=row(0,0,41)+" "+row(1,1,1)+"\n;the end\n";require(paired.find('\n')<500);run(paired,false,10);run(paired,true,11);
+    run(row(3,0)+"\r\n;comment\r\n;the end\n",false,12);
+    replacement=row(11,0,13)+"\n;the end\n";for(int mutation=1;mutation<=4;mutation++)run(row(9,0)+"\n;the end\n",mutation%2!=0,20+mutation,mutation);
+    printf("states=%u calls=%u loads=%u initializations=%u colourTransfers=%u hash=%016llx\n",states,calls,loads,initializations,colours,(unsigned long long)hash);return 0;
+}

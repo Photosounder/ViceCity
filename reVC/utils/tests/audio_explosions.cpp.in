@@ -1,0 +1,158 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include "../weapons/ExplosionTypes.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using int8=int8_t;using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+enum {EXPLOSION_DEFAULT_MAX_DIST=200,EXPLOSION_MOLOTOV_MAX_DIST=150,EXPLOSION_MINE_MAX_DIST=200};
+struct CVector {float x,y,z;};
+static void event(unsigned,unsigned);
+struct CExplosion {
+    CVector position;uint8_t sound,counter,type,reserved;
+    static bool DoesExplosionMakeSound(uint8);
+    static int8 GetExplosionActiveCounter(uint8);
+    static void ResetExplosionActiveCounter(uint8);
+    static uint8 GetExplosionType(uint8);
+    static CVector *GetExplosionPosition(uint8);
+};
+static CExplosion gaExplosion[NUM_EXPLOSIONS];
+static AudioSoundPosition AudioSoundPosition_FromVector(CVector position) {
+    // Copy the same three components through the original C sound boundary
+    return {position.x,position.y,position.z};
+}
+struct cAudioManager {
+@FIELDS@
+    void ProcessExplosions(int32);
+    float Sqrt(float v) const {
+        // Retain the original guarded square-root operation
+        return v<=0.0f?0.0f:sqrtf(v);
+    }
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static AudioSoundPosition camera;
+static unsigned seedValue,cases,callbacks,submits,reflects,skipped,resetCalls;
+static unsigned visits[16];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestExplosionsC(cAudioManager *,int32_t);
+extern "C" void TestExplosionsRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe callback order and original byte-index arguments
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned n) {
+    // Observe all initialized words without interpreting record padding
+    digest=TestAircraftHash(digest,p,n);
+}
+static void observe() {
+    // Include both complete owner records and every live explosion record
+    bytes(owners,sizeof(owners));bytes(gaExplosion,sizeof(gaExplosion));bytes(&camera,sizeof(camera));
+}
+static void event(unsigned token,unsigned id) {
+    // Observe each query before changing later state and scratch reads
+    ++callbacks;value(token);value(id);observe();
+    if(token==2&&(seedValue&64))gaExplosion[id].type=(uint8_t)((gaExplosion[id].type+1)%16);
+    if(token==3&&(seedValue&128))gaExplosion[id].type=EXPLOSION_MOLOTOV;
+    if(token==5&&(seedValue&256)){gaExplosion[id].position.x=1;active->m_sQueueSample.m_nEntityIndex^=1;}
+    if(token==6&&(seedValue&512)){active->m_sQueueSample.m_MaxDistance=160;active->m_sQueueSample.m_vecPos.x=155;}
+    if(token==10&&(seedValue&1024)&&id+1<NUM_EXPLOSIONS){gaExplosion[id+1].sound=1;gaExplosion[id+1].counter=1;}
+}
+bool CExplosion::DoesExplosionMakeSound(uint8 id) {
+    // Preserve the original short-circuit sound permission query
+    event(1,id);return gaExplosion[id].sound!=0;
+}
+int8 CExplosion::GetExplosionActiveCounter(uint8 id) {
+    // Retain the original signed conversion of the stored counter byte
+    event(2,id);return (int8)gaExplosion[id].counter;
+}
+void CExplosion::ResetExplosionActiveCounter(uint8 id) {
+    // Reset before type, position, camera or request callbacks
+    ++resetCalls;event(3,id);gaExplosion[id].counter=0;
+}
+uint8 CExplosion::GetExplosionType(uint8 id) {
+    // Record every selected type including the original default cases
+    event(4,id);++visits[gaExplosion[id].type];return gaExplosion[id].type;
+}
+CVector *CExplosion::GetExplosionPosition(uint8 id) {
+    // Expose the live position only at the original vector-copy expression
+    event(5,id);return &gaExplosion[id].position;
+}
+@HOST@
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Preserve the live sound-vector read after the camera query
+    event(6,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the existing unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe the actual request gate and allow later explosion counters to change
+    event(10,active->m_sQueueSample.m_nCounter%NUM_EXPLOSIONS);return (seedValue>>3)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Exercise defined reflection-frequency paths in the original request implementation
+    event(11,0);return (seedValue>>4)&1;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe complete scratch fields before real queue and reflection insertion
+    assert(manager==active);++submits;
+#ifdef AUDIO_REFLECTIONS
+    reflects+=manager->m_sQueueSample.m_bReflections!=0;
+#endif
+    event(9,manager->m_sQueueSample.m_nCounter);TestExplosionsRealSubmit(manager);event(12,0);
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Initialize both complete owners and retain random-displacement history across calls
+    seedValue=seed;memset(owners,0,sizeof(owners));memset(gaExplosion,0,sizeof(gaExplosion));active=&owners[seed&1];camera={0,0,0};
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*37+i*73)%10000-5000;
+    active->m_sQueueSample.m_nEntityIndex=seed;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_bIs2D=1;active->m_sQueueSample.m_fDistance=-1;active->m_sQueueSample.m_vecPos={2,3,4};
+#ifdef AUDIO_REFLECTIONS
+    // Exercise actual reflection insertion with initialized distances and positions
+    active->m_sQueueSample.m_bReflections=(seed>>4)&1;active->m_bDynamicAcousticModelingStatus=(seed>>2)&1;
+    for(unsigned i=0;i<ARRAY_SIZE(active->m_afReflectionsDistances);++i){active->m_afReflectionsDistances[i]=15+i*12;active->m_avecReflectionsPos[i]={(float)i,2,3};}
+#ifndef FIX_BUGS
+    // Exclude the pre-existing undefined vanilla reflection-frequency temporary
+    active->m_bDynamicAcousticModelingStatus=0;
+#endif
+#endif
+#ifdef AUDIO_REVERB
+    // Seed reverb independently so conditional generator writes remain observable
+    active->m_sQueueSample.m_bReverb=(seed>>5)&1;
+#endif
+    static const float distances[]={0,39.999f,40,149.999f,150,150.001f,199.999f,200,200.001f,NAN,INFINITY};
+    static const uint8_t counters[]={0,1,2,127,128,255};
+    for(unsigned i=0;i<NUM_EXPLOSIONS;++i){CExplosion *e=&gaExplosion[i];e->type=(seed/3+i)%16;e->sound=(seed+i)%4!=0;e->counter=counters[(seed+i)%ARRAY_SIZE(counters)];e->position={distances[(seed/6+i)%ARRAY_SIZE(distances)],0,(float)((seed/66)%3)*1000};}
+}
+int main() {
+    // Keep console-only failures quiet on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Scan every explosion slot twice to verify counter consumption and callback changes
+    for(unsigned seed=0;seed<2048;++seed){prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;}
+    // Require every type and both audible and inaudible reset paths
+    for(unsigned type=0;type<16;++type)assert(visits[type]);
+    assert(submits&&resetCalls>submits);
+#ifdef AUDIO_REFLECTIONS
+    assert(reflects);
+#endif
+    printf("%u %u %u %u %u %llu\n",cases,callbacks,submits,reflects,resetCalls,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

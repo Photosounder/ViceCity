@@ -4,6 +4,7 @@ import re
 from audio_controls_migration import function
 from audio_owner_init_migration import fields
 import audio_lifecycle_migration as migration
+import audio_game_setup_migration as game_setup
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-lifecycle-c-tests'
 old=(out/'before/src/audio/AudioManager.cpp').read_text();kernel=(root/'src/audio/AudioLifecycle.c').read_text()
 def normalize(s):
@@ -20,14 +21,23 @@ facades=(out/'before/src/audio/DMAudio.cpp').read_text()
 for name in ['Initialise','Terminate']:
     expected=function(facades,'DMAudio_',name).replace('AudioManager.'+name+'()', 'AudioLifecycle_'+name+'(&AudioManager)')
     assert normalize(expected)==normalize(function(kernel,'DMAudio_',name))
-includes='\n'.join('#include "'+name+'"' for name in ['AudioSound.h','AudioCollision.h','AudioEntities.h','AudioPedComments.h','AudioMissionPosition.h','AudioState.h','AudioReflectionTypes.h','AudioCrimes.h','AudioPoliceQueue.h','AudioPoliceState.h','sampman.h'])
+includes='\n'.join('#include "'+name+'"' for name in ['AudioSound.h','AudioCollision.h','AudioEntities.h','AudioPedComments.h','AudioMissionPosition.h','AudioState.h','AudioReflectionTypes.h','AudioCrimes.h','AudioPoliceQueue.h','AudioPoliceState.h','sampman.h','Validate.h','MusicManager.h'])
 template=(root/'utils/tests/audio_lifecycle.cpp.in').read_text().replace('@INCLUDES@',includes).replace('@FIELDS@',fields((root/'src/audio/AudioManager.h').read_text()))
 for variant in ['before','after']:
-    source=template.replace('@METHODS@',initialise+'\n'+terminate if variant=='before' else '').replace('@HOST@',migration.HOST if variant=='after' else '')
+    source=template.replace('@METHODS@',initialise+'\n'+terminate if variant=='before' else '').replace('@HOST@',game_setup.logic(migration.HOST)+game_setup.observers() if variant=='after' else '')
     source=source.replace('@INITIALISE@','active->Initialise()' if variant=='before' else 'AudioLifecycle_Initialise(active)').replace('@TERMINATE@','active->Terminate()' if variant=='before' else 'AudioLifecycle_Terminate(active)')
     source=source.replace('@FACADE@','AudioManager.Initialise(); AudioManager.Terminate();' if variant=='before' else 'TestLifecycleC();')
+    # Keep the legacy isolated music observer separate from the actual C owner symbol
+    source=source.replace('static FakeMusic MusicManager;','static FakeMusic fakeMusic;').replace('MusicManager.Initialise(', 'fakeMusic.Initialise(').replace('MusicManager.Terminate(', 'fakeMusic.Terminate(')
+    if variant=='after':
+        source += '\nextern "C" uint8_t MusicInit_Initialise(cMusicManager *manager) {\n    // Observe the original initialization callback at the complete C operation entry\n    if(manager!=&MusicManager) abort();\n    fakeMusic.Initialise();return 1;\n}\n'
+        source += '\nextern "C" void MusicPlayback_Terminate(cMusicManager *manager) {\n    // Observe the original callback at the same C operation entry point\n    if(manager!=&MusicManager) abort();\n    fakeMusic.Terminate();\n}\n'
+    source='#include <stdlib.h>\n'+source
     (out/(variant+'.cpp')).write_text(source,newline='\n')
 (out/'caller.c').write_text('#include "DMAudio.h"\nvoid TestLifecycleC(void)\n{\n    // Exercise both C facades against the live global owner\n    DMAudio_Initialise();\n    DMAudio_Terminate();\n}\n',newline='\n')
 for name,flags in {'default':'#define AUDIO_OAL\n','vanilla':'#define AUDIO_OAL\n#undef FIX_BUGS\n','no-external':'#undef EXTERNAL_3D_SOUND\n','ps2':'#undef GTA_PC\n#undef EXTERNAL_3D_SOUND\n#define GTA_PS2\n'}.items():
     (out/(name+'.h')).write_text('#include "config.h"\n'+flags,newline='\n')
 print('Both lifecycle bodies, channel narrowing, destructor binding, facades and callback edits audited')
+
+# Supply the actual fixed-layout C owner used only as an opaque pointer by the isolated callback observer
+(out/'music_owner.c').write_text('#include "MusicManager.h"\ncMusicManager MusicManager;\n',newline='\n')

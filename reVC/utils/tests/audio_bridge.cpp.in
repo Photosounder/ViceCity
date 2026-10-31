@@ -1,0 +1,169 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned,unsigned);
+struct CVector {float x,y,z;};
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &position) {
+    // Preserve the original position-copy boundary
+    return {position.x,position.y,position.z};
+}
+class CEntity {public:unsigned index;CVector position;const CVector &GetPosition() const {
+    // Observe the position of the original second lift-road pointer
+    event(2,index);return position;
+}};
+struct Pointer {CEntity *v;CEntity *read() const {
+    // Capture each original pointer read before changing the following pointer query
+    CEntity *result=v;event(1,result?result->index+1:0);return result;
+}operator CEntity *() const {
+    // Observe the original pointer-presence or adapter-return read
+    return read();
+}CEntity *operator->() const {
+    // Observe the separate pointer read used by the original position expression
+    return read();
+}};
+struct Integer {unsigned token;int32_t v;operator int32_t() const {
+    // Capture each original integer read before callbacks alter later state-machine gates
+    int32_t result=v;event(token,(uint32_t)result);return result;
+}};
+struct CBridge {static Pointer pLiftRoad;static Integer State,OldState;};
+struct CStats {static Integer CommercialPassed;};
+Pointer CBridge::pLiftRoad;Integer CBridge::State,CBridge::OldState,CStats::CommercialPassed;
+struct cAudioManager {
+@FIELDS@
+#ifdef GTA_BRIDGE
+void ProcessBridge();void ProcessBridgeWarning();void ProcessBridgeMotor();void ProcessBridgeOneShots();
+#endif
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static CEntity roads[2];
+static AudioSoundPosition camera;
+static unsigned seedValue,mutations,operation,cases,callbacks,submits,loops;
+static unsigned stateVisits[6],oldVisits[6],counters[3],operationVisits[4],nullRoads;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestBridgeC(cAudioManager *,uint8_t);
+extern "C" void TestBridgeRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe exact callback arguments and ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash both initialized owners and every bridge record with stable road-pointer identities
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,roads,sizeof(roads));digest=TestAircraftHash(digest,&CBridge::State,sizeof(CBridge::State));digest=TestAircraftHash(digest,&CBridge::OldState,sizeof(CBridge::OldState));digest=TestAircraftHash(digest,&CStats::CommercialPassed,sizeof(CStats::CommercialPassed));digest=TestAircraftHash(digest,&camera,sizeof(camera));value(CBridge::pLiftRoad.v?CBridge::pLiftRoad.v->index+1:0);
+}
+static void event(unsigned token,unsigned arg) {
+    // Observe state before mutations change subsequent pointer, state, distance or sample reads
+    ++callbacks;value(token);value(arg);observe();
+    if(token==1&&!arg)++nullRoads;
+    if(token==3&&arg<6)++stateVisits[arg];
+    if(token==4&&arg<6)++oldVisits[arg];
+    if(!mutations)return;
+    if(token==1&&(seedValue&1))CBridge::pLiftRoad.v=&roads[1];
+    if(token==2&&(seedValue&2))roads[arg].position.x=3;
+    if(token==3&&(seedValue&4))CBridge::OldState.v=STATE_LIFT_PART_MOVING_UP;
+    if(token==4&&(seedValue&8))CBridge::State.v=STATE_LIFT_PART_IS_DOWN;
+    if(token==5&&(seedValue&16))CBridge::OldState.v=STATE_LIFT_PART_ABOUT_TO_MOVE_UP;
+    if(token==6&&(seedValue&32))active->m_sQueueSample.m_vecPos.x=2;
+    if(token==7&&(seedValue&64))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==8&&(seedValue&128))active->m_sQueueSample.m_nSampleIndex=SFX_COL_CAR_PANEL_2;
+    if(token==9&&(seedValue&256))active->m_sQueueSample.m_fDistance=7;
+    if(token==10&&(seedValue&512)){CBridge::State.v=STATE_LIFT_PART_MOVING_DOWN;CBridge::OldState.v=STATE_LIFT_PART_IS_UP;active->m_sQueueSample.m_fDistance=7;}
+}
+@HOST@
+extern "C" void AudioReleaseHost_Position(void *entity,AudioSoundPosition *position) {
+    // Retain the original entity cast for the captured lift-road pointer
+    *position=AudioSoundPosition_FromVector(((CEntity *)entity)->GetPosition());
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager,uint32_t sample) {
+    // Observe warning or transition frequency before changing the subsequent live loop sample
+    assert(manager==&SampleManager);event(7,sample);return 8000+sample%10000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the original loop-start argument before changing the live loop-end sample
+    assert(manager==&SampleManager);++loops;event(8,sample);return sample%13;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the live loop-end sample before changing cached distance for subsequent generators
+    assert(manager==&SampleManager);event(9,sample);return 200+sample%17;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Query camera state before geometry reads the live scratch coordinates
+    event(6,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Exercise real request insertion while changing later bridge-transition gates
+    event(10,0);return (seedValue>>1)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Retain a defined real reflection dependency
+    event(11,0);return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe scratch fields before and after real C request insertion
+    assert(manager==active);++submits;if(manager->m_sQueueSample.m_nCounter<3)++counters[manager->m_sQueueSample.m_nCounter];event(12,manager->m_sQueueSample.m_nCounter);TestBridgeRealSubmit(manager);event(13,0);
+}
+#ifdef GTA_BRIDGE
+@METHODS@
+#endif
+static void run() {
+    // Exercise the original state machine and each separately callable complete sound generator
+    ++operationVisits[operation];@RUN@;
+}
+static void prepare(unsigned seed,unsigned mode) {
+    // Initialize both owners and all original integer-state and valid road records with zero padding
+    seedValue=seed;mutations=1;operation=mode;memset(owners,0,sizeof(owners));memset(roads,0,sizeof(roads));memset(&CBridge::State,0,sizeof(CBridge::State));memset(&CBridge::OldState,0,sizeof(CBridge::OldState));memset(&CStats::CommercialPassed,0,sizeof(CStats::CommercialPassed));active=&owners[seed&1];camera={0,0,0};CBridge::pLiftRoad.v=seed%7==0?NULL:&roads[0];
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    active->m_sQueueSample.m_nEntityIndex=seed%NUM_AUDIOENTITIES;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    // Cover all current and previous states, integer defaults and positive or negative story flags
+    static const int32_t states[]={STATE_BRIDGE_LOCKED,STATE_LIFT_PART_IS_UP,STATE_LIFT_PART_MOVING_DOWN,STATE_LIFT_PART_IS_DOWN,STATE_LIFT_PART_ABOUT_TO_MOVE_UP,STATE_LIFT_PART_MOVING_UP,6,-1,INT32_MIN,INT32_MAX};CBridge::State.token=3;CBridge::State.v=states[seed%10];CBridge::OldState.token=4;CBridge::OldState.v=states[(seed/10)%10];CStats::CommercialPassed.token=5;CStats::CommercialPassed.v=(seed/100)%4==0?0:(seed/100)%4==1?-1:(seed/100)%4==2?1:INT32_MAX;
+    // Exercise strict position and cached-distance gates without undefined negative volume casts
+    static const float positions[]={0,49.999f,50,50.001f,89.999f,90,90.001f,399.999f,400,400.001f,449.999f,450,450.001f,NAN,INFINITY};active->m_sQueueSample.m_fDistance=positions[(seed/7)%15];for(unsigned i=0;i<2;++i){roads[i].index=i;roads[i].position.x=positions[(seed/5+i)%15];roads[i].position.z=(float)((seed/75)%3)*100;}
+    // Retain seeded conditional fields including the reflection flag left untouched by the motor
+#ifdef AUDIO_REFLECTIONS
+    active->m_sQueueSample.m_bReflections=seed&1;active->m_sQueueSample.m_nReflectionDelay=13;active->m_bDynamicAcousticModelingStatus=(seed>>2)&1;
+#endif
+#ifdef AUDIO_REVERB
+    active->m_sQueueSample.m_bReverb=seed&1;
+#endif
+}
+int main() {
+    // Keep failures console-only on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Exercise all state combinations through repeated live mutations and fresh distance boundaries
+    for(unsigned seed=0;seed<1024;++seed)for(unsigned mode=0;mode<4;++mode){prepare(seed,mode);run();observe();++cases;run();observe();++cases;prepare(seed,mode);mutations=0;run();observe();++cases;}
+    // Require each bridge path and original state to be observed when the feature is enabled
+#ifdef GTA_BRIDGE
+    assert(submits&&nullRoads);for(unsigned i=0;i<3;++i)assert(counters[i]);for(unsigned i=0;i<6;++i)assert(stateVisits[i]&&oldVisits[i]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+#else
+    assert(!callbacks&&!submits&&!loops);
+#endif
+    for(unsigned i=0;i<4;++i)assert(operationVisits[i]);
+    printf("%u %u %u %u %llu\n",cases,callbacks,submits,loops,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

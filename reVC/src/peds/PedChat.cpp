@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "Camera.h"
 #include "DMAudio.h"
@@ -82,15 +83,15 @@ CPed::ServiceTalking(void)
 
 	if (m_queuedSound != SOUND_NO_SOUND) {
 		if (m_queuedSound == SOUND_PED_DEATH)
-			m_soundStart = CTimer::GetTimeInMilliseconds() - 1;
+			m_soundStart = (*Timer_GetTimeInMilliseconds()) - 1;
 
-		if (CTimer::GetTimeInMilliseconds() > m_soundStart) {
+		if ((*Timer_GetTimeInMilliseconds()) > m_soundStart) {
 			DMAudio_PlayOneShot(m_audioEntityId, m_queuedSound, 1.0f);
-			m_lastSoundStart = CTimer::GetTimeInMilliseconds();
+			m_lastSoundStart = (*Timer_GetTimeInMilliseconds());
 			m_soundStart =
 				CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nFixedDelayTime
-				+ CTimer::GetTimeInMilliseconds()
-				+ CGeneral::GetRandomNumberInRange(0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nOverrideFixedDelayTime);
+				+ (*Timer_GetTimeInMilliseconds())
+				+ General_GetRandomNumberInRangeInt(0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nOverrideFixedDelayTime);
 
 			if (m_queuedSound == SOUND_PED_PLAYER_BEFORESEX && IsPlayer())
 				m_soundStart += 2000;
@@ -142,14 +143,16 @@ CPed::Say(uint16 audio)
 		// See VC Ped Speech patch
 #ifdef FIX_BUGS
 			|| CommentWaitTime[audio - SOUND_PED_DEATH].m_nOverrideMaxRandomDelayTime
-				+ (uint32)CGeneral::GetRandomNumberInRange(0, CommentWaitTime[audio - SOUND_PED_DEATH].m_nMaxRandomDelayTime)
+				+ (uint32)General_GetRandomNumberInRangeInt(0, CommentWaitTime[audio - SOUND_PED_DEATH].m_nMaxRandomDelayTime)
 #else
 			|| CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nOverrideMaxRandomDelayTime
-			+ (uint32)CGeneral::GetRandomNumberInRange(0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nMaxRandomDelayTime)
+			+ (uint32)General_GetRandomNumberInRangeInt(0, CommentWaitTime[m_queuedSound - SOUND_PED_DEATH].m_nMaxRandomDelayTime)
 #endif
-				+ m_lastSoundStart <= CTimer::GetTimeInMilliseconds()) {
+				+ m_lastSoundStart <= (*Timer_GetTimeInMilliseconds())) {
 			m_queuedSound = audio;
 		}
 	}
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

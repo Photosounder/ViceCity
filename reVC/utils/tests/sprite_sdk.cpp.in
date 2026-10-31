@@ -1,0 +1,94 @@
+#include "sprite-entry.h"
+#include "PointLights_backend.h"
+SpriteCamera TheCamera;
+SpriteScene Scene;
+static float spriteNear=1.0f,spriteFar=200.0f,spriteFov=70.0f,spriteAspect=16.0f/9.0f,sdkNearDepth=0.1f,sdkFarDepth=0.9f;
+static bool spriteCapturing;
+#ifdef FIX_SPRITES
+bool Draw_ms_bFixSprites=true;
+#endif
+static SpriteArgs spriteNested;
+static bool spriteDrawReentry,spriteInsideDraw,spritePointReentry,spriteInsidePoints;
+static unsigned spriteReentries,spriteMutations,spriteDrawCalls,spriteCoverage[SP_COUNT];
+static CRGBA *spriteMutateColours;
+static CRect *spriteMutateRect;
+static unsigned spriteSetterCalls,spriteMutateSetter;
+static void spriteSetter(void)
+{
+    // Mutate live caller-owned fields at a controlled external SDK setter boundary
+    ++spriteSetterCalls;if(spriteSetterCalls!=spriteMutateSetter)return;++spriteMutations;if(spriteMutateRect){spriteMutateRect->left+=3.25f;spriteMutateRect->right-=4.5f;spriteMutateRect->top-=2.0f;spriteMutateRect->bottom+=5.0f;}if(spriteMutateColours)for(unsigned i=0;i<4;++i){spriteMutateColours[i].r^=0x51;spriteMutateColours[i].g^=0xA3;spriteMutateColours[i].b^=0x39;spriteMutateColours[i].a^=0x67;}
+}
+CVector operator*(const RwMatrix &matrix,const CVector &value)
+{
+    // Execute the separately owned native matrix-vector primitive with its actual original expression order
+    event(301);vectorValue(&value);matrixValue(&matrix);return CVector(matrix.right.x*value.x+matrix.up.x*value.y+matrix.at.x*value.z+matrix.pos.x,matrix.right.y*value.x+matrix.up.y*value.y+matrix.at.y*value.z+matrix.pos.y,matrix.right.z*value.x+matrix.up.z*value.y+matrix.at.z*value.z+matrix.pos.z);
+}
+float RwCameraGetNearClipPlane(RwCamera *camera)
+{
+    // Supply the live SDK camera clip plane at the original call point
+    require(camera&&camera->alive);event(302,camera->id);return camera->nearClip;
+}
+float RwIm2DGetNearScreenZ(void)
+{
+    // Expose the current SDK near-depth constant
+    event(303);return sdkNearDepth;
+}
+float RwIm2DGetFarScreenZ(void)
+{
+    // Expose the current SDK far-depth constant
+    event(304);return sdkFarDepth;
+}
+float Draw_GetNearClipZ(void)
+{
+    // Observe each access to the independently owned near clip setting
+    event(305);return spriteNear;
+}
+float Draw_GetFarClipZ(void)
+{
+    // Observe each access to the independently owned far clip setting
+    event(306);return spriteFar;
+}
+float Draw_GetFOV(void)
+{
+    // Observe each access to the independently owned field of view
+    event(307);return spriteFov;
+}
+float Draw_GetAspectRatio(void)
+{
+    // Observe each access to the independently owned aspect setting
+    event(308);return spriteAspect;
+}
+bool SoftwarePolygons::CapturingWorldEffects(void)
+{
+    // Expose software capture routing without changing the sprite algorithm's Y orientation choice
+    event(309,spriteCapturing);return spriteCapturing;
+}
+PointLightsVector PointLights_BackendReadVector(const void *owner)
+{
+    // Retain the full original independently owned scalar reader for the native projection forwarding case
+    const CVector *value=(const CVector*)owner;PointLightsVector result={value->x,value->y,value->z};return result;
+}
+static void spriteVertices(const RwIm2DVertex *vertices,int32 count)
+{
+    // Observe all initialized static SDK vertex fields without relying on structure padding
+    for(int32 i=0;i<count;++i){bytes(&vertices[i].x,sizeof(float));bytes(&vertices[i].y,sizeof(float));bytes(&vertices[i].z,sizeof(float));bytes(&vertices[i].reciprocal,sizeof(float));bytes(&vertices[i].u,sizeof(float));bytes(&vertices[i].v,sizeof(float));bytes(&vertices[i].colour,sizeof(vertices[i].colour));}
+}
+static void spriteDraw(int32 kind,RwIm2DVertex *vertices,int32 count)
+{
+    // Observe actual shared SDK buffers before and after nested drawing without inventing private vertex storage
+    SpriteState state;GetTestSpriteState(&state);require(count>=0&&count<=384);unsigned identity=vertices==state.immediate?1:vertices==state.buffered?2:3;event(310,kind,identity);bytes(&count,sizeof(count));spriteVertices(vertices,count);++spriteDrawCalls;
+    if(spriteDrawReentry&&!spriteInsideDraw){
+        // Reenter a complete immediate draw or a valid nonfull buffer while the original SDK array remains live
+        spriteDrawReentry=false;spriteInsideDraw=true;++spriteReentries;SpriteResult result;TestSprite(identity==1?SP_RenderOneXLUSprite:SP_RenderBufferedOneXLUSprite,&spriteNested,&result);if(identity==2)TestSprite(SP_FlushSpriteBuffer,&spriteNested,&result);spriteInsideDraw=false;
+    }
+    spriteVertices(vertices,count);
+}
+void FixturePoints(float *x,float *y,float *z,float *outX,float *outY,float *outZ,void *input,void *output)
+{
+    // Observe initialized callback fields and distinct per-invocation point lifetimes
+    require(input!=output);uintptr_t offsets[]={(uintptr_t)x-(uintptr_t)input,(uintptr_t)y-(uintptr_t)input,(uintptr_t)z-(uintptr_t)input,(uintptr_t)outX-(uintptr_t)output,(uintptr_t)outY-(uintptr_t)output,(uintptr_t)outZ-(uintptr_t)output};bytes(offsets,sizeof(offsets));float values[]={*x,*y,*z,*outX,*outY,*outZ};bytes(values,sizeof(values));
+    if(spritePointReentry&&!spriteInsidePoints){
+        // Verify nested C or native point storage does not overwrite an active caller's initialized values
+        spritePointReentry=false;spriteInsidePoints=true;++spriteReentries;SpriteResult result;TestSpritePeers(SP_PeerScrollPoints,&spriteNested,&result);float after[]={*x,*y,*z,*outX,*outY,*outZ};require(memcmp(values,after,sizeof(values))==0);spriteInsidePoints=false;
+    }
+}

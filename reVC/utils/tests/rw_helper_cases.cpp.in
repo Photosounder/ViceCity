@@ -1,0 +1,142 @@
+static RwMatrix matrix(float x,float y,float z,float scale)
+{
+    // Supply fully initialized and invertible external SDK matrices with distinguishable bases and translations
+    RwMatrix value={{scale,0.0f,0.0f},0x101,{0.0f,scale+0.5f,0.0f},0x202,{0.0f,0.0f,scale+1.0f},0x303,{x,y,z},0x404};return value;
+}
+static RwCamera *newCamera(void)
+{
+    // Construct each camera through the complete owner before supplying controlled external raster metadata
+    TestHelperArgs args={};args.x=731;args.y=509;args.z=1;RwCamera *value=(RwCamera*)run(OP_CameraCreate,&args).object;require(value&&value->frame&&value->frameBuffer&&value->zBuffer);value->frameBuffer->width=value->zBuffer->width=320;value->frameBuffer->height=value->zBuffer->height=240;return value;
+}
+static void destroyCamera(RwCamera *camera)
+{
+    // Exercise complete original or C cleanup rather than releasing owner resources directly in the fixture
+    TestHelperArgs args={};args.object=camera;run(OP_CameraDestroy,&args);
+}
+static void pipelineState(RpAtomic *atomic)
+{
+    // Observe the actual external pipeline slot and native geometry flags after policy completes
+    event(180,atomic->pipeline?atomic->pipeline->platform:0,atomic->pipeline?atomic->pipeline->pluginID:0);bytes(&atomic->geometry->flags,sizeof(atomic->geometry->flags));
+}
+int main(void)
+{
+    // Initialize independent external graph objects while leaving every helper policy decision inside the real producers
+    TestHelperState state;TestHelperGetState(&state);require(state.cull&&state.sphere&&!state.debug&&!state.blur);TestHelperArgs args={};RwFrame graph[6]={};RpHAnimHierarchy hierarchies[3]={};RpSkin skin={};RpGeometry geometry[3]={};RpAtomic atomic[3]={};RpClump clumps[3]={};rw::InstanceDataHeader instances[3]={{2},{3},{1}};rw::ObjPipeline skinPipes[8],materialPipes[8],unknown={4,0x9999};RpMaterial materials[3]={{70,0},{71,7},{72,11}};RwObject objects[2]={{80},{81}};RwTexture textures[2]={{90},{91}};RwTexDictionary dictionary={92,2,{&textures[0],&textures[1]}};
+#ifdef PS2_ALPHA_TEST
+    require(state.ps2);
+#else
+    require(!state.ps2);
+#endif
+    for(int i=0;i<8;++i){
+        // Supply actual independently indexed external pipeline tables
+        skinPipes[i]={i,rw::ID_SKIN};materialPipes[i]={i,rw::ID_MATFX};rw::skinGlobals.pipelines[i]=&skinPipes[i];rw::matFXGlobals.pipelines[i]=&materialPipes[i];
+    }
+    for(int i=0;i<6;++i){
+        // Keep modelling and world matrices observably different throughout hierarchy and sphere tests
+        graph[i].id=10+i;graph[i].alive=true;graph[i].matrix=matrix(1.0f+i,3.0f-i,5.0f+i,1.0f);graph[i].ltm=matrix(11.0f+i,13.0f-i,15.0f+i,2.0f);
+    }
+    for(int i=0;i<3;++i){
+        // Provide valid parent-stack flags, padded keyframe inputs and fully initialized bone matrices
+        hierarchies[i].id=30+i;hierarchies[i].numNodes=6;hierarchies[i].pNodeInfo=hierarchies[i].nodeInfo;for(int j=0;j<16;++j)hierarchies[i].matrices[j]=matrix((float)(i+j),(float)(i-j),0.5f*j,1.0f);hierarchies[i].nodeInfo[1].flags=rpHANIMPUSHPARENTMATRIX;hierarchies[i].nodeInfo[3].flags=rpHANIMPOPPARENTMATRIX;hierarchies[i].nodeInfo[4].flags=rpHANIMPUSHPARENTMATRIX;hierarchies[i].nodeInfo[5].flags=rpHANIMPOPPARENTMATRIX;geometry[i].id=40+i;geometry[i].instData=&instances[i];geometry[i].skin=&skin;atomic[i].id=50+i;atomic[i].geometry=&geometry[i];atomic[i].pipeline=&skinPipes[1];atomic[i].hierarchy=&hierarchies[i];atomic[i].sphere={{(float)(i*3),1.5f*i,-2.0f*i},2.0f+i};atomic[i].clump=&clumps[0];clumps[i].id=60+i;clumps[i].frame=&graph[i];clumps[i].count=2;clumps[i].atomics[0]=&atomic[0];clumps[i].atomics[1]=&atomic[1];
+    }
+    skin.id=33;skin.count=6;for(int i=0;i<16;++i)skin.matrices[i]=matrix((float)i,2.0f*i,-0.5f*i,1.0f);
+    graph[0].childCount=2;graph[0].children[0]=&graph[1];graph[0].children[1]=&graph[2];graph[1].childCount=1;graph[1].children[0]=&graph[3];graph[3].hierarchy=&hierarchies[0];graph[2].hierarchy=&hierarchies[1];graph[4].childCount=1;graph[4].children[0]=&graph[5];graph[5].hierarchy=&hierarchies[2];clumps[2].frame=&graph[4];graph[0].objectCount=2;graph[0].objects[0]=&objects[0];graph[0].objects[1]=&objects[1];
+    // Exercise static font initialization, repeated creation and the original retained-resource behavior
+    args.text="C11 helper text";args.x=-7;args.y=31;run(OP_OpenCharsetSafe,&args);run(OP_OpenCharsetSafe,&args);run(OP_CreateDebugFont,&args);run(OP_CreateDebugFont,&args);run(OP_ObrsPrintfString,&args);run(OP_FlushObrsPrintfs,&args);run(OP_DestroyDebugFont,&args);run(OP_CreateDebugFont,&args);run(OP_DestroyDebugFont,&args);
+    for(unsigned i=0;i<charsetsCreated;++i)if(charsets[i].alive)RtCharsetDestroy(&charsets[i]);
+    for(unsigned flags=0;flags<8;++flags){
+        // Vary the live graphics controls and check the original direct state setup
+        state.ps2=(flags&1)!=0;state.cull=(flags&2)!=0;state.debug=(flags&4)!=0;state.blur=(flags&1)!=0;TestHelperSetState(&state);run(OP_DefinedState,&args);require(renderStates[rwRENDERSTATEFOGCOLOR]==0xFF115395);args.x=flags&1?-1:3;run(OP_SetCullMode,&args);require(renderStates[rwRENDERSTATECULLMODE]==(state.cull?(uint32)args.x:(uint32)rwCULLMODECULLNONE));GLAD_GL_KHR_debug=false;args.text="outer debug group";run(OP_PushRendergroup,&args);run(OP_PopRendergroup,&args);GLAD_GL_KHR_debug=true;run(OP_PushRendergroup,&args);run(OP_PopRendergroup,&args);
+    }
+    // Check singleton alpha-test save slots, including the original overwrite on nested saves
+#ifdef LIBRW
+    const uint32 alphaFunction=rw::ALPHATESTFUNC,alphaReference=rw::ALPHATESTREF;
+#else
+    const uint32 alphaFunction=D3DRS_ALPHAFUNC,alphaReference=D3DRS_ALPHAREF;
+#endif
+    renderStates[alphaFunction]=17;renderStates[alphaReference]=93;args.x=27;run(OP_SetAlphaTest,&args);args.x=111;run(OP_SetAlphaTest,&args);run(OP_RestoreAlphaTest,&args);run(OP_RestoreAlphaTest,&args);
+#if defined(FIX_BUGS) && defined(GTA_PC)
+#ifdef LIBRW
+    require(renderStates[alphaFunction]==rw::ALPHAGREATEREQUAL&&renderStates[alphaReference]==0);
+#else
+    require(renderStates[alphaFunction]==D3DCMP_GREATEREQUAL&&renderStates[alphaReference]==27);
+#endif
+#else
+    require(renderStates[alphaFunction]==17&&renderStates[alphaReference]==93);
+#endif
+    // Check every public first-object selector and the original empty-container exits
+    args.object=&graph[0];require(run(OP_GetFirstChild,&args).object==&graph[1]);require(run(OP_GetFirstObject,&args).object==&objects[0]);graph[0].childCount=graph[0].objectCount=0;require(run(OP_GetFirstChild,&args).object==NULL&&run(OP_GetFirstObject,&args).object==NULL);graph[0].childCount=graph[0].objectCount=2;args.object=&clumps[0];require(run(OP_GetFirstAtomic,&args).object==&atomic[0]);int oldCount=clumps[0].count;clumps[0].count=0;require(run(OP_GetFirstAtomic,&args).object==NULL);require(run(OP_IsClumpSkinned,&args).value==0);clumps[0].count=oldCount;require(run(OP_IsClumpSkinned,&args).value==1);geometry[0].skin=NULL;require(run(OP_IsClumpSkinned,&args).value==0);geometry[0].skin=&skin;args.object=&dictionary;require(run(OP_GetFirstTexture,&args).object==&textures[0]);dictionary.count=0;require(run(OP_GetFirstTexture,&args).object==NULL);dictionary.count=2;
+    // Enter the four original direct callbacks through correctly typed independent caller storage
+    args.object=&graph[1];TestHelperResult result=run(OP_GetFirstFrameCallback,&args);require(!result.object&&result.output==args.object);args.object=&objects[0];result=run(OP_GetFirstObjectCallback,&args);require(!result.object&&result.output==args.object);args.object=&atomic[0];result=run(OP_GetFirstAtomicCallback,&args);require(!result.object&&result.output==args.object);args.object=&textures[0];result=run(OP_GetFirstTextureCallback,&args);require(!result.object&&result.output==args.object);
+    // Preserve hierarchy search overwrite rules and nested traversal contexts
+    args.object=&clumps[0];require(run(OP_GetAnimHierarchyFromSkinClump,&args).object==&hierarchies[0]);require(run(OP_GetAnimHierarchyFromClump,&args).object==&hierarchies[1]);nestedArgs={};nestedArgs.object=&clumps[2];reenterHierarchy=true;require(run(OP_GetAnimHierarchyFromClump,&args).object==&hierarchies[1]);require(!reenterHierarchy);graph[2].hierarchy=NULL;graph[3].hierarchy=NULL;require(run(OP_GetAnimHierarchyFromClump,&args).object==NULL);graph[2].hierarchy=&hierarchies[1];graph[3].hierarchy=&hierarchies[0];
+    // Observe null bone-table short circuit before any SDK traversal or metadata access
+    args.data=NULL;unsigned oldEvents=events;run(OP_SkinGetBonePositionsToTable,&args);require(events==oldEvents);RwV3d bones[16];memset(bones,0xA5,sizeof(bones));args.data=bones;run(OP_SkinGetBonePositionsToTable,&args);require(bones[0].x==0&&bones[0].y==0&&bones[0].z==0);bytes(bones,skin.count*sizeof(*bones));args.object=&hierarchies[0];unsigned oldLines=debugLines;run(OP_RenderSkeleton,&args);require(debugLines-oldLines==5);
+    // Preserve unconditional first-bone initialization with empty or singleton SDK bone counts
+    for(int count=0;count<2;++count){skin.count=count;memset(bones,0xA5,sizeof(bones));args.object=&clumps[0];args.data=bones;run(OP_SkinGetBonePositionsToTable,&args);require(bones[0].x==0&&bones[0].y==0&&bones[0].z==0);}
+    skin.count=6;hierarchies[0].nodeInfo[4].flags=rpHANIMPUSHPARENTMATRIX|rpHANIMPOPPARENTMATRIX;hierarchies[0].nodeInfo[5].flags=0;run(OP_SkinGetBonePositionsToTable,&args);bytes(bones,skin.count*sizeof(*bones));args.object=&hierarchies[0];oldLines=debugLines;run(OP_RenderSkeleton,&args);require(debugLines-oldLines==5);hierarchies[0].nodeInfo[4].flags=rpHANIMPUSHPARENTMATRIX;hierarchies[0].nodeInfo[5].flags=rpHANIMPOPPARENTMATRIX;
+    // Check original keyframe count, time division, complete initialization and SDK-provided padded stride
+    for(int nodes=0;nodes<=6;nodes+=3){
+        // Retain real application frame initialization while inspecting only defined keyframe fields
+        hierarchies[0].numNodes=nodes;RpHAnimAnimation *animation=(RpHAnimAnimation*)run(OP_HAnimAnimationCreateForHierarchy,&args).object;require(animation);
+#if defined(FIX_BUGS) || defined(LIBRW)
+        require(animation->count==2*nodes);
+#else
+        require(animation->count==nodes);
+#endif
+        for(int i=0;i<animation->count;++i){RpHAnimStdKeyFrame *frame=(RpHAnimStdKeyFrame*)HANIMFRAME(animation,i);require(frame->prevFrame==NULL&&frame->q.real==1.0f&&frame->q.imag.x==0&&frame->q.imag.y==0&&frame->q.imag.z==0&&frame->t.x==0&&frame->t.y==0&&frame->t.z==0);
+#if defined(FIX_BUGS) || defined(LIBRW)
+            require(frame->time==(float)(i/nodes));
+#else
+            require(frame->time==0.0f);
+#endif
+            bytes(&frame->time,sizeof(frame->time));bytes(&frame->q,sizeof(frame->q));bytes(&frame->t,sizeof(frame->t));uint8_t *padding=(uint8_t*)frame+sizeof(*frame);for(int j=0;j<16;++j)require(padding[j]==0xA5);
+        }
+    }
+    hierarchies[0].numNodes=6;failAnimationCall=animationCalls+1;require(run(OP_HAnimAnimationCreateForHierarchy,&args).object==NULL);failAnimationCall=0;
+    // Exercise complete vertex construction with distinct nested native stack storage
+    args={};float coordinates[]={-13.25f,19.5f,643.75f,467.125f,0.25f,2.0f,0.003125f};memcpy(args.values,coordinates,sizeof(coordinates));require(run(OP_Im2DRenderQuad,&args).value==1);nestedArgs=args;nestedArgs.values[0]=7.0f;nestedArgs.values[2]=77.0f;reenterQuad=true;require(run(OP_Im2DRenderQuad,&args).value==1);require(!reenterQuad);
+    // Verify the original sphere null and empty exits before exercising full traversal and reentry
+    RwSphere sphere={{101,103,107},109},savedSphere=sphere,innerSphere={};args={};args.data=&sphere;args.flag=false;require(run(OP_RpClumpGetBoundingSphere,&args).object==NULL&&memcmp(&sphere,&savedSphere,sizeof(sphere))==0);args.object=&clumps[0];args.data=NULL;require(run(OP_RpClumpGetBoundingSphere,&args).object==NULL);args.data=&sphere;clumps[0].count=0;require(run(OP_RpClumpGetBoundingSphere,&args).object==NULL&&sphere.radius==0&&sphere.center.x==0&&sphere.center.y==0&&sphere.center.z==0);clumps[0].count=2;
+    for(int mode=0;mode<2;++mode){
+        // Observe both original matrix choices and direct public sphere callbacks
+        args.flag=mode!=0;require(run(OP_RpClumpGetBoundingSphere,&args).object==&clumps[0]);require(isfinite(sphere.radius)&&sphere.radius>0);bytes(&sphere,sizeof(sphere));args.object=&atomic[0];run(OP_cbsCalcMeanBSphereCenterCB,&args);run(OP_cbsCalcMeanBSphereRadiusCB,&args);args.object=&clumps[0];
+    }
+    args.flag=true;nestedArgs={};nestedArgs.object=&clumps[2];nestedArgs.data=&innerSphere;nestedArgs.flag=false;reenterSphere=true;require(run(OP_RpClumpGetBoundingSphere,&args).object==&clumps[0]);TestHelperGetState(&state);require(!state.sphere&&!reenterSphere);bytes(&sphere,sizeof(sphere));bytes(&innerSphere,sizeof(innerSphere));
+    // Check camera null guards without accessing the deliberately invalid ignored rectangle
+    args={};args.data=(void*)(uintptr_t)1;args.values[0]=0.75f;args.values[1]=1.5f;oldEvents=events;run(OP_CameraSize,&args);run(OP_CameraDestroy,&args);require(events==oldEvents);
+    for(unsigned failure=0;failure<6;++failure){
+        // Preserve complete camera factory validation and its short-circuit cleanup sequence
+        args={};args.x=731;args.y=509;args.z=1;if(failure==1)failCameraCall=cameraCalls+1;if(failure==2)failFrameCall=frameCalls+1;if(failure==3)failRasterCall=rasterCalls+1;if(failure==4)failRasterCall=rasterCalls+2;if(failure==5)failParent=true;RwCamera *value=(RwCamera*)run(OP_CameraCreate,&args).object;require((value!=NULL)==(failure==0));failCameraCall=failFrameCall=failRasterCall=0;failParent=false;if(value)destroyCamera(value);
+    }
+    args={};args.z=0;RwCamera *noDepth=(RwCamera*)run(OP_CameraCreate,&args).object;require(noDepth&&noDepth->frameBuffer&&!noDepth->zBuffer);
+#if defined(FIX_BUGS) || defined(LIBRW)
+    // Preserve the original resize policy which creates a depth raster for a camera initially created without one
+    RwRect noDepthRect={0,0,120,80};args.object=noDepth;args.data=&noDepthRect;args.values[0]=0.75f;args.values[1]=1.5f;videoMode.flags=0;run(OP_CameraSize,&args);require(noDepth->zBuffer!=NULL);
+#endif
+    destroyCamera(noDepth);
+    for(int mode=0;mode<5;++mode){
+        // Preserve unchanged-size, windowed wide/tall and exclusive view-window behavior
+        RwCamera *value=newCamera();RwRect rectangle={3,5,mode==0?320:mode==1?80:40,mode==0?240:mode==1?40:80};args={};args.object=value;args.data=mode>=3?NULL:&rectangle;args.values[0]=0.75f;args.values[1]=1.5f;videoMode.flags=mode==3?rwVIDEOMODEEXCLUSIVE:0;state.blur=(mode&1)!=0;TestHelperSetState(&state);unsigned oldCalls=rasterCalls;run(OP_CameraSize,&args);if(mode==0||mode==4)require(rasterCalls==oldCalls);if(mode==3)require(value->viewWindow.x==0.75f&&value->viewWindow.y==0.5f);bytes(&rectangle,sizeof(rectangle));bytes(&value->viewWindow,sizeof(value->viewWindow));destroyCamera(value);
+    }
+#if defined(FIX_BUGS) || defined(LIBRW)
+    for(int failure=1;failure<=3;++failure){
+        // Observe caller rectangle rollback and nullable fallback buffers without repairing original recovery policy
+        RwCamera *value=newCamera();RwRect rectangle={9,13,80,60};args={};args.object=value;args.data=&rectangle;args.values[0]=0.75f;args.values[1]=1.5f;videoMode.flags=0;failRasterCall=rasterCalls+(failure==2?2:1);if(failure==3)failRasterCall2=rasterCalls+3;run(OP_CameraSize,&args);require(rectangle.x==0&&rectangle.y==0&&rectangle.w==320&&rectangle.h==240);if(failure==3)require(!value->frameBuffer&&value->zBuffer);else require(value->frameBuffer&&value->zBuffer);failRasterCall=failRasterCall2=0;bytes(&rectangle,sizeof(rectangle));destroyCamera(value);
+    }
+    // Mutate the real caller rectangle between the two original external raster allocation calls
+    RwCamera *mutating=newCamera();RwRect rectangle={1,2,80,60};args={};args.object=mutating;args.data=&rectangle;args.values[0]=0.75f;args.values[1]=1.5f;mutateRectangle=&rectangle;mutateRasterCall=rasterCalls+1;run(OP_CameraSize,&args);require(rectangle.w==37&&rectangle.h==53&&mutating->frameBuffer->width==80&&mutating->zBuffer->width==37&&RsGlobal.width==37);mutateRectangle=NULL;bytes(&rectangle,sizeof(rectangle));destroyCamera(mutating);
+#endif
+    // Preserve destruction of distinct raster parents after their child rasters
+    RwCamera *parented=newCamera();parented->frameBuffer->parent=RwRasterCreate(320,240,0,rwRASTERTYPECAMERA);parented->zBuffer->parent=RwRasterCreate(320,240,0,rwRASTERTYPEZBUFFER);destroyCamera(parented);RwCamera *empty=RwCameraCreate();destroyCamera(empty);
+#ifdef LIBRW
+    for(int skinned=0;skinned<2;++skinned)for(int target=0;target<4;++target)for(int kind=0;kind<4;++kind)for(int native=0;native<2;++native){
+        // Exercise complete platform detection, material traversal, pipeline switching and restoration through independent inputs
+        rw::platform=1;instances[0].platform=target;geometry[0].instData=target?&instances[0]:NULL;geometry[0].skin=skinned?&skin:NULL;geometry[0].materialCount=kind==2?3:0;for(int i=0;i<3;++i)geometry[0].materials[i]=&materials[i];rw::ObjPipeline *initial=kind==0?NULL:kind==1?&skinPipes[4]:kind==2?&materialPipes[4]:&unknown;atomic[0].pipeline=initial;geometry[0].flags=native?rw::Geometry::NATIVE:0;args={};args.object=&atomic[0];args.x=2;require(run(OP_findPlatform,&args).value==target);run(OP_attachPipe,&args);pipelineState(&atomic[0]);atomic[0].pipeline=initial;run(OP_switchPipes,&args);pipelineState(&atomic[0]);atomic[0].pipeline=initial;geometry[0].flags=native?rw::Geometry::NATIVE:0;require(run(OP_ConvertPlatformAtomic,&args).object==&atomic[0]);require(rw::platform==1);rw::ObjPipeline *expected=(target==0||target==1)?initial:skinned?&skinPipes[1]:kind==2?&materialPipes[1]:initial;require(atomic[0].pipeline==expected);pipelineState(&atomic[0]);
+    }
+    // Reenter platform conversion while the outer SDK operation temporarily selects a foreign platform
+    rw::platform=1;for(int i=0;i<2;++i){instances[i].platform=2+i;geometry[i].instData=&instances[i];geometry[i].skin=&skin;geometry[i].flags=rw::Geometry::NATIVE;atomic[i].pipeline=&skinPipes[4];}args={};args.object=&atomic[0];nestedArgs={};nestedArgs.object=&atomic[1];reenterPlatform=true;run(OP_ConvertPlatformAtomic,&args);require(!reenterPlatform&&rw::platform==1&&atomic[0].pipeline==&skinPipes[1]&&atomic[1].pipeline==&skinPipes[2]);pipelineState(&atomic[0]);pipelineState(&atomic[1]);
+#endif
+    // Require balanced resources after observing all original owner and caller cleanup boundaries
+    require(camerasCreated==camerasDestroyed&&framesCreated==framesDestroyed&&rastersCreated==rastersDestroyed&&charsetsCreated==charsetsDestroyed&&assertions==0);printf("commands=%u checks=%u events=%u cameras=%u/%u frames=%u/%u rasters=%u/%u fonts=%u/%u animations=%u draws=%u transforms=%u lines=%u failures=%u reentries=%u mutations=%u assertions=%u hash=%016llx\n",commands,checks,events,camerasCreated,camerasDestroyed,framesCreated,framesDestroyed,rastersCreated,rastersDestroyed,charsetsCreated,charsetsDestroyed,animationsCreated,draws,transforms,debugLines,rasterFailures,reentries,mutations,assertions,(unsigned long long)hashValue);return 0;
+}

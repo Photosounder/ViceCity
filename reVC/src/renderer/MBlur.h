@@ -1,6 +1,8 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-enum FxType
+#include <stdint.h>
+#include <stdbool.h>
+typedef enum FxType
 {
 	FXTYPE_WATER1,
 	FXTYPE_WATER2,
@@ -10,30 +12,36 @@ enum FxType
 	FXTYPE_SPLASH1,
 	FXTYPE_SPLASH2,
 	FXTYPE_SPLASH3
-};
-
-class CMBlur
+} FxType;
+typedef struct MBlurRect {int32_t x,y,w,h;} MBlurRect;
+typedef struct MBlurRectRef {int32_t *x,*y,*w,*h;} MBlurRectRef;
+typedef struct MBlurColour {uint8_t red,green,blue,alpha;} MBlurColour;
+static inline MBlurRectRef MBlur_RectRef(MBlurRect *rect)
 {
-public:
-	static RwRaster *pFrontBuffer;
-	static bool ms_bJustInitialised;
-	static bool ms_bScaledBlur;
-	static bool BlurOn;
-	static float Drunkness;
-
-	static int32 pBufVertCount;
-
-public:
-	static RwBool MotionBlurOpen(RwCamera *cam);
-	static RwBool MotionBlurClose(void);
-	static void CreateImmediateModeData(RwCamera *cam, RwRect *rect);
-	static void CreateImmediateModeData(RwCamera *cam, RwRect *rect, RwIm2DVertex *verts, RwRGBA color, float u1Off, float v1Off, float u2Off, float v2Off, float z, int fullTexture);
-	static void MotionBlurRender(RwCamera *cam, uint32 red, uint32 green, uint32 blue, uint32 blur, int32 type, uint32 bluralpha);
-	static void OverlayRender(RwCamera *cam, RwRaster *raster, RwRGBA color, int32 type, int32 bluralpha);
-	static void SetDrunkBlur(float drunkness);
-	static void ClearDrunkBlur();
-	
-	static bool PosInside(RwRect *rect, float x1, float y1, float x2, float y2);
-	static bool AddRenderFx(RwCamera *cam, RwRect *rect, float z, FxType type);
-	static void OverlayRenderFx(RwCamera *cam, RwRaster *frontBuf);
-};
+    // Borrow the actual C rectangle fields without copying or delaying caller-visible clamping
+    const MBlurRectRef value={&rect->x,&rect->y,&rect->w,&rect->h};return value;
+}
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern void * MBlur_pFrontBuffer;
+extern bool MBlur_ms_bJustInitialised;
+extern bool MBlur_ms_bScaledBlur;
+extern bool MBlur_BlurOn;
+extern float MBlur_Drunkness;
+extern int32_t MBlur_pBufVertCount;
+int32_t MBlur_MotionBlurOpen(void *camera);
+int32_t MBlur_MotionBlurClose(void);
+void MBlur_CreateImmediateModeData(void *camera,MBlurRectRef rect);
+void MBlur_CreateImmediateModeVertices(void *camera,MBlurRectRef rect,void *vertices,MBlurColour colour,float u1,float v1,float u2,float v2,float z,int fullTexture);
+void MBlur_MotionBlurRender(void *camera,uint32_t red,uint32_t green,uint32_t blue,uint32_t blur,int32_t type,uint32_t alpha);
+void MBlur_OverlayRender(void *camera,void *raster,MBlurColour colour,int32_t type,int32_t alpha);
+void MBlur_SetDrunkBlur(float drunkness);
+void MBlur_ClearDrunkBlur(void);
+bool MBlur_PosInside(MBlurRectRef rect,float x1,float y1,float x2,float y2);
+bool MBlur_AddRenderFx(void *camera,MBlurRectRef rect,float z,FxType type);
+void MBlur_OverlayRenderFx(void *camera,void *frontBuffer);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

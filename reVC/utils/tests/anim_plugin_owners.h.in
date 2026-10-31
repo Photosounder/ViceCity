@@ -1,0 +1,99 @@
+#pragma once
+#include <stdint.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <malloc.h>
+#include <vector>
+#include "config.h"
+typedef int32_t int32;typedef uint32_t uint32;typedef int32_t RwInt32;typedef uintptr_t uintptr;
+#define nil NULL
+#define MAKECHUNKID(vendor,chunk) (((vendor&0xFFFFFF)<<8)|(chunk&0xFF))
+#define rwVENDORID_ROCKSTAR 0x0253F2
+#define RWPLUGINOFFSET(type,object,offset) ((type*)((unsigned char*)(object)+(offset)))
+struct RwV3d {float x,y,z;};
+struct RwMatrix {RwV3d right;uint32_t flags;RwV3d up;uint32_t pad1;RwV3d at;uint32_t pad2;RwV3d pos;uint32_t pad3;};
+struct RwFrame {RwMatrix matrix={};std::vector<RwFrame*> children;char name[32]={};int hierarchyId=0;};
+struct RpHAnimStdInterpFrame {struct {RwV3d imag;float real;} q;RwV3d t;};
+struct TestNodeInfo {int id;};
+struct RpHAnimHierarchy {TestNodeInfo nodes[64];RpHAnimStdInterpFrame poses[64];};
+struct RpSkin {int numBones;};
+struct RpGeometry {RpSkin *skin;};
+struct RpAtomic {RpGeometry *geometry;};
+struct RpClump;
+#include "Maths.h"
+#include "Vector.h"
+#include "Vector2D.h"
+#include "KeyFrames_native.h"
+#include "Quaternion_native.h"
+#include "AnimBlendClumpData.h"
+#include "AnimBlendAssociation.h"
+#include "AnimBlendHierarchy.h"
+#include "AnimBlendClumpData_backend.h"
+#include "AnimBlendSequence_backend.h"
+#include "AnimBlendAssociation_backend.h"
+#include "AnimBlendHierarchy_backend.h"
+#include "Bones.h"
+#include "PedNode.h"
+#include "General.h"
+struct RpClump {uintptr_t guard=0x12345678;CAnimBlendClumpData *data=NULL;RwFrame *root=NULL;RpAtomic *atomic=NULL;RpHAnimHierarchy *hierarchy=NULL;bool skinned=false;};
+#include "RpAnimBlend.h"
+typedef void *(*TestLifecycle)(void*,int32_t,int32_t);
+typedef void *(*TestCopy)(void*,const void*,int32_t,int32_t);
+typedef RwFrame *(*TestFrameCallback)(RwFrame*,void*);
+int32_t RpClumpRegisterPlugin(int32_t,uint32_t,TestLifecycle,TestLifecycle,TestCopy);
+void RwFrameForAllChildren(RwFrame*,TestFrameCallback,void*);
+RpAtomic *GetFirstAtomic(RpClump*);
+RpGeometry *RpAtomicGetGeometry(RpAtomic*);
+RpSkin *RpSkinGeometryGetSkin(RpGeometry*);
+int RpSkinGetNumBones(RpSkin*);
+RpHAnimHierarchy *GetAnimHierarchyFromSkinClump(RpClump*);
+void SkinGetBonePositionsToTable(RpClump*,RwV3d*);
+bool IsClumpSkinned(RpClump*);
+RwFrame *RpClumpGetFrame(RpClump*);
+int RpHAnimIDGetIndex(RpHAnimHierarchy*,int);
+char *GetFrameNodeName(RwFrame*);
+void RwFrameUpdateObjects(RwFrame*);
+void *RwMallocAlign(uint32_t,uint32_t);
+void RwFreeAlign(void*);
+void *RwMalloc(size_t);
+void RwFree(void*);
+struct CVisibilityPlugins {static int GetFrameHierarchyId(RwFrame*);};
+#define HIERNODEID(hierarchy,index) ((hierarchy)->nodes[index].id)
+#define rpHANIMHIERARCHYGETINTERPFRAME(hierarchy,index) (&(hierarchy)->poses[index])
+#define PUSH_MEMID(value) ((void)0)
+#define POP_MEMID() ((void)0)
+#define REGISTER_MEMPTR(value) ((void)0)
+#define MEMID_ANIMATION 3
+extern "C" void re3_assert(const char*,const char*,unsigned,const char*);
+extern "C" void re3_debug(const char*,...);
+extern "C" void AnimManager_UncompressAnimation(CAnimBlendHierarchy*);
+#undef assert
+#ifndef MASTER
+#define assert(expression) ((void)((!!(expression)) || (re3_assert(#expression,__FILE__,__LINE__,__func__),0)))
+#else
+#define assert(expression) (expression)
+#endif
+#define debug(...) re3_debug("[DBG]: " __VA_ARGS__)
+static inline RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Borrow the actual fixture SDK matrix at the original primitive boundary
+    return &frame->matrix;
+}
+static inline RwV3d *RwMatrixGetPos(RwMatrix *matrix)
+{
+    // Return the live SDK position rather than a copied vector view
+    return &matrix->pos;
+}
+static inline void RwMatrixSetIdentity(RwMatrix *matrix)
+{
+    // Preserve the SDK identity primitive while keeping unrelated padding initialized
+    matrix->right={1,0,0};matrix->up={0,1,0};matrix->at={0,0,1};matrix->pos={0,0,0};matrix->flags=1;
+}
+static inline void RwMatrixUpdate(RwMatrix *matrix)
+{
+    // Observe the final SDK matrix update without performing frame policy
+    matrix->flags+=16;
+}

@@ -1,0 +1,112 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0;
+static CAnimBlendHierarchy staticHierarchies[7];
+static CLink cacheLinks[16];
+static void require(bool condition)
+{
+    // Stop quietly at the first failed lifetime or collection invariant
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable values without hashing native addresses
+    const unsigned char *p=(const unsigned char*)value;for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static void observeFloat(float value)
+{
+    // Retain finite and signed-zero bits while canonicalizing only arithmetic NaN payloads
+    uint32_t bits;memcpy(&bits,&value,4);if((bits&0x7f800000U)==0x7f800000U&&(bits&0x7fffffU))bits=0x7fc00000U;observe(&bits,4);
+}
+static void hierarchyResult(CAnimBlendHierarchy *h)
+{
+    // Observe all named fields independently of the original record padding
+    observe(h->name,24);observe(&h->numSequences,2);observe(&h->compressed,1);observe(&h->keepCompressed,1);observeFloat(h->totalLength);bool sequence=h->sequences!=NULL,link=h->linkPtr!=NULL;observe(&sequence,1);observe(&link,1);require(Run_IsCompressed(h)==h->compressed);
+}
+static CAnimBlendHierarchy *initialize(void *memory)
+{
+    // Compare constructor-defined fields before explicitly initializing fields left indeterminate by the original lifetime
+    memset(memory,0xa5,sizeof(CAnimBlendHierarchy));Run_Hierarchy(0,memory,NULL,false);CAnimBlendHierarchy *h=(CAnimBlendHierarchy*)memory;require(h->sequences==NULL&&h->numSequences==0&&!h->compressed&&h->totalLength==0&&h->linkPtr==NULL);memset(h->name,0xa5,24);h->keepCompressed=false;observedHierarchy=h;eventCount=0;return h;
+}
+static void eventsResult()
+{
+    // Observe native cache and memory operations after checking their live hierarchy state
+    observe(events,eventCount*4);eventCount=0;
+}
+static void lifetimeAndNames()
+{
+    // Preserve startup state without adding a C++ static constructor or an initialization reset at game startup
+    for(unsigned i=0;i<7;++i){CAnimBlendHierarchy *h=&staticHierarchies[i];require(h->sequences==NULL&&h->numSequences==0&&!h->compressed&&!h->keepCompressed&&h->totalLength==0&&h->linkPtr==NULL);unsigned char zero[24]={0};require(memcmp(h->name,zero,24)==0);hierarchyResult(h);}++states;
+    // Retain the exact fixed-width name policy and partial constructor writes
+    for(unsigned test=0;test<4096;++test){alignas(CAnimBlendHierarchy) unsigned char memory[sizeof(CAnimBlendHierarchy)];CAnimBlendHierarchy *h=initialize(memory);for(unsigned i=0;i<24;++i)require((unsigned char)h->name[i]==0xa5);char name[80],expected[24];for(unsigned i=0;i<79;++i)name[i]=(char)('A'+(test+i)%26);name[79]=0;name[test%80]=0;strncpy(expected,name,24);Run_Hierarchy(2,h,name,false);require(memcmp(expected,h->name,24)==0);h->keepCompressed=(test&1)!=0;hierarchyResult(h);Run_Hierarchy(1,h,NULL,false);require(h->keepCompressed==((test&1)!=0)&&memcmp(expected,h->name,24)==0);hierarchyResult(h);eventsResult();++states;}
+}
+struct Frames {KeyFrame basic[9];KeyFrameTrans trans[9];KeyFrameCompressed packed[9];KeyFrameTransCompressed packedTrans[9];};
+static void timeAndSignPolicy()
+{
+    // Cover empty sequences with a valid preceding record so both original classic and fixed policies remain defined
+    const uint32_t bits[]={0,0x80000000U,0x3f000000U,0xbf800000U,0x40000000U,0x7f800000U,0xff800000U,0x7fc12345U};
+    for(unsigned test=0;test<8192;++test)for(unsigned packed=0;packed<2;++packed){
+        alignas(CAnimBlendHierarchy) unsigned char memory[sizeof(CAnimBlendHierarchy)];CAnimBlendHierarchy *h=initialize(memory);CAnimBlendSequence sequences[4];Frames frames[4];h->sequences=sequences;h->numSequences=(int16_t)(test%5);h->keepCompressed=(test&1)!=0;
+        for(unsigned channel=0;channel<4;++channel){AnimSequence_Init(&sequences[channel]);bool translation=((test+channel)&1)!=0;sequences[channel].type=translation?3:1;sequences[channel].numFrames=(int32_t)((test+channel)%8);sequences[channel].keyFrames=translation?(void*)&frames[channel].trans[1]:&frames[channel].basic[1];sequences[channel].keyFramesCompressed=translation?(void*)&frames[channel].packedTrans[1]:&frames[channel].packed[1];
+            // Include signed zero, infinities, NaNs and all packed narrowing boundaries in actual hierarchy time conversion
+            for(unsigned key=0;key<9;++key){KeyFrame *f=translation?&frames[channel].trans[key].base:&frames[channel].basic[key];KeyFrameCompressed *p=translation?&frames[channel].packedTrans[key].base:&frames[channel].packed[key];uint32_t time=bits[(test+channel+key)%8];memcpy(&f->deltaTime,&time,4);float sign=((test+key)&1)?-1.0f:1.0f;f->rotation=Quaternion_Make(sign*0.2f,sign*0.3f,sign*0.4f,sign*0.5f);p->deltaTime=(int16_t)(test*19U+channel*103U+key*7301U);}
+        }
+        Run_Hierarchy(packed?4:3,h,NULL,false);if(!packed)Run_Hierarchy(5,h,NULL,false);hierarchyResult(h);
+        for(unsigned channel=0;channel<4;++channel)for(unsigned key=0;key<9;++key){bool translation=sequences[channel].type&2;KeyFrame *f=translation?&frames[channel].trans[key].base:&frames[channel].basic[key];KeyFrameCompressed *p=translation?&frames[channel].packedTrans[key].base:&frames[channel].packed[key];observeFloat(f->deltaTime);observe(&f->rotation,16);observe(&p->deltaTime,2);}require(eventCount==0);++states;
+    }
+}
+static void createSequences(CAnimBlendHierarchy *h,unsigned test,bool packed)
+{
+    // Allocate actual owned C sequences and keyframe storage before complete hierarchy operations
+    h->numSequences=(int16_t)(test%5);h->sequences=(CAnimBlendSequence*)malloc(sizeof(CAnimBlendSequence)*h->numSequences);require(h->sequences||h->numSequences==0);h->keepCompressed=(test&8)!=0;
+    for(int i=0;i<h->numSequences;++i){CAnimBlendSequence *s=&h->sequences[i];AnimSequence_Init(s);bool translation=((test+i)&1)!=0;int count=(int)((test+i)%4)+1;AnimSequence_SetNumFrames(s,count,translation,packed);
+        // Supply safe packed-domain values and real original keyframe strides
+        for(int key=0;key<count;++key){if(packed){KeyFrameCompressed *f=AnimSequence_GetKeyFrameCompressed(s,key);f->rot[0]=512;f->rot[1]=-1024;f->rot[2]=1536;f->rot[3]=2048;f->deltaTime=(int16_t)(key*15);if(translation){KeyFrameTransCompressed *t=(KeyFrameTransCompressed*)f;t->trans[0]=(int16_t)key;t->trans[1]=123;t->trans[2]=-456;}}else{KeyFrame *f=AnimSequence_GetKeyFrame(s,key);float sign=(key&1)?-1.0f:1.0f;f->rotation=Quaternion_Make(sign*.125f,sign*.25f,sign*.375f,sign*.5f);f->deltaTime=key*.25f;if(translation)((KeyFrameTrans*)f)->translation={(float)key,.5f,-.25f};}}
+    }
+}
+static void sequenceValues(CAnimBlendHierarchy *h)
+{
+    // Compare the actual sequence fields and initialized buffers after hierarchy operations
+    for(int i=0;i<h->numSequences;++i){CAnimBlendSequence *s=&h->sequences[i];observe(&s->type,4);observe(&s->numFrames,4);if(s->keyFrames)observe(s->keyFrames,s->numFrames*(s->type&2?32:20));if(s->keyFramesCompressed)observe(s->keyFramesCompressed,s->numFrames*(s->type&2?16:10));}
+}
+static void ownedStorageAndCache()
+{
+    // Exercise real compression configurations, known and unknown total lengths, and linked cache cleanup
+    for(unsigned test=0;test<4096;++test){alignas(CAnimBlendHierarchy) unsigned char memory[sizeof(CAnimBlendHierarchy)];CAnimBlendHierarchy *h=initialize(memory);
+#ifdef ANIM_COMPRESSION
+        bool packed=true;
+#else
+        bool packed=false;
+#endif
+        createSequences(h,test,packed);h->totalLength=(test&2)?1.25f:0.0f;h->compressed=packed;h->linkPtr=(test&4)?CLinkList_Insert(&CAnimManager::ms_animCache,h):NULL;Run_Hierarchy(7,h,NULL,false);require(!h->compressed);hierarchyResult(h);sequenceValues(h);
+        Run_Hierarchy(8,h,NULL,false);require(h->compressed);hierarchyResult(h);sequenceValues(h);unsigned before=eventCount;Run_Hierarchy(1,h,NULL,false);require(h->sequences==NULL&&h->numSequences==0&&!h->compressed&&h->totalLength==0&&h->linkPtr==NULL&&CLinkList_Count(&CAnimManager::ms_animCache)==0);require(events[before]==7);
+        // All real buffer frees observe a hierarchy already removed from its native cache
+        for(unsigned i=before;i<eventCount;i+=6)if(events[i]==2)require(events[i+4]==0&&events[i+5]==0);hierarchyResult(h);eventsResult();Run_Hierarchy(1,h,NULL,false);require(eventCount==6&&events[0]==7);eventsResult();++states;
+    }
+}
+static void optionalHeap()
+{
+    // Preserve first-success early return and all-sequence traversal through actual sequence relocation
+#ifdef USE_CUSTOM_ALLOCATOR
+    for(unsigned test=0;test<1024;++test){alignas(CAnimBlendHierarchy) unsigned char memory[sizeof(CAnimBlendHierarchy)];CAnimBlendHierarchy *h=initialize(memory);createSequences(h,test,(test&1)!=0);unsigned before=eventCount;moveMode=(test>>1)&1;bool onlyone=(test&4)!=0;Run_Hierarchy(9,h,NULL,onlyone);unsigned moved=0;for(unsigned i=before;i<eventCount;i+=6)if(events[i]==6)++moved;require(moved==(h->numSequences&&moveMode&&onlyone?1U:(unsigned)h->numSequences));sequenceValues(h);hierarchyResult(h);Run_Hierarchy(1,h,NULL,false);eventsResult();++states;}moveMode=0;
+#endif
+}
+static void compressionPreconditions()
+{
+    // Preserve assertion reporting and continuation with empty storage so failed preconditions remain defined
+    for(unsigned operation=7;operation<=8;++operation){alignas(CAnimBlendHierarchy) unsigned char memory[sizeof(CAnimBlendHierarchy)];CAnimBlendHierarchy *h=initialize(memory);h->compressed=operation==8;h->totalLength=1.0f;Run_Hierarchy(operation,h,NULL,false);
+#if defined(ANIM_COMPRESSION) && !defined(MASTER)
+        require(eventCount==6&&events[0]==8);
+#else
+        require(eventCount==0);
+#endif
+        hierarchyResult(h);eventsResult();++states;
+    }
+}
+int main()
+{
+    // Compare complete hierarchy lifetime, times, compression, actual cache links and custom heap policy
+    CLinkList_Init(&CAnimManager::ms_animCache,cacheLinks,16);lifetimeAndNames();timeAndSignPolicy();ownedStorageAndCache();optionalHeap();compressionPreconditions();require(allocations==frees);printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

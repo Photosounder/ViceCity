@@ -1,190 +1,116 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "Building.h"
 #include "Treadable.h"
 #include "Train.h"
 #include "Pools.h"
-#include "Timer.h"
 #include "Camera.h"
 #include "World.h"
-#include "FileMgr.h"
 #include "ZoneCull.h"
-#include "Zones.h"
 
-int32     CCullZones::NumAttributeZones;
-CAttributeZone CCullZones::aAttributeZones[NUMATTRIBZONES];
-
-int32 CCullZones::CurrentWantedLevelDrop_Player;
-int32 CCullZones::CurrentFlags_Camera;
-int32 CCullZones::CurrentFlags_Player;
-bool CCullZones::bCurrentSubwayIsInvisible;
-bool CCullZones::bAtBeachForAudio;
-
-void
-CCullZones::Init(void)
+extern "C" CullZonesPosition
+CullZonesHost_GameCamera(void)
 {
-	NumAttributeZones = 0;
-	CurrentWantedLevelDrop_Player = 0;
-	CurrentFlags_Camera = 0;
-	CurrentFlags_Player = 0;
-	bCurrentSubwayIsInvisible = false;
+    // Read the original typed game input at its existing access point
+    return CullZonesPosition_FromVector(TheCamera.GetGameCamPosition());
 }
 
-void
-CCullZones::Update(void)
+extern "C" CullZonesPosition
+CullZonesHost_Player(void)
 {
-	bool invisible;
-
-	switch(CTimer::GetFrameCounter() & 7){
-	case 0:
-	case 4:
-		UpdateAtBeachForAudio();
-		break;
-
-	case 2:
-		/* Update camera attributes */
-		CurrentFlags_Camera = FindAttributesForCoors(TheCamera.GetGameCamPosition(), nil);
-		invisible = (CurrentFlags_Camera & ATTRZONE_SUBWAYVISIBLE) == 0;
-		if(invisible != bCurrentSubwayIsInvisible){
-			MarkSubwayAsInvisible(!invisible);
-			bCurrentSubwayIsInvisible = invisible;
-		}
-		break;
-
-	case 6:
-		/* Update player attributes */
-		CurrentFlags_Player = FindAttributesForCoors(FindPlayerCoors(),
-			&CurrentWantedLevelDrop_Player);
-		break;
-	}
+    // Read the original typed game input at its existing access point
+    return CullZonesPosition_FromVector(FindPlayerCoors());
 }
 
-// TODO? put somewhere else?
-bool
-IsPointWithinArbitraryArea(float px, float py, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
+extern "C" float
+CullZonesHost_CameraX(void)
 {
-	if((px-x1)*(x2-x1) - (py-y1)*(y2-y1) < 0.0f) return false;
-	if((px-x2)*(x3-x2) - (py-y2)*(y3-y2) < 0.0f) return false;
-	if((px-x3)*(x4-x3) - (py-y3)*(y4-y3) < 0.0f) return false;
-	if((px-x4)*(x1-x4) - (py-y4)*(y1-y4) < 0.0f) return false;
-	return true;
+    // Read the original typed game input at its existing access point
+    return TheCamera.GetPosition().x;
 }
 
-void
-CCullZones::UpdateAtBeachForAudio(void)
+extern "C" float
+CullZonesHost_CameraY(void)
 {
-	bAtBeachForAudio = IsPointWithinArbitraryArea(TheCamera.GetPosition().x, TheCamera.GetPosition().y,
-		400.0f, -1644.4f,
-		751.9f, 1267.8f,
-		971.9f, 1216.2f,
-		840.0f, -1744.0f);
+    // Read the original typed game input at its existing access point
+    return TheCamera.GetPosition().y;
 }
 
-void
-CCullZones::ForceCullZoneCoors(CVector coors)
+extern "C" CPool *
+CullZonesHost_BuildingPool(void)
 {
+    // Read the original typed game input at its existing access point
+    return CPools::GetBuildingPool();
 }
 
-int32
-CCullZones::FindAttributesForCoors(CVector coors, int32 *wantedLevel)
+extern "C" CPool *
+CullZonesHost_TreadablePool(void)
 {
-	int i;
-	int32 attribs;
-
-	if (wantedLevel)
-		*wantedLevel = 0;
-	attribs = 0;
-	for(i = 0; i < NumAttributeZones; i++)
-		if(coors.x >= aAttributeZones[i].minx && coors.x <= aAttributeZones[i].maxx &&
-		   coors.y >= aAttributeZones[i].miny && coors.y <= aAttributeZones[i].maxy &&
-		   coors.z >= aAttributeZones[i].minz && coors.z <= aAttributeZones[i].maxz){
-			attribs |= aAttributeZones[i].attributes;
-			if(wantedLevel)
-				*wantedLevel = Max(*wantedLevel, aAttributeZones[i].wantedLevel);
-		}
-	return attribs;
+    // Read the original typed game input at its existing access point
+    return CPools::GetTreadablePool();
 }
 
-CAttributeZone*
-CCullZones::FindZoneWithStairsAttributeForPlayer(void)
+extern "C" CPool *
+CullZonesHost_VehiclePool(void)
 {
-	int i;
-	CVector coors;
-
-	coors = FindPlayerCoors();
-	for(i = 0; i < NumAttributeZones; i++)
-		if(aAttributeZones[i].attributes & ATTRZONE_STAIRS &&
-		   coors.x >= aAttributeZones[i].minx && coors.x <= aAttributeZones[i].maxx &&
-		   coors.y >= aAttributeZones[i].miny && coors.y <= aAttributeZones[i].maxy &&
-		   coors.z >= aAttributeZones[i].minz && coors.z <= aAttributeZones[i].maxz)
-			return &aAttributeZones[i];
-	return nil;
+    // Read the original typed game input at its existing access point
+    return CPools::GetVehiclePool();
 }
 
-void
-CCullZones::MarkSubwayAsInvisible(bool visible)
+extern "C" CEntity *
+CullZonesHost_Building(void *slot)
 {
-	int i, n;
-	CEntity *e;
-	CVehicle *v;
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetBuildingPool())-1;
-	//- rouz edit (ChatGPT)
-	for(i = n; i >= 0; i--){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
-		//- rouz edit (ChatGPT)
-		if(e && e->bIsSubway)
-			e->bIsVisible = visible;
-	}
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetTreadablePool())-1;
-	//- rouz edit (ChatGPT)
-	for(i = n; i >= 0; i--){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
-		//- rouz edit (ChatGPT)
-		if(e && e->bIsSubway)
-			e->bIsVisible = visible;
-	}
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	n = CPool_GetSize(CPools::GetVehiclePool())-1;
-	//- rouz edit (ChatGPT)
-	for(i = n; i >= 0; i--){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		v = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if(v && v->IsTrain() && ((CTrain*)v)->m_nTrackId != TRACK_ELTRAIN)
-			v->bIsVisible = visible;
-	}
+    // Read the original typed game input at its existing access point
+    return (CBuilding *)slot;
 }
 
-void
-CCullZones::AddCullZone(CVector const &position,
-                        float minx, float maxx,
-                        float miny, float maxy,
-                        float minz, float maxz,
-                        uint16 flag, int16 wantedLevel)
+extern "C" CEntity *
+CullZonesHost_Treadable(void *slot)
 {
-	CAttributeZone *attrib;
-
-	assert(NumAttributeZones < NUMATTRIBZONES);
-	attrib = &aAttributeZones[NumAttributeZones++];
-	attrib->minx = minx;
-	attrib->maxx = maxx;
-	attrib->miny = miny;
-	attrib->maxy = maxy;
-	attrib->minz = minz;
-	attrib->maxz = maxz;
-	attrib->attributes = flag;
-	attrib->wantedLevel = wantedLevel;
+    // Read the original typed game input at its existing access point
+    return (CTreadable *)slot;
 }
+
+extern "C" CVehicle *
+CullZonesHost_Vehicle(void *slot)
+{
+    // Read the original typed game input at its existing access point
+    return (CVehicle *)slot;
+}
+
+extern "C" bool
+CullZonesHost_IsSubway(CEntity *entity)
+{
+    // Read the original typed game input at its existing access point
+    return entity->bIsSubway;
+}
+
+extern "C" bool
+CullZonesHost_IsTrain(CVehicle *vehicle)
+{
+    // Read the original typed game input at its existing access point
+    return vehicle->IsTrain();
+}
+
+extern "C" uint8_t
+CullZonesHost_Track(CVehicle *vehicle)
+{
+    // Read the original typed game input at its existing access point
+    return ((CTrain *)vehicle)->m_nTrackId;
+}
+
+extern "C" void
+CullZonesHost_SetEntityVisible(CEntity *entity, bool visible)
+{
+    // Update the original visibility bit after the C eligibility checks
+    entity->bIsVisible = visible;
+}
+
+extern "C" void
+CullZonesHost_SetVehicleVisible(CVehicle *entity, bool visible)
+{
+    // Update the original visibility bit after the C eligibility checks
+    entity->bIsVisible = visible;
+}
+
+//- rouz edit (ChatGPT)

@@ -1,0 +1,211 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include "soundlist.h"
+#include "@MODEL_IDS@"
+#include "@WEAPON_TYPES@"
+#include "@PED_STATES@"
+#include "@SURFACES@"
+#include "@ENTITY_TYPES@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using int16=int16_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned);
+struct IntValue {int32_t v;unsigned token;operator int32_t() const {
+    // Observe each original game field read
+    event(token);return v;
+}};
+template<class T>struct PtrValue {T *p;unsigned token;operator T *() const {
+    // Observe the original pointer-field read
+    event(token);return p;
+}T *operator->() const {
+    // Observe the same pointer read before a chained game query
+    event(token);return p;
+}};
+struct CEntity {IntValue type;uint8_t GetType() const {
+    // Read the original entity-type expression
+    return (uint8_t)(int32_t)type;
+}};
+struct CWeapon {IntValue m_eWeaponType;};
+class CVehicle {public:IntValue model;int16_t GetModelIndex() const {
+    // Read the original signed model index
+    return (int16_t)(int32_t)model;
+}};
+class CPed:public CEntity {public:CWeapon weapons[2];unsigned slot,player;PtrValue<CVehicle> m_pMyVehicle;PtrValue<CEntity> m_pDamageEntity;IntValue bIsInTheAir,m_nSurfaceTouched,m_nMoveState,m_curFightMove,m_nPedState;
+    CWeapon *GetWeapon() {
+        // Observe weapon capture before choosing the current slot
+        event(20);return &weapons[slot];
+    }
+    bool IsPlayer() {
+        // Observe the original live player predicate
+        event(21);return player!=0;
+    }
+};
+struct cAudioManager {
+@FIELDS@
+void ProcessPedOneShots(cPedParams &);void SetupPedComments(cPedParams &,uint16_t);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cPedParams params;static CPed peds[2];static CVehicle cars[2];static CEntity otherEntity;
+static unsigned seedValue,cases,callbacks,requests,offsetReads,pedCalls,stereoRight,mutations,loops,reflections,collisions,clamps;
+static unsigned samples[4096],inputEvents[256];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestPedOneShotsC(cAudioManager *,cPedParams *);
+extern "C" void TestPedOneShotsRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Hash callback order and normalized scalar observations
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Hash every initialized storage word
+    digest=TestAircraftHash(digest,p,size);
+}
+static unsigned identity(const void *p) {
+    // Normalize pedestrian, vehicle, weapon and damage-entity pointers
+    return p==&peds[0]?1:p==&peds[1]?2:p==&cars[0]?3:p==&cars[1]?4:p==&otherEntity?5:p==&peds[0].weapons[0]?6:p==&peds[0].weapons[1]?7:p==&peds[1].weapons[0]?8:p==&peds[1].weapons[1]?9:0;
+}
+static void observe() {
+    // Normalize pointer fields before observing full owner and context storage
+    cAudioManager owner=*active;for(unsigned i=0;i<NUM_AUDIOENTITIES;++i)owner.m_asAudioEntities[i].m_pEntity=(void *)(uintptr_t)identity(owner.m_asAudioEntities[i].m_pEntity);
+    cPedParams copy=params;copy.m_pPed=(CPed *)(uintptr_t)identity(params.m_pPed);CPed actors[2];memcpy(actors,peds,sizeof(actors));
+    for(unsigned i=0;i<2;++i){actors[i].m_pMyVehicle.p=(CVehicle *)(uintptr_t)identity(peds[i].m_pMyVehicle.p);actors[i].m_pDamageEntity.p=(CEntity *)(uintptr_t)identity(peds[i].m_pDamageEntity.p);}
+    bytes(&owner,sizeof(owner));bytes(&copy,sizeof(copy));bytes(actors,sizeof(actors));bytes(cars,sizeof(cars));bytes(&otherEntity,sizeof(otherEntity));
+}
+static void event(unsigned token) {
+    // Observe each original query before mutating later live context and object reads
+    ++callbacks;value(token);observe();
+    if(token==20&&(seedValue&128)){++mutations;params.m_pPed=&peds[1];peds[0].slot^=1;}
+    if(token==22&&(seedValue&256)){++mutations;params.m_pPed=&peds[1];peds[0].m_pMyVehicle.p=&cars[1];}
+    if(token==26&&(seedValue&512)){++mutations;params.m_pPed=&peds[1];}
+}
+static CPed *FindPlayerPed() {
+    // Observe the live player query before step-volume routing
+    event(31);return &peds[(seedValue/7)%2];
+}
+@HOST@
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *vehicle) {
+    // Reuse the original live vehicle model query
+    return vehicle->GetModelIndex();
+}
+void cAudioManager::SetupPedComments(cPedParams &p,uint16_t sound) {
+    // Observe retained context before mutating later pedestrian events
+    ++pedCalls;event(36);value(sound);value(p.m_bDistanceCalculated);bytes(&p.m_fDistance,4);value(identity(p.m_pPed));
+    if(seedValue&1024){p.m_pPed=&peds[1];p.m_fDistance=4;p.m_bDistanceCalculated=1;active->m_sQueueSample.m_fDistance=2;}
+}
+extern "C" void AudioPedSpeech_Setup(cAudioManager *manager,cPedParams *p,uint16_t sound) {
+    // Invoke the same remaining comment-generator stand-in
+    manager->SetupPedComments(*p,sound);
+}
+extern "C" CVehicle *AudioGame_FindVehicle() {
+    // Observe the original chainsaw vehicle gate
+    event(37);return (seedValue/11)%3?nullptr:&cars[0];
+}
+extern "C" void AudioCollisionReport_Report(cAudioManager *manager,CEntity *a,CEntity *b,uint8_t s1,uint8_t s2,float power,float speed) {
+    // Observe the separately audited collision operation at its original chainsaw call point
+    ++collisions;event(38);value(manager==active);value(identity(a));value(identity(b));value(s1);value(s2);bytes(&power,4);bytes(&speed,4);
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Change later event and context queries after observing sample selection
+    event(40);value(sample);
+    if(seedValue&2048){++mutations;params.m_pPed=&peds[1];active->m_sQueueSample.m_nEntityIndex^=1;}
+    return 16000+(sample%120)*127;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample before the end-offset argument is evaluated
+    ++offsetReads;event(41);value(sample);if(seedValue&4096)active->m_sQueueSample.m_nSampleIndex=SFX_M60_LEFT;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the later live loop sample
+    ++offsetReads;event(42);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual request insertion and reflection recursion
+    if(active->m_sQueueSample.m_nCounter>=256)++reflections;event(44);return (seedValue/5)%3==0;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply both original slow-motion outcomes
+    event(45);return (seedValue/9)%2;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Insert real requests before exercising later live stereo and event-table reads
+    ++requests;event(43);if(manager->m_sQueueSample.m_nSampleIndex<4096)++samples[manager->m_sQueueSample.m_nSampleIndex];
+    if(manager->m_sQueueSample.m_nLoopCount==0)++loops;if(manager->m_sQueueSample.m_bIs2D&&manager->m_sQueueSample.m_nPan==127)++stereoRight;
+    TestPedOneShotsRealSubmit(manager);event(46);
+    if(seedValue&8192){++mutations;manager->m_sQueueSample.m_nSampleIndex=SFX_ROCKET_LEFT;manager->m_sQueueSample.m_nFrequency=12345;manager->m_sQueueSample.m_fDistance=2;params.m_pPed=&peds[1];manager->m_sQueueSample.m_nEntityIndex^=1;}
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Supply the unused linked geometry dependency
+    *out={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the unused linked geometry dependency
+    memset(out,0,sizeof(*out));
+}
+@METHOD@
+@EVENTS@
+static float eventVolume(int sound,unsigned seed) {
+    // Stay within the original defined casts while covering packed event parameters
+    if(sound==SOUND_SKATING)return (float)((seed%128)|(((seed/3)%2)<<8));
+    if(sound==SOUND_WEAPON_AK47_BULLET_ECHO)return (float)(seed%WEAPONTYPE_TOTALWEAPONS);
+    if(sound==SOUND_WEAPON_HIT_PED||sound==SOUND_WEAPON_CHAINSAW_MADECONTACT)return (float)(seed%6);
+    if(sound==SOUND_WEAPON_BAT_ATTACK||sound==SOUND_WEAPON_KNIFE_ATTACK||sound==SOUND_FIGHT_47||sound==SOUND_FIGHT_48||sound==SOUND_MELEE_ATTACK_START)return (float)((seed%6)|((seed%WEAPONTYPE_TOTALWEAPONS)<<8));
+    const float volumes[]={0,0.001f,0.25f,0.5f,0.999f,1};
+    if(sound==SOUND_SHIRT_WIND_FLAP&&seed%7==0)return 1.2f;
+    return volumes[seed%6];
+}
+static void prepare(unsigned seed) {
+    // Seed every event, weapon, surface and fight branch while retaining shared histories
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(peds,0,sizeof(peds));memset(cars,0,sizeof(cars));memset(&otherEntity,0,sizeof(otherEntity));
+    const int models[]={MI_ANGEL,MI_FREEWAY,MI_PCJ600,MI_SANCHEZ,MI_PIZZABOY,MI_FAGGIO,MI_LANDSTAL};
+    for(unsigned i=0;i<2;++i){cars[i].model={models[(seed/13+i)%7],23};peds[i].type={ENTITY_TYPE_PED,29};peds[i].player=(seed/17+i)%2;peds[i].slot=(seed/19+i)%2;peds[i].m_pMyVehicle={(seed/23+i)%3?&cars[i]:nullptr,22};peds[i].m_pDamageEntity={(seed/29+i)%3==0?nullptr:(seed/29+i)%3==1?&otherEntity:(CEntity *)&peds[1],28};peds[i].bIsInTheAir={(int32_t)((seed/31+i)%2),24};peds[i].m_nSurfaceTouched={(int32_t)((seed/37+i)%36),25};peds[i].m_nMoveState={(int32_t)((seed/41+i)%7),26};peds[i].m_curFightMove={(int32_t)((seed/43+i)%NUM_FIGHTMOVES),27};peds[i].m_nPedState={(int32_t)((seed/47+i)%PED_DEPLOY_STINGER),30};for(unsigned w=0;w<2;++w)peds[i].weapons[w].m_eWeaponType={(int32_t)((seed/7+i+w)%WEAPONTYPE_TOTALWEAPONS),32};}
+    otherEntity.type={ENTITY_TYPE_OBJECT,29};params.m_pPed=&peds[0];params.m_bDistanceCalculated=(seed/53)%3;
+    // Keep the post-query replacement vehicle valid when the original branch dereferences it
+    if(seed&256)peds[1].m_pMyVehicle.p=&cars[1];
+    const float distances[]={0,0.1f,1,14.999f,15,15.001f,19.999f,20,20.001f,29.999f,30,30.001f,39.999f,40,40.001f,49.999f,50,50.001f,59.999f,60,60.001f,119.999f,120,120.001f,149.999f,150,150.001f};float range=distances[(seed/59)%27];params.m_fDistance=range*range;
+    active->m_sQueueSample.m_fDistance=(seed/61)%7;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_nPan=53;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nEntityIndex=seed%2;active->m_nActiveSamples=8;active->m_bDynamicAcousticModelingStatus=1;active->m_FrameCounter=seed%97==0?UINT32_MAX-3:(seed/8)*7;
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)((seed*(i+1))%1001)-500;
+    for(unsigned e=0;e<2;++e){active->m_asAudioEntities[e].m_pEntity=&peds[e];active->m_asAudioEntities[e].m_AudioEvents=(seed/67+e)%5;for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j){int sound=events[(seed+e*7+j*11)%(sizeof(events)/sizeof(events[0]))];active->m_asAudioEntities[e].m_awAudioEvent[j]=(int16_t)sound;active->m_asAudioEntities[e].m_afVolume[j]=eventVolume(sound,seed+j);if(sound<256)++inputEvents[sound];}}
+#ifndef GTA_PS2
+    // Seed desktop loop fields to detect partial writes
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    // Exercise actual reflection recursion with initialized positions and distances
+    for(unsigned i=0;i<5;++i){active->m_afReflectionsDistances[i]=4+(float)i*4;active->m_avecReflectionsPos[i]={1,(float)i,3};}
+#endif
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening a Windows error dialog
+    SetErrorMode(3);
+#endif
+    // Compare repeated full event loops across alternate owners without resetting histories
+    for(unsigned seed=0;seed<32768;++seed){prepare(seed);observe();@RUN@;observe();for(unsigned e=0;e<2;++e)for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j)if(active->m_asAudioEntities[e].m_afVolume[j]==1)++clamps;++cases;}
+    if(!requests||!pedCalls||!stereoRight||!loops||!mutations||!collisions)return 2;
+    // Require every event input and multiple distinct emitted samples
+    for(unsigned i=0;i<sizeof(events)/sizeof(events[0]);++i)if(events[i]<256&&!inputEvents[events[i]])return 3;
+    unsigned distinct=0;for(unsigned i=0;i<4096;++i)if(samples[i])++distinct;if(distinct<40)return 4;
+#ifndef GTA_PS2
+    // Require desktop loop metadata queries
+    if(!offsetReads)return 5;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    // Require the actual reflection request path
+    if(!reflections)return 6;
+#endif
+    // Emit the deterministic trace and coverage counts
+    printf("%u cases %u callbacks %u requests %u samples %u collisions %u reflections %llu\n",cases,callbacks,requests,distinct,collisions,reflections,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

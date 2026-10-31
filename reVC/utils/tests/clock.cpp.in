@@ -1,0 +1,147 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdarg.h>
+#include <windows.h>
+#include "config.h"
+using uint8=uint8_t;using uint16=uint16_t;using int16=int16_t;
+using uint32=uint32_t;using int32=int32_t;
+@HEADER@
+#ifndef MASTER
+extern bool gbFreezeTime;
+#endif
+#define _TODO(x)
+#define debug(f,...) re3_debug("[DBG]: " f, ##__VA_ARGS__)
+static uint64_t hash=1469598103934665603ULL;
+static uint32_t seed,pass,calls,tick,scaleArg;
+static int16_t rightShoulder;
+static uint8_t *hourAlias;
+static bool *freezeAlias;
+static void event(unsigned);
+static void word(uint32_t value){hash=(hash^value)*1099511628211ULL;}
+struct CStats {static int32_t DaysPassed;};
+int32_t CStats::DaysPassed;
+struct CTimer {static const uint32_t &GetTimeInMilliseconds(){event(2);word(tick);return tick;}};
+struct CPad {
+    static CPad *GetPad(int32_t index){assert(index==1);event(1);static CPad pad;return &pad;}
+    bool GetRightShoulder1(){return !!rightShoulder;}
+};
+extern "C" uint32_t TestClockC(unsigned,uint8_t,uint8_t,uint32_t);
+extern "C" void re3_debug(const char *format,...){
+    // Check the exact original debug messages at their clock initialization boundaries
+    assert(!strcmp(format,"[DBG]: Initialising CClock...\n")||!strcmp(format,"[DBG]: CClock ready\n"));
+    word(!strcmp(format,"[DBG]: CClock ready\n"));event(3);
+}
+struct Console {
+    void Add(const char *text,uint8_t *hour,uint8_t step,int8_t low,int8_t high,uint8_t isVar){
+        // Preserve the original registration pointer, entry label, step and bounds
+        assert(!strcmp(text,"Time (hour of day)")&&hour==&@ms_nGameClockHours@&&step==1&&low==0&&high==23&&isVar==1);
+        hourAlias=hour;word(*hour);event(4);
+    }
+    void Add(const char *text,bool *freeze,uint8_t isVar){
+        // Preserve the original bool console overload and live freeze-flag pointer
+#ifndef MASTER
+        assert(!strcmp(text,"Freeze time")&&freeze==&gbFreezeTime&&isVar==1);freezeAlias=freeze;word(*freeze);event(5);
+#else
+        assert(false);
+#endif
+    }
+} VarConsole;
+@BODY@
+@SAVE_MACROS@
+static void savedFragment(){
+    // Exercise the exact original four save/load statements and their four-byte alignment
+    uint8_t bytes[16];memset(bytes,0xcd,sizeof(bytes));uint8_t *buf=bytes;
+    uint32_t scale=@ms_nMillisecondsPerGameMinute@,last=@ms_nLastClockTick@;
+    uint8_t hour=@ms_nGameClockHours@,minute=@ms_nGameClockMinutes@;
+    @SAVE_WRITE@
+    assert(buf==bytes+16);
+    for(unsigned i=0;i<16;i++){
+        // Check preserved gap bytes and observe every serialized byte independently
+        if((i>=9&&i<=11)||i>=13)assert(bytes[i]==0xcd);
+        word(bytes[i]);
+    }
+    @ms_nMillisecondsPerGameMinute@=1;@ms_nLastClockTick@=0;@ms_nGameClockHours@=0;@ms_nGameClockMinutes@=0;
+    buf=bytes;@SAVE_READ@
+    assert(buf==bytes+16&&@ms_nMillisecondsPerGameMinute@==scale&&@ms_nLastClockTick@==last&&@ms_nGameClockHours@==hour&&@ms_nGameClockMinutes@==minute);
+}
+static void snapshot(){
+    // Observe every clock field and the external timer, button, console and statistics state
+    word(@ms_nGameClockHours@);word(@ms_nGameClockMinutes@);word(@ms_nGameClockSeconds@);
+    word(@ms_Stored_nGameClockHours@);word(@ms_Stored_nGameClockMinutes@);word(@ms_Stored_nGameClockSeconds@);
+    word(@ms_nMillisecondsPerGameMinute@);word(@ms_nLastClockTick@);word(@ms_bClockHasBeenStored@);
+    word(gbFastTime);
+#ifndef MASTER
+    word(gbFreezeTime);
+#endif
+    word(tick);word((uint32_t)rightShoulder);word((uint32_t)CStats::DaysPassed);word(hourAlias!=nullptr);word(freezeAlias!=nullptr);
+}
+static void event(unsigned kind){
+    // Capture callback order before mutations so original live-read sequencing remains observable
+    word(kind);word(calls++);snapshot();
+    if(pass==1){
+        // Mutate clock and provider inputs while retaining nonzero scale and valid boolean representations
+        uint32_t n=seed+calls*17+kind;
+        tick+=n*1009;@ms_nLastClockTick@+=n*19;
+        @ms_nMillisecondsPerGameMinute@=1+n%60000;
+        @ms_nGameClockHours@=(uint8_t)n;@ms_nGameClockMinutes@=(uint8_t)(n>>2);
+        gbFastTime=(n&1)!=0;rightShoulder=(int16_t)n;
+#ifndef MASTER
+        gbFreezeTime=(n%7==0);
+#endif
+        if(kind==4&&hourAlias)*hourAlias=(uint8_t)(n+9);
+        if(kind==5&&freezeAlias)*freezeAlias=(n&1)!=0;
+    }
+}
+static uint32_t run(unsigned op,uint8_t h,uint8_t minute,uint32_t scale){@RUN@}
+static void initialize(unsigned n){
+    // Exercise all hour/minute bytes, signed seconds conversions, wrapping timers and stored-state distinctions
+    @ms_nGameClockHours@=(uint8_t)n;@ms_nGameClockMinutes@=(uint8_t)(n*7);
+    @ms_nGameClockSeconds@=(uint16_t)(n*101);@ms_Stored_nGameClockHours@=(uint8_t)(n+3);
+    @ms_Stored_nGameClockMinutes@=(uint8_t)(n+17);@ms_Stored_nGameClockSeconds@=(uint16_t)(n*313);
+    @ms_nMillisecondsPerGameMinute@=1+n%60000;@ms_nLastClockTick@=(uint32_t)(n*UINT32_C(1234567));
+    @ms_bClockHasBeenStored@=(n&1)!=0;gbFastTime=(n&2)!=0;
+#ifndef MASTER
+    gbFreezeTime=(n&4)!=0;
+#endif
+    tick=(n&8)?UINT32_MAX-n:n*314159;rightShoulder=(n&16)?(int16_t)n:0;
+    CStats::DaysPassed=(int32_t)(n%2048)-1024;
+}
+static void independent(){
+    // Check normal midnight rollover, shoulder-button rollover and byte overflow separately
+    pass=0;initialize(0);gbFastTime=false;
+#ifndef MASTER
+    gbFreezeTime=false;
+#endif
+    @ms_nGameClockHours@=23;@ms_nGameClockMinutes@=59;@ms_nMillisecondsPerGameMinute@=1000;@ms_nLastClockTick@=0;tick=1001;rightShoulder=0;
+    int32_t days=CStats::DaysPassed;run(1,0,0,1);assert(@ms_nGameClockHours@==0&&@ms_nGameClockMinutes@==0&&CStats::DaysPassed==days+1);
+    @ms_nGameClockHours@=23;@ms_nGameClockMinutes@=55;rightShoulder=1;days=CStats::DaysPassed;run(1,0,0,1);assert(@ms_nGameClockHours@==0&&@ms_nGameClockMinutes@==0&&CStats::DaysPassed==days);
+    @ms_nGameClockHours@=255;@ms_nGameClockMinutes@=255;run(1,0,0,1);assert(@ms_nGameClockHours@==255&&@ms_nGameClockMinutes@==7);
+    // Preserve the strict tick threshold and the original equal-endpoint time range
+    rightShoulder=0;@ms_nMillisecondsPerGameMinute@=1000;@ms_nLastClockTick@=0;tick=1000;run(1,0,0,1);assert(@ms_nGameClockMinutes@==7);
+    assert(run(4,23,23,1)==0);@ms_nGameClockHours@=23;assert(run(4,22,3,1)==1);
+    // Require reference accessors to write live storage and signed seconds to retain their original narrowing
+    assert(run(10,255,0,1)==255&&@ms_nGameClockHours@==255);assert(run(11,0,255,1)==255&&@ms_nGameClockMinutes@==255);
+    @ms_nGameClockSeconds@=65535;assert(run(9,0,0,1)==UINT32_MAX);
+    // Preserve byte overflow before normalizing set-clock inputs
+    run(2,255,255,1);assert(@ms_nGameClockHours@==3&&@ms_nGameClockMinutes@==15);
+    // Restoring saved time leaves the stored flag and last clock tick intact
+    @ms_nGameClockSeconds@=65535;run(5,0,0,1);uint32_t savedTick=@ms_nLastClockTick@;
+    @ms_nGameClockHours@=0;@ms_nGameClockMinutes@=0;@ms_nGameClockSeconds@=0;
+    run(6,0,0,1);assert(@ms_nGameClockHours@==3&&@ms_nGameClockMinutes@==15&&@ms_nGameClockSeconds@==65535&&@ms_bClockHasBeenStored@&&@ms_nLastClockTick@==savedTick);
+}
+int main(){
+    // Keep compiler traps and assertions quiet without launching a Windows crash dialog
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
+    static_assert(sizeof(bool)==1,"Original boolean width");independent();savedFragment();uint32_t groups=0;
+    for(seed=0;seed<2048;seed++)for(pass=0;pass<3;pass++){
+        // Repeat operation sequences across the mutation pass and retained-state pass
+        if(pass!=2)initialize(seed);
+        for(unsigned op=0;op<12;op++){
+            uint32_t result=run(op,(uint8_t)(seed+op*13),(uint8_t)(seed*3+op*11),1+seed%60000);
+            word(result);snapshot();groups++;
+        }
+    }
+    printf("groups=%u callbacks=%u hash=%016llx\n",groups,calls,(unsigned long long)hash);
+}

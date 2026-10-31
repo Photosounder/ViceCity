@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHD3D
 #include "common.h"
 
@@ -14,7 +18,8 @@
 #ifdef REVC_SOFTWARE_POLYGONS
 #include "PlayerPed.h"
 #include "Plane.h" // rouz edit (ChatGPT)
-#include "Antennas.h" // rouz edit (ChatGPT)
+#include "Antennas.h"
+#include "Antennas_backend.h" // rouz edit (ChatGPT)
 #include "SpecialFX.h" // rouz edit (ChatGPT)
 #endif
 //- rouz edit (ChatGPT)
@@ -435,8 +440,10 @@ CRenderer::RenderRoads(void)
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
-	DeActivateDirectional();
-	SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
 
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
 		e = ms_aVisibleEntityPtrs[i];
@@ -935,7 +942,7 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 			continue;
 		if(modelInfo->GetModelType() == MITYPE_TIME){
 			CTimeModelInfo *timeInfo = (CTimeModelInfo*)modelInfo;
-			if(!CClock::GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff())){
+			if(!Clock_GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff())){
 				int32 otherModel = timeInfo->GetOtherTimeModel();
 				if(otherModel == -1 || CModelInfo::GetModelInfo(otherModel)->GetRwObject())
 					continue;
@@ -1005,8 +1012,10 @@ CRenderer::RenderWorld(int pass)
 
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
-	DeActivateDirectional();
-	SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
 
 	// Temporary...have to figure out sorting better
 	switch(pass){
@@ -1323,7 +1332,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 	//+ rouz edit (ChatGPT)
 	if(CVehicle::bWheelsOnlyCheat && vehicle->IsBoat()){
 		CBoat *boat = (CBoat*)vehicle;
-		boat->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 3000;
+		boat->m_nSetPieceExtendedRangeTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 		if((boat->GetModelIndex() == MI_PREDATOR || boat->GetModelIndex() == MI_REEFER) && boat->m_aBoatNodes[BOAT_MOVING]){
 			RpAtomic *propeller = nil;
 			RwFrameForAllObjects(boat->m_aBoatNodes[BOAT_MOVING], GetSoftwareVehicleAtomicCB, &propeller);
@@ -1343,7 +1352,8 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 		for(int wheel = 0; wheel < 6; wheel++){
 			if(!automobile->m_aCarNodes[wheelNodes[wheel]])
 				continue;
-			RwObject *object = GetFirstObject(automobile->m_aCarNodes[wheelNodes[wheel]]);
+			// Use the C helper and retain the original typed SDK result
+			RwObject *object = ((RwObject*)GetFirstObject(automobile->m_aCarNodes[wheelNodes[wheel]]));
 			if(object)
 				SoftwarePolygons::RenderAtomic((rw::Atomic*)object);
 		}
@@ -1383,7 +1393,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 			RwFrameUpdateObjects(reflectionDodoPropeller);
 		}
 		reflectionDodoRudder = dodo->m_aCarNodes[CAR_BOOT];
-		if(reflectionDodoRudder && dodo->Damage.GetDoorStatus(DOOR_BOOT) != DOOR_STATUS_MISSING){
+		if(reflectionDodoRudder && Damage_GetDoorStatus(&dodo->Damage, DOOR_BOOT) != DOOR_STATUS_MISSING){
 			RwMatrixCopy(&savedDodoRudderMatrix, RwFrameGetMatrix(reflectionDodoRudder));
 			partMatrix.Attach(RwFrameGetMatrix(reflectionDodoRudder));
 			partPosition = partMatrix.GetPosition();
@@ -1456,7 +1466,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 	// Preserve the extended range of boat and bike set pieces when bypassing their Render overrides
 	//+ rouz edit (ChatGPT)
 	if(vehicle->IsBike() || vehicle->IsBoat())
-		vehicle->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 3000;
+		vehicle->m_nSetPieceExtendedRangeTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 	//- rouz edit (ChatGPT)
 	// Restore rotor alpha before submitting the automobile clump
 	//+ rouz edit (ChatGPT)
@@ -1646,7 +1656,7 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 		CVehiclePool *vehiclePool = CPools::GetVehiclePool();
 		CObjectPool *objectPool = CPools::GetObjectPool();
 		EntityInfo entityInfo;
-		CRegisteredMotionBlurStreak reflectionStreaks[NUMMBLURSTREAKS];
+		MotionBlurStreak reflectionStreaks[NUMMBLURSTREAKS];
 		int reflectionStreakCount = 0;
 
 		// Gather reflection-visible pedestrians that are not rendered as vehicle occupants
@@ -1700,7 +1710,8 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 				// Register the RC Bandit's antenna when its normal pre-render pass missed it
 				if(vehicle->GetModelIndex() == MI_RCBANDIT){
 					CVector antennaPosition = vehicle->GetMatrix() * CVector(0.218f, -0.444f, 0.391f);
-					CAntennas::RegisterOneForEnvMap((uintptr)vehicle, vehicle->GetUp(), antennaPosition, 1.0f);
+					// Queue the C reflection antenna with typed vector copies
+					Antennas_RegisterOneForEnvMap((uintptr)vehicle, Antennas_BackendVector(&vehicle->GetUp()), Antennas_BackendVector(&antennaPosition), 1.0f);
 				}
 				//- rouz edit (ChatGPT)
 				// Access the object payload through the C sorting record
@@ -1724,22 +1735,27 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 					continue;
 				// Rebuild throwable streaks omitted by the main-camera pre-render cull
 				if((object->GetModelIndex() == MI_GRENADE || object->GetModelIndex() == MI_MOLOTOV) &&
-				   !CMotionBlurStreaks::IsRegisteredForCurrentFrame((uintptr)object) &&
+				   // Enter the C motion-blur streak algorithm with the original owner expressions
+				   !MotionBlurStreaks_IsRegisteredForCurrentFrame((uintptr)object) &&
 				   reflectionStreakCount < NUMMBLURSTREAKS){
-					CVector movement = object->m_vecMoveSpeed * CTimeStep::ms_fTimeStep;
+					CVector movement = object->m_vecMoveSpeed * TimeStep_timeStep;
 					// Skip stationary throwables that would create a zero-area trail
 					if(movement.MagnitudeSqr() > 0.000001f){
-						CRegisteredMotionBlurStreak *streak = &reflectionStreaks[reflectionStreakCount++];
+						MotionBlurStreak *streak = &reflectionStreaks[reflectionStreakCount++];
 						streak->m_id = (uintptr)object;
 						streak->m_red = object->GetModelIndex() == MI_MOLOTOV ? 0 : 100;
 						streak->m_green = 100;
 						streak->m_blue = object->GetModelIndex() == MI_MOLOTOV ? 0 : 100;
 						CVector currentPosition = object->GetPosition();
-						streak->m_pos1[0] = currentPosition - 0.07f*cameraRight;
-						streak->m_pos2[0] = currentPosition + 0.07f*cameraRight;
+						// Copy the original reflection sample into its plain C vector record
+						streak->m_pos1[0] = MotionBlurStreaks_FromVector(currentPosition - 0.07f*cameraRight);
+						// Copy the original reflection sample into its plain C vector record
+						streak->m_pos2[0] = MotionBlurStreaks_FromVector(currentPosition + 0.07f*cameraRight);
 						CVector previousPosition = currentPosition - movement;
-						streak->m_pos1[1] = previousPosition - 0.07f*cameraRight;
-						streak->m_pos2[1] = previousPosition + 0.07f*cameraRight;
+						// Copy the original reflection sample into its plain C vector record
+						streak->m_pos1[1] = MotionBlurStreaks_FromVector(previousPosition - 0.07f*cameraRight);
+						// Copy the original reflection sample into its plain C vector record
+						streak->m_pos2[1] = MotionBlurStreaks_FromVector(previousPosition + 0.07f*cameraRight);
 						streak->m_isValid[0] = true;
 						streak->m_isValid[1] = true;
 						streak->m_isValid[2] = false;
@@ -1782,12 +1798,13 @@ CRenderer::RenderSoftwareReflectionEntities(void)
 			RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 			RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 			RwRenderStateSet(rwRENDERSTATEFOGCOLOR,
-				(void*)RWRGBALONG(CTimeCycle::GetFogRed(), CTimeCycle::GetFogGreen(), CTimeCycle::GetFogBlue(), 255));
+				(void*)RWRGBALONG(TimeCycle_GetFogRed(), TimeCycle_GetFogGreen(), TimeCycle_GetFogBlue(), 255));
 			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
 			for(int i = 0; i < reflectionStreakCount; i++)
-				reflectionStreaks[i].Render();
+				// Enter the C motion-blur streak algorithm with the original owner expressions
+				MotionBlurStreak_Render(&reflectionStreaks[i]);
 			// Restore the baseline depth and fog state for following reflection effects
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 			RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
@@ -1875,8 +1892,10 @@ CRenderer::RenderFadingInEntities(void)
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	SetCullMode(rwCULLMODECULLBACK);
-	DeActivateDirectional();
-	SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
 	CVisibilityPlugins::RenderFadingEntities();
 	POP_RENDERGROUP();
 }
@@ -1885,8 +1904,10 @@ void
 CRenderer::RenderFadingInUnderwaterEntities(void)
 {
 	PUSH_RENDERGROUP("CRenderer::RenderFadingInUnderwaterEntities");
-	DeActivateDirectional();
-	SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
 	CVisibilityPlugins::RenderFadingUnderwaterEntities();
 	POP_RENDERGROUP();
 }
@@ -1934,7 +1955,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(mi->GetModelType() == MITYPE_TIME){
  		ti = (CTimeModelInfo*)mi;
 		other = ti->GetOtherTimeModel();
-		if(CClock::GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
+		if(Clock_GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
 			// don't fade in, or between time objects
 			if(CANTIMECULL)
 				ti->m_alpha = 255;
@@ -2124,7 +2145,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	if(mi->GetModelType() == MITYPE_TIME){
 		ti = (CTimeModelInfo*)mi;
 		other = ti->GetOtherTimeModel();
-		if(CClock::GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
+		if(Clock_GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
 			// don't fade in, or between time objects
 			if(CANTIMECULL)
 				ti->m_alpha = 255;
@@ -2375,15 +2396,25 @@ CRenderer::ScanWorld(void)
 #endif
 	   TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
 		CRect rect;
+		// Initialize rectangle bounds at the former local constructor boundary
+		Rect_Init(&rect);
 		int x1, x2, y1, y2;
 		LimitFrustumVector(vectors[CORNER_FAR_TOPLEFT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_TOPLEFT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint0 = vectors[CORNER_FAR_TOPLEFT];
+		Rect_ContainPoint(&rect, &rectanglePoint0.x, &rectanglePoint0.y);
 		LimitFrustumVector(vectors[CORNER_FAR_TOPRIGHT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_TOPRIGHT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint1 = vectors[CORNER_FAR_TOPRIGHT];
+		Rect_ContainPoint(&rect, &rectanglePoint1.x, &rectanglePoint1.y);
 		LimitFrustumVector(vectors[CORNER_FAR_BOTRIGHT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_BOTRIGHT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint2 = vectors[CORNER_FAR_BOTRIGHT];
+		Rect_ContainPoint(&rect, &rectanglePoint2.x, &rectanglePoint2.y);
 		LimitFrustumVector(vectors[CORNER_FAR_BOTLEFT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_BOTLEFT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint3 = vectors[CORNER_FAR_BOTLEFT];
+		Rect_ContainPoint(&rect, &rectanglePoint3.x, &rectanglePoint3.y);
 		x1 = CWorld::GetSectorIndexX(rect.left);
 		if(x1 < 0) x1 = 0;
 		x2 = CWorld::GetSectorIndexX(rect.right);
@@ -2485,15 +2516,25 @@ CRenderer::RequestObjectsInFrustum(void)
 #endif
 	   TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
 		CRect rect;
+		// Initialize rectangle bounds at the former local constructor boundary
+		Rect_Init(&rect);
 		int x1, x2, y1, y2;
 		LimitFrustumVector(vectors[CORNER_FAR_TOPLEFT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_TOPLEFT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint4 = vectors[CORNER_FAR_TOPLEFT];
+		Rect_ContainPoint(&rect, &rectanglePoint4.x, &rectanglePoint4.y);
 		LimitFrustumVector(vectors[CORNER_FAR_TOPRIGHT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_TOPRIGHT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint5 = vectors[CORNER_FAR_TOPRIGHT];
+		Rect_ContainPoint(&rect, &rectanglePoint5.x, &rectanglePoint5.y);
 		LimitFrustumVector(vectors[CORNER_FAR_BOTRIGHT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_BOTRIGHT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint6 = vectors[CORNER_FAR_BOTRIGHT];
+		Rect_ContainPoint(&rect, &rectanglePoint6.x, &rectanglePoint6.y);
 		LimitFrustumVector(vectors[CORNER_FAR_BOTLEFT], vectors[CORNER_CAM], -100.0f);
-		rect.ContainPoint(vectors[CORNER_FAR_BOTLEFT]);
+		// Pass the native point once while retaining live coordinate reads
+		const CVector &rectanglePoint7 = vectors[CORNER_FAR_BOTLEFT];
+		Rect_ContainPoint(&rect, &rectanglePoint7.x, &rectanglePoint7.y);
 		x1 = CWorld::GetSectorIndexX(rect.left);
 		if(x1 < 0) x1 = 0;
 		x2 = CWorld::GetSectorIndexX(rect.right);
@@ -2533,8 +2574,10 @@ CEntity::RemoveLighting(bool)
 bool
 CPed::SetupLighting(void)
 {
-	ActivateDirectional();
-	SetAmbientColoursForPedsCarsAndObjects();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_ActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColoursForPedsCarsAndObjects();
 
 #ifndef MASTER
 	// Originally this was being called through iteration of Sectors, but putting it here is better.
@@ -2543,12 +2586,15 @@ CPed::SetupLighting(void)
 #endif
 
 	if (bRenderScorched) {
-		WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
 	} else {
 		// Note that this lightMult is only affected by LIGHT_DARKEN. If there's no LIGHT_DARKEN, it will be 1.0.
-		float lightMult = CPointLights::GenerateLightsAffectingObject(&GetPosition());
+		// Enter the C point-light algorithm with the original owner expressions
+		float lightMult = PointLights_GenerateLightsAffectingObjectLegacy(&GetPosition());
 		if (lightMult != 1.0f) {
-			SetAmbientAndDirectionalColours(lightMult);
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_SetAmbientAndDirectionalColours(lightMult);
 			return true;
 		}
 	}
@@ -2561,10 +2607,13 @@ CPed::RemoveLighting(bool reset)
 	if (!bRenderScorched) {
 		CRenderer::RemoveVehiclePedLights(this, reset);
 		if (reset)
-			ReSetAmbientAndDirectionalColours();
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_ReSetAmbientAndDirectionalColours();
 	}
-	SetAmbientColours();
-	DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
 }
 
 float
@@ -2760,7 +2809,7 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 	CEntity *ent;
 	int vis;
 
-	int f = CTimer::GetFrameCounter() & 3;
+	int f = (*Timer_GetFrameCounter()) & 3;
 	for(node = list.first; node; node = node->next){
 		ent = (CEntity*)node->item;
 		if(ent->bOffscreen || (ent->m_randomSeed&3) != f){
@@ -3115,8 +3164,8 @@ CRenderer::SortBIGBuildingsForSectorList(CPtrList *list)
 	for(node = list->first; node; node = node->next){
 		ent = (CEntity*)node->item;
 		if(ent->bIsBIGBuilding){
-			list->RemoveNode(node);
-			list->InsertNode(node);
+			PtrList_RemoveNode(list, node);
+			PtrList_InsertNode(list, node);
 		}
 	}
 }
@@ -3128,7 +3177,7 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 		return false;
 	CTimeModelInfo *mi = (CTimeModelInfo *)CModelInfo::GetModelInfo(ent->GetModelIndex());
 	if(mi->GetModelType() == MITYPE_TIME)
-		if(!CClock::GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
+		if(!Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
 			return false;
 	float dist = (ent->GetPosition() - campos).Magnitude();
 
@@ -3146,10 +3195,20 @@ void
 CRenderer::RemoveVehiclePedLights(CEntity *ent, bool reset)
 {
 	if(!ent->bRenderScorched){
-		CPointLights::RemoveLightsAffectingObject();
+		// Enter the C point-light algorithm with the original owner expressions
+		PointLights_RemoveLightsAffectingObject();
 		if(reset)
-			ReSetAmbientAndDirectionalColours();
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_ReSetAmbientAndDirectionalColours();
 	}
-	SetAmbientColours();
-	DeActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColours();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_DeActivateDirectional();
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

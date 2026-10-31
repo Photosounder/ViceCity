@@ -1,0 +1,217 @@
+#include "caller.h"
+#include "names.h"
+#include <stdarg.h>
+#include <string>
+#include <limits>
+#include <initializer_list>
+#undef assert
+static void require(bool value,const char *expression,int line)
+{
+    // Keep independent checks active in MASTER as well as development profiles
+    if(!value){fprintf(stderr,"Failed %d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+uint8 work_buff[55000];
+CBaseModelInfo *CModelInfo::models[TEST_WEAPON_MODEL_COUNT];
+AnimAssocDefinition CAnimManager::ms_aAnimAssocDefinitions[NUM_ANIM_ASSOC_GROUPS];
+static CWeaponModelInfo modelRecords[TEST_WEAPON_MODEL_COUNT];
+static char groupNames[NUM_ANIM_ASSOC_GROUPS][32];
+static std::string fileData;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned states,loads,dirs,logs,modelCalls,groupCalls,flagCalls,mergeCalls,typeCalls,fireCalls,offsetCalls,initializations;
+static int callbackMode;
+static bool mutateOnLoading;
+static void bytes(const void *data,size_t size)
+{
+    // Hash complete observable scalar or record bytes without native pointer values
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep integer observations independent of the native pointer width
+    bytes(&value,4);
+}
+static void records()
+{
+    // Observe all actual canonical records and both mutable public tables at native callback boundaries
+    for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++)bytes(TestWeaponInfo_Record(i),sizeof(CWeaponInfo));
+    bytes(TestWeaponInfo_Reloads(),sizeof(uint16_t)*WEAPONTYPE_TOTALWEAPONS);bytes(TestWeaponInfo_MaxAmmo(),sizeof(int32_t)*WEAPONTYPE_TOTALWEAPONS);
+}
+static void snapshot()
+{
+    // Include model registration results and native base-adjustment guards with the complete table state
+    records();
+    for(int i=0;i<TEST_WEAPON_MODEL_COUNT;i++){
+        // Preserve the original integer payload stored in the native atomic slot
+        number((uint32_t)(uintptr_t)modelRecords[i].m_atomics[2]);assert(modelRecords[i].guard[0]==UINT64_C(0x1122334455667788)+i&&modelRecords[i].guard[1]==UINT64_C(0x8877665544332211)-i);
+    }
+    states++;
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail quietly on any violated native precondition without creating a dialog
+    fprintf(stderr,"%s at %s:%u (%s)\n",expression,file,line,function);abort();
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Compare the exact original formatted diagnostic text and state before subsequent parser writes
+    char text[256];va_list args;va_start(args,format);int count=vsnprintf(text,sizeof(text),format,args);va_end(args);assert(count>=0&&count<(int)sizeof(text));
+    number(1);bytes(text,(size_t)count+1);records();logs++;
+    if(mutateOnLoading&&strstr(text,"Loading weapon data")){
+        // Change an omitted model field after reset but before the original load operation
+        TestWeaponInfo_Record(0)->m_nModelId=777;mutateOnLoading=false;
+    }
+}
+extern "C" void FileMgr_SetDir(const char *dir)
+{
+    // Observe the existing C file API boundary without changing the test process directory
+    assert(strcmp(dir,"DATA")==0);number(2);bytes(dir,strlen(dir)+1);records();dirs++;
+}
+extern "C" FileMgrSize FileMgr_LoadFile(const char *name,uint8_t *buffer,int maximum,const char *mode)
+{
+    // Supply complete deterministic file bytes to the original shared buffer and unchanged parser
+    assert(strcmp(name,"WEAPON.DAT")==0&&strcmp(mode,"r")==0&&buffer==work_buff&&maximum==55000&&fileData.size()<sizeof(work_buff));
+    number(3);number((uint32_t)fileData.size());records();memcpy(buffer,fileData.data(),fileData.size());loads++;return (FileMgrSize)fileData.size();
+}
+void CWeaponModelInfo::SetWeaponInfo(int32 weapon)
+{
+    // Observe original registration ordering and enter the complete actual native setter
+    assert(id>=0&&id<TEST_WEAPON_MODEL_COUNT&&weapon>=0&&weapon<WEAPONTYPE_TOTALWEAPONS);number(4);number(id);number(weapon);records();modelCalls++;
+    SetWeaponInfoOriginal(weapon);
+    if(callbackMode==1)TestWeaponInfo_Record(weapon)->m_nModel2Id=0x2345;
+}
+const char *CAnimManager::GetAnimGroupName(AssocGroupId group)
+{
+    // Observe every live group lookup and enter the complete actual native name getter
+    assert(group>=0&&group<NUM_ANIM_ASSOC_GROUPS);number(5);number(group);records();groupCalls++;
+    if(callbackMode==2&&group==0)ms_aAnimAssocDefinitions[2].name="live_group";
+    return GetAnimGroupNameOriginal(group);
+}
+static void seed()
+{
+    // Seed all original semantic members and actual native model records without type-punning either representation
+    memset(work_buff,0xd3,sizeof(work_buff));callbackMode=0;mutateOnLoading=false;
+    for(int i=0;i<TEST_WEAPON_MODEL_COUNT;i++){
+        // Force a nonzero base adjustment and distinguish every native model registration target
+        modelRecords[i].guard[0]=UINT64_C(0x1122334455667788)+i;modelRecords[i].guard[1]=UINT64_C(0x8877665544332211)-i;
+        for(int j=0;j<3;j++)modelRecords[i].m_atomics[j]=nil;
+        modelRecords[i].id=i;CModelInfo::models[i]=&modelRecords[i];
+    }
+    for(int i=0;i<NUM_ANIM_ASSOC_GROUPS;i++){
+        // Keep distinct names across both conditional animation-group enum layouts
+        snprintf(groupNames[i],sizeof(groupNames[i]),"grp_%d",i);CAnimManager::ms_aAnimAssocDefinitions[i].name=groupNames[i];
+    }
+    for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++){
+        // Include values omitted by initialization so accidental full-record resets are observable
+        CWeaponInfo *r=TestWeaponInfo_Record(i);r->m_eWeaponFire=(eWeaponFire)(i%5);r->m_fRange=-1.5f-i;r->m_nFiringRate=1000+i;r->m_nReload=2000+i;r->m_nAmountofAmmunition=-10-i;r->m_nDamage=3000+i;
+        r->m_fSpeed=1.25f+i;r->m_fRadius=2.25f+i;r->m_fLifespan=3.25f+i;r->m_fSpread=4.25f+i;r->m_vecFireOffset.x=0.25f*i;r->m_vecFireOffset.y=-0.5f*i;r->m_vecFireOffset.z=2.5f;
+        r->m_AnimToPlay=(AssocGroupId)(i%NUM_ANIM_ASSOC_GROUPS);r->m_fAnimLoopStart=0.25f;r->m_fAnimLoopEnd=0.5f;r->m_fAnimFrameFire=0.75f;r->m_fAnim2LoopStart=1;r->m_fAnim2LoopEnd=1.25f;r->m_fAnim2FrameFire=1.5f;r->m_fAnimBreakout=1.75f;
+        r->m_nModelId=100+i;r->m_nModel2Id=200+i;r->m_Flags=0x12340000u+i;r->m_nWeaponSlot=i%TOTAL_WEAPON_SLOTS;
+        TestWeaponInfo_Reloads()[i]=(uint16_t)(900+i);TestWeaponInfo_MaxAmmo()[i]=500+i;
+    }
+}
+static std::string line(const char *name,const char *fire,const char *anim,int index,float end=90,int model=-2,int model2=-3)
+{
+    // Generate complete valid original-format rows with distinguishable values in every field
+    char text[256];if(model==-2)model=64+index;if(model2==-3)model2=128+index;
+    int count=snprintf(text,sizeof(text),"%s %s %.3f %d %d %d %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %s %.3f %.3f %.3f %.3f %.3f %.3f %.3f %d %d %x %d\n",name,fire,20.25+index,111+index,222+index,-30-index,-40-index,1.25+index,2.25+index,3.25+index,4.25+index,5.25+index,-6.25-index,7.25+index,anim,0.0,(double)end,15.0,3.0,24.0,12.0,9.0,model,model2,0x80000000u+(unsigned)index,index%TOTAL_WEAPON_SLOTS);
+    assert(count>0&&count<(int)sizeof(text));return std::string(text,(size_t)count);
+}
+static void startup()
+{
+    // Check all actual static records before any explicit initialization or data seeding
+    const uint8_t zero[100]={};CWeaponInfo *first=TestWeaponInfo_Record(0);
+    for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++)assert(memcmp(TestWeaponInfo_Record(i),zero,100)==0&&TestWeaponInfo_Record(i)==first+i&&TestWeaponInfo_MaxAmmo()[i]==-1);
+    assert(TestWeaponInfo_Reloads()[WEAPONTYPE_COLT45]==250&&TestWeaponInfo_Reloads()[WEAPONTYPE_SHOTGUN]==650&&TestWeaponInfo_Reloads()[WEAPONTYPE_SNIPERRIFLE]==423);
+    seed();snapshot();
+}
+static void lookups()
+{
+    // Compare exact-case names, all fire categories, unknown fallbacks and both complete predicates
+    for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++){
+        // Borrow each actual canonical record and retain one native value conversion per caller expression
+        char name[32];strcpy(name,names[i]);assert(TestWeaponInfo_RunType(name)==i);typeCalls++;number(i);
+        float output[3];TestWeaponInfo_Offset(i,output);offsetCalls++;bytes(output,sizeof(output));
+        for(uint32_t value:{0u,1u,0x80000000u,0x55555555u,UINT32_MAX}){
+            // Exercise full-width masks, unknown bits, composite matches and the zero-mask case
+            TestWeaponInfo_Record(i)->m_Flags=value;
+            for(int bit=0;bit<33;bit++){
+                // Include every bit and the all-bits mask without shifting by the integer width
+                uint32_t mask=bit<32?1u<<bit:UINT32_MAX;bool result=TestWeaponInfo_RunFlag(i,mask);assert(result==((value&mask)!=0));number(result);flagCalls++;
+            }
+            assert(!TestWeaponInfo_RunFlag(i,0));flagCalls++;
+        }
+    }
+    for(const char *text:{"", "COLT45","unarmed","M4","not-a-weapon"}){
+        // Preserve the original unarmed fallback for unknown names
+        char name[32];strcpy(name,text);assert(TestWeaponInfo_RunType(name)==WEAPONTYPE_UNARMED);typeCalls++;number(TestWeaponInfo_RunType(name));
+    }
+    const char *fireNames[]={"MELEE","INSTANT_HIT","PROJECTILE","AREA_EFFECT","CAMERA","unknown","melee",""};
+    for(int i=0;i<8;i++){
+        // Check the exact unknown-type diagnostic while retaining the original default return
+        char name[32];strcpy(name,fireNames[i]);int result=TestWeaponInfo_RunFire(name);assert(result==(i<5?i:WEAPON_FIRE_INSTANT_HIT));number(result);fireCalls++;
+    }
+    for(uint32_t slot=0;slot<100;slot++){
+        // Require only the three original ammunition-merging slots
+        bool result=TestWeaponInfo_RunMerge(slot);assert(result==(slot==WEAPONSLOT_SHOTGUN||slot==WEAPONSLOT_SUBMACHINEGUN||slot==WEAPONSLOT_RIFLE));number(result);mergeCalls++;
+    }
+    assert(!TestWeaponInfo_RunMerge(UINT32_MAX));mergeCalls++;snapshot();
+}
+static void initialization()
+{
+    // Preserve partial resets, public-table mutations, diagnostics and the immediate load operation
+    seed();fileData="ENDWEAPONDATA\n";mutateOnLoading=true;TestWeaponInfo_RunInit();initializations++;
+    for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++){
+        // Require retained model IDs and original defaults without replacing the record's identity
+        CWeaponInfo *r=TestWeaponInfo_Record(i);assert(r->m_eWeaponFire==WEAPON_FIRE_INSTANT_HIT&&r->m_fRange==0&&r->m_nFiringRate==0&&r->m_nReload==0&&r->m_nAmountofAmmunition==0&&r->m_nDamage==0&&r->m_fSpeed==0&&r->m_fRadius==0&&r->m_fLifespan==0&&r->m_fSpread==0);
+        assert(r->m_vecFireOffset.x==0&&r->m_vecFireOffset.y==0&&r->m_vecFireOffset.z==0&&r->m_AnimToPlay==ASSOCGRP_UNARMED&&r->m_nModelId==(i==0?777:100+i)&&r->m_nModel2Id==200+i&&r->m_Flags==59&&r->m_nWeaponSlot==WEAPONSLOT_UNARMED);
+        assert(TestWeaponInfo_Reloads()[i]==900+i&&TestWeaponInfo_MaxAmmo()[i]==500+i);
+    }
+    snapshot();TestWeaponInfo_RunShutdown();snapshot();
+}
+static void loading()
+{
+    // Compare complete rows, comments, line endings, sentinel prefixes and every weapon-specific path
+    const char *fires[]={"MELEE","INSTANT_HIT","PROJECTILE","AREA_EFFECT","CAMERA"};
+    for(int scenario=0;scenario<8;scenario++){
+        // Retain valid line/token sizes and numeric conversions required by the original parser
+        seed();fileData="  # ignored comment\n\n\t \n";
+        for(int i=0;i<WEAPONTYPE_TOTALWEAPONS;i++){
+            // Distinguish full-row assignment from registration-only model substitutions
+            char anim[32];snprintf(anim,sizeof(anim),"grp_%d",i%NUM_ANIM_ASSOC_GROUPS);
+            if(scenario==4)strcpy(anim,"missing_group");
+            float end=scenario==1?98.0f:scenario==2?97.999f:90.0f;fileData+=line(names[i],fires[i%5],anim,i,end,scenario==3?-1:-2);
+        }
+        if(scenario==5)fileData+=line("not-a-weapon","unknown","missing_group",3,98,-1);
+        if(scenario==6){callbackMode=1;fileData+=line("Colt45","PROJECTILE","grp_1",17,98,7,99);}
+        if(scenario==7){callbackMode=2;fileData+=line("Colt45","INSTANT_HIT","live_group",17,98,7,99);}
+        if(scenario==0){
+            // Keep CRLF handling in the unchanged scanf/parser flow
+            size_t start=0;while((start=fileData.find('\n',start))!=std::string::npos){fileData.insert(start,"\r");start+=2;}
+        }
+        if(scenario==2)fileData.pop_back();
+        else fileData+="ENDWEAPONDATAX extra tokens\n"+line("Unarmed","MELEE","grp_0",0,98,9);
+        TestWeaponInfo_RunLoad();
+        if(scenario<5){
+            // Check independent special-case registrations and retained parsed model fields
+            assert(TestWeaponInfo_Record(WEAPONTYPE_DETONATOR)->m_nModelId==(scenario==3?-1:64+WEAPONTYPE_DETONATOR));
+            assert(modelRecords[MI_BOMB].m_atomics[2]==(RpAtomic *)(uintptr_t)WEAPONTYPE_DETONATOR_GRENADE);
+            assert(TestWeaponInfo_Record(WEAPONTYPE_SHOTGUN)->m_nFiringRate==111+WEAPONTYPE_SHOTGUN&&TestWeaponInfo_Record(WEAPONTYPE_FLAMETHROWER)->m_nFiringRate==111+WEAPONTYPE_FLAMETHROWER);
+            if(scenario==1)assert(TestWeaponInfo_Record(WEAPONTYPE_COLT45)->m_nFiringRate==111+WEAPONTYPE_COLT45);
+            if(scenario==4)assert(TestWeaponInfo_Record(WEAPONTYPE_COLT45)->m_AnimToPlay==WEAPONTYPE_COLT45%NUM_ANIM_ASSOC_GROUPS);
+        }
+        if(scenario==6)assert(TestWeaponInfo_Record(WEAPONTYPE_COLT45)->m_nModel2Id==0x2345);
+        if(scenario==7)assert(TestWeaponInfo_Record(WEAPONTYPE_COLT45)->m_AnimToPlay==2);
+        snapshot();TestWeaponInfo_RunLoad();snapshot();
+    }
+    seed();fileData="\n# comment only\n  \t \n";TestWeaponInfo_RunLoad();snapshot();
+    seed();fileData=line("Colt45","INSTANT_HIT","grp_0",17,98,5);TestWeaponInfo_RunInit();initializations++;assert(TestWeaponInfo_Record(WEAPONTYPE_COLT45)->m_nModelId==5&&TestWeaponInfo_Record(WEAPONTYPE_PYTHON)->m_nModelId==100+WEAPONTYPE_PYTHON);snapshot();
+}
+int main()
+{
+    // Compare complete original and C metadata behavior through quiet console calls only
+    assert((CBaseModelInfo *)&modelRecords[0]!=(CBaseModelInfo *)(void *)&modelRecords[0]);startup();lookups();initialization();loading();
+    assert(loads==dirs&&initializations==2&&loads==19&&flagCalls>0&&groupCalls>0&&modelCalls>0);
+    printf("states=%u loads=%u dirs=%u logs=%u models=%u groups=%u flags=%u merges=%u types=%u fire=%u offsets=%u initializations=%u groupCount=%u hash=%016llx\n",states,loads,dirs,logs,modelCalls,groupCalls,flagCalls,mergeCalls,typeCalls,fireCalls,offsetCalls,initializations,(unsigned)NUM_ANIM_ASSOC_GROUPS,(unsigned long long)hashValue);
+}

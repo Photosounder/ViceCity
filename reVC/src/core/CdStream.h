@@ -1,6 +1,7 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
-#define CDSTREAM_SECTOR_SIZE 2048
+#include "CdStream_constants.h"
 
 #define _GET_INDEX(a) (a >> 24)
 #define _GET_OFFSET(a)  (a & 0xFFFFFF)
@@ -46,3 +47,4 @@ int32 CdStreamGetNumImages(void);
 #ifdef FLUSHABLE_STREAMING
 extern bool flushStream[MAX_CDCHANNELS];
 #endif
+//- rouz edit (ChatGPT)

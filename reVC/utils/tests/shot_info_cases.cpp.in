@@ -1,0 +1,108 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned events,checks,adds,fires,flees,cars,assertions,mutations,reentries;
+static unsigned randomIndex;
+static bool mutate,reenter;
+static CPed peds[6];
+static CWeaponInfo infos[WEAPONTYPE_TOTALWEAPONS];
+uint32_t Timer_timeMs,Timer_frameCounter;
+float Timer_timeStep;
+CFireManager gFireManager;
+static void need(bool value)
+{
+    // Report precise diagnostic failures without starting a native error window
+    ++checks;if(!value){fprintf(stderr,"checks=%u events=%u fires=%u\n",checks,events,fires);abort();}
+}
+static void bytes(const void *data,size_t count)
+{
+    // Hash initialized scalar representations without relying on record padding
+    const uint8_t *p=(const uint8_t*)data;for(size_t i=0;i<count;++i){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(uint32_t op,uint32_t a=0,uint32_t b=0)
+{
+    // Observe external call order and stable entity identities
+    uint32_t values[]={op,a,b};bytes(values,sizeof(values));++events;
+}
+static unsigned identity(CEntity *entity)
+{
+    // Normalize nullable controlled entity addresses
+    return entity?entity->id:0;
+}
+bool CEntity::IsPed(void) {event(1,id);return ped;}
+CVector &CEntity::GetPosition(void) {event(2,id);return position;}
+bool CPed::IsPointerValid(void) {event(3,id);return valid;}
+bool CPed::IsPedInControl(void) {event(4,id);return control;}
+bool CPed::IsPlayer(void) {event(5,id);return player;}
+void CPed::SetFindPathAndFlee(CEntity *source,uint32_t duration)
+{
+    // Observe the original flee call and change live owner state at a controlled callback boundary
+    event(6,id,identity(source));need(duration==10000);++flees;if(mutate){mutate=false;++mutations;TestRecord record;TestRead(0,&record);record.source=&peds[1];record.radius=2.75f;TestSet(0,&record);Timer_timeStep=1.5f;}
+}
+void CPed::SetMoveState(int state) {need(state==PEDMOVE_SPRINT);event(7,id,state);}
+void CWorld::SetCarsOnFire(float x,float y,float z,float radius,CEntity *source)
+{
+    // Observe complete vehicle fire inputs at the original staggered frame boundary
+    event(8,identity(source));float values[]={x,y,z,radius};bytes(values,sizeof(values));need(radius==4);++cars;
+}
+void TestDebug(const char *format,...)
+{
+    // Normalize the original literal and native percent-s forwarding to their identical output
+    char message[256];va_list args;va_start(args,format);vsnprintf(message,sizeof(message),format,args);va_end(args);event(9);bytes(message,strlen(message)+1);
+}
+void re3_assert(const char *,const char *,unsigned,const char *)
+{
+    // Keep assertion evaluation observable without depending on converted source line numbers
+    ++assertions;event(10);
+}
+CWeaponInfo *WeaponInfo_GetWeaponInfo(enum eWeaponType weapon)
+{
+    // Return live controlled metadata on every original lookup including full-array failure
+    need(weapon>=0&&weapon<WEAPONTYPE_TOTALWEAPONS);event(11,weapon);return &infos[weapon];
+}
+bool WeaponInfo_IsFlagSet(const CWeaponInfo *info,uint32_t flag)
+{
+    // Observe live metadata flag queries without reproducing shot policy
+    event(12,flag);return (info->m_Flags&flag)!=0;
+}
+uint16_t General_GetRandomNumber(void)
+{
+    // Supply a deterministic sequence including both ends of the original twenty-entry table
+    static const uint16_t values[]={0,19,3,7,65535,24,11,1};uint16_t value=values[randomIndex++%8];event(13,value);return value;
+}
+CFire *FireManager_StartFireOn(CFireManager *manager,CEntity *entity,CEntity *source,float strength,uint8_t propagation)
+{
+    // Preserve actual fire arguments and optionally reenter complete shot allocation synchronously
+    need(manager==&gFireManager&&strength==0.8f&&propagation==1);event(14,identity(entity),identity(source));++fires;if(reenter){reenter=false;++reentries;peds[0].m_numNearPeds=1;float start[]={7,8,9},end[]={7,8,9};need(TestAdd(NULL,WEAPONTYPE_COLT45,start,end));}return &gFireManager.m_aFires[0];
+}
+static void observe(void)
+{
+    // Snapshot every defined shot field and the actual random table after each public operation
+    for(unsigned i=0;i<NUMSHOTINFOS;++i){TestRecord record;TestRead(i,&record);bytes(&record.weapon,sizeof(record.weapon));bytes(record.start,sizeof(record.start));bytes(record.velocity,sizeof(record.velocity));bytes(&record.radius,sizeof(record.radius));bytes(&record.timeout,sizeof(record.timeout));event(15,identity((CEntity*)record.source),record.active);}
+    float table[20];TestRandom(table);bytes(table,sizeof(table));uint32_t count=TestCounter();bytes(&count,sizeof(count));
+}
+static void reset(void)
+{
+    // Prepare live metadata and entity storage without replacing application initialization
+    Timer_timeMs=100;Timer_timeStep=0.5f;Timer_frameCounter=0;randomIndex=0;mutate=reenter=false;
+    for(unsigned i=0;i<6;++i){peds[i].id=i+1;peds[i].ped=true;peds[i].bFireProof=false;peds[i].valid=true;peds[i].control=true;peds[i].player=false;peds[i].position=CVector(0,0,0);peds[i].m_numNearPeds=0;for(unsigned j=0;j<8;++j)peds[i].m_nearPeds[j]=&peds[1];}
+    for(unsigned i=0;i<WEAPONTYPE_TOTALWEAPONS;++i){infos[i].m_fRadius=2;infos[i].m_fSpread=0;infos[i].m_fSpeed=0;infos[i].m_fLifespan=10;infos[i].m_Flags=0;}
+    TestInitialise();observe();
+}
+int main(void)
+{
+    // Cover zero normalization all random branches and complete array exhaustion
+    reset();float start[]={0,0,0},end[]={0,0,0};for(unsigned i=0;i<NUMSHOTINFOS+1;++i){infos[WEAPONTYPE_COLT45].m_fSpread=i%3?0.25f:0;infos[WEAPONTYPE_COLT45].m_Flags=i%2?WEAPONFLAG_RAND_SPEED:0;infos[WEAPONTYPE_COLT45].m_fSpeed=i%4?0.125f:0;bool result=TestAdd(NULL,WEAPONTYPE_COLT45,start,end);need(result==(i<NUMSHOTINFOS));++adds;}observe();TestUpdate();observe();Timer_timeMs=110;TestUpdate();observe();TestRecord record;TestRead(0,&record);need(record.active);Timer_timeMs=111;TestUpdate();observe();TestRead(0,&record);need(!record.active);
+    // Cover inactive source validation and the optional zero-counter early return
+    reset();TestRead(3,&record);record.source=&peds[5];peds[5].valid=false;TestSet(3,&record);TestUpdate();TestRead(3,&record);
+#ifdef SQUEEZE_PERFORMANCE
+    need(record.source==&peds[5]);
+#else
+    need(record.source==NULL);
+#endif
+    observe();
+    // Cover nearby ped filters, unsquared thresholds and callbacks into live shot state
+    reset();peds[0].m_numNearPeds=5;for(unsigned i=0;i<5;++i)peds[0].m_nearPeds[i]=&peds[i+1];peds[1].position=CVector(0.5f,0,0);peds[2].position=CVector(1.6f,0,0);peds[3].bFireProof=true;peds[4].control=false;peds[5].valid=false;infos[WEAPONTYPE_COLT45].m_Flags=WEAPONFLAG_SLOWS_DOWN|WEAPONFLAG_EXPANDS;need(TestAdd(&peds[0],WEAPONTYPE_COLT45,start,end));mutate=reenter=true;unsigned previous=fires;TestUpdate();need(fires==previous+1&&mutations==1&&reentries==1);observe();Timer_timeMs=111;Timer_frameCounter=3;TestUpdate();observe();
+    // Cover player filtering, invalid active sources and non-ped assertion evaluation
+    reset();peds[0].m_numNearPeds=1;peds[0].m_nearPeds[0]=&peds[1];peds[1].player=true;need(TestAdd(&peds[0],WEAPONTYPE_COLT45,start,end));previous=flees;TestUpdate();need(flees==previous);observe();peds[0].valid=false;TestUpdate();TestRead(0,&record);need(record.source==NULL);observe();peds[0].ped=false;peds[0].m_numNearPeds=0;need(TestAdd(&peds[0],WEAPONTYPE_COLT45,start,end));TestUpdate();observe();TestShutdown();need(cars>0&&randomIndex==0&&mutations==1&&reentries==1);printf("adds=%u checks=%u events=%u fires=%u flees=%u cars=%u assertions=%u mutations=%u reentries=%u hash=%016llx\n",adds,checks,events,fires,flees,cars,assertions,mutations,reentries,(unsigned long long)hashValue);return 0;
+}

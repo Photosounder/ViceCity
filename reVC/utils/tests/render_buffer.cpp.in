@@ -1,0 +1,105 @@
+@COMMON@
+#ifdef TEST_BEFORE
+#include "original-RenderBuffer.h"
+#else
+#include "RenderBuffer.h"
+#endif
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,transforms,renders,ends,depth;
+static unsigned mode;
+static void require(bool condition)
+{
+    // Fail quietly at the current comparison position
+    if(!condition){fprintf(stderr,"states=%u transforms=%u renders=%u\n",states,transforms,renders);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare logical state independently of process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Observe the actual vertex scalar storage without type aliasing
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void payload(void)
+{
+    // Observe every 3D vertex and all shared index values including inactive contents
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){RwIm3DVertex &v=TempBufferRenderVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());}
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)word(TempBufferRenderIndexList[i]);
+}
+static void snapshot(void)
+{
+    // Observe all counters and both independent arrays in the original struct
+    int32_t counters[4];TestRB_State(counters);for(int i=0;i<4;i++)word((uint32_t)counters[i]);payload();const unsigned char *bytes=(const unsigned char *)TempVertexBuffer.im2d;for(size_t i=0;i<sizeof(TempVertexBuffer.im2d);i++)word(bytes[i]);states++;
+}
+static void fill(void)
+{
+    // Initialize complete legal typed geometry and exact unsigned index payloads
+    memset(TempVertexBuffer.im2d,0xa5,sizeof(TempVertexBuffer.im2d));
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX((float)i*0.25f);v.setY((float)i*-0.5f);v.setZ((float)(i%7));v.setColor((uint8_t)i,(uint8_t)(i+17),(uint8_t)(i+31),255);v.setU((float)(i%11)*0.125f);v.setV((float)(i%13)*0.0625f);}
+    for(unsigned i=0;i<TEMPBUFFERINDEXSIZE;i++)TempBufferRenderIndexList[i]=(uint16_t)(65500u+i);
+}
+static void nested(void)
+{
+    // Reenter through the real manager API with legal independent pointer outputs
+    depth++;TestRB_Clear();RwIm3DVertex *v;uint16_t *indices;TestRB_StartLegacy(3,2,&indices,&v);require(indices==TempBufferRenderIndexList && v==TempBufferRenderVertices);indices[0]=0;indices[1]=1;indices[2]=0;v[0].setZ(71.0f);TestRB_Stop();depth--;
+}
+void *RwIm3DTransform(RwIm3DVertex *vertices,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Observe the original call before permitted owner-side effects and nested buffer use
+    require(vertices==TempBufferRenderVertices && matrix==NULL && flags==rwIM3D_VERTEXUV && count>0 && count<=TEMPBUFFERVERTSIZE);word(1);word(count);payload();transforms++;
+    if(mode==2 && depth==0){TestRB_SetState(4,6,7,8);TempBufferRenderIndexList[0]=81;vertices[0].setZ(41.0f);}
+    if(mode==3 && depth==0)nested();
+    bool ok=mode!=1;word(ok);return ok?vertices:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primitive,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Observe the live index count after transformation and preserve renderer reentry
+    require(primitive==rwPRIMTYPETRILIST && indices==TempBufferRenderIndexList && count>=0 && count<=TEMPBUFFERINDEXSIZE);word(2);word((uint32_t)count);payload();renders++;if(mode==4 && depth==0)nested();return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Observe the original successful draw end before the unconditional clear
+    word(3);ends++;if(mode==5 && depth==0)nested();return 1;
+}
+static void reserve(int indicesCount,int verticesCount,bool legacy)
+{
+    // Verify output offsets independently of the implementation and avoid invalid reservations
+    int32_t before[4];TestRB_State(before);uint16_t *indices;void *handle;
+    if(legacy){RwIm3DVertex *typed;TestRB_StartLegacy(indicesCount,verticesCount,&indices,&typed);handle=typed;}else TestRB_Start(indicesCount,verticesCount,&indices,&handle);
+    int32_t after[4];TestRB_State(after);require(indices==&TempBufferRenderIndexList[after[1]] && handle==&TempBufferRenderVertices[after[0]]);require(after[2]==verticesCount && after[3]==indicesCount);word((uint32_t)(indices-TempBufferRenderIndexList));word((uint32_t)((RwIm3DVertex *)handle-TempBufferRenderVertices));snapshot();
+}
+int main(void)
+{
+    // Verify actual shared scalar widths and separate typed-array layout
+    static_assert(sizeof(int)==4 && sizeof(RwImVertexIndex)==2,"Original widths");static_assert(offsetof(VertexBufferUnion,im3d)==sizeof(RwIm2DVertex)*TEMPBUFFERVERTSIZE,"Independent original arrays");
+    fill();TestRB_SetState(9,12,7,8);TestRB_Clear();int32_t counts[4];TestRB_State(counts);require(counts[0]==0 && counts[1]==0 && counts[2]==7 && counts[3]==8);snapshot();TestRB_Flush();snapshot();
+    // Cover each strict capacity boundary, both output paths and all transform/hook modes
+    int countsI[]={0,1,6,1023,1024};int countsV[]={0,1,4,511,512};
+    for(mode=0;mode<6;mode++)for(int i:countsI)for(int v:countsV)for(unsigned legacy=0;legacy<2;legacy++){
+        // Compare below, at and above each reservation threshold without storing outside an array
+        TestRB_SetState(v,i,7,8);reserve(6,4,legacy!=0);TestRB_Flush();snapshot();
+    }
+    // Preserve zero/full-capacity requests and empty pending commits
+    mode=0;for(unsigned legacy=0;legacy<2;legacy++){
+        // One-past output pointers remain legal for zero-size requests
+        TestRB_SetState(512,1024,11,13);reserve(0,0,legacy!=0);TestRB_Stop();snapshot();TestRB_Clear();reserve(1024,512,legacy!=0);TestRB_Stop();snapshot();TestRB_Flush();snapshot();
+    }
+    // Cover defined negative reservations and unsigned index addition wrapping
+    for(int change=-3;change<=3;change++){
+        // Keep every accessed slot in range while retaining original signed-count behavior
+        fill();TestRB_SetState(20,20,0,0);reserve(change,change,false);TestRB_Stop();snapshot();TestRB_Clear();
+    }
+    // Compare long mixed reservation/commit histories with capacity-triggered flushes
+    fill();TestRB_Clear();for(unsigned i=0;i<2500;i++){
+        // Supply bounded arbitrary local indices and live counter changes between reserve and commit
+        mode=i%2;int ni=(int)(i%17)+1,nv=(int)(i%9)+1;reserve(ni,nv,(i&1)!=0);int32_t current[4];TestRB_State(current);for(int j=0;j<ni;j++)TempBufferRenderIndexList[current[1]+j]=(uint16_t)(i*29u+(unsigned)j);for(int j=0;j<nv;j++)TempBufferRenderVertices[current[0]+j].setZ((float)(i%31)*0.5f);if(i%19==0 && current[0]+nv<512 && current[1]+ni+1<1024){TempBufferVerticesStored++;TempBufferIndicesStored++;TempBufferRenderIndexList[TempBufferIndicesStored+ni-1]=65535;}TestRB_Stop();if(i%31==0)TestRB_Flush();if(i%23==0)snapshot();
+    }
+    // Prove final flush clears live counts while retaining payload and pending reservation values
+    mode=0;TestRB_Flush();TestRB_State(counts);require(counts[0]==0 && counts[1]==0 && renders==ends && transforms>=renders);snapshot();printf("%016llx states=%u transforms=%u renders=%u ends=%u bytes=%u\n",(unsigned long long)hash,states,transforms,renders,ends,(unsigned)sizeof(VertexBufferUnion));return 0;
+}

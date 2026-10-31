@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "ModelInfo.h"
@@ -19,7 +20,8 @@ CWeaponModelInfo::ConvertAnimFileIndex(void)
 {
 	if(m_animFileIndex != -1){
 		// we have a string pointer in that union
-		int32 index = CAnimManager::GetAnimationBlockIndex(m_animFileName);
+		// Use the complete C animation manager at the original call boundary
+		int32 index = AnimManager_GetAnimationBlockIndex(m_animFileName);
 		free(m_animFileName); // rouz edit (ChatGPT)
 		m_animFileIndex = index;
 	}
@@ -50,3 +52,4 @@ CWeaponModelInfo::SetAtomic(int n, RpAtomic *atomic)
 	CSimpleModelInfo::SetAtomic(n, atomic);
 	CVisibilityPlugins::SetAtomicRenderCallback(atomic, CVisibilityPlugins::RenderWeaponCB);
 }
+//- rouz edit (ChatGPT)

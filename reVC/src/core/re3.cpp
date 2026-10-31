@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include <csignal>
 #define WITHWINDOWS
 #include "common.h"
@@ -137,7 +141,7 @@ CustomFrontendOptionsPopulate(void)
 #ifdef EXTENDED_PIPELINES
 	const char *vehPipelineNames[] = { "FED_MFX", "FED_NEO" };
 	const char *off_on[] = { "FEM_OFF", "FEM_ON" };
-	fd = CFileMgr::OpenFile("neo/neo.txd","r");
+	fd = FileMgr_OpenFile("neo/neo.txd","r");
 	if (fd) {
 #ifdef GRAPHICS_MENU_OPTIONS
 		FrontendOptionSetCursor(MENUPAGE_GRAPHICS_SETTINGS, -3, false);
@@ -152,7 +156,7 @@ CustomFrontendOptionsPopulate(void)
 		FrontendOptionAddSelect("FED_WLM", 0, 0, MENUALIGN_LEFT, off_on, 2, (int8*)&CustomPipes::LightmapEnable, false, nil, "Graphics", "NeoLightMaps");
 		FrontendOptionAddSelect("FED_RGL", 0, 0, MENUALIGN_LEFT, off_on, 2, (int8*)&CustomPipes::GlossEnable, false, nil, "Graphics", "NeoRoadGloss");
 #endif
-		CFileMgr::CloseFile(fd);
+		FileMgr_CloseFile(fd);
 	}
 #endif
 	// Add outsourced language translations, if files are found
@@ -160,30 +164,30 @@ CustomFrontendOptionsPopulate(void)
 	int fd2;
 	FrontendOptionSetCursor(MENUPAGE_LANGUAGE_SETTINGS, 5, false);
 #if 0
-	if (fd = CFileMgr::OpenFile("text/polish.gxt")) {
-		if (fd2 = CFileMgr::OpenFile("models/fonts_p.txd")) {
+	if (fd = FileMgr_OpenFileDefault("text/polish.gxt")) {
+		if (fd2 = FileMgr_OpenFileDefault("models/fonts_p.txd")) {
 			FrontendOptionAddDynamic("FEL_POL", 0, 0, MENUALIGN_CENTER, nil, nil, LangPolSelect, nil, nil);
-			CFileMgr::CloseFile(fd2);
+			FileMgr_CloseFile(fd2);
 		}
-		CFileMgr::CloseFile(fd);
+		FileMgr_CloseFile(fd);
 	}
 #endif
 
-	if (fd = CFileMgr::OpenFile("text/russian.gxt")) {
-		if (fd2 = CFileMgr::OpenFile("models/fonts_r.txd")) {
+	if (fd = FileMgr_OpenFileDefault("text/russian.gxt")) {
+		if (fd2 = FileMgr_OpenFileDefault("models/fonts_r.txd")) {
 			FrontendOptionAddDynamic("FEL_RUS", 0, 0, MENUALIGN_CENTER, nil, nil, LangRusSelect, nil, nil);
-			CFileMgr::CloseFile(fd2);
+			FileMgr_CloseFile(fd2);
 		}
-		CFileMgr::CloseFile(fd);
+		FileMgr_CloseFile(fd);
 	}
 
 #if 0
-	if (fd = CFileMgr::OpenFile("text/japanese.gxt")) {
-		if (fd2 = CFileMgr::OpenFile("models/fonts_j.txd")) {
+	if (fd = FileMgr_OpenFileDefault("text/japanese.gxt")) {
+		if (fd2 = FileMgr_OpenFileDefault("models/fonts_j.txd")) {
 			FrontendOptionAddDynamic("FEL_JAP", 0, 0, MENUALIGN_CENTER, nil, nil, LangJapSelect, nil, nil);
-			CFileMgr::CloseFile(fd2);
+			FileMgr_CloseFile(fd2);
 		}
-		CFileMgr::CloseFile(fd);
+		FileMgr_CloseFile(fd);
 	}
 #endif
 #endif
@@ -515,7 +519,8 @@ bool LoadINISettings()
 	ReadIniIfExists("Graphics", "FrameLimiter", &FrontEndMenuManager.m_PrefsFrameLimiter);
 #ifdef LEGACY_MENU_OPTIONS
 	ReadIniIfExists("Graphics", "VSync", &FrontEndMenuManager.m_PrefsVsyncDisp);
-	ReadIniIfExists("Graphics", "Trails", &CMBlur::BlurOn);
+	// Use the complete C motion-blur owner and its live shared state
+	ReadIniIfExists("Graphics", "Trails", &MBlur_BlurOn);
 #endif
 	ReadIniIfExists("General", "SkinFile", FrontEndMenuManager.m_PrefsSkinFile, 256);
 	ReadIniIfExists("Controller", "Method", &FrontEndMenuManager.m_ControlMethod);
@@ -525,7 +530,8 @@ bool LoadINISettings()
 	ReadIniIfExists("Display", "ShowLegends", &FrontEndMenuManager.m_PrefsShowLegends);
 
 #ifdef EXTENDED_COLOURFILTER
-	ReadIniIfExists("CustomPipesValues", "PostFXIntensity", &CPostFX::Intensity);
+	// Use the complete C post-processing owner and its live shared state
+	ReadIniIfExists("CustomPipesValues", "PostFXIntensity", &PostFX_Intensity);
 #endif
 #ifdef EXTENDED_PIPELINES
 	ReadIniIfExists("CustomPipesValues", "NeoVehicleShininess", &CustomPipes::VehicleShininess);
@@ -540,13 +546,13 @@ bool LoadINISettings()
 #endif
 
 #ifdef PROPER_SCALING
-	ReadIniIfExists("Draw", "ProperScaling", &CDraw::ms_bProperScaling);	
+	ReadIniIfExists("Draw", "ProperScaling", &Draw_ms_bProperScaling);	
 #endif
 #ifdef FIX_RADAR
-	ReadIniIfExists("Draw", "FixRadar", &CDraw::ms_bFixRadar);	
+	ReadIniIfExists("Draw", "FixRadar", &Draw_ms_bFixRadar);	
 #endif
 #ifdef FIX_SPRITES
-	ReadIniIfExists("Draw", "FixSprites", &CDraw::ms_bFixSprites);	
+	ReadIniIfExists("Draw", "FixSprites", &Draw_ms_bFixSprites);	
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	ReadIniIfExists("General", "DrawVersionText", &gbDrawVersionText);
@@ -584,9 +590,9 @@ bool LoadINISettings()
 
 	// Fetched in above block, but needs evaluation
 #ifdef PED_CAR_DENSITY_SLIDERS
-	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * CIniFile::PedNumberMultiplier;
-	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * CIniFile::PedNumberMultiplier;
-	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * CIniFile::CarNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * IniFile_PedNumberMultiplier;
+	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * IniFile_PedNumberMultiplier;
+	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * IniFile_CarNumberMultiplier;
 #endif
 
 	return true;
@@ -623,7 +629,8 @@ void SaveINISettings()
 	StoreIni("Graphics", "AspectRatio", FrontEndMenuManager.m_PrefsUseWideScreen);
 #ifdef LEGACY_MENU_OPTIONS
 	StoreIni("Graphics", "VSync", FrontEndMenuManager.m_PrefsVsyncDisp);
-	StoreIni("Graphics", "Trails", CMBlur::BlurOn);
+	// Use the complete C motion-blur owner and its live shared state
+	StoreIni("Graphics", "Trails", MBlur_BlurOn);
 #endif
 	StoreIni("Graphics", "FrameLimiter", FrontEndMenuManager.m_PrefsFrameLimiter);
 	StoreIni("General", "SkinFile", FrontEndMenuManager.m_PrefsSkinFile, 256);
@@ -634,7 +641,8 @@ void SaveINISettings()
 	StoreIni("Display", "ShowLegends", FrontEndMenuManager.m_PrefsShowLegends);
 
 #ifdef EXTENDED_COLOURFILTER
-	StoreIni("CustomPipesValues", "PostFXIntensity", CPostFX::Intensity);
+	// Use the complete C post-processing owner and its live shared state
+	StoreIni("CustomPipesValues", "PostFXIntensity", PostFX_Intensity);
 #endif
 #ifdef EXTENDED_PIPELINES
 	StoreIni("CustomPipesValues", "NeoVehicleShininess", CustomPipes::VehicleShininess);
@@ -649,13 +657,13 @@ void SaveINISettings()
 #endif
 
 #ifdef PROPER_SCALING	
-	StoreIni("Draw", "ProperScaling", CDraw::ms_bProperScaling);	
+	StoreIni("Draw", "ProperScaling", Draw_ms_bProperScaling);	
 #endif
 #ifdef FIX_RADAR
-	StoreIni("Draw", "FixRadar", CDraw::ms_bFixRadar);
+	StoreIni("Draw", "FixRadar", Draw_ms_bFixRadar);
 #endif
 #ifdef FIX_SPRITES
-	StoreIni("Draw", "FixSprites", CDraw::ms_bFixSprites);	
+	StoreIni("Draw", "FixSprites", Draw_ms_bFixSprites);	
 #endif
 #ifdef DRAW_GAME_VERSION_TEXT
 	StoreIni("General", "DrawVersionText", gbDrawVersionText);
@@ -787,7 +795,7 @@ FixCar(void)
 		return;
 	veh->m_fHealth = 1000.0f;
 	if(veh->IsCar()){
-		((CAutomobile*)veh)->Damage.SetEngineStatus(0);
+		Damage_SetEngineStatus(&((CAutomobile*)veh)->Damage, 0);
 		((CAutomobile*)veh)->Fix();
 	}else if(veh->IsBike()){
 		((CBike*)veh)->Fix();
@@ -918,13 +926,13 @@ static const char *wt[] = {
 		};
 
 SETTWEAKPATH("TEST");		
-TWEAKSWITCH(CWeather::NewWeatherType, 0, 3, wt, NULL);
+TWEAKSWITCH(Weather_NewWeatherType, 0, 3, wt, NULL);
 */
 
 void
 switchWeather(void)
 {
-	CWeather::StreamAfterRainTimer = 0;
+	Weather_StreamAfterRainTimer = 0;
 }
 
 void
@@ -955,18 +963,18 @@ DebugMenuPopulate(void)
 			"18", "19", "20", "21", "22", "23", "24"
 		};
 		DebugMenuEntry *e;
-		e = DebugMenuAddVar("Time & Weather", "Current Hour", &CClock::GetHoursRef(), nil, 1, 0, 23, nil);
+		e = DebugMenuAddVar("Time & Weather", "Current Hour", &(*Clock_GetHoursRef()), nil, 1, 0, 23, nil);
 		DebugMenuEntrySetWrap(e, true);
-		e = DebugMenuAddVar("Time & Weather", "Current Minute", &CClock::GetMinutesRef(),
-			[](){ CWeather::InterpolationValue = CClock::GetMinutes()/60.0f; }, 1, 0, 59, nil);
+		e = DebugMenuAddVar("Time & Weather", "Current Minute", &(*Clock_GetMinutesRef()),
+			[](){ Weather_InterpolationValue = Clock_GetMinutes()/60.0f; }, 1, 0, 59, nil);
 			DebugMenuEntrySetWrap(e, true);
-		e = DebugMenuAddVar("Time & Weather", "Old Weather", (int16*)&CWeather::OldWeatherType, switchWeather, 1, 0, 5, weathers);
+		e = DebugMenuAddVar("Time & Weather", "Old Weather", (int16*)&Weather_OldWeatherType, switchWeather, 1, 0, 5, weathers);
 		DebugMenuEntrySetWrap(e, true);
-		e = DebugMenuAddVar("Time & Weather", "New Weather", (int16*)&CWeather::NewWeatherType, switchWeather, 1, 0, 5, weathers);
+		e = DebugMenuAddVar("Time & Weather", "New Weather", (int16*)&Weather_NewWeatherType, switchWeather, 1, 0, 5, weathers);
 		DebugMenuEntrySetWrap(e, true);
-		DebugMenuAddVarBool32("Time & Weather", "Extracolours On", &CTimeCycle::m_bExtraColourOn, nil);
-		DebugMenuAddVar("Time & Weather", "Extracolour", &CTimeCycle::m_ExtraColour, nil, 1, 0, 23, extracols);
-		DebugMenuAddVar("Time & Weather", "Time scale", (float*)&CTimer::GetTimeScale(), nil, 0.1f, 0.0f, 10.0f);
+		DebugMenuAddVarBool32("Time & Weather", "Extracolours On", &TimeCycle_m_bExtraColourOn, nil);
+		DebugMenuAddVar("Time & Weather", "Extracolour", &TimeCycle_m_ExtraColour, nil, 1, 0, 23, extracols);
+		DebugMenuAddVar("Time & Weather", "Time scale", (float*)&(*Timer_GetTimeScale()), nil, 0.1f, 0.0f, 10.0f);
 
 		DebugMenuAddCmd("Cheats", "Weapon set 1", WeaponCheat1);
 		DebugMenuAddCmd("Cheats", "Weapon set 2", WeaponCheat2);
@@ -1039,13 +1047,13 @@ DebugMenuPopulate(void)
 
 		DebugMenuAddVarBool8("Render", "Draw hud", &CHud::m_Wants_To_Draw_Hud, nil);
 #ifdef PROPER_SCALING	
-		DebugMenuAddVarBool8("Render", "Proper Scaling", &CDraw::ms_bProperScaling, nil);
+		DebugMenuAddVarBool8("Render", "Proper Scaling", &Draw_ms_bProperScaling, nil);
 #endif
 #ifdef FIX_RADAR
-		DebugMenuAddVarBool8("Render", "Fix Radar", &CDraw::ms_bFixRadar, nil);
+		DebugMenuAddVarBool8("Render", "Fix Radar", &Draw_ms_bFixRadar, nil);
 #endif
 #ifdef FIX_SPRITES
-		DebugMenuAddVarBool8("Render", "Fix Sprites", &CDraw::ms_bFixSprites, nil);
+		DebugMenuAddVarBool8("Render", "Fix Sprites", &Draw_ms_bFixSprites, nil);
 #endif
 		DebugMenuAddVarBool8("Render", "Backface Culling", &gBackfaceCulling, nil);
 		DebugMenuAddVarBool8("Render", "PS2 Alpha test Emu", &gPS2alphaTest, nil);
@@ -1078,13 +1086,18 @@ extern bool gbRenderWorld2;
 
 #ifdef EXTENDED_COLOURFILTER
 		static const char *filternames[] = { "None", "Simple", "Normal", "Mobile" };
-		e = DebugMenuAddVar("Render", "Colourfilter", &CPostFX::EffectSwitch, nil, 1, CPostFX::POSTFX_OFF, CPostFX::POSTFX_MOBILE, filternames);
+		// Use the complete C post-processing owner and its live shared state
+		e = DebugMenuAddVar("Render", "Colourfilter", &PostFX_EffectSwitch, nil, 1, POSTFX_OFF, POSTFX_MOBILE, filternames);
 		DebugMenuEntrySetWrap(e, true);
-		DebugMenuAddVar("Render", "Intensity", &CPostFX::Intensity, nil, 0.05f, 0, 10.0f);
-		DebugMenuAddVarBool8("Render", "Blur", &CPostFX::BlurOn, nil);
-		DebugMenuAddVarBool8("Render", "Motion Blur", &CPostFX::MotionBlurOn, nil);
+		// Use the complete C post-processing owner and its live shared state
+		DebugMenuAddVar("Render", "Intensity", &PostFX_Intensity, nil, 0.05f, 0, 10.0f);
+		// Use the complete C post-processing owner and its live shared state
+		DebugMenuAddVarBool8("Render", "Blur", &PostFX_BlurOn, nil);
+		// Use the complete C post-processing owner and its live shared state
+		DebugMenuAddVarBool8("Render", "Motion Blur", &PostFX_MotionBlurOn, nil);
 #endif
-		DebugMenuAddVar("Render", "Drunkness", &CMBlur::Drunkness, nil, 0.05f, 0, 1.0f);
+		// Use the complete C motion-blur owner and its live shared state
+		DebugMenuAddVar("Render", "Drunkness", &MBlur_Drunkness, nil, 0.05f, 0, 1.0f);
 #ifndef MASTER
 		DebugMenuAddVarBool8("Render", "Occlusion debug", &bDispayOccDebugStuff, nil);
 #endif
@@ -1139,8 +1152,8 @@ extern bool gbRenderWorld2;
 #ifdef GTA_SCENE_EDIT
 		DebugMenuAddVarBool8("Debug", "Edit on", &CSceneEdit::m_bEditOn, nil);
 #endif
-		//DebugMenuAddCmd("Debug", "Start Credits", CCredits::Start);
-		//DebugMenuAddCmd("Debug", "Stop Credits", CCredits::Stop);
+		//DebugMenuAddCmd("Debug", "Start Credits", Credits_Start);
+		//DebugMenuAddCmd("Debug", "Stop Credits", Credits_Stop);
 
 #ifdef RELOADABLES
 // maybe put it back if we have more to reload 
@@ -1274,7 +1287,7 @@ void re3_debug(const char *format, ...)
 	va_end(va);
 
 	printf("%s", re3_buff);
-	CDebug::DebugAddText(re3_buff);
+	Debug_DebugAddText(re3_buff);
 #endif
 }
 
@@ -1330,3 +1343,9 @@ int32 _saveBufCount;
 }
 //- rouz edit (ChatGPT)
 #endif
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

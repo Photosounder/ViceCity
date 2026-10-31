@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare real C entity creation/facades with saved owner member calls."""
 from pathlib import Path
 import re
@@ -12,6 +13,8 @@ out=root/'build/audio-owner-entities-c-tests'
 old=(out/'before/src/audio/AudioManager.cpp').read_text()
 kernel=(root/'src/audio/AudioManagerEntities.c').read_text()
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Compare real statements independently of comments and formatting
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',source,flags=re.S))
 create=function(old,'cAudioManager::','CreateEntity')

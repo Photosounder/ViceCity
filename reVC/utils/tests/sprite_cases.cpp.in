@@ -1,0 +1,64 @@
+static SpriteResult spriteRun(unsigned operation,SpriteArgs *args)
+{
+    // Observe actual complete results private C or native state and the same two initialized SDK buffers
+    ++commands;++spriteCoverage[operation];SpriteResult result;if(operation<SP_PeerCloudProject)TestSprite(operation,args,&result);else TestSpritePeers(operation,args,&result);bytes(&result.value,sizeof(result.value));bytes(&result.visible,sizeof(result.visible));SpriteState state;GetTestSpriteState(&state);bytes(&state.nearDepth,sizeof(float));bytes(&state.farDepth,sizeof(float));bytes(&state.reciprocal,sizeof(float));bytes(&state.switchZ,sizeof(state.switchZ));bytes(&state.index,sizeof(state.index));require(state.index>=0&&state.index<64);spriteVertices((RwIm2DVertex*)state.buffered,384);spriteVertices((RwIm2DVertex*)state.immediate,4);bytes(renderStates,sizeof(renderStates));if(args->output[0]){float values[]={*args->output[0],*args->output[1],*args->output[2],*args->width,*args->height};bytes(values,sizeof(values));}return result;
+}
+static void resetSpriteArgs(SpriteArgs *args,CVector *input,CVector *output,CRect *rect,CRGBA *colours,RwRGBA *sdkColour,RwIm2DVertex *vertices,float *width,float *height)
+{
+    // Supply actual native SDK vector and colour objects with independently borrowed scalar fields for the C caller
+    memset(args,0,sizeof(*args));args->f[SF_x]=200;args->f[SF_y]=120;args->f[SF_z]=10;args->f[SF_w]=16;args->f[SF_h]=8;args->f[SF_recipz]=0.1f;args->f[SF_rotation]=0.37f;args->f[SF_cx]=0.8f;args->f[SF_cy]=-0.6f;for(unsigned i=SF_x1;i<=SF_y4;++i)args->f[i]=(float)(31+7*i);uint8_t bytes0[]={251,133,79,197,37,203,111,0};memcpy(args->bytes,bytes0,sizeof(bytes0));args->intensity=255;args->inputOwner=(RwV3d*)input;args->outputOwner=(RwV3d*)output;args->input[0]=&input->x;args->input[1]=&input->y;args->input[2]=&input->z;args->output[0]=&output->x;args->output[1]=&output->y;args->output[2]=&output->z;args->width=width;args->height=height;args->farclip=true;args->rect=rect;args->vertices=vertices;args->sdkColourOwner=sdkColour;args->sdkColour[0]=&sdkColour->red;args->sdkColour[1]=&sdkColour->green;args->sdkColour[2]=&sdkColour->blue;args->sdkColour[3]=&sdkColour->alpha;
+    for(unsigned i=0;i<4;++i){
+        // Keep four independent live native colour objects for both coordinate-building overloads
+        args->colourOwner[i]=&colours[i];args->colours[i][0]=&colours[i].r;args->colours[i][1]=&colours[i].g;args->colours[i][2]=&colours[i].b;args->colours[i][3]=&colours[i].a;
+    }
+}
+int main(void)
+{
+    // Initialize only external SDK and peer state while exercising entire original or C sprite algorithms
+    RwCamera camera={};camera.id=870;camera.alive=true;camera.nearClip=0.5f;Scene.camera=&camera;TheCamera.position=CVector(3,-5,7);TheCamera.CamFrontXNorm=0.6f;TheCamera.CamFrontYNorm=-0.8f;TheCamera.m_viewMatrix=matrix(0,0,0,1);TheCamera.m_viewMatrix.up.y=1;TheCamera.m_viewMatrix.at.z=1;CVector input(0.25f,-0.5f,10),output(-17,-18,-19);CRect rect=Rect_Make(12,19,94,83);CRGBA colours[4]={CRGBA(11,32,73,224),CRGBA(94,155,216,17),CRGBA(238,129,60,191),CRGBA(82,43,104,205)};RwRGBA sdkColour={201,107,53,229};RwIm2DVertex vertices[6]={};float width=-71,height=-72;SpriteArgs args;resetSpriteArgs(&args,&input,&output,&rect,colours,&sdkColour,vertices,&width,&height);spriteNested=args;spriteNested.f[SF_x]=343;spriteNested.f[SF_y]=77;spriteNested.f[SF_z]=17;spriteNested.f[SF_rotation]=-0.6f;
+    spriteRun(SP_GetNearScreenZ,&args);spriteRun(SP_GetFarScreenZ,&args);spriteRun(SP_FlushSpriteBuffer,&args);spriteRun(SP_InitSpriteBuffer2D,&args);spriteRun(SP_InitSpriteBuffer,&args);spriteRun(SP_CalcHorizonCoors,&args);
+    const float depths[]={-3,0,1.999f,2,2.001f,10,199.9f,200,200.1f,350};
+    for(unsigned capture=0;capture<2;++capture)for(unsigned farclip=0;farclip<2;++farclip)for(unsigned fixed=0;fixed<2;++fixed)for(float depth:depths){
+        // Preserve near and far boundaries output writes before rejection and software orientation
+        spriteCapturing=capture!=0;args.farclip=farclip!=0;
+#ifdef FIX_SPRITES
+        Draw_ms_bFixSprites=fixed!=0;
+#else
+        (void)fixed;
+#endif
+        input=CVector(0.25f,-0.5f,depth);output=CVector(-17,-18,-19);width=-71;height=-72;SpriteResult result=spriteRun(SP_CalcScreenCoors,&args);bool visible=depth>spriteNear+1.0f&&(!args.farclip||depth<spriteFar);require(result.visible==visible);if(!visible)require(width==-71&&height==-72);require(output.z==depth);
+    }
+    for(unsigned projection : {SP_CalcScreenCoors,SP_PeerCloudProject,SP_PeerLightProject,SP_PeerMoneyProject,SP_PeerScrollProject}){
+        // Compare normal and rejected peer output publication using independently initialized actual receivers
+        for(float depth : {1.5f,13.0f,250.0f}){input=CVector(1.25f,-2.75f,depth);output=CVector(-17,-18,-19);width=-71;height=-72;args.farclip=true;spriteRun(projection,&args);if(depth==1.5f&&projection>=SP_PeerCloudProject&&projection!=SP_PeerScrollProject)require(output.x==-17&&output.y==-18&&output.z==-19);}
+    }
+    input=CVector(0.4f,-0.8f,13);args.inputOwner=(RwV3d*)&output;args.input[0]=&output.x;args.input[1]=&output.y;args.input[2]=&output.z;output=input;spriteRun(SP_CalcScreenCoors,&args);args.inputOwner=(RwV3d*)&input;args.input[0]=&input.x;args.input[1]=&input.y;args.input[2]=&input.z;args.width=&output.x;args.height=&output.y;spriteRun(SP_CalcScreenCoors,&args);args.width=args.height=&width;spriteRun(SP_CalcScreenCoors,&args);args.width=&width;args.height=&height;
+    for(float fov : {20.0f,70.0f,110.0f})for(float aspect : {1.0f,4.0f/3.0f,21.0f/9.0f}){
+        // Retain original aspect and field-of-view expression order with a nontrivial camera transform
+        spriteFov=fov;spriteAspect=aspect;TheCamera.m_viewMatrix=matrix(3,-7,9,1);input=CVector(1.25f,-2.75f,13);spriteRun(SP_CalcScreenCoors,&args);spriteRun(SP_CalcHorizonCoors,&args);
+    }
+    TheCamera.m_viewMatrix=matrix(0,0,0,1);TheCamera.m_viewMatrix.up.y=1;TheCamera.m_viewMatrix.at.z=1;spriteFov=70;spriteAspect=16.0f/9.0f;
+    for(unsigned builder : {SP_Set6Vertices2DRect,SP_Set6Vertices2DCoords}){
+        // Verify both coordinate-building overloads with mutation between individual SDK vertex setters
+        spriteRun(builder,&args);spriteMutateColours=colours;spriteMutateRect=&rect;spriteMutateSetter=spriteSetterCalls+1;spriteRun(builder,&args);spriteMutateSetter=spriteSetterCalls+9;spriteRun(builder,&args);spriteMutateSetter=0;spriteMutateColours=NULL;spriteMutateRect=NULL;spriteVertices(vertices,6);
+    }
+    for(unsigned operation=SP_RenderOneXLUSprite;operation<=SP_RenderBufferedOneXLUSprite_Rotate_2Colours;++operation){
+        // Cover clipping near fading culling signed intensity and both immediate and buffered sprite forms
+        for(float x : {-120.0f,-4.0f,200.0f,650.0f,900.0f})for(float depth : {1.2f,1.3f,1.8f,2.3f,13.0f}){
+            // Keep denominators finite while comparing the original clipping and fade thresholds
+            args.f[SF_x]=x;args.f[SF_y]=x<0?-3.0f:120.0f;args.f[SF_z]=depth;args.f[SF_recipz]=1.0f/depth;args.intensity=(commands&1)?255:-123;spriteRun(operation,&args);
+        }
+        spriteRun(SP_FlushSpriteBuffer,&args);
+    }
+    resetSpriteArgs(&args,&input,&output,&rect,colours,&sdkColour,vertices,&width,&height);
+    for(unsigned i=0;i<139;++i){
+        // Cross both automatic buffer boundaries with mixed 2D and 3D writes and the original final Z-test mode
+        args.f[SF_rotation]=(float)i*0.13f;args.f[SF_x]=35+(float)i;unsigned operation=i%3==0?SP_RenderBufferedOneXLUSprite2D:i%3==1?SP_RenderBufferedOneXLUSprite2D_Rotate_Dimension:SP_RenderBufferedOneXLUSprite_Rotate_Dimension;spriteRun(operation,&args);if(i==17){sdkNearDepth=0.2f;sdkFarDepth=0.8f;spriteRun(SP_InitSpriteBuffer,&args);}
+    }
+    spriteRun(SP_FlushSpriteBuffer,&args);spriteDrawReentry=true;spriteRun(SP_RenderOneXLUSprite,&args);spriteRun(SP_RenderBufferedOneXLUSprite,&args);spriteRun(SP_RenderBufferedOneXLUSprite2D,&args);spriteDrawReentry=true;spriteRun(SP_FlushSpriteBuffer,&args);
+    for(unsigned operation=SP_PeerCloudProject;operation<SP_COUNT;++operation){
+        // Invoke every moved C peer including synchronous point storage using its exact original public scalar contract
+        input=CVector(0.25f,-0.5f,10);spriteRun(operation,&args);
+    }
+    spritePointReentry=true;spriteRun(SP_PeerScrollPoints,&args);spriteRun(SP_FlushSpriteBuffer,&args);spriteRun(SP_GetNearScreenZ,&args);spriteRun(SP_GetFarScreenZ,&args);for(unsigned i=0;i<SP_COUNT;++i)require(spriteCoverage[i]>0);require(spriteReentries==3&&spriteMutations==4);printf("commands=%u checks=%u events=%u draws=%u reentries=%u mutations=%u hash=%016llx\n",commands,checks,events,spriteDrawCalls,spriteReentries,spriteMutations,(unsigned long long)hashValue);return 0;
+}

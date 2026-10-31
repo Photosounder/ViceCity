@@ -1,6 +1,7 @@
 """Known sound-effects orchestration and live entity traversal conversion."""
 import re
 import audio_release_migration as release
+import audio_music_service_migration as music
 from audio_controls_migration import function
 
 MEMBERS = ('ProcessReverb', 'ProcessSpecial', 'ServiceCollisions', 'AddReleasingSounds', 'ProcessActiveQueues', 'ProcessEntity')
@@ -16,7 +17,10 @@ for name in MEMBERS:
 
 def calls(source):
     # Replace the former service trampoline with the actual C operation
-    return source.replace('AudioServiceHost_SoundEffects(manager)', 'AudioEffects_Service(manager)')
+    source = source.replace('AudioServiceHost_SoundEffects(manager)', 'AudioEffects_Service(manager)')
+    if '#include "AudioManager.h"' in source and 'AudioEffects_Service(manager)' in source:
+        return music.audio(source)
+    return music.calls(source)
 
 def owner(source):
     # Remove the converted methods and preserve the remaining game callbacks
@@ -34,6 +38,8 @@ def header(source):
 
 def body(source):
     # Keep the original branch structure, repeated state reads and cleanup order
+    # Preserve the original frame-count boundary after upstream timer conversion
+    source = source.replace('Timer_GetLogicalFramesPassed()', 'CTimer::GetLogicalFramesPassed()')
     source = source[source.index('{'):]
     source = re.sub(r'(?<![.>\w])\b(m_\w+)\b', r'manager->\1', source)
     source = source.replace('uint32 ', 'uint32_t ').replace('int32 ', 'int32_t ').replace('nil', 'NULL')

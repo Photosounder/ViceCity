@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -92,14 +96,17 @@ CCoronas::Init(void)
 {
 	int i;
 
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("particle"));
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(TxdStore_FindTxdSlot("particle"));
 
 	for(i = 0; i < 9; i++)
 		if(gpCoronaTexture[i] == nil)
 			gpCoronaTexture[i] = RwTextureRead(aCoronaSpriteNames[i], nil);
 
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 
 	for(i = 0; i < NUMCORONAS; i++)
 		aCoronas[i].id = 0;
@@ -138,7 +145,7 @@ CCoronas::Update(void)
 	int i;
 	static int LastCamLook = 0;
 
-	LightsMult = Min(LightsMult + 0.03f * CTimer::GetTimeStep(), 1.0f);
+	LightsMult = Min(LightsMult + 0.03f * (*Timer_GetTimeStep()), 1.0f);
 
 	int CamLook = 0;
 	if(TheCamera.Cams[TheCamera.ActiveCam].LookingLeft) CamLook |= 1;
@@ -302,7 +309,11 @@ CCoronas::Render(void)
 
 		CVector spriteCoors;
 		float spritew, spriteh;
-		if(!CSprite::CalcScreenCoors(aCoronas[i].coors, &spriteCoors, &spritew, &spriteh, true)){
+		if(!([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(aCoronas[i].coors, &spriteCoors, &spritew, &spriteh, true)){
 			aCoronas[i].offScreen = true;
 			aCoronas[i].sightClear = false;
 		}else{
@@ -313,8 +324,8 @@ CCoronas::Render(void)
 				aCoronas[i].offScreen = true;
 				aCoronas[i].sightClear = false;
 			}else{
-				if(CTimer::GetTimeInMilliseconds() > aCoronas[i].lastLOScheck + 2000){
-					aCoronas[i].lastLOScheck = CTimer::GetTimeInMilliseconds();
+				if((*Timer_GetTimeInMilliseconds()) > aCoronas[i].lastLOScheck + 2000){
+					aCoronas[i].lastLOScheck = (*Timer_GetTimeInMilliseconds());
 					aCoronas[i].sightClear = CWorld::GetIsLineOfSightClear(
 						aCoronas[i].coors, TheCamera.Cams[TheCamera.ActiveCam].Source,
 						true, true, false, false, false, true, false);
@@ -352,7 +363,7 @@ CCoronas::Render(void)
 
 				// render corona itself
 				if(aCoronas[i].texture){
-					float fogscale = CWeather::Foggyness*Min(spriteCoors.z, 40.0f)/40.0f + 1.0f;
+					float fogscale = Weather_Foggyness*Min(spriteCoors.z, 40.0f)/40.0f + 1.0f;
 					if(CCoronas::aCoronas[i].id == SUN_CORE)
 						spriteCoors.z = 0.95f * RwCameraGetFarClipPlane(Scene.camera);
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(aCoronas[i].texture));
@@ -365,7 +376,8 @@ CCoronas::Render(void)
 						float hscale = 0.35f - (wscale - 0.5f) * 0.06f;
 						hscale = Max(hscale, 0.15f);
 
-						CSprite::RenderOneXLUSprite(spriteCoors.x, spriteCoors.y, spriteCoors.z,
+						// Use the complete C sprite operation with the original argument values
+						Sprite_RenderOneXLUSprite(spriteCoors.x, spriteCoors.y, spriteCoors.z,
 							spritew * aCoronas[i].size * wscale,
 							spriteh * aCoronas[i].size * fogscale * hscale,
 							CCoronas::aCoronas[i].red / fogscale,
@@ -375,7 +387,8 @@ CCoronas::Render(void)
 							recipz,
 							255);
 					}else{
-						CSprite::RenderOneXLUSprite_Rotate_Aspect(
+						// Use the complete C sprite operation with the original argument values
+						Sprite_RenderOneXLUSprite_Rotate_Aspect(
 							spriteCoors.x, spriteCoors.y, spriteCoors.z,
 							spritew * aCoronas[i].size * fogscale,
 							spriteh * aCoronas[i].size * fogscale,
@@ -401,7 +414,8 @@ CCoronas::Render(void)
 
 					for(; flare->texture; flare++){
 						RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[flare->texture + 4]));
-						CSprite::RenderOneXLUSprite(
+						// Use the complete C sprite operation with the original argument values
+						Sprite_RenderOneXLUSprite(
 							(spriteCoors.x - (screenw/2)) * flare->position + (screenw/2),
 							(spriteCoors.y - (screenh/2)) * flare->position + (screenh/2),
 							spriteCoors.z,
@@ -475,7 +489,7 @@ RenderEnvMapOnlyCorona(const CRegisteredCorona *corona, RwCamera *camera,
 		return;
 	CVector coronaPos = corona->coors;
 	if(corona->id == CCoronas::SUN_CORE || corona->id == CCoronas::SUN_CORONA)
-		coronaPos = cameraPos + CTimeCycle::GetSunDirection()*150.0f;
+		coronaPos = cameraPos + TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection())*150.0f;
 	CVector toCorona = coronaPos - cameraPos;
 	float coronaDepth = DotProduct(toCorona, cameraForward);
 	coronaPos -= cameraForward*corona->nearDist;
@@ -500,7 +514,7 @@ RenderEnvMapOnlyCorona(const CRegisteredCorona *corona, RwCamera *camera,
 		return;
 
 	// Tint the reflection corona for scene fog and construct its camera-facing quad
-	float fogScale = CWeather::Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
+	float fogScale = Weather_Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
 	int red = Clamp((int)(corona->red/fogScale), 0, 255);
 	int green = Clamp((int)(corona->green/fogScale), 0, 255);
 	int blue = Clamp((int)(corona->blue/fogScale), 0, 255);
@@ -584,7 +598,7 @@ CCoronas::RenderForEnvMap(RwCamera *camera)
 		// Reposition sun coronas from the reflection camera because they represent a direction
 		CVector coronaPos = aCoronas[i].coors;
 		if(aCoronas[i].id == SUN_CORE || aCoronas[i].id == SUN_CORONA)
-			coronaPos = cameraPos + CTimeCycle::GetSunDirection()*150.0f;
+			coronaPos = cameraPos + TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection())*150.0f;
 		CVector toCorona = coronaPos - cameraPos;
 		float coronaDepth = DotProduct(toCorona, cameraForward);
 		float cameraDepth = coronaDepth;
@@ -614,7 +628,7 @@ CCoronas::RenderForEnvMap(RwCamera *camera)
 			continue;
 
 		// Apply the same fog tint before blending each corona texture
-		float fogScale = CWeather::Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
+		float fogScale = Weather_Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
 		int red = Clamp((int)(aCoronas[i].red/fogScale), 0, 255);
 		int green = Clamp((int)(aCoronas[i].green/fogScale), 0, 255);
 		int blue = Clamp((int)(aCoronas[i].blue/fogScale), 0, 255);
@@ -678,7 +692,7 @@ void
 CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 {
 	// Skip wet-road light reflections when the weather or reflection camera is unavailable
-	if(CWeather::WetRoads <= 0.0f || gpCoronaTexture[3] == nil || camera == nil || RwCameraGetFrame(camera) == nil)
+	if(Weather_WetRoads <= 0.0f || gpCoronaTexture[3] == nil || camera == nil || RwCameraGetFrame(camera) == nil)
 		return;
 
 	// Read the reflection camera basis for ground-aligned light streaks
@@ -724,7 +738,7 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		float fadeDistance = drawDist*0.5f;
 		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
 		float heightFade = (20.0f-aCoronas[i].heightAboveRoad)/20.0f;
-		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*CWeather::WetRoads);
+		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*Weather_WetRoads);
 		int red = (intensity*aCoronas[i].red)>>8;
 		int green = (intensity*aCoronas[i].green)>>8;
 		int blue = (intensity*aCoronas[i].blue)>>8;
@@ -773,7 +787,7 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		CColPoint point;
 		CEntity *entity;
 		if(corona->renderReflection){
-			if(((CTimer::GetFrameCounter() + i) & 0xF) == 0 &&
+			if((((*Timer_GetFrameCounter()) + i) & 0xF) == 0 &&
 			   CWorld::ProcessVerticalLine(corona->coors, -1000.0f, point, entity,
 					true, false, false, false, true, false, nil))
 				corona->heightAboveRoad = corona->coors.z - point.point.z;
@@ -798,7 +812,7 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		float fadeDistance = drawDist*0.5f;
 		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
 		float heightFade = (20.0f-corona->heightAboveRoad)/20.0f;
-		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*CWeather::WetRoads);
+		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*Weather_WetRoads);
 		int red = (intensity*corona->red)>>8;
 		int green = (intensity*corona->green)>>8;
 		int blue = (intensity*corona->blue)>>8;
@@ -856,10 +870,11 @@ CCoronas::RenderReflections(void)
 	CColPoint point;
 	CEntity *entity;
 
-	if(CWeather::WetRoads > 0.0f){
+	if(Weather_WetRoads > 0.0f){
 		PUSH_RENDERGROUP("CCoronas::RenderReflections");
 
-		CSprite::InitSpriteBuffer();
+		// Use the complete C sprite operation with the original argument values
+		Sprite_InitSpriteBuffer();
 
 		RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 		RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
@@ -877,7 +892,7 @@ CCoronas::RenderReflections(void)
 
 			// check if we want a reflection on this corona
 			if(aCoronas[i].renderReflection){
-				if(((CTimer::GetFrameCounter() + i) & 0xF) == 0 &&
+				if((((*Timer_GetFrameCounter()) + i) & 0xF) == 0 &&
 				   CWorld::ProcessVerticalLine(aCoronas[i].coors, -1000.0f, point, entity, true, false, false, false, true, false, nil))
 					aCoronas[i].heightAboveRoad = aCoronas[i].coors.z - point.point.z;
 			}else{
@@ -898,7 +913,11 @@ CCoronas::RenderReflections(void)
 
 				CVector spriteCoors;
 				float spritew, spriteh;
-				if(CSprite::CalcScreenCoors(coors, &spriteCoors, &spritew, &spriteh, true)) {
+				if(([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(coors, &spriteCoors, &spritew, &spriteh, true)) {
 					float drawDist = 0.75f * aCoronas[i].drawDist;
 					drawDist = Min(drawDist, 55.0f);
 					if(spriteCoors.z < drawDist){
@@ -907,9 +926,10 @@ CCoronas::RenderReflections(void)
 						distanceFade = Clamp(distanceFade, 0.0f, 1.0f);
 						float recipz = 1.0f/RwCameraGetNearClipPlane(Scene.camera);
 						float heightFade = (20.0f - aCoronas[i].heightAboveRoad)/20.0f;
-						int intensity = distanceFade*heightFade * 230.0 * CWeather::WetRoads;
+						int intensity = distanceFade*heightFade * 230.0 * Weather_WetRoads;
 
-						CSprite::RenderBufferedOneXLUSprite(
+						// Use the complete C sprite operation with the original argument values
+						Sprite_RenderBufferedOneXLUSprite(
 #ifdef FIX_BUGS
 							spriteCoors.x, spriteCoors.y, spriteCoors.z,
 #else
@@ -927,7 +947,8 @@ CCoronas::RenderReflections(void)
 				}
 			}
 		}
-		CSprite::FlushSpriteBuffer();
+		// Use the complete C sprite operation with the original argument values
+		Sprite_FlushSpriteBuffer();
 
 		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
@@ -957,23 +978,23 @@ CCoronas::RenderSunReflection(void)
 	}
 #endif
 	//- rouz edit (ChatGPT)
-	float sunZDir = CTimeCycle::GetSunDirection().z;
+	float sunZDir = TimeCycle_GetSunDirection()->z;
 	if(sunZDir > -0.05f){
 		float intensity = (0.3f - Abs(sunZDir - 0.25f))/0.3f *
-			(1.0f - CWeather::CloudCoverage) *
-			(1.0f - CWeather::Foggyness) *
-			(1.0f - CWeather::Wind);
+			(1.0f - Weather_CloudCoverage) *
+			(1.0f - Weather_Foggyness) *
+			(1.0f - Weather_Wind);
 		if(intensity > 0.0f){
-			int r = (CTimeCycle::GetSunCoreRed() + CTimeCycle::GetSunCoronaRed())*intensity*0.25f;
-			int g = (CTimeCycle::GetSunCoreGreen() + CTimeCycle::GetSunCoronaGreen())*intensity*0.25f;
-			int b = (CTimeCycle::GetSunCoreBlue() + CTimeCycle::GetSunCoronaBlue())*intensity*0.25f;
+			int r = (TimeCycle_GetSunCoreRed() + TimeCycle_GetSunCoronaRed())*intensity*0.25f;
+			int g = (TimeCycle_GetSunCoreGreen() + TimeCycle_GetSunCoronaGreen())*intensity*0.25f;
+			int b = (TimeCycle_GetSunCoreBlue() + TimeCycle_GetSunCoronaBlue())*intensity*0.25f;
 
 			// Position the reflection streak relative to the camera rendering this pass
 			//+ rouz edit (ChatGPT)
-			CVector sunPos = 40.0f*CTimeCycle::GetSunDirection() + reflectionCameraPosition;
+			CVector sunPos = 40.0f*TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection()) + reflectionCameraPosition;
 			//- rouz edit (ChatGPT)
-			sunPos.z = 0.5f*CWeather::Wind + 6.1f;
-			CVector sunDir = CTimeCycle::GetSunDirection();
+			sunPos.z = 0.5f*Weather_Wind + 6.1f;
+			CVector sunDir = TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection());
 			sunDir.z = 0.0;
 			sunDir.Normalise();
 
@@ -1032,7 +1053,7 @@ CCoronas::RenderSunReflection(void)
 				// What a weird way to do it...
 				float fwdLen = fwdInc/20 + 60;
 				float sideLen = sideInc/20 + 30;
-				sideLen += 10.0f*Sin((float)(CTimer::GetTimeInMilliseconds()+timeInc & 0x7FF)/0x800*TWOPI);
+				sideLen += 10.0f*Sin((float)((*Timer_GetTimeInMilliseconds())+timeInc & 0x7FF)/0x800*TWOPI);
 				timeInc += 900;
 				sideInc += 970;
 				fwdInc += 1440;
@@ -1086,27 +1107,31 @@ CCoronas::DoSunAndMoon(void)
 {
 	// yeah, moon is done somewhere else....
 
-	CVector sunCoors = CTimeCycle::GetSunDirection();
+	CVector sunCoors = TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection());
 	sunCoors *= 150.0f;
 	sunCoors += TheCamera.GetPosition();
 
-	if(CTimeCycle::GetSunDirection().z > -0.2f){
-		float size = ((CGeneral::GetRandomNumber()&0xFF) * 0.005f + 10.0f) * CTimeCycle::GetSunSize();
+	if(TimeCycle_GetSunDirection()->z > -0.2f){
+		float size = ((General_GetRandomNumber()&0xFF) * 0.005f + 10.0f) * TimeCycle_GetSunSize();
 		RegisterCorona(SUN_CORE,
-			CTimeCycle::GetSunCoreRed(), CTimeCycle::GetSunCoreGreen(), CTimeCycle::GetSunCoreBlue(),
+			TimeCycle_GetSunCoreRed(), TimeCycle_GetSunCoreGreen(), TimeCycle_GetSunCoreBlue(),
 			255, sunCoors, size,
 			999999.88f, TYPE_STAR, FLARE_NONE, REFLECTION_OFF, LOSCHECK_OFF, STREAK_OFF, 0.0f);
 
-		if(CTimeCycle::GetSunDirection().z > 0.0f && !CGame::IsInInterior())
+		if(TimeCycle_GetSunDirection()->z > 0.0f && !CGame::IsInInterior())
 			RegisterCorona(SUN_CORONA,
-				CTimeCycle::GetSunCoronaRed(), CTimeCycle::GetSunCoronaGreen(), CTimeCycle::GetSunCoronaBlue(),
-				255, sunCoors, 25.0f * CTimeCycle::GetSunSize(),
+				TimeCycle_GetSunCoronaRed(), TimeCycle_GetSunCoronaGreen(), TimeCycle_GetSunCoronaBlue(),
+				255, sunCoors, 25.0f * TimeCycle_GetSunSize(),
 				999999.88f, TYPE_STAR, FLARE_SUN, REFLECTION_OFF, LOSCHECK_ON, STREAK_OFF, 0.0f);
 	}
 
 	CVector spriteCoors;
 	float spritew, spriteh;
-	if(CSprite::CalcScreenCoors(sunCoors, &spriteCoors, &spritew, &spriteh, true)) {
+	if(([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(sunCoors, &spriteCoors, &spritew, &spriteh, true)) {
 		SunScreenX = spriteCoors.x;
 		SunScreenY = spriteCoors.y;
 	}else{
@@ -1125,25 +1150,25 @@ CRegisteredCorona::Update(void)
 	   (CCoronas::SunBlockedByClouds && id == CCoronas::SUN_CORONA ||
 	    !CWorld::GetIsLineOfSightClear(coors, TheCamera.GetPosition(), true, false, false, false, false, false))){
 		// Corona is blocked, fade out
-		fadeAlpha = Max(fadeAlpha - 15.0f*CTimer::GetTimeStep(), 0.0f);
+		fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), 0.0f);
 	}else if(offScreen){
 		// Same when off screen
-		fadeAlpha = Max(fadeAlpha - 15.0f*CTimer::GetTimeStep(), 0.0f);
+		fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), 0.0f);
 	}else{
 		// Visible
 		if(alpha > fadeAlpha){
 			// fade in
-			fadeAlpha = Min(fadeAlpha + 15.0f*CTimer::GetTimeStep(), alpha);
+			fadeAlpha = Min(fadeAlpha + 15.0f*(*Timer_GetTimeStep()), alpha);
 			if(CCoronas::bChangeBrightnessImmediately)
 				fadeAlpha = alpha;
 		}else if(alpha < fadeAlpha){
 			// too visible, decrease alpha but not below alpha
-			fadeAlpha = Max(fadeAlpha - 15.0f*CTimer::GetTimeStep(), alpha);
+			fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), alpha);
 		}
 
 		// darken scene when the sun is visible
 		if(id == CCoronas::SUN_CORONA)
-			CCoronas::LightsMult = Max(CCoronas::LightsMult - CTimer::GetTimeStep()*0.06f, 0.6f);
+			CCoronas::LightsMult = Max(CCoronas::LightsMult - (*Timer_GetTimeStep())*0.06f, 0.6f);
 	}
 
 	// remove if invisible
@@ -1184,86 +1209,86 @@ CEntity::ProcessLightsForEntity(void)
 				lightOn = true;
 				break;
 			case LIGHT_ON_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7)
 					lightOn = true;
 				break;
 			case LIGHT_FLICKER:
-				if((CTimer::GetTimeInMilliseconds() ^ m_randomSeed) & 0x60)
+				if(((*Timer_GetTimeInMilliseconds()) ^ m_randomSeed) & 0x60)
 					lightOn = true;
 				else
 					lightFlickering = true;
-				if((CTimer::GetTimeInMilliseconds()>>11 ^ m_randomSeed) & 3)
+				if(((*Timer_GetTimeInMilliseconds())>>11 ^ m_randomSeed) & 3)
 					lightOn = true;
 				break;
 			case LIGHT_FLICKER_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7 || CWeather::WetRoads > 0.5f){
-					if((CTimer::GetTimeInMilliseconds() ^ m_randomSeed) & 0x60)
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7 || Weather_WetRoads > 0.5f){
+					if(((*Timer_GetTimeInMilliseconds()) ^ m_randomSeed) & 0x60)
 						lightOn = true;
 					else
 						lightFlickering = true;
-					if((CTimer::GetTimeInMilliseconds()>>11 ^ m_randomSeed) & 3)
+					if(((*Timer_GetTimeInMilliseconds())>>11 ^ m_randomSeed) & 3)
 						lightOn = true;
 				}
 				break;
 			case LIGHT_FLASH1:
-				if((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200)
+				if(((*Timer_GetTimeInMilliseconds()) + flashTimer1) & 0x200)
 					lightOn = true;
 				break;
 			case LIGHT_FLASH1_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
-					if((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200)
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7)
+					if(((*Timer_GetTimeInMilliseconds()) + flashTimer1) & 0x200)
 						lightOn = true;
 				break;
 			case LIGHT_FLASH2:
-				if((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400)
+				if(((*Timer_GetTimeInMilliseconds()) + flashTimer2) & 0x400)
 					lightOn = true;
 				break;
 			case LIGHT_FLASH2_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
-					if((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400)
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7)
+					if(((*Timer_GetTimeInMilliseconds()) + flashTimer2) & 0x400)
 						lightOn = true;
 				break;
 			case LIGHT_FLASH3:
-				if((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800)
+				if(((*Timer_GetTimeInMilliseconds()) + flashTimer3) & 0x800)
 					lightOn = true;
 				break;
 			case LIGHT_FLASH3_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
-					if((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800)
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7)
+					if(((*Timer_GetTimeInMilliseconds()) + flashTimer3) & 0x800)
 						lightOn = true;
 				break;
 			case LIGHT_RANDOM_FLICKER:
 				if(m_randomSeed > 16)
 					lightOn = true;
 				else{
-					if((CTimer::GetTimeInMilliseconds() ^ m_randomSeed*8) & 0x60)
+					if(((*Timer_GetTimeInMilliseconds()) ^ m_randomSeed*8) & 0x60)
 						lightOn = true;
 					else
 						lightFlickering = true;
-					if((CTimer::GetTimeInMilliseconds()>>11 ^ m_randomSeed*8) & 3)
+					if(((*Timer_GetTimeInMilliseconds())>>11 ^ m_randomSeed*8) & 3)
 						lightOn = true;
 				}
 				break;
 			case LIGHT_RANDOM_FLICKER_NIGHT:
-				if(CClock::GetHours() > 18 || CClock::GetHours() < 7){
+				if(Clock_GetHours() > 18 || Clock_GetHours() < 7){
 					if(m_randomSeed > 16)
 						lightOn = true;
 					else{
-						if((CTimer::GetTimeInMilliseconds() ^ m_randomSeed*8) & 0x60)
+						if(((*Timer_GetTimeInMilliseconds()) ^ m_randomSeed*8) & 0x60)
 							lightOn = true;
 						else
 							lightFlickering = true;
-						if((CTimer::GetTimeInMilliseconds()>>11 ^ m_randomSeed*8) & 3)
+						if(((*Timer_GetTimeInMilliseconds())>>11 ^ m_randomSeed*8) & 3)
 							lightOn = true;
 					}
 				}
 				break;
 			case LIGHT_BRIDGE_FLASH1:
-				if(CBridge::ShouldLightsBeFlashing() && CTimer::GetTimeInMilliseconds() & 0x200)
+				if(Bridge_ShouldLightsBeFlashing() && (*Timer_GetTimeInMilliseconds()) & 0x200)
 					lightOn = true;
 				break;
 			case LIGHT_BRIDGE_FLASH2:
-				if(CBridge::ShouldLightsBeFlashing() && (CTimer::GetTimeInMilliseconds() & 0x1FF) < 60)
+				if(Bridge_ShouldLightsBeFlashing() && ((*Timer_GetTimeInMilliseconds()) & 0x1FF) < 60)
 					lightOn = true;
 				break;
 			}
@@ -1297,18 +1322,20 @@ CEntity::ProcessLightsForEntity(void)
 			alreadyProcessedFog = false;
 			if(effect->light.range != 0.0f && lightOn){
 				if(effect->col.r == 0 && effect->col.g == 0 && effect->col.b == 0){
-					CPointLights::AddLight(CPointLights::LIGHT_POINT,
+					// Enter the C point-light algorithm with the original owner expressions
+					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT,
 						pos, CVector(0.0f, 0.0f, 0.0f),
 						effect->light.range,
 						0.0f, 0.0f, 0.0f,
-						CPointLights::FOG_NONE, true);
+						POINTLIGHTS_FOG_NONE, true);
 				}else{
-					CPointLights::AddLight(CPointLights::LIGHT_POINT,
+					// Enter the C point-light algorithm with the original owner expressions
+					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT,
 						pos, CVector(0.0f, 0.0f, 0.0f),
 						effect->light.range,
-						effect->col.r*CTimeCycle::GetSpriteBrightness()/255.0f,
-						effect->col.g*CTimeCycle::GetSpriteBrightness()/255.0f,
-						effect->col.b*CTimeCycle::GetSpriteBrightness()/255.0f,
+						effect->col.r*TimeCycle_GetSpriteBrightness()/255.0f,
+						effect->col.g*TimeCycle_GetSpriteBrightness()/255.0f,
+						effect->col.b*TimeCycle_GetSpriteBrightness()/255.0f,
 						(effect->light.flags & LIGHTFLAG_FOG) >> 1,
 						true);
 					alreadyProcessedFog = true; 
@@ -1317,17 +1344,19 @@ CEntity::ProcessLightsForEntity(void)
 
 			if(!alreadyProcessedFog){
 				if(effect->light.flags & LIGHTFLAG_FOG_ALWAYS){
-					CPointLights::AddLight(CPointLights::LIGHT_FOGONLY_ALWAYS,
+					// Enter the C point-light algorithm with the original owner expressions
+					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_FOGONLY_ALWAYS,
 						pos, CVector(0.0f, 0.0f, 0.0f),
 						0.0f,
 						effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
-						CPointLights::FOG_ALWAYS, true);
+						POINTLIGHTS_FOG_ALWAYS, true);
 				}else if(effect->light.flags & LIGHTFLAG_FOG_NORMAL && lightOn && effect->light.range == 0.0f){
-					CPointLights::AddLight(CPointLights::LIGHT_FOGONLY,
+					// Enter the C point-light algorithm with the original owner expressions
+					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_FOGONLY,
 						pos, CVector(0.0f, 0.0f, 0.0f),
 						0.0f,
 						effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
-						CPointLights::FOG_NORMAL, true);
+						POINTLIGHTS_FOG_NORMAL, true);
 				}
 			}
 
@@ -1339,9 +1368,9 @@ CEntity::ProcessLightsForEntity(void)
 						effect->light.shadowSize, 0.0f,
 						0.0f, -effect->light.shadowSize,
 						128,
-						effect->col.r*CTimeCycle::GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
-						effect->col.g*CTimeCycle::GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
-						effect->col.b*CTimeCycle::GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
+						effect->col.r*TimeCycle_GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
+						effect->col.g*TimeCycle_GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
+						effect->col.b*TimeCycle_GetSpriteBrightness()*effect->light.shadowIntensity/255.0f,
 						15.0f, 1.0f, 40.0f, false, 0.0f);
 				}else if(lightFlickering){
 					CShadows::StoreStaticShadow((uintptr)this + i, SHADOWTYPE_ADDITIVE,
@@ -1355,7 +1384,7 @@ CEntity::ProcessLightsForEntity(void)
 			break;
 
 		case EFFECT_SUNGLARE:
-			if(CWeather::SunGlare >= 0.0f){
+			if(Weather_SunGlare >= 0.0f){
 				CVector pos = GetMatrix() * effect->pos;
 				CVector glareDir = pos - GetPosition();
 				glareDir.Normalise();
@@ -1364,16 +1393,16 @@ CEntity::ProcessLightsForEntity(void)
 				camDir *= 2.0f/dist;
 				glareDir += camDir;
 				glareDir.Normalise();
-				float camAngle = -DotProduct(glareDir, CTimeCycle::GetSunDirection());
+				float camAngle = -DotProduct(glareDir, TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection()));
 				if(camAngle > 0.0f){
-					float intens = Sqrt(camAngle) * CWeather::SunGlare;
+					float intens = Sqrt(camAngle) * Weather_SunGlare;
 					pos += camDir;
 					CCoronas::RegisterCorona((uintptr)this + 33 + i,
-						intens * (CTimeCycle::GetSunCoreRed() + 2*255)/3.0f,
-						intens * (CTimeCycle::GetSunCoreGreen() + 2*255)/3.0f,
-						intens * (CTimeCycle::GetSunCoreBlue() + 2*255)/3.0f,
+						intens * (TimeCycle_GetSunCoreRed() + 2*255)/3.0f,
+						intens * (TimeCycle_GetSunCoreGreen() + 2*255)/3.0f,
+						intens * (TimeCycle_GetSunCoreBlue() + 2*255)/3.0f,
 						255,
-						pos, 0.5f*CWeather::SunGlare*Sqrt(dist), 120.0f,
+						pos, 0.5f*Weather_SunGlare*Sqrt(dist), 120.0f,
 						CCoronas::TYPE_STAR, CCoronas::FLARE_NONE,
 						CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF,
 						CCoronas::STREAK_OFF, 0.0f);
@@ -1412,56 +1441,56 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 			lightOn = true;
 			break;
 		case LIGHT_ON_NIGHT:
-			lightOn = CClock::GetHours() > 18 || CClock::GetHours() < 7;
+			lightOn = Clock_GetHours() > 18 || Clock_GetHours() < 7;
 			break;
 		case LIGHT_FLICKER:
-			lightOn = ((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed) & 0x60) != 0 ||
-				((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed) & 3) != 0;
+			lightOn = (((*Timer_GetTimeInMilliseconds()) ^ entity->m_randomSeed) & 0x60) != 0 ||
+				(((*Timer_GetTimeInMilliseconds()) >> 11 ^ entity->m_randomSeed) & 3) != 0;
 			break;
 		case LIGHT_FLICKER_NIGHT:
-			if(CClock::GetHours() > 18 || CClock::GetHours() < 7 || CWeather::WetRoads > 0.5f)
-				lightOn = ((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed) & 0x60) != 0 ||
-					((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed) & 3) != 0;
+			if(Clock_GetHours() > 18 || Clock_GetHours() < 7 || Weather_WetRoads > 0.5f)
+				lightOn = (((*Timer_GetTimeInMilliseconds()) ^ entity->m_randomSeed) & 0x60) != 0 ||
+					(((*Timer_GetTimeInMilliseconds()) >> 11 ^ entity->m_randomSeed) & 3) != 0;
 			break;
 		case LIGHT_FLASH1:
-			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200) != 0;
+			lightOn = (((*Timer_GetTimeInMilliseconds()) + flashTimer1) & 0x200) != 0;
 			break;
 		case LIGHT_FLASH1_NIGHT:
-			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
-				((CTimer::GetTimeInMilliseconds() + flashTimer1) & 0x200) != 0;
+			lightOn = (Clock_GetHours() > 18 || Clock_GetHours() < 7) &&
+				(((*Timer_GetTimeInMilliseconds()) + flashTimer1) & 0x200) != 0;
 			break;
 		case LIGHT_FLASH2:
-			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400) != 0;
+			lightOn = (((*Timer_GetTimeInMilliseconds()) + flashTimer2) & 0x400) != 0;
 			break;
 		case LIGHT_FLASH2_NIGHT:
-			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
-				((CTimer::GetTimeInMilliseconds() + flashTimer2) & 0x400) != 0;
+			lightOn = (Clock_GetHours() > 18 || Clock_GetHours() < 7) &&
+				(((*Timer_GetTimeInMilliseconds()) + flashTimer2) & 0x400) != 0;
 			break;
 		case LIGHT_FLASH3:
-			lightOn = ((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800) != 0;
+			lightOn = (((*Timer_GetTimeInMilliseconds()) + flashTimer3) & 0x800) != 0;
 			break;
 		case LIGHT_FLASH3_NIGHT:
-			lightOn = (CClock::GetHours() > 18 || CClock::GetHours() < 7) &&
-				((CTimer::GetTimeInMilliseconds() + flashTimer3) & 0x800) != 0;
+			lightOn = (Clock_GetHours() > 18 || Clock_GetHours() < 7) &&
+				(((*Timer_GetTimeInMilliseconds()) + flashTimer3) & 0x800) != 0;
 			break;
 		case LIGHT_RANDOM_FLICKER:
 			lightOn = entity->m_randomSeed > 16 ||
-				((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
-				((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
+				(((*Timer_GetTimeInMilliseconds()) ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
+				(((*Timer_GetTimeInMilliseconds()) >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
 			break;
 		case LIGHT_RANDOM_FLICKER_NIGHT:
-			if(CClock::GetHours() > 18 || CClock::GetHours() < 7)
+			if(Clock_GetHours() > 18 || Clock_GetHours() < 7)
 				lightOn = entity->m_randomSeed > 16 ||
-					((CTimer::GetTimeInMilliseconds() ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
-					((CTimer::GetTimeInMilliseconds() >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
+					(((*Timer_GetTimeInMilliseconds()) ^ entity->m_randomSeed * 8) & 0x60) != 0 ||
+					(((*Timer_GetTimeInMilliseconds()) >> 11 ^ entity->m_randomSeed * 8) & 3) != 0;
 			break;
 		case LIGHT_BRIDGE_FLASH1:
-			lightOn = CBridge::ShouldLightsBeFlashing() &&
-				(CTimer::GetTimeInMilliseconds() & 0x200) != 0;
+			lightOn = Bridge_ShouldLightsBeFlashing() &&
+				((*Timer_GetTimeInMilliseconds()) & 0x200) != 0;
 			break;
 		case LIGHT_BRIDGE_FLASH2:
-			lightOn = CBridge::ShouldLightsBeFlashing() &&
-				(CTimer::GetTimeInMilliseconds() & 0x1FF) < 60;
+			lightOn = Bridge_ShouldLightsBeFlashing() &&
+				((*Timer_GetTimeInMilliseconds()) & 0x1FF) < 60;
 			break;
 		}
 		if(!lightOn && !(effect->light.flags & LIGHTFLAG_FOG_ALWAYS))
@@ -1500,15 +1529,17 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 		bool alreadyProcessedFog = false;
 		if(effect->light.range != 0.0f && lightOn){
 			if(effect->col.r == 0 && effect->col.g == 0 && effect->col.b == 0){
-				CPointLights::AddLight(CPointLights::LIGHT_POINT,
+				// Enter the C point-light algorithm with the original owner expressions
+				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT,
 					pos, CVector(0.0f, 0.0f, 0.0f), effect->light.range,
-					0.0f, 0.0f, 0.0f, CPointLights::FOG_NONE, true);
+					0.0f, 0.0f, 0.0f, POINTLIGHTS_FOG_NONE, true);
 			}else{
-				CPointLights::AddLight(CPointLights::LIGHT_POINT,
+				// Enter the C point-light algorithm with the original owner expressions
+				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT,
 					pos, CVector(0.0f, 0.0f, 0.0f), effect->light.range,
-					effect->col.r*CTimeCycle::GetSpriteBrightness()/255.0f,
-					effect->col.g*CTimeCycle::GetSpriteBrightness()/255.0f,
-					effect->col.b*CTimeCycle::GetSpriteBrightness()/255.0f,
+					effect->col.r*TimeCycle_GetSpriteBrightness()/255.0f,
+					effect->col.g*TimeCycle_GetSpriteBrightness()/255.0f,
+					effect->col.b*TimeCycle_GetSpriteBrightness()/255.0f,
 					(effect->light.flags & LIGHTFLAG_FOG) >> 1, true);
 				alreadyProcessedFog = true;
 			}
@@ -1516,18 +1547,26 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 		// Add standalone fog effects only when the point light did not carry them
 		if(!alreadyProcessedFog){
 			if(effect->light.flags & LIGHTFLAG_FOG_ALWAYS)
-				CPointLights::AddLight(CPointLights::LIGHT_FOGONLY_ALWAYS,
+				// Enter the C point-light algorithm with the original owner expressions
+				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_FOGONLY_ALWAYS,
 					pos, CVector(0.0f, 0.0f, 0.0f), 0.0f,
 					effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
-					CPointLights::FOG_ALWAYS, true);
+					POINTLIGHTS_FOG_ALWAYS, true);
 			else if(lightOn && effect->light.range == 0.0f &&
 			        (effect->light.flags & LIGHTFLAG_FOG_NORMAL))
-				CPointLights::AddLight(CPointLights::LIGHT_FOGONLY,
+				// Enter the C point-light algorithm with the original owner expressions
+				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_FOGONLY,
 					pos, CVector(0.0f, 0.0f, 0.0f), 0.0f,
 					effect->col.r/255.0f, effect->col.g/255.0f, effect->col.b/255.0f,
-					CPointLights::FOG_NORMAL, true);
+					POINTLIGHTS_FOG_NORMAL, true);
 		}
 	}
 }
 #endif
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

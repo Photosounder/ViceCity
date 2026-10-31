@@ -1,5 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 #include "Draw.h"
@@ -193,7 +197,7 @@ CCamera::Init(void)
 	m_PedOrientForBehindOrInFront = 0.0f;
 	if(!FrontEndMenuManager.m_bWantToRestart){
 		m_bFading = false;
-		CDraw::FadeValue = 0;
+		Draw_FadeValue = 0;
 		m_fFLOATingFade = 0.0f;
 		m_bMusicFading = false;
 		m_fTimeToFadeMusic = 0.0f;
@@ -300,7 +304,7 @@ CCamera::Process(void)
 	if(Cams[ActiveCam].Front.x == 0.0f && Cams[ActiveCam].Front.y == 0.0f)
 		oldBeta = 0.0f;
 	else
-		oldBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+		oldBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 
 	Cams[ActiveCam].Process();
 	Cams[ActiveCam].ProcessSpecialHeightRoutines();
@@ -308,12 +312,12 @@ CCamera::Process(void)
 	if(Cams[ActiveCam].Front.x == 0.0f && Cams[ActiveCam].Front.y == 0.0f)
 		newBeta = 0.0f;
 	else
-		newBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+		newBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 
 
 	// Stop transition when it's done
 	if(m_uiTransitionState != 0){
-		if(CTimer::GetTimeInMilliseconds() > m_uiTransitionDuration + m_uiTimeTransitionStart || 0 /*rouz edit*/) {
+		if((*Timer_GetTimeInMilliseconds()) > m_uiTransitionDuration + m_uiTimeTransitionStart || 0 /*rouz edit*/) {
 			m_uiTransitionState = 0;
 			m_vecDoingSpecialInterPolation = false;
 			m_bWaitForInterpolToFinish = false;
@@ -343,7 +347,7 @@ CCamera::Process(void)
 	if(m_uiTransitionState != 0 && !lookLRBVehicle){
 		// Process transition
 
-		uint32 currentTime = CTimer::GetTimeInMilliseconds() - m_uiTimeTransitionStart;
+		uint32 currentTime = (*Timer_GetTimeInMilliseconds()) - m_uiTimeTransitionStart;
 		if(currentTime >= m_uiTransitionDuration)
 			currentTime = m_uiTransitionDuration;
 		float fractionInter = (float) currentTime / m_uiTransitionDuration;
@@ -387,7 +391,7 @@ CCamera::Process(void)
 			if(m_bLookingAtPlayer){
 				CVector ToCam = m_vecSourceWhenInterPol - Target;
 				if(ToCam.Magnitude2D() < PlayerMinDist){
-					float beta = CGeneral::GetATanOfXY(ToCam.x, ToCam.y);
+					float beta = General_GetATanOfXY(ToCam.x, ToCam.y);
 					CamSource.x = Target.x + PlayerMinDist*Cos(beta);
 					CamSource.y = Target.y + PlayerMinDist*Sin(beta);
 				}
@@ -433,7 +437,7 @@ CCamera::Process(void)
 			if(m_bLookingAtPlayer){
 				CVector ToCam = m_vecSourceWhenInterPol - Target;
 				if(ToCam.Magnitude2D() < PlayerMinDist){
-					float beta = CGeneral::GetATanOfXY(ToCam.x, ToCam.y);
+					float beta = General_GetATanOfXY(ToCam.x, ToCam.y);
 					CamSource.x = Target.x + PlayerMinDist*Cos(beta);
 					CamSource.y = Target.y + PlayerMinDist*Sin(beta);
 				}
@@ -471,8 +475,8 @@ CCamera::Process(void)
 
 		CVector Dist = CamSource - Target;
 		float DistOnGround = Dist.Magnitude2D();
-		float Alpha = CGeneral::GetATanOfXY(DistOnGround, Dist.z);
-		float Beta = CGeneral::GetATanOfXY(Dist.x, Dist.y);
+		float Alpha = General_GetATanOfXY(DistOnGround, Dist.z);
+		float Beta = General_GetATanOfXY(Dist.x, Dist.y);
 		Cams[ActiveCam].KeepTrackOfTheSpeed(CamSource, Target, CamUp, Alpha, Beta, FOV);
 	}else{
 		// No transition, take Cam values directly
@@ -505,16 +509,17 @@ CCamera::Process(void)
 	}
 
 	if(m_uiTransitionState != 0)
-		if(!m_bLookingAtVector && m_bLookingAtPlayer && !CCullZones::CamStairsForPlayer() && !m_bPlayerIsInGarage){
+		if(!m_bLookingAtVector && m_bLookingAtPlayer && !CullZones_CamStairsForPlayer() && !m_bPlayerIsInGarage){
 			CEntity *entity = nil;
 			CColPoint colPoint;
 			if(CWorld::ProcessLineOfSight(pTargetEntity->GetPosition(), CamSource, colPoint, entity, true, false, false, true, false, true, true)){
-				CamSource = colPoint.point;
+				CamSource = CollisionVector_ToNative(colPoint.point);
 				RwCameraSetNearClipPlane(Scene.camera, 0.05f);
 			}
 		}
 
-	if(CMBlur::Drunkness > 0.0f){
+	// Use the complete C motion-blur owner and its live shared state
+	if(MBlur_Drunkness > 0.0f){
 		static float DrunkAngle;
 
 		int tableIndex = (int)(DEGTORAD(DrunkAngle)/TWOPI * CParticle::SIN_COS_TABLE_SIZE) & CParticle::SIN_COS_TABLE_SIZE-1;
@@ -523,20 +528,27 @@ CCamera::Process(void)
 		// This just messes up interpolation, probably not what they intended
 		// and multiplying the interpolated FOV is also a bit extreme
 		// so let's not do any of this nonsense
-		Cams[ActiveCam].FOV *= (1.0f + CMBlur::Drunkness);
+		// Use the complete C motion-blur owner and its live shared state
+		Cams[ActiveCam].FOV *= (1.0f + MBlur_Drunkness);
 #endif
 
-		CamSource.x += -0.02f*CMBlur::Drunkness * CParticle::m_CosTable[tableIndex];
-		CamSource.y += -0.02f*CMBlur::Drunkness * CParticle::m_SinTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamSource.x += -0.02f*MBlur_Drunkness * CParticle::m_CosTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamSource.y += -0.02f*MBlur_Drunkness * CParticle::m_SinTable[tableIndex];
 
 		CamUp.Normalise();
-		CamUp.x += 0.05f*CMBlur::Drunkness * CParticle::m_CosTable[tableIndex];
-		CamUp.y += 0.05f*CMBlur::Drunkness * CParticle::m_SinTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamUp.x += 0.05f*MBlur_Drunkness * CParticle::m_CosTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamUp.y += 0.05f*MBlur_Drunkness * CParticle::m_SinTable[tableIndex];
 		CamUp.Normalise();
 
 		CamFront.Normalise();
-		CamFront.x += -0.1f*CMBlur::Drunkness * CParticle::m_CosTable[tableIndex];
-		CamFront.y += -0.1f*CMBlur::Drunkness * CParticle::m_SinTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamFront.x += -0.1f*MBlur_Drunkness * CParticle::m_CosTable[tableIndex];
+		// Use the complete C motion-blur owner and its live shared state
+		CamFront.y += -0.1f*MBlur_Drunkness * CParticle::m_SinTable[tableIndex];
 		CamFront.Normalise();
 
 		CamRight = CrossProduct(CamFront, CamUp);
@@ -551,9 +563,9 @@ CCamera::Process(void)
 	GetMatrix().GetPosition() = CamSource;
 
 	// Process Shake
-	float shakeStrength = m_fCamShakeForce - 0.28f*(CTimer::GetTimeInMilliseconds()-m_uiCamShakeStart)/1000.0f;
+	float shakeStrength = m_fCamShakeForce - 0.28f*((*Timer_GetTimeInMilliseconds())-m_uiCamShakeStart)/1000.0f;
 	shakeStrength = Clamp(shakeStrength, 0.0f, 2.0f);
-	int shakeRand = CGeneral::GetRandomNumber();
+	int shakeRand = General_GetRandomNumber();
 	float shakeOffset = shakeStrength*0.1f;
 	GetMatrix().GetPosition().x += shakeOffset * ((shakeRand & 0xF) - 7);
 	GetMatrix().GetPosition().y += shakeOffset * (((shakeRand & 0xF0) >> 4) - 7);
@@ -564,7 +576,7 @@ CCamera::Process(void)
 
 	// rouz edit (ChatGPT removed upside down overexposure)
 	CalculateDerivedValues();
-	CDraw::SetFOV(FOV);
+	Draw_SetFOV(FOV);
 
 	// Set RW camera
 #ifndef MASTER
@@ -579,7 +591,7 @@ CCamera::Process(void)
 		GetMatrix().GetUp() = Up;
 		GetMatrix().GetPosition() = Source;
 
-		CDraw::SetFOV(Cams[2].FOV);
+		Draw_SetFOV(Cams[2].FOV);
 		m_vecGameCamPos = Cams[ActiveCam].Source;
 
 		*RwMatrixGetPos(RwFrameGetMatrix(frame)) = GetPosition();
@@ -604,12 +616,12 @@ CCamera::Process(void)
 
 	UpdateSoundDistances();
 
-	if((CTimer::GetFrameCounter()&0xF) == 3)
+	if(((*Timer_GetFrameCounter())&0xF) == 3)
 		DistanceToWater = CWaterLevel::CalcDistanceToWater(GetPosition().x, GetPosition().y);
 
 	// LOD dist
 	if(!CCutsceneMgr::IsRunning() || CCutsceneMgr::UseLodMultiplier()){
-		LODDistMultiplier = 70.0f/CDraw::GetFOV();
+		LODDistMultiplier = 70.0f/Draw_GetFOV();
 
 		if(GetPosition().z > 55.0f && FindPlayerVehicle() && FindPlayerVehicle()->pHandling->Flags & (HANDLING_IS_HELI|HANDLING_IS_PLANE) ||
 		   FindPlayerPed()->m_attachedTo){
@@ -624,8 +636,8 @@ CCamera::Process(void)
 	GenerationDistMultiplier = LODDistMultiplier;
 	LODDistMultiplier *= CRenderer::ms_lodDistScale;
 
-	CDraw::SetNearClipZ(RwCameraGetNearClipPlane(m_pRwCamera));
-	CDraw::SetFarClipZ(RwCameraGetFarClipPlane(m_pRwCamera));
+	Draw_SetNearClipZ(RwCameraGetNearClipPlane(m_pRwCamera));
+	Draw_SetFarClipZ(RwCameraGetFarClipPlane(m_pRwCamera));
 
 	// Keep track of speed
 	if(m_bJustInitalised || m_bJust_Switched){
@@ -693,14 +705,14 @@ CCamera::CamControl(void)
 		m_iZoneCullFrameNumWereAt = 1;
 	m_bCullZoneChecksOn = m_iZoneCullFrameNumWereAt == m_iCheckCullZoneThisNumFrames;
 	if(m_bCullZoneChecksOn)
-		m_bFailedCullZoneTestPreviously = CCullZones::CamCloseInForPlayer();
+		m_bFailedCullZoneTestPreviously = CullZones_CamCloseInForPlayer();
 
 	if(m_bLookingAtPlayer){
 		CPad::GetPad(0)->DisablePlayerControls &= ~PLAYERCONTROL_CAMERA;
 		FindPlayerPed()->bIsVisible = true;
 	}
 
-	if(!CTimer::GetIsPaused() && !m_bIdleOn){
+	if(!Timer_GetIsPaused() && !m_bIdleOn){
 		float CloseInCarHeightTarget = 0.0f;
 		float CloseInPedHeightTarget = 0.0f;
 
@@ -762,8 +774,8 @@ CCamera::CamControl(void)
 				case VEHICLE_TYPE_CAR:
 				case VEHICLE_TYPE_BIKE:{
 					CAttributeZone *stairsZone = nil;
-					if(vehType == VEHICLE_TYPE_BIKE && CCullZones::CamStairsForPlayer()){
-						stairsZone = CCullZones::FindZoneWithStairsAttributeForPlayer();
+					if(vehType == VEHICLE_TYPE_BIKE && CullZones_CamStairsForPlayer()){
+						stairsZone = CullZones_FindZoneWithStairsAttributeForPlayer();
 						if(stairsZone)
 							stairs = true;
 					}
@@ -924,41 +936,41 @@ CCamera::CamControl(void)
 
 				// Check if we have to go into first person
 				if(vehType == VEHICLE_TYPE_CAR && !m_bPlayerIsInGarage){
-					if(CCullZones::Cam1stPersonForPlayer() && 
-					   pTargetEntity->GetColModel()->boundingBox.GetSize().z >= 3.026f &&
+					if(CullZones_Cam1stPersonForPlayer() && 
+					   CollisionVector_ToNative(Box_GetSize(&pTargetEntity->GetColModel()->boundingBox)).z >= 3.026f &&
 					   pToGarageWeAreInForHackAvoidFirstPerson == nil){
 						ReqMode = CCam::MODE_1STPERSON;
 						m_bInATunnelAndABigVehicle = true;
 					}
 				}
 				if(ReqMode == CCam::MODE_TOPDOWN &&
-				   (CCullZones::Cam1stPersonForPlayer() || CCullZones::CamNoRain() || CCullZones::PlayerNoRain()))
+				   (CullZones_Cam1stPersonForPlayer() || CullZones_CamNoRain() || CullZones_PlayerNoRain()))
 					ReqMode = CCam::MODE_1STPERSON;
 
 				// Smooth zoom value - ugly code
 				if(m_bUseScriptZoomValueCar){
 					if(CarZoomValueSmooth < m_fCarZoomValueScript){
-						CarZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Min(CarZoomValueSmooth, m_fCarZoomValueScript);
 					}else{
-						CarZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Max(CarZoomValueSmooth, m_fCarZoomValueScript);
 					}
 				}else if(m_bFailedCullZoneTestPreviously){
 					CloseInCarHeightTarget = 0.65f;
 					if(CarZoomValueSmooth < -0.65f){
-						CarZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Min(CarZoomValueSmooth, -0.65f);
 					}else{
-						CarZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Max(CarZoomValueSmooth, -0.65f);
 					}
 				}else{
 					if(CarZoomValueSmooth < CarZoomValue){
-						CarZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Min(CarZoomValueSmooth, CarZoomValue);
 					}else{
-						CarZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 						CarZoomValueSmooth = Max(CarZoomValueSmooth, CarZoomValue);
 					}
 				}
@@ -1013,7 +1025,7 @@ CCamera::CamControl(void)
 			   ){
 				// See if we want to enter first person mode
 				if(CPad::GetPad(0)->LookAroundLeftRight() || CPad::GetPad(0)->LookAroundUpDown()){
-					m_uiFirstPersonCamLastInputTime = CTimer::GetTimeInMilliseconds();
+					m_uiFirstPersonCamLastInputTime = (*Timer_GetTimeInMilliseconds());
 					m_bFirstPersonBeingUsed = true;
 				}
 				if(m_bFirstPersonBeingUsed){
@@ -1021,7 +1033,7 @@ CCamera::CamControl(void)
 					if(CPad::GetPad(0)->GetPedWalkLeftRight() || CPad::GetPad(0)->GetPedWalkUpDown() ||
 					   CPad::GetPad(0)->GetSquare() || CPad::GetPad(0)->GetTriangle() ||
 					   CPad::GetPad(0)->GetCross() || CPad::GetPad(0)->GetCircle() ||
-					   CTimer::GetTimeInMilliseconds() - m_uiFirstPersonCamLastInputTime > 2850.0f){
+					   (*Timer_GetTimeInMilliseconds()) - m_uiFirstPersonCamLastInputTime > 2850.0f){
 						m_bFirstPersonBeingUsed = false;
 					}else if(CPad::GetPad(0)->TargetJustDown()){
 						m_bFirstPersonBeingUsed = false;
@@ -1049,28 +1061,28 @@ CCamera::CamControl(void)
 			// Smooth zoom value - ugly code
 			if(m_bUseScriptZoomValuePed){
 				if(m_fPedZoomValueSmooth < m_fPedZoomValueScript){
-					m_fPedZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, m_fPedZoomValueScript);
 				}else{
-					m_fPedZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, m_fPedZoomValueScript);
 				}
 			}else if(m_bFailedCullZoneTestPreviously){
 				static float PedZoomedInVal = 0.5f;
 				CloseInPedHeightTarget = 0.7f;
 				if(m_fPedZoomValueSmooth < PedZoomedInVal){
-					m_fPedZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, PedZoomedInVal);
 				}else{
-					m_fPedZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, PedZoomedInVal);
 				}
 			}else{
 				if(m_fPedZoomValueSmooth < m_fPedZoomValue){
-					m_fPedZoomValueSmooth += 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, m_fPedZoomValue);
 				}else{
-					m_fPedZoomValueSmooth -= 0.12f * CTimer::GetTimeStep();
+					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
 					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, m_fPedZoomValue);
 				}
 				if(PedZoomIndicator == CAM_ZOOM_3 && m_fPedZoomValue == 0.0f)
@@ -1090,8 +1102,8 @@ CCamera::CamControl(void)
 
 			// Garage cam
 			CAttributeZone *stairsZone = nil;
-			if(CCullZones::CamStairsForPlayer()){
-				stairsZone = CCullZones::FindZoneWithStairsAttributeForPlayer();
+			if(CullZones_CamStairsForPlayer()){
+				stairsZone = CullZones_FindZoneWithStairsAttributeForPlayer();
 				if(stairsZone)
 					stairs = true;
 			}
@@ -1237,9 +1249,9 @@ CCamera::CamControl(void)
 
 			// Set top down
 			if(PedZoomIndicator == CAM_ZOOM_TOPDOWN &&
-			   !CCullZones::Cam1stPersonForPlayer() &&
-			   !CCullZones::CamNoRain() &&
-			   !CCullZones::PlayerNoRain() &&
+			   !CullZones_Cam1stPersonForPlayer() &&
+			   !CullZones_CamNoRain() &&
+			   !CullZones_PlayerNoRain() &&
 			   !m_bFirstPersonBeingUsed &&
 			   !m_bPlayerIsInGarage)
 				ReqMode = CCam::MODE_TOP_DOWN_PED;
@@ -1286,8 +1298,8 @@ CCamera::CamControl(void)
 						}else
 							pedDist = alivePedDist;
 						playerTargetDist = playerToTarget.Magnitude2D();
-						camAngle = CGeneral::GetATanOfXY(playerToCam.x, playerToCam.y);
-						targetAngle = CGeneral::GetATanOfXY(playerToTarget.x, playerToTarget.y);
+						camAngle = General_GetATanOfXY(playerToCam.x, playerToCam.y);
+						targetAngle = General_GetATanOfXY(playerToTarget.x, playerToTarget.y);
 						ReqMode = PlayerWeaponMode.Mode;
 
 						// Check whether to start aiming in crim-in-front mode
@@ -1320,7 +1332,7 @@ CCamera::CamControl(void)
 								fixedPos.y += fixedModeDist*Sin(camAngle);
 								fixedPos.z += 1.15f;
 								if(CWorld::ProcessLineOfSight(pTargetEntity->GetPosition(), fixedPos, colPoint, entity, true, false, false, true, false, true, true))
-									SetCamPositionForFixedMode(colPoint.point, CVector(0.0f, 0.0f, 0.0f));
+									SetCamPositionForFixedMode(CollisionVector_ToNative(colPoint.point), CVector(0.0f, 0.0f, 0.0f));
 								else
 									SetCamPositionForFixedMode(fixedPos, CVector(0.0f, 0.0f, 0.0f));
 								PlaceForFixedWhenSniperFound = true;
@@ -1558,7 +1570,7 @@ CCamera::CamControl(void)
 					   Cams[ActiveCam].Mode == CCam::MODE_FIGHT_CAM_RUNABOUT ||
 					   Cams[ActiveCam].Mode == CCam::MODE_HELICANNON_1STPERSON ||
 					   Cams[ActiveCam].Mode == CCam::MODE_CAMERA){
-						float angle = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) - HALFPI;
+						float angle = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) - HALFPI;
 						((CPed*)pTargetEntity)->m_fRotationCur = angle;
 						((CPed*)pTargetEntity)->m_fRotationDest = angle;
 					}
@@ -1577,9 +1589,9 @@ CCamera::CamControl(void)
 						front.x = 0.001f;
 						front.y = 1.0f;
 #endif
-						Cams[ActiveCam].m_fTransitionBeta = CGeneral::GetATanOfXY(front.x, front.y);
+						Cams[ActiveCam].m_fTransitionBeta = General_GetATanOfXY(front.x, front.y);
 					}else
-						Cams[ActiveCam].m_fTransitionBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) + PI;
+						Cams[ActiveCam].m_fTransitionBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) + PI;
 				}
 			}
 		}else if(ReqMode == CCam::MODE_FIGHT_CAM){
@@ -1869,7 +1881,7 @@ CCamera::UpdateSoundDistances(void)
 		center = GetPosition() + 5.0f*GetForward();
 
 	// check up
-	n = CTimer::GetFrameCounter() % 12;
+	n = (*Timer_GetFrameCounter()) % 12;
 	if(n == 0){
 		SoundDistUpAsReadOld = SoundDistUpAsRead;
 		if(CWorld::ProcessVerticalLine(center, center.z+SOUND_DIST, colPoint, entity, true, false, false, false, true, false, nil))
@@ -1904,11 +1916,11 @@ CCamera::CamShake(float strength, float x, float y, float z)
 	if(dist3d < 0.0f) dist3d = 0.0f;
 	float mult = 1.0f - dist3d/100.0f;
 
-	float curForce = mult*(m_fCamShakeForce - (CTimer::GetTimeInMilliseconds() - m_uiCamShakeStart)/1000.0f);
+	float curForce = mult*(m_fCamShakeForce - ((*Timer_GetTimeInMilliseconds()) - m_uiCamShakeStart)/1000.0f);
 	strength = mult*strength;
 	if(Clamp(curForce, 0.0f, 2.0f) < strength){
 		m_fCamShakeForce = strength;
-		m_uiCamShakeStart = CTimer::GetTimeInMilliseconds();
+		m_uiCamShakeStart = (*Timer_GetTimeInMilliseconds());
 	}
 }
 
@@ -1916,10 +1928,10 @@ CCamera::CamShake(float strength, float x, float y, float z)
 void
 CamShakeNoPos(CCamera *cam, float strength)
 {
-	float curForce = cam->m_fCamShakeForce - (CTimer::GetTimeInMilliseconds() - cam->m_uiCamShakeStart)/1000.0f;
+	float curForce = cam->m_fCamShakeForce - ((*Timer_GetTimeInMilliseconds()) - cam->m_uiCamShakeStart)/1000.0f;
 	if(Clamp(curForce, 0.0f, 2.0f) < strength){
 		cam->m_fCamShakeForce = strength;
-		cam->m_uiCamShakeStart = CTimer::GetTimeInMilliseconds();
+		cam->m_uiCamShakeStart = (*Timer_GetTimeInMilliseconds());
 	}
 }
 
@@ -1942,11 +1954,11 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	float fDist = vDist.Magnitude();
 	float fDistOnGround = vDist.Magnitude2D();
 	if(vDist.x == 0.0f && vDist.y == 0.0f)
-		Beta = CGeneral::GetATanOfXY(GetForward().x, GetForward().y);
+		Beta = General_GetATanOfXY(GetForward().x, GetForward().y);
 	else
-		Beta = CGeneral::GetATanOfXY(vDist.x, vDist.y);
+		Beta = General_GetATanOfXY(vDist.x, vDist.y);
 	if(fDistOnGround != 0.0f || vDist.z != 0.0f)
-		Alpha = CGeneral::GetATanOfXY(fDistOnGround, vDist.z);
+		Alpha = General_GetATanOfXY(fDistOnGround, vDist.z);
 	CVector Front(Cos(Alpha)*Cos(Beta), Cos(Alpha)*Sin(Beta), Sin(Alpha));
 	NewSource = TargetPos - Front*fDist;
 	Front.Normalise();
@@ -1956,12 +1968,12 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	CEntity *entity = nil;
 	CWorld::pIgnoreEntity = pTargetEntity;
 	if(CWorld::ProcessLineOfSight(TargetPos, NewSource, point, entity, true, false, false, true, false, false, true)){
-		CVector ClipPoint1 = point.point;
-		NewSource = point.point;
+		CVector ClipPoint1 = CollisionVector_ToNative(point.point);
+		NewSource = CollisionVector_ToNative(point.point);
 		if(!bAvoidTest1){
 			if(CWorld::ProcessLineOfSight(NewSource, TargetPos, point, entity, false, true, true, true, false, false, true)){
-				if((NewSource - point.point).Magnitude() < RwCameraGetNearClipPlane(Scene.camera))
-					NewSource = point.point;
+				if((NewSource - CollisionVector_ToNative(point.point)).Magnitude() < RwCameraGetNearClipPlane(Scene.camera))
+					NewSource = CollisionVector_ToNative(point.point);
 				else if((NewSource - ClipPoint1).Magnitude() < RwCameraGetNearClipPlane(Scene.camera))
 					NewSource = ClipPoint1;
 			}
@@ -1981,13 +1993,13 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	static float fClearGeomAmountSpeed;
 	float Near = RwCameraGetNearClipPlane(Scene.camera);
 	float ViewPlaneHeight = Tan(DEGTORAD(FOV) / 2.0f);
-	float ViewPlaneWidth = ViewPlaneHeight * CDraw::CalculateAspectRatio() * fAvoidTweakFOV;
+	float ViewPlaneWidth = ViewPlaneHeight * Draw_CalculateAspectRatio() * fAvoidTweakFOV;
 	CVector Center = NewSource + Front*Near;
 	float fClearGeomTarget = 0.0f;
 	if(CWorld::TestSphereAgainstWorld(Center, ViewPlaneWidth, nil, true, false, false, true, false, true)){
-		CVector CamToCol = gaTempSphereColPoints[0].point - NewSource;
+		CVector CamToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - NewSource;
 		float FrontDist = DotProduct(CamToCol, Front);
-		CVector CenterToCol = gaTempSphereColPoints[0].point - Center;
+		CVector CenterToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Center;
 		if(FrontDist < DEFAULT_NEAR && FrontDist > fCloseNearClipLimit){
 			if(FrontDist < RwCameraGetNearClipPlane(Scene.camera))
 				RwCameraSetNearClipPlane(Scene.camera, FrontDist);
@@ -1996,7 +2008,7 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 
 		float ColDepth = ViewPlaneWidth - CenterToCol.Magnitude();	// amount of radius in collision
 		CenterToCol.Normalise();
-		CVector Normal = gaTempSphereColPoints[0].normal;
+		CVector Normal = CollisionVector_ToNative(gaTempSphereColPoints[0].normal);
 		Normal.Normalise();
 		if(-DotProduct(CenterToCol, Normal) < 0.0f)
 			Normal = -Normal;	// always push away from col surface
@@ -2009,12 +2021,12 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 				// target looking towards collision
 				if(m_fAvoidTheGeometryProbsTimer < 0.0f)
 					m_fAvoidTheGeometryProbsTimer = 0.0f;
-				m_fAvoidTheGeometryProbsTimer += CTimer::GetTimeStep();
+				m_fAvoidTheGeometryProbsTimer += (*Timer_GetTimeStep());
 			}else if(TargetNormalDir > 0.5f){
 				// target looking away from collision
 				if(m_fAvoidTheGeometryProbsTimer > 0.0f)
 					m_fAvoidTheGeometryProbsTimer = 0.0f;
-				m_fAvoidTheGeometryProbsTimer -= CTimer::GetTimeStep();
+				m_fAvoidTheGeometryProbsTimer -= (*Timer_GetTimeStep());
 			}
 
 			if(m_nAvoidTheGeometryProbsDirn == 0){
@@ -2028,7 +2040,7 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 		fClearGeomTarget = 1.0f;
 	}
 
-	m_fAvoidTheGeometryProbsTimer *= Pow(fAvoidProbTimerDamp, CTimer::GetTimeStep());
+	m_fAvoidTheGeometryProbsTimer *= Pow(fAvoidProbTimerDamp, (*Timer_GetTimeStep()));
 	WellBufferMe(fClearGeomTarget, &fClearGeomAmount, &fClearGeomAmountSpeed, 0.2f, 0.05f, false);
 	m_vecClearGeometryVec *= fClearGeomAmount;
 	m_bMoveCamToAvoidGeom = true;
@@ -2270,7 +2282,7 @@ CCamera::StartTransition(int16 newMode)
 	    Cams[ActiveCam].Mode == CCam::MODE_CAMERA ||
 	    Cams[ActiveCam].Mode == CCam::MODE_1STPERSON_RUNABOUT) &&
 	   pTargetEntity->IsPed()){
-		float angle = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) - HALFPI;
+		float angle = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) - HALFPI;
 		((CPed*)pTargetEntity)->m_fRotationCur = angle;
 		((CPed*)pTargetEntity)->m_fRotationDest = angle;
 	}
@@ -2318,7 +2330,7 @@ CCamera::StartTransition(int16 newMode)
 		if(m_bJustCameOutOfGarage){
 			m_bUseTransitionBeta = true;
 			if(Cams[ActiveCam].Front.x != 0.0f || Cams[ActiveCam].Front.y != 0.0f)
-				Cams[ActiveCam].m_fTransitionBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) + PI;
+				Cams[ActiveCam].m_fTransitionBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y) + PI;
 			else
 				Cams[ActiveCam].m_fTransitionBeta = 0.0f;
 		}
@@ -2336,9 +2348,9 @@ CCamera::StartTransition(int16 newMode)
 			Cams[ActiveCam].m_fTransitionBeta = 0.0f;
 			break;
 		}
-		camBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+		camBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 		if(((CPed*)pTargetEntity)->m_carInObjective)
-			targetBeta = CGeneral::GetATanOfXY(((CPed*)pTargetEntity)->m_carInObjective->GetForward().x, ((CPed*)pTargetEntity)->m_carInObjective->GetForward().y);
+			targetBeta = General_GetATanOfXY(((CPed*)pTargetEntity)->m_carInObjective->GetForward().x, ((CPed*)pTargetEntity)->m_carInObjective->GetForward().y);
 		else
 			targetBeta = camBeta;
 		deltaBeta = targetBeta - camBeta;
@@ -2403,7 +2415,7 @@ CCamera::StartTransition(int16 newMode)
 		if(!m_bLookingAtPlayer || m_bJustCameOutOfGarage)
 			break;
 		m_bUseTransitionBeta = true;
-		Cams[ActiveCam].m_fTransitionBeta = CGeneral::GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+		Cams[ActiveCam].m_fTransitionBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 		break;
 
 	case CCam::MODE_PED_DEAD_BABY:
@@ -2450,7 +2462,7 @@ CCamera::StartTransition(int16 newMode)
 	}else
 		m_uiTransitionDuration = 1350;	// already set above
 	m_uiTransitionState = 1;
-	m_uiTimeTransitionStart = CTimer::GetTimeInMilliseconds();
+	m_uiTimeTransitionStart = (*Timer_GetTimeInMilliseconds());
 	m_uiTransitionJUSTStarted = 1;
 	if(m_vecDoingSpecialInterPolation){
 		m_cvecStartingSourceForInterPol = SourceDuringInter;
@@ -2472,7 +2484,7 @@ CCamera::StartTransition(int16 newMode)
 	Cams[ActiveCam].Mode = newMode;	// already done above
 	Cams[ActiveCam].CamTargetEntity = pTargetEntity;
 	m_uiTransitionState = 1;	// these three already done above
-	m_uiTimeTransitionStart = CTimer::GetTimeInMilliseconds();
+	m_uiTimeTransitionStart = (*Timer_GetTimeInMilliseconds());
 	m_uiTransitionJUSTStarted = 1;
 	m_fStartingFOVForInterPol = Cams[ActiveCam].FOV;
 	m_cvecSourceSpeedAtStartInter = Cams[ActiveCam].m_cvecSourceSpeedOverOneFrame;
@@ -2517,8 +2529,8 @@ CCamera::StoreValuesDuringInterPol(CVector &source, CVector &target, CVector &up
 	FOVDuringInter = FOV;
 	CVector Dist = source - TargetDuringInter;
 	float DistOnGround = Dist.Magnitude2D();
-	m_fBetaDuringInterPol = CGeneral::GetATanOfXY(Dist.x, Dist.y);
-	m_fAlphaDuringInterPol = CGeneral::GetATanOfXY(DistOnGround, Dist.z);
+	m_fBetaDuringInterPol = General_GetATanOfXY(Dist.x, Dist.y);
+	m_fAlphaDuringInterPol = General_GetATanOfXY(DistOnGround, Dist.z);
 }
 
 
@@ -2568,10 +2580,16 @@ CCamera::DrawBordersForWideScreen(void)
 		SetMotionBlurAlpha(80);
 
 	// top border
-	CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, top), CRGBA(0, 0, 0, 255));
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, top), CRGBA(0, 0, 0, 255));
 
 	// bottom border
-	CSprite2d::DrawRect(CRect(0.0f, bottom, SCREEN_WIDTH, SCREEN_HEIGHT), CRGBA(0, 0, 0, 255));
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, bottom, SCREEN_WIDTH, SCREEN_HEIGHT), CRGBA(0, 0, 0, 255));
 }
 
 
@@ -2596,7 +2614,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 				return true;
 		}
-		if(CTimer::GetTimeInMilliseconds() > t+5000)
+		if((*Timer_GetTimeInMilliseconds()) > t+5000)
 			return true;
 		SetNearClipScript(0.6f);
 		return false;
@@ -2647,7 +2665,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_1STPERSON:
-		return CTimer::GetTimeInMilliseconds() > t+3000;
+		return (*Timer_GetTimeInMilliseconds()) > t+3000;
 	case OBBE_5:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return true;
@@ -2662,15 +2680,15 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_ONSTRING:
-		return CTimer::GetTimeInMilliseconds() > t+3000;
+		return (*Timer_GetTimeInMilliseconds()) > t+3000;
 	case OBBE_COPCAR:
-		return CTimer::GetTimeInMilliseconds() > t+2000 && !FindPlayerVehicle()->GetIsOnScreen();
+		return (*Timer_GetTimeInMilliseconds()) > t+2000 && !FindPlayerVehicle()->GetIsOnScreen();
 	case OBBE_COPCAR_WHEEL:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
 			return true;
 		if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 			return true;
-		if(CTimer::GetTimeInMilliseconds() > t+1000)
+		if((*Timer_GetTimeInMilliseconds()) > t+1000)
 			return true;
 		SetNearClipScript(0.6f);
 		return false;
@@ -2721,14 +2739,14 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			return true;
 		return false;
 	case OBBE_13:
-		return CTimer::GetTimeInMilliseconds() > t+5000;
+		return (*Timer_GetTimeInMilliseconds()) > t+5000;
 
 	// Heli modes
 	case OBBE_14:
 		if(FindPlayerVehicle())
 			if(!CWorld::GetIsLineOfSightClear(pTargetEntity->GetPosition(), Cams[ActiveCam].Source, true, false, false, false, false, false, false))
 				return true;
-		return CTimer::GetTimeInMilliseconds() > t+8000;
+		return (*Timer_GetTimeInMilliseconds()) > t+8000;
 	case OBBE_15:
 		if(FindPlayerVehicle()){
 			if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), m_vecFixedModeSource, true, false, false, false, false, false, false))
@@ -2804,7 +2822,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		}
 		return false;
 	case OBBE_ONSTRING_HELI:
-		return CTimer::GetTimeInMilliseconds() > t+5000;
+		return (*Timer_GetTimeInMilliseconds()) > t+5000;
 
 	default:
 		return false;
@@ -2947,7 +2965,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if (CReplay::IsPlayingBack())
 			return false;
 #endif
-		if(FindPlayerPed()->m_pWanted->GetWantedLevel() < 1)
+		if(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) < 1)
 			return false;
 		if(FindPlayerVehicle() == nil)
 			return false;
@@ -2977,7 +2995,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if (CReplay::IsPlayingBack())
 			return false;
 #endif
-		if(FindPlayerPed()->m_pWanted->GetWantedLevel() < 1)
+		if(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) < 1)
 			return false;
 		if(FindPlayerVehicle() == nil)
 			return false;
@@ -3125,7 +3143,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		playerSpeed = FindPlayerSpeed();
 		playerSpeed.z = 0.0f;
 		playerSpeed.Normalise();
-		angle = CGeneral::GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(60.0f);
+		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(60.0f);
 		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
 		playerSpeed.Normalise();
 		camPos += 30.0f*playerSpeed;
@@ -3163,7 +3181,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		playerSpeed = FindPlayerSpeed();
 		playerSpeed.z = 0.0f;
 		playerSpeed.Normalise();
-		angle = CGeneral::GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(190.0f);
+		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(190.0f);
 		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
 		playerSpeed.Normalise();
 		camPos += 25.0f*playerSpeed;
@@ -3203,7 +3221,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		else
 			camPos.z -= 23.0f;
 		playerSpeed = FindPlayerSpeed();
-		angle = CGeneral::GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(145.0f);
+		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(145.0f);
 		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
 		playerSpeed.Normalise();
 		camPos += 15.0f*playerSpeed;
@@ -3246,7 +3264,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		else
 			camPos.z -= 1.0f;
 		playerSpeed = FindPlayerSpeed();
-		angle = CGeneral::GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(28.0f);
+		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(28.0f);
 		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
 		playerSpeed.Normalise();
 		camPos += 12.5f*playerSpeed;
@@ -3315,7 +3333,7 @@ CCamera::ProcessObbeCinemaCameraCar(void)
 		    !TryToStartNewCamMode(SequenceOfCarCams[OldMode]) && i <= 14;
 		    OldMode = (OldMode+1) % 14)
 			i++;
-		TimeForNext = CTimer::GetTimeInMilliseconds();
+		TimeForNext = (*Timer_GetTimeInMilliseconds());
 		if(i >= 14){
 			OldMode = 14;
 			TryToStartNewCamMode(SequenceOfCarCams[14]);
@@ -3350,10 +3368,10 @@ CCamera::ProcessObbeCinemaCameraHeli(void)
 			OldMode = 6;
 			if(Cams[ActiveCam].Mode != CCam::MODE_CAM_ON_A_STRING){
 				TryToStartNewCamMode(OBBE_ONSTRING_HELI);
-				TimeForNext = CTimer::GetTimeInMilliseconds();
+				TimeForNext = (*Timer_GetTimeInMilliseconds());
 			}
 		}else
-			TimeForNext = CTimer::GetTimeInMilliseconds();
+			TimeForNext = (*Timer_GetTimeInMilliseconds());
 	}
 
 	m_iModeObbeCamIsInForCar = OldMode;
@@ -3376,7 +3394,7 @@ CCamera::ProcessObbeCinemaCameraPed(void)
 		for(PedOldMode = (PedOldMode+1) % 5;
 		    !TryToStartNewCamMode(SequenceOfPedCams[PedOldMode]);
 		    PedOldMode = (PedOldMode+1) % 5);
-		PedTimeForNext = CTimer::GetTimeInMilliseconds();
+		PedTimeForNext = (*Timer_GetTimeInMilliseconds());
 	}
 	bDidWeProcessAnyCinemaCam = true;
 }
@@ -3391,7 +3409,7 @@ CCamera::DontProcessObbeCinemaCamera(void)
 void
 CCamera::LoadTrainCamNodes(char const *name)
 {
-	CFileMgr::SetDir("data");
+	FileMgr_SetDir("data");
 
 	char token[16] = { 0 };
 	char filename[16] = { 0 };
@@ -3413,7 +3431,7 @@ CCamera::LoadTrainCamNodes(char const *name)
 	m_uiNumberOfTrainCamNodes = 0;
 
 	buf = (uint8*)malloc(20000); // rouz edit (ChatGPT)
-	len = CFileMgr::LoadFile(filename, buf, 20000, "r");
+	len = FileMgr_LoadFile(filename, buf, 20000, "r");
 
 	for(i = 0; i < MAX_NUM_OF_NODES; i++){
 		m_arrTrainCamNode[i].m_cvecPointToLookAt = CVector(0.0f, 0.0f, 0.0f);
@@ -3495,7 +3513,7 @@ CCamera::LoadTrainCamNodes(char const *name)
 	}
 
 	free(buf); // rouz edit (ChatGPT)
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 }
 
 void
@@ -3511,7 +3529,7 @@ CCamera::Process_Train_Camera_Control(void)
 		m_bAboveGroundTrainNodesLoaded = true;
 		m_bBelowGroundTrainNodesLoaded = false;
 		LoadTrainCamNodes("Train");
-		m_uiTimeLastChange = CTimer::GetTimeInMilliseconds();
+		m_uiTimeLastChange = (*Timer_GetTimeInMilliseconds());
 		OKtoGoBackToNodeCam = true;
 		m_iCurrentTrainCamNode = 0;
 	}
@@ -3519,7 +3537,7 @@ CCamera::Process_Train_Camera_Control(void)
 		m_bBelowGroundTrainNodesLoaded = true;
 		m_bAboveGroundTrainNodesLoaded = false;
 		LoadTrainCamNodes("Train2");
-		m_uiTimeLastChange = CTimer::GetTimeInMilliseconds();
+		m_uiTimeLastChange = (*Timer_GetTimeInMilliseconds());
 		OKtoGoBackToNodeCam = true;
 		m_iCurrentTrainCamNode = 0;
 	}
@@ -3552,7 +3570,7 @@ CCamera::Process_Train_Camera_Control(void)
 		SetWideScreenOn();
 		if(DotProduct(((CTrain*)pTargetEntity)->GetMoveSpeed(), pTargetEntity->GetForward()) < 0.001f){
 			TakeControl(FindPlayerPed(), CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
-			if(target->Doors[0].IsFullyOpen())
+			if(TrainDoor_IsFullyOpen(&target->Doors[0]))
 				SetWideScreenOff();
 		}else{
 			SetCamPositionForFixedMode(m_arrTrainCamNode[m_iCurrentTrainCamNode].m_cvecCamPosition, CVector(0.0f, 0.0f, 0.0f));
@@ -3567,7 +3585,7 @@ CCamera::Process_Train_Camera_Control(void)
 	}else{
 		if(DotProduct(((CTrain*)pTargetEntity)->GetMoveSpeed(), pTargetEntity->GetForward()) < 0.001f){
 			TakeControl(FindPlayerPed(), CCam::MODE_FOLLOWPED, JUMP_CUT, CAMCONTROL_SCRIPT);
-			if(target->Doors[0].IsFullyOpen())
+			if(TrainDoor_IsFullyOpen(&target->Doors[0]))
 				SetWideScreenOff();
 		}
 	}
@@ -3598,7 +3616,7 @@ CCamera::LoadPathSplines(int file)
 	i = 0;
 	j = 0;
 	while(reading){
-		CFileMgr::Read(file, &c, 1);
+		FileMgr_Read(file, &c, 1);
 		switch(c){
 		case '\0':
 			reading = false;
@@ -3761,7 +3779,7 @@ CCamera::ProcessFade(void)
 	if(m_bFading){
 		if(m_iFadingDirection == FADE_IN){
 			if(m_fTimeToFadeOut != 0.0f)
-				m_fFLOATingFade -= CTimer::GetTimeStepInSeconds() * 255.0f / m_fTimeToFadeOut;
+				m_fFLOATingFade -= Timer_GetTimeStepInSeconds() * 255.0f / m_fTimeToFadeOut;
 			else
 				m_fFLOATingFade = 0.0f;
 			if (m_fFLOATingFade <= 0.0f) {
@@ -3770,7 +3788,7 @@ CCamera::ProcessFade(void)
 			}
 		}else if(m_iFadingDirection == FADE_OUT){
 			if(m_fTimeToFadeOut != 0.0f)
-				m_fFLOATingFade += CTimer::GetTimeStepInSeconds() * 255.0f / m_fTimeToFadeOut;
+				m_fFLOATingFade += Timer_GetTimeStepInSeconds() * 255.0f / m_fTimeToFadeOut;
 			else
 				m_fFLOATingFade = 255.0f;
 			if (m_fFLOATingFade >= 255.0f) {
@@ -3778,7 +3796,7 @@ CCamera::ProcessFade(void)
 				m_fFLOATingFade = 255.0f;
 			}
 		}
-		CDraw::FadeValue = m_fFLOATingFade;
+		Draw_FadeValue = m_fFLOATingFade;
 	}
 }
 
@@ -3790,7 +3808,7 @@ CCamera::ProcessMusicFade(void)
 			if(m_fTimeToFadeMusic == 0.0f)
 				m_fFLOATingFadeMusic = 0.0f;
 			else
-				m_fFLOATingFadeMusic -= 255.0f*CTimer::GetTimeStepInSeconds()/m_fTimeToFadeMusic;
+				m_fFLOATingFadeMusic -= 255.0f*Timer_GetTimeStepInSeconds()/m_fTimeToFadeMusic;
 			if(m_fFLOATingFadeMusic <= 0.0f){
 				m_bMusicFading = false;
 				m_fFLOATingFadeMusic = 0.0f;
@@ -3799,7 +3817,7 @@ CCamera::ProcessMusicFade(void)
 			if(m_fTimeToFadeMusic == 0.0f)
 				m_fFLOATingFadeMusic = 255.0f;
 			else
-				m_fFLOATingFadeMusic += 255.0f*CTimer::GetTimeStepInSeconds()/m_fTimeToFadeMusic;
+				m_fFLOATingFadeMusic += 255.0f*Timer_GetTimeStepInSeconds()/m_fTimeToFadeMusic;
 			if(m_fFLOATingFadeMusic >= 255.0f){
 				m_bMusicFading = false;
 				m_fFLOATingFadeMusic = 255.0f;
@@ -3816,12 +3834,12 @@ CCamera::Fade(float timeout, int16 direction)
 	m_bFading = true;
 	m_iFadingDirection = direction;
 	m_fTimeToFadeOut = timeout;
-	m_uiFadeTimeStarted = CTimer::GetTimeInMilliseconds();
+	m_uiFadeTimeStarted = (*Timer_GetTimeInMilliseconds());
 	if(!m_bIgnoreFadingStuffForMusic){
 		m_bMusicFading = true;
 		m_iMusicFadingDirection = direction;
 		m_fTimeToFadeMusic = timeout;
-		m_uiFadeTimeStartedMusic = CTimer::GetTimeInMilliseconds();
+		m_uiFadeTimeStartedMusic = (*Timer_GetTimeInMilliseconds());
 	}
 }
 
@@ -3829,9 +3847,9 @@ void
 CCamera::SetFadeColour(uint8 r, uint8 g, uint8 b)
 {
 	m_FadeTargetIsSplashScreen = r == 2 && g == 2 && b == 2;
-	CDraw::FadeRed = r;
-	CDraw::FadeGreen = g;
-	CDraw::FadeBlue = b;
+	Draw_FadeRed = r;
+	Draw_FadeGreen = g;
+	Draw_FadeBlue = b;
 }
 
 bool
@@ -3867,7 +3885,8 @@ CCamera::RenderMotionBlur(void)
 	if(m_BlurType == 0)
 		return;
 
-	CMBlur::MotionBlurRender(m_pRwCamera,
+	// Use the complete C motion-blur owner and its live shared state
+	MBlur_MotionBlurRender(m_pRwCamera,
 		m_BlurRed, m_BlurGreen, m_BlurBlue,
 		m_motionBlur, m_BlurType, m_imotionBlurAddAlpha);
 }
@@ -3920,7 +3939,7 @@ CCamera::SetCameraDirectlyBehindForFollowPed_CamOnAString(void)
 	m_bCamDirectlyBehind = true;
 	CPlayerPed *player = FindPlayerPed();
 	if (player)
-		m_PedOrientForBehindOrInFront = CGeneral::GetATanOfXY(player->GetForward().x, player->GetForward().y);
+		m_PedOrientForBehindOrInFront = General_GetATanOfXY(player->GetForward().x, player->GetForward().y);
 }
 
 void
@@ -3929,13 +3948,13 @@ CCamera::SetCameraDirectlyInFrontForFollowPed_CamOnAString(void)
 	m_bCamDirectlyInFront = true;
 	CPlayerPed *player = FindPlayerPed();
 	if (player)
-		m_PedOrientForBehindOrInFront = CGeneral::GetATanOfXY(player->GetForward().x, player->GetForward().y);
+		m_PedOrientForBehindOrInFront = General_GetATanOfXY(player->GetForward().x, player->GetForward().y);
 }
 
 void
 CCamera::SetNewPlayerWeaponMode(int16 mode, int16 minZoom, int16 maxZoom)
 {
-	SetMotionBlur(CTimeCycle::GetBlurRed(), CTimeCycle::GetBlurGreen(), CTimeCycle::GetBlurBlue(), m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
+	SetMotionBlur(TimeCycle_GetBlurRed(), TimeCycle_GetBlurGreen(), TimeCycle_GetBlurBlue(), m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
 	PlayerWeaponMode.Mode = mode;
 	PlayerWeaponMode.MaxZoom = maxZoom;
 	PlayerWeaponMode.MinZoom = minZoom;
@@ -3945,7 +3964,7 @@ CCamera::SetNewPlayerWeaponMode(int16 mode, int16 minZoom, int16 maxZoom)
 void
 CCamera::ClearPlayerWeaponMode(void)
 {
-	SetMotionBlur(CTimeCycle::GetBlurRed(), CTimeCycle::GetBlurGreen(), CTimeCycle::GetBlurBlue(), m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
+	SetMotionBlur(TimeCycle_GetBlurRed(), TimeCycle_GetBlurGreen(), TimeCycle_GetBlurBlue(), m_motionBlur, MOTION_BLUR_LIGHT_SCENE);
 	PlayerWeaponMode.Mode = 0;
 	PlayerWeaponMode.MaxZoom = 1;
 	PlayerWeaponMode.MinZoom = -1;
@@ -3966,7 +3985,7 @@ CCamera::Find3rdPersonCamTargetVector(float dist, CVector pos, CVector &source, 
 		target = dist*Cams[ActiveCam].CamTargetEntity->GetForward() + source;
 		return false;
 	}else{
-		float angleX = DEGTORAD((m_f3rdPersonCHairMultX-0.5f) * 1.8f * 0.5f * Cams[ActiveCam].FOV * CDraw::GetAspectRatio());
+		float angleX = DEGTORAD((m_f3rdPersonCHairMultX-0.5f) * 1.8f * 0.5f * Cams[ActiveCam].FOV * Draw_GetAspectRatio());
 		float angleY = DEGTORAD((0.5f-m_f3rdPersonCHairMultY) * 1.8f * 0.5f * Cams[ActiveCam].FOV);
 		source = Cams[ActiveCam].Source;
 		target = Cams[ActiveCam].Front;
@@ -4008,7 +4027,8 @@ CCamera::SetRwCamera(RwCamera *cam)
 {
 	m_pRwCamera = cam;
 	m_viewMatrix.Attach(RwCameraGetViewMatrix(m_pRwCamera), false);
-	CMBlur::MotionBlurOpen(m_pRwCamera);
+	// Use the complete C motion-blur owner and its live shared state
+	MBlur_MotionBlurOpen(m_pRwCamera);
 }
 
 void
@@ -4016,7 +4036,7 @@ CCamera::CalculateDerivedValues(void)
 {
 	m_cameraMatrix = Invert(GetMatrix());
 
-	float hfov = DEGTORAD(CDraw::GetScaledFOV()/2.0f);
+	float hfov = DEGTORAD(Draw_GetScaledFOV()/2.0f);
 	float c = Cos(hfov);
 	float s = Sin(hfov);
 
@@ -4025,7 +4045,7 @@ CCamera::CalculateDerivedValues(void)
 	// left plane
 	m_vecFrustumNormals[1] = CVector(-c, -s, 0.0f);
 
-	CDraw::CalculateAspectRatio();
+	Draw_CalculateAspectRatio();
 	c /= SCREEN_ASPECT_RATIO;
 	s /= SCREEN_ASPECT_RATIO;
 	// bottom plane
@@ -4063,8 +4083,8 @@ CCamera::IsPointVisible(const CVector &center, const CMatrix *mat)
 		RwV3dTransformPoints(&c, &c, 1, (RwMatrix*)mat);
 	#endif
 #endif
-	if(c.y < CDraw::GetNearClipZ()) return false;
-	if(c.y > CDraw::GetFarClipZ()) return false;
+	if(c.y < Draw_GetNearClipZ()) return false;
+	if(c.y > Draw_GetFarClipZ()) return false;
 	if(c.x*m_vecFrustumNormals[0].x + c.y*m_vecFrustumNormals[0].y > 0.0f) return false;
 	if(c.x*m_vecFrustumNormals[1].x + c.y*m_vecFrustumNormals[1].y > 0.0f) return false;
 	if(c.y*m_vecFrustumNormals[2].y + c.z*m_vecFrustumNormals[2].z > 0.0f) return false;
@@ -4086,8 +4106,8 @@ CCamera::IsSphereVisible(const CVector &center, float radius, const CMatrix *mat
 		RwV3dTransformPoints(&c, &c, 1, (RwMatrix*)mat);
 	#endif
 #endif
-	if(c.y + radius < CDraw::GetNearClipZ()) return false;
-	if(c.y - radius > CDraw::GetFarClipZ()) return false;
+	if(c.y + radius < Draw_GetNearClipZ()) return false;
+	if(c.y - radius > Draw_GetFarClipZ()) return false;
 	if(c.x*m_vecFrustumNormals[0].x + c.y*m_vecFrustumNormals[0].y > radius) return false;
 	if(c.x*m_vecFrustumNormals[1].x + c.y*m_vecFrustumNormals[1].y > radius) return false;
 	if(c.y*m_vecFrustumNormals[2].y + c.z*m_vecFrustumNormals[2].z > radius) return false;
@@ -4118,8 +4138,8 @@ CCamera::IsBoxVisible(CVUVECTOR *box, const CMatrix *mat)
 #endif
 
 	for(i = 0; i < 8; i++){
-		if(box[i].y < CDraw::GetNearClipZ()) frustumTests[0]++;
-		if(box[i].y > CDraw::GetFarClipZ()) frustumTests[1]++;
+		if(box[i].y < Draw_GetNearClipZ()) frustumTests[0]++;
+		if(box[i].y > Draw_GetFarClipZ()) frustumTests[1]++;
 		if(box[i].x*m_vecFrustumNormals[0].x + box[i].y*m_vecFrustumNormals[0].y > 0.0f) frustumTests[2]++;
 		if(box[i].x*m_vecFrustumNormals[1].x + box[i].y*m_vecFrustumNormals[1].y > 0.0f) frustumTests[3]++;
 //	Why not test z?
@@ -4139,4 +4159,8 @@ CCamPathSplines::CCamPathSplines(void)
 	m_arr_PathData = nil;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

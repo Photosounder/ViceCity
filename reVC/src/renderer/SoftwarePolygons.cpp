@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #if defined(REVC_SOFTWARE_POLYGONS) && defined(RW_GL3)
 #include "rwcore.h"
 #include "rpworld.h"
@@ -2907,9 +2908,12 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 			state.radius = light->radius;
 			state.minusCosAngle = light->minusCosAngle;
 		}
-	}else if((geometry->flags & rw::Geometry::LIGHT) && pAmbient &&
-		(pAmbient->getFlags() & rw::Light::LIGHTATOMICS))
-		ambient = pAmbient->color;
+	// Use the complete C lighting owner and its borrowed SDK handles
+	}else if((geometry->flags & rw::Geometry::LIGHT) && ((RpLight*)Lights_Ambient) &&
+		// Use the complete C lighting owner and its borrowed SDK handles
+		(((RpLight*)Lights_Ambient)->getFlags() & rw::Light::LIGHTATOMICS))
+		// Use the complete C lighting owner and its borrowed SDK handles
+		ambient = ((RpLight*)Lights_Ambient)->color;
 	const bool hasVertexNormals = (geometry->flags & rw::Geometry::NORMALS) &&
 		geometry->morphTargets[0].normals != nullptr;
 	// Skip world normal transforms when neither lighting nor advanced materials use them
@@ -2965,8 +2969,10 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 	rw::V3d vehicleSpecDirections[5] = {};
 	rw::RGBAf vehicleSpecColors[5] = {};
 	float vehicleSpecPowers[5] = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
-	if(glossAtomic && CustomPipes::GlossEnable && pDirect && pDirect->getFrame() && camera->getFrame()){
-		glossLightDirection = pDirect->getFrame()->getLTM()->at;
+	// Use the complete C lighting owner and its borrowed SDK handles
+	if(glossAtomic && CustomPipes::GlossEnable && ((RpLight*)Lights_Direct) && ((RpLight*)Lights_Direct)->getFrame() && camera->getFrame()){
+		// Use the complete C lighting owner and its borrowed SDK handles
+		glossLightDirection = ((RpLight*)Lights_Direct)->getFrame()->getLTM()->at;
 		glossEyePosition = camera->getFrame()->getLTM()->pos;
 	}else
 		glossAtomic = false;
@@ -2992,8 +2998,10 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		vehicleSpecColor[0] = specular.r;
 		vehicleSpecColor[1] = specular.g;
 		vehicleSpecColor[2] = specular.b;
-		if(pDirect && pDirect->getFrame()){
-			vehicleSpecDirections[0] = pDirect->getFrame()->getLTM()->at;
+		// Use the complete C lighting owner and its borrowed SDK handles
+		if(((RpLight*)Lights_Direct) && ((RpLight*)Lights_Direct)->getFrame()){
+			// Use the complete C lighting owner and its borrowed SDK handles
+			vehicleSpecDirections[0] = ((RpLight*)Lights_Direct)->getFrame()->getLTM()->at;
 			vehicleSpecColors[0].red = specular.r;
 			vehicleSpecColors[0].green = specular.g;
 			vehicleSpecColors[0].blue = specular.b;
@@ -3001,7 +3009,8 @@ void renderAtomic(rw::ObjPipeline *, rw::Atomic *atomic)
 		}else
 			vehicleAtomic = false;
 		for(int light = 0; vehicleAtomic && light < 4; light++){
-			rw::Light *extra = pExtraDirectionals[light];
+			// Use the complete C lighting owner and its borrowed SDK handles
+			rw::Light *extra = ((RpLight*)Lights_ExtraDirectionals[light]);
 			if(!extra || !(extra->getFlags() & rw::Light::LIGHTATOMICS) || !extra->getFrame())
 				continue;
 			vehicleSpecDirections[light+1] = extra->getFrame()->getLTM()->at;
@@ -5045,4 +5054,5 @@ void Present()
 
 }
 #endif
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

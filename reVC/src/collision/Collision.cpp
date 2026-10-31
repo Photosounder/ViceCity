@@ -1,4 +1,11 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "StoredCollPoly_native.h"
+#include "StoredCollPoly_backend.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
+#include "ColLine_native.h"
 
 #include "VuVector.h"
 #include "main.h"
@@ -66,6 +73,20 @@ GetVUresult(CVuVector &point, CVuVector &normal, float &dist)
 #endif
 }
 
+#endif
+
+#ifdef VU_COLLISION
+bool StoredPoly_BackendLine(const StoredPolyVertex *p0,const StoredPolyVertex *p1,const CStoredCollPoly *poly,const StoredPolyVertex *plane,CollisionVector3 *point)
+{
+    // Transfer aligned C quadwords into actual native VU vector objects
+    CVuVector a,b,v0,v1,v2,n;
+    memcpy(&a,p0,16);memcpy(&b,p1,16);memcpy(&v0,&poly->verts[0],16);memcpy(&v1,&poly->verts[1],16);memcpy(&v2,&poly->verts[2],16);memcpy(&n,plane,16);
+    LineToTriangleCollision(a,b,v0,v1,v2,n);
+    // Capture the original VU outputs even on failure and publish XYZ only for a successful result
+    CVuVector result;float distance;const int hit=GetVUresult(result,n,distance);
+    if(hit){memcpy(&point->x,&result.x,sizeof(float));memcpy(&point->y,&result.y,sizeof(float));memcpy(&point->z,&result.z,sizeof(float));}
+    return hit!=0;
+}
 #endif
 
 eLevelName CCollision::ms_collisionInMemory;
@@ -173,7 +194,7 @@ bool
 CCollision::TestSphereSphere(const CSphere &s1, const CSphere &s2)
 {
 	float d = s1.radius + s2.radius;
-	return (s1.center - s2.center).MagnitudeSqr() < d*d;
+	return (CollisionVector_ToNative(s1.center) - CollisionVector_ToNative(s2.center)).MagnitudeSqr() < d*d;
 }
 
 bool
@@ -296,12 +317,12 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 #ifdef VU_COLLISION
 	// not used in favour of optimized loops
 	VuTriangle vutri;
-	verts[tri.a].Unpack(vutri.v0);
-	verts[tri.b].Unpack(vutri.v1);
-	verts[tri.c].Unpack(vutri.v2);
-	plane.Unpack(vutri.plane);
+	CompressedVector_Unpack(&verts[tri.a],&vutri.v0);
+	CompressedVector_Unpack(&verts[tri.b],&vutri.v1);
+	CompressedVector_Unpack(&verts[tri.c],&vutri.v2);
+	ColTrianglePlane_Unpack(&plane,&vutri.plane);
 
-	LineToTriangleCollisionCompressed(*(CVuVector*)&line.p0, *(CVuVector*)&line.p1, vutri);
+	LineToTriangleCollisionCompressed(ColLine_ToVu(line,0), ColLine_ToVu(line,1), vutri);
 
 	if(GetVUresult())
 		return true;
@@ -309,13 +330,13 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 #else
 	float t;
 	CVector normal;
-	plane.GetNormal(normal);
+	ColTrianglePlane_GetNormal(&plane,&normal.x,&normal.y,&normal.z);
 
 	// if points are on the same side, no collision
-	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
+	if(ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p0)) * ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p1)) > 0.0f)
 		return false;
 
-	float p0dist = DotProduct(line.p1 - line.p0, normal);
+	float p0dist = DotProduct(CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(line.p0), normal);
 
 #ifdef FIX_BUGS
 	// line lines in the plane, assume no collision
@@ -324,13 +345,19 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 #endif
 
 	// intersection parameter on line
-	t = -plane.CalcPoint(line.p0) / p0dist;
+	t = -ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p0)) / p0dist;
 	// find point of intersection
-	CVector p = line.p0 + (line.p1-line.p0)*t;
+	CVector p = CollisionVector_ToNative(line.p0) + (CollisionVector_ToNative(line.p1)-CollisionVector_ToNative(line.p0))*t;
 
-	const CVector &va = verts[tri.a].Get();
-	const CVector &vb = verts[tri.b].Get();
-	const CVector &vc = verts[tri.c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue0_0=CompressedVector_Get(&verts[tri.a]);
+	const CVector &va = CVector(collisionVertexValue0_0.x,collisionVertexValue0_0.y,collisionVertexValue0_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue1_0=CompressedVector_Get(&verts[tri.b]);
+	const CVector &vb = CVector(collisionVertexValue1_0.x,collisionVertexValue1_0.y,collisionVertexValue1_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue2_0=CompressedVector_Get(&verts[tri.c]);
+	const CVector &vc = CVector(collisionVertexValue2_0.x,collisionVertexValue2_0.y,collisionVertexValue2_0.z);
 	CVector2D vec1, vec2, vec3, vect;
 
 	// We do the test in 2D. With the plane direction we
@@ -398,8 +425,8 @@ CCollision::TestLineTriangle(const CColLine &line, const CompressedVector *verts
 bool
 CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 {
-	CVector v01 = line.p1 - line.p0;	// vector from p0 to p1
-	CVector v0c = sph.center - line.p0;	// vector from p0 to center
+	CVector v01 = CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(line.p0);	// vector from p0 to p1
+	CVector v0c = CollisionVector_ToNative(sph.bounds.center) - CollisionVector_ToNative(line.p0);	// vector from p0 to center
 	float linesq = v01.MagnitudeSqr();
 	// I leave in the strange -2 factors even though they serve no real purpose
 	float projline = -2.0f * DotProduct(v01, v0c);	// project v0c onto line
@@ -407,7 +434,7 @@ CCollision::TestLineSphere(const CColLine &line, const CColSphere &sph)
 	// The length of the tangent would be this: Sqrt((c-p0)^2 - r^2).
 	// Negative if p0 is inside the sphere! This breaks the test!
 	float tansq = 4.0f * linesq *
-		(sph.center.MagnitudeSqr() - 2.0f*DotProduct(sph.center, line.p0) + line.p0.MagnitudeSqr() - sph.radius*sph.radius);
+		(CollisionVector_ToNative(sph.bounds.center).MagnitudeSqr() - 2.0f*DotProduct(CollisionVector_ToNative(sph.bounds.center), CollisionVector_ToNative(line.p0)) + CollisionVector_ToNative(line.p0).MagnitudeSqr() - sph.bounds.radius*sph.bounds.radius);
 	float diffsq = projline*projline - tansq;
 	// if diffsq < 0 that means the line is a passant, so no intersection
 	if(diffsq < 0.0f)
@@ -429,38 +456,44 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 #ifdef VU_COLLISION
 	// not used in favour of optimized loops
 	VuTriangle vutri;
-	verts[tri.a].Unpack(vutri.v0);
-	verts[tri.b].Unpack(vutri.v1);
-	verts[tri.c].Unpack(vutri.v2);
-	plane.Unpack(vutri.plane);
+	CompressedVector_Unpack(&verts[tri.a],&vutri.v0);
+	CompressedVector_Unpack(&verts[tri.b],&vutri.v1);
+	CompressedVector_Unpack(&verts[tri.c],&vutri.v2);
+	ColTrianglePlane_Unpack(&plane,&vutri.plane);
 
-	SphereToTriangleCollisionCompressed(*(CVuVector*)&sphere, vutri);
+	SphereToTriangleCollisionCompressed(Sphere_ToVu(sphere.bounds), vutri);
 
 	if(GetVUresult())
 		return true;
 	return false;
 #else
 	// If sphere and plane don't intersect, no collision
-	float planedist = plane.CalcPoint(sphere.center);
-	if(Abs(planedist) > sphere.radius)
+	float planedist = ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(sphere.bounds.center));
+	if(Abs(planedist) > sphere.bounds.radius)
 		return false;
 
-	const CVector &va = verts[tri.a].Get();
-	const CVector &vb = verts[tri.b].Get();
-	const CVector &vc = verts[tri.c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue3_0=CompressedVector_Get(&verts[tri.a]);
+	const CVector &va = CVector(collisionVertexValue3_0.x,collisionVertexValue3_0.y,collisionVertexValue3_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue4_0=CompressedVector_Get(&verts[tri.b]);
+	const CVector &vb = CVector(collisionVertexValue4_0.x,collisionVertexValue4_0.y,collisionVertexValue4_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue5_0=CompressedVector_Get(&verts[tri.c]);
+	const CVector &vc = CVector(collisionVertexValue5_0.x,collisionVertexValue5_0.y,collisionVertexValue5_0.z);
 
 	// calculate two orthogonal basis vectors for the triangle
 	CVector vec2 = vb - va;
 	float len = vec2.Magnitude();
 	vec2 = vec2 * (1.0f/len);
 	CVector normal;
-	plane.GetNormal(normal);
+	ColTrianglePlane_GetNormal(&plane,&normal.x,&normal.y,&normal.z);
 	CVector vec1 = CrossProduct(vec2, normal);
 
 	// We know A has local coordinate [0,0] and B has [0,len].
 	// Now calculate coordinates on triangle for these two vectors:
 	CVector vac = vc - va;
-	CVector vas = sphere.center - va;
+	CVector vas = CollisionVector_ToNative(sphere.bounds.center) - va;
 	CVector2D b(0.0f, len);
 	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
 	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
@@ -478,19 +511,22 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 		return false;	// shouldn't happen
 	case 1:
 		// closest to a vertex
-		if(insideAB) dist = (sphere.center - vc).Magnitude();
-		else if(insideAC) dist = (sphere.center - vb).Magnitude();
-		else if(insideBC) dist = (sphere.center - va).Magnitude();
+		if(insideAB) dist = (CollisionVector_ToNative(sphere.bounds.center) - vc).Magnitude();
+		else if(insideAC) dist = (CollisionVector_ToNative(sphere.bounds.center) - vb).Magnitude();
+		else if(insideBC) dist = (CollisionVector_ToNative(sphere.bounds.center) - va).Magnitude();
 		else assert(0);
 		break;
-	case 2:
+	case 2: {
 		// closest to an edge
 		// looks like original game as DistToLine manually inlined
-		if(!insideAB) dist = DistToLine(&va, &vb, &sphere.center);
-		else if(!insideAC) dist = DistToLine(&va, &vc, &sphere.center);
-		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphere.center);
+		// Keep a native point alive through the existing edge-distance query
+		const CVector sphereNativeCenter=CollisionVector_ToNative(sphere.bounds.center);
+		if(!insideAB) dist = DistToLine(&va, &vb, &sphereNativeCenter);
+		else if(!insideAC) dist = DistToLine(&va, &vc, &sphereNativeCenter);
+		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphereNativeCenter);
 		else assert(0);
 		break;
+	}
 	case 3:
 		// center is in triangle
 		dist = Abs(planedist);
@@ -499,7 +535,7 @@ CCollision::TestSphereTriangle(const CColSphere &sphere,
 		assert(0);
 	}
 
-	return dist < sphere.radius;
+	return dist < sphere.bounds.radius;
 #endif
 }
 
@@ -513,23 +549,23 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 	// transform line to model space
 	Invert(matrix, matTransform);
 	CVuVector newline[2];
-	TransformPoints(newline, 2, matTransform, &line.p0, sizeof(CColLine)/2);
+	TransformColLines(newline,1,matTransform,&line);
 
 	// If we don't intersect with the bounding box, no chance on the rest
-	if(!TestLineBox(*(CColLine*)newline, model.boundingBox))
+	if(!TestLineBox(ColLine_FromRaw32(newline), model.boundingBox))
 		return false;
 
 	for(i = 0; i < model.numSpheres; i++){
 		if(ignoreSeeThrough && IsSeeThrough(model.spheres[i].surface)) continue;
 		if(ignoreShootThrough && IsShootThrough(model.spheres[i].surface)) continue;
-		if(TestLineSphere(*(CColLine*)newline, model.spheres[i]))
+		if(TestLineSphere(ColLine_FromRaw32(newline), model.spheres[i]))
 			return true;
 	}
 
 	for(i = 0; i < model.numBoxes; i++){
 		if(ignoreSeeThrough && IsSeeThrough(model.boxes[i].surface)) continue;
 		if(ignoreShootThrough && IsShootThrough(model.boxes[i].surface)) continue;
-		if(TestLineBox(*(CColLine*)newline, model.boxes[i]))
+		if(TestLineBox(ColLine_FromRaw32(newline), model.boxes[i].bounds))
 			return true;
 	}
 
@@ -541,10 +577,10 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 		if(ignoreShootThrough && IsShootThrough(model.triangles[i].surface)) continue;
 
 		CColTriangle *tri = &model.triangles[i];
-		model.vertices[tri->a].Unpack(vutri.v0);
-		model.vertices[tri->b].Unpack(vutri.v1);
-		model.vertices[tri->c].Unpack(vutri.v2);
-		model.trianglePlanes[i].Unpack(vutri.plane);
+		CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+		CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+		CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+		ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 		LineToTriangleCollisionCompressed(newline[0], newline[1], vutri);
 		lastTest = i;
@@ -559,10 +595,10 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 		if(ignoreShootThrough && IsShootThrough(model.triangles[i].surface)) continue;
 
 		CColTriangle *tri = &model.triangles[i];
-		model.vertices[tri->a].Unpack(vutri.v0);
-		model.vertices[tri->b].Unpack(vutri.v1);
-		model.vertices[tri->c].Unpack(vutri.v2);
-		model.trianglePlanes[i].Unpack(vutri.plane);
+		CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+		CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+		CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+		ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 		if(GetVUresult())
 			return true;
@@ -581,7 +617,14 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 
 	// transform line to model space
 	Invert(matrix, matTransform);
-	CColLine newline(matTransform * line.p0, matTransform * line.p1);
+	// Retain the line record at its original construction boundary
+	CColLine newline;
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint0_0=matTransform * CollisionVector_ToNative(line.p0);
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint0_1=matTransform * CollisionVector_ToNative(line.p1);
+	// Initialize the line at the former parameterized constructor boundary
+	ColLine_Init(&newline,COLLISION_POINT_REF(lineConstructorPoint0_0),COLLISION_POINT_REF(lineConstructorPoint0_1));
 
 	// If we don't intersect with the bounding box, no chance on the rest
 	if(!TestLineBox(newline, model.boundingBox))
@@ -597,7 +640,7 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 	for(i = 0; i < model.numBoxes; i++){
 		if(ignoreSeeThrough && IsSeeThrough(model.boxes[i].surface)) continue;
 		if(ignoreShootThrough && IsShootThrough(model.boxes[i].surface)) continue;
-		if(TestLineBox(newline, model.boxes[i]))
+		if(TestLineBox(newline, model.boxes[i].bounds))
 			return true;
 	}
 
@@ -625,15 +668,15 @@ CCollision::TestLineOfSight(const CColLine &line, const CMatrix &matrix, CColMod
 bool
 CCollision::ProcessSphereSphere(const CColSphere &s1, const CColSphere &s2, CColPoint &point, float &mindistsq)
 {
-	CVector dist = s1.center - s2.center;
-	float d = dist.Magnitude() - s2.radius;	// distance from s1's center to s2
-	float depth = s1.radius - d;	// sphere overlap
+	CVector dist = CollisionVector_ToNative(s1.bounds.center) - CollisionVector_ToNative(s2.bounds.center);
+	float d = dist.Magnitude() - s2.bounds.radius;	// distance from s1's center to s2
+	float depth = s1.bounds.radius - d;	// sphere overlap
 	if(d < 0.0f) d = 0.0f;		// clamp to zero, i.e. if s1's center is inside s2
 	// no collision if sphere is not close enough
-	if(d*d < mindistsq && d < s1.radius){
+	if(d*d < mindistsq && d < s1.bounds.radius){
 		dist.Normalise();
-		point.point = s1.center - dist*d;
-		point.normal = dist;
+		point.point = CollisionVector_FromNative(CollisionVector_ToNative(s1.bounds.center) - dist*d);
+		point.normal = CollisionVector_FromNative(dist);
 #ifndef VU_COLLISION
 		point.surfaceA = s1.surface;
 		point.pieceA = s1.piece;
@@ -657,33 +700,33 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 	// we can simplify the structure a lot
 
 	// first make sure we have a collision at all
-	if(sph.center.x + sph.radius < box.min.x) return false;
-	if(sph.center.x - sph.radius > box.max.x) return false;
-	if(sph.center.y + sph.radius < box.min.y) return false;
-	if(sph.center.y - sph.radius > box.max.y) return false;
-	if(sph.center.z + sph.radius < box.min.z) return false;
-	if(sph.center.z - sph.radius > box.max.z) return false;
+	if(sph.bounds.center.x + sph.bounds.radius < box.bounds.min.x) return false;
+	if(sph.bounds.center.x - sph.bounds.radius > box.bounds.max.x) return false;
+	if(sph.bounds.center.y + sph.bounds.radius < box.bounds.min.y) return false;
+	if(sph.bounds.center.y - sph.bounds.radius > box.bounds.max.y) return false;
+	if(sph.bounds.center.z + sph.bounds.radius < box.bounds.min.z) return false;
+	if(sph.bounds.center.z - sph.bounds.radius > box.bounds.max.z) return false;
 
 	// Now find out where the sphere center lies in relation to all the sides
-	int xpos = sph.center.x < box.min.x ? 1 :
-	           sph.center.x > box.max.x ? 2 :
+	int xpos = sph.bounds.center.x < box.bounds.min.x ? 1 :
+	           sph.bounds.center.x > box.bounds.max.x ? 2 :
 	           0;
-	int ypos = sph.center.y < box.min.y ? 1 :
-	           sph.center.y > box.max.y ? 2 :
+	int ypos = sph.bounds.center.y < box.bounds.min.y ? 1 :
+	           sph.bounds.center.y > box.bounds.max.y ? 2 :
 	           0;
-	int zpos = sph.center.z < box.min.z ? 1 :
-	           sph.center.z > box.max.z ? 2 :
+	int zpos = sph.bounds.center.z < box.bounds.min.z ? 1 :
+	           sph.bounds.center.z > box.bounds.max.z ? 2 :
 	           0;
 
 	if(xpos == 0 && ypos == 0 && zpos == 0){
 		// sphere is inside the box
-		p = (box.min + box.max)*0.5f;
+		p = (CollisionVector_ToNative(box.bounds.min) + CollisionVector_ToNative(box.bounds.max))*0.5f;
 
-		dist = sph.center - p;
+		dist = CollisionVector_ToNative(sph.bounds.center) - p;
 		float lensq = dist.MagnitudeSqr();
 		if(lensq < mindistsq){
-			point.normal = dist * (1.0f/Sqrt(lensq));
-			point.point = sph.center - point.normal;
+			point.normal = CollisionVector_FromNative(dist * (1.0f/Sqrt(lensq)));
+			point.point = CollisionVector_FromNative(CollisionVector_ToNative(sph.bounds.center) - CollisionVector_ToNative(point.normal));
 #ifndef VU_COLLISION
 			point.surfaceA = sph.surface;
 			point.pieceA = sph.piece;
@@ -693,14 +736,14 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 
 			// find absolute distance to the closer side in each dimension
 			float dx = dist.x > 0.0f ?
-				box.max.x - sph.center.x :
-				sph.center.x - box.min.x;
+				box.bounds.max.x - sph.bounds.center.x :
+				sph.bounds.center.x - box.bounds.min.x;
 			float dy = dist.y > 0.0f ?
-				box.max.y - sph.center.y :
-				sph.center.y - box.min.y;
+				box.bounds.max.y - sph.bounds.center.y :
+				sph.bounds.center.y - box.bounds.min.y;
 			float dz = dist.z > 0.0f ?
-				box.max.z - sph.center.z :
-				sph.center.z - box.min.z;
+				box.bounds.max.z - sph.bounds.center.z :
+				sph.bounds.center.z - box.bounds.min.z;
 			// collision depth is maximum of that:
 			if(dx > dy && dx > dz)
 				point.depth = dx;
@@ -713,29 +756,29 @@ CCollision::ProcessSphereBox(const CColSphere &sph, const CColBox &box, CColPoin
 	}else{
 		// sphere is outside.
 		// closest point on box:
-		p.x = xpos == 1 ? box.min.x :
-		      xpos == 2 ? box.max.x :
-		      sph.center.x;
-		p.y = ypos == 1 ? box.min.y :
-		      ypos == 2 ? box.max.y :
-		      sph.center.y;
-		p.z = zpos == 1 ? box.min.z :
-		      zpos == 2 ? box.max.z :
-		      sph.center.z;
+		p.x = xpos == 1 ? box.bounds.min.x :
+		      xpos == 2 ? box.bounds.max.x :
+		      sph.bounds.center.x;
+		p.y = ypos == 1 ? box.bounds.min.y :
+		      ypos == 2 ? box.bounds.max.y :
+		      sph.bounds.center.y;
+		p.z = zpos == 1 ? box.bounds.min.z :
+		      zpos == 2 ? box.bounds.max.z :
+		      sph.bounds.center.z;
 
-		dist = sph.center - p;
+		dist = CollisionVector_ToNative(sph.bounds.center) - p;
 		float lensq = dist.MagnitudeSqr();
 		if(lensq < mindistsq){
 			float len = Sqrt(lensq);
-			point.point = p;
-			point.normal = dist * (1.0f/len);
+			point.point = CollisionVector_FromNative(p);
+			point.normal = CollisionVector_FromNative(dist * (1.0f/len));
 #ifndef VU_COLLISION
 			point.surfaceA = sph.surface;
 			point.pieceA = sph.piece;
 			point.surfaceB = box.surface;
 			point.pieceB = box.piece;
 #endif
-			point.depth = sph.radius - len;
+			point.depth = sph.bounds.radius - len;
 			mindistsq = lensq;
 			return true;
 		}
@@ -752,93 +795,93 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 
 	mint = 1.0f;
 	// check if points are on opposite sides of min x plane
-	if((box.min.x - line.p1.x) * (box.min.x - line.p0.x) < 0.0f){
+	if((box.bounds.min.x - line.p1.x) * (box.bounds.min.x - line.p0.x) < 0.0f){
 		// parameter along line where we intersect
-		t = (box.min.x - line.p0.x) / (line.p1.x - line.p0.x);
+		t = (box.bounds.min.x - line.p0.x) / (line.p1.x - line.p0.x);
 		// y of intersection
 		y = line.p0.y + (line.p1.y - line.p0.y)*t;
-		if(y > box.min.y && y < box.max.y){
+		if(y > box.bounds.min.y && y < box.bounds.max.y){
 			// z of intersection
 			z = line.p0.z + (line.p1.z - line.p0.z)*t;
-			if(z > box.min.z && z < box.max.z)
+			if(z > box.bounds.min.z && z < box.bounds.max.z)
 				if(t < mint){
 					mint = t;
-					p = CVector(box.min.x, y, z);
+					p = CVector(box.bounds.min.x, y, z);
 					normal = CVector(-1.0f, 0.0f, 0.0f);
 				}
 		}
 	}
 
 	// max x plane
-	if((line.p1.x - box.max.x) * (line.p0.x - box.max.x) < 0.0f){
-		t = (line.p0.x - box.max.x) / (line.p0.x - line.p1.x);
+	if((line.p1.x - box.bounds.max.x) * (line.p0.x - box.bounds.max.x) < 0.0f){
+		t = (line.p0.x - box.bounds.max.x) / (line.p0.x - line.p1.x);
 		y = line.p0.y + (line.p1.y - line.p0.y)*t;
-		if(y > box.min.y && y < box.max.y){
+		if(y > box.bounds.min.y && y < box.bounds.max.y){
 			z = line.p0.z + (line.p1.z - line.p0.z)*t;
-			if(z > box.min.z && z < box.max.z)
+			if(z > box.bounds.min.z && z < box.bounds.max.z)
 				if(t < mint){
 					mint = t;
-					p = CVector(box.max.x, y, z);
+					p = CVector(box.bounds.max.x, y, z);
 					normal = CVector(1.0f, 0.0f, 0.0f);
 				}
 		}
 	}
 
 	// min y plne
-	if((box.min.y - line.p0.y) * (box.min.y - line.p1.y) < 0.0f){
-		t = (box.min.y - line.p0.y) / (line.p1.y - line.p0.y);
+	if((box.bounds.min.y - line.p0.y) * (box.bounds.min.y - line.p1.y) < 0.0f){
+		t = (box.bounds.min.y - line.p0.y) / (line.p1.y - line.p0.y);
 		x = line.p0.x + (line.p1.x - line.p0.x)*t;
-		if(x > box.min.x && x < box.max.x){
+		if(x > box.bounds.min.x && x < box.bounds.max.x){
 			z = line.p0.z + (line.p1.z - line.p0.z)*t;
-			if(z > box.min.z && z < box.max.z)
+			if(z > box.bounds.min.z && z < box.bounds.max.z)
 				if(t < mint){
 					mint = t;
-					p = CVector(x, box.min.y, z);
+					p = CVector(x, box.bounds.min.y, z);
 					normal = CVector(0.0f, -1.0f, 0.0f);
 				}
 		}
 	}
 
 	// max y plane
-	if((line.p0.y - box.max.y) * (line.p1.y - box.max.y) < 0.0f){
-		t = (line.p0.y - box.max.y) / (line.p0.y - line.p1.y);
+	if((line.p0.y - box.bounds.max.y) * (line.p1.y - box.bounds.max.y) < 0.0f){
+		t = (line.p0.y - box.bounds.max.y) / (line.p0.y - line.p1.y);
 		x = line.p0.x + (line.p1.x - line.p0.x)*t;
-		if(x > box.min.x && x < box.max.x){
+		if(x > box.bounds.min.x && x < box.bounds.max.x){
 			z = line.p0.z + (line.p1.z - line.p0.z)*t;
-			if(z > box.min.z && z < box.max.z)
+			if(z > box.bounds.min.z && z < box.bounds.max.z)
 				if(t < mint){
 					mint = t;
-					p = CVector(x, box.max.y, z);
+					p = CVector(x, box.bounds.max.y, z);
 					normal = CVector(0.0f, 1.0f, 0.0f);
 				}
 		}
 	}
 
 	// min z plne
-	if((box.min.z - line.p0.z) * (box.min.z - line.p1.z) < 0.0f){
-		t = (box.min.z - line.p0.z) / (line.p1.z - line.p0.z);
+	if((box.bounds.min.z - line.p0.z) * (box.bounds.min.z - line.p1.z) < 0.0f){
+		t = (box.bounds.min.z - line.p0.z) / (line.p1.z - line.p0.z);
 		x = line.p0.x + (line.p1.x - line.p0.x)*t;
-		if(x > box.min.x && x < box.max.x){
+		if(x > box.bounds.min.x && x < box.bounds.max.x){
 			y = line.p0.y + (line.p1.y - line.p0.y)*t;
-			if(y > box.min.y && y < box.max.y)
+			if(y > box.bounds.min.y && y < box.bounds.max.y)
 				if(t < mint){
 					mint = t;
-					p = CVector(x, y, box.min.z);
+					p = CVector(x, y, box.bounds.min.z);
 					normal = CVector(0.0f, 0.0f, -1.0f);
 				}
 		}
 	}
 
 	// max z plane
-	if((line.p0.z - box.max.z) * (line.p1.z - box.max.z) < 0.0f){
-		t = (line.p0.z - box.max.z) / (line.p0.z - line.p1.z);
+	if((line.p0.z - box.bounds.max.z) * (line.p1.z - box.bounds.max.z) < 0.0f){
+		t = (line.p0.z - box.bounds.max.z) / (line.p0.z - line.p1.z);
 		x = line.p0.x + (line.p1.x - line.p0.x)*t;
-		if(x > box.min.x && x < box.max.x){
+		if(x > box.bounds.min.x && x < box.bounds.max.x){
 			y = line.p0.y + (line.p1.y - line.p0.y)*t;
-			if(y > box.min.y && y < box.max.y)
+			if(y > box.bounds.min.y && y < box.bounds.max.y)
 				if(t < mint){
 					mint = t;
-					p = CVector(x, y, box.max.z);
+					p = CVector(x, y, box.bounds.max.z);
 					normal = CVector(0.0f, 0.0f, 1.0f);
 				}
 		}
@@ -847,8 +890,8 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 	if(mint >= mindist)
 		return false;
 
-	point.point = p;
-	point.normal = normal;
+	point.point = CollisionVector_FromNative(p);
+	point.normal = CollisionVector_FromNative(normal);
 #ifndef VU_COLLISION
 	point.surfaceA = 0;
 	point.pieceA = 0;
@@ -864,13 +907,13 @@ CCollision::ProcessLineBox(const CColLine &line, const CColBox &box, CColPoint &
 bool
 CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CColPoint &point, float &mindist)
 {
-	CVector v01 = line.p1 - line.p0;
-	CVector v0c = sphere.center - line.p0;
+	CVector v01 = CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(line.p0);
+	CVector v0c = CollisionVector_ToNative(sphere.bounds.center) - CollisionVector_ToNative(line.p0);
 	float linesq = v01.MagnitudeSqr();
 	// project v0c onto v01, scaled by |v01| this is the midpoint of the two intersections
 	float projline = DotProduct(v01, v0c);
 	// tangent of p0 to sphere, scaled by linesq just like projline^2
-	float tansq = (v0c.MagnitudeSqr() - sphere.radius*sphere.radius) * linesq;
+	float tansq = (v0c.MagnitudeSqr() - sphere.bounds.radius*sphere.bounds.radius) * linesq;
 	// this works out to be the square of the distance between the midpoint and the intersections
 	float diffsq = projline*projline - tansq;
 	// no intersection
@@ -881,9 +924,9 @@ CCollision::ProcessLineSphere(const CColLine &line, const CColSphere &sphere, CC
 	// if not on line or beyond mindist, no intersection
 	if(t < 0.0f || t > 1.0f || t >= mindist)
 		return false;
-	point.point = line.p0 + v01*t;
-	point.normal = point.point - sphere.center;
-	point.normal.Normalise();
+	point.point = CollisionVector_FromNative(CollisionVector_ToNative(line.p0) + v01*t);
+	point.normal = CollisionVector_FromNative(CollisionVector_ToNative(point.point) - CollisionVector_ToNative(sphere.bounds.center));
+	ColPoint_NormaliseNormal(&point);
 #ifndef VU_COLLISION
 	point.surfaceA = 0;
 	point.pieceA = 0;
@@ -904,9 +947,27 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	// not used in favour of optimized loops
 	bool res = ProcessLineTriangle(line, verts, tri, plane, point, mindist);
 	if(res && poly){
-		poly->verts[0] = verts[tri.a].Get();
-		poly->verts[1] = verts[tri.b].Get();
-		poly->verts[2] = verts[tri.c].Get();
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue6_0=CompressedVector_Get(&verts[tri.a]);
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue6_0.x,collisionVertexValue6_0.y,collisionVertexValue6_0.z));
+		    StoredPoly_SetVertex(poly,0,&storedVertex);
+		}
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue7_0=CompressedVector_Get(&verts[tri.b]);
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue7_0.x,collisionVertexValue7_0.y,collisionVertexValue7_0.z));
+		    StoredPoly_SetVertex(poly,1,&storedVertex);
+		}
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue8_0=CompressedVector_Get(&verts[tri.c]);
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue8_0.x,collisionVertexValue8_0.y,collisionVertexValue8_0.z));
+		    StoredPoly_SetVertex(poly,2,&storedVertex);
+		}
 		poly->valid = true;
 	}
 	return res;
@@ -914,10 +975,16 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	float t;
 	CVector normal;
 
-	const CVector &p0 = line.p0;
-	const CVector &va = verts[tri.a].Get();
-	const CVector &vb = verts[tri.b].Get();
-	const CVector &vc = verts[tri.c].Get();
+	const CollisionVector3 &p0 = line.p0;
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue9_0=CompressedVector_Get(&verts[tri.a]);
+	const CVector &va = CVector(collisionVertexValue9_0.x,collisionVertexValue9_0.y,collisionVertexValue9_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue10_0=CompressedVector_Get(&verts[tri.b]);
+	const CVector &vb = CVector(collisionVertexValue10_0.x,collisionVertexValue10_0.y,collisionVertexValue10_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue11_0=CompressedVector_Get(&verts[tri.c]);
+	const CVector &vc = CVector(collisionVertexValue11_0.x,collisionVertexValue11_0.y,collisionVertexValue11_0.z);
 
 	// early out bound rect test
 	if(p0.x < va.x && p0.x < vb.x && p0.x < vc.x) return false;
@@ -925,14 +992,14 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	if(p0.y < va.y && p0.y < vb.y && p0.y < vc.y) return false;
 	if(p0.y > va.y && p0.y > vb.y && p0.y > vc.y) return false;
 
-	plane.GetNormal(normal);
+	ColTrianglePlane_GetNormal(&plane,&normal.x,&normal.y,&normal.z);
 	// if points are on the same side, no collision
-	if(plane.CalcPoint(p0) * plane.CalcPoint(line.p1) > 0.0f)
+	if(ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(p0)) * ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p1)) > 0.0f)
 		return false;
 
 	// intersection parameter on line
-	float h = (line.p1 - p0).z;
-	t = -plane.CalcPoint(p0) / (h * normal.z);
+	float h = (CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(p0)).z;
+	t = -ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(p0)) / (h * normal.z);
 	// early out if we're beyond the mindist
 	if(t >= mindist)
 		return false;
@@ -983,16 +1050,28 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return false;
 	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return false;
 	if(t >= mindist) return false;
-	point.point = p;
-	point.normal = normal;
+	point.point = CollisionVector_FromNative(p);
+	point.normal = CollisionVector_FromNative(normal);
 	point.surfaceA = 0;
 	point.pieceA = 0;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
 	if(poly){
-		poly->verts[0] = va;
-		poly->verts[1] = vb;
-		poly->verts[2] = vc;
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(va);
+		    StoredPoly_SetVertex(poly,0,&storedVertex);
+		}
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(vb);
+		    StoredPoly_SetVertex(poly,1,&storedVertex);
+		}
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(vc);
+		    StoredPoly_SetVertex(poly,2,&storedVertex);
+		}
 		poly->valid = true;
 	}
 	mindist = t;
@@ -1000,113 +1079,7 @@ CCollision::ProcessVerticalLineTriangle(const CColLine &line,
 #endif
 }
 
-bool
-CCollision::IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CColPoint &point, CStoredCollPoly *poly)
-{
-#ifdef VU_COLLISION
-	if(!poly->valid)
-		return false;
 
-	CVuVector p0 = pos;
-	CVuVector p1 = pos;
-	p1.z = z;
-
-	CVector v01 = poly->verts[1] - poly->verts[0];
-	CVector v02 = poly->verts[2] - poly->verts[0];
-	CVuVector plane = CrossProduct(v02, v01);
-	plane.Normalise();
-	plane.w = DotProduct(plane, poly->verts[0]);
-
-	LineToTriangleCollision(p0, p1, poly->verts[0], poly->verts[1], poly->verts[2], plane);
-
-	CVuVector pnt;
-	float dist;
-	if(!GetVUresult(pnt, plane, dist))
-#ifdef FIX_BUGS
-		// perhaps not needed but be safe
-		return poly->valid = false;
-#else
-		return false;
-#endif
-	point.point = pnt;
-	return true;
-#else
-	float t;
-
-	if(!poly->valid)
-		return false;
-
-	// maybe inlined?
-	CColTrianglePlane plane;
-	plane.Set(poly->verts[0], poly->verts[1], poly->verts[2]);
-
-	const CVector &va = poly->verts[0];
-	const CVector &vb = poly->verts[1];
-	const CVector &vc = poly->verts[2];
-	CVector p0 = pos;
-	CVector p1(pos.x, pos.y, z);
-
-	// The rest is pretty much CCollision::ProcessLineTriangle
-
-	// if points are on the same side, no collision
-	if(plane.CalcPoint(p0) * plane.CalcPoint(p1) > 0.0f)
-		return poly->valid = false;
-
-	// intersection parameter on line
-	CVector normal;
-	plane.GetNormal(normal);
-	t = -plane.CalcPoint(p0) / DotProduct(p1 - p0, normal);
-	// find point of intersection
-	CVector p = p0 + (p1-p0)*t;
-
-	CVector2D vec1, vec2, vec3, vect;
-	switch(plane.dir){
-	case DIR_X_POS:
-		vec1.x = va.y; vec1.y = va.z;
-		vec2.x = vc.y; vec2.y = vc.z;
-		vec3.x = vb.y; vec3.y = vb.z;
-		vect.x = p.y; vect.y = p.z;
-		break;
-	case DIR_X_NEG:
-		vec1.x = va.y; vec1.y = va.z;
-		vec2.x = vb.y; vec2.y = vb.z;
-		vec3.x = vc.y; vec3.y = vc.z;
-		vect.x = p.y; vect.y = p.z;
-		break;
-	case DIR_Y_POS:
-		vec1.x = va.z; vec1.y = va.x;
-		vec2.x = vc.z; vec2.y = vc.x;
-		vec3.x = vb.z; vec3.y = vb.x;
-		vect.x = p.z; vect.y = p.x;
-		break;
-	case DIR_Y_NEG:
-		vec1.x = va.z; vec1.y = va.x;
-		vec2.x = vb.z; vec2.y = vb.x;
-		vec3.x = vc.z; vec3.y = vc.x;
-		vect.x = p.z; vect.y = p.x;
-		break;
-	case DIR_Z_POS:
-		vec1.x = va.x; vec1.y = va.y;
-		vec2.x = vc.x; vec2.y = vc.y;
-		vec3.x = vb.x; vec3.y = vb.y;
-		vect.x = p.x; vect.y = p.y;
-		break;
-	case DIR_Z_NEG:
-		vec1.x = va.x; vec1.y = va.y;
-		vec2.x = vb.x; vec2.y = vb.y;
-		vec3.x = vc.x; vec3.y = vc.y;
-		vect.x = p.x; vect.y = p.y;
-		break;
-	default:
-		assert(0);
-	}
-	if(CrossProduct2D(vec2-vec1, vect-vec1) < 0.0f) return poly->valid = false;
-	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return poly->valid = false;
-	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return poly->valid = false;
-	point.point = p;
-	return poly->valid = true;
-#endif
-}
 
 bool
 CCollision::ProcessLineTriangle(const CColLine &line,
@@ -1116,19 +1089,19 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 #ifdef VU_COLLISION
 	// not used in favour of optimized loops
 	VuTriangle vutri;
-	verts[tri.a].Unpack(vutri.v0);
-	verts[tri.b].Unpack(vutri.v1);
-	verts[tri.c].Unpack(vutri.v2);
-	plane.Unpack(vutri.plane);
+	CompressedVector_Unpack(&verts[tri.a],&vutri.v0);
+	CompressedVector_Unpack(&verts[tri.b],&vutri.v1);
+	CompressedVector_Unpack(&verts[tri.c],&vutri.v2);
+	ColTrianglePlane_Unpack(&plane,&vutri.plane);
 
-	LineToTriangleCollisionCompressed(*(CVuVector*)&line.p0, *(CVuVector*)&line.p1, vutri);
+	LineToTriangleCollisionCompressed(ColLine_ToVu(line,0), ColLine_ToVu(line,1), vutri);
 
 	CVuVector pnt, normal;
 	float dist;
 	if(GetVUresult(pnt, normal, dist)){
 		if(dist < mindist){
-			point.point = pnt;
-			point.normal = normal;
+			point.point = CollisionVector_FromNative(pnt);
+			point.normal = CollisionVector_FromNative(normal);
 			mindist = dist;
 			return true;
 		}
@@ -1137,13 +1110,13 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 #else
 	float t;
 	CVector normal;
-	plane.GetNormal(normal);
+	ColTrianglePlane_GetNormal(&plane,&normal.x,&normal.y,&normal.z);
 
 	// if points are on the same side, no collision
-	if(plane.CalcPoint(line.p0) * plane.CalcPoint(line.p1) > 0.0f)
+	if(ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p0)) * ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p1)) > 0.0f)
 		return false;
 
-	float p0dist = DotProduct(line.p1 - line.p0, normal);
+	float p0dist = DotProduct(CollisionVector_ToNative(line.p1) - CollisionVector_ToNative(line.p0), normal);
 
 #ifdef FIX_BUGS
 	// line lines in the plane, assume no collision
@@ -1152,17 +1125,23 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 #endif
 
 	// intersection parameter on line
-	t = -plane.CalcPoint(line.p0) / p0dist;
+	t = -ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(line.p0)) / p0dist;
 
 	// early out if we're beyond the mindist
 	if(t >= mindist)
 		return false;
 	// find point of intersection
-	CVector p = line.p0 + (line.p1-line.p0)*t;
+	CVector p = CollisionVector_ToNative(line.p0) + (CollisionVector_ToNative(line.p1)-CollisionVector_ToNative(line.p0))*t;
 
-	const CVector &va = verts[tri.a].Get();
-	const CVector &vb = verts[tri.b].Get();
-	const CVector &vc = verts[tri.c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue12_0=CompressedVector_Get(&verts[tri.a]);
+	const CVector &va = CVector(collisionVertexValue12_0.x,collisionVertexValue12_0.y,collisionVertexValue12_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue13_0=CompressedVector_Get(&verts[tri.b]);
+	const CVector &vb = CVector(collisionVertexValue13_0.x,collisionVertexValue13_0.y,collisionVertexValue13_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue14_0=CompressedVector_Get(&verts[tri.c]);
+	const CVector &vc = CVector(collisionVertexValue14_0.x,collisionVertexValue14_0.y,collisionVertexValue14_0.z);
 	CVector2D vec1, vec2, vec3, vect;
 
 	switch(plane.dir){
@@ -1209,16 +1188,28 @@ CCollision::ProcessLineTriangle(const CColLine &line,
 	if(CrossProduct2D(vec3-vec1, vect-vec1) > 0.0f) return false;
 	if(CrossProduct2D(vec3-vec2, vect-vec2) < 0.0f) return false;
 	if(t >= mindist) return false;
-	point.point = p;
-	point.normal = normal;
+	point.point = CollisionVector_FromNative(p);
+	point.normal = CollisionVector_FromNative(normal);
 	point.surfaceA = 0;
 	point.pieceA = 0;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
 	if(poly){
-		poly->verts[0] = va;
-		poly->verts[1] = vb;
-		poly->verts[2] = vc;
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(va);
+		    StoredPoly_SetVertex(poly,0,&storedVertex);
+		}
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(vb);
+		    StoredPoly_SetVertex(poly,1,&storedVertex);
+		}
+		{
+		    // Preserve the complete native conversion before the individual stored-vertex update
+		    const StoredPolyVertex storedVertex=StoredPoly_FromNative(vc);
+		    StoredPoly_SetVertex(poly,2,&storedVertex);
+		}
 		poly->valid = true;
 	}
 	mindist = t;
@@ -1234,20 +1225,20 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 #ifdef VU_COLLISION
 	// not used in favour of optimized loops
 	VuTriangle vutri;
-	verts[tri.a].Unpack(vutri.v0);
-	verts[tri.b].Unpack(vutri.v1);
-	verts[tri.c].Unpack(vutri.v2);
-	plane.Unpack(vutri.plane);
+	CompressedVector_Unpack(&verts[tri.a],&vutri.v0);
+	CompressedVector_Unpack(&verts[tri.b],&vutri.v1);
+	CompressedVector_Unpack(&verts[tri.c],&vutri.v2);
+	ColTrianglePlane_Unpack(&plane,&vutri.plane);
 
-	SphereToTriangleCollisionCompressed(*(CVuVector*)&sphere, vutri);
+	SphereToTriangleCollisionCompressed(Sphere_ToVu(sphere.bounds), vutri);
 
 	CVuVector pnt, normal;
 	float dist;
 	if(GetVUresult(pnt, normal, dist) && dist*dist < mindistsq){
-		float depth = sphere.radius - dist;
+		float depth = sphere.bounds.radius - dist;
 		if(depth > point.depth){
-			point.point = pnt;
-			point.normal = normal;
+			point.point = CollisionVector_FromNative(pnt);
+			point.normal = CollisionVector_FromNative(normal);
 			point.depth = depth;
 			mindistsq = dist*dist;
 			return true;
@@ -1256,18 +1247,24 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	return false;
 #else
 	// If sphere and plane don't intersect, no collision
-	float planedist = plane.CalcPoint(sphere.center);
+	float planedist = ColTrianglePlane_CalcPoint(&plane,COLLISION_POINT_REF(sphere.bounds.center));
 	float distsq = planedist*planedist;
-	if(Abs(planedist) > sphere.radius || distsq > mindistsq)
+	if(Abs(planedist) > sphere.bounds.radius || distsq > mindistsq)
 		return false;
 
-	const CVector &va = verts[tri.a].Get();
-	const CVector &vb = verts[tri.b].Get();
-	const CVector &vc = verts[tri.c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue15_0=CompressedVector_Get(&verts[tri.a]);
+	const CVector &va = CVector(collisionVertexValue15_0.x,collisionVertexValue15_0.y,collisionVertexValue15_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue16_0=CompressedVector_Get(&verts[tri.b]);
+	const CVector &vb = CVector(collisionVertexValue16_0.x,collisionVertexValue16_0.y,collisionVertexValue16_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue17_0=CompressedVector_Get(&verts[tri.c]);
+	const CVector &vc = CVector(collisionVertexValue17_0.x,collisionVertexValue17_0.y,collisionVertexValue17_0.z);
 
 	// calculate two orthogonal basis vectors for the triangle
 	CVector normal;
-	plane.GetNormal(normal);
+	ColTrianglePlane_GetNormal(&plane,&normal.x,&normal.y,&normal.z);
 	CVector vec2 = vb - va;
 	float len = vec2.Magnitude();
 	vec2 = vec2 * (1.0f/len);
@@ -1276,7 +1273,7 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 	// We know A has local coordinate [0,0] and B has [0,len].
 	// Now calculate coordinates on triangle for these two vectors:
 	CVector vac = vc - va;
-	CVector vas = sphere.center - va;
+	CVector vas = CollisionVector_ToNative(sphere.bounds.center) - va;
 	CVector2D b(0.0f, len);
 	CVector2D c(DotProduct(vec1, vac), DotProduct(vec2, vac));
 	CVector2D s(DotProduct(vec1, vas), DotProduct(vec2, vas));
@@ -1299,38 +1296,41 @@ CCollision::ProcessSphereTriangle(const CColSphere &sphere,
 		else if(insideAC) p = vb;
 		else if(insideBC) p = va;
 		else assert(0);
-		dist = (sphere.center - p).Magnitude();
+		dist = (CollisionVector_ToNative(sphere.bounds.center) - p).Magnitude();
 		break;
-	case 2:
+	case 2: {
 		// closest to an edge
 		// looks like original game as DistToLine manually inlined
-		if(!insideAB) dist = DistToLine(&va, &vb, &sphere.center, p);
-		else if(!insideAC) dist = DistToLine(&va, &vc, &sphere.center, p);
-		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphere.center, p);
+		// Keep a native point alive through the existing edge-distance query
+		const CVector sphereNativeCenter=CollisionVector_ToNative(sphere.bounds.center);
+		if(!insideAB) dist = DistToLine(&va, &vb, &sphereNativeCenter, p);
+		else if(!insideAC) dist = DistToLine(&va, &vc, &sphereNativeCenter, p);
+		else if(!insideBC) dist = DistToLine(&vb, &vc, &sphereNativeCenter, p);
 		else assert(0);
 		break;
+	}
 	case 3:
 		// center is in triangle
 		dist = Abs(planedist);
-		p = sphere.center - normal*planedist;
+		p = CollisionVector_ToNative(sphere.bounds.center) - normal*planedist;
 		break;
 	default:
 		assert(0);
 	}
 
-	if(dist >= sphere.radius || dist*dist >= mindistsq)
+	if(dist >= sphere.bounds.radius || dist*dist >= mindistsq)
 		return false;
 
-	point.point = p;
-	point.normal = sphere.center - p;
-	point.normal.Normalise();
+	point.point = CollisionVector_FromNative(p);
+	point.normal = CollisionVector_FromNative(CollisionVector_ToNative(sphere.bounds.center) - p);
+	ColPoint_NormaliseNormal(&point);
 #ifndef VU_COLLISION
 	point.surfaceA = sphere.surface;
 	point.pieceA = sphere.piece;
 	point.surfaceB = tri.surface;
 	point.pieceB = 0;
 #endif
-	point.depth = sphere.radius - dist;
+	point.depth = sphere.bounds.radius - dist;
 	mindistsq = dist*dist;
 	return true;
 #endif
@@ -1348,27 +1348,27 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 	// transform line to model space
 	Invert(matrix, matTransform);
 	CVuVector newline[2];
-	TransformPoints(newline, 2, matTransform, &line.p0, sizeof(CColLine)/2);
+	TransformColLines(newline,1,matTransform,&line);
 
 	if(mindist < 1.0f)
 		newline[1] = newline[0] + (newline[1] - newline[0])*mindist;
 
 	// If we don't intersect with the bounding box, no chance on the rest
-	if(!TestLineBox(*(CColLine*)newline, model.boundingBox))
+	if(!TestLineBox(ColLine_FromRaw32(newline), model.boundingBox))
 		return false;
 
 	float coldist = 1.0f;
 	for(i = 0; i < model.numSpheres; i++){
 		if(ignoreSeeThrough && IsSeeThrough(model.spheres[i].surface)) continue;
 		if(ignoreShootThrough && IsShootThrough(model.spheres[i].surface)) continue;
-		if(ProcessLineSphere(*(CColLine*)newline, model.spheres[i], point, coldist))
-			point.Set(0, 0, model.spheres[i].surface, model.spheres[i].piece);
+		if(ProcessLineSphere(ColLine_FromRaw32(newline), model.spheres[i], point, coldist))
+			ColPoint_SetSurfaces(&point,0, 0, model.spheres[i].surface, model.spheres[i].piece);
 	}
 
 	for(i = 0; i < model.numBoxes; i++){
 		if(ignoreSeeThrough && IsSeeThrough(model.boxes[i].surface)) continue;
-		if(ProcessLineBox(*(CColLine*)newline, model.boxes[i], point, coldist))
-			point.Set(0, 0, model.boxes[i].surface, model.boxes[i].piece);
+		if(ProcessLineBox(ColLine_FromRaw32(newline), model.boxes[i], point, coldist))
+			ColPoint_SetSurfaces(&point,0, 0, model.boxes[i].surface, model.boxes[i].piece);
 	}
 
 	CalculateTrianglePlanes(&model);
@@ -1379,10 +1379,10 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 		if(ignoreShootThrough && IsShootThrough(model.triangles[i].surface)) continue;
 
 		CColTriangle *tri = &model.triangles[i];
-		model.vertices[tri->a].Unpack(vutri.v0);
-		model.vertices[tri->b].Unpack(vutri.v1);
-		model.vertices[tri->c].Unpack(vutri.v2);
-		model.trianglePlanes[i].Unpack(vutri.plane);
+		CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+		CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+		CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+		ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 		LineToTriangleCollisionCompressed(newline[0], newline[1], vutri);
 		lasttri = tri;
@@ -1399,16 +1399,16 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 		if(ignoreShootThrough && IsShootThrough(model.triangles[i].surface)) continue;
 
 		CColTriangle *tri = &model.triangles[i];
-		model.vertices[tri->a].Unpack(vutri.v0);
-		model.vertices[tri->b].Unpack(vutri.v1);
-		model.vertices[tri->c].Unpack(vutri.v2);
-		model.trianglePlanes[i].Unpack(vutri.plane);
+		CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+		CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+		CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+		ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 		if(GetVUresult(pnt, normal, dist))
 			if(dist < coldist){
-				point.point = pnt;
-				point.normal = normal;
-				point.Set(0, 0, lasttri->surface, 0);
+				point.point = CollisionVector_FromNative(pnt);
+				point.normal = CollisionVector_FromNative(normal);
+				ColPoint_SetSurfaces(&point,0, 0, lasttri->surface, 0);
 				coldist = dist;
 			}
 
@@ -1417,16 +1417,16 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 	}
 	if(lasttri && GetVUresult(pnt, normal, dist))
 		if(dist < coldist){
-			point.point = pnt;
-			point.normal = normal;
-			point.Set(0, 0, lasttri->surface, 0);
+			point.point = CollisionVector_FromNative(pnt);
+			point.normal = CollisionVector_FromNative(normal);
+			ColPoint_SetSurfaces(&point,0, 0, lasttri->surface, 0);
 			coldist = dist;
 		}
 
 
 	if(coldist < 1.0f){
-		point.point = matrix * point.point;
-		point.normal = Multiply3x3(matrix, point.normal);
+		point.point = CollisionVector_FromNative(matrix * CollisionVector_ToNative(point.point));
+		point.normal = CollisionVector_FromNative(Multiply3x3(matrix, CollisionVector_ToNative(point.normal)));
 		mindist *= coldist;
 		return true;
 	}
@@ -1437,7 +1437,14 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 
 	// transform line to model space
 	Invert(matrix, matTransform);
-	CColLine newline(matTransform * line.p0, matTransform * line.p1);
+	// Retain the line record at its original construction boundary
+	CColLine newline;
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint1_0=matTransform * CollisionVector_ToNative(line.p0);
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint1_1=matTransform * CollisionVector_ToNative(line.p1);
+	// Initialize the line at the former parameterized constructor boundary
+	ColLine_Init(&newline,COLLISION_POINT_REF(lineConstructorPoint1_0),COLLISION_POINT_REF(lineConstructorPoint1_1));
 
 	// If we don't intersect with the bounding box, no chance on the rest
 	if(!TestLineBox(newline, model.boundingBox))
@@ -1464,8 +1471,8 @@ CCollision::ProcessLineOfSight(const CColLine &line,
 	}
 
 	if(coldist < mindist){
-		point.point = matrix * point.point;
-		point.normal = Multiply3x3(matrix, point.normal);
+		point.point = CollisionVector_FromNative(matrix * CollisionVector_ToNative(point.point));
+		point.normal = CollisionVector_FromNative(Multiply3x3(matrix, CollisionVector_ToNative(point.normal)));
 		mindist = coldist;
 		return true;
 	}
@@ -1486,25 +1493,25 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 	// transform line to model space
 	Invert(matrix, matTransform);
 	CVuVector newline[2];
-	TransformPoints(newline, 2, matTransform, &line.p0, sizeof(CColLine)/2);
+	TransformColLines(newline,1,matTransform,&line);
 
 	if(mindist < 1.0f)
 		newline[1] = newline[0] + (newline[1] - newline[0])*mindist;
 
-	if(!TestLineBox(*(CColLine*)newline, model.boundingBox))
+	if(!TestLineBox(ColLine_FromRaw32(newline), model.boundingBox))
 		return false;
 
 	float coldist = 1.0f;
 	for(i = 0; i < model.numSpheres; i++){
 		if(ignoreSeeThrough && IsSeeThroughVertical(model.spheres[i].surface)) continue;
-		if(ProcessLineSphere(*(CColLine*)newline, model.spheres[i], point, coldist))
-			point.Set(0, 0, model.spheres[i].surface, model.spheres[i].piece);
+		if(ProcessLineSphere(ColLine_FromRaw32(newline), model.spheres[i], point, coldist))
+			ColPoint_SetSurfaces(&point,0, 0, model.spheres[i].surface, model.spheres[i].piece);
 	}
 
 	for(i = 0; i < model.numBoxes; i++){
 		if(ignoreSeeThrough && IsSeeThroughVertical(model.boxes[i].surface)) continue;
-		if(ProcessLineBox(*(CColLine*)newline, model.boxes[i], point, coldist))
-			point.Set(0, 0, model.boxes[i].surface, model.boxes[i].piece);
+		if(ProcessLineBox(ColLine_FromRaw32(newline), model.boxes[i], point, coldist))
+			ColPoint_SetSurfaces(&point,0, 0, model.boxes[i].surface, model.boxes[i].piece);
 	}
 
 	CalculateTrianglePlanes(&model);
@@ -1517,10 +1524,10 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 			if(ignoreSeeThrough && IsSeeThroughVertical(model.triangles[i].surface)) continue;
 
 			CColTriangle *tri = &model.triangles[i];
-			model.vertices[tri->a].Unpack(vutri.v0);
-			model.vertices[tri->b].Unpack(vutri.v1);
-			model.vertices[tri->c].Unpack(vutri.v2);
-			model.trianglePlanes[i].Unpack(vutri.plane);
+			CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+			CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+			CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+			ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 			LineToTriangleCollisionCompressed(newline[0], newline[1], vutri);
 			lasttri = tri;
@@ -1536,16 +1543,16 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 			if(ignoreSeeThrough && IsSeeThroughVertical(model.triangles[i].surface)) continue;
 
 			CColTriangle *tri = &model.triangles[i];
-			model.vertices[tri->a].Unpack(vutri.v0);
-			model.vertices[tri->b].Unpack(vutri.v1);
-			model.vertices[tri->c].Unpack(vutri.v2);
-			model.trianglePlanes[i].Unpack(vutri.plane);
+			CompressedVector_Unpack(&model.vertices[tri->a],&vutri.v0);
+			CompressedVector_Unpack(&model.vertices[tri->b],&vutri.v1);
+			CompressedVector_Unpack(&model.vertices[tri->c],&vutri.v2);
+			ColTrianglePlane_Unpack(&model.trianglePlanes[i],&vutri.plane);
 
 			if(GetVUresult(pnt, normal, dist)){
 				if(dist < coldist){
-					point.point = pnt;
-					point.normal = normal;
-					point.Set(0, 0, lasttri->surface, 0);
+					point.point = CollisionVector_FromNative(pnt);
+					point.normal = CollisionVector_FromNative(normal);
+					ColPoint_SetSurfaces(&point,0, 0, lasttri->surface, 0);
 					coldist = dist;
 					registeredCol = true;
 				}else
@@ -1554,9 +1561,27 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 				registeredCol = false;
 
 			if(registeredCol){
-				TempStoredPoly.verts[0] = model.vertices[lasttri->a].Get();
-				TempStoredPoly.verts[1] = model.vertices[lasttri->b].Get();
-				TempStoredPoly.verts[2] = model.vertices[lasttri->c].Get();
+				// Copy complete decoded values before the original native vector expression
+				const CollisionVector3 collisionVertexValue18_0=CompressedVector_Get(&model.vertices[lasttri->a]);
+				{
+				    // Preserve the complete native conversion before the individual stored-vertex update
+				    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue18_0.x,collisionVertexValue18_0.y,collisionVertexValue18_0.z));
+				    StoredPoly_SetVertex(&TempStoredPoly,0,&storedVertex);
+				}
+				// Copy complete decoded values before the original native vector expression
+				const CollisionVector3 collisionVertexValue19_0=CompressedVector_Get(&model.vertices[lasttri->b]);
+				{
+				    // Preserve the complete native conversion before the individual stored-vertex update
+				    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue19_0.x,collisionVertexValue19_0.y,collisionVertexValue19_0.z));
+				    StoredPoly_SetVertex(&TempStoredPoly,1,&storedVertex);
+				}
+				// Copy complete decoded values before the original native vector expression
+				const CollisionVector3 collisionVertexValue20_0=CompressedVector_Get(&model.vertices[lasttri->c]);
+				{
+				    // Preserve the complete native conversion before the individual stored-vertex update
+				    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue20_0.x,collisionVertexValue20_0.y,collisionVertexValue20_0.z));
+				    StoredPoly_SetVertex(&TempStoredPoly,2,&storedVertex);
+				}
 				TempStoredPoly.valid = true;
 			}
 
@@ -1565,9 +1590,9 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 		}
 		if(lasttri && GetVUresult(pnt, normal, dist)){
 			if(dist < coldist){
-				point.point = pnt;
-				point.normal = normal;
-				point.Set(0, 0, lasttri->surface, 0);
+				point.point = CollisionVector_FromNative(pnt);
+				point.normal = CollisionVector_FromNative(normal);
+				ColPoint_SetSurfaces(&point,0, 0, lasttri->surface, 0);
 				coldist = dist;
 				registeredCol = true;
 			}else
@@ -1576,21 +1601,51 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 			registeredCol = false;
 
 		if(registeredCol){
-			TempStoredPoly.verts[0] = model.vertices[lasttri->a].Get();
-			TempStoredPoly.verts[1] = model.vertices[lasttri->b].Get();
-			TempStoredPoly.verts[2] = model.vertices[lasttri->c].Get();
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue21_0=CompressedVector_Get(&model.vertices[lasttri->a]);
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue21_0.x,collisionVertexValue21_0.y,collisionVertexValue21_0.z));
+			    StoredPoly_SetVertex(&TempStoredPoly,0,&storedVertex);
+			}
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue22_0=CompressedVector_Get(&model.vertices[lasttri->b]);
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue22_0.x,collisionVertexValue22_0.y,collisionVertexValue22_0.z));
+			    StoredPoly_SetVertex(&TempStoredPoly,1,&storedVertex);
+			}
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue23_0=CompressedVector_Get(&model.vertices[lasttri->c]);
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(CVector(collisionVertexValue23_0.x,collisionVertexValue23_0.y,collisionVertexValue23_0.z));
+			    StoredPoly_SetVertex(&TempStoredPoly,2,&storedVertex);
+			}
 			TempStoredPoly.valid = true;
 		}
 	}
 
 	if(coldist < 1.0f){
-		point.point = matrix * point.point;
-		point.normal = Multiply3x3(matrix, point.normal);
+		point.point = CollisionVector_FromNative(matrix * CollisionVector_ToNative(point.point));
+		point.normal = CollisionVector_FromNative(Multiply3x3(matrix, CollisionVector_ToNative(point.normal)));
 		if(TempStoredPoly.valid && poly){
 			*poly = TempStoredPoly;
-			poly->verts[0] = matrix * CVector(poly->verts[0]);
-			poly->verts[1] = matrix * CVector(poly->verts[1]);
-			poly->verts[2] = matrix * CVector(poly->verts[2]);
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[0]));
+			    StoredPoly_SetVertex(poly,0,&storedVertex);
+			}
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[1]));
+			    StoredPoly_SetVertex(poly,1,&storedVertex);
+			}
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[2]));
+			    StoredPoly_SetVertex(poly,2,&storedVertex);
+			}
 		}
 		mindist *= coldist;
 		return true;
@@ -1602,7 +1657,14 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 
 	// transform line to model space
 	// Why does the game seem to do this differently than above?
-	CColLine newline(MultiplyInverse(matrix, line.p0), MultiplyInverse(matrix, line.p1));
+	// Retain the line record at its original construction boundary
+	CColLine newline;
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint2_0=MultiplyInverse(matrix, CollisionVector_ToNative(line.p0));
+	// Capture the complete native expression before initializing line endpoints
+	const CVector &lineConstructorPoint2_1=MultiplyInverse(matrix, CollisionVector_ToNative(line.p1));
+	// Initialize the line at the former parameterized constructor boundary
+	ColLine_Init(&newline,COLLISION_POINT_REF(lineConstructorPoint2_0),COLLISION_POINT_REF(lineConstructorPoint2_1));
 
 	if(!TestLineBox(newline, model.boundingBox))
 		return false;
@@ -1627,13 +1689,25 @@ CCollision::ProcessVerticalLine(const CColLine &line,
 	}
 
 	if(coldist < mindist){
-		point.point = matrix * point.point;
-		point.normal = Multiply3x3(matrix, point.normal);
+		point.point = CollisionVector_FromNative(matrix * CollisionVector_ToNative(point.point));
+		point.normal = CollisionVector_FromNative(Multiply3x3(matrix, CollisionVector_ToNative(point.normal)));
 		if(TempStoredPoly.valid && poly){
 			*poly = TempStoredPoly;
-			poly->verts[0] = matrix * poly->verts[0];
-			poly->verts[1] = matrix * poly->verts[1];
-			poly->verts[2] = matrix * poly->verts[2];
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[0]));
+			    StoredPoly_SetVertex(poly,0,&storedVertex);
+			}
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[1]));
+			    StoredPoly_SetVertex(poly,1,&storedVertex);
+			}
+			{
+			    // Preserve the complete native conversion before the individual stored-vertex update
+			    const StoredPolyVertex storedVertex=StoredPoly_FromNative(matrix * StoredPoly_ToNative(poly->verts[2]));
+			    StoredPoly_SetVertex(poly,2,&storedVertex);
+			}
 		}
 		mindist = coldist;
 		return true;
@@ -1685,21 +1759,21 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	matAB *= matrixA;
 
 	CVuVector bsphereAB;	// bounding sphere of A in B space
-	TransformPoint(bsphereAB, matAB, modelA.boundingSphere.center);	// inlined
+	TransformPoint(bsphereAB, matAB, CollisionVector_ToNative(modelA.boundingSphere.center));	// inlined
 	bsphereAB.w = modelA.boundingSphere.radius;
-	if(!TestSphereBox(*(CColSphere*)&bsphereAB, modelB.boundingBox))
+	if(!TestSphereBox(Sphere_FromRaw16(&bsphereAB), modelB.boundingBox))
 		return 0;
 
 	// transform modelA's spheres and lines to B space
-	TransformPoints(aSpheresA, modelA.numSpheres, matAB, &modelA.spheres->center, sizeof(CColSphere));
+	TransformColSpheres(aSpheresA,modelA.numSpheres,matAB,modelA.spheres);
 	for(i = 0; i < modelA.numSpheres; i++)
-		aSpheresA[i].w = modelA.spheres[i].radius;
-	TransformPoints(aLinesA, modelA.numLines*2, matAB, &modelA.lines->p0, sizeof(CColLine)/2);
+		aSpheresA[i].w = modelA.spheres[i].bounds.radius;
+	TransformColLines(aLinesA,modelA.numLines,matAB,modelA.lines);
 
 	// Test them against model B's bounding volumes
 	int numSpheresA = 0;
 	for(i = 0; i < modelA.numSpheres; i++)
-		if(TestSphereBox(*(CColSphere*)&aSpheresA[i], modelB.boundingBox))
+		if(TestSphereBox(Sphere_FromRaw16(&aSpheresA[i]), modelB.boundingBox))
 			aSphereIndicesA[numSpheresA++] = i;
 	// No collision
 	if(numSpheresA == 0 && modelA.numLines == 0)
@@ -1711,39 +1785,39 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	matBA *= matrixB;
 
 	// transform modelB's spheres to A space
-	TransformPoints(aSpheresB, modelB.numSpheres, matBA, &modelB.spheres->center, sizeof(CColSphere));
+	TransformColSpheres(aSpheresB,modelB.numSpheres,matBA,modelB.spheres);
 	for(i = 0; i < modelB.numSpheres; i++)
-		aSpheresB[i].w = modelB.spheres[i].radius;
+		aSpheresB[i].w = modelB.spheres[i].bounds.radius;
 
 	// Check model B against A's bounding volumes
 	int numSpheresB = 0;
 	int numBoxesB = 0;
 	int numTrianglesB = 0;
 	for(i = 0; i < modelB.numSpheres; i++)
-		if(TestSphereBox(*(CColSphere*)&aSpheresB[i], modelA.boundingBox))
+		if(TestSphereBox(Sphere_FromRaw16(&aSpheresB[i]), modelA.boundingBox))
 			aSphereIndicesB[numSpheresB++] = i;
 	for(i = 0; i < modelB.numBoxes; i++)
-		if(TestSphereBox(*(CColSphere*)&bsphereAB, modelB.boxes[i]))
+		if(TestSphereBox(Sphere_FromRaw16(&bsphereAB), modelB.boxes[i].bounds))
 			aBoxIndicesB[numBoxesB++] = i;
 	CalculateTrianglePlanes(&modelB);
 	if(modelB.numTriangles){
 		VuTriangle vutri;
 		// process the first triangle
 		CColTriangle *tri = &modelB.triangles[0];
-		modelB.vertices[tri->a].Unpack(vutri.v0);
-		modelB.vertices[tri->b].Unpack(vutri.v1);
-		modelB.vertices[tri->c].Unpack(vutri.v2);
-		modelB.trianglePlanes[0].Unpack(vutri.plane);
+		CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+		CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+		CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+		ColTrianglePlane_Unpack(&modelB.trianglePlanes[0],&vutri.plane);
 
 		SphereToTriangleCollisionCompressed(bsphereAB, vutri);
 
 		for(i = 1; i < modelB.numTriangles; i++){
 			// set up the next triangle while VU0 is running
 			tri = &modelB.triangles[i];
-			modelB.vertices[tri->a].Unpack(vutri.v0);
-			modelB.vertices[tri->b].Unpack(vutri.v1);
-			modelB.vertices[tri->c].Unpack(vutri.v2);
-			modelB.trianglePlanes[i].Unpack(vutri.plane);
+			CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+			CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+			CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+			ColTrianglePlane_Unpack(&modelB.trianglePlanes[i],&vutri.plane);
 
 			// check previous result
 			if(GetVUresult())
@@ -1774,17 +1848,17 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 
 		for(j = 0; j < numSpheresB; j++)
 			// This actually looks like something was inlined here
-			if(ProcessSphereSphere(*(CColSphere*)vusphA, modelB.spheres[aSphereIndicesB[j]],
+			if(ProcessSphereSphere(ColSphere_FromRaw16(vusphA), modelB.spheres[aSphereIndicesB[j]],
 					spherepoints[numCollisions], coldist)){
-				spherepoints[numCollisions].Set(
+				ColPoint_SetSurfaces(&spherepoints[numCollisions],
 					sphA->surface, sphA->piece,
 					modelB.spheres[aSphereIndicesB[j]].surface, modelB.spheres[aSphereIndicesB[j]].piece);
 				hasCollided = true;
 			}
 		for(j = 0; j < numBoxesB; j++)
-			if(ProcessSphereBox(*(CColSphere*)vusphA, modelB.boxes[aBoxIndicesB[j]],
+			if(ProcessSphereBox(ColSphere_FromRaw16(vusphA), modelB.boxes[aBoxIndicesB[j]],
 					spherepoints[numCollisions], coldist)){
-				spherepoints[numCollisions].Set(
+				ColPoint_SetSurfaces(&spherepoints[numCollisions],
 					sphA->surface, sphA->piece,
 					modelB.boxes[aBoxIndicesB[j]].surface, modelB.boxes[aBoxIndicesB[j]].piece);
 				hasCollided = true;
@@ -1799,10 +1873,10 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 			// process the first triangle
 			k = aTriangleIndicesB[0];
 			CColTriangle *tri = &modelB.triangles[k];
-			modelB.vertices[tri->a].Unpack(vutri.v0);
-			modelB.vertices[tri->b].Unpack(vutri.v1);
-			modelB.vertices[tri->c].Unpack(vutri.v2);
-			modelB.trianglePlanes[k].Unpack(vutri.plane);
+			CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+			CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+			CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+			ColTrianglePlane_Unpack(&modelB.trianglePlanes[k],&vutri.plane);
 
 			SphereToTriangleCollisionCompressed(*vusphA, vutri);
 			lasttri = tri;
@@ -1811,19 +1885,19 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 				k = aTriangleIndicesB[j];
 				// set up the next triangle while VU0 is running
 				tri = &modelB.triangles[k];
-				modelB.vertices[tri->a].Unpack(vutri.v0);
-				modelB.vertices[tri->b].Unpack(vutri.v1);
-				modelB.vertices[tri->c].Unpack(vutri.v2);
-				modelB.trianglePlanes[k].Unpack(vutri.plane);
+				CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+				CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+				CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+				ColTrianglePlane_Unpack(&modelB.trianglePlanes[k],&vutri.plane);
 
 				// check previous result
 				// TODO: this looks inlined but spherepoints[numCollisions] does not...
 				if(GetVUresult(point, normal, depth)){
-					depth = sphA->radius - depth;
+					depth = sphA->bounds.radius - depth;
 					if(depth > spherepoints[numCollisions].depth){
-						spherepoints[numCollisions].point = point;
-						spherepoints[numCollisions].normal = normal;
-						spherepoints[numCollisions].Set(depth,
+						spherepoints[numCollisions].point = CollisionVector_FromNative(point);
+						spherepoints[numCollisions].normal = CollisionVector_FromNative(normal);
+						ColPoint_Set(&spherepoints[numCollisions],depth,
 							sphA->surface, sphA->piece, lasttri->surface, 0);
 						registeredCol = true;
 					}else
@@ -1842,11 +1916,11 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 			// check last result
 			// TODO: this looks inlined but spherepoints[numCollisions] does not...
 			if(GetVUresult(point, normal, depth)){
-				depth = sphA->radius - depth;
+				depth = sphA->bounds.radius - depth;
 				if(depth > spherepoints[numCollisions].depth){
-					spherepoints[numCollisions].point = point;
-					spherepoints[numCollisions].normal = normal;
-					spherepoints[numCollisions].Set(depth,
+					spherepoints[numCollisions].point = CollisionVector_FromNative(point);
+					spherepoints[numCollisions].normal = CollisionVector_FromNative(normal);
+					ColPoint_Set(&spherepoints[numCollisions],depth,
 						sphA->surface, sphA->piece, lasttri->surface, 0);
 					registeredCol = true;
 				}else
@@ -1867,8 +1941,8 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	}
 	for(i = 0; i < numCollisions; i++){
 		// TODO: both VU0 macros
-		spherepoints[i].point = matrixB * spherepoints[i].point;
-		spherepoints[i].normal = Multiply3x3(matrixB, spherepoints[i].normal);
+		spherepoints[i].point = CollisionVector_FromNative(matrixB * CollisionVector_ToNative(spherepoints[i].point));
+		spherepoints[i].normal = CollisionVector_FromNative(Multiply3x3(matrixB, CollisionVector_ToNative(spherepoints[i].normal)));
 	}
 
 	// And the same thing for the lines in A
@@ -1877,9 +1951,9 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 		CVuVector *lineA = &aLinesA[i*2];
 
 		for(j = 0; j < numSpheresB; j++)
-			if(ProcessLineSphere(*(CColLine*)lineA, modelB.spheres[aSphereIndicesB[j]],
+			if(ProcessLineSphere(ColLine_FromRaw32(lineA), modelB.spheres[aSphereIndicesB[j]],
 					linepoints[i], linedists[i])){
-				linepoints[i].Set(0, 0,
+				ColPoint_SetSurfaces(&linepoints[i],0, 0,
 #ifdef FIX_BUGS
 					modelB.spheres[aSphereIndicesB[j]].surface, modelB.spheres[aSphereIndicesB[j]].piece);
 #else
@@ -1888,9 +1962,9 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 				aCollided[i] = true;
 			}
 		for(j = 0; j < numBoxesB; j++)
-			if(ProcessLineBox(*(CColLine*)lineA, modelB.boxes[aBoxIndicesB[j]],
+			if(ProcessLineBox(ColLine_FromRaw32(lineA), modelB.boxes[aBoxIndicesB[j]],
 					linepoints[i], linedists[i])){
-				linepoints[i].Set(0, 0,
+				ColPoint_SetSurfaces(&linepoints[i],0, 0,
 					modelB.boxes[aBoxIndicesB[j]].surface, modelB.boxes[aBoxIndicesB[j]].piece);
 				aCollided[i] = true;
 			}
@@ -1904,10 +1978,10 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 			// process the first triangle
 			k = aTriangleIndicesB[0];
 			CColTriangle *tri = &modelB.triangles[k];
-			modelB.vertices[tri->a].Unpack(vutri.v0);
-			modelB.vertices[tri->b].Unpack(vutri.v1);
-			modelB.vertices[tri->c].Unpack(vutri.v2);
-			modelB.trianglePlanes[k].Unpack(vutri.plane);
+			CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+			CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+			CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+			ColTrianglePlane_Unpack(&modelB.trianglePlanes[k],&vutri.plane);
 
 			LineToTriangleCollisionCompressed(lineA[0], lineA[1], vutri);
 			lasttri = tri;
@@ -1916,19 +1990,19 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 				k = aTriangleIndicesB[j];
 				// set up the next triangle while VU0 is running
 				CColTriangle *tri = &modelB.triangles[k];
-				modelB.vertices[tri->a].Unpack(vutri.v0);
-				modelB.vertices[tri->b].Unpack(vutri.v1);
-				modelB.vertices[tri->c].Unpack(vutri.v2);
-				modelB.trianglePlanes[k].Unpack(vutri.plane);
+				CompressedVector_Unpack(&modelB.vertices[tri->a],&vutri.v0);
+				CompressedVector_Unpack(&modelB.vertices[tri->b],&vutri.v1);
+				CompressedVector_Unpack(&modelB.vertices[tri->c],&vutri.v2);
+				ColTrianglePlane_Unpack(&modelB.trianglePlanes[k],&vutri.plane);
 
 				// check previous result
 				// TODO: this again somewhat looks inlined
 				if(GetVUresult(point, normal, dist)){
 					if(dist < linedists[i]){
-						linepoints[i].point = point;
-						linepoints[i].normal = normal;
+						linepoints[i].point = CollisionVector_FromNative(point);
+						linepoints[i].normal = CollisionVector_FromNative(normal);
 						linedists[i] = dist;
-						linepoints[i].Set(0, 0, lasttri->surface, 0);
+						ColPoint_SetSurfaces(&linepoints[i],0, 0, lasttri->surface, 0);
 						registeredCol = true;
 					}else
 						registeredCol = false;
@@ -1946,10 +2020,10 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 			// check last result
 			if(GetVUresult(point, normal, dist)){
 				if(dist < linedists[i]){
-					linepoints[i].point = point;
-					linepoints[i].normal = normal;
+					linepoints[i].point = CollisionVector_FromNative(point);
+					linepoints[i].normal = CollisionVector_FromNative(normal);
 					linedists[i] = dist;
-					linepoints[i].Set(0, 0, lasttri->surface, 0);
+					ColPoint_SetSurfaces(&linepoints[i],0, 0, lasttri->surface, 0);
 					registeredCol = true;
 				}else
 					registeredCol = false;
@@ -1962,8 +2036,8 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 
 		if(aCollided[i]){
 			// TODO: both VU0 macros
-			linepoints[i].point = matrixB * linepoints[i].point;
-			linepoints[i].normal = Multiply3x3(matrixB, linepoints[i].normal);
+			linepoints[i].point = CollisionVector_FromNative(matrixB * CollisionVector_ToNative(linepoints[i].point));
+			linepoints[i].normal = CollisionVector_FromNative(Multiply3x3(matrixB, CollisionVector_ToNative(linepoints[i].normal)));
 		}
 	}
 
@@ -1989,9 +2063,9 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	matAB *= matrixA;
 
 	CColSphere bsphereAB;	// bounding sphere of A in B space
-	bsphereAB.radius = modelA.boundingSphere.radius;
-	bsphereAB.center = matAB * modelA.boundingSphere.center;
-	if(!TestSphereBox(bsphereAB, modelB.boundingBox))
+	bsphereAB.bounds.radius = modelA.boundingSphere.radius;
+	bsphereAB.bounds.center = CollisionVector_FromNative(matAB * CollisionVector_ToNative(modelA.boundingSphere.center));
+	if(!TestSphereBox(bsphereAB.bounds, modelB.boundingBox))
 		return 0;
 	// B to A space
 	matBA = Invert(matrixA, matBA);
@@ -2000,16 +2074,25 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	// transform modelA's spheres and lines to B space
 	for(i = 0; i < modelA.numSpheres; i++){
 		CColSphere &s = modelA.spheres[i];
-		aSpheresA[i].Set(s.radius, matAB * s.center, s.surface, s.piece);
+		{
+		    // Keep the native center expression alive at the former member-call boundary
+		    const CVector &sphereCenter0=matAB * CollisionVector_ToNative(s.bounds.center);
+		    ColSphere_Set(&aSpheresA[i],s.bounds.radius,COLLISION_POINT_REF(sphereCenter0),s.surface,s.piece);
+		}
 	}
 	for(i = 0; i < modelA.numLines; i++)
-		aLinesA[i].Set(matAB * modelA.lines[i].p0, matAB * modelA.lines[i].p1);
+		{
+        // Capture both transformed values before the ordered C line update
+        const CVector transformedLineStart=matAB * CollisionVector_ToNative(modelA.lines[i].p0);
+        const CVector transformedLineEnd=matAB * CollisionVector_ToNative(modelA.lines[i].p1);
+        ColLine_Set(&aLinesA[i],COLLISION_POINT_REF(transformedLineStart),COLLISION_POINT_REF(transformedLineEnd));
+    }
 
 	// Test them against model B's bounding volumes
 	int numSpheresA = 0;
 	int numLinesA = 0;
 	for(i = 0; i < modelA.numSpheres; i++)
-		if(TestSphereBox(aSpheresA[i], modelB.boundingBox))
+		if(TestSphereBox(aSpheresA[i].bounds, modelB.boundingBox))
 			aSphereIndicesA[numSpheresA++] = i;
 	// no actual check???
 	for(i = 0; i < modelA.numLines; i++)
@@ -2023,13 +2106,13 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	int numBoxesB = 0;
 	int numTrianglesB = 0;
 	for(i = 0; i < modelB.numSpheres; i++){
-		s.radius = modelB.spheres[i].radius;
-		s.center = matBA * modelB.spheres[i].center;
-		if(TestSphereBox(s, modelA.boundingBox))
+		s.bounds.radius = modelB.spheres[i].bounds.radius;
+		s.bounds.center = CollisionVector_FromNative(matBA * CollisionVector_ToNative(modelB.spheres[i].bounds.center));
+		if(TestSphereBox(s.bounds, modelA.boundingBox))
 			aSphereIndicesB[numSpheresB++] = i;
 	}
 	for(i = 0; i < modelB.numBoxes; i++)
-		if(TestSphereBox(bsphereAB, modelB.boxes[i]))
+		if(TestSphereBox(bsphereAB.bounds, modelB.boxes[i].bounds))
 			aBoxIndicesB[numBoxesB++] = i;
 	CalculateTrianglePlanes(&modelB);
 	for(i = 0; i < modelB.numTriangles; i++)
@@ -2072,8 +2155,8 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 			numCollisions++;
 	}
 	for(i = 0; i < numCollisions; i++){
-		spherepoints[i].point = matrixB * spherepoints[i].point;
-		spherepoints[i].normal = Multiply3x3(matrixB, spherepoints[i].normal);
+		spherepoints[i].point = CollisionVector_FromNative(matrixB * CollisionVector_ToNative(spherepoints[i].point));
+		spherepoints[i].normal = CollisionVector_FromNative(Multiply3x3(matrixB, CollisionVector_ToNative(spherepoints[i].normal)));
 	}
 
 	// And the same thing for the lines in A
@@ -2104,8 +2187,8 @@ CCollision::ProcessColModels(const CMatrix &matrixA, CColModel &modelA,
 	for(i = 0; i < numLinesA; i++)
 		if(aCollided[i]){
 			j = aLineIndicesA[i];
-			linepoints[j].point = matrixB * linepoints[j].point;
-			linepoints[j].normal = Multiply3x3(matrixB, linepoints[j].normal);
+			linepoints[j].point = CollisionVector_FromNative(matrixB * CollisionVector_ToNative(linepoints[j].point));
+			linepoints[j].normal = CollisionVector_FromNative(Multiply3x3(matrixB, CollisionVector_ToNative(linepoints[j].normal)));
 		}
 
 	return numCollisions;	// sphere collisions
@@ -2162,7 +2245,8 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 	//- rouz edit (ChatGPT)
 	if(model->trianglePlanes){
 		// re-insert at front so it's not removed again soon
-		lptr = model->GetLinkPtr();
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		lptr = ColModel_GetLinkPtr(model);
 		// Use the C linked-list functions and node types
 		//+ rouz edit (ChatGPT)
 		CLink_Remove(lptr);
@@ -2180,7 +2264,8 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 			assert(lptr->item);
 			// Access the object payload through the C list node
 			//+ rouz edit (ChatGPT)
-			((CColModel*)lptr->item)->RemoveTrianglePlanes();
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			ColModel_RemoveTrianglePlanes(((CColModel*)lptr->item));
 			CLinkList_Remove(&ms_colModelCache, lptr);
 			//- rouz edit (ChatGPT)
 			// now this cannot fail
@@ -2190,8 +2275,10 @@ CCollision::CalculateTrianglePlanes(CColModel *model)
 			//- rouz edit (ChatGPT)
 			assert(lptr);
 		}
-		model->CalculateTrianglePlanes();
-		model->SetLinkPtr(lptr);
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		ColModel_CalculateTrianglePlanes(model);
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		ColModel_SetLinkPtr(model,lptr);
 	}
 }
 
@@ -2201,9 +2288,11 @@ CCollision::RemoveTrianglePlanes(CColModel *model)
 	if(model->trianglePlanes){
 		// Use the C linked-list functions and node types
 		//+ rouz edit (ChatGPT)
-		CLinkList_Remove(&ms_colModelCache, model->GetLinkPtr());
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		CLinkList_Remove(&ms_colModelCache, ColModel_GetLinkPtr(model));
 		//- rouz edit (ChatGPT)
-		model->RemoveTrianglePlanes();
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		ColModel_RemoveTrianglePlanes(model);
 	}
 }
 
@@ -2222,8 +2311,8 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
 
-	min = colModel.boundingBox.min;
-	max = colModel.boundingBox.max;
+	min = CollisionVector_ToNative(colModel.boundingBox.min);
+	max = CollisionVector_ToNative(colModel.boundingBox.max);
 
 	verts[0] = mat * CVector(min.x, min.y, min.z);
 	verts[1] = mat * CVector(min.x, min.y, max.z);
@@ -2234,111 +2323,137 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 	verts[6] = mat * CVector(max.x, max.y, min.z);
 	verts[7] = mat * CVector(max.x, max.y, max.z);
 
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+
+	Lines_RenderLineWithClipping(
 		verts[0].x, verts[0].y, verts[0].z,
 		verts[1].x, verts[1].y, verts[1].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[1].x, verts[1].y, verts[1].z,
 		verts[3].x, verts[3].y, verts[3].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[3].x, verts[3].y, verts[3].z,
 		verts[2].x, verts[2].y, verts[2].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[2].x, verts[2].y, verts[2].z,
 		verts[0].x, verts[0].y, verts[0].z,
 		0xFF0000FF, 0xFF0000FF);
 
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+
+	Lines_RenderLineWithClipping(
 		verts[4].x, verts[4].y, verts[4].z,
 		verts[5].x, verts[5].y, verts[5].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[5].x, verts[5].y, verts[5].z,
 		verts[7].x, verts[7].y, verts[7].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[7].x, verts[7].y, verts[7].z,
 		verts[6].x, verts[6].y, verts[6].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[6].x, verts[6].y, verts[6].z,
 		verts[4].x, verts[4].y, verts[4].z,
 		0xFF0000FF, 0xFF0000FF);
 
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+
+	Lines_RenderLineWithClipping(
 		verts[0].x, verts[0].y, verts[0].z,
 		verts[4].x, verts[4].y, verts[4].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[1].x, verts[1].y, verts[1].z,
 		verts[5].x, verts[5].y, verts[5].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[2].x, verts[2].y, verts[2].z,
 		verts[6].x, verts[6].y, verts[6].z,
 		0xFF0000FF, 0xFF0000FF);
-	CLines::RenderLineWithClipping(
+	// Draw the original endpoints and colors through the C line API
+	Lines_RenderLineWithClipping(
 		verts[3].x, verts[3].y, verts[3].z,
 		verts[7].x, verts[7].y, verts[7].z,
 		0xFF0000FF, 0xFF0000FF);
 
 	for(i = 0; i < colModel.numSpheres; i++){
-		c = mat * colModel.spheres[i].center;
-		r = colModel.spheres[i].radius;
+		c = mat * CollisionVector_ToNative(colModel.spheres[i].bounds.center);
+		r = colModel.spheres[i].bounds.radius;
 
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+
+		Lines_RenderLineWithClipping(
 			c.x,   c.y,   c.z-r,
 			c.x-r, c.y-r, c.z,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x,   c.y,   c.z-r,
 			c.x-r, c.y+r, c.z,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x,   c.y,   c.z-r,
 			c.x+r, c.y-r, c.z,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x,   c.y,   c.z-r,
 			c.x+r, c.y+r, c.z,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x-r, c.y-r, c.z,
 			c.x,   c.y,   c.z+r,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x-r, c.y+r, c.z,
 			c.x,   c.y,   c.z+r,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x+r, c.y-r, c.z,
 			c.x,   c.y,   c.z+r,
 			0xFF00FFFF, 0xFF00FFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			c.x+r, c.y+r, c.z,
 			c.x,   c.y,   c.z+r,
 			0xFF00FFFF, 0xFF00FFFF);
 	}
 
 	for(i = 0; i < colModel.numLines; i++){
-		verts[0] = colModel.lines[i].p0;
-		verts[1] = colModel.lines[i].p1;
+		verts[0] = CollisionVector_ToNative(colModel.lines[i].p0);
+		verts[1] = CollisionVector_ToNative(colModel.lines[i].p1);
 
 		verts[0] = mat * verts[0];
 		verts[1] = mat * verts[1];
 
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+
+		Lines_RenderLineWithClipping(
 			verts[0].x, verts[0].y, verts[0].z,
 			verts[1].x, verts[1].y, verts[1].z,
 			0x00FFFFFF, 0x00FFFFFF);
 	}
 
 	for(i = 0; i < colModel.numBoxes; i++){
-		min = colModel.boxes[i].min;
-		max = colModel.boxes[i].max;
+		min = CollisionVector_ToNative(colModel.boxes[i].bounds.min);
+		max = CollisionVector_ToNative(colModel.boxes[i].bounds.max);
 
 		verts[0] = mat * CVector(min.x, min.y, min.z);
 		verts[1] = mat * CVector(min.x, min.y, max.z);
@@ -2349,74 +2464,95 @@ CCollision::DrawColModel(const CMatrix &mat, const CColModel &colModel)
 		verts[6] = mat * CVector(max.x, max.y, min.z);
 		verts[7] = mat * CVector(max.x, max.y, max.z);
 
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+
+		Lines_RenderLineWithClipping(
 			verts[0].x, verts[0].y, verts[0].z,
 			verts[1].x, verts[1].y, verts[1].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[1].x, verts[1].y, verts[1].z,
 			verts[3].x, verts[3].y, verts[3].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[3].x, verts[3].y, verts[3].z,
 			verts[2].x, verts[2].y, verts[2].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[2].x, verts[2].y, verts[2].z,
 			verts[0].x, verts[0].y, verts[0].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
 
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+
+		Lines_RenderLineWithClipping(
 			verts[4].x, verts[4].y, verts[4].z,
 			verts[5].x, verts[5].y, verts[5].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[5].x, verts[5].y, verts[5].z,
 			verts[7].x, verts[7].y, verts[7].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[7].x, verts[7].y, verts[7].z,
 			verts[6].x, verts[6].y, verts[6].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[6].x, verts[6].y, verts[6].z,
 			verts[4].x, verts[4].y, verts[4].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
 
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+
+		Lines_RenderLineWithClipping(
 			verts[0].x, verts[0].y, verts[0].z,
 			verts[4].x, verts[4].y, verts[4].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[1].x, verts[1].y, verts[1].z,
 			verts[5].x, verts[5].y, verts[5].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[2].x, verts[2].y, verts[2].z,
 			verts[6].x, verts[6].y, verts[6].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[3].x, verts[3].y, verts[3].z,
 			verts[7].x, verts[7].y, verts[7].z,
 			0xFFFFFFFF, 0xFFFFFFFF);
 	}
 
 	for(i = 0; i < colModel.numTriangles; i++){
-		colModel.GetTrianglePoint(verts[0], colModel.triangles[i].a);
-		colModel.GetTrianglePoint(verts[1], colModel.triangles[i].b);
-		colModel.GetTrianglePoint(verts[2], colModel.triangles[i].c);
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[0] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].a));
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[1] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].b));
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[2] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].c));
 		verts[0] = mat * verts[0];
 		verts[1] = mat * verts[1];
 		verts[2] = mat * verts[2];
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[0].x, verts[0].y, verts[0].z,
 			verts[1].x, verts[1].y, verts[1].z,
 			0x00FF00FF, 0x00FF00FF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[0].x, verts[0].y, verts[0].z,
 			verts[2].x, verts[2].y, verts[2].z,
 			0x00FF00FF, 0x00FF00FF);
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			verts[1].x, verts[1].y, verts[1].z,
 			verts[2].x, verts[2].y, verts[2].z,
 			0x00FF00FF, 0x00FF00FF);
@@ -2437,7 +2573,7 @@ GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 	g = 128;
 	b = 0;
 
-	switch(CSurfaceTable::GetAdhesionGroup(surf)){
+	switch(SurfaceTable_GetAdhesionGroup(surf)){ // rouz edit (ChatGPT)
 	case ADHESIVE_RUBBER:
 		r = 255;
 		g = 0;
@@ -2483,7 +2619,7 @@ GetSurfaceColor(uint8 surf, uint8 &r, uint8 &g, uint8 &b)
 
 	if(surf == SURFACE_TRANSPARENT_CLOTH || surf == SURFACE_METAL_CHAIN_FENCE ||
 	   surf == SURFACE_TRANSPARENT_STONE || surf == SURFACE_SCAFFOLD_POLE)
-		if(CTimer::GetFrameCounter() & 1){
+		if((*Timer_GetFrameCounter()) & 1){
 			r = 0;
 			g = 0;
 			b = 0;
@@ -2501,7 +2637,8 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 	RwImVertexIndex *iptr;
 	RwIm3DVertex *vptr;
 
-	RenderBuffer::ClearRenderBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_ClearRenderBuffer();
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
@@ -2509,9 +2646,12 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
 
 	for(i = 0; i < colModel.numTriangles; i++){
-		colModel.GetTrianglePoint(verts[0], colModel.triangles[i].a);
-		colModel.GetTrianglePoint(verts[1], colModel.triangles[i].b);
-		colModel.GetTrianglePoint(verts[2], colModel.triangles[i].c);
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[0] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].a));
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[1] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].b));
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		verts[2] = CollisionVector_ToNative(ColModel_GetTrianglePoint(&colModel,colModel.triangles[i].c));
 		verts[0] = mat * verts[0];
 		verts[1] = mat * verts[1];
 		verts[2] = mat * verts[2];
@@ -2520,13 +2660,14 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 		GetSurfaceColor(s, r, g, b);
 
 		if(s > SURFACE_METAL_GATE){
-			r = CGeneral::GetRandomNumber();
-			g = CGeneral::GetRandomNumber();
-			b = CGeneral::GetRandomNumber();
+			r = General_GetRandomNumber();
+			g = General_GetRandomNumber();
+			b = General_GetRandomNumber();
 			printf("Illegal surfacetype:%d on MI:%d\n", s, id);
 		}
 
-		RenderBuffer::StartStoring(6, 3, &iptr, &vptr);
+		// Enter the C shared-buffer algorithm with the original arguments
+		RenderBuffer_StartStoringLegacy(6, 3, &iptr, &vptr);
 		RwIm3DVertexSetRGBA(&vptr[0], r, g, b, 255);
 		RwIm3DVertexSetRGBA(&vptr[1], r, g, b, 255);
 		RwIm3DVertexSetRGBA(&vptr[2], r, g, b, 255);
@@ -2541,12 +2682,13 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 		RwIm3DVertexSetPos(&vptr[2], verts[2].x, verts[2].y, verts[2].z);
 		iptr[0] = 0; iptr[1] = 1; iptr[2] = 2;
 		iptr[3] = 0; iptr[4] = 2; iptr[5] = 1;
-		RenderBuffer::StopStoring();
+		// Enter the C shared-buffer algorithm with the original arguments
+		RenderBuffer_StopStoring();
 	}
 
 	for(i = 0; i < colModel.numBoxes; i++){
-		min = colModel.boxes[i].min;
-		max = colModel.boxes[i].max;
+		min = CollisionVector_ToNative(colModel.boxes[i].bounds.min);
+		max = CollisionVector_ToNative(colModel.boxes[i].bounds.max);
 
 		verts[0] = mat * CVector(min.x, min.y, min.z);
 		verts[1] = mat * CVector(min.x, min.y, max.z);
@@ -2560,7 +2702,8 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 		s = colModel.boxes[i].surface;
 		GetSurfaceColor(s, r, g, b);
 
-		RenderBuffer::StartStoring(36, 8, &iptr, &vptr);
+		// Enter the C shared-buffer algorithm with the original arguments
+		RenderBuffer_StartStoringLegacy(36, 8, &iptr, &vptr);
 		RwIm3DVertexSetRGBA(&vptr[0], r, g, b, 255);
 		RwIm3DVertexSetRGBA(&vptr[1], r, g, b, 255);
 		RwIm3DVertexSetRGBA(&vptr[2], r, g, b, 255);
@@ -2605,13 +2748,18 @@ CCollision::DrawColModel_Coloured(const CMatrix &mat, const CColModel &colModel,
 		iptr[27] = 2; iptr[28] = 6; iptr[29] = 4;
 		iptr[30] = 4; iptr[31] = 6; iptr[32] = 7;
 		iptr[33] = 4; iptr[34] = 7; iptr[35] = 5;
-		RenderBuffer::StopStoring();
+		// Enter the C shared-buffer algorithm with the original arguments
+		RenderBuffer_StopStoring();
 	}
  
-	RenderBuffer::RenderStuffInBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_RenderStuffInBuffer();
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

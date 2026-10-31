@@ -41,6 +41,8 @@ def header(source):
 
 def body(source):
     # Preserve every channel index, conditional branch and callback-visible state update
+    # Retain the original timer boundary when upstream calls already use C names
+    source=source.replace('(*Timer_GetTimeScale())', 'CTimer::GetTimeScale()')
     source=source[source.index('{'):]
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source)
     source=re.sub(r'(#define WORKING_VOLUME_FIELD )manager->',r'\1',source)

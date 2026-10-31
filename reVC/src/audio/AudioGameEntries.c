@@ -3,6 +3,7 @@
 #include "AudioPoliceGame.h"
 #include "DMAudio.h"
 #include <stddef.h>
+#include <stdbool.h>
 
 CVehicle *
 AudioGame_FindVehicle(void)
@@ -18,12 +19,19 @@ AudioGame_FindVehicle(void)
 	return vehicle;
 }
 
+static bool
+AudioPolice_CanReportCrime(cAudioManager *manager,enum eCrimeType type)
+{
+    // Preserve every original short-circuited eligibility and cooldown read before reading coordinates
+    return manager->m_bIsInitialised && AudioPoliceHost_MusicMode() != MUSICMODE_CUTSCENE && AudioPoliceHost_WantedLevel(AudioPoliceHost_FindPlayer()) > 0 &&
+        (type > CRIME_NONE || type < NUM_CRIME_TYPES) && manager->m_FrameCounter >= gMinTimeToNextReport[type];
+}
+
 void
 AudioPolice_ReportCrime(cAudioManager *manager, enum eCrimeType type, const CVector *position)
 {
 	// Apply the existing game eligibility and cooldown checks before updating C state
-	if (manager->m_bIsInitialised && AudioPoliceHost_MusicMode() != MUSICMODE_CUTSCENE && AudioPoliceHost_WantedLevel(AudioPoliceHost_FindPlayer()) > 0 &&
-		(type > CRIME_NONE || type < NUM_CRIME_TYPES) && manager->m_FrameCounter >= gMinTimeToNextReport[type]) {
+	if (AudioPolice_CanReportCrime(manager,type)) {
 		// Preserve duplicate, slot-selection, and cooldown behavior through the C API
 		AudioCrimePosition plain;
 		AudioPoliceHost_CrimePosition(position, &plain);
@@ -36,5 +44,12 @@ DMAudio_ReportCrime(enum eCrimeType crime, const CVector *position)
 {
 	// Apply the original crime operation to the live C audio owner
 	AudioPolice_ReportCrime(&AudioManager, crime, position);
+}
+void
+DMAudio_ReportCrimeAt(enum eCrimeType crime,const AudioCrimePosition *position)
+{
+    // Read the live canonical C position only after the original audio eligibility callbacks
+    if(AudioPolice_CanReportCrime(&AudioManager,crime))
+        AudioCrimes_Report(AudioManager.m_aCrimes,gMinTimeToNextReport,crime,AudioManager.m_FrameCounter,position->x,position->y,position->z);
 }
 //- rouz edit (ChatGPT)

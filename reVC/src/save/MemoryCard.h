@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "common.h"
 #ifdef PS2_MENU
@@ -195,3 +196,4 @@ public:
 
 extern CMemoryCard TheMemoryCard;
 #endif
+//- rouz edit (ChatGPT)

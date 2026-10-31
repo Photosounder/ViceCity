@@ -1,31 +1,33 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
 
-class CAntenna
-{
-public:
+typedef struct AntennasVector {
+	float x, y, z;
+} AntennasVector;
+typedef struct Antenna {
 	bool active;
 	bool updatedLastFrame;
-	uint32 id;
+	uint32_t id;
 	float segmentLength;
-	CVector pos[6];
-	CVector speed[6];
-
-	void Update(CVector dir, CVector pos);
-};
-
-class CAntennas
-{
-	// no need to use game's array
-	static CAntenna aAntennas[NUMANTENNAS];
-public:
-	static void Init(void);
-	static void Update(void);
-	static void RegisterOne(uint32 id, CVector dir, CVector position, float length);
-	static void Render(void);
-	//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-	static void RegisterOneForEnvMap(uint32 id, CVector dir, CVector position, float length);
-	static void RenderForEnvMap(void);
+	AntennasVector pos[6];
+	AntennasVector speed[6];
+} Antenna;
+#ifdef __cplusplus
+extern "C" {
 #endif
-	//- rouz edit (ChatGPT)
-};
+void Antennas_Init(void);
+void Antennas_Update(void);
+void Antennas_RegisterOne(uint32_t id, AntennasVector dir, AntennasVector position, float length);
+void Antennas_Render(void);
+void Antenna_Update(Antenna *antenna, AntennasVector dir, AntennasVector basepos);
+#ifdef REVC_SOFTWARE_POLYGONS
+void Antennas_RegisterOneForEnvMap(uint32_t id, AntennasVector dir, AntennasVector position, float length);
+void Antennas_RenderForEnvMap(void);
+#endif
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

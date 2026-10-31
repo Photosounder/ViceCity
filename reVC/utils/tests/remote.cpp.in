@@ -1,0 +1,197 @@
+#include "owners.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#ifdef NATIVE_PROJECT_HEADERS
+#undef malloc
+#undef free
+extern "C" void *cita_win_malloc(size_t size,const char *,const char *,int)
+{
+    // Supply the native allocator boundary with quiet CRT storage for the real C pool
+    return (std::malloc)(size);
+}
+extern "C" void cita_win_free(void *pointer,const char *,const char *,int)
+{
+    // Release the same test storage without creating an allocator diagnostic window
+    (std::free)(pointer);
+}
+#endif
+
+CPlayerInfo CWorld::Players[NUMPLAYERS];uint8 CWorld::PlayerInFocus;
+int32 CCarCtrl::NumMissionCars,CCarCtrl::NumRandomCars;
+CCamera TheCamera;
+extern "C" {uint32_t Timer_timeMs;}
+static CPool pool;
+static CVehicle first,second,previous;
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states,calls,gives,takes,constructs,grounds,distances,finds,appearances,cameras,zooms,references,joins,adds;
+static int scenario,findCount,appearanceCount,modeSeen,zoomSeen,constructorModel,constructorKind;
+static CAutomobile *created;
+static float groundValue,distanceValue,groundProbe[3];
+static bool groundFound;
+
+static void word(uint32_t value)
+{
+    // Fold a scalar in a fixed byte order independently of pointers and padding
+    for(int i=0;i<4;i++){hashValue^=(value>>(8*i))&255;hashValue*=1099511628211ULL;}
+}
+static void number(float value)
+{
+    // Observe each actual floating representation without aliasing it as another scalar type
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static int identity(const CEntity *entity)
+{
+    // Normalize actual pointer identities while preserving distinct native objects
+    return entity?entity->id:0;
+}
+static void vehicle(const CVehicle *car)
+{
+    // Observe every vehicle field that the complete controller reads or writes
+    word(identity(car));if(!car)return;
+    word(car->status);word(car->VehicleCreatedBy);word(car->bIsLocked);word(car->bEngineOn);
+    word(car->AutoPilot.m_nCarMission);word(car->AutoPilot.m_nTempAction);word(car->AutoPilot.m_nDrivingStyle);
+    word(car->AutoPilot.m_nCruiseSpeed);number(car->AutoPilot.m_fMaxTrafficSpeed);
+    word(uint8(car->AutoPilot.m_nNextLane));word(uint8(car->AutoPilot.m_nCurrentLane));number(car->baseDistance);
+    for(int row=0;row<4;row++)for(int column=0;column<4;column++)number(car->matrix.f[row][column]);
+}
+static void observe(unsigned tag,const CVehicle *car=nullptr)
+{
+    // Record original externally visible call order and all live controller state at that point
+    ++states;word(tag);vehicle(car);vehicle(&first);vehicle(&second);vehicle(&previous);
+    const CPlayerInfo &player=CWorld::Players[0];word(identity(player.m_pRemoteVehicle));word(player.m_nTimeLostRemoteCar);
+    word(player.m_bInRemoteMode);word(player.field_D5);word(player.field_D6);
+    word(CCarCtrl::NumMissionCars);word(CCarCtrl::NumRandomCars);word(Timer_timeMs);word(pool.m_allocPtr);
+    for(int i=0;i<pool.m_size;i++)word(pool.m_flags[i]);
+}
+static void require(bool condition)
+{
+    // Stop immediately when an independent controller contract check fails
+    if(!condition){fprintf(stderr,"Remote assertion scenario %d states %u\n",scenario,states);abort();}
+}
+static void seed(CVehicle *car,int id)
+{
+    // Initialize every observed named member while leaving the real C++ object and subobjects alive
+    car->id=id;car->status=STATUS_SIMPLE;car->VehicleCreatedBy=MISSION_VEHICLE;car->bIsLocked=true;car->bEngineOn=false;
+    car->AutoPilot.m_nCarMission=17;car->AutoPilot.m_nTempAction=9;car->AutoPilot.m_nDrivingStyle=3;
+    car->AutoPilot.m_nCruiseSpeed=247;car->AutoPilot.m_fMaxTrafficSpeed=123.5f;car->AutoPilot.m_nNextLane=-7;car->AutoPilot.m_nCurrentLane=5;
+    car->baseDistance=distanceValue;
+    for(int row=0;row<4;row++)for(int column=0;column<4;column++)car->matrix.f[row][column]=float(row*4+column)+0.25f;
+}
+CAutomobile::CAutomobile(int32 modelId,uint8 kind)
+{
+    // Model only the native construction boundary and preserve actual pool storage and AutoPilot construction
+    model=modelId;constructorModel=modelId;constructorKind=kind;seed(this,700);VehicleCreatedBy=kind;created=this;
+    ++constructs;++calls;observe(1,this);
+}
+CPool *CPools::GetVehiclePool(void)
+{
+    // Return the actual C pool used by both original allocation and the native backend
+    return &pool;
+}
+float CEntity::GetDistanceFromCentreOfMassToBaseOfModel(void)
+{
+    // Count this operand without imposing an order on the original addition's two function calls
+    ++distances;++calls;return static_cast<CVehicle*>(this)->baseDistance;
+}
+float CWorld::FindGroundZFor3DCoord(float x,float y,float z,bool *found)
+{
+    // Observe the complete native ground-query argument and output contract
+    ++grounds;++calls;groundProbe[0]=x;groundProbe[1]=y;groundProbe[2]=z;*found=groundFound;return groundValue;
+}
+void CEntity::SetStatus(uint8 value)
+{
+    // Preserve status mutation before the next externally visible native operation
+    status=value;++calls;observe(2,static_cast<CVehicle*>(this));
+}
+void CCarCtrl::JoinCarWithRoadSystem(CVehicle *car)
+{
+    // Perturb original live autopilot fields before the controller applies its explicit configuration
+    ++joins;++calls;observe(3,car);car->AutoPilot.m_nCruiseSpeed=231;car->AutoPilot.m_fMaxTrafficSpeed=-2.5f;
+    car->AutoPilot.m_nNextLane=6;car->AutoPilot.m_nCurrentLane=-4;
+    if(scenario&16)CWorld::Players[0].m_pRemoteVehicle=&second;
+}
+void CWorld::Add(CEntity *entity)
+{
+    // Verify complete configuration before world insertion and later player assignment
+    CVehicle *car=static_cast<CVehicle*>(entity);++adds;++calls;observe(4,car);
+    require(car->status==STATUS_PLAYER_REMOTE && car->bIsLocked && car->bEngineOn);
+    require(car->AutoPilot.m_nCarMission==MISSION_NONE && car->AutoPilot.m_nTempAction==TEMPACT_NONE && car->AutoPilot.m_nDrivingStyle==DRIVINGSTYLE_STOP_FOR_CARS);
+    require(car->AutoPilot.m_nCruiseSpeed==9 && car->AutoPilot.m_fMaxTrafficSpeed==9.0f && car->AutoPilot.m_nNextLane==0 && car->AutoPilot.m_nCurrentLane==0);
+    if(scenario&32)CWorld::Players[0].m_pRemoteVehicle=&first;
+}
+CVehicle *FindPlayerVehicle(void)
+{
+    // Retain separate live first and second lookups including changed return objects
+    ++finds;++findCount;++calls;observe(5);
+    if(!(scenario&1))return nullptr;
+    if(scenario&64)CWorld::Players[0].m_pRemoteVehicle=&previous;
+    return findCount==1?&first:((scenario&2)?&second:&first);
+}
+void CEntity::RegisterReference(CEntity **slot)
+{
+    // Check the original remote-slot address and allow a native registration to replace its live contents
+    ++references;++calls;observe(6,static_cast<CVehicle*>(this));
+    require((void*)slot==(void*)&CWorld::Players[0].m_pRemoteVehicle);
+    require(CWorld::Players[0].m_pRemoteVehicle==this && this==created);
+    if(scenario&128)CWorld::Players[0].m_pRemoteVehicle=&previous;
+}
+eVehicleAppearance CVehicle::GetVehicleAppearance(void)
+{
+    // Return scripted native appearances independently on each short-circuit query
+    ++appearances;++appearanceCount;++calls;observe(7,this);
+    static const eVehicleAppearance choices[][2]={{VEHICLE_APPEARANCE_PLANE,VEHICLE_APPEARANCE_CAR},{VEHICLE_APPEARANCE_HELI,VEHICLE_APPEARANCE_HELI},{VEHICLE_APPEARANCE_CAR,VEHICLE_APPEARANCE_HELI},{VEHICLE_APPEARANCE_HELI,VEHICLE_APPEARANCE_CAR},{VEHICLE_APPEARANCE_BOAT,VEHICLE_APPEARANCE_BIKE},{VEHICLE_APPEARANCE_NONE,VEHICLE_APPEARANCE_PLANE}};
+    require(appearanceCount<=2);return choices[(scenario>>2)%6][appearanceCount-1];
+}
+void CCamera::TakeControl(CEntity *target,int16 mode,int16 change,int32 controller)
+{
+    // Observe the original car identity and complete camera switch arguments
+    ++cameras;++calls;observe(8,static_cast<CVehicle*>(target));word(mode);word(change);word(controller);modeSeen=mode;
+    require(target==created && change==INTERPOLATION && controller==CAMCONTROL_SCRIPT);
+    if(scenario&256){CWorld::Players[0].m_pRemoteVehicle=&second;Timer_timeMs+=31;}
+}
+void CCamera::SetZoomValueCamStringScript(int16 value)
+{
+    // Verify zoom follows only the aircraft camera branch
+    ++zooms;++zoomSeen;++calls;observe(9);word(value);require(value==0 && modeSeen==CCam::MODE_CAM_ON_A_STRING);
+}
+int main(void)
+{
+    // Exercise every branch, live external lookup and native storage transition with valid original inputs
+    require(CPool_Init(&pool,3,sizeof(CAutomobile),"Remote test")!=0);
+    const uint16_t models[]={0,1,131,171,464,594,65535};
+    const float values[]={-1000.0f,-0.0f,0.125f,100.5f,2048.0f};
+    for(scenario=0;scenario<768;scenario++){
+        // Seed all actual canonical native objects and flags before the complete creation operation
+        Timer_timeMs=uint32_t(scenario)*77213u;groundValue=values[(scenario/3)%5];distanceValue=values[(scenario/7)%5];groundFound=bool(scenario&8);
+        seed(&first,101);seed(&second,102);seed(&previous,103);created=nullptr;
+        CPlayerInfo &player=CWorld::Players[0];player.m_pRemoteVehicle=&previous;player.m_nTimeLostRemoteCar=719;player.m_bInRemoteMode=false;player.field_D5=true;player.field_D6=false;
+        CWorld::PlayerInFocus=0;CCarCtrl::NumMissionCars=50;CCarCtrl::NumRandomCars=13;
+        findCount=appearanceCount=zoomSeen=0;modeSeen=-1;
+        float x=values[scenario%5],y=values[(scenario+1)%5],z=values[(scenario+2)%5],rotation=values[(scenario+3)%5];uint16_t model=models[scenario%7];
+        ++gives;TestRemote_RunGive(x,y,z,rotation,model);observe(10,created);
+        require(created && constructorModel==model && constructorKind==MISSION_VEHICLE);
+        require(groundProbe[0]==x && groundProbe[1]==y && groundProbe[2]==z+2.0f);
+        require(created->matrix.px==x && created->matrix.py==y && created->matrix.pz==distanceValue+groundValue);
+        require(findCount==((scenario&1)?2:1));require(first.status==((scenario&1)&&!(scenario&2)?STATUS_PLAYER_DISABLED:STATUS_SIMPLE));
+        require(second.status==((scenario&1)&&(scenario&2)?STATUS_PLAYER_DISABLED:STATUS_SIMPLE));
+        bool aircraft=((scenario>>2)%6)<3;require(appearanceCount==(((scenario>>2)%6)==0?1:2));
+        require(modeSeen==(aircraft?CCam::MODE_CAM_ON_A_STRING:CCam::MODE_BEHINDCAR) && zoomSeen==int(aircraft));
+        for(int kind=0;kind<6;kind++)for(int explosion=0;explosion<2;explosion++){
+            // Cover every creation kind, both explicit booleans and time boundaries without adding invalid null inputs
+            static const uint8 kinds[]={0,RANDOM_VEHICLE,MISSION_VEHICLE,3,4,255};
+            CVehicle *remote=(kind&1)?&previous:static_cast<CVehicle*>(created);player.m_pRemoteVehicle=remote;
+            remote->VehicleCreatedBy=kinds[kind];remote->bIsLocked=true;player.m_bInRemoteMode=false;player.field_D5=!explosion;player.field_D6=false;
+            CCarCtrl::NumMissionCars=50;CCarCtrl::NumRandomCars=-13;Timer_timeMs=(kind==5)?0xffffffffu:uint32_t(scenario*100+kind);
+            ++takes;TestRemote_RunTake(bool(explosion));observe(11,remote);
+            require(remote->VehicleCreatedBy==(kinds[kind]==MISSION_VEHICLE?RANDOM_VEHICLE:kinds[kind]));
+            require(CCarCtrl::NumMissionCars==50-int(kinds[kind]==MISSION_VEHICLE) && CCarCtrl::NumRandomCars==-13+int(kinds[kind]==MISSION_VEHICLE));
+            require(!remote->bIsLocked && player.m_nTimeLostRemoteCar==Timer_timeMs && player.m_bInRemoteMode && player.field_D5==bool(explosion) && player.field_D6);
+        }
+        // Destroy only the actual constructed pool object before releasing its raw C slot
+        created->~CAutomobile();CPool_Delete(&pool,created);
+    }
+    // Report complete observed equivalence without launching the game or creating a window
+    CPool_Flush(&pool);
+    printf("states=%u calls=%u gives=%u takes=%u constructs=%u grounds=%u distances=%u finds=%u appearances=%u cameras=%u zooms=%u references=%u joins=%u adds=%u hash=%016llx\n",states,calls,gives,takes,constructs,grounds,distances,finds,appearances,cameras,zooms,references,joins,adds,(unsigned long long)hashValue);
+}

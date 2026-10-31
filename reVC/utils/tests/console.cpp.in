@@ -1,0 +1,194 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs; }
+RsGlobalType RsGlobal;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,prints,adds,formats,displays;
+static int hook,active;
+static bool triggered;
+
+static void require(bool value)
+{
+    // Report the exact failing state without launching a dialog
+    if(!value){fprintf(stderr,"states=%u calls=%u hook=%d\n",states,calls,hook);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Hash observations independently of actual process addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare every original finite coordinate and scale bit
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void event(unsigned value)
+{
+    // Include the original live ring counters and time at each owner call
+    calls++;word(value);word(Timer_timeMs);Console record=TestCo_Get(active);word(record.m_nLineCount);word(record.m_nCurrentLine);word(RsGlobal.width);
+}
+static void snapshot(void)
+{
+    // Observe every row element, timestamp, color byte and instance counter
+    states++;word(Timer_timeMs);
+    for(int instance=0;instance<3;instance++){
+        // Include inactive retained buffers and all independent console instances
+        Console record=TestCo_Get(instance);word(record.m_nLineCount);word(record.m_nCurrentLine);
+        for(int line=0;line<CONSOLE_MAX_LINES;line++){
+            // Compare all forty elements, including bytes after the first terminator
+            for(int j=0;j<CONSOLE_MAX_STR_LEN;j++)word(record.Buffers[line][j]);word(record.m_aTimer[line]);word(record.m_aRed[line]);word(record.m_aGreen[line]);word(record.m_aBlue[line]);
+        }
+    }
+}
+static void reset(void)
+{
+    // Seed complete records with canaries before applying the original partial initializer
+    hook=0;triggered=false;active=0;Timer_timeMs=5000;RsGlobal.width=1280;RsGlobal.height=720;
+    for(int instance=0;instance<3;instance++){
+        // Retain original row contents and metadata across each Init call
+        Console record;memset(&record,0,sizeof(record));record.m_nLineCount=6;record.m_nCurrentLine=3;
+        for(int line=0;line<CONSOLE_MAX_LINES;line++){
+            // Supply distinguishable Unicode tails, colors and stale timestamps
+            for(int j=0;j<CONSOLE_MAX_STR_LEN;j++)record.Buffers[line][j]=(uint16_t)(0x1100+instance*320+line*40+j);record.Buffers[line][0]=0;record.m_aTimer[line]=100+line;record.m_aRed[line]=(uint8_t)(17+line);record.m_aGreen[line]=(uint8_t)(73+line);record.m_aBlue[line]=(uint8_t)(159+line);
+        }
+        TestCo_Set(instance,&record);TestCo_Init(instance);
+    }
+}
+static void add(int instance,char *text,bool split=true)
+{
+    // Submit the same live input through the original instance or separate C11 caller
+    adds++;TestCo_Add(instance,text,31,127,241,split);
+}
+static void display(int instance)
+{
+    // Keep callbacks attached to the current logical owner during nested display
+    displays++;int previous=active;active=instance;TestCo_Display(instance);active=previous;
+}
+static void mutation(unsigned where)
+{
+    // Apply targeted live owner mutations only once per corpus case
+    if(triggered)return;
+    if(hook==1 && where==1){triggered=true;TestCo_Init(active);}
+    else if(hook==2 && where==2){triggered=true;char s[]="injected";add(active,s);}
+    else if(hook==3 && where==3){triggered=true;Timer_timeMs+=20001;}
+    else if(hook==4 && where==4){triggered=true;RsGlobal.width=1920;}
+    else if(hook==5 && where==5){triggered=true;Console record=TestCo_Get(active);record.m_aRed[0]=249;record.Buffers[0][0]=0x5432;TestCo_Set(active,&record);}
+    else if(hook==6 && where==6){triggered=true;char s[]="changed during print";add(active,s);}
+    else if(hook==7 && where==6){triggered=true;TestCo_Init(active);}
+    else if(hook==8 && where==6){triggered=true;display((active+1)%3);}
+    else if(hook==9 && where==5){triggered=true;Console record=TestCo_Get(active);record.m_nCurrentLine=5;record.m_nLineCount=3;TestCo_Set(active,&record);}
+    else if(hook==10 && where==6){triggered=true;Console record=TestCo_Get(active);record.m_nLineCount=2;TestCo_Set(active,&record);}
+}
+void CFont::SetPropOn(void)
+{
+    // Preserve the first font setup operation before any expiration
+    event(1);mutation(1);
+}
+void CFont::SetBackgroundOff(void)
+{
+    // Observe insertion during the original second setup operation
+    event(2);mutation(2);
+}
+void CFont::SetScale(float x,float y)
+{
+    // Compare the original unscaled fixed font arguments and a later live timer read
+    event(3);floating(x);floating(y);mutation(3);
+}
+void CFont::SetCentreOff(void)
+{
+    // Preserve the original font-centering state write
+    event(4);
+}
+void CFont::SetRightJustifyOff(void)
+{
+    // Preserve the original right-justify state write
+    event(5);
+}
+void CFont::SetJustifyOn(void)
+{
+    // Preserve the original justify state write
+    event(6);
+}
+void CFont::SetRightJustifyWrap(float value)
+{
+    // Compare the original zero wrap before the later screen-width read
+    event(7);floating(value);mutation(4);
+}
+void CFont::SetBackGroundOnlyTextOff(void)
+{
+    // Preserve the original background-only text state write
+    event(8);
+}
+void CFont::SetFontStyle(int16 style)
+{
+    // Compare the exact canonical standard font enum
+    event(9);word((uint16_t)style);require(style==FONT_STANDARD);
+}
+void CFont::SetPropOff(void)
+{
+    // Retain the original optional unfixed proportional-font override
+    event(10);
+}
+void CFont::SetWrapx(float value)
+{
+    // Compare the live integer screen-width conversion to float
+    event(11);floating(value);
+}
+void CFont::SetColor(CRGBA color)
+{
+    // Preserve shadow/foreground color reads and mutations before their following print
+    event(12);word(color.r);word(color.g);word(color.b);word(color.a);mutation(5);
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Verify the actual borrowed Unicode row identity and live contents before and after mutation
+    event(13);prints++;floating(x);floating(y);int owner=-1,row=-1;
+    for(int i=0;i<3;i++)for(int j=0;j<CONSOLE_MAX_LINES;j++)if(text==TestCo_Row(i,j)){owner=i;row=j;}
+    require(owner>=0);word(owner);word(row);for(int j=0;j<CONSOLE_MAX_STR_LEN;j++)word(text[j]);mutation(6);text[1]^=0x21;for(int j=0;j<CONSOLE_MAX_STR_LEN;j++)word(text[j]);
+}
+int main(void)
+{
+    // Compare static zero initialization and partial Init retention for all real instances
+    snapshot();reset();snapshot();for(int i=0;i<3;i++){TestCo_Init(i);display(i);snapshot();}
+    const int lengths[]={0,1,38,39,40,41,77,78,79,80,81,119,120,121,229};
+    for(int lengthIndex=0;lengthIndex<15;lengthIndex++)for(int split=0;split<2;split++){
+        // Exercise both sides of each exact split/truncation boundary
+        reset();char text[260];int length=lengths[lengthIndex];for(int j=0;j<length;j++)text[j]=(char)('A'+j%26);text[length]=0;add(0,text,split!=0);snapshot();display(0);snapshot();
+    }
+    for(int byte=1;byte<256;byte++){
+        // Preserve signed or unsigned plain-char widening into sixteen-bit Unicode storage
+        reset();char text[3]={(char)byte,(char)(256-byte),0};add(1,text,false);snapshot();
+    }
+    for(int count=0;count<=10;count++)for(int current=0;current<8;current++){
+        // Cover ring saturation and retained seven-line behavior at every start index
+        reset();Console record=TestCo_Get(0);record.m_nLineCount=(uint8_t)count;record.m_nCurrentLine=(uint8_t)current;for(int i=0;i<8;i++)record.m_aTimer[i]=Timer_timeMs;TestCo_Set(0,&record);char text[]="ring";add(0,text,false);snapshot();display(0);snapshot();
+    }
+    const uint32_t elapsed[]={0,19999,20000,20001,20002,0x7fffffff,0xffffffffu};
+    for(int boundary=0;boundary<7;boundary++)for(int wrapped=0;wrapped<2;wrapped++){
+        // Preserve unsigned subtraction and strict expiration after twenty thousand milliseconds
+        reset();Timer_timeMs=wrapped?0xfffffff0u:5000u;char s[]="age";for(int i=0;i<7;i++)add(2,s,false);Timer_timeMs+=elapsed[boundary];display(2);snapshot();
+    }
+    for(int row=0;row<8;row++)for(int split=0;split<2;split++)for(int offset=0;offset<3;offset++){
+        // Borrow legal character bytes of a live Unicode row, including overlapping source/destination
+        reset();Console record=TestCo_Get(0);char bytes[80];for(int j=0;j<79;j++)bytes[j]=(char)('a'+j%26);bytes[79]=0;memcpy(record.Buffers[row],bytes,sizeof(bytes));TestCo_Set(0,&record);adds++;TestCo_Alias(0,row,offset,split!=0);snapshot();
+    }
+    for(int pattern=0;pattern<3;pattern++){
+        // Compare actual variadic formatting, promoted types and singleton splitting
+        reset();formats++;TestCo_Printf(pattern);snapshot();display(0);snapshot();
+    }
+    for(int h=1;h<=10;h++){
+        // Compare live counter/row/color mutations, callbacks and nested instance rendering
+        reset();char s[]="callback";for(int instance=0;instance<3;instance++)for(int line=0;line<7;line++)add(instance,s,false);hook=h;display(0);require(triggered);snapshot();
+    }
+    reset();
+    for(int frame=0;frame<1500;frame++){
+        // Sustain independent insertion, partial resets, time wrap, expiry and borrowed rendering
+        Timer_timeMs+=37;char s[100];int length=frame%99;for(int i=0;i<length;i++)s[i]=(char)(33+(frame+i)%90);s[length]=0;if(frame%3!=0)add(frame%3,s,frame%2!=0);if(frame%113==0)TestCo_Init(frame%3);display(frame%3);snapshot();
+    }
+    require(states>2000 && adds>1500 && prints>10000 && displays>1500 && formats==3);
+    printf("states=%u calls=%u adds=%u prints=%u displays=%u formats=%u hash=%016llx\n",states,calls,adds,prints,displays,formats,(unsigned long long)hash);
+}

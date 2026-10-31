@@ -1,0 +1,145 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeBoxDefault(void *memory,int collision);
+extern "C" void NativeBoxSize(const CBox *box,CVector *result);
+static CBox simpleStatic[3];
+static CColBox collisionStatic[3];
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0;
+static uint32_t randomState=0x31415926;
+static void require(bool condition)
+{
+    // Report the exact failed invariant without opening a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations across separate executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence all random input generation before passing function arguments
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Initialize every byte including explicit metadata and trailing padding
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static CBox &bounds(CColBox &value)
+{
+    // Select the original base subobject or its replacement at the same address
+#ifdef ORIGINAL
+    return value;
+#else
+    return value.bounds;
+#endif
+}
+static void copyBounds(void *self,const void *min,const void *max)
+{
+    // Model complete minimum assignment before the maximum reference is read
+    unsigned char temporary[12];memcpy(temporary,min,12);memcpy(self,temporary,12);
+    memcpy(temporary,max,12);memcpy((unsigned char*)self+12,temporary,12);
+}
+static void canonical(float &value)
+{
+    // Normalize only arithmetic NaN payloads while retaining every finite and signed-zero result bit
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void sizeCase(const CBox &box)
+{
+    // Compare both the independent C11 and native C++ return-value boundaries
+    CVector actual,native,lo,hi;memcpy(&lo,&box,12);memcpy(&hi,(const unsigned char*)&box+12,12);
+    CVector expected=hi-lo;Run_Size(&box,&actual);NativeBoxSize(&box,&native);
+    canonical(expected.x);canonical(expected.y);canonical(expected.z);
+    canonical(actual.x);canonical(actual.y);canonical(actual.z);canonical(native.x);canonical(native.y);canonical(native.z);
+    require(memcmp(&actual,&expected,12)==0&&memcmp(&native,&expected,12)==0);observe(&actual,12);
+}
+static void lifetimes()
+{
+    // Inspect initialized storage while each default-constructed object is still alive
+    alignas(CColBox) unsigned char memory[28],expected[28];memset(expected,0xa5,28);
+    for(int collision=0;collision<2;++collision){
+        memcpy(memory,expected,28);void *value=NativeBoxDefault(memory,collision);
+        require(value==memory&&memcmp(memory,expected,28)==0);observe(memory,28);
+        if(collision)((CColBox*)value)->~CColBox();else ((CBox*)value)->~CBox();++states;
+    }
+    // Retain zero-filled static records without adding dynamic initialization policy
+    unsigned char zero[84]={0};require(memcmp(simpleStatic,zero,sizeof(simpleStatic))==0&&memcmp(collisionStatic,zero,sizeof(collisionStatic))==0);
+    observe(simpleStatic,sizeof(simpleStatic));observe(collisionStatic,sizeof(collisionStatic));++states;
+}
+static void aliasesAndAssignment()
+{
+    // Cover all external/minimum/maximum aliases through every setter including the inherited overload
+    for(unsigned test=0;test<512;++test)for(unsigned a=0;a<3;++a)for(unsigned b=0;b<3;++b)for(unsigned op=0;op<3;++op){
+        CColBox actual,expected;CVector external;fill(&actual,28);fill(&external,12);memcpy(&expected,&actual,28);
+        CBox &base=bounds(actual);require((void*)&base==(void*)&actual);
+        const void *sources[3]={&external,&base.min,&base.max};
+        const void *models[3]={&external,&bounds(expected).min,&bounds(expected).max};
+        copyBounds(&expected,models[a],models[b]);uint8_t surface=(uint8_t)test,piece=(uint8_t)(test>>1);
+        if(op==0)Run_BoxSet(&base,sources[a],sources[b]);
+        else if(op==1)Run_Bounds(&actual,sources[a],sources[b]);
+        else{expected.surface=surface;expected.piece=piece;Run_Set(&actual,sources[a],sources[b],surface,piece);}
+        require(memcmp(&actual,&expected,28)==0);observe(&actual,28);++states;
+    }
+    // Check ordinary and self-assignment with distinct destination tail-padding bytes and returned identity
+    for(unsigned test=0;test<2048;++test)for(unsigned self=0;self<2;++self){
+        CColBox actual,source,expected;fill(&actual,28);fill(&source,28);memcpy(&expected,&actual,28);
+        const CColBox *other=self?&actual:&source;memcpy(&expected,other,26);
+        require(Run_Assign(&actual,other)==&actual);require(memcmp(&actual,&expected,28)==0);observe(&actual,28);++states;
+    }
+}
+static void coordinateRepresentations()
+{
+    // Cover every surface/piece pair and repeated-halfword floating representation without copying tail padding
+    for(unsigned test=0;test<65536;++test){
+        CColBox actual,expected;CVector a,b;fill(&actual,28);fill(&a,12);fill(&b,12);
+        uint32_t bits=(test<<16)|test;memcpy(&a.x,&bits,4);bits^=0x80000000U;memcpy(&b.z,&bits,4);
+        memcpy(&expected,&actual,28);copyBounds(&expected,&a,&b);expected.surface=(uint8_t)test;expected.piece=(uint8_t)(test>>8);
+        Run_Set(&actual,&a,&b,expected.surface,expected.piece);require(memcmp(&actual,&expected,28)==0);observe(&actual,28);++states;
+    }
+    // Compare signed, reversed, nonfinite and payload-bearing size queries component by component
+    const uint32_t special[]={0,0x80000000U,0x3f800000U,0xbf800000U,0x00000001U,0x80000001U,0x7f7fffffU,0xff7fffffU,0x7f800000U,0xff800000U,0x7fc12345U,0xffc98765U,0x7f812345U};
+    for(unsigned a=0;a<13;++a)for(unsigned b=0;b<13;++b){
+        CBox box;unsigned char *bytes=(unsigned char*)&box;
+        for(unsigned axis=0;axis<3;++axis){uint32_t lo=special[(a+axis)%13],hi=special[(b+axis)%13];memcpy(bytes+axis*4,&lo,4);memcpy(bytes+12+axis*4,&hi,4);}
+        sizeCase(box);++states;
+    }
+}
+static CVector nextVector()
+{
+    // Generate finite geometric inputs with explicit component sequencing
+    int x=(int)(nextBits()%257)-128;int y=(int)(nextBits()%257)-128;int z=(int)(nextBits()%257)-128;
+    return CVector(x/8.0f,y/8.0f,z/8.0f);
+}
+static void geometry()
+{
+    // Exercise the exact native collision consumers with ordinary, degenerate and reversed bounds
+    for(unsigned test=0;test<16384;++test){
+        CColBox box;fill(&box,28);CVector lo=nextVector(),hi=nextVector();
+        if(test%3==0)hi=lo;
+        else if(test%3==1){hi.x=lo.x+4;hi.y=lo.y+4;hi.z=lo.z+4;}
+        Run_Set(&box,&lo,&hi,(uint8_t)test,(uint8_t)(test>>8));sizeCase(bounds(box));
+        CColLine line;memset(&line,0x6b,sizeof(line));CVector a=nextVector(),b=nextVector();
+        if(test%4==0){b.x=a.x;b.y=a.y;}
+        memcpy(&line.p0,&a,12);memcpy(&line.p1,&b,12);
+        CColSphere sphere;sphere.center=nextVector();sphere.radius=(test%17)/4.0f;sphere.surface=19;sphere.piece=7;
+        CColPoint point;memset(&point,0xa5,sizeof(point));float limit=(test%4)/4.0f;
+        uint8_t result[5];result[0]=CCollision::TestSphereBox(sphere,bounds(box));result[1]=CCollision::TestLineBox(line,bounds(box));result[2]=CCollision::TestVerticalLineBox(line,bounds(box));
+        result[3]=CCollision::ProcessLineBox(line,box,point,limit);observe(&point,sizeof(point));observe(&limit,4);
+        memset(&point,0xa5,sizeof(point));limit=(test%5)*16.0f;
+        result[4]=CCollision::ProcessSphereBox(sphere,box,point,limit);
+        canonical(point.point.x);canonical(point.point.y);canonical(point.point.z);canonical(point.normal.x);canonical(point.normal.y);canonical(point.normal.z);canonical(point.depth);canonical(limit);
+        observe(&point,sizeof(point));observe(&limit,4);observe(result,5);++states;
+    }
+}
+int main()
+{
+    // Verify complete ownership and actual collision behavior against the original records and methods
+    lifetimes();aliasesAndAssignment();coordinateRepresentations();geometry();printf("states=%u hash=%016" PRIx64 "\n",states,hashValue);return 0;
+}

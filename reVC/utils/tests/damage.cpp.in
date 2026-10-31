@@ -1,0 +1,134 @@
+#include "owners.h"
+#include "entry.h"
+
+static uint64_t digest=1469598103934665603ULL;
+static unsigned checks,states;
+static void value(uint64_t input)
+{
+    // Hash only defined scalar observations and deliberately seeded save bytes
+    digest=(digest^input)*1099511628211ULL;
+}
+static void require(bool condition)
+{
+    // Fail quietly at the first violated state or bit-packing contract
+    ++checks;
+    if(!condition){
+        // Keep diagnostics specific without opening native assertion windows
+        fprintf(stderr,"Check %u failed at state %u\n",checks,states);exit(2);
+    }
+}
+static uint32_t bits(float input)
+{
+    // Retain finite values and signed zero while normalizing computed NaN payloads
+    uint32_t result;memcpy(&result,&input,sizeof(result));return (result&0x7fffffffu)>0x7f800000u?0x7fc00000u:result;
+}
+static void observe(const CDamageManager *self)
+{
+    // Observe every owned field without reading constructor-indeterminate padding
+    ++states;value(bits(self->m_fWheelDamageEffect));value(self->m_engineStatus);
+    for(unsigned i=0;i<4;++i)value(self->m_wheelStatus[i]);
+    for(unsigned i=0;i<6;++i)value(self->m_doorStatus[i]);
+    value(self->m_lightStatus);value(self->m_panelStatus);value(self->field_18);
+}
+static void initial(const CDamageManager *self)
+{
+    // Verify the complete original constructor contract before door initialization begins
+    require(self->m_fWheelDamageEffect==.5f && self->m_engineStatus==0 && self->field_18==1);
+    require(self->m_lightStatus==0 && self->m_panelStatus==0);
+    for(unsigned i=0;i<4;++i)require(self->m_wheelStatus[i]==0);
+    for(unsigned i=0;i<6;++i)require(self->m_doorStatus[i]==0);
+    observe(self);
+}
+struct Owner {
+    CDamageManager Damage;CDoor Doors[VEHICLE_DOOR_COUNT];
+    Owner(){
+@DAMAGE_INIT@
+        // Check damage at the old constructor boundary before any door initialization
+        initial(&Damage);
+@DOOR_INIT@
+    }
+};
+static void seed(CDamageManager *self,uint32_t word,unsigned byte)
+{
+    // Initialize every scalar independently of constructor padding and prior operations
+    Run_Init(self);self->m_fWheelDamageEffect=1.25f;self->m_engineStatus=(uint8_t)byte;
+    for(unsigned i=0;i<4;++i)self->m_wheelStatus[i]=(uint8_t)(byte+i*37);
+    for(unsigned i=0;i<6;++i)self->m_doorStatus[i]=(uint8_t)(byte+i*29);
+    self->m_lightStatus=word;self->m_panelStatus=word^0x96a55a69u;self->field_18=(uint8_t)(byte^0x5a);
+}
+int main()
+{
+    // Require explicit initialization to work on reused nonzero automobile storage
+    alignas(Owner) unsigned char ownerStorage[sizeof(Owner)];memset(ownerStorage,0xa5,sizeof(ownerStorage));Owner *owner=new(ownerStorage) Owner();owner->~Owner();
+    CDamageManager self;Run_Init(&self);initial(&self);
+    const uint32_t words[]={0,1,0xffffffffu,0x80000000u,0x76543210u,0x89abcdefu,0x55aa55aau};
+    const uint32_t statuses[]={0,1,2,3,4,15,16,255,256,0x7fffffffu,0xffffffffu};
+    for(unsigned word=0;word<7;++word)for(unsigned status=0;status<11;++status){
+        // Verify all packed nibbles, including the high nibble and unrelated-bit preservation
+        for(int panel=0;panel<8;++panel){
+            // Deposit masks the status to four bits and leaves every other nibble untouched
+            seed(&self,words[word],status);self.m_panelStatus=words[word];uint32_t mask=0xfu<<(panel*4);
+            Run_SetPanelStatus(&self,panel,statuses[status]);require(self.m_panelStatus==((words[word]&~mask)|((statuses[status]<<(panel*4))&mask)));
+            int32_t actual=Run_GetPanelStatus(&self,panel);require(actual==int32_t(statuses[status]&15));require(Run_GetPanelStatusFromWord(self.m_panelStatus,panel)==actual);value(actual);observe(&self);
+            bool advanced=Run_ProgressPanelDamage(&self,(uint8_t)panel);require(advanced==(actual!=DOOR_STATUS_MISSING));value(advanced);observe(&self);
+        }
+        for(int light=0;light<16;++light){
+            // Preserve the original two-bit arithmetic beyond the four named light identifiers
+            seed(&self,words[word],status);self.m_lightStatus=words[word];uint32_t mask=3u<<(light*2);
+            Run_SetLightStatus(&self,light,statuses[status]);require(self.m_lightStatus==((words[word]&~mask)|((statuses[status]<<(light*2))&mask)));
+            int32_t actual=Run_GetLightStatus(&self,light);require(actual==int32_t(statuses[status]&3));value(actual);observe(&self);
+        }
+    }
+    for(unsigned status=0;status<256;++status){
+        // Exhaust the byte-status progression and its distinct missing-state comparisons
+        for(unsigned door=0;door<6;++door){
+            // Door status advances and wraps independently of its packed-panel naming quirk
+            seed(&self,0x12345678u,status);Run_SetDoorStatus(&self,door,status);require(Run_GetDoorStatus(&self,door)==int32_t(status));bool changed=Run_ProgressDoorDamage(&self,(uint8_t)door);
+            require(changed==(status!=PANEL_STATUS_MISSING));require(self.m_doorStatus[door]==(status==PANEL_STATUS_MISSING?status:uint8_t(status+1)));value(changed);observe(&self);
+        }
+        for(unsigned wheel=0;wheel<4;++wheel){
+            // Wheel progression uses its own missing status and retains byte wraparound
+            seed(&self,0x12345678u,status);Run_SetWheelStatus(&self,wheel,status);require(Run_GetWheelStatus(&self,wheel)==int32_t(status));bool changed=Run_ProgressWheelDamage(&self,(uint8_t)wheel);
+            require(changed==(status!=WHEEL_STATUS_MISSING));require(self.m_wheelStatus[wheel]==(status==WHEEL_STATUS_MISSING?status:uint8_t(status+1)));value(changed);observe(&self);
+        }
+        seed(&self,0xdeadbeefu,status);Run_SetEngineStatus(&self,status);require(Run_GetEngineStatus(&self)==int32_t(status>250?250:status));uint8_t oldEngine=self.m_engineStatus;require(!Run_ProgressEngineDamage(&self) && self.m_engineStatus==oldEngine);observe(&self);
+        seed(&self,0xdeadbeefu,status);uint8_t marker=self.field_18;Run_ResetDamageStatus(&self);require(self.field_18==marker && self.m_fWheelDamageEffect==.5f && self.m_engineStatus==0 && self.m_panelStatus==0 && self.m_lightStatus==0);observe(&self);
+#if defined(FIX_BUGS) || defined(TEST_CLASSIC_WRECK)
+        // The fixed path is defined; native MSVC separately records its historical classic execution
+        seed(&self,0x12345678u,status);uint8_t wheels[4];memcpy(wheels,self.m_wheelStatus,sizeof(wheels));Run_FuckCarCompletely(&self);
+        require(self.m_wheelStatus[0]==WHEEL_STATUS_MISSING && !memcmp(self.m_wheelStatus+1,wheels+1,3));require(self.m_engineStatus==250);observe(&self);
+#endif
+    }
+    for(unsigned status=0;status<11;++status){
+        // Preserve clamping and byte narrowing for values wider than the stored status fields
+        seed(&self,0,status);Run_SetEngineStatus(&self,statuses[status]);require(self.m_engineStatus==(statuses[status]>250?250:statuses[status]));Run_SetDoorStatus(&self,0,statuses[status]);Run_SetWheelStatus(&self,0,statuses[status]);require(self.m_doorStatus[0]==uint8_t(statuses[status]) && self.m_wheelStatus[0]==uint8_t(statuses[status]));observe(&self);
+    }
+    for(int component=0;component<32;++component){
+        // Cover the full original nonnegative component range without applying out-of-range panel damage
+        tComponentGroup group=COMPGROUP_DEFAULT;uint8_t sub=123;bool found=Run_GetComponentGroup(&self,component,&group,&sub);require(found);value((uint32_t)group);value(sub);
+        if(component<=COMPONENT_BUMPER_REAR){
+            // Keep byte-alias output ordering observable without loading an invalid enum representation
+            group=COMPGROUP_DEFAULT;Run_GetComponentGroup(&self,component,&group,(uint8_t*)&group);uint32_t raw;memcpy(&raw,&group,sizeof(raw));value(raw);
+        }
+        ++states;
+    }
+    const float damageValues[]={-INFINITY,-100.0f,-0.0f,0.0f,1.0f,50.0f,100.0f,149.99998f,150.0f,150.00002f,219.99998f,220.0f,220.00002f,1000.0f,INFINITY,NAN};
+    float originalCoefficients[7];memcpy(originalCoefficients,G_aComponentDamage,sizeof(originalCoefficients));
+    for(unsigned table=0;table<3;++table){
+        // The live global coefficient table must remain mutable across all record operations
+        for(unsigned i=0;i<7;++i)G_aComponentDamage[i]=table==0?originalCoefficients[i]:table==1?1.0f:float(i+1)*.25f;
+        for(int component=0;component<=COMPONENT_BUMPER_REAR;++component)for(unsigned damage=0;damage<16;++damage)for(unsigned status=0;status<16;++status){
+            // Preserve scaling, strict thresholds, windscreen light writes and the engine progression no-op
+            seed(&self,status*0x11111111u,status);uint8_t engine=self.m_engineStatus;float factor=self.m_fWheelDamageEffect;uint8_t marker=self.field_18;
+            bool changed=Run_ApplyDamage(&self,component,damageValues[damage],table?NAN:0.0f);require(self.m_engineStatus==engine && self.m_fWheelDamageEffect==factor && self.field_18==marker);value(changed);observe(&self);
+        }
+    }
+    memcpy(G_aComponentDamage,originalCoefficients,sizeof(originalCoefficients));
+    for(unsigned seedValue=0;seedValue<128;++seedValue){
+        // Verify a 28-byte raw record transfer with every padding byte deliberately defined
+        seed(&self,seedValue*0x01010101u,seedValue);unsigned char *raw=(unsigned char*)&self;raw[15]=0x5a;raw[25]=0xa5;raw[26]=0x3c;raw[27]=0xc3;
+        unsigned char save[32];memset(save,0xe7,sizeof(save));memcpy(save+1,&self,sizeof(self));CDamageManager restored;memcpy(&restored,save+1,sizeof(restored));require(!memcmp(&restored,&self,sizeof(self)) && save[0]==0xe7 && save[29]==0xe7);observe(&restored);
+        for(unsigned i=0;i<28;++i)value(save[i+1]);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+}

@@ -1,0 +1,130 @@
+#include <cstdio>
+#include <string>
+#include "owners.h"
+#include "caller.h"
+static CSimpleModelInfo models[16];static CBaseModelInfo *slots[32];
+static unsigned states,comparisons,matches,classifications,lookups,buildingReads,resets,noops;static uint64_t hash=1469598103934665603ULL;
+static int hook;static bool triggered;static char mutableName[256];
+extern "C" bool SourceGeneral_faststrcmp(const char *,const char *);
+static void require(bool condition)
+{
+    // Stop quietly on a bad corpus, alias contract or unexpected native owner state
+    if(!condition){fprintf(stderr,"Model registry corpus failed at state %u, comparison %u, hook %d\n",states,comparisons,hook);abort();}
+}
+static void word(uint32_t value)
+{
+    // Compare exact signed-width values and independent classification results
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void text(const char *value)
+{
+    // Retain complete case-sensitive names without relying on literal-pooling addresses
+    for(;*value;value++)word((uint8_t)*value);word(0);
+}
+static void registry(void)
+{
+    // Observe all actual global values and prove their canonical addresses remain distinct
+    for(unsigned i=0;i<136;i++){int16_t *variable=TestModel_Variable(i);require(variable!=NULL);word((uint16_t)*variable);}
+}
+static void seed(unsigned salt)
+{
+    // Mutate actual globals to exercise live reads and signed narrow values independently of name loading
+    for(unsigned i=0;i<136;i++)*TestModel_Variable(i)=(int16_t)(i*431+salt*911-32768);
+}
+static void snapshot(bool exhaustive=false)
+{
+    // Observe every model variable, original name and numerical classifier
+    states++;word(states);registry();for(unsigned i=0;i<136;i++)text(TestModel_Name(i));
+    if(exhaustive){
+        // Cover the complete signed sixteen-bit domain without invalid native model-array accesses
+        for(int id=-32768;id<=32767;id++)for(int which=1;which<15;which++){word(TestModel_RunClassify(which,(int16_t)id));classifications++;}
+    }else{
+        // Check each live ID, its neighbors, sentinels and fixed-model range boundaries after mutations
+        for(unsigned i=0;i<136;i++){int value=*TestModel_Variable(i);for(int delta=-1;delta<=1;delta++)for(int which=1;which<15;which++){word(TestModel_RunClassify(which,(int16_t)(value+delta)));classifications++;}}for(int id=-2;id<=300;id++)for(int which=1;which<15;which++){word(TestModel_RunClassify(which,(int16_t)id));classifications++;}
+    }
+}
+extern "C" bool General_faststrcmp(const char *left,const char *right)
+{
+    // Execute the unchanged real C comparison while observing lookup order and live registry state
+    comparisons++;word(3);text(left);text(right);registry();bool result=SourceGeneral_faststrcmp(left,right);word(result);
+    if(hook==1 && !triggered){
+        // Replace the borrowed input text after one comparison before subsequent macro entries consume it
+        triggered=true;strcpy(mutableName,TestModel_Name(135));
+    }else if(hook==2 && !triggered){
+        // Preserve the final assignment after a comparison mutates the same canonical model variable
+        triggered=true;*TestModel_Variable(0)=-1234;
+    }
+    return result;
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int id)
+{
+    // Capture the actual model pointer before changing a later lookup mapping
+    require(id>=0 && id<32);CBaseModelInfo *model=slots[id];lookups++;word(5);word(id);word(model->identity);registry();
+    if(hook==3 && !triggered){
+        // Retain the originally captured native model after the slot points at a different live object
+        triggered=true;slots[id]=&models[(model->identity+1)%16];
+    }
+    return model;
+}
+extern "C" bool TestModel_Building(CBaseModelInfo *base)
+{
+    // Verify the actual native derived-to-base adjustment and preserve the original building gate
+    CSimpleModelInfo *model=static_cast<CSimpleModelInfo *>(base);require((void *)model!=(void *)base && model->guard[0]==0x123456789abcdef0ULL);buildingReads++;word(7);word(base->identity);word(base->building);word(model->m_isCodeGlass);word(model->m_isArtistGlass);bool result=base->building;
+    if(hook==4 && !triggered){
+        // Change glass fields only after the building predicate and before its sequenced right operand
+        triggered=true;model->m_isCodeGlass=0;model->m_isArtistGlass=1;
+    }
+    return result;
+}
+extern "C" int myrand(void)
+{
+    // Reject an unexpected random draw from the complete shared General.c implementation
+    abort();
+}
+extern "C" void mysrand(unsigned int)
+{
+    // Reject unexpected random-state mutation during model registration or classification
+    abort();
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Preserve native assertion failures without launching a debug dialog
+    fprintf(stderr,"Model registry assertion at %u: %s\n",line,expression);abort();
+}
+static void match(const char *name,int16_t id)
+{
+    // Compare a complete first-match operation through the separately compiled C caller
+    matches++;TestModel_RunMatch(name,id);registry();
+}
+int main(void)
+{
+    // Observe original static minus-one initialization and canonical address identities before resetting
+    for(unsigned i=0;i<136;i++){require(*TestModel_Variable(i)==-1);for(unsigned j=0;j<i;j++)require(TestModel_Variable(i)!=TestModel_Variable(j));}snapshot(true);
+    for(unsigned i=0;i<136;i++){
+        // Match every complete original name and preserve all other pre-existing IDs
+        seed(i);unsigned first=0;while(strcmp(TestModel_Name(first),TestModel_Name(i))!=0)first++;match(TestModel_Name(i),(int16_t)(i*257-16000));require(*TestModel_Variable(first)==(int16_t)(i*257-16000));if(first!=i)require(*TestModel_Variable(i)==(int16_t)(i*431+i*911-32768));
+    }
+    snapshot(true);
+    for(unsigned i=0;i<136;i++){
+        // Retain case sensitivity and exact end-of-string matching for every original name
+        std::string upper=TestModel_Name(i);for(char &c:upper)if(c>='a' && c<='z')c=(char)(c-'a'+'A');match(upper.c_str(),-1);std::string suffix=std::string(TestModel_Name(i))+"_extra";match(suffix.c_str(),32767);
+    }
+    match("",-32768);match("unknown-model",1234);snapshot();
+    for(unsigned cycle=0;cycle<4;cycle++){
+        // Preserve repeated reset behavior and mutable globals used by all numerical classifiers
+        seed(cycle+17);snapshot();resets++;TestModel_RunInit();snapshot();noops++;TestModel_RunTest();snapshot();
+    }
+    for(int mutation=1;mutation<=2;mutation++){
+        // Observe live input characters and the final overwrite of an externally mutated target value
+        seed(mutation+31);strcpy(mutableName,TestModel_Name(mutation==1?1:0));hook=mutation;triggered=false;match(mutableName,22222);require(triggered);hook=0;snapshot();
+    }
+    for(int pattern=0;pattern<8;pattern++){
+        // Exercise every building/code-glass/artist-glass combination through real typed model casts
+        for(int i=0;i<16;i++){models[i].guard[0]=0x123456789abcdef0ULL;models[i].guard[1]=0x0fedcba987654321ULL;models[i].identity=i;models[i].building=(pattern&1)!=0;models[i].m_isCodeGlass=(pattern&2)!=0;models[i].m_isArtistGlass=(pattern&4)!=0;}for(int i=0;i<32;i++)slots[i]=&models[i%16];for(int i=0;i<32;i++){word(TestModel_RunClassify(0,(int16_t)i));classifications++;}
+    }
+    for(int mutation=3;mutation<=4;mutation++){
+        // Retain the captured model across map replacement and preserve live fields after the building gate
+        for(int i=0;i<16;i++){models[i].building=true;models[i].m_isCodeGlass=1;models[i].m_isArtistGlass=0;}slots[0]=&models[0];hook=mutation;triggered=false;word(TestModel_RunClassify(0,0));classifications++;require(triggered);hook=0;snapshot();
+    }
+    printf("states=%u comparisons=%u matches=%u classifications=%u lookups=%u buildingReads=%u resets=%u noops=%u hash=%016llx\n",states,comparisons,matches,classifications,lookups,buildingReads,resets,noops,(unsigned long long)hash);return 0;
+}

@@ -1,0 +1,22 @@
+// Cover direct record entries independently of controller placement and scheduling
+    reset();TestMk_ObjectRender(TestMk_Marker(0));snapshot();
+    for(int type=0;type<NUMMARKERTYPES;type++){
+        // Preserve creation and rendering for every type accepted by the original record method
+        reset();TestMk_SetClump(type,(void *)(uintptr_t)(0x9000+type*16));bool added=TestMk_ObjectAdd(TestMk_Marker(0),117,(uint16_t)type,3.75f);word(added);snapshot();TestMk_ObjectRender(TestMk_Marker(0));snapshot();TestMk_ObjectDelete(TestMk_Marker(0));snapshot();TestMk_ObjectRender(TestMk_Marker(0));snapshot();
+    }
+    for(int repeat=0;repeat<48;repeat++){
+        // Exercise independent nested render-matrix lifetimes and live scale/color state
+        reset();TestMk_ObjectAdd(TestMk_Marker(0),118,MARKERTYPE_ARROW,2.f);TestMk_ObjectAdd(TestMk_Marker(1),119,MARKERTYPE_CYLINDER,4.f);marker(0).m_fBrightness=.25f+repeat*.01f;marker(0).m_fSize=.5f+repeat*.03125f;marker(0).m_Color.alpha=(uint8_t)(repeat*5);TestMk_ObjectRender(TestMk_Marker(0));TestMk_ObjectRender(TestMk_Marker(1));snapshot();TestMk_ObjectDelete(TestMk_Marker(0));snapshot();TestMk_ObjectDelete(TestMk_Marker(1));snapshot();
+    }
+    for(int h=13;h<=18;h++){
+        // Compare callback changes to creation success, scale, color references, type and deletion targets
+        reset();
+        if(h==13){hook=h;bool added=TestMk_ObjectAdd(TestMk_Marker(0),120,MARKERTYPE_ARROW,2.f);require(!added);word(added);snapshot();TestMk_ObjectRender(TestMk_Marker(0));snapshot();}
+        else{
+            // Seed resources before enabling each targeted callback mutation
+            TestMk_ObjectAdd(TestMk_Marker(0),121,h==18?MARKERTYPE_CYLINDER:MARKERTYPE_ARROW,2.f);TestMk_ObjectAdd(TestMk_Marker(1),122,MARKERTYPE_CYLINDER,4.f);hook=h;
+            if(h==17){TestMk_ObjectDelete(TestMk_Marker(0));snapshot();}
+            else{TestMk_ObjectRender(TestMk_Marker(0));snapshot();TestMk_ObjectDelete(TestMk_Marker(0));snapshot();}
+        }
+        require(triggered);
+    }

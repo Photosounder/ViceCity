@@ -1,0 +1,415 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,commands,events,createdTextures,createdDictionaries,destroyedTextures,destroyedDictionaries,visits,cycles,anisotropyQueries,frameStarts,padPolls,allocations,frees,images;
+static RwTexture textures[8192];
+static RwTexDictionary dictionaries[2048];
+static TxdDef slots[TXDSTORESIZE];
+static bool present[TXDSTORESIZE];
+static struct Allocation {void *memory;size_t size;} storage[128];
+static uint8_t capsFile[16];
+static size_t capsPosition,capsReadLimit=4;
+static bool capsExists,capsWriteFail,dictCreateFail,frameAllowed=true,escapeEnabled=true,openImageFail,directoryWriteFail,noSlotTexture;
+static int anisotropy=4,writeFailureSlot=-1,liveGameChange=-1;
+static unsigned escapeAfter=2;
+static uint32_t rasterBias,dxtMask=3;
+static float aspect=16.0f/9.0f;
+static RwStream image;
+static CSprite2d splash;
+static CPad pad;
+FakeFrontend FrontEndMenuManager={-3,5};
+FakeRsGlobal RsGlobal={false,1280,720};
+int gGameState=GS_INIT_PLAYING_GAME;
+int64_t _dwOperatingSystemVersion=OS_WINXP;
+namespace rw {uint32_t platform=17;namespace gl3 {Caps gl3Caps={1,1};bool needToReadBackTextures;}}
+extern "C" {CText TheText;}
+static void requireAt(bool value,unsigned line)
+{
+    // Stop quietly at the exact fixture line without invoking any window or native dialog
+    ++checks;if(!value){fprintf(stderr,"line=%u checks=%u commands=%u\n",line,checks,commands);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Observe initialized bytes while excluding process-specific addresses
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(uint32_t kind,uint32_t a=0,uint32_t b=0)
+{
+    // Preserve external operation order and normalized object identities in one deterministic trace
+    uint32_t values[]={kind,a,b};hashBytes(values,sizeof(values));++events;
+}
+static TexResult run(unsigned operation,void *a=NULL,void *b=NULL,uint32_t num=0,uint32_t count=1,const char *text="CVT_MSG")
+{
+    // Enter the complete original or C owner through an independently compiled public caller
+    ++commands;return TestTex(operation,a,b,num,count,text);
+}
+static void position(RwStream *stream,int32_t value)
+{
+    // Synchronize only the controlled SDK's stream position representations
+    stream->position=value;stream->Type.memory.position=(uint32_t)value;
+}
+static RwStream stream(unsigned id,int total)
+{
+    // Supply a new controlled SDK stream without reproducing reader state or resume policy
+    RwStream value={};value.id=id;value.total=total;value.failNative=-1;value.failChunk=-1;value.structChunk=true;value.Type.file.fpFile=NULL;return value;
+}
+static void snapshot(void)
+{
+    // Observe live public timing state and all SDK objects affected by the actual owner
+    hashBytes(&texLoadTime,sizeof(texLoadTime));hashBytes(&texNumLoaded,sizeof(texNumLoaded));
+    for(unsigned i=1;i<=createdTextures;++i){uint32_t values[]={textures[i].id,textures[i].alive,(uint32_t)textures[i].anisotropy,textures[i].dictionary?textures[i].dictionary->id:0};hashBytes(values,sizeof(values));}
+    for(unsigned i=1;i<=createdDictionaries;++i){uint32_t values[]={dictionaries[i].id,dictionaries[i].alive,dictionaries[i].count};hashBytes(values,sizeof(values));}
+    uint32_t flags[]={RsGlobal.quit,(uint8_t)FrontEndMenuManager.m_PrefsVsync,(uint8_t)FrontEndMenuManager.m_PrefsFrameLimiter,rw::gl3::needToReadBackTextures};hashBytes(flags,sizeof(flags));
+}
+extern "C" void *cita_win_malloc(size_t size,const char *file,const char *function,int line)
+{
+    // Allocate genuine untyped storage at the original CITAlloc boundary and initialize only external backing bytes
+    require(allocations<128&&file&&function&&line>0);void *memory=_aligned_malloc(size,16);require(memory!=NULL);memset(memory,0xa5,size);storage[allocations].memory=memory;storage[allocations].size=size;event(1,allocations,(uint32_t)size);++allocations;return memory;
+}
+extern "C" void cita_win_free(void *memory,const char *file,const char *function,int line)
+{
+    // Observe each original release without freeing resources on the owner's behalf
+    require(file&&function&&line>0);unsigned index=0;while(index<allocations&&storage[index].memory!=memory)++index;require(index<allocations&&memory);event(2,index);storage[index].memory=NULL;++frees;_aligned_free(memory);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int line,const char*)
+{
+    // Report unexpected producer or real C dependency assertions without displaying native UI
+    fprintf(stderr,"owner assertion=%s line=%u\n",expression,line);require(false);
+}
+extern "C" int myrand(void)
+{
+    // Reject unrelated random-provider calls from the complete General dependency
+    require(false);return 0;
+}
+extern "C" void mysrand(unsigned int)
+{
+    // Reject unrelated random-provider mutation from the complete General dependency
+    require(false);
+}
+extern "C" uint32_t Timer_GetCurrentTimeInCycles(void)
+{
+    // Return an independently advancing clock so texture timing consumes the original number of reads
+    cycles+=37;event(3,cycles);return cycles;
+}
+extern "C" uint32_t Timer_GetCyclesPerMillisecond(void)
+{
+    // Retain each original divisor lookup without moving averaging policy into the fixture
+    event(4);return 13;
+}
+extern "C" float Draw_GetAspectRatio(void)
+{
+    // Expose only live display metadata used by the original scaling expressions
+    return aspect;
+}
+extern "C" uint16_t *Text_Get(CText *text,const char *key)
+{
+    // Supply controlled text at the separate text owner's public C boundary
+    require(text==&TheText&&key);static uint16_t output[16];size_t i=0;for(;key[i]&&i<15;++i)output[i]=(uint8_t)key[i];output[i]=0;event(5);hashBytes(key,strlen(key)+1);return output;
+}
+int32_t RwStream::tell(void)
+{
+    // Observe native SDK stream position queries without interpreting reader state
+    event(6,id,(uint32_t)position);return position;
+}
+RwBool RwStreamFindChunk(RwStream *value,uint32_t id,uint32_t *size,uint32_t *version)
+{
+    // Supply controlled native or structure chunks while retaining the owner's read and failure decisions
+    require(value&&size&&version&&(id==rwID_STRUCT||id==rwID_TEXTURENATIVE));event(7,value->id,id);bool found=id==rwID_STRUCT?value->structChunk:value->nextTexture!=value->failChunk;if(!found)return 0;*size=id==rwID_STRUCT?4:32;*version=100;position(value,value->position+12);return 1;
+}
+uint32_t RwStreamRead(RwStream *value,void *output,uint32_t size)
+{
+    // Return the controlled structure count or an early short read at the genuine SDK stream boundary
+    require(value&&output&&size==4);event(8,value->id,size);if(value->shortRead)return 0;memcpy(output,&value->total,4);position(value,value->position+4);return 4;
+}
+RwBool rwNativeTextureHackRead(RwStream *value,RwTexture **output,int32_t size)
+{
+    // Decode independent SDK identities and permit failure, null success and live game-state changes
+    require(value&&output&&size==32);event(9,value->id,(uint32_t)value->nextTexture);int index=value->nextTexture++;if(liveGameChange>=0)gGameState=liveGameChange;if(index==value->failNative){*output=&textures[0];return 0;}position(value,value->position+size);if(value->nullTexture){*output=NULL;return 1;}require(createdTextures<8191);RwTexture *texture=&textures[++createdTextures];texture->id=createdTextures;texture->alive=true;texture->anisotropy=0;texture->dictionary=NULL;*output=texture;return 1;
+}
+static RwBool legacyRead(RwStream *value,RwTexture **output,uint32_t size)
+{
+    // Bind the controlled legacy SDK function table to the same independent native decoder
+    return rwNativeTextureHackRead(value,output,(int32_t)size);
+}
+FakeRwGlobal FakeGlobal={{legacyRead}};
+RwTexDictionary *RwTexDictionaryCreate(void)
+{
+    // Supply distinct SDK dictionaries without implementing TXD storage or reader algorithms
+    event(10);if(dictCreateFail)return NULL;require(createdDictionaries<2047);RwTexDictionary *dictionary=&dictionaries[++createdDictionaries];dictionary->id=createdDictionaries;dictionary->alive=true;dictionary->count=0;dictionary->imageSlot=-1;return dictionary;
+}
+RwBool RwTexDictionaryDestroy(RwTexDictionary *dictionary)
+{
+    // Record the exact destruction point selected by the actual reader or streaming owner
+    require(dictionary&&dictionary->alive);event(11,dictionary->id,dictionary->count);dictionary->alive=false;++destroyedDictionaries;return 1;
+}
+RwTexture *RwTexDictionaryAddTexture(RwTexDictionary *dictionary,RwTexture *texture)
+{
+    // Attach SDK objects only when requested by the actual complete dictionary reader
+    require(dictionary&&dictionary->alive&&texture&&texture->alive&&dictionary->count<32);event(12,dictionary->id,texture->id);dictionary->textures[dictionary->count++]=texture;texture->dictionary=dictionary;return texture;
+}
+RwBool RwTextureDestroy(RwTexture *texture)
+{
+    // Remove the controlled SDK object while preserving cleanup callback order
+    require(texture&&texture->alive);event(13,texture->id);if(texture->dictionary){RwTexDictionary *dictionary=texture->dictionary;unsigned i=0;while(i<dictionary->count&&dictionary->textures[i]!=texture)++i;require(i<dictionary->count);for(unsigned j=i+1;j<dictionary->count;++j)dictionary->textures[j-1]=dictionary->textures[j];--dictionary->count;texture->dictionary=NULL;}texture->alive=false;++destroyedTextures;return 1;
+}
+RwTexDictionary *RwTexDictionaryForAllTextures(RwTexDictionary *dictionary,RwTextureCallBack callback,void *data)
+{
+    // Exercise the real typed callback entry while the controlled SDK permits each callback to destroy its object
+    require(dictionary&&dictionary->alive&&callback);event(14,dictionary->id,dictionary->count);RwTexture *saved[32];unsigned count=dictionary->count;memcpy(saved,dictionary->textures,count*sizeof(*saved));for(unsigned i=0;i<count;++i){++visits;require(callback(saved[i],data)==saved[i]);}return dictionary;
+}
+RwStream *RwStreamSkip(RwStream *value,uint32_t offset)
+{
+    // Update only SDK cursor state so saved reader positions must be correct on resumed streams
+    require(value&&offset<10000);event(15,value->id,offset);position(value,value->position+(int32_t)offset);if(value->position>=16)value->nextTexture=(value->position-16)/44;return value;
+}
+int32_t RpAnisotGetMaxSupportedMaxAnisotropy(void)
+{
+    // Return different successive values to expose the original two live anisotropy queries
+    int value=anisotropy+(int)(anisotropyQueries++%2);event(16,(uint32_t)value);return value;
+}
+void RpAnisotTextureSetMaxAnisotropy(RwTexture *texture,int32_t level)
+{
+    // Record the value supplied by the complete reader after its independent capability queries
+    require(texture&&texture->alive);event(17,texture->id,(uint32_t)level);texture->anisotropy=level;
+}
+extern "C" RwInt32 _rwD3D8FindCorrectRasterFormat(RwRasterType type,RwInt32 flags)
+{
+    // Supply controlled legacy SDK capabilities rather than inventing production raster mappings
+    require(type==rwRASTERTYPETEXTURE);event(18,(uint32_t)flags);return flags+(int32_t)rasterBias;
+}
+extern "C" RwBool _rwD3D8CheckValidTextureFormat(RwInt32 format)
+{
+    // Observe both original DXT probes and their short-circuit behavior
+    require(format==D3DFMT_DXT1||format==D3DFMT_DXT3);event(19,(uint32_t)format);return format==D3DFMT_DXT1?(dxtMask&1)!=0:(dxtMask&2)!=0;
+}
+static void rectEvent(unsigned kind,const CRect &rect,const CRGBA &color)
+{
+    // Compare actual rectangle fields and color bytes after the complete owner calculates them
+    event(kind);hashBytes(&rect.left,4);hashBytes(&rect.top,4);hashBytes(&rect.right,4);hashBytes(&rect.bottom,4);hashBytes(&color,4);
+}
+#define SIMPLE(owner,name,id) void owner::name(void) { /* Observe the original external call boundary */ event(id); }
+SIMPLE(CSprite2d,SetRecipNearClip,20)
+SIMPLE(CSprite2d,InitPerFrame,21)
+SIMPLE(CFont,InitPerFrame,22)
+SIMPLE(CFont,SetBackgroundOff,23)
+SIMPLE(CFont,SetPropOn,24)
+SIMPLE(CFont,SetCentreOff,25)
+SIMPLE(CFont,SetJustifyOff,26)
+SIMPLE(CFont,SetBackGroundOnlyTextOff,27)
+SIMPLE(CFont,DrawFonts,28)
+void CSprite2d::DrawRect(const CRect &rect,const CRGBA &color)
+{
+    // Observe the exact progress and background drawing parameters
+    rectEvent(29,rect,color);
+}
+void CSprite2d::Draw(const CRect &rect,const CRGBA &color)
+{
+    // Observe splash drawing after frame initialization and render-state selection
+    require(this==&splash);rectEvent(30,rect,color);
+}
+void CFont::SetScale(float x,float y)
+{
+    // Record the original live text scale calculations
+    event(31);hashBytes(&x,4);hashBytes(&y,4);
+}
+void CFont::SetWrapx(float x)
+{
+    // Record the original text wrap boundary
+    event(32);hashBytes(&x,4);
+}
+void CFont::SetColor(const CRGBA &color)
+{
+    // Preserve the selected fix or classic text color in the trace
+    event(33);hashBytes(&color,4);
+}
+void CFont::SetFontStyle(int16_t style)
+{
+    // Verify the original standard-font selection
+    require(style==FONT_STANDARD);event(34,(uint32_t)style);
+}
+void CFont::PrintString(float x,float y,uint16_t *text)
+{
+    // Observe the borrowed Unicode string and its exact final screen coordinates
+    require(text);event(35);hashBytes(&x,4);hashBytes(&y,4);size_t length=0;while(text[length])++length;hashBytes(text,(length+1)*2);
+}
+void HandleExit(void)
+{
+    // Keep platform input handling outside the progress-screen algorithm
+    event(36);
+}
+CSprite2d *LoadSplash(const char *name)
+{
+    // Return the controlled external splash object at the original null-name boundary
+    require(name==NULL);event(37);return &splash;
+}
+bool DoRWStuffStartOfFrame(int a,int b,int c,int d,int e,int f,int alpha)
+{
+    // Control frame-start success without opening a renderer or native window
+    require(a==0&&b==0&&c==0&&d==0&&e==0&&f==0&&alpha==255);event(38,frameAllowed);++frameStarts;return frameAllowed;
+}
+void DefinedState(void)
+{
+    // Observe the original render-state initialization boundary
+    event(39);
+}
+RwBool RwRenderStateSet(int state,void *value)
+{
+    // Verify the original clamped texture-address state
+    require(state==rwRENDERSTATETEXTUREADDRESS&&(uintptr_t)value==rwTEXTUREADDRESSCLAMP);event(40);return 1;
+}
+void DoRWStuffEndOfFrame(void)
+{
+    // Observe frame completion without presenting a native surface
+    event(41);
+}
+void CPad::UpdatePads(void)
+{
+    // Advance only the controlled external input provider
+    ++padPolls;event(42,padPolls);
+}
+CPad *CPad::GetPad(int index)
+{
+    // Borrow the original pad index at each error-loop poll
+    require(index==0);event(43);return &pad;
+}
+bool CPad::GetEscapeJustDown(void)
+{
+    // Supply a bounded escape transition so error loops terminate quietly
+    require(this==&pad);bool value=escapeEnabled&&padPolls>=escapeAfter;event(44,value);return value;
+}
+void LoadingScreen(const char *a,const char *b,const char *c)
+{
+    // Observe quit-state resets at the original final loading-screen boundary
+    require(!a&&!b&&!c&&!RsGlobal.quit);event(45);
+}
+extern "C" TxdDef *TxdStore_GetSlot(int index)
+{
+    // Supply live records at the separate C dictionary-store boundary without reproducing its policy
+    require(index>=0&&index<TXDSTORESIZE);return present[index]?&slots[index]:NULL;
+}
+extern "C" char *TxdStore_GetTxdName(int index)
+{
+    // Return the actual mutable slot name borrowed by the conversion loop
+    require(index>=0&&index<TXDSTORESIZE&&present[index]);return slots[index].name;
+}
+void CStreaming::FlushRequestList(void)
+{
+    // Observe request-list boundaries around the original conversion loop
+    event(46);
+}
+bool CStreaming::IsObjectInCdImage(int32_t id)
+{
+    // Supply a controlled absent entry after the valid streamed texture slots
+    require(id>=STREAM_OFFSET_TXD);event(47,(uint32_t)id);return id-STREAM_OFFSET_TXD!=3;
+}
+void CStreaming::RequestTxd(int32_t index,int32_t flags)
+{
+    // Populate a controlled external dictionary only after the real owner requests it
+    require(index>=0&&index<4&&flags==STREAMFLAGS_KEEP_IN_MEMORY);event(48,(uint32_t)index,(uint32_t)flags);if(noSlotTexture&&index==1)return;RwTexDictionary *dictionary=RwTexDictionaryCreate();require(dictionary);dictionary->imageSlot=index;slots[index].texDict=dictionary;
+}
+void CStreaming::RequestModelStream(int32_t channel)
+{
+    // Verify the original streaming channel request
+    require(channel==0);event(49);
+}
+void CStreaming::FlushChannels(void)
+{
+    // Observe synchronous completion at the original conversion boundary
+    event(50);
+}
+void CStreaming::RemoveTxd(int32_t index)
+{
+    // Keep external dictionary ownership separate from archive conversion policy
+    require(index>=0&&index<TXDSTORESIZE);event(51,(uint32_t)index);RwTexDictionary *dictionary=(RwTexDictionary*)slots[index].texDict;if(dictionary)RwTexDictionaryDestroy(dictionary);slots[index].texDict=NULL;
+}
+RwStream *RwStreamOpen(int type,int access,const char *filename)
+{
+    // Supply an in-memory image stream while exercising the original open-failure branch
+    require(type==rwSTREAMFILENAME&&access==rwSTREAMWRITE&&strcmp(filename,"models\\txd.img")==0);event(52,openImageFail);if(openImageFail)return NULL;image=stream(900,0);image.Type.file.fpFile=&image;return &image;
+}
+RwBool RwStreamClose(RwStream *value,void *data)
+{
+    // Observe the exact final archive cursor and close ordering
+    require(value==&image&&!data);event(53,(uint32_t)value->position);return 1;
+}
+RwStream *RwStreamWrite(RwStream *value,const void *buffer,uint32_t size)
+{
+    // Capture original sector-padding bytes without creating a filesystem image
+    require(value==&image&&buffer&&size<CDSTREAM_SECTOR_SIZE);event(54,size);hashBytes(buffer,size);position(value,value->position+(int32_t)size);return value;
+}
+const RwTexDictionary *RwTexDictionaryStreamWrite(const RwTexDictionary *dictionary,RwStream *value)
+{
+    // Control serialization size and failure while the actual owner computes sector and directory records
+    require(dictionary&&dictionary->alive&&value==&image&&dictionary->imageSlot>=0&&dictionary->imageSlot<3);int slot=dictionary->imageSlot;event(55,(uint32_t)slot,(uint32_t)value->position);if(slot==writeFailureSlot)return NULL;const int sizes[]={17,2101,4096};position(value,value->position+sizes[slot]);return dictionary;
+}
+static long legacyTell(void *opaque)
+{
+    // Preserve the borrowed legacy file interface and stream identity
+    RwStream *value=(RwStream*)opaque;require(value==&image);event(56,(uint32_t)value->position);return value->position;
+}
+RwFileFunctions *RwOsGetFileInterface(void)
+{
+    // Return one stable controlled SDK file interface for the whole archive operation
+    static RwFileFunctions functions={legacyTell};event(57);return &functions;
+}
+extern "C" int FileMgr_OpenFile(const char *name,const char *mode)
+{
+    // Capture capability-file opens without touching the real filesystem
+    require(strcmp(name,"DATA\\CAPS.DAT")==0);bool write=strcmp(mode,"wb")==0;require(write||strcmp(mode,"rb")==0);event(58,write);capsPosition=0;if(write){if(capsWriteFail)return 0;capsExists=true;return 6;}return capsExists?6:0;
+}
+extern "C" int FileMgr_OpenFileForWriting(const char *name)
+{
+    // Capture the actual directory writer's original target name
+    require(strcmp(name,"models\\txd.dir")==0);event(59);return 7;
+}
+extern "C" size_t FileMgr_Read(int fd,const char *output,FileMgrSize size)
+{
+    // Return controlled full or partial capability data through the existing C file API
+    require(fd==6&&size==4&&capsPosition<=16);size_t count=(size_t)size;if(count>capsReadLimit)count=capsReadLimit;if(count>16-capsPosition)count=16-capsPosition;event(60,(uint32_t)count);memcpy((void*)output,capsFile+capsPosition,count);capsPosition+=count;return count;
+}
+extern "C" size_t FileMgr_Write(int fd,const char *input,FileMgrSize size)
+{
+    // Observe capability and real Directory.c output bytes at their external persistence boundary
+    require((fd==6||fd==7)&&size>=0);event(61,(uint32_t)fd,(uint32_t)size);hashBytes(input,(size_t)size);if(fd==6){require(capsPosition+(size_t)size<=16);memcpy(capsFile+capsPosition,input,(size_t)size);capsPosition+=(size_t)size;}return fd==7&&directoryWriteFail?(size_t)size-1:(size_t)size;
+}
+extern "C" int FileMgr_CloseFile(int fd)
+{
+    // Observe each original capability and directory close
+    require(fd==6||fd==7);event(62,(uint32_t)fd);return 0;
+}
+static void cleanup(RwTexDictionary *dictionary)
+{
+    // Release only fixture-owned SDK survivors after each public operation has been observed
+    if(!dictionary||!dictionary->alive)return;while(dictionary->count)RwTextureDestroy(dictionary->textures[0]);RwTexDictionaryDestroy(dictionary);
+}
+static void setupImage(unsigned mode)
+{
+    // Reset only external owners so every archive path runs against the same complete reader state
+    memset(slots,0,sizeof(slots));memset(present,0,sizeof(present));const char *names[]={"generic","alpha","beta","absent"};for(int i=0;i<4;++i){present[i]=true;strcpy(slots[i].name,names[i]);}FrontEndMenuManager.m_PrefsVsync=-3;FrontEndMenuManager.m_PrefsFrameLimiter=5;RsGlobal.quit=false;padPolls=0;openImageFail=mode==1||mode==2;directoryWriteFail=mode==4;noSlotTexture=mode==5;writeFailureSlot=mode==3?1:-1;_dwOperatingSystemVersion=mode==2?OS_WIN95:OS_WINXP;frameAllowed=true;escapeEnabled=true;capsWriteFail=false;
+}
+int main(void)
+{
+    // Exercise native texture success, chunk failure, decoder failure, null success and live game-state changes
+    for(unsigned mode=0;mode<6;++mode){RwStream value=stream(10+mode,1);if(mode==1)value.failChunk=0;if(mode==2)value.failNative=0;if(mode==3)value.nullTexture=true;gGameState=mode==4?0:GS_INIT_PLAYING_GAME;liveGameChange=mode==5?GS_INIT_PLAYING_GAME:-1;int oldCount=texNumLoaded;RwTexture *texture=(RwTexture*)run(OP_Texture,&value).pointer;require((texture!=NULL)==(mode==0||mode==4||mode==5));require(texNumLoaded-oldCount==(mode==0||mode==3||mode==5?1:0));if(texture){require(run(OP_Destroy,texture,(void*)(uintptr_t)123).pointer==texture);}snapshot();}liveGameChange=-1;gGameState=GS_INIT_PLAYING_GAME;
+    // Compare whole and two-stage dictionaries for empty, odd and even counts and every early SDK failure
+    for(int count=0;count<=9;++count){for(unsigned mode=0;mode<5;++mode){RwStream first=stream(100+images++,count);first.structChunk=mode!=1;first.shortRead=mode==2;first.failNative=mode==4?0:-1;dictCreateFail=mode==3;unsigned destroyed=destroyedDictionaries;RwTexDictionary *dictionary=(RwTexDictionary*)run(OP_Dictionary,&first).pointer;bool success=mode==0||(mode==4&&count==0);require((dictionary!=NULL)==success);if(dictionary){require(dictionary->count==(unsigned)count);cleanup(dictionary);}else if(mode==4)require(destroyedDictionaries==destroyed+1);dictCreateFail=false;snapshot();}
+        // Resume a successful first stage from an independent SDK stream with the original saved position
+        RwStream first=stream(300+images++,count);RwTexDictionary *dictionary=(RwTexDictionary*)run(OP_Dictionary1,&first).pointer;require(dictionary&&dictionary->count==(unsigned)(count-count/2));RwStream second=stream(400+images++,count);require(run(OP_Dictionary2,&second,dictionary).pointer==dictionary&&dictionary->count==(unsigned)count);cleanup(dictionary);snapshot();}
+    // Force cleanup callbacks in each partial-read phase and preserve saved state on an early failed first stage
+    RwStream first=stream(500,6);first.failNative=1;require(run(OP_Dictionary1,&first).pointer==NULL);first=stream(501,6);RwTexDictionary *dictionary=(RwTexDictionary*)run(OP_Dictionary1,&first).pointer;require(dictionary&&dictionary->count==3);RwStream second=stream(502,6);second.failNative=4;require(run(OP_Dictionary2,&second,dictionary).pointer==NULL&&!dictionary->alive);first=stream(503,1);first.structChunk=false;require(run(OP_Dictionary1,&first).pointer==NULL);dictionary=RwTexDictionaryCreate();second=stream(504,1);require(run(OP_Dictionary2,&second,dictionary).pointer==dictionary&&dictionary->count==0);cleanup(dictionary);snapshot();
+    // Exercise the three retained dictionary-store forwarding ABIs through their real complete target owner
+    first=stream(505,4);dictionary=(RwTexDictionary*)run(OP_Binding,&first).pointer;require(dictionary&&dictionary->count==4);cleanup(dictionary);first=stream(506,5);dictionary=(RwTexDictionary*)run(OP_Binding1,&first).pointer;require(dictionary&&dictionary->count==3);second=stream(507,5);require(run(OP_Binding2,&second,dictionary).pointer==dictionary&&dictionary->count==5);cleanup(dictionary);snapshot();
+    // Verify absent, valid, changed, partially read and unwritable capability files through the real owner
+    uint32_t caps[4];capsExists=false;run(OP_ReadCaps,caps);hashBytes(caps,sizeof(caps));require(run(OP_CheckCaps).number==1);run(OP_WriteCaps);require(run(OP_CheckCaps).number==0);run(OP_ReadCaps,caps);hashBytes(caps,sizeof(caps));capsFile[8]^=0x40;require(run(OP_CheckCaps).number==1);capsReadLimit=1;run(OP_ReadCaps,caps);hashBytes(caps,sizeof(caps));capsReadLimit=4;capsWriteFail=true;run(OP_WriteCaps);capsWriteFail=false;for(unsigned mask=0;mask<4;++mask){dxtMask=mask;run(OP_DXT);}
+    // Exercise the complete progress drawing calculations and frame-start early return without native rendering
+    for(unsigned i=0;i<3;++i){RsGlobal.width=800+(int)i*320;RsGlobal.height=600+(int)i*120;aspect=(float)RsGlobal.width/(float)RsGlobal.height;run(OP_Screen,NULL,NULL,i,2);}frameAllowed=false;unsigned starts=frameStarts;run(OP_Screen);require(frameStarts==starts+1);frameAllowed=true;RsGlobal.quit=false;padPolls=0;run(OP_Error,NULL,NULL,1,4,"CVT_ERR");require(RsGlobal.quit&&padPolls==escapeAfter);RsGlobal.quit=true;padPolls=0;run(OP_Error,NULL,NULL,0,4,"CVT_CRT");require(RsGlobal.quit&&padPolls==0);snapshot();
+    // Compare archive success, open failures, serialization failure, directory failure and a missing loaded dictionary
+    for(unsigned mode=0;mode<6;++mode){setupImage(mode);unsigned oldAllocations=allocations,oldFrees=frees;bool success=run(OP_Image).number!=0;require(success==(mode==0||mode==5));require(allocations-oldAllocations==3&&frees-oldFrees==3);require(!rw::gl3::needToReadBackTextures);
+#ifdef DISABLE_VSYNC_ON_TEXTURE_CONVERSION
+        require(FrontEndMenuManager.m_PrefsVsync==(mode==3?0:-3)&&FrontEndMenuManager.m_PrefsFrameLimiter==(mode==3?0:5));
+#endif
+        if(mode==1||mode==3||mode==4)require(RsGlobal.quit);if(mode==2)require(!RsGlobal.quit);snapshot();for(unsigned i=0;i<4;++i)cleanup((RwTexDictionary*)slots[i].texDict);}
+    // Verify every external backing allocation was released by an original owner or its real C directory dependency
+    require(allocations==frees);for(unsigned i=0;i<allocations;++i)require(storage[i].memory==NULL);printf("commands=%u checks=%u events=%u textures=%u dictionaries=%u destroyed=%u/%u visits=%u allocations=%u frees=%u hash=%016llx\n",commands,checks,events,createdTextures,createdDictionaries,destroyedTextures,destroyedDictionaries,visits,allocations,frees,(unsigned long long)hashValue);return 0;
+}

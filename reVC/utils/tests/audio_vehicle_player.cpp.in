@@ -1,0 +1,109 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@VEHICLE_TYPES@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+static float Abs(float v) {
+    // Use the game's exact float absolute value
+    return fabsf(v);
+}
+enum { VEHICLE_ENGINE_MAX_DIST=50 };
+class CVehicle {public:float m_fGasPedal;};
+class CAutomobile:public CVehicle {public:float m_fGasPedalAudio;};
+class CBike:public CVehicle {public:float m_fGasPedalAudio;};
+struct cAudioManager {
+@FIELDS@
+    void UpdateGasPedalAudio(CVehicle *,int);
+    void AddPlayerCarSample(uint8,uint32,uint32,uint8,uint8,bool8);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static CAutomobile cars[2];static CBike bikes[2];static CVehicle *selected;
+static unsigned seedValue,cases,callbacks;static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" void TestVehiclePlayerC(cAudioManager *,CVehicle *,int32_t,uint8_t,uint32_t,uint32_t,uint8_t,uint8_t,uint8_t,unsigned);
+static void value(uint32_t v) {
+    // Hash complete results and callback ordering reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Compare initialized storage without aliasing the owner or vehicle records
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4) {uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Preserve all owner fields and both types of gas-audio storage
+    bytes(active,sizeof(*active));bytes(cars,sizeof(cars));bytes(bikes,sizeof(bikes));
+}
+static void event(unsigned token,uint32_t sample) {
+    // Observe exact queue state before each audio backend operation
+    ++callbacks;value(token);value(sample);observe();
+}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Read the original vehicle gas pedal before choosing a type
+    return v->m_fGasPedal;
+}
+extern "C" float *AudioVehicleReverseHost_GasAudio(CVehicle *v) {
+    // Return the original automobile storage without an allocation or copy
+    return &((CAutomobile *)v)->m_fGasPedalAudio;
+}
+extern "C" float *AudioVehicleEngineHost_BikeGasAudio(CVehicle *v) {
+    // Return the original bike storage without an allocation or copy
+    return &((CBike *)v)->m_fGasPedalAudio;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample index to exercise the following loop-end argument
+    event(10,sample);if(seedValue&512)active->m_sQueueSample.m_nSampleIndex=SFX_CAR_IDLE_5;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the live sample index after the first backend call
+    event(11,sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after all sample fields are set
+    event(12,0);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind,int32_t *type,uint8_t *volume,uint32_t *frequency,uint32_t *sample,uint8_t *bank,uint8_t *counter,uint8_t *looping) {
+    // Exercise smoothing boundaries and complete sample setup on alternating owners
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(cars,0,sizeof(cars));memset(bikes,0,sizeof(bikes));
+    const float pedals[]={-INFINITY,-2.0f,-1.0f,-0.09f,-0.0f,0.0f,0.01f,0.07f,0.09f,0.5f,1.0f,2.0f,INFINITY,NAN};
+    const float audio[]={-INFINITY,-1.0f,-0.0f,0.0f,0.01f,0.07f,0.09f,0.5f,0.93f,1.0f,2.0f,INFINITY,NAN};
+    for(unsigned i=0;i<2;++i) {cars[i].m_fGasPedal=pedals[(seed/3+i)%14];bikes[i].m_fGasPedal=pedals[(seed/5+i)%14];cars[i].m_fGasPedalAudio=audio[(seed/7+i)%13];bikes[i].m_fGasPedalAudio=audio[(seed/11+i)%13];}
+    *type=seed%3==0?VEHICLE_TYPE_CAR:seed%3==1?VEHICLE_TYPE_BIKE:99;selected=*type==VEHICLE_TYPE_BIKE?(CVehicle *)&bikes[(seed/13)%2]:(CVehicle *)&cars[(seed/13)%2];
+    const float distances[]={-1.0f,-0.0f,0.0f,9.99f,10.0f,10.01f,25.0f,49.99f,50.0f,50.01f,60.0f};const unsigned volumes[]={0,1,40,75,90,127,128,255};const uint32_t frequencies[]={0,1,22050,44100,0xFFFFFFFF};
+    *volume=(uint8_t)volumes[(seed/17)%8];*frequency=frequencies[(seed/19)%5];*sample=seed%23==0?TOTAL_AUDIO_SAMPLES:seed%29==0?0xFFFFFFFF:SFX_CAR_REV_1+seed%16;*bank=(uint8_t)(seed%256);*counter=(uint8_t)((seed/31)%256);*looping=seed%3==0?0:seed%3==1?1:255;
+    active->m_sQueueSample.m_fDistance=distances[(seed/37)%11];active->m_sQueueSample.m_nEntityIndex=seed%31;active->m_sQueueSample.m_nSampleIndex=777;active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_nFrequency=54321;active->m_sQueueSample.m_nLoopCount=7;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};
+    active->m_nActiveSamples=1+seed%8;active->m_nActiveQueue=(seed/41)%2;active->m_nRequestedCount[active->m_nActiveQueue]=(seed/43)%(active->m_nActiveSamples+1);active->m_bDynamicAcousticModelingStatus=seed%2;
+    for(unsigned q=0;q<2;++q)for(unsigned i=0;i<active->m_nActiveSamples;++i) {active->m_aRequestedOrderList[q][i]=(uint8_t)i;active->m_aRequestedQueue[q][i].m_nFinalPriority=seed%2?0:64;}
+    value(kind);
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare repeated smoothing and sample calls including partially filled and full queues
+    for(unsigned seed=0;seed<8192;++seed)for(unsigned kind=0;kind<2;++kind) {
+        int32_t type;uint8_t volume,bank,counter,looping;uint32_t frequency,sample;
+        prepare(seed,kind,&type,&volume,&frequency,&sample,&bank,&counter,&looping);
+        for(unsigned call=0;call<4;++call) {@RUN@;observe();++cases;}
+    }
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit scheduler/zone reports and compare original members with actual C."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ import audio_police_state_fixture as state
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-police-reports-c-tests'
 old=(out/'before/src/audio/PolRadio.cpp').read_text();kernel=(root/'src/audio/AudioPoliceReports.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare every actual statement independently of whitespace and comments
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 for name,target in reports.METHODS.items():

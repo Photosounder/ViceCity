@@ -1,0 +1,129 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint32=uint32_t;using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned,unsigned);
+struct Id {uint32_t index;int32_t v;operator int32_t() const {
+    // Capture the original identifier read before subsequent cannon changes
+    int32_t result=v;event(1,index);return result;
+}};
+struct Segment {uint32_t index;int16_t v;operator int16_t() const {
+    // Capture the original signed index before changing later live indices
+    int16_t result=v;event(2,index);return result;
+}};
+struct CVector {float x,y,z;};
+struct CWaterCannon {Id m_nId;Segment m_nCur;CVector m_avecPos[16];};
+struct CWaterCannons {static CWaterCannon aCannons[NUM_WATERCANNONS];};
+CWaterCannon CWaterCannons::aCannons[NUM_WATERCANNONS];
+static AudioSoundPosition AudioSoundPosition_FromVector(CVector position) {
+    // Preserve the original position-copy boundary
+    return {position.x,position.y,position.z};
+}
+struct cAudioManager {
+@FIELDS@
+void ProcessWaterCannon(int32);
+float Sqrt(float v) const {
+    // Preserve the original guarded square root
+    return v<=0?0:sqrtf(v);
+}
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static AudioSoundPosition camera;
+static unsigned seedValue,cases,callbacks,submits,loops,current;
+static unsigned visits[16];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestWaterCannonC(cAudioManager *,int32_t);
+extern "C" void TestWaterCannonRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe callback order and original cannon arguments
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash both complete initialized owners and all live cannon positions and indices
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,CWaterCannons::aCannons,sizeof(CWaterCannons::aCannons));digest=TestAircraftHash(digest,&camera,sizeof(camera));
+}
+static void event(unsigned token,unsigned index) {
+    // Observe state before callbacks change subsequent live reads
+    ++callbacks;value(token);value(index);observe();
+    if(token==1){current=index;if(seedValue&32)CWaterCannons::aCannons[(index+1)%NUM_WATERCANNONS].m_nId.v=1;}
+    if(token==2&&(seedValue&64)){++visits[(unsigned)CWaterCannons::aCannons[index].m_nCur.v];CWaterCannons::aCannons[index].m_nCur.v=(CWaterCannons::aCannons[index].m_nCur.v+1)%16;}
+    if(token==3&&(seedValue&128))active->m_sQueueSample.m_vecPos.x=4;
+    if(token==4&&(seedValue&256))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==6&&(seedValue&512))CWaterCannons::aCannons[(current+1)%NUM_WATERCANNONS].m_nCur.v=0;
+}
+@HOST@
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the original start sample before changing the following end sample
+    assert(manager==&SampleManager);++loops;event(4,sample);return sample%13;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the live scratch sample after loop-start callbacks
+    assert(manager==&SampleManager);event(5,sample);return 200+sample%17;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Query camera state before the existing C geometry reads scratch coordinates
+    event(3,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Exercise actual insertion and changes to later live cannon indices
+    event(6,0);return (seedValue>>3)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency for water-cannon loops
+    return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe all loop fields before actual C priority insertion and replacement
+    assert(manager==active);++submits;event(7,manager->m_sQueueSample.m_nCounter);TestWaterCannonRealSubmit(manager);event(8,0);
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed all valid segment indices, identifier gates, position boundaries and both owners
+    seedValue=seed;memset(owners,0,sizeof(owners));memset(CWaterCannons::aCannons,0,sizeof(CWaterCannons::aCannons));active=&owners[seed&1];camera={0,0,0};
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    active->m_sQueueSample.m_nEntityIndex=seed;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_fDistance=-1;active->m_sQueueSample.m_nCounter=777;
+    static const float positions[]={0,5.999f,6,29.999f,30,30.001f,40,NAN,INFINITY};
+    static const int32_t ids[]={0,1,-1,INT32_MIN,INT32_MAX};
+    for(unsigned i=0;i<NUM_WATERCANNONS;++i){CWaterCannon *c=&CWaterCannons::aCannons[i];
+        // Initialize scalar fields directly so automatic segment padding stays zero
+        c->m_nId.index=i;c->m_nId.v=ids[(seed/16+i)%5];c->m_nCur.index=i;c->m_nCur.v=(int16_t)((seed+i)%16);
+        // Keep each cannon distinct so accidental replacement of cannon-zero indexing is visible
+        for(unsigned segment=0;segment<16;++segment)c->m_avecPos[segment]={positions[(seed/80+segment)%9]+i*100,0,(float)((seed/720)%3)*50};
+    }
+}
+int main() {
+    // Keep console-only failures quiet on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Scan every cannon twice while callbacks change later identifiers and segment indices
+    for(unsigned seed=0;seed<4096;++seed){prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;}
+    // Require all valid indices and actual loop submissions
+    assert(submits);for(unsigned index=0;index<16;++index)assert(visits[index]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+    printf("%u %u %u %u %llu\n",cases,callbacks,submits,loops,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

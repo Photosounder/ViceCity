@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "RwHelper.h"
@@ -15,7 +18,8 @@ CClumpModelInfo::DeleteRwObject(void)
 		m_clump = nil;
 		RemoveTexDictionaryRef();
 		if(GetAnimFileIndex() != -1)
-			CAnimManager::RemoveAnimBlockRef(GetAnimFileIndex());
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_RemoveAnimBlockRef(GetAnimFileIndex());
 	}
 }
 
@@ -36,10 +40,12 @@ CClumpModelInfo::CreateInstance(void)
 		RpHAnimHierarchy *hier;
 		RpHAnimAnimation *anim;
 
-		hier = GetAnimHierarchyFromClump(clone);
+		// Use the C helper and retain the original typed SDK result
+		hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromClump(clone));
 		assert(hier);
 		RpClumpForAllAtomics(clone, SetHierarchyForSkinAtomic, hier);
-		anim = HAnimAnimationCreateForHierarchy(hier);
+		// Use the C helper and retain the original typed SDK result
+		anim = ((RpHAnimAnimation*)HAnimAnimationCreateForHierarchy(hier));
 		RpHAnimHierarchySetCurrentAnim(hier, anim);
 		RpHAnimHierarchySetFlags(hier, (RpHAnimHierarchyFlag)(rpHANIMHIERARCHYUPDATEMODELLINGMATRICES|rpHANIMHIERARCHYUPDATELTMS));
 	}
@@ -71,17 +77,20 @@ CClumpModelInfo::SetClump(RpClump *clump)
 	CVisibilityPlugins::SetClumpModelInfo(m_clump, this);
 	AddTexDictionaryRef();
 	if(GetAnimFileIndex() != -1)
-		CAnimManager::AddAnimBlockRef(GetAnimFileIndex());
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_AddAnimBlockRef(GetAnimFileIndex());
 	if(IsClumpSkinned(clump)){
 		int i;
 		RpHAnimHierarchy *hier;
 		RpAtomic *skinAtomic;
 		RpSkin *skin;
 
-		hier = GetAnimHierarchyFromClump(clump);
+		// Use the C helper and retain the original typed SDK result
+		hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromClump(clump));
 		assert(hier);
 		RpClumpForAllAtomics(clump, SetHierarchyForSkinAtomic, hier);
-		skinAtomic = GetFirstAtomic(clump);
+		// Use the C helper and retain the original typed SDK result
+		skinAtomic = ((RpAtomic*)GetFirstAtomic(clump));
 
 		assert(skinAtomic);
 		skin = RpSkinGeometryGetSkin(RpAtomicGetGeometry(skinAtomic));
@@ -113,7 +122,8 @@ CClumpModelInfo::ConvertAnimFileIndex(void)
 {
 	if(m_animFileIndex != -1){
 		// we have a string pointer in that union
-		int32 index = CAnimManager::GetAnimationBlockIndex(m_animFileName);
+		// Use the complete C animation manager at the original call boundary
+		int32 index = AnimManager_GetAnimationBlockIndex(m_animFileName);
 		free(m_animFileName); // rouz edit (ChatGPT)
 		m_animFileIndex = index;
 	}
@@ -154,7 +164,7 @@ CClumpModelInfo::FindFrameFromNameCB(RwFrame *frame, void *data)
 {
 	RwObjectNameAssociation *assoc = (RwObjectNameAssociation*)data;
 
-	if(!CGeneral::faststricmp(GetFrameNodeName(frame), assoc->name)){
+	if(!General_faststricmp(GetFrameNodeName(frame), assoc->name)){
 		assoc->frame = frame;
 		return nil;
 	}
@@ -168,7 +178,7 @@ CClumpModelInfo::FindFrameFromNameWithoutIdCB(RwFrame *frame, void *data)
 	RwObjectNameAssociation *assoc = (RwObjectNameAssociation*)data;
 
 	if(CVisibilityPlugins::GetFrameHierarchyId(frame) == 0 &&
-	   !CGeneral::faststricmp(GetFrameNodeName(frame), assoc->name)){
+	   !General_faststricmp(GetFrameNodeName(frame), assoc->name)){
 		assoc->frame = frame;
 		return nil;
 	}
@@ -203,3 +213,7 @@ CClumpModelInfo::GetFrameFromId(RpClump *clump, int32 id)
 	RwFrameForAllChildren(RpClumpGetFrame(clump), FindFrameFromIdCB, &assoc);
 	return assoc.frame;
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

@@ -1,0 +1,289 @@
+#include <cstdio>
+#include <limits>
+#include <initializer_list>
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include "ModelIndices_backend.h"
+#ifdef NATIVE_PROJECT_HEADERS
+#undef malloc
+#undef free
+extern "C" void *cita_win_malloc(size_t size,const char *,const char *,int)
+{
+    // Supply the native pool's original aligned raw-storage dependency without game callbacks
+    return (std::malloc)(size);
+}
+extern "C" void cita_win_free(void *pointer,const char *,const char *,int)
+{
+    // Release the same raw native pool storage quietly
+    (std::free)(pointer);
+}
+#endif
+extern "C" { uint32_t Timer_timeMs; }
+int16_t CObject::nNoTempObjects;CCamera TheCamera;
+namespace OriginalRng { int myrand(void);void mysrand(unsigned int); }
+static CPool pools[2];static bool alive[2][32];static RwMatrix attachments[2][32];static int selectedPool,hook;static bool triggered,visible,depthResult=true;static float waterDepth=12.f,waterLevel=20.f;static CPlayerPed player;
+static const CVector *lastVisible;static CVector *aliasedSource;
+static WaterCreatureProperties defaults[65];static unsigned states,calls,creates,ones,updates,removes,constructs,destroys,matrices,alphas,randomDraws,depthCalls,visibilityCalls,headings,recordOps;
+static uint64_t hash=1469598103934665603ULL;
+static int forced=-1;static CObject *replacementObject;
+static void requireAt(bool condition,int line)
+{
+    // Stop quietly at invalid pool lifetimes, borrowed references or corpus inputs
+    if(!condition){fprintf(stderr,"Sea-life corpus failed at line %d, state %u, call %u, hook %d\n",line,states,calls,hook);abort();}
+}
+#define require(condition) requireAt((condition),__LINE__)
+static void word(uint32_t value)
+{
+    // Compare every exact declared scalar without process-address dependence
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Retain all finite rounding, signed zeros and comparison-only edge values
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void vector(const CVector &value)
+{
+    // Observe every named native coordinate without a representation cast
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static int objectID(const CObject *object)
+{
+    // Normalize actual pool-slot identities while preserving the native object stride
+    if(!object)return -1;for(int p=0;p<2;p++){uintptr_t address=(uintptr_t)object,base=(uintptr_t)pools[p].m_entries;if(address>=base && address<base+32*sizeof(CObject)){require((address-base)%sizeof(CObject)==0);return p*32+(int)((address-base)/sizeof(CObject));}}require(false);return -2;
+}
+static CObject *objectAt(int id)
+{
+    // Reach actual reserved raw storage through the shared pool representation
+    return (CObject *)(pools[id/32].m_entries+pools[id/32].m_entrySize*(id%32));
+}
+static int modelPointer(const int16_t *pointer)
+{
+    // Normalize each actual canonical model-ID variable address
+    int index=0;
+#define X(name,var) if(pointer==&var)return index;index++;
+    MODELINDICES
+#undef X
+    require(false);return -1;
+}
+static void records(void)
+{
+    // Observe every canonical slot and all live property pointers/scalars at external boundaries
+    word(TestSea_Count());word(TestSea_Find());word(TestSea_Space());for(int i=0;i<8;i++){WaterCreature value=TestSea_Get(i);word(objectID(value.m_pObj));floating(value.m_fFwdSpeed);floating(value.m_fZTurnSpeed);word(value.m_alpha);floating(value.m_fWaterDepth);word(value.m_state);}for(int i=0;i<65;i++){WaterCreatureProperties value=TestSea_Property(i);word(modelPointer(value.modelID));word((uint16_t)*value.modelID);floating(value.fFwdSpeed);floating(value.fLevel);floating(value.fUnknown);floating(value.fWaterDepth);}
+}
+static void object(const CObject *value)
+{
+    // Preserve all matrix coefficients, ownership metadata, movement fields and related object flags
+    word(objectID(value));for(int a=0;a<4;a++)for(int b=0;b<4;b++)floating(value->matrix.f[a][b]);word(value->matrix.m_attachment!=NULL);word(value->matrix.m_hasRwMatrix);vector(value->m_vecMoveSpeed);vector(value->m_vecTurnSpeed);word(value->modelID);word(value->alpha);word((uint8_t)value->ObjectCreatedBy);word(value->m_nEndOfLifeTime);word(value->bIsStatic);word(value->bTouchingWater);word(value->bUnderwater);word(value->onScreen);word(value->world);
+}
+static void event(unsigned id)
+{
+    // Retain complete call order and the live records visible before each native owner operation
+    calls++;word(id);word(Timer_timeMs);word((uint16_t)CObject::nNoTempObjects);vector(player.position);records();
+}
+static void snapshot(void)
+{
+    // Compare both actual pools, generation bytes/cursors and every still-constructed native object
+    states++;word(states);records();word(Timer_timeMs);word((uint16_t)CObject::nNoTempObjects);vector(player.position);for(int p=0;p<2;p++){word(pools[p].m_allocPtr);for(int i=0;i<32;i++){word(pools[p].m_flags[i]);word(alive[p][i]);if(alive[p][i])object(objectAt(p*32+i));}}
+}
+static void mutation(int point,CObject *value=NULL)
+{
+    // Apply only mutations at external operations that exist in the unchanged original algorithms
+    if(triggered)return;
+    if(hook==1 && point==1){
+        // Change the caller's original argument before the fish-position value copy occurs
+        triggered=true;require(aliasedSource!=NULL);aliasedSource->x+=3.25f;aliasedSource->y-=2.5f;player.position=CVector(8,9,10);
+    }else if(hook==2 && point==2){
+        // Mutate the actual borrowed native fish-position object during camera visibility
+        triggered=true;require(lastVisible!=NULL);CVector *position=const_cast<CVector *>(lastVisible);position->x+=1.25f;position->y-=.75f;
+    }else if(hook==3 && point==3){
+        // Preserve live property reads after heading and forward-speed random callbacks
+        triggered=true;WaterCreatureProperties property=TestSea_Property(0);property.modelID=&MI_DOLPHIN;property.fWaterDepth=13.f;property.fFwdSpeed=.9f;TestSea_SetProperty(0,&property);MI_DOLPHIN=1777;
+    }else if(hook==4 && point==4){
+        // Read the property depth and disabled slot only after alpha publication completes
+        triggered=true;WaterCreatureProperties property=TestSea_Property(0);property.fWaterDepth=17.f;TestSea_SetProperty(0,&property);WaterCreature record=TestSea_Get(0);record.m_state=WATER_CREATURE_REMOVE;record.m_pObj=NULL;TestSea_Set(0,&record);TestSea_SetCount(TestSea_Count()+1);
+    }else if(hook==5 && point==4){
+        // Preserve the controller's captured player position after an object changes the live player owner
+        triggered=true;player.position=CVector(500,500,500);Timer_timeMs+=123;
+    }else if(hook==6 && point==5){
+        // Read the current record object again after a water-depth query replaces its pointer
+        triggered=true;WaterCreature record=TestSea_Get(0);require(replacementObject!=NULL);record.m_pObj=replacementObject;record.m_fWaterDepth=1.f;TestSea_Set(0,&record);Timer_timeMs=0xfffffffeU;
+    }else if(hook==7 && point==6){
+        // Keep the cached allocation pool when a world callback changes the globally selected pool
+        triggered=true;selectedPool=1;
+    }else if(hook==8 && point==7){
+        // Preserve live active-count arithmetic after native object destruction
+        triggered=true;TestSea_SetCount(3);
+    }
+    (void)value;
+}
+CPlayerPed *FindPlayerPed(void)
+{
+    // Observe the real player query before its original value-copy operation
+    event(1);mutation(1);return &player;
+}
+CObjectPool *CPools::GetObjectPool(void)
+{
+    // Preserve the original pure current-pool getter
+    return &pools[selectedPool];
+}
+CObject::CObject(int32_t model,bool rw)
+{
+    // Construct a real matrix subobject and initialize all native mock fields before publication
+    int id=objectID(this),p=id/32,i=id%32;require(!alive[p][i] && !CPool_GetIsFree(&pools[p],i) && rw);guard[0]=0x123456789abcdef0ULL;guard[1]=0xfedcba9876543210ULL;baseTag=4321;identity=id;modelID=model;alpha=93;ObjectCreatedBy=UNKNOWN_OBJECT;m_nEndOfLifeTime=0;bIsStatic=true;bTouchingWater=false;bUnderwater=false;onScreen=true;world=false;m_vecMoveSpeed=CVector(1,2,3);m_vecTurnSpeed=CVector(4,5,6);for(int a=0;a<4;a++)for(int b=0;b<4;b++)matrix.f[a][b]=id*.125f+a*.25f+b*.0625f;matrix.rx=1;matrix.ry=0;matrix.rz=0;matrix.px=10.f+id;matrix.py=-7.f-id;matrix.pz=2.f+id;matrix.m_attachment=&attachments[p][i];matrix.m_hasRwMatrix=false;alive[p][i]=true;constructs++;event(8);object(this);
+}
+CObject::~CObject()
+{
+    // Observe native destruction before pool release and retain the original temporary-object decrement
+    int id=objectID(this);require(alive[id/32][id%32]);event(9);object(this);mutation(7,this);if(ObjectCreatedBy==TEMP_OBJECT && nNoTempObjects!=0)nNoTempObjects--;alive[id/32][id%32]=false;destroys++;
+}
+void CEntity::SetRwObjectAlpha(int32_t value)
+{
+    // Preserve the native inherited-this adjustment and exact alpha argument at publication
+    CObject *object=static_cast<CObject *>(this);require((void *)object!=(void *)this && baseTag==4321);event(10);word(objectID(object));word(value);object->alpha=value;alphas++;mutation(4,object);
+}
+bool CEntity::GetIsOnScreen(void)
+{
+    // Observe the actual captured object's on-screen predicate
+    CObject *object=static_cast<CObject *>(this);event(11);word(objectID(object));return object->onScreen;
+}
+void CWorld::Add(CEntity *base)
+{
+    // Preserve derived-to-base conversion and publication after every object setup write
+    CObject *value=static_cast<CObject *>(base);require((void *)value!=(void *)base);event(12);object(value);value->world=true;
+}
+void CWorld::Remove(CEntity *base)
+{
+    // Observe world removal before the original destruction and raw slot release
+    CObject *value=static_cast<CObject *>(base);require((void *)value!=(void *)base);event(13);object(value);value->world=false;mutation(6,value);
+}
+bool CCamera::IsSphereVisible(const CVector &position,float radius)
+{
+    // Retain the actual native fish-position reference for the subsequent water query
+    event(14);visibilityCalls++;vector(position);floating(radius);lastVisible=&position;mutation(2);return visible;
+}
+bool CWaterLevel::GetWaterDepth(const CVector &position,float *depth,float *level,float *ground)
+{
+    // Verify the same native fish object is borrowed across visibility and creation-depth calls
+    event(15);depthCalls++;vector(position);word(level!=NULL);word(ground!=NULL);if(level)require(&position==lastVisible);
+    // Leave output values untouched when the native query reports failure
+    if(!depthResult){mutation(5);return false;}
+    // Publish the same successful depth and surface values before external mutations
+    if(depth)*depth=waterDepth;if(level)*level=waterLevel;if(ground)*ground=-3.f;mutation(5);return true;
+}
+RwMatrix *RwMatrixUpdate(RwMatrix *matrix)
+{
+    // Observe exact native matrix publication including both original construction updates
+    event(16);matrices++;vector(CVector(matrix->right));vector(CVector(matrix->up));vector(CVector(matrix->at));vector(CVector(matrix->pos));return matrix;
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject an unexpected ownership change in the actual native matrix subobject
+    require(false);return FALSE;
+}
+extern "C" int myrand(void)
+{
+    // Preserve the unchanged original random provider while exposing complete public-call ordering
+    event(17);randomDraws++;int result=forced>=0?forced:OriginalRng::myrand();word(result);mutation(3);return result;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Retain the original signed-to-unsigned seed conversion and provider update
+    OriginalRng::mysrand(seed);
+}
+extern "C" ModelIndexModel *ModelIndices_BackendModel(int16_t)
+{
+    // Reject an unused model-classification dependency during sea-life tests
+    abort();
+}
+extern "C" bool ModelIndices_BackendBuilding(ModelIndexModel *)
+{
+    // Reject an unused native building classification
+    abort();
+}
+extern "C" bool ModelIndices_BackendCodeGlass(const ModelIndexModel *)
+{
+    // Reject an unused native code-glass read
+    abort();
+}
+extern "C" bool ModelIndices_BackendArtistGlass(const ModelIndexModel *)
+{
+    // Reject an unused native artist-glass read
+    abort();
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Stop quietly when a real pool or native header assertion rejects the corpus
+    fprintf(stderr,"Native sea-life assertion at %u: %s\n",line,expression);abort();
+}
+static void clean(void)
+{
+    // Release all remaining fixture-owned native objects without assuming a controller invariant
+    hook=0;for(int i=0;i<8;i++)TestSea_Free(i);TestSea_SetCount(0);for(int p=0;p<2;p++)for(int i=0;i<32;i++)if(alive[p][i]){selectedPool=p;CObject *value=objectAt(p*32+i);value->~CObject();CPool_Delete(&pools[p],value);}selectedPool=0;CObject::nNoTempObjects=0;
+}
+static void reset(unsigned seed=0)
+{
+    // Restore actual properties, native inputs and all named record fields between complete scenarios
+    clean();for(int i=0;i<65;i++)TestSea_SetProperty(i,&defaults[i]);int value=1000;
+#define X(name,var) var=(int16_t)value++;
+    MODELINDICES
+#undef X
+    player.position=CVector(0,0,0);Timer_timeMs=seed*100;visible=false;depthResult=true;waterDepth=12.f;waterLevel=20.f;lastVisible=NULL;aliasedSource=NULL;hook=0;triggered=false;forced=-1;replacementObject=NULL;General_SetRandomSeed((int32_t)seed+1);
+}
+static CObject *create(const CVector &position,int16_t model=1234,int32_t angle=37)
+{
+    // Enter the complete allocation, recovery, construction and publication algorithm from C
+    creates++;return TestSea_RunCreate(&position,model,angle);
+}
+static void one(const CVector &position,int32_t model)
+{
+    // Enter the complete spawn decision and slot-registration algorithm from C
+    ones++;TestSea_RunOne(&position,model);snapshot();
+}
+static void update(void)
+{
+    // Observe complete controller traversal and every deferred state transition
+    updates++;TestSea_RunUpdate();snapshot();
+}
+static void remove(void)
+{
+    // Observe complete teardown and original signed count updates
+    removes++;TestSea_RunRemove();snapshot();
+}
+int main(void)
+{
+    // Verify constructor-equivalent static records and all original real model-pointer property rows
+    for(int i=0;i<65;i++)defaults[i]=TestSea_Property(i);for(int i=0;i<8;i++){WaterCreature value=TestSea_Get(i);require(!value.m_pObj && value.m_state==WATER_CREATURE_DISABLED && value.m_alpha==0 && value.m_fFwdSpeed==0 && value.m_fZTurnSpeed==0 && value.m_fWaterDepth==0);}require(TestSea_Count()==0 && TestSea_Find()==0);
+    for(int p=0;p<2;p++)require(CPool_Init(&pools[p],32,sizeof(CObject),"sea-life"));reset();snapshot();
+    for(int i=0;i<8;i++){TestSea_RecordInit(i,NULL,-.125f,.03125f,7.f,0xffffffffU,WATER_CREATURE_FADE_OUT);recordOps++;snapshot();TestSea_Construct(i);recordOps++;require(TestSea_Get(i).m_state==WATER_CREATURE_DISABLED);}snapshot();
+    CVector zero(0,0,0),point(5,6,7);const CVector positions[]={CVector(1,0,0),CVector(0,1,0),CVector(-1,-1,1),CVector(0,0,0),CVector(3,4,12)};
+    for(const CVector &value:positions){headings++;floating(TestSea_Heading(&value,&zero));}
+    for(int model=0;model<65;model++){reset(model);one(point,model);require(TestSea_Count()==1);remove();}
+    for(int model: {-2,-1,65,2147483647}){reset(4);forced=32767;one(point,model);remove();}
+    reset();visible=true;one(point,0);require(TestSea_Count()==0);visible=false;depthResult=false;one(point,0);waterDepth=4.5f;depthResult=true;one(point,0);require(TestSea_Count()==0);waterDepth=4.5001f;one(point,0);require(TestSea_Count()==1);remove();
+    reset();for(int i=0;i<8;i++)one(point,i);require(!TestSea_Space() && TestSea_Find()==-1);one(point,0);remove();
+    const uint32_t times[]={0,1,39999,40000,0xfffffff0U};const int alphaValues[]={-1,0,1,5,6,7,251,254,255};
+    for(int state=0;state<5;state++)for(int alpha:alphaValues){
+        // Cover every state, both alpha step sizes, the strict distance boundary and end-time wrap
+        reset(state+alpha+3);CObject *object=create(zero);require(object!=NULL);TestSea_Allocate(0,object,.04f,-.005f,3.0f,(uint32_t)alpha,state);recordOps++;TestSea_SetCount(state==WATER_CREATURE_DISABLED?0:1);Timer_timeMs=times[(state+(unsigned)(alpha+1))%5];object->m_nEndOfLifeTime=0;object->matrix.rx=0;object->matrix.ry=0;object->matrix.rz=0;waterDepth=state%2?3.f:3.0001f;update();update();remove();
+    }
+    for(float distance: {74.999f,75.f,75.001f}){reset();CObject *object=create(CVector(distance,0,0));TestSea_Allocate(0,object,.05f,0,3,255,WATER_CREATURE_INIT);recordOps++;TestSea_SetCount(1);update();remove();}
+    reset();CObject *object=create(zero);object->onScreen=false;TestSea_Allocate(0,object,.03f,0,3,255,WATER_CREATURE_ACTIVE);recordOps++;TestSea_SetCount(1);update();update();remove();
+    reset();CObject::nNoTempObjects=NUMTEMPOBJECTS;require(!create(point));snapshot();CObject::nNoTempObjects=0;
+#ifdef FIX_BUGS
+    // Retain corrected exhaustion recovery through the original occupied-slot scan and saved handle
+    reset();for(int i=0;i<32;i++){CObject *value=create(point);require(value!=NULL);}require(!create(point));CObject *temporary=objectAt(7);temporary->ObjectCreatedBy=TEMP_OBJECT;CObject::nNoTempObjects=1;hook=7;triggered=false;require(create(point)==temporary && triggered);selectedPool=0;hook=0;snapshot();
+    // Preserve a source reference into the recovered object's reconstructed native position
+    reset();for(int i=0;i<32;i++)require(create(point)!=NULL);temporary=objectAt(3);temporary->ObjectCreatedBy=TEMP_OBJECT;CObject::nNoTempObjects=1;const CVector &alias=temporary->GetPosition();CObject *reused=create(alias);require(reused==temporary);snapshot();
+#endif
+    for(int mutation=1;mutation<=5;mutation++){reset(mutation);CVector mutablePosition=point;aliasedSource=&mutablePosition;hook=mutation;triggered=false;one(mutablePosition,0);require(triggered);hook=0;remove();}
+    // Keep the captured player value for later slots after the first alpha callback moves the player
+    reset();CObject *nearObject=create(zero),*edgeObject=create(CVector(74,0,0));TestSea_Allocate(0,nearObject,.04f,0,3,5,WATER_CREATURE_INIT);TestSea_Allocate(1,edgeObject,.04f,0,3,5,WATER_CREATURE_INIT);recordOps+=2;TestSea_SetCount(2);hook=5;triggered=false;update();require(triggered && TestSea_Get(1).m_state==WATER_CREATURE_INIT && TestSea_Get(1).m_alpha==9);hook=0;remove();
+    // Retain the initialized zero-depth fallback when an update query fails without writing outputs
+    reset();CObject *shallow=create(zero);TestSea_Allocate(0,shallow,.04f,0,3,255,WATER_CREATURE_INIT);recordOps++;TestSea_SetCount(1);depthResult=false;update();require(TestSea_Get(0).m_state==WATER_CREATURE_FADE_OUT);remove();
+    reset();CObject *first=create(zero),*second=create(zero);require(first!=NULL && second!=NULL && first!=second);replacementObject=second;TestSea_Allocate(0,first,.04f,0,3,255,WATER_CREATURE_INIT);recordOps++;TestSea_SetCount(1);hook=6;triggered=false;update();require(triggered);hook=0;remove();
+    reset();object=create(zero);TestSea_Allocate(0,object,.04f,0,3,255,WATER_CREATURE_REMOVE);recordOps++;TestSea_SetCount(1);hook=8;triggered=false;update();require(triggered && TestSea_Count()==2);hook=0;
+    reset();one(point,26);for(unsigned frame=0;frame<80;frame++){Timer_timeMs+=100;waterDepth=frame<10?12.f:2.f;update();if(TestSea_Count()==0)break;}remove();clean();for(int p=0;p<2;p++)CPool_Flush(&pools[p]);
+    printf("states=%u calls=%u creates=%u ones=%u updates=%u removes=%u constructs=%u destroys=%u matrices=%u alphas=%u randomDraws=%u depths=%u visibility=%u headings=%u recordOps=%u hash=%016llx\n",states,calls,creates,ones,updates,removes,constructs,destroys,matrices,alphas,randomDraws,depthCalls,visibilityCalls,headings,recordOps,(unsigned long long)hash);return 0;
+}

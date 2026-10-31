@@ -1,0 +1,165 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,commands,snapshots,assertions,backingAllocations,spaceCalls,tidySmall,tidyFull,removeCollision,removeIslands,removeBuildings,reloadCollision,requests,loads,timerStops,timerUpdates,fileWrites;
+static uint8_t *backing;
+static uint32_t backingSize;
+static void *slots[4100];
+static uint32_t slotSizes[4100];
+static void *pressureBlock;
+static bool pressure;
+static uint32_t dumpBytes;
+bool CGame::playingIntro=false;
+eLevelName CGame::currLevel=LEVEL_COMMERCIAL;
+size_t CStreaming::ms_memoryUsed=42;
+eLevelName CCollision::ms_collisionInMemory=LEVEL_INDUSTRIAL;
+static void requireAt(bool value,unsigned line)
+{
+    // Stop quietly when a complete owner or external primitive contract differs
+    ++checks;if(!value){fprintf(stderr,"check=%u commands=%u fixture-line=%u\n",checks,commands,line);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *data,size_t count)
+{
+    // Observe initialized scalar and payload bytes independently of process-specific addresses
+    const uint8_t *bytes=(const uint8_t*)data;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static uint32_t address(const void *pointer)
+{
+    // Normalize actual backing and embedded owner addresses while excluding unspecified sentinel fields
+    if(!pointer)return UINT32_MAX;uintptr_t value=(uintptr_t)pointer,start=(uintptr_t)backing,owner=(uintptr_t)&gMainHeap;if(value>=start&&value<start+backingSize)return (uint32_t)(value-start);if(value>=owner&&value<owner+sizeof(gMainHeap))return 0x40000000u+(uint32_t)(value-owner);require(false);return 0;
+}
+static void event(uint32_t kind,uint32_t a=0,uint32_t b=0)
+{
+    // Keep the original external call ordering and arguments in a deterministic trace
+    uint32_t values[]={kind,a,b};hashBytes(values,sizeof(values));
+}
+static HeapResult run(unsigned operation,void *self=&gMainHeap,void *a=NULL,void *b=NULL,uint32_t value=0)
+{
+    // Exercise all complete algorithms through original C++ or independent C dispatchers
+    ++commands;return TestHeap(operation,self,a,b,value);
+}
+static void *allocate(uint32_t size)
+{
+    // Use the complete allocator rather than replacing its block or fixed-list policy
+    return run(OP_MemoryHeap_Malloc,&gMainHeap,NULL,NULL,size).pointer;
+}
+static void release(void *pointer)
+{
+    // Keep registered-pointer cleanup and category accounting inside the actual owner
+    run(OP_MemoryHeap_Free,&gMainHeap,pointer);
+}
+extern "C" void *cita_win_malloc(size_t size,const char *filename,const char *func,int line)
+{
+    // Allocate the complete heap backing region at the genuine external CITAlloc boundary
+    require(!backing&&filename&&func&&line>0&&size>=4096);backing=(uint8_t*)_aligned_malloc(size,16);require(backing!=NULL);backingSize=(uint32_t)size;memset(backing,0xa5,size);++backingAllocations;event(1,(uint32_t)size);return backing;
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Report owner assertion failures without invoking native UI
+    fprintf(stderr,"owner-assert=%s file=%s line=%u function=%s\n",expression,file,line,function);++assertions;require(false);
+}
+void CStreaming::MakeSpaceFor(int32 value)
+{
+    // Preserve every recovery request while leaving release timing to the controlled external owner
+    ++spaceCalls;event(2,(uint32_t)value);
+}
+void CGame::TidyUpMemory(bool a,bool b)
+{
+    // Observe the original recursion thresholds without reproducing heap recovery decisions
+    if(a)++tidyFull;else ++tidySmall;event(3,a,b);
+}
+void CModelInfo::RemoveColModelsFromOtherLevels(eLevelName level)
+{
+    // Preserve the original first legacy pressure operation and its symbolic target
+    require(level==LEVEL_GENERIC);++removeCollision;event(4,(uint32_t)level);
+}
+void CStreaming::RemoveIslandsNotUsed(eLevelName level)
+{
+    // Observe all three original legacy island operations in their original order
+    ++removeIslands;event(5,(uint32_t)level);
+}
+void CStreaming::RemoveBigBuildings(eLevelName level)
+{
+    // Free controlled external storage only after all original escalation stages execute
+    ++removeBuildings;event(6,(uint32_t)level);if(pressure&&level==LEVEL_SUBURBAN){require(pressureBlock!=NULL);release(pressureBlock);pressureBlock=NULL;pressure=false;}
+}
+void CFileLoader::LoadCollisionFromDatFile(eLevelName level)
+{
+    // Observe restoration after the owner's recursive allocation succeeds
+    require(level==CCollision::ms_collisionInMemory);++reloadCollision;event(7,(uint32_t)level);
+}
+void CStreaming::RequestBigBuildings(eLevelName level)
+{
+    // Retain the live current-level read at the original restoration boundary
+    require(level==CGame::currLevel);++requests;event(8,(uint32_t)level);
+}
+void CStreaming::LoadAllRequestedModels(bool priority)
+{
+    // Verify the original restoration priority flag
+    require(priority);++loads;event(9,priority);
+}
+void LoadingScreen(const char*,const char*,const char*)
+{
+    // Fail if the controlled scenario enters an unexpected terminal recovery path
+    require(false);
+}
+extern "C" void Timer_Stop(void)
+{
+    // Observe timer suspension around original file and model restoration operations
+    ++timerStops;event(10);
+}
+extern "C" void Timer_Update(void)
+{
+    // Observe timer restoration at the original operation boundary
+    ++timerUpdates;event(11);
+}
+extern "C" int FileMgr_OpenFileForWriting(const char *name)
+{
+    // Capture the real heap dump operation without creating files or native windows
+    require(strcmp(name,"heap.txt")==0);event(12);return 7;
+}
+extern "C" size_t FileMgr_Write(int fd,const char *bytes,FileMgrSize length)
+{
+    // Compare every actual diagnostic byte produced by the complete ParseHeap implementation
+    require(fd==7&&length>0);++fileWrites;dumpBytes+=(uint32_t)length;hashBytes(bytes,(size_t)length);return (size_t)length;
+}
+extern "C" int FileMgr_CloseFile(int fd)
+{
+    // Verify the original debug stream closes after timer restoration
+    require(fd==7);event(13);return 0;
+}
+static void snapshot(void)
+{
+    // Compare every physical block, live accounting field and fixed-size queue in a pointer-normalized graph
+    ++snapshots;uint32_t state[]={gMainHeap.m_totalMemUsed,gMainHeap.m_totalBlocksUsed,gMainHeap.m_currentMemID,gMainHeap.m_idStack.sp,(uint32_t)numPtrs,(uint32_t)gPosnInList,m_ptrListIndexStack.sp,memMoved};hashBytes(state,sizeof(state));hashBytes(gMainHeap.m_memUsed,NUM_MEMIDS*4);hashBytes(gMainHeap.m_blocksUsed,NUM_MEMIDS*4);
+    unsigned count=0;for(HeapBlockDesc *block=gMainHeap.m_start;block<gMainHeap.m_end;block=(HeapBlockDesc*)run(OP_HeapBlock_GetNextConsecutive,block).pointer){require(++count<10000&&block->m_size<backingSize);uint32_t values[]={address(block),block->m_size,(uint32_t)(int32_t)block->m_memId,(uint32_t)(int32_t)block->m_ptrListIndex};hashBytes(values,sizeof(values));}
+    // Observe only initialized caller payloads because allocator slack can contain process addresses
+    for(unsigned i=0;i<4100;++i)if(slots[i]&&slotSizes[i])hashBytes(slots[i],slotSizes[i]);
+    for(unsigned i=0;i<NUM_FIXED_MEMBLOCKS;++i){CommonSize *list=&gMainHeap.m_fixedSize[i];uint32_t values[]={list->m_size,list->m_failed,list->m_remaining};hashBytes(values,sizeof(values));unsigned length=0;for(HeapBlockDesc *block=list->m_freeList.m_first.m_next;block!=&list->m_freeList.m_last;block=block->m_next){require(++length<10000);uint32_t offset=address(block);hashBytes(&offset,4);}hashBytes(&length,sizeof(length));}
+    unsigned freeCount=0;for(HeapBlockDesc *block=gMainHeap.m_freeList.m_first.m_next;block!=&gMainHeap.m_freeList.m_last;block=block->m_next){require(++freeCount<10000);uint32_t values[]={address(block),block->m_size};hashBytes(values,sizeof(values));}
+    fprintf(stderr,"snapshot=%u hash=%016llx\n",snapshots,(unsigned long long)hashValue);
+}
+static void reset(void)
+{
+    // Reset only diagnostic scenario storage while preserving the original constructor's partial initialization contract
+    if(backing)_aligned_free(backing);backing=NULL;backingSize=0;memset(&gMainHeap,0xa5,sizeof(gMainHeap));run(OP_MemoryHeap_InitRecord);require(gMainHeap.m_start==NULL&&gMainHeap.m_idStack.sp==0&&gMainHeap.m_totalMemUsed==0xa5a5a5a5u);memset(gPtrList,0,sizeof(gPtrList));numPtrs=0;gPosnInList=0;memset(&m_ptrListIndexStack,0,sizeof(m_ptrListIndexStack));memMoved=0;memset(slots,0,sizeof(slots));memset(slotSizes,0,sizeof(slotSizes));MemoryMgr_HostHeapInit(1024*1024);require(gMainHeap.m_totalMemUsed==0&&gMainHeap.m_totalBlocksUsed==0&&gMainHeap.m_currentMemID==MEMID_GAME);
+}
+int main(void)
+{
+    // Exercise all fixed-size queues with actual allocation, category accounting and reuse
+    reset();const uint32_t sizes[]={16,32,224,96,448,80};for(unsigned i=0;i<6;++i){void *pointer=allocate(sizes[i]),*guard=allocate(48);release(pointer);uint32_t before=gMainHeap.m_fixedSize[i].m_remaining;void *again=allocate(sizes[i]);require(again==pointer&&gMainHeap.m_fixedSize[i].m_remaining+1==before);memset(again,(int)(i+1),sizes[i]);hashBytes(again,sizes[i]);snapshot();release(again);release(guard);}require(gMainHeap.m_totalBlocksUsed==0);
+    // Run bounded fragmentation and reallocation transitions including original classic shrink behavior
+    reset();uint32_t random=0x91a2b3c4u;for(unsigned step=0;step<1024;++step){random=random*1664525u+1013904223u;unsigned index=(random>>8)%48;uint32_t size=16+(random%31)*16;if(!slots[index]){run(OP_MemoryHeap_PushMemId,&gMainHeap,NULL,NULL,MEMID_WORLD);slots[index]=allocate(size);slotSizes[index]=size;run(OP_MemoryHeap_PopMemId);memset(slots[index],(int)(index+1),size);}else if(step%3==0){HeapBlockDesc *block=(HeapBlockDesc*)run(OP_MemoryHeap_GetDescFromHeapPointer,&gMainHeap,slots[index]).pointer;uint32_t oldSize=slotSizes[index];void *next=run(OP_MemoryHeap_Realloc,&gMainHeap,slots[index],NULL,size).pointer;require(next!=NULL);for(unsigned j=0;j<(oldSize<size?oldSize:size);++j)require(((uint8_t*)next)[j]==(uint8_t)(index+1));slots[index]=next;slotSizes[index]=size;memset(next,(int)(index+1),size);}else{release(slots[index]);slots[index]=NULL;}if(step%32==0)snapshot();}
+    for(unsigned i=0;i<48;++i)if(slots[i]){release(slots[i]);slots[i]=NULL;}require(gMainHeap.m_totalBlocksUsed==0);snapshot();
+    // Exercise all relocation entry points against actual fragmented blocks and registered caller storage
+    for(unsigned mode=0;mode<3;++mode){reset();void *destination=allocate(128),*guardA=allocate(64);slots[0]=allocate(128);slotSizes[0]=128;memset(slots[0],0x6b,128);void *following=allocate(256),*guardB=allocate(64);run(OP_MemoryHeap_RegisterMemPointer,&gMainHeap,&slots[0]);run(OP_MemoryHeap_RegisterMemPointer,&gMainHeap,&slots[0]);require(numPtrs==1);release(destination);release(following);HeapBlockDesc *target=(HeapBlockDesc*)run(OP_MemoryHeap_WhereShouldMemoryMove,&gMainHeap,slots[0]).pointer;require(target==run(OP_MemoryHeap_GetDescFromHeapPointer,&gMainHeap,destination).pointer);uint32_t used=gMainHeap.m_totalMemUsed,blocks=gMainHeap.m_totalBlocksUsed;if(mode==0)slots[0]=AnimSequence_BackendMoveMemory(slots[0]);else if(mode==1)run(OP_MemoryHeap_TidyHeap);else slots[0]=run(OP_MemoryHeap_MoveHeapBlock,&gMainHeap,target,run(OP_MemoryHeap_GetDescFromHeapPointer,&gMainHeap,slots[0]).pointer).pointer;require(slots[0]==destination&&memMoved==128&&gMainHeap.m_totalMemUsed==used&&gMainHeap.m_totalBlocksUsed==blocks&&gPtrList[0]==&slots[0]);for(unsigned j=0;j<128;++j)require(((uint8_t*)slots[0])[j]==0x6b);require(run(OP_MemoryHeap_MoveMemory,&gMainHeap,slots[0]).pointer==slots[0]);snapshot();release(slots[0]);slots[0]=NULL;release(guardA);release(guardB);require(gMainHeap.m_totalBlocksUsed==0);}
+    // Verify all retained caller forwarding ABIs through the real heap category and allocation operations
+    reset();ColModel_BackendPush(MEMID_WORLD);slots[0]=MemoryMgr_HostHeapMalloc(128);ColModel_BackendPop();slotSizes[0]=128;memset(slots[0],0x35,128);ColModel_BackendRegister(&slots[0]);AnimSequence_BackendPushAnimation();slots[1]=MemoryMgr_HostHeapMalloc(16);AnimSequence_BackendPopMemory();slotSizes[1]=16;memset(slots[1],0x46,16);AnimSequence_BackendRegister(&slots[1]);require(gMainHeap.m_currentMemID==MEMID_GAME&&gMainHeap.m_blocksUsed[MEMID_WORLD]==1&&gMainHeap.m_blocksUsed[MEMID_ANIMATION]==1&&numPtrs==2);slots[0]=MemoryMgr_HostHeapRealloc(slots[0],256);for(unsigned j=0;j<128;++j)require(((uint8_t*)slots[0])[j]==0x35);slotSizes[0]=256;memset(slots[0],0x35,256);snapshot();MemoryMgr_HostHeapFree(slots[0]);slots[0]=NULL;MemoryMgr_HostHeapFree(slots[1]);slots[1]=NULL;require(gMainHeap.m_totalBlocksUsed==0);
+    // Fill and wrap the real registered-pointer ring then reuse every freed index through the embedded C stack
+    reset();for(unsigned i=0;i<4005;++i){slots[i]=allocate(16);slotSizes[i]=16;memset(slots[i],(int)(i%251),16);run(OP_MemoryHeap_RegisterMemPointer,&gMainHeap,&slots[i]);}require(numPtrs==4000&&gPosnInList==5);for(unsigned i=0;i<5;++i){HeapBlockDesc *block=(HeapBlockDesc*)run(OP_MemoryHeap_GetDescFromHeapPointer,&gMainHeap,slots[i]).pointer;require(block->m_ptrListIndex==-1);}snapshot();for(unsigned i=0;i<4005;++i){release(slots[i]);slots[i]=NULL;}require(m_ptrListIndexStack.sp==4000);for(unsigned i=0;i<8;++i){slots[i]=allocate(32);slotSizes[i]=32;memset(slots[i],(int)(i+1),32);run(OP_MemoryHeap_RegisterMemPointer,&gMainHeap,&slots[i]);}require(m_ptrListIndexStack.sp==3992&&gPosnInList==5);snapshot();for(unsigned i=0;i<8;++i){release(slots[i]);slots[i]=NULL;}
+    // Verify the complete recursive recovery and restoration policy against controlled legacy owner calls
+    reset();uint32_t largest=run(OP_MemoryHeap_GetLargestFreeBlock).number;pressureBlock=allocate(largest);pressure=true;void *recovered=allocate(16);require(!pressure&&pressureBlock==NULL&&recovered!=NULL);require(spaceCalls==14&&tidySmall==4&&tidyFull==7&&removeCollision==1&&removeIslands==3&&removeBuildings==3&&reloadCollision==1&&requests==1&&loads==1&&timerStops==2&&timerUpdates==2);release(recovered);snapshot();
+    // Execute the full real heap dump and compare its output without filesystem side effects
+    run(OP_MemoryHeap_ParseHeap);require(fileWrites>0&&dumpBytes>0&&assertions==0);snapshot();_aligned_free(backing);printf("commands=%u checks=%u snapshots=%u backings=%u pressure=%u dump=%u moved=%u hash=%016llx\n",commands,checks,snapshots,backingAllocations,spaceCalls,dumpBytes,memMoved,(unsigned long long)hashValue);return 0;
+}

@@ -1,0 +1,156 @@
+#include "owners.h"
+#include "entry.h"
+#include <malloc.h>
+static const size_t arenaSize=4*1024*1024;
+static unsigned char *arena;
+static size_t cursor;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,allocations,frees,callocCalls,reallocCalls,initCalls,reentries,tableCalls;
+static bool triggerReentry;
+static void *lastPointer;
+static size_t lastRequest,lastCount;
+static uint8_t *lastTopAtReturn;
+struct Block {void *pointer;size_t size;};
+static Block blocks[32];
+MemoryHeap gMainHeap;
+static void require(bool value)
+{
+    // Fail quietly at the exact allocator or owner contract violation
+    ++checks;if(!value){fprintf(stderr,"check=%u\n",checks);abort();}
+}
+static void hashBytes(const void *value,size_t count)
+{
+    // Observe initialized values without including process-specific pointer addresses
+    const uint8_t *bytes=(const uint8_t*)value;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static uint32_t relative(const void *pointer)
+{
+    // Express valid fixture arena addresses as deterministic offsets
+    if(!pointer)return UINT32_MAX;require((const uint8_t*)pointer>=arena&&(const uint8_t*)pointer<arena+arenaSize);return (uint32_t)((const uint8_t*)pointer-arena);
+}
+static void event(uint32_t operation,const void *pointer,size_t size,size_t count)
+{
+    // Record call ordering and the live high-water value at each actual allocator boundary
+    uint32_t values[]={operation,relative(pointer),(uint32_t)size,(uint32_t)count,relative(pMemoryTop)};hashBytes(values,sizeof(values));
+}
+static void *reserve(size_t size,uint8_t pattern)
+{
+    // Return valid aligned raw storage while tracking exact byte requests and live allocations
+    require(size>0&&size<65536);cursor=(cursor+15)&~(size_t)15;require(cursor+size<arenaSize);void *pointer=arena+cursor;cursor+=size+16;memset(pointer,pattern,size);
+    for(unsigned i=0;i<32;++i)if(!blocks[i].pointer){blocks[i]={pointer,size};++allocations;return pointer;}require(false);return NULL;
+}
+static void release(void *pointer)
+{
+    // Preserve null-free calls and reject wrong, interior or duplicate frees
+    if(!pointer)return;for(unsigned i=0;i<32;++i)if(blocks[i].pointer==pointer){memset(pointer,0xdd,blocks[i].size);blocks[i].pointer=NULL;++frees;return;}require(false);
+}
+static void reenter(void)
+{
+    // Raise the owner's high-water mark inside selected allocator calls before the outer call returns
+    if(!triggerReentry)return;triggerReentry=false;++reentries;void *nested=TestMemory(1,NULL,0,4096,0);require(nested!=NULL);TestMemory(4,nested,0,0,0);
+}
+static void finish(void *pointer,size_t size,size_t count)
+{
+    // Retain the live state immediately before returning to the original or C memory algorithm
+    lastPointer=pointer;lastRequest=size;lastCount=count;lastTopAtReturn=pMemoryTop;
+}
+static void *allocate(size_t size,bool heap,const char *func)
+{
+    // Check that actual CITAlloc macros keep the public owner's function metadata
+    if(!heap)require(strcmp(func,"MemoryMgrMalloc")==0);event(heap?11:1,NULL,size,0);void *pointer=reserve(size,0xa5);reenter();finish(pointer,size,0);return pointer;
+}
+static void *resize(void *pointer,size_t size,bool heap,const char *func)
+{
+    // Preserve existing bytes and callback-visible state across real reallocation requests
+    if(!heap)require(strcmp(func,"MemoryMgrRealloc")==0);event(heap?12:2,pointer,size,0);++reallocCalls;size_t oldSize=0;for(unsigned i=0;i<32;++i)if(blocks[i].pointer==pointer)oldSize=blocks[i].size;require(oldSize>0);void *replacement=reserve(size,0xa5);memcpy(replacement,pointer,oldSize<size?oldSize:size);release(pointer);reenter();finish(replacement,size,0);return replacement;
+}
+extern "C" void *cita_win_malloc(size_t size,const char *filename,const char *func,int line)
+{
+    // Supply only the actual external normal allocator boundary through its genuine C declaration
+    require(filename&&line>0);return allocate(size,false,func);
+}
+extern "C" void *cita_win_realloc(void *pointer,size_t size,const char *filename,const char *func,int line)
+{
+    // Preserve the exact normal allocator arguments and public owner metadata
+    require(filename&&line>0);return resize(pointer,size,false,func);
+}
+extern "C" void *cita_win_calloc(size_t count,size_t size,const char *filename,const char *func,int line)
+{
+    // Keep the external calloc's zeroed bytes independent of the owner's optional second clearing pass
+    require(filename&&line>0&&strcmp(func,"MemoryMgrCalloc")==0);event(3,NULL,size,count);++callocCalls;void *pointer=reserve(count*size,0);reenter();finish(pointer,size,count);return pointer;
+}
+extern "C" void cita_win_free(void *pointer,const char *filename,const char *func,int line)
+{
+    // Observe the original normal free even when its argument is null
+    require(filename&&line>0&&strcmp(func,"MemoryMgrFree")==0);event(4,pointer,0,0);release(pointer);
+}
+void MemoryHeap::Init(uint32_t size)
+{
+    // Verify the actual original custom-heap size without replacing any owner initialization policy
+    require(size==128*1024*1024);event(10,NULL,size,0);++initCalls;
+}
+void *MemoryHeap::Malloc(uint32_t size)
+{
+    // Borrow the same custom allocator boundary for ordinary and count-multiplied requests
+    return allocate(size,true,NULL);
+}
+void *MemoryHeap::Realloc(void *pointer,uint32_t size)
+{
+    // Preserve the original custom request narrowing at the native heap method signature
+    return resize(pointer,size,true,NULL);
+}
+void MemoryHeap::Free(void *pointer)
+{
+    // Observe custom null-free policy at its actual external boundary
+    event(14,pointer,0,0);release(pointer);
+}
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*)
+{
+    // Treat unexpected owner assertions as failures without native error windows
+    require(false);
+}
+static void expectedTop(void *pointer,size_t size)
+{
+    // Compare the original live high-water formula after any reentrant allocator update
+    uint8_t *expected=(uint8_t*)pointer+size;if(expected<lastTopAtReturn)expected=lastTopAtReturn;require(pMemoryTop==expected);uint32_t offset=relative(pMemoryTop);hashBytes(&offset,4);
+}
+int main(void)
+{
+    // Check zero-initialized state and the actual SDK table callback identities before any owner call
+    require(pMemoryTop==NULL&&memFuncs.rwmalloc==MemoryMgrMalloc&&memFuncs.rwfree==MemoryMgrFree&&memFuncs.rwrealloc==MemoryMgrRealloc&&memFuncs.rwcalloc==MemoryMgrCalloc);
+    // Use actual untyped allocated storage for typed pointer headers and keep all compared pointers in one allocation
+    arena=(uint8_t*)_aligned_malloc(arenaSize,4096);require(arena!=NULL);pMemoryTop=arena;TestMemory(0,NULL,0,0,0);require(pMemoryTop==arena);
+    for(unsigned test=0;test<2048;++test){
+        // Alternate independent public callers and the actual SDK callback table
+        cursor=64+(test%32)*16;size_t size=1+test%257;triggerReentry=(test%32)==0;void *pointer;if(test&1){pointer=memFuncs.rwmalloc(size);++tableCalls;}else pointer=TestMemory(1,NULL,0,size,0);require(pointer==lastPointer&&lastRequest==size);expectedTop(pointer,size);for(size_t i=0;i<size;++i)((uint8_t*)pointer)[i]=(uint8_t)(test+i);
+        // Reallocate while preserving payload contents and reentrant high-water observations
+        size_t nextSize=size+1+test%31;triggerReentry=(test%64)==1;if(test&1){pointer=memFuncs.rwrealloc(pointer,nextSize);++tableCalls;}else pointer=TestMemory(2,pointer,0,nextSize,0);require(pointer==lastPointer&&lastRequest==nextSize);expectedTop(pointer,nextSize);for(size_t i=0;i<size;++i)require(((uint8_t*)pointer)[i]==(uint8_t)(test+i));hashBytes(pointer,nextSize);uint8_t *peak=pMemoryTop;if(test&1){memFuncs.rwfree(pointer);++tableCalls;}else TestMemory(4,pointer,0,0,0);require(pMemoryTop==peak);
+        // Preserve the original single-element high-water update for count-multiplied allocation
+        size_t count=1+test%5,element=1+test%53;if(test&1){pointer=memFuncs.rwcalloc(count,element);++tableCalls;}else pointer=TestMemory(3,NULL,count,element,0);expectedTop(pointer,element);
+#if defined(USE_CUSTOM_ALLOCATOR) && !defined(FIX_BUGS)
+        const uint8_t expectedByte=0xa5;
+#else
+        const uint8_t expectedByte=0;
+#endif
+        for(size_t i=0;i<count*element;++i)require(((uint8_t*)pointer)[i]==expectedByte);hashBytes(pointer,count*element);TestMemory(4,pointer,0,0,0);
+        // Exercise the original pointer-width alignment formulas and the hidden original-allocation header
+        uint32_t alignment=1u<<(3+test%8);size_t payload=test%129;void *aligned=TestMemory(5,NULL,0,payload,alignment);require(((uintptr_t)aligned&(alignment-1))==0&&*(((void**)aligned)-1)==lastPointer);
+#if defined(FIX_BUGS) || defined(FIX_BUGS_64)
+        size_t requested=payload+sizeof(uintptr)+alignment-1;
+#else
+        size_t requested=payload+alignment;
+#endif
+        require(lastRequest==requested);expectedTop(lastPointer,requested);require((uint8_t*)aligned>=(uint8_t*)lastPointer+sizeof(void*)&&(uint8_t*)aligned+payload<=(uint8_t*)lastPointer+requested);memset(aligned,(int)(test%251),payload);hashBytes(aligned,payload);TestMemory(6,aligned,0,0,0);TestMemory(4,NULL,0,0,0);require(allocations==frees);
+    }
+    // Reinitialization must preserve the original high-water state and select only the configured heap branch
+    uint8_t *peak=pMemoryTop;TestMemory(0,NULL,0,0,0);require(pMemoryTop==peak&&reentries==96&&tableCalls==4096&&allocations==frees);for(unsigned i=0;i<32;++i)require(blocks[i].pointer==NULL);
+#ifdef USE_CUSTOM_ALLOCATOR
+    require(initCalls==2&&callocCalls==0);
+#else
+    require(initCalls==0&&callocCalls==2048);
+#endif
+    uint32_t high=relative(pMemoryTop);
+    // Release diagnostic backing storage only after every owner observation has completed
+    _aligned_free(arena);
+    printf("cases=2048 checks=%u allocations=%u frees=%u table=%u reentries=%u init=%u high=%u hash=%016llx\n",checks,allocations,frees,tableCalls,reentries,initCalls,high,(unsigned long long)hashValue);return 0;
+}

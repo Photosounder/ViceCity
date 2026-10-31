@@ -1,7 +1,10 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
 
 // Index into the PedType array
-enum ePedType
+typedef enum ePedType
 {
 	PEDTYPE_PLAYER1,
 	PEDTYPE_PLAYER2,
@@ -28,7 +31,7 @@ enum ePedType
 	PEDTYPE_UNUSED2,
 
 	NUM_PEDTYPES
-};
+} ePedType;
 
 enum
 {
@@ -60,40 +63,14 @@ enum
 	PED_FLAG_DEADPEDS = 1 << 25,
 };
 
-class CPedType
+typedef struct PedType
 {
-	uint32 m_flag;
-	float unknown1;
-	float unknown2;
-	float unknown3;
-	float unknown4;
-	float unknown5;
-	uint32 m_threats;
-	uint32 m_avoid;
+    uint32_t m_flag;
+    float unknown1, unknown2, unknown3, unknown4, unknown5;
+    uint32_t m_threats, m_avoid;
+} PedType;
 
-	static CPedType *ms_apPedType[NUM_PEDTYPES];
-public:
-
-	static void Initialise(void);
-	static void Shutdown(void);
-	static void LoadPedData(void);
-	static ePedType FindPedType(char *type);
-	static uint32 FindPedFlag(char *type);
-	static void Save(uint8 *buf, uint32 *size);
-	static void Load(uint8 *buf, uint32 size);
-
-	static uint32 GetFlag(int type) { return ms_apPedType[type]->m_flag; }
-	static uint32 GetAvoid(int type) { return ms_apPedType[type]->m_avoid; }
-	static uint32 GetThreats(int type) { return ms_apPedType[type]->m_threats; }
-	static void SetThreats(int type, uint32 threat) { ms_apPedType[type]->m_threats = threat; }
-	static void AddThreat(int type, int threat) { ms_apPedType[type]->m_threats |= threat; }
-	static void RemoveThreat(int type, int threat) { ms_apPedType[type]->m_threats &= ~threat; }
-	static bool IsThreat(int type, int threat) { return ms_apPedType[type]->m_threats & threat; }
-};
-
-VALIDATE_SIZE(CPedType, 0x20);
-
-enum ePedStats
+typedef enum ePedStats
 {
 	PEDSTAT_PLAYER,
 	PEDSTAT_COP,
@@ -137,7 +114,7 @@ enum ePedStats
 	PEDSTAT_COWARD,
 
 	NUM_PEDSTATS
-};
+} ePedStats;
 
 // flags
 enum
@@ -152,27 +129,46 @@ enum
 	STAT_GUN_PANIC = 0x80
 };
 
-class CPedStats
+typedef struct PedStats
 {
-public:
 	ePedStats m_type;
 	char m_name[24];
 	float m_fleeDistance;
 	float m_headingChangeRate;
-	int8 m_fear;
-	int8 m_temper;
-	int8 m_lawfulness;
-	int8 m_sexiness;
+	int8_t m_fear;
+	int8_t m_temper;
+	int8_t m_lawfulness;
+	int8_t m_sexiness;
 	float m_attackStrength;
 	float m_defendWeakness;
-	int16 m_flags;
+	int16_t m_flags;
 
-	static CPedStats *ms_apPedStats[NUM_PEDSTATS];
+} PedStats;
 
-	static void Initialise(void);
-	static void Shutdown(void);
-	static void LoadPedStats(void);
-	static ePedStats GetPedStatType(char *name);
-};
-
-VALIDATE_SIZE(CPedStats, 0x34);
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern PedType *PedType_records[NUM_PEDTYPES];
+extern PedStats *PedStats_records[NUM_PEDSTATS];
+void PedType_Initialise(void);
+void PedType_Shutdown(void);
+void PedType_LoadPedData(void);
+ePedType PedType_FindPedType(char *type);
+uint32_t PedType_FindPedFlag(char *type);
+void PedType_Save(uint8_t *buf, uint32_t *size);
+void PedType_Load(uint8_t *buf, uint32_t size);
+uint32_t PedType_GetFlag(int type);
+uint32_t PedType_GetAvoid(int type);
+uint32_t PedType_GetThreats(int type);
+void PedType_SetThreats(int type, uint32_t threat);
+void PedType_AddThreat(int type, int threat);
+void PedType_RemoveThreat(int type, int threat);
+bool PedType_IsThreat(int type, int threat);
+void PedStats_Initialise(void);
+void PedStats_Shutdown(void);
+void PedStats_LoadPedStats(void);
+ePedStats PedStats_GetPedStatType(char *name);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

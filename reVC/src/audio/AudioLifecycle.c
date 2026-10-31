@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "AudioManager.h"
+#include "MusicManager.h"
 #include "DMAudio.h"
 #include "sampman.h"
 
@@ -8,7 +9,7 @@ AudioLifecycle_Initialise(cAudioManager *manager)
 {
 	// Preserve the original lifecycle gates, partial writes and callback order
 	if (!manager->m_bIsInitialised) {
-		AudioLifecycleHost_PreInitialise(manager);
+		AudioGameSetup_PreInitialise(manager);
 		manager->m_bIsInitialised = SampleManager_Initialise(&SampleManager);
 		if (manager->m_bIsInitialised) {
 #ifdef EXTERNAL_3D_SOUND
@@ -21,10 +22,10 @@ AudioLifecycle_Initialise(cAudioManager *manager)
 			{
 				manager->m_nActiveSamples = NUM_CHANNELS_GENERIC;
 #endif
-				AudioLifecycleHost_PostInitialise(manager);
+				AudioGameSetup_PostInitialise(manager);
 				AudioPolice_InitZones();
 				AudioPolice_Init(manager);
-				AudioLifecycleHost_MusicInitialise();
+				MusicInit_Initialise(&MusicManager);
 			}
 		}
 	}
@@ -35,7 +36,7 @@ AudioLifecycle_Terminate(cAudioManager *manager)
 {
 	// Preserve the original lifecycle gates, partial writes and callback order
 	if (manager->m_bIsInitialised) {
-		AudioLifecycleHost_MusicTerminate();
+		MusicPlayback_Terminate(&MusicManager);
 
 		for (uint32_t i = 0; i < NUM_AUDIOENTITIES; i++) {
 			manager->m_asAudioEntities[i].m_bIsUsed = 0;
@@ -45,7 +46,7 @@ AudioLifecycle_Terminate(cAudioManager *manager)
 		manager->m_nAudioEntitiesCount = 0;
 		// Reset the active script-object count through the C state API
 		AudioScriptObjectManager_Reset(&manager->m_sAudioScriptObjectManager);
-		AudioLifecycleHost_PreTerminate(manager);
+		AudioGameSetup_PreTerminate(manager);
 
 		for (uint32_t i = 0; i < MAX_SFX_BANKS; i++) {
 			if (SampleManager_IsSampleBankLoaded(&SampleManager, i))
@@ -55,7 +56,7 @@ AudioLifecycle_Terminate(cAudioManager *manager)
 		SampleManager_Terminate(&SampleManager);
 
 		manager->m_bIsInitialised = 0;
-		AudioLifecycleHost_PostTerminate(manager);
+		AudioGameSetup_PostTerminate(manager);
 	}
 }
 

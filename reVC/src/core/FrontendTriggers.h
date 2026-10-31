@@ -1,4 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 CTriggerCaller MemCardAccessTriggerCaller;
 
 void InitialiseTextsInMenuControllerInCar(CMenuPictureAndText *widget, CMenuManager::CONTRCONFIG cont);
@@ -16,7 +19,10 @@ DisplayWarningControllerMsg()
 {
 	if ( CPad::bDisplayNoControllerMessage )
 	{
-		CSprite2d::DrawRect(CRect(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
 		
 		CFont::SetFontStyle(FONT_BANK);
 		CFont::SetBackgroundOff();
@@ -31,7 +37,7 @@ DisplayWarningControllerMsg()
 		CPlaceableShText text;
 		text.SetPosition(X(60.0f), Y(180.0f), false); // 205.714294
 		text.SetColor(CRGBA(152, 152, 152, 255));
-		text.m_text = TheText.Get("NOCONTE"); // Please re-insert the analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2) in controller port 1 to continue
+		text.m_text = Text_Get(&TheText,"NOCONTE"); // Please re-insert the analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2) in controller port 1 to continue
 		text.SetShadows(true, TEXT_SHADOW_COLOR, SHADOW_VECTOR*2.0f);
 		text.SetAlpha(255);
 		text.DrawShWrap(0.0f, 0.0f, X(600.0f+SHADOW_VECTOR.x), YF(600.0f)); //TODO check
@@ -40,7 +46,10 @@ DisplayWarningControllerMsg()
 	}
 	else if ( CPad::bObsoleteControllerMessage )
 	{
-		CSprite2d::DrawRect(CRect(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(X(20.0f), Y(140.0f), X(620.0f), Y(328.0)), CRGBA(64, 16, 16, 224)); // CRect(20.0f, 160.0f, 620.0f, 374.857117f)
 		CFont::SetFontStyle(FONT_BANK);
 		CFont::SetBackgroundOff();
 		CFont::SetScale(X(0.84f), Y(1.26f)); // 1.440000
@@ -54,7 +63,7 @@ DisplayWarningControllerMsg()
 		CPlaceableShText text;
 		text.SetPosition(X(60.0f), Y(180.0f), false); // 205.714294
 		text.SetColor(CRGBA(152, 152, 152, 255));
-		text.m_text = TheText.Get("WRCONTE"); // Please re-insert the analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2) in controller port 1 to continue
+		text.m_text = Text_Get(&TheText,"WRCONTE"); // Please re-insert the analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2) in controller port 1 to continue
 		text.SetShadows(true, TEXT_SHADOW_COLOR, SHADOW_VECTOR*2.0f);
 		text.SetAlpha(255);
 		text.DrawShWrap(0.0f, 0.0f, X(600.0f+SHADOW_VECTOR.x), YF(600.0f)); //TODO check
@@ -86,9 +95,9 @@ wchar *PrintStatLine(char const *text, void *stat, unsigned char itsFloat, void 
 		if (stat2)
 		{
 			if ( itsFloat )
-				sprintf(line, "  %.2f %s %.2f", *(float*)stat, UnicodeToAscii(TheText.Get("FEST_OO")), *(float*)stat2);
+				sprintf(line, "  %.2f %s %.2f", *(float*)stat, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), *(float*)stat2);
 			else
-				sprintf(line, "  %d %s %d", *(int32*)stat, UnicodeToAscii(TheText.Get("FEST_OO")), *(int32*)stat2);
+				sprintf(line, "  %d %s %d", *(int32*)stat, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), *(int32*)stat2);
 		}
 		else
 		{
@@ -112,7 +121,10 @@ wchar *PrintStatLine(char const *text, void *stat, unsigned char itsFloat, void 
 void
 DisplayMemoryCardAccessMsg(wchar *msg, CRGBA const &color)	
 {	
-	CSprite2d::DrawRect(CRect(X(70.0f), Y(100.0f), X(570.0f), Y(270.0f)), color);
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(X(70.0f), Y(100.0f), X(570.0f), Y(270.0f)), color);
 	
 	CFont::SetFontStyle(FONT_BANK);
 	CFont::SetBackgroundOff();
@@ -156,7 +168,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 		
 		if ( TheMemoryCard.GetError() == CMemoryCard::NO_ERR_SUCCESS)
 		{
-			widget->AddOption(TheText.Get("FES_CAN"), 0.0f, YF(y), cancelTrigger, 0, 0);
+			widget->AddOption(Text_Get(&TheText,"FES_CAN"), 0.0f, YF(y), cancelTrigger, 0, 0);
 			
 			FrontEndMenuManager.field_3C = 0;
 			
@@ -167,7 +179,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 			for ( int32 i = 0; i < CMemoryCard::MAX_SLOTS; i++ )
 			{
 				// SAVE FILE
-				sprintf(buff, "%s %d ", UnicodeToAscii(TheText.Get("FES_SLO")), i+1);
+				sprintf(buff, "%s %d ", UnicodeToAscii(Text_Get(&TheText,"FES_SLO")), i+1);
 				AsciiToUnicode(buff, MemoryCard_FileNames[i]);
 				
 				wchar *datetime = nil;
@@ -176,7 +188,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 				{
 					case CMemoryCard::SLOT_CORRUPTED:
 					{
-						UnicodeStrcat(MemoryCard_FileNames[i], TheText.Get("FES_ISC")); // IS CORRUPTED
+						UnicodeStrcat(MemoryCard_FileNames[i], Text_Get(&TheText,"FES_ISC")); // IS CORRUPTED
 						datetime = TheMemoryCard.GetDateAndTimeOfSavedGame(i);
 						break;
 					}
@@ -189,14 +201,14 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 						}
 						else
 						{
-							UnicodeStrcpy(MemoryCard_FileNames[i], TheText.Get("FES_SAG")); // PRESENT
+							UnicodeStrcpy(MemoryCard_FileNames[i], Text_Get(&TheText,"FES_SAG")); // PRESENT
 							datetime = TheMemoryCard.GetDateAndTimeOfSavedGame(i);
 						}
 						break;
 					}
 					case CMemoryCard::SLOT_NOTPRESENT:
 					{
-						UnicodeStrcat(MemoryCard_FileNames[i], TheText.Get("FES_ISF"));
+						UnicodeStrcat(MemoryCard_FileNames[i], Text_Get(&TheText,"FES_ISF"));
 						datetime = TheMemoryCard.GetDateAndTimeOfSavedGame(i);
 						break;
 					}
@@ -215,7 +227,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 			}
 			
 			// Cancel
-			widget->AddOption(TheText.Get("FES_CAN"), 0.0f, YF(y+(height*2)), cancelTrigger, 0, 0);
+			widget->AddOption(Text_Get(&TheText,"FES_CAN"), 0.0f, YF(y+(height*2)), cancelTrigger, 0, 0);
 			
 			FrontEndMenuManager.field_3C = 1;
 			
@@ -227,7 +239,7 @@ FillMenuWithMemCardFileListing(CMenuMultiChoiceTwoLinesTriggered *widget, void (
 			if ( TheMemoryCard.GetErrorMessage())
 				widget->AddTitle(TheMemoryCard.GetErrorMessage(), 0.0f, YF(y), 0);
 			else
-				widget->AddTitle(TheText.Get("FES_GME"), 0.0f, YF(y), 0);
+				widget->AddTitle(Text_Get(&TheText,"FES_GME"), 0.0f, YF(y), 0);
 		}
 		
 		widget->SetMenuSelection(0);
@@ -265,7 +277,7 @@ TriggerSaveZone_QuitMenu(CMenuMultiChoiceTriggered *widget)
 	{
 		FrontEndMenuManager.m_bMenuActive = false;
 		FrontEndMenuManager.m_bInSaveZone = false;
-		CTimer::EndUserPause();
+		Timer_EndUserPause();
 	}
 }
 
@@ -279,10 +291,10 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 		if ( TheMemoryCard.GetError() == CMemoryCard::NO_ERR_SUCCESS)
 		{
 			MenuSaveZoneMSG_1.m_numTexts = 0;
-			MenuSaveZoneMSG_1.AddText(TheText.Get("FES_AFO"), X(-80.0f), 0.0f, TEXT_COLOR, 0);
+			MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FES_AFO"), X(-80.0f), 0.0f, TEXT_COLOR, 0);
 			
 			MenuSaveZoneMSG_2.m_numOptions = 0;
-			MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(5.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+			MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(5.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 			
 			MenuPageSaveZone_Message.ActivatePage();
 			pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -293,7 +305,7 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 			MenuSaveZoneMSG_1.AddText(TheMemoryCard.GetErrorMessage(), X(-80.0f), 0.0f, TEXT_COLOR, 0);
 			
 			MenuSaveZoneMSG_2.m_numOptions = 0;
-			MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(15.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+			MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(15.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 			
 			MenuPageSaveZone_Message.ActivatePage();
 			pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -305,7 +317,7 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 			else
 			{
 				// Formatting Memory Card (PS2) in MEMORY CARD slot 1.  Please do not remove the Memory Card (PS2), reset or switch off the console.
-				DisplayMemoryCardAccessMsg(TheText.Get("FEFD_WR"), CRGBA(200, 50, 50, 192));
+				DisplayMemoryCardAccessMsg(Text_Get(&TheText,"FEFD_WR"), CRGBA(200, 50, 50, 192));
 				TheMemoryCard.FormatCard(CARD_ONE);
 				
 				if ( TheMemoryCard.GetError() == CMemoryCard::NO_ERR_SUCCESS )
@@ -314,17 +326,17 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 				{
 					TheMemoryCard.PopulateErrorMessage();
 					
-					wchar *error = TheText.Get("FESZ_FF"); // Format Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
+					wchar *error = Text_Get(&TheText,"FESZ_FF"); // Format Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 					
 					// missing switch
 					
-					if ( !error ) error = TheText.Get("FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
+					if ( !error ) error = Text_Get(&TheText,"FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
 					
 					MenuSaveZoneMSG_1.m_numTexts = 0;
 					MenuSaveZoneMSG_1.AddText(error, X(-80.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneMSG_2.m_numOptions = 0;
-					MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+					MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 					
 					MenuPageSaveZone_Message.ActivatePage();
 					pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -343,7 +355,7 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 					TheMemoryCard.PopulateErrorMessage();
 					
 					// Format Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
-					wchar *error = TheText.Get("FESZ_FF");
+					wchar *error = Text_Get(&TheText,"FESZ_FF");
 					
 					switch ( TheMemoryCard.GetError() )
 					{
@@ -357,13 +369,13 @@ TriggerSaveZone_FormatCard(CMenuMultiChoiceTriggered *widget)
 					}
 					
 					// Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
-					if ( !error ) error = TheText.Get("FES_GME");
+					if ( !error ) error = Text_Get(&TheText,"FES_GME");
 					
 					MenuSaveZoneMSG_1.m_numTexts = 0;
 					MenuSaveZoneMSG_1.AddText(error, X(-80.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneMSG_2.m_numOptions = 0;
-					MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+					MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 					
 					MenuPageSaveZone_Message.ActivatePage();
 					pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -384,10 +396,10 @@ TriggerSaveZone_FormatCardSelect(CMenuMultiChoiceTriggered *widget)
 		{
 			// This Memory Card (PS2) is already formatted.
 			MenuSaveZoneMSG_1.m_numTexts = 0;
-			MenuSaveZoneMSG_1.AddText(TheText.Get("FES_AFO"), X(-80.0f), 0.0f, TEXT_COLOR, 0);
+			MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FES_AFO"), X(-80.0f), 0.0f, TEXT_COLOR, 0);
 			
 			MenuSaveZoneMSG_2.m_numOptions = 0;
-			MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(5.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+			MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(5.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 			
 			MenuPageSaveZone_Message.ActivatePage();
 			pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -398,7 +410,7 @@ TriggerSaveZone_FormatCardSelect(CMenuMultiChoiceTriggered *widget)
 			MenuSaveZoneMSG_1.AddText(TheMemoryCard.GetErrorMessage(), X(-80.0f), 0.0f, TEXT_COLOR, 0);
 			
 			MenuSaveZoneMSG_2.m_numOptions = 0;
-			MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(15.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+			MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(15.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 			
 			MenuPageSaveZone_Message.ActivatePage();
 			pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -407,11 +419,11 @@ TriggerSaveZone_FormatCardSelect(CMenuMultiChoiceTriggered *widget)
 		{
 			// Are you sure you wish to format the Memory Card (PS2) in MEMORY CARD slot 1? 
 			MenuSaveZoneQYN_1.m_numTexts = 0;
-			MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QF"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
+			MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QF"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
 			
 			MenuSaveZoneQYN_2.m_numOptions = 0;
-			MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
-			MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_FormatCard,     0, 0);
+			MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+			MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_FormatCard,     0, 0);
 			
 			MenuPageSaveZone_QuestionYesNo.ActivatePage();
 			pActiveMenuPage = &MenuPageSaveZone_QuestionYesNo;
@@ -432,7 +444,7 @@ TriggerSaveZone_DeleteSaveGame(CMenuMultiChoiceTriggered *widget)
 		else
 		{
 			// Overwriting data. Please do not remove the Memory Card (PS2) in MEMORY CARD slot 1, reset or switch off the console.
-			DisplayMemoryCardAccessMsg(TheText.Get("FESZ_OW"), CRGBA(200, 50, 50, 192));
+			DisplayMemoryCardAccessMsg(Text_Get(&TheText,"FESZ_OW"), CRGBA(200, 50, 50, 192));
 			
 			TheMemoryCard.DeleteSlot(MemoryCardSlotSelected);
 			
@@ -440,17 +452,17 @@ TriggerSaveZone_DeleteSaveGame(CMenuMultiChoiceTriggered *widget)
 			{
 				TheMemoryCard.PopulateErrorMessage();
 				
-				wchar *error = TheText.Get("FES_DEE"); // Deleting Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
+				wchar *error = Text_Get(&TheText,"FES_DEE"); // Deleting Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 				
 				// switch missing
 				
-				if ( !error ) error = TheText.Get("FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
+				if ( !error ) error = Text_Get(&TheText,"FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
 				
 				MenuSaveZoneMSG_1.m_numTexts = 0;
 				MenuSaveZoneMSG_1.AddText(error, X(-80.0f), 0.0f, TEXT_COLOR, 0);
 				
 				MenuSaveZoneMSG_2.m_numOptions = 0;
-				MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+				MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 				
 				MenuPageSaveZone_Message.ActivatePage();
 				pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -463,10 +475,10 @@ TriggerSaveZone_DeleteSaveGame(CMenuMultiChoiceTriggered *widget)
 				{
 					// Game saved successfully!
 					MenuSaveZoneMSG_1.m_numTexts = 0;
-					MenuSaveZoneMSG_1.AddText(TheText.Get("FESZ_L1"), X(-20.0f), YF(10.0f), TEXT_COLOR, 0);
+					MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FESZ_L1"), X(-20.0f), YF(10.0f), TEXT_COLOR, 0);
 					
 					MenuSaveZoneMSG_2.m_numOptions = 0;
-					MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(110.0f), 0.0f, TriggerSaveZone_QuitMenu, 0, 0);
+					MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(110.0f), 0.0f, TriggerSaveZone_QuitMenu, 0, 0);
 					
 					MenuPageSaveZone_Message.ActivatePage();
 					pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -475,7 +487,7 @@ TriggerSaveZone_DeleteSaveGame(CMenuMultiChoiceTriggered *widget)
 				{
 					TheMemoryCard.PopulateErrorMessage();
 					
-					wchar *error = TheText.Get("FESZ_SR"); // Save Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
+					wchar *error = Text_Get(&TheText,"FESZ_SR"); // Save Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 					
 					switch ( TheMemoryCard.GetError() )
 					{
@@ -488,13 +500,13 @@ TriggerSaveZone_DeleteSaveGame(CMenuMultiChoiceTriggered *widget)
 						}
 					}
 					
-					if ( !error ) error = TheText.Get("FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
+					if ( !error ) error = Text_Get(&TheText,"FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
 					
 					MenuSaveZoneMSG_1.m_numTexts = 0;
 					MenuSaveZoneMSG_1.AddText(error, X(-80.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneMSG_2.m_numOptions = 0;
-					MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(120.0f), YF(30.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+					MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(120.0f), YF(30.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 					
 					MenuPageSaveZone_Message.ActivatePage();
 					pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -515,7 +527,7 @@ TriggerSaveZone_SaveGame(CMenuMultiChoiceTriggered *widget)
 			MemCardAccessTriggerCaller.SetTrigger(TriggerSaveZone_SaveGame, widget);
 		else
 		{
-			DisplayMemoryCardAccessMsg(TheText.Get("FESZ_WR"), CRGBA(200, 50, 50, 192));
+			DisplayMemoryCardAccessMsg(Text_Get(&TheText,"FESZ_WR"), CRGBA(200, 50, 50, 192));
 			
 			TheMemoryCard.SaveSlot(MemoryCardSlotSelected);
 			
@@ -523,10 +535,10 @@ TriggerSaveZone_SaveGame(CMenuMultiChoiceTriggered *widget)
 			{
 				// Game saved successfully!
 				MenuSaveZoneMSG_1.m_numTexts = 0;
-				MenuSaveZoneMSG_1.AddText(TheText.Get("FESZ_L1"), X(-20.0f), YF(10.0f), TEXT_COLOR, 0);
+				MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FESZ_L1"), X(-20.0f), YF(10.0f), TEXT_COLOR, 0);
 				
 				MenuSaveZoneMSG_2.m_numOptions = 0;
-				MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(110.0f), 0.0f, TriggerSaveZone_QuitMenu, 0, 0);
+				MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(110.0f), 0.0f, TriggerSaveZone_QuitMenu, 0, 0);
 				
 				MenuPageSaveZone_Message.ActivatePage();
 				pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -535,7 +547,7 @@ TriggerSaveZone_SaveGame(CMenuMultiChoiceTriggered *widget)
 			{
 				TheMemoryCard.PopulateErrorMessage();
 				
-				wchar *error = TheText.Get("FESZ_SR"); // Save Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
+				wchar *error = Text_Get(&TheText,"FESZ_SR"); // Save Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 				
 				switch ( TheMemoryCard.GetError() )
 				{
@@ -548,13 +560,13 @@ TriggerSaveZone_SaveGame(CMenuMultiChoiceTriggered *widget)
 					}
 				}
 				
-				if ( !error ) error = TheText.Get("FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
+				if ( !error ) error = Text_Get(&TheText,"FES_GME"); // Error Reading Memory Card (PS2) in MEMORY CARD slot 1 please check and try again.
 				
 				MenuSaveZoneMSG_1.m_numTexts = 0;
 				MenuSaveZoneMSG_1.AddText(error, X(-80.0f), 0.0f, TEXT_COLOR, 0);
 				
 				MenuSaveZoneMSG_2.m_numOptions = 0;
-				MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(120.0f), YF(30.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+				MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(120.0f), YF(30.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
 				
 				MenuPageSaveZone_Message.ActivatePage();
 				pActiveMenuPage = &MenuPageSaveZone_Message;
@@ -579,11 +591,11 @@ TriggerSaveZone_SaveSlots(CMenuMultiChoiceTwoLinesTriggered *widget)
 				{
 					// Proceed with overwriting this saved game? 
 					MenuSaveZoneQYN_1.m_numTexts = 0;
-					MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QO"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
+					MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QO"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneQYN_2.m_numOptions = 0;
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_DeleteSaveGame, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_DeleteSaveGame, 0, 0);
 					
 					MenuPageSaveZone_QuestionYesNo.ActivatePage();
 					bMemoryCardSpecialZone = false;
@@ -595,11 +607,11 @@ TriggerSaveZone_SaveSlots(CMenuMultiChoiceTwoLinesTriggered *widget)
 				{
 					// PROCEED WITH SAVE ?
 					MenuSaveZoneQYN_1.m_numTexts = 0;
-					MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QS"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
+					MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QS"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneQYN_2.m_numOptions = 0;
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_SaveGame,       0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"),  X(80.0f), YF(20.0f), TriggerSaveZone_BackToMainMenu, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), 0.0f,  TriggerSaveZone_SaveGame,       0, 0);
 					
 					MenuPageSaveZone_QuestionYesNo.ActivatePage();
 					bMemoryCardSpecialZone = false;
@@ -643,7 +655,7 @@ TriggerControls_Vibrations(CMenuOnOffTriggered *widget)
 		if ( CMenuManager::m_PrefsUseVibration )
 		{
 			CPad::GetPad(0)->StartShake(300, 150);
-			TimeToStopPadShaking = CTimer::GetTimeInMillisecondsPauseMode() + 500;
+			TimeToStopPadShaking = Timer_GetTimeInMillisecondsPauseMode() + 500;
 		}
 	}
 }
@@ -858,13 +870,13 @@ TriggerSave_NewGameNewGame(CMenuMultiChoiceTriggered *widget)
 	FrontEndMenuManager.m_bInSaveZone    = false;
 	bIgnoreTriangleButton = false;
 	
-	CTimer::EndUserPause();
+	Timer_EndUserPause();
 	
 	FrontEndMenuManager.AnaliseMenuContents();
 	
 	DMAudio_SetEffectsFadeVol(0);
 	DMAudio_SetMusicFadeVol(0);
-	DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
+	DMAudio_ResetTimers((*Timer_GetTimeInMilliseconds()));
 }
 
 void
@@ -872,11 +884,11 @@ TriggerSave_NewGameSelectYes(CMenuMultiChoiceTriggered *widget)
 {
 	// Are you sure you want to start a new game? All progress since the last save game will be lost. Proceed?
 	MenuSaveZoneQYN_1.m_numTexts = 0;
-	MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QR"), X(-100.0f), 0.0f, TEXT_COLOR, 0);
+	MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QR"), X(-100.0f), 0.0f, TEXT_COLOR, 0);
 	
 	MenuSaveZoneQYN_2.m_numOptions = 0;
-	MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"),  X(80.0f), YF(30.0f), TriggerSave_BackToMainMenu, 0, 0);
-	MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), YF(10.0f), TriggerSave_NewGameNewGame, 0, 0);
+	MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"),  X(80.0f), YF(30.0f), TriggerSave_BackToMainMenu, 0, 0);
+	MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), YF(10.0f), TriggerSave_NewGameNewGame, 0, 0);
 	
 	MenuPageSaveZone_QuestionYesNo.ActivatePage();
 	pMenuSave = &MenuPageSaveZone_QuestionYesNo;
@@ -896,7 +908,7 @@ TriggerSave_DeleteGameDeleteGame(CMenuMultiChoiceTriggered *widget)
 		else
 		{
 			// Deleting data. Please do not remove the Memory Card (PS2) in MEMORY CARD slot 1, reset or switch off the console.
-			DisplayMemoryCardAccessMsg(TheText.Get("FEDL_WR"), CRGBA(200, 50, 50, 192));
+			DisplayMemoryCardAccessMsg(Text_Get(&TheText,"FEDL_WR"), CRGBA(200, 50, 50, 192));
 			
 			TheMemoryCard.DeleteSlot(MemoryCardSlotSelected);
 			
@@ -904,10 +916,10 @@ TriggerSave_DeleteGameDeleteGame(CMenuMultiChoiceTriggered *widget)
 			{
 				// Deleting Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 				MenuSaveZoneMSG_1.m_numTexts = 0;
-				MenuSaveZoneMSG_1.AddText(TheText.Get("FES_DEE"), X(-80.0f), YF(20.0f), TEXT_COLOR, 0);
+				MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FES_DEE"), X(-80.0f), YF(20.0f), TEXT_COLOR, 0);
 				
 				MenuSaveZoneMSG_2.m_numOptions = 0;
-				MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(15.0f), TriggerSave_BackToMainMenu, 0, 0);
+				MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(15.0f), TriggerSave_BackToMainMenu, 0, 0);
 				
 				MenuPageSaveZone_Message.ActivatePage();
 				pMenuSave = &MenuPageSaveZone_Message;
@@ -947,11 +959,11 @@ TriggerSave_DeleteGameDeleteGameSelect(CMenuMultiChoiceTwoLinesTriggered *widget
 				{
 					// Proceed with deleting this saved game? 
 					MenuSaveZoneQYN_1.m_numTexts = 0;
-					MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QD"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
+					MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QD"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneQYN_2.m_numOptions = 0;
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"), X(80.0f), YF(20.0f), TriggerSave_BackToMainMenu, 0, 0);
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), 0.0f, TriggerSave_DeleteGameDeleteGame, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"), X(80.0f), YF(20.0f), TriggerSave_BackToMainMenu, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), 0.0f, TriggerSave_DeleteGameDeleteGame, 0, 0);
 					
 					MenuPageSaveZone_QuestionYesNo.ActivatePage();
 					pMenuSave = &MenuPageSaveZone_QuestionYesNo;
@@ -990,7 +1002,7 @@ TriggerSave_LoadGameLoadGame(CMenuMultiChoiceTriggered *widget)
 		else
 		{
 			// Loading data. Please do not remove the Memory Card (PS2) in MEMORY CARD slot 1, reset or switch off the console.
-			DisplayMemoryCardAccessMsg(TheText.Get("FELD_WR"), CRGBA(200, 50, 50, 192));
+			DisplayMemoryCardAccessMsg(Text_Get(&TheText,"FELD_WR"), CRGBA(200, 50, 50, 192));
 			TheMemoryCard.LoadSlotToBuffer(MemoryCardSlotSelected);
 			
 			if ( TheMemoryCard.GetError() == CMemoryCard::NO_ERR_SUCCESS)
@@ -1000,22 +1012,22 @@ TriggerSave_LoadGameLoadGame(CMenuMultiChoiceTriggered *widget)
 				FrontEndMenuManager.m_bMenuActive = false;
 				FrontEndMenuManager.m_bInSaveZone = false;
 				
-				CTimer::EndUserPause();
+				Timer_EndUserPause();
 				
 				TheMemoryCard.m_bWantToLoad = true;
 				
 				DMAudio_SetEffectsFadeVol(0);
 				DMAudio_SetMusicFadeVol(0);
-				DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
+				DMAudio_ResetTimers((*Timer_GetTimeInMilliseconds()));
 			}
 			else
 			{
 				// Load Failed! Check Memory Card (PS2) in MEMORY CARD slot 1 and please try again.
 				MenuSaveZoneMSG_1.m_numTexts = 0;
-				MenuSaveZoneMSG_1.AddText(TheText.Get("FES_LOE"), X(-80.0f), YF(20.0f), TEXT_COLOR, 0);
+				MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FES_LOE"), X(-80.0f), YF(20.0f), TEXT_COLOR, 0);
 				
 				MenuSaveZoneMSG_2.m_numOptions = 0;
-				MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), YF(25.0f), TriggerSave_BackToMainMenu, 0, 0);
+				MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), YF(25.0f), TriggerSave_BackToMainMenu, 0, 0);
 				
 				pMenuSave = &MenuPageSaveZone_Message;
 				pMenuSave->ActivatePage();
@@ -1046,10 +1058,10 @@ TriggerSave_LoadGameLoadGameSelect(CMenuMultiChoiceTwoLinesTriggered *widget)
 				{
 					// Load Failed.
 					MenuSaveZoneMSG_1.m_numTexts = 0;
-					MenuSaveZoneMSG_1.AddText(TheText.Get("FES_LOF"), X(50.0f), YF(20.0f), TEXT_COLOR, 0);
+					MenuSaveZoneMSG_1.AddText(Text_Get(&TheText,"FES_LOF"), X(50.0f), YF(20.0f), TEXT_COLOR, 0);
 					
 					MenuSaveZoneMSG_2.m_numOptions = 0;
-					MenuSaveZoneMSG_2.AddOption(TheText.Get("FESZ_OK"), X(100.0f), 0.0f, TriggerSave_BackToMainMenu, 0, 0);
+					MenuSaveZoneMSG_2.AddOption(Text_Get(&TheText,"FESZ_OK"), X(100.0f), 0.0f, TriggerSave_BackToMainMenu, 0, 0);
 					
 					MenuPageSaveZone_Message.ActivatePage();
 					pMenuSave = &MenuPageSaveZone_Message;
@@ -1060,11 +1072,11 @@ TriggerSave_LoadGameLoadGameSelect(CMenuMultiChoiceTwoLinesTriggered *widget)
 				{
 					// All unsaved progress in your current game will be lost. Proceed with loading? 
 					MenuSaveZoneQYN_1.m_numTexts = 0;
-					MenuSaveZoneQYN_1.AddText(TheText.Get("FESZ_QL"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
+					MenuSaveZoneQYN_1.AddText(Text_Get(&TheText,"FESZ_QL"), X(-40.0f), 0.0f, TEXT_COLOR, 0);
 					
 					MenuSaveZoneQYN_2.m_numOptions = 0;
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_NO"),  X(80.0f), YF(20.0f), TriggerSave_BackToMainMenu,   0, 0);
-					MenuSaveZoneQYN_2.AddOption(TheText.Get("FEM_YES"), X(80.0f), 0.0f,  TriggerSave_LoadGameLoadGame, 0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_NO"),  X(80.0f), YF(20.0f), TriggerSave_BackToMainMenu,   0, 0);
+					MenuSaveZoneQYN_2.AddOption(Text_Get(&TheText,"FEM_YES"), X(80.0f), 0.0f,  TriggerSave_LoadGameLoadGame, 0, 0);
 					
 					MenuPageSaveZone_QuestionYesNo.ActivatePage();
 					pMenuSave = &MenuPageSaveZone_QuestionYesNo;
@@ -1109,88 +1121,88 @@ void InitialiseTextsInMenuControllerInCar(CMenuPictureAndText *widget, CMenuMana
 		{
 			case CMenuManager::CONFIG_1:
 			{
-				widget->AddText(TheText.Get("FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_RSC"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_HO3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
-				widget->AddText(TheText.Get("FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
-				widget->AddText(TheText.Get("FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_HAB"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
-				widget->AddText(TheText.Get("FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
-				widget->AddText(TheText.Get("FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_RSC"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_HO3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
+				widget->AddText(Text_Get(&TheText,"FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_HAB"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
 				
 				break;
 			}
 			
 			case CMenuManager::CONFIG_2:
 			{
-				widget->AddText(TheText.Get("FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_HOR"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
-				widget->AddText(TheText.Get("FEC_CAM"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_NA"),  X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
-				widget->AddText(TheText.Get("FEC_RSC"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
-				widget->AddText(TheText.Get("FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_HAB"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
-				widget->AddText(TheText.Get("FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
-				widget->AddText(TheText.Get("FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_HOR"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_NA"),  X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_RSC"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
+				widget->AddText(Text_Get(&TheText,"FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_HAB"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
 				
 				break;
 			}
 			
 			case CMenuManager::CONFIG_3:
 			{
-				widget->AddText(TheText.Get("FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_EXV"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_RS3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
-				widget->AddText(TheText.Get("FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
-				widget->AddText(TheText.Get("FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_HOR"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
-				widget->AddText(TheText.Get("FEC_HAB"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
-				widget->AddText(TheText.Get("FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_EXV"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_RS3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); // 185.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); // -6.857143f
+				widget->AddText(Text_Get(&TheText,"FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_HOR"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_BRA"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_HAB"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CAW"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_ACC"), X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_TUC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_SM3"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
 				
 				break;
 			}
 			
 			case CMenuManager::CONFIG_4:
 			{
-				widget->AddText(TheText.Get("FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_HAB"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
-				widget->AddText(TheText.Get("FEC_TUC"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_HO3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); //  185.142868f
-				widget->AddText(TheText.Get("FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); //  161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); //  -6.857143f
-				widget->AddText(TheText.Get("FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_CAW"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); //  28.571430f
-				widget->AddText(TheText.Get("FEC_SMT"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
-				widget->AddText(TheText.Get("FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_RSC"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
-				widget->AddText(TheText.Get("FEC_NA"),  X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_ACC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_BRA"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_LL"),  X(50.0f),  Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_HAB"), X(-4.0f),  Y(29.0f),  PAD_TEXT_COLOR, true);  // 33.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_TUC"), X(-4.0f),  Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_VES"), X(-4.0f),  Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_HO3"), X(84.0f),  Y(162.0f), PAD_TEXT_COLOR, false); //  185.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"), X(103.0f), Y(141.0f), PAD_TEXT_COLOR, false); //  161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"), X(130.0f), Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_LB"),  X(68.0f),  Y(-6.0f),  PAD_TEXT_COLOR, false); //  -6.857143f
+				widget->AddText(Text_Get(&TheText,"FEC_LR"),  X(184.0f), Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_CAW"), X(238.0f), Y(25.0f),  PAD_TEXT_COLOR, false); //  28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_SMT"), X(155.0f), Y(18.0f),  PAD_TEXT_COLOR, true);  //  20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_EXV"), X(238.0f), Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_RSC"), X(238.0f), Y(65.0f),  PAD_TEXT_COLOR, false); //  74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_NA"),  X(238.0f), Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_ACC"), X(238.0f), Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_BRA"), X(238.0f), Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
 				
 				break;
 			}
@@ -1209,84 +1221,84 @@ void InitialiseTextsInMenuControllerOnFoot(CMenuPictureAndText *widget, CMenuMan
 		{
 			case CMenuManager::CONFIG_1:
 			{
-				widget->AddText(TheText.Get("FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_LOF"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
-				widget->AddText(TheText.Get("FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_ATT"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
-				widget->AddText(TheText.Get("FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
-				widget->AddText(TheText.Get("FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_LOF"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_ATT"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
 				
 				break;
 			}
 		
 			case CMenuManager::CONFIG_2:
 			{
-				widget->AddText(TheText.Get("FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_LOF"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
-				widget->AddText(TheText.Get("FEC_CAM"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_NA"),   X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
-				widget->AddText(TheText.Get("FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_ATT"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
-				widget->AddText(TheText.Get("FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
-				widget->AddText(TheText.Get("FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_LOF"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_NA"),   X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_ATT"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
 				
 				break;
 			}
 		
 			case CMenuManager::CONFIG_3:
 			{
-				widget->AddText(TheText.Get("FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_ENV"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
-				widget->AddText(TheText.Get("FEC_LOF"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_RUN"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
-				widget->AddText(TheText.Get("FEC_ATT"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
-				widget->AddText(TheText.Get("FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_ENV"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_TAR"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_LOF"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_RUN"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_ATT"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
 				
 				break;
 			}
 			
 			case CMenuManager::CONFIG_4:
 			{
-				widget->AddText(TheText.Get("FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
-				widget->AddText(TheText.Get("FEC_TAR"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
-				widget->AddText(TheText.Get("FEC_NA"),   X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
-				widget->AddText(TheText.Get("FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
-				widget->AddText(TheText.Get("FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
-				widget->AddText(TheText.Get("FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
-				widget->AddText(TheText.Get("FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
-				widget->AddText(TheText.Get("FEC_ATT"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
-				widget->AddText(TheText.Get("FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
-				widget->AddText(TheText.Get("FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
-				widget->AddText(TheText.Get("FEC_LOF"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
-				widget->AddText(TheText.Get("FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
-				widget->AddText(TheText.Get("FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
-				widget->AddText(TheText.Get("FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
-				widget->AddText(TheText.Get("FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_CWL"),  X(50.0f),   Y(-14.0f), PAD_TEXT_COLOR, true);  // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_TAR"),  X(-4.0f),   Y(25.0f),  PAD_TEXT_COLOR, true);  // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_NA"),   X(-4.0f),   Y(65.0f),  PAD_TEXT_COLOR, true);  // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_MOV"),  X(-4.0f),   Y(97.0f),  PAD_TEXT_COLOR, true);  // 110.857147f
+				widget->AddText(Text_Get(&TheText,"FEC_CAM"),  X(103.0f),  Y(141.0f), PAD_TEXT_COLOR, false); // 161.142868f
+				widget->AddText(Text_Get(&TheText,"FEC_PAU"),  X(130.0f),  Y(128.0f), PAD_TEXT_COLOR, false); // 146.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_CWR"),  X(184.0f),  Y(-14.0f), PAD_TEXT_COLOR, false); // -16.0f
+				widget->AddText(Text_Get(&TheText,"FEC_ATT"),  X(238.0f),  Y(25.0f),  PAD_TEXT_COLOR, false); // 28.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_JUM"),  X(144.0f),  Y(18.0f),  PAD_TEXT_COLOR, true);  // 20.571430f
+				widget->AddText(Text_Get(&TheText,"FEC_ENV"),  X(238.0f),  Y(52.0f),  PAD_TEXT_COLOR, false); // 59.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_LOF"),  X(238.0f),  Y(65.0f),  PAD_TEXT_COLOR, false); // 74.285721f
+				widget->AddText(Text_Get(&TheText,"FEC_RUN"),  X(238.0f),  Y(78.0f),  PAD_TEXT_COLOR, false); // 89.142860f
+				widget->AddText(Text_Get(&TheText,"FEC_FPC"),  X(238.0f),  Y(94.0f),  PAD_TEXT_COLOR, false); // 107.428574f
+				widget->AddText(Text_Get(&TheText,"FEC_LB3"),  X(238.0f),  Y(109.0f), PAD_TEXT_COLOR, false); // 124.571434f
+				widget->AddText(Text_Get(&TheText,"FEC_R3"),   X(238.0f),  Y(122.0f), PAD_TEXT_COLOR, false); // 139.428574f
 				
 				break;
 			}
@@ -1341,9 +1353,9 @@ SetRandomActiveTextlineColor(uint8 bText)
 			static uint32 delayTime = 0;
 			static bool bAddVal = true;
 			
-			if ( delayTime < CTimer::GetTimeInMillisecondsPauseMode() )
+			if ( delayTime < Timer_GetTimeInMillisecondsPauseMode() )
 			{
-				delayTime = CTimer::GetTimeInMillisecondsPauseMode() + 200;
+				delayTime = Timer_GetTimeInMillisecondsPauseMode() + 200;
 				
 				if ( bAddVal )
 					rgbaATC = TEXT_COLOR;
@@ -1359,9 +1371,9 @@ SetRandomActiveTextlineColor(uint8 bText)
 			static uint32 delayTime = 0;
 			static bool bAddVal = true;
 			
-			if ( delayTime < CTimer::GetTimeInMillisecondsPauseMode() )
+			if ( delayTime < Timer_GetTimeInMillisecondsPauseMode() )
 			{
-				delayTime = CTimer::GetTimeInMillisecondsPauseMode() + 200;
+				delayTime = Timer_GetTimeInMillisecondsPauseMode() + 200;
 				
 				if ( bAddVal )
 					rgbaATC = TITLE_TEXT_COLOR;
@@ -1382,14 +1394,22 @@ TriggerDisplay_Trails(CMenuOnOffTriggered *widget)
 	if ( widget )
 	{
 		CMenuManager::m_PrefsShowTrails = widget->GetMenuSelection();
-		CMBlur::BlurOn = CMenuManager::m_PrefsShowTrails;
+		// Use the complete C motion-blur owner and its live shared state
+		MBlur_BlurOn = CMenuManager::m_PrefsShowTrails;
 		
-		if ( CMBlur::BlurOn )
-			CMBlur::MotionBlurOpen(Scene.camera);
+		// Use the complete C motion-blur owner and its live shared state
+		if ( MBlur_BlurOn )
+			// Use the complete C motion-blur owner and its live shared state
+			MBlur_MotionBlurOpen(Scene.camera);
 		else
-			CMBlur::MotionBlurClose();
+			// Use the complete C motion-blur owner and its live shared state
+			MBlur_MotionBlurClose();
 	}
 }
 
 #endif
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

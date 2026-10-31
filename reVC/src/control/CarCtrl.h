@@ -1,4 +1,6 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include "CarClasses.h"
 #include "PathFind.h"
 #include "Boat.h"
 #include "Vehicle.h"
@@ -8,7 +10,7 @@
 #define GAME_SPEED_TO_CARAI_SPEED 60.0f
 #define TIME_COPS_WAIT_TO_EXIT_AFTER_STOPPING 2500
 
-class CZoneInfo;
+struct CZoneInfo;
 class CAutomobile;
 
 enum{
@@ -23,39 +25,7 @@ enum{
 class CCarCtrl
 {
 public:
-	enum eCarClass {
-		NORMAL = 0,
-		POOR,
-		RICH,
-		EXEC,
-		WORKER,
-		BIG,
-		TAXI,
-		MOPED,
-		MOTORBIKE,
-
-		LEISUREBOAT,
-		WORKERBOAT,
-
-		COPS,
-		CUBAN,
-		HAITIAN,
-		STREET,
-		DIAZ,
-		BIKER,
-		SECURITY,
-		PLAYER,
-		GOLFERS,
-		GANG9,
-		COPS_BOAT,
-		FIRST_CAR_RATING = NORMAL,
-		FIRST_BOAT_RATING = LEISUREBOAT,
-		FIRST_GANG_CAR_RATING = CUBAN,
-		NUM_CAR_CLASSES = MOTORBIKE - FIRST_CAR_RATING + 1,
-		NUM_BOAT_CLASSES = WORKERBOAT - FIRST_BOAT_RATING + 1,
-		NUM_GANG_CAR_CLASSES = GANG9 - FIRST_GANG_CAR_RATING + 1,
-		TOTAL_CUSTOM_CLASSES = NUM_CAR_CLASSES + NUM_BOAT_CLASSES
-	};
+	
 
 	static void SwitchVehicleToRealPhysics(CVehicle*);
 	static void AddToCarArray(int32 id, int32 vehclass);
@@ -132,7 +102,7 @@ public:
 
 	static float GetPositionAlongCurrentCurve(CVehicle* pVehicle)
 	{
-		uint32 timeInCurve = CTimer::GetTimeInMilliseconds() - pVehicle->AutoPilot.m_nTimeEnteredCurve;
+		uint32 timeInCurve = (*Timer_GetTimeInMilliseconds()) - pVehicle->AutoPilot.m_nTimeEnteredCurve;
 		return (float)timeInCurve / pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve;
 	}
 
@@ -160,15 +130,16 @@ public:
 	static uint32 LastTimeLawEnforcerCreated;
 	static uint32 LastTimeFireTruckCreated;
 	static uint32 LastTimeAmbulanceCreated;
-	static int32 TotalNumOfCarsOfRating[TOTAL_CUSTOM_CLASSES];
-	static int32 CarArrays[TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+	static int32 TotalNumOfCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+	static int32 CarArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
 
 	static int32 MiamiViceCycle;
 	static uint32 LastTimeMiamiViceGenerated;
-	static int32 NumRequestsOfCarRating[TOTAL_CUSTOM_CLASSES];
-	static int32 NumOfLoadedCarsOfRating[TOTAL_CUSTOM_CLASSES];
-	static int32 CarFreqArrays[TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
-	static int32 LoadedCarsArray[TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+	static int32 NumRequestsOfCarRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+	static int32 NumOfLoadedCarsOfRating[CARCLASS_TOTAL_CUSTOM_CLASSES];
+	static int32 CarFreqArrays[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
+	static int32 LoadedCarsArray[CARCLASS_TOTAL_CUSTOM_CLASSES][MAX_CAR_MODELS_IN_ARRAY];
 };
 
 extern CVehicle* apCarsToKeep[MAX_CARS_TO_KEEP];
+//- rouz edit (ChatGPT)

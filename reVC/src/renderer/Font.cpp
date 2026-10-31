@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Sprite2d.h"
@@ -50,7 +53,18 @@ UnicodeMakeUpperCase(wchar *dst, const wchar *src) //idk what to do with it, see
 
 CFontDetails CFont::Details;
 bool16 CFont::NewLine;
-CSprite2d CFont::Sprite[MAX_FONTS];
+Sprite2d CFont::Sprite[MAX_FONTS];
+static void Sprite2d_Exit_CFont_Sprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(CFont::Sprite,(size_t)(MAX_FONTS));
+}
+static int Sprite2d_Start_CFont_Sprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(CFont::Sprite,(size_t)(MAX_FONTS));atexit(Sprite2d_Exit_CFont_Sprite);return 0;
+}
+static const int Sprite2d_Started_CFont_Sprite=Sprite2d_Start_CFont_Sprite();
 CFontRenderState CFont::RenderState;
 
 #ifdef MORE_LANGUAGES
@@ -296,7 +310,18 @@ tFontRenderStatePointer FontRenderStatePointer;
 uint8 FontRenderStateBuf[1024];
 
 #ifdef BUTTON_ICONS
-CSprite2d CFont::ButtonSprite[MAX_BUTTON_ICONS];
+static Sprite2d fontButtonSprites[MAX_BUTTON_ICONS];
+static void Sprite2d_Exit_fontButtonSprites(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(fontButtonSprites,(size_t)(MAX_BUTTON_ICONS));
+}
+static int Sprite2d_Start_fontButtonSprites(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(fontButtonSprites,(size_t)(MAX_BUTTON_ICONS));atexit(Sprite2d_Exit_fontButtonSprites);return 0;
+}
+static const int Sprite2d_Started_fontButtonSprites=Sprite2d_Start_fontButtonSprites();
 int CFont::PS2Symbol = BUTTON_NONE;
 int CFont::ButtonsSlot = -1;
 #endif // BUTTON_ICONS
@@ -306,39 +331,60 @@ CFont::Initialise(void)
 {
 	int slot;
 
-	slot = CTxdStore::AddTxdSlot("fonts");
+	// Use the complete C texture dictionary owner with the original live arguments
+	slot = TxdStore_AddTxdSlot("fonts");
 #ifdef MORE_LANGUAGES
 	Slot = slot;
 	switch (LanguageSet)
 	{
 	case FONT_LANGSET_EFIGS:
 	default:
-		CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(slot, "MODELS/FONTS.TXD");
 		break;
 	case FONT_LANGSET_POLISH:
-		CTxdStore::LoadTxd(slot, "MODELS/FONTS_P.TXD");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(slot, "MODELS/FONTS_P.TXD");
 		break;
 	case FONT_LANGSET_RUSSIAN:
-		CTxdStore::LoadTxd(slot, "MODELS/FONTS_R.TXD");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(slot, "MODELS/FONTS_R.TXD");
 		break;
 	case FONT_LANGSET_JAPANESE:
-		CTxdStore::LoadTxd(slot, "MODELS/FONTS_J.TXD");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(slot, "MODELS/FONTS_J.TXD");
 		break;
 	}
 #else
-	CTxdStore::LoadTxd(slot, "MODELS/FONTS.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(slot, "MODELS/FONTS.TXD");
 #endif
-	CTxdStore::AddRef(slot);
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(slot);
-	Sprite[0].SetTexture("font2", "font2m");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(slot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(slot);
+	([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[0]),"font2", "font2m");
 #ifdef MORE_LANGUAGES
 	if (IsJapanese()) {
-		Sprite[1].SetTexture("FONTJAP", "FONTJAP_mask");
-		Sprite[3].SetTexture("FONTJAP", "FONTJAP_mask");
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[1]),"FONTJAP", "FONTJAP_mask");
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[3]),"FONTJAP", "FONTJAP_mask");
 	}
 #endif // MORE_LANGUAGES
-	Sprite[1].SetTexture("font1", "font1m");
+	([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[1]),"font1", "font1m");
 	SetScale(1.0f, 1.0f);
 	SetSlantRefPoint(SCREEN_WIDTH, 0.0f);
 	SetSlant(0.0f);
@@ -355,7 +401,8 @@ CFont::Initialise(void)
 	SetRightJustifyWrap(0.0f);
 	SetAlphaFade(255.0f);
 	SetDropShadowPosition(0);
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 
 #if !defined(GAMEPAD_MENU) && defined(BUTTON_ICONS)
 	// loaded in CMenuManager with GAMEPAD_MENU defined
@@ -367,44 +414,112 @@ CFont::Initialise(void)
 void
 CFont::LoadButtons(const char *txdPath)
 {
-	if (int file = CFileMgr::OpenFile(txdPath)) {
-		CFileMgr::CloseFile(file);
+	if (int file = FileMgr_OpenFileDefault(txdPath)) {
+		FileMgr_CloseFile(file);
 		if (ButtonsSlot == -1)
-			ButtonsSlot = CTxdStore::AddTxdSlot("buttons");
+			// Use the complete C texture dictionary owner with the original live arguments
+			ButtonsSlot = TxdStore_AddTxdSlot("buttons");
 		else {
 			for (int i = 0; i < MAX_BUTTON_ICONS; i++)
-				ButtonSprite[i].Delete();
-			CTxdStore::RemoveTxd(ButtonsSlot);
+				([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(fontButtonSprites[i]));
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveTxd(ButtonsSlot);
 		}
-		CTxdStore::LoadTxd(ButtonsSlot, txdPath);
-		CTxdStore::AddRef(ButtonsSlot);
-		CTxdStore::PushCurrentTxd();
-		CTxdStore::SetCurrentTxd(ButtonsSlot);
-		ButtonSprite[BUTTON_UP].SetTexture("thumblyu");
-		ButtonSprite[BUTTON_DOWN].SetTexture("thumblyd");
-		ButtonSprite[BUTTON_LEFT].SetTexture("thumblxl");
-		ButtonSprite[BUTTON_RIGHT].SetTexture("thumblxr");
-		ButtonSprite[BUTTON_CROSS].SetTexture("cross");
-		ButtonSprite[BUTTON_CIRCLE].SetTexture("circle");
-		ButtonSprite[BUTTON_SQUARE].SetTexture("square");
-		ButtonSprite[BUTTON_TRIANGLE].SetTexture("triangle");
-		ButtonSprite[BUTTON_L1].SetTexture("l1");
-		ButtonSprite[BUTTON_L2].SetTexture("l2");
-		ButtonSprite[BUTTON_L3].SetTexture("l3");
-		ButtonSprite[BUTTON_R1].SetTexture("r1");
-		ButtonSprite[BUTTON_R2].SetTexture("r2");
-		ButtonSprite[BUTTON_R3].SetTexture("r3");
-		ButtonSprite[BUTTON_RSTICK_UP].SetTexture("thumbryu");
-		ButtonSprite[BUTTON_RSTICK_DOWN].SetTexture("thumbryd");
-		ButtonSprite[BUTTON_RSTICK_LEFT].SetTexture("thumbrxl");
-		ButtonSprite[BUTTON_RSTICK_RIGHT].SetTexture("thumbrxr");
-		CTxdStore::PopCurrentTxd();
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(ButtonsSlot, txdPath);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_AddRef(ButtonsSlot);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PushCurrentTxd();
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_SetCurrentTxd(ButtonsSlot);
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_UP]),"thumblyu");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_DOWN]),"thumblyd");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_LEFT]),"thumblxl");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_RIGHT]),"thumblxr");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_CROSS]),"cross");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_CIRCLE]),"circle");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_SQUARE]),"square");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_TRIANGLE]),"triangle");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_L1]),"l1");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_L2]),"l2");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_L3]),"l3");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_R1]),"r1");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_R2]),"r2");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_R3]),"r3");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_RSTICK_UP]),"thumbryu");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_RSTICK_DOWN]),"thumbryd");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_RSTICK_LEFT]),"thumbrxl");
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(fontButtonSprites[BUTTON_RSTICK_RIGHT]),"thumbrxr");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PopCurrentTxd();
 	}
 	else {
 		if (ButtonsSlot != -1) {
 			for (int i = 0; i < MAX_BUTTON_ICONS; i++)
-				ButtonSprite[i].Delete();
-			CTxdStore::RemoveTxdSlot(ButtonsSlot);
+				([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(fontButtonSprites[i]));
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveTxdSlot(ButtonsSlot);
 			ButtonsSlot = -1;
 		}
 	}
@@ -416,35 +531,61 @@ void
 CFont::ReloadFonts(uint8 set)
 {
 	if (Slot != -1 && LanguageSet != set) {
-		Sprite[0].Delete();
-		Sprite[1].Delete();
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[0]));
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[1]));
 		if (IsJapanese())
-			Sprite[2].Delete();
-		CTxdStore::PushCurrentTxd();
-		CTxdStore::RemoveTxd(Slot);
+			([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[2]));
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PushCurrentTxd();
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveTxd(Slot);
 		switch (set)
 		{
 		case FONT_LANGSET_EFIGS:
 		default:
-			CTxdStore::LoadTxd(Slot, "MODELS/FONTS.TXD");
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_LoadFile(Slot, "MODELS/FONTS.TXD");
 			break;
 		case FONT_LANGSET_POLISH:
-			CTxdStore::LoadTxd(Slot, "MODELS/FONTS_P.TXD");
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_LoadFile(Slot, "MODELS/FONTS_P.TXD");
 			break;
 		case FONT_LANGSET_RUSSIAN:
-			CTxdStore::LoadTxd(Slot, "MODELS/FONTS_R.TXD");
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_LoadFile(Slot, "MODELS/FONTS_R.TXD");
 			break;
 		case FONT_LANGSET_JAPANESE:
-			CTxdStore::LoadTxd(Slot, "MODELS/FONTS_J.TXD");
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_LoadFile(Slot, "MODELS/FONTS_J.TXD");
 			break;
 		}
-		CTxdStore::SetCurrentTxd(Slot);
-		Sprite[0].SetTexture("font2", "font2_mask");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_SetCurrentTxd(Slot);
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[0]),"font2", "font2_mask");
 		if (set == FONT_LANGSET_JAPANESE) {
-			Sprite[2].SetTexture("FONTJAP", "FONTJAP_mask");
+			([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[2]),"FONTJAP", "FONTJAP_mask");
 		}
-		Sprite[1].SetTexture("font1", "font1_mask");
-		CTxdStore::PopCurrentTxd();
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprite[1]),"font1", "font1_mask");
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PopCurrentTxd();
 	}
 	LanguageSet = set;
 }
@@ -456,20 +597,35 @@ CFont::Shutdown(void)
 #ifdef BUTTON_ICONS
 	if (ButtonsSlot != -1) {
 		for (int i = 0; i < MAX_BUTTON_ICONS; i++)
-			ButtonSprite[i].Delete();
-		CTxdStore::RemoveTxdSlot(ButtonsSlot);
+			([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(fontButtonSprites[i]));
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveTxdSlot(ButtonsSlot);
 		ButtonsSlot = -1;
 	}
 #endif
-	Sprite[0].Delete();
-	Sprite[1].Delete();
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[0]));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[1]));
 #ifdef MORE_LANGUAGES
 	if (IsJapanese())
-		Sprite[3].Delete();
-	CTxdStore::RemoveTxdSlot(Slot);
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprite[3]));
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(Slot);
 	Slot = -1;
 #else
-	CTxdStore::RemoveTxdSlot(CTxdStore::FindTxdSlot("fonts"));
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(TxdStore_FindTxdSlot("fonts"));
 #endif
 }
 
@@ -495,6 +651,8 @@ CFont::DrawButton(float x, float y)
 
 	if (PS2Symbol != BUTTON_NONE) {
 		CRect rect;
+		// Initialize rectangle bounds at the former local constructor boundary
+		Rect_Init(&rect);
 		rect.left = x;
 		rect.top = RenderState.scaleY + RenderState.scaleY + y;
 		rect.right = RenderState.scaleY * 17.0f + x;
@@ -506,9 +664,15 @@ CFont::DrawButton(float x, float y)
 		RwRenderStateGet(rwRENDERSTATETEXTURERASTER, &raster);
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
 		if (RenderState.bIsShadow)
-			ButtonSprite[PS2Symbol].Draw(rect, RenderState.color);
+			([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(fontButtonSprites[PS2Symbol]),rect, RenderState.color);
 		else
-			ButtonSprite[PS2Symbol].Draw(rect, CRGBA(255, 255, 255, RenderState.color.a));
+			([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(fontButtonSprites[PS2Symbol]),rect, CRGBA(255, 255, 255, RenderState.color.a));
 		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
 		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)vertexAlphaState);
 	}
@@ -545,8 +709,11 @@ CFont::PrintChar(float x, float y, wchar c)
 #else
 			if (c < 193) {
 #endif
-				CSprite2d::AddToBuffer(
-					CRect(x, y,
+				([](const CRect &r,const CRGBA &c,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(
+					Rect_Make(x, y,
 						x + 32.0f * RenderState.scaleX * 1.0f,
 						y + 40.0f * RenderState.scaleY * 0.5f),
 					RenderState.color,
@@ -555,8 +722,11 @@ CFont::PrintChar(float x, float y, wchar c)
 					xoff / 16.0f, (yoff + 1.0f) / 12.8f - 0.0021f,
 					(xoff + 1.0f) / 16.0f - 0.001f, (yoff + 1.0f) / 12.8f - 0.0021f);
 			} else {
-				CSprite2d::AddToBuffer(
-					CRect(x, y,
+				([](const CRect &r,const CRGBA &c,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(
+					Rect_Make(x, y,
 						x + 32.0f * RenderState.scaleX * 1.0f,
 						y + 33.0f * RenderState.scaleY * 0.5f),
 					RenderState.color,
@@ -566,8 +736,11 @@ CFont::PrintChar(float x, float y, wchar c)
 					(xoff + 1.0f) / 16.0f - 0.001f, (yoff + 1.0f) / 12.8f - 0.017f);
 			}
 		} else
-			CSprite2d::AddToBuffer(
-				CRect(x, y,
+			([](const CRect &r,const CRGBA &c,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(
+				Rect_Make(x, y,
 					x + 32.0f * RenderState.scaleX * 1.0f,
 					y + 40.0f * RenderState.scaleY * 0.5f),
 				RenderState.color,
@@ -601,8 +774,11 @@ CFont::PrintChar(float x, float y, wchar c)
 #endif
 	} else {
 		if (bDontPrint) return;
-		CSprite2d::AddToBuffer(
-			CRect(x, y,
+		([](const CRect &r,const CRGBA &c,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_AddToBuffer(&r,Sprite_ColourRef(&c.r,&c.g,&c.b,&c.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(
+			Rect_Make(x, y,
 				x + 32.0f * RenderState.scaleX * w,
 				y + 32.0f * RenderState.scaleY * 0.5f),
 			RenderState.color,
@@ -646,7 +822,10 @@ CFont::RenderFontBuffer()
 	bool bBold = false;
 	bool bFlash = false;
 
-	Sprite[RenderState.style].SetRenderState();
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetRenderState(spriteSelf);
+})(&(Sprite[RenderState.style]));
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 	RenderState = *(CFontRenderState*)&FontRenderStateBuf[0];
 	textPosX = RenderState.fTextPosX;
@@ -683,9 +862,9 @@ CFont::RenderFontBuffer()
 			}
 #endif
 			if (bFlash) {
-				if (CTimer::GetTimeInMilliseconds() - Details.nFlashTimer > 300) {
+				if ((*Timer_GetTimeInMilliseconds()) - Details.nFlashTimer > 300) {
 					Details.bFlashState = !Details.bFlashState;
-					Details.nFlashTimer = CTimer::GetTimeInMilliseconds();
+					Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
 				}
 				Details.color.alpha = Details.bFlashState ? 0 : 255;
 			}
@@ -715,7 +894,8 @@ CFont::RenderFontBuffer()
 		if (c == '\0')
 			textPosX += RenderState.fExtraSpace;
 	}
-	CSprite2d::RenderVertexBuffer();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_RenderVertexBuffer();
 	FontRenderStatePointer.pRenderState = (CFontRenderState*)FontRenderStateBuf;
 }
 
@@ -816,9 +996,9 @@ CFont::PrintString(float x, float y, uint32, wchar *start, wchar *end, float spw
 				*FontRenderStatePointer.pStr = *(s++);
 			}
 			if (Details.bFlash) {
-				if (CTimer::GetTimeInMilliseconds() - Details.nFlashTimer > 300) {
+				if ((*Timer_GetTimeInMilliseconds()) - Details.nFlashTimer > 300) {
 					Details.bFlashState = !Details.bFlashState;
-					Details.nFlashTimer = CTimer::GetTimeInMilliseconds();
+					Details.nFlashTimer = (*Timer_GetTimeInMilliseconds());
 				}
 				Details.color.a = Details.bFlashState ? 0 : 255;
 			}
@@ -843,6 +1023,8 @@ void
 CFont::PrintString(float xstart, float ystart, wchar *s)
 {
 	CRect rect;
+	// Initialize rectangle bounds at the former local constructor boundary
+	Rect_Init(&rect);
 	int numSpaces;
 	float lineLength;
 	float x, y;
@@ -859,7 +1041,10 @@ CFont::PrintString(float xstart, float ystart, wchar *s)
 		RenderState.color = Details.color;
 		GetNumberLines(xstart, ystart, s);	// BUG: result not used
 		GetTextRect(&rect, xstart, ystart, s);
-		CSprite2d::DrawRect(rect, Details.backgroundColor);
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, Details.backgroundColor);
 	}
 
 	lineLength = 0.0f;
@@ -1936,3 +2121,6 @@ CFont::character_code(uint8 c)
 		return c;
 	return foreign_table[c-128];
 }
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

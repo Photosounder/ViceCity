@@ -1,0 +1,380 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include "Script.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs;float Timer_timeStep; }
+CCamera TheCamera;
+static RwMatrix matrices[256];
+static int atomicFrames[256];
+static bool frameAlive[256],atomicAlive[256];
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,placements,clones,creates,deletes,draws,coronas,grounds,collisions;
+static int nextAtomic,nextFrame,nextClump,currentTxd,savedTxd,hook,depth;
+static bool triggered,collisionLoaded,framePresent,matrixPresent;
+static float groundHeight,nearPlane,farPlane;
+static CVector player;
+static void *borrowed;
+static bool borrowedLegacy;
+static char directory[16];
+static RwCamera *camera=(RwCamera *)0x6000;
+
+static void require(bool condition)
+{
+    // Abort at the precise failing corpus position
+    if(!condition){fprintf(stderr,"states=%u calls=%u hook=%d clone=%d frame=%d\n",states,calls,hook,nextAtomic,nextFrame);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observations independently of object addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite floating results exactly and NaNs by classification
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void vectorValue(const RwV3d &v)
+{
+    // Observe each actual coordinate through the typed owner interface
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static C3dMarker &marker(int i)
+{
+    // Access the unchanged actual C++ record through the legal test pool handle
+    return *(C3dMarker *)TestMk_Marker(i);
+}
+static int markerIndex(const void *value)
+{
+    // Normalize marker identity without assuming its native record stride
+    if(!value)return -1;
+    for(int i=0;i<NUM3DMARKERS;i++)if(value==TestMk_Marker(i))return i;
+    require(false);return -2;
+}
+static RpAtomic *atomic(int i)
+{
+    // Supply stable opaque atomic identities without dereferencing fake RenderWare objects
+    return (RpAtomic *)(uintptr_t)(0x1000+i*16);
+}
+static int atomicIndex(const RpAtomic *value)
+{
+    // Decode only the fixture's opaque atomic tokens
+    return (int)(((uintptr_t)value-0x1000)/16);
+}
+static RwFrame *frameToken(int i)
+{
+    // Keep frame identities separate from actual typed matrix storage
+    return (RwFrame *)(uintptr_t)(0x7000+i*16);
+}
+static int frameIndex(const RwFrame *value)
+{
+    // Decode only validated fixture frame tokens
+    int i=(int)(((uintptr_t)value-0x7000)/16);require(i>=0 && i<256);return i;
+}
+static unsigned matrixIdentity(const RwMatrix *value)
+{
+    // Compare attachment identity through actual typed object addresses
+    if(!value)return 0;
+    for(unsigned i=0;i<256;i++)if(value==&matrices[i])return i+1;
+    require(false);return 999;
+}
+extern "C" void *TestMk_Borrowed(bool *legacy)
+{
+    // Expose the logical input vector for equivalent owner callback mutations
+    *legacy=borrowedLegacy;return borrowed;
+}
+extern "C" void TestMk_SetBorrowed(void *pos,bool legacy)
+{
+    // Retain nested input bindings without changing any production decision
+    borrowed=pos;borrowedLegacy=legacy;
+}
+static void changeInput(void)
+{
+    // Mutate only the correctly typed live caller object
+    if(!borrowed)return;
+    if(borrowedLegacy){CVector &v=*(CVector *)borrowed;v.x+=.125f;v.y-=.375f;v.z+=1.25f;}
+    else{Markers3DVector &v=*(Markers3DVector *)borrowed;v.x+=.125f;v.y-=.375f;v.z+=1.25f;}
+}
+static void event(unsigned value)
+{
+    // Record owner ordering and all live public controller counters
+    calls++;word(value);word(Timer_timeMs);floating(Timer_timeStep);word(TestMk_Active());word(TestMk_CacheCount());word(currentTxd);
+}
+static void text(const char *value)
+{
+    // Include resource and directory names without process-specific addresses
+    while(*value)word((unsigned char)*value++);word(0);
+}
+CVector FindPlayerCentreOfWorld(int32 index)
+{
+    // Preserve the original query before reading the borrowed position or validating type
+    event(1);require(index==0);
+    if(!triggered && hook==1){triggered=true;changeInput();}
+    return player;
+}
+bool CColStore::HasCollisionLoaded(const CVector2D &pos)
+{
+    // Observe both coordinates before any later ground-position reread
+    event(2);collisions++;floating(pos.x);floating(pos.y);
+    if(!triggered && hook==2){triggered=true;changeInput();}
+    return collisionLoaded;
+}
+float CWorld::FindGroundZFor3DCoord(float x,float y,float z,bool *found)
+{
+    // Retain exact ground-query arguments and the original null output pointer
+    event(3);grounds++;floating(x);floating(y);floating(z);require(found==NULL);
+    if(!triggered && hook==3){triggered=true;changeInput();Timer_timeMs+=37;}
+    return groundHeight==0.f?0.f:groundHeight+x*.013f+y*.007f;
+}
+int CTxdStore::FindTxdSlot(const char *name)
+{
+    // Compare the original find-before-push order and any changed current dictionary
+    event(4);text(name);require(strcmp(name,"particle")==0);
+    if(!triggered && hook==4){triggered=true;currentTxd=61;}
+    return 13;
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Preserve the actual dictionary value at the original push point
+    event(5);savedTxd=currentTxd;
+}
+void CTxdStore::SetCurrentTxd(int slot)
+{
+    // Observe the exact selected dictionary
+    event(6);word(slot);currentTxd=slot;
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Restore the original saved dictionary after both resource publications
+    event(7);currentTxd=savedTxd;
+}
+extern "C" void FileMgr_ChangeDir(const char *value)
+{
+    // Retain the original root-directory change between dictionary setup and resource loading
+    event(8);text(value);strcpy(directory,value);
+}
+RpClump *CFileLoader::LoadAtomicFile2Return(const char *name)
+{
+    // Return distinct original clumps in the exact arrow/cylinder load order
+    event(9);text(name);text(directory);require(currentTxd==13);return (RpClump *)(uintptr_t)(0x9000+nextClump++*16);
+}
+RpClump *RpClumpForAllAtomics(RpClump *clump,RpAtomicCallBack callback,void *data)
+{
+    // Execute the unchanged original callback and preserve its last-atomic selection
+    event(10);word((uint32_t)(uintptr_t)clump);require(clump!=NULL);callback(atomic(200),data);callback(atomic(201),data);return clump;
+}
+RpAtomic *RpAtomicClone(RpAtomic *source)
+{
+    // Preserve the selected source atomic and allocate an independent opaque clone token
+    event(11);clones++;require(source==atomic(201));require(nextAtomic<180);int i=nextAtomic++;atomicAlive[i]=true;return atomic(i);
+}
+RwFrame *RwFrameCreate(void)
+{
+    // Create a frame with real typed matrix storage without a window or GPU
+    event(12);creates++;require(nextFrame<180);int i=nextFrame++;frameAlive[i]=true;memset(&matrices[i],0,sizeof(matrices[i]));matrices[i].right.x=1.f;matrices[i].up.y=1.f;matrices[i].at.z=1.f;return frameToken(i);
+}
+RpAtomic *RpAtomicSetFrame(RpAtomic *value,RwFrame *frame)
+{
+    // Retain the exact original atomic-to-frame attachment
+    event(13);atomicFrames[atomicIndex(value)]=frameIndex(frame);return value;
+}
+void CVisibilityPlugins::SetAtomicRenderCallback(RpAtomic *value,RpAtomicCallBackRender callback)
+{
+    // Compare the original null render callback and a live timer change before timestamp publication
+    event(14);word(atomicIndex(value));require(callback==NULL);
+    if(!triggered && hook==5){triggered=true;Timer_timeMs+=53;changeInput();}
+}
+RpGeometry *RpAtomicGetGeometry(const RpAtomic *value)
+{
+    // Supply the actual original geometry identity operation
+    event(15);return (RpGeometry *)(uintptr_t)(0x3000+atomicIndex(value)*16);
+}
+RwUInt32 RpGeometryGetFlags(const RpGeometry *)
+{
+    // Preserve the original geometry flag read before the OR write
+    event(16);return 3;
+}
+RpGeometry *RpGeometrySetFlags(RpGeometry *value,RwUInt32 flags)
+{
+    // Observe the exact original material-color modulation flags
+    event(17);word(flags);require(flags==(3|rpGEOMETRYMODULATEMATERIALCOLOR));return value;
+}
+RpMaterial *RpGeometryGetMaterial(const RpGeometry *value,RwInt32 index)
+{
+    // Preserve the exact material-zero lookup
+    event(18);require(index==0);return (RpMaterial *)(uintptr_t)((uintptr_t)value+0x1000);
+}
+RwFrame *RpAtomicGetFrame(const RpAtomic *value)
+{
+    // Query the current frame after each original atomic state change
+    event(19);require(value!=NULL);return frameToken(atomicFrames[atomicIndex(value)]);
+}
+RwFrame *RwCameraGetFrame(const RwCamera *value)
+{
+    // Preserve the reflection frame null branch
+    event(20);require(value==camera);return framePresent?frameToken(250):NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *value)
+{
+    // Retain repeated original matrix queries and their independent null check
+    event(21);int i=frameIndex(value);return i==250 && !matrixPresent?NULL:&matrices[i];
+}
+RwMatrix *RwMatrixUpdate(RwMatrix *value)
+{
+    // Observe every publication performed by the unchanged original CMatrix owner
+    event(22);word(matrixIdentity(value));vectorValue(value->right);vectorValue(value->up);vectorValue(value->at);vectorValue(value->pos);
+    if(!triggered && hook==6){triggered=true;changeInput();}
+    return value;
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject unexpected ownership changes in the original nonowning marker matrices
+    require(false);return 0;
+}
+RpMaterial *RpMaterialSetColor(RpMaterial *value,const RwRGBA *color)
+{
+    // Preserve the exact borrowed marker color bytes at draw time
+    event(23);word(color->red);word(color->green);word(color->blue);word(color->alpha);return value;
+}
+RwFrame *RwFrameUpdateObjects(RwFrame *value)
+{
+    // Retain the original frame-object update after both matrix publications
+    event(24);word(frameIndex(value));return value;
+}
+void SetBrightMarkerColours(float brightness)
+{
+    // Observe the live original brightness passed to lighting setup
+    event(25);floating(brightness);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Compare each original conditional depth-write change
+    event(26);word(state);word((uint32_t)(uintptr_t)value);return 1;
+}
+RpAtomic *RpAtomicRender(RpAtomic *value)
+{
+    // Retain record rendering and allow the following controller fields to change live
+    event(27);draws++;word(atomicIndex(value));
+    if(!triggered && hook==7){triggered=true;marker(0).m_nType=MARKERTYPE_ARROW;marker(0).m_fSize=3.25f;TheCamera.LODDistMultiplier=1.75f;}
+    if(!triggered && hook==8){triggered=true;TestMk_SetActive(73);}
+    if(!triggered && hook==9){triggered=true;depth++;TestMk_Env(camera);depth--;}
+    return value;
+}
+void ReSetAmbientAndDirectionalColours(void)
+{
+    // Retain the original post-draw lighting restoration
+    event(28);
+}
+RwBool RpAtomicDestroy(RpAtomic *value)
+{
+    // Observe deletion after flags/identifier/type were cleared but before atomic null publication
+    event(29);deletes++;atomicAlive[atomicIndex(value)]=false;return 1;
+}
+RwBool RwFrameDestroy(RwFrame *value)
+{
+    // Preserve frame destruction after atomic destruction
+    event(30);frameAlive[frameIndex(value)]=false;return 1;
+}
+RwBool RpClumpDestroy(RpClump *value)
+{
+    // Keep the original published clump slot intact during and after destruction
+    event(31);word((uint32_t)(uintptr_t)value);return 1;
+}
+void ActivateDirectional(void)
+{
+    // Retain main/reflection lighting activation before scanning the live record flags
+    event(32);
+    if(!triggered && hook==10){triggered=true;marker(0).m_bIsUsed=false;TestMk_SetActive(17);}
+    if(!triggered && hook==11){triggered=true;TestMk_SetCache(0);}
+}
+RwReal RwCameraGetNearClipPlane(const RwCamera *value)
+{
+    // Retain the live near-plane query after camera vectors were copied
+    event(33);require(value==camera);return nearPlane;
+}
+RwReal RwCameraGetFarClipPlane(const RwCamera *value)
+{
+    // Retain the following far-plane query
+    event(34);require(value==camera);return farPlane;
+}
+void CCoronas::RegisterCorona(uint32 id,uint8 r,uint8 g,uint8 b,uint8 a,const CVector &position,float size,float distance,uint8 type,int8 flare,uint8 reflection,uint8 los,uint8 streak,float angle,bool useNear,float nearDistance)
+{
+    // Compare exact overload, narrowed marker identity, live position and default near distance
+    event(35);coronas++;int index=-1;for(int i=0;i<NUM3DMARKERS;i++)if(id==(uint32)(uintptr)TestMk_Marker(i))index=i;require(index>=0);word(index);word(r);word(g);word(b);word(a);vectorValue(position);floating(size);floating(distance);require(type==TYPE_STAR && flare==FLARE_NONE && reflection==REFLECTION_OFF && los==LOSCHECK_OFF && streak==STREAK_ON && angle==0.f && !useNear && nearDistance==1.5f);
+    if(!triggered && hook==12){triggered=true;marker(index).m_Matrix.GetPosition().x+=.75f;vectorValue(position);}
+}
+static void snapshot(void)
+{
+    // Compare every live record field, matrix, resource slot and reflection snapshot index
+    states++;word(TestMk_Active());word(TestMk_CacheCount());word(Timer_timeMs);floating(Timer_timeStep);word(currentTxd);text(directory);
+    for(int i=0;i<NUM3DMARKERS;i++){
+        // Include inactive records, retained material pointers and all embedded matrix state
+        C3dMarker &v=marker(i);for(int row=0;row<4;row++)for(int col=0;col<4;col++)floating(v.m_Matrix.f[row][col]);word(matrixIdentity(v.m_Matrix.m_attachment));word(v.m_Matrix.m_hasRwMatrix);word((uint32_t)(uintptr_t)v.m_pAtomic);word((uint32_t)(uintptr_t)v.m_pMaterial);word(v.m_nType);word(v.m_bIsUsed);word(v.m_bFindZOnNextPlacement);word(v.m_nIdentifier);word(v.m_Color.red);word(v.m_Color.green);word(v.m_Color.blue);word(v.m_Color.alpha);word(v.m_nPulsePeriod);word((uint16_t)v.m_nRotateRate);word(v.m_nStartTime);floating(v.m_fPulseFraction);floating(v.m_fStdSize);floating(v.m_fSize);floating(v.m_fBrightness);floating(v.m_fCameraRange);word(TestMk_CacheIndex(i));
+    }
+    for(int i=0;i<NUMMARKERTYPES;i++)word((uint32_t)(uintptr_t)TestMk_Clump(i));
+}
+static void reset(void)
+{
+    // Seed complete legal state while retaining the actual original typed record objects
+    hook=0;depth=0;triggered=false;collisionLoaded=true;framePresent=true;matrixPresent=true;groundHeight=7.25f;nearPlane=1.f;farPlane=100.f;player=CVector(0.f,0.f,0.f);TheCamera.LODDistMultiplier=1.25f;Timer_timeMs=5000;Timer_timeStep=1.5f;nextAtomic=0;nextFrame=0;nextClump=0;currentTxd=41;savedTxd=0;borrowed=NULL;borrowedLegacy=false;strcpy(directory,"old");memset(frameAlive,0,sizeof(frameAlive));memset(atomicAlive,0,sizeof(atomicAlive));memset(matrices,0,sizeof(matrices));matrices[250].right.x=1.f;matrices[250].up.z=1.f;matrices[250].at.y=2.f;TestMk_SetActive(31);TestMk_SetCache(0);
+    for(int i=0;i<NUM3DMARKERS;i++){
+        // Supply canaries for fields the initializer intentionally leaves untouched
+        C3dMarker &v=marker(i);for(int row=0;row<4;row++)for(int col=0;col<4;col++)v.m_Matrix.f[row][col]=(i+row+col)*.03125f;v.m_Matrix.m_attachment=NULL;v.m_Matrix.m_hasRwMatrix=false;v.m_pAtomic=NULL;v.m_pMaterial=(RpMaterial *)(uintptr_t)(0x5000+i*16);v.m_nType=MARKERTYPE_0;v.m_nIdentifier=900+i;v.m_bIsUsed=true;v.m_bFindZOnNextPlacement=true;v.m_Color.red=19;v.m_Color.green=31;v.m_Color.blue=71;v.m_Color.alpha=113;v.m_nPulsePeriod=512;v.m_nRotateRate=-3;v.m_nStartTime=4111;v.m_fPulseFraction=.375f;v.m_fStdSize=3.25f;v.m_fSize=2.75f;v.m_fBrightness=.73f;v.m_fCameraRange=131.f;
+    }
+    for(int i=0;i<NUMMARKERTYPES;i++)TestMk_SetClump(i,NULL);
+    TestMk_Init();
+}
+static void *place(uint32_t id,uint16_t type,float x,float y,float z,float size=2.f,bool legacy=false,bool set=false)
+{
+    // Exercise the actual C or mutable legacy API and compare the caller's final coordinates
+    placements++;void *result;
+    if(legacy){CVector pos(x,y,z);result=TestMk_PlaceLegacy(id,type,&pos,size,1024,.2f,5,set);vectorValue(pos);}
+    else{Markers3DVector pos={x,y,z};result=TestMk_PlaceC(id,type,&pos,size,1024,.2f,5,set);floating(pos.x);floating(pos.y);floating(pos.z);}
+    word(markerIndex(result));return result;
+}
+int main(void)
+{
+    // Observe static initialization and the exact partial controller initialization
+    snapshot();reset();snapshot();TestMk_Update();snapshot();TestMk_Shutdown();snapshot();TestMk_Shutdown();snapshot();
+    const float distances[]={0.f,5.f,5.001f,14.f,14.001f,25.f,25.001f,99.999f,100.f,150.f};
+    for(int type=0;type<=MARKERTYPE_CYLINDER;type++)for(int d=0;d<10;d++)for(int legacy=0;legacy<2;legacy++){
+        // Cover type rejection, exact distance/alpha branches and repeated placement pulse behavior
+        reset();place(77,(uint16_t)type,distances[d],0.f,11.f,2.f,legacy!=0);snapshot();TestMk_Render();snapshot();Timer_timeMs+=257;place(77,(uint16_t)type,distances[d],0.f,11.f,2.f,legacy!=0);snapshot();
+    }
+    for(int loaded=0;loaded<2;loaded++)for(int zero=0;zero<2;zero++)for(int legacy=0;legacy<2;legacy++){
+        // Verify deferred collision lookup, zero ground and create-versus-reuse input mutation
+        reset();collisionLoaded=loaded!=0;groundHeight=zero?0.f:7.25f;place(83,MARKERTYPE_CYLINDER,3.f,4.f,17.f,3.f,legacy!=0);snapshot();TestMk_Render();collisionLoaded=true;Timer_timeMs+=33;place(83,MARKERTYPE_CYLINDER,3.f,4.f,17.f,3.f,legacy!=0);snapshot();
+    }
+    for(int legacy=0;legacy<2;legacy++){
+        // Keep all three set placements on the same mutable borrowed position
+        reset();place(91,MARKERTYPE_CYLINDER,1.f,2.f,21.f,3.25f,legacy!=0,true);snapshot();
+    }
+    for(int branch=0;branch<3;branch++){
+        // Fill every slot and retain the original first-qualifying arrow replacement
+        reset();for(int i=0;i<NUM3DMARKERS;i++)place(100+i,MARKERTYPE_ARROW,70.f+i,0.f,3.f);snapshot();void *result=place(999,branch==1?MARKERTYPE_CYLINDER:MARKERTYPE_ARROW,branch==2?200.f:10.f,0.f,4.f);if(branch==0)require(markerIndex(result)==0);else require(result==NULL);snapshot();
+    }
+    for(int h=1;h<=12;h++){
+        // Compare live position aliases, resource callbacks, counters and nested reflection rendering
+        reset();hook=h;place(51,MARKERTYPE_CYLINDER,1.f,2.f,15.f,2.f,true);snapshot();place(52,MARKERTYPE_ARROW,0.f,10.f,1.f);TestMk_Render();snapshot();TestMk_Env(camera);snapshot();
+    }
+    for(int alias=0;alias<2;alias++){
+        // Borrow a real embedded matrix-position subobject during pulse and rotation
+        reset();place(62,MARKERTYPE_ARROW,3.f,4.f,9.f);TestMk_Render();Timer_timeMs+=257;CVector &pos=marker(alias).m_Matrix.GetPosition();placements++;void *result=TestMk_PlaceLegacy(62,MARKERTYPE_ARROW,&pos,2.f,1024,.2f,5,false);word(markerIndex(result));snapshot();
+    }
+    const float depths[]={0.f,1.f,1.001f,99.999f,100.f,149.999f,150.f};
+    for(int d=0;d<7;d++)for(int branch=0;branch<4;branch++){
+        // Verify exact reflection range/depth boundaries and both null-camera branches
+        reset();place(31,MARKERTYPE_ARROW,0.f,depths[d],0.f);TestMk_Render();framePresent=branch!=2;matrixPresent=branch!=3;TestMk_Env(branch==1?NULL:camera);snapshot();TestMk_Env(camera);snapshot();
+    }
+    reset();
+    for(int frameNumber=0;frameNumber<1200;frameNumber++){
+        // Sustain resource creation, pulse/rotation, deletion, snapshot capture and reflection replay
+        Timer_timeMs+=17;collisionLoaded=frameNumber%3!=0;groundHeight=frameNumber%7==0?0.f:7.25f;
+        for(int i=0;i<frameNumber%7;i++)place((uint32_t)(i+1),(i&1)?MARKERTYPE_CYLINDER:MARKERTYPE_ARROW,i*3.f,(float)(frameNumber%149),1.f,1.5f+(i%3)*.5f,(frameNumber+i)%2!=0);
+        TestMk_Render();TestMk_Env(camera);snapshot();
+        if(nextAtomic>140){TestMk_Shutdown();reset();}
+    }
+    require(states>1600 && placements>3000 && draws>1000 && coronas>500 && clones>100);printf("states=%u calls=%u placements=%u clones=%u creates=%u deletes=%u draws=%u coronas=%u grounds=%u collisions=%u hash=%016llx\n",states,calls,placements,clones,creates,deletes,draws,coronas,grounds,collisions,(unsigned long long)hash);
+}

@@ -1,0 +1,197 @@
+#ifdef NATIVE_PROJECT_HEADERS
+@NATIVE_HEADER@
+#else
+#include "common.h"
+#endif
+#include "caller.h"
+#include "FileMgr.h"
+#undef malloc
+#undef free
+#undef calloc
+#undef realloc
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+#include <vector>
+
+static_assert(sizeof(DirectoryInfo)==32 && alignof(DirectoryInfo)==4,"Unchanged disk record");
+static_assert(offsetof(DirectoryInfo,offset)==0 && offsetof(DirectoryInfo,size)==4 && offsetof(DirectoryInfo,name)==8,"Unchanged record fields");
+static_assert(sizeof(CDirectory)==sizeof(void *)+8,"Unchanged directory state size");
+static_assert(offsetof(CDirectory,entries)==0 && offsetof(CDirectory,maxEntries)==sizeof(void *) && offsetof(CDirectory,numEntries)==sizeof(void *)+4,"Unchanged state fields");
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t checks,allocations,releases,assertions,rng=0x45649a93;
+static bool failAllocation;
+struct Allocation { unsigned char *raw;size_t n; };
+static Allocation live[16];
+
+static void require(bool condition)
+{
+    // Stop quietly when an independent layout, ownership or behavior invariant fails
+    if(!condition)exit(2);checks++;
+}
+static void word(uint32_t value)
+{
+    // Record operation histories without hashing process-specific allocation addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void bytes(const void *ptr,size_t n)
+{
+    // Compare every field and trailing name byte in the initialized records
+    const unsigned char *p=(const unsigned char *)ptr;for(size_t i=0;i<n;i++)word(p[i]);
+}
+extern "C" void *cita_win_malloc(size_t n,const char *filename,const char *function,int line)
+{
+    // Guard each directory allocation and initialize its bytes for deterministic observations
+    require(filename!=NULL && function!=NULL && line>0);require(strstr(function,"Directory")!=NULL);
+    allocations++;word(0xa110);word((uint32_t)n);
+    if(failAllocation)return NULL;
+    for(auto &a:live)if(!a.raw){
+        a.raw=(unsigned char *)malloc(n+32);require(a.raw!=NULL);a.n=n;memset(a.raw,0xa5,n+32);return a.raw+16;
+    }
+    exit(3);
+}
+extern "C" void cita_win_free(void *ptr,const char *filename,const char *function,int line)
+{
+    // Check exact allocation ownership and intact guards before releasing entry storage
+    require(filename!=NULL && function!=NULL && line>0);require(strstr(function,"Directory")!=NULL);
+    releases++;word(0xf433);if(!ptr){word(0);return;}
+    for(auto &a:live)if(a.raw && ptr==a.raw+16){
+        for(unsigned i=0;i<16;i++)require(a.raw[i]==0xa5 && a.raw[16+a.n+i]==0xa5);
+        word((uint32_t)a.n);free(a.raw);a.raw=NULL;return;
+    }
+    exit(4);
+}
+extern "C" void re3_assert(const char *expr,const char *,unsigned int,const char *function)
+{
+    // Observe the original assertion before duplicate detection without creating a window
+    require(strstr(expr,"numEntries")!=NULL && strstr(function,"AddItem")!=NULL);assertions++;word(0xa553);
+}
+extern "C" int myrand(void)
+{
+    // Fail if the string-lookup dependency unexpectedly invokes unrelated random operations
+    exit(5);
+}
+extern "C" void mysrand(unsigned int)
+{
+    // Fail if the directory fixture unexpectedly invokes random seeding
+    exit(6);
+}
+extern "C" const char *FileMgr_BackendUserFilesFolder(void)
+{
+    // Fail if directory-record operations unexpectedly query the documents folder
+    exit(7);
+}
+static uint32_t randomWord(void)
+{
+    // Generate deterministic offsets, sizes and valid image indices with unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+static DirectoryInfo record(const char *name,uint32_t offset,uint32_t size)
+{
+    // Initialize all 32 record bytes and keep names terminated inside the fixed field
+    DirectoryInfo info;memset(&info,0x39,sizeof(info));info.offset=offset;info.size=size;
+    require(strlen(name)<24);memcpy(info.name,name,strlen(name)+1);return info;
+}
+static CDirectory *create(int capacity)
+{
+    // Match production owner allocation followed by original construction or C initialization
+    CDirectory *directory=(CDirectory *)malloc(sizeof(CDirectory));require(directory!=NULL);
+    TestDirectory_Initialize(directory,capacity);require(directory->maxEntries==capacity && directory->numEntries==0);
+    if(!failAllocation)require(directory->entries!=NULL);
+    return directory;
+}
+static void destroy(CDirectory *directory)
+{
+    // Release the entry array before freeing the separately allocated owner record
+    TestDirectory_Shutdown(directory);free(directory);
+}
+static void state(CDirectory *directory)
+{
+    // Observe the initialized count, capacity and complete entry bytes after each operation
+    word(directory->numEntries);word(directory->maxEntries);bytes(directory->entries,directory->numEntries*sizeof(DirectoryInfo));
+}
+static void rawFile(const char *name,const std::vector<unsigned char> &data)
+{
+    // Write only fixture-owned directory files inside the build sandbox
+    FILE *f=fopen(name,"wb");require(f!=NULL);require(fwrite(data.data(),1,data.size(),f)==data.size());require(fclose(f)==0);
+}
+static std::vector<unsigned char> rawRead(const char *name)
+{
+    // Verify physical file bytes independently of the directory writer
+    FILE *f=fopen(name,"rb");require(f!=NULL);std::vector<unsigned char> data;int c;
+    while((c=fgetc(f))!=EOF)data.push_back((unsigned char)c);require(fclose(f)==0);return data;
+}
+int main(void)
+{
+    // Check zero-capacity and failed entry allocation without changing original failure handling
+    FileMgr_Initialise();auto directory=create(0);destroy(directory);
+    failAllocation=true;directory=create(4);require(directory->entries==NULL);destroy(directory);failAllocation=false;
+
+    // Verify case-insensitive matching, missed-output preservation and aliased output order
+    directory=create(8);auto first=record("Alpha.dff",0x12345678,0x87654321);TestDirectory_Add(directory,&first);
+    uint32_t offset=11,size=22;require(TestDirectory_Find(directory,"aLPHA.DFF",&offset,&size));require(offset==first.offset && size==first.size);
+    offset=11;size=22;require(!TestDirectory_Find(directory,"missing",&offset,&size));require(offset==11 && size==22);
+    offset=99;require(TestDirectory_Find(directory,"ALPHA.DFF",&offset,&offset));require(offset==first.size);
+    auto duplicate=record("alpha.DFF",7,8);TestDirectory_Add(directory,&duplicate);
+#ifdef FIX_BUGS
+    require(directory->numEntries==1);
+#else
+    require(directory->numEntries==2);
+#endif
+    offset=0;size=0;require(TestDirectory_Find(directory,"alpha.dff",&offset,&size));require(offset==first.offset && size==first.size);
+    auto image=record("Image.txd",0x80412345,0x76543210);auto saved=image;TestDirectory_AddImage(directory,&image,127);
+    require(memcmp(&image,&saved,32)==0);require(directory->entries[directory->numEntries-1].offset==(saved.offset|0x7f000000));state(directory);
+    TestDirectory_Add(directory,&directory->entries[0]);state(directory);destroy(directory);
+
+#ifdef FIX_BUGS
+    // Retain the capacity assertion even when a full directory subsequently rejects a duplicate
+    directory=create(1);TestDirectory_Add(directory,&first);uint32_t before=assertions;TestDirectory_Add(directory,&first);
+#ifndef MASTER
+    require(assertions==before+1);
+#else
+    require(assertions==before);
+#endif
+    require(directory->numEntries==1);destroy(directory);
+#endif
+
+    // Exercise independent directory instances and long add/find histories without exceeding capacity
+    for(unsigned batch=0;batch<128;batch++){
+        directory=create(128);std::vector<DirectoryInfo> expected;
+        for(unsigned i=0;i<96;i++){
+            char name[24];snprintf(name,sizeof(name),"item%02u.%s",i%53,(i%2)?"TXD":"dff");
+            auto info=record(name,randomWord(),randomWord());int imageId=randomWord()%128;bool withImage=i%3==0;
+            auto stored=info;if(withImage)stored.offset|=imageId<<24;
+            bool found=false;for(auto &entry:expected)if(strcmp(entry.name,name)==0){found=true;break;}
+#ifndef FIX_BUGS
+            found=false;
+#endif
+            if(!found)expected.push_back(stored);
+            if(withImage)TestDirectory_AddImage(directory,&info,imageId);else TestDirectory_Add(directory,&info);
+            require(directory->numEntries==(int)expected.size());require(memcmp(directory->entries,expected.data(),expected.size()*32)==0);
+            uint32_t a=0x5555,b=0xaaaa;require(TestDirectory_Find(directory,name,&a,&b));
+            for(auto &entry:expected)if(strcmp(entry.name,name)==0){require(a==entry.offset && b==entry.size);break;}
+            state(directory);
+        }
+        require(TestDirectory_Write(directory,"roundtrip.dir"));auto physical=rawRead("roundtrip.dir");require(physical.size()==expected.size()*32);
+        require(memcmp(physical.data(),expected.data(),physical.size())==0);bytes(physical.data(),physical.size());
+        auto loaded=create(128);TestDirectory_Read(loaded,"roundtrip.dir");require(loaded->numEntries==directory->numEntries);
+        require(memcmp(loaded->entries,directory->entries,directory->numEntries*32)==0);state(loaded);destroy(loaded);destroy(directory);
+    }
+
+    // Preserve positive short-read handling by reusing the initialized prior record's remaining bytes
+    directory=create(8);std::vector<unsigned char> partial((unsigned char *)&first,(unsigned char *)&first+32);
+    uint32_t replacement=0x99887766;partial.insert(partial.end(),(unsigned char *)&replacement,(unsigned char *)&replacement+4);rawFile("partial.dir",partial);
+    TestDirectory_Read(directory,"partial.dir");
+#ifdef FIX_BUGS
+    require(directory->numEntries==1);
+#else
+    require(directory->numEntries==2 && directory->entries[1].offset==replacement && directory->entries[1].size==first.size);
+#endif
+    state(directory);destroy(directory);
+    // Verify an empty directory file and zero-record write use the original binary file format
+    rawFile("empty.dir",{});directory=create(8);TestDirectory_Read(directory,"empty.dir");require(directory->numEntries==0);
+    require(TestDirectory_Write(directory,"empty-out.dir"));require(rawRead("empty-out.dir").empty());destroy(directory);
+    for(auto &a:live)require(a.raw==NULL);require(allocations==releases);
+    printf("%016llx checks=%u allocations=%u releases=%u assertions=%u record=32\n",(unsigned long long)hash,checks,allocations,releases,assertions);
+}

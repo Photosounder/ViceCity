@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "World.h"
@@ -124,7 +126,7 @@ CCopPed::SetArrestPlayer(CPed *player)
 	Say(SOUND_PED_ARREST_COP);
 
 	if (player->EnteringCar()) {
-		if (CTimer::GetTimeInMilliseconds() > m_nPedStateTimer)
+		if ((*Timer_GetTimeInMilliseconds()) > m_nPedStateTimer)
 			return;
 
 		// why?
@@ -203,7 +205,7 @@ CCopPed::ClearPursuit(void)
 	m_bZoneDisabled = false;
 	ClearObjective();
 	if (IsPedInControl()) {
-		if (!m_pMyVehicle || wanted->GetWantedLevel() != 0)  {
+		if (!m_pMyVehicle || Wanted_GetWantedLevel(wanted) != 0)  {
 			if (m_pMyVehicle && (m_pMyVehicle->GetPosition() - GetPosition()).MagnitudeSqr() < sq(5.0f)) {
 				m_nLastPedState = PED_IDLE;
 				SetSeek((CEntity*)m_pMyVehicle, 2.5f);
@@ -221,7 +223,7 @@ CCopPed::ClearPursuit(void)
 void
 CCopPed::SetPursuit(bool ignoreCopLimit)
 {
-	if (CTimer::GetTimeInMilliseconds() < field_61C)
+	if ((*Timer_GetTimeInMilliseconds()) < field_61C)
 		return;
 
 	CWanted *wanted = FindPlayerPed()->m_pWanted;
@@ -268,11 +270,12 @@ CCopPed::ArrestPlayer(void)
 
 			CAnimBlendAssociation *arrestAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_ARREST);
 			if (!arrestAssoc || arrestAssoc->blendDelta < 0.0f)
-				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ARREST, 4.0f);
+				// Use the complete C animation manager at the original call boundary
+				AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ARREST, 4.0f);
 
 			CVector suspMidPos;
 			suspect->m_pedIK.GetComponentPosition(suspMidPos, PED_MID);
-			m_fRotationDest = CGeneral::GetRadianAngleBetweenPoints(suspMidPos.x, suspMidPos.y,
+			m_fRotationDest = General_GetRadianAngleBetweenPoints(suspMidPos.x, suspMidPos.y,
 				GetPosition().x, GetPosition().y);
 
 			m_fRotationCur = m_fRotationDest;
@@ -302,7 +305,7 @@ CCopPed::ScanForCrimes(void)
 	if (!m_bIsInPursuit) {
 		CPlayerPed *player = FindPlayerPed();
 		if ((m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER || m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER)
-			&& player->m_pWanted->GetWantedLevel() == 0) {
+			&& Wanted_GetWantedLevel(player->m_pWanted) == 0) {
 
 			if (player->m_pMyVehicle
 #ifdef FIX_BUGS
@@ -318,7 +321,7 @@ void
 CCopPed::CopAI(void)
 {
 	CWanted *wanted = FindPlayerPed()->m_pWanted;
-	int wantedLevel = wanted->GetWantedLevel();
+	int wantedLevel = Wanted_GetWantedLevel(wanted);
 	CPhysical *playerOrHisVeh = FindPlayerVehicle() ? (CPhysical*)FindPlayerVehicle() : (CPhysical*)FindPlayerPed();
 
 	if (wanted->m_bIgnoredByEveryone || wanted->m_bIgnoredByCops) {
@@ -327,7 +330,7 @@ CCopPed::CopAI(void)
 
 		return;
 	}
-	if (CCullZones::NoPolice() && m_bIsInPursuit && !m_bIsDisabledCop) {
+	if (CullZones_NoPolice() && m_bIsInPursuit && !m_bIsDisabledCop) {
 		if (bHitSomethingLastFrame) {
 			m_bZoneDisabled = true;
 			m_bIsDisabledCop = true;
@@ -346,7 +349,7 @@ CCopPed::CopAI(void)
 			if (m_fDistanceToTarget > 15.0f)
 				m_bStopAndShootDisabledZone = true;
 		}
-	} else if (m_bZoneDisabled && !CCullZones::NoPolice()) {
+	} else if (m_bZoneDisabled && !CullZones_NoPolice()) {
 		m_bZoneDisabled = false;
 		m_bIsDisabledCop = false;
 		m_bStopAndShootDisabledZone = false;
@@ -358,7 +361,7 @@ CCopPed::CopAI(void)
 	if (wantedLevel > 0) {
 		if (!m_bIsDisabledCop) {
 			// Turn and shoot the player's vehicle, if possible
-			if (!m_bIsInPursuit && !GetWeapon()->IsTypeMelee() && FindPlayerVehicle() && m_fDistanceToTarget < CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange) {
+			if (!m_bIsInPursuit && !GetWeapon()->IsTypeMelee() && FindPlayerVehicle() && m_fDistanceToTarget < WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange) {
 				if (FindPlayerVehicle()->m_vecMoveSpeed.Magnitude2D() > 0.1f) {
 					CVector2D distToVeh = GetPosition() - FindPlayerVehicle()->GetPosition();
 					distToVeh.Normalise();
@@ -370,8 +373,8 @@ CCopPed::CopAI(void)
 						SetMoveState(PEDMOVE_STILL);
 						if (TurnBody()) {
 							SetAttack(FindPlayerVehicle());
-							SetShootTimer(CGeneral::GetRandomNumberInRange(500.0f, 1000.0f));
-							SetAttackTimer(CGeneral::GetRandomNumberInRange(200.0f, 300.0f));
+							SetShootTimer(General_GetRandomNumberInRangeFloat(500.0f, 1000.0f));
+							SetAttackTimer(General_GetRandomNumberInRangeFloat(200.0f, 300.0f));
 						}
 					} else if (m_nPedState == PED_ATTACK)
 						RestorePreviousState();
@@ -439,12 +442,12 @@ CCopPed::CopAI(void)
 			return;
 		}
 		SetCurrentWeapon(WEAPONTYPE_COLT45);
-		CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
+		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		float weaponRange = weaponInfo->m_fRange;
 		SetLookFlag(playerOrHisVeh, true);
 		TurnBody();
 		if (!bIsDucking || bCrouchWhenShooting && GetCrouchFireAnim(weaponInfo)) {
-			if (m_attackTimer >= CTimer::GetTimeInMilliseconds()) {
+			if (m_attackTimer >= (*Timer_GetTimeInMilliseconds())) {
 				if (m_nPedState != PED_ATTACK && m_nPedState != PED_FIGHT && !m_bZoneDisabled) {
 					CVector targetDist = playerOrHisVeh->GetPosition() - GetPosition();
 					if (m_fDistanceToTarget > 30.0f) {
@@ -489,7 +492,7 @@ CCopPed::CopAI(void)
 				}
 			} else {
 				if (m_fDistanceToTarget < weaponRange) {
-					CVector gunPos = weaponInfo->m_vecFireOffset;
+					CVector gunPos = WeaponInfo_VectorToNative(weaponInfo->m_vecFireOffset);
 					TransformToNode(gunPos, PED_HANDR);
 
 					CColPoint foundCol;
@@ -500,9 +503,9 @@ CCopPed::CopAI(void)
 
 						SetWeaponLockOnTarget(playerOrHisVeh);
 						SetAttack(playerOrHisVeh);
-						SetShootTimer(CGeneral::GetRandomNumberInRange(500, 1000));
+						SetShootTimer(General_GetRandomNumberInRangeInt(500, 1000));
 					}
-					SetAttackTimer(CGeneral::GetRandomNumberInRange(200, 300));
+					SetAttackTimer(General_GetRandomNumberInRangeInt(200, 300));
 				}
 				SetMoveState(PEDMOVE_STILL);
 			}
@@ -530,7 +533,7 @@ CCopPed::CopAI(void)
 						} else {
 							m_pMyVehicle = nil;
 							ClearObjective();
-							SetWanderPath(CGeneral::GetRandomNumber() & 7);
+							SetWanderPath(General_GetRandomNumber() & 7);
 						}
 					} else {
 						if (m_objective != OBJECTIVE_KILL_CHAR_ON_FOOT && m_objective != OBJECTIVE_HASSLE_CHAR && CharCreatedBy == RANDOM_CHAR) {
@@ -555,10 +558,10 @@ CCopPed::CopAI(void)
 										}
 									} else {
 										if (nearPed->m_nPedType != PEDTYPE_COP && !nearPed->IsPlayer()
-											&& nearPed->IsPedInControl() && m_nHassleTimer < CTimer::GetTimeInMilliseconds()) {
+											&& nearPed->IsPedInControl() && m_nHassleTimer < (*Timer_GetTimeInMilliseconds())) {
 
 											if (nearPed->m_objective == OBJECTIVE_NONE && nearPed->m_nPedState == PED_WANDER_PATH
-												&& !nearPed->m_pLookTarget && nearPed->m_lookTimer < CTimer::GetTimeInMilliseconds()) {
+												&& !nearPed->m_pLookTarget && nearPed->m_lookTimer < (*Timer_GetTimeInMilliseconds())) {
 
 												if ((GetPosition() - nearPed->GetPosition()).MagnitudeSqr() < sq(5.0f)) {
 
@@ -567,7 +570,7 @@ CCopPed::CopAI(void)
 														Say(SOUND_PED_COP_ASK_FOR_ID);
 														SetObjective(OBJECTIVE_HASSLE_CHAR, nearPed);
 														nearPed->SetObjective(OBJECTIVE_WAIT_ON_FOOT_FOR_COP, this);
-														m_nHassleTimer = CTimer::GetTimeInMilliseconds() + 100000;
+														m_nHassleTimer = (*Timer_GetTimeInMilliseconds()) + 100000;
 													}
 												}
 											}
@@ -668,7 +671,7 @@ CCopPed::ProcessControl(void)
 							}
 						}
 					}
-				} else if ((CGeneral::GetRandomNumber() % 16) == 1) {
+				} else if ((General_GetRandomNumber() % 16) == 1) {
 					Say(SOUND_PED_COP_MANYCOPSAROUND);
 				}
 			}
@@ -761,7 +764,7 @@ CCopPed::ProcessControl(void)
 	if (m_bStopAndShootDisabledZone) {
 		bool dontShoot = false;
 		if (GetIsOnScreen()) {
-			if (((CTimer::GetFrameCounter() + m_randomSeed) & 0x1F) == 17) {
+			if ((((*Timer_GetFrameCounter()) + m_randomSeed) & 0x1F) == 17) {
 				CEntity* foundBuilding = nil;
 				CColPoint foundCol;
 				CVector lookPos = GetPosition() + CVector(0.0f, 0.0f, 0.7f);
@@ -796,8 +799,8 @@ CCopPed::ProcessControl(void)
 			m_bStopAndShootDisabledZone = true;
 			ClearPursuit();
 			SetObjective(OBJECTIVE_NONE);
-			SetWanderPath(CGeneral::GetRandomNumberInRange(0,8));
-			field_61C = CTimer::GetTimeInMilliseconds() + 30000;
+			SetWanderPath(General_GetRandomNumberInRangeInt(0,8));
+			field_61C = (*Timer_GetTimeInMilliseconds()) + 30000;
 		} else {
 			field_624 = 0;
 			if (GetWeapon()->IsTypeMelee()) {
@@ -812,7 +815,7 @@ CCopPed::ProcessControl(void)
 				bStopAndShoot = true;
 			}
 		}
-	} else if (CTimer::GetTimeStep() / 100.f <= m_fDistanceTravelled)
+	} else if ((*Timer_GetTimeStep()) / 100.f <= m_fDistanceTravelled)
 		field_624 = 0;
 }
 
@@ -823,14 +826,15 @@ CCopPed::ProcessHeliSwat(void)
 	SetPedState(PED_ABSEIL);
 	CPedPlacement::FindZCoorForPed(&bestPos);
 	if (GetPosition().z - 2.0f >= bestPos.z && m_pRopeEntity) {
-		m_fAbseilPos += 0.003f * CTimer::GetTimeStep();
+		m_fAbseilPos += 0.003f * (*Timer_GetTimeStep());
 		m_vecMoveSpeed.z = -0.03f;
 		m_vecTurnSpeed = CVector(0.f, 0.f, (m_randomSeed % 32) * 0.003f - 0.05f);
 		CPhysical::ApplyTurnSpeed();
 		GetMatrix().Reorthogonalise();
 		CVector posOnRope;
 
-		if (CRopes::FindCoorsAlongRope(m_nRopeID, m_fAbseilPos, &posOnRope)) {
+		// Enter the C rope algorithm with the original owner expressions
+		if (Ropes_FindCoorsAlongRopeToVector(m_nRopeID, m_fAbseilPos, &posOnRope)) {
 			SetPosition(posOnRope);
 		} else {
 			bUsesCollision = true;
@@ -881,3 +885,6 @@ CCopPed::ProcessStingerCop(void)
 		ClearPursuit();
 	}
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

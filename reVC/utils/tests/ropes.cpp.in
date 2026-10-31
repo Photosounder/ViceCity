@@ -1,0 +1,253 @@
+@COMMON@
+#include "caller.h"
+#include "CopPed.h"
+#include "Population.h"
+#include "Streaming.h"
+#include "Camera.h"
+#include "RenderBuffer.h"
+#include "custompipes.h"
+#include "ModelIndices.h"
+#include "Timer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,attempts,renders,ends,cameras,groups,models,peds,blends,phase[2],depth;
+static uint32_t rng=0x51379bd;
+static unsigned mode;
+static bool visible=true,loaded=true,recursive;
+static CCopPed swat[4];
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap; }
+VertexBufferUnion TempVertexBuffer;
+extern "C" { float Timer_timeStep;uint32_t Timer_timeMs; }
+
+static void require(bool condition)
+{
+    // Fail quietly with enough protocol state to diagnose a comparison failure
+    if(!condition){fprintf(stderr,"states=%u attempts=%u phase=%u\n",states,attempts,phase[depth]);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate logical values without recording process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void identity(uintptr_t value)
+{
+    // Observe all significant pointer-ID bits on each target architecture
+    word((uint32_t)value);
+#if UINTPTR_MAX > UINT32_MAX
+    word((uint32_t)(value>>32));
+#endif
+}
+static uint32_t bits(float value)
+{
+    // Inspect a float representation without scalar aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static float fromBits(uint32_t value)
+{
+    // Construct exact exceptional floating inputs
+    float result;memcpy(&result,&value,4);return result;
+}
+static void floating(float value)
+{
+    // Compare every finite bit and classify NaNs without promising their payload
+    word(isnan(value)?0x7fc00000u:bits(value));
+}
+static void vectorValue(RopesVector value)
+{
+    // Observe typed vector components in the original field order
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static uint32_t randomWord(void)
+{
+    // Generate fixed input histories with defined unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+static RopesVector vector(void)
+{
+    // Generate each coordinate in a fixed evaluation order
+    RopesVector result;
+    result.x=((int)(randomWord()%1025)-512)*0.0625f;
+    result.y=((int)(randomWord()%1025)-512)*0.0625f;
+    result.z=((int)(randomWord()%1025)-512)*0.0625f;
+    return result;
+}
+static void record(Rope value)
+{
+    // Observe every declared field including inactive record payloads
+    word(value.m_bActive);word(value.m_bWasRegistered);word(value.m_unk);identity(value.m_id);word(value.m_updateTimer);
+    for(unsigned i=0;i<32;i++){vectorValue(value.m_pos[i]);vectorValue(value.m_speed[i]);}
+}
+static void snapshot(void)
+{
+    // Compare complete private storage and the full original index table
+    for(int i=0;i<8;i++)record(TestR_Record(i));
+    for(int i=0;i<64;i++)word(RopeIndices[i]);
+    states++;
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Trace actual camera queries to detect the environment-pass short circuit
+    word(1);floating(center.x);floating(center.y);floating(center.z);floating(radius);cameras++;return visible;
+}
+void PushRendergroup(const char *name)
+{
+    // Preserve original group labels and operation timing
+    word(2);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Preserve the closing debug boundary
+    word(3);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe all state identifiers and their original pointer values
+    word(4);word((uint32_t)state);word((uint32_t)(uintptr_t)value);return 1;
+}
+static void vertexSnapshot(void)
+{
+    // Observe real D3D or GL vertex fields including persistent UV contents
+    for(unsigned i=0;i<32;i++){
+        // Read the entire typed field set rather than assuming either backend layout
+        RwIm3DVertex &v=TempBufferRenderVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());
+        RwRGBA color=v.getColor();word(color.red);word(color.green);word(color.blue);word(color.alpha);floating(v.getU());floating(v.getV());
+    }
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *value,RwUInt8 red,RwUInt8 green,RwUInt8 blue,RwUInt8 alpha)
+{
+    // Verify all colors precede their matching position updates in shared storage
+    require(phase[depth]<64 && !(phase[depth]&1));require(value==TempBufferRenderVertices+phase[depth]/2);
+    word(5);word(phase[depth]/2);word(red);word(green);word(blue);word(alpha);phase[depth]++;value->setColor(red,green,blue,alpha);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *value,RwReal x,RwReal y,RwReal z)
+{
+    // Verify original coordinates and exact vertex order
+    require(phase[depth]<64 && (phase[depth]&1));require(value==TempBufferRenderVertices+phase[depth]/2);
+    word(6);word(phase[depth]/2);floating(x);floating(y);floating(z);phase[depth]++;value->setX(x);value->setY(y);value->setZ(z);
+}
+void *RwIm3DTransform(RwIm3DVertex *value,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Preserve the original vertex count, matrix, flags and transform-success behavior
+    require(phase[depth]==64 && value==TempBufferRenderVertices && count==32 && matrix==NULL && flags==(rwIM3D_VERTEXXYZ|rwIM3D_VERTEXRGBA));phase[depth]=65;
+    attempts++;word(7);vertexSnapshot();bool success=mode==0 || (mode==2 && attempts%5!=0);
+    value[0].setU((float)(attempts%23));value[31].setV(-(float)(attempts%29));
+    if(recursive && depth==0 && attempts%71==0){
+        // Reenter using the same shared buffer while the outer draw is in progress
+        depth=1;phase[depth]=0;TestR_Render();require(phase[depth]==0);depth=0;
+    }
+    word(success);if(!success)phase[depth]=0;return success?value:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Verify the complete original index table and fixed-versus-legacy primitive
+    require(phase[depth]==65 && count==62);phase[depth]=66;
+#ifdef FIX_BUGS
+    require(type==rwPRIMTYPELINELIST);
+#else
+    require(type==rwPRIMTYPEPOLYLINE);
+#endif
+    word(8);word((uint32_t)type);for(int i=0;i<64;i++)word(indices[i]);vertexSnapshot();renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // End only successful indexed draws
+    require(phase[depth]==66);phase[depth]=0;ends++;word(9);return 1;
+}
+bool CStreaming::HasModelLoaded(int32 id)
+{
+    // Trace lazy model checks without allocating unrelated streaming resources
+    require(id==MI_SWAT);word(10);word((uint32_t)id);models++;return loaded;
+}
+CPed *CPopulation::AddPed(ePedType type,uint32 model,const CVector &pos,int32 modifier)
+{
+    // Return a legally constructed typed owner after observing rope allocation
+    require(type==PEDTYPE_COP && model==COP_HELI_SWAT && modifier==0);word(11);word((uint32_t)type);word(model);floating(pos.x);floating(pos.y);floating(pos.z);
+    for(int i=0;i<8;i++){Rope value=TestR_Record(i);word(value.m_bActive);identity(value.m_id);}
+    CCopPed *ped=&swat[peds++%4];ped->bUsesCollision=true;ped->m_pRopeEntity=NULL;ped->m_nRopeID=0;return ped;
+}
+RpClump *CCopPed::GetClump(void)
+{
+    // Observe all original owner writes before entering the animation sink
+    require(!bUsesCollision && m_pRopeEntity==(CEntity *)1);word(12);identity(m_nRopeID);return (RpClump *)17;
+}
+void *CAnimManager::BlendAnimation(RpClump *clump,AssocGroupId group,AnimationId animation,float delta)
+{
+    // Verify the original animation, group and blend amount
+    require(clump==(RpClump *)17 && group==ASSOCGRP_STD && animation==ANIM_STD_ABSEIL && delta==4.0f);
+    word(13);word((uint32_t)group);word((uint32_t)animation);floating(delta);blends++;return NULL;
+}
+int main(void)
+{
+    // Check measured layouts and initialize the actual C timer globals
+    static_assert(sizeof(Rope)==(sizeof(void *)==8?792:780),"C rope size");
+    static_assert(alignof(Rope)==alignof(uintptr_t),"C rope alignment");
+    static_assert(offsetof(Rope,m_id)==(sizeof(void *)==8?8:4),"C ID offset");
+    static_assert(offsetof(Rope,m_pos)==(sizeof(void *)==8?20:12) && offsetof(Rope,m_speed)==(sizeof(void *)==8?404:396),"C vectors");
+    Timer_timeStep=1.0f;Timer_timeMs=100;TestR_Init();snapshot();TestR_Render();
+    // Exercise full capacity, first-match updates, timer wrap and pointer-width IDs
+    RopesVector zero={0.0f,-0.0f,0.0f};
+    for(unsigned i=0;i<12;i++){word(TestR_Register((uintptr_t)i,vector(),i&1));snapshot();}
+    for(unsigned i=0;i<8;i++){uint32_t timer=TestR_Record(i).m_updateTimer;word(TestR_Register(i,zero,true));require(TestR_Record(i).m_updateTimer==timer);snapshot();}
+    TestR_Init();Timer_timeMs=UINT32_MAX-7;word(TestR_Register(17,zero,true));require(TestR_Record(0).m_updateTimer==(uint32_t)(Timer_timeMs+20000u));snapshot();
+    uintptr_t wide=(uintptr_t)UINT64_C(0x1234567800000011);word(TestR_Register(wide,zero,false));snapshot();
+    // Cover missing lookups, bounds, infinities and unchanged typed legacy outputs
+    float parameters[]={-INFINITY,-10.0f,-0.0f,0.0f,0.5f,0.999f,1.0f,20.0f,INFINITY};
+    for(float t:parameters)for(unsigned found=0;found<2;found++){
+        // Supply identical output values before every old/new lookup
+        uintptr_t id=found?17:999999;RopesVector result={3.0f,-4.0f,5.0f};bool ok=TestR_Find(id,t,&result);word(ok);vectorValue(result);if(!found)require(!ok && result.x==3.0f && result.y==-4.0f && result.z==5.0f);
+        CVector legacy(3.0f,-4.0f,5.0f);word(TestR_LegacyFind(id,t,&legacy));floating(legacy.x);floating(legacy.y);floating(legacy.z);
+    }
+    require(!TestR_Find(999999,fromBits(0x7fc01234),NULL));require(!TestR_LegacyFind(999999,0.5f,NULL));
+    // Cover the strict timeout and every registered/unregistered branch in direct physics
+    for(unsigned registered=0;registered<2;registered++)for(unsigned timing=0;timing<3;timing++){
+        // Supply complete records at times just before, equal to and after the timeout
+        Rope value={};value.m_bActive=true;value.m_bWasRegistered=registered!=0;value.m_updateTimer=50;
+        for(unsigned i=0;i<32;i++){value.m_pos[i]={0.0f,0.0f,10.0f+i*0.625f};value.m_speed[i]={0.1f,-0.2f,-0.3f};}
+        Timer_timeMs=49+timing;TestR_DirectUpdate(&value);record(value);
+    }
+    // Compare fixed mixed histories including zero timestep and timer wrap
+    TestR_Init();mode=2;
+    for(unsigned i=0;i<10000;i++){
+        // Generate operation inputs in a fixed order across all C++ compilers
+        unsigned action=randomWord()%10;uintptr_t id=randomWord()%13;Timer_timeMs+=randomWord()%101;Timer_timeStep=(randomWord()%13)*0.125f;
+        if(action<4)word(TestR_Register(id,vector(),(i&1)!=0));
+        else if(action==4)TestR_Speed(id,vector());
+        else if(action==5)TestR_Update();
+        else if(action==6)TestR_Render();
+        else if(action==7){RopesVector result={1,2,3};word(TestR_Find(id,((int)(randomWord()%2049)-1024)*0.03125f,&result));vectorValue(result);}
+        else if(action==8)TestR_Init();
+        else {CVector pos(1.0f,-2.0f,3.0f);word(TestR_LegacyRegister(id,&pos,false));}
+        if(i%17==0)snapshot();
+    }
+    // Cover original undefined floating results without changing their classifications
+    uint32_t specials[]={0,0x80000000u,1,0x3f800000u,0xbf800000u,0x7f800000u,0xff800000u,0x7fc01234u};
+    for(uint32_t special:specials){
+        // Keep all float-to-index conversions outside exceptional physics tests
+        Rope value={};value.m_bActive=true;value.m_updateTimer=0;Timer_timeStep=fromBits(special);Timer_timeMs=10;
+        for(unsigned i=0;i<32;i++){value.m_pos[i]={0.0f,0.0f,(float)(i%2)};value.m_speed[i]={fromBits(special),-0.0f,0.0f};}
+        TestR_DirectUpdate(&value);record(value);
+    }
+    // Verify the model-load and registration failure paths before SWAT allocation
+    Timer_timeStep=1.0f;Timer_timeMs=500;TestR_Init();loaded=false;word(TestR_Swat(zero));snapshot();loaded=true;
+    for(unsigned i=0;i<8;i++)word(TestR_Register(1000+i,zero,false));unsigned previous=peds;word(TestR_Swat(zero));require(peds==previous);snapshot();
+    // Preserve counter state across Init and probe 32-bit wrap in the seeded fixture profile
+    for(unsigned i=0;i<20;i++){TestR_Init();word(TestR_Swat(vector()));snapshot();loaded=false;word(TestR_Swat(zero));loaded=true;}
+    require(peds==blends);
+    // Compare visible, culled and environment-bypassed renders with every transform outcome
+    TestR_Init();Timer_timeStep=1;for(unsigned i=0;i<8;i++)word(TestR_Register(i,vector(),false));
+    for(unsigned environment=0;environment<2;environment++)for(unsigned camera=0;camera<2;camera++)for(mode=0;mode<3;mode++){
+        // Toggle the original live render conditions before each traversal
+        CustomPipes::bRenderingEnvMap=environment!=0;visible=camera!=0;TestR_Render();snapshot();
+    }
+    // Reenter the renderer while retaining the original shared buffer and indices
+    visible=true;CustomPipes::bRenderingEnvMap=false;mode=2;recursive=true;for(unsigned i=0;i<24;i++)TestR_Render();recursive=false;
+    require(renders==ends && phase[0]==0 && phase[1]==0);snapshot();
+    printf("%016llx states=%u attempts=%u renders=%u cameras=%u groups=%u models=%u peds=%u bytes=%u\n",(unsigned long long)hash,states,attempts,renders,cameras,groups,models,peds,(unsigned)sizeof(Rope));
+    return 0;
+}

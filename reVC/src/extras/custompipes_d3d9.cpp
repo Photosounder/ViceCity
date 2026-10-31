@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHD3D
 #include "common.h"
 
@@ -63,12 +65,16 @@ uploadSpecLights(void)
 	specLights[0].color.red = speccol.r;
 	specLights[0].color.green = speccol.g;
 	specLights[0].color.blue = speccol.b;
-	specLights[0].dir = pDirect->getFrame()->getLTM()->at;
+	// Use the complete C lighting owner and its borrowed SDK handles
+	specLights[0].dir = ((RpLight*)Lights_Direct)->getFrame()->getLTM()->at;
 	specLights[0].power = power;
 	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++){
-		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS){
-			specLights[1+i].color = pExtraDirectionals[i]->color;
-			specLights[1+i].dir = pExtraDirectionals[i]->getFrame()->getLTM()->at;
+		// Use the complete C lighting owner and its borrowed SDK handles
+		if(((RpLight*)Lights_ExtraDirectionals[i])->getFlags() & rw::Light::LIGHTATOMICS){
+			// Use the complete C lighting owner and its borrowed SDK handles
+			specLights[1+i].color = ((RpLight*)Lights_ExtraDirectionals[i])->color;
+			// Use the complete C lighting owner and its borrowed SDK handles
+			specLights[1+i].dir = ((RpLight*)Lights_ExtraDirectionals[i])->getFrame()->getLTM()->at;
 			specLights[1+i].power = power*2.0f;
 		}
 	}
@@ -141,7 +147,7 @@ vehicleRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 void
 CreateVehiclePipe(void)
 {
-	if(CFileMgr::LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/carTweakingTable.dat'\n");
 	else{
 		char *fp = (char*)work_buff;
@@ -256,7 +262,7 @@ worldRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 void
 CreateWorldPipe(void)
 {
-	if(CFileMgr::LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/worldTweakingTable.dat'\n");
 	else
 		ReadTweakValueTable((char*)work_buff, WorldLightmapBlend);
@@ -503,7 +509,7 @@ rimSkinRenderCB(rw::Atomic *atomic, rw::d3d9::InstanceDataHeader *header)
 void
 CreateRimLightPipes(void)
 {
-	if(CFileMgr::LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/rimTweakingTable.dat'\n");
 	else{
 		char *fp = (char*)work_buff;
@@ -643,7 +649,8 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 			setVertexShader(default_amb_VS);
 			d3ddevice->SetVertexShaderConstantF(VSLOC_combined, (float*)&building->combinedMat, 4);
 			if(building->lighting)
-				setAmbient(pAmbient->color);
+				// Use the complete C lighting owner and its borrowed SDK handles
+				setAmbient(((RpLight*)Lights_Ambient)->color);
 			else
 				setAmbient(black);
 			setupDone = true;
@@ -704,7 +711,8 @@ RenderBlendPass(int pass)
 		setVertexDeclaration(building->instHeader->vertexDeclaration);
 		d3ddevice->SetVertexShaderConstantF(VSLOC_combined, (float*)&building->combinedMat, 4);
 		if(building->lighting)
-			setAmbient(pAmbient->color);
+			// Use the complete C lighting owner and its borrowed SDK handles
+			setAmbient(((RpLight*)Lights_Ambient)->color);
 		else
 			setAmbient(black);
 
@@ -732,3 +740,5 @@ RenderBlendPass(int pass)
 #endif
 
 #endif
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

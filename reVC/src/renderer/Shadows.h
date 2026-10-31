@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #define MAX_STOREDSHADOWS    48
@@ -8,11 +10,11 @@
 
 
 class CEntity;
-class CPtrList;
+struct CPtrList;
 class CAutomobile;
 class CVehicle;
 class CPed;
-class CCutsceneShadow;
+struct CutsceneShadow;
 class CCutsceneObject;
 
 enum eShadowType
@@ -53,7 +55,7 @@ public:
 	float m_fZDistance;
 	float m_fScale;
 	RwTexture *m_pTexture;
-	CCutsceneShadow *m_pCutsceneShadow;
+	CutsceneShadow *m_pCutsceneShadow;
 	int16 m_nIntensity;
 	uint8 m_ShadowType;
 	uint8 m_nRed;
@@ -157,7 +159,7 @@ public:
 											   
 	static bool StoreStaticShadow              (uint32 nID, uint8 ShadowType, RwTexture *pTexture, Const CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, float fDrawDistance, bool bTempShadow, float fUpDistance);
 	static void StoreShadowToBeRendered        (            uint8 ShadowType,                      CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue);
-	static void StoreShadowToBeRendered        (            uint8 ShadowType, RwTexture *pTexture, CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance, bool bDrawOnWater, float fScale, CCutsceneShadow *pShadow, bool bDrawOnBuildings);
+	static void StoreShadowToBeRendered        (            uint8 ShadowType, RwTexture *pTexture, CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance, bool bDrawOnWater, float fScale, CutsceneShadow *pShadow, bool bDrawOnBuildings);
 	//+ rouz edit (ChatGPT)
 	static void StoreShadowForVehicle          (CVehicle *pCar, VEH_SHD_TYPE type,
 		const CVector *pCameraPosition = nil, bool forceTemporary = false);
@@ -180,12 +182,12 @@ public:
 																								 CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch);
 
 	static void CastCutsceneShadowSectorList   (CPtrList &PtrList, float fStartX, float fStartY, float fEndX, float fEndY,
-																								 CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch, CCutsceneShadow *pShadow);
+																								 CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch, CutsceneShadow *pShadow);
 								
 	static void CastShadowEntityXY             (CEntity *pEntity,  float fStartX, float fStartY, float fEndX, float fEndY,
 																							     CVector *pPosn, float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch);
 																								 
-	static void CastShadowEntityXYZ            (CEntity *pEntity, CVector *pPosn,                                float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch, CCutsceneShadow *pShadow);
+	static void CastShadowEntityXYZ            (CEntity *pEntity, CVector *pPosn,                                float fFrontX, float fFrontY, float fSideX, float fSideY, int16 nIntensity, uint8 nRed, uint8 nGreen, uint8 nBlue, float fZDistance,               float fScale, CPolyBunch **ppPolyBunch, CutsceneShadow *pShadow);
 								
 	static void UpdateStaticShadows            (void);
 	static void UpdatePermanentShadows         (void);
@@ -211,3 +213,5 @@ extern RwTexture *gpWalkDontTex;
 extern RwTexture *gpCrackedGlassTex;
 extern RwTexture *gpPostShadowTex;
 extern RwTexture *gpGoalTex;
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

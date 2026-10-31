@@ -1,0 +1,72 @@
+#include "owners.h"
+#include "entry.h"
+extern "C" void Integration_Decode(CompressedVector *,float *);
+static uint64_t digest=UINT64_C(1469598103934665603);
+static unsigned states,checks;
+static void hash32(uint32_t value)
+{
+    // Normalize field representations across native pointer widths
+    for(unsigned n=0;n<4;++n){digest^=(uint8_t)(value>>(n*8));digest*=UINT64_C(1099511628211);}
+}
+static uint32_t bits(float value)
+{
+    // Observe exact decoded floating point values without aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static float scalar(uint32_t value)
+{
+    // Construct exact uncompressed payloads including signed zero and quiet NaNs
+    float result;memcpy(&result,&value,4);return result;
+}
+static void require(bool condition)
+{
+    // Keep explicit format, guard and conversion invariants independent of the differential digest
+    ++checks;if(!condition){fprintf(stderr,"collision vertex invariant failed at %u/%u\n",states,checks);exit(1);}
+}
+static void observe(CompressedVector *record)
+{
+    // Verify the full stored representation, decoded value and nonmutating read contract
+    ++states;uint8_t before[sizeof(*record)];memcpy(before,record,sizeof(*record));float value[3];Run_Get(record,value);require(!memcmp(before,record,sizeof(*record)));
+    for(unsigned i=0;i<sizeof(*record);++i)hash32(before[i]);for(unsigned i=0;i<3;++i)hash32(bits(value[i]));
+#ifdef COMPRESSED_COL_VECTORS
+    // Preserve sign extension, the fourth zero lane and both surrounding output guards
+    int32_t output[6]={123456789,1,2,3,4,-123456789};Run_Unpack(record,output+1);
+    require(output[0]==123456789&&output[5]==-123456789);require(output[1]==record->x&&output[2]==record->y&&output[3]==record->z&&output[4]==0);
+    for(unsigned i=1;i<5;++i)hash32((uint32_t)output[i]);require(!memcmp(before,record,sizeof(*record)));
+#endif
+}
+static void integration(unsigned seed)
+{
+    // Exercise the actual native get-to-vector and three-vertex plane adapters
+    CompressedVector records[3];float decoded[3][3];
+    for(unsigned i=0;i<3;++i){const float value=(float)((int)seed-128+(int)i)*.125f;Run_Set(&records[i],value,-value,value*.5f);Run_Get(&records[i],decoded[i]);}
+    float output[12];Integration_Decode(records,output);require(!memcmp(output,decoded[1],12));
+    require(!memcmp(output+3,decoded[2],12)&&!memcmp(output+6,decoded[0],12)&&!memcmp(output+9,decoded[1],12));
+    for(unsigned i=0;i<12;++i)hash32(bits(output[i]));
+}
+int main(void)
+{
+#ifdef COMPRESSED_COL_VECTORS
+    // Cover every signed sixteen-bit code and fractional truncation within the original defined range
+    for(int value=-32768;value<=32767;++value){
+        CompressedVector record;record.x=(int16_t)value;record.y=(int16_t)~value;record.z=(int16_t)(value^0x5555);observe(&record);
+        float decoded[3];Run_Get(&record,decoded);require(decoded[0]==value/128.0f&&decoded[1]==record.y/128.0f&&decoded[2]==record.z/128.0f);
+        const float x=((float)value+(value<0?-.5f:.5f))/128.0f;const float y=(float)(int16_t)~value/128.0f;const float z=(float)(int16_t)(value^0x5555)/128.0f;
+        Run_Set(&record,x,y,z);require(record.x==value&&record.y==(int16_t)~value&&record.z==(int16_t)(value^0x5555));observe(&record);
+    }
+#else
+    // Preserve every uncompressed floating point payload without applying compressed-mode scaling
+    const uint32_t values[]={0,UINT32_C(0x80000000),UINT32_C(0x3f800000),UINT32_C(0xbf800000),1,UINT32_C(0x80000001),UINT32_C(0x7f7fffff),UINT32_C(0xff7fffff),UINT32_C(0x7f800000),UINT32_C(0xff800000),UINT32_C(0x7fc12345),UINT32_C(0xffc54321)};
+    const unsigned count=sizeof(values)/sizeof(values[0]);
+    for(unsigned a=0;a<count;++a)for(unsigned b=0;b<count;++b)for(unsigned c=0;c<count;++c){
+        CompressedVector record;Run_Set(&record,scalar(values[a]),scalar(values[b]),scalar(values[c]));require(bits(record.x)==values[a]&&bits(record.y)==values[b]&&bits(record.z)==values[c]);observe(&record);
+    }
+#endif
+    // Verify packed record stride and guarded storage during actual float input conversion
+    for(unsigned seed=0;seed<256;++seed){
+        struct Guarded {uint32_t before;CompressedVector records[3];uint32_t after;} block;memset(&block,0xa5,sizeof(block));block.before=0x12345678;block.after=0x87654321;
+        for(unsigned i=0;i<3;++i){const float x=((int)seed-128)/2.0f;Run_Set(&block.records[i],x,(float)i,-x);observe(&block.records[i]);}
+        require(block.before==0x12345678&&block.after==0x87654321);require((const uint8_t*)&block.records[1]-(const uint8_t*)&block.records[0]==sizeof(CompressedVector));integration(seed);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);return 0;
+}

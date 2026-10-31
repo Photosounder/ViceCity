@@ -1,0 +1,162 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include "AudioVehicleModels.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe each original speed expression on Clang and GCC
+    event(token);
+#endif
+    // Retain pure floating field reads for the native fixture
+    return v;
+}};
+class CVehicle {public:int16_t m_nPlaneId,padding;FloatValue m_fSpeed;};
+using CPlane=CVehicle;
+struct cAudioManager {
+@FIELDS@
+@DECLARATIONS@
+};
+@MACROS@
+extern "C" cAudioManager AudioManager;cAudioManager AudioManager;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+static cAudioManager other,*active;
+static cVehicleParams params;static CVehicle cars[2];
+static float PlanePathPosition[3],TakeOffPoint,LandingPoint;
+static unsigned seedValue,cases,callbacks,requests,offsetReads,layers[7],cesnaCalls;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" int32_t TestPlaneC(cAudioManager *,cVehicleParams *,unsigned);
+extern "C" void TestPlaneRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe results and exact callback ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Hash every initialized word of the complete storage records
+    digest=TestAircraftHash(digest,p,size);
+}
+static void observe() {
+    // Normalize game pointers and include both local and global owner state
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(&AudioManager,sizeof(AudioManager));bytes(&other,sizeof(other));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(PlanePathPosition,sizeof(PlanePathPosition));bytes(&TakeOffPoint,4);bytes(&LandingPoint,4);
+}
+static void event(unsigned token) {
+    // Record backend effects without resetting the shared Jumbo offset
+    ++callbacks;value(token);observe();
+}
+extern "C" float AudioPlaneHost_Speed(const CVehicle *plane) {
+    // Query the original captured speed expression
+    return plane->m_fSpeed;
+}
+extern "C" float AudioPlaneHost_Position(const CVehicle *plane) {
+    // Query the current path using the captured plane ID
+    return PlanePathPosition[plane->m_nPlaneId];
+}
+extern "C" float AudioPlaneHost_TakeOffPoint() {
+    // Supply the live takeoff threshold
+    return TakeOffPoint;
+}
+extern "C" float AudioPlaneHost_LandingPoint() {
+    // Supply the live landing threshold
+    return LandingPoint;
+}
+extern "C" void AudioAircraft_Cesna(cAudioManager *manager,cVehicleParams *p) {
+    // Observe forwarding to the separately audited Cessna generator
+    ++cesnaCalls;event(50);value(manager==active);value(p==&params);
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Exercise live distance and captured vehicle state after the base-frequency query
+    event(30);value(sample);
+    if(seedValue&128){params.m_pVehicle=&cars[1];cars[0].m_fSpeed.v=0.35f;active->m_sQueueSample.m_fDistance=(seedValue/7)%441;}
+    return sample*13+14000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live loop sample before the end-offset argument is evaluated
+    ++offsetReads;event(31);value(sample);
+    if(seedValue&256){active->m_sQueueSample.m_nSampleIndex=SFX_JUMBO_TAXI;params.m_pVehicle=&cars[1];}
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the later live sample index
+    ++offsetReads;event(32);value(sample);return sample*5+100;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe real request insertion and later scratch mutations between stereo submissions
+    ++requests;unsigned counter=manager->m_sQueueSample.m_nCounter;if(counter<7)++layers[counter];event(40);
+    TestPlaneRealSubmit(manager);event(41);
+    if(seedValue&512){manager->m_sQueueSample.m_nFrequency=34567;manager->m_sQueueSample.m_fDistance=(seedValue/11)%441;params.m_pVehicle=&cars[1];cars[0].m_fSpeed.v=0.3f;}
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe the shared request implementation's room predicate
+    event(42);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Supply the linked geometry dependency without changing plane inputs
+    *out={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the linked geometry dependency without changing plane inputs
+    memset(out,0,sizeof(*out));
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Cover all flight stages and exact boundaries while retaining shared offset history
+    seedValue=seed;active=(seed&1)?&other:&AudioManager;
+    memset(&AudioManager,0,sizeof(AudioManager));memset(&other,0,sizeof(other));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    TakeOffPoint=1000;LandingPoint=3000;
+    const float positions[]={999,1000,1001,1299,1300,1301,2000,2649,2650,2651,2999,3000,3001};
+    for(unsigned i=0;i<3;++i)PlanePathPosition[i]=positions[(seed/3+i)%13];
+    const float speeds[]={0.103343f,0.103344f,0.103345f,0.15f,0.222674f,0.222675f,0.3f,0.7f,1.0f};
+    for(unsigned i=0;i<2;++i){cars[i].m_nPlaneId=(seed/5+i)%3;cars[i].m_fSpeed={speeds[(seed/7+i)%9],21};}
+    if(kind==3||kind==7)cars[0].m_fSpeed.v=speeds[2+(seed/7)%7];
+    if(kind==4)PlanePathPosition[cars[0].m_nPlaneId]=1000+(seed%301);
+    if(kind==6)PlanePathPosition[cars[0].m_nPlaneId]=3000-(seed%351);
+    params.m_pVehicle=&cars[0];params.m_nIndex=seed%3==0?AIRTRAIN:seed%3==1?DEADDODO:LANDSTAL;
+    const float distances[]={0,1,169,170,171,179,180,181,239,240,241,439,440,441};
+    float distance=distances[(seed/11)%14];params.m_fDistance=distance*distance;params.m_bDistanceCalculated=(seed/13)%3;
+    active->m_sQueueSample.m_fDistance=distances[(seed/17)%14];active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_nPan=53;
+    active->m_nActiveSamples=1+(seed/19)%8;active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=1;
+#ifndef GTA_PS2
+    // Seed desktop fields to detect partial writes and backend ordering
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Distinguish offset scheduling on the global owner from the alternate owner
+    AudioManager.m_FrameCounter=seed/23;AudioManager.m_anRandomTable[0]=seed%31;AudioManager.m_anRandomTable[1]=(int32_t)(seed%121)-60;
+    other.m_FrameCounter=0;other.m_anRandomTable[0]=1;other.m_anRandomTable[1]=59;
+}
+int main() {
+#ifdef _WIN32
+    // Keep undefined-behavior traps from opening a Windows error dialog
+    SetErrorMode(3);
+#endif
+    // Compare all original entry points over alternating owners and repeated operations
+    for(unsigned seed=0;seed<32768;++seed){unsigned kind=seed%14;prepare(seed,kind);observe();int32_t result=@RUN@;value(result);observe();++cases;}
+    // Require every sound layer and the existing Cessna forwarding path
+    for(unsigned i=0;i<7;++i)if(i!=4&&!layers[i])return 2;
+    if(!cesnaCalls||!requests)return 3;
+#ifndef GTA_PS2
+    // Require backend offset queries on desktop
+    if(!offsetReads)return 4;
+#endif
+    printf("%u cases %u callbacks %u requests %llu\n",cases,callbacks,requests,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

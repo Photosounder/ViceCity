@@ -25,20 +25,20 @@ AudioDispatch_Entity(cAudioManager *manager, int32_t id)
 		case AUDIOTYPE_EXPLOSION:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessExplosions(manager, id);
+				AudioExplosions_Process(manager, id);
 			}
 			break;
 		case AUDIOTYPE_FIRE:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessFires(manager, id);
+				AudioFires_Process(manager, id);
 			}
 			break;
 		case AUDIOTYPE_WEATHER:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
 				if(AudioDispatchHost_Area() == AREA_MAIN_MAP || AudioDispatchHost_Area() == AREA_EVERYWHERE)
-					AudioDispatchHost_ProcessWeather(manager, id);
+					AudioWeather_Process(manager, id);
 			}
 			break;
 /*		case AUDIOTYPE_CRANE:
@@ -50,53 +50,53 @@ AudioDispatch_Entity(cAudioManager *manager, int32_t id)
 		case AUDIOTYPE_SCRIPTOBJECT:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessScriptObject(manager, id);
+				AudioScriptSounds_Process(manager, id);
 			}
 			break;
 #ifdef GTA_BRIDGE
 		case AUDIOTYPE_BRIDGE:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessBridge(manager);
+				AudioBridge_Process(manager);
 			}
 			break;
 #endif
 		case AUDIOTYPE_FRONTEND:
 			AUDIO_DISPATCH_REVERB(0);
-			AudioDispatchHost_ProcessFrontEnd(manager);
+			AudioFrontEnd_Process(manager);
 			break;
 		case AUDIOTYPE_PROJECTILE:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessProjectiles(manager);
+				AudioWorldLoops_Projectiles(manager);
 			}
 			break;
 		case AUDIOTYPE_GARAGE:
 			if (!manager->m_bIsPaused)
-				AudioDispatchHost_ProcessGarages(manager);
+				AudioGarageHydrant_Garages(manager);
 			break;
 		case AUDIOTYPE_FIREHYDRANT:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessFireHydrant(manager);
+				AudioGarageHydrant_Hydrant(manager);
 			}
 			break;
 		case AUDIOTYPE_WATERCANNON:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessWaterCannon(manager, id);
+				AudioWaterCannon_Process(manager, id);
 			}
 			break;
 		case AUDIOTYPE_ESCALATOR:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessEscalators(manager);
+				AudioWorldLoops_Escalators(manager);
 			}
 			break;
 		case AUDIOTYPE_EXTRA_SOUNDS:
 			if (!manager->m_bIsPaused) {
 				AUDIO_DISPATCH_REVERB(1);
-				AudioDispatchHost_ProcessExtraSounds(manager);
+				AudioWorldLoops_ExtraSounds(manager);
 			}
 			break;
 		default:
@@ -113,10 +113,10 @@ AudioDispatch_Physical(cAudioManager *manager, int32_t id)
 	if (entity) {
 		switch (AudioDispatchHost_PhysicalType(entity)) {
 		case ENTITY_TYPE_VEHICLE:
-			AudioDispatchHost_Vehicle(manager, manager->m_asAudioEntities[id].m_pEntity);
+			AudioVehicle_Process(manager, (CVehicle *)manager->m_asAudioEntities[id].m_pEntity);
 			break;
 		case ENTITY_TYPE_PED:
-			AudioDispatchHost_Ped(manager, manager->m_asAudioEntities[id].m_pEntity);
+			AudioPed_Process(manager, (CPed *)manager->m_asAudioEntities[id].m_pEntity);
 			break;
 		default:
 			return;

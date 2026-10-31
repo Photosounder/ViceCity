@@ -1,6 +1,8 @@
+import weather_migration as _weather_conversion
 """Audit sound-record boundaries and compare the real C ordering module."""
 from pathlib import Path
 import re
+import timer_migration as timer
 import audio_requests_migration as requests
 import audio_mission_state_migration as mission
 import audio_owner_entities_migration as entities
@@ -24,6 +26,8 @@ def function(source, signature):
     return source[start:end]
 
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Compare statements independently of formatting and comments
     return re.sub(r'\s+', '', re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.S))
 
@@ -66,6 +70,12 @@ def game_functions(source):
     declarations = list(re.finditer(r'(?m)^[A-Za-z_][A-Za-z_0-9 *]*\n(cAudioManager::[A-Za-z_][A-Za-z_0-9]*)\([^\n]*\)\n\{', source))
     return {declaration.group()[:-1]: source[declaration.start():declarations[index+1].start() if index+1<len(declarations) else len(source)] for index, declaration in enumerate(declarations)}
 
+def original_timer(source):
+    # Restore only explicit timer substitutions before earlier C-kernel extraction
+    for name in timer.REFS:source=source.replace('(*Timer_'+name+'())','CTimer::'+name+'()')
+    for name,(_,target) in timer.FIELDS.items():source=re.sub(r'\b'+target+r'\b','CTimer::'+name,source)
+    return re.sub(r'\bTimer_(\w+)\b',r'CTimer::\1',source)
+
 for expected_source, current_path in [(expected_manager, 'src/audio/AudioManager.cpp'), (old_logic, 'src/audio/AudioLogic.cpp')]:
     # Audit sound-position consumers independently of unrelated mission and reflection storage
     current_functions = game_functions((root / current_path).read_text())
@@ -74,6 +84,8 @@ for expected_source, current_path in [(expected_manager, 'src/audio/AudioManager
         if not re.search(r'(?:m_sQueueSample|sample|m_asActiveSamples\[[^\]]+\])\.m_vecPos', expected_function):
             continue
         expected_function = mission.calls(entities.calls(calls(adapt(expected_function)))).replace('AudioSoundPosition_FromVector(m_avecReflectionsPos[i])', 'm_avecReflectionsPos[i]')
+        # Feed earlier kernel migrations their original C++ timer expressions
+        expected_function=original_timer(expected_function)
         if 'cAudioManager::AddReflectionsToRequestedQueue' in signature:
             expected=requests.body(function(expected_function,signature)).replace('AudioRequests_Submit(this)','AudioRequests_Submit(manager)')
             actual=function((root/'src/audio/AudioRequests.c').read_text(),'void\nAudioRequests_AddReflections')
@@ -96,9 +108,97 @@ for expected_source, current_path in [(expected_manager, 'src/audio/AudioManager
             expected_active = active.extract(expected_function)
             actual_active = active.extract((root / 'src/audio/AudioActive.c').read_text(), 'void\nAudioActive_Process(')
             assert normalize(active.body(expected_active)) == normalize(actual_active[actual_active.index('{'):])
+        elif 'cAudioManager::SetupPedComments(' in signature:
+            # Follow speech queue setup into its complete C operation
+            import audio_ped_speech_migration as speech
+            actual_speech=function((root/'src/audio/AudioPedSpeech.c').read_text(),'void\nAudioPedSpeech_Setup')
+            assert normalize(speech.body(function(expected_function,signature)))==normalize(actual_speech[actual_speech.index('{'):])
+        elif 'cAudioManager::DebugPlayPedComment(' in signature:
+            # Follow the debug producer into C and its typed game-position boundary
+            import audio_ped_playback_migration as playback
+            original=function(expected_function,signature)
+            if 'const CVector &commentPosition' not in original:
+                original=original.replace('pedComment.m_vecPos = CWorld::Players[0].m_pPed->GetPosition();','const CVector &commentPosition = CWorld::Players[0].m_pPed->GetPosition();\n'+ '\n'.join('pedComment.m_vecPos.'+axis+' = commentPosition.'+axis+';' for axis in 'xyz'))
+            actual=function((root/'src/audio/AudioPedPlayback.c').read_text(),'void\nAudioPedPlayback_Debug')
+            assert normalize(playback.debug_body(original))==normalize(actual[actual.index('{'):])
+        elif 'cAudioManager::ProcessExplosions(' in signature:
+            # Follow complete explosion selection and emission into its C implementation
+            import audio_explosions_migration as explosions
+            actual=function((root/'src/audio/AudioExplosions.c').read_text(),'void\nAudioExplosions_Process')
+            assert normalize(explosions.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif 'cAudioManager::ProcessFires(' in signature:
+            # Follow both complete fire sound paths into C
+            import audio_fires_migration as fires
+            actual=function((root/'src/audio/AudioFires.c').read_text(),'void\nAudioFires_Process')
+            assert normalize(fires.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['PreInitialiseGameSpecificSetup','PostInitialiseGameSpecificSetup','PreTerminateGameSpecificShutdown','PostTerminateGameSpecificShutdown']):
+            # Follow the complete setup or shutdown body before adjacent inactive vector code
+            import audio_game_setup_migration as setup
+            name=next(name for name in setup.METHODS if 'cAudioManager::'+name+'(' in signature)
+            actual=function((root/'src/audio/AudioGameSetup.c').read_text(),'void\nAudioGameSetup_'+setup.METHODS[name])
+            assert normalize(setup.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['ProcessBridge','ProcessBridgeWarning','ProcessBridgeMotor','ProcessBridgeOneShots']):
+            # Follow the complete optional bridge state machine and all three sound generators
+            import audio_bridge_migration as bridge
+            name=next(name for name in bridge.METHODS if 'cAudioManager::'+name+'(' in signature)
+            actual=function((root/'src/audio/AudioBridge.c').read_text(),'void\nAudioBridge_'+bridge.METHODS[name])
+            assert normalize(bridge.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['ProcessGarages','ProcessFireHydrant']):
+            # Delimit conditional garage loops before following both complete C generators
+            import audio_garage_hydrant_migration as garage
+            name=next(name for name in garage.METHODS if 'cAudioManager::'+name+'(' in signature)
+            actual=garage.extract((root/'src/audio/AudioGarageHydrant.c').read_text(),'AudioGarageHydrant_',garage.METHODS[name])
+            assert normalize(garage.body(garage.extract(expected_function,'cAudioManager::',name)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['ProcessProjectiles','ProcessEscalators','ProcessExtraSounds']):
+            # Follow all three complete world generators while delimiting adjacent writable data
+            import audio_world_loops_migration as world
+            name=next(name for name in world.METHODS if 'cAudioManager::'+name+'(' in signature)
+            actual=function((root/'src/audio/AudioWorldLoops.c').read_text(),'void\nAudioWorldLoops_'+world.METHODS[name])
+            assert normalize(world.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['ProcessWeather','ProcessFrontEnd']):
+            # Delimit each complete ambient generator before following its C implementation
+            import audio_weather_frontend_migration as ambient
+            name=next(name for name in ambient.METHODS if 'cAudioManager::'+name+'(' in signature)
+            actual=function((root/'src/audio/AudioWeatherFrontend.c').read_text(),'void\n'+ambient.METHODS[name])
+            assert normalize(ambient.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif any('cAudioManager::'+name+'(' in signature for name in ['ProcessScriptObject','ProcessOneShotScriptObject','ProcessLoopingScriptObject']):
+            # Follow complete script routing and both sound generators into their C bodies
+            import audio_script_sounds_migration as scripts
+            name=next(name for name in scripts.METHODS if 'cAudioManager::'+name+'(' in signature)
+            original=function(expected_function,signature).replace('SetupPedComments(pedParams,','AudioPedSpeech_Setup(this, &pedParams,')
+            actual=function((root/'src/audio/AudioScriptSounds.c').read_text(),'void\nAudioScriptSounds_'+scripts.METHODS[name])
+            assert normalize(scripts.body(original))==normalize(actual[actual.index('{'):])
+        elif 'cAudioManager::ProcessWaterCannon(' in signature:
+            # Follow the complete water-cannon generator into C
+            import audio_water_cannon_migration as water
+            actual=function((root/'src/audio/AudioWaterCannon.c').read_text(),'void\nAudioWaterCannon_Process')
+            assert normalize(water.body(function(expected_function,signature)))==normalize(actual[actual.index('{'):])
+        elif 'cAudioManager::ProcessPed(' in signature:
+            # Follow the migrated pedestrian context consumer into its actual C body
+            import audio_ped_migration as ped
+            actual_ped=function((root/'src/audio/AudioPed.c').read_text(),'void\nAudioPed_Process')
+            assert normalize(ped.body(function(expected_function,signature)))==normalize(actual_ped[actual_ped.index('{'):])
+        elif 'cAudioManager::ProcessVehicle(' in signature:
+            # Follow the complete vehicle dispatcher into its actual C implementation
+            import audio_vehicle_migration as vehicle
+            actual_vehicle=function((root/'src/audio/AudioVehicle.c').read_text(),'void\nAudioVehicle_Process')
+            assert normalize(vehicle.body(function(expected_function,signature)))==normalize(actual_vehicle[actual_vehicle.index('{'):])
+        elif 'cAudioManager::ProcessPlayersVehicleEngine' in signature:
+            # Follow this migrated sound-position consumer into the complete C state machine
+            import audio_player_engine_migration as player
+            kernel=(root/'src/audio/AudioPlayerEngine.c').read_text()
+            actual_player=kernel[kernel.index('void\nAudioPlayerEngine_Process'):kernel.index('//- rouz edit (ChatGPT)')].rstrip()
+            expected_player=player.body(expected_function.rstrip()).replace('{','{\n(void)veh;',1)
+            assert normalize(expected_player)==normalize(actual_player[actual_player.index('{'):])
+        elif 'cAudioManager::ProcessCarHeli' in signature or 'cAudioManager::ProcessCesna' in signature:
+            # Follow both fully migrated aircraft position consumers into their actual C kernels
+            import audio_aircraft_migration as aircraft
+            name='Heli' if 'ProcessCarHeli' in signature else 'Cesna'
+            actual_aircraft=function((root/'src/audio/AudioAircraft.c').read_text(),('uint8_t' if name=='Heli' else 'void')+'\nAudioAircraft_'+name)
+            assert normalize(aircraft.body(function(expected_function,signature)))==normalize(actual_aircraft[actual_aircraft.index('{'):])
         else:
             current_function = current_functions[signature]
-            assert normalize(expected_function) == normalize(current_function), signature
+            assert normalize(timer.calls(expected_function)) == normalize(current_function), signature
 record = old_header[old_header.index('class tSound'):old_header.index('VALIDATE_SIZE(tSound')]
 expected_record = record.replace('class tSound\n{\npublic:', 'typedef struct tSound {').replace('CVector m_vecPos', 'AudioSoundPosition m_vecPos').replace('\n};', '\n} tSound;')
 for before, after in [('int32', 'int32_t'), ('uint32', 'uint32_t'), ('int8', 'int8_t'), ('uint8', 'uint8_t'), ('bool8', 'uint8_t')]:

@@ -1,0 +1,270 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#ifdef NATIVE_PROJECT_HEADERS
+extern "C" void *cita_win_malloc(size_t size,const char *,const char *,int)
+{
+    // Supply aligned CRT storage for the native pool header's allocation instrumentation
+    return (std::malloc)(size);
+}
+extern "C" void cita_win_free(void *value,const char *,const char *,int)
+{
+    // Release the same instrumented raw pool storage without a game callback
+    (std::free)(value);
+}
+#endif
+extern "C" { float Timer_timeStep;int32_t _saveBufCount; }
+static CPool pools[2];static CObject *objects[2][32];static RwMatrix attachments[2][32];
+static int currentPool,activePath,hook,operation;static bool triggered;static unsigned allocInOperation;
+struct Allocation { void *pointer;size_t bytes;bool live; };static Allocation allocations[4096];static unsigned allocationCount;
+struct Reference { CObject **slot;int object; };static Reference references[4096];static unsigned referenceCount;
+static CMatrix *copies[16];static unsigned copyDepth;
+static unsigned states,calls,initializations,updates,clears,saves,loads,frames,regions,copyBirths,copyDeaths,finds;
+static uint64_t hash=1469598103934665603ULL;
+static FILE *trace;
+static void check(bool condition,int line)
+{
+    // Stop at invalid corpus inputs, pool lifetimes or matrix-scope mismatches
+    if(!condition){fprintf(stderr,"Scripted-path corpus failed at line %d (hook %d)\n",line,hook);abort();}
+}
+#define require(condition) check((condition),__LINE__)
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Keep all original save and pool assertions observable in the quiet harness
+    fprintf(stderr,"Scripted-path native assertion at %u: %s\n",line,expression);abort();
+}
+static void word(uint32_t value)
+{
+    // Compare complete scalar values through a deterministic byte-wise fingerprint
+    if(trace){uint32_t row[4]={states,calls,copyDepth,value};fwrite(row,sizeof(row),1,trace);}
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact finite values, signed zero and original floating-point edge results
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void vector(float x,float y,float z)
+{
+    // Observe each named native or C coordinate without a representation cast
+    floating(x);floating(y);floating(z);
+}
+static int objectId(const void *pointer)
+{
+    // Normalize stable actual pool slot identities independently of native object stride
+    if(!pointer)return -1;for(int p=0;p<2;p++)for(int i=0;i<32;i++)if(pointer==objects[p][i])return p*32+i;require(false);return -2;
+}
+static int nodeId(const void *pointer,bool liveOnly=false)
+{
+    // Resolve current native node allocations while allowing raw-load pointers to old blocks
+    if(!pointer)return -1;for(int i=(int)allocationCount-1;i>=0;i--)if(allocations[i].pointer==pointer && (!liveOnly || allocations[i].live))return i;require(false);return -2;
+}
+static int slotId(CObject **pointer)
+{
+    // Verify registration retains the actual canonical path slot address
+    for(int r=0;r<3;r++)for(int i=0;i<6;i++)if(pointer==TestSp_Slot(r,i))return r*6+i;require(false);return -1;
+}
+static void record(int index,bool nodes)
+{
+    // Observe all named fields while avoiding stale raw-header node pointers during allocation
+    ScriptPath p=TestSp_Get(index);word(p.m_numNodes);word(p.m_pNode!=NULL);floating(p.m_fTotalLength);floating(p.m_fSpeed);floating(p.m_fPosition);floating(p.m_fObjectLength);word(p.m_state);for(int i=0;i<6;i++)word(objectId(p.m_pObjects[i]));if(nodes && p.m_pNode){int id=nodeId(p.m_pNode,true);word(id);require(allocations[id].bytes>=sizeof(CPlaneNode)*(size_t)p.m_numNodes);for(int i=0;i<p.m_numNodes;i++){const CPlaneNode &node=p.m_pNode[i];vector(node.p.x,node.p.y,node.p.z);floating(node.t);word(node.bOnGround);}}
+}
+static void matrix(const CMatrix &value)
+{
+    // Include every native coefficient and the actual ownership metadata
+    for(int i=0;i<4;i++)for(int j=0;j<4;j++)floating(value.f[i][j]);word(value.m_attachment!=NULL);word(value.m_hasRwMatrix);
+}
+static void object(CObject *o)
+{
+    // Observe all object fields touched by scripted motion and retained unrelated flags
+    word(objectId(o));matrix(o->matrix);vector(o->m_vecMoveSpeed.x,o->m_vecMoveSpeed.y,o->m_vecMoveSpeed.z);vector(o->m_vecTurnSpeed.x,o->m_vecTurnSpeed.y,o->m_vecTurnSpeed.z);vector(o->m_vecMoveFriction.x,o->m_vecMoveFriction.y,o->m_vecMoveFriction.z);vector(o->m_vecTurnFriction.x,o->m_vecTurnFriction.y,o->m_vecTurnFriction.z);word(o->bIsBIGBuilding);word(o->m_phy_flagA08);
+}
+static void snapshot(void)
+{
+    // Compare all three records, replay slots, live native objects and registered pointer identities
+    states++;floating(Timer_timeStep);word(TestSp_Active());for(int r=0;r<3;r++)record(r,true);for(int i=0;i<18;i++)word(objectId(g_pScriptPathObjects[i]));for(int p=0;p<2;p++)for(int i=0;i<32;i++)if(objects[p][i])object(objects[p][i]);word(referenceCount);for(unsigned i=0;i<referenceCount;i++){word(slotId(references[i].slot));word(references[i].object);word(objectId(*references[i].slot));}word(copyDepth);
+}
+static void event(unsigned id)
+{
+    // Preserve native call order and the live path state visible at external callbacks
+    calls++;word(id);floating(Timer_timeStep);word(copyDepth);for(int r=0;r<3;r++)record(r,false);
+}
+static void updateOne(int index)
+{
+    // Keep nested record updates distinct while preserving their original slot reads
+    int saved=activePath;activePath=index;updates++;TestSp_UpdateOne(index);snapshot();activePath=saved;
+}
+static void clearOne(int index)
+{
+    // Exercise complete node lifetime cleanup and retained scalar fields
+    int saved=activePath;activePath=index;clears++;TestSp_Clear(index);snapshot();activePath=saved;
+}
+static void initialise(int index,int file,float length)
+{
+    // Preserve the filename identifier and the loader's aliased count and length outputs
+    int saved=activePath;activePath=index;operation=1;allocInOperation=0;initializations++;TestSp_RunInitialise(index,file,length);operation=0;snapshot();activePath=saved;
+}
+static void mutation(int point,CObject *o=NULL)
+{
+    // Apply one valid mutation at an original external owner operation
+    if(triggered)return;ScriptPath p=TestSp_Get(activePath);
+    if(hook==1 && point==2){
+        // Replace the current object before the original frame update re-reads its slot
+        triggered=true;p.m_pObjects[0]=objects[0][20];TestSp_Set(activePath,&p);
+    }else if(hook==2 && point==3){
+        // Change current native position and heading during the original region update
+        triggered=true;o->matrix.px+=1.25f;o->matrix.py-=.75f;o->matrix.fx=-.25f;o->matrix.fy=.5f;Timer_timeStep=2.5f;
+    }else if(hook==3 && point==4){
+        // Observe registration before activation and preserve the captured original object argument
+        triggered=true;require(p.m_state==SCRIPT_PATH_INITIALIZED);p.m_pObjects[0]=NULL;TestSp_Set(activePath,&p);updateOne(activePath);
+    }else if(hook==4 && point==5){
+        // Mutate loader outputs through their actual canonical field addresses
+        triggered=true;p.m_fSpeed=13.f;p.m_fPosition=17.f;TestSp_Set(activePath,&p);
+    }else if(hook==5 && point==6){
+        // Mutate a later record during node freeing while the controller is still traversing
+        triggered=true;ScriptPath other=TestSp_Get(1);other.m_fSpeed=77.f;TestSp_Set(1,&other);
+    }else if(hook==6 && point==2){
+        // Preserve outer stack matrices and captured geometry through a nested record update
+        triggered=true;updateOne(1);
+    }else if(hook==7 && point==2){
+        // Reuse the original captured geometry for later objects after path parameters change
+        triggered=true;p.m_fPosition+=7.f;p.m_fObjectLength=0.f;p.m_fSpeed=-9.f;TestSp_Set(activePath,&p);Timer_timeStep=.5f;
+    }else if(hook==8 && point==3){
+        // Re-read the current object for the second matrix/frame publication and velocity writes
+        triggered=true;p.m_pObjects[0]=objects[0][21];TestSp_Set(activePath,&p);
+    }else if(hook==9 && point==2){
+        // Let the controller observe another path's newly active state during the same traversal
+        triggered=true;ScriptPath other=TestSp_Get(1);other.m_state=SCRIPT_PATH_ACTIVE;other.m_pObjects[0]=objects[0][11];TestSp_Set(1,&other);
+    }else if(hook==10 && point==7 && operation==2 && allocInOperation==1){
+        // Query the current pool again for object handles in subsequent loaded records
+        triggered=true;currentPool=1;
+    }
+}
+extern "C" void *TestSp_Malloc(size_t bytes)
+{
+    // Observe the native allocator dependency without changing its allocation or zero-size semantics
+    void *pointer=(std::malloc)(bytes);require(pointer!=NULL);require(allocationCount<4096);allocations[allocationCount++]={pointer,bytes,true};allocInOperation++;event(7);word((uint32_t)bytes);mutation(7);return pointer;
+}
+extern "C" void TestSp_Free(void *pointer)
+{
+    // Observe free before the original path fields are cleared and preserve callback timing
+    int id=nodeId(pointer,true);event(6);word(id);mutation(6);allocations[id].live=false;(std::free)(pointer);
+}
+extern "C" void TestSp_MatrixBorn(CMatrix *value)
+{
+    // Observe actual native copy construction without mutating the object or game state
+    require(copyDepth<16 && value->m_attachment==NULL && !value->m_hasRwMatrix);for(unsigned i=0;i<copyDepth;i++)require(copies[i]!=value);copies[copyDepth++]=value;event(8);copyBirths++;matrix(*value);
+}
+extern "C" void TestSp_MatrixDying(CMatrix *value)
+{
+    // Verify LIFO scope exit occurs after the complete per-object C or original sequence
+    for(unsigned i=0;i<copyDepth;i++)if(copies[i]==value){require(i==copyDepth-1);event(9);copyDeaths++;matrix(*value);for(int p=0;p<2;p++)for(int j=0;j<32;j++)if(objects[p][j])object(objects[p][j]);copyDepth--;return;}
+}
+CPool *CPools::GetObjectPool(void)
+{
+    // Preserve the actual current-pool getter's lack of side effects
+    return &pools[currentPool];
+}
+CPlaneNode *CPlane::LoadPath(const char *file,int32_t &count,float &length,bool loop)
+{
+    // Return typed native nodes while verifying real record field aliases and filename formatting
+    event(5);int id=-1;require(sscanf(file,"data\\paths\\spath%d.dat",&id)==1 && !loop);word(id);bool countAlias=false,lengthAlias=false;for(int r=0;r<3;r++){countAlias|=&count==TestSp_CountSlot(r);lengthAlias|=&length==TestSp_LengthSlot(r);}require(countAlias && lengthAlias);
+    count=4+(id%2)*2;length=(count-1)*10.f;CPlaneNode *nodes=(CPlaneNode *)malloc(sizeof(CPlaneNode)*(size_t)count);memset(nodes,0xcd,sizeof(CPlaneNode)*(size_t)count);for(int i=0;i<count;i++){nodes[i].p=CVector(i*6.f,(i%2)*8.f,10.f+i*.5f);nodes[i].t=i*10.f;nodes[i].bOnGround=i%2!=0;}mutation(5);return nodes;
+}
+CObject::CObject()
+{
+    // Initialize every native field before exposing pooled objects to either implementation
+    extra=0x1234;baseTag=4321;identity=0;bIsBIGBuilding=false;m_phy_flagA08=true;m_vecMoveSpeed=CVector(1.f,2.f,3.f);m_vecTurnSpeed=CVector(4.f,5.f,6.f);m_vecMoveFriction=CVector(7.f,8.f,9.f);m_vecTurnFriction=CVector(10.f,11.f,12.f);
+}
+CObject::~CObject()
+{
+    // Preserve the real native matrix subobject lifetime without additional owner behavior
+}
+void CEntity::RegisterReference(CEntity **pointer)
+{
+    // Verify inherited this adjustment and the exact pointer slot passed by original registration
+    CObject *o=static_cast<CObject *>(this);require((void *)o!=(void *)this && baseTag==4321);CObject **slot=(CObject **)pointer;require(referenceCount<4096);event(4);word(objectId(o));word(slotId(slot));references[referenceCount++]={slot,objectId(o)};mutation(4,o);
+}
+void CObject::UpdateRwFrame(void)
+{
+    // Observe object state after each original matrix publication and before later live reads
+    event(2);frames++;object(this);mutation(2,this);
+}
+void CObject::RemoveAndAdd(void)
+{
+    // Preserve the original region-update gate and its position between both publication pairs
+    event(3);regions++;object(this);mutation(3,this);
+}
+RwMatrix *RwMatrixUpdate(RwMatrix *value)
+{
+    // Observe actual matrix publication and both original frame-update pairs
+    event(1);int id=-1;for(int p=0;p<2;p++)for(int i=0;i<32;i++)if(value==&attachments[p][i])id=p*32+i;require(id>=0);word(id);vector(value->right.x,value->right.y,value->right.z);vector(value->up.x,value->up.y,value->up.z);vector(value->at.x,value->at.y,value->at.z);vector(value->pos.x,value->pos.y,value->pos.z);return value;
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject an unexpected ownership change in a copied or pooled native matrix
+    require(false);return FALSE;
+}
+static void seedObjects(void)
+{
+    // Construct both actual raw pools once and retain all object identities through every lifecycle case
+    for(int p=0;p<2;p++){require(CPool_Init(&pools[p],32,sizeof(CObject),"scripted paths"));for(int i=0;i<32;i++){CObject *o=(CObject *)CPool_New(&pools[p]);require(o!=NULL);std::allocator<CObject>().construct(o);objects[p][i]=o;}}
+}
+static void reset(unsigned seed)
+{
+    // Clear paths before resetting observed references and deterministic native object fields
+    hook=0;triggered=false;operation=0;activePath=0;currentPool=0;Timer_timeStep=1.f;TestSp_Shutdown();referenceCount=0;for(int i=0;i<18;i++)g_pScriptPathObjects[i]=NULL;
+    for(int p=0;p<2;p++)for(int i=0;i<32;i++){
+        // Preserve native row padding coefficients and non-owning attachment identities
+        CObject *o=objects[p][i];o->identity=p*32+i;o->bIsBIGBuilding=i%5==0;o->m_phy_flagA08=true;for(int a=0;a<4;a++)for(int b=0;b<4;b++)o->matrix.f[a][b]=i*.125f+a*.25f+b*.0625f;o->matrix.px=i*.3f;o->matrix.py=-i*.2f;o->matrix.pz=7.f+i*.1f;o->matrix.fx=(i%3==0?0.f:i%3==1?1.f:-1.f);o->matrix.fy=(i%2?1.f:-1.f);o->matrix.fz=.25f;o->matrix.m_attachment=&attachments[p][i];o->matrix.m_hasRwMatrix=false;o->m_vecMoveSpeed=CVector(1,2,3);o->m_vecTurnSpeed=CVector(4,5,6);o->m_vecMoveFriction=CVector(7,8,9);o->m_vecTurnFriction=CVector(10,11,12);
+    }
+    for(int r=0;r<3;r++){initialise(r,(int)(seed+r),2.f);ScriptPath path=TestSp_Get(r);path.m_fPosition=5.f+r*3.f;path.m_fSpeed=1.f+r;TestSp_Set(r,&path);}
+}
+static void control(int path,int slot)
+{
+    // Exercise actual registration from a separate C11 caller
+    int saved=activePath;activePath=path;TestSp_RunControl(path,objects[0][slot]);snapshot();activePath=saved;
+}
+static void savedBytes(uint8_t *buffer,uint32_t size,bool verifyNode=true)
+{
+    // Compare defined save bytes after normalizing native addresses and unspecified node tail padding
+    uint8_t normalized[8192];require(size<=sizeof(normalized));memcpy(normalized,buffer,size);size_t offset=0;for(int r=0;r<3;r++){int32_t count;memcpy(&count,buffer+offset,4);require(count==TestSp_Get(r).m_numNodes);
+#ifdef COMPATIBLE_SAVES
+        offset+=52;
+#else
+        ScriptPath raw;memcpy(&raw,buffer+offset,sizeof(raw));if(verifyNode)require(raw.m_pNode==TestSp_Get(r).m_pNode);CPlaneNode *zero=NULL;memcpy(normalized+offset+offsetof(ScriptPath,m_pNode),&zero,sizeof(zero));offset+=sizeof(ScriptPath);
+#endif
+        // Exclude only the three padding bytes that implicit native assignment may copy or leave untouched
+        static_assert(sizeof(CPlaneNode)==20 && offsetof(CPlaneNode,bOnGround)==16,"Original native node fields and padding");for(int i=0;i<count;i++)memset(normalized+offset+(size_t)i*sizeof(CPlaneNode)+17,0,3);offset+=(size_t)count*sizeof(CPlaneNode);
+    }require(offset==size);word(size);for(unsigned i=0;i<size;i++)word(normalized[i]);
+}
+static void roundtrip(bool switchPool=false)
+{
+    // Verify both serialized formats, actual header padding and unchanged node tail bytes
+    alignas(16) uint8_t buffer[8192];memset(buffer,0xa5,sizeof(buffer));for(int r=0;r<3;r++)TestSp_Padding(r,(uint8_t)(0x50+r));uint32_t size=0xdeadbeef;operation=3;allocInOperation=0;saves++;TestSp_RunSave(buffer,&size);operation=0;savedBytes(buffer,size);snapshot();if(switchPool){hook=10;triggered=false;}operation=2;allocInOperation=0;loads++;TestSp_RunLoad(buffer,size);operation=0;if(switchPool)require(triggered);snapshot();savedBytes(buffer,size,false);
+}
+int main(void)
+{
+    // Observe true static path/replay state before any allocations or native matrix copies
+    const char *tracePath=getenv("SCRIPT_PATH_TRACE");if(tracePath)trace=fopen(tracePath,"wb");
+    snapshot();seedObjects();reset(0);TestSp_RunInit();snapshot();require(!TestSp_Active());reset(0);
+    for(int r=0;r<3;r++)for(int i=0;i<6;i++)control(r,r*6+i);TestSp_SaveReplay();snapshot();for(int r=0;r<3;r++){ScriptPath p=TestSp_Get(r);for(int i=0;i<6;i++)p.m_pObjects[i]=NULL;TestSp_Set(r,&p);}TestSp_LoadReplay();snapshot();roundtrip();
+    const float speeds[]={-100.f,-1.f,-0.f,0.f,1.f,100.f};const float times[]={0.f,.25f,1.f,2.5f};const float lengths[]={0.f,.5f,2.f,80.f};
+    for(int s=0;s<6;s++)for(int t=0;t<4;t++)for(int length=0;length<4;length++){
+        // Cover clamp edges, zero direction, exact time-step behavior and both signs of path speed
+        reset(s);control(0,1);control(0,2);ScriptPath p=TestSp_Get(0);p.m_fSpeed=speeds[s];p.m_fObjectLength=lengths[length];p.m_fPosition=(s%2)?0.f:p.m_fTotalLength;TestSp_Set(0,&p);Timer_timeStep=times[t];updateOne(0);
+    }
+    for(int h=1;h<=10;h++){
+        // Preserve live slot changes, nested stack lifetimes, registration order and loader field aliases
+        reset(h);if(h==3){hook=h;control(0,1);require(!TestSp_Get(0).m_pObjects[0]);}else if(h==4){hook=h;initialise(0,17,3.f);require(TestSp_Get(0).m_fSpeed==1.f && TestSp_Get(0).m_fPosition==0.f);}else if(h==5){hook=h;TestSp_RunShutdown();snapshot();require(TestSp_Get(1).m_fSpeed==77.f);}else if(h==10){for(int r=0;r<3;r++)control(r,r+1);roundtrip(true);}else{control(0,1);if(h==6)control(1,3);hook=h;if(h==9){ScriptPath p=TestSp_Get(1);p.m_state=SCRIPT_PATH_INITIALIZED;TestSp_Set(1,&p);updates++;TestSp_RunUpdate();snapshot();}else updateOne(0);}require(triggered);
+    }
+    reset(2);ScriptPath p=TestSp_Get(0);float x,y,z;const float distances[]={-1.f,0.f,10.f,20.f,30.f};for(float d:distances){finds++;TestSp_RunFind(0,d,&x,&y,&z);vector(x,y,z);}CPlaneNode *nodes=p.m_pNode;finds++;TestSp_RunFind(0,7.f,&nodes[1].p.y,&nodes[1].p.x,&nodes[0].p.z);snapshot();
+    for(unsigned frame=0;frame<100;frame++){
+        // Sustain motion and replay snapshots without losing registered slot identities
+        if(frame%20==0){reset(frame);control(0,1);control(0,2);control(1,7);}Timer_timeStep=.25f+(frame%5)*.5f;updates++;TestSp_RunUpdate();if(frame%9==0){TestSp_SaveReplay();TestSp_LoadReplay();}snapshot();
+    }
+    require(copyDepth==0 && copyBirths==copyDeaths);
+    // Observe the original initializer's retained previous allocation before releasing harness-owned leftovers
+    TestSp_RunShutdown();referenceCount=0;unsigned retained=0;for(unsigned i=0;i<allocationCount;i++)if(allocations[i].live)retained++;word(retained);require(retained==1);for(unsigned i=0;i<allocationCount;i++)if(allocations[i].live){(std::free)(allocations[i].pointer);allocations[i].live=false;}for(int p=0;p<2;p++){for(int i=0;i<32;i++){objects[p][i]->~CObject();objects[p][i]=NULL;}CPool_Flush(&pools[p]);}
+    if(trace)fclose(trace);printf("states=%u calls=%u initializations=%u updates=%u clears=%u saves=%u loads=%u frames=%u regions=%u matrixCopies=%u finds=%u hash=%016llx\n",states,calls,initializations,updates,clears,saves,loads,frames,regions,copyBirths,finds,(unsigned long long)hash);return 0;
+}

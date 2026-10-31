@@ -1,4 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
+#include "TextLanguages.h"
 #ifdef PS2_MENU
 #include "Frontend_PS2.h"
 #else
@@ -654,7 +657,7 @@ public:
 	int32 *pControlEdit;
 	bool m_OnlySaveMenu;
 	int32 m_firstStartCounter;
-	CSprite2d m_aFrontEndSprites[NUM_MENU_SPRITES];
+	Sprite2d m_aFrontEndSprites[NUM_MENU_SPRITES];
 	bool m_bSpritesLoaded;
 	int32 m_LeftMostRadioX;
 	int32 m_ScrollRadioBy;
@@ -744,15 +747,15 @@ public:
 #endif
 	enum LANGUAGE
 	{
-		LANGUAGE_AMERICAN,
-		LANGUAGE_FRENCH,
-		LANGUAGE_GERMAN,
-		LANGUAGE_ITALIAN,
-		LANGUAGE_SPANISH,
+		LANGUAGE_AMERICAN = TEXT_LANGUAGE_AMERICAN,
+		LANGUAGE_FRENCH = TEXT_LANGUAGE_FRENCH,
+		LANGUAGE_GERMAN = TEXT_LANGUAGE_GERMAN,
+		LANGUAGE_ITALIAN = TEXT_LANGUAGE_ITALIAN,
+		LANGUAGE_SPANISH = TEXT_LANGUAGE_SPANISH,
 #ifdef MORE_LANGUAGES
-		LANGUAGE_POLISH,
-		LANGUAGE_RUSSIAN,
-		LANGUAGE_JAPANESE,
+		LANGUAGE_POLISH = TEXT_LANGUAGE_POLISH,
+		LANGUAGE_RUSSIAN = TEXT_LANGUAGE_RUSSIAN,
+		LANGUAGE_JAPANESE = TEXT_LANGUAGE_JAPANESE,
 #endif
 	};
 	bool GetIsMenuActive() {return !!m_bMenuActive;}
@@ -767,7 +770,11 @@ public:
 #endif // !MASTER
 
 	CMenuManager(void);
-	~CMenuManager(void) { UnloadTextures(); }
+	~CMenuManager(void)
+    {
+        // Retain parent shutdown before reversing embedded C sprite lifetimes
+        UnloadTextures();Sprite2d_DeinitArray(m_aFrontEndSprites,sizeof(m_aFrontEndSprites)/sizeof(m_aFrontEndSprites[0]));
+    }
 
 #ifdef NO_ISLAND_LOADING
 	enum
@@ -875,3 +882,5 @@ VALIDATE_SIZE(CMenuManager, 0x688);
 extern CMenuManager FrontEndMenuManager;
 
 #endif
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

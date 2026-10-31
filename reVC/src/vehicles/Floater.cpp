@@ -1,4 +1,6 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "Timer.h"
 #include "WaterLevel.h"
@@ -107,7 +109,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 			}
 			if(waterPosition != FLOATER_ABOVE_WATER){
 				float volume = SimpleSumBuoyancyData(waterLevel, waterPosition);
-				float upImpulse = volume * volDiv * buoyancy * CTimer::GetTimeStep();
+				float upImpulse = volume * volDiv * buoyancy * (*Timer_GetTimeStep());
 				CVector speed = veh->GetSpeed(Multiply3x3(veh->GetMatrix(), CVector(x, y, 0.0f)));
 				float damp = 1.0f - DotProduct(speed, waterNormal)*veh->pHandling->fSuspensionDampingLevel;
 				float finalImpulse = upImpulse*Max(damp, 0.0f);
@@ -134,8 +136,8 @@ cBuoyancy::PreCalcSetup(CPhysical *phys, float buoyancy)
 
 	m_isBoat = phys->IsVehicle() && ((CVehicle*)phys)->IsBoat();
 	colModel = phys->GetColModel();
-	m_dimMin = colModel->boundingBox.min;
-	m_dimMax = colModel->boundingBox.max;
+	m_dimMin = CollisionVector_ToNative(colModel->boundingBox.min);
+	m_dimMax = CollisionVector_ToNative(colModel->boundingBox.max);
 
 	if(m_isBoat){
 		switch(phys->GetModelIndex()){
@@ -319,6 +321,8 @@ cBuoyancy::CalcBuoyancyForce(CPhysical *phys, CVector *point, CVector *impulse)
 		return false;
 
 	*point = Multiply3x3(m_matrix, m_impulsePoint);
-	*impulse = CVector(0.0f, 0.0f, m_volumeUnderWater*m_buoyancy*CTimer::GetTimeStep());
+	*impulse = CVector(0.0f, 0.0f, m_volumeUnderWater*m_buoyancy*(*Timer_GetTimeStep()));
 	return true;
 }
+
+//- rouz edit (ChatGPT)

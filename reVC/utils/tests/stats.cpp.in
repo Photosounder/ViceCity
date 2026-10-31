@@ -1,0 +1,200 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),checks,states,observations;
+static uint32_t now;static float listen[NUM_RADIOS];static bool japanese,mp3;static unsigned mode;static bool armed,triggered;static unsigned assertions;
+struct Translation {char key[48];uint16_t value[64];};static Translation translations[256];static unsigned translationCount;
+CPlayerInfo CWorld::Players[2];uint8 CWorld::PlayerInFocus;bool CPad::bHasPlayerCheated,CGame::nastyGame;CMenuManager FrontEndMenuManager;
+char gString2[512];uint16_t gUString[256],gUString2[256];
+extern "C" {CText TheText;float MusicSavedData_FavoriteRadioStationList[NUM_RADIOS];}
+static void Number(uint64_t value)
+{
+    // Compare ordered observations without recording process-specific addresses
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Preserve exact canonical float representations including signed zero
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Check(bool value)
+{
+    // Stop a quiet comparison at its first independent invariant failure
+    ++checks;if(!value){fprintf(stderr,"Stats check failed at %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static void Bytes(const void *data,size_t length)
+{
+    // Compare complete initialized save payloads, guards and shared scratch storage
+    const uint8_t *p=(const uint8_t*)data;Number(length);for(size_t i=0;i<length;i++){digest^=p[i];digest*=UINT64_C(1099511628211);}
+}
+static void TextBytes(const uint16_t *value)
+{
+    // Observe complete visible UTF-16 output without depending on untranslated pointer addresses
+    for(unsigned i=0;;i++){Check(i<256);Number(value[i]);if(!value[i])break;}
+}
+static void Observe(unsigned point)
+{
+    // Preserve effectful provider order and mutate only at real external formatting/audio boundaries
+    ++observations;Number(point);if(!armed||triggered)return;
+    if(mode==1&&point==10){triggered=true;GLOBAL(DaysPassed)=999;GLOBAL(CarsExploded)=888;}
+    else if(mode==2&&point==20){triggered=true;GLOBAL(CarsExploded)=777;CWorld::PlayerInFocus=1;}
+    else if(mode==3&&point==30){triggered=true;GLOBAL(NumPropertyOwned)=0;GLOBAL(HighestChaseValue)=1800;}
+}
+extern "C" const uint32_t *Timer_GetTimeInMilliseconds()
+{
+    // Return the same live clock alias for both time rows and the persistent police-spending cache
+    return &now;
+}
+extern "C" float *DMAudio_GetListenTimeArray()
+{
+    // Observe the single live listen-array capture at its original init/save point
+    Observe(10);return listen;
+}
+extern "C" uint8_t DMAudio_IsMP3RadioChannelAvailable()
+{
+    // Preserve repeated radio-availability queries during the complete least-listened scan
+    Observe(11);return mp3?1:0;
+}
+bool CFont::IsJapanese()
+{
+    // Retain the original pure native language query without changing its scalar type
+    return japanese;
+}
+void CFont::FilterOutTokensFromString(uint16_t *text)
+{
+    // Observe the native filter boundary and apply a deterministic token removal to the same shared buffer
+    Observe(30);if(text[0]=='~'&&text[1]=='x'&&text[2]=='~'){unsigned i=0;do{text[i]=text[i+3];}while(text[i++]);}
+}
+void UnicodeStrcpy(uint16_t *target,const uint16_t *source)
+{
+    // Use the complete original primitive loop and preserve destination aliasing
+    while((*target++=*source++)!='\0');
+}
+void AsciiToUnicode(const char *source,uint16_t *target)
+{
+    // Use the complete original unsigned-byte conversion loop on shared scratch storage
+    while((*target++=(unsigned char)*source++)!='\0');
+}
+extern "C" char *UnicodeToAscii(uint16_t *source)
+{
+    // Supply the same stable C text dependency for the inline out-of formatting token
+    static char converted[256];unsigned i=0;do{Check(i<255);converted[i]=(char)source[i];}while(source[i++]);return converted;
+}
+extern "C" uint16_t *Text_Get(CText *text,const char *key)
+{
+    // Preserve translation key, stable result identity and callbacks before later string copies
+    Check(text==&TheText);Observe(20);for(const char *p=key;*p;p++)Number((unsigned char)*p);Number(0);
+    for(unsigned i=0;i<translationCount;i++)if(strcmp(translations[i].key,key)==0)return translations[i].value;
+    Check(translationCount<256&&strlen(key)<48);Translation &entry=translations[translationCount++];strcpy(entry.key,key);entry.value[0]='~';entry.value[1]='x';entry.value[2]='~';unsigned i=0;do{entry.value[i+3]=(unsigned char)key[i];}while(key[i++]);return entry.value;
+}
+extern "C" void TestStats_Assert(const char*)
+{
+    // Observe a failed original contract check without creating a native dialog
+    ++assertions;Observe(40);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int,const char*)
+{
+    // Preserve contract failures while allowing source filename and function names to reflect the C conversion
+    TestStats_Assert(expression);
+}
+#include "observations.h"
+#include "expected-save.h"
+static void Reset(int seed=1)
+{
+    // Seed every named value and buffer while retaining the original function-static row-cache lifetime
+    armed=false;triggered=false;mode=0;assertions=0;SeedCanonical(seed);now=1234567+(uint32_t)seed*123;CWorld::PlayerInFocus=0;CPad::bHasPlayerCheated=false;CGame::nastyGame=true;FrontEndMenuManager.m_PrefsLanguage=TEXT_LANGUAGE_AMERICAN;japanese=false;mp3=true;
+    CWorld::Players[0].m_nMoney=50000;CWorld::Players[0].m_nVisibleMoney=10000001;CWorld::Players[0].m_nCollectedPackages=17;CWorld::Players[0].m_nTotalPackages=100;
+    CWorld::Players[1].m_nMoney=75000;CWorld::Players[1].m_nVisibleMoney=5;CWorld::Players[1].m_nCollectedPackages=9;CWorld::Players[1].m_nTotalPackages=0;
+    for(unsigned i=0;i<NUM_RADIOS;i++){listen[i]=(float)(i+seed)*1.25f;MusicSavedData_FavoriteRadioStationList[i]=(float)(NUM_RADIOS-i);}
+    memset(gString2,0x31,sizeof(gString2));for(unsigned i=0;i<256;i++){gUString[i]=0x7777;gUString2[i]=0x6666;}
+}
+static void Snapshot()
+{
+    // Observe all 91 canonical objects, external mutations, shared buffers and radio values after each operation
+    ++states;Number(states);CanonicalSnapshot();Bytes(gString2,sizeof(gString2));Bytes(gUString,sizeof(gUString));Bytes(gUString2,sizeof(gUString2));
+    for(unsigned i=0;i<NUM_RADIOS;i++)Floating(MusicSavedData_FavoriteRadioStationList[i]);Number(CWorld::PlayerInFocus);Number(triggered);Number(assertions);
+    // Emit compact optional checkpoints for diagnosing whole-operation divergences
+    if(getenv("STATS_TRACE"))fprintf(stderr,"%llu %llu %016llx\n",(unsigned long long)states,(unsigned long long)observations,(unsigned long long)digest);
+}
+static const char *KeyOf(uint16_t *value)
+{
+    // Validate that rating and chase operations return the original stable translated object
+    for(unsigned i=0;i<translationCount;i++)if(value==translations[i].value)return translations[i].key;Check(false);return "";
+}
+static void MutationCases()
+{
+    // Exercise complete initialization, every counter updater and all indexed min/max alternatives
+    Reset();Run_Stats_Init();Snapshot();
+    const int values[]={-1,0,1,59,60,100,999,3600};
+    for(unsigned n=0;n<8;n++){
+        Reset((int)n);for(int i=0;i<COUNT(TOTAL_FASTEST_TIMES);i++){Run_Stats_RegisterFastestTime(i,values[n]);Run_Stats_RegisterFastestTime(i,values[7-n]);}for(int i=0;i<COUNT(TOTAL_HIGHEST_SCORES);i++)Run_Stats_RegisterHighestScore(i,values[n]);for(int i=0;i<COUNT(TOTAL_BEST_POSITIONS);i++)Run_Stats_RegisterBestPosition(i,values[n]);Snapshot();
+        Run_Stats_AnotherLifeSavedWithAmbulance();Run_Stats_AnotherCriminalCaught();Run_Stats_RegisterLevelAmbulanceMission(values[n]);Run_Stats_RegisterLevelVigilanteMission(values[n]);Run_Stats_RegisterLevelFireMission(values[n]);Run_Stats_AnotherFireExtinguished();Run_Stats_AnotherKillFrenzyPassed();Run_Stats_SetTotalNumberKillFrenzies(values[n]);Run_Stats_SetTotalNumberMissions(values[n]);Snapshot();
+        Run_Stats_MoneySpentOnWeapons(values[n]);Run_Stats_MoneySpentOnProperty(values[n]);Run_Stats_MoneySpentOnAutoPainting(values[n]);Run_Stats_MoneySpentOnFashion(values[n]);Run_Stats_NumOfVisitsFromLoanSharks(values[n]);Run_Stats_NumOfStoresKnockedOff(values[n]);Run_Stats_NumOfMovieStunts(values[n]);Run_Stats_NumOfAssassinations(values[n]);Run_Stats_NumOfPizzasDelivered(values[n]);Run_Stats_NumOfGarbagePickups(values[n]);Run_Stats_NumOfIceCreamSold(values[n]);Run_Stats_AddNumBloodRingKills(values[n]);Run_Stats_LongestTimeInBloodRing(values[n]);Snapshot();
+        Run_Stats_CheckPointReachedSuccessfully();Snapshot();Run_Stats_CheckPointReachedUnsuccessfully();Snapshot();for(int i=0;i<COUNT(TOTAL_PROPERTIES);i++){Run_Stats_AddPropertyAsOwned(i);Run_Stats_AddPropertyAsOwned(i);}Snapshot();
+    }
+    // Confirm the original strict fastest-time sentinel and property duplicate behavior independently
+    Reset();GLOBAL(FastestTimes)[0]=0;Run_Stats_RegisterFastestTime(0,60);Run_Stats_RegisterFastestTime(0,90);Check(GLOBAL(FastestTimes)[0]==60);GLOBAL(PropertyOwned)[0]=false;GLOBAL(NumPropertyOwned)=0;Run_Stats_AddPropertyAsOwned(0);Run_Stats_AddPropertyAsOwned(0);Check(GLOBAL(NumPropertyOwned)==1);Snapshot();
+}
+static void SaveCases()
+{
+    // Check every serialized byte, unaligned destinations, checkpoint side effects and delayed audio mutation
+    for(unsigned seed=0;seed<64;seed++)for(unsigned offset=0;offset<4;offset++){
+        Reset((int)seed);uint8_t expected[595],actual[608];uint32_t size=0;memset(actual,0xA7,sizeof(actual));
+        int oldKills=GLOBAL(KillsSinceLastCheckpoint),oldLegitimate=GLOBAL(TotalLegitimateKills);float oldRadio[NUM_RADIOS];memcpy(oldRadio,MusicSavedData_FavoriteRadioStationList,sizeof(oldRadio));
+        GLOBAL(TotalLegitimateKills)+=GLOBAL(KillsSinceLastCheckpoint);GLOBAL(KillsSinceLastCheckpoint)=0;memcpy(MusicSavedData_FavoriteRadioStationList,listen,sizeof(listen));ExpectedSave(expected);
+        GLOBAL(TotalLegitimateKills)=oldLegitimate;GLOBAL(KillsSinceLastCheckpoint)=oldKills;memcpy(MusicSavedData_FavoriteRadioStationList,oldRadio,sizeof(oldRadio));mode=(seed&1)?1:0;armed=true;
+        Run_Stats_SaveStats(actual+offset,&size);Check(size==595&&memcmp(expected,actual+offset,595)==0);for(unsigned i=0;i<offset;i++)Check(actual[i]==0xA7);for(unsigned i=offset+595;i<sizeof(actual);i++)Check(actual[i]==0xA7);Bytes(actual,sizeof(actual));Snapshot();
+        SeedCanonical(700);Run_Stats_LoadStats(actual+offset,size);Snapshot();
+    }
+    // Preserve a legal signed/unsigned alias for the caller's size output before field serialization
+    Reset();uint8_t saved[595];Run_Stats_SaveStats(saved,(uint32_t*)&GLOBAL(DaysPassed));Check(GLOBAL(DaysPassed)==595);Snapshot();
+    // Keep the original load contract: a size mismatch is checked after reading the complete payload
+    Run_Stats_LoadStats(saved,594);
+#ifdef MASTER
+    Check(assertions==0);
+#else
+    Check(assertions==1);
+#endif
+    Snapshot();
+}
+static void RatingCases()
+{
+    // Cover every criminal-rating and chase threshold and all original negative-rating clamp alternatives
+    const int ratings[]={-10001,-10000,-6001,-6000,-5999,-4000,-3999,-2000,-1999,-500,-499,-1,0,19,20,49,50,74,75,99,100,119,120,149,150,199,200,239,240,269,270,299,300,334,335,369,370,399,400,449,450,499,500,549,550,599,600,609,610,649,650,699,700,849,850,999,1000,1004,1005,1149,1150,1299,1300,1499,1500,1699,1700,1999,2000,2099,2100,2299,2300,2499,2500,2749,2750,2999,3000,3499,3500,3999,4000,4999,5000,7499,7500,9999,10000,19999,20000,29999,30000,39999,40000,49999,50000,64999,65000,79999,80000,99999,100000,149999,150000,199999,200000,299999,300000,374999,375000,499999,500000,999999,1000000};
+    for(unsigned i=0;i<sizeof(ratings)/sizeof(ratings[0]);i++)for(unsigned flags=0;flags<8;flags++){
+        Reset();SeedCanonical(0);GLOBAL(FiresExtinguished)=GLOBAL(HighestLevelFireMission)=GLOBAL(HighestLevelAmbulanceMission)=GLOBAL(CriminalsCaught)=GLOBAL(LivesSavedWithAmbulance)=GLOBAL(HelisDestroyed)=0;GLOBAL(TotalLegitimateKills)=ratings[i];GLOBAL(TimesArrested)=(flags&1)?1:0;GLOBAL(TimesDied)=0;GLOBAL(CheatedCount)=0;GLOBAL(RoundsFiredByPlayer)=0;GLOBAL(TotalProgressInGame)=0;CWorld::Players[0].m_nMoney=0;CPad::bHasPlayerCheated=(flags&2)!=0;GLOBAL(FlightTime)=(flags&4)?11*60*60000:0;
+        Number(Run_Stats_FindCriminalRatingNumber());const char *key=KeyOf(Run_Stats_FindCriminalRatingString());for(const char *p=key;*p;p++)Number(*p);Snapshot();
+    }
+    const float chase[]={-1,0,19.99f,20,49.99f,50,74.99f,75,99.99f,100,149.99f,150,199.99f,200,249.99f,250,299.99f,300,349.99f,350,399.99f,400,499.99f,500,599.99f,600,699.99f,700,799.99f,800,899.99f,900,999.99f,1000,1199.99f,1200,1399.99f,1400,1599.99f,1600,1799.99f,1800,NAN,INFINITY};
+    for(unsigned i=0;i<sizeof(chase)/sizeof(chase[0]);i++){const char *key=KeyOf(Run_Stats_FindChaseString(chase[i]));for(const char *p=key;*p;p++)Number(*p);}
+    // Compare percentage clamps and integer/float rating contributions without out-of-range conversions
+    for(unsigned i=0;i<20;i++){Reset((int)i);GLOBAL(TotalProgressInGame)=(float)i;GLOBAL(ProgressMade)=(float)i*.75f;CGame::nastyGame=(i&1)!=0;Floating(Run_Stats_GetPercentageProgress());Number(Run_Stats_FindCriminalRatingNumber());Snapshot();}
+}
+static void FormattingCases()
+{
+    // Preserve null-text early returns and every single/paired display format across locale gates
+    Reset();Bytes(gString2,sizeof(gString2));Run_Stats_BuildStatLine(NULL,(void*)1,0,NULL,0);Snapshot();
+    for(int format=0;format<7;format++)for(unsigned paired=0;paired<2;paired++)for(unsigned jp=0;jp<2;jp++){
+        Reset();japanese=jp!=0;int a=-17,b=29;float x=17.25f,y=29.5f;bool floating=format==1||format==3;mode=3;armed=true;
+        Run_Stats_BuildStatLine("BASE",floating?(void*)&x:(void*)&a,format,paired?(floating?(void*)&y:(void*)&b):NULL,0);TextBytes(gUString);TextBytes(gUString2);Snapshot();
+    }
+    for(int minute=-1;minute<12;minute++){Reset();int hour=7;Run_Stats_BuildStatLine("TIME",&hour,0,&minute,1);TextBytes(gUString);TextBytes(gUString2);Snapshot();}
+    Reset();int value=17;Run_Stats_BuildStatLine("BASE",&value,0,NULL,0);Check(gUString2[0]=='1'&&gUString2[1]=='7'&&gUString2[2]==0);Snapshot();
+}
+static void RowCases()
+{
+    // Compare every possible row and count query while retaining conditional rows and the persistent cache
+    for(unsigned scenario=0;scenario<64;scenario++){
+        Reset((int)scenario);GLOBAL(DaysPassed)=(int)(scenario/2);now=1000+scenario*10007;CGame::nastyGame=(scenario&1)!=0;CPad::bHasPlayerCheated=(scenario&2)!=0;mp3=(scenario&4)!=0;japanese=(scenario&8)!=0;FrontEndMenuManager.m_PrefsLanguage=(int)(scenario%9);
+        GLOBAL(BestStuntJump)=(int)(scenario%10);GLOBAL(NumPropertyOwned)=0;for(int i=0;i<COUNT(TOTAL_PROPERTIES);i++){GLOBAL(PropertyOwned)[i]=((scenario>>(i%6))&1)!=0;if(GLOBAL(PropertyOwned)[i])++GLOBAL(NumPropertyOwned);}
+        for(int i=0;i<COUNT(TOTAL_FASTEST_TIMES);i++)GLOBAL(FastestTimes)[i]=((scenario+i)%3)?0:(int)(scenario*7+i*61);for(int i=0;i<COUNT(TOTAL_HIGHEST_SCORES);i++)GLOBAL(HighestScores)[i]=((scenario+i)&1)?0:(int)scenario*13+i;GLOBAL(BestPositions)[0]=(scenario&16)?INT_MAX:2;
+        GLOBAL(FlightTime)=(int)(scenario*7)*60000;GLOBAL(RoundsFiredByPlayer)=(scenario&16)?0:150;GLOBAL(BulletsThatHit)=71;GLOBAL(TotalProgressInGame)=100;GLOBAL(ProgressMade)=73;GLOBAL(HighestChaseValue)=(float)scenario*37;
+        int count=Run_Stats_ConstructStatLine(99999);Check(count>=5&&count<256);Number(count);Snapshot();for(int row=-1;row<=count+1;row++){Number(Run_Stats_ConstructStatLine(row));Snapshot();}
+        Run_Stats_Init();Number(Run_Stats_ConstructStatLine(99999));Snapshot();Run_Stats_PopulateFavoriteRadioStationList();Snapshot();
+    }
+}
+int main()
+{
+    // Observe original static startup before any initializer or input seeding
+    CanonicalSnapshot();Check(GLOBAL(DaysPassed)==0&&GLOBAL(PropertyOwned)[0]==false&&GLOBAL(FastestTimes)[0]==0);
+    MutationCases();SaveCases();RatingCases();FormattingCases();RowCases();fprintf(stdout,"states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

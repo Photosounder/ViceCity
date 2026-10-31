@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 #include "FileMgr.h"
@@ -51,6 +54,13 @@ float _TEXTURE_WAKE_ADDV;
 int32 CWaterLevel::ms_nNoOfWaterLevels;
 float CWaterLevel::ms_aWaterZs[48];
 CRect CWaterLevel::ms_aWaterRects[48];
+static int InitialiseWaterRectStorage(void)
+{
+    // Initialize water rectangles at their former array-constructor boundary
+    for(unsigned i=0;i<48;++i) Rect_Init(&CWaterLevel::ms_aWaterRects[i]);
+    return 0;
+}
+static const int waterRectStorageInitialised = InitialiseWaterRectStorage();
 int8 CWaterLevel::aWaterBlockList[MAX_LARGE_SECTORS][MAX_LARGE_SECTORS];
 int8 CWaterLevel::aWaterFineBlockList[MAX_SMALL_SECTORS][MAX_SMALL_SECTORS];
 bool CWaterLevel::WavesCalculatedThisFrame;
@@ -178,21 +188,21 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 
 	do
 	{
-		hFile = CFileMgr::OpenFile("DATA\\waterpro.dat", "rb");
+		hFile = FileMgr_OpenFile("DATA\\waterpro.dat", "rb");
 	}
 	while ( hFile < 0 );
 #else
-	int32 hFile = CFileMgr::OpenFile("DATA\\waterpro.dat", "rb");
+	int32 hFile = FileMgr_OpenFile("DATA\\waterpro.dat", "rb");
 #endif
 	
 	if (hFile > 0)
 	{
-		CFileMgr::Read(hFile, (char *)&ms_nNoOfWaterLevels, sizeof(ms_nNoOfWaterLevels));
-		CFileMgr::Read(hFile, (char *)ms_aWaterZs,	sizeof(ms_aWaterZs));
-		CFileMgr::Read(hFile, (char *)ms_aWaterRects, sizeof(ms_aWaterRects));
-		CFileMgr::Read(hFile, (char *)aWaterBlockList, sizeof(aWaterBlockList));
-		CFileMgr::Read(hFile, (char *)aWaterFineBlockList, sizeof(aWaterFineBlockList));
-		CFileMgr::CloseFile(hFile);
+		FileMgr_Read(hFile, (char *)&ms_nNoOfWaterLevels, sizeof(ms_nNoOfWaterLevels));
+		FileMgr_Read(hFile, (char *)ms_aWaterZs,	sizeof(ms_aWaterZs));
+		FileMgr_Read(hFile, (char *)ms_aWaterRects, sizeof(ms_aWaterRects));
+		FileMgr_Read(hFile, (char *)aWaterBlockList, sizeof(aWaterBlockList));
+		FileMgr_Read(hFile, (char *)aWaterFineBlockList, sizeof(aWaterFineBlockList));
+		FileMgr_CloseFile(hFile);
 	}
 #ifndef MASTER
 	else
@@ -202,8 +212,8 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 		// collision is streamed in VC
 		CColStore::LoadAllCollision();
 
-		CFileMgr::SetDir("");
-		hFile = CFileMgr::OpenFile(pWaterDat, "r");
+		FileMgr_SetDir("");
+		hFile = FileMgr_OpenFile(pWaterDat, "r");
 
 		char *line;
 
@@ -217,7 +227,7 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 			}
 		}
 
-		CFileMgr::CloseFile(hFile);
+		FileMgr_CloseFile(hFile);
 
 		for (int32 x = 0; x < MAX_SMALL_SECTORS; x++)
 		{
@@ -313,17 +323,17 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 			}
 		}
 
-		hFile = CFileMgr::OpenFileForWriting("data\\waterpro.dat");
+		hFile = FileMgr_OpenFileForWriting("data\\waterpro.dat");
 
 		if (hFile > 0)
 		{
-			CFileMgr::Write(hFile, (char *)&ms_nNoOfWaterLevels, sizeof(ms_nNoOfWaterLevels));
-			CFileMgr::Write(hFile, (char *)ms_aWaterZs, sizeof(ms_aWaterZs));
-			CFileMgr::Write(hFile, (char *)ms_aWaterRects, sizeof(ms_aWaterRects));
-			CFileMgr::Write(hFile, (char *)aWaterBlockList, sizeof(aWaterBlockList));
-			CFileMgr::Write(hFile, (char *)aWaterFineBlockList, sizeof(aWaterFineBlockList));
+			FileMgr_Write(hFile, (char *)&ms_nNoOfWaterLevels, sizeof(ms_nNoOfWaterLevels));
+			FileMgr_Write(hFile, (char *)ms_aWaterZs, sizeof(ms_aWaterZs));
+			FileMgr_Write(hFile, (char *)ms_aWaterRects, sizeof(ms_aWaterRects));
+			FileMgr_Write(hFile, (char *)aWaterBlockList, sizeof(aWaterBlockList));
+			FileMgr_Write(hFile, (char *)aWaterFineBlockList, sizeof(aWaterFineBlockList));
 
-			CFileMgr::CloseFile(hFile);
+			FileMgr_CloseFile(hFile);
 		}
 
 		// collision is streamed in VC
@@ -331,10 +341,13 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 	}
 #endif
 	
-	CTxdStore::PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
 
-	int32 slot = CTxdStore::FindTxdSlot("particle");
-	CTxdStore::SetCurrentTxd(slot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int32 slot = TxdStore_FindTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(slot);
 	
 	if ( gpWaterTex == nil )
 		gpWaterTex = RwTextureRead("waterclear256", nil);
@@ -354,7 +367,8 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 		gpWaterWakeTex = RwTextureRead("waterwake", nil);
 	gpWaterWakeRaster = RwTextureGetRaster(gpWaterWakeTex);
 	
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 
 	CreateWavyAtomic();
 	
@@ -600,7 +614,7 @@ CWaterLevel::DestroyWavyAtomic()
 void
 CWaterLevel::AddWaterLevel(float fXLeft, float fYBottom, float fXRight, float fYTop, float fLevel)
 {
-	ms_aWaterRects[ms_nNoOfWaterLevels] = CRect(fXLeft, fYBottom, fXRight, fYTop);
+	ms_aWaterRects[ms_nNoOfWaterLevels] = Rect_Make(fXLeft, fYBottom, fXRight, fYTop);
 	ms_aWaterZs[ms_nNoOfWaterLevels] = fLevel;
 	ms_nNoOfWaterLevels++;
 }
@@ -777,7 +791,7 @@ CWaterLevel::GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool
 	ASSERT( pfOutLevel != nil );
 	*pfOutLevel = ms_aWaterZs[nBlock];
 
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
 	
 	float fWave = Sin
 	(
@@ -787,7 +801,7 @@ CWaterLevel::GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool
 		* (TWOPI / SMALL_SECTOR_SIZE ) + fAngle
 	);
 
-	float fWindFactor = CWeather::WindClipped * 0.4f + 0.2f;
+	float fWindFactor = Weather_WindClipped * 0.4f + 0.2f;
 	
 	*pfOutLevel += fWave * fWindFactor;
 
@@ -823,9 +837,9 @@ CWaterLevel::GetWaterLevelNoWaves(float fX, float fY, float fZ, float *pfOutLeve
 float
 CWaterLevel::GetWaterWavesOnly(short x, short y)
 {
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
 	
-	float fWindFactor = CWeather::WindClipped * 0.7f + 0.3f;
+	float fWindFactor = Weather_WindClipped * 0.7f + 0.3f;
 	
 	float fWave = Sin( float(float(4 * y + 4 * x) * (TWOPI / SMALL_SECTOR_SIZE )) + fAngle );
 	
@@ -840,8 +854,8 @@ CWaterLevel::GetWaterNormal(float fX, float fY)
 	int32 x = WATER_TO_SMALL_SECTOR_X(fX);
 	int32 y = WATER_TO_SMALL_SECTOR_Y(fY);
 	
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
-	float fWindFactor = CWeather::WindClipped * 0.4f + 0.2f;
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
+	float fWindFactor = Weather_WindClipped * 0.4f + 0.2f;
 	
 	float _fWave = (WATER_UNSIGN_Y(fY) - y*SMALL_SECTOR_SIZE + WATER_UNSIGN_X(fX) - x*SMALL_SECTOR_SIZE)
 			* (TWOPI / SMALL_SECTOR_SIZE ) + fAngle;
@@ -988,15 +1002,16 @@ CWaterLevel::RenderWater()
 	float fHugeSectorMaxRenderDist    = _GetWaterDrawDist();
 	float fHugeSectorMaxRenderDistSqr = SQR(fHugeSectorMaxRenderDist);
 	
-	float windAddUV = CWeather::WindClipped * 0.0005f + 0.0006f;
+	float windAddUV = Weather_WindClipped * 0.0005f + 0.0006f;
 	
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
 	
 	// Advance water texture coordinates only for the main game camera
 	//+ rouz edit (ChatGPT)
-	if ( !renderingEnvMap && !CTimer::GetIsPaused() ) // rouz edit (ChatGPT)
+	if ( !renderingEnvMap && !Timer_GetIsPaused() ) // rouz edit (ChatGPT)
 	{
-		float timeStep = CTimer::GetTimeStepFix();
+		// Preserve the original normalized time step without the optional helper declaration
+		float timeStep = (*Timer_GetTimeStep()) / (50.0f / 30.0f);
 
 		TEXTURE_ADDU       += windAddUV * timeStep;
 		TEXTURE_ADDV       += windAddUV * timeStep;
@@ -1022,14 +1037,14 @@ CWaterLevel::RenderWater()
 #ifdef PC_WATER
 	// Update the water height offset only for the primary camera frame
 	if(!renderingEnvMap) // rouz edit (ChatGPT)
-		_fWaterZOffset = CWeather::WindClipped * 0.5f + 0.25f;
+		_fWaterZOffset = Weather_WindClipped * 0.5f + 0.25f;
 #endif
 
 	RwRGBA color = { 0, 0, 0, 255 };
 
-	color.red   = CTimeCycle::GetWaterRed();
-	color.green = CTimeCycle::GetWaterGreen();
-	color.blue  = CTimeCycle::GetWaterBlue();
+	color.red   = TimeCycle_GetWaterRed();
+	color.green = TimeCycle_GetWaterGreen();
+	color.blue  = TimeCycle_GetWaterBlue();
 
 #ifndef PC_WATER
 	RwRGBA colorUnderwater = { 0, 0, 0, 255 };
@@ -1307,17 +1322,17 @@ CWaterLevel::RenderTransparentWater(void)
 	
 	RwRGBA color;
 	
-	color.red   = CTimeCycle::GetWaterRed();
-	color.green = CTimeCycle::GetWaterGreen();
-	color.blue  = CTimeCycle::GetWaterBlue();
+	color.red   = TimeCycle_GetWaterRed();
+	color.green = TimeCycle_GetWaterGreen();
+	color.blue  = TimeCycle_GetWaterBlue();
 	color.alpha = 255;
 	
 	RwRGBA colorTrans;
 	
-	colorTrans.red   = CTimeCycle::GetWaterRed();
-	colorTrans.green = CTimeCycle::GetWaterGreen();
-	colorTrans.blue  = CTimeCycle::GetWaterBlue();
-	colorTrans.alpha = CTimeCycle::GetWaterAlpha();
+	colorTrans.red   = TimeCycle_GetWaterRed();
+	colorTrans.green = TimeCycle_GetWaterGreen();
+	colorTrans.blue  = TimeCycle_GetWaterBlue();
+	colorTrans.alpha = TimeCycle_GetWaterAlpha();
 	
 	TempBufferVerticesStored = 0;
 	TempBufferIndicesStored = 0;
@@ -1535,7 +1550,7 @@ CWaterLevel::RenderTransparentWater(void)
 		RpAtomicRender(ms_pMaskAtomic);
 	}
 #else
-	if (!CCullZones::WaterFudge())
+	if (!CullZones_WaterFudge())
 	{
 		// Offset the wavy mask in the active camera's viewing direction
 		//+ rouz edit (ChatGPT)
@@ -1792,7 +1807,7 @@ CWaterLevel::RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &col
 	{
 		WavesCalculatedThisFrame = true;
 
-		float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
+		float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
 
 		RpGeometry *wavyGeometry = RpAtomicGetGeometry(ms_pWavyAtomic);
 		RwTexCoords *wavyTexCoords = RpGeometryGetVertexTexCoords(wavyGeometry, rwTEXTURECOORDINATEINDEX0);
@@ -1812,14 +1827,14 @@ CWaterLevel::RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &col
 
 		float vertMul = 0.5f;
 
-		float wind = CWeather::WindClipped * 0.4f + 0.2f;
-		float waveWind = CWeather::WindClipped * fWave2Ampl + 0.05f;
+		float wind = Weather_WindClipped * 0.4f + 0.2f;
+		float waveWind = Weather_WindClipped * fWave2Ampl + 0.05f;
 
 		float waveA = (TWOPI / 16.0f)
-			* ((fNormalDirectionScalar1 * Abs(camMat->at.x + camMat->at.y) + fNormMult) * (CWeather::WindClipped * 0.4f + 0.2f));
+			* ((fNormalDirectionScalar1 * Abs(camMat->at.x + camMat->at.y) + fNormMult) * (Weather_WindClipped * 0.4f + 0.2f));
 
 		float waveB = TWOPI / (16.0f * fWave2NormScale)
-			* ((fNormalDirectionScalar2 * Abs(camMat->at.y - camMat->at.x) + fNormMultB) * (CWeather::WindClipped * 0.2f + 0.1f));
+			* ((fNormalDirectionScalar2 * Abs(camMat->at.y - camMat->at.x) + fNormMultB) * (Weather_WindClipped * 0.2f + 0.1f));
 
 		CVector vA(1.0f, 0.0f, 0.0f);
 		CVector vB(0.0f, 1.0f, 0.0f);
@@ -1835,11 +1850,11 @@ CWaterLevel::RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &col
 
 				if (i > 0 && i < 16 && j > 0 && j < 16)
 				{
-					wavyMorphVerts->x += CGeneral::GetRandomNumberInRange(-1.0f, 1.0f) * randomMove;
+					wavyMorphVerts->x += General_GetRandomNumberInRangeFloat(-1.0f, 1.0f) * randomMove;
 					wavyMorphVerts->x *= fRandomDamp;
 					wavyMorphVerts->x += float(i) * randomDampInv2;
 
-					wavyMorphVerts->y += CGeneral::GetRandomNumberInRange(-1.0f, 1.0f) * randomMove;
+					wavyMorphVerts->y += General_GetRandomNumberInRangeFloat(-1.0f, 1.0f) * randomMove;
 					wavyMorphVerts->y *= fRandomDamp;
 					wavyMorphVerts->y += float(j) * randomDampInv2;
 				}
@@ -1960,10 +1975,10 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 #endif
 	
 #ifndef PC_WATER
-	float fMinSparkZ = (CWeather::WindClipped * fWave2Ampl + 0.05f +
-		CWeather::WindClipped * 0.4f + 0.2) * (1.0f - 0.04f * CWeather::SunGlare);
+	float fMinSparkZ = (Weather_WindClipped * fWave2Ampl + 0.05f +
+		Weather_WindClipped * 0.4f + 0.2) * (1.0f - 0.04f * Weather_SunGlare);
 
-	int32 randval = CGeneral::GetRandomNumber();
+	int32 randval = General_GetRandomNumber();
 
 	float fUVStep = 0.125f;
 	float f27 = 2.0f;
@@ -1988,10 +2003,10 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 	int16 nX = _RoundValue(nSecsX - 1);
 	int16 nY = _RoundValue(nSecsY - 1);
 #else
-	float fMinSparkZ = (fWave2Ampl * CWeather::WindClipped + 0.05f + 
-			0.4f * CWeather::WindClipped + 0.2) * (1.0f - 0.02f * CWeather::SunGlare);
+	float fMinSparkZ = (fWave2Ampl * Weather_WindClipped + 0.05f + 
+			0.4f * Weather_WindClipped + 0.2) * (1.0f - 0.02f * Weather_SunGlare);
 
-	int32 randval = CGeneral::GetRandomNumber() & 255;
+	int32 randval = General_GetRandomNumber() & 255;
 
 	int16 nX = _RoundValue((int32)((fX - fSectorX) * 0.5f) - 1);
 	int16 nY = _RoundValue((int32)((fY - fSectorY) * 0.5f) - 1);
@@ -2084,7 +2099,7 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2107,7 +2122,7 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2130,7 +2145,7 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2153,7 +2168,7 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2245,14 +2260,14 @@ CWaterLevel::PreCalcWaterGeometry(void)
 	
 	RwRGBA color;
 	
-	color.red   = CTimeCycle::GetWaterRed();
-	color.green = CTimeCycle::GetWaterGreen();
-	color.blue  = CTimeCycle::GetWaterBlue();
-	color.alpha = CTimeCycle::GetWaterAlpha();
+	color.red   = TimeCycle_GetWaterRed();
+	color.green = TimeCycle_GetWaterGreen();
+	color.blue  = TimeCycle_GetWaterBlue();
+	color.alpha = TimeCycle_GetWaterAlpha();
 	
 	PreCalcWavySector(color);
 	
-	if ( CCullZones::WaterFudge() )
+	if ( CullZones_WaterFudge() )
 	{
 		MaskCalculatedThisFrame = false;
 		return;
@@ -2314,7 +2329,7 @@ CWaterLevel::PreCalcWaterGeometry(void)
 bool
 CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 {	
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
 	
 	RpGeometry *wavyGeometry   = RpAtomicGetGeometry(ms_pWavyAtomic);
 
@@ -2340,14 +2355,14 @@ CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 	
 	float randomMove = 1.0f / (16.0f * fRandomMoveDiv);
 	
-	float wind     = CWeather::WindClipped * 0.4f + 0.2f;
-	float waveWind = CWeather::WindClipped * fWave2Ampl + 0.05f;
+	float wind     = Weather_WindClipped * 0.4f + 0.2f;
+	float waveWind = Weather_WindClipped * fWave2Ampl + 0.05f;
 
 	float waveA = (TWOPI / 16.0f)
-		* ((CWeather::WindClipped * 0.4f + 0.2f) * (fNormalDirectionScalar1 * Abs(camPosUp.x + camPosUp.y) + fNormMult));
+		* ((Weather_WindClipped * 0.4f + 0.2f) * (fNormalDirectionScalar1 * Abs(camPosUp.x + camPosUp.y) + fNormMult));
 		
 	float waveB = TWOPI / (16.0f * fWave2NormScale)
-		* ((CWeather::WindClipped * 0.2f + 0.1f) * (fNormalDirectionScalar2 * Abs(camPosUp.y - camPosUp.x) + fNormMultB));
+		* ((Weather_WindClipped * 0.2f + 0.1f) * (fNormalDirectionScalar2 * Abs(camPosUp.y - camPosUp.x) + fNormMultB));
 
 	
 	CVector vA(1.0f, 0.0f, 0.0f);
@@ -2364,11 +2379,11 @@ CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 			
 			if ( i > 0 && i < 16 && j > 0 && j < 16 )
 			{
-				wavyMorphVerts->x += CGeneral::GetRandomNumberInRange(-1.0f, 1.0f) * randomMove;
+				wavyMorphVerts->x += General_GetRandomNumberInRangeFloat(-1.0f, 1.0f) * randomMove;
 				wavyMorphVerts->x *= fRandomDamp;
 				wavyMorphVerts->x += float(i) * randomDampInv2;
 				
-				wavyMorphVerts->y += CGeneral::GetRandomNumberInRange(-1.0f, 1.0f) * randomMove;
+				wavyMorphVerts->y += General_GetRandomNumberInRangeFloat(-1.0f, 1.0f) * randomMove;
 				wavyMorphVerts->y *= fRandomDamp;
 				wavyMorphVerts->y += float(j) * randomDampInv2;
 			}
@@ -2435,10 +2450,10 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 		RpGeometryLock(maskGeometry, rpGEOMETRYLOCKVERTICES | rpGEOMETRYLOCKNORMALS | rpGEOMETRYLOCKPRELIGHT | rpGEOMETRYLOCKTEXCOORDS);
 	
 	
-	float fMinSparkZ = (fWave2Ampl * CWeather::WindClipped + 0.05f + 
-			0.4f * CWeather::WindClipped + 0.2) * (1.0f - 0.02f * CWeather::SunGlare);
+	float fMinSparkZ = (fWave2Ampl * Weather_WindClipped + 0.05f + 
+			0.4f * Weather_WindClipped + 0.2) * (1.0f - 0.02f * Weather_SunGlare);
 	
-	int32 randval = CGeneral::GetRandomNumber() & 255;
+	int32 randval = General_GetRandomNumber() & 255;
 
 	int16 nX = _RoundValue((int32)((fX - fSectorX) * 0.5f) - 1);
 	int16 nY = _RoundValue((int32)((fY - fSectorY) * 0.5f) - 1);
@@ -2513,7 +2528,7 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2536,7 +2551,7 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2559,7 +2574,7 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2582,7 +2597,7 @@ CWaterLevel::PreCalcWavyMask(float fX, float fY, float fZ,
 								nil,
 								0.0f,
 								15,
-								CGeneral::GetRandomNumberInRange(-90, 90),
+								General_GetRandomNumberInRangeInt(-90, 90),
 								0,
 								0);
 						}
@@ -2775,11 +2790,11 @@ CWaterLevel::RenderBoatWakes(void)
 inline float
 _GetWindedWave(float fX, float fY)
 {
-	float fAngle = (CTimer::GetTimeInMilliseconds() & 4095) * (TWOPI / 4096.0f);	
+	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);	
 	float x = WATER_HUGE_X(fX + WATER_X_OFFSET);
 	float y = WATER_HUGE_Y(fY);
 	
-	float fWindFactor (CWeather::WindClipped * 0.4f + 0.2f);
+	float fWindFactor (Weather_WindClipped * 0.4f + 0.2f);
 	float fWave = Sin(( (x - Floor(x)) + (y - Floor(y)) ) * TWOPI + fAngle);
 
 	return fWindFactor * fWave;
@@ -3146,10 +3161,10 @@ CWaterLevel::RenderSeaBirds()
 {
 	CVector cur_pos = TheCamera.GetPosition();
 	
-	if ( !CCullZones::CamNoRain()
-		&& !CCullZones::PlayerNoRain()
-		&& (CWeather::NewWeatherType == WEATHER_SUNNY || CWeather::NewWeatherType == WEATHER_EXTRA_SUNNY)
-		&& CClock::ms_nGameClockHours > 6 && CClock::ms_nGameClockHours < 20 )
+	if ( !CullZones_CamNoRain()
+		&& !CullZones_PlayerNoRain()
+		&& (Weather_NewWeatherType == WEATHER_SUNNY || Weather_NewWeatherType == WEATHER_EXTRA_SUNNY)
+		&& Clock_hours > 6 && Clock_hours < 20 )
 	{
 		static CVector prev_pos(0.0f, 0.0f, 0.0f);
 		static CVector prev_front(0.0f, 0.0f, 0.0f);
@@ -3158,31 +3173,31 @@ CWaterLevel::RenderSeaBirds()
 		if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
 		{
 			prev_pos = cur_pos;
-			timecounter = CTimer::GetTimeInMilliseconds();
+			timecounter = (*Timer_GetTimeInMilliseconds());
 		}
-		else if ( (CTimer::GetTimeInMilliseconds() - timecounter) > 5000 )
+		else if ( ((*Timer_GetTimeInMilliseconds()) - timecounter) > 5000 )
 		{
 			static int32 birdgenTime = 0;
 			
-			if ( (CTimer::GetTimeInMilliseconds() - birdgenTime) > 1000 )
+			if ( ((*Timer_GetTimeInMilliseconds()) - birdgenTime) > 1000 )
 			{
-				birdgenTime = CTimer::GetTimeInMilliseconds();
+				birdgenTime = (*Timer_GetTimeInMilliseconds());
 				
 				CVector vecPos = cur_pos;
 				
-				float fAngle = CGeneral::GetRandomNumberInRange(90.0f, 150.0f);
+				float fAngle = General_GetRandomNumberInRangeFloat(90.0f, 150.0f);
 				
-				uint16 nSinCosIdx = CGeneral::GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
+				uint16 nSinCosIdx = General_GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
 				
 				float fCos = CParticle::Cos(nSinCosIdx);
 				float fSin = CParticle::Sin(nSinCosIdx);
 
 				vecPos.x += (fCos - fSin) * fAngle;
 				vecPos.y += (fSin + fCos) * fAngle;
-				vecPos.z += CGeneral::GetRandomNumberInRange(10.0f, 30.0f);
+				vecPos.z += General_GetRandomNumberInRangeFloat(10.0f, 30.0f);
 				
-				CVector vecDir(CGeneral::GetRandomNumberInRange(-1.0f, 1.0f),
-								CGeneral::GetRandomNumberInRange(-1.0f, 1.0f),
+				CVector vecDir(General_GetRandomNumberInRangeFloat(-1.0f, 1.0f),
+								General_GetRandomNumberInRangeFloat(-1.0f, 1.0f),
 								0.0f);
 				
 				CParticle::AddParticle(PARTICLE_BIRD_FRONT, vecPos, vecDir, nil, 0.0f, 0, 0, 0, 0);
@@ -3207,21 +3222,21 @@ CWaterLevel::RenderShipsOnHorizon()
 	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
 	{
 		prev_pos = cur_pos;
-		timecounter = CTimer::GetTimeInMilliseconds();
+		timecounter = (*Timer_GetTimeInMilliseconds());
 	}
-	else if ( (CTimer::GetTimeInMilliseconds() - timecounter) > 5000 )
+	else if ( ((*Timer_GetTimeInMilliseconds()) - timecounter) > 5000 )
 	{
 		static int32 shipgenTime = 0;
 		
-		if ( (CTimer::GetTimeInMilliseconds() - shipgenTime) > 4000 )
+		if ( ((*Timer_GetTimeInMilliseconds()) - shipgenTime) > 4000 )
 		{
-			shipgenTime = CTimer::GetTimeInMilliseconds();
+			shipgenTime = (*Timer_GetTimeInMilliseconds());
 			
 			CVector vecPos = cur_pos;
 			
-			float fAngle = CGeneral::GetRandomNumberInRange(450.0f, 750.0f);
+			float fAngle = General_GetRandomNumberInRangeFloat(450.0f, 750.0f);
 			
-			uint16 nSinCosIdx = CGeneral::GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
+			uint16 nSinCosIdx = General_GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
 			
 			float fCos = CParticle::Cos(nSinCosIdx);
 			float fSin = CParticle::Sin(nSinCosIdx);
@@ -3239,13 +3254,13 @@ CWaterLevel::RenderShipsOnHorizon()
 					
 					CVector vecDir
 					(
-						CGeneral::GetRandomNumberInRange(-0.1f, 0.1f),
+						General_GetRandomNumberInRangeFloat(-0.1f, 0.1f),
 						0.0f,
 						0.0f
 					);
 					
 					CParticle::AddParticle(PARTICLE_SHIP_SIDE, vecPos, vecDir,
-						nil, 0.0f, 0, 0, CGeneral::GetRandomNumber() & 7, 0);
+						nil, 0.0f, 0, 0, General_GetRandomNumber() & 7, 0);
 				}
 			}
 		}
@@ -3266,19 +3281,19 @@ CWaterLevel::HandleSeaLifeForms()
 	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
 	{
 		prev_pos = cur_pos;
-		timecounter = CTimer::GetTimeInMilliseconds();
+		timecounter = (*Timer_GetTimeInMilliseconds());
 	}
-	else if ( (CTimer::GetTimeInMilliseconds() - timecounter) > 5000 )
+	else if ( ((*Timer_GetTimeInMilliseconds()) - timecounter) > 5000 )
 	{
-	if ( CWaterCreatures::IsSpaceForMoreWaterCreatures() )
+	if ( WaterCreatures_IsSpaceForMoreWaterCreatures() ) // rouz edit (ChatGPT)
 		{
 			for ( int32 i = 0; i < 3; i++ )
 			{
 				CVector vecPos = cur_pos;
 				
-				float fAngle = CGeneral::GetRandomNumberInRange(15.0f, 30.0f);
+				float fAngle = General_GetRandomNumberInRangeFloat(15.0f, 30.0f);
 				
-				uint16 nSinCosIdx = CGeneral::GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
+				uint16 nSinCosIdx = General_GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
 				
 				float fCos = CParticle::Cos(nSinCosIdx);
 				float fSin = CParticle::Sin(nSinCosIdx);
@@ -3286,12 +3301,12 @@ CWaterLevel::HandleSeaLifeForms()
 				vecPos.x += (fCos - fSin) * fAngle;
 				vecPos.y += (fSin + fCos) * fAngle;
 				
-				CWaterCreatures::CreateOne(vecPos, -1);
+				WaterCreatures_CreateOne(&vecPos, -1); // rouz edit (ChatGPT)
 			}
 		}
 	}
 	
-	CWaterCreatures::UpdateAll();
+	WaterCreatures_UpdateAll(); // rouz edit (ChatGPT)
 }
 
 void
@@ -3313,15 +3328,15 @@ CWaterLevel::HandleBeachToysStuff(void)
 	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
 	{
 		prev_pos = cur_pos;
-		timecounter = CTimer::GetTimeInMilliseconds();
+		timecounter = (*Timer_GetTimeInMilliseconds());
 	}
-	else if ( (CTimer::GetTimeInMilliseconds() - timecounter) > 5000 )
+	else if ( ((*Timer_GetTimeInMilliseconds()) - timecounter) > 5000 )
 	{
-		static int32 toygenTime = CTimer::GetTimeInMilliseconds();
+		static int32 toygenTime = (*Timer_GetTimeInMilliseconds());
 		
-		if ( (CTimer::GetTimeInMilliseconds() - toygenTime) > 20000 )
+		if ( ((*Timer_GetTimeInMilliseconds()) - toygenTime) > 20000 )
 		{
-			toygenTime = CTimer::GetTimeInMilliseconds();
+			toygenTime = (*Timer_GetTimeInMilliseconds());
 			
 			if ( bBeachBallInit ||  (cur_pos - FirstBeachBallPos).MagnitudeSqr() > 6400.0f )
 			{
@@ -3329,9 +3344,9 @@ CWaterLevel::HandleBeachToysStuff(void)
 				{
 					CVector vecPos = cur_pos;
 					
-					float fAngle = CGeneral::GetRandomNumberInRange(20.0f, 35.0f);
+					float fAngle = General_GetRandomNumberInRangeFloat(20.0f, 35.0f);
 					
-					uint16 nSinCosIdx = CGeneral::GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
+					uint16 nSinCosIdx = General_GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
 					
 					float fCos = CParticle::Cos(nSinCosIdx);
 					float fSin = CParticle::Sin(nSinCosIdx);
@@ -3373,9 +3388,9 @@ CWaterLevel::HandleBeachToysStuff(void)
 				{
 					CVector vecPos = cur_pos;
 					
-					float fAngle = CGeneral::GetRandomNumberInRange(20.0f, 35.0f);
+					float fAngle = General_GetRandomNumberInRangeFloat(20.0f, 35.0f);
 					
-					uint16 nSinCosIdx = CGeneral::GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
+					uint16 nSinCosIdx = General_GetRandomNumber() % (CParticle::SIN_COS_TABLE_SIZE-1);
 					
 					float fCos = CParticle::Cos(nSinCosIdx);
 					float fSin = CParticle::Sin(nSinCosIdx);
@@ -3399,7 +3414,7 @@ CWaterLevel::HandleBeachToysStuff(void)
 									CEntity *toy = CreateBeachToy(vecPos, BEACHTOY_ANY_LOUNGE);
 									if ( toy )
 									{
-										toy->SetHeading(DEGTORAD(CGeneral::GetRandomNumberInRange(0.0f, 359.0f)));
+										toy->SetHeading(DEGTORAD(General_GetRandomNumberInRangeFloat(0.0f, 359.0f)));
 										FirstLoungePos = cur_pos;
 										bLoungeInit = false;
 									}
@@ -3424,7 +3439,7 @@ CWaterLevel::CreateBeachToy(CVector const &vec, eBeachToy beachtoy)
 	int model = MI_BEACHBALL;
 	switch (beachtoy) {
 		case BEACHTOY_ANY_LOUNGE:
-			switch ( CGeneral::GetRandomNumber() & 7 ) {
+			switch ( General_GetRandomNumber() & 7 ) {
 				case 1:
 				case 7:
 					finalToy = BEACHTOY_LOUNGE_WOOD_UP;
@@ -3439,7 +3454,7 @@ CWaterLevel::CreateBeachToy(CVector const &vec, eBeachToy beachtoy)
 			}
 			break;
 		case BEACHTOY_ANY_TOWEL:
-			switch ( CGeneral::GetRandomNumber() & 7 ) {
+			switch ( General_GetRandomNumber() & 7 ) {
 				case 1:
 				case 7:
 					finalToy = BEACHTOY_TOWEL2;
@@ -3545,9 +3560,14 @@ CWaterLevel::CreateBeachToy(CVector const &vec, eBeachToy beachtoy)
 		toy->ObjectCreatedBy = TEMP_OBJECT;
 		toy->bIsStatic = isStatic;
 		CObject::nNoTempObjects++;
-		toy->m_nEndOfLifeTime = CTimer::GetTimeInMilliseconds() + 43200000;
+		toy->m_nEndOfLifeTime = (*Timer_GetTimeInMilliseconds()) + 43200000;
 		CWorld::Add(toy);
 		return toy;
 	} else
 		return nil;
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

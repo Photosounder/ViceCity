@@ -87,7 +87,7 @@ AudioVehicleRoad_FlatTyre(cAudioManager *manager, cVehicleParams *params)
 		default:
 			return 1;
 		}
-		modifier = AudioVehicleRoad_Min(1.0f, fabsf(params->m_fVelocityChange) / (0.3f * AudioVehicleRoadHost_MaxVelocity(params->m_pTransmission)));
+		modifier = AudioVehicleRoad_Min(1.0f, fabsf(params->m_fVelocityChange) / (0.3f * (params->m_pTransmission->fMaxVelocity)));
 		if (modifier > 0.01f) {
 			Vol = (FLAT_TYRE_VOLUME * modifier);
 			AudioMath_CalculateDistance(&params->m_bDistanceCalculated, &manager->m_sQueueSample.m_fDistance, params->m_fDistance);
@@ -143,7 +143,7 @@ AudioVehicleRoad_Dry(cAudioManager *manager, cVehicleParams *params)
 			velocity = fabsf(params->m_fVelocityChange);
 			if (velocity > 0.0f) {
 				AudioMath_CalculateDistance(&params->m_bDistanceCalculated, &manager->m_sQueueSample.m_fDistance, params->m_fDistance);
-				Vol = VEHICLE_ROAD_NOISE_VOLUME * AudioVehicleRoad_Min(1.0f, velocity / (0.5f * AudioVehicleRoadHost_MaxVelocity(params->m_pTransmission)));
+				Vol = VEHICLE_ROAD_NOISE_VOLUME * AudioVehicleRoad_Min(1.0f, velocity / (0.5f * (params->m_pTransmission->fMaxVelocity)));
 				manager->m_sQueueSample.m_nVolume = AudioMath_ComputeVolume(Vol, VEHICLE_ROAD_NOISE_MAX_DIST, manager->m_sQueueSample.m_fDistance);
 				if (manager->m_sQueueSample.m_nVolume > 0) {
 					manager->m_sQueueSample.m_nCounter = 0;
@@ -205,7 +205,7 @@ AudioVehicleRoad_Wet(cAudioManager *manager, cVehicleParams *params)
 			velChange = fabsf(params->m_fVelocityChange);
 			if (velChange > 0.0f) {
 				AudioMath_CalculateDistance(&params->m_bDistanceCalculated, &manager->m_sQueueSample.m_fDistance, params->m_fDistance);
-				relativeVelocity = AudioVehicleRoad_Min(1.0f, velChange / (0.5f * AudioVehicleRoadHost_MaxVelocity(params->m_pTransmission)));
+				relativeVelocity = AudioVehicleRoad_Min(1.0f, velChange / (0.5f * (params->m_pTransmission->fMaxVelocity)));
 				Vol = WET_ROAD_NOISE_VOLUME * relativeVelocity * AudioVehicleRoadHost_WetRoads();
 				manager->m_sQueueSample.m_nVolume = AudioMath_ComputeVolume(Vol, WET_ROAD_NOISE_MAX_DIST, manager->m_sQueueSample.m_fDistance);
 				if (manager->m_sQueueSample.m_nVolume > 0) {

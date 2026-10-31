@@ -1,201 +1,203 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CTimeCycle
-{
-	static uint8 m_nAmbientRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientRed_Obj[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientGreen_Obj[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientBlue_Obj[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientRed_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientGreen_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientBlue_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientRed_Obj_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientGreen_Obj_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nAmbientBlue_Obj_Bl[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nDirectionalRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nDirectionalGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nDirectionalBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyTopRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyTopGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyTopBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyBottomRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyBottomGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSkyBottomBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoreRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoreGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoreBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoronaRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoronaGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nSunCoronaBlue[NUMHOURS][NUMWEATHERS];
-	static int8 m_fSunSize[NUMHOURS][NUMWEATHERS];
-	static int8 m_fSpriteSize[NUMHOURS][NUMWEATHERS];
-	static int8 m_fSpriteBrightness[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nShadowStrength[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nLightShadowStrength[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nPoleShadowStrength[NUMHOURS][NUMWEATHERS];
-	static int16 m_fFogStart[NUMHOURS][NUMWEATHERS];
-	static int16 m_fFarClip[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fLightsOnGroundBrightness[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nLowCloudsRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nLowCloudsGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nLowCloudsBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsTopRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsTopGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsTopBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsBottomRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsBottomGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_nFluffyCloudsBottomBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fBlurRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fBlurGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fBlurBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fWaterRed[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fWaterGreen[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fWaterBlue[NUMHOURS][NUMWEATHERS];
-	static uint8 m_fWaterAlpha[NUMHOURS][NUMWEATHERS];
-
-	static float m_fCurrentAmbientRed;
-	static float m_fCurrentAmbientGreen;
-	static float m_fCurrentAmbientBlue;
-	static float m_fCurrentAmbientRed_Obj;
-	static float m_fCurrentAmbientGreen_Obj;
-	static float m_fCurrentAmbientBlue_Obj;
-	static float m_fCurrentAmbientRed_Bl;
-	static float m_fCurrentAmbientGreen_Bl;
-	static float m_fCurrentAmbientBlue_Bl;
-	static float m_fCurrentAmbientRed_Obj_Bl;
-	static float m_fCurrentAmbientGreen_Obj_Bl;
-	static float m_fCurrentAmbientBlue_Obj_Bl;
-	static float m_fCurrentDirectionalRed;
-	static float m_fCurrentDirectionalGreen;
-	static float m_fCurrentDirectionalBlue;
-	static int32 m_nCurrentSkyTopRed;
-	static int32 m_nCurrentSkyTopGreen;
-	static int32 m_nCurrentSkyTopBlue;
-	static int32 m_nCurrentSkyBottomRed;
-	static int32 m_nCurrentSkyBottomGreen;
-	static int32 m_nCurrentSkyBottomBlue;
-	static int32 m_nCurrentSunCoreRed;
-	static int32 m_nCurrentSunCoreGreen;
-	static int32 m_nCurrentSunCoreBlue;
-	static int32 m_nCurrentSunCoronaRed;
-	static int32 m_nCurrentSunCoronaGreen;
-	static int32 m_nCurrentSunCoronaBlue;
-	static float m_fCurrentSunSize;
-	static float m_fCurrentSpriteSize;
-	static float m_fCurrentSpriteBrightness;
-	static int32 m_nCurrentShadowStrength;
-	static int32 m_nCurrentLightShadowStrength;
-	static int32 m_nCurrentPoleShadowStrength;
-	static float m_fCurrentFogStart;
-	static float m_fCurrentFarClip;
-	static float m_fCurrentLightsOnGroundBrightness;
-	static int32 m_nCurrentLowCloudsRed;
-	static int32 m_nCurrentLowCloudsGreen;
-	static int32 m_nCurrentLowCloudsBlue;
-	static int32 m_nCurrentFluffyCloudsTopRed;
-	static int32 m_nCurrentFluffyCloudsTopGreen;
-	static int32 m_nCurrentFluffyCloudsTopBlue;
-	static int32 m_nCurrentFluffyCloudsBottomRed;
-	static int32 m_nCurrentFluffyCloudsBottomGreen;
-	static int32 m_nCurrentFluffyCloudsBottomBlue;
-	static float m_fCurrentBlurRed;
-	static float m_fCurrentBlurGreen;
-	static float m_fCurrentBlurBlue;
-	static float m_fCurrentWaterRed;
-	static float m_fCurrentWaterGreen;
-	static float m_fCurrentWaterBlue;
-	static float m_fCurrentWaterAlpha;
-	static int32 m_nCurrentFogColourRed;
-	static int32 m_nCurrentFogColourGreen;
-	static int32 m_nCurrentFogColourBlue;
-
-	static int32 m_FogReduction;
-
-public:
-	static int32 m_bExtraColourOn;
-	static int32 m_ExtraColour;
-	static float m_ExtraColourInter;
-	static int32 m_CurrentStoredValue;
-	static CVector m_VectorToSun[16];
-	static float m_fShadowFrontX[16];
-	static float m_fShadowFrontY[16];
-	static float m_fShadowSideX[16];
-	static float m_fShadowSideY[16];
-	static float m_fShadowDisplacementX[16];
-	static float m_fShadowDisplacementY[16];
-
-	static float GetAmbientRed(void) { return m_fCurrentAmbientRed; }
-	static float GetAmbientGreen(void) { return m_fCurrentAmbientGreen; }
-	static float GetAmbientBlue(void) { return m_fCurrentAmbientBlue; }
-	static float GetAmbientRed_Obj(void) { return m_fCurrentAmbientRed_Obj; }
-	static float GetAmbientGreen_Obj(void) { return m_fCurrentAmbientGreen_Obj; }
-	static float GetAmbientBlue_Obj(void) { return m_fCurrentAmbientBlue_Obj; }
-	static float GetAmbientRed_Bl(void) { return m_fCurrentAmbientRed_Bl; }
-	static float GetAmbientGreen_Bl(void) { return m_fCurrentAmbientGreen_Bl; }
-	static float GetAmbientBlue_Bl(void) { return m_fCurrentAmbientBlue_Bl; }
-	static float GetAmbientRed_Obj_Bl(void) { return m_fCurrentAmbientRed_Obj_Bl; }
-	static float GetAmbientGreen_Obj_Bl(void) { return m_fCurrentAmbientGreen_Obj_Bl; }
-	static float GetAmbientBlue_Obj_Bl(void) { return m_fCurrentAmbientBlue_Obj_Bl; }
-	static float GetDirectionalRed(void) { return m_fCurrentDirectionalRed; }
-	static float GetDirectionalGreen(void) { return m_fCurrentDirectionalGreen; }
-	static float GetDirectionalBlue(void) { return m_fCurrentDirectionalBlue; }
-	static int32 GetSkyTopRed(void) { return m_nCurrentSkyTopRed; }
-	static int32 GetSkyTopGreen(void) { return m_nCurrentSkyTopGreen; }
-	static int32 GetSkyTopBlue(void) { return m_nCurrentSkyTopBlue; }
-	static int32 GetSkyBottomRed(void) { return m_nCurrentSkyBottomRed; }
-	static int32 GetSkyBottomGreen(void) { return m_nCurrentSkyBottomGreen; }
-	static int32 GetSkyBottomBlue(void) { return m_nCurrentSkyBottomBlue; }
-	static int32 GetSunCoreRed(void) { return m_nCurrentSunCoreRed; }
-	static int32 GetSunCoreGreen(void) { return m_nCurrentSunCoreGreen; }
-	static int32 GetSunCoreBlue(void) { return m_nCurrentSunCoreBlue; }
-	static int32 GetSunCoronaRed(void) { return m_nCurrentSunCoronaRed; }
-	static int32 GetSunCoronaGreen(void) { return m_nCurrentSunCoronaGreen; }
-	static int32 GetSunCoronaBlue(void) { return m_nCurrentSunCoronaBlue; }
-	static float GetSunSize(void) { return m_fCurrentSunSize; }
-	static float GetSpriteBrightness(void) { return m_fCurrentSpriteBrightness; }
-	static float GetSpriteSize(void) { return m_fCurrentSpriteSize; }
-	static int32 GetShadowStrength(void) { return m_nCurrentShadowStrength; }
-	static int32 GetLightShadowStrength(void) { return m_nCurrentLightShadowStrength; }
-	static float GetLightOnGroundBrightness(void) { return m_fCurrentLightsOnGroundBrightness; }
-	static float GetFarClip(void) { return m_fCurrentFarClip; }
-	static float GetFogStart(void) { return m_fCurrentFogStart; }
-
-	static int32 GetLowCloudsRed(void) { return m_nCurrentLowCloudsRed; }
-	static int32 GetLowCloudsGreen(void) { return m_nCurrentLowCloudsGreen; }
-	static int32 GetLowCloudsBlue(void) { return m_nCurrentLowCloudsBlue; }
-	static int32 GetFluffyCloudsTopRed(void) { return m_nCurrentFluffyCloudsTopRed; }
-	static int32 GetFluffyCloudsTopGreen(void) { return m_nCurrentFluffyCloudsTopGreen; }
-	static int32 GetFluffyCloudsTopBlue(void) { return m_nCurrentFluffyCloudsTopBlue; }
-	static int32 GetFluffyCloudsBottomRed(void) { return m_nCurrentFluffyCloudsBottomRed; }
-	static int32 GetFluffyCloudsBottomGreen(void) { return m_nCurrentFluffyCloudsBottomGreen; }
-	static int32 GetFluffyCloudsBottomBlue(void) { return m_nCurrentFluffyCloudsBottomBlue; }
-	static int32 GetFogRed(void) { return m_nCurrentFogColourRed; }
-	static int32 GetFogGreen(void) { return m_nCurrentFogColourGreen; }
-	static int32 GetFogBlue(void) { return m_nCurrentFogColourBlue; }
-	static int32 GetFogReduction(void) { return m_FogReduction; }
-
-	static int32 GetBlurRed(void) { return m_fCurrentBlurRed; }
-	static int32 GetBlurGreen(void) { return m_fCurrentBlurGreen; }
-	static int32 GetBlurBlue(void) { return m_fCurrentBlurBlue; }
-	static int32 GetWaterRed(void) { return m_fCurrentWaterRed; }
-	static int32 GetWaterGreen(void) { return m_fCurrentWaterGreen; }
-	static int32 GetWaterBlue(void) { return m_fCurrentWaterBlue; }
-	static int32 GetWaterAlpha(void) { return m_fCurrentWaterAlpha; }
-
-	static void Initialise(void);
-	static void Update(void);
-	static float Interpolate(int8 *a, int8 *b);
-	static float Interpolate(uint8 *a, uint8 *b);
-	static float Interpolate(int16 *a, int16 *b);
-	static void StartExtraColour(int32 c, bool fade);
-	static void StopExtraColour(bool fade);
-	static CVector &GetSunDirection(void) { return m_VectorToSun[m_CurrentStoredValue]; }
-	static float GetShadowFrontX(void) { return m_fShadowFrontX[m_CurrentStoredValue]; }
-	static float GetShadowFrontY(void) { return m_fShadowFrontY[m_CurrentStoredValue]; }
-	static float GetShadowSideX(void) { return m_fShadowSideX[m_CurrentStoredValue]; }
-	static float GetShadowSideY(void) { return m_fShadowSideY[m_CurrentStoredValue]; }
-	static float GetShadowDisplacementX(void) { return m_fShadowDisplacementX[m_CurrentStoredValue]; }
-	static float GetShadowDisplacementY(void) { return m_fShadowDisplacementY[m_CurrentStoredValue]; }
-};
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
+typedef struct TimeCycleVector {float x,y,z;} TimeCycleVector;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern uint8_t TimeCycle_m_nAmbientRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientRed_Obj[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientGreen_Obj[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientBlue_Obj[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientRed_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientGreen_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientBlue_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientRed_Obj_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientGreen_Obj_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nAmbientBlue_Obj_Bl[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nDirectionalRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nDirectionalGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nDirectionalBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyTopRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyTopGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyTopBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyBottomRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyBottomGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSkyBottomBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoreRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoreGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoreBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoronaRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoronaGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nSunCoronaBlue[NUMHOURS][NUMWEATHERS];
+extern int8_t TimeCycle_m_fSunSize[NUMHOURS][NUMWEATHERS];
+extern int8_t TimeCycle_m_fSpriteSize[NUMHOURS][NUMWEATHERS];
+extern int8_t TimeCycle_m_fSpriteBrightness[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nShadowStrength[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nLightShadowStrength[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nPoleShadowStrength[NUMHOURS][NUMWEATHERS];
+extern int16_t TimeCycle_m_fFogStart[NUMHOURS][NUMWEATHERS];
+extern int16_t TimeCycle_m_fFarClip[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fLightsOnGroundBrightness[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nLowCloudsRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nLowCloudsGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nLowCloudsBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsTopRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsTopGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsTopBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsBottomRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsBottomGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_nFluffyCloudsBottomBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fBlurRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fBlurGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fBlurBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fWaterRed[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fWaterGreen[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fWaterBlue[NUMHOURS][NUMWEATHERS];
+extern uint8_t TimeCycle_m_fWaterAlpha[NUMHOURS][NUMWEATHERS];
+extern float TimeCycle_m_fCurrentAmbientRed;
+extern float TimeCycle_m_fCurrentAmbientGreen;
+extern float TimeCycle_m_fCurrentAmbientBlue;
+extern float TimeCycle_m_fCurrentAmbientRed_Obj;
+extern float TimeCycle_m_fCurrentAmbientGreen_Obj;
+extern float TimeCycle_m_fCurrentAmbientBlue_Obj;
+extern float TimeCycle_m_fCurrentAmbientRed_Bl;
+extern float TimeCycle_m_fCurrentAmbientGreen_Bl;
+extern float TimeCycle_m_fCurrentAmbientBlue_Bl;
+extern float TimeCycle_m_fCurrentAmbientRed_Obj_Bl;
+extern float TimeCycle_m_fCurrentAmbientGreen_Obj_Bl;
+extern float TimeCycle_m_fCurrentAmbientBlue_Obj_Bl;
+extern float TimeCycle_m_fCurrentDirectionalRed;
+extern float TimeCycle_m_fCurrentDirectionalGreen;
+extern float TimeCycle_m_fCurrentDirectionalBlue;
+extern int32_t TimeCycle_m_nCurrentSkyTopRed;
+extern int32_t TimeCycle_m_nCurrentSkyTopGreen;
+extern int32_t TimeCycle_m_nCurrentSkyTopBlue;
+extern int32_t TimeCycle_m_nCurrentSkyBottomRed;
+extern int32_t TimeCycle_m_nCurrentSkyBottomGreen;
+extern int32_t TimeCycle_m_nCurrentSkyBottomBlue;
+extern int32_t TimeCycle_m_nCurrentSunCoreRed;
+extern int32_t TimeCycle_m_nCurrentSunCoreGreen;
+extern int32_t TimeCycle_m_nCurrentSunCoreBlue;
+extern int32_t TimeCycle_m_nCurrentSunCoronaRed;
+extern int32_t TimeCycle_m_nCurrentSunCoronaGreen;
+extern int32_t TimeCycle_m_nCurrentSunCoronaBlue;
+extern float TimeCycle_m_fCurrentSunSize;
+extern float TimeCycle_m_fCurrentSpriteSize;
+extern float TimeCycle_m_fCurrentSpriteBrightness;
+extern int32_t TimeCycle_m_nCurrentShadowStrength;
+extern int32_t TimeCycle_m_nCurrentLightShadowStrength;
+extern int32_t TimeCycle_m_nCurrentPoleShadowStrength;
+extern float TimeCycle_m_fCurrentFogStart;
+extern float TimeCycle_m_fCurrentFarClip;
+extern float TimeCycle_m_fCurrentLightsOnGroundBrightness;
+extern int32_t TimeCycle_m_nCurrentLowCloudsRed;
+extern int32_t TimeCycle_m_nCurrentLowCloudsGreen;
+extern int32_t TimeCycle_m_nCurrentLowCloudsBlue;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsTopRed;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsTopGreen;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsTopBlue;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsBottomRed;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsBottomGreen;
+extern int32_t TimeCycle_m_nCurrentFluffyCloudsBottomBlue;
+extern float TimeCycle_m_fCurrentBlurRed;
+extern float TimeCycle_m_fCurrentBlurGreen;
+extern float TimeCycle_m_fCurrentBlurBlue;
+extern float TimeCycle_m_fCurrentWaterRed;
+extern float TimeCycle_m_fCurrentWaterGreen;
+extern float TimeCycle_m_fCurrentWaterBlue;
+extern float TimeCycle_m_fCurrentWaterAlpha;
+extern int32_t TimeCycle_m_nCurrentFogColourRed;
+extern int32_t TimeCycle_m_nCurrentFogColourGreen;
+extern int32_t TimeCycle_m_nCurrentFogColourBlue;
+extern int32_t TimeCycle_m_FogReduction;
+extern int32_t TimeCycle_m_bExtraColourOn;
+extern int32_t TimeCycle_m_ExtraColour;
+extern float TimeCycle_m_ExtraColourInter;
+extern int32_t TimeCycle_m_CurrentStoredValue;
+extern TimeCycleVector TimeCycle_m_VectorToSun[16];
+extern float TimeCycle_m_fShadowFrontX[16];
+extern float TimeCycle_m_fShadowFrontY[16];
+extern float TimeCycle_m_fShadowSideX[16];
+extern float TimeCycle_m_fShadowSideY[16];
+extern float TimeCycle_m_fShadowDisplacementX[16];
+extern float TimeCycle_m_fShadowDisplacementY[16];
+void TimeCycle_Initialise(void);
+void TimeCycle_Update(void);
+float TimeCycle_InterpolateI8(int8_t *a,int8_t *b);
+float TimeCycle_InterpolateU8(uint8_t *a,uint8_t *b);
+float TimeCycle_InterpolateI16(int16_t *a,int16_t *b);
+void TimeCycle_StartExtraColour(int32_t c,bool fade);
+void TimeCycle_StopExtraColour(bool fade);
+float TimeCycle_GetAmbientRed(void);
+float TimeCycle_GetAmbientGreen(void);
+float TimeCycle_GetAmbientBlue(void);
+float TimeCycle_GetAmbientRed_Obj(void);
+float TimeCycle_GetAmbientGreen_Obj(void);
+float TimeCycle_GetAmbientBlue_Obj(void);
+float TimeCycle_GetAmbientRed_Bl(void);
+float TimeCycle_GetAmbientGreen_Bl(void);
+float TimeCycle_GetAmbientBlue_Bl(void);
+float TimeCycle_GetAmbientRed_Obj_Bl(void);
+float TimeCycle_GetAmbientGreen_Obj_Bl(void);
+float TimeCycle_GetAmbientBlue_Obj_Bl(void);
+float TimeCycle_GetDirectionalRed(void);
+float TimeCycle_GetDirectionalGreen(void);
+float TimeCycle_GetDirectionalBlue(void);
+int32_t TimeCycle_GetSkyTopRed(void);
+int32_t TimeCycle_GetSkyTopGreen(void);
+int32_t TimeCycle_GetSkyTopBlue(void);
+int32_t TimeCycle_GetSkyBottomRed(void);
+int32_t TimeCycle_GetSkyBottomGreen(void);
+int32_t TimeCycle_GetSkyBottomBlue(void);
+int32_t TimeCycle_GetSunCoreRed(void);
+int32_t TimeCycle_GetSunCoreGreen(void);
+int32_t TimeCycle_GetSunCoreBlue(void);
+int32_t TimeCycle_GetSunCoronaRed(void);
+int32_t TimeCycle_GetSunCoronaGreen(void);
+int32_t TimeCycle_GetSunCoronaBlue(void);
+float TimeCycle_GetSunSize(void);
+float TimeCycle_GetSpriteBrightness(void);
+float TimeCycle_GetSpriteSize(void);
+int32_t TimeCycle_GetShadowStrength(void);
+int32_t TimeCycle_GetLightShadowStrength(void);
+float TimeCycle_GetLightOnGroundBrightness(void);
+float TimeCycle_GetFarClip(void);
+float TimeCycle_GetFogStart(void);
+int32_t TimeCycle_GetLowCloudsRed(void);
+int32_t TimeCycle_GetLowCloudsGreen(void);
+int32_t TimeCycle_GetLowCloudsBlue(void);
+int32_t TimeCycle_GetFluffyCloudsTopRed(void);
+int32_t TimeCycle_GetFluffyCloudsTopGreen(void);
+int32_t TimeCycle_GetFluffyCloudsTopBlue(void);
+int32_t TimeCycle_GetFluffyCloudsBottomRed(void);
+int32_t TimeCycle_GetFluffyCloudsBottomGreen(void);
+int32_t TimeCycle_GetFluffyCloudsBottomBlue(void);
+int32_t TimeCycle_GetFogRed(void);
+int32_t TimeCycle_GetFogGreen(void);
+int32_t TimeCycle_GetFogBlue(void);
+int32_t TimeCycle_GetFogReduction(void);
+int32_t TimeCycle_GetBlurRed(void);
+int32_t TimeCycle_GetBlurGreen(void);
+int32_t TimeCycle_GetBlurBlue(void);
+int32_t TimeCycle_GetWaterRed(void);
+int32_t TimeCycle_GetWaterGreen(void);
+int32_t TimeCycle_GetWaterBlue(void);
+int32_t TimeCycle_GetWaterAlpha(void);
+TimeCycleVector *TimeCycle_GetSunDirection(void);
+float TimeCycle_GetShadowFrontX(void);
+float TimeCycle_GetShadowFrontY(void);
+float TimeCycle_GetShadowSideX(void);
+float TimeCycle_GetShadowSideY(void);
+float TimeCycle_GetShadowDisplacementX(void);
+float TimeCycle_GetShadowDisplacementY(void);
+#ifdef __cplusplus
+}
+class CVector;
+CVector TimeCycle_ToNativeVector(TimeCycleVector value);
+#endif
+//- rouz edit (ChatGPT)

@@ -1,0 +1,175 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeSphereDefault(void *memory,int collision);
+extern "C" bool NativeSphereRay(void *self,const void *from,const void *dir,void *entry,void *exit);
+static CSphere staticBase[3];
+static CColSphere staticCollision[3];
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0,hits=0,misses=0;
+static uint32_t randomState=0x18273645;
+static void require(bool condition)
+{
+    // Report the first failed contract without a native error dialog
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable bytes across separate original and C executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence input generation explicitly before constructing argument lists
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Initialize every coordinate, metadata byte and tail-padding byte
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static CSphere &bounds(CColSphere &value)
+{
+    // Select the original base or its actual replacement subobject at offset zero
+#ifdef ORIGINAL
+    return value;
+#else
+    return value.bounds;
+#endif
+}
+static CVector nextVector()
+{
+    // Keep random draws independent of constructor argument evaluation order
+    int x=(int)(nextBits()%129)-64;int y=(int)(nextBits()%129)-64;int z=(int)(nextBits()%129)-64;
+    return CVector(x/8.0f,y/8.0f,z/8.0f);
+}
+static void canonical(float &value)
+{
+    // Normalize arithmetic NaN payloads while preserving all finite and signed-zero result bits
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void pointResult(CColPoint &point)
+{
+    // Retain complete contact bytes while allowing platform-specific arithmetic NaN payloads
+    canonical(point.point.x);canonical(point.point.y);canonical(point.point.z);
+    canonical(point.normal.x);canonical(point.normal.y);canonical(point.normal.z);canonical(point.depth);
+    observe(&point,sizeof(point));
+}
+static void lifetimesAndSetters()
+{
+    // Check both no-write default lifetimes through separately compiled construction boundaries
+    alignas(CColSphere) unsigned char memory[20],expected[20];memset(expected,0xa5,20);
+    for(int collision=0;collision<2;++collision){
+        memcpy(memory,expected,20);void *value=NativeSphereDefault(memory,collision);
+        require(value==memory&&memcmp(memory,expected,20)==0);observe(memory,20);
+        if(collision)((CColSphere*)value)->~CColSphere();else ((CSphere*)value)->~CSphere();++states;
+    }
+    // Preserve zero-filled static records without adding initialization policy
+    unsigned char zero[60]={0};require(memcmp(staticBase,zero,sizeof(staticBase))==0&&memcmp(staticCollision,zero,sizeof(staticCollision))==0);observe(staticBase,sizeof(staticBase));observe(staticCollision,sizeof(staticCollision));++states;
+    // Compare every setter with an external or self-aliased center while preserving untouched bytes
+    for(unsigned test=0;test<512;++test)for(unsigned alias=0;alias<2;++alias)for(unsigned op=0;op<3;++op){
+        CColSphere actual,model;CVector center;fill(&actual,20);fill(&center,12);memcpy(&model,&actual,20);
+        const void *source=alias?(void*)&bounds(actual).center:(void*)&center;
+        const void *expectedSource=alias?(void*)&bounds(model).center:(void*)&center;
+        float radius=(int(test)-256)/16.0f;if(!alias)memcpy(&model,expectedSource,12);memcpy((unsigned char*)&model+12,&radius,4);
+        if(op==0)Run_BaseSet(&bounds(actual),radius,source);
+        else if(op==1)Run_Bounds(&actual,radius,source);
+        else{model.surface=(uint8_t)test;model.piece=(uint8_t)(test>>1);Run_Set(&actual,radius,source,model.surface,model.piece);}
+        require(memcmp(&actual,&model,20)==0);observe(&actual,20);++states;
+    }
+    // Cover every surface/piece pair with arbitrary coordinate and radius payloads
+    for(unsigned test=0;test<65536;++test){
+        CColSphere actual,model;CVector center;fill(&actual,20);fill(&center,12);uint32_t bits=(test<<16)|test;float radius;memcpy(&radius,&bits,4);bits^=0x80000000U;memcpy(&center.z,&bits,4);
+        memcpy(&model,&actual,20);memcpy(&model,&center,12);memcpy((unsigned char*)&model+12,&radius,4);model.surface=(uint8_t)test;model.piece=(uint8_t)(test>>8);
+        Run_Set(&actual,radius,&center,model.surface,model.piece);require(memcmp(&actual,&model,20)==0);observe(&actual,20);++states;
+    }
+}
+struct RayState {CColSphere sphere;CVector vectors[4];};
+static void *slot(RayState &value,unsigned index)
+{
+    // Return actual vector subobjects so every old C++ reference alias is valid
+    return index==0?(void*)&bounds(value.sphere).center:(void*)&value.vectors[index-1];
+}
+static void initializeRay(RayState &value,unsigned test)
+{
+    // Supply finite origins, centers and directions including zero and nonunit directions
+    memset(&value,0xa5,sizeof(value));CVector center=nextVector();float radius=(test%17)/2.0f;
+    Run_Set(&value.sphere,radius,&center,(uint8_t)test,(uint8_t)(test>>8));
+    for(unsigned i=0;i<4;++i)value.vectors[i]=nextVector();
+    if(test%5==0)value.vectors[0]=center;
+    if(test%5==1)value.vectors[1]=CVector(0,0,0);
+    if(test%5==2)value.vectors[1]=CVector(1,0,0);
+}
+static void rayAliases()
+{
+    // Exercise every combination of shared input/output vectors including the sphere's own center
+    for(unsigned test=0;test<64;++test)for(unsigned from=0;from<5;++from)for(unsigned dir=0;dir<5;++dir)for(unsigned entry=0;entry<5;++entry)for(unsigned exit=0;exit<5;++exit){
+        RayState initial,actual,native;initializeRay(initial,test);memcpy(&actual,&initial,sizeof(actual));memcpy(&native,&initial,sizeof(native));
+        bool result=Run_Ray(&actual.sphere,slot(actual,from),slot(actual,dir),slot(actual,entry),slot(actual,exit));
+        bool nativeResult=NativeSphereRay(&native.sphere,slot(native,from),slot(native,dir),slot(native,entry),slot(native,exit));
+        require(result==nativeResult&&memcmp(&actual,&native,sizeof(actual))==0);
+        if(!result){require(memcmp(&actual,&initial,sizeof(actual))==0);++misses;}
+        else{require(memcmp((unsigned char*)&actual.sphere+12,(unsigned char*)&initial.sphere+12,8)==0);++hits;}
+        for(unsigned i=0;i<5;++i)if(i!=entry&&i!=exit)require(memcmp(slot(actual,i),slot(initial,i),12)==0);
+        observe(&actual,sizeof(actual));observe(&result,sizeof(result));++states;
+    }
+    // Retain the exact hit and output behavior for nonfinite and signed-zero ray inputs
+    const uint32_t special[]={0,0x80000000U,1,0x80000001U,0x3f800000U,0xbf800000U,0x7f7fffffU,0xff7fffffU,0x7f800000U,0xff800000U,0x7fc12345U,0xffc98765U,0x7f812345U};
+    for(unsigned i=0;i<13;++i)for(unsigned j=0;j<13;++j){
+        RayState value;initializeRay(value,i+j);memcpy(&value.vectors[0].x,&special[i],4);memcpy(&value.vectors[1].z,&special[j],4);
+        bool result=Run_Ray(&value.sphere,&value.vectors[0],&value.vectors[1],&value.vectors[2],&value.vectors[3]);
+        for(unsigned n=2;n<4;++n){canonical(value.vectors[n].x);canonical(value.vectors[n].y);canonical(value.vectors[n].z);observe(&value.vectors[n],12);}
+        observe(&result,sizeof(result));++states;
+    }
+    require(hits>0&&misses>0);
+}
+static void nativeBoundaries()
+{
+    // Preserve every bit of the center/radius quadword and synthesize only unused scratch metadata
+    for(unsigned test=0;test<65536;++test){
+        CVuVector quad;fill(&quad,16);uint32_t bits=(test<<16)|test;memcpy(&quad.w,&bits,4);
+        CSphere base;CColSphere collision;memset(&collision,0xa5,20);Run_RawBase(&base,&quad);Run_RawCol(&collision,&quad);
+        require(memcmp(&base,&quad,16)==0&&memcmp(&bounds(collision),&quad,16)==0&&collision.surface==0&&collision.piece==0);
+#ifndef ORIGINAL
+        CVuVector restored=Sphere_ToVu(base);require(memcmp(&restored,&quad,16)==0);
+#endif
+        observe(&base,16);observe(&collision,18);++states;
+    }
+    // Compare the exact original strided transform with typed C sphere access and output guards
+    for(unsigned test=0;test<1024;++test){
+        CMatrix matrix;CColSphere spheres[8];CVuVector actual[10],expected[10];
+        for(unsigned i=0;i<4;++i)for(unsigned j=0;j<4;++j){int value=(int)(nextBits()%257)-128;matrix.f[i][j]=value/16.0f;}
+        for(unsigned i=0;i<8;++i){CVector center=nextVector();Run_Set(&spheres[i],(i+1)/4.0f,&center,(uint8_t)i,7);}
+        unsigned count=test%9;memset(actual,0xa5,sizeof(actual));memset(expected,0xa5,sizeof(expected));
+        for(unsigned i=0;i<count;++i){CVector center;memcpy(&center,&bounds(spheres[i]).center,12);CVector transformed=matrix*center;memcpy(&expected[i+1],&transformed,12);expected[i+1].w=bounds(spheres[i]).radius;}
+#ifdef ORIGINAL
+        TransformPoints(actual+1,(int)count,matrix,&spheres[0].center,20);
+#else
+        TransformColSpheres(actual+1,(int)count,matrix,spheres);
+#endif
+        for(unsigned i=0;i<count;++i){actual[i+1].w=bounds(spheres[i]).radius;require(memcmp(&actual[i+1],&expected[i+1],16)==0);observe(&actual[i+1],16);}
+        require(memcmp(actual,expected,16)==0&&memcmp(&actual[count+1],&expected[count+1],16)==0);++states;
+    }
+}
+static void geometry()
+{
+    // Exercise six actual native sphere collision consumers with ordinary and degenerate geometry
+    for(unsigned test=0;test<8192;++test){
+        CColSphere a,b;memset(&a,0xa5,20);memset(&b,0x6b,20);CVector ac=nextVector(),bc=nextVector();if(test%13==0)bc=ac;
+        Run_Set(&a,(test%17)/2.0f,&ac,19,7);Run_Set(&b,(test%11)/2.0f,&bc,13,5);
+        CVector lo=nextVector(),hi=lo+CVector(4,4,4);CColBox box;memset(&box,0x3c,sizeof(box));memcpy(&box.bounds.min,&lo,12);memcpy(&box.bounds.max,&hi,12);box.surface=5;box.piece=9;
+        CColLine line;memset(&line,0xa5,sizeof(line));CVector start=nextVector(),end=nextVector();if(test%7==0)end=start;memcpy(&line.p0,&start,12);memcpy(&line.p1,&end,12);
+        uint8_t result[6];result[0]=CCollision::TestSphereSphere(bounds(a),bounds(b));result[1]=CCollision::TestSphereBox(bounds(a),box.bounds);result[2]=CCollision::TestLineSphere(line,a);
+        CColPoint point;memset(&point,0xa5,sizeof(point));float limit=100.f;result[3]=CCollision::ProcessSphereSphere(a,b,point,limit);pointResult(point);canonical(limit);observe(&limit,4);
+        memset(&point,0xa5,sizeof(point));limit=100.f;result[4]=CCollision::ProcessSphereBox(a,box,point,limit);pointResult(point);canonical(limit);observe(&limit,4);
+        memset(&point,0xa5,sizeof(point));limit=1.f;result[5]=CCollision::ProcessLineSphere(line,a,point,limit);pointResult(point);canonical(limit);observe(&limit,4);observe(result,6);++states;
+    }
+}
+int main()
+{
+    // Verify complete ownership, reference aliasing, native boundaries and downstream geometry
+    lifetimesAndSetters();rayAliases();nativeBoundaries();geometry();printf("states=%u hits=%u misses=%u hash=%016" PRIx64 "\n",states,hits,misses,hashValue);return 0;
+}

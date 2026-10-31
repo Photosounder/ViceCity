@@ -1,0 +1,60 @@
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "entry.h"
+static unsigned checks,reports;
+static uint64_t digest=UINT64_C(1469598103934665603);
+static void require(int value)
+{
+    // Fail quietly if either mapping or its continuing assertion contract differs
+    ++checks;if(!value){fprintf(stderr,"bone check %u failed\n",checks);exit(2);}
+}
+static void record(unsigned value)
+{
+    // Compare defined results and diagnostic counts without including code or string addresses
+    digest=(digest^value)*UINT64_C(1099511628211);
+}
+void re3_assert(const char *expression,const char *file,unsigned line,const char *function)
+{
+    // Verify the original project report and deliberately return to test the fallback result
+    require(strcmp(expression,"0 && \"this node has no bone\"")==0);require(file!=NULL&&line>0);require(strcmp(function,"ConvertPedNode2BoneTag")==0);++reports;
+}
+static void test(int input)
+{
+    // Check each node and tag against independent expected maps including all unknown input values
+    static const int nodes[]={-1,3,5,32,22,34,24,41,51,43,53,52,42,33,23,31,21,4};
+    static const struct {int tag;const char *name;} names[]={
+        {0,"Root"},{1,"Pelvis"},{2,"Spine"},{3,"Spine1"},{4,"Neck"},{5,"Head"},
+        {21,"Bip01 R Clavicle"},{22,"R UpperArm"},{23,"R Forearm"},{24,"R Hand"},{25,"R Fingers"},
+        {31,"Bip01 L Clavicle"},{32,"L UpperArm"},{33,"L Forearm"},{34,"L Hand"},{35,"L Fingers"},
+        {41,"L Thigh"},{42,"L Calf"},{43,"L Foot"},{51,"R Thigh"},{52,"R Calf"},{53,"R Foot"}
+    };
+    int expected=input>0&&input<18?nodes[input]:-1;unsigned previous=reports;int value=Run_Node(input);
+    require(value==expected);record((unsigned)value);
+#ifndef MASTER
+    // Unsupported nodes report once through the project handler and still return minus one
+    require(reports==previous+(expected==-1));
+#else
+    // MASTER keeps the fallback result while omitting the report
+    require(reports==previous);
+#endif
+    const char *name=Run_Name(input),*wanted=NULL;
+    for(unsigned i=0;i<sizeof(names)/sizeof(names[0]);++i)if(input==names[i].tag)wanted=names[i].name;
+    require((name==NULL)==(wanted==NULL));
+    if(wanted){
+        // Preserve exact case and spelling of every public bone name
+        require(strcmp(name,wanted)==0);while(*name)record((unsigned char)*name++);
+    }
+    record(name!=NULL);record(reports);
+}
+int main(void)
+{
+    // Cover the complete neighborhood of all node and tag values plus both signed integer limits
+    for(int value=-2048;value<=2048;++value)test(value);
+    test(INT_MIN);test(INT_MIN+1);test(INT_MAX-1);test(INT_MAX);
+    for(unsigned i=0;i<41;++i)record((unsigned)Run_Constant(i));
+    printf("inputs=4101 checks=%u reports=%u hash=%016llx\n",checks,reports,(unsigned long long)digest);
+    return 0;
+}

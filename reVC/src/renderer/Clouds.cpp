@@ -1,3 +1,8 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -22,845 +27,360 @@
 #define SMALLSTRIPHEIGHT 4.0f
 #define HORIZSTRIPHEIGHT 48.0f
 
-RwTexture *gpCloudTex[5];
 
-float CClouds::CloudRotation;
-uint32 CClouds::IndividualRotation;
 
-float CClouds::ms_cameraRoll;
-float CClouds::ms_horizonZ;
-float CClouds::ms_HorizonTilt;
-CRGBA CClouds::ms_colourTop;
-CRGBA CClouds::ms_colourBottom;
-CRGBA CClouds::ms_colourBkGrd;
 
 //+ rouz edit (ChatGPT)
-static float HorizonX;
-static float HorizonSkyX;
-static float HorizonSkyY;
-static float HorizonLineX;
-static float HorizonLineY;
-struct HorizonState
-{
-	float x;
-	float z;
-	float skyX;
-	float skyY;
-	float lineX;
-	float lineY;
-};
-static HorizonState LastSafeHorizon;
-static bool HaveLastSafeHorizon;
+
 //- rouz edit (ChatGPT)
 
-void
-CClouds::Init(void)
+
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+#include "Clouds_backend.h"
+
+
+
+
+void * Clouds_BackendReadTexture(const char *name,const char *mask)
 {
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("particle"));
-	gpCloudTex[0] = RwTextureRead("cloud1", nil);
-	gpCloudTex[1] = RwTextureRead("cloud2", nil);
-	gpCloudTex[2] = RwTextureRead("cloud3", nil);
-	gpCloudTex[3] = RwTextureRead("cloudhilit", nil);
-	gpCloudTex[4] = RwTextureRead("cloudmasked", nil);
-	CTxdStore::PopCurrentTxd();
-	CloudRotation = 0.0f;
+    // Retain the original typed owner operation at its original C call point
+    return RwTextureRead(name,mask);
+}
+void Clouds_BackendDestroyTexture(void *texture)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwTextureDestroy((RwTexture *)texture);
+}
+void * Clouds_BackendRaster(void *texture)
+{
+    // Retain the original typed owner operation at its original C call point
+    return RwTextureGetRaster((RwTexture *)texture);
+}
+float Clouds_BackendOrientation(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TheCamera.Orientation;
+}
+bool Clouds_BackendOutside(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return CGame::CanSeeOutSideFromCurrArea();
+}
+float Clouds_BackendScreenWidth(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return SCREEN_WIDTH;
+}
+CloudsVector Clouds_BackendCameraPosition(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    const CVector &v=TheCamera.GetPosition();CloudsVector result={v.x,v.y,v.z};return result;
+}
+bool * Clouds_BackendSunBlocked(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return &CCoronas::SunBlockedByClouds;
+}
+float Clouds_BackendMoonSize(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return CCoronas::MoonSize;
+}
+float Clouds_BackendSunX(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return CCoronas::SunScreenX;
+}
+float Clouds_BackendSunY(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return CCoronas::SunScreenY;
+}
+void * Clouds_BackendCoronaTexture(int32_t index)
+{
+    // Retain the original typed owner operation at its original C call point
+    return gpCoronaTexture[index];
 }
 
-void
-CClouds::Shutdown(void)
+
+
+void Clouds_BackendSetRaster(void *raster)
 {
-	RwTextureDestroy(gpCloudTex[0]);
-	gpCloudTex[0] = nil;
-	RwTextureDestroy(gpCloudTex[1]);
-	gpCloudTex[1] = nil;
-	RwTextureDestroy(gpCloudTex[2]);
-	gpCloudTex[2] = nil;
-	RwTextureDestroy(gpCloudTex[3]);
-	gpCloudTex[3] = nil;
-	RwTextureDestroy(gpCloudTex[4]);
-	gpCloudTex[4] = nil;
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
+}
+void Clouds_BackendPush(const char *name)
+{
+    // Retain the original typed owner operation at its original C call point
+    PUSH_RENDERGROUP(name);
+}
+void Clouds_BackendPop(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    POP_RENDERGROUP();
+}
+float Clouds_BackendWind(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return Weather_Wind;
+}
+float Clouds_BackendFoggyness(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return Weather_Foggyness;
+}
+float Clouds_BackendCloudCoverage(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return Weather_CloudCoverage;
+}
+float Clouds_BackendExtraSunnyness(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return Weather_ExtraSunnyness;
+}
+float Clouds_BackendRainbow(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return Weather_Rainbow;
+}
+int32_t Clouds_BackendLowCloudsRed(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetLowCloudsRed();
+}
+int32_t Clouds_BackendLowCloudsGreen(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetLowCloudsGreen();
+}
+int32_t Clouds_BackendLowCloudsBlue(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetLowCloudsBlue();
+}
+int32_t Clouds_BackendFluffyCloudsTopRed(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsTopRed();
+}
+int32_t Clouds_BackendFluffyCloudsTopGreen(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsTopGreen();
+}
+int32_t Clouds_BackendFluffyCloudsTopBlue(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsTopBlue();
+}
+int32_t Clouds_BackendFluffyCloudsBottomRed(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsBottomRed();
+}
+int32_t Clouds_BackendFluffyCloudsBottomGreen(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsBottomGreen();
+}
+int32_t Clouds_BackendFluffyCloudsBottomBlue(void)
+{
+    // Retain the original typed owner operation at its original C call point
+    return TimeCycle_GetFluffyCloudsBottomBlue();
+}
+void Clouds_BackendZWrite(bool enabled)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,(void *)(uintptr_t)enabled);
+}
+void Clouds_BackendZTest(bool enabled)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,(void *)(uintptr_t)enabled);
+}
+void Clouds_BackendVertexAlpha(bool enabled)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE,(void *)(uintptr_t)enabled);
+}
+void Clouds_BackendFog(bool enabled)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATEFOGENABLE,(void *)(uintptr_t)enabled);
+}
+void Clouds_BackendSrcBlend(bool additive)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATESRCBLEND,(void *)(uintptr_t)(additive?rwBLENDONE:rwBLENDSRCALPHA));
+}
+void Clouds_BackendDestBlend(bool additive)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATEDESTBLEND,(void *)(uintptr_t)(additive?rwBLENDONE:rwBLENDINVSRCALPHA));
+}
+void Clouds_BackendCull(bool none)
+{
+    // Retain the original typed owner operation at its original C call point
+    RwRenderStateSet(rwRENDERSTATECULLMODE,(void *)(uintptr_t)(none?rwCULLMODECULLNONE:rwCULLMODECULLBACK));
 }
 
-void
-CClouds::Update(void)
+
+
+
+
+#ifdef REVC_SOFTWARE_POLYGONS
+void * Clouds_BackendCameraFrame(void *camera)
 {
-	float s = Sin(TheCamera.Orientation - 0.85f);
-#ifdef FIX_BUGS
-	CloudRotation += CWeather::Wind*s*0.001f*CTimer::GetTimeStepFix();
-	IndividualRotation += (CWeather::Wind*CTimer::GetTimeStep()*0.5f + 0.3f*CTimer::GetTimeStepFix()) * 60.0f;
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    return RwCameraGetFrame((RwCamera *)camera);
+}
+void * Clouds_BackendFrameMatrix(void *frame)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    return RwFrameGetMatrix((RwFrame *)frame);
+}
+float Clouds_BackendNearClip(void *camera)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    return RwCameraGetNearClipPlane((RwCamera *)camera);
+}
+float Clouds_BackendFarClip(void *camera)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    return RwCameraGetFarClipPlane((RwCamera *)camera);
+}
+CloudsVector Clouds_BackendSunDirection(void)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    CVector v=TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection());CloudsVector result={v.x,v.y,v.z};return result;
+}
+CloudsVector Clouds_BackendMatrixPosition(void *matrix)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    const RwV3d &v=((RwMatrix *)matrix)->pos;CloudsVector result={v.x,v.y,v.z};return result;
+}
+CloudsVector Clouds_BackendMatrixRight(void *matrix)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    const RwV3d &v=((RwMatrix *)matrix)->right;CloudsVector result={v.x,v.y,v.z};return result;
+}
+CloudsVector Clouds_BackendMatrixUp(void *matrix)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    const RwV3d &v=((RwMatrix *)matrix)->up;CloudsVector result={v.x,v.y,v.z};return result;
+}
+CloudsVector Clouds_BackendMatrixForward(void *matrix)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    const RwV3d &v=((RwMatrix *)matrix)->at;CloudsVector result={v.x,v.y,v.z};return result;
+}
+void Clouds_BackendSetPos(void *vertices,int32_t index,float x,float y,float z)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    RwIm3DVertex *v=(RwIm3DVertex *)vertices;RwIm3DVertexSetPos(&v[index],x,y,z);
+}
+void Clouds_BackendSetRGBA(void *vertices,int32_t index,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    RwIm3DVertex *v=(RwIm3DVertex *)vertices;RwIm3DVertexSetRGBA(&v[index],r,g,b,a);
+}
+void Clouds_BackendSetU(void *vertices,int32_t index,float value)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    RwIm3DVertex *v=(RwIm3DVertex *)vertices;RwIm3DVertexSetU(&v[index],value);
+}
+void Clouds_BackendSetV(void *vertices,int32_t index,float value)
+{
+    // Retain the actual reflection camera or vertex field type without assuming its layout
+    RwIm3DVertex *v=(RwIm3DVertex *)vertices;RwIm3DVertexSetV(&v[index],value);
+}
+#endif
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+static CRGBA BackgroundColors[3];
+CloudsColorFields Clouds_BackendColorFields(int32_t index)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    CRGBA &c=BackgroundColors[index];CloudsColorFields result={&c.r,&c.g,&c.b,&c.a};return result;
+}
+CloudsVector Clouds_BackendCameraUp(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    const CVector &v=TheCamera.GetUp();CloudsVector result={v.x,v.y,v.z};return result;
+}
+CloudsVector Clouds_BackendCameraForward(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    const CVector &v=TheCamera.GetForward();CloudsVector result={v.x,v.y,v.z};return result;
+}
+float Clouds_BackendForwardAxis(int32_t axis)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    const CVector &v=TheCamera.GetForward();return axis==0?v.x:axis==1?v.y:v.z;
+}
+bool Clouds_BackendCollisionPolys(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    return gbShowCollisionPolys;
+}
+float Clouds_BackendScreenHeight(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    return SCREEN_HEIGHT;
+}
+CloudsViewMatrix Clouds_BackendViewMatrix(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    const CMatrix &m=TheCamera.m_viewMatrix;CloudsViewMatrix result={m.rx,m.ry,m.rz,m.fx,m.fy,m.fz,m.ux,m.uy,m.uz,m.px,m.py,m.pz};return result;
+}
+bool Clouds_BackendCapturingWorldEffects(void)
+{
+    // Preserve the original actual owner fields, references and typed drawing operation
+    #ifdef REVC_SOFTWARE_POLYGONS
+    return SoftwarePolygons::CapturingWorldEffects();
 #else
-	CloudRotation += CWeather::Wind*s*0.001f;
-	IndividualRotation += (CWeather::Wind*CTimer::GetTimeStep()*0.5f + 0.3f) * 60.0f;
+    return false;
 #endif
 }
-
-float StarCoorsX[9] = { 0.0f, 0.05f, 0.13f, 0.4f, 0.7f, 0.6f, 0.27f, 0.55f, 0.75f };
-float StarCoorsY[9] = { 0.0f, 0.45f, 0.9f, 1.0f, 0.85f, 0.52f, 0.48f, 0.35f, 0.2f };
-float StarSizes[9] = { 1.0f, 1.4f, 0.9f, 1.0f, 0.6f, 1.5f, 1.3f, 1.0f, 0.8f };
-
-float LowCloudsX[12] = { 1.0f, 0.7f, 0.0f, -0.7f, -1.0f, -0.7f, 0.0f, 0.7f, 0.8f, -0.8f, 0.4f, -0.4f };
-float LowCloudsY[12] = { 0.0f, -0.7f, -1.0f, -0.7f, 0.0f, 0.7f, 1.0f, 0.7f, 0.4f, 0.4f, -0.8f, -0.8f };
-float LowCloudsZ[12] = { 0.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.3f, 0.9f, 0.4f, 1.3f, 1.4f, 1.2f, 1.7f };
-
-float CoorsOffsetX[37] = {
-	0.0f, 60.0f, 72.0f, 48.0f, 21.0f, 12.0f,
-	9.0f, -3.0f, -8.4f, -18.0f, -15.0f, -36.0f,
-	-40.0f, -48.0f, -60.0f, -24.0f, 100.0f, 100.0f,
-	100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
-	100.0f, 100.0f, -30.0f, -20.0f, 10.0f, 30.0f,
-	0.0f, -100.0f, -100.0f, -100.0f, -100.0f, -100.0f, -100.0f
-};
-float CoorsOffsetY[37] = {
-	100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
-	100.0f, 100.0f, 100.0f, 100.0f, 100.0f, 100.0f,
-	100.0f, 100.0f, 100.0f, 100.0f, -30.0f, 10.0f,
-	-25.0f, -5.0f, 28.0f, -10.0f, 10.0f, 0.0f,
-	15.0f, 40.0f, -100.0f, -100.0f, -100.0f, -100.0f,
-	-100.0f, -40.0f, -20.0f, 0.0f, 10.0f, 30.0f, 35.0f
-};
-float CoorsOffsetZ[37] = {
-	2.0f, 1.0f, 0.0f, 0.3f, 0.7f, 1.4f,
-	1.7f, 0.24f, 0.7f, 1.3f, 1.6f, 1.0f,
-	1.2f, 0.3f, 0.7f, 1.4f, 0.0f, 0.1f,
-	0.5f, 0.4f, 0.55f, 0.75f, 1.0f, 1.4f,
-	1.7f, 2.0f, 2.0f, 2.3f, 1.9f, 2.4f,
-	2.0f, 2.0f, 1.5f, 1.2f, 1.7f, 1.5f, 2.1f
-};
-
-uint8 BowRed[6] = { 30, 30, 30, 10, 0, 15 };
-uint8 BowGreen[6] = { 0, 15, 30, 30, 0, 0 };
-uint8 BowBlue[6] = { 0, 0, 0, 10, 30, 30 };
-
-void
-CClouds::Render(void)
+void Clouds_BackendDrawBackgroundQuad(float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,int32_t top,int32_t bottom)
 {
-	int i;
-	float szx, szy;
-	RwV3d screenpos;
-	RwV3d worldpos;
-
-	if(!CGame::CanSeeOutSideFromCurrArea())
-		return;
-
-	PUSH_RENDERGROUP("CClouds::Render");
-
-	CCoronas::SunBlockedByClouds = false;
-
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-	CSprite::InitSpriteBuffer();
-
-	float minute = CClock::GetHours()*60 + CClock::GetMinutes() + CClock::GetSeconds()/60.0f;
-	RwV3d campos = TheCamera.GetPosition();
-
-	// Moon
-	float moonfadeout = Abs(minute - 180.0f);	// fully visible at 3AM
-	if((int)moonfadeout < 180){			// fade in/out 3 hours
-		float coverage = Max(CWeather::Foggyness, CWeather::CloudCoverage);
-		int brightness = (1.0f - coverage) * (180 - (int)moonfadeout);
-		RwV3d pos = { 0.0f, -100.0f, 15.0f };
-		RwV3dAdd(&worldpos, &campos, &pos);
-		if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
-			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[2]));
-			szx *= CCoronas::MoonSize*2.0f + 4.0f;
-			szy *= CCoronas::MoonSize*2.0f + 4.0f;
-			CSprite::RenderOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
-				szx, szy, brightness, brightness, brightness, 255, 1.0f/screenpos.z, 255);
-		}
-	}
-
-	// The R* logo
-	int starintens = 0;
-	if(CClock::GetHours() < 22 && CClock::GetHours() > 5)
-		starintens = 0;
-	else if(CClock::GetHours() > 22 || CClock::GetHours() < 5)
-		starintens = 255;
-	else if(CClock::GetHours() == 22)
-		starintens = 255 * CClock::GetMinutes()/60.0f;
-	else if(CClock::GetHours() == 5)
-		starintens = 255 * (60 - CClock::GetMinutes())/60.0f;
-	if(starintens != 0){
-		float coverage = Max(CWeather::Foggyness, CWeather::CloudCoverage);
-		int brightness = (1.0f - coverage) * starintens;
-
-		// R
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
-		for(i = 0; i < 11; i++){
-			RwV3d pos = { 100.0f, 0.0f, 10.0f };
-			if(i >= 9) pos.x = -pos.x;
-			RwV3dAdd(&worldpos, &campos, &pos);
-			worldpos.y -= 90.0f*StarCoorsX[i%9];
-			worldpos.z += 80.0f*StarCoorsY[i%9];
-			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
-				float sz = 0.8f*StarSizes[i%9];
-				CSprite::RenderBufferedOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
-					szx*sz, szy*sz, brightness, brightness, brightness, 255, 1.0f/screenpos.z, 255);
-			}
-		}
-		CSprite::FlushSpriteBuffer();
-
-		// *
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
-		RwV3d pos = { 100.0f, 0.0f, 10.0f };
-		RwV3dAdd(&worldpos, &campos, &pos);
-		worldpos.y -= 90.0f;
-		if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
-			brightness *= (CGeneral::GetRandomNumber()&127) / 640.0f + 0.5f;
-			CSprite::RenderOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
-				szx*5.0f, szy*5.0f, brightness, brightness, brightness, 255, 1.0f/screenpos.z, 255);
-		}
-	}
-
-	// Low clouds
-	float lowcloudintensity = 1.0f - Max(Max(CWeather::Foggyness, CWeather::CloudCoverage), CWeather::ExtraSunnyness);
-	int r = CTimeCycle::GetLowCloudsRed() * lowcloudintensity;
-	int g = CTimeCycle::GetLowCloudsGreen() * lowcloudintensity;
-	int b = CTimeCycle::GetLowCloudsBlue() * lowcloudintensity;
-	for(int cloudtype = 0; cloudtype < 3; cloudtype++){
-		for(i = cloudtype; i < 12; i += 3){
-			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[cloudtype]));
-			RwV3d pos = { 800.0f*LowCloudsX[i], 800.0f*LowCloudsY[i], 60.0f*LowCloudsZ[i] };
-			worldpos.x = campos.x + pos.x;
-			worldpos.y = campos.y + pos.y;
-			worldpos.z = 40.0f + pos.z;
-			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false))
-				CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(screenpos.x, screenpos.y, screenpos.z,
-					szx*320.0f, szy*40.0f, r, g, b, 255, 1.0f/screenpos.z, ms_cameraRoll, 255);
-		}
-		CSprite::FlushSpriteBuffer();
-	}
-
-	// Fluffy clouds
-	float rot_sin = Sin(CloudRotation);
-	float rot_cos = Cos(CloudRotation);
-	int fluffyalpha = 160 * (1.0f - Max(CWeather::Foggyness, CWeather::ExtraSunnyness));
-	if(fluffyalpha != 0){
-		static bool bCloudOnScreen[37];
-		float sundist, hilight;
-
-		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[4]));
-		for(i = 0; i < 37; i++){
-			RwV3d pos = { 2.0f*CoorsOffsetX[i], 2.0f*CoorsOffsetY[i], 40.0f*CoorsOffsetZ[i] + 40.0f };
-			worldpos.x = pos.x*rot_cos + pos.y*rot_sin + campos.x;
-			worldpos.y = pos.x*rot_sin - pos.y*rot_cos + campos.y;
-			worldpos.z = pos.z;
-
-			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
-				sundist = Sqrt(sq(screenpos.x-CCoronas::SunScreenX) + sq(screenpos.y-CCoronas::SunScreenY));
-				int tr = CTimeCycle::GetFluffyCloudsTopRed();
-				int tg = CTimeCycle::GetFluffyCloudsTopGreen();
-				int tb = CTimeCycle::GetFluffyCloudsTopBlue();
-				int br = CTimeCycle::GetFluffyCloudsBottomRed();
-				int bg = CTimeCycle::GetFluffyCloudsBottomGreen();
-				int bb = CTimeCycle::GetFluffyCloudsBottomBlue();
-				int distLimit = (3*SCREEN_WIDTH)/4;
-				if(sundist < distLimit){
-					hilight = (1.0f - Max(CWeather::Foggyness, CWeather::CloudCoverage)) * (1.0f - sundist/(float)distLimit);
-					tr = tr*(1.0f-hilight) + 255*hilight;
-					tg = tg*(1.0f-hilight) + 190*hilight;
-					tb = tb*(1.0f-hilight) + 190*hilight;
-					br = br*(1.0f-hilight) + 255*hilight;
-					bg = bg*(1.0f-hilight) + 190*hilight;
-					bb = bb*(1.0f-hilight) + 190*hilight;
-					if(sundist < SCREEN_WIDTH/10)
-						CCoronas::SunBlockedByClouds = true;
-				}else
-					hilight = 0.0f;
-				CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(screenpos.x, screenpos.y, screenpos.z,
-					szx*55.0f, szy*55.0f,
-					tr, tg, tb, br, bg, bb, 0.0f, -1.0f,
-					1.0f/screenpos.z,
-					(uint16)IndividualRotation/65336.0f * 6.28f + ms_cameraRoll,
-					fluffyalpha);
-				bCloudOnScreen[i] = true;
-			}else
-				bCloudOnScreen[i] = false;
-		}
-		CSprite::FlushSpriteBuffer();
-
-		// Highlights
-		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[3]));
-
-		for(i = 0; i < 37; i++){
-			RwV3d pos = { 2.0f*CoorsOffsetX[i], 2.0f*CoorsOffsetY[i], 40.0f*CoorsOffsetZ[i] + 40.0f };
-			worldpos.x = pos.x*rot_cos + pos.y*rot_sin + campos.x;
-			worldpos.y = pos.x*rot_sin + pos.y*rot_cos + campos.y;
-			worldpos.z = pos.z;
-			if(bCloudOnScreen[i] && CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false)){
-				if(sundist < SCREEN_WIDTH/3){
-					CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(screenpos.x, screenpos.y, screenpos.z,
-						szx*30.0f, szy*30.0f,
-						200*hilight, 0, 0, 255, 1.0f/screenpos.z,
-						1.7f - CGeneral::GetATanOfXY(screenpos.x-CCoronas::SunScreenX, screenpos.y-CCoronas::SunScreenY) + CClouds::ms_cameraRoll, 255);
-				}
-			}
-		}
-		CSprite::FlushSpriteBuffer();
-	}
-
-	// Rainbow
-	if(CWeather::Rainbow != 0.0f){
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
-		for(i = 0; i < 6; i++){
-			RwV3d pos = { i*1.5f, 100.0f, 5.0f };
-			RwV3dAdd(&worldpos, &campos, &pos);
-			if(CSprite::CalcScreenCoors(worldpos, &screenpos, &szx, &szy, false))
-				CSprite::RenderBufferedOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
-					2.0f*szx, 50.0*szy,
-					BowRed[i]*CWeather::Rainbow, BowGreen[i]*CWeather::Rainbow, BowBlue[i]*CWeather::Rainbow,
-					255, 1.0f/screenpos.z, 255);
-
-		}
-		CSprite::FlushSpriteBuffer();
-	}
-
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-
-	POP_RENDERGROUP();
+    // Preserve the original actual owner fields, references and typed drawing operation
+    ([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawAnyRect(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(x1,y1,x2,y2,x3,y3,x4,y4,BackgroundColors[top],BackgroundColors[top],BackgroundColors[bottom],BackgroundColors[bottom]);
 }
-
-//+ rouz edit (ChatGPT)
-#ifdef REVC_SOFTWARE_POLYGONS
-static void
-StoreEnvMapCloudQuad(const CVector &center, const CVector &cameraRight, const CVector &cameraUp,
-	float halfWidth, float halfHeight, float rotation,
-	const CRGBA &top, const CRGBA &bottom)
+void Clouds_BackendDrawBackgroundRect(float left,float top,float right,float bottom,int32_t lower,int32_t upper)
 {
-	// Rotate the camera-facing basis to match the cloud sprite orientation
-	float cosine = Cos(rotation);
-	float sine = Sin(rotation);
-	CVector horizontal = cameraRight*(halfWidth*cosine) + cameraUp*(halfWidth*sine);
-	CVector vertical = cameraUp*(halfHeight*cosine) - cameraRight*(halfHeight*sine);
-	CVector corners[4] = {
-		center-horizontal+vertical,
-		center+horizontal+vertical,
-		center-horizontal-vertical,
-		center+horizontal-vertical
-	};
-	RwImVertexIndex *indices;
-	RwIm3DVertex *vertices;
-	// Reserve one textured quad in the shared RenderWare immediate buffer
-	RenderBuffer::StartStoring(6, 4, &indices, &vertices);
-	for(int vertex = 0; vertex < 4; vertex++){
-		RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
-		const CRGBA &color = vertex < 2 ? top : bottom;
-		RwIm3DVertexSetRGBA(&vertices[vertex], color.r, color.g, color.b, color.a);
-	}
-	RwIm3DVertexSetU(&vertices[0], 0.0f); RwIm3DVertexSetV(&vertices[0], 0.0f);
-	RwIm3DVertexSetU(&vertices[1], 1.0f); RwIm3DVertexSetV(&vertices[1], 0.0f);
-	RwIm3DVertexSetU(&vertices[2], 0.0f); RwIm3DVertexSetV(&vertices[2], 1.0f);
-	RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
-	indices[0] = 0; indices[1] = 1; indices[2] = 2;
-	indices[3] = 2; indices[4] = 1; indices[5] = 3;
-	RenderBuffer::StopStoring();
+    // Preserve the original actual owner fields, references and typed drawing operation
+    ([](const CRect &r,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawFourColourRect(&r,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(Rect_Make(left,top,right,bottom),BackgroundColors[lower],BackgroundColors[lower],BackgroundColors[upper],BackgroundColors[upper]);
 }
-
-void
-CClouds::RenderForEnvMap(RwCamera *camera)
+float Clouds_BackendAmbientRed(void)
 {
-	// Skip sky effects without a valid reflection camera or when the current area is indoors
-	if(camera == nil || !CGame::CanSeeOutSideFromCurrArea())
-		return;
-	RwFrame *cameraFrame = RwCameraGetFrame(camera);
-	// Skip rendering if the reflection camera has no frame matrix
-	if(cameraFrame == nil || RwFrameGetMatrix(cameraFrame) == nil)
-		return;
-
-	// Use the reflection camera basis without touching the main camera's cloud state
-	RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
-	CVector cameraPos(cameraMatrix->pos);
-	CVector cameraRight(cameraMatrix->right);
-	CVector cameraUp(cameraMatrix->up);
-	CVector cameraForward(cameraMatrix->at);
-	cameraRight.Normalise();
-	cameraUp.Normalise();
-	cameraForward.Normalise();
-	float nearClip = RwCameraGetNearClipPlane(camera);
-	float farClip = RwCameraGetFarClipPlane(camera);
-
-	// Preserve pending world geometry before starting the sky effect batches
-	RenderBuffer::RenderStuffInBuffer();
-	PUSH_RENDERGROUP("CClouds::RenderForEnvMap");
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-	RenderBuffer::ClearRenderBuffer();
-
-	// Place the moon ahead of the upward-facing reflection camera during its night window
-	float minute = CClock::GetHours()*60.0f + CClock::GetMinutes() + CClock::GetSeconds()/60.0f;
-	float moonFade = Abs(minute - 180.0f);
-	if((int)moonFade < 180 && gpCoronaTexture[2]){
-		float coverage = Max(CWeather::Foggyness, CWeather::CloudCoverage);
-		int brightness = (int)((1.0f-coverage)*(180-(int)moonFade));
-		if(brightness > 0){
-			CVector moonPosition = cameraPos + cameraForward*190.0f + cameraUp*45.0f;
-			float depth = DotProduct(moonPosition-cameraPos, cameraForward);
-			if(depth > nearClip && depth < farClip){
-				RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[2]));
-				CRGBA moonColor(brightness, brightness, brightness, 255);
-				float moonSize = CCoronas::MoonSize*2.0f + 4.0f;
-				StoreEnvMapCloudQuad(moonPosition, cameraRight, cameraUp, moonSize, moonSize, 0.0f, moonColor, moonColor);
-				RenderBuffer::RenderStuffInBuffer();
-			}
-		}
-	}
-
-	// Draw stable stars from the existing sky layout without invoking random flicker
-	int starIntensity = 0;
-	if(CClock::GetHours() < 5 || CClock::GetHours() > 22)
-		starIntensity = 255;
-	else if(CClock::GetHours() == 22)
-		starIntensity = 255*CClock::GetMinutes()/60;
-	else if(CClock::GetHours() == 5)
-		starIntensity = 255*(60-CClock::GetMinutes())/60;
-	starIntensity *= 1.0f-Max(CWeather::Foggyness, CWeather::CloudCoverage);
-	if(starIntensity > 0 && gpCoronaTexture[0]){
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
-		for(int i = 0; i < 11; i++){
-			int star = i%9;
-			float horizontal = (StarCoorsX[star]-0.375f)*180.0f;
-			float vertical = (StarCoorsY[star]-0.35f)*120.0f;
-			CVector starPosition = cameraPos + cameraForward*190.0f + cameraRight*horizontal + cameraUp*vertical;
-			float depth = DotProduct(starPosition-cameraPos, cameraForward);
-			if(depth <= nearClip || depth >= farClip)
-				continue;
-			float size = 0.8f*StarSizes[star];
-			CRGBA starColor(starIntensity, starIntensity, starIntensity, 255);
-			StoreEnvMapCloudQuad(starPosition, cameraRight, cameraUp, size, size, 0.0f, starColor, starColor);
-		}
-		// Add a slow, deterministic pulse to the bright R-star in the reflection sky
-		//+ rouz edit (ChatGPT)
-		const float starPulse = 0.7f + 0.3f*Sin((CTimer::GetTimeInMilliseconds() & 4095)*TWOPI/4096.0f);
-		CVector brightStarPosition = cameraPos + cameraForward*190.0f + cameraRight*95.0f + cameraUp*18.0f;
-		float brightStarDepth = DotProduct(brightStarPosition-cameraPos, cameraForward);
-		if(brightStarDepth > nearClip && brightStarDepth < farClip){
-			int brightStarIntensity = (int)(starIntensity*starPulse);
-			CRGBA brightStarColor(brightStarIntensity, brightStarIntensity, brightStarIntensity, 255);
-			StoreEnvMapCloudQuad(brightStarPosition, cameraRight, cameraUp, 5.0f, 5.0f,
-				0.0f, brightStarColor, brightStarColor);
-		}
-		//- rouz edit (ChatGPT)
-		RenderBuffer::RenderStuffInBuffer();
-	}
-
-	// Render the three animated low-cloud texture layers around the reflection viewpoint
-	float lowCloudIntensity = 1.0f-Max(Max(CWeather::Foggyness, CWeather::CloudCoverage), CWeather::ExtraSunnyness);
-	if(lowCloudIntensity > 0.0f){
-		int red = CTimeCycle::GetLowCloudsRed()*lowCloudIntensity;
-		int green = CTimeCycle::GetLowCloudsGreen()*lowCloudIntensity;
-		int blue = CTimeCycle::GetLowCloudsBlue()*lowCloudIntensity;
-		for(int cloudType = 0; cloudType < 3; cloudType++){
-			if(gpCloudTex[cloudType] == nil)
-				continue;
-			RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[cloudType]));
-			for(int i = cloudType; i < 12; i += 3){
-				CVector cloudPosition(cameraPos.x + 800.0f*LowCloudsX[i],
-					cameraPos.y + 800.0f*LowCloudsY[i], 40.0f + 60.0f*LowCloudsZ[i]);
-				float depth = DotProduct(cloudPosition-cameraPos, cameraForward);
-				if(depth <= nearClip || depth >= farClip)
-					continue;
-				CRGBA cloudColor(red, green, blue, 255);
-				StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 320.0f, 40.0f, 0.0f,
-					cloudColor, cloudColor);
-			}
-			RenderBuffer::RenderStuffInBuffer();
-		}
-	}
-
-	// Draw the soft cloud layer with its timecycle gradient and existing wind rotation
-	int fluffyAlpha = 160*(1.0f-Max(CWeather::Foggyness, CWeather::ExtraSunnyness));
-	if(fluffyAlpha > 0 && gpCloudTex[4]){
-		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[4]));
-		float rotationSine = Sin(CloudRotation);
-		float rotationCosine = Cos(CloudRotation);
-		float spriteRotation = (uint16)IndividualRotation/65336.0f*TWOPI;
-		CRGBA cloudTop(CTimeCycle::GetFluffyCloudsTopRed(), CTimeCycle::GetFluffyCloudsTopGreen(),
-			CTimeCycle::GetFluffyCloudsTopBlue(), fluffyAlpha);
-		CRGBA cloudBottom(CTimeCycle::GetFluffyCloudsBottomRed(), CTimeCycle::GetFluffyCloudsBottomGreen(),
-			CTimeCycle::GetFluffyCloudsBottomBlue(), fluffyAlpha);
-		for(int i = 0; i < 37; i++){
-			float x = 2.0f*CoorsOffsetX[i];
-			float y = 2.0f*CoorsOffsetY[i];
-			CVector cloudPosition(cameraPos.x + x*rotationCosine + y*rotationSine,
-				cameraPos.y + x*rotationSine - y*rotationCosine,
-				40.0f*CoorsOffsetZ[i] + 40.0f);
-			float depth = DotProduct(cloudPosition-cameraPos, cameraForward);
-			if(depth <= nearClip || depth >= farClip)
-				continue;
-			StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 55.0f, 55.0f,
-				spriteRotation, cloudTop, cloudBottom);
-		}
-		RenderBuffer::RenderStuffInBuffer();
-	}
-
-	// Add a camera-relative highlight around the sun without reading main-camera screen coordinates
-	CVector sunDirection = CTimeCycle::GetSunDirection();
-	sunDirection.Normalise();
-	float sunDepth = DotProduct(sunDirection, cameraForward);
-	if(gpCloudTex[3] && sunDepth > 0.05f){
-		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCloudTex[3]));
-		float sunScreenX = DotProduct(sunDirection, cameraRight)/sunDepth;
-		float sunScreenY = DotProduct(sunDirection, cameraUp)/sunDepth;
-		float highlightLimit = 0.55f;
-		float cloudRotationSine = Sin(CloudRotation);
-		float cloudRotationCosine = Cos(CloudRotation);
-		for(int i = 0; i < 37; i++){
-			float x = 2.0f*CoorsOffsetX[i];
-			float y = 2.0f*CoorsOffsetY[i];
-			CVector cloudPosition(cameraPos.x + x*cloudRotationCosine + y*cloudRotationSine,
-				cameraPos.y + x*cloudRotationSine - y*cloudRotationCosine,
-				40.0f*CoorsOffsetZ[i] + 40.0f);
-			CVector fromCamera = cloudPosition-cameraPos;
-			float depth = DotProduct(fromCamera, cameraForward);
-			if(depth <= nearClip || depth >= farClip)
-				continue;
-			float screenX = DotProduct(fromCamera, cameraRight)/depth;
-			float screenY = DotProduct(fromCamera, cameraUp)/depth;
-			float deltaX = screenX-sunScreenX;
-			float deltaY = screenY-sunScreenY;
-			float distance = Sqrt(sq(deltaX)+sq(deltaY));
-			if(distance >= highlightLimit)
-				continue;
-			float highlight = (1.0f-Max(CWeather::Foggyness, CWeather::CloudCoverage))*(1.0f-distance/highlightLimit);
-			int red = 200.0f*highlight;
-			if(red <= 0)
-				continue;
-			CRGBA highlightColor(red, 0, 0, 255);
-			StoreEnvMapCloudQuad(cloudPosition, cameraRight, cameraUp, 30.0f, 30.0f,
-				1.7f-Atan2(deltaY, deltaX), highlightColor, highlightColor);
-		}
-		RenderBuffer::RenderStuffInBuffer();
-	}
-
-	// Add the weather rainbow as six camera-aligned colored streaks
-	if(CWeather::Rainbow != 0.0f && gpCoronaTexture[0]){
-		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
-		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpCoronaTexture[0]));
-		for(int i = 0; i < 6; i++){
-			CVector rainbowPosition = cameraPos + cameraForward*190.0f + cameraUp*35.0f + cameraRight*(i*1.5f-3.75f);
-			CRGBA rainbowColor(BowRed[i]*CWeather::Rainbow, BowGreen[i]*CWeather::Rainbow,
-				BowBlue[i]*CWeather::Rainbow, 255);
-			StoreEnvMapCloudQuad(rainbowPosition, cameraRight, cameraUp, 2.0f, 50.0f,
-				0.0f, rainbowColor, rainbowColor);
-		}
-		RenderBuffer::RenderStuffInBuffer();
-	}
-
-	// Restore the standard world pass states after drawing the sky
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
-	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLBACK);
-	POP_RENDERGROUP();
+    // Preserve the original actual owner fields, references and typed drawing operation
+    return TimeCycle_GetAmbientRed();
 }
-#endif
-//- rouz edit (ChatGPT)
-
-bool
-UseDarkBackground(void)
+float Clouds_BackendAmbientGreen(void)
 {
-	return TheCamera.GetForward().z < -0.9f || gbShowCollisionPolys;
+    // Preserve the original actual owner fields, references and typed drawing operation
+    return TimeCycle_GetAmbientGreen();
 }
-
-//+ rouz edit (ChatGPT)
-static bool
-UseSkyTopBackground(void)
+float Clouds_BackendAmbientBlue(void)
 {
-	return TheCamera.GetForward().z > 0.98f;
-}
-
-static HorizonState
-GetCurrentHorizonState(void)
-{
-	HorizonState state;
-	state.x = HorizonX;
-	state.z = CClouds::ms_horizonZ;
-	state.skyX = HorizonSkyX;
-	state.skyY = HorizonSkyY;
-	state.lineX = HorizonLineX;
-	state.lineY = HorizonLineY;
-	return state;
-}
-
-static void
-SetCurrentHorizonState(const HorizonState &state)
-{
-	HorizonX = state.x;
-	CClouds::ms_horizonZ = state.z;
-	HorizonSkyX = state.skyX;
-	HorizonSkyY = state.skyY;
-	HorizonLineX = state.lineX;
-	HorizonLineY = state.lineY;
-}
-
-static HorizonState
-GetMirroredPoleHorizonState(const HorizonState &state)
-{
-	HorizonState mirrored = state;
-	mirrored.x = SCREEN_WIDTH - state.x;
-	mirrored.z = SCREEN_HEIGHT - state.z;
-	mirrored.skyX = SCREEN_WIDTH - state.skyX;
-	mirrored.skyY = SCREEN_HEIGHT - state.skyY;
-	mirrored.lineX = -state.lineX;
-	mirrored.lineY = -state.lineY;
-	return mirrored;
-}
-
-static void CalcScreenCoorsNoClip(const CVector &in, float &x, float &y)
-{
-	CVector view = TheCamera.m_viewMatrix * in;
-	if(Abs(view.z) < 0.001f)
-		view.z = view.z < 0.0f ? -0.001f : 0.001f;
-	x = view.x * SCREEN_WIDTH / view.z;
-	y = view.y * SCREEN_HEIGHT / view.z;
-	//+ rouz edit (ChatGPT)
-	// Match the software framebuffer's top-down screen Y used by projected world sprites
-#ifdef REVC_SOFTWARE_POLYGONS
-	if(SoftwarePolygons::CapturingWorldEffects())
-		y = SCREEN_HEIGHT - y;
-#endif
-	//- rouz edit (ChatGPT)
-}
-
-static void UpdateHorizonCoors(void)
-{
-	CVector forward(TheCamera.GetForward().x, TheCamera.GetForward().y, 0.0f);
-	if(forward.MagnitudeSqr() < 0.0001f){
-		HorizonX = SCREEN_WIDTH/2.0f;
-		HorizonSkyX = SCREEN_WIDTH/2.0f;
-		HorizonSkyY = SCREEN_HEIGHT/2.0f - 1.0f;
-		CClouds::ms_horizonZ = SCREEN_HEIGHT/2.0f;
-		HorizonLineX = Cos(CClouds::ms_cameraRoll);
-		HorizonLineY = -Sin(CClouds::ms_cameraRoll);
-		return;
-	}
-	forward.Normalise();
-
-	CVector right = CrossProduct(CVector(0.0f, 0.0f, 1.0f), forward);
-	right.Normalise();
-
-	CVector center = TheCamera.GetPosition() + forward*3000.0f;
-	center.z = 0.0f;
-	CVector left = center - right*3000.0f;
-	CVector rightPos = center + right*3000.0f;
-	CVector sky = center;
-	sky.z += 1.0f;
-
-	CalcScreenCoorsNoClip(center, HorizonX, CClouds::ms_horizonZ);
-	CalcScreenCoorsNoClip(sky, HorizonSkyX, HorizonSkyY);
-	float leftX, leftY, rightX, rightY;
-	CalcScreenCoorsNoClip(left, leftX, leftY);
-	CalcScreenCoorsNoClip(rightPos, rightX, rightY);
-
-	HorizonLineX = rightX - leftX;
-	HorizonLineY = rightY - leftY;
-	float len = Sqrt(SQR(HorizonLineX) + SQR(HorizonLineY));
-	if(len > 0.001f){
-		HorizonLineX /= len;
-		HorizonLineY /= len;
-	}else{
-		HorizonLineX = Cos(CClouds::ms_cameraRoll);
-		HorizonLineY = -Sin(CClouds::ms_cameraRoll);
-	}
-}
-
-static void DrawHorizonBand(float centerY, float topOffset, float bottomOffset, const CRGBA &top, const CRGBA &bottom)
-{
-	float halfWidth = 2.0f*Sqrt(SQR(SCREEN_WIDTH) + SQR(SCREEN_HEIGHT));
-	float lineX = HorizonLineX;
-	float lineY = HorizonLineY;
-	float downX = -lineY;
-	float downY = lineX;
-	float skySide = (HorizonSkyX - HorizonX)*downX + (HorizonSkyY - CClouds::ms_horizonZ)*downY;
-	if(skySide > 0.0f){
-		downX = -downX;
-		downY = -downY;
-	}
-
-	float topLeftX = HorizonX - lineX*halfWidth + downX*topOffset;
-	float topLeftY = centerY - lineY*halfWidth + downY*topOffset;
-	float topRightX = HorizonX + lineX*halfWidth + downX*topOffset;
-	float topRightY = centerY + lineY*halfWidth + downY*topOffset;
-	float bottomLeftX = HorizonX - lineX*halfWidth + downX*bottomOffset;
-	float bottomLeftY = centerY - lineY*halfWidth + downY*bottomOffset;
-	float bottomRightX = HorizonX + lineX*halfWidth + downX*bottomOffset;
-	float bottomRightY = centerY + lineY*halfWidth + downY*bottomOffset;
-
-	//+ rouz edit (ChatGPT)
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	//- rouz edit (ChatGPT)
-	CSprite2d::DrawAnyRect(topLeftX, topLeftY, topRightX, topRightY,
-		bottomLeftX, bottomLeftY, bottomRightX, bottomRightY,
-		top, top, bottom, bottom);
-}
-
-//+ rouz edit (ChatGPT)
-static float GetHorizonScreenDepth(void)
-{
-	float downX = -HorizonLineY;
-	float downY = HorizonLineX;
-	float skySide = (HorizonSkyX - HorizonX)*downX + (HorizonSkyY - CClouds::ms_horizonZ)*downY;
-	if(skySide > 0.0f){
-		downX = -downX;
-		downY = -downY;
-	}
-
-	float d0 = Abs((0.0f - HorizonX)*downX + (0.0f - CClouds::ms_horizonZ)*downY);
-	float d1 = Abs((SCREEN_WIDTH - HorizonX)*downX + (0.0f - CClouds::ms_horizonZ)*downY);
-	float d2 = Abs((0.0f - HorizonX)*downX + (SCREEN_HEIGHT - CClouds::ms_horizonZ)*downY);
-	float d3 = Abs((SCREEN_WIDTH - HorizonX)*downX + (SCREEN_HEIGHT - CClouds::ms_horizonZ)*downY);
-	return Max(Max(d0, d1), Max(d2, d3)) + SCREEN_HEIGHT;
-}
-
-static CRGBA
-ScaleRGBAAlpha(const CRGBA &colour, float scale)
-{
-	scale = Clamp(scale, 0.0f, 1.0f);
-	return CRGBA(colour.r, colour.g, colour.b, uint8(Clamp(colour.a*scale, 0.0f, 255.0f)));
-}
-
-static void
-DrawBackgroundGradientBands(int16 topred, int16 topgreen, int16 topblue,
-	int16 botred, int16 botgreen, int16 botblue, int16 alpha, float alphaScale)
-{
-	int fogr = (topred + 2 * botred) / 3;
-	int fogg = (topgreen + 2 * botgreen) / 3;
-	int fogb = (topblue + 2 * botblue) / 3;
-	float skyDepth = GetHorizonScreenDepth();
-
-	CClouds::ms_colourTop = ScaleRGBAAlpha(CRGBA(topred, topgreen, topblue, alpha), alphaScale);
-	CClouds::ms_colourBottom = ScaleRGBAAlpha(CRGBA(botred, botgreen, botblue, alpha), alphaScale);
-	DrawHorizonBand(CClouds::ms_horizonZ, -skyDepth, 0.0f, CClouds::ms_colourTop, CClouds::ms_colourBottom);
-
-	CClouds::ms_colourTop = ScaleRGBAAlpha(CRGBA(fogr, fogg, fogb, alpha), alphaScale);
-	DrawHorizonBand(CClouds::ms_horizonZ, 0.0f, SMALLSTRIPHEIGHT, CClouds::ms_colourTop, CClouds::ms_colourTop);
-
-	CClouds::ms_colourTop = CRGBA(fogr, fogg, fogb, alpha);
-	CClouds::ms_colourBottom = CClouds::ms_colourTop;
+    // Preserve the original actual owner fields, references and typed drawing operation
+    return TimeCycle_GetAmbientBlue();
 }
 //- rouz edit (ChatGPT)
-
-void
-CClouds::RenderBackground(int16 topred, int16 topgreen, int16 topblue,
-	int16 botred, int16 botgreen, int16 botblue, int16 alpha)
-{
-	PUSH_RENDERGROUP("CClouds::RenderBackground");
-
-	//+ rouz edit (ChatGPT)
-	CVector camRight = CrossProduct(TheCamera.GetUp(), TheCamera.GetForward());
-	camRight.Normalise();
-	CVector levelRight = CrossProduct(CVector(0.0f, 0.0f, 1.0f), TheCamera.GetForward());
-	if(levelRight.MagnitudeSqr() > 0.0001f){
-		levelRight.Normalise();
-		ms_cameraRoll = Atan2(camRight.z, DotProduct(camRight, levelRight));
-	}else
-		ms_cameraRoll = 0.0f;
-	ms_HorizonTilt = 0.0f;
-	UpdateHorizonCoors();
-	//- rouz edit (ChatGPT)
-
-	if(UseDarkBackground()){
-		ms_colourTop.r = 50;
-		ms_colourTop.g = 50;
-		ms_colourTop.b = 50;
-		ms_colourTop.a = 255;
-		if(gbShowCollisionPolys){
-			if(CTimer::GetFrameCounter() & 1){
-				ms_colourTop.r = 0;
-				ms_colourTop.g = 0;
-				ms_colourTop.b = 0;
-			}else{
-				ms_colourTop.r = 255;
-				ms_colourTop.g = 255;
-				ms_colourTop.b = 255;
-			}
-		}
-		ms_colourBottom = ms_colourTop;
-		CRect r(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-		CSprite2d::DrawRect(r, ms_colourBottom, ms_colourBottom, ms_colourTop, ms_colourTop);
-	//+ rouz edit (ChatGPT)
-	}else if(UseSkyTopBackground()){
-		HorizonState currentHorizon = GetCurrentHorizonState();
-		if(!HaveLastSafeHorizon){
-			LastSafeHorizon = currentHorizon;
-			HaveLastSafeHorizon = true;
-		}
-
-		float t = Clamp((TheCamera.GetForward().z - 0.98f)/(1.0f - 0.98f), 0.0f, 1.0f);
-		t = t*t*(3.0f - 2.0f*t);
-
-		SetCurrentHorizonState(LastSafeHorizon);
-		DrawBackgroundGradientBands(topred, topgreen, topblue, botred, botgreen, botblue, alpha, 1.0f);
-
-		SetCurrentHorizonState(GetMirroredPoleHorizonState(LastSafeHorizon));
-		DrawBackgroundGradientBands(topred, topgreen, topblue, botred, botgreen, botblue, alpha, t);
-
-		SetCurrentHorizonState(currentHorizon);
-	}else{
-		LastSafeHorizon = GetCurrentHorizonState();
-		HaveLastSafeHorizon = true;
-		DrawBackgroundGradientBands(topred, topgreen, topblue, botred, botgreen, botblue, alpha, 1.0f);
-	}
-	//- rouz edit (ChatGPT)
-
-	POP_RENDERGROUP();
-}
-
-void
-CClouds::RenderHorizon(void)
-{
-	// rouz edit (ChatGPT)
-	if(UseDarkBackground() || UseSkyTopBackground())
-		return;
-
-	PUSH_RENDERGROUP("CClouds::RenderHorizon");
-
-	ms_colourBottom.a = 230;
-	ms_colourTop.a = 80;
-
-	// rouz edit (ChatGPT)
-	DrawHorizonBand(ms_horizonZ, 0.0f, SMALLSTRIPHEIGHT, ms_colourTop, ms_colourBottom);
-
-	ms_colourBkGrd.r = 128.0f*CTimeCycle::GetAmbientRed();
-	ms_colourBkGrd.g = 128.0f*CTimeCycle::GetAmbientGreen();
-	ms_colourBkGrd.b = 128.0f*CTimeCycle::GetAmbientBlue();
-	ms_colourBkGrd.a = 255;
-
-	float horzstrip = SCREEN_STRETCH_Y(HORIZSTRIPHEIGHT);
-	//+ rouz edit (ChatGPT)
-	float skyDepth = GetHorizonScreenDepth();
-
-	DrawHorizonBand(ms_horizonZ, SMALLSTRIPHEIGHT, SMALLSTRIPHEIGHT + horzstrip,
-		ms_colourBottom, ms_colourBkGrd);
-	DrawHorizonBand(ms_horizonZ, SMALLSTRIPHEIGHT + horzstrip, skyDepth,
-		ms_colourBkGrd, ms_colourBkGrd);
-	//- rouz edit
-
-	POP_RENDERGROUP();
-}
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

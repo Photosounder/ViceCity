@@ -1,0 +1,67 @@
+static void sequenceResult(CAnimBlendSequence *s)
+{
+    // Observe every real field while excluding the removed virtual dispatch pointer and native padding
+    observe(&s->type,4);observe(s->name,24);observe(&s->numFrames,4);observe(&s->boneTag,2);bool unpacked=s->keyFrames!=NULL,packed=s->keyFramesCompressed!=NULL;observe(&unpacked,1);observe(&packed,1);
+}
+static void initialize(CAnimBlendSequence *s)
+{
+    // Start the original or C lifetime in explicitly initialized storage without initializing the name
+    Run_Sequence(0,s,NULL,0,false,false);
+}
+static void destroy(CAnimBlendSequence *s)
+{
+    // End the owning lifetime without reading object fields after original C++ destruction
+    Run_Sequence(1,s,NULL,0,false,false);observedSequence=NULL;observe(events,eventCount*4);eventCount=0;
+}
+static void valuesAndNames()
+{
+    // Keep the original partial initializer, full fixed-width name policy and signed bone tag narrowing
+    for(unsigned test=0;test<4096;++test){
+        alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0xa5,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);require(s->type==0&&s->numFrames==0&&s->keyFrames==NULL&&s->keyFramesCompressed==NULL&&s->boneTag==-1);for(unsigned i=0;i<24;++i)require((unsigned char)s->name[i]==0xa5);observedSequence=s;
+        char name[80];for(unsigned i=0;i<79;++i)name[i]=(char)('A'+(test+i)%26);name[79]=0;unsigned length=test%80;name[length]=0;char expected[24];strncpy(expected,name,24);Run_Sequence(2,s,name,0,false,false);require(memcmp(s->name,expected,24)==0);int32_t tag=(int32_t)(test*91237U);Run_Sequence(8,s,NULL,tag,false,false);require(s->boneTag==(int16_t)tag);sequenceResult(s);destroy(s);++states;
+    }
+    // Flag and empty-count queries stay independent of uninitialized or absent frame storage
+    for(int32_t type=-8;type<8;++type){alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0x5a,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);observedSequence=s;s->type=type;require(Run_HasTranslation(s)==((type&2)!=0));s->numFrames=0;Run_Sequence(4,s,NULL,0,false,false);Run_Sequence(5,s,NULL,0,false,false);Run_Sequence(6,s,NULL,0,false,false);Run_Sequence(7,s,NULL,0,false,false);require(eventCount==0);sequenceResult(s);destroy(s);++states;}
+}
+static void allocationPolicy()
+{
+    // Preserve original size_t conversion, unpacked allocation sizes for packed input and type accumulation
+    const int32_t counts[]={0,1,3,17,-1,-17,INT32_MIN,INT32_MAX,0x20000000,0x40000000};
+    for(unsigned test=0;test<1024;++test){
+        alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0xa5,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);observedSequence=s;bool translation=(test&1)!=0,packed=(test&2)!=0;int32_t count=counts[test%10];s->type=(int32_t)(test&0xf0);Run_Sequence(3,s,NULL,count,translation,packed);require(lastBytes==(translation?sizeof(KeyFrameTrans):sizeof(KeyFrame))*(size_t)count&&s->numFrames==count&&s->type==((int32_t)(test&0xf0)|(translation?3:1)));uint64_t bytes=(uint64_t)lastBytes;observe(&bytes,8);sequenceResult(s);
+        // Replacing a buffer retains the original absence of an implicit free operation
+        void *orphan=packed?s->keyFramesCompressed:s->keyFrames;unsigned before=fixtureFrees;Run_Sequence(3,s,NULL,2,false,packed);require(fixtureFrees==before&&(s->type&3)==(translation?3:1));RwFree(orphan);sequenceResult(s);destroy(s);++states;
+    }
+}
+static void packedStorage()
+{
+    // Exercise complete allocation, actual getter strides, sign correction and compression lifetimes
+    for(unsigned test=0;test<4096;++test){
+        alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0xa5,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);observedSequence=s;bool translation=(test&1)!=0;int32_t count=(int32_t)(test%8)+1;Run_Sequence(3,s,NULL,count,translation,false);
+        for(int32_t i=0;i<count;++i){
+            // Keep every packed narrowing input within its original defined signed sixteen-bit domain
+            KeyFrame *frame=(KeyFrame*)Run_Frame(s,i,false);require(frame==(translation?&((KeyFrameTrans*)s->keyFrames)[i].base:&((KeyFrame*)s->keyFrames)[i]));float sign=((test+i)&2)?-1.0f:1.0f;frame->rotation=Quaternion_Make(sign*0.1f*(i+1),sign*0.2f,sign*0.3f,sign*0.8f);frame->deltaTime=(float)((test+i)%97)/60.0f;if(translation)((KeyFrameTrans*)s->keyFrames)[i].translation={(float)i/8.0f,-(float)i/16.0f,(float)i/32.0f};
+        }
+        Run_Sequence(4,s,NULL,0,false,false);observe(s->keyFrames,count*(translation?32:20));Run_Sequence(6,s,NULL,0,false,false);require(s->keyFrames&&s->keyFramesCompressed);observe(s->keyFramesCompressed,count*(translation?16:10));
+        for(int32_t i=0;i<count;++i){void *expected=translation?(void*)&((KeyFrameTransCompressed*)s->keyFramesCompressed)[i].base:(void*)&((KeyFrameCompressed*)s->keyFramesCompressed)[i];require(Run_Frame(s,i,true)==expected);}
+        // Uncompression retains the old unpacked allocation and frees packed data only after pointer registration
+        void *orphan=s->keyFrames;Run_Sequence(5,s,NULL,0,false,false);require(s->keyFrames&&s->keyFramesCompressed==NULL);observe(s->keyFrames,count*(translation?32:20));RwFree(orphan);
+        Run_Sequence(7,s,NULL,0,false,false);require(s->keyFrames==NULL&&s->keyFramesCompressed);observe(s->keyFramesCompressed,count*(translation?16:10));Run_Sequence(5,s,NULL,0,false,false);require(s->keyFrames&&s->keyFramesCompressed==NULL);observe(s->keyFrames,count*(translation?32:20));sequenceResult(s);destroy(s);++states;
+    }
+    // Cover every packed signed pattern through the complete bulk uncompression formulas
+    for(unsigned test=0;test<65536;++test){
+        alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0xa5,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);observedSequence=s;Run_Sequence(3,s,NULL,1,true,true);KeyFrameTransCompressed *frame=(KeyFrameTransCompressed*)s->keyFramesCompressed;int16_t value=(int16_t)test;frame->base.rot[0]=value;frame->base.rot[1]=(int16_t)(test^0x5555U);frame->base.rot[2]=(int16_t)(test^0xaaaaU);frame->base.rot[3]=(int16_t)(test^0xffffU);frame->base.deltaTime=value;frame->trans[0]=value;frame->trans[1]=(int16_t)(test^0x1234U);frame->trans[2]=(int16_t)(test^0x789aU);Run_Sequence(5,s,NULL,0,false,false);observe(s->keyFrames,32);destroy(s);++states;
+    }
+}
+static void relocationPolicy()
+{
+    // Exercise null, first-buffer priority and unchanged or relocated storage in the optional custom heap
+#ifdef USE_CUSTOM_ALLOCATOR
+    for(unsigned test=0;test<512;++test){alignas(CAnimBlendSequence) unsigned char memory[sizeof(CAnimBlendSequence)];memset(memory,0xa5,sizeof(memory));CAnimBlendSequence *s=(CAnimBlendSequence*)memory;initialize(s);observedSequence=s;if(test&1)s->keyFrames=RwMalloc(32);if(test&2)s->keyFramesCompressed=RwMalloc(16);moveMode=(test>>2)&1;void *old=s->keyFrames,*oldPacked=s->keyFramesCompressed;bool answer=Run_Move(s);require(answer==((old||oldPacked)&&moveMode));if(old)require(s->keyFramesCompressed==oldPacked);else require(s->keyFrames==NULL);observe(&answer,1);sequenceResult(s);destroy(s);++states;}moveMode=0;
+#endif
+}
+int main()
+{
+    // Compare the entire sequence owner and every native animation frame consumer
+    valuesAndNames();allocationPolicy();packedStorage();relocationPolicy();require(fixtureAllocations==fixtureFrees);observedSequence=NULL;animation();require(fixtureAllocations==fixtureFrees);printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

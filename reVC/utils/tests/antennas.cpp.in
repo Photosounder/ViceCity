@@ -1,0 +1,213 @@
+@COMMON@
+@MAIN@
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,attempts,renders,ends,groups,stateCalls,setters,phase[2],depth;
+static unsigned mode;
+static bool recursive;
+static RwIm3DVertex *vertices;
+static uint32_t rng=0x7754109;
+static void require(bool condition)
+{
+    // Fail without opening a game assertion window
+    if(!condition){fprintf(stderr,"states=%u attempts=%u phase=%u\n",states,attempts,phase[depth]);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate logical values independently of address allocation
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static uint32_t bits(float value)
+{
+    // Preserve scalar bits without aliasing float and integer storage
+    uint32_t result;memcpy(&result,&value,sizeof(result));return result;
+}
+static float fromBits(uint32_t value)
+{
+    // Construct exceptional floats with an exact representation
+    float result;memcpy(&result,&value,sizeof(result));return result;
+}
+static void floating(float value)
+{
+    // Compare every finite bit while classifying NaNs without a payload promise
+    word(isnan(value)?UINT32_C(0x7fc00000):bits(value));
+}
+static uint32_t randomWord(void)
+{
+    // Generate a reproducible stream with defined unsigned operations
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+static AntennasVector vector(void)
+{
+    // Keep routine histories finite while retaining all three component signs
+    AntennasVector result;
+    result.x=((int)(randomWord()%2049)-1024)*0.03125f;
+    result.y=((int)(randomWord()%2049)-1024)*0.03125f;
+    result.z=((int)(randomWord()%2049)-1024)*0.03125f;
+    return result;
+}
+static void record(Antenna value)
+{
+    // Observe all declared fields including inactive position and speed storage
+    word(value.active);word(value.updatedLastFrame);word(value.id);floating(value.segmentLength);
+    for(int i=0;i<6;i++){
+        // Retain the original record's position and speed component order
+        floating(value.pos[i].x);floating(value.pos[i].y);floating(value.pos[i].z);
+        floating(value.speed[i].x);floating(value.speed[i].y);floating(value.speed[i].z);
+    }
+}
+static void snapshot(void)
+{
+    // Observe the complete main and optional auxiliary arrays after each operation
+    for(int i=0;i<NUMANTENNAS;i++)record(TestA_Record(i,0));
+#ifdef REVC_SOFTWARE_POLYGONS
+    for(int i=0;i<NUMANTENNAS;i++)record(TestA_Record(i,1));
+#endif
+    word(TestA_Count());states++;
+}
+static void vertexSnapshot(void)
+{
+    // Inspect real backend vertex layouts including UVs changed by earlier transforms
+    for(int i=0;i<2;i++){
+        // Read the same typed fields for both D3D and GL storage
+        floating(vertices[i].getX());floating(vertices[i].getY());floating(vertices[i].getZ());
+        RwRGBA color=vertices[i].getColor();word(color.red);word(color.green);word(color.blue);word(color.alpha);
+        floating(vertices[i].getU());floating(vertices[i].getV());
+    }
+}
+void PushRendergroup(const char *name)
+{
+    // Record original group labels and their timing around render-state changes
+    word(1);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Record the matching original group boundary
+    word(2);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Preserve every typed render-state identifier and original pointer value
+    word(3);word((uint32_t)state);word((uint32_t)(uintptr_t)value);stateCalls++;return 1;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *value,RwUInt8 red,RwUInt8 green,RwUInt8 blue,RwUInt8 alpha)
+{
+    // Verify color and position setters alternate on the same persistent buffer
+    if(!vertices)vertices=value;
+    require(phase[depth]==0 || phase[depth]==2);require(value==vertices+phase[depth]/2);
+    word(4);word(phase[depth]/2);word(red);word(green);word(blue);word(alpha);phase[depth]++;setters++;
+    value->setColor(red,green,blue,alpha);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *value,RwReal x,RwReal y,RwReal z)
+{
+    // Verify coordinates follow their matching color assignment
+    require(phase[depth]==1 || phase[depth]==3);require(value==vertices+phase[depth]/2);
+    word(5);word(phase[depth]/2);floating(x);floating(y);floating(z);phase[depth]++;setters++;
+    value->setX(x);value->setY(y);value->setZ(z);
+}
+void *RwIm3DTransform(RwIm3DVertex *value,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Observe full storage and preserve successful and failed transform behavior
+    require(phase[depth]==4 && value==vertices && count==2 && matrix==NULL && flags==0);phase[depth]=5;
+    attempts++;word(6);vertexSnapshot();
+    bool success=mode==0 || (mode==2 && attempts%5!=0);
+    value[0].setU((float)(attempts%31));value[1].setV(-(float)(attempts%43));
+    if(recursive && depth==0 && attempts%113==0){
+        // Reenter the original renderer while retaining its shared vertex buffer
+        depth=1;phase[depth]=0;TestA_Render();require(phase[depth]==0);depth=0;
+    }
+    word(success);if(!success)phase[depth]=0;
+    return success?value:NULL;
+}
+RwBool RwIm3DRenderLine(RwInt32 first,RwInt32 second)
+{
+    // Render only after a successful transform using the same two indices
+    require(phase[depth]==5 && first==0 && second==1);phase[depth]=6;renders++;word(7);vertexSnapshot();return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Match every successful render with exactly one end operation
+    require(phase[depth]==6);phase[depth]=0;ends++;word(8);return 1;
+}
+int main(void)
+{
+    // Verify the measured public record and vector layout at each compiler boundary
+    static_assert(sizeof(Antenna)==156 && alignof(Antenna)==4,"C record layout");
+    static_assert(offsetof(Antenna,active)==0 && offsetof(Antenna,updatedLastFrame)==1,"C flag offsets");
+    static_assert(offsetof(Antenna,id)==4 && offsetof(Antenna,segmentLength)==8,"C scalar offsets");
+    static_assert(offsetof(Antenna,pos)==12 && offsetof(Antenna,speed)==84,"C vector offsets");
+    static_assert(sizeof(AntennasVector)==12 && alignof(AntennasVector)==4,"C vector layout");
+    TestA_Init();snapshot();TestA_Render();
+#ifdef REVC_SOFTWARE_POLYGONS
+    TestA_EnvRender();
+#endif
+    // Exercise first-free allocation, duplicate IDs, capacity and repeated lengths
+    AntennasVector up={0.0f,0.0f,1.0f},zero={0.0f,0.0f,0.0f};
+    for(unsigned i=0;i<NUMANTENNAS+4;i++){TestA_Register(i,up,vector(),(float)i-2.0f);snapshot();}
+    for(unsigned i=0;i<NUMANTENNAS;i++){TestA_Register(i,up,zero,1000.0f);snapshot();require(TestA_Record((int)i,0).segmentLength==((float)i-2.0f)/6.0f);}
+    for(mode=0;mode<3;mode++){TestA_Render();snapshot();}
+    TestA_Frame();snapshot();TestA_Frame();snapshot();TestA_Render();
+    // Observe partial initialization and reuse after complex spring histories
+    mode=2;
+    for(unsigned i=0;i<12000;i++){
+        // Alternate registration, frame expiry, rendering and scene reset operations
+        unsigned action=randomWord()%12;uint32_t id=randomWord()%13;
+        if(action<7){
+            // Generate each input in a fixed order across C++ compiler conventions
+            AntennasVector dir=vector(),pos=vector();float length=((int)(randomWord()%257)-128)*0.125f;
+            TestA_Register(id,dir,pos,length);
+        }
+        else if(action==7)TestA_Frame();
+        else if(action==8)TestA_Render();
+        else if(action==9)TestA_Init();
+#ifdef REVC_SOFTWARE_POLYGONS
+        else if(action==10){
+            // Keep auxiliary inputs independent of argument evaluation order
+            AntennasVector dir=vector(),pos=vector();float length=(float)(randomWord()%33);
+            TestA_EnvRegister(id,dir,pos,length);
+        }
+        else TestA_EnvRender();
+#endif
+        if(i%11==0)snapshot();
+    }
+    // Exercise typed caller vector copies and original pointer-ID truncation
+    CVector dir(0.5f,-1.0f,2.0f),pos(1.0f,2.0f,3.0f);
+    for(unsigned i=0;i<32;i++){
+        // Keep caller input objects live while IDs vary above the 32-bit range
+        uintptr_t id=(uintptr_t)UINT64_C(0xfedcba9800000000)+i%7;
+        TestA_Legacy(id,&dir,&pos,(float)i);snapshot();dir.x+=0.125f;pos.z-=0.25f;
+    }
+    // Cover each direct spring corner state including signed zeros and exceptional floats
+    uint32_t specials[]={0,0x80000000u,1,0x80000001u,0x3f800000u,0xbf800000u,0x00800000u,0x7f7fffffu,0x7f800000u,0xff800000u,0x7fc01234u,0xffc05678u};
+    for(uint32_t special:specials)for(unsigned axis=0;axis<3;axis++){
+        // Supply complete records before entering the original or converted member algorithm
+        Antenna value={};value.id=special;value.segmentLength=axis==0?0.0f:(axis==1?1.0f:-1.0f);
+        for(unsigned i=0;i<6;i++){value.pos[i]={fromBits(special),-0.0f,(float)i};value.speed[i]={0.0f,fromBits(special),-0.0f};}
+        TestA_UpdateRecord(&value,axis==0?zero:up,zero);record(value);
+    }
+    // Compare direct finite spring histories without depending on pool registration
+    Antenna spring={};spring.active=true;spring.updatedLastFrame=true;spring.id=0xffffffff;spring.segmentLength=0.125f;
+    for(unsigned i=0;i<4096;i++){
+        // Generate the spring direction before the base position on every compiler
+        AntennasVector dir=vector(),pos=vector();TestA_UpdateRecord(&spring,dir,pos);record(spring);
+    }
+#ifdef REVC_SOFTWARE_POLYGONS
+    // Exercise auxiliary duplicate suppression, capacity and failed-transform queue consumption
+    TestA_Init();TestA_Register(7,up,zero,1.0f);TestA_EnvRegister(7,up,zero,3.0f);require(TestA_Count()==0);
+    for(unsigned i=0;i<NUMANTENNAS+3;i++){TestA_EnvRegister(100+i,up,vector(),(float)i);TestA_EnvRegister(100+i,zero,zero,100.0f);snapshot();}
+    require(TestA_Count()==NUMANTENNAS);mode=1;TestA_EnvRender();require(TestA_Count()==0);snapshot();TestA_EnvRender();
+    TestA_EnvRegister(900,up,zero,1.0f);TestA_Register(900,up,zero,2.0f);mode=0;TestA_EnvRender();snapshot();
+#endif
+    // Exercise renderer reentry with the original persistent typed vertex storage
+    TestA_Init();for(unsigned i=0;i<NUMANTENNAS;i++)TestA_Register(i,up,vector(),1.0f);
+    recursive=true;mode=2;for(unsigned i=0;i<40;i++)TestA_Render();recursive=false;snapshot();
+    require(renders==ends && setters==attempts*4 && phase[0]==0 && phase[1]==0);
+    printf("%016llx states=%u attempts=%u renders=%u groups=%u statecalls=%u\n",(unsigned long long)hash,states,attempts,renders,groups,stateCalls);
+    return 0;
+}

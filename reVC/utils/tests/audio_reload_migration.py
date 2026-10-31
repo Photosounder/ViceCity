@@ -1,5 +1,6 @@
 """Known audio reload and game-created entity cleanup conversion."""
 import re
+import audio_music_reload_migration as music_reload
 import audio_lifecycle_migration as lifecycle
 from audio_controls_migration import function
 HOST='//+ rouz edit (ChatGPT)\nvoid\nAudioReloadHost_ResetMusic(void)\n{\n    // Reset music at the original reload point before clearing the player speech flag\n    MusicManager.ResetMusicAfterReload();\n}\n//- rouz edit (ChatGPT)\n'
@@ -31,4 +32,4 @@ def body(source):
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source)
     source=source.replace('uint32 ','uint32_t ').replace('TRUE','1').replace('FALSE','0').replace('nil','NULL')
     source=source.replace('AudioMission_Clear(this,','AudioMission_Clear(manager,').replace('MusicManager.ResetMusicAfterReload()', 'AudioReloadHost_ResetMusic()').replace('CPools::GetAudioScriptObjectPool()', 'CPools_GetAudioScriptObjectPool()')
-    return source
+    return music_reload.calls(source)

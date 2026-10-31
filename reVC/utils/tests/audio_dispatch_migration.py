@@ -1,5 +1,6 @@
 """Known entity-kind and physical-object dispatch migration."""
 import re
+import zones_migration as zones
 import audio_collision_service_migration as collision_service
 from audio_controls_migration import function
 INDEXED=('ProcessExplosions','ProcessFires','ProcessWeather','ProcessScriptObject','ProcessWaterCannon')
@@ -56,11 +57,11 @@ def enumeration(source,name):
 
 def entity_header(source):
     # Separate entity kinds into a header consumable by both languages
-    return '//+ rouz edit (ChatGPT)\n'+source.replace(enumeration(source,'eEntityType'),'#include "EntityTypes.h"')+'\n//- rouz edit (ChatGPT)\n'
+    return '//+ rouz edit (ChatGPT)\n'+source.replace(enumeration(source,'eEntityType'),'#include "EntityTypes.h"').replace(enumeration(source,'eEntityStatus'),'#include "EntityStatus.h"')+'\n//- rouz edit (ChatGPT)\n'
 
 def game_header(source):
     # Separate area identifiers while retaining the existing game class and level enum
-    return '//+ rouz edit (ChatGPT)\n'+source.replace(enumeration(source,'eAreaName'),'#include "GameAreas.h"')+'\n//- rouz edit (ChatGPT)\n'
+    return zones.calls('//+ rouz edit (ChatGPT)\n'+source.replace(enumeration(source,'eAreaName'),'#include "GameAreas.h"')+'\n//- rouz edit (ChatGPT)\n')
 
 def calls(source):
     # Replace the former entity trampoline with actual C routing
@@ -93,4 +94,5 @@ def body(source):
     source=source.replace('CPhysical *entity = (CPhysical *)','void *entity = ')
     source=source.replace('entity->GetType()', 'AudioDispatchHost_PhysicalType(entity)')
     source=source.replace('ProcessVehicle((CVehicle *)', 'AudioDispatchHost_Vehicle(manager, ').replace('ProcessPed((CPhysical *)', 'AudioDispatchHost_Ped(manager, ')
-    return source
+    import audio_vehicle_migration
+    return audio_vehicle_migration.calls(source)

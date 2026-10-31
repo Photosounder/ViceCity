@@ -1,0 +1,286 @@
+// Use MinGW's non-SEH assertion recovery because no nontrivial objects cross the jump
+#if defined(__MINGW32__)
+#define __USE_MINGW_SETJMP_NON_SEH
+#endif
+@COMMON@
+#include "caller.h"
+#include "Pools.h"
+#include "Ped.h"
+#include "Camera.h"
+#include "Fire.h"
+#include "Particle.h"
+#include "WaterLevel.h"
+#include "custompipes.h"
+#include "Timer.h"
+#include "General.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+#include <setjmp.h>
+extern RwIm3DVertex WaterCannonVertices[4];
+extern "C" { uint32_t Timer_timeMs,Timer_frameCounter;float Timer_timeStep; }
+static uint64_t hash=UINT64_C(1469598103934665603);
+static FILE *trace;
+static unsigned states,randoms,ranges,fires,attempts,renders,ends,particles,falls,queries,groups,assertions,depth;
+static uint32_t rng=0x59381a7;
+static unsigned fireMode,drawMode;
+static bool recursive,framePresent=true,matrixPresent=true,expectAssert;
+static jmp_buf assertionJump;
+static RwMatrix cameraMatrix;
+static CPed peds[7];
+static uint8 pedFlags[7]={0,1,POOLFLAG_ISFREE,3,4,5,6};
+static CPool pedPool;
+CCamera TheCamera;
+CFireManager gFireManager;
+RwRaster *gpWaterRaster=(RwRaster *)81;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+static void require(bool condition)
+{
+    // Fail quietly with the current comparison position
+    if(!condition){fprintf(stderr,"states=%u fires=%u attempts=%u\n",states,fires,attempts);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate complete logical state independently of process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+    // Save optional word-level diagnostics for a compiler-specific mismatch
+    if(trace)fwrite(&value,sizeof(value),1,trace);
+}
+static uint32_t bits(float value)
+{
+    // Inspect float storage without scalar aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static float fromBits(uint32_t value)
+{
+    // Construct exact exceptional input values
+    float result;memcpy(&result,&value,4);return result;
+}
+static void floating(float value)
+{
+    // Retain all finite bits and classify NaNs without a payload promise
+    word(isnan(value)?0x7fc00000u:bits(value));
+}
+static void vectorValue(const CVector &value)
+{
+    // Observe original typed owner values through their actual components
+    floating(value.x);floating(value.y);floating(value.z);
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int,const char *)
+{
+    // Observe assertion ordering without opening a game assertion window
+    require(expectAssert);word(1);for(const char *p=expression;*p;p++)word((unsigned char)*p);assertions++;longjmp(assertionJump,1);
+}
+static uint32_t randomWord(void)
+{
+    // Generate fixed histories with defined unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Observe every original gameplay random draw
+    uint16_t value=(uint16_t)randomWord();word(2);word(value);randoms++;return value;
+}
+extern "C" float General_GetRandomNumberInRangeFloat(float low,float high)
+{
+    // Observe both range calls before the original integer particle conversions
+    word(3);floating(low);floating(high);ranges++;return low+(high-low)*((randomWord()&255)/256.0f);
+}
+CPool *CPools::GetPedPool(void)
+{
+    // Observe all original live pool queries and descending traversal
+    word(4);queries++;return &pedPool;
+}
+CVector &CPed::GetPosition(void)
+{
+    // Preserve repeated original position-query order at every eligibility test
+    word(5);word((uint32_t)id);queries++;return position;
+}
+int CPed::GetLocalDirection(const CVector2D &direction)
+{
+    // Observe standing state before the original direction query and force
+    require(direction.x==1.0f && direction.y==0.0f);word(6);word((uint32_t)id);word(bIsStanding);return localDir;
+}
+void CPed::ApplyMoveForce(float x,float y,float z)
+{
+    // Observe the original force arguments and provide legal owner-side velocity effects
+    require(!bIsStanding && x==0.0f && y==0.0f);word(7);word((uint32_t)id);floating(z);m_vecMoveSpeed.z+=z*0.125f;
+}
+void CPed::SetFall(int time,AnimationId animation,uint8 flag)
+{
+    // Observe every C-selected fall ID after the original velocity clamp
+    require(time==2000 && flag==0);word(8);word((uint32_t)id);word((uint32_t)animation);vectorValue(m_vecMoveSpeed);::falls++;this->falls++;lastAnimation=(int)animation;
+}
+CParticle *CParticle::AddParticle(tParticleType type,const CVector &pos,const CVector &dir,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 life)
+{
+    // Observe the exact original particle overload and narrowed rotation values
+    require(entity==NULL && size==0.5f && life==0);require(type==PARTICLE_STEAM_NY_SLOWMOTION || type==PARTICLE_CAR_SPLASH);word(9);word((uint32_t)type);vectorValue(pos);vectorValue(dir);word((uint32_t)rotationSpeed);word((uint32_t)rotation);word((uint32_t)frame);particles++;return NULL;
+}
+bool CFireManager::ExtinguishPointWithWater(CVector pos,float range)
+{
+    // Observe used-segment order and the first-success short circuit
+    require(range==4.0f);fires++;word(10);vectorValue(pos);bool result=fireMode==1 || (fireMode==2 && fires%3==0);word(result);return result;
+}
+CVector &CCamera::GetForward(void)
+{
+    // Observe original main-camera access even when the environment camera replaces it
+    word(11);queries++;return forward;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Preserve the original auxiliary frame null branch
+    require(camera==CustomPipes::EnvMapCam);word(12);word(framePresent);return framePresent?(RwFrame *)31:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Preserve the original auxiliary matrix null branch
+    require(frame==(RwFrame *)31);word(13);word(matrixPresent);return matrixPresent?&cameraMatrix:NULL;
+}
+void PushRendergroup(const char *name)
+{
+    // Retain original debug labels and group timing
+    word(14);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Retain the original final debug boundary
+    word(15);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe every original render-state identifier and value
+    word(16);word((uint32_t)state);word((uint32_t)(uintptr_t)value);return 1;
+}
+void RwIm3DVertexSetU(RwIm3DVertex *vertex,RwReal value)
+{
+    // Observe repeated original UV initialization for each cannon
+    word(17);word((uint32_t)(vertex-WaterCannonVertices));floating(value);vertex->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *vertex,RwReal value)
+{
+    // Observe original main-versus-auxiliary random V values
+    word(18);word((uint32_t)(vertex-WaterCannonVertices));floating(value);vertex->setV(value);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *vertex,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Preserve color narrowing and per-segment vertex order
+    word(19);word((uint32_t)(vertex-WaterCannonVertices));word(r);word(g);word(b);word(a);vertex->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *vertex,RwReal x,RwReal y,RwReal z)
+{
+    // Preserve original ribbon orientation, widening and winding coordinates
+    word(20);word((uint32_t)(vertex-WaterCannonVertices));floating(x);floating(y);floating(z);vertex->setX(x);vertex->setY(y);vertex->setZ(z);
+}
+static void vertices(void)
+{
+    // Observe all actual vertex fields including persistent UV and color contents
+    for(int i=0;i<4;i++){RwIm3DVertex &v=WaterCannonVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());}
+}
+void LittleTest(void)
+{
+    // Reenter at the original hook using the same shared vertex buffer
+    word(21);vertices();if(recursive && depth==0 && attempts%67==0){depth=1;TestWC_Render();depth=0;}
+}
+void *RwIm3DTransform(RwIm3DVertex *value,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Preserve all transform arguments and success/failure behavior
+    require(value==WaterCannonVertices && count==4 && matrix==NULL && flags==rwIM3D_VERTEXUV);attempts++;word(22);vertices();bool ok=drawMode==0 || (drawMode==2 && attempts%5!=0);value[3].setU((float)(attempts%13));word(ok);return ok?value:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Observe the original double-sided triangle list and all twelve indices
+    require(type==rwPRIMTYPETRILIST && count==12);word(23);for(int i=0;i<12;i++)word(indices[i]);vertices();renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Match every successful draw with its original end operation
+    word(24);ends++;return 1;
+}
+static void snapshot(void)
+{
+    // Observe all cannon fields, complete audio outputs and every ped effect
+    for(int index=0;index<NUM_WATERCANNONS;index++){
+        // Compare inactive payloads as well as current and used-segment state
+        WaterCannon c=TestWC_Record(index);word((uint32_t)c.m_nId);word((uint16_t)c.m_nCur);word(c.m_nTimeCreated);
+        for(int i=0;i<16;i++){floating(c.m_avecPos[i].x);floating(c.m_avecPos[i].y);floating(c.m_avecPos[i].z);floating(c.m_avecVelocity[i].x);floating(c.m_avecVelocity[i].y);floating(c.m_avecVelocity[i].z);word(c.m_abUsed[i]);}
+        AudioSoundPosition pos;word((uint32_t)AudioWaterCannonHost_Id(index));AudioWaterCannonHost_Position(index,&pos);floating(pos.x);floating(pos.y);floating(pos.z);
+    }
+    for(int i=0;i<7;i++){vectorValue(peds[i].position);vectorValue(peds[i].m_vecMoveSpeed);word(peds[i].bIsStanding);word((uint32_t)peds[i].falls);word((uint32_t)peds[i].lastAnimation);}
+    for(int i=0;i<12;i++)word(WaterCannonIndexList[i]);states++;
+}
+static WaterCannon seed(uint32_t id,unsigned cur,unsigned mask)
+{
+    // Construct complete original record states with distinct segment and velocity values
+    WaterCannon result={};result.m_nId=(int32_t)id;result.m_nCur=(int16_t)cur;result.m_nTimeCreated=Timer_timeMs;
+    for(unsigned i=0;i<16;i++){result.m_avecPos[i]={(float)i*0.125f,(float)(i%3)*0.25f,(float)(i%5)*0.125f};result.m_avecVelocity[i]={0.75f,-0.5f,0.125f*(float)i};result.m_abUsed[i]=(mask&(1u<<i))!=0;}
+    return result;
+}
+static void reset(void)
+{
+    // Restart the complete manager and legal typed ped-pool storage
+    Timer_timeMs=1000;Timer_timeStep=1.0f;Timer_frameCounter=1;fireMode=0;drawMode=2;pedPool.m_entries=(uint8 *)peds;pedPool.m_flags=pedFlags;pedPool.m_size=7;pedPool.m_entrySize=sizeof(CPed);pedPool.m_allocPtr=-1;
+    for(int i=0;i<7;i++){peds[i].id=i;peds[i].localDir=i%4;peds[i].position=CVector((float)i*0.25f,0.25f,0.25f);peds[i].m_vecMoveSpeed=CVector(0.0f,0.0f,0.0f);peds[i].bIsStanding=true;peds[i].falls=0;peds[i].lastAnimation=0;}
+    TheCamera.forward=CVector(0.0f,0.0f,1.0f);cameraMatrix.at.x=0.0f;cameraMatrix.at.y=2.0f;cameraMatrix.at.z=0.0f;CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=NULL;framePresent=true;matrixPresent=true;TestWC_Init();snapshot();
+}
+int main(void)
+{
+    // Open optional quiet diagnostics without changing the production algorithms
+    const char *tracePath=getenv("WATERCANNON_TRACE");if(tracePath)trace=fopen(tracePath,"wb");
+    // Verify the measured record layout on both C and C++ call boundaries
+    static_assert(sizeof(WaterCannon)==412 && alignof(WaterCannon)==4,"C record");
+    static_assert(offsetof(WaterCannon,m_nId)==0 && offsetof(WaterCannon,m_nCur)==4 && offsetof(WaterCannon,m_nTimeCreated)==8,"C scalar fields");
+    static_assert(offsetof(WaterCannon,m_avecPos)==12 && offsetof(WaterCannon,m_avecVelocity)==204 && offsetof(WaterCannon,m_abUsed)==396,"C arrays");
+    reset();CVector pos(1.0f,2.0f,3.0f),dir(0.1f,0.2f,0.3f);
+    // Observe original assertions before any input read or state update
+#ifndef MASTER
+    expectAssert=true;if(setjmp(assertionJump)==0){TestWC_One(5,NULL,&dir);require(false);}if(setjmp(assertionJump)==0){TestWC_One(5,&pos,NULL);require(false);}if(setjmp(assertionJump)==0){TestWC_Input(0,NULL,&dir);require(false);}if(setjmp(assertionJump)==0){TestWC_Frame(0,NUM_WATERCANNONS);require(false);}expectAssert=false;snapshot();
+#endif
+    // Cover ID zero, signed/unsigned IDs, existing records and full-pool rejection
+    uint32_t ids[]={0,1,0xffffffffu,0x80000000u,2,3,4};
+    for(uint32_t id:ids){TestWC_One(id,&pos,&dir);snapshot();}
+    // Exercise actual original and C subobject aliases in member and manager input paths
+    for(unsigned kind=0;kind<4;kind++)for(unsigned manager=0;manager<2;manager++){
+        // Preserve position-before-velocity semantics for all source/destination combinations
+        reset();WaterCannon c=seed(7,5,0);TestWC_SetRecord(0,&c);TestWC_Alias(0,(int)kind,manager!=0);snapshot();
+    }
+    // Cover strict timeout, unsigned wrap, fire short circuits and every segment slot
+    for(unsigned cur=0;cur<16;cur++)for(unsigned timing=0;timing<3;timing++)for(unsigned fire=0;fire<3;fire++){
+        // Advance directly around the exact original creation-plus-lifetime threshold
+        reset();WaterCannon c=seed(cur+1,cur,(cur&1)?0xffffu:(1u<<cur));c.m_nTimeCreated=timing==0?UINT32_MAX-50:1000;TestWC_SetRecord(0,&c);Timer_timeMs=c.m_nTimeCreated+150+(timing==2?1:0);fireMode=fire;TestWC_Frame(0,(int16_t)(cur%3));snapshot();
+    }
+    // Cover complete empty records, allowed negative member indices and silent ID release
+    reset();WaterCannon empty=seed(71,0,0);TestWC_SetRecord(0,&empty);TestWC_Frame(0,-1);require(TestWC_Record(0).m_nId==0);snapshot();
+    // Cover all camera branches, used-pair gaps, zero cross products and transform outcomes
+    unsigned masks[]={0,1,3,0x5555u,0xaaaau,0xffffu,0x8001u};
+    for(unsigned mask:masks)for(unsigned camera=0;camera<5;camera++){
+        // Keep all ring indices legal while exercising original normal reuse across gaps
+        reset();WaterCannon c=seed(9,7,mask);if(mask==3)for(int i=0;i<16;i++)c.m_avecPos[i]={0.0f,0.0f,0.0f};TestWC_SetRecord(0,&c);CustomPipes::bRenderingEnvMap=camera!=0;CustomPipes::EnvMapCam=camera==1?NULL:(RwCamera *)29;framePresent=camera!=2;matrixPresent=camera!=3;
+        for(drawMode=0;drawMode<3;drawMode++){TestWC_Draw(0);snapshot();}
+    }
+    // Cover ped bounds, strict edge rejection, sparse pools and every local direction
+    for(unsigned used=0;used<2;used++)for(unsigned pool=0;pool<2;pool++){
+        // Bound all axes with distant used points before selecting the first nearby segment
+        reset();WaterCannon c=seed(19,0,used?0xffffu:0);c.m_avecPos[0]={-2.0f,-2.0f,-2.0f};c.m_avecPos[1]={2.0f,2.0f,2.0f};TestWC_SetRecord(0,&c);if(pool)pedPool.m_size=0;peds[5].position=CVector(2.0f,0.5f,0.5f);peds[6].position=CVector(-2.0f,0.5f,0.5f);TestWC_Push(0);snapshot();
+    }
+    // Verify all four animation directions both below and above the planar speed clamp
+    for(int direction=0;direction<4;direction++)for(unsigned fast=0;fast<2;fast++){
+        // Keep one eligible ped inside strict bounds and require exactly one fall and two particles
+        reset();WaterCannon c=seed(21,0,0xffffu);c.m_avecPos[0]={-2.0f,-2.0f,-2.0f};c.m_avecPos[1]={2.0f,2.0f,2.0f};for(int i=0;i<16;i++)c.m_avecVelocity[i]={fast?3.0f:0.01f,fast?-4.0f:0.01f,0.0f};TestWC_SetRecord(0,&c);pedPool.m_size=1;peds[0].position=CVector(0.0f,0.0f,0.0f);peds[0].localDir=direction;unsigned oldFalls=falls,oldParticles=particles;TestWC_Push(0);require(falls==oldFalls+1 && particles==oldParticles+2);require(peds[0].lastAnimation==direction+ANIM_STD_HIGHIMPACT_FRONT);require(peds[0].m_vecMoveSpeed.Magnitude2D()<=0.200001f);snapshot();
+    }
+    // Compare long complete update, input, ped-effect and render histories
+    reset();Timer_timeMs=UINT32_MAX-500;
+    for(unsigned frame=0;frame<6000;frame++){
+        // Generate one complete set of finite inputs in a fixed order
+        Timer_frameCounter=frame;Timer_timeMs+=13;Timer_timeStep=(frame%7)*0.25f;pos=CVector((float)(frame%5)*0.1f,0.25f,0.25f);dir=CVector(0.8f,-0.4f,0.2f);TestWC_One(1+frame%4,&pos,&dir);fireMode=frame%3;TestWC_Update();if(frame%11==0)TestWC_Render();if(frame%29==0)snapshot();
+    }
+    // Reenter the renderer through its original shared buffer hook
+    reset();for(int i=0;i<NUM_WATERCANNONS;i++){WaterCannon c=seed(i+1,(unsigned)i,0xffffu);TestWC_SetRecord(i,&c);}recursive=true;for(unsigned i=0;i<12;i++)TestWC_Render();recursive=false;snapshot();
+    // Check independently counted owner effects against the original pairing
+    require(renders==ends && particles==falls*2 && ranges==falls*2);
+    printf("%016llx states=%u randoms=%u ranges=%u fires=%u attempts=%u renders=%u particles=%u queries=%u assertions=%u groups=%u\n",(unsigned long long)hash,states,randoms,ranges,fires,attempts,renders,particles,queries,assertions,groups);
+    // Finish any requested diagnostic trace after all state observations
+    if(trace)fclose(trace);
+    return 0;
+}

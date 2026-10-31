@@ -1,0 +1,100 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,allocations,frees,planeCalls,assignments,pushes,pops,registrations,relocations;
+static int depth;
+static bool relocate;
+static CColModel *activeModel;
+struct Allocation {void *pointer;size_t size;unsigned id;};
+static Allocation blocks[64];
+static CLink cacheLinks[16];
+ModelHeap gMainHeap;
+static void require(bool value)
+{
+    // Stop without a dialog when an actual owner or SDK contract differs
+    ++checks;if(!value){fprintf(stderr,"check=%u\n",checks);abort();}
+}
+static void hashBytes(const void *value,size_t count)
+{
+    // Observe only initialized bytes and deterministic operation metadata
+    const unsigned char *bytes=(const unsigned char*)value;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,unsigned id,size_t size)
+{
+    // Preserve allocator ordering independently of pointer width and address reuse
+    uint32_t values[]={operation,id,(uint32_t)size};hashBytes(values,sizeof(values));
+}
+void *RwMalloc(size_t size)
+{
+    // Allocate valid aligned storage and retain exact requested byte counts and live identities
+    require(size<65536);for(unsigned i=0;i<64;++i)if(!blocks[i].pointer){void *p=_aligned_malloc(size?size:1,16);require(p!=NULL);memset(p,0xa5,size);blocks[i]={p,size,++allocations};event(1,allocations,size);return p;}require(false);return NULL;
+}
+void RwFree(void *memory)
+{
+    // Observe every original null free and reject double frees at the actual allocator boundary
+    if(!memory){event(2,0,0);return;}for(unsigned i=0;i<64;++i)if(blocks[i].pointer==memory){event(2,blocks[i].id,blocks[i].size);_aligned_free(memory);blocks[i].pointer=NULL;++frees;return;}require(false);
+}
+void ModelHeap::PushMemId(int32_t id)
+{
+    // Check the actual custom allocator category and its balanced nesting
+    require(id==13&&depth==0);++depth;++pushes;event(3,13,0);
+}
+void ModelHeap::PopMemId(void)
+{
+    // Verify every plane calculation restores the original allocator category
+    require(depth==1);--depth;++pops;event(4,13,0);
+}
+void ModelHeap::RegisterMemPointer(void *location)
+{
+    // Verify registration receives the actual live plane pointer slot
+    require(depth==1&&location==&activeModel->trianglePlanes);++registrations;event(5,0,0);
+    // Relocate selected allocations before the original triangle loop reads the registered pointer
+    if(relocate){void *old=*(void**)location;size_t size=0;for(unsigned i=0;i<64;++i)if(blocks[i].pointer==old)size=blocks[i].size;require(size>0);void *replacement=RwMalloc(size);memcpy(replacement,old,size);RwFree(old);*(void**)location=replacement;++relocations;}
+}
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*)
+{
+    // Treat unexpected model assertions as test failures without opening native diagnostics
+    require(false);
+}
+static ColModelResult invoke(unsigned operation,CColModel *self,const CColModel *other=NULL,int32_t index=0,void *link=NULL)
+{
+    // Enter every whole owner method through the independently compiled original or C caller
+    activeModel=self;return TestModel(operation,self,other,index,link);
+}
+static CColModel *create(unsigned seed)
+{
+    // Check constructor partial initialization before populating valid geometry inputs
+    CColModel *model=(CColModel*)malloc(sizeof(CColModel));require(model!=NULL);memset(model,0xa5,sizeof(*model));invoke(0,model);for(unsigned i=0;i<sizeof(CSphere)+sizeof(CBox);++i)require(((unsigned char*)model)[i]==0xa5);require(model->numSpheres==0&&model->numBoxes==0&&model->numLines==0&&model->numTriangles==0&&model->level==0&&model->ownsCollisionVolumes&&!model->spheres&&!model->lines&&!model->boxes&&!model->vertices&&!model->triangles&&!model->trianglePlanes);
+    // Use distinct source and destination bounds and collision metadata
+    model->boundingSphere.center={(float)seed*0.125f,-2.0f,3.5f};model->boundingSphere.radius=4.25f;model->boundingBox.min={-1.0f,-2.0f,-3.0f};model->boundingBox.max={1.0f,2.0f,(float)seed*0.0625f};model->level=(uint8_t)(seed%3);model->numSpheres=seed%4;model->numBoxes=(seed/2)%4;model->numLines=(seed/3)%4;model->numTriangles=(seed/5)%6;
+    // Allocate real C collision records with deterministic padding before filling every used field
+    if(model->numSpheres){model->spheres=(CColSphere*)RwMalloc(model->numSpheres*sizeof(CColSphere));for(int i=0;i<model->numSpheres;++i){model->spheres[i].bounds.center={(float)i,2.0f,3.0f};model->spheres[i].bounds.radius=(float)(seed%11+i);model->spheres[i].surface=(uint8_t)seed;model->spheres[i].piece=(uint8_t)i;}}
+    if(model->numBoxes){model->boxes=(CColBox*)RwMalloc(model->numBoxes*sizeof(CColBox));for(int i=0;i<model->numBoxes;++i){model->boxes[i].bounds.min={(float)i,-3.0f,-4.0f};model->boxes[i].bounds.max={(float)i+2.0f,3.0f,4.0f};model->boxes[i].surface=(uint8_t)seed;model->boxes[i].piece=(uint8_t)i;}}
+    if(model->numLines){model->lines=(CColLine*)RwMalloc(model->numLines*sizeof(CColLine));memset(model->lines,0,model->numLines*sizeof(CColLine));for(int i=0;i<model->numLines;++i){model->lines[i].p0={(float)i,1.0f,2.0f};model->lines[i].p1={(float)i+3.0f,4.0f,5.0f};}}
+    if(model->numTriangles){model->vertices=(CompressedVector*)RwMalloc(16*sizeof(CompressedVector));for(int i=0;i<16;++i)CompressedVector_Set(&model->vertices[i],(float)(i%4),(float)(i/4),(float)((i*7+seed)%9)*0.25f);model->triangles=(CColTriangle*)RwMalloc(model->numTriangles*sizeof(CColTriangle));for(int i=0;i<model->numTriangles;++i)ColTriangle_Set(&model->triangles[i],i,(i+3)%16,(i+9)%16,(uint8_t)(seed+i));}
+    return model;
+}
+static void planes(CColModel *model)
+{
+    // Exercise real geometry calculations, registered pointer relocation and the aligned cache-link tail
+    invoke(3,model);++planeCalls;CLink *link=CLinkList_Insert(&CCollision::ms_colModelCache,model);require(link!=NULL);invoke(5,model,NULL,0,link);require(invoke(6,model).pointer==link);for(int i=0;i<model->numTriangles;++i)hashBytes(&model->trianglePlanes[i],sizeof(CColTrianglePlane));
+}
+static void observe(const CColModel *model)
+{
+    // Compare initialized model fields and typed geometry while ignoring record padding and addresses
+    hashBytes(&model->boundingSphere,sizeof(CSphere));hashBytes(&model->boundingBox,sizeof(CBox));int32_t counts[]={model->numSpheres,model->numBoxes,model->numLines,model->numTriangles,model->level,model->ownsCollisionVolumes};hashBytes(counts,sizeof(counts));
+    for(int i=0;i<model->numSpheres;++i){hashBytes(&model->spheres[i].bounds,sizeof(CSphere));hashBytes(&model->spheres[i].surface,1);hashBytes(&model->spheres[i].piece,1);}for(int i=0;i<model->numBoxes;++i){hashBytes(&model->boxes[i].bounds,sizeof(CBox));hashBytes(&model->boxes[i].surface,1);hashBytes(&model->boxes[i].piece,1);}for(int i=0;i<model->numLines;++i){hashBytes(&model->lines[i].p0,sizeof(CollisionVector3));hashBytes(&model->lines[i].p1,sizeof(CollisionVector3));}for(int i=0;i<model->numTriangles;++i){hashBytes(&model->triangles[i].a,6);hashBytes(&model->triangles[i].surface,1);}
+}
+int main(void)
+{
+    // Exercise actual C cache lists and a complete range of allocation, reuse and ownership transitions
+    CLinkList_Init(&CCollision::ms_colModelCache,cacheLinks,16);for(unsigned test=0;test<4096;++test){CColModel *source=create(test),*target=create(test%4==0?test:test*7+3);relocate=(test&1)!=0;if(target->numTriangles==source->numTriangles)planes(target);CColTrianglePlane *oldPlanes=target->trianglePlanes;CColSphere *oldSpheres=target->spheres;int oldCount=target->numSpheres;uint8_t oldLevel=target->level;
+        // Preserve deep-copy field order, equal-count allocation reuse and untouched cache-plane state
+        require(invoke(8,target,source).pointer==target);++assignments;require(target->level==oldLevel&&target->ownsCollisionVolumes&&target->trianglePlanes==oldPlanes);if(oldCount==source->numSpheres&&oldCount)require(target->spheres==oldSpheres);observe(target);if(target->numTriangles){int maximum=0;for(int i=0;i<target->numTriangles;++i){if(target->triangles[i].a>maximum)maximum=target->triangles[i].a;if(target->triangles[i].b>maximum)maximum=target->triangles[i].b;if(target->triangles[i].c>maximum)maximum=target->triangles[i].c;}for(int i=0;i<=maximum;++i){CollisionVector3 expected=CompressedVector_Get(&source->vertices[i]);CollisionVector3 actual=invoke(7,target,NULL,i).point;require(memcmp(&expected,&actual,sizeof(expected))==0);hashBytes(&actual,sizeof(actual));}}
+        // Cover all plane counts including zero and cached-plane destruction after volume frees
+        if(!target->trianglePlanes)planes(target);if(test%3==0){CColSphere *spheres=target->spheres;CColLine *lines=target->lines;CColBox *boxes=target->boxes;CompressedVector *vertices=target->vertices;CColTriangle *triangles=target->triangles;CColTrianglePlane *savedPlanes=target->trianglePlanes;CLink *link=(CLink*)invoke(6,target).pointer;target->ownsCollisionVolumes=false;unsigned oldFrees=frees;invoke(2,target);require(frees==oldFrees&&target->trianglePlanes==savedPlanes&&!target->spheres&&!target->lines&&!target->boxes&&!target->vertices&&!target->triangles&&target->numSpheres==0&&target->numBoxes==0&&target->numLines==0&&target->numTriangles==0);CLinkList_Remove(&CCollision::ms_colModelCache,link);RwFree(savedPlanes);target->trianglePlanes=NULL;RwFree(spheres);RwFree(lines);RwFree(boxes);RwFree(vertices);RwFree(triangles);}
+        invoke(1,target);invoke(1,source);free(target);free(source);require(CCollision::ms_colModelCache.head.next==&CCollision::ms_colModelCache.tail&&depth==0);
+    }
+    // Verify every diagnostic allocation is balanced before reporting the comparison hash
+    require(allocations==frees);for(unsigned i=0;i<64;++i)require(blocks[i].pointer==NULL);printf("cases=4096 checks=%u assignments=%u planes=%u allocations=%u frees=%u pushes=%u registrations=%u relocations=%u hash=%016llx\n",checks,assignments,planeCalls,allocations,frees,pushes,registrations,relocations,(unsigned long long)hashValue);return 0;
+}

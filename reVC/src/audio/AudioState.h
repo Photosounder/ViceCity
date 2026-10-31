@@ -1,17 +1,17 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 //+ rouz edit (ChatGPT)
 #include <stddef.h>
 #include <stdint.h>
+#include "../vehicles/Transmission.h"
 #include "../core/config.h"
 
 #ifdef __cplusplus
 class CPed;
 class CVehicle;
-class cTransmission;
 #else
 typedef struct CPed CPed;
 typedef struct CVehicle CVehicle;
-typedef struct cTransmission cTransmission;
 #endif
 
 typedef struct cAudioScriptObjectManager {
@@ -63,4 +63,5 @@ VehicleParams_Init(cVehicleParams *params)
 	params->m_nIndex = 0;
 	params->m_fVelocityChange = 0.0f;
 }
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

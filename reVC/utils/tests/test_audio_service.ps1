@@ -21,7 +21,10 @@ foreach($serviceCompiler in @('clang','gcc')) {
    $serviceCommon=@("$serviceBuild/random.o","$serviceBuild/AudioMissionState.o","$serviceBuild/AudioMissionPosition.o")
    & $serviceCpp -std=c++17 "-$serviceOptimization" @serviceArgs "$serviceBuild/before.cpp" @serviceCommon -o "$serviceBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original owner compile failed'}
-   & $serviceCpp -std=c++17 "-$serviceOptimization" @serviceArgs "$serviceBuild/after.cpp" @serviceCommon "$serviceBuild/AudioService.o" "$serviceBuild/caller.o" -o "$serviceBuild/after.exe"
+   # Provide the actual global C music record for the direct service-entry observer
+   & $serviceCompiler -std=c11 -pedantic-errors "-$serviceOptimization" @serviceArgs -c "$serviceBuild/music-owner.c" -o "$serviceBuild/music-owner.o"
+   if($LASTEXITCODE -ne 0) {throw 'C music owner compile failed'}
+   & $serviceCpp -std=c++17 "-$serviceOptimization" @serviceArgs "$serviceBuild/after.cpp" @serviceCommon "$serviceBuild/AudioService.o" "$serviceBuild/caller.o" "$serviceBuild/music-owner.o" -o "$serviceBuild/after.exe"
    if($LASTEXITCODE -ne 0) {throw 'Mixed C/C++ link failed'}
    $serviceBefore=& "$serviceBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original runtime failed'}

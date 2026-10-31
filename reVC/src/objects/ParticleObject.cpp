@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "ParticleObject.h"
@@ -158,7 +159,7 @@ CParticleObject::AddObject(uint16 type, CVector const &pos, CVector const &targe
 	pobj->m_pParticle        = nil;
 	
 	if ( lifeTime != 0 )
-		pobj->m_nRemoveTimer = CTimer::GetTimeInMilliseconds() + lifeTime;
+		pobj->m_nRemoveTimer = (*Timer_GetTimeInMilliseconds()) + lifeTime;
 	else
 		pobj->m_nRemoveTimer = 0;
 	
@@ -244,7 +245,7 @@ CParticleObject::AddObject(uint16 type, CVector const &pos, CVector const &targe
 			pobj->m_nSkipFrames      = 1;
 			pobj->m_nCreationChance  = 0;
 			pobj->m_vecTarget        = CVector(0.0f, 0.0f, 0.3f);
-			pobj->m_nRemoveTimer     = CTimer::GetTimeInMilliseconds() + 5000;
+			pobj->m_nRemoveTimer     = (*Timer_GetTimeInMilliseconds()) + 5000;
 			CAudioHydrant::Add(pobj);
 			break;
 		}
@@ -357,7 +358,7 @@ CParticleObject::AddObject(uint16 type, CVector const &pos, CVector const &targe
 			pobj->m_nNumEffectCycles = 1;
 			pobj->m_nSkipFrames      = 1;
 			pobj->m_nCreationChance  = 0;
-			pobj->m_nRemoveTimer     = CTimer::GetTimeInMilliseconds();
+			pobj->m_nRemoveTimer     = (*Timer_GetTimeInMilliseconds());
 			break;
 		}
 	}
@@ -395,7 +396,7 @@ CParticleObject::AddObject(tParticleType type, CVector const &pos, CVector const
 	pobj->m_bRemove          = remove;
 	
 	if ( lifeTime != 0 )
-		pobj->m_nRemoveTimer = CTimer::GetTimeInMilliseconds() + lifeTime;
+		pobj->m_nRemoveTimer = (*Timer_GetTimeInMilliseconds()) + lifeTime;
 	else
 		pobj->m_nRemoveTimer = 0;
 	
@@ -446,7 +447,7 @@ CParticleObject::UpdateAll(void)
 	}
 
 	{
-		int32 frame = CTimer::GetFrameCounter() & 31;
+		int32 frame = (*Timer_GetFrameCounter()) & 31;
 		int32 counter = 0;
 	
 		CParticleObject *pobj = pFarListHead;
@@ -502,7 +503,7 @@ void CParticleObject::UpdateClose(void)
 		
 		int32 randVal;
 		if ( this->m_nCreationChance != 0 )
-			randVal = CGeneral::GetRandomNumber() % this->m_nCreationChance;
+			randVal = General_GetRandomNumber() % this->m_nCreationChance;
 		
 		if (   this->m_nCreationChance == 0
 			|| randVal == 0 && this->m_nCreationChance < 0
@@ -520,16 +521,16 @@ void CParticleObject::UpdateClose(void)
 					
 					flamevel.x = vel.x;
 					flamevel.y = vel.y;
-					flamevel.z = CGeneral::GetRandomNumberInRange(0.0125f*size, 0.1f*size);
+					flamevel.z = General_GetRandomNumberInRangeFloat(0.0125f*size, 0.1f*size);
 						
 					CParticle::AddParticle(PARTICLE_FLAME, pos, flamevel, nil, size);
 					
 					
 					CVector possmoke = pos;
 					
-					possmoke.x += CGeneral::GetRandomNumberInRange(0.625f*-size, size*0.625f);
-					possmoke.y += CGeneral::GetRandomNumberInRange(0.625f*-size, size*0.625f);
-					possmoke.z += CGeneral::GetRandomNumberInRange(0.625f* size, size*2.5f);
+					possmoke.x += General_GetRandomNumberInRangeFloat(0.625f*-size, size*0.625f);
+					possmoke.y += General_GetRandomNumberInRangeFloat(0.625f*-size, size*0.625f);
+					possmoke.z += General_GetRandomNumberInRangeFloat(0.625f* size, size*2.5f);
 					
 					CParticle::AddParticle(PARTICLE_CARFLAME_SMOKE, possmoke, vel);
             
@@ -549,7 +550,7 @@ void CParticleObject::UpdateClose(void)
 					
 					flamevel.x = vel.x;
 					flamevel.y = vel.y;
-					flamevel.z = CGeneral::GetRandomNumberInRange(0.0125f*s, 0.1f*s);
+					flamevel.z = General_GetRandomNumberInRangeFloat(0.0125f*s, 0.1f*s);
 					
 					float flamesize = 0.8f*size;
 					
@@ -560,9 +561,9 @@ void CParticleObject::UpdateClose(void)
 					{
 						CVector smokepos = pos;
 						
-						smokepos.x += CGeneral::GetRandomNumberInRange(0.625f*-size, 0.625f*size);
-						smokepos.y += CGeneral::GetRandomNumberInRange(0.625f*-size, 0.625f*size);
-						smokepos.z += CGeneral::GetRandomNumberInRange(0.625f* size, 3.5f  *size);
+						smokepos.x += General_GetRandomNumberInRangeFloat(0.625f*-size, 0.625f*size);
+						smokepos.y += General_GetRandomNumberInRangeFloat(0.625f*-size, 0.625f*size);
+						smokepos.z += General_GetRandomNumberInRangeFloat(0.625f* size, 3.5f  *size);
 						
 						CParticle::AddParticle(PARTICLE_CARFLAME_SMOKE, smokepos, vel);
 					}
@@ -593,9 +594,9 @@ void CParticleObject::UpdateClose(void)
 						
 						for ( int32 i = 0; i < this->m_nNumEffectCycles; i++ )
 						{
-							fireballvel.x += CGeneral::GetRandomNumberInRange(-veloffset.x, veloffset.x);
-							fireballvel.y += CGeneral::GetRandomNumberInRange(-veloffset.y, veloffset.y);
-							fireballvel.z += CGeneral::GetRandomNumberInRange(-veloffset.z, veloffset.z);
+							fireballvel.x += General_GetRandomNumberInRangeFloat(-veloffset.x, veloffset.x);
+							fireballvel.y += General_GetRandomNumberInRangeFloat(-veloffset.y, veloffset.y);
+							fireballvel.z += General_GetRandomNumberInRangeFloat(-veloffset.z, veloffset.z);
 
 							CParticle::AddParticle(PARTICLE_FIREBALL_SMOKE, pos, fireballvel, nil, size);
 						}
@@ -639,16 +640,16 @@ void CParticleObject::UpdateClose(void)
 						CVector vel = this->m_vecTarget;
 
 						if ( vel.x != 0.0f )
-							vel.x += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+							vel.x += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 						
 						if ( vel.y != 0.0f )
-							vel.y += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+							vel.y += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 						
 						if ( vel.z != 0.0f )
-							vel.z += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+							vel.z += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 						
 						CParticle::AddParticle(this->m_ParticleType, this->GetPosition(), vel, nil, this->m_fSize,
-							CGeneral::GetRandomNumberInRange(-6.0f, 6.0f));
+							General_GetRandomNumberInRangeFloat(-6.0f, 6.0f));
 					}
 					
 					break;
@@ -671,41 +672,41 @@ void CParticleObject::UpdateClose(void)
 						CVector splashvel;
 												
 						splashpos = pos + CVector(0.75f*fCos, 0.75f*fSin, 0.0f);
-						splashvel = vel + CVector(0.05f*fCos, 0.05f*fSin, CGeneral::GetRandomNumberInRange(0.04f, 0.08f));
+						splashvel = vel + CVector(0.05f*fCos, 0.05f*fSin, General_GetRandomNumberInRangeFloat(0.04f, 0.08f));
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.8f), colorsmoke);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.8f), colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.5f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.5f), this->m_Color);
 						
 
 						splashpos = pos + CVector(0.75f*fCos, 0.75f*-fSin, 0.0f);
-						splashvel = vel + CVector(0.05f*fCos, 0.05f*-fSin, CGeneral::GetRandomNumberInRange(0.04f, 0.08f));
+						splashvel = vel + CVector(0.05f*fCos, 0.05f*-fSin, General_GetRandomNumberInRangeFloat(0.04f, 0.08f));
 						
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.8f), colorsmoke);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.8f), colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.5f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.5f), this->m_Color);
 						
 						
 						splashpos = pos + CVector(0.75f*-fCos, 0.75f*fSin, 0.0f);
-						splashvel = vel + CVector(0.05f*-fCos, 0.05f*fSin, CGeneral::GetRandomNumberInRange(0.04f, 0.08f));
+						splashvel = vel + CVector(0.05f*-fCos, 0.05f*fSin, General_GetRandomNumberInRangeFloat(0.04f, 0.08f));
 						
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.8f), colorsmoke);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.8f), colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.5f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.5f), this->m_Color);
 						
 						
 						splashpos = pos + CVector(0.75f*-fCos, 0.75f*-fSin, 0.0f);
-						splashvel = vel + CVector(0.05f*-fCos, 0.05f*-fSin, CGeneral::GetRandomNumberInRange(0.04f, 0.08f));
+						splashvel = vel + CVector(0.05f*-fCos, 0.05f*-fSin, General_GetRandomNumberInRangeFloat(0.04f, 0.08f));
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.8f), colorsmoke);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.8f), colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.1f, 0.5f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.1f, 0.5f), this->m_Color);
 					}
 					
 					for ( int32 i = 0; i < 1; i++ )
@@ -720,42 +721,42 @@ void CParticleObject::UpdateClose(void)
 						
 						splashpos = pos + CVector(0.5f*fCos, 0.5f*fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.05f, 0.25f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.05f, 0.25f);
 						
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.4f, 1.0f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.4f, 1.0f), this->m_Color);
 						
 						
 						splashpos = pos + CVector(0.5f*fCos, 0.5f*-fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) *  fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.05f, 0.25f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) *  fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.05f, 0.25f);
 
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.4f, 1.0f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.4f, 1.0f), this->m_Color);
 						
 						
 						splashpos = pos + CVector(0.5f*-fCos, 0.5f*fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) *  fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.05f, 0.25f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) *  fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.05f, 0.25f);
 
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.4f, 1.0f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.4f, 1.0f), this->m_Color);
 						
 						
 						splashpos = pos + CVector(0.5f*-fCos, 0.5f*-fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.25f, 0.25f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.05f, 0.25f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.25f, 0.25f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.05f, 0.25f);
 
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.4f, 1.0f), this->m_Color);
+							General_GetRandomNumberInRangeFloat(0.4f, 1.0f), this->m_Color);
 					}
 
 					break;
@@ -768,7 +769,7 @@ void CParticleObject::UpdateClose(void)
 					CVector pos = this->GetPosition();
 					CVector vel = this->m_vecTarget;
 					
-					float size = CGeneral::GetRandomNumberInRange(1.0f, 2.5f);
+					float size = General_GetRandomNumberInRangeFloat(1.0f, 2.5f);
 					
 					for ( int32 i = 0; i < 3; i++ )
 					{
@@ -782,9 +783,9 @@ void CParticleObject::UpdateClose(void)
 						
 						splashpos = pos + CVector(2.0f*fCos, 2.0f*fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.01f, 0.03f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.01f, 0.03f);
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil, size, colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
@@ -792,27 +793,27 @@ void CParticleObject::UpdateClose(void)
 
 						splashpos = pos + CVector(2.0f*fCos, 2.0f*-fSin, 0.0f);						
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.01f, 0.03f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.01f, 0.03f);
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil, size, colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 						
 						splashpos = pos + CVector(2.0f*-fCos, 2.0f*fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.01f, 0.03f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.01f, 0.03f);
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil, size, colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 						
 						splashpos = pos + CVector(2.0f*-fCos, 2.0f*-fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.01f, 0.03f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.01f, 0.03f);
 						
 						CParticle::AddParticle(PARTICLE_RUBBER_SMOKE, splashpos, splashvel, nil, size, colorsmoke);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
@@ -831,30 +832,30 @@ void CParticleObject::UpdateClose(void)
 						
 						splashpos = pos + CVector(1.25f*fCos, 1.25f*fSin, 0.0f);
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.26f, 0.53f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.26f, 0.53f);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 						
 						splashpos = pos + CVector(1.25f*fCos, 1.25f*-fSin, 0.0f);						
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.26f, 0.53f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.26f, 0.53f);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 						
 						splashpos = pos + CVector(1.25f*-fCos, 1.25f*fSin, 0.0f);						
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.26f, 0.53f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.26f, 0.53f);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 
 						splashpos = pos + CVector(1.25f*-fCos, 1.25f*-fSin, 0.0f);						
 						splashvel = vel;
-						splashvel.x += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * -fCos;
-						splashvel.y += CGeneral::GetRandomNumberInRange(-0.1f, 0.1f) * -fSin;
-						splashvel.z += CGeneral::GetRandomNumberInRange(0.26f, 0.53f);
+						splashvel.x += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * -fCos;
+						splashvel.y += General_GetRandomNumberInRangeFloat(-0.1f, 0.1f) * -fSin;
+						splashvel.z += General_GetRandomNumberInRangeFloat(0.26f, 0.53f);
 						CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil, 0.0f, this->m_Color);
 					}
 
@@ -870,10 +871,10 @@ void CParticleObject::UpdateClose(void)
 					{
 						CVector splashpos = pos;
 						
-						splashpos.x += CGeneral::GetRandomNumberInRange(-size, size);
-						splashpos.y += CGeneral::GetRandomNumberInRange(-size, size);
+						splashpos.x += General_GetRandomNumberInRangeFloat(-size, size);
+						splashpos.y += General_GetRandomNumberInRangeFloat(-size, size);
 
-						if ( CGeneral::GetRandomNumber() & 1 )
+						if ( General_GetRandomNumber() & 1 )
 						{
 							CParticle::AddParticle(PARTICLE_RAIN_SPLASH,   splashpos, CVector(0.0f, 0.0f, 0.0f),
 								nil, 0.1f,  this->m_Color);
@@ -905,28 +906,28 @@ void CParticleObject::UpdateClose(void)
 							CVector splashpos, splashvel;
 							
 							splashpos = pos + CVector(0.01f*fCos, 0.01f*fSin, 0.0f);
-							splashvel = vel + CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+							splashvel = vel + CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 							CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-								CGeneral::GetRandomNumberInRange(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
+								General_GetRandomNumberInRangeFloat(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
 								
 							splashpos = pos + CVector(0.01f*fCos, 0.01f*-fSin, 0.0f);
-							splashvel = vel + CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+							splashvel = vel + CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 							CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-								CGeneral::GetRandomNumberInRange(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
+								General_GetRandomNumberInRangeFloat(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
 								
 							splashpos = pos + CVector(0.01f*-fCos, 0.01f*fSin, 0.0f);
-							splashvel = vel + CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+							splashvel = vel + CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 							CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-								CGeneral::GetRandomNumberInRange(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
+								General_GetRandomNumberInRangeFloat(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
 								
 							splashpos = pos + CVector(0.01f*-fCos, 0.01f*-fSin, 0.0f);
-							splashvel = vel + CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+							splashvel = vel + CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 							CParticle::AddParticle(PARTICLE_CAR_SPLASH, splashpos, splashvel, nil,
-								CGeneral::GetRandomNumberInRange(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
+								General_GetRandomNumberInRangeFloat(0.005f, 0.0075f), this->m_Color, 0, 0, 1, 300);
 						}
 						for ( int32 i = 0; i < this->m_nNumEffectCycles; i++ )
 						{
@@ -952,28 +953,28 @@ void CParticleObject::UpdateClose(void)
 						CVector splashpos, splashvel;
 						
 						splashpos = pos + CVector(0.015f*fCos, 0.015f*fSin, 0.0f);
-						splashvel = vel + CVector(0.015f*fCos, 0.015f*fSin, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+						splashvel = vel + CVector(0.015f*fCos, 0.015f*fSin, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 						CParticle::AddParticle(PARTICLE_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
+							General_GetRandomNumberInRangeFloat(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
 							
 						splashpos = pos + CVector(0.015f*fCos, 0.015f*-fSin, 0.0f);
-						splashvel = vel + CVector(0.015f*fCos, 0.015f*-fSin, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+						splashvel = vel + CVector(0.015f*fCos, 0.015f*-fSin, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 						CParticle::AddParticle(PARTICLE_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
+							General_GetRandomNumberInRangeFloat(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
 							
 						splashpos = pos + CVector(0.015f*-fCos, 0.015f*fSin, 0.0f);
-						splashvel = vel + CVector(0.015f*-fCos, 0.015f*fSin, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+						splashvel = vel + CVector(0.015f*-fCos, 0.015f*fSin, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 						CParticle::AddParticle(PARTICLE_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
+							General_GetRandomNumberInRangeFloat(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
 							
 						splashpos = pos + CVector(0.015f*-fCos, 0.015f*-fSin, 0.0f);
-						splashvel = vel + CVector(0.015f*-fCos, 0.015f*-fSin, CGeneral::GetRandomNumberInRange(0.004f, 0.008f));
+						splashvel = vel + CVector(0.015f*-fCos, 0.015f*-fSin, General_GetRandomNumberInRangeFloat(0.004f, 0.008f));
 							
 						CParticle::AddParticle(PARTICLE_SPLASH, splashpos, splashvel, nil,
-							CGeneral::GetRandomNumberInRange(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
+							General_GetRandomNumberInRangeFloat(0.001f, 0.005f), this->m_Color, 0, 0, 1, 1000);
 					}
 					
 					break;
@@ -1001,13 +1002,13 @@ void CParticleObject::UpdateClose(void)
 							CVector vel = this->m_vecTarget;
 							
 							if ( vel.x != 0.0f )
-								vel.x += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+								vel.x += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 							
 							if ( vel.y != 0.0f )
-								vel.y += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+								vel.y += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 							
 							if ( vel.z != 0.0f )
-								vel.z += CGeneral::GetRandomNumberInRange(-this->m_fRandVal, this->m_fRandVal);
+								vel.z += General_GetRandomNumberInRangeFloat(-this->m_fRandVal, this->m_fRandVal);
 							
 							CParticle::AddParticle(this->m_ParticleType, this->GetPosition(), vel, nil,
 								this->m_fSize, this->m_Color);
@@ -1028,7 +1029,7 @@ void CParticleObject::UpdateClose(void)
 		}
 	}
 	
-	if ( this->m_nRemoveTimer != 0 && this->m_nRemoveTimer < CTimer::GetTimeInMilliseconds() )
+	if ( this->m_nRemoveTimer != 0 && this->m_nRemoveTimer < (*Timer_GetTimeInMilliseconds()) )
 	{
 		MoveToList(&pCloseListHead, &pUnusedListHead, this);
 		this->m_nState = POBJECTSTATE_FREE;
@@ -1041,7 +1042,7 @@ void CParticleObject::UpdateClose(void)
 void
 CParticleObject::UpdateFar(void)
 {
-	if ( this->m_nRemoveTimer != 0 && this->m_nRemoveTimer < CTimer::GetTimeInMilliseconds() )
+	if ( this->m_nRemoveTimer != 0 && this->m_nRemoveTimer < (*Timer_GetTimeInMilliseconds()) )
 	{
 		MoveToList(&pFarListHead, &pUnusedListHead, this);
 		this->m_nState = POBJECTSTATE_FREE;
@@ -1344,5 +1345,7 @@ CParticleObject::MoveToList(CParticleObject **from, CParticleObject **to, CParti
 	if ( obj->m_pNext )
 		obj->m_pNext->m_pPrev = obj;
 }
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)

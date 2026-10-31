@@ -1,0 +1,288 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { int32_t TempBufferVerticesStored,TempBufferIndicesStored,RenderBuffer_VerticesToBeStored,RenderBuffer_IndicesToBeStored;uint16_t TempBufferRenderIndexList[TEMPBUFFERINDEXSIZE]; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+static RwCamera camera;
+static RwFrame frame;
+static RwMatrix matrix;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t rng=0x987321u;
+static unsigned states,calls,queries,randoms,transforms,renders,flushes,attempts,writes;
+static int hook,depth,thresholdV,thresholdI;
+static bool triggered,transformOK,matrixPresent;
+
+static void require(bool condition)
+{
+    // Abort at the exact failing corpus position
+    if(!condition){fprintf(stderr,"states=%u calls=%u hook=%d vertices=%d indices=%d\n",states,calls,hook,TempBufferVerticesStored,TempBufferIndicesStored);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observations independently of addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite floating results bit for bit and NaNs by classification
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void record(const BrightLight &v)
+{
+    // Observe every declared component in the original record order
+    const BrightLightVector values[]={v.m_pos,v.m_up,v.m_side,v.m_front};
+    for(int i=0;i<4;i++){
+        // Include all basis and position coordinates without type punning
+        floating(values[i].x);floating(values[i].y);floating(values[i].z);
+    }
+    floating(v.m_camDist);word(v.m_type);word(v.m_red);word(v.m_green);word(v.m_blue);
+}
+static void event(unsigned value)
+{
+    // Compare owner ordering and the live main/cache/shared counts at each call
+    int mainCount,envCount;TestBL_Counts(&mainCount,&envCount);calls++;word(value);word(mainCount);word(envCount);word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(rng);
+}
+static BrightLight seeded(int index)
+{
+    // Prepare legal nonorthogonal geometry and recognizable retained record data
+    BrightLight value={{index*.375f,index*-.19f,.25f},{.13f,.05f,.91f},{.7f,-.11f,.03f},{.17f,.81f,.09f},(float)(index%61),(uint8_t)(index%12+1),(uint8_t)(37+index),(uint8_t)(187-index),(uint8_t)(23+index*3)};return value;
+}
+static void changeRecord(void)
+{
+    // Change source fields after a cached position or color calculation
+    BrightLight value=TestBL_Record(false,0);value.m_pos={-17.25f,9.5f,.125f};value.m_up={.53f,-.17f,.87f};value.m_side={.2f,.75f,-.17f};value.m_red=241;value.m_green=13;value.m_blue=61;TestBL_SetRecord(false,0,&value);
+}
+CVector &CCamera::GetPosition(void)
+{
+    // Retain the original live main-camera query before all optional reflection reads
+    event(1);queries++;
+    if(!triggered && hook==1){
+        // Change the assignment destination count while preserving captured input arguments
+        triggered=true;changeRecord();int mainCount,envCount;TestBL_Counts(&mainCount,&envCount);TestBL_SetCounts(mainCount+1,envCount);position.x+=.125f;
+    }
+    if(!triggered && hook==2){
+        // Reenter the registration algorithm before the outer distance write
+        triggered=true;depth++;BrightLight value=seeded(7);attempts++;TestBL_Register(&value);depth--;
+    }
+    return position;
+}
+CVector &CCamera::GetRight(void)
+{
+    // Observe the original early basis lookup and a late reflection-flag change
+    event(2);queries++;
+    if(!triggered && hook==3){triggered=true;CustomPipes::bRenderingEnvMap=true;}
+    return right;
+}
+CVector &CCamera::GetUp(void)
+{
+    // Keep the second original basis copy independent of later matrix queries
+    event(3);queries++;return up;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *value)
+{
+    // Enter the actual RenderWare frame boundary rather than replacing it with an inline method
+    event(4);queries++;require(value==&camera);
+    if(!triggered && hook==4){triggered=true;matrix.pos.x+=.75f;matrix.right.z-=.25f;}
+    return value->getFrame();
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *value)
+{
+    // Preserve both original matrix reads and their null short circuit
+    event(5);queries++;require(value==&frame);
+    if(!triggered && hook==5){triggered=true;matrix.pos.y-=.5f;matrix.up.x+=.25f;}
+    return matrixPresent?&matrix:NULL;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Supply the same sixteen-bit stream at the exact original flicker call point
+    event(6);randoms++;
+    if(!triggered && hook==6){triggered=true;changeRecord();BrightLight value=TestBL_Record(false,0);value.m_type=BRIGHTLIGHT_SIREN;TestBL_SetRecord(false,0,&value);}
+    rng=rng*1664525u+1013904223u;return (uint16_t)(rng>>16);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Compare every original alpha, depth, blend and raster state call
+    event(7);word(state);word((uint32_t)(uintptr_t)value);
+    if(!triggered && hook==7 && state==rwRENDERSTATEVERTEXALPHAENABLE){triggered=true;TestBL_Init();}
+    return 1;
+}
+void LittleTest(void)
+{
+    // Retain the hook before transformation and all following live shared-count reads
+    event(8);flushes++;
+    if(!triggered && hook==8){triggered=true;TempBufferVerticesStored=12;TempBufferIndicesStored=6;}
+    if(!triggered && hook==14){triggered=true;depth++;TestBL_Flush();depth--;}
+    if(!triggered && hook==15){triggered=true;depth++;TestBL_Render(true);depth--;}
+}
+void *RwIm3DTransform(RwIm3DVertex *vertices,RwUInt32 count,RwMatrix *transform,RwUInt32 flags)
+{
+    // Compare actual shared storage, the original null matrix and the exact vertex flags
+    event(9);transforms++;require(vertices==TempBufferRenderVertices && count<=TEMPBUFFERVERTSIZE && transform==NULL && flags==rwIM3D_VERTEXUV);word(count);
+    for(unsigned i=0;i<count;i++){
+        // Observe every submitted typed field while leaving stale UV data visible
+        RwRGBA c=vertices[i].getColor();floating(vertices[i].getX());floating(vertices[i].getY());floating(vertices[i].getZ());floating(vertices[i].getU());floating(vertices[i].getV());word(c.red);word(c.green);word(c.blue);word(c.alpha);
+    }
+    if(!triggered && hook==9){triggered=true;TempBufferIndicesStored=3;}
+    return transformOK?vertices:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Compare all traffic/siren or cube triangles including transform-side count changes
+    event(10);renders++;require(type==rwPRIMTYPETRILIST && indices==TempBufferRenderIndexList && count>=0 && count<=TEMPBUFFERINDEXSIZE);word(count);
+    for(int i=0;i<count;i++)word(indices[i]);
+    return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Verify that the original final counter clears discard end-hook changes
+    event(11);
+    if(!triggered && hook==10){triggered=true;TempBufferVerticesStored=77;TempBufferIndicesStored=88;}
+    return 1;
+}
+static int vertexIndex(RwIm3DVertex *vertex)
+{
+    // Validate every original live vertex address without guessing the typed stride
+    ptrdiff_t index=vertex-TempBufferRenderVertices;require(index>=0 && index<TEMPBUFFERVERTSIZE);return (int)index;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *vertex,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Compare all integer-to-byte narrowing at the original typed setter boundary
+    event(12);writes++;word(vertexIndex(vertex));word(r);word(g);word(b);word(a);vertex->setColor(r,g,b,a);
+    if(!triggered && hook==11){triggered=true;changeRecord();}
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *vertex,RwReal x,RwReal y,RwReal z)
+{
+    // Compare the local position computed before the preceding color setter
+    event(13);writes++;int index=vertexIndex(vertex);word(index);floating(x);floating(y);floating(z);vertex->setX(x);vertex->setY(y);vertex->setZ(z);
+    if(!triggered && hook==12){triggered=true;changeRecord();}
+    if(!triggered && hook==13 && index==5){triggered=true;TempBufferVerticesStored=thresholdV-6;TempBufferIndicesStored=thresholdI-12;}
+}
+static void snapshot(void)
+{
+    // Compare both pools and flicker arrays plus every shared geometry field and untouched 2D byte
+    states++;int mainCount,envCount;TestBL_Counts(&mainCount,&envCount);word(mainCount);word(envCount);word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(RenderBuffer_VerticesToBeStored);word(RenderBuffer_IndicesToBeStored);word(rng);
+    for(int i=0;i<NUMBRIGHTLIGHTS;i++){
+        // Include unregistered records and stale flicker values
+        record(TestBL_Record(false,i));record(TestBL_Record(true,i));floating(TestBL_Flicker(false,i));floating(TestBL_Flicker(true,i));
+    }
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){
+        // Observe actual typed vertices without including implementation padding
+        RwIm3DVertex &v=TempBufferRenderVertices[i];RwRGBA c=v.getColor();floating(v.getX());floating(v.getY());floating(v.getZ());floating(v.getU());floating(v.getV());word(c.red);word(c.green);word(c.blue);word(c.alpha);
+    }
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)word(TempBufferRenderIndexList[i]);
+    const unsigned char *bytes=(const unsigned char *)TempVertexBuffer.im2d;
+    for(size_t i=0;i<sizeof(TempVertexBuffer.im2d);i++)word(bytes[i]);
+}
+static void setFrame(bool present)
+{
+    // Set an actual camera parent field without calling a GUI or external allocator
+#ifdef NATIVE_PROJECT_HEADERS
+    camera.object.object.parent=present?&frame:NULL;
+#else
+    camera.frame=present?&frame:NULL;
+#endif
+}
+static void reset(void)
+{
+    // Supply complete legal state without substituting the initializer being tested
+    hook=0;depth=0;triggered=false;transformOK=true;matrixPresent=true;thresholdV=472;thresholdI=984;TheCamera.position=CVector(0.f,0.f,0.f);TheCamera.right=CVector(.97f,.13f,-.07f);TheCamera.up=CVector(-.11f,.05f,1.03f);CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=&camera;setFrame(true);matrix.pos.x=7.25f;matrix.pos.y=-3.5f;matrix.pos.z=.125f;matrix.right.x=-2.5f;matrix.right.y=.13f;matrix.right.z=.3f;matrix.up.x=.17f;matrix.up.y=.8f;matrix.up.z=7.f;TestBL_SetCounts(0,0);TempBufferVerticesStored=7;TempBufferIndicesStored=9;RenderBuffer_VerticesToBeStored=11;RenderBuffer_IndicesToBeStored=13;
+    for(int i=0;i<NUMBRIGHTLIGHTS;i++){
+        // Keep distinct stale main and reflection data outside the active counts
+        BrightLight value=seeded(i);TestBL_SetRecord(false,i,&value);value.m_red^=0x55;value.m_camDist+=3.f;TestBL_SetRecord(true,i,&value);TestBL_SetFlicker(false,i,i*.2f);TestBL_SetFlicker(true,i,(31-i)*.2f);
+    }
+    memset(TempVertexBuffer.im2d,0x5a,sizeof(TempVertexBuffer.im2d));
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){
+        // Initialize actual vertex fields through their quiet typed methods
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.03f);v.setY(i*-.07f);v.setZ(i*.11f);v.setU(i*.005f);v.setV(i*.009f);v.setColor((uint8_t)i,(uint8_t)(i*3),19,71);
+    }
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)TempBufferRenderIndexList[i]=(uint16_t)(i%64);
+}
+static void populate(int count,int type)
+{
+    // Seed legal active main-view geometry without replacing a rendering algorithm
+    for(int i=0;i<count;i++){
+        // Mix all valid primitive families or use one selected type
+        BrightLight value=seeded(i);if(type>=0)value.m_type=(uint8_t)type;TestBL_SetRecord(false,i,&value);
+    }
+    TestBL_SetCounts(count,0);
+}
+static void registerValue(const BrightLight &value,int kind)
+{
+    // Count each entry while exercising the C API and both typed default-color forms
+    attempts++;if(kind==0)TestBL_Register(&value);else TestBL_RegisterLegacy(&value,kind==2);
+}
+int main(void)
+{
+    // Compare static initialization and the original count-only reset
+    snapshot();reset();populate(7,-1);TestBL_SetCounts(7,11);TestBL_Init();snapshot();
+    const float distances[]={0.f,14.999f,15.f,29.999f,30.f,44.999f,45.f,59.999f,60.f,60.001f,INFINITY,NAN};
+    for(int d=0;d<12;d++)for(int branch=0;branch<5;branch++)for(int kind=0;kind<3;kind++){
+        // Verify registration range, rejected distance writes and all reflection fallback branches
+        reset();CustomPipes::bRenderingEnvMap=branch!=0;CustomPipes::EnvMapCam=branch==2?NULL:&camera;setFrame(branch!=3);matrixPresent=branch!=4;BrightLight value=seeded(3);value.m_pos={distances[d],0.f,0.f};registerValue(value,kind);snapshot();
+    }
+    for(int occupied=0;occupied<=NUMBRIGHTLIGHTS;occupied++){
+        // Verify every occupied count and rejection before camera/owner reads
+        reset();populate(occupied,-1);BrightLight value=seeded(5);registerValue(value,occupied%3);snapshot();
+    }
+    for(int h=1;h<=5;h++)for(int legacy=0;legacy<2;legacy++){
+        // Compare actual pool input capture, assignment order, recursion and repeated matrix reads
+        reset();hook=h;CustomPipes::bRenderingEnvMap=h>=4;attempts++;TestBL_Alias(0,legacy!=0);snapshot();
+    }
+    for(int type=1;type<=BRIGHTLIGHT_SIREN;type++)for(int d=0;d<9;d++){
+        // Cover every geometry table and exact alpha/fade boundary using defined conversions
+        reset();BrightLight value=seeded(0);value.m_type=(uint8_t)type;value.m_camDist=distances[d];TestBL_SetRecord(false,0,&value);TestBL_SetCounts(1,0);TestBL_Render(false);snapshot();unsigned before=randoms;CustomPipes::bRenderingEnvMap=true;TestBL_Render(true);require(before==randoms);snapshot();
+    }
+    for(int count=0;count<=NUMBRIGHTLIGHTS;count++)for(int type=0;type<3;type++){
+        // Exercise natural index-buffer flushes, mixed geometry and failed transforms
+        reset();populate(count,type==0?-1:type==1?BRIGHTLIGHT_FRONT_LONG:BRIGHTLIGHT_SIREN);transformOK=(count&1)!=0;TestBL_Render(false);snapshot();CustomPipes::bRenderingEnvMap=true;TestBL_Render(true);snapshot();TestBL_Render(true);snapshot();
+    }
+    for(int mainCount=0;mainCount<4;mainCount++)for(int envCount=0;envCount<5;envCount++)for(int branch=0;branch<5;branch++){
+        // Verify matching flicker, near-equal positions, missing cached lamps and camera/list fallback
+        reset();populate(mainCount,-1);
+        for(int i=0;i<envCount;i++){
+            // Include both duplicate thresholds, type mismatches and an out-of-range cached lamp
+            BrightLight value=seeded(i);if(i==0)value.m_pos.x+=.0099f;if(i==1)value.m_pos.x+=.0101f;if(i==2)value.m_type=BRIGHTLIGHT_SIREN;if(i==3)value.m_pos.x=90.f;TestBL_SetRecord(true,i,&value);
+        }
+        TestBL_SetCounts(mainCount,envCount);CustomPipes::bRenderingEnvMap=branch!=0;CustomPipes::EnvMapCam=branch==2?NULL:&camera;setFrame(branch!=3);matrixPresent=branch!=4;TestBL_Render(true);snapshot();
+    }
+    for(int h=3;h<=15;h++){
+        // Compare late reflection activation, owner mutations and nested render/flush frames
+        reset();populate(3,h==13?BRIGHTLIGHT_TRAFFIC_GREEN:-1);TestBL_SetCounts(3,2);hook=h;CustomPipes::bRenderingEnvMap=h!=3;TestBL_Render(h!=6);snapshot();
+    }
+    for(int v=472;v<=473;v++)for(int i=984;i<=985;i++){
+        // Verify strict greater-than capacity thresholds at their exact boundary values
+        reset();populate(2,BRIGHTLIGHT_TRAFFIC_GREEN);hook=13;thresholdV=v;thresholdI=i;TestBL_Render(false);snapshot();
+    }
+    for(int branch=0;branch<4;branch++){
+        // Cover empty flush retention, transformation failure and zero basis normalization
+        reset();TempBufferVerticesStored=branch==0?7:6;TempBufferIndicesStored=branch==0?0:12;transformOK=branch!=1;TestBL_Flush();snapshot();reset();populate(2,BRIGHTLIGHT_SIREN);CustomPipes::bRenderingEnvMap=true;if(branch&1){matrix.right.x=matrix.right.y=matrix.right.z=0.f;}if(branch&2){matrix.up.x=matrix.up.y=matrix.up.z=0.f;}TestBL_Render(true);snapshot();
+    }
+#ifdef FIX_BUGS
+    for(int type=0;type<2;type++){
+        // Keep the original invalid-light continue inside the reflection-restoration path
+        reset();populate(2,type==0?BRIGHTLIGHT_INVALID:255);CustomPipes::bRenderingEnvMap=true;TestBL_Render(true);snapshot();
+    }
+#endif
+    reset();populate(31,-1);TestBL_SetCounts(31,32);CustomPipes::bRenderingEnvMap=true;TestBL_Render(true);snapshot();
+    reset();
+    for(int frameNumber=0;frameNumber<1500;frameNumber++){
+        // Sustain normal flicker generation, cached phase reuse and reflection-list restoration
+        TestBL_Init();CustomPipes::bRenderingEnvMap=false;transformOK=frameNumber%5!=0;TheCamera.position=CVector(frameNumber*.013f,frameNumber*-.007f,.1f);int count=frameNumber%36;
+        for(int i=0;i<count;i++){
+            // Fill and overflow the original pool through both public input boundaries
+            BrightLight value=seeded((i+frameNumber)%32);registerValue(value,(frameNumber+i)%3);
+        }
+        TestBL_Render(false);CustomPipes::bRenderingEnvMap=true;
+        if(frameNumber%3==0){
+            // Register reflection-only lamps before merging the cached main list
+            BrightLight value=seeded(frameNumber%32);registerValue(value,0);
+        }
+        unsigned before=randoms;TestBL_Render(true);require(before==randoms);snapshot();
+    }
+    require(states>2000 && attempts>20000 && randoms>10000 && writes>100000 && queries>30000);require(transforms>=renders);
+    printf("states=%u calls=%u queries=%u randoms=%u transforms=%u renders=%u flushes=%u attempts=%u writes=%u hash=%016llx\n",states,calls,queries,randoms,transforms,renders,flushes,attempts,writes,(unsigned long long)hash);
+}

@@ -1,0 +1,311 @@
+#include "owners.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <initializer_list>
+CCamera TheCamera;
+bool CStats::NoMoreHurricanes;
+float CParticle::m_SinTable[1024],CParticle::m_CosTable[1024];
+RsGlobalType RsGlobal;
+namespace CustomPipes {bool bRenderingEnvMap;void *EnvMapCam;}
+static CEntity target;static CPlayerPed player;static CVehicle car;static CPad pads[2];
+static CVector speed(0,0,0),sun(0,0,1);static RwMatrix environment;
+alignas(16) static char cameraIdentity[16],frameIdentity[16],textureIdentity[16],rasterIdentity[16];
+WeatherTexture *gpRainDropTex=reinterpret_cast<WeatherTexture*>(textureIdentity);
+extern "C" {uint32_t Timer_timeMs;float Timer_timeStep;bool Timer_userPause,Timer_codePause;
+    bool SpecialFX_bSnapShotActive;int32_t CullZones_cameraFlags,CullZones_playerFlags;}
+static bool playback,interior,cutscene,playerPresent=true,playerAir,hasVehicle,roof,forwardView,lrbView,shock,groundFound,verticalFound,transformOK=true,framePresent=true,matrixPresent=true;
+static int fog,audioHandle,hook,randomMode,caseNumber;
+static uint32_t randomState=0x12481248;static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states,calls,randomDraws,particles,removals,grounds,verticals,transforms,renders,ends,shakes,creations,updates,rainCalls,streakCalls,helperCalls,heatCalls,beastieCalls,splashes,streams;
+
+static void require(bool condition)
+{
+    // Stop at the exact corpus case if an original native precondition or independent expectation fails
+    if(!condition){fprintf(stderr,"Weather assertion case %d states %u calls %u\n",caseNumber,states,calls);abort();}
+}
+static void word(uint32_t value)
+{
+    // Observe canonical values in a fixed byte order independent of addresses and padding
+    for(unsigned i=0;i<4;i++){hashValue^=(value>>(8*i))&255;hashValue*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact native float bits without a representation cast
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void vector(const CVector &value)
+{
+    // Observe all components passed to actual native vector arguments
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void packet(WeatherVector value)
+{
+    // Observe plain C coordinate packets using the same component order
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void canonical()
+{
+    // Read every canonical scalar and complete persistent table through named-field adapters
+    WeatherTestState value;TestWeather_Read(&value);
+    @SCALAR_OBSERVATIONS@
+    for(const auto &streak:value.streaks){packet(streak.position);packet(streak.direction);word(streak.timer);}
+    for(int i=0;i<64;i++){word(uint16_t(value.types[i]));word(uint16_t(value.hurricanes[i]));}
+    for(float wind:value.wind)floating(wind);
+}
+static void geometry()
+{
+    // Observe the entire actual typed vertex/index buffer including retained inactive entries
+    word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(RenderBuffer_VerticesToBeStored);word(RenderBuffer_IndicesToBeStored);
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){auto &v=TempBufferRenderVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA color=v.getColor();word(color.red);word(color.green);word(color.blue);word(color.alpha);floating(v.getU());floating(v.getV());}
+    for(uint16_t index:TempBufferRenderIndexList)word(index);
+}
+static void snapshot(unsigned tag)
+{
+    // Compare full operation results and persistent state without observing private object padding
+    ++states;word(tag);canonical();geometry();word(randomState);word(randomDraws);
+    if(getenv("WEATHER_TRACE"))printf("%u %d %u %016llx\n",states,caseNumber,tag,(unsigned long long)hashValue);
+}
+static void event(unsigned tag)
+{
+    // Retain externally visible native call order while keeping camera field reads ordinary reads
+    ++calls;word(tag);
+}
+const CVector &CEntity::GetPosition(){
+    // Return the original live owner coordinates
+    return position;
+}
+CVector &CCamera::GetForward(){
+    // Return the original live camera forward basis
+    return forward;
+}
+CVector &CCamera::GetRight(){
+    // Return the original live camera right basis
+    return right;
+}
+CVector &CCamera::GetUp(){
+    // Return the original live camera up basis
+    return up;
+}
+bool CCamera::GetLookingForwardFirstPerson(){
+    // Read the original first-person forward gate
+    return forwardView;
+}
+bool CCamera::GetLookingLRBFirstPerson(){
+    // Read the original first-person side/rear gate
+    return lrbView;
+}
+bool CReplay::IsPlayingBack(){
+    // Read the original playback gate without changing weather state
+    return playback;
+}
+bool CGame::IsInInterior(){
+    // Read the original interior gate
+    return interior;
+}
+bool CCutsceneMgr::IsRunning(){
+    // Read the original cutscene gate
+    return cutscene;
+}
+CPad *CPad::GetPad(int index){
+    // Preserve exact original pad indices and owner identities
+    require(index>=0 && index<2);return &pads[index];
+}
+bool CPad::GetRightShockJustDown(){
+    // Preserve the original second-pad debug input
+    require(this==&pads[1]);return shock;
+}
+void CPad::StartShake(int16 duration,uint8 frequency){
+    // Observe the complete original lightning vibration arguments
+    require(this==&pads[0]);++shakes;event(1);word(uint16_t(duration));word(frequency);
+}
+CVector &CTimeCycle::GetSunDirection(){
+    // Return the original borrowed sun-direction vector
+    return sun;
+}
+int32 CTimeCycle::GetFogReduction(){
+    // Retain the original signed fog-reduction input
+    return fog;
+}
+CPlayerPed *FindPlayerPed(){
+    // Return a valid actual shell or the original optional missing player
+    return playerPresent?&player:nullptr;
+}
+CVehicle *FindPlayerVehicle(){
+    // Return the same actual vehicle shell for the original rain roof check
+    return hasVehicle?&car:nullptr;
+}
+const CVector &FindPlayerSpeed(){
+    // Return the native borrowed speed vector used by streak generation
+    return speed;
+}
+bool CPlayerPed::CheckIfInTheAir(){
+    // Preserve both repeated native air checks in the original heat-haze condition
+    return playerAir;
+}
+bool CVehicle::CarHasRoof(){
+    // Read the original native roof decision
+    return roof;
+}
+extern "C" int myrand(){
+    // Supply deterministic raw draws to the complete actual C random-range helpers
+    ++randomDraws;randomState=randomState*1664525u+1013904223u;
+    if(randomMode==1)return 0;if(randomMode==2)return 255;if(randomMode==3)return 65000;
+    if(randomMode==4)return (randomDraws&1)?0:65535;return int(randomState>>16);
+}
+extern "C" void mysrand(unsigned seed){
+    // Preserve the actual random provider's seed conversion
+    randomState=seed;
+}
+extern "C" int32_t DMAudio_CreateEntity(eAudioType type,void *identity){
+    // Observe creation of the original weather audio owner and its sentinel identity
+    ++creations;event(2);word(type);require(type==AUDIOTYPE_WEATHER && identity==(void*)1);return audioHandle;
+}
+extern "C" void DMAudio_SetEntityStatus(int32_t handle,uint8_t status){
+    // Retain the original success-only audio activation
+    event(3);word(handle);word(status);require(handle>=0 && status==1);
+}
+extern "C" void DMAudio_PlayOneShot(int32_t handle,uint16_t sound,float volume){
+    // Observe complete lightning audio arguments at the original scheduled boundary
+    event(4);word(handle);word(sound);floating(volume);require(sound==SOUND_LIGHTNING);
+}
+float CWorld::FindGroundZFor3DCoord(float x,float y,float z,bool *found){
+    // Observe the exact captured target/camera position and explicit native output flag
+    ++grounds;event(5);floating(x);floating(y);floating(z);*found=groundFound;return 3.25f;
+}
+bool CWorld::ProcessVerticalLine(const CVector &position,float limit,CColPoint &point,CEntity *&entity,bool buildings,bool vehicles,bool peds,bool objects,bool dummies,bool seeThrough,CStoredCollPoly *poly){
+    // Check every original splash collision-filter argument and initialize hit data only on success
+    ++verticals;event(6);vector(position);floating(limit);require(limit==-40 && buildings && !vehicles && !peds && !objects && dummies && !seeThrough && !poly);
+    if(verticalFound){point.point=CVector(position.x,position.y,4.5f);entity=&target;}return verticalFound;
+}
+static void particle(tParticleType type,const CVector &position,const CVector &direction,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan,const RwRGBA *color){
+    // Observe all original overload/default arguments and exercise later live camera/weather reads
+    ++particles;event(color?8:7);word(type);vector(position);vector(direction);require(!entity);floating(size);word(rotationSpeed);word(rotation);word(frame);word(lifespan);
+    if(color){word(color->red);word(color->green);word(color->blue);word(color->alpha);}
+    if(hook==1){TheCamera.position.x+=0.125f;TheCamera.Orientation+=0.00390625f;}
+    if(hook==2){WeatherTestState value;TestWeather_Read(&value);value.Rain=(particles&1)?0.5f:1.0f;TestWeather_Write(&value);}
+}
+CParticle *CParticle::AddParticle(tParticleType type,const CVector &position,const CVector &direction,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan){
+    // Retain the complete native uncolored overload with its default argument values
+    particle(type,position,direction,entity,size,rotationSpeed,rotation,frame,lifespan,nullptr);return nullptr;
+}
+CParticle *CParticle::AddParticle(tParticleType type,const CVector &position,const CVector &direction,CEntity *entity,float size,const RwRGBA &color,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan){
+    // Retain the complete native colored overload and borrowed color value
+    particle(type,position,direction,entity,size,rotationSpeed,rotation,frame,lifespan,&color);return nullptr;
+}
+void CParticle::RemovePSystem(tParticleType type){
+    // Observe removal before the original early roof return
+    ++removals;event(9);word(type);require(type==PARTICLE_RAINDROP_2D);
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera){
+    // Return a controllable opaque native frame without dereferencing the camera identity
+    event(10);require((const void*)camera==cameraIdentity);return framePresent?reinterpret_cast<RwFrame*>(frameIdentity):nullptr;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame){
+    // Preserve both original frame-matrix queries and their actual matrix pointer
+    event(11);require((const void*)frame==frameIdentity);return matrixPresent?&environment:nullptr;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture){
+    // Preserve the original texture-to-raster operation with normalized pointer identity
+    event(12);require((const void*)texture==textureIdentity);return reinterpret_cast<RwRaster*>(rasterIdentity);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value){
+    // Observe every original render-state write and preserve the exact raster identity
+    event(13);word(state);if(state==rwRENDERSTATETEXTURERASTER){require(value==rasterIdentity);word(101);}else word(uint32_t(uintptr_t(value)));return 1;
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *vertex,RwReal x,RwReal y,RwReal z){
+    // Write the actual typed vertex coordinates without assuming its platform stride
+    vertex->setX(x);vertex->setY(y);vertex->setZ(z);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *vertex,RwUInt8 red,RwUInt8 green,RwUInt8 blue,RwUInt8 alpha){
+    // Retain the original native integer narrowing and color storage
+    vertex->setColor(red,green,blue,alpha);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *vertex,RwReal value){
+    // Write the original actual native U coordinate
+    vertex->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *vertex,RwReal value){
+    // Write the original actual native V coordinate
+    vertex->setV(value);
+}
+void *RwIm3DTransform(RwIm3DVertex *vertices,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags){
+    // Observe complete generated geometry and preserve live counts after a native transform callback
+    ++transforms;event(14);require(vertices==TempBufferRenderVertices && !matrix && flags==1 && count<=175);word(count);geometry();
+    if(hook==3){TempBufferIndicesStored=3;TempBufferRenderIndexList[0]=4;vertices[2].setZ(17.25f);}return transformOK?vertices:nullptr;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primitive,RwImVertexIndex *indices,RwInt32 count){
+    // Observe the post-transform live index count and unchanged original triangle winding
+    ++renders;event(15);require(primitive==rwPRIMTYPETRILIST && indices==TempBufferRenderIndexList);word(count);geometry();return 1;
+}
+RwBool RwIm3DEnd(){
+    // Observe completion only for successful native transforms
+    ++ends;event(16);return 1;
+}
+static void resetOwners(){
+    // Set only external inputs while retaining all original hidden fractional counters and timers
+    TheCamera.position=CVector(10,20,8);TheCamera.forward=CVector(0,1,0);TheCamera.right=CVector(1,0,0);TheCamera.up=CVector(0,0,1);TheCamera.m_RealPreviousCameraPosition=CVector(9,18,7);
+    TheCamera.Orientation=0.25f;TheCamera.m_CameraAverageSpeed=0.5f;TheCamera.pTargetEntity=&target;TheCamera.ActiveCam=0;TheCamera.Cams[0].Mode=CAMERA_MODE_FOLLOWPED;
+    target.position=CVector(11,22,6);player.position=CVector(1,2,3);speed=CVector(0.125f,-0.25f,0);
+    playback=interior=cutscene=playerAir=hasVehicle=roof=forwardView=lrbView=shock=false;playerPresent=true;groundFound=verticalFound=transformOK=framePresent=matrixPresent=true;hook=0;randomMode=0;fog=0;sun=CVector(0,0,1);
+    CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=cameraIdentity;Timer_timeStep=1;Timer_codePause=Timer_userPause=false;Clock_hours=12;Clock_minutes=30;Clock_seconds=0;SpecialFX_bSnapShotActive=false;
+    RsGlobal.width=1280;RsGlobal.height=720;CStats::NoMoreHurricanes=false;
+    CullZones_cameraFlags=CullZones_playerFlags=0;
+    environment.pos.x=30;environment.pos.y=-40;environment.pos.z=17;environment.right.x=0;environment.right.y=3;environment.right.z=0;environment.up.x=0;environment.up.y=0;environment.up.z=5;
+}
+int main(){
+    // Initialize real typed geometry and compare the original static weather state before any operation
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){auto &vertex=TempBufferRenderVertices[i];vertex.setX(float(i));vertex.setY(-float(i));vertex.setZ(float(i%7));vertex.setColor(uint8(i),uint8(i+1),uint8(i+2),255);vertex.setU(float(i%3));vertex.setV(float(i%5));}
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)TempBufferRenderIndexList[i]=uint16(60000+i);
+    for(int i=0;i<1024;i++){CParticle::m_SinTable[i]=float(i%31-15)/16;CParticle::m_CosTable[i]=float(i%37-18)/32;}
+    resetOwners();snapshot(100);WeatherTestState original;TestWeather_Read(&original);
+    for(int handle:{-1,0,17}){
+        // Verify initialization preserves every unrelated canonical scalar and persistent rain record
+        ++caseNumber;audioHandle=handle;WeatherTestState state=original;state.Rain=0.75f;state.Wind=1.5f;state.streaks[0]={{1,2,3},{0,0,-12},71};TestWeather_Write(&state);RunWeather_Init();snapshot(101);
+    }
+    for(int oldType=0;oldType<6;oldType++)for(int newType=0;newType<6;newType++)for(int clockCase=0;clockCase<4;clockCase++)for(int stepCase=0;stepCase<3;stepCase++){
+        // Cover interpolation, replay/debug gates, lightning, every wind table pair and fractional updates
+        ++caseNumber;resetOwners();Timer_timeMs=1000u+caseNumber*17u;Timer_timeStep=stepCase==0?0.0f:stepCase==1?0.5f:2.5f;
+        Clock_hours=uint8_t((clockCase*6+5)%24);Clock_minutes=uint8_t(clockCase*15);Clock_seconds=uint16_t(clockCase*13);playback=bool(clockCase&1);shock=bool(stepCase&1);interior=bool(clockCase&2);cutscene=bool((caseNumber/3)&1);playerAir=bool(caseNumber&1);sun.z=(caseNumber%5)*0.05f;randomMode=caseNumber%5;CStats::NoMoreHurricanes=bool(caseNumber&2);
+        WeatherTestState state=original;state.SoundHandle=9;state.OldWeatherType=int16_t(oldType);state.NewWeatherType=int16_t(newType);state.ForcedWeatherType=(caseNumber&1)?WEATHER_RANDOM:WEATHER_HURRICANE;state.WeatherTypeInList=63;state.InterpolationValue=0.95f;state.LightningBurst=bool(caseNumber&1);state.LightningFlash=bool(caseNumber&2);state.LightningStart=1;state.LightningFlashLastChange=1;state.WhenToPlayLightningSound=1;state.LightningDuration=7;TestWeather_Write(&state);
+        ++updates;RunWeather_Update();snapshot(102);
+    }
+    for(int photo=0;photo<2;photo++)for(float interpolation:{0.0f,0.25f,0.49f,0.5f}){
+        // Require daylight rainbow coverage and exact suppression of glare randomness during snapshots
+        ++caseNumber;resetOwners();playback=interior=cutscene=true;SpecialFX_bSnapShotActive=bool(photo);Timer_timeStep=0;Clock_hours=12;sun.z=0.2f;
+        WeatherTestState state=original;state.OldWeatherType=WEATHER_CLOUDY;state.NewWeatherType=WEATHER_EXTRA_SUNNY;state.InterpolationValue=interpolation;TestWeather_Write(&state);unsigned draws=randomDraws;
+        ++updates;RunWeather_Update();TestWeather_Read(&state);require(state.Rainbow==(interpolation<0.5f?1.0f-4.0f*fabsf(interpolation-0.25f)/4.0f:0.0f));require(randomDraws-draws==unsigned(interpolation>0 && !photo));snapshot(112);
+    }
+    for(int mode=0;mode<8;mode++)for(int stepCase=0;stepCase<3;stepCase++){
+        // Check no-rain/roof returns before fractional-counter advancement and ongoing steam after rain
+        ++caseNumber;resetOwners();Timer_timeMs+=1000;Timer_timeStep=stepCase==0?0:stepCase==1?0.5f:2.0f;Clock_hours=mode<4?12:23;hook=mode;CullZones_cameraFlags=mode==4?ATTRZONE_NORAIN:0;CullZones_playerFlags=mode==5?ATTRZONE_NORAIN:0;hasVehicle=roof=lrbView=bool(mode&1);groundFound=bool(mode&2);verticalFound=bool(mode&1);randomMode=mode%5;
+        WeatherTestState state;TestWeather_Read(&state);state.Rain=0.75f;state.Wind=1.5f;TestWeather_Write(&state);++rainCalls;RunWeather_AddRain();snapshot(103);
+        TestWeather_Read(&state);state.Rain=0;state.Wind=0;TestWeather_Write(&state);++rainCalls;RunWeather_AddRain();snapshot(104);
+    }
+    for(int mode=0;mode<8;mode++){
+        // Enter all independent particle helpers with original camera modes, target fallbacks and day boundaries
+        ++caseNumber;resetOwners();Timer_timeMs+=1000;Clock_hours=uint8_t(mode*3);groundFound=bool(mode&1);TheCamera.pTargetEntity=(mode&2)?nullptr:&target;TheCamera.Cams[0].Mode=mode==0?CAMERA_MODE_TOPDOWN:mode==1?CAMERA_MODE_TOP_DOWN_PED:CAMERA_MODE_FOLLOWPED;forwardView=bool(mode&1);hasVehicle=bool(mode&4);randomMode=mode%5;hook=mode%3;
+        ++heatCalls;RunWeather_AddHeatHaze();++beastieCalls;RunWeather_AddBeastie();++splashes;RunWeather_AddSplashesDuringHurricane();++streams;RunWeather_AddStreamAfterRain();snapshot(105);
+    }
+    for(int reflection=0;reflection<2;reflection++)for(int mode=0;mode<8;mode++)for(uint32_t elapsed:{0u,1u,306u,308u,1024u,2048u,3788u,4096u,4097u}){
+        // Compare primary/reflection geometry, exact fade/lifetime boundaries and transform failure/reentry
+        ++caseNumber;resetOwners();Timer_timeMs=10000;Timer_timeStep=1;CustomPipes::bRenderingEnvMap=bool(reflection);fog=mode*8;TheCamera.m_CameraAverageSpeed=mode==7?2.0f:0.5f;Timer_codePause=mode==6;transformOK=mode!=5;hook=mode==4?3:0;framePresent=mode!=1;matrixPresent=mode!=2;
+        WeatherTestState state=original;state.Rain=mode==3?0.0f:1.0f;state.streaks[0]={{11,22,30},{0,0,-12},Timer_timeMs-elapsed};state.streaks[1]={{-3,9,17},{0,0,0},Timer_timeMs-1024};TestWeather_Write(&state);
+        ++streakCalls;RunWeather_RenderRainStreaks();snapshot(106);
+    }
+    for(int mode=0;mode<4;mode++)for(float distance:{0.0f,7.999f,8.0f,12.0f,16.0f,16.001f}){
+        // Exercise the complete billboard helper with both scale choices, pause state and nonzero buffer offsets
+        ++caseNumber;resetOwners();Timer_userPause=bool(mode&2);TempBufferIndicesStored=12;TempBufferVerticesStored=5;
+        ++helperCalls;RunWeather_RenderOneRainStreak({1,2,3},{0,0,-12},mode==3?255:127,bool(mode&1),distance,{0,1,0},{0,0,1});snapshot(107);require(TempBufferIndicesStored==24 && TempBufferVerticesStored==10);
+    }
+    for(int16_t type:{int16_t(WEATHER_RANDOM),int16_t(0),int16_t(5)}){
+        // Compare every public forcing operation without indexing tables using an invalid type
+        ++caseNumber;RunWeather_ForceWeather(type);snapshot(108);RunWeather_ForceWeatherNow(type);snapshot(109);RunWeather_ReleaseWeather();snapshot(110);
+    }
+#ifdef SECUROM
+    // Execute the guarded complete hurricane operation and observe both mutable schedules
+    RunWeather_ForceHurricaneWeather();snapshot(111);
+#endif
+    // Report full canonical, random-stream, particle and geometry equivalence without a graphics device
+    printf("states=%u calls=%u random=%u particles=%u removals=%u grounds=%u verticals=%u transforms=%u renders=%u ends=%u shakes=%u creations=%u updates=%u rains=%u streaks=%u helpers=%u heat=%u beasties=%u splashes=%u streams=%u hash=%016llx\n",states,calls,randomDraws,particles,removals,grounds,verticals,transforms,renders,ends,shakes,creations,updates,rainCalls,streakCalls,helperCalls,heatCalls,beastieCalls,splashes,streams,(unsigned long long)hashValue);
+}

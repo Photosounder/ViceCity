@@ -1,0 +1,137 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe each original field expression on Clang and GCC
+    event(token);
+#endif
+    // Retain pure floating field reads for the native fixture
+    return v;
+}};
+class CVehicle {public:FloatValue m_fSpeed,m_fWagonPosition;};
+using CTrain=CVehicle;
+struct cAudioManager {
+@FIELDS@
+bool8 ProcessTrainNoise(cVehicleParams &);
+};
+@MACROS@
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+static cAudioManager owners[2],*active;
+static cVehicleParams params;static CVehicle cars[2];
+static unsigned seedValue,cases,callbacks,requests,offsetReads,farLayers,nearLayers,rejections,stationary;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" uint8_t TestTrainC(cAudioManager *,cVehicleParams *);
+extern "C" void TestTrainRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Record exact callback order and scalar results
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Normalize game pointers and hash every initialized storage record
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,&copy,sizeof(copy));digest=TestAircraftHash(digest,cars,sizeof(cars));
+}
+static void event(unsigned token) {
+    // Observe every callback before its externally visible mutation
+    ++callbacks;value(token);observe();
+}
+extern "C" float AudioTrainHost_Speed(const CVehicle *train) {
+    // Read the captured train through the original field expression
+    return train->m_fSpeed;
+}
+extern "C" float AudioTrainHost_WagonPosition(const CVehicle *train) {
+    // Read the original wagon-position gate
+    return train->m_fWagonPosition;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Exercise live distance changes while preserving the captured train
+    event(30);value(sample);
+    if(seedValue&128){params.m_pVehicle=&cars[1];active->m_sQueueSample.m_fDistance=(seedValue/7)%71;}
+    return sample*13+14000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample before the later end-offset argument
+    ++offsetReads;event(31);value(sample);
+    if(seedValue&256){active->m_sQueueSample.m_nSampleIndex=SFX_TRAIN_NEAR;params.m_pVehicle=&cars[1];}
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the later live sample index
+    ++offsetReads;event(32);value(sample);return sample*5+100;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Exercise real request insertion before mutating the subsequent near-layer gate
+    ++requests;if(manager->m_sQueueSample.m_nCounter==32)++farLayers;else if(manager->m_sQueueSample.m_nCounter==33)++nearLayers;event(40);
+    TestTrainRealSubmit(manager);event(41);
+    if(seedValue&512){params.m_fDistance=(seedValue&1024)?10000:100;manager->m_sQueueSample.m_fDistance=10;params.m_pVehicle=&cars[1];}
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Supply the real request implementation's room predicate
+    event(42);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Supply the linked geometry dependency
+    *out={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the linked geometry dependency
+    memset(out,0,sizeof(*out));
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Cover range, motion, speed, wagon and cached-distance boundaries with defined casts
+    seedValue=seed;active=&owners[seed&1];memset(owners,0,sizeof(owners));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    const float distances[]={-1,0,1,4899,4900,4901,89999,90000,90001,INFINITY,NAN};
+    const float velocities[]={-INFINITY,-1,-0.0f,0,0.001f,0.1f,INFINITY,NAN};
+    const float speeds[]={0,0.0001f,0.1f,0.203999f,0.204f,0.204001f,1,INFINITY};
+    const float wagons[]={0,-0.0f,0.0001f,1,-1,NAN,INFINITY};
+    const float cached[]={-1,-0.0f,0,14,69.999f,70,70.001f,100};
+    params.m_fDistance=distances[seed%11];params.m_fVelocityChange=velocities[(seed/11)%8];params.m_bDistanceCalculated=1+(seed/13)%2;
+    for(unsigned i=0;i<2;++i){cars[i].m_fSpeed={speeds[(seed/17+i)%8],21};cars[i].m_fWagonPosition={wagons[(seed/19+i)%7],22};}
+    params.m_pVehicle=params.m_fDistance<90000&&params.m_fVelocityChange>0?&cars[0]:nullptr;
+    active->m_sQueueSample.m_fDistance=cached[(seed/23)%8];active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_nPan=53;
+    active->m_nActiveSamples=1+(seed/29)%8;active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=1;
+#ifndef GTA_PS2
+    // Seed desktop fields to detect partial writes and backend ordering
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Cover uncached distance calculation without entering undefined volume-cast domains
+    if(seed%31==0&&params.m_fDistance>=0&&params.m_fDistance<4900)params.m_bDistanceCalculated=0;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening a Windows error dialog
+    SetErrorMode(3);
+#endif
+    // Compare repeated operations on alternating owners and require both layers and return paths
+    for(unsigned seed=0;seed<16384;++seed){prepare(seed);observe();uint8_t result=@RUN@;value(result);observe();++cases;if(!result)++rejections;else if(!(params.m_fVelocityChange>0))++stationary;}
+    if(!farLayers||!nearLayers||!rejections||!stationary)return 2;
+#ifndef GTA_PS2
+    // Require desktop loop-offset queries
+    if(!offsetReads)return 3;
+#endif
+    // Emit the deterministic comparison trace
+    printf("%u cases %u callbacks %u requests %llu\n",cases,callbacks,requests,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

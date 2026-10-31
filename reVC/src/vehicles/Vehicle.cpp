@@ -1,5 +1,10 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
 #include "main.h"
 
 #include "General.h"
@@ -66,6 +71,8 @@ bool CVehicle::m_bDisplayHandlingInfo;
 
 CVehicle::CVehicle(uint8 CreatedBy)
 {
+    // Initialize the plain autopilot before any original vehicle constructor statement
+    AutoPilot_Init(&AutoPilot);
 	int i;
 
 	m_nCurrentGear = 1;
@@ -130,7 +137,7 @@ CVehicle::CVehicle(uint8 CreatedBy)
 	bCreatedAsPoliceVehicle = false;
 	bRestingOnPhysical = false;
 	bParking = false;
-	bCanPark = CGeneral::GetRandomNumberInRange(0.0f, 1.0f) < 0.0f;	// never true. probably doesn't work very well
+	bCanPark = General_GetRandomNumberInRangeFloat(0.0f, 1.0f) < 0.0f;	// never true. probably doesn't work very well
 	bIsVan = false;
 	bIsBus = false;
 	bIsBig = false;
@@ -166,7 +173,7 @@ CVehicle::CVehicle(uint8 CreatedBy)
 		m_nRadioStation = RADIO_OFF;
 		break;
 	default:
-		m_nRadioStation = CGeneral::GetRandomNumber() % NUM_RADIOS;
+		m_nRadioStation = General_GetRandomNumber() % NUM_RADIOS;
 		break;
 	}
 	m_pCurGroundEntity = nil;
@@ -177,7 +184,7 @@ CVehicle::CVehicle(uint8 CreatedBy)
 	m_aCollPolys[1].valid = false;
 	AutoPilot.m_nCarMission = MISSION_NONE;
 	AutoPilot.m_nTempAction = TEMPACT_NONE;
-	AutoPilot.m_nTimeToStartMission = CTimer::GetTimeInMilliseconds();
+	AutoPilot.m_nTimeToStartMission = (*Timer_GetTimeInMilliseconds());
 	AutoPilot.m_bStayInCurrentLevel = false;
 	AutoPilot.m_bIgnorePathfinding = false;
 	AutoPilot.m_nSwitchDistance = 20;
@@ -199,7 +206,7 @@ CVehicle::~CVehicle()
 			pPassengers[i]->FlagToDestroyWhenNextProcessed();
 	}
 	if (m_pCarFire)
-		m_pCarFire->Extinguish();
+		Fire_Extinguish(m_pCarFire);
 	CCarCtrl::UpdateCarCount(this, true);
 	if (bIsAmbulanceOnDuty){
 		CCarCtrl::NumAmbulancesOnDuty--;
@@ -223,16 +230,21 @@ CVehicle::SetModelIndex(uint32 id)
 bool
 CVehicle::SetupLighting(void)
 {
-	ActivateDirectional();
-	SetAmbientColoursForPedsCarsAndObjects();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_ActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColoursForPedsCarsAndObjects();
 
 	if(bRenderScorched){
-		WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
 	}else{
 		CVector coors = GetPosition();
-		float lighting = CPointLights::GenerateLightsAffectingObject(&coors);
+		// Enter the C point-light algorithm with the original owner expressions
+		float lighting = PointLights_GenerateLightsAffectingObjectLegacy(&coors);
 		if(lighting != 1.0f){
-			SetAmbientAndDirectionalColours(lighting);
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_SetAmbientAndDirectionalColours(lighting);
 			return true;
 		}
 	}
@@ -250,7 +262,7 @@ bool
 CVehicle::IsClearToDriveAway(void)
 {
 	CColPoint point;
-	float length = GetColModel()->boundingBox.GetSize().y;
+	float length = CollisionVector_ToNative(Box_GetSize(&GetColModel()->boundingBox)).y;
 	CEntity *ent = nil;
 	CVector front = GetForward() * (length*0.5f + 3.0f);
 	return !CWorld::ProcessLineOfSight(GetPosition() + front, GetPosition(),
@@ -282,11 +294,11 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		float fwdSpeed = DotProduct(m_vecMoveSpeed, GetForward());
 		float magic = m_vecMoveSpeed.MagnitudeSqr() * sq(fwdSpeed);
 		float turnImpulse = (sideImpulse*0.003f + m_fSteerAngle*0.001f) *
-			magic*m_fTurnMass*CTimer::GetTimeStep();
+			magic*m_fTurnMass*(*Timer_GetTimeStep());
 		ApplyTurnForce(turnImpulse*GetRight(), -4.0f*GetForward());
 
 		float impulse = sideImpulse*0.2f *
-			magic*m_fMass*CTimer::GetTimeStep();
+			magic*m_fMass*(*Timer_GetTimeStep());
 		ApplyMoveForce(impulse*GetRight());
 		ApplyTurnForce(impulse*GetRight(), 2.0f*GetUp());
 
@@ -296,20 +308,20 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		float upSpeed = DotProduct(m_vecMoveSpeed, GetUp());
 		float upImpulse = -1.0f * upSpeed / moveSpeed;
 		turnImpulse = (upImpulse*0.002f + -CPad::GetPad(0)->GetSteeringUpDown()/128.0f*0.001f) *
-			magic*m_fTurnMass*CTimer::GetTimeStep();
+			magic*m_fTurnMass*(*Timer_GetTimeStep());
 		ApplyTurnForce(turnImpulse*GetUp(), -4.0f*GetForward());
 
 		impulse = (upImpulse*3.5f + 0.5f)*0.05f *
-			magic*m_fMass*CTimer::GetTimeStep();
-		if(GRAVITY*m_fMass*CTimer::GetTimeStep() < impulse &&
+			magic*m_fMass*(*Timer_GetTimeStep());
+		if(GRAVITY*m_fMass*(*Timer_GetTimeStep()) < impulse &&
 		   GetPosition().z > 100.0f)
-			impulse = 0.9f*GRAVITY*m_fMass*CTimer::GetTimeStep();
+			impulse = 0.9f*GRAVITY*m_fMass*(*Timer_GetTimeStep());
 		CVector com = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 		ApplyMoveForce(impulse*GetUp());
 		ApplyTurnForce(impulse*GetUp(), 2.0f*GetUp() + com);
 
 
-		m_vecTurnSpeed.y *= Pow(0.9f, CTimer::GetTimeStep());
+		m_vecTurnSpeed.y *= Pow(0.9f, (*Timer_GetTimeStep()));
 
 
 		moveSpeed = m_vecMoveSpeed.MagnitudeSqr();
@@ -377,16 +389,16 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			fThrustAccel *= 0.3f;
 		else if(flightModel == FLIGHT_MODEL_PLANE)
 			fThrustAccel *= 0.1f;
-		ApplyMoveForce(fThrustAccel * GetForward() * m_fMass * CTimer::GetTimeStep());
+		ApplyMoveForce(fThrustAccel * GetForward() * m_fMass * (*Timer_GetTimeStep()));
 
 		// left/right
 		float fSideSpeed = -DotProduct(GetMoveSpeed(), GetRight());
 		float fSideSlipAccel = pFlyingHandling->fSideSlip * fSideSpeed * Abs(fSideSpeed);
-		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * CTimer::GetTimeStep());
+		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * (*Timer_GetTimeStep()));
 
 		float fYaw = -DotProduct(GetSpeed(vecTail), GetRight());
 		float fYawAccel = pFlyingHandling->fYawStab * fYaw * Abs(fYaw) + pFlyingHandling->fYaw * fSteerLR * fForwSpeed;
-		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * CTimer::GetTimeStep(), vecTail);
+		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * (*Timer_GetTimeStep()), vecTail);
 
 		float fRollAccel;
 		if (flightModel == FLIGHT_MODEL_RCPLANE) {
@@ -397,39 +409,39 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		}
 		else
 			fRollAccel = fSteerLR * pFlyingHandling->fRoll;
-		ApplyTurnForce(GetRight() * fRollAccel * fForwSpeed * m_fTurnMass * CTimer::GetTimeStep(), GetUp());
+		ApplyTurnForce(GetRight() * fRollAccel * fForwSpeed * m_fTurnMass * (*Timer_GetTimeStep()), GetUp());
 
 		CVector vecFRight = CrossProduct(GetForward(), CVector(0.0f, 0.0f, 1.0f));
 		CVector vecStabilise = (GetUp().z > 0.0f) ? vecFRight : -vecFRight;
 		float fStabiliseDirection = (GetRight().z > 0.0f) ? -1.0f : 1.0f;
 		float fStabiliseSpeed = pFlyingHandling->fRollStab * fStabiliseDirection * (1.0f - DotProduct(GetRight(), vecStabilise)) * (1.0f - Abs(GetForward().z));
-		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * GetRight(), GetUp()); // no CTimer::GetTimeStep(), is it right?
+		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * GetRight(), GetUp()); // no (*Timer_GetTimeStep()), is it right?
 
 		// up/down
 		float fTail = -DotProduct(GetSpeed(vecTail), GetUp());
 		float fPitchAccel = pFlyingHandling->fPitchStab * fTail * Abs(fTail) + pFlyingHandling->fPitch * fSteerUD * fForwSpeed;
-		ApplyTurnForce(fPitchAccel * m_fTurnMass * GetUp() * CTimer::GetTimeStep(), vecTail);
+		ApplyTurnForce(fPitchAccel * m_fTurnMass * GetUp() * (*Timer_GetTimeStep()), vecTail);
 
 		float fLift = DotProduct(GetMoveSpeed(), GetUp()) / Max(0.01f, GetMoveSpeed().Magnitude()); //accel*angle
 		float fLiftAccel = (pFlyingHandling->fFormLift - pFlyingHandling->fAttackLift * fLift) * SQR(fForwSpeed);
-		float fLiftImpulse = fLiftAccel * m_fMass * CTimer::GetTimeStep();
-		if (GRAVITY * CTimer::GetTimeStep() * m_fMass < fLiftImpulse) {
+		float fLiftImpulse = fLiftAccel * m_fMass * (*Timer_GetTimeStep());
+		if (GRAVITY * (*Timer_GetTimeStep()) * m_fMass < fLiftImpulse) {
 			if (flightModel == FLIGHT_MODEL_RCPLANE && GetPosition().z > 50.0f)
-				fLiftImpulse = CTimer::GetTimeStep() * 0.9f*GRAVITY * m_fMass;
+				fLiftImpulse = (*Timer_GetTimeStep()) * 0.9f*GRAVITY * m_fMass;
 			else if (flightModel == FLIGHT_MODEL_SEAPLANE && GetPosition().z > 80.0f)
-				fLiftImpulse = CTimer::GetTimeStep() * 0.9f*GRAVITY * m_fMass;
+				fLiftImpulse = (*Timer_GetTimeStep()) * 0.9f*GRAVITY * m_fMass;
 #ifdef BETTER_ALLCARSAREDODO_CHEAT
 			else if(bAllDodosCheat && GetPosition().z > 170.0f)
-				fLiftImpulse = CTimer::GetTimeStep() * 0.9f * GRAVITY * m_fMass;
+				fLiftImpulse = (*Timer_GetTimeStep()) * 0.9f * GRAVITY * m_fMass;
 #endif
 		}
 		ApplyMoveForce(fLiftImpulse * GetUp());
 
 		CVector vecResistance;
 		vecResistance = pFlyingHandling->vecTurnRes;
-		float rX = Pow(vecResistance.x, CTimer::GetTimeStep());
-		float rY = Pow(vecResistance.y, CTimer::GetTimeStep());
-		float rZ = Pow(vecResistance.z, CTimer::GetTimeStep());
+		float rX = Pow(vecResistance.x, (*Timer_GetTimeStep()));
+		float rY = Pow(vecResistance.y, (*Timer_GetTimeStep()));
+		float rZ = Pow(vecResistance.z, (*Timer_GetTimeStep()));
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
 		vecTurnSpeed.x *= rX;
 		float fResistance = vecTurnSpeed.y * (1.0f / (pFlyingHandling->vecSpeedRes.y * SQR(vecTurnSpeed.y) + 1.0f)) * rY - vecTurnSpeed.y;
@@ -455,7 +467,7 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 #else
 		tFlyingHandlingData* flyingHandling = pFlyingHandling;
 #endif
-		float rm = Pow(flyingHandling->fMoveRes, CTimer::GetTimeStep());
+		float rm = Pow(flyingHandling->fMoveRes, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= rm;
 		if (GetStatus() != STATUS_PLAYER && GetStatus() != STATUS_PLAYER_REMOTE)
 			return;
@@ -465,7 +477,7 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			fThrust *= 2.0f;
 		if(flightModel == FLIGHT_MODEL_RCHELI){
 			fThrust = flyingHandling->fThrust * fThrust + 0.45f;
-			ApplyMoveForce(GRAVITY * CVector(0.0f, 0.0f, 0.5f) * m_fMass * CTimer::GetTimeStep());
+			ApplyMoveForce(GRAVITY * CVector(0.0f, 0.0f, 0.5f) * m_fMass * (*Timer_GetTimeStep()));
 		}else
 			fThrust = flyingHandling->fThrust * fThrust + 0.95f;
 		fThrust -= flyingHandling->fThrustFallOff * fUpSpeed;
@@ -473,23 +485,23 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			fThrust *= 10.0f/(GetPosition().z - 30.0f);
 		else if(GetPosition().z > 80.0f)
 			fThrust *= 10.0f/(GetPosition().z - 70.0f);
-		ApplyMoveForce(GRAVITY * GetUp() * fThrust * m_fMass * CTimer::GetTimeStep());
+		ApplyMoveForce(GRAVITY * GetUp() * fThrust * m_fMass * (*Timer_GetTimeStep()));
 
 		if (GetUp().z > 0.0f){
 			float upRight = Clamp(GetRight().z, -flyingHandling->fFormLift, flyingHandling->fFormLift);
-			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * CTimer::GetTimeStep();
+			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
 			ApplyTurnForce(upImpulseRight * GetUp(), GetRight());
 
 			float upFwd = Clamp(GetForward().z, -flyingHandling->fFormLift, flyingHandling->fFormLift);
-			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * CTimer::GetTimeStep();
+			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
 			ApplyTurnForce(upImpulseFwd * GetUp(), GetForward());
 		}else{
 			float upRight = GetRight().z < 0.0f ? -flyingHandling->fFormLift : flyingHandling->fFormLift;
-			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * CTimer::GetTimeStep();
+			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
 			ApplyTurnForce(upImpulseRight * GetUp(), GetRight());
 
 			float upFwd = GetForward().z < 0.0f ? -flyingHandling->fFormLift : flyingHandling->fFormLift;
-			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * CTimer::GetTimeStep();
+			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
 			ApplyTurnForce(upImpulseFwd * GetUp(), GetForward());
 		}
 
@@ -522,22 +534,22 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			fPitch = Clamp(flyingHandling->fPitchStab * DotProduct(m_vecMoveSpeed, GetForward()), -200.0f, 1.3f);
 			fRoll = Clamp(flyingHandling->fRollStab * DotProduct(m_vecMoveSpeed, GetRight()), -200.0f, 1.3f);
 		}
-		ApplyTurnForce(fPitch * GetUp() * flyingHandling->fPitch * m_fTurnMass * CTimer::GetTimeStep(), GetForward());
-		ApplyTurnForce(fRoll * GetUp() * flyingHandling->fRoll * m_fTurnMass * CTimer::GetTimeStep(), GetRight());
+		ApplyTurnForce(fPitch * GetUp() * flyingHandling->fPitch * m_fTurnMass * (*Timer_GetTimeStep()), GetForward());
+		ApplyTurnForce(fRoll * GetUp() * flyingHandling->fRoll * m_fTurnMass * (*Timer_GetTimeStep()), GetRight());
 
 		float fSideSpeed = -DotProduct(GetMoveSpeed(), GetRight());
 		float fSideSlipAccel = flyingHandling->fSideSlip * fSideSpeed * Abs(fSideSpeed);
-		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * CTimer::GetTimeStep());
+		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * (*Timer_GetTimeStep()));
 		float fYawAccel = flyingHandling->fYawStab * fSideSpeed * Abs(fSideSpeed) + flyingHandling->fYaw * fYaw;
-		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * CTimer::GetTimeStep(), -GetForward());
+		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * (*Timer_GetTimeStep()), -GetForward());
 
-		ApplyTurnForce(fYaw * GetForward() * flyingHandling->fYaw * m_fTurnMass * CTimer::GetTimeStep(), GetRight());
+		ApplyTurnForce(fYaw * GetForward() * flyingHandling->fYaw * m_fTurnMass * (*Timer_GetTimeStep()), GetRight());
 
-		float rX = Pow(flyingHandling->vecTurnRes.x, CTimer::GetTimeStep());
-		float rY = Pow(flyingHandling->vecTurnRes.y, CTimer::GetTimeStep());
-		float rZ = Pow(flyingHandling->vecTurnRes.z, CTimer::GetTimeStep());
+		float rX = Pow(flyingHandling->vecTurnRes.x, (*Timer_GetTimeStep()));
+		float rY = Pow(flyingHandling->vecTurnRes.y, (*Timer_GetTimeStep()));
+		float rZ = Pow(flyingHandling->vecTurnRes.z, (*Timer_GetTimeStep()));
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
-		float fResistanceMultiplier = Pow(1.0f / (flyingHandling->vecSpeedRes.z * SQR(vecTurnSpeed.z) + 1.0f) * rZ, CTimer::GetTimeStep());
+		float fResistanceMultiplier = Pow(1.0f / (flyingHandling->vecSpeedRes.z * SQR(vecTurnSpeed.z) + 1.0f) * rZ, (*Timer_GetTimeStep()));
 		float fResistance = vecTurnSpeed.z * fResistanceMultiplier - vecTurnSpeed.z;
 		vecTurnSpeed.x *= rX;
 		vecTurnSpeed.y *= rY;
@@ -549,7 +561,14 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 	}
 }
 
-static CColModel rotorColModel;
+static void DestroyStaticRotorModel(void);
+static CColModel rotorColModel=ColModel_InitStatic(&rotorColModel,DestroyStaticRotorModel);
+static void DestroyStaticRotorModel(void)
+{
+    // Release the rotor model through the complete C owner at process exit
+    // Invoke the complete C collision owner at the original native lifetime or operation boundary
+    ColModel_Destroy(&rotorColModel);
+}
 static CColSphere rotorColSphere;
 float ROTOR_SEMI_THICKNESS = 0.05f;
 float ROTOR_TURN_SPEED = 0.2f;
@@ -584,9 +603,22 @@ CVehicle::DoBladeCollision(CVector pos, CMatrix &matrix, int16 rotorType, float 
 
 	min += pos;
 	max += pos;
-	rotorColModel.boundingBox.Set(min, max);
-	rotorColModel.boundingSphere.Set(radius, pos);
-	rotorColSphere.Set(radius, pos, 0, 0);
+	{
+	    // Keep native bound expressions alive through the ordered C update
+	    const CVector &boxMinimum0=min;
+	    const CVector &boxMaximum0=max;
+	    Box_Set(&rotorColModel.boundingBox,COLLISION_POINT_REF(boxMinimum0),COLLISION_POINT_REF(boxMaximum0));
+	}
+	{
+	    // Keep the native center expression alive at the former member-call boundary
+	    const CVector &sphereCenter0=pos;
+	    Sphere_Set(&rotorColModel.boundingSphere,radius,COLLISION_POINT_REF(sphereCenter0));
+	}
+	{
+	    // Keep the native center expression alive at the former member-call boundary
+	    const CVector &sphereCenter1=pos;
+	    ColSphere_Set(&rotorColSphere,radius,COLLISION_POINT_REF(sphereCenter1),0,0);
+	}
 	rotorColModel.spheres = &rotorColSphere;
 	rotorColModel.numSpheres = 1;
 
@@ -675,7 +707,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 		break;
 	}
 	turnSpeed = Multiply3x3(matrix, turnSpeed);
-	CVector center = rotorColModel.boundingSphere.center;
+	CVector center = CollisionVector_ToNative(rotorColModel.boundingSphere.center);
 	center = matrix*center;
 
 	for(CPtrNode *node = list.first; node; node = node->next) {
@@ -723,10 +755,10 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 			m_fElasticity = ROTOR_COL_ELASTICITY;
 
 			for(i = 0; i < numCollisions; i++){
-				CVector colpos = CWorld::m_aTempColPts[i].point;
+				CVector colpos = CollisionVector_ToNative(CWorld::m_aTempColPts[i].point);
 				CVector localColpos = colpos - center;
 				float axisDir = DotProduct(axis, localColpos);
-				float colDir = DotProduct(CWorld::m_aTempColPts[i].normal, localColpos);
+				float colDir = DotProduct(CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal), localColpos);
 
 				if(2.0f*ROTOR_SEMI_THICKNESS < Abs(axisDir) &&
 				   ROTOR_DISGUARD_MULT*Abs(colDir) < Abs(axisDir))
@@ -740,7 +772,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 				// Particles
 				for(int j = 0; j < 4; j++){
 					CParticle::AddParticle(PARTICLE_SPARK_SMALL, colpos, (tangentSpeed+m_vecMoveSpeed)/2.0f);
-					CParticle::AddParticle(PARTICLE_SPARK, colpos, 0.1f*CWorld::m_aTempColPts[i].normal);
+					CParticle::AddParticle(PARTICLE_SPARK, colpos, 0.1f*CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal));
 				}
 
 				// Apply Collision
@@ -756,7 +788,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 
 				float damageImpulse = damageMult * Max(impulse, ROTOR_DEFAULT_DAMAGE*m_fMass/3000.0f);
 				if(damageImpulse > m_fDamageImpulse)
-					SetDamagedPieceRecord(0, damageImpulse, entity, CWorld::m_aTempColPts[i].normal);
+					SetDamagedPieceRecord(0, damageImpulse, entity, CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal));
 
 			}
 
@@ -801,7 +833,7 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 		bAlreadySkidding = true;
 	*wheelState = WHEEL_STATE_NORMAL;
 
-	adhesion *= CTimer::GetTimeStep();
+	adhesion *= (*Timer_GetTimeStep());
 	if(bAlreadySkidding)
 		adhesion *= pHandling->fTractionLoss;
 
@@ -821,11 +853,11 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 		// so we probably have to fix this
 		// fixing this causes jittery cars at 15fps, and causes the car to move backwards slowly at 18fps
 		// at 19fps, the effects are gone ...
-		//right *= CTimer::GetTimeStepFix();
+		//right *= Timer_GetTimeStepFix();
 
 		if(wheelStatus == WHEEL_STATUS_BURST){
 			float fwdspeed = Min(contactSpeedFwd, fBurstSpeedMax);
-			right += fwdspeed * CGeneral::GetRandomNumberInRange(-fBurstTyreMod, fBurstTyreMod);
+			right += fwdspeed * General_GetRandomNumberInRangeFloat(-fBurstTyreMod, fBurstTyreMod);
 		}
 	}
 
@@ -846,7 +878,7 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
 		// so we probably have to fix this
 		// better get rid of it here too
-		//fwd *= CTimer::GetTimeStepFix();
+		//fwd *= Timer_GetTimeStepFix();
 #endif
 
 		if(!bBraking){
@@ -860,7 +892,7 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 				else
 					brake = mod_HandlingManager.fWheelFriction / pHandling->fMass;
 #ifdef FIX_BUGS
-				brake *= CTimer::GetTimeStepFix();
+				brake *= Timer_GetTimeStepFix();
 #endif
 			}
 		}
@@ -966,7 +998,7 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 		bAlreadySkidding = true;
 	*wheelState = WHEEL_STATE_NORMAL;
 
-	adhesion *= CTimer::GetTimeStep();
+	adhesion *= (*Timer_GetTimeStep());
 	if(bAlreadySkidding)
 		adhesion *= pHandling->fTractionLoss;
 
@@ -983,12 +1015,12 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 		// contactSpeedRight is independent of framerate but right has timestep as a factor
 		// so we probably have to fix this
 		// see above
-		//right *= CTimer::GetTimeStepFix();
+		//right *= Timer_GetTimeStepFix();
 #endif
 
 		if(wheelStatus == WHEEL_STATUS_BURST){
 			float fwdspeed = Min(contactSpeedFwd, fBurstBikeSpeedMax);
-			right += fwdspeed * CGeneral::GetRandomNumberInRange(-fBurstBikeTyreMod, fBurstBikeTyreMod);
+			right += fwdspeed * General_GetRandomNumberInRangeFloat(-fBurstBikeTyreMod, fBurstBikeTyreMod);
 		}
 	}
 
@@ -1009,7 +1041,7 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
 		// so we probably have to fix this
 		// see above
-		//fwd *= CTimer::GetTimeStepFix();
+		//fwd *= Timer_GetTimeStepFix();
 #endif
 
 		if(!bBraking){
@@ -1023,7 +1055,7 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 				else
 					brake = mod_HandlingManager.fWheelFriction / m_fMass;
 #ifdef FIX_BUGS
-				brake *= CTimer::GetTimeStepFix();
+				brake *= Timer_GetTimeStepFix();
 #endif
 			}
 		}
@@ -1105,7 +1137,7 @@ CVehicle::ProcessWheelRotation(tWheelState state, const CVector &fwd, const CVec
 		angularVelocity = -DotProduct(fwd, speed) / radius;	// forward speed
 		break;
 	}
-	return angularVelocity * CTimer::GetTimeStep();
+	return angularVelocity * (*Timer_GetTimeStep());
 }
 
 int
@@ -1131,7 +1163,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 {
 	if (!bCanBeDamaged)
 		return;
-	if(GetStatus() == STATUS_PLAYER && CStats::GetPercentageProgress() >= 100.0f)
+	if(GetStatus() == STATUS_PLAYER && Stats_GetPercentageProgress() >= 100.0f)
 		damage *= 0.5f;
 	if (GetStatus() != STATUS_PLAYER && bOnlyDamagedByPlayer && (damagedBy != FindPlayerPed() && damagedBy != FindPlayerVehicle()))
 		return;
@@ -1139,7 +1171,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 	if(damage > 10.0f && (damagedBy == FindPlayerPed() || damagedBy == FindPlayerVehicle()) && GetStatus() != STATUS_WRECKED){
 		CWorld::Players[CWorld::PlayerInFocus].m_nHavocLevel += 2;
 		CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention += 1.0f;
-		CStats::PropertyDestroyed += CGeneral::GetRandomNumberInRange(5, 25);
+		Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(5, 25);
 	}
 
 	bool bFrightensDriver = false;
@@ -1237,7 +1269,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 		if(((CPed*)damagedBy)->IsPlayer() && (CCamera::m_bUseMouse3rdPerson || TheCamera.Using1stPersonWeaponMode()))
 			accuracy = 0;
 
-		if(accuracy != 0 && !bTyresDontBurst && (CGeneral::GetRandomNumber()&0x7F) < accuracy){
+		if(accuracy != 0 && !bTyresDontBurst && (General_GetRandomNumber()&0x7F) < accuracy){
 			if(IsBike())
 				BurstTyre(FindTyreNearestPoint(pos.x, pos.y) + CAR_PIECE_WHEEL_LF, false);
 			else if(GetVehicleAppearance() == VEHICLE_APPEARANCE_CAR)
@@ -1266,7 +1298,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 				case STATUS_SIMPLE:
 				case STATUS_PHYSICS:
 					if(AutoPilot.m_nDrivingStyle == DRIVINGSTYLE_PLOUGH_THROUGH ||
-					   CGeneral::GetRandomNumberInRange(0.0f, 1.0f) > 0.5f && AutoPilot.m_nCarMission == MISSION_CRUISE){
+					   General_GetRandomNumberInRangeFloat(0.0f, 1.0f) > 0.5f && AutoPilot.m_nCarMission == MISSION_CRUISE){
 						// Drive away like a maniac
 						if(pDriver && pDriver->m_objective != OBJECTIVE_LEAVE_CAR){
 							if(AutoPilot.m_nDrivingStyle != DRIVINGSTYLE_PLOUGH_THROUGH)
@@ -1288,7 +1320,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 							    pPassengers[i]->CharCreatedBy != MISSION_CHAR) {
 								pPassengers[i]->bFleeAfterExitingCar = true;
 								pPassengers[i]->SetObjective(OBJECTIVE_LEAVE_CAR, this);
-								pPassengers[i]->m_objectiveTimer = CTimer::GetTimeInMilliseconds() + time;
+								pPassengers[i]->m_objectiveTimer = (*Timer_GetTimeInMilliseconds()) + time;
 								pPassengers[i]->Say(SOUND_PED_FLEE_SPRINT);
 								time += 200;
 							}
@@ -1302,7 +1334,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 			if (oldHealth >= DAMAGE_HEALTH_TO_CATCH_FIRE && m_fHealth < DAMAGE_HEALTH_TO_CATCH_FIRE) {
 				if (IsCar()) {
 					CAutomobile* pThisCar = (CAutomobile*)this;
-					pThisCar->Damage.SetEngineStatus(ENGINE_STATUS_ON_FIRE);
+					Damage_SetEngineStatus(&pThisCar->Damage, ENGINE_STATUS_ON_FIRE);
 					pThisCar->m_pSetOnFireEntity = damagedBy;
 					if (damagedBy)
 						damagedBy->RegisterReference((CEntity**)&pThisCar->m_pSetOnFireEntity);
@@ -1313,7 +1345,7 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 			m_fHealth = 0.0f;
 			if (weaponType == WEAPONTYPE_EXPLOSION) {
 				// between 1000 and 3047. Also not very nice: can't be saved by respray or cheat
-				m_nBombTimer = 1000 + CGeneral::GetRandomNumber() & 0x7FF;
+				m_nBombTimer = 1000 + General_GetRandomNumber() & 0x7FF;
 				m_pBlowUpEntity = damagedBy;
 				if (damagedBy)
 					damagedBy->RegisterReference((CEntity**)&m_pBlowUpEntity);
@@ -1337,7 +1369,7 @@ CVehicle::DoFixedMachineGuns(void)
 		if(CPad::GetPad(0)->GetCarGunFired() && !bGunSwitchedOff){
 			FireFixedMachineGuns();
 		}else{
-			if(CTimer::GetTimeInMilliseconds() > m_nGunFiringTime + 1400)
+			if((*Timer_GetTimeInMilliseconds()) > m_nGunFiringTime + 1400)
 				m_nAmmoInClip = 20;
 		}
 	}
@@ -1346,7 +1378,7 @@ CVehicle::DoFixedMachineGuns(void)
 void
 CVehicle::FireFixedMachineGuns(void)
 {
-	if (CTimer::GetTimeInMilliseconds() <= m_nGunFiringTime + 150)
+	if ((*Timer_GetTimeInMilliseconds()) <= m_nGunFiringTime + 150)
 		return;
 	CVector source, target;
 	float dx, dy, len;
@@ -1358,23 +1390,23 @@ CVehicle::FireFixedMachineGuns(void)
 	dx /= len;
 	dy /= len;
 
-	m_nGunFiringTime = CTimer::GetTimeInMilliseconds();
+	m_nGunFiringTime = (*Timer_GetTimeInMilliseconds());
 
 	source = GetMatrix() * CVector(2.0f, 2.5f, 1.0f);
 	target = source + CVector(dx, dy, 0.0f) * 60.0f;
 	target += CVector(
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.015f,
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.015f,
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.02f);
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.015f,
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.015f,
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.02f);
 	CWeapon::DoTankDoomAiming(this, pDriver, &source, &target);
 	FireOneInstantHitRound(&source, &target, 15);
 
 	source = GetMatrix() * CVector(-2.0f, 2.5f, 1.0f);
 	target = source + CVector(dx, dy, 0.0f) * 60.0f;
 	target += CVector(
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.015f,
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.015f,
-		((CGeneral::GetRandomNumber() & 0xFF) - 128) * 0.02f);
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.015f,
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.015f,
+		((General_GetRandomNumber() & 0xFF) - 128) * 0.02f);
 	CWeapon::DoTankDoomAiming(this, pDriver, &source, &target);
 	FireOneInstantHitRound(&source, &target, 15);
 
@@ -1383,7 +1415,7 @@ CVehicle::FireFixedMachineGuns(void)
 	m_nAmmoInClip--;
 	if (m_nAmmoInClip == 0) {
 		m_nAmmoInClip = 20;
-		m_nGunFiringTime = CTimer::GetTimeInMilliseconds() + 1400;
+		m_nGunFiringTime = (*Timer_GetTimeInMilliseconds()) + 1400;
 	}
 }
 
@@ -1426,11 +1458,11 @@ CVehicle::ExtinguishCarFire(void)
 	if(GetStatus() != STATUS_WRECKED)
 		m_fHealth = Max(m_fHealth, 300.0f);
 	if(m_pCarFire)
-		m_pCarFire->Extinguish();
+		Fire_Extinguish(m_pCarFire);
 	if(IsCar()){
 		CAutomobile *car = (CAutomobile*)this;
-		if(car->Damage.GetEngineStatus() >= ENGINE_STATUS_ON_FIRE)
-			car->Damage.SetEngineStatus(ENGINE_STATUS_ON_FIRE-10);
+		if(Damage_GetEngineStatus(&car->Damage) >= ENGINE_STATUS_ON_FIRE)
+			Damage_SetEngineStatus(&car->Damage, ENGINE_STATUS_ON_FIRE-10);
 		car->m_fFireBlowUpTimer = 0.0f;
 	}
 }
@@ -1502,7 +1534,7 @@ CVehicle::MakeNonDraggedPedsLeaveVehicle(CPed *ped1, CPed *ped2, CPlayerPed *&pl
 	cop = nil;
 
 	if(ped1->IsPlayer() && ped2->m_nPedType == PEDTYPE_COP &&
-	   ((CPlayerPed*)ped1)->m_pWanted->GetWantedLevel() > 0 &&
+	   Wanted_GetWantedLevel(((CPlayerPed*)ped1)->m_pWanted) > 0 &&
 	   ped2->m_pedInObjective == ped1){
 		player = (CPlayerPed*)ped1;
 		cop = (CCopPed*)ped2;
@@ -1531,7 +1563,7 @@ CVehicle::MakeNonDraggedPedsLeaveVehicle(CPed *ped1, CPed *ped2, CPlayerPed *&pl
 	int numPeds3 = 0;
 	for(i = 0; i < numPeds; i++){
 		if(peds[i]->IsPlayer() && ped2->m_nPedType == PEDTYPE_COP &&
-		   ((CPlayerPed*)peds[i])->m_pWanted->GetWantedLevel() > 0 &&
+		   Wanted_GetWantedLevel(((CPlayerPed*)peds[i])->m_pWanted) > 0 &&
 		   ped2->m_pedInObjective == peds[i]){
 			player = (CPlayerPed*)peds[i];
 			cop = (CCopPed*)ped2;
@@ -1542,15 +1574,15 @@ CVehicle::MakeNonDraggedPedsLeaveVehicle(CPed *ped1, CPed *ped2, CPlayerPed *&pl
 
 	int time = 1800;
 	for(i = 0; i < numPeds3; i++){
-		peds3[i]->m_leaveCarTimer = CTimer::GetTimeInMilliseconds() + time;
+		peds3[i]->m_leaveCarTimer = (*Timer_GetTimeInMilliseconds()) + time;
 		peds3[i]->SetObjective(OBJECTIVE_LEAVE_CAR, this);
-		time += CGeneral::GetRandomNumberInRange(300.0f, 600.0f);
+		time += General_GetRandomNumberInRangeFloat(300.0f, 600.0f);
 	}
 
-	if(IsCar() && numPeds2 > 0 && CGeneral::GetRandomTrueFalse())
+	if(IsCar() && numPeds2 > 0 && General_GetRandomTrueFalse())
 		for(i = 0; i < numPeds2; i++)
-			if(peds2[i]->IsFemale() || CGeneral::GetRandomTrueFalse()){
-				peds2[i]->m_leaveCarTimer = CTimer::GetTimeInMilliseconds() + 10000;
+			if(peds2[i]->IsFemale() || General_GetRandomTrueFalse()){
+				peds2[i]->m_leaveCarTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
 				peds2[i]->bHeldHostageInCar = true;
 				peds2[i]->bFleeAfterExitingCar = true;
 			}
@@ -1562,7 +1594,7 @@ CVehicle::ProcessDelayedExplosion(void)
 	if(m_nBombTimer == 0)
 		return;
 
-	int tick = CTimer::GetTimeStep()/60.0f*1000.0f;
+	int tick = (*Timer_GetTimeStep())/60.0f*1000.0f;
 	int16 prev = m_nBombTimer;
 	if(tick > m_nBombTimer)
 		m_nBombTimer = 0;
@@ -2036,7 +2068,7 @@ CVehicle::ProcessCarAlarm(void)
 	if(m_nAlarmState == 0 || m_nAlarmState == -1)
 		return;
 
-	step = CTimer::GetTimeStepInMilliseconds();
+	step = Timer_GetTimeStepInMilliseconds();
 	if((uint16)m_nAlarmState < step){
 		m_nAlarmState = 0;
 		m_nCarHornTimer = 0;
@@ -2114,7 +2146,7 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 		return;
 
 	uint8 surface = SURFACE_TARMAC;
-	int frm = CTimer::GetFrameCounter() & 7;
+	int frm = (*Timer_GetFrameCounter()) & 7;
 	float testLowZ = ground - 10.0f;
 	float dustSize = 0.0f;
 	float baseSize = 1.0f;
@@ -2165,21 +2197,21 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 		if(n){
 			pos.z = particleZ;
 			if(surface == SURFACE_WATER){
-				float red = (0.3*CTimeCycle::GetDirectionalRed() + CTimeCycle::GetAmbientRed_Obj())*255.0f/4.0f;
-				float green = (0.3*CTimeCycle::GetDirectionalGreen() + CTimeCycle::GetAmbientGreen_Obj())*255.0f/4.0f;
-				float blue = (0.3*CTimeCycle::GetDirectionalBlue() + CTimeCycle::GetAmbientBlue_Obj())*255.0f/4.0f;
+				float red = (0.3*TimeCycle_GetDirectionalRed() + TimeCycle_GetAmbientRed_Obj())*255.0f/4.0f;
+				float green = (0.3*TimeCycle_GetDirectionalGreen() + TimeCycle_GetAmbientGreen_Obj())*255.0f/4.0f;
+				float blue = (0.3*TimeCycle_GetDirectionalBlue() + TimeCycle_GetAmbientBlue_Obj())*255.0f/4.0f;
 				r = Clamp(red, 0.0f, 255.0f);
 				g = Clamp(green, 0.0f, 255.0f);
 				b = Clamp(blue, 0.0f, 255.0f);
-				RwRGBA col1 = { r, g, b, (RwUInt8)CGeneral::GetRandomNumberInRange(8, 32) };
+				RwRGBA col1 = { r, g, b, (RwUInt8)General_GetRandomNumberInRangeInt(8, 32) };
 				RwRGBA col2 = { 255, 255, 255, 32 };
 
 				if(n&1)
 					CParticle::AddParticle(PARTICLE_STEAM_NY_SLOWMOTION, pos, dir, nil, steamSize, col2);
 				else
 					CParticle::AddParticle(PARTICLE_CAR_SPLASH, pos, dir, nil, splashSize, col1,
-						CGeneral::GetRandomNumberInRange(0.0f, 10.0f),
-						CGeneral::GetRandomNumberInRange(0.0f, 90.0f), 1);
+						General_GetRandomNumberInRangeFloat(0.0f, 10.0f),
+						General_GetRandomNumberInRangeFloat(0.0f, 90.0f), 1);
 			}else{
 				switch(surface){
 				default:
@@ -2229,13 +2261,13 @@ void
 CVehicle::DoSunGlare(void)
 {
 	if(bRenderScorched || GetPosition().z < 0.0f ||
-	   GetVehicleAppearance() != VEHICLE_APPEARANCE_CAR || CWeather::SunGlare <= 0.0f)
+	   GetVehicleAppearance() != VEHICLE_APPEARANCE_CAR || Weather_SunGlare <= 0.0f)
 		return;
 
 	CVector camDir = TheCamera.GetPosition() - GetPosition();
 	float dist = camDir.Magnitude();
 	camDir *= 2.0f/dist;
-	CVector glareVec = camDir + CTimeCycle::GetSunDirection();
+	CVector glareVec = camDir + TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection());
 	CVector localGlareVec;
 	localGlareVec.x = DotProduct(glareVec, GetRight());
 	localGlareVec.y = DotProduct(glareVec, GetForward());
@@ -2264,10 +2296,10 @@ CVehicle::DoSunGlare(void)
 	else
 		return;
 
-	float intens = 0.8f * strength * CWeather::SunGlare;
-	int r = intens * (CTimeCycle::GetSunCoreRed() + 2*255)/3.0f;
-	int g = intens * (CTimeCycle::GetSunCoreGreen() + 2*255)/3.0f;
-	int b = intens * (CTimeCycle::GetSunCoreBlue() + 2*255)/3.0f;
+	float intens = 0.8f * strength * Weather_SunGlare;
+	int r = intens * (TimeCycle_GetSunCoreRed() + 2*255)/3.0f;
+	int g = intens * (TimeCycle_GetSunCoreGreen() + 2*255)/3.0f;
+	int b = intens * (TimeCycle_GetSunCoreBlue() + 2*255)/3.0f;
 
 	CColModel *colmodel = GetColModel();
 	CCollision::CalculateTrianglePlanes(colmodel);
@@ -2280,7 +2312,9 @@ CVehicle::DoSunGlare(void)
 		int a2 = colmodel->triangles[i+1].a;
 		int b2 = colmodel->triangles[i+1].b;
 		int c2 = colmodel->triangles[i+1].c;
-		CVector vert1 = colmodel->vertices[a1].Get();
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue0_0=CompressedVector_Get(&colmodel->vertices[a1]);
+		CVector vert1 = CVector(collisionVertexValue0_0.x,collisionVertexValue0_0.y,collisionVertexValue0_0.z);
 		CVector vert4;
 		// Need an upward surface
 		if(vert1.z <= 0.0f)
@@ -2291,23 +2325,32 @@ CVehicle::DoSunGlare(void)
 		if(a2 != a1 && a2 != b1 && a2 != c1){
 			// a2 is not in tri1
 			numTri2Verts++;
-			vert4 = colmodel->vertices[a2].Get();
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue1_0=CompressedVector_Get(&colmodel->vertices[a2]);
+			vert4 = CVector(collisionVertexValue1_0.x,collisionVertexValue1_0.y,collisionVertexValue1_0.z);
 		}
 		if(b2 != a1 && b2 != b1 && b2 != c1){
 			// b2 is not in tri1
 			numTri2Verts++;
-			vert4 = colmodel->vertices[b2].Get();
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue2_0=CompressedVector_Get(&colmodel->vertices[b2]);
+			vert4 = CVector(collisionVertexValue2_0.x,collisionVertexValue2_0.y,collisionVertexValue2_0.z);
 		}
 		if(c2 != a1 && c2 != b1 && c2 != c1){
 			// c2 is not in tri1
 			numTri2Verts++;
-			vert4 = colmodel->vertices[c2].Get();
+			// Copy complete decoded values before the original native vector expression
+			const CollisionVector3 collisionVertexValue3_0=CompressedVector_Get(&colmodel->vertices[c2]);
+			vert4 = CVector(collisionVertexValue3_0.x,collisionVertexValue3_0.y,collisionVertexValue3_0.z);
 		}
 		// Need exactly one vertex from tri2 for a quad with tri1
 		if(numTri2Verts != 1)
 			continue;
 
-		CVector mid = (vert1 + colmodel->vertices[b1].Get() + colmodel->vertices[c1].Get() + vert4)/4.0f;
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue4_0=CompressedVector_Get(&colmodel->vertices[b1]);
+		const CollisionVector3 collisionVertexValue4_1=CompressedVector_Get(&colmodel->vertices[c1]);
+		CVector mid = (vert1 + CVector(collisionVertexValue4_0.x,collisionVertexValue4_0.y,collisionVertexValue4_0.z) + CVector(collisionVertexValue4_1.x,collisionVertexValue4_1.y,collisionVertexValue4_1.z) + vert4)/4.0f;
 		float dy = mid.y - vert1.y;
 		float dx = mid.x - vert1.x;
 		float dist = 1.4f * Min(Abs(dx), Abs(dy));
@@ -2315,7 +2358,7 @@ CVehicle::DoSunGlare(void)
 			CVector pos = GetMatrix() * (dist * localGlareVec + mid) + camDir;
 			CCoronas::RegisterCorona((uintptr)this + 27 + i,
 				r, g, b, 255,
-				pos, 0.9f*CWeather::SunGlare, 90.0f,
+				pos, 0.9f*Weather_SunGlare, 90.0f,
 				CCoronas::TYPE_STAR, CCoronas::FLARE_NONE,
 				CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF,
 				CCoronas::STREAK_OFF, 0.0f);
@@ -2328,7 +2371,7 @@ CVehicle::KillPedsInVehicle(void)
 {
 	int i;
 	if(pDriver){
-		CDarkel::RegisterKillByPlayer(pDriver, WEAPONTYPE_EXPLOSION);
+		Darkel_RegisterKillByPlayer(pDriver,WEAPONTYPE_EXPLOSION,false);
 		if(pDriver->GetPedState() == PED_DRIVING){
 			pDriver->SetDead();
 			if(!pDriver->IsPlayer())
@@ -2338,7 +2381,7 @@ CVehicle::KillPedsInVehicle(void)
 	}
 	for(i = 0; i < m_nNumMaxPassengers; i++){
 		if(pPassengers[i]){
-			CDarkel::RegisterKillByPlayer(pPassengers[i], WEAPONTYPE_EXPLOSION);
+			Darkel_RegisterKillByPlayer(pPassengers[i],WEAPONTYPE_EXPLOSION,false);
 			if(pPassengers[i]->GetPedState() == PED_DRIVING){
 				pPassengers[i]->SetDead();
 				if(!pPassengers[i]->IsPlayer())
@@ -2353,12 +2396,12 @@ void
 DestroyVehicleAndDriverAndPassengers(CVehicle* pVehicle)
 {
 	if (pVehicle->pDriver) {
-		CDarkel::RegisterKillByPlayer(pVehicle->pDriver, WEAPONTYPE_UNIDENTIFIED);
+		Darkel_RegisterKillByPlayer(pVehicle->pDriver,WEAPONTYPE_UNIDENTIFIED,false);
 		pVehicle->pDriver->FlagToDestroyWhenNextProcessed();
 	}
 	for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++) {
 		if (pVehicle->pPassengers[i]) {
-			CDarkel::RegisterKillByPlayer(pVehicle->pPassengers[i], WEAPONTYPE_UNIDENTIFIED);
+			Darkel_RegisterKillByPlayer(pVehicle->pPassengers[i],WEAPONTYPE_UNIDENTIFIED,false);
 			pVehicle->pPassengers[i]->FlagToDestroyWhenNextProcessed();
 		}
 	}
@@ -2394,7 +2437,7 @@ CVehicle::Save(uint8*& buf)
 		SaveEntityFlags(buf);
 		// Transfer save data through the C buffer API with explicit sizes
 	ZeroSaveBuf(&buf, 208);
-		AutoPilot.Save(buf);
+		AutoPilot_Save(&AutoPilot,&(buf));
 		// Transfer save data through the C buffer API with explicit sizes
 	WriteSaveBuf(&buf, &m_currentColour1, sizeof(m_currentColour1));
 	WriteSaveBuf(&buf, &m_currentColour2, sizeof(m_currentColour2));
@@ -2462,7 +2505,7 @@ CVehicle::Load(uint8*& buf)
 		LoadEntityFlags(buf);
 		// Transfer save data through the C buffer API with explicit sizes
 	SkipSaveBuf(&buf, 208);
-		AutoPilot.Load(buf);
+		AutoPilot_Load(&AutoPilot,&(buf));
 		// Transfer save data through the C buffer API with explicit sizes
 	ReadSaveBuf(&m_currentColour1, &buf, sizeof(m_currentColour1));
 	ReadSaveBuf(&m_currentColour2, &buf, sizeof(m_currentColour2));
@@ -2538,4 +2581,8 @@ IsVehiclePointerValid(CVehicle* pVehicle)
 	return pVehicle->m_vehType == VEHICLE_TYPE_PLANE || pVehicle->m_entryInfoList.first;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

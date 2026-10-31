@@ -1,0 +1,159 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#ifdef ORIGINAL
+#include "original.h"
+#else
+#include "StreamingInfo.h"
+#endif
+#include "entry.h"
+
+static uint64_t digest=1469598103934665603ULL;
+static unsigned checks,states;
+static CStreamingInfo records[36];
+
+static void value(uint64_t input)
+{
+    // Accumulate only defined scalar observations independently of native pointer width
+    digest=(digest^input)*1099511628211ULL;
+}
+
+static void require(bool ok)
+{
+    // Stop immediately when a topology or output contract is violated
+    ++checks;
+    if(!ok){
+        // Keep fixture failures quiet and specific
+        fprintf(stderr,"Check %u failed at state %u\n",checks,states);
+        abort();
+    }
+}
+
+static unsigned indexOf(CStreamingInfo *record)
+{
+    // Normalize pointers within the single record array to stable indices
+    return record?unsigned(record-records)+1:0;
+}
+
+static void observe()
+{
+    // Observe every owned field and verify both independent sentinel lists
+    ++states;
+    for(unsigned i=0;i<36;++i){
+        // Retain metadata on both linked and detached records
+        CStreamingInfo *record=&records[i];
+        value(indexOf(record->m_next));value(indexOf(record->m_prev));
+        value(record->m_loadState);value(record->m_flags);value((uint16_t)record->m_nextID);
+        value(record->m_position);value(record->m_size);
+    }
+    for(unsigned list=0;list<2;++list){
+        // Check head-to-tail links and then tail-to-head links without accepting cycles
+        CStreamingInfo *head=&records[list*2],*tail=&records[list*2+1],*previous=head;
+        unsigned forward=0,backward=0;
+        for(CStreamingInfo *node=head->m_next;node!=tail;node=node->m_next){
+            // Require each live node to point back to its predecessor
+            require(node && ++forward<=32 && node->m_prev==previous);
+            previous=node;
+        }
+        require(tail->m_prev==previous && !head->m_prev && !tail->m_next);
+        CStreamingInfo *next=tail;
+        for(CStreamingInfo *node=tail->m_prev;node!=head;node=node->m_prev){
+            // Require each backward link to agree with its forward neighbor
+            require(node && ++backward<=32 && node->m_next==next);
+            next=node;
+        }
+        require(head->m_next==next && forward==backward);
+    }
+}
+
+static uint32_t randomValue()
+{
+    // Use defined unsigned arithmetic for repeatable mutations
+    static uint32_t state=0x9b32ed71;
+    state=state*1664525+1013904223;
+    return state;
+}
+
+int main()
+{
+    // Seed every field explicitly because the original record has no initializing constructor
+    for(unsigned i=0;i<36;++i){
+        // Give detached records varied metadata that list operations must preserve
+        records[i].m_next=records[i].m_prev=NULL;
+        records[i].m_loadState=(uint8_t)(i%5);
+        records[i].m_flags=(uint8_t)(i*7);
+        records[i].m_nextID=(int16_t)(i-18);
+        records[i].m_position=0xfedcba98u-i;
+        records[i].m_size=i%3?i*17:0;
+    }
+    for(unsigned list=0;list<2;++list){
+        // Match the manager's original start/end sentinel initialization
+        records[list*2].m_next=&records[list*2+1];
+        records[list*2+1].m_prev=&records[list*2];
+    }
+    observe();
+    for(unsigned flag=0;flag<256;++flag){
+        // Exhaust the priority bit's behavior independently of the other flag and state bits
+        records[4].m_flags=(uint8_t)flag;
+        for(unsigned state=0;state<256;++state){
+            // Priority and size queries must leave all record fields untouched
+            records[4].m_loadState=(uint8_t)state;
+            require(Run_IsPriority(&records[4])==bool(flag&STREAMFLAGS_PRIORITY));
+            require(Run_GetCdSize(&records[4])==records[4].m_size);
+            value(Run_IsPriority(&records[4]));value(Run_GetCdSize(&records[4]));
+        }
+    }
+    const uint32_t boundaries[]={0,1,0x7fffffffu,0x80000000u,0xffffffffu,0x12345678u};
+    for(unsigned p=0;p<6;++p)for(unsigned s=0;s<6;++s)for(unsigned alias=0;alias<16;++alias){
+        // Cover independent outputs, one shared output and every output alias into the record
+        CStreamingInfo *record=&records[4];
+        Run_SetCdPosnAndSize(record,boundaries[p],boundaries[s]);
+        uint32_t external[2]={0xa5a5a5a5u,0x5a5a5a5au};
+        uint32_t *options[]={&external[0],&external[1],&record->m_position,&record->m_size};
+        bool ok=Run_GetCdPosnAndSize(record,options[alias/4],options[alias%4]);
+        require(ok==(boundaries[s]!=0));
+        if(!boundaries[s]){
+            // A missing disc entry must leave both outputs and the record untouched
+            require(external[0]==0xa5a5a5a5u && external[1]==0x5a5a5a5au);
+            require(record->m_position==boundaries[p] && record->m_size==0);
+        }
+        value(ok);value(external[0]);value(external[1]);observe();
+    }
+    for(unsigned step=0;step<8000;++step){
+        // Move records between sentinel lists and update location metadata between transfers
+        CStreamingInfo *record=&records[4+randomValue()%32];
+        unsigned operation=randomValue()%5;
+        if(operation<3){
+            // Detach a linked record before reinserting it after any live node or list head
+            if(record->m_next){
+                // Removal must clear both record links while preserving its metadata
+                Run_RemoveFromList(record);
+                require(!record->m_next && !record->m_prev);
+            }
+            if(operation<2){
+                // Choose a valid insertion point from either current list
+                CStreamingInfo *after=&records[(randomValue()%2)*2];
+                unsigned hops=randomValue()%33;
+                while(hops-- && after->m_next->m_next)after=after->m_next;
+                Run_AddToList(record,after);
+                require(record->m_prev==after && after->m_next==record);
+            }
+        }else{
+            // Location setters must not alter flags, IDs or linked-list membership
+            uint32_t position=randomValue(),size=randomValue();
+            Run_SetCdPosnAndSize(record,position,size);
+            uint32_t actualPosition=0,actualSize=0;
+            require(Run_GetCdPosnAndSize(record,&actualPosition,&actualSize)==(size!=0));
+            require(record->m_position==position && Run_GetCdSize(record)==size);
+            require(!size || (actualPosition==position && actualSize==size));
+        }
+        observe();
+    }
+    for(unsigned i=4;i<36;++i){
+        // Empty both lists using their real record-removal operation
+        if(records[i].m_next)Run_RemoveFromList(&records[i]);
+    }
+    observe();
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+}

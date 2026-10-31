@@ -1,0 +1,92 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned events,checks,draws,reads,destroys,projections,queries,groups;
+static bool project=true,failRead,reenter,mutate;
+static TestPlayer player;
+static RwTexture textures[32];
+static RwRaster rasters[32];
+static void need(bool value)
+{
+    // Reject precise diagnostic failures without opening a window
+    ++checks;if(!value){fprintf(stderr,"checks=%u events=%u\n",checks,events);abort();}
+}
+static void bytes(const void *data,size_t count)
+{
+    // Observe only initialized scalar representations
+    const uint8_t *p=(const uint8_t*)data;for(size_t i=0;i<count;++i){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(uint32_t kind,uint32_t a=0,uint32_t b=0)
+{
+    // Preserve the exact external call order and normalize resource identities
+    uint32_t values[]={kind,a,b};bytes(values,sizeof(values));++events;
+}
+TestPlayer *FindPlayerPed(void)
+{
+    // Return the controlled current player at the original query boundary
+    ++queries;event(1,player.weapon.m_eWeaponType);return &player;
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Retain exact factory inputs and a controlled failed creation
+    event(2);need(strcmp(name,"target256")==0&&strcmp(mask,"target256m")==0);++reads;if(failRead)return NULL;need(reads<32);rasters[reads].id=200+reads;textures[reads]={100+reads,true,&rasters[reads]};return &textures[reads];
+}
+void RwTextureDestroy(RwTexture *texture)
+{
+    // Observe the original unguarded null shutdown and reject duplicate live-resource destruction
+    event(3,texture?texture->id:0);if(texture){need(texture->alive);texture->alive=false;++destroys;}
+}
+RwRaster *RwTextureGetRaster(RwTexture *texture)
+{
+    // Borrow the live controlled SDK raster
+    need(texture&&texture->alive);event(4,texture->id);return texture->raster;
+}
+void RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Normalize raster pointers separately from scalar render-state tokens
+    event(5,state,state==rwRENDERSTATETEXTURERASTER?(value?((RwRaster*)value)->id:0):(uint32_t)(uintptr_t)value);
+}
+void PushRendergroup(const char *name)
+{
+    // Keep the actual original diagnostic group label and nesting boundary
+    need(strcmp(name,"CWeaponEffects::Render")==0);event(6);++groups;
+}
+void PopRendergroup(void)
+{
+    // Observe matching diagnostic scope exits
+    need(groups!=0);event(7);--groups;
+}
+void TxdStore_PushCurrentTxd(void) {event(8);}
+void TxdStore_PopCurrentTxd(void) {event(9);}
+void TxdStore_SetCurrentTxd(int slot) {need(slot==17);event(10,slot);}
+int TxdStore_FindTxdSlot(const char *name) {need(strcmp(name,"particle")==0);event(11);return 17;}
+bool Sprite_CalcScreenCoors(SpriteVectorRef in,SpriteVectorOut out,float *w,float *h,bool farclip)
+{
+    // Observe live projection inputs and control success without reproducing weapon rendering policy
+    ++projections;event(12,farclip);bytes(in.x,sizeof(float));bytes(in.y,sizeof(float));bytes(in.z,sizeof(float));*out.x=11;*out.y=19;*out.z=4;*w=3.25f;*h=7.5f;return project;
+}
+void Sprite_RenderOneXLUSprite_Rotate_Aspect(float x,float y,float z,float w,float h,uint8_t r,uint8_t g,uint8_t b,int16_t intens,float recipz,float rotation,uint8_t a)
+{
+    // Observe complete draw inputs and allow nested callbacks to mutate the actual owner state
+    ++draws;event(13);float values[]={x,y,z,w,h,recipz,rotation};bytes(values,sizeof(values));uint8_t colour[]={r,g,b,a};bytes(colour,sizeof(colour));bytes(&intens,sizeof(intens));if(mutate){mutate=false;TestRotation(6.3f);}if(reenter){reenter=false;TestAction(4);}
+}
+static void observe(void)
+{
+    // Inspect initialized owner fields without relying on record padding
+    TestState state;TestRead(&state);float values[]={state.x,state.y,state.z,state.size,state.rotation};bytes(values,sizeof(values));uint8_t colour[]={state.r,state.g,state.b,state.a,(uint8_t)state.active};bytes(colour,sizeof(colour));
+}
+int main(void)
+{
+    // Cover initial state inactive rendering every valid weapon and ignored mark colours
+    observe();TestAction(4);need(queries==0&&draws==0);TestAction(0);TestAction(2);TestState state;TestRead(&state);need(state.r==255&&state.g==0&&state.b==0&&state.a==127&&state.size==0.375f);
+    for(int weapon=0;weapon<WEAPONTYPE_TOTALWEAPONS;++weapon){
+        // Exercise every original weapon table entry without adding index recovery policy
+        player.weapon.m_eWeaponType=weapon;TestAction(4);observe();
+    }
+    // Retain projection failure early exits and exact rotation wrap boundaries
+    project=false;TestRotation(6.28f);TestAction(4);TestRead(&state);need(state.rotation==6.28f);observe();project=true;TestAction(4);TestRead(&state);need(state.rotation==0);observe();TestRotation(-0.02f);TestAction(4);observe();
+    // Retain shared owner state across reentrant drawing and late rotation mutation
+    reenter=true;TestAction(4);observe();mutate=true;TestAction(4);observe();TestAction(3);unsigned old=queries;TestAction(4);need(queries==old);TestAction(1);observe();
+    // Preserve failed creation and the original subsequent unguarded null destruction call
+    failRead=true;TestAction(0);TestAction(1);observe();need(reads==2&&destroys==1&&groups==0&&draws==84&&projections==43&&queries==43);printf("checks=%u events=%u reads=%u destroys=%u draws=%u projections=%u queries=%u hash=%016llx\n",checks,events,reads,destroys,draws,projections,queries,(unsigned long long)hashValue);return 0;
+}

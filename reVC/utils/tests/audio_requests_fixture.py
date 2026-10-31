@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare sound submission and reflection expansion against saved owner bodies."""
 from pathlib import Path
 import re
@@ -7,6 +8,8 @@ import audio_requests_migration as migration
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-requests-c-tests'
 old=(out/'before/src/audio/AudioManager.cpp').read_text();kernel=(root/'src/audio/AudioRequests.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare complete statements independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 methods=[]

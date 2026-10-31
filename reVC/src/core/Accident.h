@@ -1,31 +1,23 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-#include "config.h"
-
-class CPed;
-
-class CAccident
-{
-public:
-	CPed *m_pVictim;
-	uint32 m_nMedicsAttending;
-	uint32 m_nMedicsPerformingCPR;
-	CAccident() : m_pVictim(nil), m_nMedicsAttending(0), m_nMedicsPerformingCPR(0) {}
-};
-
-class CAccidentManager
-{
-	CAccident m_aAccidents[NUM_ACCIDENTS];
-	enum {
-		MAX_MEDICS_TO_ATTEND_ACCIDENT = 2
-	};
-public:
-	CAccident *GetNextFreeAccident();
-	void ReportAccident(CPed *ped);
-	void Update();
-	CAccident *FindNearestAccident(CVector vecPos, float *pDistance);
-	uint16 CountActiveAccidents();
-	bool UnattendedAccidents();
-	bool WorkToDoForMedics();
-};
-
+#include "EventsShared.h"
+typedef struct CAccident {CPed *m_pVictim;uint32_t m_nMedicsAttending;uint32_t m_nMedicsPerformingCPR;} CAccident;
+typedef struct CAccidentManager {CAccident m_aAccidents[NUM_ACCIDENTS];} CAccidentManager;
+enum {ACCIDENT_MAX_MEDICS_TO_ATTEND=2};
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern CAccidentManager gAccidentManager;
+void Accident_Init(CAccident *self);
+void AccidentManager_Init(CAccidentManager *self);
+CAccident *AccidentManager_GetNextFreeAccident(CAccidentManager *self);
+void AccidentManager_ReportAccident(CAccidentManager *self,CPed *ped);
+void AccidentManager_Update(CAccidentManager *self);
+CAccident *AccidentManager_FindNearestAccident(CAccidentManager *self,EventsVector position,float *distance);
+uint16_t AccidentManager_CountActiveAccidents(CAccidentManager *self);
+bool AccidentManager_WorkToDoForMedics(CAccidentManager *self);
+bool AccidentManager_UnattendedAccidents(CAccidentManager *self);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

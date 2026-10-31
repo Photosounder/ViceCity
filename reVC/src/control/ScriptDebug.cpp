@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -1600,13 +1601,13 @@ void CRunningScript::GetStoredParameterForDebug(char* buf)
 void CTheScripts::LogAfterScriptInitializing()
 {
 #if SCRIPT_LOG_FILE_LEVEL == 2
-	CFileMgr::SetDirMyDocuments();
+	FileMgr_SetDirMyDocuments();
 	if (dbg_log)
 		fclose(dbg_log);
 	dbg_log = fopen("SCRDBG.LOG", "w");
 	static const char* init_msg = "Starting debug script log\n\n";
 	PrintToLog(init_msg);
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 #endif
 }
 
@@ -1614,14 +1615,14 @@ void CTheScripts::LogBeforeScriptProcessing()
 {
 
 #if SCRIPT_LOG_FILE_LEVEL == 1
-	CFileMgr::SetDirMyDocuments();
+	FileMgr_SetDirMyDocuments();
 	dbg_log = fopen("SCRDBG.LOG", "w");
 	static const char* init_msg = "Starting debug script log\n\n";
 	PrintToLog(init_msg);
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 #endif
 	PrintToLog("------------------------\n");
-	PrintToLog("CTheScripts::Process started, CTimer::GetTimeInMilliseconds == %u\n", CTimer::GetTimeInMilliseconds());
+	PrintToLog("CTheScripts::Process started, Timer_GetTimeInMilliseconds == %u\n", (*Timer_GetTimeInMilliseconds()));
 }
 
 void CTheScripts::LogAfterScriptProcessing()
@@ -1705,7 +1706,7 @@ void CRunningScript::LogAfterProcessingCommand(int32 command)
 				if (commandInfo[i] == '_')
 					commandInfo[i] = ' ';
 			}
-			CDebug::DebugAddText(commandInfo);
+			Debug_DebugAddText(commandInfo);
 		}
 	}
 }
@@ -1730,7 +1731,7 @@ CTheScripts::SwitchToMission(int32 mission)
 
 		while (!pScript->ProcessOneCommand());
 
-		CMessages::ClearMessages();
+		Messages_ClearMessages();
 	}
 
 	if (CTheScripts::NumberOfExclusiveMissionScripts > 0 && mission <= UINT16_MAX - 2)
@@ -1744,22 +1745,24 @@ CTheScripts::SwitchToMission(int32 mission)
 	}
 #endif
 #endif
-	CTimer::Suspend();
+	Timer_Suspend();
 	int offset = CTheScripts::MultiScriptArray[mission];
 #ifdef USE_DEBUG_SCRIPT_LOADER
 	int handle = OpenScript();
 #else
-	CFileMgr::ChangeDir("\\");
-	int handle = CFileMgr::OpenFile("data\\main.scm", "rb");
+	FileMgr_ChangeDir("\\");
+	int handle = FileMgr_OpenFile("data\\main.scm", "rb");
 #endif
-	CFileMgr::Seek(handle, offset, 0);
-	CFileMgr::Read(handle, (const char*)&CTheScripts::ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
-	CFileMgr::CloseFile(handle);
+	FileMgr_Seek(handle, offset, 0);
+	FileMgr_Read(handle, (const char*)&CTheScripts::ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
+	FileMgr_CloseFile(handle);
 	CRunningScript* pMissionScript = CTheScripts::StartNewScript(SIZE_MAIN_SCRIPT);
-	CTimer::Resume();
+	Timer_Resume();
 	pMissionScript->m_bIsMissionScript = true;
 	pMissionScript->m_bMissionFlag = true;
 	CTheScripts::bAlreadyRunningAMissionScript = true;
 	CGameLogic::ClearShortCut();
 }
 #endif
+
+//- rouz edit (ChatGPT)

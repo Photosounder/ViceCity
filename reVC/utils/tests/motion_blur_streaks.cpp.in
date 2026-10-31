@@ -1,0 +1,160 @@
+@COMMON@
+#include "caller.h"
+#include "Timecycle.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,drawStates,queries,hooks,attempts,renders,ends,depth;
+static unsigned mode;
+static int32 colors[3]={17,129,255};
+static bool recursive,mutateRecord,mutateStates;
+static void require(bool value)
+{
+    // Fail quietly at the current comparison position
+    if(!value){fprintf(stderr,"states=%u attempts=%u renders=%u\n",states,attempts,renders);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate logical values independently of process addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite and exceptional scalar storage without type aliasing
+    uint32_t result;memcpy(&result,&value,4);word(result);
+}
+static void idValue(uintptr_t value)
+{
+    // Preserve all identifier bits on both native pointer widths
+    uint64_t wide=(uint64_t)value;word((uint32_t)wide);word((uint32_t)(wide>>32));
+}
+static void vectorValue(MotionBlurStreakVector value)
+{
+    // Observe original vector component order through the plain record interface
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static RwIm3DVertex *vertices(void)
+{
+    // Use the actual typed backend array in both implementations
+    return (RwIm3DVertex *)TestMBS_Vertices();
+}
+static void geometry(void)
+{
+    // Observe all shared vertex fields including inactive UV and color contents
+    for(int i=0;i<4;i++){RwIm3DVertex &v=vertices()[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());}
+    for(int i=0;i<12;i++)word(TestMBS_Index(i));
+}
+static void snapshot(void)
+{
+    // Observe every pool field and all public registration-query results
+    for(int i=0;i<NUMMBLURSTREAKS;i++){
+        // Compare inactive payloads and every historical sample as well as the live ID
+        MotionBlurStreak r=TestMBS_Record(i);idValue(r.m_id);word(r.m_red);word(r.m_green);word(r.m_blue);for(int j=0;j<3;j++){vectorValue(r.m_pos1[j]);vectorValue(r.m_pos2[j]);word(r.m_isValid[j]);}word(TestMBS_IsRegistered(r.m_id));
+    }
+    geometry();states++;
+}
+int32 CTimeCycle::GetFogRed(void)
+{
+    // Observe the original live red fog query
+    word(1);word((uint32_t)colors[0]);queries++;return colors[0];
+}
+int32 CTimeCycle::GetFogGreen(void)
+{
+    // Observe the original live green fog query
+    word(2);word((uint32_t)colors[1]);queries++;return colors[1];
+}
+int32 CTimeCycle::GetFogBlue(void)
+{
+    // Observe the original live blue fog query
+    word(3);word((uint32_t)colors[2]);queries++;return colors[2];
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe actual render-state identifiers and preserve reinitialization from an owner hook
+    word(4);word((uint32_t)state);word((uint32_t)(uintptr_t)value);drawStates++;if(mutateStates && state==rwRENDERSTATEZWRITEENABLE){mutateStates=false;TestMBS_Init();}return 1;
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal value)
+{
+    // Observe the original ordered geometry initialization
+    word(5);word((uint32_t)(v-vertices()));floating(value);v->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Preserve all original shared V-coordinate writes
+    word(6);word((uint32_t)(v-vertices()));floating(value);v->setV(value);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Observe integer alpha calculation and color narrowing at the actual typed setter
+    word(7);word((uint32_t)(v-vertices()));word(r);word(g);word(b);word(a);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Observe vertex winding and original component write order
+    word(8);word((uint32_t)(v-vertices()));floating(x);floating(y);floating(z);v->setX(x);v->setY(y);v->setZ(z);
+}
+void LittleTest(void)
+{
+    // Reenter or mutate the actual pool at the original shared-buffer hook
+    word(9);geometry();hooks++;if(mutateRecord){mutateRecord=false;MotionBlurStreak r=TestMBS_Record(0);r.m_isValid[1]=false;r.m_pos1[2].z=71.0f;TestMBS_SetRecord(0,&r);}if(recursive && depth==0 && hooks%31==0){depth=1;TestMBS_Render();depth=0;}
+}
+void *RwIm3DTransform(RwIm3DVertex *buffer,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Preserve all transform arguments and success/failure branches
+    require(buffer==vertices() && count==4 && matrix==NULL && flags==rwIM3D_VERTEXUV);word(10);geometry();attempts++;bool ok=mode==0 || (mode==2 && attempts%5!=0);word(ok);buffer[3].setV((float)(attempts%17));return ok?buffer:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Observe the complete double-sided triangle table and legal shared-table changes
+    require(type==rwPRIMTYPETRILIST && count==12);word(11);for(int i=0;i<12;i++)word(indices[i]);geometry();indices[11]^=1;renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Pair each original successful indexed draw with its end operation
+    word(12);ends++;return 1;
+}
+static MotionBlurStreak record(uintptr_t id,unsigned mask)
+{
+    // Construct complete original record states with distinct inactive sample data
+    MotionBlurStreak r={};r.m_id=id;r.m_red=17;r.m_green=129;r.m_blue=255;
+    for(int i=0;i<3;i++){r.m_pos1[i]={(float)i+0.25f,(float)i*-0.5f,(float)i*1.25f};r.m_pos2[i]={(float)i-0.125f,(float)i*0.75f,(float)i*-1.5f};r.m_isValid[i]=(mask&(1u<<i))!=0;}return r;
+}
+static void reset(void)
+{
+    // Preserve the separate original geometry and ID-only initialization operations
+    TestMBS_InitGeometry();TestMBS_Init();mode=0;snapshot();
+}
+int main(void)
+{
+    // Verify the original record layout at the C and C++ interface
+    static_assert(sizeof(MotionBlurStreak)==(sizeof(void *)==8?88:84) && alignof(MotionBlurStreak)==alignof(uintptr_t),"C record");static_assert(offsetof(MotionBlurStreak,m_pos1)==(sizeof(void *)==8?12:8) && offsetof(MotionBlurStreak,m_pos2)==(sizeof(void *)==8?48:44) && offsetof(MotionBlurStreak,m_isValid)==(sizeof(void *)==8?84:80),"C samples");
+    reset();require(!TestMBS_IsRegistered(0));unsigned before=drawStates;TestMBS_Render();require(drawStates==before);snapshot();
+    // Cover every validity mask, ID-zero state and descending historical sample copy
+    for(unsigned mask=0;mask<8;mask++)for(unsigned zero=0;zero<2;zero++){
+        // Preserve payloads and flags during manager reinitialization and member updates
+        reset();MotionBlurStreak r=record(zero?0:71,mask);TestMBS_SetRecord(0,&r);TestMBS_MemberUpdate(0);snapshot();TestMBS_Update();snapshot();TestMBS_Init();snapshot();
+    }
+    // Cover ID zero, full-width identifiers, first-free allocation and full-pool rejection
+    uintptr_t ids[]={0,1,UINTPTR_MAX,(uintptr_t)1<<(sizeof(uintptr_t)*8-1),2,3,4,5};CVector p1(1.0f,-0.0f,3.0f),p2(4.0f,5.0f,6.0f);
+    reset();for(uintptr_t id:ids){TestMBS_RegisterLegacy(id,255,0,129,&p1,&p2);snapshot();}for(int i=0;i<4;i++){TestMBS_Alias(i);snapshot();}TestMBS_Init();snapshot();TestMBS_RegisterC(0,7,8,9,{1.0f,2.0f,3.0f},{4.0f,5.0f,6.0f});snapshot();
+    // Compare every pair-mask, local reflection record, alpha and transform outcome
+    for(unsigned mask=0;mask<8;mask++)for(unsigned draw=0;draw<3;draw++){
+        // Use one legal complete record for both manager and isolated member rendering
+        reset();MotionBlurStreak r=record(9,mask);TestMBS_SetRecord(0,&r);mode=draw;TestMBS_MemberRender(0);snapshot();TestMBS_LocalRender(&r);snapshot();TestMBS_Render();snapshot();
+    }
+    // Preserve state setup after a live owner clears every ID during the first state write
+    reset();MotionBlurStreak seeded=record(19,7);TestMBS_SetRecord(0,&seeded);mutateStates=true;TestMBS_Render();require(!mutateStates);snapshot();
+    // Preserve live sample flags when the original draw hook changes the current streak
+    reset();TestMBS_SetRecord(0,&seeded);mutateRecord=true;TestMBS_MemberRender(0);require(!mutateRecord);snapshot();
+    // Compare long registration/update/render histories with sparse frames and repeated IDs
+    reset();for(unsigned frame=0;frame<7000;frame++){
+        // Generate complete by-value inputs and palette values in a fixed order
+        colors[0]=(int32)(frame&255);colors[1]=(int32)((frame*3)&255);colors[2]=(int32)((frame*7)&255);p1=CVector((float)(frame%19)*0.125f,(float)(frame%7)*-0.5f,(float)(frame%13));p2=CVector(p1.x+0.25f,p1.y-0.5f,p1.z+0.75f);uintptr_t id=1+(frame/11)%6;
+        if(frame%3)TestMBS_RegisterLegacy(id,(uint8_t)frame,(uint8_t)(frame>>1),(uint8_t)(frame+7),&p1,&p2);else TestMBS_RegisterC(id,(uint8_t)frame,(uint8_t)(frame>>1),(uint8_t)(frame+7),{p1.x,p1.y,p1.z},{p2.x,p2.y,p2.z});mode=frame%3;if(frame%5==0)TestMBS_Render();TestMBS_Update();if(frame%29==0)snapshot();if(frame%317==0){TestMBS_Init();snapshot();}
+    }
+    // Reenter through the original hook with all records sharing one vertex array
+    reset();for(int i=0;i<4;i++){MotionBlurStreak r=record(i+1,7);TestMBS_SetRecord(i,&r);}recursive=true;mode=2;for(int i=0;i<12;i++)TestMBS_Render();recursive=false;snapshot();
+    require(renders==ends && hooks==attempts && queries%3==0);printf("%016llx states=%u drawStates=%u queries=%u hooks=%u attempts=%u renders=%u ends=%u bytes=%u\n",(unsigned long long)hash,states,drawStates,queries,hooks,attempts,renders,ends,(unsigned)sizeof(MotionBlurStreak));return 0;
+}

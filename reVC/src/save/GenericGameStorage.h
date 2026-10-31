@@ -1,4 +1,6 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include "../audio/MusicSavedData.h"
 
 #include "Game.h"
 #include "PCSave.h"
@@ -8,9 +10,6 @@
 
 #define SLOT_COUNT (8)
 
-void InitRadioStationPositionList();
-int32 GetSavedRadioStationPosition(int32 station);
-void PopulateRadioStationPositionList();
 bool GenericSave(int file);
 bool GenericLoad();
 bool ReadInSizeofSaveFileBuffer(int32 &file, uint32 &size);
@@ -71,3 +70,5 @@ enum {
 };
 
 #endif
+
+//- rouz edit (ChatGPT)

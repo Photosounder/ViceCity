@@ -75,4 +75,5 @@ def body(source):
     source=source.replace('CReplay::IsPlayingBack()', 'AudioEnvironmentHost_Replay()').replace('ProcessPlayerMood()', 'AudioEnvironmentHost_Mood(manager)')
     source=source.replace('CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle', 'AudioEnvironmentHost_Remote()').replace('FindPlayerPed()', 'AudioPoliceHost_FindPlayer()')
     source=source.replace('playerPed->m_audioEntityId', 'AudioEnvironmentHost_EntityId(playerPed)').replace('playerPed->EnteringCar()', 'AudioEnvironmentHost_Entering(playerPed)').replace('playerPed->bInVehicle', 'AudioEnvironmentHost_InVehicle(playerPed)')
-    return source
+    import audio_ped_speech_migration
+    return audio_ped_speech_migration.calls(source)

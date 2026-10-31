@@ -1,0 +1,147 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+void FrameUpdateCallBackNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackOffscreen(AnimBlendFrameData*,void*);
+static uint64_t hashValue=1469598103934665603ULL;
+static uint32_t randomState=0x93a2b3c4U;
+static unsigned states=0,checks=0;
+extern "C" void *NativeNodeDefault(void *memory);
+static void require(bool condition)
+{
+    // Report the first failed invariant without opening a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations across independent executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence fixture inputs independently of C++ argument evaluation order
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Cover full stored bit patterns without evaluating arbitrary floating-point representations
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static float finiteValue()
+{
+    // Keep matrix branch and animation inputs finite and exactly representable
+    return ((int32_t)(nextBits()%8193)-4096)/1024.0f;
+}
+static void canonical(float &value)
+{
+    // Compare arithmetic NaNs without imposing a new payload propagation policy
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void result(CQuaternion value)
+{
+    // Retain finite and signed-zero results while canonicalizing arithmetic NaN payloads
+    canonical(value.x);canonical(value.y);canonical(value.z);canonical(value.w);observe(&value,16);
+}
+static void vectorResult(RwV3d value)
+{
+    // Compare all three initialized arithmetic coordinates
+    canonical(value.x);canonical(value.y);canonical(value.z);observe(&value,12);
+}
+static void matrixResult(RwMatrix matrix)
+{
+    // Include every matrix byte while canonicalizing only the nine arithmetic outputs
+    canonical(matrix.right.x);canonical(matrix.right.y);canonical(matrix.right.z);canonical(matrix.up.x);canonical(matrix.up.y);canonical(matrix.up.z);canonical(matrix.at.x);canonical(matrix.at.y);canonical(matrix.at.z);observe(&matrix,64);
+}
+static CAnimBlendNode staticNodes[3];
+static void nodeResult(CAnimBlendNode node)
+{
+    // Compare initialized scalar state without imposing node padding or native pointer representations
+    canonical(node.theta);canonical(node.invSin);canonical(node.remainingTime);observe(&node.theta,20);
+}
+static void lifetimesAndInit()
+{
+    // Preserve original no-write default construction during the object's lifetime
+    alignas(CAnimBlendNode) unsigned char memory[sizeof(CAnimBlendNode)],expected[sizeof(CAnimBlendNode)];memset(memory,0xa5,sizeof(memory));memset(expected,0xa5,sizeof(expected));CAnimBlendNode *value=(CAnimBlendNode*)NativeNodeDefault(memory);require(value==(void*)memory&&memcmp(memory,expected,sizeof(memory))==0);observe(memory,sizeof(memory));value->~CAnimBlendNode();++states;
+    // Retain zero-filled static node arrays without adding constructor behavior
+    unsigned char zero[sizeof(staticNodes)]={0};require(memcmp(staticNodes,zero,sizeof(zero))==0);observe(staticNodes,sizeof(staticNodes));++states;
+    // Keep initialization partial and preserve both angles and native pointer-alignment padding
+    for(unsigned test=0;test<4096;++test){
+        CAnimBlendNode actual,model;fill(&actual,sizeof(actual));memcpy(&model,&actual,sizeof(model));model.frameA=-1;model.frameB=-1;model.remainingTime=0.0f;model.sequence=NULL;model.association=NULL;Run_Init(&actual);require(memcmp(&actual,&model,sizeof(actual))==0);observe(&actual,sizeof(actual));CAnimBlendNode copy=actual;require(memcmp(&copy.theta,&actual.theta,20)==0&&copy.sequence==actual.sequence&&copy.association==actual.association);++states;
+    }
+}
+static void directMethods()
+{
+    // Exercise every original policy branch through all twelve non-initializer C operations
+    const uint32_t weightBits[]={0,0x80000000U,0x3f000000U,0x3f800000U,0xbf800000U,0x40000000U,0x7f800000U,0xff800000U,0x7fc12345U};
+    for(unsigned test=0;test<4096;++test)for(unsigned op=0;op<12;++op){
+        CAnimBlendSequence sequence;CAnimBlendAssociation association;KeyFrame basic[5];KeyFrameTrans full[5];KeyFrameCompressed packed[5];KeyFrameTransCompressed packedFull[5];const int count=(int)(test%5);sequence.numFrames=count;sequence.type=count?((test>>3)&3):0;sequence.keyFrames=(sequence.type&2)?(void*)full:basic;sequence.keyFramesCompressed=(sequence.type&2)?(void*)packedFull:packed;
+        for(unsigned i=0;i<5;++i){
+            // Keep packed quaternion values inside their original defined narrowing domain
+            float sign=((test+i)&1)?-1.0f:1.0f;CQuaternion rotation=Quaternion_Make(sign*0.1f*(i+1),sign*0.2f,sign*0.3f,sign*0.6f);float duration=((test&64)&&i==1&&op!=4&&count>=3)?0.0f:0.125f*(i+1);basic[i].rotation=rotation;basic[i].deltaTime=duration;full[i].base=basic[i];full[i].translation={(float)i,-0.25f*i,0.5f*i};KeyFrameCompressed_SetRotation(&packed[i],&rotation);KeyFrameCompressed_SetTime(&packed[i],duration);packedFull[i].base=packed[i];CVector pos((float)i,-0.25f*i,0.5f*i);KeyFrameTransCompressed_SetTranslation(&packedFull[i],KeyFrame_VectorRef(pos));
+        }
+        association.flags=(int16_t)(test&255);association.blendAmount=(test&256)?0.75f:(test&512)?-0.5f:0.0f;association.timeStep=(test&1024)?-0.25f:0.625f;if(!count){association.flags=0;association.blendAmount=0;}
+        CAnimBlendNode node;Run_Init(&node);node.sequence=&sequence;node.association=&association;node.theta=0.75f;node.invSin=1.25f;node.frameA=count>1?1:0;node.frameB=0;node.remainingTime=((int)(test%9)-5)*0.125f;
+        struct {uint32_t prefix;CVector value;uint32_t suffix;} translation;translation.prefix=0x12345678;translation.suffix=0x87654321;fill(&translation.value,12);CVector priorTranslation=translation.value;CQuaternion rotation;fill(&rotation,16);CQuaternion priorRotation=rotation;float value;uint32_t bits=weightBits[test%9];memcpy(&value,&bits,4);if(op==4)value=((int)(test%41)-8)*0.125f;
+        bool answer=Run_Method(op,&node,&translation.value,&rotation,value);require(node.sequence==&sequence&&node.association==&association);require(translation.prefix==0x12345678&&translation.suffix==0x87654321);if(op>=2&&op<=7)require(memcmp(&translation.value,&priorTranslation,12)==0);if(op>=2)require(memcmp(&rotation,&priorRotation,16)==0);observe(&answer,sizeof(answer));nodeResult(node);vectorResult(translation.value);result(rotation);observe(sequence.keyFrames,count*(sequence.type&2?32:20));observe(sequence.keyFramesCompressed,count*(sequence.type&2?16:10));++states;
+    }
+}
+static void lazyReads()
+{
+    // Preserve count-only early returns with null associations and no frame storage
+    CAnimBlendSequence sequence;sequence.numFrames=1;CAnimBlendNode node;Run_Init(&node);node.sequence=&sequence;node.theta=0.25f;node.invSin=2.0f;CAnimBlendNode prior=node;require(!Run_Method(2,&node,NULL,NULL,0)&&!Run_Method(3,&node,NULL,NULL,0));require(memcmp(&node.theta,&prior.theta,20)==0&&node.association==NULL);nodeResult(node);++states;
+    // Keep empty sequence searches independent of flags, storage and association fields
+    sequence.numFrames=0;require(!Run_Method(4,&node,NULL,NULL,1)&&!Run_Method(5,&node,NULL,NULL,1));require(memcmp(&node.theta,&prior.theta,20)==0);nodeResult(node);++states;
+    // Rotation-disabled delta queries leave angle state intact without requiring keyframes
+    sequence.type=0;Run_Method(6,&node,NULL,NULL,0);Run_Method(7,&node,NULL,NULL,0);require(memcmp(&node.theta,&prior.theta,20)==0);nodeResult(node);++states;
+    // Zero blends avoid a sequence and a stopped association leaves its timestep unread
+    CAnimBlendAssociation association;association.flags=0;association.blendAmount=0;node.association=&association;node.sequence=NULL;CVector translation;CQuaternion rotation;
+    for(unsigned op=0;op<12;++op)if(op<=1||op>=8){
+        translation=CVector(3,4,5);rotation=Quaternion_Make(6,7,8,9);require(!Run_Method(op,&node,&translation,&rotation,1));require(translation.x==0&&translation.y==0&&translation.z==0);if(op<=1)require(rotation.x==0&&rotation.y==0&&rotation.z==0&&rotation.w==0);nodeResult(node);vectorResult(translation);result(rotation);++states;
+    }
+}
+
+static void animation()
+{
+    // Execute complete original and converted animation methods and every frame callback
+    typedef void (*Callback)(AnimBlendFrameData*,void*);const Callback callbacks[]={FrameUpdateCallBackNonSkinned,FrameUpdateCallBackWithVelocityExtractionNonSkinned,FrameUpdateCallBackWith3dVelocityExtractionNonSkinned,FrameUpdateCallBackSkinned,FrameUpdateCallBackWithVelocityExtractionSkinned,FrameUpdateCallBackWith3dVelocityExtractionSkinned,FrameUpdateCallBackNonSkinnedCompressed,FrameUpdateCallBackSkinnedCompressed,FrameUpdateCallBackOffscreen};
+    for(unsigned test=0;test<2048;++test)for(unsigned which=0;which<9;++which){
+        CAnimBlendSequence sequences[2];KeyFrameTrans frames[2][3];KeyFrameTransCompressed packed[2][3];KeyFrame rotations[2][3];KeyFrameCompressed packedRotations[2][3];CAnimBlendAssociation associations[2];CAnimBlendNode nodes[2][2];CAnimBlendNode *pointers[3]={nodes[0],nodes[1],NULL};
+        for(unsigned channel=0;channel<2;++channel){
+            // Supply initialized keyframes with alternating quaternion signs and safe packed ranges
+            for(unsigned key=0;key<3;++key){
+                float sign=((test+channel+key)&1)?-1.0f:1.0f;frames[channel][key].base.rotation=Quaternion_Make(sign*0.1f*(key+1),sign*0.2f,sign*0.3f,sign*0.8f);frames[channel][key].base.deltaTime=0.25f+key*0.125f;CVector framePosition((float)key+channel,-0.3f*(key+1),0.2f*(key+1));frames[channel][key].translation=KeyFrame_FromNative(framePosition);KeyFrameCompressed_SetRotation(&packed[channel][key].base,&frames[channel][key].base.rotation);KeyFrameCompressed_SetTime(&packed[channel][key].base,frames[channel][key].base.deltaTime);KeyFrameTransCompressed_SetTranslation(&packed[channel][key],KeyFrame_VectorRef(framePosition));
+            }
+            sequences[channel].type=CAnimBlendSequence::KF_ROT|((test&16)?CAnimBlendSequence::KF_TRANS:0);sequences[channel].numFrames=3;sequences[channel].keyFrames=frames[channel];sequences[channel].keyFramesCompressed=packed[channel];
+            // Keep rotation-only fixture arrays at the correct original record stride
+            if(!(test&16)){
+                for(unsigned k=0;k<3;++k){rotations[channel][k]=frames[channel][k].base;packedRotations[channel][k]=packed[channel][k].base;}sequences[channel].keyFrames=rotations[channel];sequences[channel].keyFramesCompressed=packedRotations[channel];
+            }
+            sequences[channel].RemoveQuaternionFlips();associations[channel].blendAmount=(test&32)?0.7f:0.25f;associations[channel].timeStep=(test&64)?0.6f:0.05f;associations[channel].flags=(int16_t)((test+channel*7)&255);
+            Run_Init(&nodes[channel][0]);nodes[channel][0].sequence=&sequences[channel];nodes[channel][0].association=&associations[channel];nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;nodes[channel][0].remainingTime=0.2f;Run_Method(6,&nodes[channel][0],NULL,NULL,0);Run_Init(&nodes[channel][1]);
+            // Exercise compressed sign correction and actual scalar interpolation before frame accumulation
+            CVector translation;CQuaternion rotation;Run_Method(7,&nodes[channel][0],NULL,NULL,0);Run_Method(1,&nodes[channel][0],&translation,&rotation,0.75f);result(rotation);vectorResult(translation);nodes[channel][0].remainingTime=0.2f;nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;Run_Method(6,&nodes[channel][0],NULL,NULL,0);
+        }
+        // Cover ignore flags, velocity extraction, partial weights, looping and native frame output
+        RwFrame frame;fill(&frame.matrix,64);RpHAnimStdInterpFrame skin;memset(&skin,0x5a,sizeof(skin));AnimBlendFrameData data;data.flag=test&15;data.frame=&frame;data.hanimFrame=&skin;data.resetPos=CVector(0.5f,-1.25f,0.3f);AnimBlendFrameUpdateData update={(test&128)!=0,pointers};CVector2D velocity2(0.125f,-0.5f);CVector velocity3(0.25f,-0.5f,0.75f);CAnimBlendClumpData clump;clump.velocity2d=((test&256)&&(which==0||which==3||which>=6))?NULL:&velocity2;clump.velocity3d=&velocity3;gpAnimBlendClump=&clump;callbacks[which](&data,&update);matrixResult(frame.matrix);vectorResult(skin.q.imag);float real=skin.q.real;canonical(real);observe(&real,4);vectorResult(skin.t);canonical(velocity2.x);canonical(velocity2.y);observe(&velocity2,8);vectorResult(velocity3);
+        for(unsigned channel=0;channel<2;++channel){
+            // Observe complete animation state without comparing implementation-owned pointer values
+            require(pointers[channel]==nodes[channel]||pointers[channel]==nodes[channel]+1);unsigned advanced=(unsigned)(pointers[channel]-nodes[channel]);observe(&advanced,4);CAnimBlendNode &node=nodes[channel][0];canonical(node.theta);canonical(node.invSin);observe(&node.theta,20);observe(sequences[channel].keyFrames,(test&16)?sizeof(frames[channel]):3*sizeof(KeyFrame));observe(sequences[channel].keyFramesCompressed,(test&16)?sizeof(packed[channel]):3*sizeof(KeyFrameCompressed));
+        }
+        ++states;
+    }
+}
+int main()
+{
+    // Compare complete node ownership, lazy reads and every actual native frame callback
+    lifetimesAndInit();directMethods();lazyReads();animation();printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

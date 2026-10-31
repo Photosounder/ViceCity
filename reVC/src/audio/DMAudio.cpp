@@ -165,50 +165,21 @@ void
 DMAudio_PlayRadioAnnouncement(uint32 announcement)
 {
 	// Preserve the original game audio operation through the C interface
-	MusicManager.PlayAnnouncement(announcement);
+	MusicState_PlayAnnouncement(&MusicManager, announcement);
 }
 
 void
 DMAudio_PlayFrontEndTrack(uint32 track, bool8 frontendFlag)
 {
 	// Preserve the original game audio operation through the C interface
-	MusicManager.PlayFrontEndTrack(track, frontendFlag);
+	MusicState_PlayFrontEndTrack(&MusicManager, track, frontendFlag);
 }
 
 void
 DMAudio_StopFrontEndTrack(void)
 {
 	// Preserve the original game audio operation through the C interface
-	MusicManager.StopFrontEndTrack();
-}
-
-
-void
-DMAudio_ChangeMusicMode(uint8 mode)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.ChangeMusicMode(mode);
-}
-
-void
-DMAudio_PreloadCutSceneMusic(uint32 track)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.PreloadCutSceneMusic(track);
-}
-
-void
-DMAudio_PlayPreloadedCutSceneMusic(void)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.PlayPreloadedCutSceneMusic();
-}
-
-void
-DMAudio_StopCutSceneMusic(void)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.StopCutSceneMusic();
+	MusicState_StopFrontEndTrack(&MusicManager);
 }
 
 
@@ -219,68 +190,37 @@ DMAudio_StopCutSceneMusic(void)
 
 
 
-uint8
-DMAudio_GetRadioInCar(void)
-{
-	// Preserve the original game audio operation through the C interface
-	return MusicManager.GetRadioInCar();
-}
 
-void
-DMAudio_SetRadioInCar(uint32 radio)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.SetRadioInCar(radio);
-}
+
+
+
+
+
 
 void
 DMAudio_SetRadioChannel(uint32 radio, int32 pos)
 {
 	// Preserve the original game audio operation through the C interface
-	MusicManager.SetRadioChannelByScript(radio, pos);
+	MusicState_SetRadioChannelByScript(&MusicManager, radio, pos);
 }
 
-void
-DMAudio_SetStartingTrackPositions(bool8 isStartGame)
-{
-	// Preserve the original game audio operation through the C interface
-	MusicManager.SetStartingTrackPositions(isStartGame);
-}
 
 float *
 DMAudio_GetListenTimeArray()
 {
 	// Preserve the original game audio operation through the C interface
-	return MusicManager.GetListenTimeArray();
+	return MusicState_GetListenTimeArray(&MusicManager);
 }
 
 uint32
 DMAudio_GetFavouriteRadioStation()
 {
 	// Preserve the original game audio operation through the C interface
-	return MusicManager.GetFavouriteRadioStation();
+	return MusicState_GetFavouriteRadioStation(&MusicManager);
 }
 
-int32
-DMAudio_GetRadioPosition(uint32 station)
-{
-	// Preserve the original game audio operation through the C interface
-	return MusicManager.GetRadioPosition(station);
-}
 
-void
-DMAudio_SetPedTalkingStatus(CPed *ped, bool8 status)
-{
-	// Preserve the original game audio operation through the C interface
-	return AudioManager.SetPedTalkingStatus(ped, status);
-}
 
-void
-DMAudio_SetPlayersMood(uint8 mood, uint32 time)
-{
-	// Preserve the original game audio operation through the C interface
-	return AudioManager.SetPlayersMood(mood, time);
-}
 
 void
 DMAudio_ShutUpPlayerTalking(bool8 state)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 enum {
@@ -147,7 +148,7 @@ public:
 class CPlaceableSprite
 {
 public:
-	CSprite2d *m_pSprite;
+	Sprite2d *m_pSprite;
 	CVector2D m_position;
 	CVector2D m_size;
 	CRGBA m_color;
@@ -274,8 +275,8 @@ public:
 	void SetNewOldTextScale(bool bTextScale, const CVector2D &newScale, const CVector2D &oldScale);
 	void SetTextsColor(const CRGBA &color);
 	void AddText(wchar *text, float positionX, float positionY, const CRGBA &color, bool bRightJustify);
-	void AddPicture(CSprite2d *sprite, CSprite2d *shadow, float positionX, float positionY, float width, float height, const CRGBA &color);
-	void AddPicture(CSprite2d *sprite, float positionX, float positionY, float width, float height, const CRGBA &color);
+	void AddPicture(Sprite2d *sprite, Sprite2d *shadow, float positionX, float positionY, float width, float height, const CRGBA &color);
+	void AddPicture(Sprite2d *sprite, float positionX, float positionY, float width, float height, const CRGBA &color);
 
 	virtual void Draw(const CRGBA &, const CRGBA &, float x, float y);
 	virtual void DrawNormal(float x, float y) { Draw(CRGBA(0,0,0,0), CRGBA(0,0,0,0), x, y); }
@@ -389,7 +390,7 @@ public:
 	CMenuMultiChoicePictured(void) { Initialise(); }
 	void Initialise(void);
 	using CMenuMultiChoice::AddOption;
-	CPlaceableShOption *AddOption(CSprite2d *sprite, float positionX, float positionY, const CVector2D &size, bool bSelected);
+	CPlaceableShOption *AddOption(Sprite2d *sprite, float positionX, float positionY, const CVector2D &size, bool bSelected);
 
 	virtual void Draw(const CRGBA &optionHighlight, const CRGBA &titleHighlight, float x, float y);
 	virtual void DrawNormal(float x, float y);
@@ -411,7 +412,7 @@ public:
 
 	void Initialise(void);
 	using CMenuMultiChoicePictured::AddOption;
-	CPlaceableShOption *AddOption(CSprite2d *sprite, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected);
+	CPlaceableShOption *AddOption(Sprite2d *sprite, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected);
 
 	virtual void SelectCurrentOptionUnderCursor(void);
 	virtual void SelectDefaultCancelAction(void);
@@ -434,7 +435,7 @@ public:
 
 	void Initialise(void);
 	using CMenuMultiChoicePicturedTriggered::AddOption;
-	CPlaceableShOption *AddOption(CSprite2d *sprite, FEC_MOVETAB *moveTab, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected);
+	CPlaceableShOption *AddOption(Sprite2d *sprite, FEC_MOVETAB *moveTab, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected);
 
 	virtual bool GoDown(void);
 	virtual bool GoUp(void);
@@ -747,4 +748,4 @@ public:
 	virtual void GoDownMenuOnPage(void);
 	virtual void GoLeftMenuOnPage(void);
 	virtual void GoRightMenuOnPage(void);
-};
+};//- rouz edit (ChatGPT)

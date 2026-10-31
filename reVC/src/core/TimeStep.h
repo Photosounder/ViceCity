@@ -1,10 +1,12 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-// Pretty sure this class is not used by the game
-class CTimeStep
-{
-public:
-	static float ms_fTimeScale;
-	static float ms_fFramesPerUpdate;
-	static float ms_fTimeStep;
-};
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern float TimeStep_timeScale;
+extern float TimeStep_framesPerUpdate;
+extern float TimeStep_timeStep;
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

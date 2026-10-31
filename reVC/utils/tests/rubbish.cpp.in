@@ -1,0 +1,293 @@
+@COMMON@
+#include "caller.h"
+#include "owners.h"
+#include "Camera.h"
+#include "Vehicle.h"
+#include "Weather.h"
+#include "Stats.h"
+#include "World.h"
+#include "TxdStore.h"
+#include "RenderBuffer.h"
+#include "custompipes.h"
+#include "Timer.h"
+#include "ZoneCull.h"
+#include "General.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+#include <initializer_list>
+static uint64_t hash=UINT64_C(1469598103934665603);
+static FILE *trace;
+static unsigned states,randoms,grounds,zones,attempts,renders,ends,hooks,groups,inputs,loads,destroys,stage,serial,depth;
+static uint32_t rng=0x1836517;
+static unsigned groundMode,cullMode,drawMode;
+static bool recursive,framePresent=true,matrixPresent=true;
+static RwMatrix auxiliaryMatrix;
+CCamera TheCamera;
+RubbishFloat CWeather::Wind;
+RubbishInt CStats::PamphletMissionPassed;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+VertexBufferUnion TempVertexBuffer;
+RwImVertexIndex TempBufferRenderIndexList[TEMPBUFFERINDEXSIZE];
+int32 TempBufferVerticesStored,TempBufferIndicesStored;
+extern "C" { uint32_t Timer_timeMs,Timer_frameCounter;float Timer_timeStep; }
+static void require(bool condition)
+{
+    // Fail quietly with enough state to identify the current comparison operation
+    if(!condition){fprintf(stderr,"states=%u randoms=%u attempts=%u\n",states,randoms,attempts);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Record logical values and optional binary diagnostics without process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);if(trace)fwrite(&value,4,1,trace);
+}
+static uint32_t bits(float value)
+{
+    // Read a float representation without scalar aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static void floating(float value)
+{
+    // Compare every finite bit and classify NaNs without a payload promise
+    word(isnan(value)?0x7fc00000u:bits(value));
+}
+void TestRB_Input(unsigned event,uint32_t value)
+{
+    // Observe original getter and scalar-read counts and timing
+    word(100+event);word(value);inputs++;
+}
+static uint32_t randomWord(void)
+{
+    // Generate a reproducible stream with defined unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Observe exactly the original 16-bit random API and draw sequence
+    uint16_t value=(uint16_t)randomWord();word(1);word(value);randoms++;return value;
+}
+float CWorld::FindGroundZFor3DCoord(float x,float y,float z,bool *found)
+{
+    // Preserve null-output ground queries and scripted success/failure paths
+    grounds++;word(2);floating(x);floating(y);floating(z);word(found!=NULL);
+    bool ok=groundMode==0 || (groundMode==2 && grounds%3!=0);if(found)*found=ok;word(ok);return (x+y)*0.03125f;
+}
+extern "C" int32_t CullZones_FindAttributesForCoors(CullZonesPosition pos,int32_t *wanted)
+{
+    // Observe exact cull coordinates and query order even after failed ground searches
+    require(wanted==NULL);zones++;word(3);floating(pos.x);floating(pos.y);floating(pos.z);
+    int32_t value=(cullMode==1 || (cullMode==2 && zones%2))?ATTRZONE_NORAIN:0;word((uint32_t)value);return value;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Preserve the original auxiliary-camera frame query and null branch
+    require(camera==CustomPipes::EnvMapCam);word(4);word(framePresent);return framePresent?(RwFrame *)31:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Observe both original matrix accesses on the successful path
+    require(frame==(RwFrame *)31);word(5);word(matrixPresent);return matrixPresent?&auxiliaryMatrix:NULL;
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Preserve dictionary acquisition order and existing texture publication
+    require(stage==0);stage=1;word(6);
+}
+int CTxdStore::FindTxdSlot(const char *name)
+{
+    // Retain the original particle dictionary name and selected slot
+    require(stage==1 && strcmp(name,"particle")==0);stage=2;word(7);return 9;
+}
+void CTxdStore::SetCurrentTxd(int slot)
+{
+    // Select the original dictionary before all four reads
+    require(stage==2 && slot==9);stage=3;word(8);
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Return opaque resources after verifying all four original texture names
+    static const char *names[]={"gameleaf01_64","gameleaf02_64","newspaper01_64","newspaper02_64"};
+    require(stage>=3 && stage<7 && strcmp(name,names[stage-3])==0 && mask==NULL);word(9);word(stage-3);stage++;loads++;return (RwTexture *)(uintptr_t)(100+(++serial));
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Observe all four published handles before restoring the dictionary
+    require(stage==7);word(10);for(int i=0;i<4;i++)word((uint32_t)(uintptr_t)TestRB_Texture(i));stage=0;
+}
+RwBool RwTextureDestroy(RwTexture *texture)
+{
+    // Verify release happens before clearing each individual original handle
+    word(11);word((uint32_t)(uintptr_t)texture);bool found=false;for(int i=0;i<4;i++)if(TestRB_Texture(i)==texture)found=true;require(found && texture!=NULL);destroys++;return 1;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture)
+{
+    // Observe actual texture selection including the fourth-group mission condition
+    word(12);word((uint32_t)(uintptr_t)texture);return (RwRaster *)((uintptr_t)texture+1000);
+}
+void PushRendergroup(const char *name)
+{
+    // Preserve original diagnostic labels and group timing
+    word(13);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Preserve the original final group boundary
+    word(14);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe every original typed render-state identifier and value
+    word(15);word((uint32_t)state);word((uint32_t)(uintptr_t)value);return 1;
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *vertex,RwReal x,RwReal y,RwReal z)
+{
+    // Preserve all original shared vertex indices and coordinate expressions
+    int index=(int)(vertex-TempBufferRenderVertices);require(index>=0 && index<64);word(16);word((uint32_t)index);floating(x);floating(y);floating(z);vertex->setX(x);vertex->setY(y);vertex->setZ(z);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *vertex,RwUInt8 red,RwUInt8 green,RwUInt8 blue,RwUInt8 alpha)
+{
+    // Observe original alpha narrowing and color-write order
+    int index=(int)(vertex-TempBufferRenderVertices);require(index>=0 && index<64);word(17);word((uint32_t)index);word(red);word(green);word(blue);word(alpha);vertex->setColor(red,green,blue,alpha);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *vertex,RwReal value)
+{
+    // Preserve original typed U writes in shared storage
+    word(18);word((uint32_t)(vertex-TempBufferRenderVertices));floating(value);vertex->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *vertex,RwReal value)
+{
+    // Preserve original typed V writes in shared storage
+    word(19);word((uint32_t)(vertex-TempBufferRenderVertices));floating(value);vertex->setV(value);
+}
+static void buffers(void)
+{
+    // Observe all potentially used vertex/index fields including persistent unused tails
+    word((uint32_t)TempBufferVerticesStored);word((uint32_t)TempBufferIndicesStored);
+    for(int i=0;i<64;i++){
+        // Read actual D3D or GL vertex fields without assuming a backend layout
+        RwIm3DVertex &v=TempBufferRenderVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA color=v.getColor();word(color.red);word(color.green);word(color.blue);word(color.alpha);floating(v.getU());floating(v.getV());
+    }
+    for(int i=0;i<96;i++)word(TempBufferRenderIndexList[i]);
+}
+void LittleTest(void)
+{
+    // Reenter at the original hook while preserving live shared counter changes
+    hooks++;word(20);buffers();
+    if(recursive && depth==0 && hooks%37==0){depth=1;TestRB_Render();depth=0;}
+}
+void *RwIm3DTransform(RwIm3DVertex *vertices,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Read original live counts after hooks and preserve all transform outcomes
+    require(vertices==TempBufferRenderVertices && count==(unsigned)TempBufferVerticesStored && count<=64 && matrix==NULL && flags==rwIM3D_VERTEXUV);
+    attempts++;word(21);word(count);buffers();bool ok=drawMode==0 || (drawMode==2 && attempts%5!=0);vertices[63].setU((float)(attempts%17));word(ok);return ok?vertices:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Preserve the original shared index buffer, primitive and post-hook count
+    require(type==rwPRIMTYPETRILIST && indices==TempBufferRenderIndexList && count==TempBufferIndicesStored && count<=96);word(22);word((uint32_t)count);buffers();renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Match every successful indexed draw with its original end operation
+    word(23);ends++;return 1;
+}
+static void payload(RubbishSheet value)
+{
+    // Observe all declared sheet payload fields independently of pointer addresses
+    floating(value.m_basePos.x);floating(value.m_basePos.y);floating(value.m_basePos.z);floating(value.m_animatedPos.x);floating(value.m_animatedPos.y);floating(value.m_animatedPos.z);
+    floating(value.m_targetZ);word((uint8_t)value.m_state);word((uint8_t)value.m_animationType);word(value.m_moveStart);word(value.m_moveDuration);floating(value.m_animHeight);floating(value.m_xDist);floating(value.m_yDist);floating(value.m_angle);word(value.m_isVisible);word(value.m_targetIsVisible);
+}
+static void snapshot(void)
+{
+    // Observe every record and sentinel, resource handle, visibility and exact topology
+    for(int i=0;i<NUM_RUBBISH_SHEETS+6;i++){payload(TestRB_Record(i));word((uint32_t)TestRB_Link(i,false));word((uint32_t)TestRB_Link(i,true));}
+    for(int i=0;i<4;i++)word((uint32_t)(uintptr_t)TestRB_Texture(i));for(int i=0;i<6;i++)word(RubbishIndexList[i]);word((uint32_t)TestRB_Visibility());word(TestRB_Invisible());states++;
+}
+static void checkLists(void)
+{
+    // Independently verify complete membership and both directions of all three lists
+    bool seen[NUM_RUBBISH_SHEETS]={};
+    for(int list=0;list<3;list++){
+        // Walk each actual list through its observed original identities
+        int head=NUM_RUBBISH_SHEETS+list*2,end=head+1,previous=head,node=TestRB_Link(head,false),count=0;require(TestRB_Link(head,true)==-1 && TestRB_Link(end,false)==-1);
+        while(node!=end){require(node>=0 && node<NUM_RUBBISH_SHEETS && !seen[node] && count++<NUM_RUBBISH_SHEETS);seen[node]=true;require(TestRB_Link(node,true)==previous);require(TestRB_Record(node).m_state==list);previous=node;node=TestRB_Link(node,false);}
+        require(TestRB_Link(end,true)==previous);
+    }
+    for(int i=0;i<NUM_RUBBISH_SHEETS;i++)require(seen[i]);
+}
+static void reset(void)
+{
+    // Restart real algorithm state while retaining original partial-initialization behavior
+    if(TestRB_Texture(0))TestRB_Shutdown();TestRB_Init();Timer_timeMs=5000;Timer_frameCounter=1;Timer_timeStep=1.0f;
+    TheCamera.position=CVector(0.0f,0.0f,2.0f);TheCamera.Orientation.value=0.0f;TheCamera.Orientation.event=30;CWeather::Wind.value=0.0f;CWeather::Wind.event=31;CStats::PamphletMissionPassed.value=0;CStats::PamphletMissionPassed.event=32;
+    CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=NULL;groundMode=0;cullMode=0;drawMode=2;framePresent=true;matrixPresent=true;checkLists();snapshot();
+}
+static void seed(int index,int state,float x,float y,bool visible,bool target)
+{
+    // Supply complete valid animation payloads and move through the real list methods
+    RubbishSheet sheet={};sheet.m_basePos={x,y,0.125f};sheet.m_animatedPos=sheet.m_basePos;sheet.m_targetZ=0.25f;sheet.m_state=(int8_t)state;sheet.m_animationType=1;sheet.m_moveStart=Timer_timeMs-500;sheet.m_moveDuration=2000;sheet.m_animHeight=0.8f;sheet.m_xDist=3.0f;sheet.m_yDist=-2.0f;sheet.m_angle=0.25f;sheet.m_isVisible=visible;sheet.m_targetIsVisible=target;
+    TestRB_SetRecord(index,&sheet);TestRB_Move(index,state);
+}
+int main(int argc,char **argv)
+{
+    // Enable detailed binary event diagnostics only for an explicitly requested failed comparison
+    if(argc>1){trace=fopen(argv[1],"wb");require(trace!=NULL);}
+    static_assert(sizeof(RubbishSheet)==(sizeof(void *)==8?80:68),"C sheet layout");
+    static_assert(alignof(RubbishSheet)==alignof(void *),"C sheet alignment");
+    static_assert(offsetof(RubbishSheet,m_next)==(sizeof(void *)==8?64:60) && offsetof(RubbishSheet,m_prev)==(sizeof(void *)==8?72:64),"C links");
+    reset();word(50);
+    // Exercise both list algorithms and all six sentinel payloads across reinitialization
+    for(int i=0;i<8;i++){seed(i,1,(float)i,0.0f,true,true);checkLists();snapshot();}
+    for(int i=0;i<8;i++){TestRB_Move(i,0);RubbishSheet value=TestRB_Record(i);value.m_state=0;TestRB_SetRecord(i,&value);checkLists();snapshot();}
+    RubbishSheet sentinel=TestRB_Record(NUM_RUBBISH_SHEETS);sentinel.m_angle=7.0f;sentinel.m_targetZ=3.0f;TestRB_SetRecord(NUM_RUBBISH_SHEETS,&sentinel);reset();require(TestRB_Record(NUM_RUBBISH_SHEETS).m_angle==7.0f);
+    // Cover zero visibility, all camera/frame/matrix branches and fourth-group texture behavior
+    word(51);auxiliaryMatrix.pos.x=8.0f;auxiliaryMatrix.pos.y=0.0f;auxiliaryMatrix.pos.z=3.0f;
+    for(int group=0;group<4;group++)for(int i=0;i<4;i++)seed(group*NUM_RUBBISH_SHEETS/4+i,i&1?2:1,(float)(i*7),0.0f,(i&1)==0,(i&2)!=0);
+    for(unsigned camera=0;camera<5;camera++)for(unsigned mission=0;mission<2;mission++)for(unsigned visibility=0;visibility<3;visibility++){
+        // Retain valid moving-sheet times while exploring every original render branch
+        CustomPipes::bRenderingEnvMap=camera!=0;CustomPipes::EnvMapCam=camera==1?NULL:(RwCamera *)29;framePresent=camera!=2;matrixPresent=camera!=3;CStats::PamphletMissionPassed.value=(int)mission;TestRB_State(visibility==0?0:(visibility==1?128:255),false);
+        for(drawMode=0;drawMode<3;drawMode++){TestRB_Render();snapshot();}
+    }
+    word((uint32_t)(uintptr_t)TestRB_FluffRaster());
+    // Cover every wind frequency threshold with failed/successful ground and cull decisions
+    word(52);float winds[]={0.0f,0.09999999f,0.1f,0.39999998f,0.4f,0.6999999f,0.7f,1.0f};
+    for(float wind:winds)for(unsigned behavior=0;behavior<3;behavior++){
+        // Let complete updates fill pools, animate and expire sheets without inventing undefined durations
+        reset();CWeather::Wind.value=wind;groundMode=behavior;cullMode=behavior;
+        for(unsigned frame=0;frame<80;frame++){Timer_frameCounter=frame;Timer_timeMs+=37;TestRB_Update();checkLists();if(frame%11==0){snapshot();TestRB_Render();}}
+        snapshot();
+    }
+    // Cover exact interpolation boundaries for all three original animation rows
+    word(53);
+    for(unsigned animation=0;animation<3;animation++)for(unsigned duration: {1001u,2000u}){
+        // Move a complete original sheet through interpolation and the expiry transition
+        reset();seed(0,2,0.0f,0.0f,true,false);RubbishSheet sheet=TestRB_Record(0);sheet.m_animationType=(int8_t)animation;sheet.m_moveStart=UINT32_MAX-500;sheet.m_moveDuration=duration;TestRB_SetRecord(0,&sheet);
+        for(unsigned step=0;step<=32;step++){Timer_timeMs=sheet.m_moveStart+(duration*step)/32;Timer_frameCounter=1;TestRB_Update();checkLists();snapshot();TestRB_Render();}
+    }
+    // Cover the exact frame XOR/seed rejection and vehicle speed/distance thresholds
+    word(54);RubbishTestVehicle vehicle;vehicle.position=CVector(0.0f,0.0f,0.0f);vehicle.forward=CVector(0.0f,1.0f,0.0f);vehicle.right=CVector(1.0f,0.0f,0.0f);vehicle.collision.boundingBox.max=CVector(1.0f,2.0f,1.0f);
+    float speeds[]={0.0f,0.05f,0.05000001f,0.1f,0.15f,0.3f,-0.2f};
+    for(unsigned frame=0;frame<5;frame++)for(unsigned seedValue=0;seedValue<4;seedValue++)for(float speed:speeds){
+        // Stir both directly-behind and edge-of-width sheets using original saved-next traversal
+        reset();seed(0,1,0.0f,-2.0f,true,true);seed(1,1,1.2f,-2.0f,true,false);seed(2,1,1.5f,-2.0f,true,true);seed(3,1,0.0f,2.0f,true,true);vehicle.m_randomSeed.value=(uint16_t)seedValue;vehicle.speed=CVector(0.0f,speed,0.0f);Timer_frameCounter=frame;TestRB_Stir(&vehicle);checkLists();snapshot();TestRB_Render();
+    }
+    // Cover camera distance rejection before speed and collision-model reads
+    reset();seed(0,1,0.0f,-2.0f,true,true);vehicle.m_randomSeed.value=0;vehicle.speed=CVector(0.0f,0.2f,0.0f);Timer_frameCounter=1;
+    for(float coordinate: {19.999998f,20.0f,20.000002f}){vehicle.position.x=coordinate;TestRB_Stir(&vehicle);snapshot();}vehicle.position.x=0.0f;
+    // Compare long complete histories including full pools, visibility fades and timer wrap
+    word(55);reset();Timer_timeMs=UINT32_MAX-1000;CWeather::Wind.value=0.6f;groundMode=2;cullMode=2;
+    for(unsigned frame=0;frame<1600;frame++){
+        // Run updates before rendering so existing float-to-unsigned fade inputs stay defined
+        Timer_frameCounter=frame;Timer_timeMs+=17;Timer_timeStep=(frame%4)*0.5f;
+        if(frame%83==0)TestRB_SetVisibility((frame/83)&1);TestRB_Update();
+        if(frame%7==0)TestRB_Stir(&vehicle);if(frame%13==0)TestRB_Render();if(frame%19==0){checkLists();snapshot();}
+    }
+    // Reenter the renderer with all groups populated and preserve shared live counters
+    word(56);reset();for(int group=0;group<4;group++)for(int i=0;i<3;i++)seed(group*NUM_RUBBISH_SHEETS/4+i,1,(float)i,(float)group,true,true);
+    recursive=true;for(unsigned i=0;i<32;i++)TestRB_Render();recursive=false;checkLists();snapshot();TestRB_Shutdown();snapshot();
+    require(loads==destroys && stage==0 && attempts==hooks && renders==ends);
+    printf("%016llx states=%u randoms=%u grounds=%u zones=%u attempts=%u renders=%u inputs=%u groups=%u sheets=%u bytes=%u\n",(unsigned long long)hash,states,randoms,grounds,zones,attempts,renders,inputs,groups,(unsigned)NUM_RUBBISH_SHEETS,(unsigned)sizeof(RubbishSheet));
+    if(trace)fclose(trace);return 0;
+}

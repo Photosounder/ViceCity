@@ -1,23 +1,36 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CFileMgr
-{
-	static char ms_rootDirName[128];
-	static char ms_dirName[128];
-public:
-	static void Initialise(void);
-	static void ChangeDir(const char *dir);
-	static void SetDir(const char *dir);
-	static void SetDirMyDocuments(void);
-	static ssize_t LoadFile(const char *file, uint8 *buf, int maxlen, const char *mode);
-	static int OpenFile(const char *file, const char *mode);
-	static int OpenFile(const char *file) { return OpenFile(file, "rb"); }
-	static int OpenFileForWriting(const char *file);
-	static size_t Read(int fd, const char *buf, ssize_t len);
-	static size_t Write(int fd, const char *buf, ssize_t len);
-	static bool Seek(int fd, int offset, int whence);
-	static bool ReadLine(int fd, char *buf, int len);
-	static int CloseFile(int fd);
-	static int GetErrorReadWrite(int fd);
-	static char *GetRootDirName() { return ms_rootDirName; }
-};
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T FileMgrSize;
+#elif defined(__MWERKS__)
+typedef ptrdiff_t FileMgrSize;
+#else
+#include <sys/types.h>
+typedef ssize_t FileMgrSize;
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+void FileMgr_Initialise(void);
+void FileMgr_ChangeDir(const char *dir);
+void FileMgr_SetDir(const char *dir);
+void FileMgr_SetDirMyDocuments(void);
+FileMgrSize FileMgr_LoadFile(const char *file, uint8_t *buf, int maxlen, const char *mode);
+int FileMgr_OpenFile(const char *file, const char *mode);
+int FileMgr_OpenFileDefault(const char *file);
+int FileMgr_OpenFileForWriting(const char *file);
+size_t FileMgr_Read(int fd, const char *buf, FileMgrSize len);
+size_t FileMgr_Write(int fd, const char *buf, FileMgrSize len);
+bool FileMgr_Seek(int fd, int offset, int whence);
+bool FileMgr_ReadLine(int fd, char *buf, int len);
+int FileMgr_CloseFile(int fd);
+int FileMgr_GetErrorReadWrite(int fd);
+char *FileMgr_GetRootDirName(void);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

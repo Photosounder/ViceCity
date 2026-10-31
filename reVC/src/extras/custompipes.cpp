@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHD3D
 #include "common.h"
 
@@ -218,7 +221,7 @@ StorePedShadowForEnvMap(CEntity *ped)
 {
 	// Use reflection-camera distance without relying on the main camera's visibility test
 	if(!bRenderingEnvMap || ped == nil || EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS ||
-	   CTimeCycle::GetShadowStrength() == 0 || EnvMapCam == nil || EnvMapCam->getFrame() == nil)
+	   TimeCycle_GetShadowStrength() == 0 || EnvMapCam == nil || EnvMapCam->getFrame() == nil)
 		return;
 
 	// Match the game's pedestrian shadow range and sunlight fade
@@ -234,9 +237,9 @@ StorePedShadowForEnvMap(CEntity *ped)
 	float distance = Sqrt(distanceSquared);
 	float fade = 1.0f - (4.0f / drawDistance) * (distance - drawDistance * 0.25f);
 	int intensity = distance >= drawDistance * 0.25f ?
-		(int)(CTimeCycle::GetShadowStrength() * fade) : CTimeCycle::GetShadowStrength();
-	shadowPosition.x += CTimeCycle::GetShadowDisplacementX();
-	shadowPosition.y += CTimeCycle::GetShadowDisplacementY();
+		(int)(TimeCycle_GetShadowStrength() * fade) : TimeCycle_GetShadowStrength();
+	shadowPosition.x += TimeCycle_GetShadowDisplacementX();
+	shadowPosition.y += TimeCycle_GetShadowDisplacementY();
 
 	// Isolate the generated shadow so it cannot change the main scene queue
 	int16 savedCount = CShadows::ShadowsStoredToBeRendered;
@@ -245,8 +248,8 @@ StorePedShadowForEnvMap(CEntity *ped)
 		savedFirstShadow = CShadows::asShadowsStored[0];
 	CShadows::ShadowsStoredToBeRendered = 0;
 	CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK, gpShadowPedTex, &shadowPosition,
-		CTimeCycle::GetShadowFrontX(), CTimeCycle::GetShadowFrontY(),
-		CTimeCycle::GetShadowSideX(), CTimeCycle::GetShadowSideY(),
+		TimeCycle_GetShadowFrontX(), TimeCycle_GetShadowFrontY(),
+		TimeCycle_GetShadowSideX(), TimeCycle_GetShadowSideY(),
 		intensity, intensity, intensity, intensity, 4.0f, false, 1.0f, nil, false);
 
 	// Keep the new shadow only when it does not duplicate an existing reflection entry
@@ -268,7 +271,7 @@ StoreBeachBallShadowForEnvMap(CEntity *beachBall)
 {
 	// Add the beachball's normal compact ground shadow to the reflection queue
 	if(!bRenderingEnvMap || beachBall == nil || EnvMapAdditionalShadowCount >= MAX_STOREDSHADOWS ||
-	   CTimeCycle::GetShadowStrength() == 0 || EnvMapCam == nil)
+	   TimeCycle_GetShadowStrength() == 0 || EnvMapCam == nil)
 		return;
 	CVector shadowPosition = beachBall->GetPosition();
 	// Isolate registration so this reflection effect does not consume the main queue
@@ -279,8 +282,8 @@ StoreBeachBallShadowForEnvMap(CEntity *beachBall)
 	CShadows::ShadowsStoredToBeRendered = 0;
 	CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK, gpShadowPedTex, &shadowPosition,
 		0.4f, 0.0f, 0.0f, 0.4f,
-		CTimeCycle::GetShadowStrength(), CTimeCycle::GetShadowStrength(),
-		CTimeCycle::GetShadowStrength(), CTimeCycle::GetShadowStrength(),
+		TimeCycle_GetShadowStrength(), TimeCycle_GetShadowStrength(),
+		TimeCycle_GetShadowStrength(), TimeCycle_GetShadowStrength(),
 		20.0f, false, 1.0f, nil, false);
 	// Keep the shadow only when the reflection queue does not already contain it
 	if(CShadows::ShadowsStoredToBeRendered > 0){
@@ -401,7 +404,8 @@ RenderEnvMapScene(void)
 	CWaterLevel::RenderWater();
 	// Render the reflection camera's sky layers before opaque world geometry
 	//+ rouz edit (ChatGPT)
-	CClouds::RenderForEnvMap(EnvMapCam);
+	// Enter the complete C cloud effect with the original arguments
+	Clouds_RenderForEnvMap(EnvMapCam);
 	DefinedState();
 	//- rouz edit (ChatGPT)
 #endif
@@ -442,8 +446,10 @@ RenderEnvMapScene(void)
 	//+ rouz edit (ChatGPT)
 	RenderStoredShadowsForEnvMap();
 	//- rouz edit (ChatGPT)
-	CSkidmarks::Render();
-	CRubbish::Render();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Render();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Render();
 	// Draw persistent shattered glass panes into vehicle reflections
 	//+ rouz edit (ChatGPT)
 	CGlass::Render();
@@ -460,43 +466,57 @@ RenderEnvMapScene(void)
 	//- rouz edit (ChatGPT)
 	DefinedState();
 	//- rouz edit (ChatGPT)
-	CWeather::RenderRainStreaks();
-	CWaterCannons::Render();
+	Weather_RenderRainStreaks();
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Render();
 	DefinedState();
 	// Reflect traffic signals and vehicle lamps using the main pass's flicker values
 	//+ rouz edit (ChatGPT)
-	CBrightLights::Render(true);
+	// Enter the C bright-light algorithm with the original arguments
+	BrightLights_Render(true);
 	DefinedState();
 	//- rouz edit (ChatGPT)
 	// Replay registered shiny text geometry in the vehicle reflection
 	//+ rouz edit (ChatGPT)
-	CShinyTexts::RenderForEnvMap();
+	// Enter the C shiny-text algorithm at the original effect pass
+	ShinyTexts_RenderForEnvMap();
 	DefinedState();
 	//- rouz edit (ChatGPT)
 	// Replay active world markers without mutating their registration state
 	//+ rouz edit (ChatGPT)
-	C3dMarkers::RenderForEnvMap(EnvMapCam);
+	// Enter the C 3D-marker controller with the original arguments
+	Markers3D_RenderForEnvMap(EnvMapCam);
 	DefinedState();
 	//- rouz edit (ChatGPT)
-	CAntennas::Render();
+	// Render the C antenna pool
+	Antennas_Render();
 	// Add antennas from RC Bandits that were visible only to the reflection camera
 	//+ rouz edit (ChatGPT)
-	CAntennas::RenderForEnvMap();
+	// Render and consume the C reflection antenna queue
+	Antennas_RenderForEnvMap();
 	//- rouz edit (ChatGPT)
-	CRopes::Render();
-	CMotionBlurStreaks::Render();
-	CBulletTraces::Render();
-	CPlaneTrails::Render();
-	CSmokeTrails::Render();
-	CPlaneBanners::Render();
+	// Enter the C rope algorithm with the original owner expressions
+	Ropes_Render();
+	// Enter the C motion-blur streak algorithm with the original owner expressions
+	MotionBlurStreaks_Render();
+	// Enter the C bullet-trace algorithm with the original owner expressions
+	BulletTraces_Render();
+	// Enter the C plane-trail algorithm with the original input capture
+	PlaneTrails_Render();
+	// Use the C smoke-trail state or algorithm at the original call point
+	SmokeTrails_Render();
+	// Enter the C plane-banner algorithm with the original input capture
+	PlaneBanners_Render();
 	// Reflect the animated stadium message board from its current pixel state
 	//+ rouz edit (ChatGPT)
-	CMovingThings::RenderForEnvMap(EnvMapCam);
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_RenderForEnvMap(EnvMapCam);
 	DefinedState();
 	//- rouz edit (ChatGPT)
 	// Add camera-corrected point-light fog to the software reflection
 	//+ rouz edit (ChatGPT)
-	CPointLights::RenderFogEffectForEnvMap(EnvMapCam);
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_RenderFogEffectForEnvMap(EnvMapCam);
 	DefinedState();
 	//- rouz edit (ChatGPT)
 	// Draw world-space smoke, sparks, and debris particles in the software reflection
@@ -528,20 +548,20 @@ EnvMapRender(void)
 	EnvMapCam->getFrame()->transform(&EnvMapCam->getFrame()->matrix, rw::COMBINEREPLACE);
 
 	rw::RGBA skycol;
-	skycol.red = CTimeCycle::GetSkyBottomRed();
-	skycol.green = CTimeCycle::GetSkyBottomGreen();
-	skycol.blue = CTimeCycle::GetSkyBottomBlue();
+	skycol.red = TimeCycle_GetSkyBottomRed();
+	skycol.green = TimeCycle_GetSkyBottomGreen();
+	skycol.blue = TimeCycle_GetSkyBottomBlue();
 	skycol.alpha = 255;
 	// Keep a timecycle gradient behind geometry in the software environment map
 	//+ rouz edit (ChatGPT)
 	rw::RGBA skyTop = {
-		(rw::uint8)CTimeCycle::GetSkyTopRed(),
-		(rw::uint8)CTimeCycle::GetSkyTopGreen(),
-		(rw::uint8)CTimeCycle::GetSkyTopBlue(), 255
+		(rw::uint8)TimeCycle_GetSkyTopRed(),
+		(rw::uint8)TimeCycle_GetSkyTopGreen(),
+		(rw::uint8)TimeCycle_GetSkyTopBlue(), 255
 	};
 	// Match the main software framebuffer during visible lightning flashes
 	//+ rouz edit (ChatGPT)
-	if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+	if(Weather_LightningFlash && !CullZones_CamNoRain()){
 		skyTop.red = skyTop.green = skyTop.blue = 255;
 		skycol.red = skycol.green = skycol.blue = 255;
 	}
@@ -562,7 +582,8 @@ EnvMapRender(void)
 	//+ rouz edit (ChatGPT)
 	// Clear auxiliary point-light registrations before gathering this reflection scene
 #ifdef REVC_SOFTWARE_POLYGONS
-	CPointLights::ResetEnvMapLights();
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_ResetEnvMapLights();
 #endif
 	//- rouz edit (ChatGPT)
 	bRenderingEnvMap = true;
@@ -667,15 +688,15 @@ EnvMapShutdown(void)
  */
 
 #define INTERP_SETUP \
-		int h1 = CClock::GetHours();								  \
+		int h1 = Clock_GetHours();								  \
 		int h2 = (h1+1)%24;										  \
-		int w1 = CWeather::OldWeatherType;								  \
-		int w2 = CWeather::NewWeatherType;								  \
-		float timeInterp = (CClock::GetSeconds()/60.0f + CClock::GetMinutes())/60.0f;	  \
-		float c0 = (1.0f-timeInterp)*(1.0f-CWeather::InterpolationValue);				  \
-		float c1 = timeInterp*(1.0f-CWeather::InterpolationValue);					  \
-		float c2 = (1.0f-timeInterp)*CWeather::InterpolationValue;					  \
-		float c3 = timeInterp*CWeather::InterpolationValue;
+		int w1 = Weather_OldWeatherType;								  \
+		int w2 = Weather_NewWeatherType;								  \
+		float timeInterp = (Clock_GetSeconds()/60.0f + Clock_GetMinutes())/60.0f;	  \
+		float c0 = (1.0f-timeInterp)*(1.0f-Weather_InterpolationValue);				  \
+		float c1 = timeInterp*(1.0f-Weather_InterpolationValue);					  \
+		float c2 = (1.0f-timeInterp)*Weather_InterpolationValue;					  \
+		float c3 = timeInterp*Weather_InterpolationValue;
 #define INTERP(v) v[h1][w1]*c0 + v[h2][w1]*c1 + v[h1][w2]*c2 + v[h2][w2]*c3;
 #define INTERPF(v,f) v[h1][w1].f*c0 + v[h2][w1].f*c1 + v[h1][w2].f*c2 + v[h2][w2].f*c3;
 
@@ -696,10 +717,10 @@ InterpolatedFloat::Read(char *s, int line, int field)
 float
 InterpolatedFloat::Get(void)
 {
-	if(curInterpolator != CClock::GetSeconds()){
+	if(curInterpolator != Clock_GetSeconds()){
 		INTERP_SETUP
 		curVal = INTERP(data);
-		curInterpolator = CClock::GetSeconds();
+		curInterpolator = Clock_GetSeconds();
 	}
 	return curVal;
 }
@@ -723,13 +744,13 @@ InterpolatedColor::Read(char *s, int line, int field)
 Color
 InterpolatedColor::Get(void)
 {
-	if(curInterpolator != CClock::GetSeconds()){
+	if(curInterpolator != Clock_GetSeconds()){
 		INTERP_SETUP
 		curVal.r = INTERPF(data, r);
 		curVal.g = INTERPF(data, g);
 		curVal.b = INTERPF(data, b);
 		curVal.a = INTERPF(data, a);
-		curInterpolator = CClock::GetSeconds();
+		curInterpolator = Clock_GetSeconds();
 	}
 	return curVal;
 }
@@ -910,7 +931,8 @@ CustomPipeInit(void)
 		printf("Error: couldn't open 'neo/neo.txd'\n");
 	else{
 		if(RwStreamFindChunk(stream, rwID_TEXDICTIONARY, nil, nil))
-			neoTxd = RwTexDictionaryGtaStreamRead(stream);
+			// Use the complete C texture reader with the original live SDK arguments
+			neoTxd = ((RwTexDictionary*)TexRead_ReadDictionary(stream));
 		RwStreamClose(stream, nil);
 	}
 
@@ -967,10 +989,13 @@ customFindCB(const char *name)
 void
 SetTxdFindCallback(void)
 {
-	int slot = CTxdStore::FindTxdSlot("generic");
-	CTxdStore::AddRef(slot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int slot = TxdStore_FindTxdSlot("generic");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(slot);
 	// TODO: function for this
-	genericTxd = CTxdStore::GetSlot(slot)->texDict;
+	// Use the complete C texture dictionary owner with the original live arguments
+	genericTxd = ((RwTexDictionary*)TxdStore_GetSlot(slot)->texDict);
 	assert(genericTxd);
 	if(defaultFindCB == nil)
 		defaultFindCB = rw::Texture::findCB;
@@ -980,3 +1005,7 @@ SetTxdFindCallback(void)
 }
 
 #endif
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

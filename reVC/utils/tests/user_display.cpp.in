@@ -1,0 +1,344 @@
+#include "owners.h"
+#include <initializer_list>
+#include <limits.h>
+#undef assert
+static unsigned checks,states,positions,zoneQueries,translations,zoneDisplays,vehicleChecks,models,textCalls,vehicleDisplays,replays,timerInits,pagerInits,timerUpdates,pagerUpdates,callbacks;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static CPlaceName *place;
+static CCurrentVehicle *current;
+static int callbackMode;
+static bool playing,armed;
+static CZone zones[4];
+static CZone *navigation,*fallback;
+static CVehicle vehicles[3];
+static CAutomobile taxi;
+static CPed pedestrians[2];
+static CVehicleModelInfo modelRecords[4];
+static wchar labels[16][32];
+static CVector expectedPosition;
+static uint32_t trace[128];
+static unsigned traceCount,queryIndex;
+static void require(bool value,const char *expression,int line)
+{
+    // Retain every independent assertion in MASTER and vanilla configurations
+    checks++;if(!value){fprintf(stderr,"%d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+static void bytes(const void *pointer,size_t size)
+{
+    // Hash stable scalar and record bytes without native pointer addresses
+    const uint8_t *p=(const uint8_t *)pointer;for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep integer observations at the same width across native architectures
+    bytes(&value,4);
+}
+static uint32_t zoneId(const CZone *value)
+{
+    // Preserve exact canonical zone identity without hashing an address
+    if(!value)return 0;for(int i=0;i<4;i++)if(value==&zones[i])return 1+i;abort();
+}
+static uint32_t vehicleId(const CVehicle *value)
+{
+    // Compare native vehicle base pointers including the derived shortcut taxi
+    if(!value)return 0;for(int i=0;i<3;i++)if(value==&vehicles[i])return 1+i;if(value==(const CVehicle *)&taxi)return 4;abort();
+}
+static uint32_t labelId(const uint16_t *value)
+{
+    // Normalize original borrowed UTF-16 label identities and interior aliases
+    if(!value)return 0;uintptr_t p=(uintptr_t)value,a=(uintptr_t)&labels[0][0];if(p>=a&&p<a+sizeof(labels))return 1+(uint32_t)((p-a)/2);abort();
+}
+CPlayerInfo CWorld::Players[NUMPLAYERS];
+uint8 CWorld::PlayerInFocus;
+CAutomobile *CGameLogic::pShortCutTaxi;
+TestCamera TheCamera;
+CText TheText;
+wchar *CHud::m_pZoneName;
+wchar *CHud::m_pLastZoneName;
+wchar *CHud::m_VehicleName;
+uint32 CHud::m_ZoneState;
+COnscreenTimer OnscreenTimer_state;
+CPager Pager_state;
+static CPlaceName &canonicalPlace()
+{
+    // Borrow the actual constructor-initialized original or static C-owned place record
+#ifdef TEST_USER_DISPLAY_ORIGINAL
+    return CUserDisplay::PlaceName;
+#else
+    return PlaceName_state;
+#endif
+}
+static CCurrentVehicle &canonicalCurrent()
+{
+    // Borrow the actual constructor-initialized original or static C-owned vehicle record
+#ifdef TEST_USER_DISPLAY_ORIGINAL
+    return CUserDisplay::CurrentVehicle;
+#else
+    return CurrentVehicle_state;
+#endif
+}
+static void observe()
+{
+    // Include both complete user records, their padding, all HUD pointers and subordinate C state
+    number(zoneId(place->m_pZone));number(zoneId(place->m_pZone2));bytes((const uint8_t *)place+2*sizeof(void *),sizeof(*place)-2*sizeof(void *));
+    number(vehicleId(current->m_pCurrentVehicle));number(labelId(CHud::m_pZoneName));number(labelId(CHud::m_pLastZoneName));number(labelId(CHud::m_VehicleName));number(CHud::m_ZoneState);
+    number(OnscreenTimer_state.m_bDisabled);number(OnscreenTimer_state.m_bProcessed);number((uint16_t)Pager_state.m_nNumDisplayLetters);bytes(labels,sizeof(labels));
+}
+static void event(uint32_t tag)
+{
+    // Record native callback order and the exact controller state before that boundary
+    number(tag);if(traceCount<128)trace[traceCount]=tag;traceCount++;observe();
+}
+static void snapshot()
+{
+    // Compare canonical state and native base-adjustment guards after each operation
+    observe();states++;
+    for(int i=0;i<3;i++)assert(vehicles[i].guard[0]==UINT64_C(0x1234567812345600)+(unsigned)i);
+    for(int i=0;i<4;i++)assert(modelRecords[i].guard[0]==UINT64_C(0xaabbccddaabbcc00)+(unsigned)i);
+    assert(taxi.taxiGuard[0]==UINT64_C(0x9933557799335577));
+}
+static void seed(CPlaceName &name,CCurrentVehicle &vehicle)
+{
+    // Seed valid live pointers and nonzero place-record padding without invoking a user-display operation
+    place=&name;current=&vehicle;memset(place,0x5a,sizeof(*place));place->m_pZone=&zones[0];place->m_pZone2=&zones[1];place->m_nAdditionalTimer=17;current->m_pCurrentVehicle=&vehicles[0];
+    callbackMode=0;playing=false;armed=false;traceCount=0;queryIndex=0;navigation=&zones[0];fallback=&zones[1];CWorld::PlayerInFocus=0;
+    memset(labels,0,sizeof(labels));for(int i=0;i<16;i++){labels[i][0]=(uint16_t)('A'+i);labels[i][1]=(uint16_t)(0x4e00+i);}
+    memset(zones,0,sizeof(zones));for(int i=0;i<4;i++){zones[i].name[0]='Z';zones[i].name[1]=(char)('0'+i);}
+    for(int i=0;i<3;i++){
+        // Retain distinct live native vehicle positions and model indices behind opaque C pointers
+        vehicles[i].guard[0]=UINT64_C(0x1234567812345600)+(unsigned)i;vehicles[i].guard[1]=~vehicles[i].guard[0];vehicles[i].position=CVector(100.0f+i,200.0f+i,300.0f+i);vehicles[i].m_modelIndex=(int16)i;
+    }
+    taxi.taxiGuard[0]=UINT64_C(0x9933557799335577);taxi.m_modelIndex=3;taxi.position=CVector(901.0f,902.0f,903.0f);CGameLogic::pShortCutTaxi=&taxi;
+    for(int i=0;i<4;i++){modelRecords[i].guard[0]=UINT64_C(0xaabbccddaabbcc00)+(unsigned)i;modelRecords[i].guard[1]=~modelRecords[i].guard[0];modelRecords[i].id=i;snprintf(modelRecords[i].m_gameName,10,"CAR%d",i);}
+    for(int i=0;i<2;i++){pedestrians[i].bInVehicle=true;pedestrians[i].m_pMyVehicle=&vehicles[i];pedestrians[i].position=CVector(10.0f+i,20.0f+i,30.0f+i);}
+    CWorld::Players[0].m_pPed=&pedestrians[0];TheCamera.position=CVector(801.0f,802.0f,803.0f);
+    CHud::m_pZoneName=labels[3];CHud::m_pLastZoneName=labels[2];CHud::m_VehicleName=labels[12];CHud::m_ZoneState=0xfedcba98;
+    memset(&OnscreenTimer_state,0,sizeof(OnscreenTimer_state));OnscreenTimer_state.m_bDisabled=true;OnscreenTimer_state.m_bProcessed=true;memset(&Pager_state,0,sizeof(Pager_state));Pager_state.m_nNumDisplayLetters=19;
+}
+bool CPed::InVehicle(void)
+{
+    // Execute the complete original pedestrian predicate before any live-player mutation
+    bool result=RealInVehicle();event(2);vehicleChecks++;
+    if(callbackMode==1&&armed){CWorld::Players[0].m_pPed=&pedestrians[1];armed=false;callbacks++;}
+    return result;
+}
+const CVector &CPlayerInfo::GetPos()
+{
+    // Run the entire original player-position operation and retain its borrowed native vector
+    event(1);positions++;const CVector &result=RealGetPos();expectedPosition=result;queryIndex=0;return result;
+}
+extern "C" CZone *Zones_FindSmallestNavigationZoneForPosition(ZonesPosition position,bool first,bool second)
+{
+    // Observe both exact existing C zone calls with the single captured native player position
+    assert(memcmp(&position.x,&expectedPosition.x,4)==0&&memcmp(&position.y,&expectedPosition.y,4)==0&&memcmp(&position.z,&expectedPosition.z,4)==0);
+    assert(queryIndex<2&&first==(queryIndex==1)&&second==(queryIndex==0));event(queryIndex==0?3:4);bytes(&position,sizeof(position));zoneQueries++;
+    CZone *result=queryIndex==0?navigation:fallback;
+    if(callbackMode==7&&queryIndex==0){
+        // Change the live native position between queries while retaining the original captured query coordinates
+        vehicles[0].position=CVector(-9.0f,-8.0f,-7.0f);pedestrians[0].position=CVector(-6.0f,-5.0f,-4.0f);callbacks++;
+    }
+    if(callbackMode==8&&queryIndex==1){
+        // Mutate prior membership after both lookup arguments were captured but before the transition decisions
+        place->m_pZone=navigation;place->m_pZone2=fallback;place->m_nAdditionalTimer=5;callbacks++;
+    }
+    queryIndex++;return result;
+}
+extern "C" uint16_t *Zone_GetTranslatedName(CZone *zone)
+{
+    // Observe the selected canonical zone identity and return its original borrowed label
+    assert(zone!=NULL);event(5);translations++;uint32_t id=zoneId(zone)-1;
+    if(callbackMode==6){place->m_pZone=&zones[3];callbacks++;}
+    return labels[id];
+}
+void CHud::SetZoneName(wchar *name)
+{
+    // Execute the complete original HUD pointer assignment at the original display boundary
+    event(6);number(labelId(name));zoneDisplays++;RealSetZoneName(name);
+    if(callbackMode==5){place->m_nAdditionalTimer=77;callbacks++;}
+}
+int16 CEntity::GetModelIndex(void)const
+{
+    // Capture the original native model index before changing the live current-vehicle slot
+    int16 result=RealGetModelIndex();event(9);number((uint16_t)result);
+    if(callbackMode==2){current->m_pCurrentVehicle=&vehicles[1];callbacks++;}
+    return result;
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int32 model)
+{
+    // Preserve the typed base pointer adjustment used by the original model-info downcast
+    assert(model>=0&&model<4);event(10);number(model);models++;
+    if(callbackMode==3){memcpy(modelRecords[model].m_gameName,"CAR2",5);callbacks++;}
+    return &modelRecords[model];
+}
+wchar *CText::Get(const char *name)
+{
+    // Resolve the original borrowed native game-name array after all model callbacks
+    assert(strlen(name)<10);event(11);bytes(name,strlen(name)+1);textCalls++;
+    int id=name[3]-'0';assert(strncmp(name,"CAR",3)==0&&id>=0&&id<4);
+    if(callbackMode==4){current->m_pCurrentVehicle=&vehicles[2];callbacks++;}
+    return labels[8+id];
+}
+void CHud::SetVehicleName(wchar *name)
+{
+    // Execute the whole original HUD vehicle-label pointer assignment
+    event(12);number(labelId(name));vehicleDisplays++;RealSetVehicleName(name);
+}
+bool CReplay::IsPlayingBack()
+{
+    // Observe the original guarded root replay query before any subordinate update
+    bool result=playing;event(13);replays++;
+    if(callbackMode==11){place->m_nAdditionalTimer=91;CWorld::Players[0].m_pPed=&pedestrians[1];callbacks++;}
+    return result;
+}
+extern "C" void OnscreenTimer_Init(COnscreenTimer *self)
+{
+    // Observe the unchanged subordinate C API between the place and vehicle initializations
+    assert(self==&OnscreenTimer_state);event(7);timerInits++;
+    if(callbackMode==10){place->m_nAdditionalTimer=31;current->m_pCurrentVehicle=&vehicles[2];callbacks++;}
+}
+extern "C" void Pager_Init(CPager *self)
+{
+    // Observe the unchanged subordinate C API before the final vehicle initialization
+    assert(self==&Pager_state);event(8);pagerInits++;
+}
+extern "C" void OnscreenTimer_Process(COnscreenTimer *self)
+{
+    // Preserve the original update coordination boundary after place-name processing
+    assert(self==&OnscreenTimer_state);event(7);timerUpdates++;
+    if(callbackMode==9){CWorld::Players[0].m_pPed=&pedestrians[1];callbacks++;}
+}
+extern "C" void Pager_Process(CPager *self)
+{
+    // Preserve the original pager coordination boundary before the live vehicle query
+    assert(self==&Pager_state);event(8);pagerUpdates++;
+    if(callbackMode==12){playing=true;callbacks++;}
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Report any violated native precondition without opening a Windows dialog
+    fprintf(stderr,"%s %s:%u %s\n",expression,file,line,function);abort();
+}
+static uint32_t randomState=0x18a81f31;
+static uint32_t random32()
+{
+    // Generate identical explicitly sequenced state transitions for every compiler
+    randomState^=randomState<<13;randomState^=randomState>>17;randomState^=randomState<<5;return randomState;
+}
+int main()
+{
+    // Verify complete constructor-equivalent canonical storage before preparation changes any state
+    CPlaceName &name=canonicalPlace();CCurrentVehicle &vehicle=canonicalCurrent();place=&name;current=&vehicle;
+    for(size_t i=0;i<sizeof(name);i++)assert(((const uint8_t *)&name)[i]==0);
+    for(size_t i=0;i<sizeof(vehicle);i++)assert(((const uint8_t *)&vehicle)[i]==0);
+    seed(name,vehicle);CPlaceName expectedName;memcpy(&expectedName,&name,sizeof(name));expectedName.m_pZone=NULL;expectedName.m_pZone2=NULL;expectedName.m_nAdditionalTimer=0;
+    Run_PlaceName_Init(&name);assert(memcmp(&name,&expectedName,sizeof(name))==0);Run_CurrentVehicle_Init(&vehicle);assert(vehicle.m_pCurrentVehicle==NULL);snapshot();
+    for(int oldNav=-1;oldNav<3;oldNav++)for(int oldDefault=-1;oldDefault<3;oldDefault++)for(int nextNav=-1;nextNav<3;nextNav++)for(int nextDefault=-1;nextDefault<3;nextDefault++)for(int timer:{-3,0,1,249,250,32767}){
+        // Explore every old/new null and nonnull membership relation with zero, positive and signed retained counters
+#ifndef FIX_BUGS
+        if(nextNav<0&&nextDefault<0)continue;
+#endif
+        seed(name,vehicle);name.m_pZone=oldNav<0?NULL:&zones[oldNav];name.m_pZone2=oldDefault<0?NULL:&zones[oldDefault];name.m_nAdditionalTimer=(int16_t)timer;
+        navigation=nextNav<0?NULL:&zones[nextNav];fallback=nextDefault<0?NULL:&zones[nextDefault];unsigned p=positions,q=zoneQueries,d=zoneDisplays;
+        Run_PlaceName_Process(&name);assert(positions==p+1&&zoneQueries==q+2&&zoneDisplays==d+1);
+        assert(name.m_nAdditionalTimer>=-4&&name.m_nAdditionalTimer<=32767);
+        if(nextNav>=0)assert(name.m_pZone==&zones[nextNav]);else assert(name.m_pZone==NULL);
+        if(nextNav<0&&nextDefault>=0)assert(name.m_pZone2==&zones[nextDefault]);
+        if(nextNav==oldNav&&nextDefault==oldDefault&&(nextNav>=0||nextDefault>=0))assert(name.m_nAdditionalTimer==(timer?timer-1:0));
+        snapshot();
+    }
+    for(int first=-1;first<4;first++)for(int second=-1;second<4;second++){
+        // Select the primary zone first, retain fallback priority and preserve record fields during direct display
+#ifndef FIX_BUGS
+        if(first<0&&second<0)continue;
+#endif
+        seed(name,vehicle);name.m_pZone=first<0?NULL:&zones[first];name.m_pZone2=second<0?NULL:&zones[second];memcpy(&expectedName,&name,sizeof(name));unsigned t=translations;
+        Run_PlaceName_Display(&name);assert(CHud::m_pZoneName==(first>=0?labels[first]:second>=0?labels[second]:NULL)&&translations==t+(first>=0||second>=0?1:0)&&memcmp(&name,&expectedName,sizeof(name))==0);snapshot();
+    }
+    seed(name,vehicle);Run_PlaceName_ProcessAfterFrontEndShutDown(&name);assert(CHud::m_pLastZoneName==NULL&&CHud::m_ZoneState==0&&name.m_nAdditionalTimer==250&&name.m_pZone==&zones[0]&&name.m_pZone2==&zones[1]);snapshot();
+    for(bool inVehicle:{false,true})for(int assigned=-1;assigned<4;assigned++){
+        // Retain the complete native pedestrian predicate including a set flag without a vehicle pointer
+        seed(name,vehicle);pedestrians[0].bInVehicle=inVehicle;pedestrians[0].m_pMyVehicle=assigned<0?NULL:assigned==3?(CVehicle *)&taxi:&vehicles[assigned];
+        unsigned calls=vehicleChecks;Run_CurrentVehicle_Process(&vehicle);CVehicle *selected=inVehicle?pedestrians[0].m_pMyVehicle:NULL;
+        assert(vehicleChecks==calls+1&&vehicle.m_pCurrentVehicle==selected&&CHud::m_VehicleName==(!selected||assigned==3?NULL:labels[8+assigned]));snapshot();
+    }
+    for(int selected=-1;selected<4;selected++)for(bool shortcut:{false,true}){
+        // Preserve null handling, native derived taxi comparison and the captured model-name lookup
+        seed(name,vehicle);vehicle.m_pCurrentVehicle=selected<0?NULL:selected==3?(CVehicle *)&taxi:&vehicles[selected];if(!shortcut)CGameLogic::pShortCutTaxi=NULL;
+        unsigned m=models,t=textCalls;Run_CurrentVehicle_Display(&vehicle);bool lookup=selected>=0&&!(selected==3&&shortcut);
+        assert(models==m+(lookup?1:0)&&textCalls==t+(lookup?1:0)&&CHud::m_VehicleName==(lookup?labels[8+selected]:NULL));snapshot();
+    }
+    const uint32_t floatCases[]={0,0x80000000,1,0x3f800000,0x7f7fffff,0x7f800000,0xff800000,0x7fc12345};
+    for(uint32_t bits:floatCases){
+        // Compare exact native-to-C position copies including signed zero, subnormal, infinity and quiet NaN values
+        seed(name,vehicle);pedestrians[0].bInVehicle=false;memcpy(&pedestrians[0].position.x,&bits,4);memcpy(&pedestrians[0].position.y,&bits,4);memcpy(&pedestrians[0].position.z,&bits,4);Run_PlaceName_Process(&name);snapshot();
+    }
+#ifdef FIX_BUGS
+    // Retain the complete native player getter's fixed-build camera fallback independently of vehicle processing
+    seed(name,vehicle);CWorld::Players[0].m_pPed=NULL;Run_PlaceName_Process(&name);assert(memcmp(&expectedPosition.x,&TheCamera.position.x,12)==0);snapshot();
+#endif
+    for(bool playback:{false,true}){
+        // Preserve the compile-time root replay gate and original place/timer/pager/vehicle coordination order
+        seed(name,vehicle);playing=playback;unsigned p=positions,u=timerUpdates,g=pagerUpdates,r=replays,v=vehicleDisplays;Run_UserDisplay_Process();
+#ifdef FIX_BUGS
+        assert(replays==r+1&&positions==p+(playback?0:1)&&timerUpdates==u+(playback?0:1)&&pagerUpdates==g+(playback?0:1)&&vehicleDisplays==v+(playback?0:1));
+#else
+        assert(replays==r&&positions==p+1&&timerUpdates==u+1&&pagerUpdates==g+1&&vehicleDisplays==v+1);
+#endif
+        if(!playback){unsigned index=0;while(index<traceCount&&trace[index]!=6)index++;assert(index+2<traceCount&&trace[index+1]==7&&trace[index+2]==8);}
+        snapshot();
+    }
+    seed(name,vehicle);unsigned initialTimers=timerInits,initialPagers=pagerInits;Run_UserDisplay_Init();assert(name.m_pZone==NULL&&name.m_pZone2==NULL&&name.m_nAdditionalTimer==0&&vehicle.m_pCurrentVehicle==NULL&&timerInits==initialTimers+1&&pagerInits==initialPagers+1&&traceCount==2&&trace[0]==7&&trace[1]==8);snapshot();
+    for(int mode=1;mode<=12;mode++){
+        // Exercise state mutation at each original native or subordinate-controller boundary
+        seed(name,vehicle);callbackMode=mode;
+        if(mode==1){armed=true;Run_CurrentVehicle_Process(&vehicle);assert(vehicle.m_pCurrentVehicle==&vehicles[1]&&CHud::m_VehicleName==labels[9]);}
+        if(mode==2){Run_CurrentVehicle_Display(&vehicle);assert(vehicle.m_pCurrentVehicle==&vehicles[1]&&CHud::m_VehicleName==labels[8]);}
+        if(mode==3){Run_CurrentVehicle_Display(&vehicle);assert(CHud::m_VehicleName==labels[10]);}
+        if(mode==4){Run_CurrentVehicle_Display(&vehicle);assert(vehicle.m_pCurrentVehicle==&vehicles[2]&&CHud::m_VehicleName==labels[8]);}
+        if(mode==5){Run_PlaceName_Process(&name);assert(name.m_nAdditionalTimer==77);}
+        if(mode==6){Run_PlaceName_Display(&name);assert(name.m_pZone==&zones[3]&&CHud::m_pZoneName==labels[0]);}
+        if(mode==7){Run_PlaceName_Process(&name);assert(expectedPosition.x==100.0f&&vehicles[0].position.x==-9.0f);}
+        if(mode==8){name.m_pZone=&zones[2];Run_PlaceName_Process(&name);assert(name.m_pZone==navigation&&name.m_nAdditionalTimer==4);}
+        if(mode==9){Run_UserDisplay_Process();assert(vehicle.m_pCurrentVehicle==&vehicles[1]&&CHud::m_VehicleName==labels[9]);}
+        if(mode==10){Run_UserDisplay_Init();assert(name.m_nAdditionalTimer==31&&vehicle.m_pCurrentVehicle==NULL);}
+        if(mode==11){playing=true;unsigned p=positions;Run_UserDisplay_Process();
+#ifdef FIX_BUGS
+            assert(name.m_nAdditionalTimer==91&&positions==p);
+#else
+            assert(positions==p+1);
+#endif
+        }
+        if(mode==12){Run_UserDisplay_Process();assert(playing&&vehicle.m_pCurrentVehicle==&vehicles[0]&&CHud::m_VehicleName==labels[8]);}
+        snapshot();
+    }
+    seed(name,vehicle);Run_CurrentVehicle_Display(&vehicle);labels[8][0]=0x1234;assert(CHud::m_VehicleName==labels[8]&&CHud::m_VehicleName[0]==0x1234);snapshot();
+    seed(name,vehicle);
+    for(int iteration=0;iteration<6000;iteration++){
+        // Compare all nine complete operations in interleaved defined states with explicitly sequenced random inputs
+        callbackMode=0;queryIndex=0;playing=(random32()%5)==0;int n=(int)(random32()%5)-1,d=(int)(random32()%5)-1;navigation=n<0?NULL:&zones[n];fallback=d<0?NULL:&zones[d];
+#ifndef FIX_BUGS
+        if(!navigation&&!fallback)fallback=&zones[0];
+#endif
+        CWorld::Players[0].m_pPed=&pedestrians[random32()%2];CPed *ped=CWorld::Players[0].m_pPed;ped->bInVehicle=(random32()&1)!=0;int v=(int)(random32()%5)-1;ped->m_pMyVehicle=v<0?NULL:v==3?(CVehicle *)&taxi:&vehicles[v];
+        switch(random32()%9){
+        case 0:Run_PlaceName_Init(&name);break;
+        case 1:Run_PlaceName_Process(&name);break;
+        case 2:
+#ifndef FIX_BUGS
+            if(!name.m_pZone&&!name.m_pZone2)name.m_pZone2=&zones[0];
+#endif
+            Run_PlaceName_Display(&name);break;
+        case 3:Run_PlaceName_ProcessAfterFrontEndShutDown(&name);break;
+        case 4:Run_CurrentVehicle_Init(&vehicle);break;
+        case 5:Run_CurrentVehicle_Process(&vehicle);break;
+        case 6:Run_CurrentVehicle_Display(&vehicle);break;
+        case 7:Run_UserDisplay_Init();break;
+        case 8:Run_UserDisplay_Process();break;
+        }
+        snapshot();
+    }
+    // Verify explicit local receivers retain the same initialization and display behavior
+    CPlaceName localName;CCurrentVehicle localVehicle;seed(localName,localVehicle);Run_PlaceName_Init(&localName);Run_CurrentVehicle_Init(&localVehicle);Run_PlaceName_Process(&localName);Run_CurrentVehicle_Process(&localVehicle);assert(localName.m_pZone==navigation&&localVehicle.m_pCurrentVehicle==&vehicles[0]);snapshot();
+    printf("states=%u checks=%u positions=%u queries=%u translations=%u zoneDisplays=%u vehicleChecks=%u models=%u texts=%u vehicleDisplays=%u replays=%u timerInits=%u pagerInits=%u timerUpdates=%u pagerUpdates=%u callbacks=%u hash=%016llx\n",states,checks,positions,zoneQueries,translations,zoneDisplays,vehicleChecks,models,textCalls,vehicleDisplays,replays,timerInits,pagerInits,timerUpdates,pagerUpdates,callbacks,(unsigned long long)hashValue);
+}

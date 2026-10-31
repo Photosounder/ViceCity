@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "General.h"
@@ -428,7 +429,7 @@ CPathFind::CalcNodeCoors(float x, float y, float z, int id, CVector *out)
 bool
 CPathFind::LoadPathFindData(void)
 {
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 	return false;
 }
 
@@ -1168,7 +1169,7 @@ CPathFind::SwitchRoadsInAngledArea(float x1, float y1, float z1, float x2, float
 	}
 
 	// angle of vector from p2 to p1
-	float angle = CGeneral::GetRadianAngleBetweenPoints(x1, y1, x2, y2) + HALFPI;
+	float angle = General_GetRadianAngleBetweenPoints(x1, y1, x2, y2) + HALFPI;
 	while(angle < 0.0f) angle += TWOPI;
 	while(angle > TWOPI) angle -= TWOPI;
 	// vector from p1 to p2
@@ -1475,7 +1476,7 @@ CPathFind::GenerateCarCreationCoors(float x, float y, float dirX, float dirY, fl
 		return false;
 
 	for(i = 0; i < 500; i++){
-		node1 = (CGeneral::GetRandomNumber()>>3) % m_numCarPathNodes;
+		node1 = (General_GetRandomNumber()>>3) % m_numCarPathNodes;
 		if(m_pathNodes[node1].bDisabled && !ignoreDisabled)
 			continue;
 		dist1 = Distance2D(m_pathNodes[node1].GetPosition(), x, y);
@@ -1557,13 +1558,13 @@ CPathFind::GeneratePedCreationCoors(float x, float y, float minDist, float maxDi
 		return false;
 
 	for(i = 0; i < 5; i++){
-		float f2 = (CGeneral::GetRandomNumber()&0xFF)/256.0f;
+		float f2 = (General_GetRandomNumber()&0xFF)/256.0f;
 		float f1 = 1.0f - f2;
 		*pPositionBetweenNodes = f2;
 		CVector pos = m_pathNodes[node1].GetPosition()*f1 + m_pathNodes[node2].GetPosition()*f2;
 		if(Distance2D(pos, x, y) < maxDist+20.0f){
-			pos.x += ((CGeneral::GetRandomNumber()&0xFF)-128)*0.01f;
-			pos.y += ((CGeneral::GetRandomNumber()&0xFF)-128)*0.01f;
+			pos.x += ((General_GetRandomNumber()&0xFF)-128)*0.01f;
+			pos.y += ((General_GetRandomNumber()&0xFF)-128)*0.01f;
 			float dist = Distance2D(pos, x, y);
 
 			bool visible;
@@ -1841,7 +1842,8 @@ CPathFind::DisplayPathData(void)
 		n1.z += 0.3f;
 
 		// Draw node itself
-		CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 			n1.x, n1.y, n1.z + 1.0f,
 			0xFFFFFFFF, 0xFFFFFFFF);
 
@@ -1850,7 +1852,8 @@ CPathFind::DisplayPathData(void)
 			CVector n2 = m_pathNodes[k].GetPosition();
 			n2.z += 0.3f;
 			// Draw links to neighbours
-			CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+			// Draw the original endpoints and colors through the C line API
+			Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 				n2.x, n2.y, n2.z,
 				0xFFFFFFFF, 0xFFFFFFFF);
 		}
@@ -1870,15 +1873,18 @@ CPathFind::DisplayPathData(void)
 		n1.z += 0.3f;
 
 		// Draw car node itself
-		CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 			n1.x, n1.y, n1.z + 1.0f,
 			0xFFFFFFFF, 0xFFFFFFFF);
-		CLines::RenderLineWithClipping(n1.x, n1.y, n1.z + 0.5f,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x, n1.y, n1.z + 0.5f,
 			n1.x+m_carPathLinks[i].GetDirX(), n1.y+m_carPathLinks[i].GetDirY(), n1.z + 0.5f,
 			0xFFFFFFFF, 0xFFFFFFFF);
 
 		// Draw connection to car path node
-		CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 			pn1.x, pn1.y, pn1.z,
 			0xFF0000FF, 0xFFFFFFFF);
 
@@ -1890,7 +1896,8 @@ CPathFind::DisplayPathData(void)
 			col += 0x00FF0000;
 		if(m_carPathLinks[i].trafficLightType & 0x80)
 			col += 0x0000FF00;
-		CLines::RenderLineWithClipping(n1.x+0.2f, n1.y, n1.z,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x+0.2f, n1.y, n1.z,
 			n1.x+0.2f, n1.y, n1.z + 1.0f,
 			col, col);
 
@@ -1904,7 +1911,8 @@ CPathFind::DisplayPathData(void)
 			n2.z += 0.3f;
 
 			// Draw links to neighbours
-			CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+			// Draw the original endpoints and colors through the C line API
+			Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 				n2.x, n2.y, n2.z,
 				0xFF00FFFF, 0xFF00FFFF);
 		}
@@ -1920,7 +1928,8 @@ CPathFind::DisplayPathData(void)
 		n1.z += 0.3f;
 
 		// Draw node itself
-		CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 			n1.x, n1.y, n1.z + 1.0f,
 			0xFFFFFFFF, 0xFFFFFFFF);
 
@@ -1929,7 +1938,8 @@ CPathFind::DisplayPathData(void)
 			CVector n2 = m_pathNodes[k].GetPosition();
 			n2.z += 0.3f;
 			// Draw links to neighbours
-			CLines::RenderLineWithClipping(n1.x, n1.y, n1.z,
+			// Draw the original endpoints and colors through the C line API
+			Lines_RenderLineWithClipping(n1.x, n1.y, n1.z,
 				n2.x, n2.y, n2.z,
 				0xFFFFFFFF, 0xFFFFFFFF);
 
@@ -1940,7 +1950,8 @@ CPathFind::DisplayPathData(void)
 				col += 0x00FF0000;
 			if(ConnectionHasTrafficLight(m_pathNodes[i].firstLink + j))
 				col += 0xFF000000;
-			CLines::RenderLineWithClipping(mid.x, mid.y, mid.z,
+			// Draw the original endpoints and colors through the C line API
+			Lines_RenderLineWithClipping(mid.x, mid.y, mid.z,
 				mid.x, mid.y, mid.z + 1.0f,
 				col, col);
 		}
@@ -1982,3 +1993,5 @@ CPathFind::GetIndex(CPathNode *node)
 	else
 		return (node - ThePaths.m_pathNodes) + ARRAY_SIZE(ThePaths.m_searchNodes);
 }
+
+//- rouz edit (ChatGPT)

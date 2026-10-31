@@ -1,9 +1,10 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Ped.h"
 
-class CAccident;
-class CFire;
+struct CAccident;
+struct CFire;
 
 enum EmergencyPedState
 {
@@ -37,3 +38,4 @@ public:
 	void MedicAI(void);
 };
 //VALIDATE_SIZE(CEmergencyPed, 0x554);
+//- rouz edit (ChatGPT)

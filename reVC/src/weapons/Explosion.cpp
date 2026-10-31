@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Automobile.h"
@@ -151,7 +152,7 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 	explosion.m_nActiveCounter = 1;
 	explosion.m_bIsBoat = false;
 	explosion.m_bMakeSound = makeSound;
-	explosion.m_nParticlesExpireTime = lifetime != 0 ? CTimer::GetTimeInMilliseconds() + lifetime : 0;
+	explosion.m_nParticlesExpireTime = lifetime != 0 ? (*Timer_GetTimeInMilliseconds()) + lifetime : 0;
 	switch (type)
 	{
 	case EXPLOSION_GRENADE:
@@ -161,13 +162,13 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 		explosion.m_fRadius = 9.0f;
 #endif
 		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
 		posGround = pos;
 		posGround.z = CWorld::FindGroundZFor3DCoord(posGround.x, posGround.y, posGround.z + 3.0f, nil);
-		CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
 		if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f) {
-			uint8 tmp = CGeneral::GetRandomNumberInRange(0, 64) - 64;
+			uint8 tmp = General_GetRandomNumberInRangeInt(0, 64) - 64;
 			colorGrenade.green += tmp;
 			colorGrenade.blue += tmp;
 			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nil, 4.5f, colorGrenade);
@@ -177,7 +178,7 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 	{
 		explosion.m_fRadius = 6.0f;
 		explosion.m_fPower = 0.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 3000;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 3000;
 		explosion.m_fPropagationRate = 0.5f;
 		posGround = pos;
 		bool found;
@@ -190,16 +191,16 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 			&& posGround.z < waterLevel && waterLevel - 6.0f < posGround.z) { // some subway/tunnels check?
 			bDontExplode = true;
 		} else if (found) {
-			gFireManager.StartFire(posGround, 1.8f, false);
+			FireManager_StartFireAt(&gFireManager,Fire_VectorFromNative(posGround), 1.8f, false);
 		}
 		break;
 	}
 	case EXPLOSION_ROCKET:
 		explosion.m_fRadius = 10.0f;
 		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
-		CEventList::RegisterEvent(EVENT_EXPLOSION, pos, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),250);
 		if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f)
 			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nil, 5.5f, color);
 		break;
@@ -208,15 +209,15 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 	case EXPLOSION_BOAT:
 		explosion.m_fRadius = 9.0f;
 		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 4250;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 4250;
 		explosion.m_fPropagationRate = 0.5f;
-		explosion.m_fStartTime = CTimer::GetTimeInMilliseconds();
+		explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds());
 		if (explosion.m_pVictimEntity != nil) {
 			if (explosion.m_pVictimEntity->IsVehicle() && ((CVehicle*)explosion.m_pVictimEntity)->IsBoat())
 				explosion.m_bIsBoat = true;
-			CEventList::RegisterEvent(EVENT_EXPLOSION, EVENT_ENTITY_VEHICLE, explosion.m_pVictimEntity, nil, 1000);
+			Events_RegisterEntity(EVENT_EXPLOSION,EVENT_ENTITY_VEHICLE,explosion.m_pVictimEntity,nil,1000);
 		} else {
-			CEventList::RegisterEvent(EVENT_EXPLOSION, pos, 1000);
+			Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),1000);
 		}
 
 		if (explosion.m_pVictimEntity != nil && !explosion.m_bIsBoat) {
@@ -235,9 +236,9 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 				veh->GetComponentWorldPosition(CAR_BOOT, componentPos);
 			}
 			if (componentPos.x != 0.0f) {
-				int rn = (CGeneral::GetRandomNumber() & 1) + 1;
+				int rn = (General_GetRandomNumber() & 1) + 1;
 				for (int i = 0; i < rn; i++)
-					CParticle::AddJetExplosion(componentPos, (CGeneral::GetRandomNumber() & 7) / 7.0f  + 1.5f, 0.5f);
+					CParticle::AddJetExplosion(componentPos, (General_GetRandomNumber() & 7) / 7.0f  + 1.5f, 0.5f);
 			}
 		}
 		break;
@@ -250,61 +251,61 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 			explosion.m_fRadius = 6.0f;
 			explosion.m_fPower = 300.0f;
 		}
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
-		explosion.m_fStartTime = CTimer::GetTimeInMilliseconds();
+		explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds());
 		for (int i = 0; i < 10; i++) {
 			CVector randpos;
 
-			randpos.x = CGeneral::GetRandomNumber();
-			randpos.y = CGeneral::GetRandomNumber();
-			randpos.z = CGeneral::GetRandomNumber();
+			randpos.x = General_GetRandomNumber();
+			randpos.y = General_GetRandomNumber();
+			randpos.z = General_GetRandomNumber();
 			randpos -= CVector(128, 128, 128);
 			randpos /= 20.0f;
 			randpos += pos;
 
 			CParticle::AddParticle(PARTICLE_EXPLOSION_MFAST, randpos, CVector(0.0f, 0.0f, 0.0f), nil, 2.5f, color);
 
-			randpos.x = CGeneral::GetRandomNumber();
-			randpos.y = CGeneral::GetRandomNumber();
-			randpos.z = CGeneral::GetRandomNumber();
+			randpos.x = General_GetRandomNumber();
+			randpos.y = General_GetRandomNumber();
+			randpos.z = General_GetRandomNumber();
 			randpos -= CVector(128, 128, 128);
 			randpos /= 20.0f;
 			randpos += pos;
 
 			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, randpos, CVector(0.0f, 0.0f, 0.0f), nil, 5.0f, color);
 
-			randpos.x = CGeneral::GetRandomNumber();
-			randpos.y = CGeneral::GetRandomNumber();
-			randpos.z = CGeneral::GetRandomNumber();
+			randpos.x = General_GetRandomNumber();
+			randpos.y = General_GetRandomNumber();
+			randpos.z = General_GetRandomNumber();
 			randpos -= CVector(128, 128, 128);
 			randpos /= 20.0f;
 			randpos += pos;
 
 			CParticle::AddJetExplosion(randpos, 1.4f, 3.0f);
 		}
-		CEventList::RegisterEvent(EVENT_EXPLOSION, pos, 1000);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),1000);
 		break;
 	case EXPLOSION_MINE:
 		explosion.m_fRadius = 10.0f;
 		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
 		posGround = pos;
 		//posGround.z = 
 			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
 		break;
 	case EXPLOSION_BARREL:
 		explosion.m_fRadius = 7.0f;
 		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
 		for (int i = 0; i < 6; i++) {
 			CVector randpos;
-			randpos.x = CGeneral::GetRandomNumber();
-			randpos.y = CGeneral::GetRandomNumber();
-			randpos.z = CGeneral::GetRandomNumber();
+			randpos.x = General_GetRandomNumber();
+			randpos.y = General_GetRandomNumber();
+			randpos.z = General_GetRandomNumber();
 			randpos -= CVector(128, 128, 128);
 			randpos.x /= 50.0f;
 			randpos.y /= 50.0f;
@@ -315,27 +316,27 @@ CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionT
 		posGround = pos;
 		//posGround.z = 
 			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
 		break;
 	case EXPLOSION_TANK_GRENADE:
 		explosion.m_fRadius = 10.0f;
 		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
 		posGround = pos;
 		//posGround.z = 
 			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
 		break;
 	case EXPLOSION_HELI_BOMB:
 		explosion.m_fRadius = 8.0f;
 		explosion.m_fPower = 50.0f;
-		explosion.m_fStopTime = lifetime + CTimer::GetTimeInMilliseconds() + 750;
+		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
 		explosion.m_fPropagationRate = 0.5f;
 		posGround = pos;
 		//posGround.z = 
 			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		CEventList::RegisterEvent(EVENT_EXPLOSION, posGround, 250);
+		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
 		break;
 	default:
 		debug("Undefined explosion type, AddExplosion, Explosion.cpp");
@@ -368,14 +369,14 @@ CExplosion::Update()
 		if (explosion.m_nIteration == 0) continue;
 
 		if (explosion.m_nParticlesExpireTime != 0) {
-			if (CTimer::GetTimeInMilliseconds() > explosion.m_nParticlesExpireTime) {
+			if ((*Timer_GetTimeInMilliseconds()) > explosion.m_nParticlesExpireTime) {
 				explosion.m_nParticlesExpireTime = 0;
 				if (explosion.m_fPower != 0.0f)
 					CWorld::TriggerExplosion(explosion.m_vecPosition, explosion.m_fRadius, explosion.m_fPower, explosion.m_pCreatorEntity, (explosion.m_ExplosionType == EXPLOSION_ROCKET || explosion.m_ExplosionType == EXPLOSION_CAR_QUICK || explosion.m_ExplosionType == EXPLOSION_MINE || explosion.m_ExplosionType == EXPLOSION_BARREL || explosion.m_ExplosionType == EXPLOSION_TANK_GRENADE || explosion.m_ExplosionType == EXPLOSION_HELI_BOMB));
 			}
 		} else {
-			explosion.m_fRadius += explosion.m_fPropagationRate * CTimer::GetTimeStep();
-			int32 someTime = explosion.m_fStopTime - CTimer::GetTimeInMilliseconds();
+			explosion.m_fRadius += explosion.m_fPropagationRate * (*Timer_GetTimeStep());
+			int32 someTime = explosion.m_fStopTime - (*Timer_GetTimeInMilliseconds());
 			switch (explosion.m_ExplosionType)
 			{
 			case EXPLOSION_GRENADE:
@@ -384,8 +385,9 @@ CExplosion::Update()
 			case EXPLOSION_HELI2:
 			case EXPLOSION_MINE:
 			case EXPLOSION_BARREL:
-				if (CTimer::GetFrameCounter() & 1) {
-					CPointLights::AddLight(CPointLights::LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 20.0f, 1.0f, 1.0f, 0.5f, CPointLights::FOG_NONE, true);
+				if ((*Timer_GetFrameCounter()) & 1) {
+					// Enter the C point-light algorithm with the original owner expressions
+					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 20.0f, 1.0f, 1.0f, 0.5f, POINTLIGHTS_FOG_NONE, true);
 					CCoronas::RegisterCorona((uintptr)&explosion, 255, 255, 200, 255, explosion.m_vecPosition, 8.0f, 120.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 				} else
 					CCoronas::RegisterCorona((uintptr)&explosion, 128, 128, 100, 255, explosion.m_vecPosition, 8.0f, 120.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
@@ -407,13 +409,13 @@ CExplosion::Update()
 					}
 					float ff = ((float)explosion.m_nIteration * 0.55f);
 					for (int i = 0; i < 5 * ff; i++) {
-						float angle = CGeneral::GetRandomNumber() / 256.0f * 6.28f;
+						float angle = General_GetRandomNumber() / 256.0f * 6.28f;
 
 						CVector pos = explosion.m_vecPosition;
 						pos.x += ff * Sin(angle);
 						pos.y += ff * Cos(angle);
 						pos.z = explosion.m_fZshift + 0.5f;
-						CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, CGeneral::GetRandomNumberInRange(-3.0f, 3.0f), CGeneral::GetRandomNumberInRange(-180.0f, 180.0f));
+						CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, General_GetRandomNumberInRangeFloat(-3.0f, 3.0f), General_GetRandomNumberInRangeFloat(-180.0f, 180.0f));
 					}
 				}
 				break;
@@ -422,7 +424,7 @@ CExplosion::Update()
 			case EXPLOSION_BOAT:
 				if (someTime >= 3500) {
 					if (explosion.m_pVictimEntity != nil) {
-						if ((CGeneral::GetRandomNumber() & 0xF) == 0 && !explosion.m_bIsBoat) {
+						if ((General_GetRandomNumber() & 0xF) == 0 && !explosion.m_bIsBoat) {
 							CVehicle *veh = (CVehicle*)explosion.m_pVictimEntity;
 							uint8 component = CAR_WING_LR;
 
@@ -436,15 +438,16 @@ CExplosion::Update()
 								CParticle::AddJetExplosion(componentPos, 0.5f, 0.0f);
 							}
 						}
-						if (CTimer::GetTimeInMilliseconds() > explosion.m_fStartTime) {
-							explosion.m_fStartTime = CTimer::GetTimeInMilliseconds() + 125 + (CGeneral::GetRandomNumber() & 0x7F);
+						if ((*Timer_GetTimeInMilliseconds()) > explosion.m_fStartTime) {
+							explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds()) + 125 + (General_GetRandomNumber() & 0x7F);
 							CVector pos = explosion.m_pVictimEntity->GetPosition();
-							for (int i = 0; i < (CGeneral::GetRandomNumber() & 1) + 1; i++)
+							for (int i = 0; i < (General_GetRandomNumber() & 1) + 1; i++)
 								CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, pos, CVector(0.0f, 0.0f, 0.0f), nil, 3.5f, color);
 						}
 					}
-					if (CTimer::GetFrameCounter() & 1) {
-						CPointLights::AddLight(CPointLights::LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 15.0f, 1.0f, 0.0f, 0.0f, CPointLights::FOG_NONE, true);
+					if ((*Timer_GetFrameCounter()) & 1) {
+						// Enter the C point-light algorithm with the original owner expressions
+						PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 15.0f, 1.0f, 0.0f, 0.0f, POINTLIGHTS_FOG_NONE, true);
 						CCoronas::RegisterCorona((uintptr)&explosion, 200, 100, 0, 255, explosion.m_vecPosition, 6.0f, 80.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 					} else
 						CCoronas::RegisterCorona((uintptr)&explosion, 128, 0, 0, 255, explosion.m_vecPosition, 8.0f, 80.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
@@ -452,10 +455,10 @@ CExplosion::Update()
 					CCoronas::RegisterCorona((uintptr)&explosion + 1, 30, 15, 0, 255, explosion.m_vecPosition, explosion.m_fRadius, 80.0f, gpCoronaTexture[7], CCoronas::TYPE_STAR, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 				} else if (explosion.m_nIteration & 1) {
 					if (explosion.m_pVictimEntity != nil)
-						CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, explosion.m_pVictimEntity->GetPosition(), CVector(0.0f, 0.0f, 0.0f), nil, CGeneral::GetRandomNumberInRange(0.5f, 0.8f), color);
+						CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, explosion.m_pVictimEntity->GetPosition(), CVector(0.0f, 0.0f, 0.0f), nil, General_GetRandomNumberInRangeFloat(0.5f, 0.8f), color);
 					CVector pos = explosion.m_vecPosition;
 					pos.z += 1.0f;
-					CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, pos, CVector(0.0f, 0.0f, 0.11f), nil, CGeneral::GetRandomNumberInRange(0.5f, 2.0f), color);
+					CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, pos, CVector(0.0f, 0.0f, 0.11f), nil, General_GetRandomNumberInRangeFloat(0.5f, 2.0f), color);
 				}
 				break;
 			case EXPLOSION_TANK_GRENADE:
@@ -463,14 +466,14 @@ CExplosion::Update()
 				if (explosion.m_nIteration < 5) {
 					float ff = ((float)explosion.m_nIteration * 0.65f);
 					for (int i = 0; i < 10 * ff; i++) {
-						uint8 x = CGeneral::GetRandomNumber(), y = CGeneral::GetRandomNumber(), z = CGeneral::GetRandomNumber();
+						uint8 x = General_GetRandomNumber(), y = General_GetRandomNumber(), z = General_GetRandomNumber();
 						CVector pos(x - 128, y - 128, (z % 128) + 1);
 
 						pos.Normalise();
 						pos *= (explosion.m_nIteration + 1) * ff / 5.0f;
 						pos += explosion.m_vecPosition;
 						pos.z += 0.5f;
-						CParticle::AddParticle(PARTICLE_EXPLOSION_LARGE, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, CGeneral::GetRandomNumberInRange(-3.0f, 3.0f), CGeneral::GetRandomNumberInRange(-180.0f, 180.0f));
+						CParticle::AddParticle(PARTICLE_EXPLOSION_LARGE, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, General_GetRandomNumberInRangeFloat(-3.0f, 3.0f), General_GetRandomNumberInRangeFloat(-180.0f, 180.0f));
 					}
 				}
 				break;
@@ -513,4 +516,6 @@ CExplosion::RemoveAllExplosionsInArea(CVector pos, float radius)
 		}
 	}
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

@@ -1,0 +1,147 @@
+#include "common.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits>
+#include <type_traits>
+#undef sqrt
+
+static_assert(std::is_trivially_default_constructible<RwIm3DVertex>::value,"Original static buffer has no constructor");
+static_assert(std::is_trivially_destructible<RwIm3DVertex>::value,"Original static buffer has no destructor");
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t attempts,renders,ends,hooks,setColors,setPositions,groups;
+static uint32_t rng=0x95730931;
+static RwIm3DVertex *liveVertices;
+static unsigned depth;
+static unsigned phases[3];
+static bool recursive,allFail;
+
+static void require(bool condition)
+{
+    // Fail quietly with a nonzero status when an independent invariant fails
+    if(!condition) exit(2);
+}
+static void word(uint32_t value)
+{
+    // Record event order and exact scalar bits without hashing process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static uint32_t bits(float value)
+{
+    // Preserve finite values, infinities, NaN payloads and signed zero as raw words
+    uint32_t valueBits;memcpy(&valueBits,&value,4);return valueBits;
+}
+static uint32_t randomWord(void)
+{
+    // Generate reproducible coordinate and color histories with defined unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+static void snapshot(RwIm3DVertex *v)
+{
+    // Record all real vertex fields including UV values mutated by prior transforms
+    for(int i=0;i<2;i++){
+        word(bits(v[i].getX()));word(bits(v[i].getY()));word(bits(v[i].getZ()));
+        RwRGBA c=v[i].getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);
+        word(bits(v[i].getU()));word(bits(v[i].getV()));
+    }
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Check color updates precede position updates and retain the same static storage
+    if(!liveVertices)liveVertices=v;
+    unsigned index=phases[depth];require(index<2);require(v==liveVertices+index);
+    phases[depth]++;setColors++;word(1);word(index);word(r);word(g);word(b);word(a);
+    v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Check both colors are written before the two ordered position updates
+    unsigned index=phases[depth]-2;require(index<2);require(v==liveVertices+index);
+    phases[depth]++;setPositions++;word(2);word(index);word(bits(x));word(bits(y));word(bits(z));
+    v->setX(x);v->setY(y);v->setZ(z);
+}
+void LittleTest(void)
+{
+    // Record the hook and occasionally reenter the line operation using its shared buffer
+    require(phases[depth]==4);phases[depth]=5;hooks++;word(3);snapshot(liveVertices);
+    if(recursive && depth==0 && hooks%67==0){
+        depth=1;phases[depth]=0;
+        TestLine(-2,3,-4,7,-8,9,0x12345678,0x9abcdef0);
+        require(phases[depth]==0);depth=0;
+    }
+}
+void *RwIm3DTransform(RwIm3DVertex *v,uint32 count,RwMatrix *matrix,uint32 flags)
+{
+    // Check fixed transform arguments and observe persistent UV state on success and failure
+    require(phases[depth]==5 && v==liveVertices && count==2 && matrix==nil && flags==0);
+    if(attempts==0)require(bits(v[0].u)==0 && bits(v[0].v)==0 && bits(v[1].u)==0 && bits(v[1].v)==0);
+    attempts++;word(4);snapshot(v);
+    v[0].u=(float)(attempts%8192);v[0].v=-(float)(attempts%4096);
+    v[1].u=(float)(attempts%2048);v[1].v=-(float)(attempts%1024);
+    bool success=!allFail && attempts%5!=0;word(success);
+    phases[depth]=success?6:0;
+    return success?v:nil;
+}
+int RwIm3DRenderLine(int a,int b)
+{
+    // Preserve rendering on success even when RenderLine itself returns false
+    require(phases[depth]==6 && a==0 && b==1);phases[depth]=7;
+    renders++;word(5);snapshot(liveVertices);return renders%3!=0;
+}
+int RwIm3DEnd(void)
+{
+    // Require exactly one end call after each render attempt
+    require(phases[depth]==7);phases[depth]=0;ends++;word(6);return ends%7!=0;
+}
+static void line(float x,float y,float z,float a,float b,float c,uint32_t col1,uint32_t col2)
+{
+    // Exercise one complete line and verify that the draw protocol returns to idle
+    require(phases[0]==0);TestLine(x,y,z,a,b,c,col1,col2);require(phases[0]==0);groups++;
+}
+int main(void)
+{
+    // Check the first zero-length line, channel extraction and persistent initial UV state
+    line(0,0,0,0,0,0,0x01234567,0x89abcdef);
+    require(attempts==1 && hooks==1 && renders==1 && ends==1);
+    RwRGBA c=liveVertices[0].getColor();require(c.red==1 && c.green==0x23 && c.blue==0x45 && c.alpha==0x67);
+    c=liveVertices[1].getColor();require(c.red==0x89 && c.green==0xab && c.blue==0xcd && c.alpha==0xef);
+
+    // Check segment-count thresholds independently on axis-aligned lines
+    allFail=true;
+    for(unsigned n=1;n<100;n++){
+        float length=1.5f*n;
+        uint32_t start=attempts;line(0,0,0,length,0,0,0xffffffff,0);
+#ifdef THIS_IS_STUPID
+        require(attempts-start==n+1);
+#else
+        require(attempts-start==1);
+        require(bits(liveVertices[1].getX())==bits(length));
+#endif
+        require(renders==1 && ends==1);
+    }
+    allFail=false;
+
+    // Compare long deterministic histories with successes, failures and recursive calls
+    recursive=true;
+    for(unsigned i=0;i<16384;i++){
+        float values[6];for(unsigned j=0;j<6;j++)values[j]=((int)(randomWord()%4097)-2048)*0.015625f;
+        line(values[0],values[1],values[2],values[3],values[4],values[5],randomWord(),randomWord());
+    }
+    recursive=false;
+
+    // Exercise interpolation boundaries and signed zeros with all channel extremes
+    float lengths[]={0.0f,-0.0f,1.49999988f,1.5f,1.50000012f,2.99999976f,3.0f,3.00000024f};
+    for(float length:lengths)line(-0.0f,0.0f,-0.0f,length,-0.0f,0.0f,0xff00ff00,0x00ff00ff);
+#ifndef THIS_IS_STUPID
+    // Confirm the unsplit path forwards arbitrary float words without arithmetic
+    uint32_t exceptional[]={0x7f800000,0xff800000,0x7fc01234,0xffc05678,1,0x80000001,0x7f7fffff};
+    for(uint32_t value:exceptional){
+        float x;memcpy(&x,&value,4);line(x,-0.0f,x,-0.0f,x,-0.0f,0,0xffffffff);
+        require(bits(liveVertices[0].getX())==value && bits(liveVertices[1].getY())==value);
+    }
+#endif
+    // Report the comparison fingerprint only after checking complete protocol accounting
+    require(setColors==attempts*2 && setPositions==attempts*2 && hooks==attempts && renders==ends);
+    printf("%016llx groups=%u attempts=%u renders=%u\n",(unsigned long long)hash,groups,attempts,renders);
+}

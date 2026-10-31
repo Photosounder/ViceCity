@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare complete mission label data, original case folding, and C preloading."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ from audio_mission_data_migration import TABLE,calls,logic,facade,header
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-mission-data-c-tests'
 old=(out/'before/src/audio/AudioLogic.cpp').read_text();kernel=(root/'src/audio/AudioMissionData.c').read_text()
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Compare actual data and statements independently of whitespace and comments
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',source,flags=re.S))
 expected=TABLE.replace('struct MissionAudioData {','typedef struct MissionAudioData {').replace('uint32 m_nId','uint32_t m_nId').replace('};','} MissionAudioData;',1).replace('Const MissionAudioData','static const MissionAudioData').replace('{nil, 0}','{NULL, 0}')

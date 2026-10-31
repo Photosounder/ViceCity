@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Sprite2d.h"
@@ -60,17 +62,9 @@ struct CFontRenderState
 	int16 style;
 };
 
-class CSprite2d;
+struct Sprite2d;
 
-enum {
-	FONT_BANK,
-	FONT_STANDARD,
-	FONT_HEADING,
-#ifdef MORE_LANGUAGES
-	FONT_JAPANESE,
-#endif
-	MAX_FONTS = FONT_HEADING
-};
+#include "FontStyles.h"
 
 enum {
 	ALIGN_LEFT,
@@ -131,13 +125,13 @@ class CFont
 #endif
 	static bool16 NewLine;
 public:
-	static CSprite2d Sprite[MAX_FONTS];
+	static Sprite2d Sprite[MAX_FONTS];
 	static CFontDetails Details;
 	static CFontRenderState RenderState;
 
 #ifdef BUTTON_ICONS
 	static int32 ButtonsSlot;
-	static CSprite2d ButtonSprite[MAX_BUTTON_ICONS];
+
 	static int PS2Symbol;
 	
 	static void LoadButtons(const char *txdPath);
@@ -215,3 +209,5 @@ public:
 	static bool IsJapaneseFont() { return IsJapanese() && (Details.style == FONT_JAPANESE);  }
 #endif
 };
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

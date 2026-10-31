@@ -54,8 +54,10 @@ expected_process = qualify(expected_process)
 position = '\t\t\tAudioManager.m_sQueueSample.m_vecPos = comments->m_aPedCommentQueue[comments->m_nActiveQueue][comments->m_aPedCommentOrderList[comments->m_nActiveQueue][0]].m_vecPos;'
 expected_process = expected_process.replace(position, '\n'.join(position[:-1].replace('m_vecPos =', 'm_vecPos.' + axis + ' =') + '.' + axis + ';' for axis in 'xyz'))
 current_logic = (root / 'src/audio/AudioLogic.cpp').read_text()
-current_process = current_logic[current_logic.index('void\nPedComments_Process('):current_logic.index('\n#undef cooldown_phrase')].rstrip()
-assert normalize(calls(expected_process)) == normalize(current_process.replace("uint8 ", "uint8_t ")), 'Playback decisions changed'
+import audio_ped_playback_migration as playback
+playback_kernel=(root/'src/audio/AudioPedPlayback.c').read_text()
+current_process=playback.extract(playback_kernel)
+assert normalize(playback.playback_body(calls(expected_process))) == normalize(current_process[current_process.index('{'):]), 'Playback decisions changed'
 
 # Verify all game callers after the intended queue and vector-boundary substitutions
 expected_logic = old_logic.replace(old_add + '\n\n', '').replace(old_process, current_process).replace('m_sPedComments.Add(&pedComment);', 'PedComments_Add(&m_sPedComments, &pedComment);')
@@ -64,8 +66,16 @@ for oldline, indent, expr in [ ('\t\t\tpedComment.m_vecPos = m_sQueueSample.m_ve
     expected_logic = expected_logic.replace(oldline, replacement)
 for signature in ('cAudioManager::SetupPedComments', 'cAudioManager::DebugPlayPedComment'):
     # Check pedestrian producers after the separately verified sound-position copy boundary
-    current_producer = function(current_logic, signature).replace('AudioSoundPosition_ToVector(&m_sQueueSample.m_vecPos)', 'm_sQueueSample.m_vecPos')
-    assert normalize(calls(function(expected_logic, signature))) == normalize(current_producer), 'Unexpected pedestrian integration change'
+    if signature=='cAudioManager::SetupPedComments':
+        # Follow the complete producer into its C speech operation
+        import audio_ped_speech_migration as speech
+        actual=function((root/'src/audio/AudioPedSpeech.c').read_text(),'AudioPedSpeech_Setup')
+        assert normalize(speech.body(calls(function(expected_logic,signature))))==normalize(actual[actual.index('{'):])
+        continue
+    # Follow the complete debug producer into C after its typed position boundary
+    current_producer=function(playback_kernel,'AudioPedPlayback_Debug')
+    assert normalize(playback.debug_body(calls(function(expected_logic,signature))))==normalize(current_producer[current_producer.index('{'):]), 'Unexpected debug producer change'
+
 old_manager = (out / 'before/src/audio/AudioManager.cpp').read_text()
 expected_manager = old_manager.replace('AudioCrimes_Init(m_aCrimes);', 'AudioCrimes_Init(m_aCrimes);\nPedComments_Init(&m_sPedComments);').replace('m_sPedComments.Process();', 'PedComments_Process(&m_sPedComments);')
 # Account for the separately verified C queue reset operations at the same owner call sites

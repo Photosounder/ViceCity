@@ -1,0 +1,234 @@
+@COMMON@
+#include "caller.h"
+#include "Camera.h"
+#include "owners.h"
+#include "TxdStore.h"
+#include "custompipes.h"
+#include "WeaponType.h"
+#include "DMAudio.h"
+#include "replay-packet.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+extern "C" { uint32_t Timer_timeMs; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+static CPlayerPed player;
+static CVehicle vehicle,otherVehicle;
+static bool vehiclePresent,framePresent=true,matrixPresent=true,liveCamera,textureFailure,recursive,resourceRender;
+static RwMatrix matrix;
+static unsigned mode,depth,states,queries,sounds,attempts,renders,ends,reads,destroys,groups;
+static int dictionary=42,dictionaryStack[8],stackDepth;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static void require(bool condition)
+{
+    // Fail quietly at the current observable comparison position
+    if(!condition){fprintf(stderr,"states=%u queries=%u attempts=%u\n",states,queries,attempts);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Observe logical data independently of process addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite storage exactly and classify NaNs without promising payload preservation
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void vectorValue(const RwV3d &value)
+{
+    // Observe original typed vector components
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void vectorValue(BulletTraceVector value)
+{
+    // Observe corresponding C vector components
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static RwIm3DVertex *vertices(void)
+{
+    // Use the actual typed allocation on both sides
+    return (RwIm3DVertex *)TestBT_Vertices();
+}
+static void geometry(void)
+{
+    // Observe all shared vertex fields and every initialized triangle index
+    for(int i=0;i<10;i++){RwIm3DVertex &v=vertices()[i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());}for(int i=0;i<48;i++)word(TestBT_Index(i));
+}
+static void snapshot(void)
+{
+    // Observe complete inactive payloads as well as live pool and resource state
+    for(int i=0;i<NUMBULLETTRACES;i++){BulletTrace r=TestBT_Record(i);vectorValue(r.m_vecStartPos);vectorValue(r.m_vecEndPos);word(r.m_bInUse);word(r.m_nCreationTime);word(r.m_nLifeTime);floating(r.m_fThickness);word(r.m_fVisibility);}geometry();word(TestBT_Texture()!=NULL);word((uint32_t)dictionary);word((uint32_t)stackDepth);states++;
+}
+CVector &CCamera::GetPosition(void)
+{
+    // Observe each original live query and legal alias-sensitive getter-side changes
+    word(1);queries++;if(liveCamera){position.x+=0.03125f;forward.x+=0.015625f;}return position;
+}
+CVector &CCamera::GetForward(void)
+{
+    // Return the original borrowed forward reference
+    word(2);queries++;return forward;
+}
+CVector &CCamera::GetUp(void)
+{
+    // Return the original borrowed up reference
+    word(3);queries++;return up;
+}
+CVector &CCamera::GetRight(void)
+{
+    // Return the original borrowed right reference
+    word(4);queries++;return right;
+}
+CPlayerPed *FindPlayerPed(void)
+{
+    // Preserve every original typed player query and its base-address conversion
+    word(5);queries++;return &player;
+}
+CVehicle *FindPlayerVehicle(void)
+{
+    // Preserve repeated live vehicle queries
+    word(6);word(vehiclePresent);queries++;return vehiclePresent?&vehicle:NULL;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Preserve the original auxiliary frame null branch
+    require(camera==CustomPipes::EnvMapCam);word(7);queries++;return framePresent?(RwFrame *)31:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Observe both original matrix queries at the successful eligibility gate
+    require(frame==(RwFrame *)31);word(8);queries++;return matrixPresent?&matrix:NULL;
+}
+extern "C" void DMAudio_PlayFrontEndSound(uint16_t sound,uint32_t volume)
+{
+    // Observe original side selection and float-to-volume narrowing
+    require((sound==SOUND_BULLETTRACE_1 || sound==SOUND_BULLETTRACE_2) && volume<=127);word(9);word(sound);word(volume);sounds++;
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Preserve original dictionary nesting and publication timing
+    require(stackDepth<8);word(10);word((uint32_t)dictionary);dictionaryStack[stackDepth++]=dictionary;
+}
+int CTxdStore::FindTxdSlot(const char *name)
+{
+    // Verify the exact original texture dictionary
+    require(strcmp(name,"particle")==0);word(11);return 7;
+}
+void CTxdStore::SetCurrentTxd(int slot)
+{
+    // Observe the original dictionary selection
+    require(slot==7);word(12);dictionary=slot;
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Restore the exact original outer dictionary
+    require(stackDepth>0);word(13);dictionary=dictionaryStack[--stackDepth];
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Preserve failure/retry behavior and publish only after the owner returns
+    require(strcmp(name,"smoketrail")==0 && mask==NULL && dictionary==7 && TestBT_Texture()==NULL);word(14);reads++;return textureFailure?NULL:(RwTexture *)81;
+}
+RwBool RwTextureDestroy(RwTexture *texture)
+{
+    // Observe the old live handle while nested rendering still has access to it
+    require(texture==(RwTexture *)81 && TestBT_Texture()==texture);word(15);destroys++;if(resourceRender)TestBT_Render();return 1;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture)
+{
+    // Observe each original per-trace typed raster lookup
+    require(texture==(RwTexture *)81);word(16);return (RwRaster *)83;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe actual state identifiers and final restoration even for empty or clipped draws
+    word(17);word((uint32_t)state);word((uint32_t)(uintptr_t)value);return 1;
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal value)
+{
+    // Preserve partial geometry initialization through actual typed storage
+    word(18);word((uint32_t)(v-vertices()));floating(value);v->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Observe all pass-specific V-coordinate changes
+    word(19);word((uint32_t)(v-vertices()));floating(value);v->setV(value);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Observe original alpha narrowing and per-pass transparent endpoints
+    word(20);word((uint32_t)(v-vertices()));word(r);word(g);word(b);word(a);v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Observe clipping, segment interpolation, winding and both FIX_BUGS branches
+    word(21);word((uint32_t)(v-vertices()));floating(x);floating(y);floating(z);v->setX(x);v->setY(y);v->setZ(z);
+}
+void *RwIm3DTransform(RwIm3DVertex *buffer,RwUInt32 count,RwMatrix *value,RwUInt32 flags)
+{
+    // Observe all original transform arguments and reenter with the same shared allocation
+    require(buffer==vertices() && count==10 && value==NULL && flags==1);word(22);geometry();attempts++;if(recursive && depth==0 && attempts%73==0){depth=1;TestBT_Render();depth=0;}bool ok=mode==0 || (mode==2 && attempts%5!=0);word(ok);return ok?buffer:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Observe every original triangle and preserve legal table mutation across draws
+    require(type==rwPRIMTYPETRILIST && count==48);word(23);geometry();for(int i=0;i<48;i++)word(indices[i]);indices[47]^=1;renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Pair each successful original draw with its end operation
+    word(24);ends++;return 1;
+}
+static BulletTrace record(bool used,unsigned seed)
+{
+    // Supply complete finite states whose rendering avoids undefined alpha conversions
+    BulletTrace r={{0.25f,-1.0f,0.5f},{0.5f,3.0f,0.75f},used,Timer_timeMs,1000,0.4f,(uint8_t)(100+seed%100)};return r;
+}
+static void reset(void)
+{
+    // Preserve the separate original manager and geometry initialization semantics
+    TestBT_Init();TestBT_Geometry();Timer_timeMs=1000;TheCamera.position=CVector(0.0f,0.0f,0.0f);TheCamera.forward=CVector(0.0f,1.0f,0.0f);TheCamera.up=CVector(0.0f,0.0f,1.0f);TheCamera.right=CVector(1.0f,0.0f,0.0f);TheCamera.ActiveCam=0;TheCamera.Cams[0].Mode=CCam::MODE_FOLLOWPED;TheCamera.Cams[1].Mode=CCam::MODE_SNIPER;player.m_vecMoveSpeed=CVector(0.0f,0.0f,0.0f);vehicle.m_vecMoveSpeed=CVector(0.0f,0.0f,0.0f);vehiclePresent=false;liveCamera=false;CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=NULL;framePresent=true;matrixPresent=true;matrix.pos.x=0.125f;matrix.pos.y=0.25f;matrix.pos.z=0.0f;matrix.at.x=0.0f;matrix.at.y=2.0f;matrix.at.z=0.0f;mode=0;snapshot();
+}
+int main(void)
+{
+    // Verify original record and replay packet layout at both language boundaries
+    static_assert(sizeof(BulletTrace)==44 && alignof(BulletTrace)==4 && offsetof(BulletTrace,m_bInUse)==24 && offsetof(BulletTrace,m_nCreationTime)==28 && offsetof(BulletTrace,m_nLifeTime)==32 && offsetof(BulletTrace,m_fThickness)==36 && offsetof(BulletTrace,m_fVisibility)==40,"C record");static_assert(sizeof(TestReplayPacket)==28 && offsetof(TestReplayPacket,inf)==4 && offsetof(TestReplayPacket,sup)==16,"Replay packet");require((char *)(CEntity *)&player!=(char *)&player);
+    reset();TestBT_ShutdownTexture();textureFailure=true;TestBT_InitTexture();require(TestBT_Texture()==NULL);textureFailure=false;TestBT_InitTexture();unsigned previousReads=reads;TestBT_InitTexture();require(reads==previousReads);TestBT_Render();snapshot();
+    // Cover every occupancy count, both density thresholds and full-pool sound generation
+    CVector start(-0.25f,-1.0f,0.0f),end(-0.25f,1.0f,0.0f);
+    for(unsigned used=0;used<=16;used++){
+        // Preserve inactive payloads while selecting the original first free slot
+        reset();for(unsigned i=0;i<16;i++){BulletTrace r=record(i<used,i);TestBT_SetRecord((int)i,&r);}TestBT_Add(&start,&end,0.7f,1001,255);if(used<16)require(TestBT_Record((int)used).m_nLifeTime==(used>=10?250u:used>=5?500u:1001u));snapshot();TestBT_Render();snapshot();
+    }
+    // Cover actual C/C++ subobject aliases and both API input paths
+    for(unsigned kind=0;kind<4;kind++)for(unsigned weapon=0;weapon<2;weapon++){reset();BulletTrace r=record(false,3);r.m_vecStartPos={-0.25f,-1.0f,0.0f};r.m_vecEndPos={0.25f,1.0f,0.0f};TestBT_SetRecord(0,&r);TestBT_Alias((int)kind,weapon!=0);snapshot();}
+    // Keep camera references lazy even when input storage aliases a live camera field
+    reset();liveCamera=true;TestBT_Add(&TheCamera.position,&end,0.4f,750,150);snapshot();liveCamera=false;
+    // Cover all camera modes, shooter identities, weapon presets and strict speed boundary
+    int weapons[]={WEAPONTYPE_PYTHON,WEAPONTYPE_SHOTGUN,WEAPONTYPE_SPAS12_SHOTGUN,WEAPONTYPE_STUBBY_SHOTGUN,WEAPONTYPE_M4,WEAPONTYPE_RUGER,WEAPONTYPE_SNIPERRIFLE,WEAPONTYPE_LASERSCOPE,WEAPONTYPE_M60,WEAPONTYPE_MINIGUN,WEAPONTYPE_HELICANNON,WEAPONTYPE_COLT45};
+    for(int cam=0;cam<=CCam::MODE_CAMERA;cam++)for(unsigned identity=0;identity<3;identity++){
+        // Use valid typed base conversions while retaining repeated owner queries
+        reset();vehiclePresent=identity!=0;TheCamera.Cams[0].Mode=(int16)cam;player.m_vecMoveSpeed=CVector(cam%3==0?0.0f:cam%3==1?0.049f:0.05f,0.0f,0.0f);vehicle.m_vecMoveSpeed=player.m_vecMoveSpeed;CEntity *shooter=identity==0?(CEntity *)&player:identity==1?(CEntity *)&vehicle:(CEntity *)&otherVehicle;TestBT_Weapon(&start,&end,weapons[cam%12],shooter);snapshot();
+    }
+    // Preserve early rejection before any input pointer dereference
+    reset();TheCamera.Cams[0].Mode=CCam::MODE_SNIPER;TestBT_Weapon(NULL,NULL,WEAPONTYPE_M4,(CEntity *)&player);snapshot();
+    // Cover strict expiration, zero lifetime and unsigned timer wrap without rendering undefined states
+    for(unsigned elapsed=0;elapsed<4;elapsed++){reset();BulletTrace r=record(true,5);r.m_nCreationTime=UINT32_MAX-10;r.m_nLifeTime=elapsed==0?0:100;TestBT_SetRecord(0,&r);Timer_timeMs=r.m_nCreationTime+(elapsed==0?0:elapsed==1?99:elapsed==2?100:101);TestBT_MemberUpdate(0);snapshot();}
+    // Exercise exact replay output and partial playback writes while retaining stale timing fields
+    reset();BulletTrace seed=record(false,7);seed.m_nCreationTime=17;seed.m_nLifeTime=1234;seed.m_fThickness=0.75f;TestBT_SetRecord(3,&seed);TestReplayPacket packet;memset(&packet,0x35,sizeof(packet));packet.index=3;packet.inf=CVector(2.0f,3.0f,4.0f);packet.sup=CVector(5.0f,6.0f,7.0f);TestBT_ApplyPacket(&packet);BulletTrace replayed=TestBT_Record(3);require(replayed.m_bInUse && replayed.m_nCreationTime==17 && replayed.m_nLifeTime==1234 && replayed.m_fThickness==0.75f);TestBT_ReadPacket(3,&packet);word(packet.type);word(packet.frames);word(packet.lifetime);word(packet.index);vectorValue(packet.inf);vectorValue(packet.sup);snapshot();
+    // Cover every reflection null branch, front/back clipping combination and draw outcome
+    for(unsigned branch=0;branch<5;branch++)for(unsigned clip=0;clip<5;clip++)for(unsigned draw=0;draw<3;draw++){
+        // Keep all alpha inputs defined while observing the original three rendering passes
+        reset();BulletTrace r=record(true,9);r.m_vecStartPos.y=clip==0?-2.0f:clip==1?-1.0f:clip==2?2.0f:clip==3?0.7f:2.0f;r.m_vecEndPos.y=clip==0?-1.0f:clip==1?2.0f:clip==2?-1.0f:clip==3?0.7f:3.0f;if(clip==3)r.m_vecEndPos=r.m_vecStartPos;TestBT_SetRecord(0,&r);Timer_timeMs+=500;CustomPipes::bRenderingEnvMap=branch!=0;CustomPipes::EnvMapCam=branch==1?NULL:(RwCamera *)29;framePresent=branch!=2;matrixPresent=branch!=3;mode=draw;TestBT_Render();snapshot();
+    }
+    // Compare complete mixed histories with growth, expiration, sound and reflection draws
+    reset();Timer_timeMs=UINT32_MAX-1000;for(unsigned frame=0;frame<3000;frame++){
+        // Supply bounded finite inputs and expire old records before rendering
+        Timer_timeMs+=13;start=CVector((float)(frame%7)*0.125f,-1.0f,(float)(frame%5)*0.25f);end=CVector(start.x+0.25f,2.0f,start.z+0.5f);TestBT_Add(&start,&end,0.4f,750,150);TestBT_Update();mode=frame%3;if(frame%17==0)TestBT_Render();if(frame%29==0)snapshot();
+    }
+    // Reenter rendering and destruction while the original shared resource is still published
+    reset();for(int i=0;i<2;i++){BulletTrace r=record(true,(unsigned)i);TestBT_SetRecord(i,&r);}Timer_timeMs+=250;recursive=true;TestBT_Render();recursive=false;resourceRender=true;TestBT_ShutdownTexture();resourceRender=false;require(TestBT_Texture()==NULL);TestBT_InitTexture();snapshot();TestBT_ShutdownTexture();
+    require(renders==ends && stackDepth==0 && sounds>0 && reads>0 && destroys>0);printf("%016llx states=%u queries=%u sounds=%u attempts=%u renders=%u reads=%u destroys=%u\n",(unsigned long long)hash,states,queries,sounds,attempts,renders,reads,destroys);return 0;
+}

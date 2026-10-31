@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit and compare the cached distance C helper with its saved C++ body."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ out=root/'build/audio-distance-c-tests'
 old=(out/'before/src/audio/AudioLogic.cpp').read_text()
 member=function(old,'cAudioManager::','CalculateDistance')
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Compare statements independently of comments and formatting
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',source,flags=re.S))
 kernel=(root/'src/audio/AudioMath.c').read_text()

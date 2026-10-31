@@ -14,11 +14,13 @@ foreach($lifecycleCompiler in @('clang','gcc')) {
     & $lifecycleCompiler -std=c11 -pedantic-errors "-$lifecycleOptimization" @lifecycleArgs -c "$lifecycleRoot/src/audio/$lifecycleUnit.c" -o "$lifecycleBuild/$lifecycleUnit.o"
     if($LASTEXITCODE -ne 0) {throw "C compile failed: $lifecycleUnit"}
    }
+   & $lifecycleCompiler -std=c11 -pedantic-errors "-$lifecycleOptimization" @lifecycleArgs -c "$lifecycleBuild/music_owner.c" -o "$lifecycleBuild/music_owner.o"
+   if($LASTEXITCODE -ne 0) {throw 'C music owner compilation failed'}
    & $lifecycleCompiler -std=c11 -pedantic-errors "-$lifecycleOptimization" @lifecycleArgs -c "$lifecycleBuild/caller.c" -o "$lifecycleBuild/caller.o"
    if($LASTEXITCODE -ne 0) {throw 'C caller compile failed'}
    & $lifecycleCpp -std=c++17 "-$lifecycleOptimization" @lifecycleArgs "$lifecycleBuild/before.cpp" "$lifecycleBuild/AudioPoliceState.o" -o "$lifecycleBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original owner compile failed'}
-   & $lifecycleCpp -std=c++17 "-$lifecycleOptimization" @lifecycleArgs "$lifecycleBuild/after.cpp" "$lifecycleBuild/AudioPoliceState.o" "$lifecycleBuild/AudioLifecycle.o" "$lifecycleBuild/caller.o" -o "$lifecycleBuild/after.exe"
+   & $lifecycleCpp -std=c++17 "-$lifecycleOptimization" @lifecycleArgs "$lifecycleBuild/after.cpp" "$lifecycleBuild/AudioPoliceState.o" "$lifecycleBuild/AudioLifecycle.o" "$lifecycleBuild/caller.o" "$lifecycleBuild/music_owner.o" -o "$lifecycleBuild/after.exe"
    if($LASTEXITCODE -ne 0) {throw 'Mixed C/C++ link failed'}
    $lifecycleBefore=& "$lifecycleBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original runtime failed'}

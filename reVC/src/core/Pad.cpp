@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHDINPUT
 #include "common.h"
 #include "crossplatform.h"
@@ -12,8 +15,10 @@
 #endif
 
 #include "Pad.h"
+#include "InputState_backend.h"
 #include "ControllerConfig.h"
 #include "Timer.h"
+#include "Clock.h"
 #include "Frontend.h"
 #include "Camera.h"
 #include "Game.h"
@@ -58,7 +63,7 @@ u_long128 pad_dma_buf[scePadDmaBufferMax] __attribute__((aligned(64)));
 u_long128 pad2_dma_buf[scePadDmaBufferMax] __attribute__((aligned(64)));
 #endif
 
-CMousePointerStateHelper MousePointerStateHelper;
+
 
 bool CPad::bDisplayNoControllerMessage;
 bool CPad::bObsoleteControllerMessage;
@@ -79,15 +84,18 @@ CKeyboardState CPad::TempKeyState;
 char CPad::KeyBoardCheatString[30];
 
 CMouseControllerState CPad::OldMouseControllerState;
+static const int OldMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::OldMouseControllerState),0);
 CMouseControllerState CPad::NewMouseControllerState;
+static const int NewMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::NewMouseControllerState),0);
 CMouseControllerState CPad::PCTempMouseControllerState;
+static const int PCTempMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::PCTempMouseControllerState),0);
 
 #ifdef DETECT_PAD_INPUT_SWITCH
 bool CPad::IsAffectedByController = false;
 #endif
 
 _TODO("gbFastTime");
-extern bool gbFastTime;
+
 
 #ifdef WALLCLIMB_CHEAT
 extern bool gGravityCheat;
@@ -111,11 +119,11 @@ void SpecialCarCheats()
 
 		mod_HandlingManager.GetHandlingData(HANDLING_BAGGAGE)->Transmission.fEngineAcceleration *= 2.0f;
 		mod_HandlingManager.GetHandlingData(HANDLING_BAGGAGE)->Transmission.fMaxVelocity *= 2.0f;
-		mod_HandlingManager.GetHandlingData(HANDLING_BAGGAGE)->Transmission.InitGearRatios();
+		Transmission_InitGearRatios(&mod_HandlingManager.GetHandlingData(HANDLING_BAGGAGE)->Transmission);
 
 		mod_HandlingManager.GetHandlingData(HANDLING_GOLFCART)->Transmission.fEngineAcceleration *= 2.0f;
 		mod_HandlingManager.GetHandlingData(HANDLING_GOLFCART)->Transmission.fMaxVelocity *= 2.0f;
-		mod_HandlingManager.GetHandlingData(HANDLING_GOLFCART)->Transmission.InitGearRatios();
+		Transmission_InitGearRatios(&mod_HandlingManager.GetHandlingData(HANDLING_GOLFCART)->Transmission);
 
 		mod_HandlingManager.GetHandlingData(HANDLING_STINGER)->fCollisionDamageMultiplier *= 0.25f;
 		mod_HandlingManager.GetHandlingData(HANDLING_STINGER)->fMass *= 2.5f;
@@ -136,7 +144,7 @@ void SpecialCarCheats()
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fCollisionDamageMultiplier *= 0.25f;
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fMass *= 2.5f;
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fTurnMass *= 4.0f;
-		CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CVehicle::bCheat9 = true;
 		CPad::bHasPlayerCheated = true;
 	}
@@ -155,7 +163,7 @@ void PickUpChicksCheat()
 		CPed* someoneElse = (CPed*)CWorld::TestSphereAgainstWorld(vehicle->GetPosition(), 6.0f, FindPlayerPed(), false, false, true, false, false, false);
 		if ( someoneElse && someoneElse->m_nPedState != PED_DRIVING )
 		{
-			CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+			CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 			someoneElse->SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, vehicle);
 		}
 	}
@@ -163,7 +171,7 @@ void PickUpChicksCheat()
 
 void WeaponCheat1()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT2"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	CStreaming::RequestModel(MI_BRASS_KNUCKLES, STREAMFLAGS_DONT_REMOVE);
 	CStreaming::RequestModel(MI_BASEBALL_BAT, STREAMFLAGS_DONT_REMOVE);
@@ -204,7 +212,7 @@ void WeaponCheat1()
 
 void WeaponCheat2()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT2"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	CStreaming::RequestModel(MI_KATANA, STREAMFLAGS_DONT_REMOVE);
 	CStreaming::RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE);
@@ -248,7 +256,7 @@ void WeaponCheat2()
 
 void WeaponCheat3()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT2"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
 	CStreaming::RequestModel(MI_CHAINSAW, STREAMFLAGS_DONT_REMOVE);
 	CStreaming::RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE);
@@ -297,14 +305,14 @@ void HealthCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(TheText.Get("CHEAT3"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT3"), true);
 	FindPlayerPed()->m_fHealth = CWorld::Players[0].m_nMaxHealth;
 	if (FindPlayerVehicle()) {
 		FindPlayerVehicle()->m_fHealth = 1000.0f;
 		if (FindPlayerVehicle()->m_vehType == VEHICLE_TYPE_CAR) {
-			((CAutomobile*)FindPlayerVehicle())->Damage.SetEngineStatus(0);
+			Damage_SetEngineStatus(&((CAutomobile*)FindPlayerVehicle())->Damage, 0);
 			for (int32 i = 0; i < 4; i++)
-				((CAutomobile*)FindPlayerVehicle())->Damage.SetWheelStatus(i, WHEEL_STATUS_OK);
+				Damage_SetWheelStatus(&((CAutomobile*)FindPlayerVehicle())->Damage, i, WHEEL_STATUS_OK);
 		}
 	}
 }
@@ -312,11 +320,11 @@ void HealthCheat()
 // TODO(Miami): this is HELLA different on mobile, although it mostly has debug oriented things like player exiting it's current car and enters spawned one etc.
 void VehicleCheat(int model)
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CStreaming::RequestModel(model, STREAMFLAGS_DONT_REMOVE);
 	CStreaming::LoadAllRequestedModels(false);
 	if (CStreaming::ms_aInfoForModel[model].m_loadState == STREAMSTATE_LOADED) {
-		CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 
 		if (!(CStreaming::ms_aInfoForModel[model].m_loadState & STREAMFLAGS_DONT_REMOVE)) {
 			CStreaming::SetModelIsDeletable(model);
@@ -358,14 +366,14 @@ void VehicleCheat(int model)
 			CWorld::Add(vehicle);
 		}
 	}
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 
 void BlowUpCarsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
@@ -386,13 +394,13 @@ void ChangePlayerCheat()
 	int modelId, anotherModelId;
 
 	if (FindPlayerPed()->IsPedInControl() && CModelInfo::GetModelInfo("player", nil)) {
-		CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CPlayerPed *ped = FindPlayerPed();
 		AssocGroupId AnimGrp = ped->m_animGroup;
 		do
 		{
 			do {
-				modelId = CGeneral::GetRandomNumberInRange(0, MI_PGA);
+				modelId = General_GetRandomNumberInRangeInt(0, MI_PGA);
 				anotherModelId = modelId+1;
 			} while (!CModelInfo::GetModelInfo(anotherModelId));
 		} while (anotherModelId >= MI_SPECIAL01 && anotherModelId <= MI_SPECIAL04 || modelId == MI_TAXI_D);
@@ -421,53 +429,53 @@ void ChangePlayerModel(const char* name) {
 
 void MayhemCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
-		CPedType::SetThreats(i, PED_FLAG_PLAYER1 | PED_FLAG_PLAYER2 | PED_FLAG_PLAYER3 | PED_FLAG_PLAYER4 |
+		PedType_SetThreats(i, PED_FLAG_PLAYER1 | PED_FLAG_PLAYER2 | PED_FLAG_PLAYER3 | PED_FLAG_PLAYER4 |
 			PED_FLAG_CIVMALE | PED_FLAG_CIVFEMALE | PED_FLAG_COP | PED_FLAG_GANG1 |
 			PED_FLAG_GANG2 | PED_FLAG_GANG3 | PED_FLAG_GANG4 | PED_FLAG_GANG5 |
 			PED_FLAG_GANG6 | PED_FLAG_GANG7 | PED_FLAG_GANG8 | PED_FLAG_GANG9 |
 			PED_FLAG_EMERGENCY | PED_FLAG_PROSTITUTE | PED_FLAG_CRIMINAL | PED_FLAG_SPECIAL );
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void EverybodyAttacksPlayerCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
-		CPedType::AddThreat(i, PED_FLAG_PLAYER1);
+		PedType_AddThreat(i, PED_FLAG_PLAYER1);
 
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void WeaponsForAllCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CPopulation::ms_bGivePedsWeapons = !CPopulation::ms_bGivePedsWeapons;
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void FastTimeCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
-	if (CTimer::GetTimeScale() < 4.0f)
-		CTimer::SetTimeScale(CTimer::GetTimeScale() * 2.0f);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	if ((*Timer_GetTimeScale()) < 4.0f)
+		Timer_SetTimeScale((*Timer_GetTimeScale()) * 2.0f);
 }
 
 void SlowTimeCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
-	if (CTimer::GetTimeScale() > 0.25f)
-		CTimer::SetTimeScale(CTimer::GetTimeScale() * 0.5f);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	if ((*Timer_GetTimeScale()) > 0.25f)
+		Timer_SetTimeScale((*Timer_GetTimeScale()) * 0.5f);
 }
 
 void MoneyCheat()
 {
 	CWorld::Players[CWorld::PlayerInFocus].m_nMoney += 250000;
-	CHud::SetHelpMessage(TheText.Get("CHEAT6"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT6"), true);
 }
 
 void ArmourCheat()
@@ -476,7 +484,7 @@ void ArmourCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(TheText.Get("CHEAT4"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT4"), true);
 	FindPlayerPed()->m_fArmour = CWorld::Players[0].m_nMaxArmour;
 }
 
@@ -486,8 +494,8 @@ void WantedLevelUpCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(TheText.Get("CHEAT5"), true);
-	FindPlayerPed()->m_pWanted->CheatWantedLevel(Min(FindPlayerPed()->m_pWanted->GetWantedLevel() + 2, 6));
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
+	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,Min(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) + 2, 6));
 }
 
 void WantedLevelDownCheat()
@@ -496,142 +504,142 @@ void WantedLevelDownCheat()
 	if (FindPlayerPed()==NULL)
 		return;
 
-	CHud::SetHelpMessage(TheText.Get("CHEAT5"), true);
-	FindPlayerPed()->m_pWanted->CheatWantedLevel(0);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
+	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,0);
 }
 
 void SunnyWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT7"), true);
-	CWeather::ForceWeatherNow(WEATHER_SUNNY);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Weather_ForceWeatherNow(WEATHER_SUNNY);
 }
 
 void ExtraSunnyWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT7"), true);
-	CWeather::ForceWeatherNow(WEATHER_EXTRA_SUNNY);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Weather_ForceWeatherNow(WEATHER_EXTRA_SUNNY);
 }
 
 void CloudyWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT7"), true);
-	CWeather::ForceWeatherNow(WEATHER_CLOUDY);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Weather_ForceWeatherNow(WEATHER_CLOUDY);
 }
 
 void RainyWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT7"), true);
-	CWeather::ForceWeatherNow(WEATHER_RAINY);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Weather_ForceWeatherNow(WEATHER_RAINY);
 }
 
 void FoggyWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT7"), true);
-	CWeather::ForceWeatherNow(WEATHER_FOGGY);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT7"), true);
+	Weather_ForceWeatherNow(WEATHER_FOGGY);
 }
 
 void FastWeatherCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbFastTime = !gbFastTime;
 }
 
 void OnlyRenderWheelsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bWheelsOnlyCheat = !CVehicle::bWheelsOnlyCheat;
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void ChittyChittyBangBangCheat()
 {
 #ifdef BETTER_ALLCARSAREDODO_CHEAT
-	CHud::SetHelpMessage(TheText.Get(!CVehicle::bAllDodosCheat ? "CHEAT1" : "CHEATOF"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,!CVehicle::bAllDodosCheat ? "CHEAT1" : "CHEATOF"), true);
 #else
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 #endif
 	CVehicle::bAllDodosCheat = !CVehicle::bAllDodosCheat;
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void StrongGripCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat3 = !CVehicle::bCheat3;
-	CStats::CheatedCount += 1000;
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
 void FannyMagnetCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CPed::bFannyMagnetCheat = !CPed::bFannyMagnetCheat;
 	CPad::bHasPlayerCheated = true;
 }
 
 void BlackCarsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbBlackCars = true;
 	gbPinkCars = false;
 }
 
 void PinkCarsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	gbBlackCars = false;
 	gbPinkCars = true;
 }
 
 void TrafficLightsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
-	CTrafficLights::bGreenLightsCheat = true;
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	TrafficLights_bGreenLightsCheat = true;
 }
 
 void MadCarsCheat()
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CCarCtrl::bMadDriversCheat = true;
 }
 
 void NoSeaBedCheat(void)
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CWaterLevel::m_bRenderSeaBed = !CWaterLevel::m_bRenderSeaBed;
 }
 
 void RenderWaterLayersCheat(void)
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	if ( ++CWaterLevel::m_nRenderWaterLayers > 5 )
 			CWaterLevel::m_nRenderWaterLayers = 0;
 }
 
 void BackToTheFuture(void)
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bHoverCheat = !CVehicle::bHoverCheat;
 	CPad::bHasPlayerCheated = true;
 }
 
 void SuicideCheat(void) {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	FindPlayerPed()->InflictDamage(nil, WEAPONTYPE_UNARMED, 1000.0f, PEDPIECE_TORSO, 0);
 }
 
 void DoChicksWithGunsCheat(void) {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
-	CStreaming::SetModelIsDeletable(CGangs::GetGangPedModel1(GANG_PLAYER));
-	CStreaming::SetModelIsDeletable(CGangs::GetGangPedModel2(GANG_PLAYER));
-	CStreaming::SetModelTxdIsDeletable(CGangs::GetGangPedModel1(GANG_PLAYER));
-	CStreaming::SetModelTxdIsDeletable(CGangs::GetGangPedModel2(GANG_PLAYER));
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	CStreaming::SetModelIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER));
+	CStreaming::SetModelIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER));
+	CStreaming::SetModelTxdIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER));
+	CStreaming::SetModelTxdIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER));
 	CStreaming::RemoveCurrentZonesModels();
-	CGangs::SetGangPedModels(GANG_PLAYER, MI_HFYBE, MI_WFYBE);
-	CGangs::SetGangWeapons(GANG_PLAYER, WEAPONTYPE_M4, WEAPONTYPE_M4);
-	CStats::CheatedCount += 1000;
+	Gangs_SetGangPedModels(GANG_PLAYER, MI_HFYBE, MI_WFYBE);
+	Gangs_SetGangWeapons(GANG_PLAYER, WEAPONTYPE_M4, WEAPONTYPE_M4);
+	Stats_CheatedCount += 1000;
 	CPad::bHasPlayerCheated = true;
 }
 
@@ -645,10 +653,10 @@ void KangarooCheat()
 	int m_fMass;
 
 	if (playerPed->m_ped_flagI80) {
-		string = TheText.Get("CHEATOF");
+		string = Text_Get(&TheText,"CHEATOF");
 		m_fMass = 70.0f;
 	} else {
-		string = TheText.Get("CHEAT1");
+		string = Text_Get(&TheText,"CHEAT1");
 		m_fMass = 15.0f;
 	}
 	CHud::SetHelpMessage(string, true);
@@ -664,11 +672,11 @@ void AllCarsHeliCheat(void)
 {
 	wchar* string;
 	if (bAllCarCheat) {
-		string = TheText.Get("CHEATOF");
+		string = Text_Get(&TheText,"CHEATOF");
 		bAllCarCheat = false;
 	}
 	else {
-		string = TheText.Get("CHEAT1");
+		string = Text_Get(&TheText,"CHEAT1");
 		bAllCarCheat = true;
 	}
 	CHud::SetHelpMessage(string, true);
@@ -680,11 +688,11 @@ void WallClimbingCheat(void)
 {
 	wchar* string;
 	if (gGravityCheat) {
-		string = TheText.Get("CHEATOF");
+		string = Text_Get(&TheText,"CHEATOF");
 		gGravityCheat = false;
 	}
 	else {
-		string = TheText.Get("CHEAT1");
+		string = Text_Get(&TheText,"CHEAT1");
 		gGravityCheat = true;
 	}
 	CHud::SetHelpMessage(string, true);
@@ -693,67 +701,18 @@ void WallClimbingCheat(void)
 
 void FlyingFishCheat(void)
 {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat8 = !CVehicle::bCheat8;
 	CPad::bHasPlayerCheated = true;
 }
 
 void DoShowChaseStatCheat(void) {
-	CHud::SetHelpMessage(TheText.Get("CHEAT1"), true);
-	CStats::ShowChaseStatOnScreen = 1;
+	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
+	Stats_ShowChaseStatOnScreen = 1;
 }
 
-bool
-CControllerState::CheckForInput(void)
-{
-	return !!RightStickX || !!RightStickY || !!LeftStickX || !!LeftStickY
-		|| !!DPadUp || !!DPadDown || !!DPadLeft || !!DPadRight
-		|| !!Triangle || !!Cross || !!Circle || !!Square
-		|| !!Start || !!Select
-		|| !!LeftShoulder1 || !!LeftShoulder2 || !!RightShoulder1 || !!RightShoulder2
-		|| !!LeftShock || !!RightShock;
-}
 
-void
-CControllerState::Clear(void)
-{
-	LeftStickX = LeftStickY = RightStickX = RightStickY = 0;
-	LeftShoulder1 = LeftShoulder2 = RightShoulder1 = RightShoulder2 = 0;
-	DPadUp = DPadDown = DPadLeft = DPadRight = 0;
-	Start = Select = 0;
-	Square = Triangle = Cross = Circle = 0;
-	LeftShock = RightShock = 0;
-	NetworkTalk = 0;
-}
 
-void CKeyboardState::Clear()
-{
-	for ( int32 i = 0; i < ARRAY_SIZE(F); i++	)
-		F[i] = 0;
-
-	for ( int32 i = 0; i < ARRAY_SIZE(VK_KEYS); i++	 )
-		VK_KEYS[i] = 0;
-
-	ESC = INS = DEL = HOME = END = PGUP = PGDN = 0;
-
-	UP = DOWN = LEFT = RIGHT = 0;
-
-	NUMLOCK = 0;
-
-	DIV = MUL = SUB = ADD = 0;
-
-	DECIMAL = NUM1 = NUM2 = NUM3 = NUM4 = 0;
-
-	NUM5 = NUM6 = NUM7 = NUM8 = 0;
-
-	NUM9 = NUM0 = SCROLLLOCK = PAUSE = 0;
-
-	BACKSP = TAB = CAPSLOCK = EXTENTER = 0;
-
-	LSHIFT = SHIFT = RSHIFT = LCTRL = RCTRL = LALT = RALT = 0;
-
-	LWIN = RWIN = APPS = 0;
-}
 
 #ifdef GTA_PS2_STUFF
 void CPad::Initialise(void)
@@ -780,20 +739,20 @@ void CPad::Initialise(void)
 
 void CPad::Clear(bool bResetPlayerControls)
 {
-	NewState.Clear();
-	OldState.Clear();
+	ControllerState_Clear(&NewState);
+	ControllerState_Clear(&OldState);
 
-	PCTempKeyState.Clear();
-	PCTempJoyState.Clear();
-	PCTempMouseState.Clear();
+	ControllerState_Clear(&PCTempKeyState);
+	ControllerState_Clear(&PCTempJoyState);
+	ControllerState_Clear(&PCTempMouseState);
 
-	NewKeyState.Clear();
-	OldKeyState.Clear();
-	TempKeyState.Clear();
+	KeyboardState_Clear(&NewKeyState);
+	KeyboardState_Clear(&OldKeyState);
+	KeyboardState_Clear(&TempKeyState);
 
-	NewMouseControllerState.Clear();
-	OldMouseControllerState.Clear();
-	PCTempMouseControllerState.Clear();
+	MouseControllerState_Clear(&NewMouseControllerState);
+	MouseControllerState_Clear(&OldMouseControllerState);
+	MouseControllerState_Clear(&PCTempMouseControllerState);
 
 	Phase = 0;
 	ShakeFreq = 0;
@@ -818,109 +777,32 @@ void CPad::Clear(bool bResetPlayerControls)
 	for ( int32 i = 0; i < ARRAY_SIZE(CheatString); i++ )
 		CheatString[i] = ' ';
 
-	LastTimeTouched = CTimer::GetTimeInMilliseconds();
+	LastTimeTouched = (*Timer_GetTimeInMilliseconds());
 	AverageWeapon = 0;
 	AverageEntries = 0;
 }
 
 uint32 CPad::InputHowLongAgo()
 {
-	return CTimer::GetTimeInMilliseconds() - LastTimeTouched;
+	return (*Timer_GetTimeInMilliseconds()) - LastTimeTouched;
 }
 
 void CPad::ClearMouseHistory()
 {
-	PCTempMouseControllerState.Clear();
-	NewMouseControllerState.Clear();
-	OldMouseControllerState.Clear();
+	MouseControllerState_Clear(&PCTempMouseControllerState);
+	MouseControllerState_Clear(&NewMouseControllerState);
+	MouseControllerState_Clear(&OldMouseControllerState);
 }
 
 // unused
 void CPad::ClearKeyBoardHistory()
 {
-	NewKeyState.Clear();
-	OldKeyState.Clear();
-	TempKeyState.Clear();
+	KeyboardState_Clear(&NewKeyState);
+	KeyboardState_Clear(&OldKeyState);
+	KeyboardState_Clear(&TempKeyState);
 }
 
-CMouseControllerState::CMouseControllerState()
-{
-	LMB = 0;
-	RMB = 0;
-	MMB = 0;
-	WHEELUP = 0;
-	WHEELDN = 0;
-	MXB1 = 0;
-	MXB2 = 0;
 
-	x = 0.0f;
-	y = 0.0f;
-}
-
-void CMouseControllerState::Clear()
-{
-	LMB = 0;
-	RMB = 0;
-	MMB = 0;
-	WHEELUP = 0;
-	WHEELDN = 0;
-	MXB1 = 0;
-	MXB2 = 0;
-}
-
-CMouseControllerState CMousePointerStateHelper::GetMouseSetUp()
-{
-	CMouseControllerState state;
-
-#if defined RW_D3D9 || defined RWLIBS
-	if ( PSGLOBAL(mouse) == nil )
-		_InputInitialiseMouse(!FrontEndMenuManager.m_bMenuActive && _InputMouseNeedsExclusive());
-
-	if ( PSGLOBAL(mouse) != nil )
-	{
-		DIDEVCAPS devCaps;
-		devCaps.dwSize = sizeof(DIDEVCAPS);
-
-		PSGLOBAL(mouse)->GetCapabilities(&devCaps);
-		switch ( devCaps.dwButtons )
-		{
-			case 3:
-			case 4:
-			case 5:
-			case 6:
-			case 7:
-			case 8:
-				state.MMB = true;
-
-			case 2:
-				state.RMB = true;
-
-			case 1:
-				state.LMB = true;
-		}
-
-		if ( devCaps.dwAxes == 3 )
-		{
-			state.WHEELDN = true;
-			state.WHEELUP = true;
-		}
-	}
-#else
-	// It seems there is no way to get number of buttons on mouse, so assign all buttons if we have mouse.
-	double xpos = 1.0f, ypos;
-	glfwGetCursorPos(PSGLOBAL(window), &xpos, &ypos);
-
-	if (xpos != 0.f) {
-		state.MMB = true;
-		state.RMB = true;
-		state.LMB = true;
-		state.WHEELDN = true;
-		state.WHEELUP = true;
-	}
-#endif
-
-	return state;
-}
 
 void CPad::UpdateMouse()
 {
@@ -945,7 +827,7 @@ void CPad::UpdateMouse()
 					signX = -1;
 			}
 
-			PCTempMouseControllerState.Clear();
+			MouseControllerState_Clear(&PCTempMouseControllerState);
 
 			PCTempMouseControllerState.x = (float)(signX * state.lX);
 			PCTempMouseControllerState.y = (float)(signy * state.lY);
@@ -983,7 +865,7 @@ void CPad::UpdateMouse()
 				signX = -1;
 		}
 
-		PCTempMouseControllerState.Clear();
+		MouseControllerState_Clear(&PCTempMouseControllerState);
 
 		PCTempMouseControllerState.x = (float)(signX * (xpos - PSGLOBAL(lastMousePos.x)));
 		PCTempMouseControllerState.y = (float)(signy * (ypos - PSGLOBAL(lastMousePos.y)));
@@ -1012,7 +894,7 @@ CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &Stat
 {
 	static CControllerState ReconState;
 
-	ReconState.Clear();
+	ControllerState_Clear(&ReconState);
 
 #define _RECONCILE_BUTTON(button) \
 	{ if ( State1.button || State2.button ) ReconState.button = 255; }
@@ -1584,7 +1466,8 @@ void CPad::AddToPCCheatString(char c)
 	//CERTAINDEATH
 	else if (!Cheat_strncmp(KeyBoardCheatString, "KYHFQiLHU]RK")) {
 		KeyBoardCheatString[0] = ' ';
-		CSmokeTrails::CigOn = !CSmokeTrails::CigOn;
+		// Use the C smoke-trail state or algorithm at the original call point
+		SmokeTrails_CigOn = !SmokeTrails_CigOn;
 	}
 	//AIRSHIP
 	else if (!Cheat_strncmp(KeyBoardCheatString, "SNOT_dD")) {
@@ -1644,12 +1527,17 @@ void CPad::AddToPCCheatString(char c)
 
 	// rouz KANGAROO
 	// "G12"
+//+ rouz edit (ChatGPT)
+#ifdef KANGAROO_CHEAT
+	// Keep the optional custom cheat consistent with its guarded implementation
 	if (!_CHEATCMP("21G"))
 	{
 		KangarooCheat();
 		swprintf(msg, L"Kangaroo");
 		CHud::SetHelpMessage((wchar *) msg, true);
 	}
+#endif
+//- rouz edit (ChatGPT)
 
 	// rouz ?
 	// "G13"
@@ -1670,8 +1558,8 @@ void CPad::AddToPCCheatString(char c)
 	// "G14"
 	if (!_CHEATCMP("41G"))
 	{
-		CTrafficLights::bGreenLightsCheat ^= 1;
-		if (CTrafficLights::bGreenLightsCheat)
+		TrafficLights_bGreenLightsCheat ^= 1;
+		if (TrafficLights_bGreenLightsCheat)
 			swprintf(msg, L"Traffic lights are always green");
 		else
 			swprintf(msg, L"Traffic lights back to normal");
@@ -1691,17 +1579,17 @@ void CPad::AddToPCCheatString(char c)
 
 		for (int i = PEDTYPE_CIVMALE; i < PEDTYPE_SPECIAL; i++)
 			if (rouz.peds_attack_cops)
-				CPedType::AddThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
+				PedType_AddThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
 			else
-				CPedType::RemoveThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
+				PedType_RemoveThreat(i, PED_FLAG_COP | PED_FLAG_EMERGENCY);
 
 		for (int i = PEDSTAT_GANG1; i <= PEDSTAT_COWARD; i++)
 			if (rouz.peds_attack_cops)
 			{
-				CPedStats::ms_apPedStats[i]->m_temper = 100;
-				CPedStats::ms_apPedStats[i]->m_fear = 0;
-				CPedStats::ms_apPedStats[i]->m_lawfulness = 0;
-				CPedStats::ms_apPedStats[i]->m_flags &= ~STAT_GUN_PANIC;
+				PedStats_records[i]->m_temper = 100;
+				PedStats_records[i]->m_fear = 0;
+				PedStats_records[i]->m_lawfulness = 0;
+				PedStats_records[i]->m_flags &= ~STAT_GUN_PANIC;
 			}
 
 		CPopulation::ms_bGivePedsWeapons = rouz.peds_attack_cops;
@@ -1757,7 +1645,7 @@ void CPad::AddToPCCheatString(char c)
 			veh->m_fHealth = 249.0f;
 			if (veh->IsCar())
 			{
-				((CAutomobile *)veh)->Damage.SetEngineStatus(0);
+				Damage_SetEngineStatus(&((CAutomobile *)veh)->Damage, 0);
 				if (prev_health <= 0.f && ((CAutomobile *)veh)->m_rwObject)
 					((CAutomobile *)veh)->Fix();
 			}
@@ -1924,7 +1812,7 @@ void CPad::AddToPCCheatString(char c)
 			pPlayerPed->ClearAdrenaline();
 			pPlayerPed->m_fCurrentStamina = pPlayerPed->m_fMaxStamina;
 			//if (pPlayerPed->m_pFire)
-			//	pPlayerPed->m_pFire->Extinguish();
+			//	Fire_Extinguish(pPlayerPed->m_pFire);
 			pPlayerPed->bInVehicle = false;
 			pPlayerPed->m_pMyVehicle = nil;
 			pPlayerPed->m_pVehicleAnim = nil;
@@ -1948,16 +1836,16 @@ void CPad::AddToPCCheatString(char c)
 			CStreaming::RemoveBuildingsNotInArea(AREA_MAIN_MAP);
 			TheCamera.SetCameraDirectlyInFrontForFollowPed_CamOnAString();
 			TheCamera.Restore();
-			//CReferences::RemoveReferencesToPlayer();
+			//References_RemoveReferencesToPlayer();
 			//CGarages::PlayerArrestedOrDied();
-			CStats::CheckPointReachedUnsuccessfully();
+			Stats_CheckPointReachedUnsuccessfully();
 			CWorld::Remove(pPlayerPed);
 			CWorld::Add(pPlayerPed);
 			//CHud::ResetWastedText();
 			//CStreaming::StreamZoneModels(pos);
 
 			pPlayerPed->ResolveReferences();	// seems necessary to stop getting busted
-			CMessages::ClearMessages();
+			Messages_ClearMessages();
 			CHud::GetRidOfAllHudMessages();
 
 			//CGameLogic::RestorePlayerStuffDuringResurrection(FindPlayerPed(), FindPlayerPed()->GetPosition(), 0.f);
@@ -1983,7 +1871,7 @@ void CPad::AddToPCCheatString(char c)
 			veh->m_fHealth = 1000.0f;
 			if(veh->IsCar())
 			{
-				((CAutomobile *)veh)->Damage.SetEngineStatus(0);
+				Damage_SetEngineStatus(&((CAutomobile *)veh)->Damage, 0);
 				if (((CAutomobile *)veh)->m_rwObject)
 					((CAutomobile *)veh)->Fix();
 			}
@@ -2057,14 +1945,14 @@ void CPad::AddToPCCheatString(char c)
 	// rouz set wanted level
 	// "G51_"
 	if (strncmp("15G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
-		FindPlayerPed()->m_pWanted->CheatWantedLevel(KeyBoardCheatString[0]-'0');
+		Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,KeyBoardCheatString[0]-'0');
 
 	// rouz set max wanted level
 	// "G52_"
 	if (strncmp("25G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
 	{
-		FindPlayerPed()->m_pWanted->SetMaximumWantedLevel(KeyBoardCheatString[0]-'0');
-		FindPlayerPed()->m_pWanted->UpdateWantedLevel();
+		((void)(FindPlayerPed()->m_pWanted),Wanted_SetMaximumWantedLevel(KeyBoardCheatString[0]-'0'));
+		Wanted_UpdateWantedLevel(FindPlayerPed()->m_pWanted);
 		swprintf(msg, L"Max wanted level %d", KeyBoardCheatString[0]-'0');
 		CHud::SetHelpMessage((wchar *) msg, true);
 	}
@@ -2174,10 +2062,10 @@ void CPad::AddToPCCheatString(char c)
 
 	// Set weather
 	// "G07X"
-	if (!_CHEATCMP("070G")) { CWeather::ReleaseWeather();				CHud::SetHelpMessage((wchar *)L"Normal weather", true); }
-	if (!_CHEATCMP("170G")) { CWeather::ForceWeatherNow(WEATHER_SUNNY);		CHud::SetHelpMessage((wchar *)L"Sunny weather", true); }
-	if (!_CHEATCMP("270G")) { CWeather::ForceWeatherNow(WEATHER_EXTRA_SUNNY);	CHud::SetHelpMessage((wchar *)L"Extra sunny weather", true); }
-	if (!_CHEATCMP("370G")) { CWeather::ForceWeatherNow(WEATHER_HURRICANE);		CHud::SetHelpMessage((wchar *)L"Hurricane weather", true); }
+	if (!_CHEATCMP("070G")) { Weather_ReleaseWeather();				CHud::SetHelpMessage((wchar *)L"Normal weather", true); }
+	if (!_CHEATCMP("170G")) { Weather_ForceWeatherNow(WEATHER_SUNNY);		CHud::SetHelpMessage((wchar *)L"Sunny weather", true); }
+	if (!_CHEATCMP("270G")) { Weather_ForceWeatherNow(WEATHER_EXTRA_SUNNY);	CHud::SetHelpMessage((wchar *)L"Extra sunny weather", true); }
+	if (!_CHEATCMP("370G")) { Weather_ForceWeatherNow(WEATHER_HURRICANE);		CHud::SetHelpMessage((wchar *)L"Hurricane weather", true); }
 
 #undef _CHEATCMP
 }
@@ -2236,10 +2124,10 @@ void CPad::AffectFromXinput(uint32 pad)
 		uint16 iLeftMotor = (uint16)((float)ShakeFreq / 255.0f * (float)0xffff);
 		uint16 iRightMotor = (uint16)((float)ShakeFreq / 255.0f * (float)0xffff);
 
-		if (ShakeDur < CTimer::GetTimeStepInMilliseconds())
+		if (ShakeDur < Timer_GetTimeStepInMilliseconds())
 			ShakeDur = 0;
 		else
-			ShakeDur -= CTimer::GetTimeStepInMilliseconds();
+			ShakeDur -= Timer_GetTimeStepInMilliseconds();
 		if (ShakeDur == 0) ShakeFreq = 0;
 
 		VibrationState.wLeftMotorSpeed = iLeftMotor;
@@ -2269,7 +2157,7 @@ void CPad::UpdatePads(void)
 #endif
 
 #ifdef DETECT_PAD_INPUT_SWITCH
-	if (GetPad(0)->PCTempJoyState.CheckForInput())
+	if (ControllerState_CheckForInput(&GetPad(0)->PCTempJoyState))
 		IsAffectedByController = true;
 	else {
 #endif
@@ -2279,7 +2167,7 @@ void CPad::UpdatePads(void)
 
 #ifdef DETECT_PAD_INPUT_SWITCH
 	}
-	if (IsAffectedByController && (GetPad(0)->PCTempKeyState.CheckForInput() || GetPad(0)->PCTempMouseState.CheckForInput()))
+	if (IsAffectedByController && (ControllerState_CheckForInput(&GetPad(0)->PCTempKeyState) || ControllerState_CheckForInput(&GetPad(0)->PCTempMouseState)))
 		IsAffectedByController = false;
 #endif
 
@@ -2292,8 +2180,8 @@ void CPad::UpdatePads(void)
 #ifndef MASTER
 	GetPad(1)->Update(1);
 #else
-	GetPad(1)->NewState.Clear();
-	GetPad(1)->OldState.Clear();
+	ControllerState_Clear(&GetPad(1)->NewState);
+	ControllerState_Clear(&GetPad(1)->OldState);
 #endif
 
 	// Improve keyboard input latency part 2
@@ -2459,7 +2347,7 @@ void CPad::Update(int16 pad)
 		{
 			if ( ShakeDur )
 			{
-				ShakeDur = Max(ShakeDur - (int32)CTimer::GetTimeStepInMilliseconds(), 0);
+				ShakeDur = Max(ShakeDur - (int32)Timer_GetTimeStepInMilliseconds(), 0);
 
 				if ( ShakeDur == 0 )
 				{
@@ -2477,7 +2365,7 @@ void CPad::Update(int16 pad)
 
 			if (scePadRead( pad, 0, rdata )==0)
 			{
-				NewState.Clear();
+				ControllerState_Clear(&NewState);
 				break;
 			}
 
@@ -2529,11 +2417,11 @@ void CPad::Update(int16 pad)
 				{
 					if ( pad == 0 )
 						bObsoleteControllerMessage = true;
-					NewState.Clear();
+					ControllerState_Clear(&NewState);
 				}
 
 				if ( NewState.IsAnyButtonPressed() )
-					LastTimeTouched = CTimer::GetTimeInMilliseconds();
+					LastTimeTouched = (*Timer_GetTimeInMilliseconds());
 
 				break;
 			}
@@ -2542,7 +2430,7 @@ void CPad::Update(int16 pad)
 				iCurrHornHistory = 0;
 
 			bHornHistory[iCurrHornHistory] = GetHorn();
-			NewState.Clear();
+			ControllerState_Clear(&NewState);
 			return;
 		}
 		break;
@@ -2577,14 +2465,14 @@ void CPad::Update(int16 pad)
 		NewState = ReconcileTwoControllersInput(PCTempMouseState, NewState);
 	}
 
-	PCTempJoyState.Clear();
-	PCTempKeyState.Clear();
-	PCTempMouseState.Clear();
+	ControllerState_Clear(&PCTempJoyState);
+	ControllerState_Clear(&PCTempKeyState);
+	ControllerState_Clear(&PCTempMouseState);
 
 	ProcessPCSpecificStuff();
 
-	if (NewState.CheckForInput())
-		LastTimeTouched = CTimer::GetTimeInMilliseconds();
+	if (ControllerState_CheckForInput(&NewState))
+		LastTimeTouched = (*Timer_GetTimeInMilliseconds());
 	
 	if ( ++iCurrHornHistory >= HORNHISTORY_SIZE )
 		iCurrHornHistory = 0;
@@ -3924,7 +3812,10 @@ void CPad::PrintErrorMessage(void)
 
 	if ( bDisplayNoControllerMessage && !CGame::playingIntro && !FrontEndMenuManager.m_bMenuActive )
 	{
-		CSprite2d::DrawRect(CRect(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
 #ifdef FIX_BUGS
 		CFont::SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
 #else
@@ -3945,12 +3836,15 @@ void CPad::PrintErrorMessage(void)
 		(
 			SCREEN_WIDTH  / 2,
 			SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(40.0f),
-			TheText.Get("NOCONT") // Please reconnect an analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2). to controller port 1 to continue
+			Text_Get(&TheText,"NOCONT") // Please reconnect an analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2). to controller port 1 to continue
 		);
 	}
 	else if ( bObsoleteControllerMessage )
 	{
-		CSprite2d::DrawRect(CRect(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(SCREEN_STRETCH_X(20.0f), SCREEN_SCALE_FROM_BOTTOM(130.0f), SCREEN_STRETCH_FROM_RIGHT(20.0f), SCREEN_SCALE_Y(140.0f)), CRGBA(50, 50, 50, 210));
 #ifdef FIX_BUGS
 		CFont::SetScale(SCREEN_SCALE_X(0.85f), SCREEN_SCALE_Y(1.0f));
 #else
@@ -3971,7 +3865,7 @@ void CPad::PrintErrorMessage(void)
 		(
 			SCREEN_WIDTH  / 2,
 			SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(40.0f),
-			TheText.Get("WRCONT") // The controller connected to controller port 1 is an unsupported controller. Grand Theft Auto III requires an analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2).
+			Text_Get(&TheText,"WRCONT") // The controller connected to controller port 1 is an unsupported controller. Grand Theft Auto III requires an analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2).
 		);
 	}
 
@@ -3986,11 +3880,11 @@ void LittleTest(void)
 
 void CPad::ResetCheats(void)
 {
-	CWeather::ReleaseWeather();
+	Weather_ReleaseWeather();
 
 	gbFastTime = false;
 	CPopulation::ms_bGivePedsWeapons = false;
-	CTimer::SetTimeScale(1.0f);
+	Timer_SetTimeScale(1.0f);
 
 	CVehicle::bWheelsOnlyCheat = false;
 	CVehicle::bAllDodosCheat = false;
@@ -4009,8 +3903,8 @@ void CPad::ResetCheats(void)
 	gbPinkCars = false;
 
 	CCarCtrl::bMadDriversCheat = false;
-	CTrafficLights::bGreenLightsCheat = false;
-	CStats::ShowChaseStatOnScreen = 0;
+	TrafficLights_bGreenLightsCheat = false;
+	Stats_ShowChaseStatOnScreen = 0;
 	CPed::bNastyLimbsCheat = false;
 	CPed::bFannyMagnetCheat = false;
 	CPed::bPedCheat3 = false;
@@ -4229,3 +4123,50 @@ void CPad::FixPadsAfterSave(void)
 		GetPad(0)->Phase = 0;
 	}
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+#if defined RW_D3D9 || defined RWLIBS
+bool InputState_BackendHasMouse(void)
+{
+    // Borrow the current platform mouse availability
+    return PSGLOBAL(mouse) != nil;
+}
+bool InputState_BackendMenuActive(void)
+{
+    // Borrow the current frontend flag without changing it
+    return FrontEndMenuManager.m_bMenuActive;
+}
+bool InputState_BackendNeedsExclusive(void)
+{
+    // Retain the platform's original exclusivity query
+    return _InputMouseNeedsExclusive();
+}
+void InputState_BackendInitialiseMouse(bool exclusive)
+{
+    // Pass the selected exclusivity directly to the existing device initializer
+    _InputInitialiseMouse(exclusive);
+}
+void InputState_BackendCapabilities(uint32_t *buttons,uint32_t *axes)
+{
+    // Query the original device-capability structure without changing failure handling
+    DIDEVCAPS devCaps;
+    devCaps.dwSize=sizeof(DIDEVCAPS);
+    PSGLOBAL(mouse)->GetCapabilities(&devCaps);
+    *buttons=devCaps.dwButtons;
+    *axes=devCaps.dwAxes;
+}
+#else
+double InputState_BackendCursorX(void)
+{
+    // Retain the original cursor default if the platform query leaves it untouched
+    double xpos=1.0f,ypos;
+    glfwGetCursorPos(PSGLOBAL(window),&xpos,&ypos);
+    return xpos;
+}
+#endif
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

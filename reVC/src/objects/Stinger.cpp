@@ -1,4 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 #include "Stinger.h"
 #include "CopPed.h"
 #include "ModelIndices.h"
@@ -107,7 +110,7 @@ CStinger::Init(CPed *pPed)
 		m_vPositions[i] = fwd2d * 1.8f * Sin(DEGTORAD(i));
 
 	m_nSpikeState = STINGERSTATE_NONE;
-	m_nTimeOfDeploy = CTimer::GetTimeInMilliseconds();
+	m_nTimeOfDeploy = (*Timer_GetTimeInMilliseconds());
 }
 
 void
@@ -162,7 +165,8 @@ CStinger::Deploy(CPed *pPed)
 				return;
 #endif
 			pPed->SetPedState(PED_DEPLOY_STINGER);
-			CAnimManager::AddAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_THROW_UNDER);
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_AddAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_THROW_UNDER);
 		}
 	}
 }
@@ -203,9 +207,9 @@ CStinger::CheckForBurstTyres()
 				(pBike != nil && pBike->m_aSuspensionSpringRatioPrev[wheelId] < 1.0f)) {
 				CVector vecWheelPos;
 				if (pAutomobile != nil)
-					vecWheelPos = pAutomobile->m_aWheelColPoints[wheelId].point;
+					vecWheelPos = CollisionVector_ToNative(pAutomobile->m_aWheelColPoints[wheelId].point);
 				else if (pBike != nil)
-					vecWheelPos = pBike->m_aWheelColPoints[wheelId].point;
+					vecWheelPos = CollisionVector_ToNative(pBike->m_aWheelColPoints[wheelId].point);
 
 				for (int32 spike = 0; spike < NUM_STINGER_SEGMENTS; spike++) {
 					if ((pSpikes[spike]->GetPosition() - vecWheelPos).Magnitude() < maxWheelDistToSpike) {
@@ -256,14 +260,14 @@ CStinger::Process()
 			((CCopPed*)pOwner)->m_bThrowsSpikeTrap = false;
 		break;
 	case STINGERSTATE_UNDEPLOYING:
-		if (CTimer::GetTimeInMilliseconds() > m_nTimeOfDeploy + 2500)
+		if ((*Timer_GetTimeInMilliseconds()) > m_nTimeOfDeploy + 2500)
 			m_nSpikeState = STINGERSTATE_REMOVE;
 		// no break
 	case STINGERSTATE_DEPLOYING:
-		if (m_nSpikeState == STINGERSTATE_DEPLOYING && CTimer::GetTimeInMilliseconds() > m_nTimeOfDeploy + 2500)
+		if (m_nSpikeState == STINGERSTATE_DEPLOYING && (*Timer_GetTimeInMilliseconds()) > m_nTimeOfDeploy + 2500)
 			m_nSpikeState = STINGERSTATE_DEPLOYED;
 		else {
-			float progress = (CTimer::GetTimeInMilliseconds() - m_nTimeOfDeploy) / 2500.0f;
+			float progress = ((*Timer_GetTimeInMilliseconds()) - m_nTimeOfDeploy) / 2500.0f;
 			if (m_nSpikeState != STINGERSTATE_DEPLOYING)
 				progress = 1.0f - progress;
 
@@ -279,8 +283,8 @@ CStinger::Process()
 			if (CWorld::ProcessVerticalLine(CVector(pos3d.x, pos3d.y, pos3d.z - 10.0f), pos3d.z, colPoint, pEntity, true, false, false, false, true, false, nil))
 				pos3d.z = colPoint.point.z + 0.15f;
 
-			angle1 = CGeneral::LimitRadianAngle(angle1);
-			angle2 = CGeneral::LimitRadianAngle(angle2);
+			angle1 = General_LimitRadianAngle(angle1);
+			angle2 = General_LimitRadianAngle(angle2);
 
 			for (int spike = 0; spike < NUM_STINGER_SEGMENTS; spike++) {
 				if (CWorld::TestSphereAgainstWorld(pos3d + CVector(pos2d.x, pos2d.y, 0.6f), 0.3f, nil, true, false, false, true, false, false))
@@ -307,3 +311,6 @@ CStinger::Process()
 	}
 	CheckForBurstTyres();
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

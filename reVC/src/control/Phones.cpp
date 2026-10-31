@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Phones.h"
@@ -51,16 +53,18 @@ CPhoneInfo::Update(void)
 #endif
 	CPlayerPed *player = FindPlayerPed();
 	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
-	if (bDisplayingPhoneMessage && CTimer::GetTimeInMilliseconds() > PhoneEnableControlsTimer) {
+	if (bDisplayingPhoneMessage && (*Timer_GetTimeInMilliseconds()) > PhoneEnableControlsTimer) {
 		playerInfo->MakePlayerSafe(false);
 		TheCamera.SetWideScreenOff();
 		pPhoneDisplayingMessages = nil;
 		bDisplayingPhoneMessage = false;
 		CAnimBlendAssociation *talkAssoc = RpAnimBlendClumpGetAssociation(player->GetClump(), ANIM_STD_PHONE_TALK);
 		if (talkAssoc && talkAssoc->blendAmount > 0.5f) {
-			CAnimBlendAssociation *endAssoc = CAnimManager::BlendAnimation(player->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_OUT, 8.0f);
+			// Use the complete C animation manager at the original call boundary
+			CAnimBlendAssociation *endAssoc = AnimManager_BlendAnimation(player->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_OUT, 8.0f);
 			endAssoc->flags &= ~ASSOC_DELETEFADEDOUT;
-			endAssoc->SetFinishCallback(PhonePutDownCB, player);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetFinishCallback(endAssoc,PhonePutDownCB, player);
 		} else {
 			CPad::GetPad(0)->SetEnablePlayerControls(PLAYERCONTROL_PHONE);
 			if (player->m_nPedState == PED_MAKE_CALL)
@@ -88,11 +92,11 @@ CPhoneInfo::Update(void)
 						scratchTheCabinet = false;
 						phoneRings = false;
 					} else {
-						scratchTheCabinet = (CTimer::GetTimeInMilliseconds() / 1880) % 2 == 1;
-						phoneRings = (CTimer::GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
+						scratchTheCabinet = ((*Timer_GetTimeInMilliseconds()) / 1880) % 2 == 1;
+						phoneRings = (Timer_GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
 					}
 					if (scratchTheCabinet) {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = (CGeneral::GetRandomNumber() % 1024) / 16000.0f + 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f;
 						if (!phoneRings)
 						    {
 						    	// Evaluate the game position once before passing its components to C
@@ -109,7 +113,7 @@ CPhoneInfo::Update(void)
 						if (Abs(distToPhone.x) < 1.0f && Abs(distToPhone.y) < 1.0f) {
 							if (DotProduct2D(distToPhone, m_aPhones[phoneId].m_pEntity->GetForward()) / distToPhone.Magnitude() < -0.85f) {
 								CVector2D distToPhoneObj = playerPos - m_aPhones[phoneId].m_pEntity->GetPosition();
-								float angleToFace = CGeneral::GetATanOfXY(distToPhoneObj.x, distToPhoneObj.y) + HALFPI;
+								float angleToFace = General_GetATanOfXY(distToPhoneObj.x, distToPhoneObj.y) + HALFPI;
 								if (angleToFace > TWOPI)
 									angleToFace = angleToFace - TWOPI;
 								player->m_fRotationCur = angleToFace;
@@ -119,8 +123,10 @@ CPhoneInfo::Update(void)
 								CPad::GetPad(0)->SetDisablePlayerControls(PLAYERCONTROL_PHONE);
 								TheCamera.SetWideScreenOn();
 								playerInfo->MakePlayerSafe(true);
-								CAnimBlendAssociation *phonePickAssoc = CAnimManager::BlendAnimation(player->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_IN, 4.0f);
-								phonePickAssoc->SetFinishCallback(PhonePickUpCB, &m_aPhones[phoneId]);
+								// Use the complete C animation manager at the original call boundary
+								CAnimBlendAssociation *phonePickAssoc = AnimManager_BlendAnimation(player->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_IN, 4.0f);
+								// Use the complete C association at the original native operation boundary
+								AnimAssociation_SetFinishCallback(phonePickAssoc,PhonePickUpCB, &m_aPhones[phoneId]);
 								bPickingUpPhone = true;
 								pCallBackPed = player;
 							}
@@ -128,14 +134,14 @@ CPhoneInfo::Update(void)
 					}
 					break;
 				case PHONE_STATE_REPEATED_MESSAGE_STARTED:
-					if (CTimer::GetTimeInMilliseconds() - m_aPhones[phoneId].m_repeatedMessagePickupStart > 60000)
+					if ((*Timer_GetTimeInMilliseconds()) - m_aPhones[phoneId].m_repeatedMessagePickupStart > 60000)
 						m_aPhones[phoneId].m_nState = PHONE_STATE_REPEATED_MESSAGE_SHOWN_ONCE;
 					break;
 				case PHONE_STATE_9:
-					scratchTheCabinet = (CTimer::GetTimeInMilliseconds() / 1880) % 2 == 1;
-					phoneRings = (CTimer::GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
+					scratchTheCabinet = ((*Timer_GetTimeInMilliseconds()) / 1880) % 2 == 1;
+					phoneRings = (Timer_GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
 					if (scratchTheCabinet) {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = (CGeneral::GetRandomNumber() % 1024) / 16000.0f + 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f;
 						if (!phoneRings)
 						    {
 						    	// Evaluate the game position once before passing its components to C
@@ -153,7 +159,7 @@ CPhoneInfo::Update(void)
 			}
 			if (CVector2D(TheCamera.GetPosition() - m_aPhones[phoneId].m_vecPos).MagnitudeSqr() > sq(100.0f))
 				m_aPhones[phoneId].m_visibleToCam = false;
-		} else if (!((CTimer::GetFrameCounter() + m_aPhones[phoneId].m_pEntity->m_randomSeed) % 16)) {
+		} else if (!(((*Timer_GetFrameCounter()) + m_aPhones[phoneId].m_pEntity->m_randomSeed) % 16)) {
 			if (CVector2D(TheCamera.GetPosition() - m_aPhones[phoneId].m_vecPos).MagnitudeSqr() < sq(60.0f))
 				m_aPhones[phoneId].m_visibleToCam = true;
 		}
@@ -433,7 +439,7 @@ PhonePickUpCB(CAnimBlendAssociation *assoc, void *arg)
 	for(int i=0; i < 6; i++) {
 		wchar *msg = phone->m_apMessages[i];
 		if (msg) {
-			CMessages::AddMessage(msg, 3000, 0);
+			Messages_AddMessage(msg, 3000, 0);
 			messagesDisplayTime += 3000;
 		}
 	}
@@ -441,22 +447,27 @@ PhonePickUpCB(CAnimBlendAssociation *assoc, void *arg)
 	CPhoneInfo::bPickingUpPhone = false;
 	CPhoneInfo::bDisplayingPhoneMessage = true;
 	CPhoneInfo::pPhoneDisplayingMessages = phone;
-	CPhoneInfo::PhoneEnableControlsTimer = CTimer::GetTimeInMilliseconds() + messagesDisplayTime;
+	CPhoneInfo::PhoneEnableControlsTimer = (*Timer_GetTimeInMilliseconds()) + messagesDisplayTime;
 
 	if (phone->m_nState == PHONE_STATE_ONETIME_MESSAGE_SET) {
 		phone->m_nState = PHONE_STATE_ONETIME_MESSAGE_STARTED;
 	} else {
 		phone->m_nState = PHONE_STATE_REPEATED_MESSAGE_STARTED;
-		phone->m_repeatedMessagePickupStart = CTimer::GetTimeInMilliseconds();
+		phone->m_repeatedMessagePickupStart = (*Timer_GetTimeInMilliseconds());
 	}
 
 	CPed *ped = CPhoneInfo::pCallBackPed;
 	ped->m_nMoveState = PEDMOVE_STILL;
-	CAnimManager::BlendAnimation(ped->GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE, 8.0f);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_BlendAnimation(ped->GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE, 8.0f);
 
 	if (assoc->blendAmount > 0.5f && ped)
-		CAnimManager::BlendAnimation(ped->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_TALK, 8.0f);
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_BlendAnimation(ped->GetClump(), ASSOCGRP_STD, ANIM_STD_PHONE_TALK, 8.0f);
 
 	CPhoneInfo::pCallBackPed = nil;
 }
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

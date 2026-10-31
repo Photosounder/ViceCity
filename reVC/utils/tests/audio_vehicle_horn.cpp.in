@@ -1,0 +1,152 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include "@AUDIO_MODELS@"
+#include "@ENTITY_STATUS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define Const const
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+enum {@CONSTANTS@};
+@PATTERN@
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe the original byte field query
+    event(token);return (uint8_t)v;
+}ByteValue &operator=(uint8_t value) {
+    // Preserve the original pattern assignment without changing the read token
+    v=value;return *this;
+}};
+struct IntValue {int32_t v;unsigned token;operator int32_t() const {
+    // Observe each shared sound setting at its original access point
+    event(token);return v;
+}};
+class CVehicle {public:int32_t model,status,alarmState;uint32_t m_nCarHornTimer,uses;ByteValue m_nCarHornPattern,m_bSirenOrAlarm,bIsDrowning;
+    int16_t GetModelIndex() const {
+        // Observe the model lookup after siren switching
+        event(11);return (int16_t)model;
+    }
+    int32_t GetStatus() const {
+        // Observe live status after the siren predicate
+        event(13);return status;
+    }
+    bool IsAlarmOn() {
+        // Preserve the original alarm predicate and its status short circuit
+        event(12);return alarmState!=0&&alarmState!=-1&&GetStatus()!=STATUS_WRECKED;
+    }
+    bool UsesSiren() {
+        // Retain this captured vehicle even if the query changes later live parameters
+        event(14);return uses!=0;
+    }
+};
+struct Settings {IntValue m_nHornSample,m_nHornFrequency;ByteValue m_nSirenOrAlarmSample;IntValue m_nSirenOrAlarmFrequency;};static Settings aVehicleSettings[MAX_CARS];
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessVehicleHorn(cVehicleParams &);bool8 ProcessVehicleSirenOrAlarm(cVehicleParams &);
+    bool8 UsesSiren(cVehicleParams &);bool8 UsesSirenSwitching(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CVehicle vehicles[2];
+static unsigned seedValue,cases,callbacks,currentTime,hornSamples,sirenSamples,fastSamples,clockReads,usesReads,offsetReads;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestVehicleHornC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash all state and query order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized storage without aliasing records
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4){uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Preserve complete owner, parameter, vehicle, table and clock state with normalized pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&vehicles[0]?1:params.m_pVehicle==&vehicles[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(vehicles,sizeof(vehicles));bytes(aVehicleSettings,sizeof(aVehicleSettings));value(currentTime);
+}
+static void event(unsigned token) {
+    // Change later live reads while keeping the siren's original captured vehicle intact
+    ++callbacks;value(token);observe();if(token==14){++usesReads;if(seedValue&512)params.m_pVehicle=&vehicles[1];}if(token==71&&seedValue&1024)params.m_pVehicle=&vehicles[1];if(token==70)++hornSamples;if(token==72)++sirenSamples;
+}
+class CTimer {public:static uint32_t GetTimeInMilliseconds() {
+    // Preserve separate clock reads and exercise unsigned timer wrap
+    ++clockReads;event(15);uint32_t result=currentTime;currentTime+=seedValue%2?17:1000;return result;
+}};
+extern "C" uint32_t AudioPlayerEngineHost_Time() {
+    // Reuse the existing exact game timer adapter
+    return CTimer::GetTimeInMilliseconds();
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *v) {
+    // Reuse the original model lookup adapter
+    return v->GetModelIndex();
+}
+extern "C" int32_t AudioVehicleEngineHost_Status(const CVehicle *v) {
+    // Reuse the original live status adapter
+    return v->GetStatus();
+}
+extern "C" uint8_t AudioVehicleModelHost_Drowning(const CVehicle *v) {
+    // Reuse the original drowning field adapter
+    return v->bIsDrowning;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Observe the fast-siren sample query after the initial counter and sample assignments
+    ++fastSamples;event(80);value(sample);if(seedValue&256)active->m_sQueueSample.m_nSampleIndex=SFX_POLICE_SIREN_SLOW;return 22050+sample;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live scratch sample between the two loop-offset queries
+    ++offsetReads;event(81);value(sample);if(seedValue&128)active->m_sQueueSample.m_nSampleIndex=SFX_CAR_HORN_JEEP;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the live end-offset sample argument
+    ++offsetReads;event(82);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after all horn or siren fields are set
+    event(83);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Exercise every pattern position, timer caps and all siren index exceptions
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(vehicles,0,sizeof(vehicles));memset(aVehicleSettings,0,sizeof(aVehicleSettings));
+    const int32_t statuses[]={STATUS_PLAYER,STATUS_SIMPLE,STATUS_ABANDONED,STATUS_WRECKED};const int32_t alarms[]={0,1,-1,-2};
+    for(unsigned i=0;i<2;++i){CVehicle &v=vehicles[i];v.model=(seed/3+i)%3==0?MI_MRWHOOP:MI_LANDSTAL;v.status=statuses[(seed/5+i)%4];v.alarmState=alarms[(seed/7+i)%4];v.m_nCarHornTimer=1+(seed+i*17)%44;v.m_nCarHornPattern={uint32_t((seed/44+i)%8),16};v.m_bSirenOrAlarm={uint32_t((seed/11+i)%2),17};v.bIsDrowning={uint32_t((seed/13+i)%2),18};v.uses=(seed/17+i)%2;if(seed%19==0)v.m_nCarHornTimer=0;if(seed%23==0)v.m_nCarHornTimer=45;if(seed%29==0)v.m_nCarHornTimer=0xFFFFFFFF;}
+    for(unsigned i=0;i<MAX_CARS;++i){aVehicleSettings[i].m_nHornSample={SFX_CAR_HORN_JEEP+(int32_t)(i%3),70};aVehicleSettings[i].m_nHornFrequency={10000+(int32_t)i*100,71};aVehicleSettings[i].m_nSirenOrAlarmSample={(uint32_t)SFX_POLICE_SIREN_SLOW,72};aVehicleSettings[i].m_nSirenOrAlarmFrequency={12000+(int32_t)i*50,73};}
+    const uint32_t indices[]={FIRETRUK,MRWHOOP,FBIRANCH,VICECHEE,LANDSTAL,POLICE};const float distances[]={-1.0f,0.0f,100.0f,1599.0f,1600.0f,1601.0f,12099.0f,12100.0f,12101.0f,NAN,INFINITY};
+    params.m_pVehicle=&vehicles[0];params.m_nIndex=indices[(seed/31)%6];params.m_fDistance=distances[(seed/37)%11];params.m_bDistanceCalculated=(seed/41)%3;active->m_sQueueSample.m_fDistance=(seed/43)%(kind==0?41:111);active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nCounter=777;active->m_FrameCounter=seed;active->m_nActiveSamples=8;
+    currentTime=seed%47==0?0xFFFFFF00:seed%53==0?0:seed%10000;
+    if(!(params.m_fDistance<(kind==0?1600.0f:12100.0f)))params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare both complete generators with repeated calls and alternating owners
+    for(unsigned seed=0;seed<4096;++seed)for(unsigned kind=0;kind<2;++kind){prepare(seed,kind);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+    // Require pattern emission, siren table selection, clock updates and fast-siren backend queries
+    if(!hornSamples||!sirenSamples||!clockReads||!fastSamples||!usesReads)return 2;
+#ifndef GTA_PS2
+    if(!offsetReads)return 3;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

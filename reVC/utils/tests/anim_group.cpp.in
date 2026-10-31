@@ -1,0 +1,53 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned checks=0;
+#ifdef ORIGINAL
+static CAnimBlendAssocGroup processGroup;
+#else
+static CAnimBlendAssocGroup processGroup=AnimGroup_InitStaticCutscene(&processGroup);
+#endif
+static void require(bool condition)
+{
+    // Stop at the first failed group invariant without opening a native error dialog
+    ++checks;if(!condition){fprintf(stderr,"Failure at %u\n",checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized named fields independently of pointer addresses and padding
+    const unsigned char *p=(const unsigned char*)value;for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static void matchingAndCreation()
+{
+    // Exhaust the defined ASCII character domain including terminators and paired digit matching
+    for(unsigned a=0;a<128;++a)for(unsigned b=0;b<128;++b){char first[3]={(char)a,'x',0},second[3]={(char)b,'X',0};bool result=Run_GroupCompare(first,second);observe(&result,1);}
+    // Exercise real association binding and both creation overloads around native SDK observations
+    for(unsigned test=0;test<1024;++test){
+        alignas(CAnimBlendAssocGroup) unsigned char memory[sizeof(CAnimBlendAssocGroup)];CAnimBlendAssocGroup *g=(CAnimBlendAssocGroup*)memory;Run_Group(0,g,0,NULL);CAnimBlock previous={};g->animBlock=&previous;g->firstAnimId=test%31;g->groupId=test*7919;block.firstIndex=0;block.numAnims=4;
+        AnimBlendFrameData frame={};CAnimBlendClumpData data={};data.numFrames=1;data.frames=&frame;RpClump clump={&data};RwObject object={rpCLUMP},wrong={1};CBaseModelInfo metadata[4]={};CAnimBlendSequence sequences[4];
+        for(unsigned i=0;i<8;++i)models[i]=NULL;
+        for(unsigned i=0;i<4;++i){models[i]=&metadata[i];metadata[i].object=&object;metadata[i].instance=&clump;AnimSequence_Init(&sequences[i]);sequences[i].name[0]=0;sequences[i].numFrames=1;hierarchies[i].sequences=&sequences[i];hierarchies[i].numSequences=1;snprintf(hierarchies[i].name,24,"walk%u",i);}
+        strcpy(metadata[0].name,"igHero");strcpy(metadata[1].name,"CSHero");strcpy(metadata[2].name,"Walk7");strcpy(metadata[3].name,"Walk8");metadata[2].object=(test&2)?&wrong:&object;if(test&4)metadata[3].object=NULL;strcpy(hierarchies[0].name,(test&8)?"CSplay0":"walk0");strcpy(hierarchies[3].name,"Missing");skinned=(test&1)!=0;eventCount=0;
+        // Normalize the actual selected model while observing the full search order in each executable
+        void *found[4];for(unsigned i=0;i<4;++i){found[i]=Run_GroupModel(hierarchies[i].name);int identity=-1;for(unsigned j=0;j<4;++j)if(found[i]==&metadata[j])identity=(int)j;observe(&identity,4);}
+        Run_GroupCreate(7,g,NULL,NULL,0);require(g->animBlock==&previous&&g->numAssociations==4);
+        for(unsigned i=0;i<4;++i){CAnimBlendAssociation *a=&g->assocList[i];if(found[i]){require(a->hierarchy==&hierarchies[i]&&a->numNodes==1&&a->nodes[0].association==a&&a->nodes[0].sequence==&sequences[i]);require(a->animId==g->firstAnimId+(int)i&&a->groupId==(int16_t)g->groupId);}else require(a->nodes==NULL&&a->animId==-1&&a->groupId==-1);observe(&a->animId,2);observe(&a->groupId,2);}
+        // Recreate from named hierarchies and verify the member block assignment differs from model creation
+        const char *names[]={hierarchies[2].name,hierarchies[0].name,hierarchies[1].name};Run_GroupCreate(8,g,&clump,names,3);require(g->animBlock==&block&&g->numAssociations==3);
+        const unsigned order[]={2,0,1};for(unsigned i=0;i<3;++i){CAnimBlendAssociation *a=&g->assocList[i];require(a->hierarchy==&hierarchies[order[i]]&&a->nodes[0].association==a&&a->nodes[0].sequence==&sequences[order[i]]);observe(&a->animId,2);observe(&a->groupId,2);}
+        observe(events,eventCount*4);eventCount=0;Run_Group(1,g,0,NULL);
+    }
+}
+int main(int argc,char **argv)
+{
+    // Observe original pre-main construction and real process-exit node cleanup in an isolated child
+    if(argc==2&&strcmp(argv[1],"--exit")==0){require(processGroup.groupId==-1&&processGroup.animBlock==NULL&&processGroup.assocList==NULL&&processGroup.numAssociations==0&&processGroup.firstAnimId==0);processGroup.assocList=(CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));require(processGroup.assocList!=NULL);processGroup.numAssociations=1;AnimAssociation_Init(processGroup.assocList);AnimAssociation_AllocateAnimBlendNodeArray(processGroup.assocList,1);processGroup.assocList->numNodes=1;exitOutput=true;puts("main group=-1 nodes=1");return 0;}
+    // Compare complete constructor, null-storage policy, lookup, copying and real association cleanup
+    for(unsigned test=0;test<2048;++test){alignas(CAnimBlendAssocGroup) unsigned char memory[sizeof(CAnimBlendAssocGroup)];CAnimBlendAssocGroup *g=(CAnimBlendAssocGroup*)memory;Run_Group(0,g,0,NULL);require(!g->animBlock&&!g->assocList&&g->numAssociations==0&&g->firstAnimId==0&&g->groupId==-1);g->numAssociations=7;Run_Group(2,g,0,NULL);require(g->numAssociations==7);g->numAssociations=(int32_t)(test%7)+1;g->firstAnimId=test%19;g->groupId=test%5;g->animBlock=&block;g->assocList=(CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation)*g->numAssociations);
+        for(int i=0;i<g->numAssociations;++i){AnimAssociation_Init(&g->assocList[i]);g->assocList[i].numNodes=0;g->assocList[i].hierarchy=&hierarchies[i];g->assocList[i].flags=i;g->assocList[i].animId=g->firstAnimId+i;g->assocList[i].groupId=g->groupId;snprintf(hierarchies[i].name,24,"Walk%d",i);}
+        for(int i=0;i<g->numAssociations;++i){require(Run_Group(3,g,g->firstAnimId+i,NULL)==&g->assocList[i]);char name[24];snprintf(name,24,"wALK%d",i);require(Run_Group(4,g,0,name)==&g->assocList[i]);CAnimBlendAssociation *copy=(CAnimBlendAssociation*)Run_Group((test&1)?5:6,g,g->firstAnimId+i,name);require(copy&&copy->hierarchy==&hierarchies[i]&&copy->flags==i&&copy->animId==g->firstAnimId+i&&copy->groupId==g->groupId&&copy->numNodes==0);observe(&copy->flags,2);AnimAssociation_Destroy(copy);free(copy);}
+        require(Run_Group(4,g,0,"missing")==NULL&&Run_Group(6,g,0,"missing")==NULL);Run_Group(2,g,0,NULL);require(g->assocList==NULL&&g->numAssociations==0&&g->animBlock==&block);observe(&g->firstAnimId,4);observe(&g->groupId,4);Run_Group(1,g,0,NULL);
+    }
+    matchingAndCreation();require(allocations==frees);observe(&hostCalls,4);observe(&debugCalls,4);printf("cases=19456 checks=%u hash=%016" PRIx64 "\n",checks,hashValue);return 0;
+}

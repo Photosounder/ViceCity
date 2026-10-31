@@ -1,48 +1,42 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CAnimBlendNode;
-class CAnimBlendAssociation;
-class CAnimBlendClumpData;
-struct AnimBlendFrameData;
-
-struct AnimBlendFrameUpdateData
+#include <stdint.h>
+#include <stdbool.h>
+#include "AnimBlendAssociation.h"
+#include "AnimBlendFrameUpdate.h"
+typedef struct CAnimBlendClumpData CAnimBlendClumpData;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int32_t ClumpOffset;
+static inline CAnimBlendClumpData **RpAnimBlendClumpDataSlot(void *clump)
 {
-	int foobar;	// TODO: figure out what this actually means
-	CAnimBlendNode *nodes[16];
-};
-
-extern RwInt32 ClumpOffset;
-#define RPANIMBLENDCLUMPDATA(o) (RWPLUGINOFFSET(CAnimBlendClumpData*, o, ClumpOffset))
-
+    // Address only the SDK-registered plugin slot using its original byte offset
+    return (CAnimBlendClumpData**)((unsigned char*)clump+ClumpOffset);
+}
+#define RPANIMBLENDCLUMPDATA(object) (RpAnimBlendClumpDataSlot((void*)(object)))
 bool RpAnimBlendPluginAttach(void);
-CAnimBlendAssociation *RpAnimBlendGetNextAssociation(CAnimBlendAssociation *assoc);
-CAnimBlendAssociation *RpAnimBlendGetNextAssociation(CAnimBlendAssociation *assoc, uint32 mask);
-void RpAnimBlendAllocateData(RpClump *clump);
-
-void RpAnimBlendClumpSetBlendDeltas(RpClump *clump, uint32 mask, float delta);
-void RpAnimBlendClumpRemoveAllAssociations(RpClump *clump);
-void RpAnimBlendClumpRemoveAssociations(RpClump *clump, uint32 mask);
-void RpAnimBlendClumpInit(RpClump *clump);
-bool RpAnimBlendClumpIsInitialized(RpClump *clump);
-void RpAnimBlendClumpFillFrameArray(RpClump* clump, AnimBlendFrameData** frames);
-AnimBlendFrameData *RpAnimBlendClumpFindFrame(RpClump *clump, const char *name);
-AnimBlendFrameData *RpAnimBlendClumpFindBone(RpClump *clump, uint32 boneTag);
-void FillFrameArrayCallBack(AnimBlendFrameData *frame, void *arg);
-CAnimBlendAssociation *RpAnimBlendClumpGetAssociation(RpClump *clump, uint32 id);
-CAnimBlendAssociation *RpAnimBlendClumpGetMainAssociation(RpClump *clump, CAnimBlendAssociation **assocRet, float *blendRet);
-CAnimBlendAssociation *RpAnimBlendClumpGetMainPartialAssociation(RpClump *clump);
-CAnimBlendAssociation *RpAnimBlendClumpGetMainAssociation_N(RpClump *clump, int n);
-CAnimBlendAssociation *RpAnimBlendClumpGetMainPartialAssociation_N(RpClump *clump, int n);
-CAnimBlendAssociation *RpAnimBlendClumpGetFirstAssociation(RpClump *clump, uint32 mask);
-CAnimBlendAssociation *RpAnimBlendClumpGetFirstAssociation(RpClump *clump);
-void RpAnimBlendNodeUpdateKeyframes(AnimBlendFrameData *frames, AnimBlendFrameUpdateData *updateData, int32 numNodes);
-void RpAnimBlendClumpUpdateAnimations(RpClump* clump, float timeDelta, bool doRender = true);
-
-
-extern CAnimBlendClumpData *gpAnimBlendClump;
-void FrameUpdateCallBackNonSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackSkinned(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackOffscreen(AnimBlendFrameData *frame, void *arg);
-
-void FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData *frame, void *arg);
-void FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData *frame, void *arg);
+CAnimBlendAssociation * RpAnimBlendGetNextAssociation(CAnimBlendAssociation *assoc);
+CAnimBlendAssociation * RpAnimBlendGetNextAssociationWithMask(CAnimBlendAssociation *assoc,uint32_t mask);
+void RpAnimBlendAllocateData(void *clump);
+void RpAnimBlendClumpSetBlendDeltas(void *clump,uint32_t mask,float delta);
+void RpAnimBlendClumpRemoveAllAssociations(void *clump);
+void RpAnimBlendClumpRemoveAssociations(void *clump,uint32_t mask);
+void RpAnimBlendClumpInit(void *clump);
+bool RpAnimBlendClumpIsInitialized(void *clump);
+void RpAnimBlendClumpFillFrameArray(void *clump,AnimBlendFrameData **frames);
+AnimBlendFrameData * RpAnimBlendClumpFindFrame(void *clump,const char *name);
+AnimBlendFrameData * RpAnimBlendClumpFindBone(void *clump,uint32_t boneTag);
+CAnimBlendAssociation * RpAnimBlendClumpGetAssociation(void *clump,uint32_t id);
+CAnimBlendAssociation * RpAnimBlendClumpGetMainAssociation(void *clump,CAnimBlendAssociation **assocRet,float *blendRet);
+CAnimBlendAssociation * RpAnimBlendClumpGetMainPartialAssociation(void *clump);
+CAnimBlendAssociation * RpAnimBlendClumpGetMainAssociation_N(void *clump,int n);
+CAnimBlendAssociation * RpAnimBlendClumpGetMainPartialAssociation_N(void *clump,int n);
+CAnimBlendAssociation * RpAnimBlendClumpGetFirstAssociationWithMask(void *clump,uint32_t mask);
+CAnimBlendAssociation * RpAnimBlendClumpGetFirstAssociation(void *clump);
+void RpAnimBlendNodeUpdateKeyframes(AnimBlendFrameData *frames,AnimBlendFrameUpdateData *updateData,int32_t numNodes);
+void RpAnimBlendClumpUpdateAnimations(void *clump,float timeDelta,bool doRender);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

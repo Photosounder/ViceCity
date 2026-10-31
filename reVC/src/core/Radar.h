@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "Sprite2d.h"
 #include "Draw.h"
@@ -167,8 +169,8 @@ struct sRadarTraceSave
 		#define RADAR_WIDTH (82.0f)
 		#define RADAR_HEIGHT (82.0f)
 */
-#define RADAR_WIDTH ((CDraw::ms_bFixRadar)  ? (82.0f) : (94.0f))	
-#define RADAR_HEIGHT ((CDraw::ms_bFixRadar) ? (82.0f) : (76.0f))
+#define RADAR_WIDTH ((Draw_ms_bFixRadar)  ? (82.0f) : (94.0f))	
+#define RADAR_HEIGHT ((Draw_ms_bFixRadar) ? (82.0f) : (76.0f))
 #else
 /*
 	broken since forever, someone tried to fix size for 640x512(PAL)
@@ -188,46 +190,46 @@ class CRadar
 public:
 	static float m_radarRange;
 	static sRadarTrace ms_RadarTrace[NUMRADARBLIPS];
-	static CSprite2d CentreSprite;
-	static CSprite2d MapHereSprite;
-	static CSprite2d NorthSprite;
-	static CSprite2d AverySprite;
-	static CSprite2d BikerSprite;
-	static CSprite2d CortezSprite;
-	static CSprite2d DiazSprite;
-	static CSprite2d KentSprite;
-	static CSprite2d LawyerSprite;
-	static CSprite2d PhilSprite;
-	static CSprite2d BikersSprite;
-	static CSprite2d BoatyardSprite;
-	static CSprite2d MalibuClubSprite;
-	static CSprite2d CubansSprite;
-	static CSprite2d FilmSprite;
-	static CSprite2d GunSprite;
-	static CSprite2d HaitiansSprite;
-	static CSprite2d HardwareSprite;
-	static CSprite2d SaveHouseSprite;
-	static CSprite2d StripSprite;
-	static CSprite2d IceSprite;
-	static CSprite2d KCabsSprite;
-	static CSprite2d LovefistSprite;
-	static CSprite2d PrintworksSprite;
-	static CSprite2d PropertySprite;
-	static CSprite2d SunYardSprite;
-	static CSprite2d SpraySprite;
-	static CSprite2d TShirtSprite;
-	static CSprite2d TommySprite;
-	static CSprite2d PhoneSprite;
-	static CSprite2d RadioWildstyleSprite;
-	static CSprite2d RadioFlashSprite;
-	static CSprite2d RadioKChatSprite;
-	static CSprite2d RadioFeverSprite;
-	static CSprite2d RadioVRockSprite;
-	static CSprite2d RadioVCPRSprite;
-	static CSprite2d RadioEspantosoSprite;
-	static CSprite2d RadioEmotionSprite;
-	static CSprite2d RadioWaveSprite;
-	static CSprite2d *RadarSprites[RADAR_SPRITE_COUNT];
+	static Sprite2d CentreSprite;
+	static Sprite2d MapHereSprite;
+	static Sprite2d NorthSprite;
+	static Sprite2d AverySprite;
+	static Sprite2d BikerSprite;
+	static Sprite2d CortezSprite;
+	static Sprite2d DiazSprite;
+	static Sprite2d KentSprite;
+	static Sprite2d LawyerSprite;
+	static Sprite2d PhilSprite;
+	static Sprite2d BikersSprite;
+	static Sprite2d BoatyardSprite;
+	static Sprite2d MalibuClubSprite;
+	static Sprite2d CubansSprite;
+	static Sprite2d FilmSprite;
+	static Sprite2d GunSprite;
+	static Sprite2d HaitiansSprite;
+	static Sprite2d HardwareSprite;
+	static Sprite2d SaveHouseSprite;
+	static Sprite2d StripSprite;
+	static Sprite2d IceSprite;
+	static Sprite2d KCabsSprite;
+	static Sprite2d LovefistSprite;
+	static Sprite2d PrintworksSprite;
+	static Sprite2d PropertySprite;
+	static Sprite2d SunYardSprite;
+	static Sprite2d SpraySprite;
+	static Sprite2d TShirtSprite;
+	static Sprite2d TommySprite;
+	static Sprite2d PhoneSprite;
+	static Sprite2d RadioWildstyleSprite;
+	static Sprite2d RadioFlashSprite;
+	static Sprite2d RadioKChatSprite;
+	static Sprite2d RadioFeverSprite;
+	static Sprite2d RadioVRockSprite;
+	static Sprite2d RadioVCPRSprite;
+	static Sprite2d RadioEspantosoSprite;
+	static Sprite2d RadioEmotionSprite;
+	static Sprite2d RadioWaveSprite;
+	static Sprite2d *RadarSprites[RADAR_SPRITE_COUNT];
 	static float cachedCos;
 	static float cachedSin;
 	static CRGBA ArrowBlipColour1;
@@ -236,7 +238,7 @@ public:
 	static int16 MapLegendCounter;
 
 #ifdef MAP_ENHANCEMENTS
-	static CSprite2d WaypointSprite;
+	static Sprite2d WaypointSprite;
 	static int TargetMarkerId;
 	static CVector TargetMarkerPos;
 #endif
@@ -262,7 +264,7 @@ public:
 	static void DrawRadarMask();
 	static void DrawRadarSection(int32 x, int32 y);
 	static void DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha);
-	static void DrawRotatingRadarSprite(CSprite2d* sprite, float x, float y, float angle, int32 alpha);
+	static void DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha);
 	static int32 GetActualBlipArrayIndex(int32 i);
 	static int32 GetNewUniqueBlipIndex(int32 i);
 	static uint32 GetRadarTraceColour(uint32 color, bool bright);
@@ -292,3 +294,5 @@ public:
 	static void DrawCoordBlip(int32 blipId);
 	static void DrawLegend(int32, int32, int32);
 };
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

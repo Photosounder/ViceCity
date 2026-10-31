@@ -1,4 +1,15 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include <time.h>
 #include "rpmatfx.h"
@@ -175,26 +186,26 @@ Error(char *fmt, ...)
 void
 ValidateVersion()
 {
-	int32 file = CFileMgr::OpenFile("models\\coll\\peds.col", "rb");
+	int32 file = FileMgr_OpenFile("models\\coll\\peds.col", "rb");
 	char buff[128];
 
 	if ( file != -1 )
 	{
-		CFileMgr::Seek(file, 100, SEEK_SET);
+		FileMgr_Seek(file, 100, SEEK_SET);
 		
 		for ( int i = 0; i < 128; i++ )
 		{
-			CFileMgr::Read(file, &buff[i], sizeof(char));
+			FileMgr_Read(file, &buff[i], sizeof(char));
 			buff[i] -= 23;
 			if ( buff[i] == '\0' )
 				break;
-			CFileMgr::Seek(file, 99, SEEK_CUR);
+			FileMgr_Seek(file, 99, SEEK_CUR);
 		}
 		
 		if ( !strncmp(buff, "grandtheftauto3", 15) )
 		{
 			strncpy(version_name, &buff[15], 64);
-			CFileMgr::CloseFile(file);
+			FileMgr_CloseFile(file);
 			return;
 		}
 	}
@@ -213,7 +224,7 @@ DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomR
 	CRGBA TopColor(TopRed, TopGreen, TopBlue, Alpha);
 	CRGBA BottomColor(BottomRed, BottomGreen, BottomBlue, Alpha);
 
-	CDraw::CalculateAspectRatio();
+	Draw_CalculateAspectRatio();
 	CameraSize(Scene.camera, nil, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
 	CVisibilityPlugins::SetRenderWareCamera(Scene.camera);
 	RwCameraClear(Scene.camera, &TopColor.rwRGBA, CLEARMODE);
@@ -221,10 +232,14 @@ DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomR
 	if(!RsCameraBeginUpdate(Scene.camera))
 		return false;
 
-	CSprite2d::InitPerFrame();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame();
 
 	if(Alpha != 0)
-		CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), BottomColor, BottomColor, TopColor, TopColor);
+		([](const CRect &r,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawFourColourRect(&r,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), BottomColor, BottomColor, TopColor, TopColor);
 
 	return true;
 }
@@ -232,7 +247,7 @@ DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomR
 bool
 DoRWStuffStartOfFrame_Horizon(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomRed, int16 BottomGreen, int16 BottomBlue, int16 Alpha)
 {
-	CDraw::CalculateAspectRatio();
+	Draw_CalculateAspectRatio();
 	CameraSize(Scene.camera, nil, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
 	CVisibilityPlugins::SetRenderWareCamera(Scene.camera);
 	RwCameraClear(Scene.camera, &gColourTop, CLEARMODE);
@@ -241,7 +256,8 @@ DoRWStuffStartOfFrame_Horizon(int16 TopRed, int16 TopGreen, int16 TopBlue, int16
 		return false;
 
 	TheCamera.m_viewMatrix.Update();
-	CClouds::RenderBackground(TopRed, TopGreen, TopBlue, BottomRed, BottomGreen, BottomBlue, Alpha);
+	// Enter the C sky background and horizon algorithms with the original arguments
+	Clouds_RenderBackground(TopRed, TopGreen, TopBlue, BottomRed, BottomGreen, BottomBlue, Alpha);
 
 	return true;
 }
@@ -250,34 +266,35 @@ DoRWStuffStartOfFrame_Horizon(int16 TopRed, int16 TopGreen, int16 TopBlue, int16
 void
 DoRWRenderHorizon(void)
 {
-	CClouds::RenderHorizon();
+	// Enter the C sky background and horizon algorithms with the original arguments
+	Clouds_RenderHorizon();
 }
 
 void
 DoFade(void)
 {
-	if(CTimer::GetIsPaused())
+	if(Timer_GetIsPaused())
 		return;
 
 #ifdef PS2_MENU
 	if(TheMemoryCard.JustLoadedDontFadeInYet){
 		TheMemoryCard.JustLoadedDontFadeInYet = false;
-		TheMemoryCard.TimeStartedCountingForFade = CTimer::GetTimeInMilliseconds();
+		TheMemoryCard.TimeStartedCountingForFade = (*Timer_GetTimeInMilliseconds());
 	}
 #else
 	if(JustLoadedDontFadeInYet){
 		JustLoadedDontFadeInYet = false;
-		TimeStartedCountingForFade = CTimer::GetTimeInMilliseconds();
+		TimeStartedCountingForFade = (*Timer_GetTimeInMilliseconds());
 	}
 #endif
 
 #ifdef PS2_MENU
 	if(TheMemoryCard.StillToFadeOut){
-		if(CTimer::GetTimeInMilliseconds() - TheMemoryCard.TimeStartedCountingForFade > TheMemoryCard.TimeToStayFadedBeforeFadeOut){
+		if((*Timer_GetTimeInMilliseconds()) - TheMemoryCard.TimeStartedCountingForFade > TheMemoryCard.TimeToStayFadedBeforeFadeOut){
 			TheMemoryCard.StillToFadeOut = false;
 #else
 	if(StillToFadeOut){
-		if(CTimer::GetTimeInMilliseconds() - TimeStartedCountingForFade > TimeToStayFadedBeforeFadeOut){
+		if((*Timer_GetTimeInMilliseconds()) - TimeStartedCountingForFade > TimeToStayFadedBeforeFadeOut){
 			StillToFadeOut = false;
 #endif
 			TheCamera.Fade(3.0f, FADE_IN);
@@ -291,12 +308,14 @@ DoFade(void)
 	}
 
 	// Route gameplay fades through the active framebuffer capture // rouz edit (ChatGPT)
-	if(CDraw::FadeValue != 0 || FrontEndMenuManager.m_PrefsBrightness < 256){
-		CSprite2d *splash = LoadSplash(nil);
+	if(Draw_FadeValue != 0 || FrontEndMenuManager.m_PrefsBrightness < 256){
+		Sprite2d *splash = LoadSplash(nil);
 
 		CRGBA fadeColor;
 		CRect rect;
-		int fadeValue = CDraw::FadeValue;
+		// Initialize rectangle bounds at the former local constructor boundary
+		Rect_Init(&rect);
+		int fadeValue = Draw_FadeValue;
 		float brightness = Min(FrontEndMenuManager.m_PrefsBrightness, 256);
 		if(brightness <= 50)
 			brightness = 50;
@@ -313,9 +332,9 @@ DoFade(void)
 			fadeColor.b = 0;
 			fadeColor.a = 0;
 		}else{
-			fadeColor.r = fadeValue * CDraw::FadeRed / fade;
-			fadeColor.g = fadeValue * CDraw::FadeGreen / fade;
-			fadeColor.b = fadeValue * CDraw::FadeBlue / fade;
+			fadeColor.r = fadeValue * Draw_FadeRed / fade;
+			fadeColor.g = fadeValue * Draw_FadeGreen / fade;
+			fadeColor.b = fadeValue * Draw_FadeBlue / fade;
 			int alpha = 255 - brightness*(256 - fadeValue)/256;
 			if(alpha < 0)
 				alpha = 0;
@@ -323,15 +342,21 @@ DoFade(void)
 		}
 
 		TheCamera.GetScreenRect(rect);
-		CSprite2d::DrawRect(rect, fadeColor);
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, fadeColor);
 
-		if(CDraw::FadeValue != 0 && TheCamera.m_FadeTargetIsSplashScreen){
+		if(Draw_FadeValue != 0 && TheCamera.m_FadeTargetIsSplashScreen){
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
 			fadeColor.r = 255;
 			fadeColor.g = 255;
 			fadeColor.b = 255;
-			fadeColor.a = CDraw::FadeValue;
-			splash->Draw(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), fadeColor, fadeColor, fadeColor, fadeColor);
+			fadeColor.a = Draw_FadeValue;
+			([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectColours(spriteSelf,&rect,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(splash,Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), fadeColor, fadeColor, fadeColor, fadeColor);
 		}
 	}
 }
@@ -346,7 +371,7 @@ RwGrabScreen(RwCamera *camera, RwChar *filename)
 	if (pImage == nil)
 		return false;
 
-	strcpy(temp, CFileMgr::GetRootDirName());
+	strcpy(temp, FileMgr_GetRootDirName());
 	strcat(temp, filename);
 
 #ifndef LIBRW
@@ -370,8 +395,8 @@ void
 DoRWStuffEndOfFrame(void)
 {
 	// Include final on-screen diagnostics in the pending software framebuffer // rouz edit (ChatGPT)
-	CDebug::DisplayScreenStrings();	// custom
-	CDebug::DebugDisplayTextBuffer();
+	Debug_DisplayScreenStrings();	// custom
+	Debug_DebugDisplayTextBuffer();
 	FlushObrsPrintfs();
 	#ifdef REVC_SOFTWARE_POLYGONS
 	// Present the completed software scene and overlays together
@@ -392,11 +417,11 @@ DoRWStuffEndOfFrame(void)
 	if (CPad::GetPad(1)->GetLeftShockJustDown()) {
 		// try using both controllers for this thing... crazy bastards
 		if (CPad::GetPad(0)->GetRightStickY() > 0) {
-			sprintf(s, "screen%d%d.ras", CClock::ms_nGameClockHours, CClock::ms_nGameClockMinutes);
+			sprintf(s, "screen%d%d.ras", Clock_hours, Clock_minutes);
 			// TODO
 			//RtTileRender(Scene.camera, TILE_WIDTH * 2, TILE_HEIGHT * 2, TILE_WIDTH, TILE_HEIGHT, &NewTileRendererCB, nil, s);
 		} else {
-			sprintf(s, "screen%d%d.bmp", CClock::ms_nGameClockHours, CClock::ms_nGameClockMinutes);
+			sprintf(s, "screen%d%d.bmp", Clock_hours, Clock_minutes);
 			RwGrabScreen(Scene.camera, s);
 		}
 	}
@@ -541,8 +566,8 @@ Initialise3D(void *param)
 	PUSH_MEMID(MEMID_RENDER);
 
 #ifndef MASTER
-	VarConsole.Add("Display number of atomics rendered", &bDisplayNumOfAtomicsRendered, true);
-	VarConsole.Add("Display posn and framerate", &bDisplayPosn, true);
+	VarConsole_AddBool(&VarConsole,"Display number of atomics rendered", &bDisplayNumOfAtomicsRendered, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool(&VarConsole,"Display posn and framerate", &bDisplayPosn, true); // rouz edit (ChatGPT)
 #endif
 
 	if (RsRwInitialize(param))
@@ -573,10 +598,21 @@ Terminate3D(void)
 	return;
 }
 
-CSprite2d splash;
+Sprite2d splash;
+static void Sprite2d_Exit_splash(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&splash,(size_t)(1));
+}
+static int Sprite2d_Start_splash(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&splash,(size_t)(1));atexit(Sprite2d_Exit_splash);return 0;
+}
+static const int Sprite2d_Started_splash=Sprite2d_Start_splash();
 int splashTxdId = -1;
 
-CSprite2d*
+Sprite2d*
 LoadSplash(const char *name)
 {
 	RwTexDictionary *txd;
@@ -586,27 +622,41 @@ LoadSplash(const char *name)
 	if(name == nil)
 		return &splash;
 	if(splashTxdId == -1)
-		splashTxdId = CTxdStore::AddTxdSlot("splash");
+		// Use the complete C texture dictionary owner with the original live arguments
+		splashTxdId = TxdStore_AddTxdSlot("splash");
 
-	txd = CTxdStore::GetSlot(splashTxdId)->texDict;
+	// Use the complete C texture dictionary owner with the original live arguments
+	txd = ((RwTexDictionary*)TxdStore_GetSlot(splashTxdId)->texDict);
 	if(txd)
 		tex = RwTexDictionaryFindNamedTexture(txd, name);
 	// if texture is found, splash was already set up below
 
 	if(tex == nil){
-		CFileMgr::SetDir("TXD\\");
+		FileMgr_SetDir("TXD\\");
 		sprintf(filename, "%s.txd", name);
 		if(splash.m_pTexture)
-			splash.Delete();
+			([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(splash));
 		if(txd)
-			CTxdStore::RemoveTxd(splashTxdId);
-		CTxdStore::LoadTxd(splashTxdId, filename);
-		CTxdStore::AddRef(splashTxdId);
-		CTxdStore::PushCurrentTxd();
-		CTxdStore::SetCurrentTxd(splashTxdId);
-		splash.SetTexture(name);
-		CTxdStore::PopCurrentTxd();
-		CFileMgr::SetDir("");
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveTxd(splashTxdId);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_LoadFile(splashTxdId, filename);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_AddRef(splashTxdId);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PushCurrentTxd();
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_SetCurrentTxd(splashTxdId);
+		([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(splash),name);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_PopCurrentTxd();
+		FileMgr_SetDir("");
 	}
 
 	return &splash;
@@ -615,9 +665,13 @@ LoadSplash(const char *name)
 void
 DestroySplashScreen(void)
 {
-	splash.Delete();
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(splash));
 	if(splashTxdId != -1)
-		CTxdStore::RemoveTxdSlot(splashTxdId);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveTxdSlot(splashTxdId);
 	splashTxdId = -1;
 }
 
@@ -636,7 +690,7 @@ GetRandomSplashScreen(void)
 		7, 12
 	};
 
-	index = splashIndex[2*index2 + CGeneral::GetRandomNumberInRange(0, 2)];
+	index = splashIndex[2*index2 + General_GetRandomNumberInRangeInt(0, 2)];
 	index2++;
 	if(index2 == 6)
 		index2 = 0;
@@ -666,7 +720,7 @@ ResetLoadingScreenBar()
 void
 LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 {
-	CSprite2d *splash;
+	Sprite2d *splash;
 
 #ifdef DISABLE_LOADING_SCREEN
 	if (str1 && str2)
@@ -685,12 +739,17 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 #endif
 
 	if(DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255)){
-		CSprite2d::SetRecipNearClip();
-		CSprite2d::InitPerFrame();
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_SetRecipNearClip();
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_InitPerFrame();
 		CFont::InitPerFrame();
 		DefinedState();
 		RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
-		splash->Draw(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), CRGBA(255, 255, 255, 255));
+		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(splash,Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), CRGBA(255, 255, 255, 255));
 
 		if(str1){
 			NumberOfChunksLoaded += 1;
@@ -708,12 +767,21 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 			float bottom = SCREEN_STRETCH_Y(407.4f + 7.0f/3.0f);
 #endif
 
-			CSprite2d::DrawRect(CRect(hpos-1.0f, top-1.0f, hpos+length+1.0f, bottom+1.0f), CRGBA(40, 53, 68, 255));
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(hpos-1.0f, top-1.0f, hpos+length+1.0f, bottom+1.0f), CRGBA(40, 53, 68, 255));
 
-			CSprite2d::DrawRect(CRect(hpos, top, hpos+length, bottom), CRGBA(155, 50, 125, 255));
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(hpos, top, hpos+length, bottom), CRGBA(155, 50, 125, 255));
 
 			length *= NumberOfChunksLoaded/TOTALNUMCHUNKS;
-			CSprite2d::DrawRect(CRect(hpos, top, hpos+length, bottom), CRGBA(255, 150, 225, 255));
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(hpos, top, hpos+length, bottom), CRGBA(255, 150, 225, 255));
 
 			// this is done by the game but is unused
 			CFont::SetBackgroundOff();
@@ -752,20 +820,28 @@ LoadingScreen(const char *str1, const char *str2, const char *splashscreen)
 void
 LoadingIslandScreen(const char *levelName)
 {
-	CSprite2d *splash;
+	Sprite2d *splash;
 
 	splash = LoadSplash(nil);
 	if(!DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 255))
 		return;
 
-	CSprite2d::SetRecipNearClip();
-	CSprite2d::InitPerFrame();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_SetRecipNearClip();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame();
 	CFont::InitPerFrame();
 	DefinedState();
 	CRGBA col = CRGBA(255, 255, 255, 255);
 	CRGBA col2 = CRGBA(0, 0, 0, 255);
-	CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), col2);
-	splash->Draw(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), col, col, col, col);
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), col2);
+	([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectColours(spriteSelf,&rect,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(splash,Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), col, col, col, col);
 	CFont::DrawFonts();
 	DoRWStuffEndOfFrame();
 }
@@ -803,7 +879,7 @@ ProcessSlowMode(void)
 		
 		if ( stop )
 		{
-			CTimer::Stop();
+			Timer_Stop();
 			stop = false;
 		}
 		
@@ -873,25 +949,25 @@ struct tZonePrint
 
 tZonePrint ZonePrint[] =
 {
-	{ "DOWNTOWN", "GM", CRect(-1500.0f, 1500.0f, -300.0f, 980.0f)},
-	{ "DOWNTOWS", "KB", CRect(-1200.0f, 980.0f, -300.0f, 435.0f)},
-	{ "GOLF", "NT", CRect(-300.0f, 660.0f, 320.0f, -255.0f)},
-	{ "LITTLEHA", "AG", CRect(-1250.0f, -310.0f, -746.0f, -926.0f)},
-	{ "HAITI", "CJ", CRect(-1355.0f, 30.0f, -637.0f, -304.0f)},
-	{ "HAITIN", "SM", CRect(-1355.0f, 435.0f, -637.0f, 30.0f)},
-	{ "DOCKS", "AW", CRect(-1122.0f, -926.0f, -609.0f, -1575.0f)},
-	{ "AIRPORT", "NT", CRect(-2000.0f, 200.0f, -871.0f, -2000.0f)},
-	{ "STARISL", "CJ", CRect(-724.0f, -320.0f, -40.0f, -380.0f)},
-	{ "CENT.ISLA", "NT", CRect(-163.0f, 1260.0f,  120.0f, 830.0f)},
-	{ "MALL", "AW", CRect( 300.0f, 1266.0f,  483.0f, 995.0f)},
-	{ "MANSION", "KB", CRect(-724.0f, -500.0f, -40.0f, -670.0f)},
-	{ "NBEACH", "AS", CRect( 120.0f,  1340.0f,  900.0f,  600.0f)},
-	{ "NBEACHBT", "AS", CRect( 200.0f, 680.0f,  660.0f, -50.0f)},
-	{ "NBEACHW", "AS", CRect(-93.0f, 80.0f,  410.0f, -680.0f)},
-	{ "OCEANDRV", "AC", CRect( 200.0f, -964.0f,  955.0f, -1797.0f)},
-	{ "OCEANDN", "WS", CRect( 400.0f, 50.0f,  955.0f,  -964.0f)},
-	{ "WASHINGTN", "AC", CRect(-320.0f, -487.0f,  500.0f, -1200.0f)},
-	{ "WASHINBTM", "AC", CRect(-255.0f, -1200.0f,  500.0f, -1690.0f)}
+	{ "DOWNTOWN", "GM", Rect_Make(-1500.0f, 1500.0f, -300.0f, 980.0f)},
+	{ "DOWNTOWS", "KB", Rect_Make(-1200.0f, 980.0f, -300.0f, 435.0f)},
+	{ "GOLF", "NT", Rect_Make(-300.0f, 660.0f, 320.0f, -255.0f)},
+	{ "LITTLEHA", "AG", Rect_Make(-1250.0f, -310.0f, -746.0f, -926.0f)},
+	{ "HAITI", "CJ", Rect_Make(-1355.0f, 30.0f, -637.0f, -304.0f)},
+	{ "HAITIN", "SM", Rect_Make(-1355.0f, 435.0f, -637.0f, 30.0f)},
+	{ "DOCKS", "AW", Rect_Make(-1122.0f, -926.0f, -609.0f, -1575.0f)},
+	{ "AIRPORT", "NT", Rect_Make(-2000.0f, 200.0f, -871.0f, -2000.0f)},
+	{ "STARISL", "CJ", Rect_Make(-724.0f, -320.0f, -40.0f, -380.0f)},
+	{ "CENT.ISLA", "NT", Rect_Make(-163.0f, 1260.0f,  120.0f, 830.0f)},
+	{ "MALL", "AW", Rect_Make( 300.0f, 1266.0f,  483.0f, 995.0f)},
+	{ "MANSION", "KB", Rect_Make(-724.0f, -500.0f, -40.0f, -670.0f)},
+	{ "NBEACH", "AS", Rect_Make( 120.0f,  1340.0f,  900.0f,  600.0f)},
+	{ "NBEACHBT", "AS", Rect_Make( 200.0f, 680.0f,  660.0f, -50.0f)},
+	{ "NBEACHW", "AS", Rect_Make(-93.0f, 80.0f,  410.0f, -680.0f)},
+	{ "OCEANDRV", "AC", Rect_Make( 200.0f, -964.0f,  955.0f, -1797.0f)},
+	{ "OCEANDN", "WS", Rect_Make( 400.0f, 50.0f,  955.0f,  -964.0f)},
+	{ "WASHINGTN", "AC", Rect_Make(-320.0f, -487.0f,  500.0f, -1200.0f)},
+	{ "WASHINBTM", "AC", Rect_Make(-255.0f, -1200.0f,  500.0f, -1690.0f)}
 };
 
 void
@@ -925,97 +1001,116 @@ return;
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Game: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_GAME), gMainHeap.GetMemoryUsed(MEMID_GAME));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Game: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_GAME), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_GAME));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "World: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_WORLD), gMainHeap.GetMemoryUsed(MEMID_WORLD));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "World: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_WORLD), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_WORLD));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Render: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_RENDER), gMainHeap.GetMemoryUsed(MEMID_RENDER));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Render: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_RENDER), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_RENDER));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "PreAlloc: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_PRE_ALLOC), gMainHeap.GetMemoryUsed(MEMID_PRE_ALLOC));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "PreAlloc: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_PRE_ALLOC), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_PRE_ALLOC));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Default Models: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_DEF_MODELS), gMainHeap.GetMemoryUsed(MEMID_DEF_MODELS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Default Models: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_DEF_MODELS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_DEF_MODELS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Textures: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_TEXTURES), gMainHeap.GetMemoryUsed(MEMID_TEXTURES));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Textures: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_TEXTURES), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_TEXTURES));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streaming: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM), gMainHeap.GetMemoryUsed(MEMID_STREAM));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streaming: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streamed Models: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM_MODELS), gMainHeap.GetMemoryUsed(MEMID_STREAM_MODELS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streamed Models: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_MODELS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_MODELS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streamed LODs: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM_LODS), gMainHeap.GetMemoryUsed(MEMID_STREAM_LODS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streamed LODs: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_LODS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_LODS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streamed Textures: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM_TEXUTRES), gMainHeap.GetMemoryUsed(MEMID_STREAM_TEXUTRES));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streamed Textures: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_TEXUTRES), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_TEXUTRES));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streamed Collision: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM_COLLISION), gMainHeap.GetMemoryUsed(MEMID_STREAM_COLLISION));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streamed Collision: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_COLLISION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_COLLISION));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Streamed Animation: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_STREAM_ANIMATION), gMainHeap.GetMemoryUsed(MEMID_STREAM_ANIMATION));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Streamed Animation: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_STREAM_ANIMATION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_ANIMATION));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Ped Attr: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_PED_ATTR), gMainHeap.GetMemoryUsed(MEMID_PED_ATTR));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Ped Attr: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_PED_ATTR), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_PED_ATTR));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Animation: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_ANIMATION), gMainHeap.GetMemoryUsed(MEMID_ANIMATION));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Animation: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_ANIMATION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_ANIMATION));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Pools: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_POOLS), gMainHeap.GetMemoryUsed(MEMID_POOLS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Pools: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_POOLS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_POOLS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Collision: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_COLLISION), gMainHeap.GetMemoryUsed(MEMID_COLLISION));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Collision: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_COLLISION), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_COLLISION));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Game Process: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_GAME_PROCESS), gMainHeap.GetMemoryUsed(MEMID_GAME_PROCESS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Game Process: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_GAME_PROCESS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_GAME_PROCESS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Script: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_SCRIPT), gMainHeap.GetMemoryUsed(MEMID_SCRIPT));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Script: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_SCRIPT), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_SCRIPT));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
 
-	sprintf(gString, "Cars: %d blocks, %d bytes", gMainHeap.GetBlocksUsed(MEMID_CARS), gMainHeap.GetMemoryUsed(MEMID_CARS));
+	// Use the complete C heap operation with the original live owner
+	sprintf(gString, "Cars: %d blocks, %d bytes", MemoryHeap_GetBlocksUsed(&gMainHeap,MEMID_CARS), MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_CARS));
 	AsciiToUnicode(gString, gUString);
 	CFont::PrintString(24.0f, y, gUString);
 	y += 12.0f;
@@ -1166,11 +1261,11 @@ DisplayGameDebugText()
 #ifdef FIX_BUGS
 	// this is inaccurate with over 1000 fps
 	static uint32 PreviousTimeInMillisecondsPauseMode = 0;
-	FramesPerSecondCounter += (CTimer::GetTimeInMillisecondsPauseMode() - PreviousTimeInMillisecondsPauseMode) / 1000.0f; // convert to seconds
-	PreviousTimeInMillisecondsPauseMode = CTimer::GetTimeInMillisecondsPauseMode();
+	FramesPerSecondCounter += (Timer_GetTimeInMillisecondsPauseMode() - PreviousTimeInMillisecondsPauseMode) / 1000.0f; // convert to seconds
+	PreviousTimeInMillisecondsPauseMode = Timer_GetTimeInMillisecondsPauseMode();
 	FramesPerSecond = FrameSamples / FramesPerSecondCounter;
 #else
-	FramesPerSecondCounter += 1000.0f / CTimer::GetTimeStepNonClippedInMilliseconds();
+	FramesPerSecondCounter += 1000.0f / Timer_GetTimeStepNonClippedInMilliseconds();
 	FramesPerSecond = FramesPerSecondCounter / FrameSamples;
 #endif
 	
@@ -1331,7 +1426,8 @@ RenderScene_new(void)
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
 #endif
-	CClouds::Render();
+	// Enter the complete C cloud effect with the original arguments
+	Clouds_Render();
 	DoRWRenderHorizon();
 #ifdef REVC_SOFTWARE_POLYGONS
 	}
@@ -1357,15 +1453,18 @@ RenderEffects_new(void)
 	CShadows::RenderStaticShadows();
 	// CRenderer::GenerateEnvironmentMap
 	CShadows::RenderStoredShadows();
-	CSkidmarks::Render();
-	CRubbish::Render();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Render();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Render();
 */
 
 	// these aren't really effects
 	DefinedState();
 	if(FredIsInFirstPersonCam()){
 		DefinedState();
-		C3dMarkers::Render();	// normally rendered in CSpecialFX::Render()
+		// Enter the C 3D-marker controller with the original arguments
+		Markers3D_Render();	// normally rendered in SpecialFX_Render()
 if(gbRenderWorld2)
 		CRenderer::RenderWorld(2);	// transparent
 		#ifndef REVC_SOFTWARE_POLYGONS
@@ -1390,25 +1489,34 @@ if(gbRenderFadingInEntities)
 	// from above
 	CShadows::RenderStaticShadows();
 	CShadows::RenderStoredShadows();
-	CSkidmarks::Render();
-	CRubbish::Render();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Render();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Render();
 
 	CGlass::Render();
 	// CMattRenderer::ResetRenderStates
 	DefinedState();
 	CCoronas::RenderSunReflection();
-	CWeather::RenderRainStreaks();
-	// CWeather::AddSnow
-	CWaterCannons::Render();
-	CAntennas::Render();
-	CSpecialFX::Render();
-	CRopes::Render();
+	Weather_RenderRainStreaks();
+	// Weather_AddSnow
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Render();
+	// Render the C antenna pool
+	Antennas_Render();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Render();
+	// Enter the C rope algorithm with the original owner expressions
+	Ropes_Render();
 	CCoronas::Render();
 	CParticle::Render();
 	CPacManPickups::Render();
-	CWeaponEffects::Render();
-	CPointLights::RenderFogEffect();
-	CMovingThings::Render();
+	// Enter the complete C weapon effect operation
+	WeaponEffects_Render();
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_RenderFogEffect();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Render();
 	CRenderer::RenderFirstPersonVehicle();
 	POP_RENDERGROUP();
 }
@@ -1433,25 +1541,36 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 		int green = TheCamera.m_BlurGreen;
 		int blue = TheCamera.m_BlurBlue;
 		if(TheCamera.m_BlurType == MOTION_BLUR_LIGHT_SCENE){
-			CPostFX::SmoothColor(red, green, blue, TheCamera.m_motionBlur);
-			red = CPostFX::AvgRed;
-			green = CPostFX::AvgGreen;
-			blue = CPostFX::AvgBlue;
+			// Use the complete C post-processing owner and its live shared state
+			PostFX_SmoothColor(red, green, blue, TheCamera.m_motionBlur);
+			// Use the complete C post-processing owner and its live shared state
+			red = PostFX_AvgRed;
+			// Use the complete C post-processing owner and its live shared state
+			green = PostFX_AvgGreen;
+			// Use the complete C post-processing owner and its live shared state
+			blue = PostFX_AvgBlue;
 		}
-		const bool applyColourFilter = CPostFX::EffectSwitch == CPostFX::POSTFX_MOBILE ||
-			(CPostFX::EffectSwitch == CPostFX::POSTFX_NORMAL && !CPostFX::MotionBlurOn);
+		// Use the complete C post-processing owner and its live shared state
+		const bool applyColourFilter = PostFX_EffectSwitch == POSTFX_MOBILE ||
+			// Use the complete C post-processing owner and its live shared state
+			(PostFX_EffectSwitch == POSTFX_NORMAL && !PostFX_MotionBlurOn);
 		if(applyColourFilter && TheCamera.m_BlurType != MOTION_BLUR_SNIPER)
-			SoftwarePolygons::ApplyColourFilter(CPostFX::EffectSwitch, red, green, blue, CPostFX::Intensity);
+			// Use the complete C post-processing owner and its live shared state
+			SoftwarePolygons::ApplyColourFilter(PostFX_EffectSwitch, red, green, blue, PostFX_Intensity);
 		if(TheCamera.m_BlurType == MOTION_BLUR_SNIPER){
 			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, 80); // rouz edit (ChatGPT)
 			historyActive = true;
-		}else if(CPostFX::EffectSwitch == CPostFX::POSTFX_NORMAL && CPostFX::MotionBlurOn){
-			SoftwarePolygons::ApplyPreviousFrameBlur(red, green, blue, CPostFX::BlurOn);
+		// Use the complete C post-processing owner and its live shared state
+		}else if(PostFX_EffectSwitch == POSTFX_NORMAL && PostFX_MotionBlurOn){
+			// Use the complete C post-processing owner and its live shared state
+			SoftwarePolygons::ApplyPreviousFrameBlur(red, green, blue, PostFX_BlurOn);
 			historyActive = true;
 		}
 		// Apply drunk-camera blur alongside the active camera postfx mode
-				if(CMBlur::Drunkness > 0.0f){
-			SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*CMBlur::Drunkness));
+				// Use the complete C motion-blur owner and its live shared state
+				if(MBlur_Drunkness > 0.0f){
+			// Use the complete C motion-blur owner and its live shared state
+			SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*MBlur_Drunkness));
 			historyActive = true;
 		}
 			}
@@ -1476,15 +1595,18 @@ static void ApplySoftwarePostFX(void) // rouz edit (ChatGPT)
 		}
 		if(TheCamera.m_BlurType == MOTION_BLUR_SNIPER)
 			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, 80);
-		else if(CMBlur::BlurOn)
+		// Use the complete C motion-blur owner and its live shared state
+		else if(MBlur_BlurOn)
 			SoftwarePolygons::ApplyPreviousFrameBlur(red, green, blue, true);
 		else
 			SoftwarePolygons::ApplyPreviousFrameOverlay(red, green, blue, alpha*3/5);
 		historyActive = true;
 	}
 	// Add the drunk-camera tint over the same saved frame
-	if(CMBlur::Drunkness > 0.0f){
-		SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*CMBlur::Drunkness));
+	// Use the complete C motion-blur owner and its live shared state
+	if(MBlur_Drunkness > 0.0f){
+		// Use the complete C motion-blur owner and its live shared state
+		SoftwarePolygons::ApplyPreviousFrameOverlay(255, 255, 255, (int)(175.0f*MBlur_Drunkness));
 		historyActive = true;
 	}
 	SoftwarePolygons::SavePreviousFrame(historyActive);
@@ -1506,9 +1628,9 @@ static void RegisterSoftwarePedShadows(void)
 			if(!ped || !ped->bIsVisible)
 			continue;
 		CShadows::StoreShadowForPed(ped,
-			CTimeCycle::GetShadowDisplacementX(), CTimeCycle::GetShadowDisplacementY(),
-			CTimeCycle::GetShadowFrontX(), CTimeCycle::GetShadowFrontY(),
-			CTimeCycle::GetShadowSideX(), CTimeCycle::GetShadowSideY());
+			TimeCycle_GetShadowDisplacementX(), TimeCycle_GetShadowDisplacementY(),
+			TimeCycle_GetShadowFrontX(), TimeCycle_GetShadowFrontY(),
+			TimeCycle_GetShadowSideX(), TimeCycle_GetShadowSideY());
 	}
 }
 
@@ -1531,31 +1653,41 @@ static void RenderSoftwareWorldEffects(void)
 		CustomPipes::CaptureStoredShadowsForEnvMap();
 #endif
 		CShadows::RenderStoredShadows();
-	CSkidmarks::Render();
-	CRubbish::Render();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Render();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Render();
 	CGlass::Render();
 	// Restore the standard effect states after glass highlights
 		DefinedState();
 		// Draw sky reflections and rain after deferred transparent world geometry
 		CCoronas::RenderSunReflection();
-	CWeather::RenderRainStreaks();
+	Weather_RenderRainStreaks();
 	// Capture world-space rain, water cannon, antenna, special, and rope geometry
-	CWaterCannons::Render();
-	CAntennas::Render();
-	CSpecialFX::Render();
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Render();
+	// Render the C antenna pool
+	Antennas_Render();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Render();
 	// Restore first-person 3D markers skipped by the new renderer special-effects pass
 		#ifdef NEW_RENDERER
 	if(gbNewRenderer && FredIsInFirstPersonCam())
-		C3dMarkers::Render();
+		// Enter the C 3D-marker controller with the original arguments
+		Markers3D_Render();
 	#endif
-		CRopes::Render();
+		// Enter the C rope algorithm with the original owner expressions
+		Ropes_Render();
 	// Capture sprite based effects and first-person vehicle geometry on the CPU
 	CCoronas::Render();
 	CParticle::Render();
 	CPacManPickups::Render();
-	CWeaponEffects::Render();
-	CPointLights::RenderFogEffect();
-	CMovingThings::Render();
+	// Enter the complete C weapon effect operation
+	WeaponEffects_Render();
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_RenderFogEffect();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Render();
 	CRenderer::RenderFirstPersonVehicle();
 		SoftwarePolygons::EndWorldEffects();
 }
@@ -1566,10 +1698,10 @@ RenderScene(void)
 {
 	#ifdef REVC_SOFTWARE_POLYGONS
 	// Clear the CPU framebuffer with the current sky colors before rendering the scene
-	rw::RGBA softwareSkyTop = { (rw::uint8)CTimeCycle::GetSkyTopRed(), (rw::uint8)CTimeCycle::GetSkyTopGreen(), (rw::uint8)CTimeCycle::GetSkyTopBlue(), 255 };
-	rw::RGBA softwareSkyBottom = { (rw::uint8)CTimeCycle::GetSkyBottomRed(), (rw::uint8)CTimeCycle::GetSkyBottomGreen(), (rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255 };
+	rw::RGBA softwareSkyTop = { (rw::uint8)TimeCycle_GetSkyTopRed(), (rw::uint8)TimeCycle_GetSkyTopGreen(), (rw::uint8)TimeCycle_GetSkyTopBlue(), 255 };
+	rw::RGBA softwareSkyBottom = { (rw::uint8)TimeCycle_GetSkyBottomRed(), (rw::uint8)TimeCycle_GetSkyBottomGreen(), (rw::uint8)TimeCycle_GetSkyBottomBlue(), 255 };
 	// Match the existing white sky clear used during visible lightning flashes
-		if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+		if(Weather_LightningFlash && !CullZones_CamNoRain()){
 		softwareSkyTop.red = softwareSkyTop.green = softwareSkyTop.blue = 255;
 		softwareSkyBottom.red = softwareSkyBottom.green = softwareSkyBottom.blue = 255;
 	}
@@ -1581,7 +1713,8 @@ RenderScene(void)
 	SoftwarePolygons::BeginWorldEffects();
 	// Reproduce the horizon-aware sky background inside the CPU framebuffer
 		if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
-		CClouds::RenderBackground(softwareSkyTop.red, softwareSkyTop.green, softwareSkyTop.blue,
+		// Enter the C sky background and horizon algorithms with the original arguments
+		Clouds_RenderBackground(softwareSkyTop.red, softwareSkyTop.green, softwareSkyTop.blue,
 			softwareSkyBottom.red, softwareSkyBottom.green, softwareSkyBottom.blue, 255);
 	#endif
 	#ifdef NEW_RENDERER
@@ -1605,7 +1738,8 @@ RenderScene(void)
 	#ifdef REVC_SOFTWARE_POLYGONS
 	if(SoftwarePolygons::renderSkyStage.load(std::memory_order_relaxed)){
 #endif
-	CClouds::Render();
+	// Enter the complete C cloud effect with the original arguments
+	Clouds_Render();
 	DoRWRenderHorizon();
 #ifdef REVC_SOFTWARE_POLYGONS
 	}
@@ -1640,7 +1774,7 @@ RenderScene(void)
 	RwRenderStateSet(rwRENDERSTATECULLMODE, (void*)rwCULLMODECULLNONE);
 	// Leave these effects to the software pass after transparent triangles are composited
 	#ifndef REVC_SOFTWARE_POLYGONS
-	CWeather::RenderRainStreaks();
+	Weather_RenderRainStreaks();
 	CCoronas::RenderSunReflection();
 #endif
 		POP_RENDERGROUP();
@@ -1666,7 +1800,7 @@ RenderDebugShit(void)
 	if(gbShowCollisionLines)
 		CRenderer::RenderCollisionLines();
 	ThePaths.DisplayPathData();
-	CDebug::DrawLines();
+	Debug_DrawLines();
 	DefinedState();
 #endif
 	POP_RENDERGROUP();
@@ -1687,20 +1821,29 @@ RenderEffects(void)
 #endif
 	PUSH_RENDERGROUP("RenderEffects");
 	CGlass::Render();
-	CWaterCannons::Render();
-	CSpecialFX::Render();
-	CRopes::Render();
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Render();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Render();
+	// Enter the C rope algorithm with the original owner expressions
+	Ropes_Render();
 	CShadows::RenderStaticShadows();
 	CShadows::RenderStoredShadows();
-	CSkidmarks::Render();
-	CAntennas::Render();
-	CRubbish::Render();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Render();
+	// Render the C antenna pool
+	Antennas_Render();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Render();
 	CCoronas::Render();
 	CParticle::Render();
 	CPacManPickups::Render();
-	CWeaponEffects::Render();
-	CPointLights::RenderFogEffect();
-	CMovingThings::Render();
+	// Enter the complete C weapon effect operation
+	WeaponEffects_Render();
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_RenderFogEffect();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Render();
 	CRenderer::RenderFirstPersonVehicle();
 	POP_RENDERGROUP();
 }
@@ -1752,19 +1895,38 @@ Render2dStuff(void)
 
 		// top and bottom strips
 		if (weaponType == WEAPONTYPE_ROCKETLAUNCHER) {
-			CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(180)), black);
-			CSprite2d::DrawRect(CRect(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(170), SCREEN_WIDTH, SCREEN_HEIGHT), black);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(180)), black);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(170), SCREEN_WIDTH, SCREEN_HEIGHT), black);
 		}
 		else {
-			CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(210)), black);
-			CSprite2d::DrawRect(CRect(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(210), SCREEN_WIDTH, SCREEN_HEIGHT), black);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT / 2 - SCREEN_SCALE_Y(210)), black);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, SCREEN_HEIGHT / 2 + SCREEN_SCALE_Y(210), SCREEN_WIDTH, SCREEN_HEIGHT), black);
 		}
-		CSprite2d::DrawRect(CRect(0.0f, 0.0f, SCREEN_WIDTH / 2 - SCREEN_SCALE_X(210), SCREEN_HEIGHT), black);
-		CSprite2d::DrawRect(CRect(SCREEN_WIDTH / 2 + SCREEN_SCALE_X(210), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), black);
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(0.0f, 0.0f, SCREEN_WIDTH / 2 - SCREEN_SCALE_X(210), SCREEN_HEIGHT), black);
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(SCREEN_WIDTH / 2 + SCREEN_SCALE_X(210), 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT), black);
 	}
 
-	MusicManager.DisplayRadioStationName();
-	TheConsole.Display();
+	MusicDisplay_StationName(&MusicManager);
+	// Enter the complete C console implementation with the original singleton
+	Console_Display(&TheConsole);
 #ifdef GTA_SCENE_EDIT
 	if(CSceneEdit::m_bEditOn)
 		CSceneEdit::Draw();
@@ -1772,10 +1934,11 @@ Render2dStuff(void)
 #endif
 		CHud::Draw();
 
-	CSpecialFX::Render2DFXs();
-	CUserDisplay::OnscnTimer.ProcessForDisplay();
-	CMessages::Display();
-	CDarkel::DrawMessages();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Render2DFXs();
+	OnscreenTimer_ProcessForDisplay(&OnscreenTimer_state);
+	Messages_Display();
+	Darkel_DrawMessages();
 	CGarages::PrintMessages();
 	CPad::PrintErrorMessage();
 	CFont::DrawFonts();
@@ -1801,7 +1964,7 @@ RenderMenus(void)
 	}
 #ifndef MASTER
 	else
-		VarConsole.Check();
+		VarConsole_Check(&VarConsole); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -1821,26 +1984,29 @@ Render2dStuffAfterFade(void)
 #endif
 
 #ifdef MOBILE_IMPROVEMENTS
-	if (CDraw::FadeValue != 0)
+	if (Draw_FadeValue != 0)
 #endif
 	CHud::DrawAfterFade();
 	CFont::DrawFonts();
-	CCredits::Render();
+	// Enter the complete C credits implementation with the original arguments
+	Credits_Render();
 	POP_RENDERGROUP();
 }
 
 void
 Idle(void *arg)
 {
-	CTimer::Update();
+	Timer_Update();
 
 	tbInit();
 
-	CSprite2d::InitPerFrame();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame();
 	CFont::InitPerFrame();
 
 	PUSH_MEMID(MEMID_GAME_PROCESS);
-	CPointLights::InitPerFrame();
+	// Enter the C point-light algorithm with the original owner expressions
+	PointLights_InitPerFrame();
 
 	tbStartTimer(0, "CGame::Process");
 	CGame::Process();
@@ -1851,7 +2017,7 @@ Idle(void *arg)
 	DMAudio_Service();
 	tbEndTimer("DMAudio.Service");
 
-	if(CGame::bDemoMode && CTimer::GetTimeInMilliseconds() > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing()){
+	if(CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing()){
 		WANT_TO_LOAD = false;
 		FrontEndMenuManager.m_bWantToRestart = true;
 		return;
@@ -1862,7 +2028,8 @@ Idle(void *arg)
 		return;
 	}
 	
-	SetLightsWithTimeOfDayColour(Scene.world);
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetLightsWithTimeOfDayColour(Scene.world);
 
 	if(arg == nil)
 		return;
@@ -1899,16 +2066,16 @@ Idle(void *arg)
 #ifdef FIX_BUGS
 		RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)FALSE); // TODO: temp? this fixes OpenGL render but there should be a better place for this
 		// This has to be done BEFORE RwCameraBeginUpdate
-		RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip()*10.f);	// rouz edit, increased the far plane to avoid visible clipping
-		RwCameraSetFogDistance(Scene.camera, CTimeCycle::GetFogStart());
+		RwCameraSetFarClipPlane(Scene.camera, TimeCycle_GetFarClip()*10.f);	// rouz edit, increased the far plane to avoid visible clipping
+		RwCameraSetFogDistance(Scene.camera, TimeCycle_GetFogStart());
 #endif
 
-		if(CWeather::LightningFlash && !CCullZones::CamNoRain()){
+		if(Weather_LightningFlash && !CullZones_CamNoRain()){
 			if(!DoRWStuffStartOfFrame_Horizon(255, 255, 255, 255, 255, 255, 255))
 				goto popret;
 		}else{
-			if(!DoRWStuffStartOfFrame_Horizon(CTimeCycle::GetSkyTopRed(), CTimeCycle::GetSkyTopGreen(), CTimeCycle::GetSkyTopBlue(),
-						CTimeCycle::GetSkyBottomRed(), CTimeCycle::GetSkyBottomGreen(), CTimeCycle::GetSkyBottomBlue(),
+			if(!DoRWStuffStartOfFrame_Horizon(TimeCycle_GetSkyTopRed(), TimeCycle_GetSkyTopGreen(), TimeCycle_GetSkyTopBlue(),
+						TimeCycle_GetSkyBottomRed(), TimeCycle_GetSkyBottomGreen(), TimeCycle_GetSkyBottomBlue(),
 						255))
 				goto popret;
 		}
@@ -1916,8 +2083,8 @@ Idle(void *arg)
 		DefinedState();
 
 #ifndef FIX_BUGS
-		RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip());
-		RwCameraSetFogDistance(Scene.camera, CTimeCycle::GetFogStart());
+		RwCameraSetFarClipPlane(Scene.camera, TimeCycle_GetFarClip());
+		RwCameraSetFogDistance(Scene.camera, TimeCycle_GetFogStart());
 #endif
 
 		tbStartTimer(0, "RenderScene");
@@ -1947,7 +2114,8 @@ Idle(void *arg)
 		// Composite queued refraction and splash effects over the completed screen-effects image
 		// Skip refraction and splash compositing with camera post effects
 		if(SoftwarePolygons::renderPostEffectsStage.load(std::memory_order_relaxed)) // rouz edit (ChatGPT)
-			CMBlur::OverlayRenderFx(Scene.camera, CMBlur::pFrontBuffer); // rouz edit (ChatGPT)
+			// Use the complete C motion-blur owner and its live shared state
+			MBlur_OverlayRenderFx(Scene.camera, MBlur_pFrontBuffer); // rouz edit (ChatGPT)
 		// Apply temporal blur after screen effects and before HUD drawing
 		ApplySoftwarePostFX(); // rouz edit (ChatGPT)
 #endif
@@ -1960,7 +2128,8 @@ Idle(void *arg)
 		        TheCamera.SetMotionBlurAlpha(150);
 
 #ifdef SCREEN_DROPLETS
-		CPostFX::GetBackBuffer(Scene.camera);
+		// Use the complete C post-processing owner and its live shared state
+		PostFX_GetBackBuffer(Scene.camera);
 		ScreenDroplets::Process();
 		ScreenDroplets::Render();
 #endif
@@ -1974,7 +2143,7 @@ Idle(void *arg)
 		Render2dStuff();
 		tbEndTimer("Render2dStuff");
 	}else{
-		CDraw::CalculateAspectRatio();
+		Draw_CalculateAspectRatio();
 #ifdef ASPECT_RATIO_SCALE
 		CameraSize(Scene.camera, nil, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
 #else
@@ -2002,7 +2171,7 @@ Idle(void *arg)
 	tbStartTimer(0, "Render2dStuff-Fade");
 	Render2dStuffAfterFade();
 	tbEndTimer("Render2dStuff-Fade");
-	// CCredits::Render(); // They added it to function above and also forgot it here
+	// Credits_Render(); // They added it to function above and also forgot it here
 #ifdef XBOX_MESSAGE_SCREEN
 	// Keep frontend overlays tied to the visible menu in the software target
 	#ifdef REVC_SOFTWARE_POLYGONS
@@ -2031,10 +2200,12 @@ popret:	POP_MEMID();	// MEMID_RENDER
 void
 FrontendIdle(void)
 {
-	CDraw::CalculateAspectRatio();
-	CTimer::Update();
-	CSprite2d::SetRecipNearClip(); // this should be on InitialiseRenderWare according to PS2 asm. seems like a bug fix
-	CSprite2d::InitPerFrame();
+	Draw_CalculateAspectRatio();
+	Timer_Update();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_SetRecipNearClip(); // this should be on InitialiseRenderWare according to PS2 asm. seems like a bug fix
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame();
 	CFont::InitPerFrame();
 	CPad::UpdatePads();
 	FrontEndMenuManager.Process();
@@ -2157,39 +2328,42 @@ TheModelViewer(void)
 	// 1- We want 2D things to be initalized, whereas original AnimViewer doesn't use them. my additions marked with X
 	// 2- VC Mobile code run it like main function(as opposed to III and LCS), so it has it's own loop inside it, but our func. already called in a loop.
 
-	CDraw::CalculateAspectRatio(); // X
+	Draw_CalculateAspectRatio(); // X
 	CAnimViewer::Update();
-	SetLightsWithTimeOfDayColour(Scene.world);
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetLightsWithTimeOfDayColour(Scene.world);
 	CRenderer::ConstructRenderList();
-	DoRWStuffStartOfFrame(CTimeCycle::GetSkyTopRed()*0.5f, CTimeCycle::GetSkyTopGreen()*0.5f, CTimeCycle::GetSkyTopBlue()*0.5f,
-		CTimeCycle::GetSkyBottomRed(), CTimeCycle::GetSkyBottomGreen(), CTimeCycle::GetSkyBottomBlue(),
+	DoRWStuffStartOfFrame(TimeCycle_GetSkyTopRed()*0.5f, TimeCycle_GetSkyTopGreen()*0.5f, TimeCycle_GetSkyTopBlue()*0.5f,
+		TimeCycle_GetSkyBottomRed(), TimeCycle_GetSkyBottomGreen(), TimeCycle_GetSkyBottomBlue(),
 		255);
 	// Start the software framebuffer before the animation viewer submits its model
 	#ifdef REVC_SOFTWARE_POLYGONS
 	rw::RGBA viewerSkyTop = {
-		(rw::uint8)(CTimeCycle::GetSkyTopRed()*0.5f),
-		(rw::uint8)(CTimeCycle::GetSkyTopGreen()*0.5f),
-		(rw::uint8)(CTimeCycle::GetSkyTopBlue()*0.5f), 255
+		(rw::uint8)(TimeCycle_GetSkyTopRed()*0.5f),
+		(rw::uint8)(TimeCycle_GetSkyTopGreen()*0.5f),
+		(rw::uint8)(TimeCycle_GetSkyTopBlue()*0.5f), 255
 	};
 	rw::RGBA viewerSkyBottom = {
-		(rw::uint8)CTimeCycle::GetSkyBottomRed(),
-		(rw::uint8)CTimeCycle::GetSkyBottomGreen(),
-		(rw::uint8)CTimeCycle::GetSkyBottomBlue(), 255
+		(rw::uint8)TimeCycle_GetSkyBottomRed(),
+		(rw::uint8)TimeCycle_GetSkyBottomGreen(),
+		(rw::uint8)TimeCycle_GetSkyBottomBlue(), 255
 	};
 	SoftwarePolygons::BeginFrame(Scene.camera, Scene.camera->frameBuffer->width,
 		Scene.camera->frameBuffer->height, viewerSkyTop, viewerSkyBottom);
 	SoftwarePolygons::BeginWorldEffects();
 #endif
 	
-	CSprite2d::SetRecipNearClip(); // X
-	CSprite2d::InitPerFrame(); // X
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_SetRecipNearClip(); // X
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame(); // X
 	CFont::InitPerFrame(); // X
 	DefinedState();
 	CVisibilityPlugins::InitAlphaEntityList();
 	CAnimViewer::Render();
 	Render2dStuff(); // X
 	DoRWStuffEndOfFrame();
-	CTimer::Update();
+	Timer_Update();
 #endif
 }
 #endif
@@ -2202,7 +2376,7 @@ void TheGame(void)
 
 	PUSH_MEMID(MEMID_GAME);	// NB: not popped
 
-	CTimer::Initialise();
+	Timer_Initialise();
 
 	CGame::Initialise("DATA\\GTA3.DAT");
 
@@ -2223,8 +2397,8 @@ void TheGame(void)
 		if (FrontEndMenuManager.m_PrefsLanguage != TheMemoryCard.GetLanguageToLoad())
 		{
 			FrontEndMenuManager.m_PrefsLanguage = TheMemoryCard.GetLanguageToLoad();
-			TheText.Unload();
-			TheText.Load();
+			Text_Unload(&TheText);
+			Text_Load(&TheText);
 		}
 
 		CGame::currLevel = TheMemoryCard.GetLevelToLoad();
@@ -2243,21 +2417,23 @@ void TheGame(void)
 
 		WANT_TO_LOAD = false;
 
-		CTimer::Update();
+		Timer_Update();
 
 		while (!(FrontEndMenuManager.m_bWantToRestart || FOUND_GAME_TO_LOAD))
 		{
-			CSprite2d::InitPerFrame();
+			// Preserve the original operation through the C sprite interface
+			Sprite2d_InitPerFrame();
 			CFont::InitPerFrame();
 
 			PUSH_MEMID(MEMID_GAME_PROCESS)
-			CPointLights::InitPerFrame();
+			// Enter the C point-light algorithm with the original owner expressions
+			PointLights_InitPerFrame();
 			CGame::Process();
 			POP_MEMID();
 
 			DMAudio_Service();
 
-			if (CGame::bDemoMode && CTimer::GetTimeInMilliseconds() > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing())
+			if (CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing())
 			{
 				WANT_TO_LOAD = false;
 				FrontEndMenuManager.m_bWantToRestart = true;
@@ -2267,7 +2443,8 @@ void TheGame(void)
 			if (FrontEndMenuManager.m_bWantToRestart || FOUND_GAME_TO_LOAD)
 				break;
 
-			SetLightsWithTimeOfDayColour(Scene.world);
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_SetLightsWithTimeOfDayColour(Scene.world);
 
 			PUSH_MEMID(MEMID_RENDER);
 
@@ -2280,19 +2457,19 @@ void TheGame(void)
 
 #ifdef FIX_BUGS
 				// This has to be done BEFORE RwCameraBeginUpdate
-				RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip());
-				RwCameraSetFogDistance(Scene.camera, CTimeCycle::GetFogStart());
+				RwCameraSetFarClipPlane(Scene.camera, TimeCycle_GetFarClip());
+				RwCameraSetFogDistance(Scene.camera, TimeCycle_GetFogStart());
 #endif
 
-				if (CWeather::LightningFlash && !CCullZones::CamNoRain())
+				if (Weather_LightningFlash && !CullZones_CamNoRain())
 					DoRWStuffStartOfFrame_Horizon(255, 255, 255, 255, 255, 255, 255);
 				else
-					DoRWStuffStartOfFrame_Horizon(CTimeCycle::GetSkyTopRed(), CTimeCycle::GetSkyTopGreen(), CTimeCycle::GetSkyTopBlue(), CTimeCycle::GetSkyBottomRed(), CTimeCycle::GetSkyBottomGreen(), CTimeCycle::GetSkyBottomBlue(), 255);
+					DoRWStuffStartOfFrame_Horizon(TimeCycle_GetSkyTopRed(), TimeCycle_GetSkyTopGreen(), TimeCycle_GetSkyTopBlue(), TimeCycle_GetSkyBottomRed(), TimeCycle_GetSkyBottomGreen(), TimeCycle_GetSkyBottomBlue(), 255);
 
 				DefinedState();
 #ifndef FIX_BUGS
-				RwCameraSetFarClipPlane(Scene.camera, CTimeCycle::GetFarClip());
-				RwCameraSetFogDistance(Scene.camera, CTimeCycle::GetFogStart());
+				RwCameraSetFarClipPlane(Scene.camera, TimeCycle_GetFarClip());
+				RwCameraSetFogDistance(Scene.camera, TimeCycle_GetFogStart());
 #endif
 
 				RenderScene();
@@ -2323,7 +2500,8 @@ void TheGame(void)
 
 			DoFade();
 			Render2dStuffAfterFade();
-			CCredits::Render();
+			// Enter the complete C credits implementation with the original arguments
+			Credits_Render();
 
 			DoRWStuffEndOfFrame();
 
@@ -2332,7 +2510,7 @@ void TheGame(void)
 
 			frameCount = 0;
 
-			CTimer::Update();
+			Timer_Update();
 
 			POP_MEMID():	// MEMID_RENDER
 
@@ -2344,7 +2522,7 @@ void TheGame(void)
 		CPad::StopPadsShaking();
 		DMAudio_ChangeMusicMode(MUSICMODE_DISABLE);
 		CGame::ShutDownForRestart();
-		CTimer::Stop();
+		Timer_Stop();
 
 		if (FrontEndMenuManager.m_bWantToRestart || FOUND_GAME_TO_LOAD)
 		{
@@ -2375,7 +2553,7 @@ void SystemInit()
 #endif
 	
 #ifdef GTA_PS2
-	CFileMgr::InitCdSystem();
+	FileMgr_InitCdSystem();
 	
 	char path[256];
 	
@@ -2390,11 +2568,11 @@ void SystemInit()
 	
 	sceSifInitRpc(0);
 	
-	CFileMgr::InitCdSystem();
+	FileMgr_InitCdSystem();
 	
 	sceFsReset();
 
-	CFileMgr::InitCd();
+	FileMgr_InitCd();
 	
 	char modulepath[256];
 	
@@ -2756,8 +2934,8 @@ main(int argc, char *argv[])
 	{
 		GameInit(true);
 		
-		TheText.Unload();
-		TheText.Load();
+		Text_Unload(&TheText);
+		Text_Load(&TheText);
 		
 		CFont::Initialise();
 		
@@ -3208,7 +3386,7 @@ void cheats_window()
 
 	// Controls
 	ctrl_knob_fromlayout((double *) &timescale_v, &layout, 10);
-	CTimer::SetTimeScale(timescale_v);
+	Timer_SetTimeScale(timescale_v);
 }
 
 double rlip_altitude, cur_altitude;
@@ -3762,7 +3940,8 @@ void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector
 	ped->ReplaceWeaponWhenExitingVehicle();
 	ped->m_pVehicleAnim = nil;
 	ped->SetMoveState(PEDMOVE_NONE);
-	CAnimManager::BlendAnimation(ped->GetClump(), ped->m_animGroup, ANIM_STD_IDLE, 1000.0f);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_BlendAnimation(ped->GetClump(), ped->m_animGroup, ANIM_STD_IDLE, 1000.0f);
 	//ped->RestartNonPartialAnims();
 	pos.z += ped->GetDistanceFromCentreOfMassToBaseOfModel();
 
@@ -3820,7 +3999,7 @@ int rouz_acceleration_cheats(void *ptr)
 
 		// Car pitch
 		if (((CVehicle *) p)->IsCar() || ((CVehicle *) p)->IsBoat())
-			p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetRight() * ((float) -rouz.pitch + (float) CPad::GetPad(0)->GetCarGunUpDown()/128.f + (float) CPad::GetPad(0)->GetChar('P')-(float) CPad::GetPad(0)->GetChar(';')) * -0.0006f * (1.f + 4.f*(((CAutomobile *) p)->m_nWheelsOnGround==4));
+			p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetRight() * ((float) -rouz.pitch + (float) CPad::GetPad(0)->GetCarGunUpDown()/128.f + (float) CPad::GetPad(0)->GetChar('P')-(float) CPad::GetPad(0)->GetChar(';')) * -0.0006f * (1.f + 4.f*(((CAutomobile *) p)->m_nWheelsOnGround==4));
 
 		if (tas > 0.01f)
 		{
@@ -3842,7 +4021,7 @@ int rouz_acceleration_cheats(void *ptr)
 			acc += normal_vec * lift * lift_mul[1];
 
 			// Spin vehicle if lateral wind
-			p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetUp() * lift * lift_mul[3];
+			p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetUp() * lift * lift_mul[3];
 
 			// Front plane
 			normal_vec = p->GetForward();
@@ -3852,11 +4031,11 @@ int rouz_acceleration_cheats(void *ptr)
 			acc += normal_vec * lift * lift_mul[2];
 
 			// Integrate
-			p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+			p->m_vecMoveSpeed += (*Timer_GetTimeStep()) * acc;
 		}
 
 		// Rotation drag
-		p->m_vecTurnSpeed *= powf(0.5f, CTimer::GetTimeStepInMilliseconds()*0.001f);
+		p->m_vecTurnSpeed *= powf(0.5f, Timer_GetTimeStepInMilliseconds()*0.001f);
 
 		// Thrust and turning
 		if ((((CVehicle *) p)->IsBike() && ((CBike *) p)->m_nWheelsOnGround == 0) || (((CVehicle *) p)->IsCar() && ((CAutomobile *) p)->m_nWheelsOnGround == 0) || ((CVehicle *) p)->IsBoat())
@@ -3869,15 +4048,15 @@ int rouz_acceleration_cheats(void *ptr)
 				thrust *= (zero_speed - rangelimitf(fwd_tas, 0., zero_speed)) / zero_speed;		// thrust goes down to 0 at ~250 kt
 			else
 				thrust *= 0.3 * (-zero_speed + rangelimitf(-fwd_tas, 0., zero_speed)) / -zero_speed;
-			p->m_vecMoveSpeed += CTimer::GetTimeStep() * p->GetForward() * ((CVehicle *) p)->m_fGasPedal * thrust;
+			p->m_vecMoveSpeed += (*Timer_GetTimeStep()) * p->GetForward() * ((CVehicle *) p)->m_fGasPedal * thrust;
 
 			// Turning
 			if (((CVehicle *) p)->IsBike())
-				p->m_vecTurnSpeed += CTimer::GetTimeStep() * (-p->GetForward() + p->GetUp()*0.005f) * ((CVehicle *) p)->m_fSteerAngle * 0.09f;
+				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * (-p->GetForward() + p->GetUp()*0.005f) * ((CVehicle *) p)->m_fSteerAngle * 0.09f;
 			else
 			{
-				p->m_vecTurnSpeed += CTimer::GetTimeStep() * -p->GetForward() * ((CVehicle *) p)->m_fSteerAngle * 0.0018f;	// bank
-				p->m_vecTurnSpeed += CTimer::GetTimeStep() * p->GetUp() * (sqf(ias)+0.08f + 0.16f*erff(ias*10.f)*(float)p->bIsInWater) * ((float) CPad::GetPad(0)->GetCarGunLeftRight()/128.f + (float) CPad::GetPad(0)->GetChar('O')-(float) CPad::GetPad(0)->GetChar('U') + rouz.yaw) * -0.002f;	// rudder
+				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * -p->GetForward() * ((CVehicle *) p)->m_fSteerAngle * 0.0018f;	// bank
+				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetUp() * (sqf(ias)+0.08f + 0.16f*erff(ias*10.f)*(float)p->bIsInWater) * ((float) CPad::GetPad(0)->GetCarGunLeftRight()/128.f + (float) CPad::GetPad(0)->GetChar('O')-(float) CPad::GetPad(0)->GetChar('U') + rouz.yaw) * -0.002f;	// rudder
 			}
 			// GetRight -> point nose up (+) or down (-)
 			// -GetForward -> banking
@@ -3994,7 +4173,7 @@ int rouz_acceleration_cheats(void *ptr)
 		fmag = Min(fmag, 9.8f * 1.f);
 		acc = fmag * (attractor - p->GetPosition()) / dbb;
 		acc *= GRAVITY / 9.8;					// Newtons to retarded GTA units
-		p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+		p->m_vecMoveSpeed += (*Timer_GetTimeStep()) * acc;
 	}
 
 	// Vehicle antigravity
@@ -4013,10 +4192,10 @@ int rouz_acceleration_cheats(void *ptr)
 			acc = fmag * (attractor - p->GetPosition()) / dbb;
 			acc *= GRAVITY / 9.8;					// Newtons to retarded GTA units
 			if (p != FindPlayerVehicle())
-				p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+				p->m_vecMoveSpeed += (*Timer_GetTimeStep()) * acc;
 		}
 
-		p->m_vecMoveSpeed.z -= GRAVITY * CTimer::GetTimeStep();		// add regular GTA gravity
+		p->m_vecMoveSpeed.z -= GRAVITY * (*Timer_GetTimeStep());		// add regular GTA gravity
 	}
 
 	// Falling upwards attraction
@@ -4030,7 +4209,7 @@ int rouz_acceleration_cheats(void *ptr)
 		fmag = mass / dbb2;
 		acc = fmag * (attractor - p->GetPosition()) / dbb;
 		acc *= GRAVITY / 9.8;						// Newtons to retarded GTA units
-		p->m_vecMoveSpeed += CTimer::GetTimeStep() * acc;
+		p->m_vecMoveSpeed += (*Timer_GetTimeStep()) * acc;
 	}
 
 	print_counter &= 31;
@@ -4043,7 +4222,21 @@ int rouz_acceleration_cheats(void *ptr)
 
 double get_game_time()
 {
-	return (double) CTimer::GetTimeInMilliseconds() * 1e-3;
+	return (double) (*Timer_GetTimeInMilliseconds()) * 1e-3;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

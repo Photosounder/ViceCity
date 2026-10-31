@@ -1,0 +1,65 @@
+#pragma once
+#include "Draw.h"
+#include "Draw_constants.h"
+#include "Rect.h"
+typedef int32 RwPrimitiveType;
+typedef uint8_t uint8;
+typedef int16_t int16;
+struct CRGBA {
+    union {struct {uint8_t r,g,b,a;};struct {uint8_t red,green,blue,alpha;};RwRGBA rwRGBA;};
+    CRGBA()=default;
+    CRGBA(uint8_t r0,uint8_t g0,uint8_t b0,uint8_t a0){
+        // Preserve the original native colour constructor's channel conversions and assignments
+        r=r0;g=g0;b=b0;a=a0;
+    }
+};
+inline CVector operator+(const CVector &left,const CVector &right)
+{
+    // Execute the separately owned native vector addition primitive
+    return CVector(left.x+right.x,left.y+right.y,left.z+right.z);
+}
+inline CVector operator*(const CVector &left,float right)
+{
+    // Execute the separately owned native vector scaling primitive
+    return CVector(left.x*right,left.y*right,left.z*right);
+}
+CVector operator*(const RwMatrix&,const CVector&);
+struct SpriteCamera {CVector position;float CamFrontXNorm,CamFrontYNorm;RwMatrix m_viewMatrix;const CVector &GetPosition(void)const{
+    // Borrow the actual controlled camera position
+    return position;
+}};
+extern SpriteCamera TheCamera;
+struct SpriteScene {RwCamera *camera;};
+extern SpriteScene Scene;
+const float DefaultFOV=70.0f;
+float RwCameraGetNearClipPlane(RwCamera*);
+float RwIm2DGetNearScreenZ(void);
+float RwIm2DGetFarScreenZ(void);
+struct SoftwarePolygons {static bool CapturingWorldEffects(void);};
+inline float Sin(float x){
+    // Preserve the original native float trigonometric wrapper
+    return sinf(x);
+}
+inline float Cos(float x){
+    // Preserve the original native float trigonometric wrapper
+    return cosf(x);
+}
+#define Clamp(v,low,high) ((v)<(low)?(low):(v)>(high)?(high):(v))
+#ifdef GTA_PS2
+#ifdef GTA_PAL
+#define SCREEN_WIDTH ((float)640)
+#define SCREEN_HEIGHT ((float)512)
+#else
+#define SCREEN_WIDTH ((float)640)
+#define SCREEN_HEIGHT ((float)448)
+#endif
+#else
+#define SCREEN_WIDTH ((float)RsGlobal.width)
+#define SCREEN_HEIGHT ((float)RsGlobal.height)
+#endif
+#ifdef ASPECT_RATIO_SCALE
+#define SCREEN_SCALE_AR(a) ((a)*DEFAULT_ASPECT_RATIO/Draw_GetAspectRatio())
+#else
+#define SCREEN_SCALE_AR(a) (a)
+#endif
+enum {rwPRIMTYPETRIFAN=501,rwPRIMTYPETRILIST=502};

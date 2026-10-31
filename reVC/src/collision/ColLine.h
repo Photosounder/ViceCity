@@ -1,14 +1,21 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-struct CColLine
-{
-	// NB: this has to be compatible with two CVuVectors
-	CVector p0;
-	int pad0;
-	CVector p1;
-	int pad1;
-
-	CColLine(void) { };
-	CColLine(const CVector &p0, const CVector &p1) { this->p0 = p0; this->p1 = p1; };
-	void Set(const CVector &p0, const CVector &p1);
-};
+#include <stdint.h>
+#include "CollisionVector.h"
+typedef struct CColLine {
+    CollisionVector3 p0;
+    int32_t pad0;
+    CollisionVector3 p1;
+    int32_t pad1;
+} CColLine;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void ColLine_Init(CColLine *self,CollisionPointRef p0,CollisionPointRef p1);
+void ColLine_Set(CColLine *self,CollisionPointRef p0,CollisionPointRef p1);
+CColLine ColLine_Make(CollisionPointRef p0,CollisionPointRef p1);
+CColLine ColLine_FromRaw32(const void *bytes);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

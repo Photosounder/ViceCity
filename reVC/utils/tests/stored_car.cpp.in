@@ -1,0 +1,118 @@
+#include "owners.h"
+#include "entry.h"
+extern int pointerCode(const void *);
+extern "C" void Run_GarageAssign(void *,const void *);
+static uint64_t digest=UINT64_C(1469598103934665603);
+static unsigned states,checks;
+
+static void hash32(uint32_t value)
+{
+    // Compare explicit representations without addresses or compiler-dependent outer padding
+    for(unsigned n=0;n<4;++n){digest^=(uint8_t)(value>>(n*8));digest*=UINT64_C(1099511628211);}
+}
+static void bytes(const void *data,size_t size)
+{
+    // Observe all stored-record bytes including the two destination padding bytes
+    const uint8_t *p=(const uint8_t*)data;for(size_t i=0;i<size;++i){digest^=p[i];digest*=UINT64_C(1099511628211);}
+}
+static void require(bool condition)
+{
+    // Keep explicit invariants independent of the original-versus-C digest
+    ++checks;if(!condition){fprintf(stderr,"stored-car invariant failed at %u/%u\n",states,checks);exit(1);}
+}
+static uint32_t representation(float value)
+{
+    // Inspect floating point payloads without aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static void word(void *record,unsigned offset,uint32_t value)
+{
+    // Seed field representations without depending on private C++ field access
+    memcpy((uint8_t*)record+offset,&value,4);
+}
+static void seed(CStoredCar *record,unsigned value)
+{
+    // Provide distinct padding, signed bytes and copy-only floating point payloads
+    memset(record,(int)(value|0x80),sizeof(*record));word(record,0,100+value);
+    const uint32_t values[]={0,UINT32_C(0x80000000),UINT32_C(0x7f800000),UINT32_C(0xff800000),UINT32_C(0x7fc12345),UINT32_C(0xffc54321),UINT32_C(0x3f800000),UINT32_C(0xbf800000)};
+    for(unsigned i=0;i<6;++i)word(record,4+i*4,values[(value+i)%8]);
+    word(record,28,(value*UINT32_C(2654435761)));
+    for(unsigned i=32;i<38;++i)((uint8_t*)record)[i]=(uint8_t)(value*17+i*7);
+}
+static void observeRecord(const CStoredCar *record)
+{
+    // Keep every operation's partial-write contract visible
+    ++states;bytes(record,sizeof(*record));
+}
+static void observeVehicle(CVehicle *vehicle)
+{
+    // Normalize native pointer identities and hash all fields restoration can affect or retain
+    hash32(vehicle?1:0);if(!vehicle)return;
+    hash32(vehicle->model);hash32(vehicle->status);hash32(vehicle->type);
+    const CVector *vectors[]={&vehicle->pos,&vehicle->forward,&vehicle->right,&vehicle->up};
+    for(unsigned n=0;n<4;++n){hash32(representation(vectors[n]->x));hash32(representation(vectors[n]->y));hash32(representation(vectors[n]->z));}
+    hash32(vehicle->m_currentColour1);hash32(vehicle->m_currentColour2);hash32(vehicle->m_nRadioStation);hash32((uint8_t)vehicle->m_aExtras[0]);hash32((uint8_t)vehicle->m_aExtras[1]);
+    hash32(vehicle->m_bombType);hash32(pointerCode(vehicle->m_pBombRigger));hash32(pointerCode(vehicle->pDriver));hash32(vehicle->m_nDoorLock);
+    hash32(vehicle->bFreebies);hash32(vehicle->bHasBeenOwnedByPlayer);hash32(vehicle->bIsStanding);
+    hash32(vehicle->bBulletProof);hash32(vehicle->bFireProof);hash32(vehicle->bExplosionProof);hash32(vehicle->bCollisionProof);hash32(vehicle->bMeleeProof);
+}
+static void observeTrace(void)
+{
+    // Compare native operation order and retained component-selection state
+    hash32(traceCount);for(unsigned i=0;i<traceCount;++i)hash32(traceValues[i]);hash32((uint8_t)controls.first);hash32((uint8_t)controls.second);
+}
+
+@GARAGE_OBSERVE@
+
+int main(int argc,char **argv)
+{
+    // Exercise original debug assertions in child processes without triggering a graphical error dialog
+    if(argc>1){
+        CStoredCar record;seed(&record,0);controls={true,false,false,false,false,1,0,-1,0,0};
+        controls.nullInfo=!strcmp(argv[1],"info");controls.nullPool=!controls.nullInfo;
+        controls.boat=!strcmp(argv[1],"pool-boat");controls.bike=!strcmp(argv[1],"pool-bike");Run_RestoreCar(&record);return 9;
+    }
+
+    // Preserve partial initialization, partial clearing, assignment return identity and self-assignment
+    for(unsigned n=0;n<256;++n){
+        CStoredCar record,other;seed(&record,n);seed(&other,255-n);uint8_t saved[40];memcpy(saved,&record,40);
+        Run_Init(&record);require(!Run_HasCar(&record));require(memcmp((uint8_t*)&record+4,saved+4,36)==0);observeRecord(&record);
+        seed(&record,n);Run_Clear(&record);require(!Run_HasCar(&record));require(memcmp((uint8_t*)&record+4,saved+4,36)==0);observeRecord(&record);
+        seed(&record,n);require(Run_Assign(&record,&other)==&record);require(memcmp(&record,&other,38)==0);require(((uint8_t*)&record)[38]==saved[38]&&((uint8_t*)&record)[39]==saved[39]);observeRecord(&record);
+        require(Run_Assign(&record,&record)==&record);observeRecord(&record);
+        word(&record,0,n?UINT32_C(0xffffffff):0);require(Run_HasCar(&record)==(n!=0));observeRecord(&record);
+    }
+
+    // Capture all proof masks, reported vehicle kinds and signed-byte storage values
+    for(unsigned proof=0;proof<32;++proof)for(int type=0;type<8;++type)for(unsigned value=0;value<256;value+=17){
+        CAutomobile vehicle(1,RANDOM_VEHICLE);controls.proofs=(int)proof;controls.reportedType=type;construct(&vehicle,400+type,RANDOM_VEHICLE,0);traceCount=0;
+        vehicle.m_currentColour1=(uint8_t)value;vehicle.m_currentColour2=(uint8_t)(255-value);vehicle.m_nRadioStation=(uint8_t)(value^128);vehicle.m_aExtras[0]=(int8_t)value;vehicle.m_aExtras[1]=(int8_t)~value;vehicle.m_bombType=value;
+        CStoredCar record;seed(&record,value);memcpy(&vehicle.pos,(uint8_t*)&record+4,12);memcpy(&vehicle.forward,(uint8_t*)&record+16,12);const uint8_t oldBomb=((uint8_t*)&record)[37];Run_StoreCar(&record,&vehicle);
+        uint32_t flags;memcpy(&flags,(uint8_t*)&record+28,4);require(flags==proof);require(((uint8_t*)&record)[37]==(type==0||type==1?vehicle.m_bombType:oldBomb));observeRecord(&record);observeTrace();
+    }
+
+    // Compare readiness, both model selectors, component gates, retained proofs and raw bomb narrowing
+    const uint8_t bombs[]={0,1,7,8,128,255};
+    for(int loaded=0;loaded<2;++loaded)for(int kind=0;kind<4;++kind)for(int components=-1;components<=1;++components)for(int proof=0;proof<32;++proof)for(unsigned b=0;b<6;++b)for(int reported=-1;reported<4;++reported){
+        CStoredCar record;seed(&record,(unsigned)(proof+b));word(&record,28,(uint32_t)proof|UINT32_C(0x80000000));((uint8_t*)&record)[37]=bombs[b];
+        uint8_t saved[40];memcpy(saved,&record,40);controls={loaded!=0,(kind&1)!=0,(kind&2)!=0,false,false,components,b%3==0?0:b%3==1?31:proof^31,reported,-7,11};traceCount=0;
+        CVehicle *vehicle=(CVehicle*)Run_RestoreCar(&record);require((vehicle!=NULL)==(loaded!=0));require(memcmp(saved,&record,40)==0);
+        if(vehicle){const unsigned expected=(unsigned)(controls.proofs|proof);require(vehicle->pDriver==NULL&&vehicle->status==STATUS_ABANDONED&&vehicle->m_nDoorLock==CARLOCK_UNLOCKED);require(vehicle->bBulletProof==!!(expected&1)&&vehicle->bFireProof==!!(expected&2)&&vehicle->bExplosionProof==!!(expected&4)&&vehicle->bCollisionProof==!!(expected&8)&&vehicle->bMeleeProof==!!(expected&16));}
+        observeRecord(&record);observeVehicle(vehicle);observeTrace();
+    }
+
+    // Retain forty-byte save stride, field writes and untouched guard/padding bytes
+    for(unsigned n=0;n<256;++n){
+        CStoredCar source,target;seed(&source,n);seed(&target,255-n);alignas(CStoredCar) uint8_t buffer[48];memset(buffer,0x5a,sizeof(buffer));
+        Run_Assign(buffer+4,&source);require(buffer[0]==0x5a&&buffer[3]==0x5a&&buffer[44]==0x5a&&buffer[47]==0x5a&&buffer[42]==0x5a&&buffer[43]==0x5a);
+        Run_Assign(&target,buffer+4);require(memcmp(&source,&target,38)==0);observeRecord(&target);bytes(buffer,sizeof(buffer));
+    }
+
+    // Preserve nested record padding through the old noncompatible garage assignment boundaries
+    for(unsigned n=0;n<256;++n){
+        CGarage source,target;memset(&source,0,sizeof(source));memset(&target,0x5a,sizeof(target));seed(&source.m_sStoredCar,n);seed(&target.m_sStoredCar,255-n);
+        source.m_bClosingWithoutTargetCar=!!(n&1);source.m_bDeactivated=!!(n&2);source.m_bResprayHappened=!!(n&4);source.m_fDoorHeight=(float)n;source.m_nTimeToStartAction=n*1000;
+        const uint8_t padding=((uint8_t*)&target.m_sStoredCar)[38];Run_GarageAssign(&target,&source);require(((uint8_t*)&target.m_sStoredCar)[38]==padding&&((uint8_t*)&target.m_sStoredCar)[39]==padding);observeGarage(&target);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);return 0;
+}

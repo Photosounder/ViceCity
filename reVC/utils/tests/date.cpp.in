@@ -1,0 +1,88 @@
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <new>
+typedef int8_t int8;
+typedef int16_t int16;
+@OWNER@
+@SERIALIZATION@
+static CDate staticDates[8];
+static uint64_t digest=UINT64_C(1469598103934665603);
+static uint32_t randomState=1;
+static void require(bool ok,const char *message)
+{
+    // Fail an independent record, comparison or serialization invariant
+    if(!ok){fprintf(stderr,"%s\n",message);exit(1);}
+}
+static void word(uint32_t value)
+{
+    // Record complete integer state and comparison results in the history
+    digest^=value;digest*=UINT64_C(1099511628211);
+}
+static uint32_t randomWord(void)
+{
+    // Generate deterministic input bits using defined unsigned arithmetic
+    randomState=randomState*UINT32_C(1664525)+UINT32_C(1013904223);return randomState;
+}
+static int *field(CDate *date,unsigned index)
+{
+    // Address each actual field without walking a struct as an array
+    switch(index){case 0:return &date->m_nSecond;case 1:return &date->m_nMinute;case 2:return &date->m_nHour;case 3:return &date->m_nDay;case 4:return &date->m_nMonth;default:return &date->m_nYear;}
+}
+int main(void)
+{
+    // Check the unchanged six-int layout and zero state of global date arrays
+    require(sizeof(CDate)==24 && alignof(CDate)==4,"Date layout");
+    require(offsetof(CDate,m_nSecond)==0 && offsetof(CDate,m_nYear)==20,"Date field offsets");
+    for(CDate &date:staticDates)for(unsigned index=0;index<6;++index)require(*field(&date,index)==0,"Static array initialization");
+    // Check chronological priority even when lower fields disagree with it
+    CDate left,right;TestDate_Initialize(&left);TestDate_Initialize(&right);
+    for(unsigned priority=0;priority<6;++priority){
+        TestDate_Initialize(&left);TestDate_Initialize(&right);*field(&right,5-priority)=1;
+        for(unsigned index=0;index<5-priority;++index)*field(&left,index)=INT_MAX;
+        require(TestDate_IsBefore(&left,&right) && !TestDate_IsAfter(&left,&right) && !TestDate_IsEqual(&left,&right),"Comparison field priority");
+        require(TestDate_IsAfter(&right,&left) && !TestDate_IsBefore(&right,&left),"Comparison symmetry");
+    }
+    // Check the exact signed input widths and shared input-reference behavior
+    int8_t inputs[]={-128,127,-3,-4,12};int8_t copied[5];memcpy(copied,inputs,5);
+    TestDate_Populate(&left,inputs,inputs+1,inputs+2,inputs+3,inputs+4,INT16_MIN);
+    require(left.m_nSecond==-128 && left.m_nMinute==127 && left.m_nHour==-3 && left.m_nDay==-4 && left.m_nMonth==12 && left.m_nYear==INT16_MIN,"Signed population");
+    require(memcmp(inputs,copied,5)==0,"Read-only inputs");
+    int8_t shared=-17;TestDate_Populate(&right,&shared,&shared,&shared,&shared,&shared,INT16_MAX);
+    require(right.m_nSecond==-17 && right.m_nMonth==-17 && right.m_nYear==INT16_MAX && shared==-17,"Shared input addresses");
+    // Compare reset, population, assignment and every ordering operation over varied record histories
+    CDate dates[8];for(CDate &date:dates)TestDate_Initialize(&date);
+    uint64_t comparisons=0;
+    for(uint32_t iteration=0;iteration<32768;++iteration){
+        unsigned slot=iteration%8;CDate *date=dates+slot;
+        switch(iteration%5){
+            case 0:TestDate_Initialize(date);break;
+            case 1:
+                for(unsigned index=0;index<6;++index)*field(date,index)=(int32_t)randomWord();
+                break;
+            case 2:{
+                int8_t values[5];for(int8_t &value:values)value=(int8_t)randomWord();
+                int16_t year=(int16_t)randomWord();TestDate_Populate(date,values,values+1,values+2,values+3,values+4,year);break;
+            }
+            case 3:dates[slot]=dates[(slot+3)%8];break;
+            default:for(unsigned index=0;index<6;++index)*field(date,index)=index%2?INT_MIN:INT_MAX;break;
+        }
+        for(CDate &a:dates)for(CDate &b:dates){
+            bool after=TestDate_IsAfter(&a,&b),before=TestDate_IsBefore(&a,&b),equal=TestDate_IsEqual(&a,&b);
+            require((unsigned)after+(unsigned)before+(unsigned)equal==1,"Ordering trichotomy");
+            word(after);word(before);word(equal);++comparisons;
+        }
+        for(CDate &a:dates)for(unsigned index=0;index<6;++index)word((uint32_t)*field(&a,index));
+        uint8_t buffer[30];memset(buffer,0xa5,sizeof(buffer));int expected[6];
+        for(unsigned index=0;index<6;++index)expected[index]=*field(date,index);
+        require(saveDate(date,buffer+3)==24 && memcmp(buffer+3,expected,24)==0,"Save order and length");
+        for(unsigned index=0;index<3;++index)require(buffer[index]==0xa5 && buffer[27+index]==0xa5,"Save guards");
+        TestDate_Initialize(&right);require(loadDate(&right,buffer+3)==24,"Load length");
+        require(TestDate_IsEqual(date,&right),"Date save/load equality");
+        for(uint8_t value:buffer)word(value);
+    }
+    printf("%016llx comparisons=%llu fragments=32768 bytes=24\n",(unsigned long long)digest,(unsigned long long)comparisons);
+}

@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Font.h"
@@ -62,17 +66,24 @@ void
 CAnimViewer::Initialise(void) {
 
 	// we need messages, messages needs hud, hud needs those
-	int hudSlot = CTxdStore::AddTxdSlot("hud");
-	CTxdStore::LoadTxd(hudSlot, "MODELS/HUD.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	int hudSlot = TxdStore_AddTxdSlot("hud");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(hudSlot, "MODELS/HUD.TXD");
 	CHud::m_Wants_To_Draw_Hud = false;
 
-	animTxdSlot = CTxdStore::AddTxdSlot("generic");
-	CTxdStore::Create(animTxdSlot);
-	int particleSlot = CTxdStore::AddTxdSlot("particle");
-	CTxdStore::LoadTxd(particleSlot, "MODELS/PARTICLE.TXD");
-	CTxdStore::SetCurrentTxd(animTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	animTxdSlot = TxdStore_AddTxdSlot("generic");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_Create(animTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int particleSlot = TxdStore_AddTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(particleSlot, "MODELS/PARTICLE.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(animTxdSlot);
 	CPools::Initialise();
-	CReferences::Init();
+	References_Init();
 	TheCamera.Init();
 	TheCamera.SetRwCamera(Scene.camera);
 	TheCamera.Cams[TheCamera.ActiveCam].Distance = 5.0f;
@@ -82,12 +93,13 @@ CAnimViewer::Initialise(void) {
 	CWorld::Initialise();
 	mod_HandlingManager.Initialise();
 	CTempColModels::Initialise();
-	CAnimManager::Initialise();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_Initialise();
 	CModelInfo::Initialise();
 	CParticle::Initialise();
 	CCarCtrl::Init();
-	CPedStats::Initialise();
-	CMessages::Init();
+	PedStats_Initialise();
+	Messages_Init();
 	CdStreamAddImage("MODELS\\GTA3.IMG");
 	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
 	CFileLoader::LoadLevel("DATA\\ANIMVIEWER.DAT");
@@ -103,13 +115,14 @@ CAnimViewer::Initialise(void) {
 #ifdef FIX_BUGS
 	CVehicleModelInfo::LoadEnvironmentMaps();
 #endif
-	CAnimManager::LoadAnimFiles();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_LoadAnimFiles();
 	CWorld::PlayerInFocus = 0;
 	CWeapon::InitialiseWeapons();
 	CPed::Initialise();
-	CTimer::Initialise();
-	CClock::Initialise(60000);
-	CTimeCycle::Initialise();
+	Timer_Initialise();
+	Clock_Initialise(60000);
+	TimeCycle_Initialise();
 	CCarCtrl::Init();
 //+ rouz edit (ChatGPT)
 	// Allocate the anim viewer player without invoking C++ new.
@@ -122,20 +135,21 @@ CAnimViewer::Initialise(void) {
 //- rouz edit (ChatGPT)
 	player->SetPosition(1000.0f, 1000.0f, 1000.0f);
 	CWorld::Players[0].m_pPed = player;
-	CDraw::SetFOV(120.0f);
-	CDraw::ms_fLODDistance = 500.0f;
+	Draw_SetFOV(120.0f);
+	Draw_ms_fLODDistance = 500.0f;
 
-	int fd = CFileMgr::OpenFile("DATA\\SPECIAL.TXT", "r");
+	int fd = FileMgr_OpenFile("DATA\\SPECIAL.TXT", "r");
 	char animGroup[32], modelName[32];
 	if (fd) {
 		for (int lineId = 0; lineId < NUM_OF_SPECIAL_CHARS; lineId++) {
-			if (!CFileMgr::ReadLine(fd, gString, 255))
+			if (!FileMgr_ReadLine(fd, gString, 255))
 				break;
 
 			sscanf(gString, "%s %s", modelName, animGroup);
 			int groupId;
 			for (groupId = 0; groupId < NUM_ANIM_ASSOC_GROUPS; groupId++) {
-				if (!strcmp(animGroup, CAnimManager::GetAnimGroupName((AssocGroupId)groupId)))
+				// Use the complete C animation manager at the original call boundary
+				if (!strcmp(animGroup, AnimManager_GetAnimGroupName((AssocGroupId)groupId)))
 					break;
 			}
 
@@ -144,17 +158,22 @@ CAnimViewer::Initialise(void) {
 
 			CStreaming::RequestSpecialChar(lineId, modelName, STREAMFLAGS_DONT_REMOVE);
 		}
-		CFileMgr::CloseFile(fd);
+		FileMgr_CloseFile(fd);
 	} else {
 		// TODO? maybe request some special models here so the thing doesn't crash
 	}
 
 	// From LCS. idk if needed
-	int vanBlock = CAnimManager::GetAnimationBlockIndex("van");
-	int bikesBlock = CAnimManager::GetAnimationBlockIndex("bikes");
-	int bikevBlock = CAnimManager::GetAnimationBlockIndex("bikev");
-	int bikehBlock = CAnimManager::GetAnimationBlockIndex("bikeh");
-	int bikedBlock = CAnimManager::GetAnimationBlockIndex("biked");
+	// Use the complete C animation manager at the original call boundary
+	int vanBlock = AnimManager_GetAnimationBlockIndex("van");
+	// Use the complete C animation manager at the original call boundary
+	int bikesBlock = AnimManager_GetAnimationBlockIndex("bikes");
+	// Use the complete C animation manager at the original call boundary
+	int bikevBlock = AnimManager_GetAnimationBlockIndex("bikev");
+	// Use the complete C animation manager at the original call boundary
+	int bikehBlock = AnimManager_GetAnimationBlockIndex("bikeh");
+	// Use the complete C animation manager at the original call boundary
+	int bikedBlock = AnimManager_GetAnimationBlockIndex("biked");
 	CStreaming::FlushRequestList();
 	CStreaming::RequestAnim(vanBlock, STREAMFLAGS_DEPENDENCY);
 	CStreaming::RequestAnim(bikesBlock, STREAMFLAGS_DEPENDENCY);
@@ -162,11 +181,16 @@ CAnimViewer::Initialise(void) {
 	CStreaming::RequestAnim(bikehBlock, STREAMFLAGS_DEPENDENCY);
 	CStreaming::RequestAnim(bikedBlock, STREAMFLAGS_DEPENDENCY);
 	CStreaming::LoadAllRequestedModels(false);
-	CAnimManager::AddAnimBlockRef(vanBlock);
-	CAnimManager::AddAnimBlockRef(bikesBlock);
-	CAnimManager::AddAnimBlockRef(bikevBlock);
-	CAnimManager::AddAnimBlockRef(bikehBlock);
-	CAnimManager::AddAnimBlockRef(bikedBlock);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_AddAnimBlockRef(vanBlock);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_AddAnimBlockRef(bikesBlock);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_AddAnimBlockRef(bikevBlock);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_AddAnimBlockRef(bikehBlock);
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_AddAnimBlockRef(bikedBlock);
 }
 
 int
@@ -230,18 +254,23 @@ PlayAnimation(RpClump *clump, AssocGroupId animGroup, AnimationId anim)
 
 //+ rouz edit (ChatGPT)
 	// Destroy the matching partial animation without invoking C++ delete.
-	if (currentAssoc && currentAssoc->IsPartial()){
-		currentAssoc->~CAnimBlendAssociation();
+	// Use the complete C association at the original native operation boundary
+	if (currentAssoc && AnimAssociation_IsPartial(currentAssoc)){
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_Destroy(currentAssoc);
 		free(currentAssoc);
 	}
 //- rouz edit (ChatGPT)
 
 	RpAnimBlendClumpSetBlendDeltas(clump, ASSOC_PARTIAL, -8.0f);
 
-	CAnimBlendAssociation *animAssoc = CAnimManager::BlendAnimation(clump, animGroup, anim, 8.0f);
+	// Use the complete C animation manager at the original call boundary
+	CAnimBlendAssociation *animAssoc = AnimManager_BlendAnimation(clump, animGroup, anim, 8.0f);
 	animAssoc->flags |= ASSOC_DELETEFADEDOUT;
-	animAssoc->SetCurrentTime(0.0f);
-	animAssoc->SetRun();
+	// Use the complete C association at the original native operation boundary
+	AnimAssociation_SetCurrentTime(animAssoc,0.0f);
+	// Use the complete C association at the original native operation boundary
+	AnimAssociation_SetRun(animAssoc);
 }
 
 void
@@ -290,9 +319,12 @@ CAnimViewer::Update(void)
 			pTarget = nil;
 			
 			// These calls were inside of LoadIFP function.
-			CAnimManager::Shutdown();
-			CAnimManager::Initialise();
-			CAnimManager::LoadAnimFiles();
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_Shutdown();
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_Initialise();
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_LoadAnimFiles();
 
 			reloadIFP = false;
 		}
@@ -461,17 +493,17 @@ CAnimViewer::Update(void)
 			if (pad->GetSquareJustDown()) {
 				reloadIFP = true;
 				AsciiToUnicode("IFP reloaded", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetCrossJustDown()) {
 				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
 				AsciiToUnicode("Animation restarted", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetCircleJustDown()) {
 				PlayAnimation(pTarget->GetClump(), animGroup, ANIM_STD_IDLE);
 				AsciiToUnicode("Idle animation playing", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetDPadUpJustDown()) {
 				animId--;
@@ -482,7 +514,7 @@ CAnimViewer::Update(void)
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetDPadDownJustDown()) {
 				animId = (animId == (ANIM_STD_NUM - 1) ? 0 : animId + 1);
@@ -490,23 +522,24 @@ CAnimViewer::Update(void)
 
 				sprintf(gString, "Current anim: %d", animId);
 				AsciiToUnicode(gString, gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 
 			} else if (pad->GetStartJustDown()) {
 
 			} else if (pad->GetLeftShoulder1JustDown()) {
 				nextModelId = FirstCarModelId(modelId);
 				AsciiToUnicode("Switched to vehicles", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 				// Originally it was GetPad(1)->LeftShoulder2
 			} else if (pad->NewState.Triangle) {
 				((CPedModelInfo *)CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(pTarget->GetClump());
 				AsciiToUnicode("Ped Col model will be animated as long as you hold the button", gUString);
-				CMessages::AddMessage(gUString, 100, 0);
+				Messages_AddMessage(gUString, 100, 0);
 			}
 
 			// From LCS
-			if (CAnimManager::GetAnimAssocGroups()[animGroup].numAssociations <= animId)
+			// Use the complete C animation manager at the original call boundary
+			if (AnimManager_GetAnimAssocGroups()[animGroup].numAssociations <= animId)
 				animId = 0;
 
 		} else if (modelInfo->GetModelType() == MITYPE_VEHICLE) {
@@ -514,12 +547,12 @@ CAnimViewer::Update(void)
 			if (pad->GetLeftShoulder1JustDown()) {
 				nextModelId = LastPedModelId(modelId);
 				AsciiToUnicode("Switched to peds", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 				// Start in mobile
 			} else if (pad->GetSquareJustDown()) {
 				CVehicleModelInfo::LoadVehicleColours();
 				AsciiToUnicode("Carcols.dat reloaded", gUString);
-				CMessages::AddMessage(gUString, 1000, 0);
+				Messages_AddMessage(gUString, 1000, 0);
 			}
 		}
 	}
@@ -529,14 +562,14 @@ CAnimViewer::Update(void)
 
 		sprintf(gString, "Current model ID: %d", nextModelId);
 		AsciiToUnicode(gString, gUString);
-		CMessages::AddMessage(gUString, 1000, 0);
+		Messages_AddMessage(gUString, 1000, 0);
 
 	} else if (pad->GetDPadRightJustDown()) {
 		nextModelId = NextModelId(modelId, 1);
 
 		sprintf(gString, "Current model ID: %d", nextModelId);
 		AsciiToUnicode(gString, gUString);
-		CMessages::AddMessage(gUString, 1000, 0);
+		Messages_AddMessage(gUString, 1000, 0);
 	}
 	// There were extra codes here to let us change model id by 50, but xbox CPad struct is different, so I couldn't port.
 
@@ -571,7 +604,7 @@ CAnimViewer::Update(void)
 		return;
 	}
 
-	CTimeCycle::Update();
+	TimeCycle_Update();
 	CWorld::Process();
 	if (pTarget)
 		TheCamera.Process();
@@ -593,8 +626,16 @@ CAnimViewer::Shutdown(void)
 
 	CWorld::ShutDown();
 	CModelInfo::ShutDown();
-	CAnimManager::Shutdown();
-	CTimer::Shutdown();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_Shutdown();
+	Timer_Shutdown();
 	CStreaming::Shutdown();
-	CTxdStore::RemoveTxdSlot(animTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(animTxdSlot);
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #ifdef RW_OPENGL
@@ -60,12 +62,16 @@ uploadSpecLights(void)
 	colors[0].red = speccol.r;
 	colors[0].green = speccol.g;
 	colors[0].blue = speccol.b;
-	dirs[0].dir = pDirect->getFrame()->getLTM()->at;
+	// Use the complete C lighting owner and its borrowed SDK handles
+	dirs[0].dir = ((RpLight*)Lights_Direct)->getFrame()->getLTM()->at;
 	dirs[0].power = power;
 	for(int i = 0; i < NUMEXTRADIRECTIONALS; i++){
-		if(pExtraDirectionals[i]->getFlags() & rw::Light::LIGHTATOMICS){
-			colors[1+i] = pExtraDirectionals[i]->color;
-			dirs[1+i].dir = pExtraDirectionals[i]->getFrame()->getLTM()->at;
+		// Use the complete C lighting owner and its borrowed SDK handles
+		if(((RpLight*)Lights_ExtraDirectionals[i])->getFlags() & rw::Light::LIGHTATOMICS){
+			// Use the complete C lighting owner and its borrowed SDK handles
+			colors[1+i] = ((RpLight*)Lights_ExtraDirectionals[i])->color;
+			// Use the complete C lighting owner and its borrowed SDK handles
+			dirs[1+i].dir = ((RpLight*)Lights_ExtraDirectionals[i])->getFrame()->getLTM()->at;
 			dirs[1+i].power = power*2.0f;
 		}
 	}
@@ -141,7 +147,7 @@ CreateVehiclePipe(void)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	if(CFileMgr::LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/carTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/carTweakingTable.dat'\n");
 	else{
 		char *fp = (char*)work_buff;
@@ -250,7 +256,7 @@ CreateWorldPipe(void)
 	using namespace rw;
 	using namespace rw::gl3;
 
-	if(CFileMgr::LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/worldTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/worldTweakingTable.dat'\n");
 	else
 		ReadTweakValueTable((char*)work_buff, WorldLightmapBlend);
@@ -502,7 +508,7 @@ CreateRimLightPipes(void)
 {
 	using namespace rw::gl3;
 
-	if(CFileMgr::LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
+	if(FileMgr_LoadFile("neo/rimTweakingTable.dat", work_buff, sizeof(work_buff), "r") <= 0)
 		printf("Error: couldn't open 'neo/rimTweakingTable.dat'\n");
 	else{
 		char *fp = (char*)work_buff;
@@ -641,7 +647,8 @@ AtomicFirstPass(RpAtomic *atomic, int pass)
 	lights.numDirectionals = 0;
 	lights.numLocals = 0;
 	if(building->lighting)
-		lights.ambient = pAmbient->color;
+		// Use the complete C lighting owner and its borrowed SDK handles
+		lights.ambient = ((RpLight*)Lights_Ambient)->color;
 	else
 		lights.ambient = black;
 
@@ -720,7 +727,8 @@ RenderBlendPass(int pass)
 		setupVertexInput(building->instHeader);
 		setWorldMatrix(&building->matrix);
 		if(building->lighting)
-			lights.ambient = pAmbient->color;
+			// Use the complete C lighting owner and its borrowed SDK handles
+			lights.ambient = ((RpLight*)Lights_Ambient)->color;
 		else
 			lights.ambient = black;
 		setLights(&lights);
@@ -746,3 +754,5 @@ RenderBlendPass(int pass)
 #endif
 
 #endif
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

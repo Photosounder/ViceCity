@@ -1,0 +1,190 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs;bool Draw_ms_bProperScaling; }
+RsGlobalType RsGlobal;
+CMenuManager FrontEndMenuManager;
+bool CMenuManager::m_PrefsCutsceneBorders;
+CCamera TheCamera;
+CText TheText;
+static CPad pad;
+static wchar buffer[64];
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,lookups,updates,prints,borders,flushes;
+static unsigned crossAt,crossEvery,localUpdate;
+static int hook;
+static bool triggered;
+static float aspect;
+static uint32_t *borrowedLine;
+
+static void require(bool value)
+{
+    // Fail quietly with the exact failing corpus position
+    if(!value){fprintf(stderr,"states=%u calls=%u hook=%d\n",states,calls,hook);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Normalize every observation independently of process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite results bit for bit
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void event(unsigned value)
+{
+    // Observe private state, live owner state and exact operation ordering
+    calls++;word(value);word(TestCr_Going());word(TestCr_StartTime());word(Timer_timeMs);word(RsGlobal.width);word(RsGlobal.height);word(FrontEndMenuManager.m_PrefsLanguage);word(FrontEndMenuManager.m_bMenuActive);
+}
+static void snapshot(void)
+{
+    // Record all persistent credits state and relevant owner state
+    states++;word(TestCr_Going());word(TestCr_Done());word(TestCr_StartTime());word(Timer_timeMs);word(pad.NewState.Cross);word(pad.OldState.Cross);word(buffer[0]);word(buffer[1]);floating(aspect);
+}
+extern "C" float Draw_GetAspectRatio(void)
+{
+    // Read the same aspect value without introducing an owner callback
+    return aspect;
+}
+#ifdef PROPER_SCALING
+extern "C" float Draw_ScaleY(float y)
+{
+    // Execute the exact existing shared proper-scaling expression
+    return Draw_ms_bProperScaling?y:y*((float)DEFAULT_SCREEN_HEIGHT/SCREEN_HEIGHT_NTSC);
+}
+#endif
+void DefinedState(void)
+{
+    // Preserve state setup before elapsed-time calculation
+    event(1);
+    if(!triggered && hook==1){triggered=true;Timer_timeMs+=73;TestCr_Start();}
+}
+wchar *CText::Get(const char *key)
+{
+    // Return the same mutable Unicode buffer for every original localization key
+    event(2);lookups++;size_t n=strlen(key);require(n<63);for(size_t i=0;i<=n;i++){word((unsigned char)key[i]);buffer[i]=(wchar)(unsigned char)key[i];}
+    if(!triggered && hook==2){triggered=true;TestCr_Stop();}
+    if(!triggered && hook==3 && strcmp(key,"CRED023")==0){triggered=true;FrontEndMenuManager.m_PrefsLanguage=CMenuManager::LANGUAGE_FRENCH;}
+    return buffer;
+}
+void CPad::UpdatePads(void)
+{
+    // Retain every original per-line input update, including updates after cancellation
+    event(3);updates++;localUpdate++;pad.OldState.Cross=0;pad.NewState.Cross=(crossAt==localUpdate || (crossEvery && localUpdate%crossEvery==0))?1:0;
+    if(!triggered && hook==4){triggered=true;buffer[0]=0x3456;if(borrowedLine)*borrowedLine+=31;}
+    if(!triggered && hook==5){triggered=true;Timer_timeMs+=101;TestCr_Start();}
+}
+CPad *CPad::GetPad(int32 index)
+{
+    // Preserve the original pad index and exact just-down predicate
+    event(4);require(index==0);return &pad;
+}
+void CFont::SetScale(float x,float y)
+{
+    // Compare scaled font arguments before any callback changes the viewport
+    event(5);floating(x);floating(y);
+    if(!triggered && hook==6){triggered=true;RsGlobal.width=1365;RsGlobal.height=767;aspect=1.91f;}
+}
+void CFont::SetColor(CRGBA color)
+{
+    // Retain original typed color values and a possible line-alias change before printing
+    event(6);word(color.r);word(color.g);word(color.b);word(color.a);
+    if(!triggered && hook==7){triggered=true;if(borrowedLine)*borrowedLine+=47;buffer[1]=0x4567;}
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Compare the original borrowed buffer at each shadow and foreground call
+    event(7);prints++;floating(x);floating(y);require(text==buffer);for(int i=0;i<12;i++)word(text[i]);
+    if(!triggered && hook==8){triggered=true;buffer[0]=0x5678;RsGlobal.width=1920;RsGlobal.height=1080;aspect=16.f/9.f;if(borrowedLine)*borrowedLine+=59;}
+    if(!triggered && hook==9){triggered=true;TestCr_Render();}
+    if(!triggered && hook==10){triggered=true;TestCr_Stop();}
+}
+void CFont::SetCentreSize(float value)
+{
+    // Observe the original centre-width expression and live font-owner ordering
+    event(8);floating(value);
+}
+void CFont::SetFontStyle(int16 style)
+{
+    // Check the canonical font enum against the original standard selection
+    event(9);word((uint16_t)style);require(style==FONT_STANDARD);
+}
+void CFont::DrawFonts(void)
+{
+    // Keep the original end-of-sequence flush before border and completion predicates
+    event(10);flushes++;
+    if(!triggered && hook==11){triggered=true;TheCamera.m_WideScreenOn=true;CMenuManager::m_PrefsCutsceneBorders=true;}
+    if(!triggered && hook==12){triggered=true;Timer_timeMs+=100000;TestCr_Start();}
+}
+void CCamera::DrawBordersForWideScreen(void)
+{
+    // Preserve the final live widescreen-border owner call
+    event(11);borders++;
+    if(!triggered && hook==13){triggered=true;TestCr_Stop();}
+}
+void CFont::SetJustifyOff(void)
+{
+    // Observe the first original font-state operation
+    event(12);
+}
+void CFont::SetBackgroundOff(void)
+{
+    // Observe the second original font-state operation
+    event(13);
+}
+void CFont::SetCentreOn(void)
+{
+    // Observe the original font-centering operation
+    event(14);
+}
+void CFont::SetPropOn(void)
+{
+    // Observe the original proportional-font operation
+    event(15);
+}
+static void reset(void)
+{
+    // Reset only owner fixtures and explicitly seed actual controller state
+    TestCr_SetState(false,77);Timer_timeMs=5000;RsGlobal.width=1280;RsGlobal.height=720;Draw_ms_bProperScaling=true;aspect=16.f/9.f;FrontEndMenuManager.m_bMenuActive=false;FrontEndMenuManager.m_PrefsLanguage=CMenuManager::LANGUAGE_AMERICAN;CMenuManager::m_PrefsCutsceneBorders=true;TheCamera.m_WideScreenOn=true;memset(&pad,0,sizeof(pad));memset(buffer,0,sizeof(buffer));hook=0;triggered=false;crossAt=0;crossEvery=0;localUpdate=0;borrowedLine=NULL;
+}
+int main(void)
+{
+    // Verify zero-initialized private state and exact init/start/stop retention
+    snapshot();reset();snapshot();TestCr_Init();snapshot();TestCr_Start();snapshot();TestCr_Stop();snapshot();TestCr_Init();snapshot();
+    const float spaces[]={0.f,.5f,.95f,1.1f,1.5f,2.75f,100.f};
+    const uint32_t lines[]={0,1,19,1000,65535,16777215,16777217,2147483000u};
+    for(unsigned i=0;i<sizeof(spaces)/sizeof(*spaces);i++)for(unsigned j=0;j<sizeof(lines)/sizeof(*lines);j++){
+        // Exercise unsigned float compound assignment across precision boundaries
+        uint32_t line=lines[j];TestCr_Space(spaces[i],&line);word(line);snapshot();
+    }
+    const float heights[]={0.f,20.f,20.001f,100.f,200.f,(float)DEFAULT_SCREEN_HEIGHT-20.001f,(float)DEFAULT_SCREEN_HEIGHT-20.f,(float)DEFAULT_SCREEN_HEIGHT};
+    for(int i=0;i<8;i++)for(int cancelled=0;cancelled<2;cancelled++)for(int proper=0;proper<2;proper++){
+        // Cover strict print boundaries, both proper-scaling branches and cancellation without line advance
+        reset();Draw_ms_bProperScaling=proper!=0;crossAt=cancelled?1:0;uint32_t line=37;TestCr_Text(.95f,1.1f,buffer,&line,line+(float)DEFAULT_SCREEN_HEIGHT+20.f-heights[i]);word(line);snapshot();
+    }
+    for(int language=0;language<5;language++)for(int setting=0;setting<8;setting++){
+        // Exercise each language-spacing branch and short-circuit menu/border preferences
+        reset();FrontEndMenuManager.m_PrefsLanguage=language;FrontEndMenuManager.m_bMenuActive=(setting&1)!=0;CMenuManager::m_PrefsCutsceneBorders=(setting&2)!=0;TheCamera.m_WideScreenOn=(setting&4)!=0;TestCr_Start();Timer_timeMs+=12000;TestCr_Render();snapshot();
+    }
+    for(int h=1;h<=13;h++){
+        // Retain live state, timer, viewport, text, line-reference and nested-render mutations
+        reset();TestCr_Start();Timer_timeMs+=12000;hook=h;
+        if(h==4 || h==7 || h==8){uint32_t line=0;borrowedLine=&line;TestCr_Text(1.1f,1.1f,buffer,&line,300.f);word(line);borrowedLine=NULL;}
+        else TestCr_Render();
+        require(triggered);snapshot();
+    }
+    for(unsigned cancel=1;cancel<=5;cancel++){
+        // Preserve full lookup/input traversal after early, repeated and late button cancellation
+        reset();TestCr_Start();Timer_timeMs+=9000;crossAt=cancel==5?400:cancel;crossEvery=cancel==4?7:0;TestCr_Render();snapshot();
+    }
+    for(int frame=0;frame<700;frame++){
+        // Traverse the complete scroll range, timer wrap and variable viewport/language states
+        reset();FrontEndMenuManager.m_PrefsLanguage=frame%5;Draw_ms_bProperScaling=frame%2!=0;RsGlobal.width=640+(frame%7)*160;RsGlobal.height=448+(frame%5)*72;aspect=(float)RsGlobal.width/RsGlobal.height;Timer_timeMs=frame%3==0?0xfffff000u:5000u;TestCr_Start();Timer_timeMs+=(uint32_t)frame*1000u;TestCr_Render();snapshot();
+    }
+    require(states>850 && lookups>250000 && updates==lookups+35 && prints>1000 && flushes>700);
+    printf("states=%u calls=%u lookups=%u updates=%u prints=%u borders=%u flushes=%u hash=%016llx\n",states,calls,lookups,updates,prints,borders,flushes,(unsigned long long)hash);
+}

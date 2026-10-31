@@ -1,46 +1,45 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
 #ifdef EXTENDED_COLOURFILTER
-
-class CPostFX
-{
-public:
-	enum {
-		POSTFX_OFF,
-		POSTFX_SIMPLE,
-		POSTFX_NORMAL,
-		POSTFX_MOBILE
-	};
-	static RwRaster *pFrontBuffer;
-	static RwRaster *pBackBuffer;
-	static bool bJustInitialised;
-	static int EffectSwitch;
-	static bool BlurOn;	// or use CMblur for that?
-	static bool MotionBlurOn;	// or use CMblur for that?
-	static float Intensity;
-
-	// smooth blur color
-	enum { NUMAVERAGE = 20 };
-	static int PrevRed[NUMAVERAGE], AvgRed;
-	static int PrevGreen[NUMAVERAGE], AvgGreen;
-	static int PrevBlue[NUMAVERAGE], AvgBlue;
-	static int PrevAlpha[NUMAVERAGE], AvgAlpha;
-	static int Next;
-	static int NumValues;
-
-	static void InitOnce(void);
-	static void Open(RwCamera *cam);
-	static void Close(void);
-	static void RenderOverlayBlur(RwCamera *cam, int32 r, int32 g, int32 b, int32 a);
-	static void RenderOverlaySniper(RwCamera *cam, int32 r, int32 g, int32 b, int32 a);
-	static void RenderOverlayShader(RwCamera *cam, int32 r, int32 g, int32 b, int32 a);
-	static void RenderMotionBlur(RwCamera *cam, uint32 blur);
-	static void Render(RwCamera *cam, uint32 red, uint32 green, uint32 blue, uint32 blur, int32 type, uint32 bluralpha);
-	static void SmoothColor(uint32 red, uint32 green, uint32 blue, uint32 alpha);
-	static bool NeedBackBuffer(void);
-	static bool NeedFrontBuffer(int32 type);
-	static void GetBackBuffer(RwCamera *cam);
-	static bool UseBlurColours(void) { return EffectSwitch != POSTFX_SIMPLE; }
-};
-
+enum {POSTFX_OFF,POSTFX_SIMPLE,POSTFX_NORMAL,POSTFX_MOBILE,POSTFX_NUMAVERAGE=20};
+#ifdef __cplusplus
+extern "C" {
 #endif
+extern void * PostFX_pFrontBuffer;
+extern void * PostFX_pBackBuffer;
+extern bool PostFX_bJustInitialised;
+extern int PostFX_EffectSwitch;
+extern bool PostFX_BlurOn;
+extern bool PostFX_MotionBlurOn;
+extern float PostFX_Intensity;
+extern int PostFX_PrevRed[POSTFX_NUMAVERAGE];
+extern int PostFX_PrevGreen[POSTFX_NUMAVERAGE];
+extern int PostFX_PrevBlue[POSTFX_NUMAVERAGE];
+extern int PostFX_PrevAlpha[POSTFX_NUMAVERAGE];
+extern int PostFX_AvgRed;
+extern int PostFX_AvgGreen;
+extern int PostFX_AvgBlue;
+extern int PostFX_AvgAlpha;
+extern int PostFX_Next;
+extern int PostFX_NumValues;
+void PostFX_InitOnce(void);
+void PostFX_Open(void *camera);
+void PostFX_Close(void);
+void PostFX_RenderOverlayBlur(void *camera,int32_t red,int32_t green,int32_t blue,int32_t alpha);
+void PostFX_RenderOverlaySniper(void *camera,int32_t red,int32_t green,int32_t blue,int32_t alpha);
+void PostFX_RenderOverlayShader(void *camera,int32_t red,int32_t green,int32_t blue,int32_t alpha);
+void PostFX_RenderMotionBlur(void *camera,uint32_t blur);
+void PostFX_Render(void *camera,uint32_t red,uint32_t green,uint32_t blue,uint32_t blur,int32_t type,uint32_t alpha);
+void PostFX_SmoothColor(uint32_t red,uint32_t green,uint32_t blue,uint32_t alpha);
+bool PostFX_NeedBackBuffer(void);
+bool PostFX_NeedFrontBuffer(int32_t type);
+void PostFX_GetBackBuffer(void *camera);
+bool PostFX_UseBlurColours(void);
+#ifdef __cplusplus
+}
+#endif
+#endif
+//- rouz edit (ChatGPT)

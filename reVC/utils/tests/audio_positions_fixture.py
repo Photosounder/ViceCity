@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare mission storage and the real reflection adapters against saved sources."""
 from pathlib import Path
 import re
@@ -27,6 +28,8 @@ def function(source, signature):
     return source[start:end]
 
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Audit statements independently of formatting and explanatory comments
     return re.sub(r'\s+', '', re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.S))
 

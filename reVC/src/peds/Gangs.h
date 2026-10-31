@@ -1,57 +1,37 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
 #include "PedType.h"
-
-struct CGangInfo
-{
-	int32 m_nVehicleMI;
-	int32 m_nPedModel1MI;
-	int32 m_nPedModel2MI;
-	int8 m_nPedModelOverride;
-	int32 m_Weapon1;
-	int32 m_Weapon2;
-
-	CGangInfo();
-};
-
-VALIDATE_SIZE(CGangInfo, 0x10);
-
-enum {
-	GANG_CUBAN = 0,
-	GANG_HAITIAN,
-	GANG_STREET,
-	GANG_DIAZ,
-	GANG_SECURITY,
-	GANG_BIKER,
-	GANG_PLAYER,
-	GANG_GOLFER,
-	GANG_9,
-	NUM_GANGS
-};
-
-class CGangs
-{
-public:
-	static void Initialise(void);
-	static void SetGangVehicleModel(int16, int32);
-	static void SetGangWeapons(int16, int32, int32);
-	static void SetGangPedModelOverride(int16, int8);
-	static int8 GetGangPedModelOverride(int16);
-	static void SaveAllGangData(uint8 *, uint32 *);
-	static void LoadAllGangData(uint8 *, uint32);
-
-	static void SetGangPedModels(int16, int32, int32);
-	static void SetWillAttackPlayerWithCops(ePedType type, bool will);
-	static bool GetWillAttackPlayerWithCops(ePedType type);
-	static int32 ChooseGangPedModel(int16);
-
-	static bool HaveGangModelsLoaded(int16 gang);
-	static int32 GetGangPedModel1(int16 gang) { return Gang[gang].m_nPedModel1MI; }
-	static int32 GetGangPedModel2(int16 gang) { return Gang[gang].m_nPedModel2MI; }
-	static int32 GetGangVehicleModel(int16 gang) { return Gang[gang].m_nVehicleMI; }
-	static CGangInfo *GetGangInfo(int16 gang) { return &Gang[gang]; }
-
-private:
-	static CGangInfo Gang[NUM_GANGS];
-	static bool GangAttackWithCops[NUM_GANGS];
-};
+#include "GangTypes.h"
+typedef struct GangInfo {
+    int32_t m_nVehicleMI;
+    int32_t m_nPedModel1MI;
+    int32_t m_nPedModel2MI;
+    int8_t m_nPedModelOverride;
+    int32_t m_Weapon1;
+    int32_t m_Weapon2;
+} GangInfo;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void Gangs_Initialise(void);
+bool Gangs_HaveGangModelsLoaded(int16_t gang);
+void Gangs_SetGangPedModels(int16_t gang,int32_t first,int32_t second);
+void Gangs_SetWillAttackPlayerWithCops(ePedType type,bool will);
+bool Gangs_GetWillAttackPlayerWithCops(ePedType type);
+int32_t Gangs_ChooseGangPedModel(int16_t gang);
+void Gangs_SetGangVehicleModel(int16_t gang,int32_t model);
+void Gangs_SetGangWeapons(int16_t gang,int32_t first,int32_t second);
+void Gangs_SetGangPedModelOverride(int16_t gang,int8_t overrideModel);
+int8_t Gangs_GetGangPedModelOverride(int16_t gang);
+void Gangs_SaveAllGangData(uint8_t *buffer,uint32_t *size);
+void Gangs_LoadAllGangData(uint8_t *buffer,uint32_t size);
+int32_t Gangs_GetGangPedModel1(int16_t gang);
+int32_t Gangs_GetGangPedModel2(int16_t gang);
+int32_t Gangs_GetGangVehicleModel(int16_t gang);
+GangInfo * Gangs_GetGangInfo(int16_t gang);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

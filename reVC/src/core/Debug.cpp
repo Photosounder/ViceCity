@@ -1,170 +1,138 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-#include "RwHelper.h"
-#include "Debug.h"
-#include "Lines.h"
+#include "Debug_backend.h"
 #include "Font.h"
+#include "RwHelper.h"
 #include "main.h"
 #include "Text.h"
-
-bool gbDebugStuffInRelease = false;
-
-#define DEBUG_X_POS (300)
-#define DEBUG_Y_POS (41)
-#define DEBUG_LINE_HEIGHT (22)
-
-int16 CDebug::ms_nCurrentTextLine;
-char CDebug::ms_aTextBuffer[MAX_LINES][MAX_STR_LEN];
-
-void
-CDebug::DebugInitTextBuffer()
+Debug_Vector Debug_FromVector(CVector value)
 {
-	ms_nCurrentTextLine = 0;
+    // Copy the original three float components at the native argument boundary
+    Debug_Vector result={value.x,value.y,value.z};return result;
+}
+void Debug_BackendSetPropOn(void)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetPropOn();
 }
 
-void
-CDebug::DebugAddText(const char *str)
+void Debug_BackendSetPropOff(void)
 {
-	int32 i = 0;
-	if (*str != '\0') {
-		while (i < MAX_STR_LEN - 1) {
-			ms_aTextBuffer[ms_nCurrentTextLine][i++] = *(str++);
-			if (*str == '\0')
-				break;
-		}
-	}
-
-	ms_aTextBuffer[ms_nCurrentTextLine++][i] = '\0';
-	if (ms_nCurrentTextLine >= MAX_LINES)
-		ms_nCurrentTextLine = 0;
+    // Access the original native primitive at its original C policy access point
+    CFont::SetPropOff();
 }
 
-void
-CDebug::DebugDisplayTextBuffer()
+void Debug_BackendSetBackgroundOff(void)
 {
-#ifndef MASTER
-	if (gbDebugStuffInRelease)
-	{
-		int32 i = 0;
-		int32 y = DEBUG_Y_POS;
-#ifdef FIX_BUGS
-		CFont::SetPropOn();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(1.0f, 1.0f);
-		CFont::SetCentreOff();
-		CFont::SetRightJustifyOff();
-		CFont::SetJustifyOn();
-		CFont::SetRightJustifyWrap(0.0f);
-		CFont::SetBackGroundOnlyTextOff();
-		CFont::SetFontStyle(FONT_STANDARD);
-#else
-		// this is not even readable
-		CFont::SetPropOff();
-		CFont::SetBackgroundOff();
-		CFont::SetScale(1.0f, 1.0f);
-		CFont::SetCentreOff();
-		CFont::SetRightJustifyOn();
-		CFont::SetRightJustifyWrap(0.0f);
-		CFont::SetBackGroundOnlyTextOff();
-		CFont::SetFontStyle(FONT_STANDARD);
-		CFont::SetPropOff();
-#endif
-		do {
-			char *line;
-			while (true) {
-				line = ms_aTextBuffer[(ms_nCurrentTextLine + i++) % MAX_LINES];
-				if (*line != '\0')
-					break;
-				y += DEBUG_LINE_HEIGHT;
-				if (i == MAX_LINES) {
-					CFont::DrawFonts();
-					return;
-				}
-			}
-			AsciiToUnicode(line, gUString);
-			CFont::SetColor(CRGBA(0, 0, 0, 255));
-			CFont::PrintString(DEBUG_X_POS, y-1, gUString);
-			CFont::SetColor(CRGBA(255, 128, 128, 255));
-			CFont::PrintString(DEBUG_X_POS+1, y, gUString);
-			y += DEBUG_LINE_HEIGHT;
-		} while (i != MAX_LINES);
-		CFont::DrawFonts();
-	}
-#endif
+    // Access the original native primitive at its original C policy access point
+    CFont::SetBackgroundOff();
 }
 
-
-// custom
-
-CDebug::ScreenStr CDebug::ms_aScreenStrs[MAX_SCREEN_STRS];
-int CDebug::ms_nScreenStrs;
-
-void
-CDebug::DisplayScreenStrings()
+void Debug_BackendSetCentreOff(void)
 {
-	int i;
-	
-
-	CFont::SetPropOn();
-	CFont::SetBackgroundOff();
-	CFont::SetScale(1.0f, 1.0f);
-	CFont::SetCentreOff();
-	CFont::SetRightJustifyOff();
-	CFont::SetJustifyOff();
-	CFont::SetRightJustifyWrap(0.0f);
-	CFont::SetWrapx(9999.0f);
-	CFont::SetBackGroundOnlyTextOff();
-	CFont::SetFontStyle(FONT_STANDARD);
-
-	for(i = 0; i < ms_nScreenStrs; i++){
-/*
-		AsciiToUnicode(ms_aScreenStrs[i].str, gUString);
-		CFont::SetColor(CRGBA(0, 0, 0, 255));
-		CFont::PrintString(ms_aScreenStrs[i].x, ms_aScreenStrs[i].y, gUString);
-		CFont::SetColor(CRGBA(255, 255, 255, 255));
-		CFont::PrintString(ms_aScreenStrs[i].x+1, ms_aScreenStrs[i].y+1, gUString);
-*/
-		ObrsPrintfString(ms_aScreenStrs[i].str, ms_aScreenStrs[i].x, ms_aScreenStrs[i].y);
-	}
-	CFont::DrawFonts();
-
-	ms_nScreenStrs = 0;
+    // Access the original native primitive at its original C policy access point
+    CFont::SetCentreOff();
 }
 
-void
-CDebug::PrintAt(const char *str, int x, int y)
+void Debug_BackendSetRightJustifyOn(void)
 {
-	if(ms_nScreenStrs >= MAX_SCREEN_STRS)
-		return;
-	strncpy(ms_aScreenStrs[ms_nScreenStrs].str, str, 256);
-	ms_aScreenStrs[ms_nScreenStrs].x = x;//*12;
-	ms_aScreenStrs[ms_nScreenStrs].y = y;//*22;
-	ms_nScreenStrs++;
+    // Access the original native primitive at its original C policy access point
+    CFont::SetRightJustifyOn();
 }
 
-CDebug::Line CDebug::ms_aLines[MAX_DEBUG_LINES];
-int CDebug::ms_nLines;
-
-void
-CDebug::AddLine(CVector p1, CVector p2, uint32 c1, uint32 c2)
+void Debug_BackendSetRightJustifyOff(void)
 {
-	if(ms_nLines >= MAX_DEBUG_LINES)
-		return;
-	ms_aLines[ms_nLines].p1 = p1;
-	ms_aLines[ms_nLines].p2 = p2;
-	ms_aLines[ms_nLines].c1 = c1;
-	ms_aLines[ms_nLines].c2 = c2;
-	ms_nLines++;
+    // Access the original native primitive at its original C policy access point
+    CFont::SetRightJustifyOff();
 }
 
-void
-CDebug::DrawLines(void)
+void Debug_BackendSetJustifyOn(void)
 {
-	int i;
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
-	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
-	for(i = 0; i < ms_nLines; i++){
-		Line *l = &ms_aLines[i];
-		CLines::RenderLineWithClipping(l->p1.x, l->p1.y, l->p1.z, l->p2.x, l->p2.y, l->p2.z, l->c1, l->c2);
-	}
-	ms_nLines = 0;
+    // Access the original native primitive at its original C policy access point
+    CFont::SetJustifyOn();
 }
+
+void Debug_BackendSetJustifyOff(void)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetJustifyOff();
+}
+
+void Debug_BackendSetBackGroundOnlyTextOff(void)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetBackGroundOnlyTextOff();
+}
+
+void Debug_BackendDrawFonts(void)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::DrawFonts();
+}
+
+void Debug_BackendSetScale(float x,float y)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetScale(x,y);
+}
+
+void Debug_BackendSetRightJustifyWrap(float wrap)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetRightJustifyWrap(wrap);
+}
+
+void Debug_BackendSetWrapx(float wrap)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetWrapx(wrap);
+}
+
+void Debug_BackendSetFontStyle(int16_t style)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetFontStyle(style);
+}
+
+void Debug_BackendColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::SetColor(CRGBA(r,g,b,a));
+}
+
+void Debug_BackendPrintString(float x,float y,uint16_t *text)
+{
+    // Access the original native primitive at its original C policy access point
+    CFont::PrintString(x,y,text);
+}
+
+void Debug_BackendAsciiToUnicode(const char *source,uint16_t *target)
+{
+    // Access the original native primitive at its original C policy access point
+    AsciiToUnicode(source,target);
+}
+
+uint16_t * Debug_BackendUnicode(void)
+{
+    // Access the original native primitive at its original C policy access point
+    return gUString;
+}
+
+void Debug_BackendObrsPrintfString(const char *str,int16_t x,int16_t y)
+{
+    // Access the original native primitive at its original C policy access point
+    ObrsPrintfString(str,x,y);
+}
+
+void Debug_BackendTextureNone(void)
+{
+    // Access the original native primitive at its original C policy access point
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,nil);
+}
+
+void Debug_BackendDepthTestOff(void)
+{
+    // Access the original native primitive at its original C policy access point
+    RwRenderStateSet(rwRENDERSTATEZTESTENABLE,(void*)FALSE);
+}
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare crime entry and player vehicle lookup against saved C++ members."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ root=Path(__file__).resolve().parents[2];out=root/'build/audio-game-entries-c-te
 oldlogic=(out/'before/src/audio/AudioLogic.cpp').read_text();oldradio=(out/'before/src/audio/PolRadio.cpp').read_text()
 kernel=(root/'src/audio/AudioGameEntries.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare complete statements independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 vehicle=function(oldlogic,'cAudioManager::','FindVehicleOfPlayer');crime=function(oldradio,'cAudioManager::','ReportCrime')

@@ -1,0 +1,228 @@
+#include "owners.h"
+#include <limits.h>
+#include <initializer_list>
+#undef assert
+static unsigned checks,states,variables,replays,sounds,callbacks;
+static uint64_t fingerprint=UINT64_C(1469598103934665603);
+static void require(bool value,const char *expression,int line)
+{
+    // Keep every independent check enabled in all build profiles
+    checks++;if(!value){fprintf(stderr,"%d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+static void bytes(const void *pointer,size_t size)
+{
+    // Compare stable record bytes and native scalar observations without pointer addresses
+    const uint8_t *p=(const uint8_t *)pointer;
+    for(size_t i=0;i<size;i++){fingerprint^=p[i];fingerprint*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Hash integers with a fixed width on both native architectures
+    bytes(&value,sizeof(value));
+}
+float Timer_timeStep;
+bool CHud::m_Wants_To_Draw_Hud;
+TestCamera TheCamera;
+alignas(4) uint8 CTheScripts::ScriptSpace[260512];
+static COnscreenTimer *active;
+static bool playing;
+static int callbackMode;
+static uint32_t lastSound;
+static COnscreenTimer &canonical()
+{
+    // Exercise the actual zero-initialized canonical C instance after conversion
+#ifdef TEST_ONSCREEN_ORIGINAL
+    static COnscreenTimer originalState;return originalState;
+#else
+    return OnscreenTimer_state;
+#endif
+}
+static int32_t &variable(int offset)
+{
+    // Seed only aligned valid script-variable addresses using the original script storage
+    return *(int32_t *)&CTheScripts::ScriptSpace[offset];
+}
+static void observe()
+{
+    // Include complete display state, retained buffer tails and all consumed script variables
+    bytes(active,sizeof(*active));bytes(CTheScripts::ScriptSpace,256);bytes(&Timer_timeStep,4);
+}
+static void snapshot()
+{
+    // Record the final state of each operation including inactive entries and original padding
+    observe();states++;
+}
+static void seed(COnscreenTimer &state,uint8_t pattern=0x5a)
+{
+    // Fill padding and stale buffers explicitly while giving every boolean a valid representation
+    memset(&state,pattern,sizeof(state));state.m_bProcessed=true;state.m_bDisabled=false;
+    for(unsigned i=0;i<NUMONSCREENCLOCKS;i++){
+        // Preserve distinct field contents for inactive clocks before any partial reset
+        state.m_sClocks[i].m_nClockOffset=8;state.m_sClocks[i].m_bClockProcessed=true;state.m_sClocks[i].m_bClockGoingDown=false;
+    }
+    for(unsigned i=0;i<NUMONSCREENCOUNTERS;i++){
+        // Preserve distinct field contents for inactive counters before any partial reset
+        state.m_sCounters[i].m_nCounterOffset=12+i*4;state.m_sCounters[i].m_bCounterProcessed=true;
+    }
+    active=&state;playing=false;CHud::m_Wants_To_Draw_Hud=true;TheCamera.m_WideScreenOn=false;Timer_timeStep=1.0f;callbackMode=0;
+    memset(CTheScripts::ScriptSpace,0,256);CTheScripts::ScriptSpace[3]=0;CTheScripts::ScriptSpace[4]=4;
+}
+bool Test_Replay()
+{
+    // Observe predicate ordering and mutate the disabled gate before its original subsequent read
+    number(1);observe();replays++;
+    if(callbackMode==10){
+        // Disable the clock after the replay query but before the controller tests the flag
+        active->m_bDisabled=true;callbacks++;
+    }
+    if(callbackMode==11){
+        // Enable the clock after the replay query while retaining the original short-circuit order
+        active->m_bDisabled=false;callbacks++;
+    }
+    return playing;
+}
+void Test_Variable(int32_t offset)
+{
+    // Observe the exact lookup offset and state before returning the actual variable pointer
+    number(2);number(offset);observe();variables++;
+    if(callbackMode==1){
+        // Change the live direction and timestep after the original entry registration guard
+        active->m_sClocks[0].m_bClockGoingDown=false;active->m_sClocks[0].m_nClockOffset=20;Timer_timeStep=3.0f;variable(offset)=400;callbacks++;
+    }
+    if(callbackMode==2&&offset==8){
+        // Change a later counter before the display loop reaches that record
+        active->m_sCounters[0].m_nCounterOffset=24;variable(24)=-81;active->m_sClocks[0].m_nClockOffset=20;variable(offset)=65000;callbacks++;
+    }
+    if(callbackMode==3&&offset==12){
+        // Remove the current registration after its guard and add the next registration before its guard
+        active->m_sCounters[0].m_nCounterOffset=0;active->m_sCounters[1].m_nCounterOffset=28;variable(offset)=123;variable(28)=456;callbacks++;
+    }
+}
+extern "C" void DMAudio_PlayFrontEndSound(uint16_t sound,uint32_t volume)
+{
+    // Compare exact tick payloads and script/record state at the real existing C audio boundary
+    assert(sound==SOUND_CLOCK_TICK);number(3);number(sound);number(volume);observe();sounds++;lastSound=volume;
+    if(callbackMode==4){
+        // Mutate the canonical record during a tick without introducing extra post-audio writes
+        active->m_sClocks[0].m_nClockOffset=28;active->m_sClocks[0].m_bClockGoingDown=false;active->m_bDisabled=true;variable(28)=777;callbacks++;
+    }
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail violated original native preconditions quietly without creating a dialog
+    fprintf(stderr,"%s %s:%u %s\n",expression,file,line,function);abort();
+}
+static uint32_t randomValue=0x61381249;
+static uint32_t random32()
+{
+    // Generate identical finite and in-range controller inputs for every compiler
+    randomValue^=randomValue<<13;randomValue^=randomValue>>17;randomValue^=randomValue<<5;return randomValue;
+}
+int main()
+{
+    // Verify actual static initialization before seeding any record or script state
+    COnscreenTimer &state=canonical();active=&state;
+    const uint8_t *startup=(const uint8_t *)&state;
+    for(size_t i=0;i<sizeof(state);i++)assert(startup[i]==0);
+    seed(state);COnscreenTimer original=state;Run_OnscreenTimer_Init(&state);
+    assert(state.m_bProcessed&&!state.m_bDisabled&&state.m_sClocks[0].m_bClockGoingDown);
+    assert(memcmp(state.m_sClocks[0].m_aClockBuffer,original.m_sClocks[0].m_aClockBuffer,40)==0);
+    for(int i=0;i<3;i++){
+        // Check initialization clears labels and flags while retaining every counter buffer
+        assert(state.m_sCounters[i].m_nCounterOffset==0&&!state.m_sCounters[i].m_bCounterProcessed&&state.m_sCounters[i].m_nType==0);
+        for(int j=0;j<10;j++)assert(state.m_sCounters[i].m_aCounterText[j]==0);
+        assert(memcmp(state.m_sCounters[i].m_aCounterBuffer,original.m_sCounters[i].m_aCounterBuffer,40)==0);
+    }
+    snapshot();state.m_bProcessed=false;Run_OnscreenTimer_Init(&state);assert(!state.m_bProcessed);snapshot();
+    char labels[][24]={"","A","CLOCK","123456789","1234567890","12345678901234567890"};
+    for(int label=-1;label<6;label++){
+        // Exercise null, empty, padded, exactly full and unterminated copied label storage
+        seed(state);Run_OnscreenTimer_Init(&state);char *text=label<0?NULL:labels[label];
+        Run_OnscreenTimer_AddCounter(&state,12,65535,text,0);Run_OnscreenTimer_AddClock(&state,8,text,false);
+        assert(state.m_sCounters[0].m_nCounterOffset==12&&state.m_sCounters[0].m_nType==65535&&state.m_sClocks[0].m_nClockOffset==8);
+        snapshot();Run_OnscreenTimer_AddCounter(&state,16,1,labels[2],0);Run_OnscreenTimer_AddClock(&state,20,labels[2],true);
+        assert(state.m_sCounters[0].m_nCounterOffset==(label<=0?16u:12u)&&state.m_sClocks[0].m_nClockOffset==8);snapshot();
+        Run_OnscreenTimer_ClearCounter(&state,state.m_sCounters[0].m_nCounterOffset);Run_OnscreenTimer_ClearClock(&state,8);
+        assert(state.m_sCounters[0].m_aCounterText[0]==0&&state.m_sClocks[0].m_bClockGoingDown);snapshot();
+    }
+    seed(state);Run_OnscreenTimer_Init(&state);Run_OnscreenTimer_AddClock(&state,0,labels[2],false);Run_OnscreenTimer_AddClock(&state,8,NULL,true);
+    assert(state.m_sClocks[0].m_nClockOffset==8&&state.m_sClocks[0].m_aClockText[0]==0&&state.m_sClocks[0].m_aClockText[1]=='L');snapshot();
+    for(unsigned offset:{0u,12u,28u}){
+        // Clear all duplicate matches and empty entries while retaining label tails and display buffers
+        seed(state);for(int i=0;i<3;i++)state.m_sCounters[i].m_nCounterOffset=offset;
+        Run_OnscreenTimer_ClearCounter(&state,offset);for(int i=0;i<3;i++)assert(!state.m_sCounters[i].m_bCounterProcessed&&state.m_sCounters[i].m_nCounterOffset==0&&state.m_sCounters[i].m_aCounterText[1]==0x5a);
+        state.m_sClocks[0].m_nClockOffset=offset;Run_OnscreenTimer_ClearClock(&state,offset);assert(state.m_sClocks[0].m_nClockOffset==0&&state.m_sClocks[0].m_aClockText[1]==0x5a);snapshot();
+    }
+    for(int oldTime:{-20,0,1,19,20,21,999,1000,1001,10999,11000,11999,12000,12001,61000,INT_MAX-100000}){
+        // Check exact countdown expiry and every second-crossing threshold around the original twelve-second tick gate
+        for(float step:{0.0f,0.025f,0.999f,1.0f,1.025f,3.0f,50.0f,150.0f})for(bool down:{false,true})for(bool wide:{false,true}){
+            // Keep arithmetic representable while testing both directions, large steps and widescreen sound suppression
+            seed(state);state.m_sClocks[0].m_bClockGoingDown=down;variable(8)=oldTime;Timer_timeStep=step;TheCamera.m_WideScreenOn=wide;
+            int delta=(int)Timer_GetTimeStepInMilliseconds();int expected=down?oldTime-delta:oldTime+delta;unsigned soundBefore=sounds;
+            Run_OnscreenClock_Process(&state.m_sClocks[0]);
+            assert(variable(8)==(down&&expected<0?0:expected));assert(state.m_sClocks[0].m_nClockOffset==(down&&expected<0?0u:8u));
+            bool tick=down&&expected>=0&&oldTime/1000<12&&expected/1000!=oldTime/1000&&!wide;
+            assert(sounds==soundBefore+(tick?1:0));if(tick)assert(lastSound==(uint32_t)(expected/1000));snapshot();
+        }
+    }
+    for(bool playback:{false,true})for(bool disabled:{false,true})for(bool registered:{false,true}){
+        // Preserve replay-before-disabled ordering and skip variable access for unregistered clocks
+        seed(state);playing=playback;state.m_bDisabled=disabled;state.m_sClocks[0].m_nClockOffset=registered?8:0;variable(8)=2000;
+        unsigned r=replays,v=variables;Run_OnscreenTimer_Process(&state);assert(replays==r+1&&variables==v+(!playback&&!disabled&&registered?1:0));
+        assert(variable(8)==(!playback&&!disabled&&registered?2020:2000));snapshot();
+    }
+    for(int mode:{10,11}){
+        // Check the disabled flag is read live after the predicate callback
+        seed(state);callbackMode=mode;state.m_bDisabled=mode==11;variable(8)=2000;Run_OnscreenTimer_Process(&state);assert(variable(8)==(mode==10?2000:2020));snapshot();
+    }
+    seed(state);state.m_sClocks[0].m_nClockOffset=0;unsigned count=variables;Run_OnscreenClock_Process(&state.m_sClocks[0]);assert(variables==count);snapshot();
+    for(int value:{INT_MIN,-1,0,1,999,1000,59999,60000,5999999,6000000,INT_MAX}){
+        // Compare exact unsigned clock formatting and the original signed-looking counter formatting
+        seed(state);variable(8)=value;variable(12)=value;Run_OnscreenClock_ProcessForDisplayClock(&state.m_sClocks[0]);Run_OnscreenCounter_ProcessForDisplayCounter(&state.m_sCounters[0]);
+        char expected[40];uint32_t time=(uint32_t)value;snprintf(expected,sizeof(expected),"%02d:%02d",time/1000/60%100,time/1000%60);assert(strcmp(expected,state.m_sClocks[0].m_aClockBuffer)==0);
+        snprintf(expected,sizeof(expected),"%d",value);assert(strcmp(expected,state.m_sCounters[0].m_aCounterBuffer)==0&&state.m_sClocks[0].m_bClockProcessed);snapshot();
+    }
+    for(bool hud:{false,true})for(bool disabled:{false,true})for(bool playback:{false,true}){
+        // Retain all state with a hidden HUD and ignore update gating when formatting a visible HUD
+        seed(state);CHud::m_Wants_To_Draw_Hud=hud;state.m_bDisabled=disabled;playing=playback;variable(8)=65000;variable(12)=-12;variable(16)=52;
+        state.m_sCounters[1].m_nCounterOffset=0;original=state;unsigned r=replays,v=variables;Run_OnscreenTimer_ProcessForDisplay(&state);assert(replays==r);
+        if(!hud)assert(memcmp(&state,&original,sizeof(state))==0&&variables==v);
+        else assert(strcmp(state.m_sClocks[0].m_aClockBuffer,"01:05")==0&&state.m_bProcessed&&!state.m_sCounters[1].m_bCounterProcessed&&variables==v+3);
+        snapshot();
+    }
+    seed(state);Run_OnscreenTimer_Init(&state);Run_OnscreenTimer_ProcessForDisplay(&state);assert(!state.m_bProcessed);snapshot();
+    for(int mode:{1,2,3,4}){
+        // Exercise mutations of the direction, offset, timestep and later display records at native boundaries
+        seed(state);callbackMode=mode;variable(8)=1001;variable(12)=77;
+        if(mode==1){Run_OnscreenClock_Process(&state.m_sClocks[0]);assert(variable(8)==460&&state.m_sClocks[0].m_nClockOffset==20);}
+        if(mode==2){Run_OnscreenTimer_ProcessForDisplay(&state);assert(strcmp(state.m_sClocks[0].m_aClockBuffer,"01:05")==0&&strcmp(state.m_sCounters[0].m_aCounterBuffer,"-81")==0);}
+        if(mode==3){state.m_sCounters[1].m_nCounterOffset=0;Run_OnscreenTimer_ProcessForDisplay(&state);assert(state.m_sCounters[0].m_bCounterProcessed&&state.m_sCounters[0].m_nCounterOffset==0&&strcmp(state.m_sCounters[1].m_aCounterBuffer,"456")==0);}
+        if(mode==4){state.m_sClocks[0].m_bClockGoingDown=true;Run_OnscreenClock_Process(&state.m_sClocks[0]);assert(state.m_bDisabled&&state.m_sClocks[0].m_nClockOffset==28&&variable(28)==777);}
+        snapshot();
+    }
+    seed(state);Run_OnscreenTimer_Init(&state);
+    for(int iteration=0;iteration<12000;iteration++){
+        // Compare interleaved complete operations on canonical state with bounded script values and valid positions
+        callbackMode=0;playing=(random32()%7)==0;CHud::m_Wants_To_Draw_Hud=(random32()%5)!=0;TheCamera.m_WideScreenOn=(random32()%3)==0;
+        Timer_timeStep=(random32()%5000)/40.0f;state.m_bDisabled=(random32()%7)==0;
+        for(int i=8;i<64;i+=4)variable(i)=(int32_t)(random32()%20000000)-10000;
+        uint32_t offset=8+(random32()%14)*4;uint16_t pos=(uint16_t)(random32()%3);char *text=(random32()%3)==0?NULL:labels[random32()%6];
+        switch(random32()%10){
+        case 0:Run_OnscreenTimer_Init(&state);break;
+        case 1:Run_OnscreenTimer_Process(&state);break;
+        case 2:Run_OnscreenTimer_ProcessForDisplay(&state);break;
+        case 3:Run_OnscreenTimer_AddClock(&state,offset,text,(random32()&1)!=0);break;
+        case 4:Run_OnscreenTimer_AddCounter(&state,offset,(uint16_t)random32(),text,pos);break;
+        case 5:Run_OnscreenTimer_ClearClock(&state,(random32()&1)?0:state.m_sClocks[0].m_nClockOffset);break;
+        case 6:Run_OnscreenTimer_ClearCounter(&state,(random32()&1)?0:state.m_sCounters[pos].m_nCounterOffset);break;
+        case 7:Run_OnscreenClock_Process(&state.m_sClocks[0]);break;
+        case 8:state.m_sClocks[0].m_nClockOffset=offset;Run_OnscreenClock_ProcessForDisplayClock(&state.m_sClocks[0]);break;
+        case 9:state.m_sCounters[pos].m_nCounterOffset=offset;Run_OnscreenCounter_ProcessForDisplayCounter(&state.m_sCounters[pos]);break;
+        }
+        snapshot();
+    }
+    // Verify explicit receivers also operate independently of the canonical instance
+    COnscreenTimer local;seed(local,0x21);Run_OnscreenTimer_Init(&local);Run_OnscreenTimer_AddClock(&local,8,labels[2],false);variable(8)=98;Run_OnscreenTimer_Process(&local);assert(variable(8)==118);snapshot();
+    printf("states=%u checks=%u variables=%u replays=%u sounds=%u callbacks=%u hash=%016llx\n",states,checks,variables,replays,sounds,callbacks,(unsigned long long)fingerprint);
+}

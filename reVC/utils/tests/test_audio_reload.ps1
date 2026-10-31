@@ -18,10 +18,12 @@ foreach($reloadCompiler in @('clang','gcc')) {
     & $reloadCompiler -std=c11 -pedantic-errors "-$reloadOptimization" @reloadArgs -c "$reloadBuild/$reloadUnit.c" -o "$reloadBuild/$reloadUnit.o"
     if($LASTEXITCODE -ne 0) {throw "C fixture compile failed: $reloadUnit"}
    }
+   & $reloadCompiler -std=c11 -pedantic-errors "-$reloadOptimization" @reloadArgs -c "$reloadBuild/music-owner.c" -o "$reloadBuild/music-owner.o"
+   if($LASTEXITCODE -ne 0) {throw 'C music owner compile failed'}
    $reloadCommon=@("$reloadBuild/AudioEntities.o","$reloadBuild/AudioSoundReset.o","$reloadBuild/AudioMissionState.o","$reloadBuild/AudioMissionPosition.o","$reloadBuild/script-reset.o")
    & $reloadCpp -std=c++17 "-$reloadOptimization" @reloadArgs "$reloadBuild/before.cpp" @reloadCommon -o "$reloadBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original owner compile failed'}
-   & $reloadCpp -std=c++17 "-$reloadOptimization" @reloadArgs "$reloadBuild/after.cpp" @reloadCommon "$reloadBuild/AudioReload.o" "$reloadBuild/caller.o" -o "$reloadBuild/after.exe"
+   & $reloadCpp -std=c++17 "-$reloadOptimization" @reloadArgs "$reloadBuild/after.cpp" @reloadCommon "$reloadBuild/AudioReload.o" "$reloadBuild/caller.o" "$reloadBuild/music-owner.o" -o "$reloadBuild/after.exe"
    if($LASTEXITCODE -ne 0) {throw 'Mixed C/C++ link failed'}
    $reloadBefore=& "$reloadBuild/before.exe"
    if($LASTEXITCODE -ne 0) {throw 'Original runtime failed'}

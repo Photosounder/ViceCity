@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "AudioManager.h"
+#include "MusicManager.h"
 #include "DMAudio.h"
 #include "sampman.h"
 
@@ -20,7 +21,7 @@ AudioService_Run(cAudioManager *manager)
 		AudioReflections_Update(manager);
 #endif
 		AudioEffects_Service(manager);
-		AudioServiceHost_Music();
+		MusicService_Run(&MusicManager);
 	}
 }
 

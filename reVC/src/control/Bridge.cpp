@@ -1,167 +1,70 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "Bridge.h"
+#include "Bridge_backend.h"
+#ifdef GTA_BRIDGE
 #include "Pools.h"
 #include "ModelIndices.h"
 #include "PathFind.h"
 #include "Stats.h"
-
-CEntity *CBridge::pLiftRoad;
-CEntity *CBridge::pLiftPart;
-CEntity *CBridge::pWeight;
-
-int CBridge::State;
-int CBridge::OldState;
-
-float CBridge::DefaultZLiftPart;
-float CBridge::DefaultZLiftRoad;
-float CBridge::DefaultZLiftWeight;
-
-float CBridge::OldLift;
-
-uint32 CBridge::TimeOfBridgeBecomingOperational;
-
-void CBridge::Init()
+CPool * Bridge_BackendBuildingPool(void)
 {
-#ifdef GTA_BRIDGE
-	FindBridgeEntities();
-	OldLift = -1.0f;
-	if (pLiftPart && pWeight)
-	{
-		DefaultZLiftPart   = pLiftPart->GetPosition().z;
-		DefaultZLiftWeight = pWeight->GetPosition().z;
-
-		if (pLiftRoad)
-			DefaultZLiftRoad = pLiftRoad->GetPosition().z;
-
-		ThePaths.SetLinksBridgeLights(-330.0, -230.0, -700.0, -588.0, true);
-	}
-#endif
+    // Enter the original typed native field or action at the C decision point
+    return CPools::GetBuildingPool();
 }
-
-void CBridge::Update()
+CEntity * Bridge_BackendBuilding(void *slot)
 {
-#ifdef GTA_BRIDGE
-	if (!pLiftPart || !pWeight)
-		return;
-
-	OldState = State;
-
-	float liftHeight;
-
-	// Set bridge height and state
-	if (CStats::CommercialPassed)
-	{
-		if (TimeOfBridgeBecomingOperational == 0)
-			TimeOfBridgeBecomingOperational = CTimer::GetTimeInMilliseconds();
-
-		// Time remaining for bridge to become operational
-		// uint16, so after about a minute it overflows to 0 and the cycle repeats
-		uint16 timeElapsed = CTimer::GetTimeInMilliseconds() - TimeOfBridgeBecomingOperational;
-
-		// Calculate lift part height and bridge state
-		if (timeElapsed < 10000)
-		{
-			State = STATE_LIFT_PART_MOVING_DOWN;
-			liftHeight = 25.0f - timeElapsed / 10000.0f * 25.0f;
-		}
-		else if (timeElapsed < 40000)
-		{
-			liftHeight = 0.0f;
-			State = STATE_LIFT_PART_IS_DOWN;
-		}
-		else if (timeElapsed < 50000)
-		{
-			liftHeight = 0.0f;
-			State = STATE_LIFT_PART_ABOUT_TO_MOVE_UP;
-		}
-		else if (timeElapsed < 60000)
-		{
-			State = STATE_LIFT_PART_MOVING_UP;
-			liftHeight = (timeElapsed - 50000) / 10000.0f * 25.0f;
-		}
-		else
-		{
-			liftHeight = 25.0f;
-			State = STATE_LIFT_PART_IS_UP;
-		}
-	}
-	else
-	{
-		liftHeight = 25.0f;
-		TimeOfBridgeBecomingOperational = 0;
-		State = STATE_BRIDGE_LOCKED;
-	}
-
-	// Move bridge part
-	if (liftHeight != OldLift)
-	{
-		pLiftPart->GetMatrix().GetPosition().z = DefaultZLiftPart + liftHeight;
-		pLiftPart->GetMatrix().UpdateRW();
-		pLiftPart->UpdateRwFrame();
-		if (pLiftRoad)
-		{
-			pLiftRoad->GetMatrix().GetPosition().z = DefaultZLiftRoad + liftHeight;
-			pLiftRoad->GetMatrix().UpdateRW();
-			pLiftRoad->UpdateRwFrame();
-		}
-		pWeight->GetMatrix().GetPosition().z = DefaultZLiftWeight - liftHeight;
-		pWeight->GetMatrix().UpdateRW();
-		pWeight->UpdateRwFrame();
-
-		OldLift = liftHeight;
-	}
-
-	if (State == STATE_LIFT_PART_ABOUT_TO_MOVE_UP && OldState == STATE_LIFT_PART_IS_DOWN)
-		ThePaths.SetLinksBridgeLights(-330.0, -230.0, -700.0, -588.0, true);
-	else if (State == STATE_LIFT_PART_IS_DOWN && OldState == STATE_LIFT_PART_MOVING_DOWN)
-		ThePaths.SetLinksBridgeLights(-330.0, -230.0, -700.0, -588.0, false);
-#endif
+    // Enter the original typed native field or action at the C decision point
+    return (CBuilding *)slot;
 }
-
-bool CBridge::ShouldLightsBeFlashing()
+int32_t Bridge_BackendModel(CEntity *entity)
 {
-#ifdef GTA_BRIDGE
-	return State != STATE_LIFT_PART_IS_DOWN;
-#else
-	return false;
-#endif
+    // Enter the original typed native field or action at the C decision point
+    return entity->GetModelIndex();
 }
-
-void CBridge::FindBridgeEntities()
+int32_t Bridge_BackendLiftModel(void)
 {
-#ifdef GTA_BRIDGE
-	pWeight   = nil;
-	pLiftRoad = nil;
-	pLiftPart = nil;
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for (int i = CPool_GetSize(CPools::GetBuildingPool())-1; i >= 0; i--) {
-		// Access raw storage through the C store or pool API
-		CBuilding* entry = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
-	//- rouz edit (ChatGPT)
-		if (entry)
-		{
-			if (entry->GetModelIndex() == MI_BRIDGELIFT)
-				pLiftPart = entry;
-			else if (entry->GetModelIndex() == MI_BRIDGEROADSEGMENT)
-				pLiftRoad = entry;
-			else if (entry->GetModelIndex() == MI_BRIDGEWEIGHT)
-				pWeight = entry;
-		}
-	}
-#endif
+    // Enter the original typed native field or action at the C decision point
+    return MI_BRIDGELIFT;
 }
-
-bool CBridge::ThisIsABridgeObjectMovingUp(int index)
+int32_t Bridge_BackendRoadModel(void)
 {
-#ifdef GTA_BRIDGE
-	if (index != MI_BRIDGEROADSEGMENT && index != MI_BRIDGELIFT)
-		return false;
-
-	return State == STATE_LIFT_PART_ABOUT_TO_MOVE_UP || State == STATE_LIFT_PART_MOVING_UP;
-#else
-	return false;
-#endif
+    // Enter the original typed native field or action at the C decision point
+    return MI_BRIDGEROADSEGMENT;
 }
+int32_t Bridge_BackendWeightModel(void)
+{
+    // Enter the original typed native field or action at the C decision point
+    return MI_BRIDGEWEIGHT;
+}
+float Bridge_BackendPositionZ(CEntity *entity)
+{
+    // Enter the original typed native field or action at the C decision point
+    return entity->GetPosition().z;
+}
+void Bridge_BackendSetPositionZ(CEntity *entity,float value)
+{
+    // Enter the original typed native field or action at the C decision point
+    entity->GetMatrix().GetPosition().z=value;
+}
+void Bridge_BackendUpdateMatrix(CEntity *entity)
+{
+    // Enter the original typed native field or action at the C decision point
+    entity->GetMatrix().UpdateRW();
+}
+void Bridge_BackendUpdateFrame(CEntity *entity)
+{
+    // Enter the original typed native field or action at the C decision point
+    entity->UpdateRwFrame();
+}
+int32_t Bridge_BackendCommercialPassed(void)
+{
+    // Enter the original typed native field or action at the C decision point
+    return Stats_CommercialPassed;
+}
+void Bridge_BackendSetLights(float x1,float x2,float y1,float y2,bool enabled)
+{
+    // Enter the original typed native field or action at the C decision point
+    ThePaths.SetLinksBridgeLights(x1,x2,y1,y2,enabled);
+}
+#endif
+//- rouz edit (ChatGPT)

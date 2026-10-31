@@ -1,0 +1,154 @@
+@COMMON@
+@CAMERA@
+#include "caller.h"
+#include "General.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+#include <initializer_list>
+static_assert(sizeof(WindModifiersVector)==12 && alignof(WindModifiersVector)==4,"C vector layout");
+static_assert(sizeof(WindModifiersRecord)==16 && alignof(WindModifiersRecord)==4,"C record layout");
+static_assert(offsetof(WindModifiersRecord,m_pos)==0 && offsetof(WindModifiersRecord,m_type)==12,"C field offsets");
+extern "C" bool TestWind_LegacyFind(const void *,float *,float *);
+unsigned testCameraReads;
+CCamera TheCamera;
+#ifdef NATIVE_PROJECT_HEADERS
+CMatrix::CMatrix(void)
+{
+    // Provide an empty fixture matrix lifetime without renderer ownership
+    m_attachment=NULL;m_hasRwMatrix=false;
+}
+CMatrix::~CMatrix(void)
+{
+    // Reject unexpected rendering resources in the wind fixture
+    if(m_attachment!=NULL || m_hasRwMatrix)abort();
+}
+CPlaceable::CPlaceable(void)
+{
+    // Leave unrelated placement initialization outside the wind algorithms
+}
+void CCam::Init(void)
+{
+    // Leave unrelated camera startup outside the wind algorithms
+}
+CCamPathSplines::CCamPathSplines(void)
+{
+    // Avoid unrelated spline resources in the camera owner
+    m_arr_PathData=NULL;
+}
+CCamera::CCamera(void)
+{
+    // Let each test explicitly supply the camera position consumed by wind registration
+}
+#endif
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t checks,queries,randomReads;
+static uint16_t nextRandom;
+static void require(bool condition)
+{
+    // Fail quietly and identify the independent check without a game assertion window
+    if(!condition){fprintf(stderr,"check=%u query=%u\n",checks,queries);exit(2);}checks++;
+}
+static uint32_t bits(float value)
+{
+    // Inspect float storage without violating scalar aliasing rules
+    uint32_t word;memcpy(&word,&value,4);return word;
+}
+static void word(uint32_t value)
+{
+    // Record all observable count, record and output values
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Retain every finite result bit and classify zero-distance NaNs without a payload claim
+    word(isnan(value)?UINT32_C(0x7fc00000):bits(value));
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Verify the exact single draw and original uint16 promotion boundary
+    randomReads++;word(nextRandom);return nextRandom;
+}
+static void camera(WindModifiersVector pos)
+{
+    // Set actual typed camera storage for native runs and the same scalar model for portable runs
+#ifdef NATIVE_PROJECT_HEADERS
+    TheCamera.SetPosition(pos.x,pos.y,pos.z);
+#else
+    TheCamera.position=CVector(pos.x,pos.y,pos.z);
+#endif
+}
+static void snapshot(void)
+{
+    // Compare all active and inactive records to catch writes beyond count and unintended reset clearing
+    word((uint32_t)*TestWind_Count());
+    for(int i=0;i<16;i++){
+        WindModifiersRecord value=TestWind_Record(i);
+        floating(value.m_pos.x);floating(value.m_pos.y);floating(value.m_pos.z);word((uint32_t)value.m_type);
+    }
+}
+static bool find(WindModifiersVector pos,uint16_t random,bool alias)
+{
+    // Compare complete search results and enforce unchanged outputs on failure or one draw on success
+    nextRandom=random;uint32_t previous=randomReads;float x=1.25f,y=-2.5f;
+    bool result=TestWind_Find(pos,&x,alias?&x:&y);require(randomReads-previous==(result?1u:0u));
+    if(!result)require(bits(x)==bits(1.25f) && bits(y)==bits(-2.5f));
+    word(result);floating(x);floating(y);queries++;return result;
+}
+static void registerOne(WindModifiersVector pos,int32_t type)
+{
+    // Independently check strict camera distance and original capacity before observing the entire array
+    int32_t before=*TestWind_Count();unsigned reads=testCameraReads;TestWind_Register(pos,type);
+#ifndef NATIVE_PROJECT_HEADERS
+    require(testCameraReads-reads==(before<16?1u:0u));
+#endif
+    require(*TestWind_Count()==before || *TestWind_Count()==before+1);require(*TestWind_Count()<=16);snapshot();
+}
+int main(void)
+{
+    // Verify original zero startup state and the live count address used for frame resets
+    int32_t *count=TestWind_Count();require(*count==0 && count==TestWind_Count());snapshot();
+    for(int i=0;i<16;i++){WindModifiersRecord r=TestWind_Record(i);require(r.m_type==0 && bits(r.m_pos.x)==0 && bits(r.m_pos.y)==0 && bits(r.m_pos.z)==0);}
+    require(!find({0,0,0},0,false));camera({0,0,0});
+    // Verify strict registration boundaries and a full array's lazy camera behavior
+    registerOne({nextafterf(100.f,0.f),0,0},1);require(*count==1);
+    registerOne({100,0,0},1);require(*count==1);registerOne({nextafterf(100.f,INFINITY),0,0},1);require(*count==1);
+    registerOne({INFINITY,0,0},1);require(*count==1);registerOne({NAN,0,0},1);require(*count==1);
+    for(int i=1;i<16;i++)registerOne({(float)i,2,-3},i%3);require(*count==16);
+    registerOne({0,0,0},1);require(*count==16);*count=0;snapshot();
+    // Check type filtering, exact simple directions, last-match precedence and sequential aliases
+    registerOne({0,0,0},2);require(!find({3,4,0},16,false));*count=0;registerOne({0,0,0},1);
+    nextRandom=16;float x=0,y=0;require(TestWind_Find({3,4,0},&x,&y));require(bits(x)==bits(0.1875f) && bits(y)==bits(0.25f));
+    registerOne({6,8,0},1);x=0;y=0;require(TestWind_Find({3,4,0},&x,&y));require(bits(x)==bits(-0.1875f) && bits(y)==bits(-0.25f));
+    x=1;require(TestWind_Find({3,4,0},&x,&x));require(bits(x)==bits(0.5625f));
+    // Preserve the typed legacy position copy when output writes alias that source vector
+    CVector legacy(3,4,0);require(TestWind_LegacyFind(&legacy,&legacy.x,&legacy.y));require(bits(legacy.x)==bits(2.8125f) && bits(legacy.y)==bits(3.75f));
+    *count=0;registerOne({0,0,0},1);
+    // Cover fade, height and distance thresholds together with every low RNG bit pattern
+    const float edges[]={-55.f,nextafterf(-55.f,0.f),-25.f,-15.f,-0.f,0.f,15.f,nextafterf(20.f,0.f),20.f,nextafterf(20.f,INFINITY),25.f,nextafterf(25.f,0.f),nextafterf(50.f,0.f),50.f,nextafterf(50.f,INFINITY),INFINITY,-INFINITY,NAN};
+    for(float a:edges)for(float b:edges)for(uint32_t r=0;r<32;r++){
+        find({a,b,0},(uint16_t)r,false);find({a,0,b},(uint16_t)(r|0xffe0),true);
+    }
+    // Compare randomized full tables, camera coordinates, record types and aliased output paths
+    uint32_t state=UINT32_C(0x7642c123);
+    for(unsigned batch=0;batch<256;batch++){
+        *count=0;camera({10,-20,30});
+        for(unsigned i=0;i<20;i++){
+            state=state*1664525u+1013904223u;float a=(float)(int32_t)(state%131)-65;
+            state=state*1664525u+1013904223u;float b=(float)(int32_t)(state%91)-45;
+            state=state*1664525u+1013904223u;float c=(float)(int32_t)(state%111)-55;
+            registerOne({a,b,c},i%5==0?INT32_MIN:i%7==0?INT32_MAX:1);
+        }
+        for(unsigned i=0;i<64;i++){
+            state=state*1664525u+1013904223u;float a=(float)(int32_t)(state%141)-70;
+            state=state*1664525u+1013904223u;float b=(float)(int32_t)(state%101)-50;
+            state=state*1664525u+1013904223u;float c=(float)(int32_t)(state%131)-65;
+            find({a,b,c},(uint16_t)state,(i&1)!=0);
+        }
+    }
+    // Retain the original negative-count no-search behavior without indexing a negative registration slot
+    *count=-1;require(!find({0,0,0},0,true));*count=0;require(count==TestWind_Count());snapshot();
+    printf("%016llx queries=%u checks=%u random=%u record=%zu\n",(unsigned long long)hash,queries,checks,randomReads,sizeof(WindModifiersRecord));
+}

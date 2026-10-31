@@ -1,6 +1,7 @@
 # Audit three complete tyre and road generators and shared enum extraction
 from pathlib import Path
 import re
+import audio_vehicle_doors_migration as doors
 from audio_controls_migration import function
 from audio_owner_init_migration import fields
 import audio_vehicle_road_migration as migration
@@ -16,7 +17,7 @@ for name,transform in [('AudioLogic.cpp',migration.logic),('AudioManager.h',migr
     assert normalize(transform((out/'before/src/audio'/name).read_text()))==normalize((root/'src/audio'/name).read_text()),name
 for path,enum,new in [('src/modelinfo/VehicleModelInfo.h','eVehicleType','VehicleTypes.h'),('src/vehicles/DamageManager.h','eWheelStatus','WheelStatus.h')]:
     saved=(out/'before'/path).read_text();block=re.search(r'enum '+enum+r'\s*\{.*?\n\};',saved,re.S).group()
-    assert normalize(saved.replace(block,'#include "'+new+'"'))==normalize((root/path).read_text())
+    assert normalize(doors.types(saved.replace(block,'#include "'+new+'"')))==normalize((root/path).read_text())
     assert normalize(block)==normalize((root/Path(path).parent/new).read_text().replace('#pragma once',''))
 header=(out/'before/src/audio/AudioManager.h').read_text();macros=header[header.index('#ifndef GTA_PS2\n#define RESET_LOOP_OFFSETS'):header.index('#if defined(AUDIO_MSS)')]
 converted=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',macros)

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "rl.h"
@@ -156,24 +157,9 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #include "skeleton.h"
 #include "Draw.h"
 
-#if defined(PROPER_SCALING)
-	#ifdef FORCE_PC_SCALING
-		#define DEFAULT_SCREEN_WIDTH  (640)
-		#define DEFAULT_SCREEN_HEIGHT (448)
-	#else
-		#define DEFAULT_SCREEN_WIDTH  (640)
-		#define DEFAULT_SCREEN_HEIGHT (480)
-	#endif
-#elif defined(GTA_PS2)
-		#define DEFAULT_SCREEN_WIDTH  (640)
-		#define DEFAULT_SCREEN_HEIGHT (480)
-#else //elif defined(GTA_PC)
-		#define DEFAULT_SCREEN_WIDTH  (640)
-		#define DEFAULT_SCREEN_HEIGHT (448)
-#endif
-
-#define DEFAULT_ASPECT_RATIO (4.0f/3.0f)
-#define DEFAULT_VIEWWINDOW (0.7f)
+//+ rouz edit (ChatGPT)
+#include "Draw_constants.h"
+//- rouz edit (ChatGPT)
 
 // game uses maximumWidth/Height, but this probably won't work
 // with RW windowed mode
@@ -190,11 +176,9 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #define SCREEN_HEIGHT ((float)RsGlobal.height)
 #endif
 
-#define SCREEN_HEIGHT_PAL ((float)512)
-#define SCREEN_HEIGHT_NTSC ((float)448)
 
-#define SCREEN_ASPECT_RATIO (CDraw::GetAspectRatio())
-#define SCREEN_VIEWWINDOW (Tan(DEGTORAD(CDraw::GetScaledFOV() * 0.5f)))
+#define SCREEN_ASPECT_RATIO (Draw_GetAspectRatio())
+#define SCREEN_VIEWWINDOW (Tan(DEGTORAD(Draw_GetScaledFOV() * 0.5f)))
 
 // This scales from PS2 pixel coordinates to the real resolution
 #define SCREEN_STRETCH_X(a)   ((a) * (float) SCREEN_WIDTH / DEFAULT_SCREEN_WIDTH)
@@ -214,7 +198,7 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #ifdef PROPER_SCALING
 	#ifndef FORCE_PC_SCALING			
 		#undef SCREEN_SCALE_Y	
-		#define SCREEN_SCALE_Y(a) CDraw::ScaleY(SCREEN_STRETCH_Y(a))	
+		#define SCREEN_SCALE_Y(a) Draw_ScaleY(SCREEN_STRETCH_Y(a))	
 	#endif
 #endif
 #else
@@ -322,11 +306,6 @@ inline float sq(float x) { return x*x; }
 #define M_SQRT1_2  0.707106781186547524401  // 1/sqrt(2)
 #endif
 
-#define PI (float)M_PI
-#define TWOPI (PI*2)
-#define HALFPI (PI/2)
-#define DEGTORAD(x) ((x) * PI / 180.0f)
-#define RADTODEG(x) ((x) * 180.0f / PI)
 
 #ifdef USE_PS2_RAND
 #define MYRAND_MAX		65535
@@ -420,3 +399,4 @@ typedef struct
 extern rouz_t rouz;
 
 extern double get_game_time();
+//- rouz edit (ChatGPT)

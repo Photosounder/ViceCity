@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit channel/crackle conversion and compare backend-visible traces."""
 from pathlib import Path
 import re
@@ -7,6 +8,8 @@ import audio_police_state_fixture as state
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-police-channel-c-tests'
 old=(out/'before/src/audio/PolRadio.cpp').read_text();kernel=(root/'src/audio/AudioPoliceChannel.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare complete bodies independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 for name,target in [('DoPoliceRadioCrackle','Crackle'),('ServicePoliceRadioChannel','ServiceChannel')]:

@@ -1,4 +1,16 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "platform.h"
 
@@ -85,6 +97,7 @@
 #include "World.h"
 #include "ZoneCull.h"
 #include "Zones.h"
+#include "Gangs.h"
 #include "Occlusion.h"
 #include "debugmenu.h"
 #include "Ropes.h"
@@ -129,18 +142,22 @@ void MessageScreen(char *msg)
 {
 	//TODO: stretch_screen
 	
-	CRect rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	CRect rect = Rect_Make(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	CRGBA color(255, 255, 255, 255);
 
 	DoRWStuffStartOfFrame(50, 50, 50, 0, 0, 0, 255);
 	
-	CSprite2d::InitPerFrame();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_InitPerFrame();
 	CFont::InitPerFrame();
 	DefinedState();
 
-	CSprite2d *splash = LoadSplash(NULL);
-	splash->Draw(rect, color, color, color, color);
-	splash->DrawRect(CRect(SCREEN_SCALE_X(20.0f), SCREEN_SCALE_Y(110.0f), SCREEN_SCALE_X(620.0f), SCREEN_SCALE_Y(300.0f)), CRGBA(50, 50, 50, 192));
+	Sprite2d *splash = LoadSplash(NULL);
+	([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &c0,const CRGBA &c1,const CRGBA &c2,const CRGBA &c3){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectColours(spriteSelf,&rect,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
+})(splash,rect, color, color, color, color);
+	splash->DrawRect(Rect_Make(SCREEN_SCALE_X(20.0f), SCREEN_SCALE_Y(110.0f), SCREEN_SCALE_X(620.0f), SCREEN_SCALE_Y(300.0f)), CRGBA(50, 50, 50, 192));
 	
 	CFont::SetFontStyle(FONT_BANK);
 	CFont::SetBackgroundOff();
@@ -153,7 +170,7 @@ void MessageScreen(char *msg)
 	CFont::SetDropColor(CRGBA(32, 32, 32, 255));
 	CFont::SetDropShadowPosition(3);
 	CFont::SetPropOn();
-	CFont::PrintString(SCREEN_SCALE_X(320.0f), SCREEN_SCALE_Y(130.0f), TheText.Get(msg));
+	CFont::PrintString(SCREEN_SCALE_X(320.0f), SCREEN_SCALE_Y(130.0f), Text_Get(&TheText,msg));
 	CFont::DrawFonts();
 	
 	DoRWStuffEndOfFrame();
@@ -163,7 +180,7 @@ void MessageScreen(char *msg)
 bool
 CGame::InitialiseOnceBeforeRW(void)
 {
-	CFileMgr::Initialise();
+	FileMgr_Initialise();
 	CdStreamInit(MAX_CDCHANNELS);
 	debug("size of matrix %d\n", sizeof(CMatrix));
 	debug("size of placeable %d\n", sizeof(CPlaceable));
@@ -171,7 +188,8 @@ CGame::InitialiseOnceBeforeRW(void)
 	debug("size of building %d\n", sizeof(CBuilding));
 	debug("size of dummy %d\n", sizeof(CDummy));
 #ifdef EXTENDED_COLOURFILTER
-	CPostFX::InitOnce();
+	// Use the complete C post-processing owner and its live shared state
+	PostFX_InitOnce();
 #endif
 #ifdef CUSTOM_FRONTEND_OPTIONS
 	// Not needed here but may be needed in future
@@ -195,10 +213,12 @@ CGame::InitialiseRenderWare(void)
 {
 	ValidateVersion();
 #ifdef USE_TEXTURE_POOL
-	_TexturePoolsInitialise();
+	// Use the complete C texture and palette pool owner
+	TexturePools_Initialise();
 #endif
 
-	CTxdStore::Initialise();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_Initialise();
 	CVisibilityPlugins::Initialise();
 
 #ifdef GTA_PS2
@@ -212,7 +232,8 @@ CGame::InitialiseRenderWare(void)
 #endif
 
 	/* Create camera */
-	Scene.camera = CameraCreate(SCREEN_WIDTH, SCREEN_HEIGHT, TRUE);
+	// Use the C helper and retain the original typed SDK result
+	Scene.camera = ((RwCamera*)CameraCreate(SCREEN_WIDTH, SCREEN_HEIGHT, TRUE));
 	ASSERT(Scene.camera != nil);
 	if (!Scene.camera)
 	{
@@ -241,7 +262,8 @@ CGame::InitialiseRenderWare(void)
 	
 	/* Add the camera to the world */
 	RpWorldAddCamera(Scene.world, Scene.camera);
-	LightsCreate(Scene.world);
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_Create(Scene.world);
 
 	CreateDebugFont();
 
@@ -269,7 +291,7 @@ CGame::InitialiseRenderWare(void)
 	PUSH_MEMID(MEMID_TEXTURES);
 	CFont::Initialise();
 	CHud::Initialise();
-	CPlayerSkin::Initialise();
+	PlayerSkin_Initialise(); // rouz edit (ChatGPT)
 	POP_MEMID();
 
 #ifdef EXTENDED_PIPELINES
@@ -298,12 +320,13 @@ void CGame::ShutdownRenderWare(void)
 	for ( int32 i = 0; i < NUMPLAYERS; i++ )
 		CWorld::Players[i].DeletePlayerSkin();
 
-	CPlayerSkin::Shutdown();
+	PlayerSkin_Shutdown(); // rouz edit (ChatGPT)
 	
 	DestroyDebugFont();
 	
 	/* Destroy world */
-	LightsDestroy(Scene.world);
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_Destroy(Scene.world);
 	RpWorldRemoveCamera(Scene.world, Scene.camera);
 	RpWorldDestroy(Scene.world);
 	
@@ -316,19 +339,20 @@ void CGame::ShutdownRenderWare(void)
 	CVisibilityPlugins::Shutdown();
 	
 #ifdef USE_TEXTURE_POOL
-	_TexturePoolsShutdown();
+	// Use the complete C texture and palette pool owner
+	TexturePools_Shutdown();
 #endif
 }
 
 bool CGame::InitialiseOnceAfterRW(void)
 {
-	TheText.Load();
-	CTimer::Initialise();
+	Text_Load(&TheText);
+	Timer_Initialise();
 	CTempColModels::Initialise();
 	mod_HandlingManager.Initialise();
-	CSurfaceTable::Initialise("DATA\\SURFACE.DAT");
-	CPedStats::Initialise();
-	CTimeCycle::Initialise();
+	SurfaceTable_Initialise("DATA\\SURFACE.DAT"); // rouz edit (ChatGPT)
+	PedStats_Initialise();
+	TimeCycle_Initialise();
 #ifdef GTA_PS2
 	LoadingScreen("Loading the Game", "Initialising audio", GetRandomSplashScreen());
 #endif
@@ -360,8 +384,9 @@ bool CGame::InitialiseOnceAfterRW(void)
 void
 CGame::FinalShutdown(void)
 {	
-	CTxdStore::Shutdown();
-	CPedStats::Shutdown();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_Shutdown();
+	PedStats_Shutdown();
 	CdStreamShutdown();
 }
 
@@ -379,9 +404,9 @@ bool CGame::Initialise(const char* datFile)
 #ifndef GTA_PS2
 #ifdef PED_CAR_DENSITY_SLIDERS
 	// Load density values from gta3.ini only if our reVC.ini have them 0.6f
-	if (CIniFile::PedNumberMultiplier == 0.6f && CIniFile::CarNumberMultiplier == 0.6f)
+	if (IniFile_PedNumberMultiplier == 0.6f && IniFile_CarNumberMultiplier == 0.6f)
 #endif
-		CIniFile::LoadIniFile();
+		IniFile_LoadIniFile();
 #endif
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsUnknown(false);
@@ -391,9 +416,12 @@ bool CGame::Initialise(const char* datFile)
 
 	PUSH_MEMID(MEMID_TEXTURES);
 	LoadingScreen("Loading the Game", "Loading generic textures", GetRandomSplashScreen());
-	gameTxdSlot = CTxdStore::AddTxdSlot("generic");
-	CTxdStore::Create(gameTxdSlot);
-	CTxdStore::AddRef(gameTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	gameTxdSlot = TxdStore_AddTxdSlot("generic");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_Create(gameTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(gameTxdSlot);
 
 #ifdef EXTENDED_PIPELINES
 	// for generic fallback
@@ -401,10 +429,14 @@ bool CGame::Initialise(const char* datFile)
 #endif
 
 	LoadingScreen("Loading the Game", "Loading particles", nil);
-	int particleTxdSlot = CTxdStore::AddTxdSlot("particle");
-	CTxdStore::LoadTxd(particleTxdSlot, "MODELS/PARTICLE.TXD");
-	CTxdStore::AddRef(particleTxdSlot);
-	CTxdStore::SetCurrentTxd(gameTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int particleTxdSlot = TxdStore_AddTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(particleTxdSlot, "MODELS/PARTICLE.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(particleTxdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(gameTxdSlot);
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
 	POP_MEMID();
 
@@ -413,24 +445,25 @@ bool CGame::Initialise(const char* datFile)
 #endif
 
 	CGameLogic::InitAtStartOfGame();
-	CReferences::Init();
+	References_Init();
 	TheCamera.Init();
 	TheCamera.SetRwCamera(Scene.camera);
-	CDebug::DebugInitTextBuffer();
+	Debug_DebugInitTextBuffer();
 	ThePaths.Init();
 	ThePaths.AllocatePathFindInfoMem(4500);
-	CScriptPaths::Init();
-	CWeather::Init();
-	CCullZones::Init();
+	// Enter the C scripted-path operation at the original call point
+	ScriptPaths_Init();
+	Weather_Init();
+	CullZones_Init();
 	COcclusion::Init();
 	CCollision::Init();
-	CSetPieces::Init();
-	CTheZones::Init();
-	CUserDisplay::Init();
-	CMessages::Init();
-	CMessages::ClearAllMessagesDisplayedByGame();
+	SetPieces_Init(); // rouz edit (ChatGPT)
+	Zones_Init();
+	UserDisplay_Init();
+	Messages_Init();
+	Messages_ClearAllMessagesDisplayedByGame();
 	CRecordDataForGame::Init();
-	CRestart::Initialise();
+	Restart_Initialise(); // rouz edit (ChatGPT)
 
 	PUSH_MEMID(MEMID_WORLD);
 	CWorld::Initialise();
@@ -441,7 +474,8 @@ bool CGame::Initialise(const char* datFile)
 	POP_MEMID();
 
 	PUSH_MEMID(MEMID_ANIMATION);
-	CAnimManager::Initialise();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_Initialise();
 	CCutsceneMgr::Initialise();
 	POP_MEMID();
 
@@ -464,7 +498,7 @@ bool CGame::Initialise(const char* datFile)
 	CWorld::AddParticles();
 	CVehicleModelInfo::LoadVehicleColours();
 	CVehicleModelInfo::LoadEnvironmentMaps();
-	CTheZones::PostZoneCreation();
+	Zones_PostZoneCreation();
 	POP_MEMID();
 
 	LoadingScreen("Loading the Game", "Setup paths", nil);
@@ -476,9 +510,10 @@ bool CGame::Initialise(const char* datFile)
 
 	LoadingScreen("Loading the Game", "Setup water", nil);
 	CWaterLevel::Initialise("DATA\\WATER.DAT");
-	TheConsole.Init();
-	CDraw::SetFOV(120.0f);
-	CDraw::ms_fLODDistance = 500.0f;
+	// Enter the complete C console implementation with the original singleton
+	Console_Init(&TheConsole);
+	Draw_SetFOV(120.0f);
+	Draw_ms_fLODDistance = 500.0f;
 
 	LoadingScreen("Loading the Game", "Setup streaming", nil);
 	CStreaming::LoadInitialVehicles();
@@ -490,14 +525,15 @@ bool CGame::Initialise(const char* datFile)
 
 	LoadingScreen("Loading the Game", "Load animations", GetRandomSplashScreen());
 	PUSH_MEMID(MEMID_ANIMATION);
-	CAnimManager::LoadAnimFiles();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_LoadAnimFiles();
 	POP_MEMID();
 
 	CStreaming::LoadInitialWeapons();
 	CStreaming::LoadAllRequestedModels(0);
 	CPed::Initialise();
-	CRouteNode::Initialise();
-	CEventList::Initialise();
+	PedRoutes_Initialise();
+	Events_Initialise();
 #ifdef SCREEN_DROPLETS
 	ScreenDroplets::Initialise();
 #endif
@@ -510,17 +546,20 @@ bool CGame::Initialise(const char* datFile)
 	CWeapon::InitialiseWeapons();
 
 	LoadingScreen("Loading the Game", "Setup traffic lights", nil);
-	CTrafficLights::ScanForLightsOnMap();
-	CRoadBlocks::Init();
+	TrafficLights_ScanForLightsOnMap();
+	RoadBlocks_Init();
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
 	CPopulation::Initialise();
 	CWorld::PlayerInFocus = 0;
 	CCoronas::Init();
 	CShadows::Init();
-	CWeaponEffects::Init();
-	CSkidmarks::Init();
-	CAntennas::Init();
+	// Enter the complete C weapon effect operation
+	WeaponEffects_Init();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Init();
+	// Initialize the C antenna pool
+	Antennas_Init();
 	CGlass::Init();
 	gPhoneInfo.Initialise();
 #ifdef GTA_SCENE_EDIT
@@ -530,23 +569,29 @@ bool CGame::Initialise(const char* datFile)
 	LoadingScreen("Loading the Game", "Load scripts", nil);
 	PUSH_MEMID(MEMID_SCRIPT);
 	CTheScripts::Init();
-	CGangs::Initialise();
+	Gangs_Initialise();
 	POP_MEMID();
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
-	CClock::Initialise(1000);
+	Clock_Initialise(1000);
 	CHeli::InitHelis();
 	CCranes::InitCranes();
-	CMovingThings::Init();
-	CDarkel::Init();
-	CStats::Init();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Init();
+	Darkel_Init();
+	Stats_Init();
 	CPacManPickups::Init();
-	CRubbish::Init();
-	CClouds::Init();
-	CSpecialFX::Init();
-	CRopes::Init();
-	CWaterCannons::Init();
-	CBridge::Init();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Init();
+	// Enter the complete C cloud effect with the original arguments
+	Clouds_Init();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Init();
+	// Enter the C rope algorithm with the original owner expressions
+	Ropes_Init();
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Init();
+	Bridge_Init();
 	CGarages::Init();
 
 	LoadingScreen("Loading the Game", "Position dynamic objects", nil);
@@ -554,7 +599,8 @@ bool CGame::Initialise(const char* datFile)
 
 	CTrain::InitTrains();
 	CPlane::InitPlanes();
-	CCredits::Init();
+	// Enter the complete C credits implementation with the original arguments
+	Credits_Init();
 	CRecordDataForChase::Init();
 	CReplay::Init();
 
@@ -578,10 +624,10 @@ bool CGame::Initialise(const char* datFile)
 
 #ifndef MASTER
 	PlayerCoords = FindPlayerCoors();
-	VarConsole.Add("X PLAYER COORD", &PlayerCoords.x, 10.0f, -10000.0f, 10000.0f, true);
-	VarConsole.Add("Y PLAYER COORD", &PlayerCoords.y, 10.0f, -10000.0f, 10000.0f, true);
-	VarConsole.Add("Z PLAYER COORD", &PlayerCoords.z, 10.0f, -10000.0f, 10000.0f, true);
-	VarConsole.Add("UPDATE PLAYER COORD", &VarUpdatePlayerCoords, true);
+	VarConsole_AddFloat(&VarConsole,"X PLAYER COORD", &PlayerCoords.x, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddFloat(&VarConsole,"Y PLAYER COORD", &PlayerCoords.y, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddFloat(&VarConsole,"Z PLAYER COORD", &PlayerCoords.z, 10.0f, -10000.0f, 10000.0f, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool8(&VarConsole,"UPDATE PLAYER COORD", &VarUpdatePlayerCoords, true); // rouz edit (ChatGPT)
 #endif
 
 
@@ -599,14 +645,17 @@ bool CGame::ShutDown(void)
 	CReplay::EmptyReplayBuffer();
 	CPlane::Shutdown();
 	CTrain::Shutdown();
-	CScriptPaths::Shutdown();
-	CWaterCreatures::RemoveAll();
-	CSpecialFX::Shutdown();
+	// Enter the C scripted-path operation at the original call point
+	ScriptPaths_Shutdown();
+	WaterCreatures_RemoveAll(); // rouz edit (ChatGPT)
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Shutdown();
 	CGarages::Shutdown();
-	CMovingThings::Shutdown();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Shutdown();
 	gPhoneInfo.Shutdown();
 	CWeapon::ShutdownWeapons();
-	CPedType::Shutdown();
+	PedType_Shutdown();
 	
 	for (int32 i = 0; i < NUMPLAYERS; i++)
 	{
@@ -627,26 +676,34 @@ bool CGame::ShutDown(void)
 	CWorld::ShutDown();
 	DMAudio_DestroyAllGameCreatedEntities();
 	CModelInfo::ShutDown();
-	CAnimManager::Shutdown();
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_Shutdown();
 	CCutsceneMgr::Shutdown();
 	CVehicleModelInfo::DeleteVehicleColourTextures();
 	CVehicleModelInfo::ShutdownEnvironmentMaps();
 	CRadar::Shutdown();
 	CStreaming::Shutdown();
-	CTxdStore::GameShutdown();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_GameShutdown();
 	CCollision::Shutdown();
 	CWaterLevel::Shutdown();
-	CRubbish::Shutdown();
-	CClouds::Shutdown();
+	// Enter the C rubbish algorithm with the original owner expressions
+	Rubbish_Shutdown();
+	// Enter the complete C cloud effect with the original arguments
+	Clouds_Shutdown();
 	CShadows::Shutdown();
 	CCoronas::Shutdown();
-	CSkidmarks::Shutdown();
-	CWeaponEffects::Shutdown();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Shutdown();
+	// Enter the complete C weapon effect operation
+	WeaponEffects_Shutdown();
 	CParticle::Shutdown();
 	CPools::ShutDown();
 	CHud::ReInitialise();
-	CTxdStore::RemoveTxdSlot(gameTxdSlot);
-	CMBlur::MotionBlurClose();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(gameTxdSlot);
+	// Use the complete C motion-blur owner and its live shared state
+	MBlur_MotionBlurClose();
 	CdStreamRemoveImages();
 #ifdef USE_TEXTURE_POOL
 	_TexturePoolsFinalShutdown();
@@ -664,25 +721,25 @@ void CGame::ReInitGameObjectVariables(void)
 		TheCamera.Init();
 		TheCamera.SetRwCamera(Scene.camera);
 	}
-	CDebug::DebugInitTextBuffer();
-	CWeather::Init();
-	CUserDisplay::Init();
-	CMessages::Init();
-	CRestart::Initialise();
+	Debug_DebugInitTextBuffer();
+	Weather_Init();
+	UserDisplay_Init();
+	Messages_Init();
+	Restart_Initialise(); // rouz edit (ChatGPT)
 	CWorld::bDoingCarCollisions = false;
 	CHud::ReInitialise();
 	CRadar::Initialise();
 	CCarCtrl::ReInit();
-	CTimeCycle::Initialise();
-	CDraw::SetFOV(120.0f);
-	CDraw::ms_fLODDistance = 500.0f;
+	TimeCycle_Initialise();
+	Draw_SetFOV(120.0f);
+	Draw_ms_fLODDistance = 500.0f;
 	CStreaming::RequestBigBuildings(LEVEL_GENERIC);
 	CStreaming::RemoveIslandsNotUsed(LEVEL_BEACH);
 	CStreaming::RemoveIslandsNotUsed(LEVEL_MAINLAND);
 	CStreaming::LoadAllRequestedModels(false);
 	currArea = AREA_MAIN_MAP;
 	CPed::Initialise();
-	CEventList::Initialise();
+	Events_Initialise();
 #ifdef SCREEN_DROPLETS
 	ScreenDroplets::Initialise();
 #endif
@@ -693,29 +750,35 @@ void CGame::ReInitGameObjectVariables(void)
 		CWorld::Players[i].Clear();
 	
 	CWorld::PlayerInFocus = 0;
-	CAntennas::Init();
+	// Initialize the C antenna pool
+	Antennas_Init();
 	CGlass::Init();
 	gPhoneInfo.Initialise();
 
 	PUSH_MEMID(MEMID_SCRIPT);
 	CTheScripts::Init();
-	CGangs::Initialise();
+	Gangs_Initialise();
 	POP_MEMID();
 
-	CTimer::Initialise();
-	CClock::Initialise(1000);
+	Timer_Initialise();
+	Clock_Initialise(1000);
 	CTheCarGenerators::Init();
 	CHeli::InitHelis();
-	CMovingThings::Init();
-	CDarkel::Init();
-	CStats::Init();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Init();
+	Darkel_Init();
+	Stats_Init();
 	CPickups::Init();
 	CPacManPickups::Init();
 	CGarages::Init();
-	CSpecialFX::Init();
-	CRopes::Init();
-	CWaterCannons::Init();
-	CScriptPaths::Init();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Init();
+	// Enter the C rope algorithm with the original owner expressions
+	Ropes_Init();
+	// Enter the C water-cannon algorithm with the original owner expressions
+	WaterCannons_Init();
+	// Enter the C scripted-path operation at the original call point
+	ScriptPaths_Init();
 	CParticle::ReloadConfig();
 
 #ifdef PS2_MENU
@@ -749,7 +812,8 @@ void CGame::ShutDownForRestart(void)
 	CReplay::FinishPlayback();
 	CReplay::EmptyReplayBuffer();
 	DMAudio_DestroyAllGameCreatedEntities();
-	CMovingThings::Shutdown();
+	// Enter the C moving-scenery algorithm at the original call point
+	MovingThings_Shutdown();
 	
 	for (int i = 0; i < NUMPLAYERS; i++)
 		CWorld::Players[i].Clear();
@@ -759,24 +823,26 @@ void CGame::ShutDownForRestart(void)
 	CTheScripts::UndoEntityInvisibilitySettings();
 	CWorld::ClearForRestart();
 	CGameLogic::ClearShortCut();
-	CTimer::Shutdown();
+	Timer_Shutdown();
 	CStreaming::ReInit();
 	CRadar::RemoveRadarSections();
 	FrontEndMenuManager.UnloadTextures();
 	CParticleObject::RemoveAllExpireableParticleObjects();
-	CWaterCreatures::RemoveAll(); 
-	CSetPieces::Init();
-	CPedType::Shutdown();
-	CSpecialFX::Shutdown();
+	WaterCreatures_RemoveAll();  // rouz edit (ChatGPT)
+	SetPieces_Init(); // rouz edit (ChatGPT)
+	PedType_Shutdown();
+	// Enter the C special-effects controller with the original arguments
+	SpecialFX_Shutdown();
 }
 
 void CGame::InitialiseWhenRestarting(void)
 {
-	CRect rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	CRect rect = Rect_Make(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	CRGBA color(255, 255, 255, 255);
 	
-	CTimer::Initialise();
-	CSprite2d::SetRecipNearClip();
+	Timer_Initialise();
+	// Preserve the original operation through the C sprite interface
+	Sprite2d_SetRecipNearClip();
 
 	if (b_FoundRecentSavedGameWantToLoad || FrontEndMenuManager.m_bWantToLoad)
 	{
@@ -796,7 +862,8 @@ void CGame::InitialiseWhenRestarting(void)
 #ifdef XBOX_MESSAGE_SCREEN
 		FrontEndMenuManager.SetDialogTimer(1000);
 		DoRWStuffStartOfFrame(0, 0, 0, 0, 0, 0, 0);
-		CSprite2d::InitPerFrame();
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_InitPerFrame();
 		CFont::InitPerFrame();
 		FrontEndMenuManager.DrawOverlays();
 		DoRWStuffEndOfFrame();
@@ -812,7 +879,7 @@ void CGame::InitialiseWhenRestarting(void)
 		InitRadioStationPositionList();
 		if ( GenericLoad() == true )
 		{
-			DMAudio_ResetTimers(CTimer::GetTimeInMilliseconds());
+			DMAudio_ResetTimers((*Timer_GetTimeInMilliseconds()));
 			CTrain::InitTrains();
 			CPlane::InitPlanes();
 		}
@@ -826,8 +893,8 @@ void CGame::InitialiseWhenRestarting(void)
 			
 			TheCamera.SetFadeColour(0, 0, 0);
 			ShutDownForRestart();
-			CTimer::Stop();
-			CTimer::Initialise();
+			Timer_Stop();
+			Timer_Initialise();
 			FrontEndMenuManager.m_bWantToLoad = false;
 			ReInitGameObjectVariables();
 			currLevel = LEVEL_GENERIC;
@@ -838,7 +905,7 @@ void CGame::InitialiseWhenRestarting(void)
 #endif
 	}
 	
-	CTimer::Update();
+	Timer_Update();
 	
 	DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 #ifdef USE_TEXTURE_POOL
@@ -857,24 +924,24 @@ void CGame::Process(void)
 #endif
 	CCutsceneMgr::Update();
 
-	if (!CCutsceneMgr::IsCutsceneProcessing() && !CTimer::GetIsCodePaused())
+	if (!CCutsceneMgr::IsCutsceneProcessing() && !Timer_GetIsCodePaused())
 		FrontEndMenuManager.Process();
 
-	CTheZones::Update();
+	Zones_Update();
 #ifdef SECUROM
-	if (CTimer::GetTimeInMilliseconds() >= (35 * 60 * 1000) && gameProcessPirateCheck == 0){
+	if ((*Timer_GetTimeInMilliseconds()) >= (35 * 60 * 1000) && gameProcessPirateCheck == 0){
 		// if game not pirated
 		// gameProcessPirateCheck = 1;
 		// else
 		gameProcessPirateCheck = 2;
 	}
 #endif
-	uint32 startTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+	uint32 startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 	CStreaming::Update();
-	uint32 processTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond() - startTime;
-	CWindModifiers::Number = 0;
+	uint32 processTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond() - startTime;
+	WindModifiers_Number = 0;
 	rouz_update();
-	if (!CTimer::GetIsPaused())
+	if (!Timer_GetIsPaused())
 	{
 #ifndef MASTER
 		if (VarUpdatePlayerCoords) {
@@ -882,35 +949,40 @@ void CGame::Process(void)
 			VarUpdatePlayerCoords = false;
 		}
 #endif
-		CSprite2d::SetRecipNearClip();
-		CSprite2d::InitPerFrame();
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_SetRecipNearClip();
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_InitPerFrame();
 		CFont::InitPerFrame();
 		CRecordDataForGame::SaveOrRetrieveDataForThisFrame();
 		CRecordDataForChase::SaveOrRetrieveDataForThisFrame();
 		CPad::DoCheats();
-		CClock::Update();
-		CWeather::Update();
+		Clock_Update();
+		Weather_Update();
 
 		PUSH_MEMID(MEMID_SCRIPT);
 		CTheScripts::Process();
 		POP_MEMID();
 
 		CCollision::Update();
-		CScriptPaths::Update();
+		// Enter the C scripted-path operation at the original call point
+		ScriptPaths_Update();
 		CTrain::UpdateTrains();
 		CPlane::UpdatePlanes();
 		CHeli::UpdateHelis();
-		CDarkel::Update();
-		CSkidmarks::Update();
-		CAntennas::Update();
+		Darkel_Update();
+		// Enter the C skidmark algorithm with the original owner expressions
+		Skidmarks_Update();
+		// Advance the C antenna frame state
+		Antennas_Update();
 		CGlass::Update();
 #ifdef GTA_SCENE_EDIT
 		CSceneEdit::Update();
 #endif
-		CSetPieces::Update();
-		CEventList::Update();
+		SetPieces_Update(); // rouz edit (ChatGPT)
+		Events_Update();
 		CParticle::Update();
-		gFireManager.Update();
+		FireManager_Update(&gFireManager);
 
 		// Otherwise even on 30 fps most probably you won't see any peds around Ocean View Hospital
 #if defined FIX_BUGS && !defined SQUEEZE_PERFORMANCE
@@ -920,39 +992,45 @@ void CGame::Process(void)
 #endif
 			CPopulation::Update(false);
 		} else {
-			uint32 startTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+			uint32 startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 			CPopulation::Update(true);
-			processTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond() - startTime;
+			processTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond() - startTime;
 		}
 		CWeapon::UpdateWeapons();
 		if (!CCutsceneMgr::IsRunning())
 			CTheCarGenerators::Process();
 		if (!CReplay::IsPlayingBack())
 			CCranes::UpdateCranes();
-		CClouds::Update();
-		CMovingThings::Update();
-		CWaterCannons::Update();
-		CUserDisplay::Process();
+		// Enter the complete C cloud effect with the original arguments
+		Clouds_Update();
+		// Enter the C moving-scenery algorithm at the original call point
+		MovingThings_Update();
+		// Enter the C water-cannon algorithm with the original owner expressions
+		WaterCannons_Update();
+		UserDisplay_Process();
 		CReplay::Update();
 
 		PUSH_MEMID(MEMID_WORLD);
 		CWorld::Process();
 		POP_MEMID();
 
-		gAccidentManager.Update();
+		AccidentManager_Update(&gAccidentManager);
 		CPacManPickups::Update();
 		CPickups::Update();
 		CGarages::Update();
-		CRubbish::Update();
-		CSpecialFX::Update();
-		CRopes::Update();
-		CTimeCycle::Update();
+		// Enter the C rubbish algorithm with the original owner expressions
+		Rubbish_Update();
+		// Enter the C special-effects controller with the original arguments
+		SpecialFX_Update();
+		// Enter the C rope algorithm with the original owner expressions
+		Ropes_Update();
+		TimeCycle_Update();
 		if (CReplay::ShouldStandardCameraBeProcessed())
 			TheCamera.Process();
-		CCullZones::Update();
+		CullZones_Update();
 		if (!CReplay::IsPlayingBack())
 			CGameLogic::Update();
-		CBridge::Update();
+		Bridge_Update();
 		CCoronas::DoSunAndMoon();
 		CCoronas::Update();
 		CShadows::UpdateStaticShadows();
@@ -963,7 +1041,7 @@ void CGame::Process(void)
 			PUSH_MEMID(MEMID_CARS);
 			if (processTime < 2)
 				CCarCtrl::GenerateRandomCars();
-			CRoadBlocks::GenerateRoadBlocks();
+			RoadBlocks_GenerateRoadBlocks();
 			CCarCtrl::RemoveDistantCars();
 			CCarCtrl::RemoveCarsIfThePoolGetsFull();
 			POP_MEMID();
@@ -985,7 +1063,8 @@ MoveMem(void** ptr)
 {
 	if (*ptr) {
 		gNumMemMoved++;
-		void* newPtr = gMainHeap.MoveMemory(*ptr);
+		// Use the complete C heap operation with the original live owner
+		void* newPtr = MemoryHeap_MoveMemory(&gMainHeap,*ptr);
 		if (*ptr != newPtr) {
 			*ptr = newPtr;
 			return true;
@@ -1052,7 +1131,8 @@ MoveTextureMemoryCB(RwTexture* texture, void* pData)
 	pixelDiff = (uintptr)raster->cpPixels - (uintptr)raster->originalPixels;
 	if (raster->palette)
 		paletteDiff = (uintptr)raster->palette - (uintptr)raster->originalPixels;
-	uint8* newptr = (uint8*)gMainHeap.MoveMemory(raster->originalPixels);
+	// Use the complete C heap operation with the original live owner
+	uint8* newptr = (uint8*)MemoryHeap_MoveMemory(&gMainHeap,raster->originalPixels);
 	if (newptr != raster->originalPixels) {
 		// adjust everything
 		prefix->data = (uintptr)newptr + dataDiff;
@@ -1195,20 +1275,23 @@ void CGame::DrasticTidyUpMemory(bool flushDraw)
 
 	TidyUpMemory(true, flushDraw);
 
-	if (gMainHeap.GetLargestFreeBlock() < 200000 && !playingIntro) {
+	// Use the complete C heap operation with the original live owner
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
 		CStreaming::RemoveIslandsNotUsed(LEVEL_INDUSTRIAL);
 		CStreaming::RemoveIslandsNotUsed(LEVEL_COMMERCIAL);
 		CStreaming::RemoveIslandsNotUsed(LEVEL_SUBURBAN);
 		TidyUpMemory(true, flushDraw);
 	}
 
-	if (gMainHeap.GetLargestFreeBlock() < 200000 && !playingIntro) {
+	// Use the complete C heap operation with the original live owner
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
 		CModelInfo::RemoveColModelsFromOtherLevels(LEVEL_GENERIC);
 		TidyUpMemory(true, flushDraw);
 		removedCol = true;
 	}
 
-	if (gMainHeap.GetLargestFreeBlock() < 200000 && !playingIntro) {
+	// Use the complete C heap operation with the original live owner
+	if (MemoryHeap_GetLargestFreeBlock(&gMainHeap) < 200000 && !playingIntro) {
 		CStreaming::RemoveBigBuildings(LEVEL_INDUSTRIAL);
 		CStreaming::RemoveBigBuildings(LEVEL_COMMERCIAL);
 		CStreaming::RemoveBigBuildings(LEVEL_SUBURBAN);
@@ -1230,7 +1313,8 @@ void CGame::DrasticTidyUpMemory(bool flushDraw)
 void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
-	printf("Largest free block before tidy %d\n", gMainHeap.GetLargestFreeBlock());
+	// Use the complete C heap operation with the original live owner
+	printf("Largest free block before tidy %d\n", MemoryHeap_GetLargestFreeBlock(&gMainHeap));
 
 	if (moveTextures) {
 		if (flushDraw) {
@@ -1244,13 +1328,16 @@ void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 				RwCameraShowRaster(Scene.camera, nil, 0);
 			}
 			}
-		int fontSlot = CTxdStore::FindTxdSlot("fonts");
+		// Use the complete C texture dictionary owner with the original live arguments
+		int fontSlot = TxdStore_FindTxdSlot("fonts");
 
 		for (int i = 0; i < TXDSTORESIZE; i++) {
 			if (i == fontSlot ||
-				CTxdStore::GetSlot(i) == nil)
+				// Use the complete C texture dictionary owner with the original live arguments
+				TxdStore_GetSlot(i) == nil)
 				continue;
-			RwTexDictionary* txd = CTxdStore::GetSlot(i)->texDict;
+			// Use the complete C texture dictionary owner with the original live arguments
+			RwTexDictionary* txd = ((RwTexDictionary*)TxdStore_GetSlot(i)->texDict);
 			if (txd)
 				RwTexDictionaryForAllTextures(txd, MoveTextureMemoryCB, nil);
 		}
@@ -1258,10 +1345,12 @@ void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 
 	// animations
 	for (int i = 0; i < NUMANIMATIONS; i++) {
-		CAnimBlendHierarchy* anim = CAnimManager::GetAnimation(i);
+		// Use the complete C animation manager at the original call boundary
+		CAnimBlendHierarchy* anim = AnimManager_GetAnimationById(i);
 		if (anim == nil)
 			continue;	// cannot happen
-		anim->MoveMemory();
+		// Use the complete C hierarchy at the original native operation boundary
+		AnimHierarchy_MoveMemory(anim,false);
 	}
 
 	// model info
@@ -1272,7 +1361,8 @@ void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 		TidyUpModelInfo(mi, false);
 	}
 
-	printf("Largest free block after tidy %d\n", gMainHeap.GetLargestFreeBlock());
+	// Use the complete C heap operation with the original live owner
+	printf("Largest free block after tidy %d\n", MemoryHeap_GetLargestFreeBlock(&gMainHeap));
 #endif
 	}
 
@@ -1309,8 +1399,10 @@ void CGame::ProcessTidyUpMemory(void)
 #ifdef FIX_BUGS
 			txd = nil;
 #endif
-			if (CTxdStore::GetSlot(txdIndex))
-				txd = CTxdStore::GetSlot(txdIndex)->texDict;
+			// Use the complete C texture dictionary owner with the original live arguments
+			if (TxdStore_GetSlot(txdIndex))
+				// Use the complete C texture dictionary owner with the original live arguments
+				txd = ((RwTexDictionary*)TxdStore_GetSlot(txdIndex)->texDict);
 			txdIndex++;
 			if (txdIndex >= TXDSTORESIZE)
 				txdIndex = 0;
@@ -1324,12 +1416,14 @@ void CGame::ProcessTidyUpMemory(void)
 	// animations
 	CAnimBlendHierarchy* anim;
 	do {
-		anim = CAnimManager::GetAnimation(animIndex);
+		// Use the complete C animation manager at the original call boundary
+		anim = AnimManager_GetAnimationById(animIndex);
 		animIndex++;
 		if (animIndex >= NUMANIMATIONS)
 			animIndex = 0;
 	} while (anim == nil);	// always != nil
-	anim->MoveMemory(true);
+	// Use the complete C hierarchy at the original native operation boundary
+	AnimHierarchy_MoveMemory(anim,true);
 #endif
 }
 
@@ -1357,4 +1451,18 @@ CGame::CanSeeOutSideFromCurrArea(void)
 		currArea == AREA_MANSION || currArea == AREA_HOTEL;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -6,6 +6,7 @@
 #include "audio_enums.h"
 #include "soundlist.h"
 #include "../core/CrimeTypes.h"
+#include "AudioCrimes.h"
 
 #define AEHANDLE_IS_FAILED(h) ((h)<0)
 #define AEHANDLE_IS_OK(h)     ((h)>=0)
@@ -69,6 +70,7 @@ typedef struct CVector CVector;
 
 	void DMAudio_ResetPoliceRadio(void);
 	void DMAudio_ReportCrime(enum eCrimeType crime, const CVector *pos);
+	void DMAudio_ReportCrimeAt(enum eCrimeType crime,const AudioCrimePosition *pos);
 	
 	int32_t DMAudio_CreateLoopingScriptObject(cAudioScriptObject *scriptObject);
 	void DMAudio_DestroyLoopingScriptObject(int32_t audioEntity);

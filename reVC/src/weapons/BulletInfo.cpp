@@ -1,5 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "BulletInfo.h"
 
@@ -81,10 +85,10 @@ bool CBulletInfo::AddBullet(CEntity* pSource, eWeaponType type, CVector vecPosit
 		return false;
 	gaBulletInfo[i].m_pSource = pSource;
 	gaBulletInfo[i].m_eWeaponType = type;
-	gaBulletInfo[i].m_nDamage = CWeaponInfo::GetWeaponInfo(type)->m_nDamage;
+	gaBulletInfo[i].m_nDamage = WeaponInfo_GetWeaponInfo(type)->m_nDamage;
 	gaBulletInfo[i].m_vecPosition = vecPosition;
 	gaBulletInfo[i].m_vecSpeed = vecSpeed;
-	gaBulletInfo[i].m_fTimer = CTimer::GetTimeInMilliseconds() + BULLET_LIFETIME;
+	gaBulletInfo[i].m_fTimer = (*Timer_GetTimeInMilliseconds()) + BULLET_LIFETIME;
 	gaBulletInfo[i].m_bInUse = true;
 
 #ifdef SQUEEZE_PERFORMANCE
@@ -106,14 +110,14 @@ void CBulletInfo::Update(void)
 			pBullet->m_pSource = nil;
 		if (!pBullet->m_bInUse)
 			continue;
-		if (CTimer::GetTimeInMilliseconds() > pBullet->m_fTimer) {
+		if ((*Timer_GetTimeInMilliseconds()) > pBullet->m_fTimer) {
 			pBullet->m_bInUse = false;
 #ifdef SQUEEZE_PERFORMANCE
 			bulletInfoInUse--;
 #endif
 		}
 		CVector vecOldPos = pBullet->m_vecPosition;
-		CVector vecNewPos = pBullet->m_vecPosition + pBullet->m_vecSpeed * CTimer::GetTimeStep() * 0.5f;
+		CVector vecNewPos = pBullet->m_vecPosition + pBullet->m_vecSpeed * (*Timer_GetTimeStep()) * 0.5f;
 
 		if ( vecNewPos.x <= BULLET_BOUNDARY_MIN_X || vecNewPos.x >= BULLET_BOUNDARY_MAX_X || vecNewPos.y <= BULLET_BOUNDARY_MIN_Y || vecNewPos.y >= BULLET_BOUNDARY_MAX_Y ) {
 			pBullet->m_bInUse = false;
@@ -133,32 +137,38 @@ void CBulletInfo::Update(void)
 				if (!pPed->DyingOrDead() && pPed != pBullet->m_pSource) {
 					if (pPed->IsPedInControl() && !pPed->bIsDucking) {
 						pPed->ClearAttackByRemovingAnim();
-						CAnimBlendAssociation* pAnim = CAnimManager::AddAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HITBYGUN_FRONT);
-						pAnim->SetBlend(0.0f, 8.0f);
+						// Use the complete C animation manager at the original call boundary
+						CAnimBlendAssociation* pAnim = AnimManager_AddAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HITBYGUN_FRONT);
+						// Use the complete C association at the original native operation boundary
+						AnimAssociation_SetBlend(pAnim,0.0f, 8.0f);
 					}
-					pPed->InflictDamage(pBullet->m_pSource, pBullet->m_eWeaponType, pBullet->m_nDamage, (ePedPieceTypes)point.pieceB, pPed->GetLocalDirection(pPed->GetPosition() - point.point));
-					CEventList::RegisterEvent(pPed->m_nPedType == PEDTYPE_COP ? EVENT_SHOOT_COP : EVENT_SHOOT_PED, EVENT_ENTITY_PED, pPed, (CPed*)pBullet->m_pSource, 1000);
+					pPed->InflictDamage(pBullet->m_pSource, pBullet->m_eWeaponType, pBullet->m_nDamage, (ePedPieceTypes)point.pieceB, pPed->GetLocalDirection(pPed->GetPosition() - CollisionVector_ToNative(point.point)));
+					Events_RegisterEntity(pPed->m_nPedType == PEDTYPE_COP ? EVENT_SHOOT_COP : EVENT_SHOOT_PED,EVENT_ENTITY_PED,pPed,(CPed*)pBullet->m_pSource,1000);
 					pBullet->m_bInUse = false;
 #ifdef SQUEEZE_PERFORMANCE
 					bulletInfoInUse--;
 #endif
-					vecNewPos = point.point;
+					vecNewPos = CollisionVector_ToNative(point.point);
 				}
 				if (CGame::nastyGame) {
-					CVector vecParticleDirection = (point.point - pPed->GetPosition()) * 0.01f;
+					CVector vecParticleDirection = (CollisionVector_ToNative(point.point) - pPed->GetPosition()) * 0.01f;
 					vecParticleDirection.z = 0.01f;
 					if (pPed->GetIsOnScreen()) {
 						for (int j = 0; j < NUM_PED_BLOOD_PARTICLES; j++)
-							CParticle::AddParticle(PARTICLE_BLOOD_SMALL, point.point + BLOOD_PARTICLE_OFFSET, vecParticleDirection);
+							CParticle::AddParticle(PARTICLE_BLOOD_SMALL, CollisionVector_ToNative(point.point) + BLOOD_PARTICLE_OFFSET, vecParticleDirection);
 					}
 					if (pPed->GetPedState() == PED_DEAD) {
 						CAnimBlendAssociation* pAnim;
-						if (RpAnimBlendClumpGetFirstAssociation(pPed->GetClump(), ASSOC_FRONTAL))
-							pAnim = CAnimManager::BlendAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_FLOOR_FRONT, 8.0f);
+						// Use the complete C animation plugin API with explicit overload and render arguments
+						if (RpAnimBlendClumpGetFirstAssociationWithMask(pPed->GetClump(), ASSOC_FRONTAL))
+							// Use the complete C animation manager at the original call boundary
+							pAnim = AnimManager_BlendAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_FLOOR_FRONT, 8.0f);
 						else
-							pAnim = CAnimManager::BlendAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_FLOOR, 8.0f);
+							// Use the complete C animation manager at the original call boundary
+							pAnim = AnimManager_BlendAnimation(pPed->GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_FLOOR, 8.0f);
 						if (pAnim) {
-							pAnim->SetCurrentTime(0.0f);
+							// Use the complete C association at the original native operation boundary
+							AnimAssociation_SetCurrentTime(pAnim,0.0f);
 							pAnim->flags |= ASSOC_RUNNING;
 							pAnim->flags &= ~ASSOC_FADEOUTWHENDONE;
 						}
@@ -167,7 +177,7 @@ void CBulletInfo::Update(void)
 #ifdef SQUEEZE_PERFORMANCE
 					bulletInfoInUse--;
 #endif
-					vecNewPos = point.point;
+					vecNewPos = CollisionVector_ToNative(point.point);
 				}
 			}
 			else if (pHitEntity->IsVehicle()) {
@@ -176,16 +186,16 @@ void CBulletInfo::Update(void)
 					if ( point.pieceB >= CAR_PIECE_WHEEL_LF && point.pieceB <= CAR_PIECE_WHEEL_RR ) {
 						((CVehicle*)pHitEntity)->BurstTyre(point.pieceB, true);
 						for (int j=0; j<NUM_TYRE_POP_SMOKES; j++) {
-							CParticle::AddParticle(PARTICLE_BULLETHIT_SMOKE, point.point, point.normal / 20);
+							CParticle::AddParticle(PARTICLE_BULLETHIT_SMOKE, CollisionVector_ToNative(point.point), CollisionVector_ToNative(point.normal) / 20);
 						}
 					} else {
 						// CVector sth(0.0f, 0.0f, 0.0f); // unused
 						((CVehicle*)pHitEntity)->InflictDamage(source, pBullet->m_eWeaponType, pBullet->m_nDamage);
 						if ( pBullet->m_eWeaponType == WEAPONTYPE_FLAMETHROWER ) {
-							gFireManager.StartFire(pHitEntity, pBullet->m_pSource, 0.8f, 1);
+							FireManager_StartFireOn(&gFireManager,pHitEntity, pBullet->m_pSource, 0.8f, 1);
 						} else {
 							for (int j=0; j<NUM_VEHICLE_SPARKS; j++) {
-								CParticle::AddParticle(PARTICLE_SPARK, point.point, point.normal / 20);
+								CParticle::AddParticle(PARTICLE_SPARK, CollisionVector_ToNative(point.point), CollisionVector_ToNative(point.normal) / 20);
 							}
 						}
 					}
@@ -195,11 +205,11 @@ void CBulletInfo::Update(void)
 #ifdef SQUEEZE_PERFORMANCE
 				bulletInfoInUse--;
 #endif
-				vecNewPos = point.point;
+				vecNewPos = CollisionVector_ToNative(point.point);
 #endif
 			} else {
 				for (int j = 0; j < NUM_OTHER_SPARKS; j++)
-					CParticle::AddParticle(PARTICLE_SPARK, point.point, point.normal / 20);
+					CParticle::AddParticle(PARTICLE_SPARK, CollisionVector_ToNative(point.point), CollisionVector_ToNative(point.normal) / 20);
 				CEntity *source = pBullet->m_pSource;
 				if ( !source || !source->IsPed() || ((CPed*)source)->m_attachedTo != pHitEntity) {
 					if (pHitEntity->IsObject()) {
@@ -213,7 +223,7 @@ void CBulletInfo::Update(void)
 
 							notStatic = !pHitObject->GetIsStatic();
 							if (!notStatic) {
-								CVector moveForce = point.normal * -BULLET_HIT_FORCE;
+								CVector moveForce = CollisionVector_ToNative(point.normal) * -BULLET_HIT_FORCE;
 								pHitObject->ApplyMoveForce(moveForce.x, moveForce.y, moveForce.z);
 							}
 						} else if (pHitObject->m_nCollisionDamageEffect >= DAMAGE_EFFECT_SMASH_COMPLETELY) {
@@ -226,7 +236,7 @@ void CBulletInfo::Update(void)
 #ifdef SQUEEZE_PERFORMANCE
 				bulletInfoInUse--;
 #endif
-				vecNewPos = point.point;
+				vecNewPos = CollisionVector_ToNative(point.point);
 #endif
 			}
 			if (pBullet->m_eWeaponType == WEAPONTYPE_SNIPERRIFLE || pBullet->m_eWeaponType == WEAPONTYPE_LASERSCOPE) {
@@ -299,18 +309,18 @@ void CBulletInfo::Update(void)
 						DMAudio_CreateOneShotScriptObject(pAudio);
 						break;
 					case ENTITY_TYPE_PED:
-						++CStats::BulletsThatHit;
+						++Stats_BulletsThatHit;
 						DMAudio_PlayOneShot(((CPed*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_PED, 1.0f);
 						((CPed*)pHitEntity)->Say(SOUND_PED_BULLET_HIT);
 						break;
 					case ENTITY_TYPE_VEHICLE:
-						++CStats::BulletsThatHit;
+						++Stats_BulletsThatHit;
 						DMAudio_PlayOneShot(((CVehicle*)pHitEntity)->m_audioEntityId, SOUND_WEAPON_HIT_VEHICLE, 1.0f);
 						break;
 						default: break;
 				}
 			}
-			CGlass::WasGlassHitByBullet(pHitEntity, point.point);
+			CGlass::WasGlassHitByBullet(pHitEntity, CollisionVector_ToNative(point.point));
 			CWeapon::BlowUpExplosiveThings(pHitEntity);
 		}
 		CWorld::pIgnoreEntity = nil;
@@ -332,10 +342,18 @@ bool CBulletInfo::TestForSniperBullet(float x1, float x2, float y1, float y2, fl
 	if (!bPlayerSniperBullet)
 		return false;
 #ifdef FIX_BUGS // original code is not going work anyway...
-	CColLine line(PlayerSniperBulletStart, PlayerSniperBulletEnd);
+	// Retain the line record at its original construction boundary
+	CColLine line;
+	// Initialize the line at the former parameterized constructor boundary
+	ColLine_Init(&line,COLLISION_POINT_REF(PlayerSniperBulletStart),COLLISION_POINT_REF(PlayerSniperBulletEnd));
 	CColBox box;
-	box.Set(CVector(x1, y1, z1), CVector(x2, y2, z2), SURFACE_DEFAULT, 0);
-	return CCollision::TestLineBox(line, box);
+	{
+	    // Keep native bound expressions alive through the ordered C update
+	    const CVector &boxMinimum0=CVector(x1, y1, z1);
+	    const CVector &boxMaximum0=CVector(x2, y2, z2);
+	    ColBox_Set(&box,COLLISION_POINT_REF(boxMinimum0),COLLISION_POINT_REF(boxMaximum0),SURFACE_DEFAULT,0);
+	}
+	return CCollision::TestLineBox(line, box.bounds);
 #else
 	float minP = 0.0f;
 	float maxP = 1.0f;
@@ -374,4 +392,8 @@ bool CBulletInfo::TestForSniperBullet(float x1, float x2, float y1, float y2, fl
 	return minP <= maxP;
 #endif
 }
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

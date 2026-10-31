@@ -5,26 +5,11 @@
 #include "Placeable.h"
 
 struct CReference;
-class CPtrList;
+struct CPtrList;
 
 #include "EntityTypes.h"
 
-enum eEntityStatus
-{
-	STATUS_PLAYER,
-	STATUS_PLAYER_PLAYBACKFROMBUFFER,
-	STATUS_SIMPLE,
-	STATUS_PHYSICS,
-	STATUS_ABANDONED,
-	STATUS_WRECKED,
-	STATUS_TRAIN_MOVING,
-	STATUS_TRAIN_NOT_MOVING,
-	STATUS_HELI,
-	STATUS_PLANE,
-	STATUS_PLAYER_REMOTE,
-	STATUS_PLAYER_DISABLED,
-	STATUS_GHOST
-};
+#include "EntityStatus.h"
 
 class CEntity : public CPlaceable
 {

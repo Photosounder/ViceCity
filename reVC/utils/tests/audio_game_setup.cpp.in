@@ -1,0 +1,169 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+#define TRUE 1
+#define FALSE 0
+static void event(unsigned,unsigned);
+struct CPed {unsigned index;uint8_t isPed;uint32_t lastStart,soundStart;};
+static unsigned gFireManager;
+static uint32_t now;
+struct CTimer {static uint32_t GetTimeInMilliseconds() {
+    // Capture the original clock read before callbacks change later state
+    uint32_t result=now;event(9,result);return result;
+}};
+struct cAudioManager {
+@FIELDS@
+void PreInitialiseGameSpecificSetup();void PostInitialiseGameSpecificSetup();void PreTerminateGameSpecificShutdown();void PostTerminateGameSpecificShutdown();
+};
+extern "C" cAudioManager AudioManager;cAudioManager AudioManager;
+static cAudioManager owners[2],*active;
+static CPed peds[4];
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint32_t BankStartOffset[MAX_SFX_BANKS];uint32_t BankStartOffset[MAX_SFX_BANKS];
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestGameSetupC(cAudioManager *,uint8_t);
+extern "C" uint32_t AudioPlayerEngineHost_Time(void);
+extern "C" int32_t AudioManager_CreateEntity(cAudioManager *,enum eAudioType,void *);
+extern "C" int32_t TestGameSetupRealCreate(cAudioManager *,enum eAudioType,void *);
+extern "C" void AudioService_ResetLogicTimers(cAudioManager *,uint32_t);
+extern "C" void TestGameSetupRealReset(cAudioManager *,uint32_t);
+extern "C" void TestGameSetupRealDestroy(tAudioEntity *,uint32_t *,uint32_t *,uint8_t,int32_t);
+extern "C" void TestGameSetupRealStatus(tAudioEntity *,uint8_t,int32_t,uint8_t);
+static unsigned seedValue,mutations,operation,cases,callbacks,created,destroyed,statuses,resets,operationVisits[5],createResults[3];
+static uint64_t digest=1469598103934665603ULL;
+static void value(uint32_t v) {
+    // Observe exact callback arguments and ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static uint32_t identity(void *pointer) {
+    // Normalize every defined entity pointer without changing game record fields
+    if(pointer==NULL)return 0;
+    if(pointer==(void *)1)return 1;
+    if(pointer==&gFireManager)return 8;
+    for(unsigned i=0;i<4;++i)if(pointer==&peds[i])return 16+i;
+    assert(false);return 0;
+}
+static void observe() {
+    // Hash both complete initialized owners and every bank, ped, clock and fire-manager record
+    static cAudioManager copies[2];memcpy(copies,owners,sizeof(copies));
+    for(unsigned i=0;i<2;++i)for(unsigned j=0;j<NUM_AUDIOENTITIES;++j)copies[i].m_asAudioEntities[j].m_pEntity=(void *)(uintptr_t)identity(copies[i].m_asAudioEntities[j].m_pEntity);
+    digest=TestAircraftHash(digest,copies,sizeof(copies));digest=TestAircraftHash(digest,BankStartOffset,sizeof(BankStartOffset));digest=TestAircraftHash(digest,peds,sizeof(peds));value(now);value(gFireManager);
+}
+static void event(unsigned token,unsigned arg) {
+    // Observe state before controlled mutations affect later live setup or shutdown reads
+    ++callbacks;value(token);value(arg);observe();
+    if(!mutations)return;
+    if(token==1&&(seedValue&1))active->m_bIsInitialised=!active->m_bIsInitialised;
+    if(token==2&&(seedValue&2))active->m_nFireAudioEntity=NUM_AUDIOENTITIES+1;
+    if(token==3&&(seedValue&4))active->m_bIsInitialised=!active->m_bIsInitialised;
+    if(token==5&&(seedValue&8))active->m_nProjectileEntity=active->m_nCollisionEntity;
+    if(token==6&&(seedValue&16))active->m_nFireAudioEntity=active->m_nFrontEndEntity;
+    if(token==9&&(seedValue&32)){active->m_bIsInitialised=!active->m_bIsInitialised;now+=17;}
+    if(token==12&&(seedValue&64))peds[arg].lastStart=17;
+    if(token==13&&(seedValue&128))active->m_anRandomTable[0]=-173;
+    if(token==15&&(seedValue&256))active->m_bIsInitialised=!active->m_bIsInitialised;
+    if(token==16&&(seedValue&512)){active->m_nPlayerMood=PLAYER_MOOD_ANGRY;active->m_nPlayerMoodTimer=UINT32_MAX;}
+}
+@HOST@
+@TIME_HOST@
+extern "C" int32_t AudioManager_CreateEntity(cAudioManager *manager,enum eAudioType type,void *pointer) {
+    // Observe original creation arguments before and after the actual C allocator
+    assert(manager==active);++created;value(identity(pointer));event(1,type);int32_t id=TestGameSetupRealCreate(manager,type,pointer);++createResults[id>=0?0:id==AEHANDLE_ERROR_NOAUDIOSYS?1:2];event(2,(uint32_t)id);return id;
+}
+extern "C" void AudioEntities_SetStatus(tAudioEntity *entities,uint8_t initialized,int32_t id,uint8_t status) {
+    // Retain captured status arguments while callbacks change the following initialization gate
+    assert(entities==active->m_asAudioEntities);++statuses;value(initialized);value(status);event(3,(uint32_t)id);TestGameSetupRealStatus(entities,initialized,id,status);event(4,(uint32_t)id);
+}
+extern "C" void AudioEntities_Destroy(tAudioEntity *entities,uint32_t *order,uint32_t *count,uint8_t initialized,int32_t id) {
+    // Retain captured destruction arguments before mutating handles read by later shutdown gates
+    assert(entities==active->m_asAudioEntities&&order==active->m_aAudioEntityOrderList&&count==&active->m_nAudioEntitiesCount);++destroyed;value(initialized);event(5,(uint32_t)id);TestGameSetupRealDestroy(entities,order,count,initialized,id);event(6,(uint32_t)id);
+}
+extern "C" void AudioService_ResetLogicTimers(cAudioManager *manager,uint32_t timer) {
+    // Observe the original captured timer around actual C ped, mission and channel resets
+    assert(manager==active);++resets;event(10,timer);TestGameSetupRealReset(manager,timer);event(11,timer);
+}
+extern "C" uint8_t AudioServiceHost_IsPed(CPed *ped) {
+    // Observe only valid seeded physical-entity records at the existing typed dependency
+    assert(ped>=peds&&ped<peds+4);uint8_t result=ped->isPed;event(12,ped->index);return result;
+}
+extern "C" void AudioServiceHost_PedLastStart(CPed *ped,uint32_t timer) {
+    // Store the original captured time after the existing ped callback boundary
+    value(timer);event(13,ped->index);ped->lastStart=timer;
+}
+extern "C" void AudioServiceHost_PedSoundStart(CPed *ped,uint32_t timer) {
+    // Store the live random-table adjustment evaluated after the last-start callback
+    value(timer);event(14,ped->index);ped->soundStart=timer;
+}
+extern "C" void SampleManager_StopStreamedFile(cSampleManager *manager,uint8_t slot) {
+    // Observe cleared mission fields before the next live initialization gate
+    assert(manager==&SampleManager);event(15,slot);
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *manager,uint32_t channel) {
+    // Observe final reset state before player mood and speech flags are cleared
+    assert(manager==&SampleManager);event(16,channel);
+}
+extern "C" void AudioManager_GenerateRandomTable(int32_t *) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);
+}
+extern "C" void AudioServiceHost_ResetMusicTimers(uint32_t) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);
+}
+extern "C" uint8_t AudioServiceHost_UserPaused(void) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);return 0;
+}
+extern "C" void AudioServiceHost_Music(void) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);
+}
+extern "C" void AudioEffects_Service(cAudioManager *) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);
+}
+#ifdef AUDIO_REFLECTIONS
+extern "C" void AudioReflections_Update(cAudioManager *) {
+    // Reject an unrelated service path in the complete linked C unit
+    assert(false);
+}
+#endif
+@METHODS@
+static void run() {
+    // Exercise a complete lifecycle sequence or each separately callable original operation
+    ++operationVisits[operation];@RUN@;
+}
+static void prepare(unsigned seed,unsigned mode) {
+    // Initialize every owner, entity, queue and game record with defined counts and zero padding
+    seedValue=seed;mutations=1;operation=mode;memset(owners,0,sizeof(owners));memset(peds,0,sizeof(peds));active=&owners[seed&1];gFireManager=seed*17;static const uint32_t times[]={0,1,3000,INT32_MAX,UINT32_MAX-5,UINT32_MAX};now=times[(seed/7)%6];for(unsigned i=0;i<MAX_SFX_BANKS;++i)BankStartOffset[i]=0xabc00000u+i;
+    for(unsigned i=0;i<4;++i){peds[i].index=i;peds[i].isPed=(seed+i)&1;peds[i].lastStart=seed;peds[i].soundStart=~seed;}
+    active->m_bIsInitialised=(seed>>1)&1;static const unsigned counts[]={0,1,NUM_AUDIOENTITIES-10,NUM_AUDIOENTITIES-1,NUM_AUDIOENTITIES};unsigned count=counts[(seed/4)%5];active->m_nAudioEntitiesCount=count;
+    for(unsigned i=0;i<NUM_AUDIOENTITIES;++i){tAudioEntity *entity=&active->m_asAudioEntities[i];entity->m_bIsUsed=i<count;entity->m_bStatus=(seed+i)&1;entity->m_nType=i%3==0?AUDIOTYPE_PHYSICAL:AUDIOTYPE_FRONTEND;entity->m_pEntity=i%3==0?&peds[i%4]:NULL;active->m_aAudioEntityOrderList[i]=i<count?i:NUM_AUDIOENTITIES;entity->m_afVolume[0]=(float)i;}
+    // Seed valid queued references to free slots so the fixed allocator must preserve their IDs
+    active->m_nActiveSamples=6;for(unsigned q=0;q<NUM_SOUND_QUEUES;++q){active->m_nRequestedCount[q]=seed%7;for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[q][i]=i;active->m_aRequestedQueue[q][i].m_nEntityIndex=(seed+i+q)%NUM_AUDIOENTITIES;}}
+    // Exercise each live shutdown gate with negative, valid, aliased and out-of-range handles
+    static const int32_t ids[]={AEHANDLE_NONE,-1,0,1,NUM_AUDIOENTITIES-1,NUM_AUDIOENTITIES,INT32_MAX};int32_t *handles[]={&active->m_nFireAudioEntity,&active->m_nCollisionEntity,&active->m_nFrontEndEntity,&active->m_nProjectileEntity,&active->m_nWaterCannonEntity,&active->m_nPoliceChannelEntity,&active->m_nEscalatorEntity,&active->m_nExtraSoundsEntity};for(unsigned i=0;i<8;++i)*handles[i]=ids[(seed/5+i)%7];
+#ifdef GTA_BRIDGE
+    active->m_nBridgeEntity=ids[(seed/5+8)%7];
+#endif
+    // Retain non-default mission, speech and mood state to expose every original write
+    for(unsigned i=0;i<MISSION_AUDIO_SLOTS;++i){active->m_nMissionAudioSampleIndex[i]=17+i;active->m_nMissionAudioLoadingStatus[i]=LOADING_STATUS_LOADED;active->m_nMissionAudioPlayStatus[i]=PLAY_STATUS_PLAYING;active->m_bIsMissionAudioPlaying[i]=1;active->m_bIsMissionAudioAllowedToPlay[i]=1;active->m_bIsMissionAudio2D[i]=0;active->m_nMissionAudioFramesToPlay[i]=73;active->m_bIsMissionAudioPhoneCall[i]=1;}
+    static const int32_t randoms[]={0,1,-1,INT32_MIN,INT32_MAX,173};active->m_anRandomTable[0]=randoms[(seed/13)%6];active->m_nGlobalSfxVolumeMultiplier=17;active->m_bIsPlayerShutUp=1;active->m_nPlayerMood=PLAYER_MOOD_ANGRY;active->m_nPlayerMoodTimer=UINT32_MAX;
+}
+int main() {
+    // Keep failures console-only on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Compare repeated live mutations and fresh seeded gates across every operation
+    for(unsigned seed=0;seed<1024;++seed)for(unsigned mode=0;mode<5;++mode){prepare(seed,mode);run();observe();++cases;run();observe();++cases;prepare(seed,mode);mutations=0;run();observe();++cases;}
+    // Require successful, disabled and capacity-limited creation plus all shutdown and reset paths
+    assert(created&&destroyed&&statuses&&resets);for(unsigned i=0;i<3;++i)assert(createResults[i]);for(unsigned i=0;i<5;++i)assert(operationVisits[i]);
+    printf("%u %u %u %u %u %u %llu\n",cases,callbacks,created,destroyed,statuses,resets,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

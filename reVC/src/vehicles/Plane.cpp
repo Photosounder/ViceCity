@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -210,15 +211,17 @@ CPlane::ProcessControl(void)
 	
 	if(GetModelIndex() == MI_AIRTRAIN){
 		if(GetPosition().z > 100.0f)
-			CPlaneTrails::RegisterPoint(GetPosition(), m_nPlaneId);
+			// Enter the C plane-trail algorithm with the original input capture
+			PlaneTrails_RegisterPointVector(&GetPosition(), m_nPlaneId);
 	}else if(GetModelIndex() == MI_DEADDODO)
-		CPlaneBanners::RegisterPoint(GetPosition(), m_nPlaneId);
+		// Enter the C plane-banner algorithm with the original input capture
+		PlaneBanners_RegisterPointVector(&GetPosition(), m_nPlaneId);
 
 	// Explosion
 	if(m_bHasBeenHit){
 		// BUG: since this is all based on frames, you can skip the explosion processing when you go into the menu
 		if(GetModelIndex() == MI_AIRTRAIN){
-			int frm = CTimer::GetFrameCounter() - m_nFrameWhenHit;
+			int frm = (*Timer_GetFrameCounter()) - m_nFrameWhenHit;
 			if(frm == 20){
 				static int nFrameGen;
 				CRGBA colors[8];
@@ -236,27 +239,27 @@ CPlane::ProcessControl(void)
 
 				CVector dir;
 				for(i = 0; i < 40; i++){
-					dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
-					int rotSpeed = CGeneral::GetRandomNumberInRange(10, 30);
-					if(CGeneral::GetRandomNumber() & 1)
+					dir.x = General_GetRandomNumberInRangeFloat(-2.0f, 2.0f);
+					dir.y = General_GetRandomNumberInRangeFloat(-2.0f, 2.0f);
+					dir.z = General_GetRandomNumberInRangeFloat(0.0f, 2.0f);
+					int rotSpeed = General_GetRandomNumberInRangeInt(10, 30);
+					if(General_GetRandomNumber() & 1)
 						rotSpeed = -rotSpeed;
 					int f = ++nFrameGen & 3;
 					CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
-						nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
+						nil, General_GetRandomNumberInRangeFloat(0.1f, 1.0f),
 						colors[nFrameGen&7], rotSpeed, 0, f, 0);
 				}
 			}
 			if(frm >= 40 && frm <= 80 && frm & 1){
 				if(frm & 1){
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+					pos.x = ((General_GetRandomNumber() & 0x3F) - 32) * 0.2f;
+					pos.z = ((General_GetRandomNumber() & 0x3F) - 32) * 0.2f;
 					pos.y = frm - 40;
 					pos = GetMatrix() * pos;
 				}else{
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.2f;
+					pos.x = ((General_GetRandomNumber() & 0x3F) - 32) * 0.2f;
+					pos.z = ((General_GetRandomNumber() & 0x3F) - 32) * 0.2f;
 					pos.y = 40 - frm;
 					pos = GetMatrix() * pos;
 				}
@@ -272,7 +275,7 @@ CPlane::ProcessControl(void)
 				FlagToDestroyWhenNextProcessed();
 			}
 		}else{
-			int frm = CTimer::GetFrameCounter() - m_nFrameWhenHit;
+			int frm = (*Timer_GetFrameCounter()) - m_nFrameWhenHit;
 			if(frm == 20){
 				static int nFrameGen;
 				CRGBA colors[8];
@@ -290,27 +293,27 @@ CPlane::ProcessControl(void)
 
 				CVector dir;
 				for(i = 0; i < 40; i++){
-					dir.x = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.y = CGeneral::GetRandomNumberInRange(-2.0f, 2.0f);
-					dir.z = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
-					int rotSpeed = CGeneral::GetRandomNumberInRange(30.0f, 20.0f);
-					if(CGeneral::GetRandomNumber() & 1)
+					dir.x = General_GetRandomNumberInRangeFloat(-2.0f, 2.0f);
+					dir.y = General_GetRandomNumberInRangeFloat(-2.0f, 2.0f);
+					dir.z = General_GetRandomNumberInRangeFloat(0.0f, 2.0f);
+					int rotSpeed = General_GetRandomNumberInRangeFloat(30.0f, 20.0f);
+					if(General_GetRandomNumber() & 1)
 						rotSpeed = -rotSpeed;
 					int f = ++nFrameGen & 3;
 					CParticle::AddParticle(PARTICLE_HELI_DEBRIS, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), dir,
-						nil, CGeneral::GetRandomNumberInRange(0.1f, 1.0f),
+						nil, General_GetRandomNumberInRangeFloat(0.1f, 1.0f),
 						colors[nFrameGen&7], rotSpeed, 0, f, 0);
 				}
 			}
 			if(frm >= 40 && frm <= 60 && frm & 1){
 				if(frm & 1){
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+					pos.x = ((General_GetRandomNumber() & 0x3F) - 32) * 0.1f;
+					pos.z = ((General_GetRandomNumber() & 0x3F) - 32) * 0.1f;
 					pos.y = (frm - 40)*0.3f;
 					pos = GetMatrix() * pos;
 				}else{
-					pos.x = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
-					pos.z = ((CGeneral::GetRandomNumber() & 0x3F) - 32) * 0.1f;
+					pos.x = ((General_GetRandomNumber() & 0x3F) - 32) * 0.1f;
+					pos.z = ((General_GetRandomNumber() & 0x3F) - 32) * 0.1f;
 					pos.y = (40 - frm)*0.3f;
 					pos = GetMatrix() * pos;
 				}
@@ -337,7 +340,7 @@ CPlane::ProcessControl(void)
 	}
 
 	// Update plane position and speed
-	if(GetModelIndex() == MI_AIRTRAIN || !m_isFarAway || ((CTimer::GetFrameCounter() + m_randomSeed) & 7) == 0){
+	if(GetModelIndex() == MI_AIRTRAIN || !m_isFarAway || (((*Timer_GetFrameCounter()) + m_randomSeed) & 7) == 0){
 		updatedCollisionMatrix = true; // rouz edit (ChatGPT)
 		if(GetModelIndex() == MI_AIRTRAIN){
 			float pathPositionRear = PlanePathPosition[m_nPlaneId] - 30.0f;
@@ -621,8 +624,8 @@ CPlane::ProcessControl(void)
 	}
 
 		if(updatedCollisionMatrix){
-		if(hadCollisionVelocity && CTimer::GetTimeStep() > 0.0f){
-			float invTimeStep = 1.0f/CTimer::GetTimeStep();
+		if(hadCollisionVelocity && (*Timer_GetTimeStep()) > 0.0f){
+			float invTimeStep = 1.0f/(*Timer_GetTimeStep());
 			m_vecMoveSpeed = (GetPosition() - previousCollisionMatrix.GetPosition()) * invTimeStep;
 			m_vecTurnSpeed = (CrossProduct(previousCollisionMatrix.GetRight(), GetRight()) +
 				CrossProduct(previousCollisionMatrix.GetForward(), GetForward()) +
@@ -741,7 +744,7 @@ CPlane::PreRender(void)
 	}
 
 	// Tail light
-	if(CTimer::GetTimeInMilliseconds() & 0x200){
+	if((*Timer_GetTimeInMilliseconds()) & 0x200){
 		CVector pos = GetMatrix() * mi->m_positions[PLANE_POS_LIGHT_TAIL];
 
 		CCoronas::RegisterCorona((uintptr)this + 12, 255, 0, 0, 255,
@@ -921,7 +924,7 @@ CPlane::LoadPath(char const *filename, int32 &numNodes, float &totalLength, bool
 	int bp, lp;
 	int i;
 
-	CFileMgr::LoadFile(filename, work_buff, sizeof(work_buff), "r");
+	FileMgr_LoadFile(filename, work_buff, sizeof(work_buff), "r");
 	*gString = '\0';
 	for(bp = 0, lp = 0; work_buff[bp] != '\n'; bp++, lp++)
 		gString[lp] = work_buff[bp];
@@ -967,7 +970,7 @@ CPlane::UpdatePlanes(void)
 		return;
 
 	// Jumbo jets
-	time = CTimer::GetTimeInMilliseconds();
+	time = (*Timer_GetTimeInMilliseconds());
 	for(i = 0; i < 3; i++){
 		t = TotalDurationOfFlightPath * (float)(time & 0x7FFFF)/0x80000;
 		// find current frame
@@ -994,7 +997,7 @@ CPlane::UpdatePlanes(void)
 		time += 0x80000/3;
 	}
 
-	time = CTimer::GetTimeInMilliseconds();
+	time = (*Timer_GetTimeInMilliseconds());
 
 	t = TotalDurationOfFlightPath2/0x80000;
 	PlanePath2Position[0] = CRUISE_SPEED * (time & 0x7FFFF)*t;
@@ -1020,11 +1023,11 @@ CPlane::UpdatePlanes(void)
 
 	if(FindPlayerVehicle() && (FindPlayerVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI ||
 	                           FindPlayerVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_PLANE))
-		LastTimeInPlane = CTimer::GetTimeInMilliseconds();
+		LastTimeInPlane = (*Timer_GetTimeInMilliseconds());
 	else
-		LastTimeNotInPlane = CTimer::GetTimeInMilliseconds();
+		LastTimeNotInPlane = (*Timer_GetTimeInMilliseconds());
 
-	if(CTimer::GetTimeInMilliseconds() - LastTimeNotInPlane > 10000){
+	if((*Timer_GetTimeInMilliseconds()) - LastTimeNotInPlane > 10000){
 		if(!bCesnasActivated){
 			if(CStreaming::HasModelLoaded(MI_DEADDODO)){
 				for(i = 0; i < 5; i++){
@@ -1066,7 +1069,7 @@ CPlane::UpdatePlanes(void)
 			}else
 				CStreaming::RequestModel(MI_CHOPPER, 0);
 		}
-	}else if(CTimer::GetTimeInMilliseconds() - LastTimeInPlane > 10000)
+	}else if((*Timer_GetTimeInMilliseconds()) - LastTimeInPlane > 10000)
 		RemoveTemporaryPlanes();
 }
 
@@ -1111,10 +1114,9 @@ CPlane::TestRocketCollision(CVector *rocketPos)
 		   plane->GetModelIndex() != MI_AIRTRAIN && plane->GetModelIndex() == MI_DEADDODO &&	// strange check
 #endif
 		   !plane->m_bHasBeenHit && (*rocketPos - plane->GetPosition()).Magnitude() < 25.0f){
-			plane->m_nFrameWhenHit = CTimer::GetFrameCounter();
+			plane->m_nFrameWhenHit = (*Timer_GetFrameCounter());
 			plane->m_bHasBeenHit = true;
-			CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted->RegisterCrime_Immediately(CRIME_DESTROYED_CESSNA,
-				plane->GetPosition(), i+1983, false);
+			Wanted_RegisterCrime_Immediately(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted,CRIME_DESTROYED_CESSNA,Wanted_ReferenceNative(plane->GetPosition()),i+1983,false);
 			return true;
 		}
 	}
@@ -1148,7 +1150,7 @@ CPlane::CreateIncomingCesna(void)
 	CWorld::Add(pDrugRunCesna);
 
         CesnaMissionStatus = CESNA_STATUS_FLYING;
-        CesnaMissionStartTime = CTimer::GetTimeInMilliseconds();
+        CesnaMissionStartTime = (*Timer_GetTimeInMilliseconds());
         printf("CPlane::CreateIncomingCesna(void)\n");
 }
 
@@ -1178,7 +1180,7 @@ CPlane::CreateDropOffCesna(void)
 	CWorld::Add(pDropOffCesna);
 
         DropOffCesnaMissionStatus = CESNA_STATUS_FLYING;
-        DropOffCesnaMissionStartTime = CTimer::GetTimeInMilliseconds();
+        DropOffCesnaMissionStartTime = (*Timer_GetTimeInMilliseconds());
         printf("CPlane::CreateDropOffCesna(void)\n");
 }
 
@@ -1200,5 +1202,7 @@ CPlane::Save(void)
 {
 	RemoveTemporaryPlanes();
 }
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)

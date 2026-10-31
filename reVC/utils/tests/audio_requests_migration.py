@@ -37,6 +37,8 @@ def body(source):
     source=source[source.index('{'):]
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source)
     for old,new in [('uint32','uint32_t'),('uint8','uint8_t'),('int32','int32_t'),('bool8','uint8_t'),('FALSE','0'),('TRUE','1')]:source=re.sub(r'\b'+old+r'\b',new,source)
+    # Recognize the timer's C spelling before extracting the unchanged reflection kernel
+    source=source.replace('Timer_GetIsSlowMotionActive()', 'CTimer::GetIsSlowMotionActive()')
     source=source.replace('CCullZones::InRoomForAudio()', 'AudioRequestsHost_InRoom()').replace('CTimer::GetIsSlowMotionActive()', 'AudioRequestsHost_SlowMotion()')
     source=source.replace('AddSampleToRequestedQueue()', 'AudioRequests_Submit(manager)').replace('AddReflectionsToRequestedQueue()', 'AudioRequests_AddReflections(manager)')
     source=source.replace('CVector oldPos = AudioSoundPosition_ToVector(&manager->m_sQueueSample.m_vecPos);','AudioSoundPosition oldPos = manager->m_sQueueSample.m_vecPos;').replace('AudioSoundPosition_FromVector(oldPos)','oldPos')

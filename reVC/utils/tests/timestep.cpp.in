@@ -1,0 +1,37 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "caller.h"
+@OWNER@
+static uint64_t digest=UINT64_C(1469598103934665603);
+static void require(bool ok,const char *message)
+{
+    // Fail a storage or byte-layout invariant independently of the comparison hash
+    if(!ok){fprintf(stderr,"%s\n",message);exit(1);}
+}
+int main(void)
+{
+    // Check static initialization and obtain stable addresses for all three live fields
+    float *fields[]={TestTimeStep_Field(0),TestTimeStep_Field(1),TestTimeStep_Field(2)};
+    for(float *field:fields)require(*field==1.f,"Initial value");
+    require(fields[0]!=fields[1] && fields[1]!=fields[2] && fields[0]!=fields[2],"Distinct storage");
+    // Check bit-preserving saves, loads and cursor advancement without relying on float conversions
+    for(uint32_t index=0;index<1024;++index){
+        uint32_t bits[]={index*UINT32_C(16777619),UINT32_C(0x80000000)^index,UINT32_C(0x7fc00000)+index};
+        if(index==0){bits[0]=0;bits[1]=UINT32_C(0x80000000);bits[2]=UINT32_C(0x7f800000);}
+        for(unsigned slot=0;slot<3;++slot)memcpy(fields[slot],bits+slot,4);
+        uint8_t buffer[18];memset(buffer,0xa5,sizeof(buffer));
+        require(TestTimeStep_Save(buffer+3)==12,"Save length");
+        require(memcmp(buffer+3,bits,12)==0,"Save field order and bits");
+        for(unsigned guard=0;guard<3;++guard)require(buffer[guard]==0xa5 && buffer[15+guard]==0xa5,"Buffer guards");
+        for(float *field:fields)memset(field,0,4);
+        require(TestTimeStep_Load(buffer+3)==12,"Load length");
+        for(unsigned slot=0;slot<3;++slot){
+            require(TestTimeStep_Field(slot)==fields[slot],"Stable live address");
+            require(memcmp(fields[slot],bits+slot,4)==0,"Loaded field bits");
+        }
+        for(uint8_t byte:buffer){digest^=byte;digest*=UINT64_C(1099511628211);}
+    }
+    printf("%016llx fragments=1024 bytes=12\n",(unsigned long long)digest);
+}

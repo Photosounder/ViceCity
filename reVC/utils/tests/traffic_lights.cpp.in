@@ -1,0 +1,313 @@
+#include "caller.h"
+#include <limits>
+#include <initializer_list>
+#undef assert
+static void require(bool value,const char *expression,int line)
+{
+    // Keep independent checks active in MASTER as well as development profiles
+    if(!value){fprintf(stderr,"Failed %d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+extern "C" {uint32_t Timer_timeMs;float Weather_Wind,Weather_TrafficLightBrightness;}
+CCamera TheCamera;
+CPathFind ThePaths;
+CSector CWorld::sectors[NUMSECTORS_Y][NUMSECTORS_X];
+CBaseModelInfo *CModelInfo::models[256];
+float CTimeCycle::ground,CTimeCycle::sprite,CTimeCycle::size;
+RwTexture *gpShadowExplosionTex=(RwTexture *)0x1234;
+static CEntity lights[5];
+static CVehicle vehicle;
+static CBaseModelInfo models[4];
+static C2dEffect effects[24],alternateEffects[24];
+static CStore effectStore;
+static CPtrNode nodes[6];
+static CEntity *activeLight;
+static bool flipEffects;
+static unsigned callbackMode,callbackCount,localStoreReads;
+static unsigned states,phaseCases,displayCases,stopCases,scanCases,segmentCases,typeCases,storeReads,sectorReads,points,brights,shadows,coronas;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static void bytes(const void *data,size_t size)
+{
+    // Hash observable scalar bytes without native pointer values or unspecified padding
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep integer observations independent of the native pointer width
+    bytes(&value,4);
+}
+static void vector(const CVector &value)
+{
+    // Observe all native vector components handed to the remaining engine operations
+    bytes(&value.x,4);bytes(&value.y,4);bytes(&value.z,4);
+}
+static void liveState()
+{
+    // Observe live phase inputs at each external action rather than a separate cached state
+    number(Timer_timeMs);number(*TestTraffic_Cheat());bytes(&Weather_Wind,4);bytes(&Weather_TrafficLightBrightness,4);bytes(&CTimeCycle::ground,4);bytes(&CTimeCycle::sprite,4);bytes(&CTimeCycle::size,4);
+}
+static void snapshot()
+{
+    // Include all path fields changed by scanning and all live rendering/phase inputs
+    liveState();number(ThePaths.m_numCarPathNodes);number(ThePaths.m_numPathNodes);
+    for(int i=0;i<32;i++){
+        // Preserve exact path flags, direction bits and connected-node metadata
+        CPathNode &node=ThePaths.m_pathNodes[i];CCarPathLink &link=ThePaths.m_carPathLinks[i];
+        number((uint16_t)node.x);number((uint16_t)node.y);number((uint16_t)node.z);number(node.numLinks);number((uint16_t)node.firstLink);
+        number(link.trafficLightType);number(link.trafficLightDirection);number(link.bBridgeLights);number((uint16_t)link.pathNodeIndex);
+    }
+    for(int i=0;i<64;i++){number(ThePaths.m_connections[i]);number((uint16_t)ThePaths.m_carPathConnections[i]);}
+    states++;
+}
+extern "C" int myrand(void)
+{
+    // Reject randomness absent from the original traffic-light controller
+    assert(false);return 0;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Reject seeding absent from the original traffic-light controller
+    (void)seed;assert(false);
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail quietly on any violated real store or controller precondition
+    fprintf(stderr,"%s at %s:%u (%s)\n",expression,file,line,function);abort();
+}
+void TestTraffic_MatrixUpdate(RwMatrix *matrix)
+{
+    // Reject graphics synchronization outside these unattached fixture matrices
+    (void)matrix;assert(false);
+}
+void TestTraffic_MatrixDestroy(RwMatrix *matrix)
+{
+    // Reject graphics-resource ownership outside these unattached fixture matrices
+    (void)matrix;assert(false);
+}
+CStore *TestTraffic_EffectStore(void)
+{
+    // Observe real getter calls and optionally switch the store between repeated macro operands
+    number(1);liveState();storeReads++;localStoreReads++;effectStore.entries=flipEffects&&(localStoreReads&1)?alternateEffects:effects;return &effectStore;
+}
+CSector *CWorld::GetSector(int x,int y)
+{
+    // Observe the original traversal order while preserving its native positive-bound clamp
+    number(2);number(x);number(y);sectorReads++;
+    if(x>NUMSECTORS_X-1||y>NUMSECTORS_Y-1)return &sectors[0][0];
+    return &sectors[y][x];
+}
+static void callback(unsigned operation)
+{
+    // Change later live reads only at external action boundaries present in the original controller
+    callbackCount++;
+    if(callbackMode==1&&operation==1){
+        // Retain the already captured phase while changing later weather and camera gates
+        Weather_TrafficLightBrightness=0.01f;TheCamera.forward=CVector(0,-1,0);Timer_timeMs=1024;*TestTraffic_Cheat()=true;
+    }
+    if(callbackMode==2&&operation==2&&callbackCount==1){
+        // Exercise the vertical model's bright registration before its later weather decisions
+        Weather_TrafficLightBrightness=0.01f;CTimeCycle::size=0.6f;
+    }
+    if(callbackMode==3&&operation==3){
+        // Preserve camera and sprite rereads after the shadow registration
+        TheCamera.forward=CVector(0,-1,0);CTimeCycle::sprite=0.3f;
+    }
+    if(callbackMode==4&&operation==4){
+        // Change axes that the original bright-light calls read after the corona operation
+        activeLight->GetUp()=CVector(0.2f,0.3f,0.9f);activeLight->GetRight()=CVector(-0.7f,0.1f,0.2f);
+    }
+}
+extern "C" void PointLights_AddLight(uint8_t type,PointLightsVector position,PointLightsVector direction,float radius,float red,float green,float blue,uint8_t fog,bool cast)
+{
+    // Observe exact C registration arguments after the original legacy adapter or the direct C call
+    assert(type==POINTLIGHTS_LIGHT_POINT&&direction.x==0&&direction.y==0&&direction.z==0&&radius==8&&blue==0&&fog==POINTLIGHTS_FOG_NORMAL&&cast);
+    number(3);bytes(&position,sizeof(position));bytes(&red,4);bytes(&green,4);liveState();points++;callback(1);
+}
+extern "C" void BrightLights_RegisterOne(BrightLightVector position,BrightLightVector up,BrightLightVector side,BrightLightVector front,uint8_t type,uint8_t red,uint8_t green,uint8_t blue)
+{
+    // Preserve complete geometry and defaults including the original zero-type warning-light case
+    assert(front.x==0&&front.y==0&&front.z==0&&red==0&&green==0&&blue==0&&type<=BRIGHTLIGHT_TRAFFIC_RED);
+    number(4);bytes(&position,sizeof(position));bytes(&up,sizeof(up));bytes(&side,sizeof(side));number(type);liveState();brights++;callback(2);
+}
+bool CShadows::StoreStaticShadow(uint32 id,uint8 type,RwTexture *texture,const CVector *position,float frontX,float frontY,float sideX,float sideY,int16 intensity,uint8 red,uint8 green,uint8 blue,float distance,float scale,float drawDistance,bool temporary,float up)
+{
+    // Check every native shadow argument and normalize the original narrowed pointer identifier
+    assert(id==(uint32)(uintptr_t)activeLight&&type==SHADOWTYPE_ADDITIVE&&texture==gpShadowExplosionTex&&frontX==8&&frontY==0&&sideX==0&&sideY==-8&&intensity==128&&blue==0&&distance==12&&scale==1&&drawDistance==40&&!temporary&&up==0);
+    number(5);vector(*position);number(red);number(green);liveState();shadows++;callback(3);return true;
+}
+void CCoronas::RegisterCorona(uint32 id,uint8 red,uint8 green,uint8 blue,uint8 alpha,const CVector &position,float size,float distance,uint8 type,int8 flare,uint8 reflection,uint8 los,uint8 streak,float angle,bool useNear,float nearDistance)
+{
+    // Preserve the native defaults, selected face and identifier offset for every original corona call
+    assert(blue==0&&alpha==255&&distance==50&&type==TYPE_STAR&&flare==FLARE_NONE&&reflection==REFLECTION_ON&&los==LOSCHECK_OFF&&streak==STREAK_OFF&&angle==0&&!useNear&&nearDistance==1.5f);
+    number(6);number(id-(uint32)(uintptr_t)activeLight);number(red);number(green);vector(position);bytes(&size,4);liveState();coronas++;callback(4);
+}
+static void fresh()
+{
+    // Seed actual native objects and canonical inputs without replacing production controller decisions
+    MI_TRAFFICLIGHTS=40;MI_TRAFFICLIGHTS_VERTICAL=41;MI_TRAFFICLIGHTS_MIAMI=42;MI_TRAFFICLIGHTS_TWOVERTICAL=43;
+    memset(&ThePaths,0,sizeof(ThePaths));memset(&vehicle.AutoPilot,0,sizeof(vehicle.AutoPilot));vehicle.status=STATUS_PHYSICS;vehicle.matrix.SetTranslate(0,0,0);
+    for(int i=0;i<5;i++){
+        // Retain real matrix construction and the model variants recognized by the original code
+        lights[i].matrix.SetTranslate(10,-20,3);lights[i].matrix.RotateZ(0.0f);lights[i].bRenderDamaged=false;lights[i].model=i<4?40+i:99;lights[i].id=i;
+    }
+    for(int model=0;model<4;model++){
+        // Keep each effect lookup in a real indexed C store with distinguishable geometry
+        models[model].m_2dEffectsID=model*6;CModelInfo::models[40+model]=&models[model];
+        for(int i=0;i<6;i++){
+            // Vary both extrema so selected Min/Max operands are evaluated again on different iterations
+            effects[model*6+i].pos=CVector(2+model,(i%2?-1.0f:1.0f)*(i+1),1+i);
+            alternateEffects[model*6+i].pos=CVector(4+model,(i%2?1.0f:-1.0f)*(i+2),7-i);
+        }
+    }
+    effectStore.entries=effects;effectStore.entrySize=sizeof(C2dEffect);effectStore.capacity=24;effectStore.allocPtr=24;
+    TheCamera.forward=CVector(0,1,0);CTimeCycle::ground=2;CTimeCycle::sprite=0.8f;CTimeCycle::size=1.25f;
+    Timer_timeMs=0;Weather_Wind=0;Weather_TrafficLightBrightness=0.75f;*TestTraffic_Cheat()=false;flipEffects=false;callbackMode=callbackCount=localStoreReads=0;activeLight=&lights[0];
+}
+static void phases()
+{
+    // Compare every millisecond of the complete phase cycle and independently check its duration totals
+    fresh();unsigned counts[5][4]={};bool *canonical=TestTraffic_Cheat();
+    for(uint32_t time=0;time<16384;time++)for(int kind=0;kind<5;kind++){
+        // Observe all five original phase functions through a separate C11 caller
+        Timer_timeMs=time;uint8_t phase=TestTraffic_RunPhase(kind);assert(phase<4&&TestTraffic_Cheat()==canonical);counts[kind][phase]++;number(phase);phaseCases++;
+    }
+    assert(counts[0][PED_LIGHTS_DONT_WALK]==12000&&counts[0][PED_LIGHTS_WALK]==3384&&counts[0][PED_LIGHTS_WALK_BLINK]==1000);
+    for(int kind=1;kind<5;kind++)assert(counts[kind][CAR_LIGHTS_GREEN]==5000&&counts[kind][CAR_LIGHTS_YELLOW]==1000&&counts[kind][CAR_LIGHTS_RED]==10384);
+    const float winds[]={-1,0,1.1f,nextafterf(1.1f,2),1.2f,std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()};
+    const uint32_t times[]={0,1,1023,1024,4999,5000,5999,6000,10999,11000,11999,12000,15383,15384,16383,16384,UINT32_MAX};
+    for(float wind:winds)for(bool cheat:{false,true})for(uint32_t time:times){
+        // Include strict wind thresholds, warning blink bits, cheat precedence and timer wrap
+        Weather_Wind=wind;*canonical=cheat;Timer_timeMs=time;liveState();
+        for(int kind=0;kind<5;kind++){number(TestTraffic_RunPhase(kind));phaseCases++;}
+        if(wind>1.1f||cheat)assert(TestTraffic_RunPhase(1)==CAR_LIGHTS_GREEN&&TestTraffic_RunPhase(2)==CAR_LIGHTS_GREEN);
+    }
+    snapshot();
+}
+static void orientations()
+{
+    // Exercise the real General angle routine and original strict orientation ranges through native matrices
+    fresh();
+    for(int angle=0;angle<=3600;angle++){
+        // Keep matrix rotation and degree conversion in the complete actual native/C implementations
+        lights[0].matrix.SetTranslate(0,0,0);lights[0].matrix.RotateZ(angle*PI/1800.0f);number(TestTraffic_RunType(&lights[0]));typeCases++;
+    }
+    const CVector axes[]={CVector(1,0,0),CVector(0,1,0),CVector(-1,0,0),CVector(0,-1,0),CVector(0,0,0)};
+    for(int i=0;i<5;i++){
+        // Check independent cardinal and zero-axis classifications
+        lights[0].GetForward()=axes[i];int type=TestTraffic_RunType(&lights[0]);assert(type==(i==1||i==3?1:2));number(type);typeCases++;
+    }
+}
+static void display()
+{
+    // Compare all four layouts, light phases, brightness gates, visibility signs and storm warnings
+    const uint32_t times[]={0,1024,5000,6000,11000,12000,16383};
+    const float brightness[]={-0.1f,0,0.05f,nextafterf(0.05f,1),0.5f,nextafterf(0.5f,1),1};
+    const float winds[]={0,1.2f,std::numeric_limits<float>::quiet_NaN()};
+    for(int kind=0;kind<4;kind++)for(uint32_t time:times)for(float value:brightness)for(int sign=-1;sign<=1;sign++)for(float wind:winds){
+        // Observe complete external rendering payloads without launching a renderer
+        fresh();Timer_timeMs=time;Weather_TrafficLightBrightness=value;Weather_Wind=wind;TheCamera.forward=CVector(0,(float)sign,0);activeLight=&lights[kind];TestTraffic_RunDisplay(activeLight);displayCases++;snapshot();
+    }
+    for(int kind=0;kind<5;kind++)for(int mode=0;mode<9;mode++){
+        // Preserve repeated effect accesses, early exits and live reads after real external action boundaries
+        fresh();activeLight=&lights[kind];
+        if(mode==0)activeLight->bRenderDamaged=true;
+        if(mode==1)activeLight->GetUp().z=nextafterf(0.96f,0);
+        if(mode==2)activeLight->GetUp().z=0.96f;
+        if(mode==3)flipEffects=true;
+        if(mode>=4&&mode<=7)callbackMode=mode-3;
+        if(mode==8)activeLight->GetUp().z=std::numeric_limits<float>::quiet_NaN();
+        unsigned before=points+brights+shadows+coronas;TestTraffic_RunDisplay(activeLight);displayCases++;
+        if(mode==0||mode==1||kind==4)assert(points+brights+shadows+coronas==before);
+        snapshot();
+    }
+}
+static void stop()
+{
+    // Compare all three route stages, traffic types, direction policies and strict stopping distances
+    fresh();
+    const float distances[]={-8.1f,-8,-7.999f,-6,-5.999f,-0.001f,-0.0f,0,0.001f,5.999f,6,7.999f,8,8.1f,std::numeric_limits<float>::quiet_NaN()};
+    for(int stage=0;stage<3;stage++)for(int type=0;type<4;type++)for(int direction=0;direction<2;direction++)for(int same=0;same<2;same++)for(int travel:{-1,0,1})for(float distance:distances)for(bool always:{false,true})for(int time:{2500,9000,12500}){
+        // Keep physical path indices valid while varying the independent signal and distance gates
+        memset(&ThePaths,0,sizeof(ThePaths));vehicle.AutoPilot.m_nNextPathNodeInfo=0;vehicle.AutoPilot.m_nCurrentPathNodeInfo=1;vehicle.AutoPilot.m_nPreviousPathNodeInfo=2;
+        vehicle.AutoPilot.m_nNextRouteNode=vehicle.AutoPilot.m_nCurrentRouteNode=vehicle.AutoPilot.m_nPrevRouteNode=same?7:8;
+        vehicle.AutoPilot.m_nNextDirection=vehicle.AutoPilot.m_nCurrentDirection=vehicle.AutoPilot.m_nPreviousDirection=travel;
+        vehicle.status=STATUS_PHYSICS;vehicle.matrix.SetTranslate(distance,0,std::numeric_limits<float>::quiet_NaN());
+        CCarPathLink &link=ThePaths.m_carPathLinks[stage];link.trafficLightType=type;link.trafficLightDirection=direction;link.pathNodeIndex=7;link.dirX=100;
+        Timer_timeMs=time;uint8_t before[sizeof(ThePaths)];memcpy(before,&ThePaths,sizeof(ThePaths));bool result=TestTraffic_RunStop(&vehicle,always);assert(memcmp(before,&ThePaths,sizeof(ThePaths))==0);
+        bool signal=always||(type==1&&time!=2500)||(type==2&&time!=9000);float range=stage==2?6.0f:8.0f;
+        bool distancePass=travel==-1?(distance>0&&distance<range):(distance<0&&distance>-range);
+        assert(result==(type!=0&&(direction?!same:same)&&signal&&distancePass));number(result);stopCases++;
+    }
+    for(int status:{STATUS_SIMPLE,STATUS_PHYSICS,STATUS_PLAYER})for(int bridge=0;bridge<4;bridge++){
+        // Check previous-node physics gating and the original optional bridge short circuit
+        memset(&ThePaths,0,sizeof(ThePaths));vehicle.AutoPilot.m_nNextPathNodeInfo=0;vehicle.AutoPilot.m_nCurrentPathNodeInfo=1;vehicle.AutoPilot.m_nPreviousPathNodeInfo=2;
+        vehicle.AutoPilot.m_nPrevRouteNode=7;vehicle.AutoPilot.m_nPreviousDirection=-1;vehicle.status=status;vehicle.matrix.SetTranslate(1,0,0);
+        CCarPathLink &link=ThePaths.m_carPathLinks[2];link.trafficLightType=1;link.pathNodeIndex=7;link.dirX=100;
+        assert(TestTraffic_RunStop(&vehicle,true)==(status==STATUS_PHYSICS));stopCases++;
+        ThePaths.m_carPathLinks[0].bBridgeLights=!!(bridge&1);ThePaths.m_carPathLinks[1].bBridgeLights=!!(bridge&2);bool result=TestTraffic_RunBridge(&vehicle);
+#ifdef GTA_BRIDGE
+        assert(result==(bridge==1));
+#else
+        assert(!result);
+#endif
+        number(result);stopCases++;
+    }
+    snapshot();
+}
+static void scan()
+{
+    // Compare real list traversal and path writes across layout, geometry and exact threshold boundaries
+    for(int scene=0;scene<12;scene++){
+        // Seed complete valid native graph records before each full 160-by-160 sector scan
+        fresh();memset(CWorld::sectors,0,sizeof(CWorld::sectors));memset(nodes,0,sizeof(nodes));ThePaths.m_numCarPathNodes=4;ThePaths.m_numPathNodes=8;
+        for(int i=0;i<5;i++)lights[i].matrix.SetTranslate(0,0,0);
+        const CVector positions[]={CVector(-10,-20,2),CVector(-10,20,2),CVector(10,-20,2),CVector(10,20,2),CVector(-10,2,0),CVector(10,2,0),CVector(-40,30,0),CVector(40,30,0)};
+        for(int i=0;i<8;i++){
+            // Preserve native fixed-point node coordinates and connection flags
+            CPathNode &node=ThePaths.m_pathNodes[i];node.SetPosition(positions[i]);node.numLinks=1;node.firstLink=2*i;
+            ThePaths.m_connections[2*i]=(i^1)|(i>=4?0x8000:0);ThePaths.m_carPathConnections[2*i]=i/2;
+        }
+        for(int i=0;i<4;i++)ThePaths.m_carPathLinks[i].pathNodeIndex=2*i+1;
+        if(scene==1){ThePaths.m_pathNodes[0].numLinks=2;ThePaths.m_connections[1]=3;ThePaths.m_carPathConnections[1]=2;}
+        if(scene==2)lights[0].GetPosition().z=12;
+        if(scene==3)lights[0].GetPosition().z=nextafterf(12,0);
+        if(scene==4)lights[0].matrix.RotateZ(PI/4);
+        if(scene==5){
+            // Distinguish x-major sector traversal using two differently oriented intersecting lights
+            ThePaths.m_pathNodes[0].SetPosition(CVector(-10,-10,2));ThePaths.m_pathNodes[1].SetPosition(CVector(10,10,2));ThePaths.m_pathNodes[2].SetPosition(CVector(-10,10,2));ThePaths.m_pathNodes[3].SetPosition(CVector(10,-10,2));lights[1].matrix.RotateZ(-PI/2);
+        }
+        if(scene==6)ThePaths.m_carPathLinks[0].trafficLightDirection=true;
+        if(scene==7){ThePaths.m_pathNodes[0].SetPosition(CVector(117,0,0));ThePaths.m_pathNodes[1].SetPosition(CVector(-100,0,0));}
+        if(scene==8){ThePaths.m_pathNodes[4].SetPosition(CVector(15,0,0));ThePaths.m_pathNodes[5].SetPosition(CVector(-15,0,0));}
+        if(scene==9)ThePaths.m_pathNodes[4].SetPosition(CVector(14.875f,0,0));
+        if(scene==10)ThePaths.m_connections[8]&=0x7fff;
+        if(scene==11)lights[0].model=-1;
+        nodes[0].item=&lights[0];nodes[0].next=&nodes[1];nodes[1].item=&lights[4];nodes[1].prev=&nodes[0];CWorld::sectors[1][0].m_lists[ENTITYLIST_DUMMIES].first=&nodes[0];
+        if(scene==5){nodes[2].item=&lights[1];CWorld::sectors[0][1].m_lists[ENTITYLIST_DUMMIES].first=&nodes[2];}
+        unsigned before=sectorReads;TestTraffic_RunScan();scanCases++;assert(sectorReads==before+NUMSECTORS_X*NUMSECTORS_Y);
+        if(scene==0)assert(ThePaths.m_carPathLinks[0].trafficLightType==1&&ThePaths.m_carPathLinks[1].trafficLightType==1&&(ThePaths.m_connections[8]&0x4000));
+        if(scene==2||scene==7||scene==11)assert(ThePaths.m_carPathLinks[0].trafficLightType==0);
+        if(scene==3)assert(ThePaths.m_carPathLinks[0].trafficLightType==1);
+        if(scene==5)assert(ThePaths.m_carPathLinks[0].trafficLightType==2);
+        if(scene==6)assert(ThePaths.m_carPathLinks[0].trafficLightDirection);
+        if(scene==8||scene==10)assert(!(ThePaths.m_connections[8]&0x4000));
+        if(scene==9)assert(ThePaths.m_connections[8]&0x4000);
+        snapshot();
+    }
+}
+static void intersections()
+{
+    // Compare the complete original helper including its degenerate and collinear behavior
+    const float values[]={-2,-1,-0.0f,0,1,2};
+    for(float x:values)for(float y:values)for(float u:values)for(float v:values){number(TestTraffic_RunIntersect(x,y,u,v,-1,0,1,0));segmentCases++;}
+    assert(TestTraffic_RunIntersect(-1,-1,1,1,-1,1,1,-1));assert(!TestTraffic_RunIntersect(0,0,1,0,0,1,1,1));
+    assert(TestTraffic_RunIntersect(0,0,1,0,2,0,3,0));
+}
+int main()
+{
+    // Compare complete original and C behavior through quiet console calls using actual canonical storage
+    assert(!*TestTraffic_Cheat());phases();orientations();display();stop();scan();intersections();
+    assert(points>0&&brights>0&&shadows>0&&coronas>0&&storeReads>0&&scanCases==12&&sectorReads==12*NUMSECTORS_X*NUMSECTORS_Y);
+    printf("states=%u phases=%u displays=%u stops=%u scans=%u segments=%u types=%u stores=%u sectors=%u points=%u brights=%u shadows=%u coronas=%u hash=%016llx\n",states,phaseCases,displayCases,stopCases,scanCases,segmentCases,typeCases,storeReads,sectorReads,points,brights,shadows,coronas,(unsigned long long)hashValue);
+}

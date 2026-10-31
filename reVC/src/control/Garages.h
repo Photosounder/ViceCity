@@ -6,53 +6,10 @@
 
 class CVehicle;
 
-enum eGarageState
-{
-	GS_FULLYCLOSED,
-	GS_OPENED,
-	GS_CLOSING,
-	GS_OPENING,
-	GS_OPENEDCONTAINSCAR,
-	GS_CLOSEDCONTAINSCAR,
-	GS_AFTERDROPOFF,
-};
+//+ rouz edit (ChatGPT)
+#include "GarageTypes.h"
+//- rouz edit (ChatGPT)
 
-enum eGarageType
-{
-	GARAGE_NONE,
-	GARAGE_MISSION,
-	GARAGE_BOMBSHOP1,
-	GARAGE_BOMBSHOP2,
-	GARAGE_BOMBSHOP3,
-	GARAGE_RESPRAY,
-	GARAGE_COLLECTORSITEMS,
-	GARAGE_COLLECTSPECIFICCARS,
-	GARAGE_COLLECTCARS_1,
-	GARAGE_COLLECTCARS_2,
-	GARAGE_COLLECTCARS_3,
-	GARAGE_FORCARTOCOMEOUTOF,
-	GARAGE_60SECONDS,
-	GARAGE_CRUSHER,
-	GARAGE_MISSION_KEEPCAR,
-	GARAGE_FOR_SCRIPT_TO_OPEN,
-	GARAGE_HIDEOUT_ONE,
-	GARAGE_HIDEOUT_TWO,
-	GARAGE_HIDEOUT_THREE,
-	GARAGE_FOR_SCRIPT_TO_OPEN_AND_CLOSE,
-	GARAGE_KEEPS_OPENING_FOR_SPECIFIC_CAR,
-	GARAGE_MISSION_KEEPCAR_REMAINCLOSED,
-	GARAGE_COLLECTCARS_4,
-	GARAGE_FOR_SCRIPT_TO_OPEN_FOR_CAR,
-	GARAGE_HIDEOUT_FOUR,
-	GARAGE_HIDEOUT_FIVE,
-	GARAGE_HIDEOUT_SIX,
-	GARAGE_HIDEOUT_SEVEN,
-	GARAGE_HIDEOUT_EIGHT,
-	GARAGE_HIDEOUT_NINE,
-	GARAGE_HIDEOUT_TEN,
-	GARAGE_HIDEOUT_ELEVEN,
-	GARAGE_HIDEOUT_TWELVE
-};
 
 enum
 {
@@ -61,34 +18,9 @@ enum
 	TOTAL_COLLECTCARS_CARS = 6
 };
 
-class CStoredCar
-{
-	enum {
-		FLAG_BULLETPROOF = 0x1,
-		FLAG_FIREPROOF = 0x2,
-		FLAG_EXPLOSIONPROOF = 0x4,
-		FLAG_COLLISIONPROOF = 0x8,
-		FLAG_MELEEPROOF = 0x10,
-	};
-	int32 m_nModelIndex;
-	CVector m_vecPos;
-	CVector m_vecAngle;
-	int32 m_nFlags;
-	int8 m_nPrimaryColor;
-	int8 m_nSecondaryColor;
-	int8 m_nRadioStation;
-	int8 m_nVariationA;
-	int8 m_nVariationB;
-	int8 m_nCarBombType;
-public:
-	void Init() { m_nModelIndex = 0; }
-	void Clear() { m_nModelIndex = 0; }
-	bool HasCar() { return m_nModelIndex != 0; }
-	const CStoredCar &operator=(const CStoredCar& other);
-	void StoreCar(CVehicle*);
-	CVehicle* RestoreCar();
-};
-
+//+ rouz edit (ChatGPT)
+#include "StoredCar.h"
+//- rouz edit (ChatGPT)
 VALIDATE_SIZE(CStoredCar, 0x28);
 
 #define SWITCH_GARAGE_DISTANCE_CLOSE 40.0f

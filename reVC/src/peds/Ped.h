@@ -1,3 +1,6 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "RwHelper.h"
@@ -17,11 +20,11 @@
 #define ENTER_CAR_MAX_DIST	30.0f
 #define CAN_SEE_ENTITY_ANGLE_THRESHOLD	DEGTORAD(60.0f)
 
-class CAccident;
+struct CAccident;
 class CObject;
-class CFire;
+struct CFire;
 struct AnimBlendFrameData;
-class CAnimBlendAssociation;
+struct CAnimBlendAssociation;
 class CPedAttractor;
 
 struct PedAudioData
@@ -96,46 +99,7 @@ struct FightMove
 };
 
 // TODO: This is eFightState on mobile.
-enum PedFightMoves
-{
-	FIGHTMOVE_NULL,
-	// Attacker
-	FIGHTMOVE_STDPUNCH,
-	FIGHTMOVE_IDLE,
-	FIGHTMOVE_SHUFFLE_F,
-	FIGHTMOVE_KNEE,
-	FIGHTMOVE_PUNCHHOOK,
-	FIGHTMOVE_PUNCHJAB,
-	FIGHTMOVE_PUNCH,
-	FIGHTMOVE_LONGKICK,
-	FIGHTMOVE_ROUNDHOUSE,
-	// Directionals
-	FIGHTMOVE_FWDLEFT,
-	FIGHTMOVE_FWDRIGHT,
-	FIGHTMOVE_BACKKICK,
-	FIGHTMOVE_BACKFLIP,
-	FIGHTMOVE_BACKLEFT,
-	FIGHTMOVE_BACKRIGHT,
-	FIGHTMOVE_RIGHTSWEEP,
-	// Special
-	FIGHTMOVE_GROUNDKICK,
-	// Opponent
-	FIGHTMOVE_HITFRONT,
-	FIGHTMOVE_HITBACK,
-	FIGHTMOVE_HITRIGHT,
-	FIGHTMOVE_HITLEFT,
-	FIGHTMOVE_HITBODY,
-	FIGHTMOVE_HITCHEST,
-	FIGHTMOVE_HITHEAD,
-	FIGHTMOVE_HITBIGSTEP,
-	FIGHTMOVE_HITONFLOOR,
-	FIGHTMOVE_HITBEHIND,
-	FIGHTMOVE_MELEE1,
-	FIGHTMOVE_MELEE2,
-	FIGHTMOVE_MELEE3,
-	FIGHTMOVE_IDLE2NORM,
-	NUM_FIGHTMOVES
-};
+#include "PedStates.h"
 
 enum ePedPieceTypes
 {
@@ -277,88 +241,9 @@ enum PointBlankNecessity {
 	POINT_BLANK_FOR_SOMEONE_ELSE
 };
 
-enum PedState
-{
-	PED_NONE,
-	PED_IDLE,
-	PED_LOOK_ENTITY,
-	PED_LOOK_HEADING,
-	PED_WANDER_RANGE,
-	PED_WANDER_PATH,
-	PED_SEEK_POS,
-	PED_SEEK_ENTITY,
-	PED_FLEE_POS,
-	PED_FLEE_ENTITY,
-	PED_PURSUE,
-	PED_FOLLOW_PATH,
-	PED_SNIPER_MODE,
-	PED_ROCKET_MODE,
-	PED_DUMMY,
-	PED_PAUSE,
-	PED_ATTACK,
-	PED_FIGHT,
-	PED_FACE_PHONE,
-	PED_MAKE_CALL,
-	PED_CHAT,
-	PED_MUG,
-	PED_AIM_GUN,
-	PED_AI_CONTROL,
-	PED_SEEK_CAR,
-	PED_SEEK_IN_BOAT,
-	PED_FOLLOW_ROUTE,
-	PED_CPR,
-	PED_SOLICIT,
-	PED_BUY_ICECREAM,
-	PED_INVESTIGATE,
-	PED_STEP_AWAY,
-	PED_ON_FIRE,
-	PED_SUN_BATHE,
-	PED_FLASH,
-	PED_JOG,
-	PED_ANSWER_MOBILE,
 
-	PED_UNKNOWN,	// Same with IDLE, but also infects up to 5 peds with same pedType and WANDER_PATH, so they become stone too. HANG_OUT in Fire_Head's idb
 
-	PED_STATES_NO_AI,
 
-	PED_ABSEIL,
-	PED_SIT,
-	PED_JUMP,
-	PED_FALL,
-	PED_GETUP,
-	PED_STAGGER,
-	PED_DIVE_AWAY,
-
-	PED_STATES_NO_ST,
-	PED_ENTER_TRAIN,
-	PED_EXIT_TRAIN,
-	PED_ARREST_PLAYER,
-
-	PED_DRIVING,
-	PED_PASSENGER,
-	PED_TAXI_PASSENGER,
-	PED_OPEN_DOOR,
-	PED_DIE,
-	PED_DEAD,
-	PED_CARJACK,
-	PED_DRAG_FROM_CAR,
-	PED_ENTER_CAR,
-	PED_STEAL_CAR,
-	PED_EXIT_CAR,
-	PED_HANDS_UP,
-	PED_ARRESTED,
-	PED_DEPLOY_STINGER
-};
-
-enum eMoveState {
-	PEDMOVE_NONE,
-	PEDMOVE_STILL,
-	PEDMOVE_WALK,
-	PEDMOVE_JOG,
-	PEDMOVE_RUN,
-	PEDMOVE_SPRINT,
-	PEDMOVE_THROWN
-};
 
 extern float gfTommyFatness;
 
@@ -368,7 +253,7 @@ class CPed : public CPhysical
 {
 public:
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
-	class CCutsceneShadow *m_pRTShadow;
+	struct CutsceneShadow *m_pRTShadow;
 #endif
 	// 0x128
 	CStoredCollPoly m_collPoly;
@@ -579,7 +464,7 @@ public:
 	uint32 m_phoneTalkTimer;
 	CAccident *m_lastAccident;
 	uint32 m_nPedType;
-	CPedStats *m_pedStats;
+	PedStats *m_pedStats;
 	CVector2D m_fleeFromPos;
 	CEntity *m_fleeFrom;
 	uint32 m_fleeTimer;
@@ -589,7 +474,7 @@ public:
 	CEntity *m_pCollidingEntity;
 	uint8 m_stateUnused;
 	uint32 m_timerUnused;
-	class CRange2D *m_wanderRangeBounds;
+	struct Range2D *m_wanderRangeBounds; // rouz edit (ChatGPT)
 	CWeapon m_weapons[TOTAL_WEAPON_SLOTS];
 	eWeaponType m_storedWeapon;
 	eWeaponType m_delayedWeapon;
@@ -1007,23 +892,23 @@ public:
 
 	// My names. Inlined in VC
 	AnimationId GetFireAnimNotDucking(CWeaponInfo* weapon) {
-		if (m_nPedType == PEDTYPE_COP && weapon->IsFlagSet(WEAPONFLAG_COP3_RD))
+		if (m_nPedType == PEDTYPE_COP && WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_COP3_RD))
 			return Get3rdFireAnim(weapon);
 		else
 			return GetPrimaryFireAnim(weapon);
 	}
 
 	static AnimationId Get3rdFireAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_COP3_RD))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_COP3_RD))
 			return ANIM_WEAPON_FIRE_3RD;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetFireAnimGround(CWeaponInfo* weapon, bool kickFloorIfNone = true) {
-		if (weapon->IsFlagSet(WEAPONFLAG_GROUND_2ND))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_GROUND_2ND))
 			return ANIM_WEAPON_CROUCHFIRE;
-		else if (weapon->IsFlagSet(WEAPONFLAG_GROUND_3RD))
+		else if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_GROUND_3RD))
 			return ANIM_WEAPON_FIRE_3RD;
 		else if (kickFloorIfNone)
 			return ANIM_STD_KICKGROUND;
@@ -1032,56 +917,56 @@ public:
 	}
 
 	static AnimationId GetPrimaryFireAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_ANIMDETONATE))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_ANIMDETONATE))
 			return ANIM_STD_DETONATE;
 		else
 			return ANIM_WEAPON_FIRE;
 	}
 
 	static AnimationId GetCrouchReloadAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_RELOAD))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_RELOAD))
 			return ANIM_WEAPON_CROUCHRELOAD;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetCrouchFireAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_CROUCHFIRE))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_CROUCHFIRE))
 			return ANIM_WEAPON_CROUCHFIRE;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetReloadAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_RELOAD))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_RELOAD))
 			return ANIM_WEAPON_RELOAD;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetFightIdleWithMeleeAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_FIGHTMODE))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_FIGHTMODE))
 			return ANIM_MELEE_IDLE_FIGHTMODE;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetFinishingAttackAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_FINISH_3RD))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_FINISH_3RD))
 			return ANIM_MELEE_ATTACK_FINISH;
 		else
 			return (AnimationId)0;
 	}
 
 	static AnimationId GetSecondFireAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_USE_2ND))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_USE_2ND))
 			return ANIM_WEAPON_FIRE_2ND;
 		else
 			return (AnimationId)0;
 	}
 	
 	static AnimationId GetMeleeStartAnim(CWeaponInfo* weapon) {
-		if (weapon->IsFlagSet(WEAPONFLAG_PARTIALATTACK))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_PARTIALATTACK))
 			return ANIM_MELEE_ATTACK_START;
 		else
 			return (AnimationId)0;
@@ -1089,7 +974,7 @@ public:
 
 	static AnimationId GetThrowAnim(CWeaponInfo *weapon)
 	{
-		if (weapon->IsFlagSet(WEAPONFLAG_THROW))
+		if (WeaponInfo_IsFlagSet(weapon,WEAPONFLAG_THROW))
 			return ANIM_THROWABLE_START_THROW;
 		else
 			return (AnimationId)0;
@@ -1130,7 +1015,8 @@ public:
 	CVector GetNodePosition(int32 node)
 	{
 		RwV3d pos = { 0.0f, 0.0f, 0.0f };
-		RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(GetClump());
+		// Use the C helper and retain the original typed SDK result
+		RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(GetClump()));
 		int32 idx = RpHAnimIDGetIndex(hier, m_pFrames[node]->nodeID);
 		RwMatrix *mats = RpHAnimHierarchyGetMatrixArray(hier);
 		pos = mats[idx].pos;
@@ -1138,7 +1024,8 @@ public:
 	}
 	void TransformToNode(CVector &pos, int32 node)
 	{
-		RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(GetClump());
+		// Use the C helper and retain the original typed SDK result
+		RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(GetClump()));
 		int32 idx = RpHAnimIDGetIndex(hier, m_pFrames[node]->nodeID);
 		RwMatrix *mats = RpHAnimHierarchyGetMatrixArray(hier);
 		RwV3dTransformPoints(&pos, &pos, 1, &mats[idx]);
@@ -1188,3 +1075,7 @@ VALIDATE_SIZE(CPed, 0x5F4);
 
 bool IsPedPointerValid(CPed*);
 bool IsPedPointerValid_NotInWorld(CPed*);
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

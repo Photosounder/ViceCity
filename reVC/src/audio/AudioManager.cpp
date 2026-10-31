@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 
 #include "AudioManager.h"
 #include "AudioSoundGame.h"
@@ -28,10 +30,8 @@ cAudioManager::cAudioManager()
 
 cAudioManager::~cAudioManager()
 {
-	if (m_bIsInitialised)
-		AudioLifecycle_Terminate(this);
-	// Preserve the former script-object manager destructor reset
-	AudioScriptObjectManager_Reset(&m_sAudioScriptObjectManager);
+	// Delegate the complete owner cleanup to its C implementation
+	AudioOwner_Destroy(this);
 }
 
 
@@ -88,12 +88,6 @@ cAudioManager::~cAudioManager()
 
 
 #ifdef GTA_PS2
-void
-cAudioManager::LoadBankIfNecessary(uint8 bank)
-{
-	if(!SampleManager_IsSampleBankLoaded(&SampleManager, bank))
-		SampleManager_LoadSampleBank(&SampleManager, bank);
-}
 #endif
 
 #ifdef EXTERNAL_3D_SOUND
@@ -106,14 +100,14 @@ uint8_t
 AudioRequestsHost_InRoom(void)
 {
     // Read the existing camera room flag at the original sound eligibility check
-    return CCullZones::InRoomForAudio();
+    return CullZones_InRoomForAudio();
 }
 #ifndef USE_TIME_SCALE_FOR_AUDIO
 uint8_t
 AudioRequestsHost_SlowMotion(void)
 {
     // Read slow motion at each original reflection frequency and delay decision
-    return CTimer::GetIsSlowMotionActive();
+    return Timer_GetIsSlowMotionActive();
 }
 #endif
 #endif
@@ -128,7 +122,7 @@ AudioReflectionsHost_Line(const AudioSoundPosition *start, const AudioSoundPosit
     CEntity *entity;
     if (!CWorld::ProcessLineOfSight(AudioSoundPosition_ToVector(start), AudioSoundPosition_ToVector(end), point, entity, true, false, false, true, false, true, true))
         return 0;
-    *hit = AudioSoundPosition_FromVector(point.point);
+    *hit = AudioSoundPosition_FromVector(CollisionVector_ToNative(point.point));
     return 1;
 }
 
@@ -146,55 +140,13 @@ AudioReflectionsHost_Vertical(const AudioSoundPosition *start, float endZ, float
 #endif
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
-void
-AudioReloadHost_ResetMusic(void)
-{
-    // Reset music at the original reload point before clearing the player speech flag
-    MusicManager.ResetMusicAfterReload();
-}
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
-void
-AudioLifecycleHost_PreInitialise(cAudioManager *manager)
-{
-	// Invoke the existing game callback at the original lifecycle point
-	manager->PreInitialiseGameSpecificSetup();
-}
 
-void
-AudioLifecycleHost_PostInitialise(cAudioManager *manager)
-{
-	// Invoke the existing game callback at the original lifecycle point
-	manager->PostInitialiseGameSpecificSetup();
-}
 
-void
-AudioLifecycleHost_PreTerminate(cAudioManager *manager)
-{
-	// Invoke the existing game callback at the original lifecycle point
-	manager->PreTerminateGameSpecificShutdown();
-}
 
-void
-AudioLifecycleHost_PostTerminate(cAudioManager *manager)
-{
-	// Invoke the existing game callback at the original lifecycle point
-	manager->PostTerminateGameSpecificShutdown();
-}
 
-void
-AudioLifecycleHost_MusicInitialise(void)
-{
-	// Invoke the existing music callback at the original lifecycle point
-	MusicManager.Initialise();
-}
 
-void
-AudioLifecycleHost_MusicTerminate(void)
-{
-	// Invoke the existing music callback at the original lifecycle point
-	MusicManager.Terminate();
-}
 
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
@@ -202,23 +154,17 @@ void
 AudioServiceHost_ResetMusicTimers(uint32_t time)
 {
     // Read the music timer argument at the original deferred reset point
-    MusicManager.ResetTimers(time);
+    MusicState_ResetTimers(&MusicManager, time);
 }
 
 uint8_t
 AudioServiceHost_UserPaused(void)
 {
     // Query the existing user pause flag after retaining the previous pause state
-    return CTimer::GetIsUserPaused();
+    return Timer_GetIsUserPaused();
 }
 
 
-void
-AudioServiceHost_Music(void)
-{
-    // Invoke music after the sound effects service callback completes
-    MusicManager.Service();
-}
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 
@@ -233,7 +179,7 @@ float
 AudioReleaseHost_TimeStep(void)
 {
     // Read the original fixed time step at each fading expression
-    return CTimer::GetTimeStepFix();
+    return Timer_GetTimeStepFix();
 }
 
 void
@@ -257,4 +203,6 @@ AudioActiveHost_CameraSwitched(void)
     // Read the camera switch flag at the original doppler calculation point
     return TheCamera.Get_Just_Switched_Status();
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

@@ -1,4 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Camera.h"
@@ -15,6 +20,14 @@
 #include "Wanted.h"
 #include "Sprite.h"
 #include "Sprite2d.h"
+
+static Sprite2d *Sprite2d_HudLocalTarget;
+static void Sprite2d_ExitHudLocal(void)
+{
+    // Destroy the same lazily initialized C record at its original process-exit position
+    Sprite2d_Deinit(Sprite2d_HudLocalTarget);
+}
+
 #include "Text.h"
 #include "Timer.h"
 #include "Script.h"
@@ -38,9 +51,9 @@
 #endif
 
 #ifdef FIX_BUGS
-#define FRAMECOUNTER CTimer::GetLogicalFrameCounter()
+#define FRAMECOUNTER Timer_GetLogicalFrameCounter()
 #else
-#define FRAMECOUNTER CTimer::GetFrameCounter()
+#define FRAMECOUNTER (*Timer_GetFrameCounter())
 #endif
 
 // Game has colors inlined in code.
@@ -133,7 +146,18 @@ uint32 CHud::m_LastWanted;
 uint32 CHud::m_LastWeapon;
 uint32 CHud::m_LastTimeEnergyLost;
 
-CSprite2d CHud::Sprites[NUM_HUD_SPRITES];
+Sprite2d CHud::Sprites[NUM_HUD_SPRITES];
+static void Sprite2d_Exit_CHud_Sprites(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(CHud::Sprites,(size_t)(NUM_HUD_SPRITES));
+}
+static int Sprite2d_Start_CHud_Sprites(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(CHud::Sprites,(size_t)(NUM_HUD_SPRITES));atexit(Sprite2d_Exit_CHud_Sprites);return 0;
+}
+static const int Sprite2d_Started_CHud_Sprites=Sprite2d_Start_CHud_Sprites();
 
 struct
 {
@@ -267,9 +291,11 @@ void CHud::Draw()
 
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 
-			float fStep = Sin((CTimer::GetTimeInMilliseconds() & 1023)/1024.0f * 6.28f);
+			float fStep = Sin(((*Timer_GetTimeInMilliseconds()) & 1023)/1024.0f * 6.28f);
 			float fMultBright = SpriteBrightness * 0.03f * (0.25f * fStep + 0.75f);
 			CRect rect;
+			// Initialize rectangle bounds at the former local constructor boundary
+			Rect_Init(&rect);
 			if (DrawCrossHairPC && TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam()) {
 				float f3rdX = SCREEN_WIDTH * TheCamera.m_f3rdPersonCHairMultX;
 				float f3rdY = SCREEN_HEIGHT * TheCamera.m_f3rdPersonCHairMultY;
@@ -282,7 +308,10 @@ void CHud::Draw()
 					rect.right = f3rdX + SCREEN_SCALE_X(32.0f * 0.6f);
 					rect.bottom = f3rdY + SCREEN_SCALE_Y(32.0f  * 0.6f);
 
-					Sprites[HUD_SITEM16].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else {
@@ -291,7 +320,10 @@ void CHud::Draw()
 					rect.right = f3rdX + SCREEN_SCALE_X(32.0f * 0.4f);
 					rect.bottom = f3rdY + SCREEN_SCALE_Y(32.0f  * 0.4f);
 
-					Sprites[HUD_SITEM16].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 			} else {
@@ -302,7 +334,10 @@ void CHud::Draw()
 					rect.top = (SCREEN_HEIGHT / 2) - SCREEN_SCALE_Y(32.0f);
 					rect.right = (SCREEN_WIDTH / 2) + SCREEN_SCALE_X(32.0f);
 					rect.bottom = (SCREEN_HEIGHT / 2) + SCREEN_SCALE_Y(32.0f);
-					Sprites[HUD_SITEM16].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else if (Mode == CCam::MODE_1STPERSON_RUNABOUT) {
@@ -311,7 +346,10 @@ void CHud::Draw()
 					rect.right = (SCREEN_WIDTH / 2) + SCREEN_SCALE_X(32.0f * 0.7f);
 					rect.bottom = (SCREEN_HEIGHT / 2) + SCREEN_SCALE_Y(32.0f * 0.7f);
 
-					Sprites[HUD_SITEM16].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[HUD_SITEM16]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f);
 				}
 				else if (Mode == CCam::MODE_ROCKETLAUNCHER || Mode == CCam::MODE_ROCKETLAUNCHER_RUNABOUT) {
@@ -322,7 +360,8 @@ void CHud::Draw()
 					RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpRocketSightTex));
 
-					CSprite::RenderOneXLUSprite(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1.0f, SCREEN_SCALE_X(40.0f), SCREEN_SCALE_Y(40.0f), (100.0f * fMultBright), (200.0f * fMultBright), (100.0f * fMultBright), 255, 1.0f, 255);
+					// Use the complete C sprite operation with the original argument values
+					Sprite_RenderOneXLUSprite(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 1.0f, SCREEN_SCALE_X(40.0f), SCREEN_SCALE_Y(40.0f), (100.0f * fMultBright), (200.0f * fMultBright), (100.0f * fMultBright), 255, 1.0f, 255);
 					RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 					RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 				}
@@ -345,28 +384,40 @@ void CHud::Draw()
 					rect.top = SCREEN_HEIGHT/2 - yOffset;
 					rect.right = SCREEN_WIDTH/2;
 					rect.bottom = SCREEN_HEIGHT/2;
-					Sprites[sprite].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.01f, 0.01f,  1.0f, 0.0f,  0.01f, 1.0f,  1.0f, 1.0f);
 
 					rect.left = SCREEN_WIDTH/2;
 					rect.top = SCREEN_HEIGHT/2 - yOffset;
 					rect.right = SCREEN_WIDTH/2 + xOffset;
 					rect.bottom = SCREEN_HEIGHT/2;
-					Sprites[sprite].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.99f, 0.0f,  0.01f, 0.01f,  0.99f, 1.0f,  0.01f, 1.0f);
 
 					rect.left = SCREEN_WIDTH/2 - xOffset;
 					rect.top = SCREEN_HEIGHT/2;
 					rect.right = SCREEN_WIDTH/2;
 					rect.bottom = SCREEN_HEIGHT/2 + yOffset;
-					Sprites[sprite].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.01f, 0.99f,  1.0f, 0.99f,  0.01f, 0.01f,  1.0f, 0.01f);
 
 					rect.left = SCREEN_WIDTH/2;
 					rect.top = SCREEN_HEIGHT/2;
 					rect.right = SCREEN_WIDTH/2 + xOffset;
 					rect.bottom = SCREEN_HEIGHT/2 + yOffset;
-					Sprites[sprite].Draw(CRect(rect), CRGBA(255, 255, 255, 255),
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[sprite]),Rect_CopyValue(rect), CRGBA(255, 255, 255, 255),
 						0.99f, 0.99f,  0.01f, 0.99f,  0.99f, 0.01f,  0.01f, 0.01f);
 
 					CVector dotPos;
@@ -383,11 +434,12 @@ void CHud::Draw()
 #endif
 						RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(gpLaserDotTex));
 #ifdef FIX_BUGS
-						int intensity = CGeneral::GetRandomNumberInRange(0, 37);
+						int intensity = General_GetRandomNumberInRangeInt(0, 37);
 #else
-						int intensity = CGeneral::GetRandomNumberInRange(0, 35);
+						int intensity = General_GetRandomNumberInRangeInt(0, 35);
 #endif
-						CSprite::RenderOneXLUSprite(dotPos.x, dotPos.y, dotPos.z,
+						// Use the complete C sprite operation with the original argument values
+						Sprite_RenderOneXLUSprite(dotPos.x, dotPos.y, dotPos.z,
 							SCREEN_SCALE_X(size), SCREEN_SCALE_Y(size), intensity - 36, 0, 0, intensity - 36, 1.0f, 127);
 
 						RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
@@ -454,7 +506,7 @@ void CHud::Draw()
 		}
 		if (m_WeaponState != FADED_OUT) {
 			CWeapon *weapon = playerPed->GetWeapon();
-			int32 AmmoAmount = CWeaponInfo::GetWeaponInfo((eWeaponType)WeaponType)->m_nAmountofAmmunition;
+			int32 AmmoAmount = WeaponInfo_GetWeaponInfo((eWeaponType)WeaponType)->m_nAmountofAmmunition;
 			int32 AmmoInClip = weapon->m_nAmmoInClip;
 			int32 TotalAmmo = weapon->m_nAmmoTotal;
 			int32 Ammo, Clip;
@@ -476,7 +528,7 @@ void CHud::Draw()
 			}
 
 			AsciiToUnicode(sTemp, sPrint);
-			CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo((eWeaponType)WeaponType);
+			CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo((eWeaponType)WeaponType);
 			/*
 				DrawWeaponIcon
 			*/
@@ -485,8 +537,11 @@ void CHud::Draw()
 				if (weaponInfo->m_nModelId <= 0) {
 					RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERLINEAR);
 					if (FrontEndMenuManager.m_PrefsShowHud)
-						Sprites[WeaponType].Draw(
-							CRect(SCREEN_SCALE_FROM_RIGHT(99.0f), SCREEN_SCALE_Y(27.0f), SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(91.0f)),
+						([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(Sprites[WeaponType]),
+							Rect_Make(SCREEN_SCALE_FROM_RIGHT(99.0f), SCREEN_SCALE_Y(27.0f), SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(91.0f)),
 							CRGBA(255, 255, 255, alpha),
 							0.015f, 0.015f,
 							1.0f, 0.0f,
@@ -494,7 +549,8 @@ void CHud::Draw()
 							1.0f, 1.0f);
 				} else {
 					CBaseModelInfo *weaponModel = CModelInfo::GetModelInfo(weaponInfo->m_nModelId);
-					RwTexDictionary *weaponTxd = CTxdStore::GetSlot(weaponModel->GetTxdSlot())->texDict;
+					// Use the complete C texture dictionary owner with the original live arguments
+					RwTexDictionary *weaponTxd = ((RwTexDictionary*)TxdStore_GetSlot(weaponModel->GetTxdSlot())->texDict);
 					if (weaponTxd) {
 						RwTexture *weaponIcon = RwTexDictionaryFindNamedTexture(weaponTxd, weaponModel->GetModelName());
 						if (weaponIcon) {
@@ -504,14 +560,23 @@ void CHud::Draw()
 							const float ySize = SCREEN_SCALE_Y(64.0f / 2.0f);
 							RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)FALSE);
 							RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(weaponIcon));
-							CSprite::RenderOneXLUSprite(SCREEN_SCALE_FROM_RIGHT(99.0f) + xSize, SCREEN_SCALE_Y(25.0f) + ySize, 1.0f, xSize, ySize,
+							// Use the complete C sprite operation with the original argument values
+							Sprite_RenderOneXLUSprite(SCREEN_SCALE_FROM_RIGHT(99.0f) + xSize, SCREEN_SCALE_Y(25.0f) + ySize, 1.0f, xSize, ySize,
 								255, 255, 255, 255, 1.0f, 255);
 							RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 #else
-							static CSprite2d sprite;
+							static Sprite2d sprite;
+                            // Preserve the original local-static guard while initializing the C record and registering its cleanup
+                            static const int sprite2dLocalStarted=[](){
+                                // Initialize and register the same lazily owned C record
+                                Sprite2d_Init(&sprite);Sprite2d_HudLocalTarget=&sprite;atexit(Sprite2d_ExitHudLocal);return 0;}();
+                            (void)sprite2dLocalStarted;
 							sprite.m_pTexture = weaponIcon;
-							sprite.Draw(
-								CRect(SCREEN_SCALE_FROM_RIGHT(99.0f), SCREEN_SCALE_Y(27.0f), SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(91.0f)),
+							([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col,float u0,float v0,float u1,float v1,float u3,float v3,float u2,float v2){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRectUV(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a),u0,v0,u1,v1,u3,v3,u2,v2);
+})(&(sprite),
+								Rect_Make(SCREEN_SCALE_FROM_RIGHT(99.0f), SCREEN_SCALE_Y(27.0f), SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(91.0f)),
 								CRGBA(255, 255, 255, alpha),
 								0.015f, 0.015f,
 								1.0f, 0.0f,
@@ -532,7 +597,7 @@ void CHud::Draw()
 				CFont::SetDropShadowPosition(0);
 				CFont::SetFontStyle(FONT_STANDARD);
 
-				if (Min(9999, TotalAmmo - AmmoInClip) != 9999 && !CDarkel::FrenzyOnGoing() && weaponInfo->m_nWeaponSlot > 1 && weapon->m_eWeaponType != WEAPONTYPE_DETONATOR) {
+				if (Min(9999, TotalAmmo - AmmoInClip) != 9999 && !Darkel_FrenzyOnGoing() && weaponInfo->m_nWeaponSlot > 1 && weapon->m_eWeaponType != WEAPONTYPE_DETONATOR) {
 					CFont::SetDropShadowPosition(2);
 					CFont::SetDropColor(CRGBA(0, 0, 0, alpha));
 					AMMO_COLOR.a = alpha;
@@ -585,7 +650,7 @@ void CHud::Draw()
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
+						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || (*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(HEALTH_COLOR);
 							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
@@ -612,7 +677,7 @@ void CHud::Draw()
 
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
+						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || (*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
 							// CFont::SetColor(ARMOUR_COLOR);
 							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
@@ -624,11 +689,11 @@ void CHud::Draw()
 		/*
 			DrawWantedLevel
 		*/
-		if (m_LastWanted == playerPed->m_pWanted->GetWantedLevel()) {
+		if (m_LastWanted == Wanted_GetWantedLevel(playerPed->m_pWanted)) {
 			alpha = DrawFadeState(HUD_WANTED_FADING, 0);
 		} else {
 			alpha = DrawFadeState(HUD_WANTED_FADING, 1);
-			m_LastWanted = playerPed->m_pWanted->GetWantedLevel();
+			m_LastWanted = Wanted_GetWantedLevel(playerPed->m_pWanted);
 		}
 
 		if (m_WantedState != FADED_OUT) {
@@ -644,8 +709,8 @@ void CHud::Draw()
 
 			for (int i = 0; i < 6; i++) {
 				if (FrontEndMenuManager.m_PrefsShowHud) {
-					if (playerPed->m_pWanted->GetWantedLevel() > i
-						&& (CTimer::GetTimeInMilliseconds() > playerPed->m_pWanted->m_nLastWantedLevelChange
+					if (Wanted_GetWantedLevel(playerPed->m_pWanted) > i
+						&& ((*Timer_GetTimeInMilliseconds()) > playerPed->m_pWanted->m_nLastWantedLevelChange
 							+ 2000 || FRAMECOUNTER & 4)) {
 
 						WANTED_COLOR.a = alpha;
@@ -657,7 +722,7 @@ void CHud::Draw()
 						CFont::SetColor(WANTED_COLOR_FLASH);
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
 
-					} else if (playerPed->m_pWanted->GetWantedLevel() <= i) {
+					} else if (Wanted_GetWantedLevel(playerPed->m_pWanted) <= i) {
 						NOTWANTED_COLOR.a = alpha;
 						CFont::SetColor(NOTWANTED_COLOR);
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 23.0f * i), SCREEN_SCALE_Y(87.0f), sPrintIcon);
@@ -667,18 +732,18 @@ void CHud::Draw()
 		}
 
 		static int32 nMediaLevelCounter = 0;
-		if (CStats::ShowChaseStatOnScreen != 0) {
+		if (Stats_ShowChaseStatOnScreen != 0) {
 			float fCurAttentionLevel = CWorld::Players[CWorld::PlayerInFocus].m_fMediaAttention;
-			if (0.7f * CStats::HighestChaseValue > fCurAttentionLevel
+			if (0.7f * Stats_HighestChaseValue > fCurAttentionLevel
 				|| fCurAttentionLevel <= 40.0f || CTheScripts::IsPlayerOnAMission()) {
 				nMediaLevelCounter = 0;
 			}
 			else {
-				if (fCurAttentionLevel == CStats::HighestChaseValue) {
-					sprintf(gString, "%s %d", UnicodeToAscii(TheText.Get("CHSE")), (int32)fCurAttentionLevel);
+				if (fCurAttentionLevel == Stats_HighestChaseValue) {
+					sprintf(gString, "%s %d", UnicodeToAscii(Text_Get(&TheText,"CHSE")), (int32)fCurAttentionLevel);
 				}
 				else {
-					sprintf(gString, "%s %d" "-%d-", UnicodeToAscii(TheText.Get("CHSE")), (int32)fCurAttentionLevel, (int32)CStats::HighestChaseValue);
+					sprintf(gString, "%s %d" "-%d-", UnicodeToAscii(Text_Get(&TheText,"CHSE")), (int32)fCurAttentionLevel, (int32)Stats_HighestChaseValue);
 				}
 				AsciiToUnicode(gString, gUString);
 				CFont::SetBackgroundOff();
@@ -693,21 +758,21 @@ void CHud::Draw()
 				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
 				CRGBA colour;
-				if (CTimer::GetTimeInMilliseconds() & 0x200)
+				if ((*Timer_GetTimeInMilliseconds()) & 0x200)
 					colour = CRGBA(204, 0, 185, 180);
 				else
 					colour = CRGBA(178, 0, 162, 180);
 				CFont::SetColor(colour);
 				CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(113.0f), gUString);
 				
-				if (CStats::FindChaseString(fCurAttentionLevel) != prevChaseString) {
-					prevChaseString = CStats::FindChaseString(fCurAttentionLevel);
+				if (Stats_FindChaseString(fCurAttentionLevel) != prevChaseString) {
+					prevChaseString = Stats_FindChaseString(fCurAttentionLevel);
 					nMediaLevelCounter = 100;
 				}
 
 				if (nMediaLevelCounter != 0) {
 					nMediaLevelCounter--;
-					UnicodeMakeUpperCase(gUString, CStats::FindChaseString(fCurAttentionLevel));
+					UnicodeMakeUpperCase(gUString, Stats_FindChaseString(fCurAttentionLevel));
 					CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(138.0f), gUString);
 				}
 			}
@@ -753,7 +818,7 @@ void CHud::Draw()
 					}
 					break;
 				case 2:
-					m_ZoneFadeTimer += CTimer::GetTimeStepInMilliseconds();
+					m_ZoneFadeTimer += Timer_GetTimeStepInMilliseconds();
 					if (m_ZoneFadeTimer > 1000.0f) {
 						m_ZoneState = 1;
 						m_ZoneFadeTimer = 1000;
@@ -761,7 +826,7 @@ void CHud::Draw()
 					fZoneAlpha = m_ZoneFadeTimer * 0.001f * 255.0f;
 					break;
 				case 3:
-					m_ZoneFadeTimer -= CTimer::GetTimeStepInMilliseconds();
+					m_ZoneFadeTimer -= Timer_GetTimeStepInMilliseconds();
 					if (m_ZoneFadeTimer < 0.0f) {
 						m_ZoneState = 0;
 						m_ZoneFadeTimer = 0;
@@ -769,7 +834,7 @@ void CHud::Draw()
 					fZoneAlpha = m_ZoneFadeTimer * 0.001f * 255.0f;
 					break;
 				case 4:
-					m_ZoneFadeTimer -= CTimer::GetTimeStepInMilliseconds();
+					m_ZoneFadeTimer -= Timer_GetTimeStepInMilliseconds();
 					if (m_ZoneFadeTimer < 0.0f) {
 						m_ZoneFadeTimer = 0;
 						m_ZoneToPrint = m_pLastZoneName;
@@ -784,7 +849,7 @@ void CHud::Draw()
 
 				if (!m_Message[0] && BigMessageInUse[1] == 0.0f && BigMessageInUse[2] == 0.0f) {
 
-					m_ZoneNameTimer += CTimer::GetTimeStepInMilliseconds();
+					m_ZoneNameTimer += Timer_GetTimeStepInMilliseconds();
 					CFont::SetJustifyOff();
 					CFont::SetPropOn();
 					CFont::SetBackgroundOff();
@@ -854,7 +919,7 @@ void CHud::Draw()
 					fVehicleAlpha = 255.0f;
 					break;
 				case 2:
-					m_VehicleFadeTimer += CTimer::GetTimeStepInMilliseconds();
+					m_VehicleFadeTimer += Timer_GetTimeStepInMilliseconds();
 					if (m_VehicleFadeTimer > 1000) {
 						m_VehicleState = 1;
 						m_VehicleFadeTimer = 1000;
@@ -862,7 +927,7 @@ void CHud::Draw()
 					fVehicleAlpha = m_VehicleFadeTimer * 0.001f * 255.0f;
 					break;
 				case 3:
-					m_VehicleFadeTimer -= CTimer::GetTimeStepInMilliseconds();
+					m_VehicleFadeTimer -= Timer_GetTimeStepInMilliseconds();
 					if (m_VehicleFadeTimer < 0) {
 						m_VehicleState = 0;
 						m_VehicleFadeTimer = 0;
@@ -870,7 +935,7 @@ void CHud::Draw()
 					fVehicleAlpha = m_VehicleFadeTimer * 0.001f * 255.0f;
 					break;
 				case 4:
-					m_VehicleFadeTimer -= CTimer::GetTimeStepInMilliseconds();
+					m_VehicleFadeTimer -= Timer_GetTimeStepInMilliseconds();
 					if (m_VehicleFadeTimer < 0) {
 						m_VehicleFadeTimer = 0;
 						m_pVehicleNameToPrint = m_pLastVehicleName;
@@ -884,7 +949,7 @@ void CHud::Draw()
 				}
 
 				if (!m_Message[0]) {
-					m_VehicleNameTimer += CTimer::GetTimeStepInMilliseconds();
+					m_VehicleNameTimer += Timer_GetTimeStepInMilliseconds();
 					CFont::SetJustifyOff();
 					CFont::SetPropOn();
 					CFont::SetBackgroundOff();
@@ -934,7 +999,7 @@ void CHud::Draw()
 			CFont::SetDropShadowPosition(2);
 			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
-			sprintf(sTemp, "%02d:%02d", CClock::GetHours(), CClock::GetMinutes());
+			sprintf(sTemp, "%02d:%02d", Clock_GetHours(), Clock_GetMinutes());
 			AsciiToUnicode(sTemp, sPrint);
 
 			CFont::SetColor(CLOCK_COLOR);
@@ -948,16 +1013,16 @@ void CHud::Draw()
 		
 		wchar sTimer[16];
 
-		if (!CUserDisplay::OnscnTimer.m_sClocks[0].m_bClockProcessed)
+		if (!OnscreenTimer_state.m_sClocks[0].m_bClockProcessed)
 			TimerOnLastFrame = false;
 
 		for(uint32 i = 0; i < NUMONSCREENCOUNTERS; i++) {
-			if (!CUserDisplay::OnscnTimer.m_sCounters[0].m_bCounterProcessed)
+			if (!OnscreenTimer_state.m_sCounters[0].m_bCounterProcessed)
 				CounterOnLastFrame[i] = false;
 		}
 
-		if (CUserDisplay::OnscnTimer.m_bProcessed) {
-			if (CUserDisplay::OnscnTimer.m_sClocks[0].m_bClockProcessed) {
+		if (OnscreenTimer_state.m_bProcessed) {
+			if (OnscreenTimer_state.m_sClocks[0].m_bClockProcessed) {
 				if (!TimerOnLastFrame)
 					TimerFlashTimer = 1;
 
@@ -969,7 +1034,7 @@ void CHud::Draw()
 				}
 
 				if (FRAMECOUNTER & 4 || TimerFlashTimer == 0) {
-					AsciiToUnicode(CUserDisplay::OnscnTimer.m_sClocks[0].m_aClockBuffer, sTimer);
+					AsciiToUnicode(OnscreenTimer_state.m_sClocks[0].m_aClockBuffer, sTimer);
 					CFont::SetPropOn();
 					CFont::SetBackgroundOff();
 					CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
@@ -985,17 +1050,17 @@ void CHud::Draw()
 					CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(110.0f), sTimer);
 					CFont::SetPropOn();
 
-					if (CUserDisplay::OnscnTimer.m_sClocks[0].m_aClockText[0]) {
+					if (OnscreenTimer_state.m_sClocks[0].m_aClockText[0]) {
 						CFont::SetDropShadowPosition(2);
 						CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 						CFont::SetColor(TIMER_COLOR);
-						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(80.0f), SCREEN_SCALE_Y(110.0f), TheText.Get(CUserDisplay::OnscnTimer.m_sClocks[0].m_aClockText));
+						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(80.0f), SCREEN_SCALE_Y(110.0f), Text_Get(&TheText,OnscreenTimer_state.m_sClocks[0].m_aClockText));
 					}
 				}
 			}
 
 			for(uint32 i = 0; i < NUMONSCREENCOUNTERS; i++) {
-				if (CUserDisplay::OnscnTimer.m_sCounters[i].m_bCounterProcessed) {
+				if (OnscreenTimer_state.m_sCounters[i].m_bCounterProcessed) {
 					if (!CounterOnLastFrame[i])
 						CounterFlashTimer[i] = 1;
 
@@ -1007,8 +1072,8 @@ void CHud::Draw()
 					}
 
 					if (FRAMECOUNTER & 4 || CounterFlashTimer[i] == 0) {
-						if (CUserDisplay::OnscnTimer.m_sCounters[i].m_nType == COUNTER_DISPLAY_NUMBER) {
-							AsciiToUnicode(CUserDisplay::OnscnTimer.m_sCounters[i].m_aCounterBuffer, sTimer);
+						if (OnscreenTimer_state.m_sCounters[i].m_nType == COUNTER_DISPLAY_NUMBER) {
+							AsciiToUnicode(OnscreenTimer_state.m_sCounters[i].m_aCounterBuffer, sTimer);
 							CFont::SetPropOn();
 							CFont::SetBackgroundOff();
 							CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
@@ -1024,7 +1089,7 @@ void CHud::Draw()
 							CFont::SetColor(COUNTER_COLOR);
 							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), sTimer);
 						} else {
-							int counter = atoi(CUserDisplay::OnscnTimer.m_sCounters[i].m_aCounterBuffer);
+							int counter = atoi(OnscreenTimer_state.m_sCounters[i].m_aCounterBuffer);
 
 							const float barWidth = SCREEN_SCALE_X(100.f / 2.f);
 							const float right = SCREEN_SCALE_FROM_RIGHT(37.0f);
@@ -1035,20 +1100,29 @@ void CHud::Draw()
 							const float bottom = top + barHeight;
 
 							// shadow
-							CSprite2d::DrawRect(CRect(left + SCREEN_SCALE_X(6.0f), top + SCREEN_SCALE_Y(2.0f), right + SCREEN_SCALE_X(6.0f), bottom + SCREEN_SCALE_Y(2.0f)), CRGBA(0, 0, 0, 255));
+							([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(left + SCREEN_SCALE_X(6.0f), top + SCREEN_SCALE_Y(2.0f), right + SCREEN_SCALE_X(6.0f), bottom + SCREEN_SCALE_Y(2.0f)), CRGBA(0, 0, 0, 255));
 							
-							CSprite2d::DrawRect(CRect(left + SCREEN_SCALE_X(4.0f), top, right + SCREEN_SCALE_X(4.0f), bottom), CRGBA(27, 89, 130, 255));
-							CSprite2d::DrawRect(CRect(left + SCREEN_SCALE_X(4.0f), top, left + SCREEN_SCALE_X(counter) / 2.0f + SCREEN_SCALE_X(4.0f), bottom), CRGBA(97, 194, 247, 255));
+							([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(left + SCREEN_SCALE_X(4.0f), top, right + SCREEN_SCALE_X(4.0f), bottom), CRGBA(27, 89, 130, 255));
+							([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(left + SCREEN_SCALE_X(4.0f), top, left + SCREEN_SCALE_X(counter) / 2.0f + SCREEN_SCALE_X(4.0f), bottom), CRGBA(97, 194, 247, 255));
 						}
 
-						if (CUserDisplay::OnscnTimer.m_sCounters[i].m_aCounterText[0]) {
+						if (OnscreenTimer_state.m_sCounters[i].m_aCounterText[0]) {
 							CFont::SetPropOn();
 							CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
 							CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
 							CFont::SetDropShadowPosition(2);
 							CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 							CFont::SetColor(COUNTER_COLOR);
-							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(61.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), TheText.Get(CUserDisplay::OnscnTimer.m_sCounters[i].m_aCounterText));
+							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(37.0f) - SCREEN_SCALE_X(61.0f), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y * 20.f * i) + SCREEN_SCALE_Y(132.0f), Text_Get(&TheText,OnscreenTimer_state.m_sCounters[i].m_aCounterText));
 						}
 						// unused/leftover color. I wonder what was it for
 						CFont::SetColor(CRGBA(244, 225, 91, 255));
@@ -1066,19 +1140,25 @@ void CHud::Draw()
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)rwFILTERNEAREST);
 			CRadar::DrawMap();
 			if (FrontEndMenuManager.m_PrefsRadarMode != 1) {
-				CRect rect(0.0f, 0.0f, SCREEN_SCALE_X(RADAR_WIDTH), SCREEN_SCALE_Y(RADAR_HEIGHT));
+				CRect rect = Rect_Make(0.0f, 0.0f, SCREEN_SCALE_X(RADAR_WIDTH), SCREEN_SCALE_Y(RADAR_HEIGHT));
 				
-				rect.Translate(SCREEN_SCALE_X_FIX(RADAR_LEFT), SCREEN_SCALE_FROM_BOTTOM(RADAR_BOTTOM + RADAR_HEIGHT));
+				Rect_Translate(&rect, SCREEN_SCALE_X_FIX(RADAR_LEFT), SCREEN_SCALE_FROM_BOTTOM(RADAR_BOTTOM + RADAR_HEIGHT));
 
 #ifdef FIX_BUGS
-				rect.Grow(SCREEN_SCALE_X(6.0f), SCREEN_SCALE_X(6.0f), SCREEN_SCALE_Y(6.0f), SCREEN_SCALE_Y(6.0f));
+				Rect_GrowEdges(&rect, SCREEN_SCALE_X(6.0f), SCREEN_SCALE_X(6.0f), SCREEN_SCALE_Y(6.0f), SCREEN_SCALE_Y(6.0f));
 #else
-				rect.Grow(6.0f);
+				Rect_Grow(&rect, 6.0f);
 #endif
-				rect.Translate(SCREEN_SCALE_X_FIX(0.0f), SCREEN_SCALE_Y_FIX(2.0f));
-				Sprites[HUD_RADARDISC].Draw(rect, CRGBA(0, 0, 0, 255));
-				rect.Translate(SCREEN_SCALE_X_FIX(0.0f), SCREEN_SCALE_Y_FIX(-2.0f));
-				Sprites[HUD_RADARDISC].Draw(rect, RADARDISC_COLOR);
+				Rect_Translate(&rect, SCREEN_SCALE_X_FIX(0.0f), SCREEN_SCALE_Y_FIX(2.0f));
+				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(Sprites[HUD_RADARDISC]),rect, CRGBA(0, 0, 0, 255));
+				Rect_Translate(&rect, SCREEN_SCALE_X_FIX(0.0f), SCREEN_SCALE_Y_FIX(-2.0f));
+				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(Sprites[HUD_RADARDISC]),rect, RADARDISC_COLOR);
 			}
 			CRadar::DrawBlips();
 		}
@@ -1094,7 +1174,7 @@ void CHud::Draw()
 	/*
 		DrawScriptText
 	*/
-	if (!CTimer::GetIsUserPaused()) {
+	if (!Timer_GetIsUserPaused()) {
 		for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroTextLines); i++) {
 			if (CTheScripts::IntroTextLines[i].m_Text[0] && CTheScripts::IntroTextLines[i].m_bTextBeforeFade) {
 				CFont::SetScale(SCREEN_SCALE_X(CTheScripts::IntroTextLines[i].m_fScaleX), SCREEN_SCALE_Y(CTheScripts::IntroTextLines[i].m_fScaleY * 0.5f));
@@ -1145,22 +1225,28 @@ void CHud::Draw()
 			// Yeah, top and bottom changed place. R* vision
 			if (IntroRect.m_bIsUsed && IntroRect.m_bBeforeFade) {
 				if (IntroRect.m_nTextureId >= 0) {
-					CRect rect (
+					CRect rect = Rect_Make(
 						IntroRect.m_sRect.left,
 						IntroRect.m_sRect.bottom,
 						IntroRect.m_sRect.right,
 						IntroRect.m_sRect.top );
 
-					CTheScripts::ScriptSprites[IntroRect.m_nTextureId].Draw(rect, IntroRect.m_sColor);
+					([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(CTheScripts::ScriptSprites[IntroRect.m_nTextureId]),rect, IntroRect.m_sColor);
 				}
 				else {
-					CRect rect (
+					CRect rect = Rect_Make(
 						IntroRect.m_sRect.left,
 						IntroRect.m_sRect.bottom,
 						IntroRect.m_sRect.right,
 						IntroRect.m_sRect.top );
 
-					CSprite2d::DrawRect(rect, IntroRect.m_sColor);
+					([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, IntroRect.m_sColor);
 				}
 			}
 		}
@@ -1224,14 +1310,14 @@ void CHud::Draw()
 		*/
 
 		if (m_HelpMessage[0]) {
-			if (!CMessages::WideStringCompare(m_HelpMessage, m_LastHelpMessage, HELP_MSG_LENGTH)) {
+			if (!Messages_WideStringCompare(m_HelpMessage, m_LastHelpMessage, HELP_MSG_LENGTH)) {
 				switch (m_HelpMessageState) {
 				case 0:
 					m_HelpMessageFadeTimer = 0;
 					m_HelpMessageState = 2;
 					m_HelpMessageTimer = 0;
-					CMessages::WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
-					m_HelpMessageDisplayTime = CMessages::GetWideStringLength(m_HelpMessage) * 0.05f + 3.0f;
+					Messages_WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
+					m_HelpMessageDisplayTime = Messages_GetWideStringLength(m_HelpMessage) * 0.05f + 3.0f;
 
 					if (TheCamera.m_ScreenReductionPercentage == 0.0f)
 						DMAudio_PlayFrontEndSound(SOUND_HUD, 0);
@@ -1246,7 +1332,7 @@ void CHud::Draw()
 				default:
 					break;
 				}
-				CMessages::WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
+				Messages_WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
 			}
 
 			float fAlpha = 225.0f;
@@ -1267,7 +1353,7 @@ void CHud::Draw()
 					if (TheCamera.m_WideScreenOn)
 						break;
 
-					m_HelpMessageFadeTimer += 2 * CTimer::GetTimeStepInMilliseconds();
+					m_HelpMessageFadeTimer += 2 * Timer_GetTimeStepInMilliseconds();
 					if (m_HelpMessageFadeTimer > 0) {
 						m_HelpMessageState = 1;
 						m_HelpMessageFadeTimer = 0;
@@ -1275,7 +1361,7 @@ void CHud::Draw()
 					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
 					break;
 				case 3:
-					m_HelpMessageFadeTimer -= 2 * CTimer::GetTimeStepInMilliseconds();
+					m_HelpMessageFadeTimer -= 2 * Timer_GetTimeStepInMilliseconds();
 					if (m_HelpMessageFadeTimer < 0 || TheCamera.m_WideScreenOn) {
 						m_HelpMessageState = 0;
 						m_HelpMessageFadeTimer = 0;
@@ -1283,11 +1369,11 @@ void CHud::Draw()
 					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
 					break;
 				case 4:
-					m_HelpMessageFadeTimer -= 2 * CTimer::GetTimeStepInMilliseconds();
+					m_HelpMessageFadeTimer -= 2 * Timer_GetTimeStepInMilliseconds();
 					if (m_HelpMessageFadeTimer < 0) {
 						m_HelpMessageState = 2;
 						m_HelpMessageFadeTimer = 0;
-						CMessages::WideStringCopy(m_HelpMessageToPrint, m_LastHelpMessage, HELP_MSG_LENGTH);
+						Messages_WideStringCopy(m_HelpMessageToPrint, m_LastHelpMessage, HELP_MSG_LENGTH);
 					}
 					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
 					break;
@@ -1296,7 +1382,7 @@ void CHud::Draw()
 				}
 
 				if (!TheCamera.m_WideScreenOn) {
-					m_HelpMessageTimer += CTimer::GetTimeStepInMilliseconds();
+					m_HelpMessageTimer += Timer_GetTimeStepInMilliseconds();
 
 					CFont::SetAlphaFade(fAlpha);
 					CFont::SetCentreOff();
@@ -1357,11 +1443,11 @@ void CHud::Draw()
 				// Appearently sliding text in here was abandoned very early, since this text is centered now.
 
 				if (BigMessageX[0] >= SCALE_AND_CENTER_X(620.0f)) {
-					BigMessageInUse[0] += CTimer::GetTimeStep();
+					BigMessageInUse[0] += (*Timer_GetTimeStep());
 
 					if (BigMessageInUse[0] >= 120.0f) {
 						BigMessageInUse[0] = 120.0f;
-						BigMessageAlpha[0] -= (CTimer::GetTimeStepInMilliseconds() * 0.3f);
+						BigMessageAlpha[0] -= (Timer_GetTimeStepInMilliseconds() * 0.3f);
 					}
 
 					if (BigMessageAlpha[0] <= 0.0f) {
@@ -1370,8 +1456,8 @@ void CHud::Draw()
 					}
 				}
 				else {
-					BigMessageX[0] += SCREEN_SCALE_X((CTimer::GetTimeStepInMilliseconds() * 0.3f));
-					BigMessageAlpha[0] += (CTimer::GetTimeStepInMilliseconds() * 0.3f);
+					BigMessageX[0] += SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f));
+					BigMessageAlpha[0] += (Timer_GetTimeStepInMilliseconds() * 0.3f);
 
 					if (BigMessageAlpha[0] > 255.0f)
 						BigMessageAlpha[0] = 255.0f;
@@ -1395,7 +1481,7 @@ void CHud::Draw()
 		// WastedBustedText
 		if (m_BigMessage[2][0]) {
 			if (BigMessageInUse[2] != 0.0f) {
-				BigMessageAlpha[2] += (CTimer::GetTimeStepInMilliseconds() * 0.4f);
+				BigMessageAlpha[2] += (Timer_GetTimeStepInMilliseconds() * 0.4f);
 
 				if (BigMessageAlpha[2] > 255.0f)
 					BigMessageAlpha[2] = 255.0f;
@@ -1438,7 +1524,7 @@ void CHud::DrawAfterFade()
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 
-	if (CTimer::GetIsUserPaused() || CReplay::IsPlayingBack())
+	if (Timer_GetIsUserPaused() || CReplay::IsPlayingBack())
 		return;
 
 	for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroTextLines); i++) {
@@ -1490,10 +1576,16 @@ void CHud::DrawAfterFade()
 
 			// Yeah, top and bottom changed place. R* vision
 			if (rectangle.m_nTextureId >= 0) {
-				CTheScripts::ScriptSprites[rectangle.m_nTextureId].Draw(CRect(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
+				([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(CTheScripts::ScriptSprites[rectangle.m_nTextureId]),Rect_Make(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
 					rectangle.m_sRect.right, rectangle.m_sRect.top), rectangle.m_sColor);
 			} else {
-				CSprite2d::DrawRect(CRect(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
+				([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(rectangle.m_sRect.left, rectangle.m_sRect.bottom,
 					rectangle.m_sRect.right, rectangle.m_sRect.top), rectangle.m_sColor);
 			}
 		}
@@ -1533,7 +1625,7 @@ void CHud::DrawAfterFade()
 
 	// Oddjob result
 	if (OddJob2OffTimer > 0)
-		OddJob2OffTimer -= CTimer::GetTimeStepInMilliseconds();
+		OddJob2OffTimer -= Timer_GetTimeStepInMilliseconds();
 
 	float fStep;
 	if (m_BigMessage[5][0] && OddJob2OffTimer <= 0.0f) {
@@ -1553,7 +1645,7 @@ void CHud::DrawAfterFade()
 				}
 				break;
 			case 2:
-				OddJob2Timer += CTimer::GetTimeStepInMilliseconds();
+				OddJob2Timer += Timer_GetTimeStepInMilliseconds();
 				if (OddJob2Timer > 1500) {
 					OddJob2On = 3;
 				}
@@ -1608,11 +1700,11 @@ void CHud::DrawAfterFade()
 			CFont::SetScale(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_AMERICAN ? SCREEN_SCALE_X(1.7f) : SCREEN_SCALE_X(1.5f), SCREEN_SCALE_Y(1.8f));
 
 			if (BigMessageX[1] >= SCREEN_SCALE_FROM_RIGHT(20.0f)) {
-				BigMessageInUse[1] += CTimer::GetTimeStep();
+				BigMessageInUse[1] += (*Timer_GetTimeStep());
 
 				if (BigMessageInUse[1] >= 120.0f) {
 					BigMessageInUse[1] = 120.0f;
-					BigMessageAlpha[1] -= CTimer::GetTimeStepInMilliseconds();
+					BigMessageAlpha[1] -= Timer_GetTimeStepInMilliseconds();
 				}
 				if (BigMessageAlpha[1] <= 0.0f) {
 					m_BigMessage[1][0] = 0;
@@ -1620,8 +1712,8 @@ void CHud::DrawAfterFade()
 					BigMessageAlpha[1] = 0.0f;
 				}
 			} else {
-				BigMessageX[1] += SCREEN_SCALE_X((CTimer::GetTimeStepInMilliseconds() * 0.3f));
-				BigMessageAlpha[1] += CTimer::GetTimeStepInMilliseconds();
+				BigMessageX[1] += SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f));
+				BigMessageAlpha[1] += Timer_GetTimeStepInMilliseconds();
 
 				if (BigMessageAlpha[1] > 255.0f)
 					BigMessageAlpha[1] = 255.0f;
@@ -1683,22 +1775,35 @@ void CHud::GetRidOfAllHudMessages()
 void CHud::ReloadTXD()
 {
 	for (int i = 0; i < NUM_HUD_SPRITES; ++i) {
-		Sprites[i].Delete();
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprites[i]));
 	}
 
-	int HudTXD = CTxdStore::FindTxdSlot("hud");
-	CTxdStore::RemoveTxdSlot(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int HudTXD = TxdStore_FindTxdSlot("hud");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(HudTXD);
 
 	debug("Reloading HUD.TXD...\n");
 
-	HudTXD = CTxdStore::AddTxdSlot("hud");
-	CTxdStore::LoadTxd(HudTXD, "MODELS/HUD.TXD");
-	CTxdStore::AddRef(HudTXD);
-	CTxdStore::PopCurrentTxd();
-	CTxdStore::SetCurrentTxd(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	HudTXD = TxdStore_AddTxdSlot("hud");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(HudTXD, "MODELS/HUD.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(HudTXD);
 
 	for (int i = 0; i < NUM_HUD_SPRITES; i++) {
-		Sprites[i].SetTexture(WeaponFilenames[i].name, WeaponFilenames[i].mask);
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
 	}
 }
 #endif
@@ -1708,14 +1813,22 @@ void CHud::Initialise()
 	m_Wants_To_Draw_Hud = true;
 	m_Wants_To_Draw_3dMarkers = true;
 
-	int HudTXD = CTxdStore::AddTxdSlot("hud");
-	CTxdStore::LoadTxd(HudTXD, "MODELS/HUD.TXD");
-	CTxdStore::AddRef(HudTXD);
-	CTxdStore::PopCurrentTxd();
-	CTxdStore::SetCurrentTxd(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int HudTXD = TxdStore_AddTxdSlot("hud");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_LoadFile(HudTXD, "MODELS/HUD.TXD");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(HudTXD);
 
 	for (int i = 0; i < NUM_HUD_SPRITES; i++) {
-		Sprites[i].SetTexture(WeaponFilenames[i].name, WeaponFilenames[i].mask);
+		([](Sprite2d *spriteSelf,const char *name,const char *mask){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTextureMasked(spriteSelf,name,mask);
+})(&(Sprites[i]),WeaponFilenames[i].name, WeaponFilenames[i].mask);
 	}
 
 	m_pLastZoneName = nil;
@@ -1781,9 +1894,10 @@ void CHud::Initialise()
 	m_LastWeapon = 0;
 
 #ifndef MASTER
-	VarConsole.Add("Draw HUD", &m_Wants_To_Draw_Hud, false);
+	VarConsole_AddBool(&VarConsole,"Draw HUD", &m_Wants_To_Draw_Hud, false); // rouz edit (ChatGPT)
 #endif
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 }
 
 void CHud::ReInitialise() {
@@ -1887,9 +2001,9 @@ void CHud::SetHelpMessage(wchar *message, bool quick, bool displayForever)
 			m_HelpMessageToPrint[i] = 0;
 		}
 
-		CMessages::WideStringCopy(m_HelpMessage, message, HELP_MSG_LENGTH);
-		CMessages::InsertPlayerControlKeysInString(m_HelpMessage);
-		if (m_HelpMessageState == 0 || !CMessages::WideStringCompare(m_HelpMessage, m_HelpMessageToPrint, HELP_MSG_LENGTH)) {
+		Messages_WideStringCopy(m_HelpMessage, message, HELP_MSG_LENGTH);
+		Messages_InsertPlayerControlKeysInString(m_HelpMessage);
+		if (m_HelpMessageState == 0 || !Messages_WideStringCompare(m_HelpMessage, m_HelpMessageToPrint, HELP_MSG_LENGTH)) {
 			for (int i = 0; i < HELP_MSG_LENGTH; i++) {
 				m_LastHelpMessage[i] = 0;
 			}
@@ -1902,8 +2016,8 @@ void CHud::SetHelpMessage(wchar *message, bool quick, bool displayForever)
 				m_HelpMessageState = displayForever;
 			} else {
 				m_HelpMessageState = 1;
-				CMessages::WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
-				CMessages::WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
+				Messages_WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
+				Messages_WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
 			}
 
 			m_HelpMessageQuick = quick;
@@ -1955,7 +2069,10 @@ void CHud::SetZoneName(wchar *name)
 void CHud::Shutdown()
 {
 	for (int i = 0; i < NUM_HUD_SPRITES; ++i) {
-		Sprites[i].Delete();
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(Sprites[i]));
 	}
 
 	RwTextureDestroy(gpSniperSightTex);
@@ -1973,8 +2090,10 @@ void CHud::Shutdown()
 	RwTextureDestroy(gpViewFinderTex);
 	gpViewFinderTex = nil;
 
-	int HudTXD = CTxdStore::FindTxdSlot("hud");
-	CTxdStore::RemoveTxdSlot(HudTXD);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int HudTXD = TxdStore_FindTxdSlot("hud");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(HudTXD);
 }
 
 float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
@@ -2031,7 +2150,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 				}
 				break;
 			case FADING_IN:
-				fadeTimer += CTimer::GetTimeStepInMilliseconds();
+				fadeTimer += Timer_GetTimeStepInMilliseconds();
 				if (fadeTimer > 1000.0f) {
 					operation = START_FADE_OUT;
 					fadeTimer = 1000;
@@ -2039,7 +2158,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 				alpha = fadeTimer / 1000.0f * 255.0f;
 				break;
 			case FADING_OUT:
-				fadeTimer -= CTimer::GetTimeStepInMilliseconds();
+				fadeTimer -= Timer_GetTimeStepInMilliseconds();
 				if (fadeTimer < 0.0f) {
 					fadeTimer = 0;
 					operation = FADED_OUT;
@@ -2049,7 +2168,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 			default:
 				break;
 		}
-		timer += CTimer::GetTimeStepInMilliseconds();
+		timer += Timer_GetTimeStepInMilliseconds();
 	}
 
 	switch (fadingElement) {
@@ -2089,4 +2208,11 @@ CHud::ResetWastedText(void)
 	m_BigMessage[0][0] = 0;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

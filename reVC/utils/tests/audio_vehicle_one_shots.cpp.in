@@ -1,0 +1,261 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include "AudioVehicleModels.h"
+#include "AudioVehicleDoorTypes.h"
+#include "soundlist.h"
+#include "@MODEL_IDS@"
+#include "@VEHICLE_TYPES@"
+#include "@APPEARANCE@"
+#include "@WEAPON_TYPES@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using int16=int16_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct IntValue {int32_t v;unsigned token;operator int32_t() const {
+    // Observe each original model or weapon field read
+    event(token);return v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe floating reads on Clang and GCC
+    event(token);
+#endif
+    // Retain pure floating field reads on native MSVC
+    return v;
+}};
+struct CWeapon {IntValue m_eWeaponType;};
+class CPed {public:CWeapon weapons[TOTAL_WEAPON_SLOTS];uint32_t driveBy;
+    bool HasWeaponSlot(uint8_t slot) {
+        // Observe the original captured driver predicate and its selected slot
+        event(32);return weapons[slot].m_eWeaponType!=WEAPONTYPE_UNARMED;
+    }
+    bool IsPedDoingDriveByShooting() {
+        // Observe the original captured driver's drive-by query
+        event(34);return driveBy!=0;
+    }
+    CWeapon &GetWeapon(uint8_t slot) {
+        // Observe the original selected weapon reference
+        event(35);return weapons[slot];
+    }
+};
+struct DriverValue {CPed *pointer;operator CPed *() const {
+    // Observe capture of the current driver pointer
+    event(31);return pointer;
+}};
+class CVehicle {public:IntValue m_modelIndex;FloatValue m_aWheelSpeed[4];DriverValue pDriver;int32_t appearance;
+    int16_t GetModelIndex() const {
+        // Read the same original signed model field
+        return (int16_t)(int32_t)m_modelIndex;
+    }
+    int32_t GetVehicleAppearance() {
+        // Observe the live appearance query
+        event(22);return appearance;
+    }
+};
+using CAutomobile=CVehicle;
+static int16_t handBrake();
+struct CPad {int16_t GetHandBrake() {
+    // Forward the original first pad query to the fixture
+    return handBrake();
+}};static CPad Pads[1];
+struct cAudioManager {
+@FIELDS@
+    void ProcessVehicleOneShots(cVehicleParams &);void SetupPedComments(cPedParams &,uint16_t);
+};
+@MACROS@
+struct DoorValue {uint8_t v;constexpr DoorValue(uint8_t value):v(value){}operator uint8_t() const {
+    // Observe the original table-field read before alternate event-table queries
+    event(26);return v;
+}};
+@TABLE@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CVehicle cars[2];static CPed drivers[2];
+static unsigned seedValue,cases,callbacks,requests,offsetReads,pedCalls,stereoRight,mutations,loops,reflections,clamps,layers[19];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestVehicleOneShotsC(cAudioManager *,cVehicleParams *);
+extern "C" void TestVehicleOneShotsRealSubmit(cAudioManager *);
+@PROTOTYPES@
+static void value(uint32_t v) {
+    // Hash scalar observations and exact callback order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Hash every initialized word of complete records
+    digest=TestAircraftHash(digest,p,size);
+}
+static unsigned identity(const void *p) {
+    // Normalize vehicle and captured driver pointers
+    return p==&cars[0]?1:p==&cars[1]?2:p==&drivers[0]?3:p==&drivers[1]?4:0;
+}
+static void observe() {
+    // Include complete owner, parameter, vehicle and pedestrian records
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)identity(params.m_pVehicle);CVehicle vehicles[2];memcpy(vehicles,cars,sizeof(vehicles));
+    for(unsigned i=0;i<2;++i)vehicles[i].pDriver.pointer=(CPed *)(uintptr_t)identity(cars[i].pDriver.pointer);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(vehicles,sizeof(vehicles));bytes(drivers,sizeof(drivers));
+}
+static void event(unsigned token) {
+    // Observe live game queries before changing later vehicle and event-table reads
+    ++callbacks;value(token);observe();
+    if(token==31&&(seedValue&128)){params.m_pVehicle=&cars[1];cars[1].m_modelIndex.v=MI_PREDATOR;}
+    if(token==26&&(seedValue&256)){++mutations;for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j)active->m_asAudioEntities[active->m_sQueueSample.m_nEntityIndex].m_awAudioEvent[j]=SOUND_CAR_DOOR_CLOSE_FRONT_LEFT;}
+    if(token==35&&(seedValue&512))drivers[0].weapons[WEAPONSLOT_SUBMACHINEGUN].m_eWeaponType.v=WEAPONTYPE_TEC9;
+}
+extern "C" float AudioAircraftHost_WheelSpeed(const CVehicle *vehicle) {
+    // Query the live original rotor-speed input
+    return vehicle->m_aWheelSpeed[1];
+}
+extern "C" int32_t AudioVehicleHost_Appearance(CVehicle *vehicle) {
+    // Query the current vehicle's appearance
+    return vehicle->GetVehicleAppearance();
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *vehicle) {
+    // Read each original live model expression
+    return vehicle->GetModelIndex();
+}
+extern "C" uint8_t AudioVehicleOneShotsHost_DoorType(uint32_t index) {
+    // Read the original immutable audio-table door kind
+    return aVehicleSettings[index].m_bDoorType;
+}
+static int16_t handBrake() {
+    // Exercise both original Hunter weapon choices
+    event(30);return (seedValue/7)%2?255:0;
+}
+extern "C" int16_t AudioVehicleOneShotsHost_HandBrake() {
+    // Retain the first pad's original handbrake query
+    return Pads[0].GetHandBrake();
+}
+extern "C" CVehicle *AudioGame_FindVehicle() {
+    // Exercise player and AI Hunter branches after the handbrake predicate
+    event(29);return seedValue%3==0?NULL:&cars[(seedValue/3)%2];
+}
+extern "C" CPed *AudioVehicleOneShotsHost_Driver(const CVehicle *vehicle) {
+    // Capture the original driver before later live vehicle changes
+    return vehicle->pDriver;
+}
+extern "C" uint8_t AudioVehicleOneShotsHost_HasWeapon(CPed *ped,uint8_t slot) {
+    // Query the captured driver and selected slot
+    return ped->HasWeaponSlot(slot);
+}
+extern "C" uint8_t AudioVehicleOneShotsHost_DriveBy(CPed *ped) {
+    // Query the captured driver rather than a later replacement vehicle
+    return ped->IsPedDoingDriveByShooting();
+}
+extern "C" int32_t AudioVehicleOneShotsHost_Weapon(CPed *ped,uint8_t slot) {
+    // Read the type from the original selected weapon reference
+    return ped->GetWeapon(slot).m_eWeaponType;
+}
+void cAudioManager::SetupPedComments(cPedParams &p,uint16_t sound) {
+    // Observe retained pedestrian context and its original distance fields
+    ++pedCalls;event(36);value(sound);value(p.m_bDistanceCalculated);bytes(&p.m_fDistance,4);value(identity(p.m_pPed));p.m_pPed=&drivers[0];
+}
+extern "C" void AudioPedSpeech_Setup(cAudioManager *manager,cPedParams *p,uint16_t sound) {
+    // Forward the original local context through the remaining comment boundary
+    manager->SetupPedComments(*p,sound);
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Observe sample selection and change subsequent live event and parameter accesses
+    event(40);value(sample);
+    if(seedValue&1024){params.m_pVehicle=&cars[1];params.m_VehicleType=VEHICLE_TYPE_BIKE;active->m_sQueueSample.m_nEntityIndex^=1;}
+    return 16000+(sample%120)*127;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live loop sample before its end-offset argument is evaluated
+    ++offsetReads;event(41);value(sample);if(seedValue&2048)active->m_sQueueSample.m_nSampleIndex=SFX_M60_LEFT;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the later current sample argument
+    ++offsetReads;event(42);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request and reflection recursion
+    if(active->m_sQueueSample.m_nCounter>=256)++reflections;event(44);return (seedValue/5)%3==0;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Exercise both defined disabled-time-scale reflection paths
+    event(45);return (seedValue/9)%2;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe actual insertion and retained stereo state across the first request
+    ++requests;event(43);uint32_t c=manager->m_sQueueSample.m_nCounter;
+    const uint32_t counters[]={68,36,37,81,87,51,86,15,80,48,50,79};
+    for(unsigned j=0;j<12;++j)if(c==counters[j])++layers[j];
+    if(c==34)++layers[18];if(c>=41&&c<=46)++layers[12];if(c>=82&&c<=85)++layers[13];if(c>=91&&c<=94)++layers[14];if(c>=53&&c<=58)++layers[15];if(c>=89&&c<=90)++layers[16];if(c<30||c>94)++layers[17];
+    if(manager->m_sQueueSample.m_nLoopCount==0)++loops;if(manager->m_sQueueSample.m_bIs2D&&manager->m_sQueueSample.m_nPan==127)++stereoRight;
+    TestVehicleOneShotsRealSubmit(manager);event(46);
+    if(seedValue&4096){++mutations;manager->m_sQueueSample.m_nFrequency=12345;manager->m_sQueueSample.m_nSampleIndex=SFX_ROCKET_LEFT;manager->m_sQueueSample.m_fDistance=12;manager->m_sQueueSample.m_nEntityIndex^=1;params.m_pVehicle=&cars[1];}
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Supply the unused linked geometry dependency
+    *out={0,0,0};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the unused linked geometry dependency
+    memset(out,0,sizeof(*out));
+}
+@METHOD@
+@EVENTS@
+static float eventVolume(int event,unsigned seed) {
+    // Stay inside the original defined conversion domains while exercising clamping boundaries
+    if(event==SOUND_CAR_SPLASH){const float v[]={149,150,151,799,800,801};return v[seed%6];}
+    if(event==SOUND_CAR_TANK_TURRET_ROTATE){const float v[]={0,0.0001f,0.038399f,0.0384f,0.038401f,0.1f};return v[seed%6];}
+    if(event==SOUND_CAR_PED_COLLISION){const float v[]={0,0.001f,1,19.999f,20,20.001f,50};return v[seed%7];}
+    const float v[]={0,0.001f,0.25f,0.399f,0.4f,0.5f,1,1.2f};return v[seed%8];
+}
+static void prepare(unsigned seed) {
+    // Seed all event labels, model and weapon choices, exact ranges and shared history cadence
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));memset(drivers,0,sizeof(drivers));
+    const int models[]={MI_LANDSTAL,MI_CADDY,MI_HUNTER,MI_CHOPPER,MI_SEASPAR,MI_SPARROW,MI_MAVERICK,MI_VCNMAV,MI_PREDATOR,MI_SKIMMER};
+    const int weapons[]={WEAPONTYPE_UNARMED,WEAPONTYPE_TEC9,WEAPONTYPE_SILENCED_INGRAM,WEAPONTYPE_MP5,WEAPONTYPE_UZI,WEAPONTYPE_COLT45};
+    const float rotor[]={0,0.043999f,0.044f,0.044001f,0.1f,0.219999f,0.22f};
+    for(unsigned j=0;j<2;++j){cars[j].m_modelIndex={models[(seed/11+j)%10],21};cars[j].appearance=(seed/13+j)%6;cars[j].m_aWheelSpeed[1]={rotor[(seed/17+j)%7],24};cars[j].pDriver.pointer=(seed/19+j)%3?&drivers[(seed/23+j)%2]:NULL;drivers[j].driveBy=(seed/29+j)%2;for(unsigned slot=0;slot<TOTAL_WEAPON_SLOTS;++slot)drivers[j].weapons[slot].m_eWeaponType={weapons[(seed/31+j)%6],33};}
+    params.m_pVehicle=&cars[0];params.m_nIndex=seed%MAX_CARS;params.m_VehicleType=seed%2?VEHICLE_TYPE_BIKE:VEHICLE_TYPE_CAR;
+    const float ranges[]={0,1,24,34.999f,35,35.001f,39.999f,40,40.001f,49.999f,50,50.001f,59.999f,60,60.001f,119.999f,120,120.001f};float range=ranges[(seed/37)%18];params.m_fDistance=range*range;params.m_bDistanceCalculated=(seed/41)%3;
+    active->m_sQueueSample.m_fDistance=(seed/43)%36;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_nPan=53;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nEntityIndex=seed%2;active->m_nActiveSamples=8;active->m_bDynamicAcousticModelingStatus=1;
+    active->m_FrameCounter=seed%97==0?UINT32_MAX-3:(seed/8)*7;
+    for(unsigned j=0;j<5;++j)active->m_anRandomTable[j]=(int32_t)((seed*(j+1))%1001)-500;
+    for(unsigned entity=0;entity<2;++entity){active->m_asAudioEntities[entity].m_AudioEvents=(seed/47+entity)%5;for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j){int event=events[(seed+entity*7+j*11)%ARRAY_SIZE(events)];active->m_asAudioEntities[entity].m_awAudioEvent[j]=(int16_t)event;active->m_asAudioEntities[entity].m_afVolume[j]=eventVolume(event,seed+j);}}
+#ifndef GTA_PS2
+    // Seed loop fields to expose partial writes
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    // Exercise real reflection request insertion with initialized geometry
+    for(unsigned j=0;j<5;++j){active->m_afReflectionsDistances[j]=4+(float)j*4;active->m_avecReflectionsPos[j]={1,(float)j,3};}
+#endif
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening an error dialog
+    SetErrorMode(3);
+#endif
+    // Compare complete event loops across alternating owners without resetting shared counters
+    for(unsigned seed=0;seed<16384;++seed){prepare(seed);observe();@RUN@;observe();for(unsigned entity=0;entity<2;++entity)for(unsigned j=0;j<NUM_AUDIOENTITY_EVENTS;++j)if(active->m_asAudioEntities[entity].m_afVolume[j]==800)++clamps;++cases;}
+    // Require every sound family plus pedestrian, stereo, loop and mutable-event paths
+    for(unsigned j=0;j<19;++j)if(!layers[j])return 2;
+    if(!pedCalls||!stereoRight||!loops||!mutations||!clamps)return 3;
+#ifndef GTA_PS2
+    // Require desktop live loop queries
+    if(!offsetReads)return 4;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    // Require actual request recursion in reflection-enabled shapes
+    if(!reflections)return 5;
+#endif
+    printf("%u cases %u callbacks %u requests %u reflections %llu\n",cases,callbacks,requests,reflections,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

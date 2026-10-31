@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Vehicle.h"
@@ -7,19 +9,14 @@
 
 class CObject;
 
-enum {
-	CARWHEEL_FRONT_LEFT,
-	CARWHEEL_REAR_LEFT,
-	CARWHEEL_FRONT_RIGHT,
-	CARWHEEL_REAR_RIGHT
-};
+#include "WheelIndices.h"
 
 
 class CAutomobile : public CVehicle
 {
 public:
 	CDamageManager Damage;
-	CDoor Doors[6];
+	CDoor Doors[VEHICLE_DOOR_COUNT];
 	RwFrame *m_aCarNodes[NUM_CAR_NODES];
 	CColPoint m_aWheelColPoints[4];
 	float m_aSuspensionSpringRatio[4];
@@ -173,3 +170,6 @@ public:
 
 extern CVector vecHunterGunPos;
 extern bool bAllCarCheat;
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)

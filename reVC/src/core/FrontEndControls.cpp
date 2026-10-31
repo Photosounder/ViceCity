@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 #include "Timer.h"
@@ -137,7 +139,10 @@ void
 CPlaceableSprite::Draw(const CRGBA &color, float x, float y)
 {
 	if(m_pSprite)
-		m_pSprite->Draw(CRect(m_position.x+x, m_position.y+y,
+		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(m_pSprite,Rect_Make(m_position.x+x, m_position.y+y,
 		                      m_position.x+x + m_size.x, m_position.y+y + m_size.y),
 		                color);
 }
@@ -194,7 +199,7 @@ CMenuPictureAndText::AddText(wchar *text, float positionX, float positionY, CRGB
 }
 
 void
-CMenuPictureAndText::AddPicture(CSprite2d *sprite, CSprite2d *shadow, float positionX, float positionY, float width, float height, CRGBA const &color)
+CMenuPictureAndText::AddPicture(Sprite2d *sprite, Sprite2d *shadow, float positionX, float positionY, float width, float height, CRGBA const &color)
 {
 	int i;
 	if(m_numSprites >= 5)
@@ -212,7 +217,7 @@ CMenuPictureAndText::AddPicture(CSprite2d *sprite, CSprite2d *shadow, float posi
 }
 
 void
-CMenuPictureAndText::AddPicture(CSprite2d *sprite, float positionX, float positionY, float width, float height, CRGBA const &color)
+CMenuPictureAndText::AddPicture(Sprite2d *sprite, float positionX, float positionY, float width, float height, CRGBA const &color)
 {
 	int i;
 	if(m_numSprites >= 5)
@@ -542,7 +547,7 @@ CMenuMultiChoicePictured::Initialise(void)
 }
 
 CPlaceableShOption*
-CMenuMultiChoicePictured::AddOption(CSprite2d *sprite, float positionX, float positionY, const CVector2D &size, bool bSelected)
+CMenuMultiChoicePictured::AddOption(Sprite2d *sprite, float positionX, float positionY, const CVector2D &size, bool bSelected)
 {
 	CPlaceableShOption *option;
 	option = CMenuMultiChoice::AddOption(nil, 0.0f, 0.0f, bSelected, false);
@@ -661,7 +666,7 @@ CMenuMultiChoicePicturedTriggered::Initialise(void)
 }
 
 CPlaceableShOption*
-CMenuMultiChoicePicturedTriggered::AddOption(CSprite2d *sprite, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected)
+CMenuMultiChoicePicturedTriggered::AddOption(Sprite2d *sprite, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected)
 {
 	CPlaceableShOption *option;
 	option = CMenuMultiChoicePictured::AddOption(sprite, positionX, positionY, size, bSelected);
@@ -703,7 +708,7 @@ CMenuMultiChoicePicturedTriggeredAnyMove::Initialise(void)
 }
 
 CPlaceableShOption*
-CMenuMultiChoicePicturedTriggeredAnyMove::AddOption(CSprite2d *sprite, FEC_MOVETAB *moveTab, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected)
+CMenuMultiChoicePicturedTriggeredAnyMove::AddOption(Sprite2d *sprite, FEC_MOVETAB *moveTab, float positionX, float positionY, const CVector2D &size, Trigger trigger, bool bSelected)
 {
 	CPlaceableShOption *option;
 	option = CMenuMultiChoicePicturedTriggered::AddOption(sprite, positionX, positionY, size, trigger, bSelected);
@@ -1042,11 +1047,11 @@ void
 CMenuOnOff::Draw(CRGBA const &optionHighlight, CRGBA const &titleHighlight, float x, float y)
 {
 	if(m_type == 1){
-		m_options[0].m_text = TheText.Get("FEM_NO");
-		m_options[1].m_text = TheText.Get("FEM_YES");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_NO");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_YES");
 	}else if(m_type == 0){
-		m_options[0].m_text = TheText.Get("FEM_OFF");
-		m_options[1].m_text = TheText.Get("FEM_ON");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_OFF");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_ON");
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
@@ -1079,11 +1084,11 @@ void
 CMenuOnOff::DrawNormal(float x, float y)
 {
 	if(m_type == 1){
-		m_options[0].m_text = TheText.Get("FEM_NO");
-		m_options[1].m_text = TheText.Get("FEM_YES");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_NO");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_YES");
 	}else if(m_type == 0){
-		m_options[0].m_text = TheText.Get("FEM_OFF");
-		m_options[1].m_text = TheText.Get("FEM_ON");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_OFF");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_ON");
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
@@ -1106,11 +1111,11 @@ void
 CMenuOnOff::DrawHighlighted(CRGBA const &titleHighlight, float x, float y)
 {
 	if(m_type == 1){
-		m_options[0].m_text = TheText.Get("FEM_NO");
-		m_options[1].m_text = TheText.Get("FEM_YES");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_NO");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_YES");
 	}else if(m_type == 0){
-		m_options[0].m_text = TheText.Get("FEM_OFF");
-		m_options[1].m_text = TheText.Get("FEM_ON");
+		m_options[0].m_text = Text_Get(&TheText,"FEM_OFF");
+		m_options[1].m_text = Text_Get(&TheText,"FEM_ON");
 	}
 
 	if(m_bSetTextScale && m_bSetTitleTextScale)
@@ -1223,18 +1228,27 @@ CMenuSlider::Draw(const CRGBA &optionHighlight, const CRGBA &titleHighlight, flo
 			float f = m_value/1000.0f;
 			CVector2D boxPos = m_box.m_position + m_position + CVector2D(x,y);
 			if(m_box.m_bDropShadow)
-				CSprite2d::DrawRect(
-					CRect(boxPos.x + X(m_box.m_shadowOffset.x),
+				([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+					Rect_Make(boxPos.x + X(m_box.m_shadowOffset.x),
 					      boxPos.y + Y(m_box.m_shadowOffset.y),
 					      boxPos.x + X(m_box.m_shadowOffset.x) + m_size[0].x,
 					      boxPos.y + Y(m_box.m_shadowOffset.y) + m_size[0].y),
 					shadowCol);
-			CSprite2d::DrawRect(
-				CRect(boxPos.x, boxPos.y,
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+				Rect_Make(boxPos.x, boxPos.y,
 				      boxPos.x + m_size[0].x, boxPos.y + m_size[0].y),
 				m_colors[1]);
-			CSprite2d::DrawRect(
-				CRect(boxPos.x, boxPos.y,
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+				Rect_Make(boxPos.x, boxPos.y,
 				      boxPos.x + m_size[0].x*f, boxPos.y + m_size[0].y),
 				selectionCol);
 		}else if(m_style == 0){
@@ -1266,18 +1280,27 @@ CMenuSlider::DrawNormal(float x, float y)
 		float f = m_value/1000.0f;
 		CVector2D boxPos = m_box.m_position + m_position + CVector2D(x,y);
 		if(m_box.m_bDropShadow)
-			CSprite2d::DrawRect(
-				CRect(boxPos.x + X(m_box.m_shadowOffset.x),
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+				Rect_Make(boxPos.x + X(m_box.m_shadowOffset.x),
 				      boxPos.y + Y(m_box.m_shadowOffset.y),
 				      boxPos.x + X(m_box.m_shadowOffset.x) + m_size[0].x,
 				      boxPos.y + Y(m_box.m_shadowOffset.y) + m_size[0].y),
 				shadowCol);
-		CSprite2d::DrawRect(
-			CRect(boxPos.x, boxPos.y,
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+			Rect_Make(boxPos.x, boxPos.y,
 			      boxPos.x + m_size[0].x, boxPos.y + m_size[0].y),
 			m_colors[1]);
-		CSprite2d::DrawRect(
-			CRect(boxPos.x, boxPos.y,
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+			Rect_Make(boxPos.x, boxPos.y,
 			      boxPos.x + m_size[0].x*f, boxPos.y + m_size[0].y),
 			m_colors[0]);
 	}else if(m_style == 0){
@@ -1312,18 +1335,27 @@ CMenuSlider::DrawHighlighted(const CRGBA &titleHighlight, float x, float y)
 		float f = m_value/1000.0f;
 		CVector2D boxPos = m_box.m_position + m_position + CVector2D(x,y);
 		if(m_box.m_bDropShadow)
-			CSprite2d::DrawRect(
-				CRect(boxPos.x + X(m_box.m_shadowOffset.x),
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+				Rect_Make(boxPos.x + X(m_box.m_shadowOffset.x),
 				      boxPos.y + Y(m_box.m_shadowOffset.y),
 				      boxPos.x + X(m_box.m_shadowOffset.x) + m_size[0].x,
 				      boxPos.y + Y(m_box.m_shadowOffset.y) + m_size[0].y),
 				shadowCol);
-		CSprite2d::DrawRect(
-			CRect(boxPos.x, boxPos.y,
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+			Rect_Make(boxPos.x, boxPos.y,
 			      boxPos.x + m_size[0].x, boxPos.y + m_size[0].y),
 			m_colors[1]);
-		CSprite2d::DrawRect(
-			CRect(boxPos.x, boxPos.y,
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(
+			Rect_Make(boxPos.x, boxPos.y,
 			      boxPos.x + m_size[0].x*f, boxPos.y + m_size[0].y),
 			m_colors[0]);
 	}else if(m_style == 0){
@@ -1352,7 +1384,7 @@ CMenuSlider::DrawTicks(const CVector2D &position, const CVector2D &size, float h
 	int left = level*numTicks;
 	int drewSelection = 0;
 	for(i = 0; i < numTicks; i++){
-		CRect rect(position.x + X(8.0f)*i, position.y + dy - stepy*i,
+		CRect rect = Rect_Make(position.x + X(8.0f)*i, position.y + dy - stepy*i,
 		           position.x + X(8.0f)*i + X(4.0f), position.y + dy + size.y);
 		if(bShadow){
 			CRect shadowRect = rect;
@@ -1360,15 +1392,27 @@ CMenuSlider::DrawTicks(const CVector2D &position, const CVector2D &size, float h
 			shadowRect.right += X(shadowOffset.x);
 			shadowRect.top += Y(shadowOffset.y);
 			shadowRect.bottom += Y(shadowOffset.y);
-			CSprite2d::DrawRect(shadowRect, shadowColor);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(shadowRect, shadowColor);
 		}
 		if(i < left)
-			CSprite2d::DrawRect(rect, leftCol);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, leftCol);
 		else if(!drewSelection){
-			CSprite2d::DrawRect(rect, selCol);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, selCol);
 			drewSelection = 1;
 		}else
-			CSprite2d::DrawRect(rect, rightCol);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, rightCol);
 	}
 }
 
@@ -1381,7 +1425,7 @@ CMenuSlider::DrawTicks(const CVector2D &position, const CVector2D &size, float h
 	float stepy = dy / numTicks;
 	int left = level*numTicks;
 	for(i = 0; i < numTicks; i++){
-		CRect rect(position.x + X(8.0f)*i, position.y + dy - stepy*i,
+		CRect rect = Rect_Make(position.x + X(8.0f)*i, position.y + dy - stepy*i,
 		           position.x + X(8.0f)*i + X(4.0f), position.y + dy + size.y);
 		if(bShadow){
 			CRect shadowRect = rect;
@@ -1389,12 +1433,21 @@ CMenuSlider::DrawTicks(const CVector2D &position, const CVector2D &size, float h
 			shadowRect.right += X(shadowOffset.x);
 			shadowRect.top += Y(shadowOffset.y);
 			shadowRect.bottom += Y(shadowOffset.y);
-			CSprite2d::DrawRect(shadowRect, shadowColor);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(shadowRect, shadowColor);
 		}
 		if(i < left)
-			CSprite2d::DrawRect(rect, leftCol);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, leftCol);
 		else
-			CSprite2d::DrawRect(rect, rightCol);
+			([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(rect, rightCol);
 	}
 }
 
@@ -1885,3 +1938,5 @@ CMenuPageAnyMove::GoRightMenuOnPage(void)
 		m_pCurrentControl->GoLast();
 	}
 }
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

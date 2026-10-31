@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "policy.h"
+
+static unsigned removals,uncompressions,evictions,packedTimes,checks;
+static unsigned long long digest=1469598103934665603ULL;
+static unsigned randomState=0x12345678U;
+static void record(unsigned value)
+{
+    // Hash observable state without including addresses or padding bytes
+    digest=(digest^value)*1099511628211ULL;
+}
+static void require(bool value)
+{
+    // Stop at the first failed policy invariant in either implementation
+    ++checks;if(!value){fprintf(stderr,"policy check %u failed\n",checks);exit(2);}
+}
+static unsigned randomValue(void)
+{
+    // Generate identical repeatable cache and reference operations for both owners
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+extern "C" void re3_assert(const char*,const char*,unsigned,const char*)
+{
+    // Fail quietly if a tested operation violates an original project precondition
+    fprintf(stderr,"project assertion\n");exit(3);
+}
+extern "C" void AnimHierarchy_CalcTotalTimeCompressed(CAnimBlendHierarchy *self)
+{
+    // Observe the manager decision to calculate packed duration exactly once
+    ++packedTimes;self->totalLength=2.0f;
+}
+extern "C" void AnimHierarchy_Uncompress(CAnimBlendHierarchy *self)
+{
+    // Model only the lower owner result while testing actual manager cache policy
+    ++uncompressions;self->compressed=false;
+}
+extern "C" void AnimHierarchy_RemoveUncompressedData(CAnimBlendHierarchy *self)
+{
+    // Observe the actual selected eviction and its ordering relative to link removal
+    require(self->linkPtr!=NULL);++evictions;self->compressed=true;
+}
+#ifdef ORIGINAL
+void CStreaming::RemoveModel(int32 id)
+{
+    // Record the original inline streaming animation offset boundary
+    require(id>=STREAM_OFFSET_ANIM);++removals;record((unsigned)(id-STREAM_OFFSET_ANIM));
+}
+#else
+extern "C" void AnimManager_HostRemoveAnim(int32_t id)
+{
+    // Record the same external streaming animation operation after conversion
+    require(id>=0);++removals;record((unsigned)id);
+}
+extern "C" int AnimManager_HostCompareNames(const char *a,const char *b)
+{
+    // Retain the original Windows case insensitive string comparison primitive
+    return strcasecmp(a,b);
+}
+#endif
+int main(void)
+{
+    // Initialize the real manager and exercise registration, case folding and reference deletion boundaries
+    MANAGER(Initialise)();
+    for(int n=0;n<20;++n){
+        // Register distinct blocks and confirm the same case insensitive lookup storage
+        char name[24];sprintf(name,"block%02d",n);int id=MANAGER(RegisterAnimBlock)(name);
+        require(id==n);require(MANAGER(RegisterAnimBlock)(name)==n);
+        name[0]='B';require(BLOCK_NAME(name)==BLOCK_ID(n));require(MANAGER(GetAnimationBlockIndex)(name)==n);
+        require(MANAGER(GetNumRefsToAnimBlock)(n)==0);
+        for(int k=0;k<5;++k)MANAGER(AddAnimBlockRef)(n);
+        MANAGER(RemoveAnimBlockRefWithoutDelete)(n);require(removals==(unsigned)n);
+        for(int k=0;k<4;++k)MANAGER(RemoveAnimBlockRef)(n);
+        require(removals==(unsigned)n+1);require(MANAGER(GetNumRefsToAnimBlock)(n)==0);
+    }
+    require(BLOCK_NAME("absent")==NULL);require(MANAGER(GetAnimationBlockIndex)("absent")==-1);
+    // Populate actual static hierarchy records and preserve first-match name lookup behavior
+    CAnimBlock *block=BLOCK_ID(0);block->firstIndex=0;block->numAnims=32;
+    for(int n=0;n<32;++n){
+        // Initialize every observed hierarchy field before cache operations
+        CAnimBlendHierarchy *hier=ANIMATION_ID(n);memset(hier,0,sizeof(*hier));sprintf(hier->name,"anim%02d",n);hier->compressed=true;
+    }
+    require(ANIMATION_NAME("ANIM07",block)==ANIMATION_ID(7));require(ANIMATION_NAME("missing",block)==NULL);
+    // Fill beyond the real twenty-five-entry cache capacity before randomized promotion and removal
+    for(int n=0;n<32;++n)MANAGER(UncompressAnimation)(ANIMATION_ID(n));
+    require(evictions==7);require(uncompressions==32);
+    for(unsigned n=0;n<32768;++n){
+        // Apply identical cache operations with compressed, uncompressed and keep-compressed states
+        unsigned value=randomValue();int index=(int)((value>>10)%32);CAnimBlendHierarchy *hier=ANIMATION_ID(index);
+        if((value&15)==0){
+            // Remove a live entry without freeing or changing hierarchy payload state
+            MANAGER(RemoveFromUncompressedCache)(hier);require(hier->linkPtr==NULL);
+        }else if((value&15)==1 && !hier->linkPtr){
+            // Exercise lazy packed-duration calculation and repeat calls on an uncached hierarchy
+            hier->keepCompressed=true;hier->totalLength=0;MANAGER(UncompressAnimation)(hier);MANAGER(UncompressAnimation)(hier);hier->keepCompressed=false;
+        }else{
+            // Force a previously removed uncached hierarchy back through decompression when required
+            if(!hier->linkPtr)hier->compressed=true;MANAGER(UncompressAnimation)(hier);
+        }
+        unsigned active=0;
+        for(int k=0;k<32;++k){
+            // Compare membership and actual cache links rather than allocation addresses
+            CAnimBlendHierarchy *item=ANIMATION_ID(k);record(item->compressed);record(item->keepCompressed);record(item->linkPtr!=NULL);
+            if(item->linkPtr){
+                // Encode the next hierarchy identity to detect differences in least-recently-used order
+                ++active;unsigned next=33;
+                for(int j=0;j<32;++j)if(ANIMATION_ID(j)->linkPtr==item->linkPtr->next)next=(unsigned)j;
+                record(next);require(item->linkPtr->item==item);
+            }
+        }
+        require(active<=25);record(active);record(uncompressions);record(evictions);record(packedTimes);
+    }
+    // Remove all remaining cache links before reporting deterministic observable results
+    for(int n=0;n<32;++n)MANAGER(RemoveFromUncompressedCache)(ANIMATION_ID(n));
+    printf("operations=32768 checks=%u uncompressions=%u evictions=%u packed=%u hash=%016llx\n",checks,uncompressions,evictions,packedTimes,digest);
+    return 0;
+}

@@ -1,0 +1,407 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),checks,states,observations;
+static CPlayerPed players[2];static CPed victim;static CVehicle vehicle;static CWanted wanted[2];static CWeaponInfo infos[WEAPONTYPE_TOTALWEAPONS];static CBaseModelInfo models[NUM_DEFAULT_MODELS];
+static uint32_t now,frame;static unsigned activePlayer,mode;static bool armed,triggered,playback,inVehicle,properScaling;static float aspect;
+static uint16_t message[]={65,66,67,0},page[]={80,65,71,69,0},passed[]={75,70,51,0};static unsigned frenziesPassed;
+TestScreen RsGlobal;char gString[256];uint16_t gUString[256];
+int32 CPopulation::m_AllRandomPedsThisType;int32 CStats::CarsExploded,CStats::HelisDestroyed,CStats::BoatsExploded,CStats::PeopleKilledByPlayer,CStats::PedsKilledOfThisType[NUM_PEDTYPES],CStats::HeadsPopped,CStats::KillsSinceLastCheckpoint,CStats::PeopleKilledByOthers;
+extern "C" {CText TheText;}
+static void Number(uint64_t value)
+{
+    // Compare ordered scalar observations without process-specific addresses or uninitialized padding
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Preserve exact single-precision coordinate, scale and timing representations
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Check(bool value)
+{
+    // Stop the console comparison at the first independent invariant violation
+    ++checks;if(!value){fprintf(stderr,"Darkel check failed at %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static unsigned TextId(const uint16_t *value)
+{
+    // Distinguish canonical start, sentinel, translated and shared-scratch string pointers
+    if(!value)return 0;if(value==message)return 1;if(value==page)return 2;if(value==passed)return 3;if(value==gUString)return 4;Check(false);return 999;
+}
+static void Words(const uint16_t *value)
+{
+    // Observe complete visible text while keeping all scratch tail bytes in separate deterministic snapshots
+    Number(TextId(value));if(value)for(unsigned i=0;value[i];i++){Check(i<255);Number(value[i]);}Number(0);
+}
+void Observe(unsigned point,int identity)
+{
+    // Exercise live canonical state only at external calls that may change gameplay or rendering state
+    ++observations;Number(point);Number(identity);if(!armed||triggered)return;
+    if(mode==1&&point==1){triggered=true;GLOBAL(KillsNeeded)=2;GLOBAL(Status)=KILLFRENZY_FAILED;}
+    else if(mode==2&&point==2){triggered=true;GLOBAL(bNeedHeadShot)=true;GLOBAL(WeaponType)=WEAPONTYPE_MOLOTOV;}
+    else if(mode==3&&point==25){triggered=true;activePlayer=1;}
+    else if(mode==4&&point==33){triggered=true;GLOBAL(InterruptedWeaponType)=WEAPONTYPE_COLT45;GLOBAL(AmmoInterruptedWeapon)=123;}
+    else if(mode==5&&point==34){triggered=true;activePlayer=1;}
+    else if(mode==6&&point==40&&identity==SOUND_RAMPAGE_ONGOING){triggered=true;GLOBAL(KillsNeeded)=0;GLOBAL(PreviousTime)=1;}
+    else if(mode==7&&point==40&&identity==SOUND_RAMPAGE_FAILED){triggered=true;GLOBAL(KillsNeeded)=-1;}
+    else if(mode==8&&point==40&&identity==SOUND_RAMPAGE_KILL){triggered=true;victim.model.value=12;victim.bChrisCriminal.value=true;}
+    else if(mode==9&&point==40&&identity==SOUND_RAMPAGE_CAR_BLOWN){triggered=true;vehicle.model.value=13;vehicle.appearance.value=VEHICLE_APPEARANCE_BOAT;}
+    else if(mode==10&&point==50){triggered=true;GLOBAL(TimeOfFrenzyStart)-=250;GLOBAL(pStartMessage)=passed;}
+    else if(mode==11&&point==53){triggered=true;GLOBAL(TimeLimit)=-1;RsGlobal.width=853;RsGlobal.height=481;}
+    else if(mode==12&&point==56){triggered=true;GLOBAL(KillsNeeded)=-3;GLOBAL(pStartMessage)=NULL;}
+    else if(mode==13&&point==60){triggered=true;GLOBAL(pStartMessage)=passed;}
+    else if(mode==14&&point==41){triggered=true;GLOBAL(InterruptedWeaponSelected)=WEAPONTYPE_UZI;}
+    else if(mode==15&&point==22){triggered=true;GLOBAL(bStandardSoundAndMessages)=false;}
+    else if(mode==16&&point==32){triggered=true;GLOBAL(InterruptedWeaponType)=0;GLOBAL(WeaponType)=WEAPONTYPE_EXPLOSION;}
+}
+int CEntity::GetModelIndex()
+{
+    // Preserve the original separate native model reads before kill counting and statistics
+    return model;
+}
+eVehicleAppearance CVehicle::GetVehicleAppearance()
+{
+    // Preserve the original vehicle-appearance query after registered-model counting
+    return (eVehicleAppearance)(int)appearance;
+}
+CWeaponInfo *CWeapon::GetInfo()
+{
+    // Preserve the native weapon-info lookup through its current live weapon type
+    Observe(18,identity);return WeaponInfo_GetWeaponInfo(m_eWeaponType);
+}
+CPlayerPed *FindPlayerPed()
+{
+    // Keep fresh global player lookups distinct from the locally captured player pointer
+    Observe(10,(int)activePlayer);return &players[activePlayer];
+}
+CVehicle *FindPlayerVehicle()
+{
+    // Preserve every original player-vehicle lookup without caching it across gameplay callbacks
+    Observe(11,0);return inVehicle?&vehicle:NULL;
+}
+CWeapon *CPlayerPed::GetWeapon()
+{
+    // Return the original current weapon record after its native selected-slot read
+    Observe(12,identity);uint8_t slot=m_currentWeapon;Check(slot<TOTAL_WEAPON_SLOTS);return &weapons[slot];
+}
+CWeapon &CPlayerPed::GetWeapon(uint8_t slot)
+{
+    // Preserve the native uint8 parameter conversion and exact indexed weapon identity
+    Observe(13,identity);Number(slot);Check(slot<TOTAL_WEAPON_SLOTS);return weapons[slot];
+}
+int CPlayerPed::GetWeaponSlot(eWeaponType type)
+{
+    // Preserve each repeated native slot lookup independently of later weapon-field reads
+    Observe(14,identity);Number(type);return (int)WeaponInfo_GetWeaponInfo(type)->m_nWeaponSlot;
+}
+void CPlayerPed::RemoveWeaponAnims(int type,float delta)
+{
+    // Observe platform-dependent animation removal order and the original negative time delta
+    Observe(22,identity);Number(type);Floating(delta);Check(delta==-1000.0f);
+}
+int32 CPlayerPed::GiveWeapon(eWeaponType type,uint32 ammo,bool unused)
+{
+    // Apply deterministic external weapon replacement while retaining the captured native receiver
+    Observe(25,identity);Number(type);Number(ammo);Number(unused);Check(type>=0&&type<WEAPONTYPE_TOTALWEAPONS);unsigned slot=infos[type].m_nWeaponSlot;
+    weapons[slot].m_eWeaponType=type;weapons[slot].m_nAmmoTotal=(int32)ammo;weapons[slot].m_nAmmoInClip=(int32)(ammo>17?17:ammo);weapons[slot].m_eWeaponState=WEAPONSTATE_READY;return (int32)slot;
+}
+void CPlayerPed::SetCurrentWeapon(eWeaponType type)
+{
+    // Verify the original enum overload separately from the integer slot overload
+    Observe(26,identity);Number(type);Check(type>=0&&type<WEAPONTYPE_TOTALWEAPONS);m_currentWeapon=(uint8_t)infos[type].m_nWeaponSlot;m_nSelectedWepSlot=(int8_t)m_currentWeapon;
+}
+void CPlayerPed::SetCurrentWeapon(int slot)
+{
+    // Preserve the native integer overload and its selected-slot interpretation
+    Observe(27,identity);Number(slot);Check(slot>=0&&slot<TOTAL_WEAPON_SLOTS);m_currentWeapon=(uint8_t)slot;
+}
+void CPlayerPed::MakeChangesForNewWeapon(int32 slot)
+{
+    // Observe the original promoted int8 or uint8 input to the integer overload
+    Observe(28,identity);Number(slot);
+}
+void CPlayerPed::MakeChangesForNewWeapon(eWeaponType)
+{
+    // Reject an accidental switch to the unused enum overload during conversion
+    abort();
+}
+void CPlayerPed::SetAmmo(eWeaponType type,uint32 ammo)
+{
+    // Preserve the original repeated Min operand reads before updating external weapon ammunition
+    Observe(29,identity);Number(type);Number(ammo);weapons[infos[type].m_nWeaponSlot].m_nAmmoTotal=(int32)ammo;
+}
+void CPlayerPed::ClearWeaponTarget()
+{
+    // Observe target clearing only in the original vehicle-start branch
+    Observe(30,identity);
+}
+void CPlayerPed::RemoveWeaponModel(int model)
+{
+    // Observe receiver and model lookup order before any subsequent fresh player accesses
+    Observe(32,identity);Number(model);
+}
+void CPlayerPed::RemoveDrivebyAnims()
+{
+    // Preserve drive-by animation cleanup after current weapon changes
+    Observe(35,identity);
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int model)
+{
+    // Resolve the original model pointer without replacing reference-counting policy
+    Observe(31,model);Check(model>=0&&model<NUM_DEFAULT_MODELS);return &models[model];
+}
+void CBaseModelInfo::AddRef()
+{
+    // Retain native uint16 reference-count wrap and callback ordering
+    Observe(33,identity);++references;
+}
+void CBaseModelInfo::RemoveRef()
+{
+    // Retain repeated removal and native uint16 underflow in original double-restoration cases
+    Observe(34,identity);--references;
+}
+void CGameLogic::ClearShortCut()
+{
+    // Observe the first original startup callback before rampage state is assigned
+    Observe(1,0);
+}
+void CGameLogic::RemoveShortCutDropOffPointForMission()
+{
+    // Preserve the second original startup callback before weapon remapping
+    Observe(2,0);
+}
+void CStats::AnotherKillFrenzyPassed()
+{
+    // Observe proper-rampage scoring before wanted-level clearing and weapon restoration
+    Observe(41,0);++frenziesPassed;
+}
+bool CReplay::IsPlayingBack()
+{
+    // Preserve the unconditional drawing gate and conditional gameplay replay gates
+    Observe(42,0);return playback;
+}
+extern "C" CWeaponInfo *WeaponInfo_GetWeaponInfo(eWeaponType type)
+{
+    // Return the actual stable C weapon record after observing each original info lookup
+    Observe(17,type);Check(type>=0&&type<WEAPONTYPE_TOTALWEAPONS);return &infos[type];
+}
+extern "C" void Wanted_SetWantedLevel(CWanted *value,int32_t level)
+{
+    // Preserve the fresh wanted receiver at rampage completion
+    Check(value==&wanted[0]||value==&wanted[1]);Observe(43,value->identity);Number(level);value->level=level;
+}
+extern "C" void DMAudio_PlayFrontEndSound(uint16_t sound,uint32_t value)
+{
+    // Observe exact sound selection and unsigned time/volume conversions before callbacks
+    Number(value);Observe(40,sound);
+}
+extern "C" const uint32_t *Timer_GetTimeInMilliseconds()
+{
+    // Keep the original pure live clock alias while recording repeated access order
+    Observe(44,0);return &now;
+}
+extern "C" const uint32_t *Timer_GetFrameCounter()
+{
+    // Retain the original frame-parity alias used for the final timer blink
+    Observe(45,0);return &frame;
+}
+extern "C" uint16_t *Text_Get(CText *text,const char *key)
+{
+    // Preserve native pointer-identity comparisons for the sentinel and translated completion message
+    Check(text==&TheText);Observe(60,0);if(strcmp(key,"PAGE_00")==0)return page;Check(strcmp(key,"KF_3")==0);return passed;
+}
+extern "C" float Draw_BackendScreenWidth()
+{
+    // Reproduce the original platform-dependent pure screen-width macro
+#ifdef GTA_PS2
+    return 640.0f;
+#else
+    return (float)RsGlobal.width;
+#endif
+}
+extern "C" float Draw_BackendScreenHeight()
+{
+    // Reproduce the original platform-dependent pure screen-height macro
+#ifdef GTA_PS2
+#ifdef GTA_PAL
+    return 512.0f;
+#else
+    return 448.0f;
+#endif
+#else
+    return (float)RsGlobal.height;
+#endif
+}
+extern "C" float Draw_GetAspectRatio()
+{
+    // Preserve the existing C aspect provider and each original macro expansion
+    Observe(46,0);return aspect;
+}
+extern "C" float Draw_ScaleY(float value)
+{
+    // Preserve the complete existing C proper-scaling primitive's original arithmetic
+    Observe(47,0);return properScaling?value:value*((float)DEFAULT_SCREEN_HEIGHT/448.0f);
+}
+void AsciiToUnicode(const char *source,uint16_t *target)
+{
+    // Execute the complete original global conversion primitive on shared canonical scratch buffers
+    Observe(48,0);while((*target++=(unsigned char)*source++)!='\0');
+}
+void CFont::SetJustifyOff()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(50,0);
+}
+void CFont::SetBackgroundOff()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(51,0);
+}
+void CFont::SetCentreSize(float value)
+{
+    // Observe exact native centering width after platform-dependent scaling
+    Floating(value);Observe(52,0);
+}
+void CFont::SetCentreOn()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(54,0);
+}
+void CFont::SetPropOn()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(55,0);
+}
+void CFont::SetScale(float x,float y)
+{
+    // Observe both exact native font scales before a selected rendering callback
+    Floating(x);Floating(y);Observe(53,0);
+}
+void CFont::SetColor(CRGBA value)
+{
+    // Preserve all four original uint8 color conversions including computed fade alpha
+    Number(value.r);Number(value.g);Number(value.b);Number(value.a);Observe(56,0);
+}
+void CFont::SetFontStyle(int16_t value)
+{
+    // Preserve the original native style-width conversion and its ordering
+    Number(value);Observe(57,0);
+}
+void CFont::PrintString(float x,float y,uint16_t *text)
+{
+    // Observe visible native text, shared scratch identity and exact drawing coordinates
+    Floating(x);Floating(y);Words(text);Observe(58,0);
+}
+void CFont::SetCentreOff()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(59,0);
+}
+void CFont::SetRightJustifyOn()
+{
+    // Preserve each native font-state write at its original statement boundary
+    Observe(61,0);
+}
+static unsigned SlotFor(unsigned type)
+{
+    // Seed valid external weapon records across every original weapon category
+    if(type==0)return 0;if(type<12)return 1;if(type<17)return 2;if(type<19)return 3;if(type<22)return 4;if(type<26)return 5;if(type<28)return 6;if(type<30)return 8;if(type<34)return 7;return type==35?7:9;
+}
+static void Reset()
+{
+    // Seed all canonical fields and complete external records without introducing fake getter/setter observations
+    armed=false;triggered=false;mode=0;activePlayer=0;playback=false;inVehicle=false;properScaling=true;aspect=16.0f/9.0f;now=1000;frame=0;frenziesPassed=0;RsGlobal.width=1280;RsGlobal.height=720;
+    GLOBAL(TimeLimit)=12000;GLOBAL(PreviousTime)=12;GLOBAL(TimeOfFrenzyStart)=1000;GLOBAL(WeaponType)=WEAPONTYPE_UZI;GLOBAL(AmmoInterruptedWeapon)=91;GLOBAL(KillsNeeded)=7;GLOBAL(InterruptedWeaponType)=WEAPONTYPE_COLT45;GLOBAL(InterruptedWeaponSelected)=WEAPONTYPE_UZI;
+    GLOBAL(bStandardSoundAndMessages)=false;GLOBAL(bNeedHeadShot)=false;GLOBAL(bProperKillFrenzy)=false;GLOBAL(Status)=KILLFRENZY_NONE;GLOBAL(ModelToKill)=-1;GLOBAL(ModelToKill2)=21;GLOBAL(ModelToKill3)=22;GLOBAL(ModelToKill4)=23;GLOBAL(pStartMessage)=message;
+    for(unsigned i=0;i<NUM_DEFAULT_MODELS;i++){GLOBAL(RegisteredKills)[i]=(uint16_t)(i*3);models[i].identity=(int)i;models[i].references=10;}
+    CStats::CarsExploded=1;CStats::HelisDestroyed=2;CStats::BoatsExploded=3;CStats::PeopleKilledByPlayer=4;CStats::HeadsPopped=5;CStats::KillsSinceLastCheckpoint=6;CStats::PeopleKilledByOthers=7;CPopulation::m_AllRandomPedsThisType=8;
+    for(unsigned i=0;i<NUM_PEDTYPES;i++)CStats::PedsKilledOfThisType[i]=100+(int)i;
+    victim.identity=10;victim.model={20,10,70,170};victim.bChrisCriminal={false,10,71,171};victim.m_nPedType=PEDTYPE_CIVMALE;vehicle.identity=20;vehicle.model={24,20,70,170};vehicle.appearance={VEHICLE_APPEARANCE_CAR,20,73,173};
+    memset(infos,0,sizeof(infos));for(unsigned i=0;i<WEAPONTYPE_TOTALWEAPONS;i++){infos[i].m_nWeaponSlot=SlotFor(i);infos[i].m_nAmountofAmmunition=10+(int)i;infos[i].m_nModelId=100+(int)i;}
+    const eWeaponType slotTypes[TOTAL_WEAPON_SLOTS]={WEAPONTYPE_UNARMED,WEAPONTYPE_KNIFE,WEAPONTYPE_GRENADE,WEAPONTYPE_COLT45,WEAPONTYPE_SHOTGUN,WEAPONTYPE_UZI,WEAPONTYPE_M4,WEAPONTYPE_M60,WEAPONTYPE_SNIPERRIFLE,WEAPONTYPE_CAMERA};
+    for(unsigned i=0;i<2;i++){
+        CPlayerPed &p=players[i];p.identity=30+(int)i;p.m_nSelectedWepSlot=(int8_t)(3+i);p.m_currentWeapon=(uint8_t)(3+i);p.m_pWanted=&wanted[i];wanted[i].identity=(int)i;wanted[i].level=3;
+        for(unsigned j=0;j<TOTAL_WEAPON_SLOTS;j++){CWeapon &w=p.weapons[j];w.identity=1000+(int)i*100+(int)j;w.m_eWeaponType=slotTypes[j];w.m_eWeaponState=WEAPONSTATE_READY;w.m_nAmmoTotal=300+(int)j;w.m_nAmmoInClip=17;}
+    }
+    memset(gString,0x31,sizeof(gString));for(unsigned i=0;i<256;i++)gUString[i]=0x7777;
+}
+static void Snapshot()
+{
+    // Observe all 18 canonical fields, every registered model, external weapon state, stats and scratch bytes
+    ++states;Number(states);Number(GLOBAL(TimeLimit));Number(GLOBAL(PreviousTime));Number(GLOBAL(TimeOfFrenzyStart));Number(GLOBAL(WeaponType));Number(GLOBAL(AmmoInterruptedWeapon));Number(GLOBAL(KillsNeeded));Number(GLOBAL(InterruptedWeaponType));Number(GLOBAL(InterruptedWeaponSelected));
+    Number(GLOBAL(bStandardSoundAndMessages));Number(GLOBAL(bNeedHeadShot));Number(GLOBAL(bProperKillFrenzy));Number(GLOBAL(Status));Number(GLOBAL(ModelToKill));Number(GLOBAL(ModelToKill2));Number(GLOBAL(ModelToKill3));Number(GLOBAL(ModelToKill4));Number(TextId(GLOBAL(pStartMessage)));
+    for(unsigned i=0;i<NUM_DEFAULT_MODELS;i++){Number(GLOBAL(RegisteredKills)[i]);Number(models[i].references);}
+    Number(CStats::CarsExploded);Number(CStats::HelisDestroyed);Number(CStats::BoatsExploded);Number(CStats::PeopleKilledByPlayer);Number(CStats::HeadsPopped);Number(CStats::KillsSinceLastCheckpoint);Number(CStats::PeopleKilledByOthers);Number(CPopulation::m_AllRandomPedsThisType);
+    for(unsigned i=0;i<NUM_PEDTYPES;i++)Number(CStats::PedsKilledOfThisType[i]);
+    for(unsigned i=0;i<2;i++){Number(wanted[i].level);Number(players[i].m_nSelectedWepSlot);Number(players[i].m_currentWeapon);for(unsigned j=0;j<TOTAL_WEAPON_SLOTS;j++){const CWeapon &w=players[i].weapons[j];Number(w.m_eWeaponType);Number(w.m_eWeaponState);Number(w.m_nAmmoTotal);Number(w.m_nAmmoInClip);}}
+    for(unsigned i=0;i<256;i++){Number((unsigned char)gString[i]);Number(gUString[i]);}Number(activePlayer);Number(triggered);Number(frenziesPassed);
+    // Emit optional compact checkpoints to diagnose the first whole-operation divergence
+    if(getenv("DARKEL_TRACE"))fprintf(stderr,"%llu %llu %016llx\n",(unsigned long long)states,(unsigned long long)observations,(unsigned long long)digest);
+}
+static void FadeCases()
+{
+    // Cover exact fade boundaries, short windows and unsigned start/end overflow without changing the formula
+    const uint32_t values[]={0,1,499,500,501,999,1000,2999,3000,3499,3500,7500,7999,8000,8001,11000,UINT32_MAX-500,UINT32_MAX};
+    for(unsigned a=0;a<18;a++)for(unsigned b=0;b<18;b++)for(unsigned c=0;c<18;c++)Number(Run_Darkel_CalcFade(values[a],values[b],values[c]));
+    Check(Run_Darkel_CalcFade(0,0,8000)==0&&Run_Darkel_CalcFade(500,0,8000)==255&&Run_Darkel_CalcFade(8000,0,8000)==0);
+}
+static void RegisterCases()
+{
+    // Compare all original weapon equivalences, model alternatives, headshot gates and replay alternatives
+    for(int selected=0;selected<=WEAPONTYPE_ANYWEAPON;selected++)for(int used=0;used<=WEAPONTYPE_ANYWEAPON;used++)for(unsigned flags=0;flags<8;flags++){
+        Reset();GLOBAL(Status)=KILLFRENZY_ONGOING;GLOBAL(WeaponType)=selected;GLOBAL(bNeedHeadShot)=(flags&1)!=0;playback=(flags&2)!=0;GLOBAL(ModelToKill)=(flags&4)?-1:99;GLOBAL(ModelToKill2)=20;
+        Run_Darkel_RegisterKillByPlayer(&victim,(eWeaponType)used,(flags&4)!=0);Snapshot();
+    }
+    // Preserve post-sound live model/stat reads and the unused victim/weapon inputs of nonplayer kills
+    for(unsigned callback=0;callback<2;callback++){
+        Reset();GLOBAL(Status)=KILLFRENZY_ONGOING;mode=callback?8:0;armed=true;Run_Darkel_RegisterKillByPlayer(&victim,WEAPONTYPE_UZI,true);Snapshot();Run_Darkel_RegisterKillNotByPlayer(NULL,WEAPONTYPE_UNIDENTIFIED);Snapshot();
+    }
+    // Cover vehicle matching, appearance categories, replay gates and uint16 model-counter rollover
+    for(unsigned appearance=0;appearance<6;appearance++)for(unsigned flags=0;flags<8;flags++){
+        Reset();vehicle.appearance.value=(int)appearance;GLOBAL(Status)=(flags&1)?KILLFRENZY_ONGOING:KILLFRENZY_NONE;GLOBAL(ModelToKill)=(flags&2)?-2:99;GLOBAL(ModelToKill3)=24;playback=(flags&4)!=0;mode=9;armed=true;
+        GLOBAL(RegisteredKills)[24]=UINT16_MAX;Run_Darkel_RegisterCarBlownUpByPlayer(&vehicle);Snapshot();
+    }
+    // Preserve Init's status-only reset and the complete model-array reset independently of kill statistics
+    Reset();Run_Darkel_Init();Check(GLOBAL(KillsNeeded)==7&&GLOBAL(Status)==KILLFRENZY_NONE);Run_Darkel_ResetModelsKilledByPlayer();for(unsigned i=0;i<NUM_DEFAULT_MODELS;i++)Check(Run_Darkel_QueryModelsKilledByPlayer(i)==0);Snapshot();
+}
+static void WeaponCases()
+{
+    // Compare every real/pseudo weapon, sentinel identity, vehicle branch and mutable native startup callback
+    for(int weapon=0;weapon<=WEAPONTYPE_ANYWEAPON;weapon++)for(unsigned scenario=0;scenario<8;scenario++)for(unsigned callback=0;callback<6;callback++){
+        Reset();inVehicle=(scenario&1)!=0;mode=callback==0?0:callback==1?1:callback==2?3:callback==3?4:callback==4?15:13;armed=true;
+        Run_Darkel_StartFrenzy((eWeaponType)weapon,(scenario&2)?-1:12000,9,(scenario&4)?-2:-1,(scenario&4)?page:message,21,22,23,(scenario&2)!=0,(scenario&1)!=0);Snapshot();
+        Number(Run_Darkel_FrenzyOnGoing());Number(Run_Darkel_ReadStatus());Run_Darkel_DealWithWeaponChangeAtEndOfFrenzy();Snapshot();
+    }
+    // Preserve fresh player lookups, local weapon pointers and the independent drive-by cleanup path
+    for(unsigned callback=0;callback<4;callback++){
+        Reset();inVehicle=true;GLOBAL(Status)=KILLFRENZY_ONGOING;mode=callback==0?0:callback==1?5:callback==2?16:14;armed=true;Run_Darkel_DealWithWeaponChangeAtEndOfFrenzy();Snapshot();Run_Darkel_ResetOnPlayerDeath();Snapshot();
+    }
+}
+static void UpdateCases()
+{
+    // Preserve failure-before-completion, repeated restoration, negative limits, clock wrap and sound callbacks
+    const int limits[]={-1,0,1,999,1000,5000,12000};const uint32_t elapsed[]={0,1,499,500,999,1000,4000,4999,5000,12000,UINT32_MAX};
+    for(unsigned limit=0;limit<7;limit++)for(unsigned time=0;time<11;time++)for(unsigned flags=0;flags<8;flags++){
+        Reset();GLOBAL(Status)=KILLFRENZY_ONGOING;GLOBAL(TimeLimit)=limits[limit];GLOBAL(KillsNeeded)=(flags&1)?0:7;GLOBAL(bProperKillFrenzy)=(flags&2)!=0;GLOBAL(bStandardSoundAndMessages)=true;playback=(flags&4)!=0;now=1000+elapsed[time];mode=(flags&2)?7:6;armed=true;
+        Run_Darkel_Update();Snapshot();Run_Darkel_ResetOnPlayerDeath();Snapshot();
+    }
+}
+static void DrawCases()
+{
+    // Compare exact text, fade, blink, scaling and sliding completion coordinates at every temporal boundary
+    const uint32_t elapsed[]={0,1,499,500,2999,3000,3499,3500,3999,4000,4999,5000,7499,7500,7999,8000,8001,10999,11000,UINT32_MAX};
+    for(unsigned status=0;status<4;status++)for(unsigned time=0;time<20;time++)for(unsigned flags=0;flags<16;flags++){
+        Reset();GLOBAL(Status)=(uint16_t)status;GLOBAL(bStandardSoundAndMessages)=(flags&1)!=0;playback=(flags&2)!=0;GLOBAL(TimeLimit)=(flags&4)?-1:12000;frame=(flags&8)?1:0;properScaling=(flags&8)!=0;now=1000+elapsed[time];
+        if(flags&4)GLOBAL(pStartMessage)=NULL;Run_Darkel_DrawMessages();Snapshot();
+    }
+    // Exercise native font callbacks that change later canonical fields and screen dimensions
+    for(unsigned callback=0;callback<4;callback++){
+        Reset();GLOBAL(Status)=KILLFRENZY_ONGOING;GLOBAL(bStandardSoundAndMessages)=true;now=5000;mode=callback==0?0:callback==1?10:callback==2?11:12;armed=true;Run_Darkel_DrawMessages();Snapshot();
+    }
+}
+int main()
+{
+    // Confirm canonical static startup before any original or C operation mutates the owner
+    Check(GLOBAL(Status)==0&&GLOBAL(TimeLimit)==0&&GLOBAL(pStartMessage)==NULL);for(unsigned i=0;i<NUM_DEFAULT_MODELS;i++)Check(GLOBAL(RegisteredKills)[i]==0);
+    Check((uintptr_t)&victim!=(uintptr_t)(CEntity*)&victim);Check((uintptr_t)&players[0]!=(uintptr_t)(CPed*)&players[0]);
+    FadeCases();RegisterCases();WeaponCases();UpdateCases();DrawCases();fprintf(stdout,"states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

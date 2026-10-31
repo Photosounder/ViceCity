@@ -1,0 +1,313 @@
+#include "owners.h"
+#include "capi.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),checks,states,observations;
+static CWanted state,copyState;static CVector nativePosition;static CPed peds[12];static CVehicle vehicles[12];static CCopPed cops[10];
+static CPool pedPool,vehiclePool;static uint8_t pedFlags[12],vehicleFlags[12];static unsigned mode;static bool armed,triggered,frenzy;static int drop;static uint8_t musicMode;static int audioWanted;
+static CPlayerPed player;static CVehicle *playerVehicle;static int8_t lastPaths[10];static unsigned randomCalls,dropCalls;
+int32 CStats::WantedStarsAttained,CStats::WantedStarsEvaded;
+extern "C" {uint32_t TestTime;cAudioManager AudioManager;uint32_t gMinTimeToNextReport[NUM_CRIME_TYPES];}
+static void Number(uint64_t value)
+{
+    // Compare ordered scalar observations without including process-specific pointers or record padding
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Preserve exact float results and signed zero in snapshots and native access traces
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Check(bool value)
+{
+    // Stop a quiet console comparison at the first independent invariant violation
+    ++checks;if(!value){fprintf(stderr,"Wanted check failed at %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static int CopId(CCopPed *value)
+{
+    // Preserve canonical pursuit-slot identities across native callbacks and stable compaction
+    if(!value)return 0;for(int i=0;i<10;i++)if(value==&cops[i])return i+1;Check(false);return 999;
+}
+static WantedVector Position(float x,float y,float z)
+{
+    // Construct identical named coordinates for the old C++ and new C vector-value ABIs
+    WantedVector value;value.x=x;value.y=y;value.z=z;return value;
+}
+static WantedPositionRef NativeRef()
+{
+    // Preserve the same actual native input object through the entire original operation
+    WantedPositionRef value={NULL,&nativePosition};return value;
+}
+static WantedPositionRef QueueRef(unsigned index)
+{
+    // Preserve a live reference to a canonical queued-crime coordinate across audio eligibility callbacks
+    WantedPositionRef value={&state.m_aCrimes[index].m_vecPosn,NULL};return value;
+}
+void Observe(unsigned point,int identity)
+{
+    // Observe lazy reads and writes before exercising a selected original statement boundary
+    ++observations;Number(point);Number(identity);if(!armed||triggered)return;
+    if(mode==1&&point==10){triggered=true;state.m_fCrimeSensitivity=2.75f;nativePosition.x=81;state.m_aCrimes[0].m_vecPosn.x=91;}
+    else if(mode==2&&point==11){triggered=true;state.m_nMinChaos=71;state.m_nWantedLevel=4;}
+    else if(mode==3&&point==20){triggered=true;nativePosition=CVector(61,62,63);state.m_aCrimes[0].m_vecPosn=Position(71,72,73);}
+    else if(mode==4&&point==21){triggered=true;AudioManager.m_FrameCounter=19;for(unsigned i=0;i<NUM_CRIME_TYPES;i++)gMinTimeToNextReport[i]=20;}
+    else if(mode==5&&point==22){triggered=true;state.m_nChaos=1300;state.m_nWantedLevel=2;}
+    else if(mode==6&&point==30){triggered=true;state.m_pCops[0]=&cops[9];state.m_CurrentCops=8;}
+    else if(mode==7&&point==31){triggered=true;state.m_pCops[0]=NULL;state.m_pCops[8]=&cops[8];state.m_CurrentCops=9;}
+    else if(mode==8&&point==11){triggered=true;drop=200;}
+    else if(mode==9&&point==40){triggered=true;pedFlags[11]=POOLFLAG_ISFREE;peds[10].model.value=0;}
+    else if(mode==10&&point==54){triggered=true;vehicles[identity-200].status.value=STATUS_WRECKED;}
+    else if(mode==11&&point==20){triggered=true;AudioManager.m_bIsInitialised=false;}
+    else if(mode==12&&point==60){triggered=true;state.m_nMinChaos=90;}
+}
+const CVector &CEntity::GetPosition()
+{
+    // Return the actual native coordinate reference at the original distance access
+    Observe(50,identity);return position;
+}
+int16 CEntity::GetModelIndex()
+{
+    // Preserve the model read before any distance or vehicle-status eligibility checks
+    return model;
+}
+uint8 CVehicle::GetStatus()
+{
+    // Preserve both original short-circuited status reads as separate native operations
+    return status;
+}
+bool CCopPed::DyingOrDead()
+{
+    // Observe the existing local pursuit pointer after its four original state writes
+    Observe(30,identity);return dying;
+}
+bool CCopPed::SetWanderPath(int8 path)
+{
+    // Preserve the original float-to-int8 native parameter conversion and receiver identity
+    Observe(32,identity);lastPaths[identity-300]=path;Number((uint8)path);return true;
+}
+CPool *CPools::GetPedPool()
+{
+    // Supply the same pool object independently at every original size or slot access
+    Observe(40,0);return &pedPool;
+}
+CPool *CPools::GetVehiclePool()
+{
+    // Preserve vehicle-pool lookup ordering after the complete pedestrian scan
+    Observe(41,0);return &vehiclePool;
+}
+bool CDarkel::FrenzyOnGoing()
+{
+    // Read frenzy state before the live crime-sensitivity field
+    Observe(10,0);return frenzy;
+}
+CVector FindPlayerCoors()
+{
+    // Return the separate by-value player-coordinate input for natural chaos decay
+    Observe(42,0);return CVector(1,2,3);
+}
+CVehicle *FindPlayerVehicle()
+{
+    // Preserve the current player-vehicle comparison after law-enforcer and model checks
+    Observe(43,0);return playerVehicle;
+}
+extern "C" uint32_t *Timer_GetTimeInMilliseconds()
+{
+    // Preserve repeated ordered clock reads and unsigned wraparound in all queue and decay tests
+    Observe(44,0);return &TestTime;
+}
+extern "C" int32_t CullZones_GetWantedLevelDrop()
+{
+    // Retain the original repeated Min macro argument evaluation under changing zone state
+    int value=drop;++dropCalls;Observe(11,0);Number(value);return value;
+}
+extern "C" float General_GetRandomNumberInRangeFloat(float min,float max)
+{
+    // Supply deterministic original wander values while observing callbacks before the pursuit slot is cleared
+    ++randomCalls;Observe(31,0);Floating(min);Floating(max);Check(min==0&&max==8);return (float)((randomCalls*13)%32)*.25f;
+}
+extern "C" bool IsPolicePedModel(int16_t value)
+{
+    // Preserve the independent native model predicate and its lazy evaluation
+    Observe(51,value);return value==1;
+}
+extern "C" bool IsPoliceVehicleModel(int16_t value)
+{
+    // Preserve the independent law-enforcement vehicle model predicate
+    Observe(52,value);return value==2;
+}
+void Error(const char *format,...)
+{
+    // Observe the original invalid-crime diagnostic without inventing an early return
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);Observe(60,0);for(const char *p=text;*p;p++)Number((unsigned char)*p);
+}
+extern "C" int WantedTest_Print(const char *format,...)
+{
+    // Compare original pursuit-repair diagnostics without emitting thousands of console lines
+    char text[256];va_list args;va_start(args,format);int result=vsnprintf(text,sizeof(text),format,args);va_end(args);Observe(61,0);for(const char *p=text;*p;p++)Number((unsigned char)*p);return result;
+}
+extern "C" uint8_t AudioPoliceHost_MusicMode()
+{
+    // Exercise audio callbacks before either native or canonical queued coordinates are sampled
+    Observe(20,0);return musicMode;
+}
+extern "C" CPlayerPed *AudioPoliceHost_FindPlayer()
+{
+    // Preserve fresh player lookup inside the original audio eligibility condition
+    Observe(21,0);return &player;
+}
+extern "C" int32_t AudioPoliceHost_WantedLevel(const CPlayerPed *value)
+{
+    // Preserve the final wanted eligibility callback before checking the live cooldown and position
+    Check(value==&player);Observe(22,0);return audioWanted;
+}
+extern "C" void AudioPoliceHost_CrimePosition(const CVector *value,AudioCrimePosition *plain)
+{
+    // Sample live native coordinates after all original eligibility callbacks without adding side effects
+    plain->x=value->x;plain->y=value->y;plain->z=value->z;
+}
+extern "C" CVehicle *AudioPoliceHost_PlayerVehicle()
+{
+    // Reject the unrelated audio vehicle-selection path in this complete audio-entry translation unit
+    abort();
+}
+extern "C" CEntity *AudioPoliceHost_AttachedTo(const CPlayerPed*)
+{
+    // Reject the unrelated audio vehicle-selection path in this complete audio-entry translation unit
+    abort();
+}
+extern "C" uint8_t AudioPoliceHost_IsVehicle(CEntity*)
+{
+    // Reject the unrelated audio vehicle-selection path in this complete audio-entry translation unit
+    abort();
+}
+extern "C" CVehicle *AudioPoliceHost_AsVehicle(CEntity*)
+{
+    // Reject the unrelated audio vehicle-selection path in this complete audio-entry translation unit
+    abort();
+}
+static void InitEntity(CEntity *entity,int identity,int16 model)
+{
+    // Initialize each native model without generating artificial setter observations
+    entity->identity=identity;entity->model={model,identity,53,153};entity->position=CVector(3,4,5);
+}
+static void Reset()
+{
+    // Seed all named record fields and unused queue entries after the original value-initialization lifecycle
+    armed=false;triggered=false;mode=0;frenzy=false;drop=0;musicMode=0;audioWanted=1;randomCalls=dropCalls=0;TestTime=2000;
+    GLOBAL(MaximumWantedLevel)=6;GLOBAL(nMaximumWantedLevel)=9600;CStats::WantedStarsAttained=0;CStats::WantedStarsEvaded=0;
+    Run_Wanted_ConstructValue(&state);Run_Wanted_Initialise(&state);Run_Wanted_ConstructValue(&copyState);nativePosition=CVector(11,12,13);
+    for(unsigned i=0;i<16;i++){state.m_aCrimes[i].m_nId=100+(int)i;state.m_aCrimes[i].m_nTime=99+i;state.m_aCrimes[i].m_vecPosn=Position(20+(float)i,30,40);state.m_aCrimes[i].m_bReported=(i&1)!=0;state.m_aCrimes[i].m_bPoliceDoesntCare=(i&2)!=0;}
+    AudioManager.m_bIsInitialised=true;AudioManager.m_FrameCounter=1000;AudioCrimes_Init(AudioManager.m_aCrimes);for(unsigned i=0;i<NUM_CRIME_TYPES;i++)gMinTimeToNextReport[i]=0;
+    for(int i=0;i<12;i++){
+        InitEntity(&peds[i],100+i,1);InitEntity(&vehicles[i],200+i,2);vehicles[i].bIsLawEnforcer={true,200+i,55,155};vehicles[i].status={STATUS_PHYSICS,200+i,54,154};pedFlags[i]=vehicleFlags[i]=POOLFLAG_ISFREE;
+    }
+    pedPool.m_entries=(uint8_t*)peds;pedPool.m_flags=pedFlags;pedPool.m_size=12;pedPool.m_entrySize=sizeof(CPed);pedPool.m_allocPtr=-1;
+    vehiclePool.m_entries=(uint8_t*)vehicles;vehiclePool.m_flags=vehicleFlags;vehiclePool.m_size=12;vehiclePool.m_entrySize=sizeof(CVehicle);vehiclePool.m_allocPtr=-1;playerVehicle=NULL;
+    for(int i=0;i<10;i++){
+        InitEntity(&cops[i],300+i,1);cops[i].m_bIsInPursuit={true,300+i,70,170};cops[i].m_objective={17,300+i,71,171};cops[i].m_prevObjective={18,300+i,72,172};cops[i].m_nLastPedState={19,300+i,73,173};cops[i].dying=false;lastPaths[i]=-1;
+    }
+}
+static void Record(const CWanted &value)
+{
+    // Observe every original named scalar, bit field, queued-crime component and pursuit pointer
+    Number(value.m_nChaos);Number(value.m_nMinChaos);Number(value.m_nLastUpdateTime);Number(value.m_nLastWantedLevelChange);Number(value.m_nLastTimeSuspended);Floating(value.m_fCrimeSensitivity);
+    Number(value.m_CurrentCops);Number(value.m_MaxCops);Number(value.m_MaximumLawEnforcerVehicles);Number(value.m_CopsBeatingSuspect);Number(value.m_RoadblockDensity);
+    Number(value.m_bIgnoredByCops);Number(value.m_bIgnoredByEveryone);Number(value.m_bSwatRequired);Number(value.m_bFbiRequired);Number(value.m_bArmyRequired);Number(value.m_nWantedLevel);Number(value.m_nMinWantedLevel);
+    for(unsigned i=0;i<16;i++){const CCrimeBeingQd &c=value.m_aCrimes[i];Number(c.m_nType);Number(c.m_nId);Number(c.m_nTime);Floating(c.m_vecPosn.x);Floating(c.m_vecPosn.y);Floating(c.m_vecPosn.z);Number(c.m_bReported);Number(c.m_bPoliceDoesntCare);}
+    for(unsigned i=0;i<10;i++)Number(CopId(value.m_pCops[i]));
+}
+static void Snapshot()
+{
+    // Compare all external mutations and canonical audio state after each complete wanted operation
+    ++states;Number(states);Record(state);Number(GLOBAL(MaximumWantedLevel));Number(GLOBAL(nMaximumWantedLevel));Number(TestTime);Number(CStats::WantedStarsAttained);Number(CStats::WantedStarsEvaded);Number(triggered);Number(randomCalls);Number(dropCalls);
+    for(unsigned i=0;i<10;i++){Number(cops[i].m_bIsInPursuit.value);Number(cops[i].m_objective.value);Number(cops[i].m_prevObjective.value);Number(cops[i].m_nLastPedState.value);Number((uint8)lastPaths[i]);}
+    Number(AudioManager.m_bIsInitialised);Number(AudioManager.m_FrameCounter);
+    for(unsigned i=0;i<AUDIO_CRIME_COUNT;i++){const cAMCrime &c=AudioManager.m_aCrimes[i];Number(c.type);Floating(c.position.x);Floating(c.position.y);Floating(c.position.z);Number(c.timer);}
+    for(unsigned i=0;i<NUM_CRIME_TYPES;i++)Number(gMinTimeToNextReport[i]);
+    // Emit optional compact checkpoints for locating the first original/C behavior divergence
+    if(getenv("WANTED_TRACE"))fprintf(stderr,"%llu %llu %016llx\n",(unsigned long long)states,(unsigned long long)observations,(unsigned long long)digest);
+}
+static void LevelCases()
+{
+    // Check every wanted threshold, invalid cap, ignored flag and reinforcement override combination
+    const int chaos[]={-1,0,49,50,51,179,180,549,550,1199,1200,2399,2400,4799,4800,9599,9600,9601};
+    for(int cap=-1;cap<8;cap++)for(int prior=0;prior<7;prior++)for(unsigned j=0;j<sizeof(chaos)/sizeof(chaos[0]);j++){
+        Reset();Run_Wanted_SetMaximumWantedLevel(cap);state.m_nChaos=chaos[j];state.m_nWantedLevel=prior;Run_Wanted_UpdateWantedLevel(&state);Snapshot();
+        for(unsigned flags=0;flags<32;flags++){
+            state.m_bIgnoredByCops=flags&1;state.m_bIgnoredByEveryone=(flags>>1)&1;state.m_bSwatRequired=(flags>>2)&1;state.m_bFbiRequired=(flags>>3)&1;state.m_bArmyRequired=(flags>>4)&1;
+            Number(Run_Wanted_AreMiamiViceRequired(&state));Number(Run_Wanted_AreSwatRequired(&state));Number(Run_Wanted_AreFbiRequired(&state));Number(Run_Wanted_AreArmyRequired(&state));Number(Run_Wanted_NumOfHelisRequired(&state));Number(Run_Wanted_IsIgnored(&state));Number(Run_Wanted_GetWantedLevel(&state));
+        }
+    }
+    // Preserve level clamps, no-drop restoration, duplicate cheat updates and partial queue clearing
+    for(int level=-1;level<9;level++)for(int minimum=0;minimum<7;minimum++){
+        Reset();state.m_nChaos=450;state.m_nWantedLevel=2;state.m_nMinWantedLevel=minimum;Run_Wanted_SetWantedLevelNoDrop(&state,level);Snapshot();Run_Wanted_CheatWantedLevel(&state,level);Snapshot();Run_Wanted_SetWantedLevel(&state,level);Snapshot();
+    }
+    // Independently verify representative exact wanted thresholds and constructor/copied-record values
+    Reset();state.m_nChaos=50;Run_Wanted_UpdateWantedLevel(&state);Check(state.m_nWantedLevel==1&&state.m_MaxCops==1);state.m_nChaos=180;Run_Wanted_UpdateWantedLevel(&state);Check(state.m_nWantedLevel==2&&state.m_MaxCops==3);
+    Run_Wanted_Copy(&copyState,&state);Record(copyState);Check(copyState.m_nChaos==state.m_nChaos&&copyState.m_nWantedLevel==state.m_nWantedLevel);Snapshot();
+}
+static void CrimeCases()
+{
+    // Exercise every crime multiplier, sensitivity, zone drop, audio gate and delayed native coordinate read
+    const int drops[]={-25,0,50,100,125};const float sensitivities[]={0,.25f,1,2.5f};
+    for(int type=0;type<NUM_CRIME_TYPES;type++)for(unsigned scenario=0;scenario<40;scenario++)for(unsigned callback=0;callback<6;callback++){
+        Reset();state.m_fCrimeSensitivity=sensitivities[scenario%4];drop=drops[(scenario/4)%5];frenzy=(scenario&1)!=0;musicMode=(scenario&2)?0:MUSICMODE_CUTSCENE;
+        mode=callback==0?0:callback==1?1:callback==2?3:callback==3?4:callback==4?8:11;armed=true;
+        Run_Wanted_ReportCrimeNow(&state,(eCrimeType)type,NativeRef(),(scenario&4)!=0);Snapshot();
+    }
+    // Preserve duplicate ID/type handling, the reported flag transition, full queues and signed ID conversion
+    for(unsigned full=0;full<2;full++)for(unsigned reported=0;reported<2;reported++)for(unsigned dontCare=0;dontCare<2;dontCare++){
+        Reset();if(full)for(unsigned i=0;i<16;i++)state.m_aCrimes[i].m_nType=CRIME_STEAL_CAR;
+        Number(Run_Wanted_AddCrimeToQ(&state,CRIME_SHOOT_COP,-17,NativeRef(),reported!=0,dontCare!=0));Snapshot();
+        nativePosition=CVector(111,112,113);TestTime+=99;Number(Run_Wanted_AddCrimeToQ(&state,CRIME_SHOOT_COP,-17,NativeRef(),true,false));Snapshot();
+        Run_Wanted_RegisterCrime(&state,CRIME_SHOOT_COP,NativeRef(),UINT32_MAX,false);Snapshot();Run_Wanted_RegisterCrime_Immediately(&state,CRIME_SHOOT_COP,NativeRef(),UINT32_MAX,false);Snapshot();Run_Wanted_RegisterCrime_Immediately(&state,CRIME_SHOOT_COP,NativeRef(),UINT32_MAX,false);Snapshot();
+        Run_Wanted_ClearQdCrimes(&state);Snapshot();
+    }
+    // Compare strict queue-age boundaries, unsigned wrap and live queue aliases after audio eligibility callbacks
+    const uint32_t starts[]={0,100,UINT32_MAX-200};const uint32_t ages[]={499,500,501,9999,10000,10001};
+    for(unsigned start=0;start<3;start++)for(unsigned age=0;age<6;age++)for(unsigned callback=0;callback<13;callback++){
+        Reset();state.m_aCrimes[0].m_nType=CRIME_SHOOT_COP;state.m_aCrimes[0].m_nTime=starts[start];state.m_aCrimes[0].m_bReported=false;TestTime=starts[start]+ages[age];mode=callback;armed=true;Run_Wanted_UpdateCrimesQ(&state);Snapshot();
+    }
+    // Verify a queued position remains live during the music callback before audio commits its crime record
+    Reset();state.m_aCrimes[0].m_nType=CRIME_SHOOT_COP;mode=3;armed=true;Run_Wanted_ReportCrimeNow(&state,CRIME_SHOOT_COP,QueueRef(0),false);Check(AudioManager.m_aCrimes[9].position.x==71&&AudioManager.m_aCrimes[9].position.y==72);Snapshot();
+    // Preserve initialization's untouched inactive queue fields and explicit record copy semantics
+    Reset();state.m_aCrimes[0].m_nType=CRIME_HIT_COP;Run_Wanted_Initialise(&state);Check(state.m_aCrimes[0].m_nType==CRIME_NONE&&state.m_aCrimes[0].m_nId==100&&state.m_aCrimes[0].m_vecPosn.x==20);Snapshot();
+}
+static void PoliceCases()
+{
+    // Compare reverse pool traversal and every lazy pedestrian/vehicle eligibility alternative
+    for(unsigned pattern=0;pattern<256;pattern++)for(unsigned callback=0;callback<3;callback++){
+        Reset();for(int i=0;i<12;i++){
+            unsigned value=(pattern>>(i%8))^(unsigned)i;pedFlags[i]=(value&1)?0:POOLFLAG_ISFREE;vehicleFlags[i]=(value&2)?0:POOLFLAG_ISFREE;
+            peds[i].model.value=(value&4)?1:3;vehicles[i].model.value=(value&8)?2:3;vehicles[i].bIsLawEnforcer.value=(value&16)!=0;vehicles[i].status.value=(uint8)(value%7);
+            peds[i].position=CVector((float)(i*2),0,0);vehicles[i].position=CVector(0,(float)(i*2),0);
+        }
+        playerVehicle=(pattern&32)?&vehicles[3]:NULL;mode=callback==1?9:callback==2?10:0;armed=true;
+        Number(Run_Wanted_WorkOutPolicePresence(Position(0,0,0),18));Snapshot();
+    }
+    // Independently enforce strict three-dimensional radius exclusion at exact equality
+    Reset();pedFlags[0]=0;peds[0].position=CVector(6,8,0);Check(Run_Wanted_WorkOutPolicePresence(Position(0,0,0),10)==0);Check(Run_Wanted_WorkOutPolicePresence(Position(0,0,0),10.01f)==1);Snapshot();
+    // Compare pursuit state writes, dead-cop handling, local-pointer retention and random-path conversion
+    for(unsigned pattern=0;pattern<64;pattern++)for(unsigned callback=0;callback<3;callback++){
+        Reset();for(unsigned i=0;i<10;i++){state.m_pCops[i]=(pattern&(1u<<(i%6)))?&cops[i]:NULL;cops[i].dying=(i&1)!=0;}state.m_CurrentCops=7;
+        mode=callback==1?6:callback==2?7:0;armed=true;Run_Wanted_ResetPolicePursuit(&state);Check(state.m_CurrentCops==0);Snapshot();
+    }
+}
+static void UpdateCases()
+{
+    // Cover exact decay/suspension time boundaries, current-cop recount and stable pursuit-list compaction
+    const uint32_t ages[]={0,999,1000,1001,19999,20000,20001,UINT32_MAX};
+    for(unsigned prior=0;prior<7;prior++)for(unsigned age=0;age<8;age++)for(unsigned pattern=0;pattern<16;pattern++){
+        Reset();state.m_nWantedLevel=prior;state.m_nChaos=20+(int)prior*700;state.m_nMinChaos=9;state.m_nMinWantedLevel=1;TestTime=ages[age];state.m_nLastUpdateTime=0;state.m_nLastTimeSuspended=0;
+        for(unsigned i=0;i<10;i++)state.m_pCops[i]=(pattern&(1u<<(i%4)))?&cops[i]:NULL;
+        state.m_CurrentCops=(uint8)(pattern%7);if(pattern&8){pedFlags[0]=0;peds[0].position=CVector(1,2,3);}
+        Run_Wanted_Update(&state);Snapshot();Run_Wanted_Suspend(&state);Snapshot();Run_Wanted_Reset(&state);Snapshot();
+    }
+}
+int main()
+{
+    // Confirm static startup and the exact named-field value-initialization lifecycle before seeding test cases
+    Check(GLOBAL(MaximumWantedLevel)==6&&GLOBAL(nMaximumWantedLevel)==9600);Run_Wanted_ConstructValue(&state);
+    Check(state.m_nChaos==0&&state.m_nWantedLevel==0&&state.m_fCrimeSensitivity==0&&!state.m_pCops[0]);for(unsigned i=0;i<16;i++)Check(state.m_aCrimes[i].m_nId==0&&state.m_aCrimes[i].m_nTime==0&&state.m_aCrimes[i].m_vecPosn.x==0&&!state.m_aCrimes[i].m_bReported);
+    Check((uintptr_t)&peds[0]!=(uintptr_t)(CEntity*)&peds[0]);Check((uintptr_t)&cops[0]!=(uintptr_t)(CPed*)&cops[0]);
+    LevelCases();CrimeCases();PoliceCases();UpdateCases();fprintf(stdout,"states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

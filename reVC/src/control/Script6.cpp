@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -32,6 +34,7 @@
 #include "Streaming.h"
 #include "Weather.h"
 #include "Zones.h"
+#include "Gangs.h"
 #include "main.h"
 #include "GameLogic.h"
 #include "Sprite.h"
@@ -99,7 +102,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		CCarCtrl::bCarsGeneratedAroundCamera = (ScriptParams[0] != 0);
 		return 0;
 	case COMMAND_CLEAR_SMALL_PRINTS:
-		CMessages::ClearSmallMessagesOnly();
+		Messages_ClearSmallMessagesOnly();
 		return 0;
 	/*
 	case COMMAND_HAS_MILITARY_CRANE_COLLECTED_ALL_CARS:
@@ -140,11 +143,11 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	case COMMAND_SET_THREAT_FOR_PED_TYPE:
 		CollectParameters(&m_nIp, 2);
-		CPedType::AddThreat(ScriptParams[0], ScriptParams[1]);
+		PedType_AddThreat(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	case COMMAND_CLEAR_THREAT_FOR_PED_TYPE:
 		CollectParameters(&m_nIp, 2);
-		CPedType::RemoveThreat(ScriptParams[0], ScriptParams[1]);
+		PedType_RemoveThreat(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	case COMMAND_GET_CAR_COLOURS:
 	{
@@ -178,7 +181,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	case COMMAND_LOAD_COLLISION:
 	{
 		CollectParameters(&m_nIp, 1);
-		CTimer::Stop();
+		Timer_Stop();
 		CGame::currLevel = (eLevelName)ScriptParams[0];
 		ISLAND_LOADING_IS(LOW)
 		{
@@ -191,7 +194,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 			CStreaming::RequestIslands(CGame::currLevel);
 			CStreaming::LoadAllRequestedModels(true);
 		}
-		CTimer::Update();
+		Timer_Update();
 		return 0;
 	}
 	case COMMAND_GET_BODY_CAST_HEALTH:
@@ -219,7 +222,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		if (ScriptParams[1])
-			pVehicle->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pVehicle->GetPosition());
+			pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		else
 			pVehicle->m_nZoneLevel = LEVEL_GENERIC;
 		return 0;
@@ -231,7 +234,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		if (ScriptParams[1])
-			pPed->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pPed->GetPosition());
+			pPed->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pPed->GetPosition())));
 		else
 			pPed->m_nZoneLevel = LEVEL_GENERIC;
 		return 0;
@@ -267,17 +270,17 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	}
 	case COMMAND_REGISTER_LIFE_SAVED:
-		CStats::AnotherLifeSavedWithAmbulance();
+		Stats_AnotherLifeSavedWithAmbulance();
 		return 0;
 	case COMMAND_REGISTER_CRIMINAL_CAUGHT:
-		CStats::AnotherCriminalCaught();
+		Stats_AnotherCriminalCaught();
 		return 0;
 	case COMMAND_REGISTER_AMBULANCE_LEVEL:
 		CollectParameters(&m_nIp, 1);
-		CStats::RegisterLevelAmbulanceMission(ScriptParams[0]);
+		Stats_RegisterLevelAmbulanceMission(ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_FIRE_EXTINGUISHED:
-		CStats::AnotherFireExtinguished();
+		Stats_AnotherFireExtinguished();
 		return 0;
 	case COMMAND_TURN_PHONE_ON:
 		CollectParameters(&m_nIp, 1);
@@ -286,7 +289,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	/*
 	case COMMAND_REGISTER_LONGEST_DODO_FLIGHT:
 		CollectParameters(&m_nIp, 1);
-		CStats::RegisterLongestFlightInDodo(ScriptParams[0]);
+		Stats_RegisterLongestFlightInDodo(ScriptParams[0]);
 		return 0;
 	*/
 	case COMMAND_GET_OFFSET_FROM_CAR_IN_WORLD_COORDS:
@@ -302,7 +305,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	}
 	case COMMAND_SET_TOTAL_NUMBER_OF_KILL_FRENZIES:
 		CollectParameters(&m_nIp, 1);
-		CStats::SetTotalNumberKillFrenzies(ScriptParams[0]);
+		Stats_SetTotalNumberKillFrenzies(ScriptParams[0]);
 		return 0;
 	case COMMAND_BLOW_UP_RC_BUGGY:
 		CWorld::Players[CWorld::PlayerInFocus].BlowUpRCBuggy(true);
@@ -326,15 +329,15 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	/*
 	case COMMAND_SET_FADE_IN_AFTER_NEXT_ARREST:
 		CollectParameters(&m_nIp, 1);
-		CRestart::bFadeInAfterNextArrest = !!ScriptParams[0];
+		Restart_bFadeInAfterNextArrest = !!ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_SET_FADE_IN_AFTER_NEXT_DEATH:
 		CollectParameters(&m_nIp, 1);
-		CRestart::bFadeInAfterNextDeath = !!ScriptParams[0];
+		Restart_bFadeInAfterNextDeath = !!ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_SET_GANG_PED_MODEL_PREFERENCE:
 		CollectParameters(&m_nIp, 2);
-		CGangs::SetGangPedModelOverride(ScriptParams[0], ScriptParams[1]);
+		Gangs_SetGangPedModelOverride(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	*/
 	case COMMAND_SET_CHAR_USE_PEDNODE_SEEK:
@@ -405,19 +408,19 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		}
 #endif
 #endif
-		CTimer::Suspend();
+		Timer_Suspend();
 		int offset = CTheScripts::MultiScriptArray[ScriptParams[0]];
 #ifdef USE_DEBUG_SCRIPT_LOADER
 		int handle = CTheScripts::OpenScript();
 #else
-		CFileMgr::ChangeDir("\\");
-		int handle = CFileMgr::OpenFile("data\\main.scm", "rb");
+		FileMgr_ChangeDir("\\");
+		int handle = FileMgr_OpenFile("data\\main.scm", "rb");
 #endif
-		CFileMgr::Seek(handle, offset, 0);
-		CFileMgr::Read(handle, (const char*)&CTheScripts::ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
-		CFileMgr::CloseFile(handle);
+		FileMgr_Seek(handle, offset, 0);
+		FileMgr_Read(handle, (const char*)&CTheScripts::ScriptSpace[SIZE_MAIN_SCRIPT], SIZE_MISSION_SCRIPT);
+		FileMgr_CloseFile(handle);
 		CRunningScript* pMissionScript = CTheScripts::StartNewScript(SIZE_MAIN_SCRIPT);
-		CTimer::Resume();
+		Timer_Resume();
 		pMissionScript->m_bIsMissionScript = true;
 		pMissionScript->m_bMissionFlag = true;
 		CTheScripts::bAlreadyRunningAMissionScript = true;
@@ -462,7 +465,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	}
 	case COMMAND_REGISTER_KILL_FRENZY_PASSED:
-		CStats::AnotherKillFrenzyPassed();
+		Stats_AnotherKillFrenzyPassed();
 		return 0;
 	case COMMAND_SET_CHAR_SAY:
 	{
@@ -505,15 +508,15 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	/*
 	case COMMAND_OVERRIDE_HOSPITAL_LEVEL:
 		CollectParameters(&m_nIp, 1);
-		CRestart::OverrideHospitalLevel = ScriptParams[0];
+		Restart_OverrideHospitalLevel = ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_OVERRIDE_POLICE_STATION_LEVEL:
 		CollectParameters(&m_nIp, 1);
-		CRestart::OverridePoliceStationLevel = ScriptParams[0];
+		Restart_OverridePoliceStationLevel = ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_FORCE_RAIN:
 		CollectParameters(&m_nIp, 1);
-		CWeather::bScriptsForceRain = !!ScriptParams[0];
+		Weather_bScriptsForceRain = !!ScriptParams[0];
 		return 0;
 	case COMMAND_DOES_GARAGE_CONTAIN_CAR:
 	{
@@ -625,7 +628,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	}
 	case COMMAND_IS_THREAT_FOR_PED_TYPE:
 		CollectParameters(&m_nIp, 2);
-		UpdateCompareFlag(CPedType::IsThreat(ScriptParams[0], ScriptParams[1]));
+		UpdateCompareFlag(PedType_IsThreat(ScriptParams[0], ScriptParams[1]));
 		return 0;
 	*/
 	case COMMAND_CLEAR_AREA_OF_CHARS:
@@ -654,7 +657,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	}
 	case COMMAND_SET_TOTAL_NUMBER_OF_MISSIONS:
 		CollectParameters(&m_nIp, 1);
-		CStats::SetTotalNumberMissions(CGame::germanGame ? ScriptParams[0] - 2 : ScriptParams[0]);
+		Stats_SetTotalNumberMissions(CGame::germanGame ? ScriptParams[0] - 2 : ScriptParams[0]);
 		return 0;
 	case COMMAND_CONVERT_METRES_TO_FEET_INT:
 		CollectParameters(&m_nIp, 1);
@@ -663,11 +666,11 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	case COMMAND_REGISTER_FASTEST_TIME:
 		CollectParameters(&m_nIp, 2);
-		CStats::RegisterFastestTime(ScriptParams[0], ScriptParams[1]);
+		Stats_RegisterFastestTime(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	case COMMAND_REGISTER_HIGHEST_SCORE:
 		CollectParameters(&m_nIp, 2);
-		CStats::RegisterHighestScore(ScriptParams[0], ScriptParams[1]);
+		Stats_RegisterHighestScore(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	//case COMMAND_WARP_CHAR_INTO_CAR_AS_PASSENGER:
 	case COMMAND_IS_CAR_PASSENGER_SEAT_FREE:
@@ -704,13 +707,16 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	}
 	case COMMAND_START_CREDITS:
-		CCredits::Start();
+		// Enter the complete C credits implementation with the original arguments
+		Credits_Start();
 		return 0;
 	case COMMAND_STOP_CREDITS:
-		CCredits::Stop();
+		// Enter the complete C credits implementation with the original arguments
+		Credits_Stop();
 		return 0;
 	case COMMAND_ARE_CREDITS_FINISHED:
-		UpdateCompareFlag(CCredits::AreCreditsDone());
+		// Enter the complete C credits implementation with the original arguments
+		UpdateCompareFlag(Credits_AreCreditsDone());
 		return 0;
 	case COMMAND_CREATE_SINGLE_PARTICLE:
 		CollectParameters(&m_nIp, 8);
@@ -727,7 +733,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		if (ScriptParams[1])
 			pPed->m_nZoneLevel = LEVEL_IGNORE;
 		else
-			pPed->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pPed->GetPosition());
+			pPed->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pPed->GetPosition())));
 		return 0;
 	}
 	case COMMAND_GET_CHASE_CAR:
@@ -742,7 +748,8 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		return 0;
 	}
 	case COMMAND_START_BOAT_FOAM_ANIMATION:
-		CSpecialParticleStuff::StartBoatFoamAnimation();
+		// Enter the C boat-foam algorithm at the original script call point
+		BoatFoam_StartBoatFoamAnimation();
 		return 0;
 	case COMMAND_UPDATE_BOAT_FOAM_ANIMATION:
 	{
@@ -750,7 +757,8 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 				// Access raw storage through the C store or pool API
 		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
-		CSpecialParticleStuff::UpdateBoatFoamAnimation(&pObject->GetMatrix());
+		// Enter the C boat-foam algorithm at the original script call point
+		BoatFoam_UpdateBoatFoamAnimation(&pObject->GetMatrix());
 		return 0;
 	}
 	*/
@@ -788,8 +796,8 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 						script_assert(pHooker);
 			pPlayerInfo->m_pHooker = (CCivilianPed*)pHooker;
 			pPlayerInfo->m_nSexFrequency = 1000;
-			pPlayerInfo->m_nNextSexFrequencyUpdateTime = CTimer::GetTimeInMilliseconds() + 1000;
-			pPlayerInfo->m_nNextSexMoneyUpdateTime = CTimer::GetTimeInMilliseconds() + 3000;
+			pPlayerInfo->m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 1000;
+			pPlayerInfo->m_nNextSexMoneyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 		}
 		return 0;
 	}
@@ -831,7 +839,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	/*
 	case COMMAND_SET_SCRIPT_FIRE_AUDIO:
 		CollectParameters(&m_nIp, 2);
-		gFireManager.SetScriptFireAudio(ScriptParams[0], !!ScriptParams[1]);
+		FireManager_SetScriptFireAudio(&gFireManager,ScriptParams[0], !!ScriptParams[1]);
 		return 0;
 	*/
 	case COMMAND_ARE_ANY_CAR_CHEATS_ACTIVATED:
@@ -909,7 +917,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 	/*
 	case COMMAND_LOAD_COLLISION_WITH_SCREEN:
 		CollectParameters(&m_nIp, 1);
-		CTimer::Stop();
+		Timer_Stop();
 		CGame::currLevel = (eLevelName)ScriptParams[0];
 		if (CGame::currLevel != CCollision::ms_collisionInMemory) {
 			ISLAND_LOADING_IS(LOW)
@@ -940,7 +948,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 			ISLAND_LOADING_IS(LOW)
 				DMAudio_SetEffectsFadeVol(127);
 		}
-		CTimer::Update();
+		Timer_Update();
 		return 0;
 	*/
 	case COMMAND_LOAD_SPLASH_SCREEN:
@@ -960,7 +968,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		if (ScriptParams[1])
 			pVehicle->m_nZoneLevel = LEVEL_IGNORE;
 		else
-			pVehicle->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pVehicle->GetPosition());
+			pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		return 0;
 	}
 	case COMMAND_MAKE_CRAIGS_CAR_A_BIT_STRONGER:
@@ -1048,7 +1056,11 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 				CVector vTestedPos(pTestedPed->GetPosition().x, pTestedPed->GetPosition().y, pTestedPed->GetPosition().z + 0.4);
 				CVector vScreenPos;
 				float w, h;
-				if (CSprite::CalcScreenCoors(vTestedPos, &vScreenPos, &w, &h, false)) {
+				if (([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(vTestedPos, &vScreenPos, &w, &h, false)) {
 					CVector2D vCrosshairPosition(CCamera::m_f3rdPersonCHairMultX * RsGlobal.maximumWidth, CCamera::m_f3rdPersonCHairMultY * RsGlobal.maximumHeight);
 					float fScreenDistance = ((CVector2D)vScreenPos - vCrosshairPosition).Magnitude();
 					if (SCREEN_STRETCH_X(0.45f) > fScreenDistance / w) {
@@ -1108,7 +1120,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame].m_fAtX = *(float*)&ScriptParams[0];
 		CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame].m_fAtY = *(float*)&ScriptParams[1];
 		CollectParameters(&m_nIp, 1);
-		CMessages::InsertNumberInString(text, ScriptParams[0], -1, -1, -1, -1, -1,
+		Messages_InsertNumberInString(text, ScriptParams[0], -1, -1, -1, -1, -1,
 			CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame++].m_Text);
 		return 0;
 	}
@@ -1119,7 +1131,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame].m_fAtX = *(float*)&ScriptParams[0];
 		CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame].m_fAtY = *(float*)&ScriptParams[1];
 		CollectParameters(&m_nIp, 2);
-		CMessages::InsertNumberInString(text, ScriptParams[0], ScriptParams[1], -1, -1, -1, -1,
+		Messages_InsertNumberInString(text, ScriptParams[0], ScriptParams[1], -1, -1, -1, -1,
 			CTheScripts::IntroTextLines[CTheScripts::NumberOfIntroTextLinesThisFrame++].m_Text);
 		return 0;
 	}
@@ -1349,10 +1361,10 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 	{
 		char zone[KEY_LENGTH_IN_SCRIPT];
 		strncpy(zone, (const char*)&CTheScripts::ScriptSpace[m_nIp], KEY_LENGTH_IN_SCRIPT);
-		int nZone = CTheZones::FindZoneByLabelAndReturnIndex(zone, ZONE_DEFAULT);
+		int nZone = Zones_FindZoneByLabelAndReturnIndex(zone, ZONE_DEFAULT);
 		if (nZone != -1)
 			m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CZone* pZone = CTheZones::GetNavigationZone(nZone);
+		CZone* pZone = Zones_GetNavigationZone(nZone);
 		int ped_handle = -1;
 		CVector pos = FindPlayerCoors();
 				// Access raw storage through the C store or pool API
@@ -1377,7 +1389,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 				continue;
 			if (pPed->bIsLeader || pPed->m_leader)
 				continue;
-			if (!CTheZones::PointLiesWithinZone(&pPed->GetPosition(), pZone))
+			if (!Zones_PointLiesWithinZone(ZonesPosition_FromVector(*(&pPed->GetPosition())), pZone))
 				continue;
 			if (pos.z - COP_PED_FIND_Z_OFFSET > pPed->GetPosition().z)
 				continue;
@@ -1452,7 +1464,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CRemote::GivePlayerRemoteControlledCar(pos.x, pos.y, pos.z, DEGTORAD(*(float*)&ScriptParams[4]), ScriptParams[5]);
+		Remote_GivePlayerRemoteControlledCar(pos.x, pos.y, pos.z, DEGTORAD(*(float*)&ScriptParams[4]), ScriptParams[5]); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_GET_CURRENT_PLAYER_WEAPON:
@@ -1489,7 +1501,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->AutoPilot.m_nTempAction = (uint8)ScriptParams[1];
-		pVehicle->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + ScriptParams[2];
+		pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + ScriptParams[2];
 		return 0;
 	}
 	/*
@@ -1500,7 +1512,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->AutoPilot.m_nTempAction = TEMPACT_HANDBRAKETURNRIGHT;
-		pVehicle->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + ScriptParams[1];
+		pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + ScriptParams[1];
 		return 0;
 	}
 	case COMMAND_SET_CAR_HANDBRAKE_STOP:
@@ -1510,7 +1522,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		pVehicle->AutoPilot.m_nTempAction = TEMPACT_HANDBRAKESTRAIGHT;
-		pVehicle->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + ScriptParams[1];
+		pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + ScriptParams[1];
 		return 0;
 	}
 	*/
@@ -1689,7 +1701,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		bool bOnFire = false;
 		if (pVehicle->m_pCarFire)
 			bOnFire = true;
-		if (pVehicle->m_vehType == VEHICLE_TYPE_CAR && ((CAutomobile*)pVehicle)->Damage.GetEngineStatus() >= ENGINE_STATUS_ON_FIRE)
+		if (pVehicle->m_vehType == VEHICLE_TYPE_CAR && Damage_GetEngineStatus(&((CAutomobile*)pVehicle)->Damage) >= ENGINE_STATUS_ON_FIRE)
 			bOnFire = true;
 		if (pVehicle->m_fHealth < 250.0f)
 			bOnFire = true;
@@ -1723,12 +1735,12 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 			CAutomobile* pCar = (CAutomobile*)pVehicle;
 			if (ScriptParams[1] == 4) {
 				for (int i = 0; i < 4; i++) {
-					if (pCar->Damage.GetWheelStatus(i) == WHEEL_STATUS_BURST)
+					if (Damage_GetWheelStatus(&pCar->Damage, i) == WHEEL_STATUS_BURST)
 						bIsBurst = true;
 				}
 			}
 			else
-				bIsBurst = pCar->Damage.GetWheelStatus(ScriptParams[1] == WHEEL_STATUS_BURST);
+				bIsBurst = Damage_GetWheelStatus(&pCar->Damage, ScriptParams[1] == WHEEL_STATUS_BURST);
 		}
 		UpdateCompareFlag(bIsBurst);
 		return 0;
@@ -1741,10 +1753,12 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 	case COMMAND_INITIALISE_OBJECT_PATH: {
 		CollectParameters(&m_nIp, 2);
 		int32 counter = 0;
-		while (counter < 3 && CScriptPaths::aArray[counter].m_state != SCRIPT_PATH_DISABLED) {
+		// Enter the C scripted-path operation at the original call point
+		while (counter < 3 && ScriptPaths_aArray[counter].m_state != SCRIPT_PATH_DISABLED) {
 			counter++;
 		}
-		CScriptPaths::aArray[counter].InitialiseOne(ScriptParams[0], *(float*)&ScriptParams[1]);
+		// Enter the C scripted-path operation at the original call point
+		ScriptPath_InitialiseOne(&ScriptPaths_aArray[counter],ScriptParams[0], *(float*)&ScriptParams[1]);
 		ScriptParams[0] = counter;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -1755,26 +1769,30 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 				// Access raw storage through the C store or pool API
 		CObject *pObj = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
 				assert(pObj);
-		CScriptPaths::aArray[ScriptParams[1]].SetObjectToControl(pObj);
+		// Enter the C scripted-path operation at the original call point
+		ScriptPath_SetObjectToControl(&ScriptPaths_aArray[ScriptParams[1]],pObj);
 		return 0;
 	}
 	case COMMAND_SET_OBJECT_PATH_SPEED:
 	{
 		CollectParameters(&m_nIp, 2);
-		CScriptPaths::aArray[ScriptParams[0]].m_fSpeed = *(float*)&ScriptParams[1];
+		// Enter the C scripted-path operation at the original call point
+		ScriptPaths_aArray[ScriptParams[0]].m_fSpeed = *(float*)&ScriptParams[1];
 		return 0;
 	}
 	case COMMAND_SET_OBJECT_PATH_POSITION:
 	{
 		CollectParameters(&m_nIp, 2);
-		CScriptPaths::aArray[ScriptParams[0]].m_fPosition = *(float*)&ScriptParams[1];
+		// Enter the C scripted-path operation at the original call point
+		ScriptPaths_aArray[ScriptParams[0]].m_fPosition = *(float*)&ScriptParams[1];
 		return 0;
 	}
 	//case COMMAND_GET_OBJECT_DISTANCE_ALONG_PATH:
 	case COMMAND_CLEAR_OBJECT_PATH:
 	{
 		CollectParameters(&m_nIp, 1);
-		CScriptPaths::aArray[ScriptParams[0]].Clear();
+		// Enter the C scripted-path operation at the original call point
+		ScriptPath_Clear(&ScriptPaths_aArray[ScriptParams[0]]);
 		return 0;
 	}
 	case COMMAND_HELI_GOTO_COORDS:
@@ -1901,4 +1919,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 	return -1;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

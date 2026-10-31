@@ -1,0 +1,184 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs,Timer_previousTimeMs; }
+CCamera TheCamera;
+static CMatrix matrix;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t rng=0x914723u;
+static unsigned states,draws,queries,particles,animated,coordinates,updates;
+static int hook,depth,mode;
+static bool triggered;
+
+static void require(bool condition)
+{
+    // Abort at the exact failing corpus position
+    if(!condition){fprintf(stderr,"states=%u draws=%u particles=%u hook=%d\n",states,draws,particles,hook);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observations without process addresses or type padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite float bits exactly and NaNs by classification
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void vectorValue(const RwV3d &v)
+{
+    // Observe every component read by the original particle interface
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void stateValue(TestBoatState value)
+{
+    // Include all original persistent animation fields independently of their storage addresses
+    word(value.boatStart);word(value.animationStart);word(value.lastFrame);floating(value.x);floating(value.y);floating(value.z);floating(value.dx);floating(value.dy);floating(value.dz);
+}
+static void colorValue(const RwRGBA &value)
+{
+    // Observe each actual typed color byte at its original use
+    word(value.red);word(value.green);word(value.blue);word(value.alpha);
+}
+static void event(unsigned value)
+{
+    // Preserve owner-call order and live timing/state visible at every boundary
+    word(value);word(Timer_timeMs);word(Timer_previousTimeMs);word(rng);stateValue(TestBF_State());
+#ifdef BOAT_TRACE
+    // Narrow a mismatching initial run to the first externally visible owner call
+    if(states<2)printf("event=%u draws=%u queries=%u particles=%u hash=%016llx\n",value,draws,queries,particles,(unsigned long long)hash);
+#endif
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject any unexpected ownership change in the borrowed matrix path
+    require(false);return 0;
+}
+CVector &CCamera::GetForward(void)
+{
+    // Retain the original per-attempt camera query and owner-side matrix changes
+    event(1);queries++;
+    if(!triggered && hook==1){triggered=true;matrix.px+=.375f;matrix.py-=.25f;matrix.fy=.875f;}
+    if(!triggered && hook==2){triggered=true;forward.x=-1.f;forward.y=.25f;}
+    return forward;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Supply the same original sixteen-bit stream without replacing the signed-byte arithmetic
+    event(2);draws++;
+    if(!triggered && hook==3){triggered=true;Timer_previousTimeMs=1023;Timer_timeMs=1024;}
+    if(!triggered && hook==4){triggered=true;matrix.pz+=.5f;matrix.ux=.03125f;}
+    if(!triggered && hook==5){triggered=true;TestBF_Start();}
+    rng=rng*1664525u+1013904223u;return mode==1?(uint16_t)(draws-1):(uint16_t)(rng>>16);
+}
+CParticle *CParticle::AddParticle(tParticleType type,const CVector &position,const CVector &direction,CEntity *entity,float size,const RwRGBA &color,int32 rotationSpeed,int32 rotation,int32 frameIndex,int32 lifespan)
+{
+    // Compare the exact original overload, flags, direction and live color object
+    event(3);particles++;if(type==PARTICLE_STEAM_NY)animated++;word(type);vectorValue(position);vectorValue(direction);floating(size);require(entity==NULL && rotationSpeed==1 && rotation==0 && frameIndex==0 && lifespan==0);require(direction.x==0.f && direction.y==0.f && direction.z==0.f);colorValue(color);
+    RwRGBA &ownerColor=FoamColour;word(&color==&ownerColor);
+#ifdef BOAT_TRACE
+    // Show the original typed particle values and color reference during diagnosis
+    if(states<2)printf("particle=%d pos=%a,%a,%a size=%a color=%u,%u,%u,%u alias=%d\n",(int)type,(double)position.x,(double)position.y,(double)position.z,(double)size,color.red,color.green,color.blue,color.alpha,&color==&ownerColor);
+#endif
+    if(!triggered && hook==6){
+        // Change the actual shared color during its own borrowed-reference call
+        triggered=true;FoamColour=CRGBA(17,31,79,113);colorValue(color);
+    }
+    if(!triggered && hook==7){triggered=true;matrix.px+=1.25f;matrix.py-=.75f;matrix.ry=.125f;}
+    if(!triggered && hook==8){triggered=true;Timer_previousTimeMs=3071;Timer_timeMs=3072;}
+    if(!triggered && hook==9){triggered=true;TestBF_Start();}
+    if(!triggered && hook==10){
+        // Reenter the whole animation update before the outer callback's subsequent state write
+        triggered=true;depth++;updates++;TestBF_Update(&matrix);depth--;
+    }
+    if(!triggered && hook==11 && type==PARTICLE_STEAM_NY){
+        // Mutate live persistent state while preserving the outer local frame number
+        triggered=true;TestBoatState value=TestBF_State();value.animationStart=Timer_timeMs;value.lastFrame=99;value.x=71.25f;value.dx=-.75f;TestBF_SetState(value);
+    }
+    if(!triggered && hook==12 && type==PARTICLE_STEAM_NY){
+        // Exercise a nested update whose final frame state is followed by the outer assignment
+        triggered=true;Timer_timeMs+=67;depth++;updates++;TestBF_Update(&matrix);depth--;
+    }
+    colorValue(color);
+    return particles%3==0?NULL:(CParticle *)17;
+}
+static void snapshot(void)
+{
+    // Compare every persistent scalar, live timer, named matrix coefficient and shared color
+    states++;word(0xff);stateValue(TestBF_State());word(Timer_timeMs);word(Timer_previousTimeMs);word(rng);vectorValue(TheCamera.forward);colorValue((RwRGBA &)FoamColour);
+    floating(matrix.rx);floating(matrix.ry);floating(matrix.rz);floating(matrix.fx);floating(matrix.fy);floating(matrix.fz);floating(matrix.ux);floating(matrix.uy);floating(matrix.uz);floating(matrix.px);floating(matrix.py);floating(matrix.pz);
+#ifdef BOAT_TRACE
+    // Identify the first differing complete corpus state during diagnosis
+    printf("state=%u draws=%u queries=%u particles=%u hook=%d hash=%016llx\n",states,draws,queries,particles,hook,(unsigned long long)hash);
+#endif
+}
+static void reset(void)
+{
+    // Reset all legal owner and persistent inputs after the first observation bind
+    hook=0;depth=0;mode=0;triggered=false;Timer_timeMs=5000;Timer_previousTimeMs=4983;TheCamera.forward=CVector(1.f,0.f,0.f);FoamColour=CRGBA(255,255,255,255);TestBoatState value={0,0,0,0,0,0,0,0,0};TestBF_SetState(value);
+    matrix.rx=1.f;matrix.ry=0.f;matrix.rz=0.f;matrix.fx=0.f;matrix.fy=1.f;matrix.fz=0.f;matrix.ux=0.f;matrix.uy=0.f;matrix.uz=1.f;matrix.px=2.f;matrix.py=-3.f;matrix.pz=1.f;
+}
+static TestBoatState animation(uint32_t start)
+{
+    // Supply distinct coordinates and velocities to every original transform component
+    TestBoatState value={777,start,0,-17.3f,5.27f,10.f,.17f,-.13f,2.f};return value;
+}
+static void update(void)
+{
+    // Count entry attempts separately from individual ambient and animated particle emissions
+    updates++;TestBF_Update(&matrix);
+}
+int main(void)
+{
+    // Observe original zero initialization and bind legal aliases without changing production code
+    snapshot();reset();Timer_timeMs=Timer_previousTimeMs=0;update();reset();snapshot();
+    for(uint32_t value=0;value<65536;value++)for(int variant=0;variant<2;variant++){
+        // Exhaust every sixteen-bit input through the actual C helper and unchanged original statements
+        BoatFoamVector position=TestBF_RandomPosition((uint16_t)value,variant?-17.25f:107.f,variant?0.f:24.1f);coordinates++;floating(position.x);floating(position.y);floating(position.z);
+    }
+    const int counts[]={-1,0,1,2,20,100};
+    for(int branch=0;branch<8;branch++)for(int n=0;n<6;n++){
+        // Cover every rejection gate, the attempt bound, partial success and null-matrix early paths
+        reset();float fw=107.f,rg=24.1f,up=30.5f;void *input=&matrix;
+        if(branch==0){TheCamera.forward=CVector(0.f,0.f,0.f);input=NULL;}
+        if(branch==1)fw=-10.f;
+        if(branch==2)rg=-10.f;
+        if(branch==3){fw=rg=100.f;up=-10.f;}
+        if(branch==4){matrix.rx=matrix.fy=matrix.uz=0.f;}
+        if(branch==5){fw=rg=up=0.f;}
+        if(branch==6){mode=1;matrix.px=-7.f;matrix.py=.5f;}
+        if(branch==7){TheCamera.forward=CVector(.13f,.91f,NAN);matrix.ry=.07f;matrix.fx=-.03f;}
+        TestBF_Create(input,fw,rg,up,counts[n]);snapshot();
+    }
+    const uint32_t origins[]={0,1,1024,5000,UINT32_MAX-499};
+    const uint32_t ages[]={0,1,32,33,34,66,99,498,499,500,501,1000,UINT32_MAX};
+    for(int o=0;o<5;o++)for(int age=0;age<13;age++)for(int repeated=0;repeated<2;repeated++){
+        // Exercise exact frame quantization, zero sentinel, expiry and unsigned elapsed-time overflow
+        reset();TestBoatState value=animation(origins[o]);value.lastFrame=repeated?3:0;TestBF_SetState(value);Timer_timeMs=origins[o]+ages[age];Timer_previousTimeMs=Timer_timeMs;update();snapshot();
+    }
+    for(int branch=0;branch<4;branch++){
+        // Compare the original scalar transform using nonorthogonal and signed-zero matrix rows
+        reset();TestBF_SetState(animation(5000));Timer_timeMs=Timer_previousTimeMs=5101;matrix.rx=.83f;matrix.ry=-2.5f;matrix.rz=1.07f;matrix.fx=3.1f;matrix.fy=.97f;matrix.fz=-.6f;matrix.ux=-.13f;matrix.uy=.4f;matrix.uz=2.2f;matrix.px=99.125f;matrix.py=-31.5f;matrix.pz=.003f;if(branch&1){matrix.rx=-0.f;matrix.fz=0.f;}if(branch&2){matrix.px=0.f;matrix.py=-0.f;}update();snapshot();
+    }
+    for(int h=1;h<=12;h++){
+        // Verify owner reentry, live color aliasing and state writes after callbacks return
+        reset();TestBF_SetState(animation(5000));Timer_timeMs=Timer_previousTimeMs=5101;hook=h;update();snapshot();
+    }
+    reset();TestBF_SetState(animation(5000));Timer_timeMs=5101;TestBF_Start();snapshot();update();snapshot();TestBF_Start();snapshot();Timer_previousTimeMs=Timer_timeMs;Timer_timeMs+=1;update();snapshot();
+    const uint32_t ticks[]={0,1023,1024,1025,1057,1090,1490,1524,1530,2047,2048,UINT32_MAX,0,1,34};
+    for(int t=0;t<15;t++){
+        // Cover start/reset and clock-mask rollover independently of the previous animation branch
+        reset();Timer_timeMs=ticks[t];Timer_previousTimeMs=t? ticks[t-1]:0;update();snapshot();
+    }
+    reset();Timer_timeMs=1000;TestBF_Start();
+    for(int frameNumber=0;frameNumber<1500;frameNumber++){
+        // Sustain real timer progression, repeated quantized frames and animation restarts
+        Timer_previousTimeMs=Timer_timeMs;Timer_timeMs+=(frameNumber%7==0?1:frameNumber%11==0?67:17);matrix.px=(frameNumber%9)*.125f;matrix.py=(frameNumber%13)*-.17f;matrix.ry=(frameNumber%3)*.01f;TheCamera.forward=CVector(1.f,frameNumber%2?.13f:0.f,0.f);if(frameNumber%103==0)TestBF_Start();update();snapshot();
+    }
+    require(coordinates==131072 && states>1700 && draws>100000 && particles>3000 && animated>100);
+    require(queries<=draws && updates>1600);
+    printf("states=%u draws=%u queries=%u particles=%u animated=%u coordinates=%u updates=%u hash=%016llx\n",states,draws,queries,particles,animated,coordinates,updates,(unsigned long long)hash);
+}

@@ -1,3 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #if (!defined(GTA_PS2_STUFF) && defined(RWLIBS)) || defined(__MWERKS__)
 #define WITHD3D
 #endif
@@ -27,50 +31,490 @@ sRadarTrace CRadar::ms_RadarTrace[NUMRADARBLIPS];
 CVector2D vec2DRadarOrigin;
 int32 gRadarTxdIds[64];
 
-CSprite2d CRadar::CentreSprite;
-CSprite2d CRadar::MapHereSprite;
-CSprite2d CRadar::NorthSprite;
-CSprite2d CRadar::AverySprite;
-CSprite2d CRadar::BikerSprite;
-CSprite2d CRadar::CortezSprite;
-CSprite2d CRadar::DiazSprite;
-CSprite2d CRadar::KentSprite;
-CSprite2d CRadar::LawyerSprite;
-CSprite2d CRadar::PhilSprite;
-CSprite2d CRadar::BikersSprite;
-CSprite2d CRadar::BoatyardSprite;
-CSprite2d CRadar::MalibuClubSprite;
-CSprite2d CRadar::CubansSprite;
-CSprite2d CRadar::FilmSprite;
-CSprite2d CRadar::GunSprite;
-CSprite2d CRadar::HaitiansSprite;
-CSprite2d CRadar::HardwareSprite;
-CSprite2d CRadar::SaveHouseSprite;
-CSprite2d CRadar::StripSprite;
-CSprite2d CRadar::IceSprite;
-CSprite2d CRadar::KCabsSprite;
-CSprite2d CRadar::LovefistSprite;
-CSprite2d CRadar::PrintworksSprite;
-CSprite2d CRadar::PropertySprite;
-CSprite2d CRadar::SunYardSprite;
-CSprite2d CRadar::SpraySprite;
-CSprite2d CRadar::TShirtSprite;
-CSprite2d CRadar::TommySprite;
-CSprite2d CRadar::PhoneSprite;
-CSprite2d CRadar::RadioWildstyleSprite;
-CSprite2d CRadar::RadioFlashSprite;
-CSprite2d CRadar::RadioKChatSprite;
-CSprite2d CRadar::RadioFeverSprite;
-CSprite2d CRadar::RadioVRockSprite;
-CSprite2d CRadar::RadioVCPRSprite;
-CSprite2d CRadar::RadioEspantosoSprite;
-CSprite2d CRadar::RadioEmotionSprite;
-CSprite2d CRadar::RadioWaveSprite;
+Sprite2d CRadar::CentreSprite;
+static void Sprite2d_Exit_CRadar_CentreSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::CentreSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_CentreSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::CentreSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CentreSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_CentreSprite=Sprite2d_Start_CRadar_CentreSprite();
+Sprite2d CRadar::MapHereSprite;
+static void Sprite2d_Exit_CRadar_MapHereSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::MapHereSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_MapHereSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::MapHereSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MapHereSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_MapHereSprite=Sprite2d_Start_CRadar_MapHereSprite();
+Sprite2d CRadar::NorthSprite;
+static void Sprite2d_Exit_CRadar_NorthSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::NorthSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_NorthSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::NorthSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_NorthSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_NorthSprite=Sprite2d_Start_CRadar_NorthSprite();
+Sprite2d CRadar::AverySprite;
+static void Sprite2d_Exit_CRadar_AverySprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::AverySprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_AverySprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::AverySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_AverySprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_AverySprite=Sprite2d_Start_CRadar_AverySprite();
+Sprite2d CRadar::BikerSprite;
+static void Sprite2d_Exit_CRadar_BikerSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::BikerSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_BikerSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::BikerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikerSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_BikerSprite=Sprite2d_Start_CRadar_BikerSprite();
+Sprite2d CRadar::CortezSprite;
+static void Sprite2d_Exit_CRadar_CortezSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::CortezSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_CortezSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::CortezSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CortezSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_CortezSprite=Sprite2d_Start_CRadar_CortezSprite();
+Sprite2d CRadar::DiazSprite;
+static void Sprite2d_Exit_CRadar_DiazSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::DiazSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_DiazSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::DiazSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_DiazSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_DiazSprite=Sprite2d_Start_CRadar_DiazSprite();
+Sprite2d CRadar::KentSprite;
+static void Sprite2d_Exit_CRadar_KentSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::KentSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_KentSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::KentSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KentSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_KentSprite=Sprite2d_Start_CRadar_KentSprite();
+Sprite2d CRadar::LawyerSprite;
+static void Sprite2d_Exit_CRadar_LawyerSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::LawyerSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_LawyerSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::LawyerSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LawyerSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_LawyerSprite=Sprite2d_Start_CRadar_LawyerSprite();
+Sprite2d CRadar::PhilSprite;
+static void Sprite2d_Exit_CRadar_PhilSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::PhilSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_PhilSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::PhilSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhilSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_PhilSprite=Sprite2d_Start_CRadar_PhilSprite();
+Sprite2d CRadar::BikersSprite;
+static void Sprite2d_Exit_CRadar_BikersSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::BikersSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_BikersSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::BikersSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BikersSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_BikersSprite=Sprite2d_Start_CRadar_BikersSprite();
+Sprite2d CRadar::BoatyardSprite;
+static void Sprite2d_Exit_CRadar_BoatyardSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::BoatyardSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_BoatyardSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::BoatyardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_BoatyardSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_BoatyardSprite=Sprite2d_Start_CRadar_BoatyardSprite();
+Sprite2d CRadar::MalibuClubSprite;
+static void Sprite2d_Exit_CRadar_MalibuClubSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::MalibuClubSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_MalibuClubSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::MalibuClubSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_MalibuClubSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_MalibuClubSprite=Sprite2d_Start_CRadar_MalibuClubSprite();
+Sprite2d CRadar::CubansSprite;
+static void Sprite2d_Exit_CRadar_CubansSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::CubansSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_CubansSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::CubansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_CubansSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_CubansSprite=Sprite2d_Start_CRadar_CubansSprite();
+Sprite2d CRadar::FilmSprite;
+static void Sprite2d_Exit_CRadar_FilmSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::FilmSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_FilmSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::FilmSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_FilmSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_FilmSprite=Sprite2d_Start_CRadar_FilmSprite();
+Sprite2d CRadar::GunSprite;
+static void Sprite2d_Exit_CRadar_GunSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::GunSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_GunSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::GunSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_GunSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_GunSprite=Sprite2d_Start_CRadar_GunSprite();
+Sprite2d CRadar::HaitiansSprite;
+static void Sprite2d_Exit_CRadar_HaitiansSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::HaitiansSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_HaitiansSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::HaitiansSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HaitiansSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_HaitiansSprite=Sprite2d_Start_CRadar_HaitiansSprite();
+Sprite2d CRadar::HardwareSprite;
+static void Sprite2d_Exit_CRadar_HardwareSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::HardwareSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_HardwareSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::HardwareSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_HardwareSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_HardwareSprite=Sprite2d_Start_CRadar_HardwareSprite();
+Sprite2d CRadar::SaveHouseSprite;
+static void Sprite2d_Exit_CRadar_SaveHouseSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::SaveHouseSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_SaveHouseSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::SaveHouseSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SaveHouseSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_SaveHouseSprite=Sprite2d_Start_CRadar_SaveHouseSprite();
+Sprite2d CRadar::StripSprite;
+static void Sprite2d_Exit_CRadar_StripSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::StripSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_StripSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::StripSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_StripSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_StripSprite=Sprite2d_Start_CRadar_StripSprite();
+Sprite2d CRadar::IceSprite;
+static void Sprite2d_Exit_CRadar_IceSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::IceSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_IceSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::IceSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_IceSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_IceSprite=Sprite2d_Start_CRadar_IceSprite();
+Sprite2d CRadar::KCabsSprite;
+static void Sprite2d_Exit_CRadar_KCabsSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::KCabsSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_KCabsSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::KCabsSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_KCabsSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_KCabsSprite=Sprite2d_Start_CRadar_KCabsSprite();
+Sprite2d CRadar::LovefistSprite;
+static void Sprite2d_Exit_CRadar_LovefistSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::LovefistSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_LovefistSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::LovefistSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_LovefistSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_LovefistSprite=Sprite2d_Start_CRadar_LovefistSprite();
+Sprite2d CRadar::PrintworksSprite;
+static void Sprite2d_Exit_CRadar_PrintworksSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::PrintworksSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_PrintworksSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::PrintworksSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PrintworksSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_PrintworksSprite=Sprite2d_Start_CRadar_PrintworksSprite();
+Sprite2d CRadar::PropertySprite;
+static void Sprite2d_Exit_CRadar_PropertySprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::PropertySprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_PropertySprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::PropertySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PropertySprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_PropertySprite=Sprite2d_Start_CRadar_PropertySprite();
+Sprite2d CRadar::SunYardSprite;
+static void Sprite2d_Exit_CRadar_SunYardSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::SunYardSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_SunYardSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::SunYardSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SunYardSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_SunYardSprite=Sprite2d_Start_CRadar_SunYardSprite();
+Sprite2d CRadar::SpraySprite;
+static void Sprite2d_Exit_CRadar_SpraySprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::SpraySprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_SpraySprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::SpraySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_SpraySprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_SpraySprite=Sprite2d_Start_CRadar_SpraySprite();
+Sprite2d CRadar::TShirtSprite;
+static void Sprite2d_Exit_CRadar_TShirtSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::TShirtSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_TShirtSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::TShirtSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TShirtSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_TShirtSprite=Sprite2d_Start_CRadar_TShirtSprite();
+Sprite2d CRadar::TommySprite;
+static void Sprite2d_Exit_CRadar_TommySprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::TommySprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_TommySprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::TommySprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_TommySprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_TommySprite=Sprite2d_Start_CRadar_TommySprite();
+Sprite2d CRadar::PhoneSprite;
+static void Sprite2d_Exit_CRadar_PhoneSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::PhoneSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_PhoneSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::PhoneSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_PhoneSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_PhoneSprite=Sprite2d_Start_CRadar_PhoneSprite();
+Sprite2d CRadar::RadioWildstyleSprite;
+static void Sprite2d_Exit_CRadar_RadioWildstyleSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioWildstyleSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioWildstyleSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioWildstyleSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWildstyleSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioWildstyleSprite=Sprite2d_Start_CRadar_RadioWildstyleSprite();
+Sprite2d CRadar::RadioFlashSprite;
+static void Sprite2d_Exit_CRadar_RadioFlashSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioFlashSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioFlashSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioFlashSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFlashSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioFlashSprite=Sprite2d_Start_CRadar_RadioFlashSprite();
+Sprite2d CRadar::RadioKChatSprite;
+static void Sprite2d_Exit_CRadar_RadioKChatSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioKChatSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioKChatSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioKChatSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioKChatSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioKChatSprite=Sprite2d_Start_CRadar_RadioKChatSprite();
+Sprite2d CRadar::RadioFeverSprite;
+static void Sprite2d_Exit_CRadar_RadioFeverSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioFeverSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioFeverSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioFeverSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioFeverSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioFeverSprite=Sprite2d_Start_CRadar_RadioFeverSprite();
+Sprite2d CRadar::RadioVRockSprite;
+static void Sprite2d_Exit_CRadar_RadioVRockSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioVRockSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioVRockSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioVRockSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVRockSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioVRockSprite=Sprite2d_Start_CRadar_RadioVRockSprite();
+Sprite2d CRadar::RadioVCPRSprite;
+static void Sprite2d_Exit_CRadar_RadioVCPRSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioVCPRSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioVCPRSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioVCPRSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioVCPRSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioVCPRSprite=Sprite2d_Start_CRadar_RadioVCPRSprite();
+Sprite2d CRadar::RadioEspantosoSprite;
+static void Sprite2d_Exit_CRadar_RadioEspantosoSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioEspantosoSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioEspantosoSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioEspantosoSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEspantosoSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioEspantosoSprite=Sprite2d_Start_CRadar_RadioEspantosoSprite();
+Sprite2d CRadar::RadioEmotionSprite;
+static void Sprite2d_Exit_CRadar_RadioEmotionSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioEmotionSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioEmotionSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioEmotionSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioEmotionSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioEmotionSprite=Sprite2d_Start_CRadar_RadioEmotionSprite();
+Sprite2d CRadar::RadioWaveSprite;
+static void Sprite2d_Exit_CRadar_RadioWaveSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::RadioWaveSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_RadioWaveSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::RadioWaveSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_RadioWaveSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_RadioWaveSprite=Sprite2d_Start_CRadar_RadioWaveSprite();
 #ifdef MAP_ENHANCEMENTS
-CSprite2d CRadar::WaypointSprite;
+Sprite2d CRadar::WaypointSprite;
+static void Sprite2d_Exit_CRadar_WaypointSprite(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(&CRadar::WaypointSprite,(size_t)(1));
+}
+static int Sprite2d_Start_CRadar_WaypointSprite(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(&CRadar::WaypointSprite,(size_t)(1));atexit(Sprite2d_Exit_CRadar_WaypointSprite);return 0;
+}
+static const int Sprite2d_Started_CRadar_WaypointSprite=Sprite2d_Start_CRadar_WaypointSprite();
 #endif
 
-CSprite2d *CRadar::RadarSprites[RADAR_SPRITE_COUNT] = { 
+Sprite2d *CRadar::RadarSprites[RADAR_SPRITE_COUNT] = { 
 	nil,
 	&CentreSprite,
 	&MapHereSprite,
@@ -489,7 +933,8 @@ void CRadar::Draw3dMarkers()
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += 1.2f * CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 2.5f;
-					C3dMarkers::PlaceMarker(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 2.5f, CARBLIP_MARKER_COLOR_R, CARBLIP_MARKER_COLOR_G, CARBLIP_MARKER_COLOR_B, CARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					// Enter the C 3D-marker controller with the original arguments
+					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 2.5f, CARBLIP_MARKER_COLOR_R, CARBLIP_MARKER_COLOR_G, CARBLIP_MARKER_COLOR_B, CARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
@@ -506,7 +951,8 @@ void CRadar::Draw3dMarkers()
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += 3.0f;
-					C3dMarkers::PlaceMarker(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.5f, CHARBLIP_MARKER_COLOR_R, CHARBLIP_MARKER_COLOR_G, CHARBLIP_MARKER_COLOR_B, CHARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					// Enter the C 3D-marker controller with the original arguments
+					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.5f, CHARBLIP_MARKER_COLOR_R, CHARBLIP_MARKER_COLOR_G, CHARBLIP_MARKER_COLOR_B, CHARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
@@ -519,7 +965,8 @@ void CRadar::Draw3dMarkers()
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
 					pos.z += CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 1.0f + 1.0f;
-					C3dMarkers::PlaceMarker(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.0f, OBJECTBLIP_MARKER_COLOR_R, OBJECTBLIP_MARKER_COLOR_G, OBJECTBLIP_MARKER_COLOR_B, OBJECTBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
+					// Enter the C 3D-marker controller with the original arguments
+					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.0f, OBJECTBLIP_MARKER_COLOR_R, OBJECTBLIP_MARKER_COLOR_G, OBJECTBLIP_MARKER_COLOR_B, OBJECTBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
 				break;
 			}
@@ -528,7 +975,8 @@ void CRadar::Draw3dMarkers()
 			case BLIP_CONTACT_POINT:
 				if (!CTheScripts::IsPlayerOnAMission()) {
 					if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY)
-						C3dMarkers::PlaceMarkerSet(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_CYLINDER, ms_RadarTrace[i].m_vecPos, 2.0f, COORDBLIP_MARKER_COLOR_R, COORDBLIP_MARKER_COLOR_G, COORDBLIP_MARKER_COLOR_B, COORDBLIP_MARKER_COLOR_A, 2048, 0.2f, 0);
+						// Enter the C 3D-marker controller with the original arguments
+						Markers3D_PlaceMarkerSetLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_CYLINDER, ms_RadarTrace[i].m_vecPos, 2.0f, COORDBLIP_MARKER_COLOR_R, COORDBLIP_MARKER_COLOR_G, COORDBLIP_MARKER_COLOR_B, COORDBLIP_MARKER_COLOR_A, 2048, 0.2f, 0);
 				}
 				break;
 			}
@@ -775,8 +1223,10 @@ void CRadar::DrawRadarMask()
 			TransformRadarPointToScreenSpace(out[j + 1], in);
 		};
 
-		CSprite2d::SetMaskVertices(8, (float *)out);
-		RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, CSprite2d::GetVertices(), 8);
+		// Preserve the original operation through the C sprite interface
+		Sprite2d_SetMaskVertices(8, (float *)out);
+		// Preserve the original operation through the C sprite interface
+		RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, ((RwIm2DVertex*)Sprite2d_GetVertices()), 8);
 	}
 #if !defined(GTA_PS2_STUFF) && defined(RWLIBS)
 	RwD3D8SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
@@ -800,7 +1250,9 @@ void CRadar::DrawRadarSection(int32 x, int32 y)
 	ClipRadarTileCoords(x, y);
 
 	if (!CTheScripts::bPlayerIsInTheStatium &&
-		(!(txd = CTxdStore::GetSlot(gRadarTxdIds[x + RADAR_NUM_TILES * y])->texDict) || !(texture = GetFirstTexture(txd))))
+		// Use the complete C texture dictionary owner with the original live arguments
+		// Use the C helper and retain the original typed SDK result
+		(!(txd = ((RwTexDictionary*)TxdStore_GetSlot(gRadarTxdIds[x + RADAR_NUM_TILES * y])->texDict)) || !(texture = ((RwTexture*)GetFirstTexture(txd)))))
 		return;
 
 	for (i = 0; i < 4; i++)
@@ -821,15 +1273,21 @@ void CRadar::DrawRadarSection(int32 x, int32 y)
 
 	if (CTheScripts::bPlayerIsInTheStatium) {
 		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
-		CSprite2d::SetVertices(numVertices, (float*)screenPoly, (float*)texCoords, CRGBA(204, 204, 204, 255));
+		([](int n,float *positions,float *uvs,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetArrayVertices(n,positions,uvs,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(numVertices, (float*)screenPoly, (float*)texCoords, CRGBA(204, 204, 204, 255));
 	} else {
 		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(texture));
-		CSprite2d::SetVertices(numVertices, (float*)screenPoly, (float*)texCoords, CRGBA(255, 255, 255, 255));
+		([](int n,float *positions,float *uvs,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetArrayVertices(n,positions,uvs,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(numVertices, (float*)screenPoly, (float*)texCoords, CRGBA(255, 255, 255, 255));
 	}
 
 	// check done above now
 //	if(numVertices > 2)
-	RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, CSprite2d::GetVertices(), numVertices);
+	RwIm2DRenderPrimitive(rwPRIMTYPETRIFAN, ((RwIm2DVertex*)Sprite2d_GetVertices()), numVertices);
 }
 
 void CRadar::DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
@@ -837,7 +1295,10 @@ void CRadar::DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
 #ifdef MAP_ENHANCEMENTS
 	if(sprite == RADAR_SPRITE_WAYPOINT) alpha = 255;
 #endif
-	RadarSprites[sprite]->Draw(CRect(x - SCREEN_SCALE_X(8.0f), y - SCREEN_SCALE_Y(8.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(8.0f)), CRGBA(255, 255, 255, alpha));
+	([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(RadarSprites[sprite],Rect_Make(x - SCREEN_SCALE_X(8.0f), y - SCREEN_SCALE_Y(8.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(8.0f)), CRGBA(255, 255, 255, alpha));
 
 	if (FrontEndMenuManager.m_bMenuMapActive) {
 		bool alreadyThere = false;
@@ -852,7 +1313,7 @@ void CRadar::DrawRadarSprite(uint16 sprite, float x, float y, uint8 alpha)
 	}
 }
 
-void CRadar::DrawRotatingRadarSprite(CSprite2d* sprite, float x, float y, float angle, int32 alpha)
+void CRadar::DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float angle, int32 alpha)
 {
 	CVector curPosn[4];
 	const float sizeX = SCREEN_SCALE_X(8.0f);
@@ -865,7 +1326,10 @@ void CRadar::DrawRotatingRadarSprite(CSprite2d* sprite, float x, float y, float 
 		curPosn[i].y = y - (0.0f * Sin(cornerAngle) - 1.0f * Cos(cornerAngle)) * sizeY;
 	}
 
-	sprite->Draw(curPosn[3].x, curPosn[3].y, curPosn[2].x, curPosn[2].y, curPosn[0].x, curPosn[0].y, curPosn[1].x, curPosn[1].y, CRGBA(255, 255, 255, alpha));
+	([](Sprite2d *spriteSelf,float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawQuad(spriteSelf,x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(sprite,curPosn[3].x, curPosn[3].y, curPosn[2].x, curPosn[2].y, curPosn[0].x, curPosn[0].y, curPosn[1].x, curPosn[1].y, CRGBA(255, 255, 255, alpha));
 }
 
 int32 CRadar::GetActualBlipArrayIndex(int32 i)
@@ -969,7 +1433,8 @@ CRadar::Initialise()
 
 	m_radarRange = 350.0f;
 	for (int i = 0; i < 64; i++) 
-		gRadarTxdIds[i] = CTxdStore::FindTxdSlot(gRadarTexNames[i]);
+		// Use the complete C texture dictionary owner with the original live arguments
+		gRadarTxdIds[i] = TxdStore_FindTxdSlot(gRadarTexNames[i]);
 }
 
 float CRadar::LimitRadarPoint(CVector2D &point)
@@ -1076,49 +1541,171 @@ VALIDATESAVEBUF(*size);
 void
 CRadar::LoadTextures()
 {
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("hud"));
-	CentreSprite.SetTexture("radar_centre");
-	MapHereSprite.SetTexture("arrow");
-	NorthSprite.SetTexture("radar_north");
-	AverySprite.SetTexture("radar_avery");
-	BikerSprite.SetTexture("radar_biker");
-	CortezSprite.SetTexture("radar_cortez");
-	DiazSprite.SetTexture("radar_diaz");
-	KentSprite.SetTexture("radar_kent");
-	LawyerSprite.SetTexture("radar_lawyer");
-	PhilSprite.SetTexture("radar_phil");
-	BikersSprite.SetTexture("bikers");
-	BoatyardSprite.SetTexture("boatyard");
-	MalibuClubSprite.SetTexture("club");
-	CubansSprite.SetTexture("cubans");
-	FilmSprite.SetTexture("filmstudio");
-	GunSprite.SetTexture("gun");
-	HaitiansSprite.SetTexture("haitians");
-	HardwareSprite.SetTexture("hardware");
-	SaveHouseSprite.SetTexture("radar_save");
-	StripSprite.SetTexture("radar_strip");
-	IceSprite.SetTexture("icecream");
-	KCabsSprite.SetTexture("kcabs");
-	LovefistSprite.SetTexture("lovefist");
-	PrintworksSprite.SetTexture("printworks");
-	PropertySprite.SetTexture("property");
-	SunYardSprite.SetTexture("SunYard");
-	SpraySprite.SetTexture("spray");
-	TShirtSprite.SetTexture("tshirt");
-	TommySprite.SetTexture("tommy");
-	PhoneSprite.SetTexture("phone");
-	RadioWildstyleSprite.SetTexture("RWildstyle");
-	RadioFlashSprite.SetTexture("RFlash");
-	RadioKChatSprite.SetTexture("RKchat");
-	RadioFeverSprite.SetTexture("RFever");
-	RadioVRockSprite.SetTexture("RVRock");
-	RadioVCPRSprite.SetTexture("RVCPR");
-	RadioEspantosoSprite.SetTexture("REspantoso");
-	RadioEmotionSprite.SetTexture("REmotion");
-	RadioWaveSprite.SetTexture("RWave");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(TxdStore_FindTxdSlot("hud"));
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(CentreSprite),"radar_centre");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(MapHereSprite),"arrow");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(NorthSprite),"radar_north");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(AverySprite),"radar_avery");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(BikerSprite),"radar_biker");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(CortezSprite),"radar_cortez");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(DiazSprite),"radar_diaz");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(KentSprite),"radar_kent");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(LawyerSprite),"radar_lawyer");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(PhilSprite),"radar_phil");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(BikersSprite),"bikers");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(BoatyardSprite),"boatyard");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(MalibuClubSprite),"club");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(CubansSprite),"cubans");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(FilmSprite),"filmstudio");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(GunSprite),"gun");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(HaitiansSprite),"haitians");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(HardwareSprite),"hardware");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(SaveHouseSprite),"radar_save");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(StripSprite),"radar_strip");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(IceSprite),"icecream");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(KCabsSprite),"kcabs");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(LovefistSprite),"lovefist");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(PrintworksSprite),"printworks");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(PropertySprite),"property");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(SunYardSprite),"SunYard");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(SpraySprite),"spray");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(TShirtSprite),"tshirt");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(TommySprite),"tommy");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(PhoneSprite),"phone");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioWildstyleSprite),"RWildstyle");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioFlashSprite),"RFlash");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioKChatSprite),"RKchat");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioFeverSprite),"RFever");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioVRockSprite),"RVRock");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioVCPRSprite),"RVCPR");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioEspantosoSprite),"REspantoso");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioEmotionSprite),"REmotion");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(RadioWaveSprite),"RWave");
 #ifdef MAP_ENHANCEMENTS
-	WaypointSprite.SetTexture("radar_waypoint");
+	([](Sprite2d *spriteSelf,const char *name){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_SetTexture(spriteSelf,name);
+})(&(WaypointSprite),"radar_waypoint");
 	if(!WaypointSprite.m_pTexture) {
 		// create the texture if it's missing in TXD
 #define WAYPOINT_R (255)
@@ -1148,13 +1735,15 @@ CRadar::LoadTextures()
 			}
 		RwRasterUnlock(raster);
 		WaypointSprite.m_pTexture = RwTextureCreate(raster);
-		RwTextureSetFilterMode(WaypointSprite.m_pTexture, rwFILTERLINEAR);
+		// Preserve the original operation through the C sprite interface
+		RwTextureSetFilterMode((RwTexture*)WaypointSprite.m_pTexture, rwFILTERLINEAR);
 #undef WAYPOINT_R
 #undef WAYPOINT_G
 #undef WAYPOINT_B
 	}
 #endif
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 }
 
 void CRadar::RemoveRadarSections()
@@ -1288,8 +1877,14 @@ void CRadar::ShowRadarTrace(float x, float y, uint32 size, uint8 red, uint8 gree
 	if (!CHud::m_Wants_To_Draw_Hud || TheCamera.m_WideScreenOn)
 		return;
 
-	CSprite2d::DrawRect(CRect(x - SCREEN_SCALE_X(size + 1.0f), y - SCREEN_SCALE_Y(size + 1.0f), SCREEN_SCALE_X(size + 1.0f) + x, SCREEN_SCALE_Y(size + 1.0f) + y), CRGBA(0, 0, 0, alpha));
-	CSprite2d::DrawRect(CRect(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y), CRGBA(red, green, blue, alpha));
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x - SCREEN_SCALE_X(size + 1.0f), y - SCREEN_SCALE_Y(size + 1.0f), SCREEN_SCALE_X(size + 1.0f) + x, SCREEN_SCALE_Y(size + 1.0f) + y), CRGBA(0, 0, 0, alpha));
+	([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y), CRGBA(red, green, blue, alpha));
 }
 
 void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, uint8 green, uint8 blue, uint8 alpha, uint8 mode)
@@ -1301,64 +1896,202 @@ void CRadar::ShowRadarTraceWithHeight(float x, float y, uint32 size, uint8 red, 
 	{
 	case BLIP_MODE_TRIANGULAR_UP:
 		size++;
-		CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(size + 3.0f), y + SCREEN_SCALE_Y(size + 2.0f), x - (SCREEN_SCALE_X(size + 3.0f)), y + SCREEN_SCALE_Y(size + 2.0f), x, y - (SCREEN_SCALE_Y(size + 3.0f)), x, y - (SCREEN_SCALE_Y(size + 3.0f)), CRGBA(0, 0, 0, alpha));
-		CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(size + 1.0f), y + SCREEN_SCALE_Y(size + 1.0f), x - (SCREEN_SCALE_X(size + 1.0f)), y + SCREEN_SCALE_Y(size + 1.0f), x, y - (SCREEN_SCALE_Y(size + 1.0f)), x, y - (SCREEN_SCALE_Y(size + 1.0f)), CRGBA(red, green, blue, alpha));
+		([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(size + 3.0f), y + SCREEN_SCALE_Y(size + 2.0f), x - (SCREEN_SCALE_X(size + 3.0f)), y + SCREEN_SCALE_Y(size + 2.0f), x, y - (SCREEN_SCALE_Y(size + 3.0f)), x, y - (SCREEN_SCALE_Y(size + 3.0f)), CRGBA(0, 0, 0, alpha));
+		([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(size + 1.0f), y + SCREEN_SCALE_Y(size + 1.0f), x - (SCREEN_SCALE_X(size + 1.0f)), y + SCREEN_SCALE_Y(size + 1.0f), x, y - (SCREEN_SCALE_Y(size + 1.0f)), x, y - (SCREEN_SCALE_Y(size + 1.0f)), CRGBA(red, green, blue, alpha));
 		break;
 	case BLIP_MODE_TRIANGULAR_DOWN:
 		size++;
-		CSprite2d::Draw2DPolygon(x, y + SCREEN_SCALE_Y(size + 2.0f), x, y + SCREEN_SCALE_Y(size + 3.0f), x + SCREEN_SCALE_X(size + 3.0f), y - (SCREEN_SCALE_Y(size + 2.0f)), x - (SCREEN_SCALE_X(size + 3.0f)), y - (SCREEN_SCALE_Y(size + 2.0f)), CRGBA(0, 0, 0, alpha));
-		CSprite2d::Draw2DPolygon(x, y + SCREEN_SCALE_Y(size + 1.0f), x, y + SCREEN_SCALE_Y(size + 1.0f), x + SCREEN_SCALE_X(size + 1.0f), y - (SCREEN_SCALE_Y(size + 1.0f)), x - (SCREEN_SCALE_X(size + 1.0f)), y - (SCREEN_SCALE_Y(size + 1.0f)), CRGBA(red, green, blue, alpha));
+		([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x, y + SCREEN_SCALE_Y(size + 2.0f), x, y + SCREEN_SCALE_Y(size + 3.0f), x + SCREEN_SCALE_X(size + 3.0f), y - (SCREEN_SCALE_Y(size + 2.0f)), x - (SCREEN_SCALE_X(size + 3.0f)), y - (SCREEN_SCALE_Y(size + 2.0f)), CRGBA(0, 0, 0, alpha));
+		([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x, y + SCREEN_SCALE_Y(size + 1.0f), x, y + SCREEN_SCALE_Y(size + 1.0f), x + SCREEN_SCALE_X(size + 1.0f), y - (SCREEN_SCALE_Y(size + 1.0f)), x - (SCREEN_SCALE_X(size + 1.0f)), y - (SCREEN_SCALE_Y(size + 1.0f)), CRGBA(red, green, blue, alpha));
 		break;
 	case BLIP_MODE_SQUARE:
-		CSprite2d::DrawRect(CRect(x - SCREEN_SCALE_X(size + 1.0f), y - SCREEN_SCALE_Y(size + 1.0f), SCREEN_SCALE_X(size + 1.0f) + x, SCREEN_SCALE_Y(size + 1.0f) + y), CRGBA(0, 0, 0, alpha));
-		CSprite2d::DrawRect(CRect(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y), CRGBA(red, green, blue, alpha));
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x - SCREEN_SCALE_X(size + 1.0f), y - SCREEN_SCALE_Y(size + 1.0f), SCREEN_SCALE_X(size + 1.0f) + x, SCREEN_SCALE_Y(size + 1.0f) + y), CRGBA(0, 0, 0, alpha));
+		([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x - SCREEN_SCALE_X(size), y - SCREEN_SCALE_Y(size), SCREEN_SCALE_X(size) + x, SCREEN_SCALE_Y(size) + y), CRGBA(red, green, blue, alpha));
 		break;
 	}
 }
 
 void CRadar::Shutdown()
 {
-	CentreSprite.Delete();
-	MapHereSprite.Delete();
-	NorthSprite.Delete();
-	AverySprite.Delete();
-	BikerSprite.Delete();
-	CortezSprite.Delete();
-	DiazSprite.Delete();
-	KentSprite.Delete();
-	LawyerSprite.Delete();
-	PhilSprite.Delete();
-	BikersSprite.Delete();
-	BoatyardSprite.Delete();
-	MalibuClubSprite.Delete();
-	CubansSprite.Delete();
-	FilmSprite.Delete();
-	GunSprite.Delete();
-	HaitiansSprite.Delete();
-	HardwareSprite.Delete();
-	SaveHouseSprite.Delete();
-	StripSprite.Delete();
-	IceSprite.Delete();
-	KCabsSprite.Delete();
-	LovefistSprite.Delete();
-	PrintworksSprite.Delete();
-	PropertySprite.Delete();
-	SunYardSprite.Delete();
-	SpraySprite.Delete();
-	TShirtSprite.Delete();
-	TommySprite.Delete();
-	PhoneSprite.Delete();
-	RadioWildstyleSprite.Delete();
-	RadioFlashSprite.Delete();
-	RadioKChatSprite.Delete();
-	RadioFeverSprite.Delete();
-	RadioVRockSprite.Delete();
-	RadioVCPRSprite.Delete();
-	RadioEspantosoSprite.Delete();
-	RadioEmotionSprite.Delete();
-	RadioWaveSprite.Delete();
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(CentreSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(MapHereSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(NorthSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(AverySprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(BikerSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(CortezSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(DiazSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(KentSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(LawyerSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(PhilSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(BikersSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(BoatyardSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(MalibuClubSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(CubansSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(FilmSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(GunSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(HaitiansSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(HardwareSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(SaveHouseSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(StripSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(IceSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(KCabsSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(LovefistSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(PrintworksSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(PropertySprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(SunYardSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(SpraySprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(TShirtSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(TommySprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(PhoneSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioWildstyleSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioFlashSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioKChatSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioFeverSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioVRockSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioVCPRSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioEspantosoSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioEmotionSprite));
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(RadioWaveSprite));
 #ifdef MAP_ENHANCEMENTS
-	WaypointSprite.Delete();
+	([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(WaypointSprite));
 #endif
 	RemoveRadarSections();
 }
@@ -1477,13 +2210,13 @@ CRadar::DrawYouAreHereSprite(float x, float y)
 	static bool show = true;
 
 	if (show) {
-		if (CTimer::GetTimeInMillisecondsPauseMode() - lastChange > 500) {
-			lastChange = CTimer::GetTimeInMillisecondsPauseMode();
+		if (Timer_GetTimeInMillisecondsPauseMode() - lastChange > 500) {
+			lastChange = Timer_GetTimeInMillisecondsPauseMode();
 			show = !show;
 		}
 	} else {
-		if (CTimer::GetTimeInMillisecondsPauseMode() - lastChange > 200) {
-			lastChange = CTimer::GetTimeInMillisecondsPauseMode();
+		if (Timer_GetTimeInMillisecondsPauseMode() - lastChange > 200) {
+			lastChange = Timer_GetTimeInMillisecondsPauseMode();
 			show = !show;
 		}
 	}
@@ -1493,10 +2226,16 @@ CRadar::DrawYouAreHereSprite(float x, float y)
 		const float top = y - SCREEN_SCALE_Y(40.0f);
 		const float right = x + SCREEN_SCALE_X(40.0);
 		const float bottom = y + SCREEN_SCALE_Y(8.0f);
-		MapHereSprite.Draw(CRect(left + SCREEN_SCALE_X(2.f), top + SCREEN_SCALE_Y(2.f), right + SCREEN_SCALE_X(2.f), bottom + SCREEN_SCALE_Y(2.f)),
+		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(MapHereSprite),Rect_Make(left + SCREEN_SCALE_X(2.f), top + SCREEN_SCALE_Y(2.f), right + SCREEN_SCALE_X(2.f), bottom + SCREEN_SCALE_Y(2.f)),
 			CRGBA(0, 0, 0, 255));
 
-		MapHereSprite.Draw(CRect(left, top, right, bottom), CRGBA(255, 255, 255, 255));
+		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(&(MapHereSprite),Rect_Make(left, top, right, bottom), CRGBA(255, 255, 255, 255));
 
 		CFont::SetWrapx(right + SCREEN_SCALE_X(28.0f));
 		CFont::SetRightJustifyWrap(right);
@@ -1508,7 +2247,7 @@ CRadar::DrawYouAreHereSprite(float x, float y)
 		CFont::SetRightJustifyOff();
 		CFont::SetFontStyle(FONT_LOCALE(FONT_HEADING));
 		CFont::SetScale(SCREEN_SCALE_X(0.65f), SCREEN_SCALE_Y(0.95f));
-		CFont::PrintString(right, top, TheText.Get("MAP_YAH"));
+		CFont::PrintString(right, top, Text_Get(&TheText,"MAP_YAH"));
 		CFont::SetDropShadowPosition(0);
 		CFont::DrawFonts();
 	}
@@ -1692,8 +2431,8 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 			color = ArrowBlipColour2;
 		}
 
-		if (CTimer::GetTimeInMillisecondsPauseMode() - lastChange > 600) {
-			lastChange = CTimer::GetTimeInMillisecondsPauseMode();
+		if (Timer_GetTimeInMillisecondsPauseMode() - lastChange > 600) {
+			lastChange = Timer_GetTimeInMillisecondsPauseMode();
 			if ( blipMode == 2 )
 				blipMode = 0;
 			else
@@ -1702,145 +2441,166 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 
 		switch (blipMode) {
 			case BLIP_MODE_TRIANGULAR_UP:
-				CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(14.0f), y + SCREEN_SCALE_Y(13.0f), x + SCREEN_SCALE_X(2.0f), y + SCREEN_SCALE_Y(13.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(2.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(2.0f), CRGBA(0, 0, 0, 255));
-				CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(12.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(4.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(4.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(4.0f), color);
+				([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(14.0f), y + SCREEN_SCALE_Y(13.0f), x + SCREEN_SCALE_X(2.0f), y + SCREEN_SCALE_Y(13.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(2.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(2.0f), CRGBA(0, 0, 0, 255));
+				([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(12.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(4.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(4.0f), x + SCREEN_SCALE_X(8.f), y + SCREEN_SCALE_Y(4.0f), color);
 				break;
 			case BLIP_MODE_TRIANGULAR_DOWN:
-				CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(14.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(14.0f), x + SCREEN_SCALE_X(2.f), y + SCREEN_SCALE_Y(3.0f), x + SCREEN_SCALE_X(2.f), y + SCREEN_SCALE_Y(3.0f), CRGBA(0, 0, 0, 255));
-				CSprite2d::Draw2DPolygon(x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(12.f), y + SCREEN_SCALE_Y(4.0f), x + SCREEN_SCALE_X(4.f), y + SCREEN_SCALE_Y(4.0f), color);
+				([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(14.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(14.0f), x + SCREEN_SCALE_X(2.f), y + SCREEN_SCALE_Y(3.0f), x + SCREEN_SCALE_X(2.f), y + SCREEN_SCALE_Y(3.0f), CRGBA(0, 0, 0, 255));
+				([](float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &color){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Draw2DPolygon(x1,y1,x2,y2,x3,y3,x4,y4,Sprite_ColourRef(&color.r,&color.g,&color.b,&color.a));
+})(x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(8.0f), y + SCREEN_SCALE_Y(12.0f), x + SCREEN_SCALE_X(12.f), y + SCREEN_SCALE_Y(4.0f), x + SCREEN_SCALE_X(4.f), y + SCREEN_SCALE_Y(4.0f), color);
 				break;
 			case BLIP_MODE_SQUARE:
-				CSprite2d::DrawRect(CRect(x + SCREEN_SCALE_X(4.0f), y + SCREEN_SCALE_Y(3.0f), SCREEN_SCALE_X(12.0f) + x, SCREEN_SCALE_Y(12.0f) + y), CRGBA(0, 0, 0, 255));
-				CSprite2d::DrawRect(CRect(x + SCREEN_SCALE_X(5.0f), y + SCREEN_SCALE_Y(4.0f), SCREEN_SCALE_X(11.0f) + x, SCREEN_SCALE_Y(11.0f) + y), color);
+				([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x + SCREEN_SCALE_X(4.0f), y + SCREEN_SCALE_Y(3.0f), SCREEN_SCALE_X(12.0f) + x, SCREEN_SCALE_Y(12.0f) + y), CRGBA(0, 0, 0, 255));
+				([](const CRect &r,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawSolidRect(&r,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(Rect_Make(x + SCREEN_SCALE_X(5.0f), y + SCREEN_SCALE_Y(4.0f), SCREEN_SCALE_X(11.0f) + x, SCREEN_SCALE_Y(11.0f) + y), color);
 				break;
 		}
 
 	} else {
-		RadarSprites[sprite]->Draw(CRect(x, y, x + SCREEN_SCALE_X(16.f), y + SCREEN_SCALE_X(16.f)), CRGBA(255, 255, 255, 255));
+		([](Sprite2d *spriteSelf,const CRect &rect,const CRGBA &col){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_DrawRect(spriteSelf,&rect,Sprite_ColourRef(&col.r,&col.g,&col.b,&col.a));
+})(RadarSprites[sprite],Rect_Make(x, y, x + SCREEN_SCALE_X(16.f), y + SCREEN_SCALE_X(16.f)), CRGBA(255, 255, 255, 255));
 	}
 
 	wchar *text;
 	switch ( sprite ) {
 		case RADAR_SPRITE_ENTITY_BLIP:
-			text = TheText.Get("LG_38");
+			text = Text_Get(&TheText,"LG_38");
 		break;
 		case RADAR_SPRITE_COORD_BLIP:
-			text = TheText.Get("LG_35");
+			text = Text_Get(&TheText,"LG_35");
 		break;
 		case RADAR_SPRITE_MAP_HERE:
-			text = TheText.Get("LG_01");
+			text = Text_Get(&TheText,"LG_01");
 		break;
 		case RADAR_SPRITE_AVERY:
-			text = TheText.Get("LG_02");
+			text = Text_Get(&TheText,"LG_02");
 		break;
 		case RADAR_SPRITE_BIKER:
-			text = TheText.Get("LG_03");
+			text = Text_Get(&TheText,"LG_03");
 		break;
 		case RADAR_SPRITE_CORTEZ:
-			text = TheText.Get("LG_04");
+			text = Text_Get(&TheText,"LG_04");
 		break;
 		case RADAR_SPRITE_DIAZ:
-			text = TheText.Get("LG_05");
+			text = Text_Get(&TheText,"LG_05");
 		break;
 		case RADAR_SPRITE_KENT:
-			text = TheText.Get("LG_06");
+			text = Text_Get(&TheText,"LG_06");
 		break;
 		case RADAR_SPRITE_LAWYER:
-			text = TheText.Get("LG_07");
+			text = Text_Get(&TheText,"LG_07");
 		break;
 		case RADAR_SPRITE_PHIL:
-			text = TheText.Get("LG_08");
+			text = Text_Get(&TheText,"LG_08");
 		break;
 		case RADAR_SPRITE_BIKERS:
-			text = TheText.Get("LG_03");
+			text = Text_Get(&TheText,"LG_03");
 		break;
 		case RADAR_SPRITE_BOATYARD:
-			text = TheText.Get("LG_09");
+			text = Text_Get(&TheText,"LG_09");
 		break;
 		case RADAR_SPRITE_MALIBU_CLUB:
-			text = TheText.Get("LG_10");
+			text = Text_Get(&TheText,"LG_10");
 		break;
 		case RADAR_SPRITE_CUBANS:
-			text = TheText.Get("LG_11");
+			text = Text_Get(&TheText,"LG_11");
 		break;
 		case RADAR_SPRITE_FILM:
-			text = TheText.Get("LG_12");
+			text = Text_Get(&TheText,"LG_12");
 		break;
 		case RADAR_SPRITE_GUN:
-			text = TheText.Get("LG_13");
+			text = Text_Get(&TheText,"LG_13");
 		break;
 		case RADAR_SPRITE_HAITIANS:
-			text = TheText.Get("LG_14");
+			text = Text_Get(&TheText,"LG_14");
 		break;
 		case RADAR_SPRITE_HARDWARE:
-			text = TheText.Get("LG_15");
+			text = Text_Get(&TheText,"LG_15");
 		break;
 		case RADAR_SPRITE_SAVE:
-			text = TheText.Get("LG_16");
+			text = Text_Get(&TheText,"LG_16");
 		break;
 		case RADAR_SPRITE_STRIP:
-			text = TheText.Get("LG_37");
+			text = Text_Get(&TheText,"LG_37");
 		break;
 		case RADAR_SPRITE_ICE:
-			text = TheText.Get("LG_17");
+			text = Text_Get(&TheText,"LG_17");
 		break;
 		case RADAR_SPRITE_KCABS:
-			text = TheText.Get("LG_18");
+			text = Text_Get(&TheText,"LG_18");
 		break;
 		case RADAR_SPRITE_LOVEFIST:
-			text = TheText.Get("LG_19");
+			text = Text_Get(&TheText,"LG_19");
 		break;
 		case RADAR_SPRITE_PRINTWORKS:
-			text = TheText.Get("LG_20");
+			text = Text_Get(&TheText,"LG_20");
 		break;
 		case RADAR_SPRITE_PROPERTY:
-			text = TheText.Get("LG_21");
+			text = Text_Get(&TheText,"LG_21");
 		break;
 		case RADAR_SPRITE_SUNYARD:
-			text = TheText.Get("LG_36");
+			text = Text_Get(&TheText,"LG_36");
 		break;
 		case RADAR_SPRITE_SPRAY:
-			text = TheText.Get("LG_22");
+			text = Text_Get(&TheText,"LG_22");
 		break;
 		case RADAR_SPRITE_TSHIRT:
-			text = TheText.Get("LG_23");
+			text = Text_Get(&TheText,"LG_23");
 		break;
 		case RADAR_SPRITE_TOMMY:
-			text = TheText.Get("LG_24");
+			text = Text_Get(&TheText,"LG_24");
 		break;
 		case RADAR_SPRITE_PHONE:
-			text = TheText.Get("LG_25");
+			text = Text_Get(&TheText,"LG_25");
 		break;
 		case RADAR_SPRITE_RADIO_WILDSTYLE:
-			text = TheText.Get("LG_26");
+			text = Text_Get(&TheText,"LG_26");
 		break;
 		case RADAR_SPRITE_RADIO_FLASH:
-			text = TheText.Get("LG_27");
+			text = Text_Get(&TheText,"LG_27");
 		break;
 		case RADAR_SPRITE_RADIO_KCHAT:
-			text = TheText.Get("LG_28");
+			text = Text_Get(&TheText,"LG_28");
 		break;
 		case RADAR_SPRITE_RADIO_FEVER:
-			text = TheText.Get("LG_29");
+			text = Text_Get(&TheText,"LG_29");
 		break;
 		case RADAR_SPRITE_RADIO_VROCK:
-			text = TheText.Get("LG_30");
+			text = Text_Get(&TheText,"LG_30");
 		break;
 		case RADAR_SPRITE_RADIO_VCPR:
-			text = TheText.Get("LG_31");
+			text = Text_Get(&TheText,"LG_31");
 		break;
 		case RADAR_SPRITE_RADIO_ESPANTOSO:
-			text = TheText.Get("LG_32");
+			text = Text_Get(&TheText,"LG_32");
 		break;
 		case RADAR_SPRITE_RADIO_EMOTION:
-			text = TheText.Get("LG_33");
+			text = Text_Get(&TheText,"LG_33");
 		break;
 		case RADAR_SPRITE_RADIO_WAVE:
-			text = TheText.Get("LG_34");
+			text = Text_Get(&TheText,"LG_34");
 		break;
 #ifdef MAP_ENHANCEMENTS
         case RADAR_SPRITE_WAYPOINT:
-			text = TheText.Get("LG_38");
+			text = Text_Get(&TheText,"LG_38");
 		break;
 #endif
 		default:
@@ -1848,3 +2608,8 @@ CRadar::DrawLegend(int32 x, int32 y, int32 sprite)
 	}
 	CFont::PrintString(SCREEN_SCALE_X(20.f) + x, SCREEN_SCALE_Y(3.0f) + y, text);
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit mission playback statements and compare original/C callback-visible traces."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ import audio_mission_playback_migration as playback
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-mission-playback-c-tests'
 old=(out/'before/src/audio/AudioLogic.cpp').read_text();new=(root/'src/audio/AudioLogic.cpp').read_text();kernel=(root/'src/audio/AudioMissionPlayback.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare all actual statements independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 for name,target in [('ProcessMissionAudioSlot','ProcessSlot'),('ProcessMissionAudio','Process')]:

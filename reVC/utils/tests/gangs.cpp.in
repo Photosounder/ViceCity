@@ -1,0 +1,212 @@
+#include "common.h"
+#include "caller.h"
+#include "Streaming.h"
+#include "ModelIndexData.h"
+#include "WeaponType.h"
+#include <limits.h>
+#include <stdarg.h>
+#undef assert
+static void require(bool condition,const char *expression,int line)
+{
+    // Keep independent fixture checks active in every build profile including MASTER
+    if(!condition){fprintf(stderr,"Failed at %d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+#ifdef VALIDATE_SAVE_SIZE
+extern "C" {int32_t _saveBufCount;}
+#endif
+CStreamingInfo CStreaming::ms_aInfoForModel[4096];
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned states,queries,draws,choices,initializations,saveBlocks,loadBlocks,assertions,mutations;
+static int32_t randomValue;
+static int queried[8],queryCount,pendingGang=-1,pendingSecond;
+static bool permitAssertions,observeLoadInitialization;
+
+static void bytes(const void *data,size_t length)
+{
+    // Compare complete deterministic records and padding without native pointer addresses
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<length;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep scalar observations at the original fixed integer width
+    bytes(&value,4);
+}
+static GangInfo read(int gang)
+{
+    // Copy the actual canonical record representation through its real getter
+    GangInfo result;TestGangs_Read(gang,&result);return result;
+}
+static void snapshot()
+{
+    // Observe every stored record byte and the separate attack-policy flags
+    for(int i=0;i<NUM_GANGS;i++){
+        // Require contiguous original record storage and stable canonical addresses
+        GangInfo record=read(i);bytes(&record,sizeof(record));number(TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i)));
+        assert((const uint8_t *)TestGangs_Record(i)==(const uint8_t *)TestGangs_Record(0)+sizeof(GangInfo)*i);
+    }
+    states++;
+}
+extern "C" int myrand(void)
+{
+    // Observe each real General random draw and supply controlled signed provider values
+    number(1);number((uint32_t)randomValue);draws++;return randomValue;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Reject new seeding dependencies because the original gang module never seeds the provider
+    (void)seed;assert(false);
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Retain the game's returning assertion callback during intentionally corrupt-header tests
+    if(!permitAssertions){fprintf(stderr,"Unexpected %s at %s:%u (%s)\n",expression,file,line,function);abort();}
+    if(observeLoadInitialization){
+        // Require initialization to occur before the first original header check
+        assert(TestGangs_GetModel1(GANG_CUBAN)==MI_CBA);
+        assert(TestGangs_GetVehicle(GANG_CUBAN)==MI_CUBAN);
+        assert(read(GANG_GOLFER).m_Weapon1==WEAPONTYPE_GOLFCLUB);
+    }
+    bytes(expression,strlen(expression));assertions++;
+}
+void TestGangs_StreamingQuery(int32_t id)
+{
+    // Observe the actual streaming predicate and optionally mutate the live second model between queries
+    assert(id>=0&&id<4096&&queryCount<8);queried[queryCount++]=id;number(2);number(id);number(CStreaming::ms_aInfoForModel[id].m_loadState);queries++;
+    if(pendingGang>=0){
+        // Use the real setter to avoid type-punning between original and converted record classes
+        int gang=pendingGang;pendingGang=-1;TestGangs_SetModels(gang,TestGangs_GetModel1(gang),pendingSecond);mutations++;
+    }
+}
+
+static void constructorDefaults()
+{
+    // Check all nine original constructor results before any explicit initialization call
+    for(int i=0;i<NUM_GANGS;i++){
+        // Include zero-initialized static padding and every original sentinel field
+        GangInfo expected;memset(&expected,0,sizeof(expected));expected.m_nVehicleMI=expected.m_nPedModel1MI=expected.m_nPedModel2MI=-1;expected.m_nPedModelOverride=-1;
+        GangInfo actual=read(i);assert(memcmp(&actual,&expected,sizeof(actual))==0);assert(!TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i)));
+    }
+    snapshot();
+}
+static void initializationCases()
+{
+    // Distinguish one-time constructor state from the partial reset performed by each Initialize call
+    const int32_t pedModels[8][2]={{MI_CBA,MI_CBB},{MI_HNA,MI_HNB},{MI_SGA,MI_SGB},{MI_CLA,MI_CLB},{MI_GDA,MI_GDB},{MI_BKA,MI_BKB},{MI_PGA,MI_PGB},{MI_WFOGO,MI_WMOGO}};
+    const int32_t cars[8]={MI_CUBAN,MI_VOODOO,MI_GANGBUR,-1,-1,MI_ANGEL,-1,MI_CADDY};
+    for(int pass=0;pass<4;pass++){
+        // Seed all non-reset fields and padding with distinct live values
+        GangInfo expected[NUM_GANGS];bool attack[NUM_GANGS];
+        for(int i=0;i<NUM_GANGS;i++){
+            // Use public setters for each original operation and byte copies only for explicit padding seeding
+            const void *identity=TestGangs_Record(i);TestGangs_SetModels(i,400+i,500+i);TestGangs_SetVehicle(i,1000+i);
+            TestGangs_SetWeapons(i,INT32_MIN+i,INT32_MAX-i);TestGangs_SetOverride(i,(int8_t)(pass*10+i));
+            assert(TestGangs_GetModel1(i)==400+i&&TestGangs_GetModel2(i)==500+i&&TestGangs_GetVehicle(i)==1000+i&&TestGangs_GetOverride(i)==pass*10+i&&TestGangs_Record(i)==identity);
+            expected[i]=read(i);uint8_t *raw=(uint8_t *)&expected[i];raw[13]=0x40+i;raw[14]=0x80+i;raw[15]=0xD0+i;TestGangs_Write(i,&expected[i]);
+            attack[i]=(pass+i)%2!=0;TestGangs_SetAttack((ePedType)(PEDTYPE_GANG1+i),attack[i]);
+            if(i<8){expected[i].m_nPedModel1MI=pedModels[i][0];expected[i].m_nPedModel2MI=pedModels[i][1];expected[i].m_nVehicleMI=cars[i];}
+            if(i==GANG_GOLFER)expected[i].m_Weapon1=expected[i].m_Weapon2=WEAPONTYPE_GOLFCLUB;
+#ifdef FIX_BUGS
+            expected[i].m_nPedModelOverride=-1;
+#endif
+        }
+        snapshot();TestGangs_Init();initializations++;
+        for(int i=0;i<NUM_GANGS;i++){
+            // Require the ninth gang, attack flags, other weapons and record padding to retain their original behavior
+            GangInfo actual=read(i);assert(memcmp(&actual,&expected[i],sizeof(actual))==0);assert(TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i))==attack[i]);
+        }
+        snapshot();
+    }
+}
+static void attackCases()
+{
+    // Cover both inclusive gang-type boundaries and every valid nongang pedestrian type
+    for(int pass=0;pass<2;pass++)for(int type=0;type<=NUM_PEDTYPES;type++){
+        // Verify rejected type writes cannot change any of the nine stored attack flags
+        bool expected[NUM_GANGS];for(int i=0;i<NUM_GANGS;i++)expected[i]=TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i));
+        TestGangs_SetAttack((ePedType)type,pass!=0);
+        if(type>=PEDTYPE_GANG1&&type<=PEDTYPE_GANG9)expected[type-PEDTYPE_GANG1]=pass!=0;
+        else assert(!TestGangs_GetAttack((ePedType)type));
+        for(int i=0;i<NUM_GANGS;i++)assert(TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i))==expected[i]);
+        snapshot();
+    }
+}
+static void chooseCases()
+{
+    // Cover every signed override category and both sides of the actual General random threshold
+#ifdef USE_PS2_RAND
+    const uint32_t maximum=65535;
+#else
+    const uint32_t maximum=32767;
+#endif
+    const int values[]={INT32_MIN,-1,0,1,(int)(maximum/2-1),(int)(maximum/2),(int)(maximum/2+1),32767,32768,65535,INT32_MAX};
+    const int8_t overrides[]={INT8_MIN,-2,-1,0,1,2,INT8_MAX};
+    for(int gang=0;gang<NUM_GANGS;gang++)for(int8_t overrideModel:overrides)for(int value:values){
+        // Require no random draw for any override value other than minus one
+        TestGangs_SetModels(gang,200+gang,300+gang);TestGangs_SetOverride(gang,overrideModel);randomValue=value;unsigned previous=draws;
+        int32_t result=TestGangs_Choose(gang);bool first=overrideModel!=-1||((uint32_t)value&maximum)<maximum/2;
+        assert(result==(first?200+gang:300+gang));assert(draws-previous==(overrideModel==-1?1u:0u));number((uint32_t)result);choices++;
+    }
+    snapshot();
+}
+static void streamingCases()
+{
+    // Compare the real streaming load-state predicate and its conditional second live lookup
+    const uint8_t statesToTry[]={0,1,2,3,4,255};
+    for(int gang=0;gang<NUM_GANGS;gang++)for(uint8_t first:statesToTry)for(uint8_t second:statesToTry){
+        // Preserve short-circuiting for every supported and unknown byte load-state value
+        TestGangs_SetModels(gang,100+gang,200+gang);CStreaming::ms_aInfoForModel[100+gang].m_loadState=first;CStreaming::ms_aInfoForModel[200+gang].m_loadState=second;queryCount=0;
+        assert(TestGangs_Loaded(gang)==(first==STREAMSTATE_LOADED&&second==STREAMSTATE_LOADED));
+        assert(queryCount==(first==STREAMSTATE_LOADED?2:1)&&queried[0]==100+gang);if(queryCount==2)assert(queried[1]==200+gang);
+    }
+    for(int gang=0;gang<NUM_GANGS;gang++)for(int loaded=0;loaded<2;loaded++){
+        // Change model two after query one and require the next original field access to use it
+        TestGangs_SetModels(gang,100+gang,200+gang);CStreaming::ms_aInfoForModel[100+gang].m_loadState=STREAMSTATE_LOADED;CStreaming::ms_aInfoForModel[300+gang].m_loadState=loaded;
+        pendingGang=gang;pendingSecond=300+gang;queryCount=0;assert(TestGangs_Loaded(gang)==(loaded!=0));assert(queryCount==2&&queried[1]==300+gang);
+    }
+    snapshot();
+}
+static void saveCases()
+{
+    // Compare exact original aggregate assignment at four valid buffer alignments and distinct padding patterns
+    const int32_t values[]={INT32_MIN,INT32_MAX,-1,0,1,32768,-32769,0x12345678,-0x1234567};
+    for(int pass=0;pass<3;pass++)for(int offset=0;offset<16;offset+=4){
+        // Seed all 24 bytes of each canonical record and both separate policy states
+        GangInfo saved[NUM_GANGS];bool attack[NUM_GANGS];const void *identities[NUM_GANGS];
+        for(int i=0;i<NUM_GANGS;i++){
+            // Keep arbitrary signed model and weapon values without calling the streaming table on them
+            GangInfo &record=saved[i];memset(&record,0,sizeof(record));record.m_nVehicleMI=values[i];record.m_nPedModel1MI=values[(i+pass+1)%9];record.m_nPedModel2MI=values[(i+pass+2)%9];record.m_nPedModelOverride=(int8_t)(i*29-pass*7);
+            record.m_Weapon1=values[(i+3)%9];record.m_Weapon2=values[(i+5)%9];uint8_t *raw=(uint8_t *)&record;raw[13]=0x31+i+pass;raw[14]=0x82+i+pass;raw[15]=0xC0+i+pass;
+            TestGangs_Write(i,&record);attack[i]=(i+pass)%2!=0;TestGangs_SetAttack((ePedType)(PEDTYPE_GANG1+i),attack[i]);identities[i]=TestGangs_Record(i);
+        }
+        alignas(16) uint8_t storage[288];memset(storage,0x5A,sizeof(storage));uint8_t *buffer=storage+16+offset;uint32_t size=0;
+        TestGangs_Save(buffer,&size);saveBlocks++;assert(size==224&&memcmp(buffer,"GNG\0",4)==0);uint32_t payload;memcpy(&payload,buffer+4,4);assert(payload==216);
+        assert(memcmp(buffer+8,saved,sizeof(saved))==0);for(int i=0;i<16+offset;i++)assert(storage[i]==0x5A);for(size_t i=16+offset+size;i<sizeof(storage);i++)assert(storage[i]==0x5A);bytes(buffer,size);
+        for(int i=0;i<NUM_GANGS;i++){
+            // Make incoming padding distinguishable from old canonical padding before load assignment
+            GangInfo overwritten;memset(&overwritten,0xA5,sizeof(overwritten));TestGangs_Write(i,&overwritten);
+        }
+        uint8_t originalBuffer[224];memcpy(originalBuffer,buffer,size);TestGangs_Load(buffer,size);loadBlocks++;
+        assert(memcmp(originalBuffer,buffer,size)==0);
+        for(int i=0;i<NUM_GANGS;i++){
+            // Require complete record restoration, unchanged policy flags and stable canonical addresses
+            GangInfo actual=read(i);assert(memcmp(&actual,&saved[i],sizeof(actual))==0&&TestGangs_Record(i)==identities[i]);assert(TestGangs_GetAttack((ePedType)(PEDTYPE_GANG1+i))==attack[i]);
+        }
+        snapshot();memset(buffer,0x33,8);unsigned previous=assertions;permitAssertions=observeLoadInitialization=true;TestGangs_Load(buffer,size);permitAssertions=observeLoadInitialization=false;loadBlocks++;
+#ifdef VALIDATE_SAVE_SIZE
+        assert(assertions-previous==5);
+#else
+        assert(assertions==previous);
+#endif
+        for(int i=0;i<NUM_GANGS;i++){GangInfo actual=read(i);assert(memcmp(&actual,&saved[i],sizeof(actual))==0);}
+        snapshot();
+    }
+}
+int main()
+{
+    // Exercise all sixteen actual gang operations with no game process or rendering device
+    assert(sizeof(GangInfo)==24&&NUM_GANGS==9);constructorDefaults();initializationCases();attackCases();chooseCases();streamingCases();saveCases();
+    assert(states==83&&choices==693&&draws==99&&queries==414&&mutations==18&&saveBlocks==12&&loadBlocks==24);
+    printf("states=%u choices=%u draws=%u queries=%u mutations=%u initializations=%u saves=%u loads=%u assertions=%u hash=%016llx\n",states,choices,draws,queries,mutations,initializations,saveBlocks,loadBlocks,assertions,(unsigned long long)hashValue);
+}

@@ -1,0 +1,141 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,commands,events,allocations,frees,created,removed,opens,closes,openFailures,readFailure,snapshots,bindings;
+static RwTexDictionary dictionaries[8192],*current;
+static RwStream fileStream={99,true};
+static bool removeOnCallback;
+static void *storage[3];
+static void requireAt(bool value,unsigned line)
+{
+    // Stop quietly at the exact failing diagnostic line without any UI
+    ++checks;if(!value){fprintf(stderr,"line=%u commands=%u checks=%u\n",line,commands,checks);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *data,size_t count)
+{
+    // Compare only initialized data and address-independent identities
+    const unsigned char *bytes=(const unsigned char*)data;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,unsigned a=0,unsigned b=0)
+{
+    // Retain exact external operation ordering and live borrowed dictionary identities
+    unsigned values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static TxdResult run(unsigned operation,int slot=0,void *argument=NULL)
+{
+    // Exercise independently compiled complete original or C owner operations
+    ++commands;return TestTxd(operation,slot,argument);
+}
+static TxdDef *get(int slot)
+{
+    // Borrow the actual live pool entry rather than reproducing slot policy in the fixture
+    return (TxdDef*)run(OP_GetSlot,slot).pointer;
+}
+extern "C" void *cita_win_malloc(size_t bytes,const char *file,const char *function,int line)
+{
+    // Allocate real raw pool storage at the original external allocator boundary
+    require(allocations<3&&file&&function&&line>0);void *memory=_aligned_malloc(bytes,16);require(memory!=NULL);memset(memory,0xa5,bytes);storage[allocations++]=memory;event(1,(unsigned)bytes);return memory;
+}
+extern "C" void cita_win_free(void *memory,const char *file,const char *function,int line)
+{
+    // Observe the exact pool release order without managing entries on the owner's behalf
+    require(file&&function&&line>0);unsigned index=0;while(index<3&&storage[index]!=memory)++index;require(index<3);storage[index]=NULL;++frees;event(2,index);_aligned_free(memory);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int,const char*)
+{
+    // Report unexpected owner assertions without opening a native dialog
+    fprintf(stderr,"owner assertion=%s\n",expression);require(false);
+}
+extern "C" int myrand(void)
+{
+    // Reject any unexpected random-provider use by the complete General dependency
+    require(false);return 0;
+}
+extern "C" void mysrand(unsigned int)
+{
+    // Reject any unexpected random-provider mutation by the complete General dependency
+    require(false);
+}
+RwTexDictionary *RwTexDictionaryCreate(void)
+{
+    // Supply independent SDK dictionary identities without implementing TXD ownership policy
+    require(created<8191);RwTexDictionary *dictionary=&dictionaries[++created];dictionary->id=created;event(3,created);return dictionary;
+}
+void RwTexDictionaryDestroy(RwTexDictionary *dictionary)
+{
+    // Record SDK destruction at the exact point chosen by the actual owner
+    require(dictionary&&dictionary->id);++dictionary->destroys;event(4,dictionary->id);
+}
+RwTexDictionary *RwTexDictionaryGetCurrent(void)
+{
+    // Return the SDK's live current dictionary through the original primitive
+    event(5,current?current->id:0);return current;
+}
+void RwTexDictionarySetCurrent(RwTexDictionary *dictionary)
+{
+    // Observe current-dictionary transitions without emulating the owner's saved slot
+    current=dictionary;event(6,current?current->id:0);
+}
+void CStreaming::RemoveTxd(int slot)
+{
+    // Permit streaming callbacks to reenter the complete dictionary owner
+    ++removed;event(7,(unsigned)slot);if(removeOnCallback)run(OP_RemoveTxd,slot);
+}
+RwStream *RwStreamFindChunk(RwStream *stream,int id,void *length,void *version)
+{
+    // Supply controlled SDK chunk results while the actual owner chooses its failure behavior
+    require(stream&&id==rwID_TEXDICTIONARY&&!length&&!version);event(8,stream->id,stream->chunk);return stream->chunk?stream:NULL;
+}
+RwTexDictionary *RwTexDictionaryGtaStreamRead(RwStream *stream)
+{
+    // Return controlled whole-dictionary read results at the genuine SDK boundary
+    event(9,stream->id);return readFailure==1?NULL:RwTexDictionaryCreate();
+}
+RwTexDictionary *RwTexDictionaryGtaStreamRead1(RwStream *stream)
+{
+    // Return controlled first-stage results without reproducing the owner's slot mutation
+    event(10,stream->id);return readFailure==2?NULL:RwTexDictionaryCreate();
+}
+RwTexDictionary *RwTexDictionaryGtaStreamRead2(RwStream *stream,RwTexDictionary *dictionary)
+{
+    // Observe the exact prior dictionary passed to the second-stage SDK reader
+    event(11,stream->id,dictionary?dictionary->id:0);return readFailure==3?NULL:RwTexDictionaryCreate();
+}
+void _rwD3D8TexDictionaryEnableRasterFormatConversion(bool enabled)
+{
+    // Preserve the original file-loading conversion request in the external trace
+    require(enabled);event(12,enabled);
+}
+RwStream *RwStreamOpen(int type,int access,const char *filename)
+{
+    // Fail a bounded number of open attempts so the original retry loop executes quietly
+    require(type==rwSTREAMFILENAME&&access==rwSTREAMREAD&&strcmp(filename,"fixture.txd")==0);++opens;event(13);if(openFailures){--openFailures;return NULL;}return &fileStream;
+}
+void RwStreamClose(RwStream *stream,void *memory)
+{
+    // Verify the owner closes the exact SDK stream even when its read fails
+    require(stream==&fileStream&&!memory);++closes;event(14);
+}
+static void snapshot(void)
+{
+    // Compare every occupied pool entry through the public lookup without reading uninitialized name padding
+    ++snapshots;for(int i=0;i<TXDSTORESIZE;++i){TxdDef *entry=get(i);if(entry){RwTexDictionary *dictionary=(RwTexDictionary*)entry->texDict;unsigned values[]={(unsigned)i,(unsigned)entry->refCount,dictionary?dictionary->id:0};hashBytes(values,sizeof(values));hashBytes(entry->name,strlen(entry->name)+1);}}event(15,current?current->id:0);
+}
+int main(void)
+{
+    // Verify actual pool initialization, duplicate names, mutable names and dictionary current-state operations
+    run(OP_Initialise);run(OP_Initialise);require(allocations==3&&run(OP_FindTxdSlot,0,(void*)"absent").number==-1);int a=run(OP_AddTxdSlot,0,(void*)"alpha").number,b=run(OP_AddTxdSlot,0,(void*)"ALPHA").number;require(a==0&&b==1&&run(OP_FindTxdSlot,0,(void*)"AlPhA").number==a);run(OP_Create,a);run(OP_Create,b);RwTexDictionary *first=(RwTexDictionary*)get(a)->texDict,*second=(RwTexDictionary*)get(b)->texDict;current=first;run(OP_PushCurrentTxd);run(OP_SetCurrentTxd,b);run(OP_PopCurrentTxd);require(current==first);run(OP_PopCurrentTxd);require(current==NULL);run(OP_PushCurrentTxd);current=second;run(OP_PushCurrentTxd);current=first;run(OP_PopCurrentTxd);require(current==second);char *name=(char*)run(OP_GetTxdName,a).pointer;name[0]='x';require(run(OP_FindTxdSlot,0,(void*)"xlpha").number==a);snapshot();
+    // Exercise all original stream read stages and preserve their success and failure mutation rules
+    RwStream stream={7,true};for(unsigned mode=0;mode<4;++mode){readFailure=mode;for(unsigned operation=OP_LoadStream;operation<=OP_FinishLoadTxd;++operation){if(operation==OP_LoadFile)continue;bool expected=(operation==OP_LoadStream?mode!=1:operation==OP_StartLoadTxd?mode!=2:mode!=3);require(run(operation,a,&stream).number==expected);require((get(a)->texDict!=NULL)==expected);snapshot();}}readFailure=0;run(OP_Create,a);stream.chunk=false;void *prior=get(a)->texDict;require(!run(OP_LoadStream,a,&stream).number&&get(a)->texDict==prior);require(!run(OP_StartLoadTxd,a,&stream).number&&get(a)->texDict==prior);stream.chunk=true;
+    // Verify original file retry behavior and stream closure for both successful and failed dictionary reads
+    openFailures=3;require(run(OP_LoadFile,a,(void*)"fixture.txd").number==1&&opens==4&&closes==1);readFailure=1;require(run(OP_LoadFile,a,(void*)"fixture.txd").number==0&&opens==5&&closes==2);readFailure=0;
+    // Exercise zero and negative reference transitions and reentry from the streaming owner
+    run(OP_AddRef,b);run(OP_AddRef,b);require(run(OP_GetNumRefs,b).number==2);run(OP_RemoveRefWithoutDelete,b);require(removed==0);removeOnCallback=true;run(OP_RemoveRef,b);require(removed==1&&get(b)->texDict==NULL);run(OP_RemoveRef,b);require(removed==2&&run(OP_GetNumRefs,b).number==-1);removeOnCallback=false;
+    // Run repeated slot reuse and case-insensitive lookup using the actual pool generation and allocation cursor
+    for(unsigned i=0;i<512;++i){char text[20];sprintf(text,"slot%u",i);int slot=run(OP_AddTxdSlot,0,text).number;require(slot>=0&&run(OP_FindTxdSlot,0,text).number==slot);run(OP_Create,slot);run(OP_AddRef,slot);require(run(OP_GetNumRefs,slot).number==1);run(OP_RemoveRefWithoutDelete,slot);run(OP_RemoveTxdSlot,slot);require(get(slot)==NULL);if(i%64==0)snapshot();}
+    // Invoke every retained renderer forwarding ABI against live slots and the actual dictionary owner
+    int forwardedSlot=run(OP_AddTxdSlot,0,(void*)"forward").number;run(OP_Create,forwardedSlot);for(unsigned i=0;i<27;++i){unsigned action=TestBindingActions[i];if(action==5){run(OP_RemoveTxdSlot,forwardedSlot);}++commands;++bindings;TxdResult result=TestTxdBinding(i,forwardedSlot,"forward");if(action==3)require(result.number==forwardedSlot);if(action==5){forwardedSlot=result.number;require(forwardedSlot>=0);}if(action==6)require(get(forwardedSlot)->texDict!=NULL);if(action==8){require(get(forwardedSlot)==NULL);forwardedSlot=run(OP_AddTxdSlot,0,(void*)"forward").number;run(OP_Create,forwardedSlot);}}run(OP_RemoveTxdSlot,forwardedSlot);require(bindings==27);snapshot();
+    // Preserve the exact zero-reference shutdown criterion and the original pool-only final destruction
+    run(OP_GameShutdown);require(get(a)==NULL&&get(b)!=NULL);run(OP_RemoveTxdSlot,b);snapshot();run(OP_Shutdown);require(frees==3&&storage[0]==NULL&&storage[1]==NULL&&storage[2]==NULL);printf("commands=%u checks=%u snapshots=%u bindings=%u created=%u removed=%u opens=%u closes=%u events=%u hash=%016llx\n",commands,checks,snapshots,bindings,created,removed,opens,closes,events,(unsigned long long)hashValue);return 0;
+}

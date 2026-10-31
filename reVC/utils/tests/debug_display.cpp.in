@@ -1,0 +1,194 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),states,checks,observations;
+static bool armed,triggered;static unsigned mode,drawCalls,lineCalls,printCalls,screenCalls;
+static bool prop,background,centre,rightJustify,justify,backgroundOnly,depthTest;
+static float scaleX,scaleY,rightWrap,wrapX;static int fontStyle;static uint32_t color;static uintptr_t texture;
+uint16_t gUString[256];
+static void Number(uint64_t value)
+{
+    // Compare ordered scalar observations without native addresses or indeterminate padding
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Preserve exact endpoint and screen-coordinate representations
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Bytes(const void *pointer,size_t size)
+{
+    // Compare every initialized buffer byte including stale tails and truncated strings
+    const uint8_t *bytes=(const uint8_t*)pointer;for(size_t i=0;i<size;i++){digest^=bytes[i];digest*=UINT64_C(1099511628211);}
+}
+static void Check(bool value)
+{
+    // Reject independent invariant failures at their exact state
+    ++checks;if(!value){fprintf(stderr,"Debug display invariant %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static void Observe(unsigned point)
+{
+    // Exercise live queue mutation only at native draw or conversion calls
+    ++observations;Number(point);if(!armed||triggered)return;
+    if(mode==1&&point==1){triggered=true;gbDebugStuffInRelease=false;GLOBAL(ms_nCurrentTextLine)=(GLOBAL(ms_nCurrentTextLine)+3)%15;}
+    else if(mode==2&&point==16){triggered=true;Run_Debug_DebugAddText("during conversion");}
+    else if(mode==3&&point==15){triggered=true;gUString[0]='Z';}
+    else if(mode==4&&point==17){triggered=true;Run_Debug_PrintAt("from text",71,82);}
+    else if(mode==5&&point==18){triggered=true;Run_Debug_PrintAt("late screen",77,88);}
+    else if(mode==6&&point==10){triggered=true;Run_Debug_PrintAt("during flush",11,22);}
+    else if(mode==7&&point==21){triggered=true;DebugTestVector a={1,2,3},b={-4,-5,-6};Run_Debug_AddLine(a,b,0x12345678,0x90abcdef);}
+    else if(mode==8&&point==19){triggered=true;DebugTestVector a={3,2,1},b={6,5,4};Run_Debug_AddLine(a,b,1,2);}
+    else if(mode==9&&point==20){triggered=true;GLOBAL(ms_nLines)=0;}
+    else if(mode==10&&point==18){triggered=true;GLOBAL(ms_nScreenStrs)=0;}
+    else if(mode==11&&point==17){triggered=true;Run_Debug_DebugAddText("");}
+    else if(mode==12&&point==11){triggered=true;Run_Debug_DebugInitTextBuffer();}
+}
+void CFont::SetPropOn()
+{
+    // Preserve the first native proportional-font operation and its live effects
+    Observe(1);prop=true;
+}
+void CFont::SetPropOff()
+{
+    // Preserve both original classic-mode proportional-font resets
+    Observe(2);prop=false;
+}
+void CFont::SetBackgroundOff()
+{
+    // Preserve native background-state mutation
+    Observe(3);background=false;
+}
+void CFont::SetCentreOff()
+{
+    // Preserve native centering-state mutation
+    Observe(4);centre=false;
+}
+void CFont::SetRightJustifyOn()
+{
+    // Preserve classic text-buffer right justification
+    Observe(5);rightJustify=true;
+}
+void CFont::SetRightJustifyOff()
+{
+    // Preserve fixed text-buffer and screen-queue right justification
+    Observe(6);rightJustify=false;
+}
+void CFont::SetJustifyOn()
+{
+    // Preserve fixed text-buffer justification without adding it to classic mode
+    Observe(7);justify=true;
+}
+void CFont::SetJustifyOff()
+{
+    // Preserve screen-queue justification state
+    Observe(8);justify=false;
+}
+void CFont::SetBackGroundOnlyTextOff()
+{
+    // Preserve native background-only-text state
+    Observe(9);backgroundOnly=false;
+}
+void CFont::DrawFonts()
+{
+    // Flush after all original print calls and before screen-queue reset
+    Observe(10);++drawCalls;Number(GLOBAL(ms_nScreenStrs));
+}
+void CFont::SetScale(float x,float y)
+{
+    // Preserve exact scale arguments before later font setup operations
+    Observe(11);scaleX=x;scaleY=y;Floating(x);Floating(y);
+}
+void CFont::SetRightJustifyWrap(float value)
+{
+    // Preserve native right-wrap arguments
+    Observe(12);rightWrap=value;Floating(value);
+}
+void CFont::SetWrapx(float value)
+{
+    // Preserve the screen-string queue's large wrap value
+    Observe(13);wrapX=value;Floating(value);
+}
+void CFont::SetFontStyle(int16 value)
+{
+    // Preserve the native style argument width and value
+    Observe(14);fontStyle=value;Number((uint16_t)value);
+}
+void CFont::SetColor(CRGBA value)
+{
+    // Preserve color byte order and native callbacks before each text print
+    Observe(15);color=(uint32_t)value.r|((uint32_t)value.g<<8)|((uint32_t)value.b<<16)|((uint32_t)value.a<<24);Number(color);
+}
+void AsciiToUnicode(const char *src,wchar *dst)
+{
+    // Retain source-row identity and then execute the actual original conversion body
+    Observe(16);Check(dst==gUString);uintptr_t offset=(uintptr_t)src-(uintptr_t)GLOBAL(ms_aTextBuffer);Check(offset<1200&&offset%80==0);Number(offset/80);
+    @ASCII_BODY@
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Preserve the shared scratch pointer and live text bytes at each native print
+    Observe(17);++printCalls;Floating(x);Floating(y);Number(color);Check(text==gUString);for(unsigned i=0;;i++){Check(i<256);Number(text[i]);if(!text[i])break;}
+}
+void ObrsPrintfString(const char *str,short x,short y)
+{
+    // Preserve queue-row identity and native signed-short coordinate narrowing
+    Observe(18);++screenCalls;uintptr_t offset=(uintptr_t)str-(uintptr_t)GLOBAL(ms_aScreenStrs);Check(offset<sizeof(GLOBAL(ms_aScreenStrs))&&offset%264==8);Number(offset/264);Number((uint32_t)x);Number((uint32_t)y);for(unsigned i=0;;i++){Check(i<256);Number((uint8_t)str[i]);if(!str[i])break;}
+}
+bool RwRenderStateSet(int state,void *value)
+{
+    // Preserve both persistent render-state changes even when no debug lines are queued
+    Check(value==NULL);if(state==rwRENDERSTATETEXTURERASTER){Observe(19);texture=(uintptr_t)value;}else{Check(state==rwRENDERSTATEZTESTENABLE);Observe(20);depthTest=value!=NULL;}return true;
+}
+extern "C" void Lines_RenderLineWithClipping(float x1,float y1,float z1,float x2,float y2,float z2,uint32_t c1,uint32_t c2)
+{
+    // Preserve exact endpoint, color and live-count behavior at the existing C line API
+    Observe(21);++lineCalls;Floating(x1);Floating(y1);Floating(z1);Floating(x2);Floating(y2);Floating(z2);Number(c1);Number(c2);Check(texture==0&&!depthTest);
+}
+static void Snapshot()
+{
+    // Observe all six complete queue objects, shared scratch bytes and native font/render state
+    ++states;Number((uint16_t)GLOBAL(ms_nCurrentTextLine));Bytes(GLOBAL(ms_aTextBuffer),sizeof(GLOBAL(ms_aTextBuffer)));Number(GLOBAL(ms_nScreenStrs));Number(GLOBAL(ms_nLines));
+    for(int i=0;i<100;i++){const Debug_ScreenStr &screen=GLOBAL(ms_aScreenStrs)[i];Number((uint32_t)screen.x);Number((uint32_t)screen.y);Bytes(screen.str,256);const Debug_Line &line=GLOBAL(ms_aLines)[i];Floating(line.p1.x);Floating(line.p1.y);Floating(line.p1.z);Floating(line.p2.x);Floating(line.p2.y);Floating(line.p2.z);Number(line.c1);Number(line.c2);}
+    for(int i=0;i<256;i++)Number(gUString[i]);Number(gbDebugStuffInRelease);Number(triggered);Number(prop);Number(background);Number(centre);Number(rightJustify);Number(justify);Number(backgroundOnly);Number(depthTest);Number(texture);Floating(scaleX);Floating(scaleY);Floating(rightWrap);Floating(wrapX);Number(fontStyle);Number(color);Number(drawCalls);Number(lineCalls);Number(printCalls);Number(screenCalls);
+}
+static void Reset(unsigned seed)
+{
+    // Seed every state object without erasing the original operation's partial-reset semantics
+    armed=triggered=false;mode=0;gbDebugStuffInRelease=seed&1;GLOBAL(ms_nCurrentTextLine)=seed%15;GLOBAL(ms_nScreenStrs)=GLOBAL(ms_nLines)=0;drawCalls=lineCalls=printCalls=screenCalls=0;prop=background=centre=rightJustify=justify=backgroundOnly=depthTest=true;texture=123;scaleX=3;scaleY=4;rightWrap=5;wrapX=6;fontStyle=-1;color=0xabcdef12;
+    for(int i=0;i<15;i++){for(int j=0;j<80;j++)GLOBAL(ms_aTextBuffer)[i][j]=(char)(1+(seed+i+j)%255);GLOBAL(ms_aTextBuffer)[i][79]=0;}
+    for(int i=0;i<100;i++){Debug_ScreenStr &screen=GLOBAL(ms_aScreenStrs)[i];screen.x=(int)seed+i;screen.y=-i;for(int j=0;j<256;j++)screen.str[j]=(char)(seed+i+j);Debug_Line &line=GLOBAL(ms_aLines)[i];line.p1.x=(float)i;line.p1.y=-(float)i;line.p1.z=0.25f;line.p2.x=-0.0f;line.p2.y=17.5f;line.p2.z=-3;line.c1=seed+i;line.c2=~line.c1;}
+    for(int i=0;i<256;i++)gUString[i]=(uint16_t)(seed*3+i);
+}
+static DebugTestVector Point(unsigned n)
+{
+    // Include special float payloads without imposing arithmetic on by-value endpoint copies
+    DebugTestVector point={(float)n*0.25f,-(float)n,0};uint32_t bits[]={0x80000000,0,0x7f800000,0xff800000,0x7fc12345,0x00000001,0x3f800000};memcpy(&point.z,&bits[n%7],4);return point;
+}
+int main()
+{
+    // Verify original static initialization before any fixture reset supplies state
+    Check(!gbDebugStuffInRelease&&GLOBAL(ms_nCurrentTextLine)==0&&GLOBAL(ms_nScreenStrs)==0&&GLOBAL(ms_nLines)==0);Snapshot();
+    // Prove initialization resets only the ring cursor and preserves all existing buffer and queue bytes
+    for(unsigned seed=0;seed<30;seed++){Reset(seed);char before[15][80];memcpy(before,GLOBAL(ms_aTextBuffer),sizeof(before));GLOBAL(ms_nScreenStrs)=7;GLOBAL(ms_nLines)=9;Run_Debug_DebugInitTextBuffer();Check(GLOBAL(ms_nCurrentTextLine)==0&&GLOBAL(ms_nScreenStrs)==7&&GLOBAL(ms_nLines)==9);Check(memcmp(before,GLOBAL(ms_aTextBuffer),sizeof(before))==0);Snapshot();}
+    // Exercise every ring slot, wrap, empty input, exact limit and truncation with independent expected bytes
+    const unsigned lengths[]={0,1,2,78,79,80,81,255,300};char input[320];for(unsigned seed=0;seed<90;seed++){Reset(seed);for(unsigned k=0;k<9;k++){unsigned length=lengths[(seed+k)%9];for(unsigned j=0;j<length;j++)input[j]=(char)(1+(j+seed)%255);input[length]=0;int index=GLOBAL(ms_nCurrentTextLine);char expected[80];memcpy(expected,GLOBAL(ms_aTextBuffer)[index],80);unsigned copied=length<79?length:79;memcpy(expected,input,copied);expected[copied]=0;Run_Debug_DebugAddText(input);Check(GLOBAL(ms_nCurrentTextLine)==(index+1)%15);Check(memcmp(expected,GLOBAL(ms_aTextBuffer)[index],80)==0);Snapshot();}}
+    // Exercise valid live aliases into the ring without adding overlap assumptions to strncpy
+    for(unsigned seed=0;seed<30;seed++){Reset(seed);Run_Debug_DebugAddText(GLOBAL(ms_aTextBuffer)[(seed+1)%15]+3);Snapshot();}
+    // Exercise screen copies at the exact 256-byte boundary and retain original nontermination on truncation
+    for(unsigned seed=0;seed<12;seed++){Reset(seed);for(unsigned i=0;i<105;i++){unsigned length=lengths[(seed+i)%9];memset(input,'A'+i%26,length);input[length]=0;char expected[256];memset(expected,0,256);memcpy(expected,input,length<256?length:256);int x=(int)(i*65537u+seed),y=INT_MIN+(int)i;Run_Debug_PrintAt(input,x,y);if(i<100){Check(GLOBAL(ms_aScreenStrs)[i].x==x&&GLOBAL(ms_aScreenStrs)[i].y==y);Check(memcmp(expected,GLOBAL(ms_aScreenStrs)[i].str,256)==0);}Check(GLOBAL(ms_nScreenStrs)==(int)(i<100?i+1:100));Snapshot();}}
+    // Verify a saturated screen queue returns before dereferencing a null input
+    Reset(37);GLOBAL(ms_nScreenStrs)=100;Run_Debug_PrintAt(NULL,INT_MIN,INT_MAX);Check(GLOBAL(ms_nScreenStrs)==100);Snapshot();
+    // Exercise text display gates, blank-row exits, native callbacks and full MASTER suppression
+    for(unsigned seed=0;seed<104;seed++){Reset(seed);for(int i=0;i<15;i++){if((i+(int)seed)%4==0)GLOBAL(ms_aTextBuffer)[i][0]=0;else{GLOBAL(ms_aTextBuffer)[i][0]=(char)('A'+i);GLOBAL(ms_aTextBuffer)[i][1]=0;}}if(seed%8==0)for(int i=0;i<15;i++)GLOBAL(ms_aTextBuffer)[i][0]=0;gbDebugStuffInRelease=seed%3!=0;mode=seed%13;armed=true;Run_Debug_DebugDisplayTextBuffer();armed=false;
+#ifdef MASTER
+        Check(drawCalls==0&&printCalls==0);
+#endif
+        Snapshot();}
+    // Exercise visible screen queues, signed-short coordinates, append/clear callbacks and reset-after-flush ordering
+    for(unsigned seed=0;seed<104;seed++){Reset(seed);int count=seed%4==0?0:seed%4==1?1:seed%4==2?99:100;for(int i=0;i<count;i++)Run_Debug_PrintAt(i&1?"screen":"",i*65537,(int)(0x80000000u+(unsigned)i));mode=seed%13;armed=true;Run_Debug_DisplayScreenStrings();armed=false;Check(GLOBAL(ms_nScreenStrs)==0&&drawCalls==1);Snapshot();}
+    // Exercise complete line-capacity saturation and every endpoint/color bit pattern
+    for(unsigned seed=0;seed<8;seed++){Reset(seed);for(unsigned i=0;i<105;i++){DebugTestVector a=Point(i+seed),b=Point(2*i+seed);Run_Debug_AddLine(a,b,0x12345678u+i,~i);Check(GLOBAL(ms_nLines)==(int)(i<100?i+1:100));if(i<100){Check(memcmp(&GLOBAL(ms_aLines)[i].p1,&a,12)==0&&memcmp(&GLOBAL(ms_aLines)[i].p2,&b,12)==0);Check(GLOBAL(ms_aLines)[i].c1==0x12345678u+i&&GLOBAL(ms_aLines)[i].c2==~i);}Snapshot();}}
+    // Exercise empty and full line flushes with both persistent render states and live line-count mutations
+    for(unsigned seed=0;seed<104;seed++){Reset(seed);unsigned count=seed%4==0?0:seed%4==1?1:seed%4==2?99:100;for(unsigned i=0;i<count;i++)Run_Debug_AddLine(Point(i),Point(i+1),i,~i);mode=seed%13;armed=true;Run_Debug_DrawLines();armed=false;Check(GLOBAL(ms_nLines)==0&&texture==0&&!depthTest);Snapshot();}
+    // Report the complete original/C observable sequence from a quiet console executable
+    printf("states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

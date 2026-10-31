@@ -1,0 +1,248 @@
+#include "owners.h"
+#include "entry.h"
+#include "Camera_effects.h"
+#include "shaders/obj/colourfilterVC_PS.inc"
+#include "shaders/obj/contrastPS.inc"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned commands,checks,events,rastersCreated,rastersDestroyed,shadersCreated,shadersDestroyed,draws,constants,uniforms,registrations,reentries,assertions,rasterFailures,shaderFailures;
+static unsigned failRasterCall,failShaderCall,rasterCalls,shaderCalls;
+static bool reenterUpload,insideUpload;
+static const float *outerValues;
+static TestPostArgs nestedArgs;
+static RwRaster rasters[8192];
+static TestShader shaders[8192];
+static RwRaster cameraRaster={1,640,448,32,true};
+static RwCamera camera={&cameraRaster,0.5f};
+static TestDevice device;
+float MBlur_Drunkness;
+bool MBlur_BlurOn;
+namespace rw {
+namespace d3d {TestDevice *d3ddevice=&device;void *im2dOverridePS;}
+namespace gl3 {Shader *im2dOverrideShader;const char *shaderDecl="#version 330\n",*header_vert_src="vertex stage\n",*header_frag_src="fragment stage\n";}
+}
+static void requireAt(bool value,unsigned line)
+{
+    // Fail quietly at the exact diagnostic line without creating native dialogs
+    ++checks;if(!value){fprintf(stderr,"line=%u commands=%u checks=%u events=%u\n",line,commands,checks,events);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Observe initialized values and resource identities rather than process-specific addresses
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,uint32_t a=0,uint32_t b=0)
+{
+    // Retain complete external SDK operation order and normalized input identities
+    uint32_t values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static unsigned rasterId(RwRaster *value)
+{
+    // Normalize nullable SDK raster handles
+    return value?value->id:0;
+}
+static unsigned shaderId(void *value)
+{
+    // Normalize actual controlled shader objects without exposing them to C policy
+    return value?((TestShader*)value)->id:0;
+}
+static TestPostState state(void)
+{
+    // Observe all canonical application data through the independent original or C public caller
+    TestPostState value;TestPostGetState(&value);unsigned ids[]={rasterId((RwRaster*)value.front),rasterId((RwRaster*)value.back)};hashBytes(ids,sizeof(ids));hashBytes(&value.initialised,sizeof(value.initialised));hashBytes(&value.blur,sizeof(value.blur));hashBytes(&value.motion,sizeof(value.motion));hashBytes(&value.effect,sizeof(value.effect));hashBytes(&value.intensity,sizeof(value.intensity));hashBytes(value.previous,sizeof(value.previous));hashBytes(value.average,sizeof(value.average));hashBytes(&value.next,sizeof(value.next));hashBytes(&value.count,sizeof(value.count));return value;
+}
+static int32_t run(unsigned operation,TestPostArgs *args)
+{
+    // Enter complete owner and forwarding operations without duplicating their implementation
+    ++commands;int32_t value=TestPost(operation,args);hashBytes(&value,sizeof(value));state();return value;
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int,const char*)
+{
+    // Observe original assertion sites quietly while preserving their expression identity class
+    ++assertions;event(1,strstr(expression,"FrontBuffer")?1:strstr(expression,"BackBuffer")?2:3);
+}
+RwRaster *RwCameraGetRaster(RwCamera *value)
+{
+    // Supply the original SDK camera raster lookup
+    require(value==&camera);event(2);return value->frameBuffer;
+}
+float RwCameraGetNearClipPlane(RwCamera *value)
+{
+    // Observe each original near-clip query without caching it in the fixture
+    require(value==&camera);event(3);return value->nearClip;
+}
+int RwRasterGetWidth(RwRaster *value)
+{
+    // Observe each original SDK width lookup
+    require(value&&value->alive);event(4,value->id);return value->width;
+}
+int RwRasterGetHeight(RwRaster *value)
+{
+    // Observe each original SDK height lookup
+    require(value&&value->alive);event(5,value->id);return value->height;
+}
+int RwRasterGetDepth(RwRaster *value)
+{
+    // Observe each original SDK depth lookup
+    require(value&&value->alive);event(6,value->id);return value->depth;
+}
+RwRaster *RwRasterCreate(int width,int height,int depth,uint32 flags)
+{
+    // Control SDK allocation outcomes without reproducing buffer sizing or recovery policy
+    require(flags==rwRASTERTYPECAMERATEXTURE);event(7,width,height);hashBytes(&depth,sizeof(depth));++rasterCalls;if(failRasterCall==rasterCalls){++rasterFailures;return NULL;}require(rastersCreated<8192);RwRaster *value=&rasters[rastersCreated++];*value={100+rastersCreated,width,height,depth,true};return value;
+}
+void RwRasterDestroy(RwRaster *value)
+{
+    // Verify each actual SDK resource is destroyed only while alive
+    require(value&&value->alive);event(8,value->id);value->alive=false;++rastersDestroyed;
+}
+void RwRasterPushContext(RwRaster *value)
+{
+    // Preserve nullable context arguments at every original framebuffer-copy call
+    event(9,rasterId(value));
+}
+void RwRasterPopContext(void)
+{
+    // Observe the matching external context pop
+    event(10);
+}
+void RwRasterRenderFast(RwRaster *value,int x,int y)
+{
+    // Retain the exact external source raster and copy coordinates
+    require(value&&value->alive);event(11,value->id);hashBytes(&x,sizeof(x));hashBytes(&y,sizeof(y));
+}
+float RwIm2DGetNearScreenZ(void)
+{
+    // Supply deterministic external screen-depth metadata
+    event(12);return 0.25f;
+}
+void RwIm2DRenderIndexedPrimitive(int32 kind,RwIm2DVertex *vertices,int32 count,RwImVertexIndex *indices,int32 indexCount)
+{
+    // Observe complete initialized SDK vertices and shader overrides at each actual draw
+    require(kind==rwPRIMTYPETRILIST&&count==4&&indexCount==6);event(13,shaderId(rw::d3d::im2dOverridePS),shaderId(rw::gl3::im2dOverrideShader));hashBytes(vertices,count*sizeof(*vertices));hashBytes(indices,indexCount*sizeof(*indices));++draws;
+}
+void RwRenderStateSet(RwRenderState kind,void *value)
+{
+    // Compare SDK state identities while normalizing opaque raster addresses
+    event(14,kind,kind==rwRENDERSTATETEXTURERASTER?rasterId((RwRaster*)value):(uint32)(uintptr_t)value);
+}
+void DefinedState(void)
+{
+    // Observe the original external state-reset operation as a single primitive
+    event(15);
+}
+void PushRendergroup(const char *name)
+{
+    // Require the original debug label to survive identifier projection unchanged
+    require(strcmp(name,"CPostFX::Render")==0);event(16);
+}
+void PopRendergroup(void)
+{
+    // Observe the original matching rendering group exit
+    event(17);
+}
+static TestShader *makeShader(unsigned kind)
+{
+    // Supply controlled SDK shader identities and per-object uniform metadata
+    ++shaderCalls;if(shaderCalls==failShaderCall){++shaderFailures;return NULL;}require(shadersCreated<8192);TestShader *value=&shaders[shadersCreated++];value->id=10000+shadersCreated;value->kind=kind;value->alive=true;for(int i=0;i<32;++i)value->uniformLocations[i]=(int32)value->id*32+i;return value;
+}
+void *rw::d3d::createPixelShader(void *bytes)
+{
+    // Require every original compiled shader byte and factory order to remain unchanged
+    bool colour=(shaderCalls%2)==0;const void *reference=colour?(void*)colourfilterVC_PS_cso:(void*)contrastPS_cso;size_t size=colour?sizeof(colourfilterVC_PS_cso):sizeof(contrastPS_cso);require(memcmp(bytes,reference,size)==0);event(18,(uint32)size,colour);hashBytes(bytes,size);return makeShader(colour?1:2);
+}
+void rw::d3d::destroyPixelShader(void *shader)
+{
+    // Observe exact shader lifetime operations without hiding partial allocations
+    TestShader *value=(TestShader*)shader;require(value&&value->alive);event(19,value->id);value->alive=false;++shadersDestroyed;
+}
+static void observeUpload(const float *values,unsigned components)
+{
+    // Compare only initialized coefficient components and preserve borrowed stack-array lifetime during reentry
+    hashBytes(values,components*sizeof(float));if(insideUpload)require(values!=outerValues);
+    if(reenterUpload&&!insideUpload){
+        // Reenter complete shader policy while the original caller's coefficient array remains live
+        float saved[4];memcpy(saved,values,components*sizeof(float));outerValues=values;reenterUpload=false;insideUpload=true;++reentries;run(OP_Shader,&nestedArgs);require(memcmp(saved,values,components*sizeof(float))==0);insideUpload=false;outerValues=NULL;
+    }
+}
+int TestDevice::SetPixelShaderConstantF(uint32 first,const float *values,uint32 count)
+{
+    // Retain the original vector-four upload count while excluding the original mobile array's unspecified fourth float
+    require((first==10||first==11)&&count==1);TestPostState current;TestPostGetState(&current);unsigned components=current.effect==3?3:4;event(20,first,count);observeUpload(values,components);++constants;return 0;
+}
+int32 rw::gl3::registerUniform(const char *name)
+{
+    // Validate exact original uniform strings independently of the new C variable names
+    const char *names[]={"u_blurcolor","u_contrastAdd","u_contrastMult"};int i=0;while(i<3&&strcmp(name,names[i])!=0)++i;require(i<3);event(21,i);++registrations;return 5+4*i;
+}
+TestShader *TestShader::create(const char **vertices,const char **fragments)
+{
+    // Observe all original stage preambles and exact source strings through the unmodified SDK factory ABI
+    require(vertices[0]==rw::gl3::shaderDecl&&vertices[1]==rw::gl3::header_vert_src&&vertices[3]==NULL);require(fragments[0]==rw::gl3::shaderDecl&&fragments[1]==rw::gl3::header_frag_src&&fragments[3]==NULL);event(22);
+    for(int i=0;i<3;++i){size_t size=strlen(vertices[i]);event(23,(uint32)size);hashBytes(vertices[i],size);size=strlen(fragments[i]);event(24,(uint32)size);hashBytes(fragments[i],size);}return makeShader(3);
+}
+void TestShader::destroy(void)
+{
+    // Observe the original SDK object destruction without replacing C lifetime decisions
+    require(alive);event(25,id);alive=false;++shadersDestroyed;
+}
+void TestShader::use(void)
+{
+    // Require the original shader object and override binding to remain consistent
+    require(alive&&rw::gl3::im2dOverrideShader==this);event(26,id);
+}
+void glUniform3fv(int32 location,int32 count,const float *values)
+{
+    // Observe initialized mobile coefficient vectors through the actual vector-three primitive
+    require(count==1);event(27,location,count);observeUpload(values,3);++uniforms;
+}
+void glUniform4fv(int32 location,int32 count,const float *values)
+{
+    // Observe all four initialized normal-filter coefficient components
+    require(count==1);event(28,location,count);observeUpload(values,4);++uniforms;
+}
+static void cleanupRetained(void)
+{
+    // Release only test-observed resources retained by original partial-failure behavior after recording their ownership state
+    for(unsigned i=0;i<rastersCreated;++i)if(rasters[i].alive)RwRasterDestroy(&rasters[i]);for(unsigned i=0;i<shadersCreated;++i)if(shaders[i].alive){
+#ifdef RW_D3D9
+        rw::d3d::destroyPixelShader(&shaders[i]);
+#else
+        shaders[i].destroy();
+#endif
+    }
+}
+int main(void)
+{
+    // Verify classic lighting forwarding even when the complete extended owner is intentionally inactive
+    TestPostArgs args={&camera,137,257,511,173,0,0};
+#ifndef EXTENDED_COLOURFILTER
+    MBlur_BlurOn=false;require(run(OP_BindLighting,&args)==0);MBlur_BlurOn=true;require(run(OP_BindLighting,&args)==1);
+#else
+    // Observe original static initialization and both uniform registration boundaries
+    TestPostState initial=state();require(initial.front==NULL&&initial.back==NULL&&!initial.initialised&&!initial.blur&&!initial.motion&&initial.effect==2&&initial.intensity==1.0f&&initial.next==0&&initial.count==0);run(OP_Init,&args);run(OP_Init,&args);
+    // Verify the complete smoothing ring wraps and divides with original integer semantics
+    for(unsigned i=0;i<40;++i){args.red=i;args.green=2*i;args.blue=3*i;args.alpha=4*i;run(OP_Smooth,&args);}TestPostState current=state();require(current.count==20&&current.next==0&&current.average[0]==29&&current.average[1]==59&&current.average[2]==88&&current.average[3]==118);memset(current.previous,0,sizeof(current.previous));memset(current.average,0,sizeof(current.average));current.next=current.count=0;TestPostSetState(&current);args.red=UINT32_MAX;args.green=1;args.blue=2;args.alpha=3;run(OP_Smooth,&args);require(state().average[0]==-1);current=state();memset(current.previous,0,sizeof(current.previous));current.next=current.count=0;TestPostSetState(&current);
+    for(unsigned cycle=0;cycle<12;++cycle){
+        // Exercise complete open, repeated open, direct draws and both depth-dependent vertex layouts
+        cameraRaster.width=cycle&1?800:640;cameraRaster.height=cycle&1?600:448;cameraRaster.depth=cycle&2?16:32;camera.nearClip=cycle&1?0.25f:0.5f;run(OP_Open,&args);run(OP_Open,&args);current=state();require(current.front&&current.back&&current.initialised);args.red=137+cycle;args.green=257+cycle;args.blue=511-cycle;args.alpha=173;args.blur=0;run(OP_Motion,&args);args.blur=289;run(OP_Motion,&args);run(OP_GetBack,&args);
+        for(int effect=-1;effect<=4;++effect)for(int flags=0;flags<8;++flags){
+            // Vary each live buffer-selection and filter predicate independently of rendering implementation
+            current=state();current.effect=effect;current.blur=(flags&1)!=0;current.motion=(flags&2)!=0;current.initialised=(flags&4)!=0;current.intensity=cycle%3==0?0.0f:cycle%3==1?0.75f:2.25f;TestPostSetState(&current);MBlur_Drunkness=cycle&1?0.375f:0.0f;args.type=flags%3==0?MOTION_BLUR_SNIPER:flags%3==1?MOTION_BLUR_LIGHT_SCENE:MOTION_BLUR_NONE;require(run(OP_UseBlur,&args)==(effect!=1));require(run(OP_BindLighting,&args)==(effect!=1));run(OP_NeedBack,&args);run(OP_NeedFront,&args);run(OP_Blur,&args);run(OP_Sniper,&args);run(OP_Shader,&args);run(OP_Render,&args);run(OP_BindRender,&args);
+        }
+        // Exercise live C forwarding and every original lifetime exit operation
+        run(OP_BindClose,&args);run(OP_BindOpen,&args);run(OP_BindClose,&args);run(OP_Close,&args);require(state().front==NULL&&state().back==NULL);
+    }
+    // Observe partial allocation behavior without inventing recovery or hiding originally retained resources
+    failRasterCall=rasterCalls+1;run(OP_Open,&args);current=state();require(current.front==NULL&&current.back!=NULL);failRasterCall=0;run(OP_Open,&args);run(OP_Close,&args);cleanupRetained();failRasterCall=rasterCalls+2;run(OP_Open,&args);current=state();require(current.front!=NULL&&current.back==NULL);failRasterCall=0;run(OP_Close,&args);cleanupRetained();
+    // Observe shader factory failure in a defined open/close sequence without using a null shader
+    failShaderCall=shaderCalls+1;run(OP_Open,&args);failShaderCall=0;run(OP_Close,&args);cleanupRetained();
+    // Reenter the complete shader operation while the outer stack coefficients remain borrowed
+    run(OP_Open,&args);current=state();current.effect=3;TestPostSetState(&current);nestedArgs=args;nestedArgs.red=11;nestedArgs.green=29;nestedArgs.blue=53;
+#if defined(RW_D3D9)||defined(RW_OPENGL)
+    reenterUpload=true;run(OP_Shader,&args);require(reentries==1&&!reenterUpload);
+#endif
+    run(OP_Close,&args);cleanupRetained();require(state().front==NULL&&state().back==NULL);
+#endif
+    require(rastersCreated==rastersDestroyed&&shadersCreated==shadersDestroyed);printf("commands=%u checks=%u events=%u rasters=%u/%u shaders=%u/%u failures=%u/%u draws=%u constants=%u uniforms=%u registrations=%u reentries=%u assertions=%u hash=%016llx\n",commands,checks,events,rastersCreated,rastersDestroyed,shadersCreated,shadersDestroyed,rasterFailures,shaderFailures,draws,constants,uniforms,registrations,reentries,assertions,(unsigned long long)hashValue);return 0;
+}

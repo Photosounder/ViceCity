@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #ifndef _WIN32
 #include "common.h"
 #include "crossplatform.h"
@@ -21,7 +22,7 @@
 
 #include "CdStream.h"
 #include "rwcore.h"
-#include "MemoryMgr.h"
+#include "MemoryMgr_native.h"
 
 #define CDDEBUG(f, ...)   debug ("%s: " f "\n", "cdvd_stream", ## __VA_ARGS__)
 #define CDTRACE(f, ...)   printf("%s: " f "\n", "cdvd_stream", ## __VA_ARGS__)
@@ -602,3 +603,4 @@ CdStreamGetNumImages(void)
 	return gNumImages;
 }
 #endif
+//- rouz edit (ChatGPT)

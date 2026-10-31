@@ -1,0 +1,272 @@
+#include "owners.h"
+#include <vector>
+#include <algorithm>
+#include <assert.h>
+#include <inttypes.h>
+#undef malloc
+#undef free
+
+static uint64_t fingerprint=UINT64_C(1469598103934665603),checks,states,reads,clears,suspends,resumes,languageReads,localeReads;
+static void Hash(uint64_t value)
+{
+    // Hash normalized values independently of native addresses and pointer width
+    for(int i=0;i<8;i++){fingerprint^=(uint8_t)value;fingerprint*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Bytes(const void *pointer,size_t size)
+{
+    // Compare initialized payload bytes while keeping unspecified padding out of observations
+    const uint8_t *bytes=(const uint8_t *)pointer;Hash(size);for(size_t i=0;i<size;i++)Hash(bytes[i]);
+}
+static void Check(bool condition)
+{
+    // Stop the quiet console fixture at the first violated invariant
+    ++checks;if(!condition){fprintf(stderr,"Text check failed at check %llu\n",(unsigned long long)checks);abort();}
+}
+static void Trace(const char *stage)
+{
+    // Emit optional phase fingerprints without changing the deterministic comparison itself
+    if(getenv("TEXT_TRACE"))fprintf(stderr,"%s %016" PRIx64 "\n",stage,fingerprint);
+}
+TextObservedInteger::operator int()const
+{
+    // Observe each original preference read at the same native boundary
+    ++languageReads;Hash(0x41);Hash(value);return value;
+}
+TextObservedInteger &TextObservedInteger::operator=(int next)
+{
+    // Assign the test preference without introducing an observed read
+    value=next;return *this;
+}
+TextObservedFlag::operator bool()const
+{
+    // Observe the original short-circuit locale reads in their exact order
+    ++localeReads;Hash(this==&CGame::russianGame?0x52:0x4a);Hash(value);return value;
+}
+TextObservedFlag &TextObservedFlag::operator=(bool next)
+{
+    // Assign the native locale flag without introducing an observed read
+    value=next;return *this;
+}
+CMenuManager FrontEndMenuManager;
+TextObservedFlag CGame::russianGame,CGame::japaneseGame;
+
+struct Allocation {void *pointer;size_t size;bool live;};
+static Allocation allocations[8192];static unsigned allocationCount;static bool finalising;
+static unsigned Identity(const void *pointer)
+{
+    // Identify only currently owned allocations without hashing process-specific addresses
+    if(!pointer)return 0;for(unsigned i=allocationCount;i;i--)if(allocations[i].live&&allocations[i].pointer==pointer)return i;
+    Check(false);return 0;
+}
+extern "C" void *TestTextMalloc(size_t size)
+{
+    // Preserve allocation sizes and seed unread payload bytes for deterministic short-read observations
+    void *pointer=malloc(size);Check(pointer||!size);Check(allocationCount+1<8192);unsigned id=++allocationCount;
+    allocations[id]={pointer,size,true};if(size)memset(pointer,0x69,size);Hash(0x4d);Hash(id);Hash(size);return pointer;
+}
+extern "C" void TestTextFree(void *pointer)
+{
+    // Record every original release including null frees and the actual process-exit destruction order
+    unsigned id=Identity(pointer);
+    if(finalising){const char *path=getenv("TEXT_EXIT_LOG");FILE *log=path?fopen(path,"a"):NULL;if(log){fprintf(log,"%u\n",id);fclose(log);}}
+    else{Hash(0x46);Hash(id);}
+    if(id)allocations[id].live=false;free(pointer);
+}
+static std::vector<uint8_t> image;static size_t cursor,maximumRead=(size_t)-1;static bool suspended;
+static void Word(std::vector<uint8_t> &target,uint32_t value,int bytes)
+{
+    // Serialize deterministic little-endian GXT values using the actual disk format
+    for(int i=0;i<bytes;i++)target.push_back((uint8_t)(value>>(8*i)));
+}
+static void Chunk(std::vector<uint8_t> &target,const char *name,const std::vector<uint8_t> &payload)
+{
+    // Append one complete chunk without changing its declared payload length
+    target.insert(target.end(),name,name+4);Word(target,(uint32_t)payload.size(),4);target.insert(target.end(),payload.begin(),payload.end());
+}
+static void KeyData(std::vector<uint8_t> &target,bool mission,int variant)
+{
+    // Build sorted key records with distinct shared and mission strings and non-ASCII UTF-16 data
+    std::vector<uint8_t> keys,data;const char *mainNames[]={"A","HELLO","SHARED","Z"};const char *missionNames[]={"MISSION","SHARED"};
+    int count=mission?2:4;
+    for(int i=0;i<count;i++){
+        Word(keys,(uint32_t)data.size(),4);const char *name=mission?missionNames[i]:mainNames[i];char label[8]={0};strcpy(label,name);keys.insert(keys.end(),label,label+8);
+        for(int j=0;j<4+i;j++)Word(data,(uint16_t)(0x41+j+variant*5+(mission?64:0)),2);Word(data,(uint16_t)(150+i),2);Word(data,0,2);
+    }
+    if(variant&1){Chunk(target,"TDAT",data);Chunk(target,"TKEY",keys);}else{Chunk(target,"TKEY",keys);Chunk(target,"TDAT",data);}
+}
+static void SetupImage(int variant,bool offsets=true)
+{
+    // Exercise zero chunks, unknown chunks, conditional table loading and both valid chunk orders
+    image.clear();Chunk(image,"ZERO",{});Chunk(image,"JUNK",{3,1,4,1,5});
+    if(offsets){std::vector<uint8_t> table;for(int i=0;i<2;i++){char name[8]={0};name[0]='M';name[1]='0'+i;table.insert(table.end(),name,name+8);Word(table,4096u*(i+1),4);}Chunk(image,"TABL",table);}
+    KeyData(image,false,variant);
+    for(int i=0;i<2;i++){image.resize(4096u*(i+1),0x44);char name[8]={0};name[0]='M';name[1]='0'+i;image.insert(image.end(),name,name+8);Chunk(image,"JUNK",{6,7});Chunk(image,"ZERO",{});KeyData(image,true,variant+i);}
+    cursor=0;maximumRead=(size_t)-1;
+}
+extern "C" void FileMgr_SetDir(const char *directory)
+{
+    // Observe directory changes and retain each original filename-selection position
+    Hash(0x44);Bytes(directory,strlen(directory));
+}
+extern "C" int FileMgr_OpenFile(const char *name,const char *mode)
+{
+    // Reopen the deterministic file and observe the selected native language filename
+    Hash(0x4f);Bytes(name,strlen(name));Bytes(mode,strlen(mode));cursor=0;return 7;
+}
+extern "C" size_t FileMgr_Read(int file,const char *buffer,FileMgrSize length)
+{
+    // Preserve short reads and record requested counts separately from actual file progress
+    Check(file==7&&length>=0&&cursor<=image.size());size_t actual=std::min((size_t)length,std::min(maximumRead,image.size()-cursor));
+    if(actual)memcpy((void *)buffer,image.data()+cursor,actual);Hash(0x72);Hash(cursor);Hash((uint64_t)length);Hash(actual);Bytes(buffer,actual);cursor+=actual;++reads;return actual;
+}
+extern "C" bool FileMgr_Seek(int file,int offset,int whence)
+{
+    // Observe the original unknown-chunk and mission-table seeks without normalizing their arguments
+    Check(file==7);Hash(0x73);Hash((uint32_t)offset);Hash(whence);cursor=whence==SEEK_SET?(size_t)offset:cursor+offset;Check(cursor<=image.size());return true;
+}
+extern "C" int FileMgr_CloseFile(int file)
+{
+    // Observe the close position after the complete original loader finishes
+    Check(file==7);Hash(0x63);Hash(cursor);return 0;
+}
+extern "C" void Messages_ClearAllMessagesDisplayedByGame(void)
+{
+    // Preserve message clearing as an ordered visible effect of text operations
+    ++clears;Hash(0x6d);
+}
+extern "C" void Timer_Suspend(void)
+{
+    // Check suspension precedes mission file access and is paired with the original resume
+    Check(!suspended);suspended=true;++suspends;Hash(0x53);
+}
+extern "C" void Timer_Resume(void)
+{
+    // Check the original mission loader resumes after closing its file
+    Check(suspended);suspended=false;++resumes;Hash(0x54);
+}
+static void Wide(const uint16_t *text)
+{
+    // Observe only the initialized visible string rather than the original diagnostic buffer's unspecified tail
+    Check(text!=NULL);size_t length=0;while(text[length]){Check(length<1024);Hash(text[length++]);}Hash(0);
+}
+static void Keys(const CKeyArray &keys,const CData &data)
+{
+    // Observe full ownership and normalize fixed offsets and original relocated key pointers identically
+    Hash(Identity(keys.entries));Hash(keys.numEntries);Hash(Identity(data.chars));Hash(data.numChars);
+    for(int i=0;i<keys.numEntries;i++){
+        Bytes(keys.entries[i].key,8);
+#if defined(FIX_BUGS) || defined(FIX_BUGS_64)
+        Hash(keys.entries[i].valueOffset);
+#else
+        Hash((uintptr_t)((uint8_t *)keys.entries[i].value-(uint8_t *)data.chars));
+#endif
+    }
+    Bytes(data.chars,sizeof(uint16_t)*data.numChars);
+}
+static void State(const CText &text)
+{
+    // Compare every named field, both complete owned tables and all initialized mission metadata
+    ++states;Keys(text.keyArray,text.data);Keys(text.mission_keyArray,text.mission_data);Hash(text.encoding);Hash(text.bHasMissionTextOffsets);Hash(text.bIsMissionTextLoaded);
+    Bytes(text.szMissionTableName,8);Hash(text.MissionTextOffsets.size);Bytes(text.MissionTextOffsets.data,sizeof(text.MissionTextOffsets.data));
+}
+static uint16_t *Search(CKeyArray *keys,CData *data,const char *name,uint8_t *found)
+{
+    // Exercise the genuine conditional public C search signature in each original configuration
+#if defined(FIX_BUGS) || defined(FIX_BUGS_64)
+    return Run_TextKeys_Search(keys,name,data->chars,found);
+#else
+    return Run_TextKeys_Search(keys,name,found);
+#endif
+}
+static void RawTables()
+{
+    // Exercise each complete table constructor, allocation, short read, offset update and unload independently
+    alignas(CKeyArray) unsigned char keyStorage[sizeof(CKeyArray)];alignas(CData) unsigned char dataStorage[sizeof(CData)];alignas(CMissionTextOffsets) unsigned char offsetStorage[sizeof(CMissionTextOffsets)];
+    CKeyArray *keys=(CKeyArray *)keyStorage;CData *data=(CData *)dataStorage;CMissionTextOffsets *offsets=(CMissionTextOffsets *)offsetStorage;
+    memset(keyStorage,0x53,sizeof keyStorage);memset(dataStorage,0x53,sizeof dataStorage);memset(offsetStorage,0x53,sizeof offsetStorage);
+    Run_TextKeys_Init(keys);Run_TextData_Init(data);Run_TextOffsets_Init(offsets);Check(!keys->entries&&!keys->numEntries&&!data->chars&&!data->numChars&&!offsets->size);Bytes(offsets->data,sizeof offsets->data);
+    // Exercise an empty initialized search without allocating or dereferencing an absent table
+    uint8_t emptyFound=0xaa;Wide(Search(keys,data,"EMPTY",&emptyFound));Check(!emptyFound);Check(Run_TextKeys_BinarySearch(keys,"EMPTY",NULL,0,-1)==NULL);
+    for(int trial=0;trial<24;trial++){
+        image.clear();for(int i=0;i<8;i++){Word(image,i*4,4);char name[8]={0};sprintf(name,"K%02d",i);image.insert(image.end(),name,name+8);}cursor=0;size_t offset=13;
+        Run_TextKeys_Load(keys,image.size(),7,&offset);Check(keys->numEntries==8&&offset==109);Hash(offset);
+        image.clear();for(int i=0;i<24;i++)Word(image,(uint16_t)(i+trial),2);cursor=0;offset=31;Run_TextData_Load(data,image.size(),7,&offset);Check(data->numChars==24&&offset==79);Run_TextKeys_Update(keys,data->chars);Keys(*keys,*data);
+        CKeyEntry alternate[8];memcpy(alternate,keys->entries,sizeof alternate);strcpy(alternate[3].key,"K03");
+        for(int i=-1;i<9;i++){
+            char name[8];sprintf(name,"K%02d",i);CKeyEntry *result=Run_TextKeys_BinarySearch(keys,name,alternate,0,7);Check((result!=NULL)==(i>=0&&i<8));if(result)Check(result==alternate+i);Hash(result?(result-alternate)+1:0);
+            uint8_t found=0xee;uint16_t *wide=Search(keys,data,name,&found);Check(found==(i>=0&&i<8));if(found){Check(wide==data->chars+i*2);Hash(*wide);}else Wide(wide);
+        }
+        Check(Run_TextKeys_BinarySearch(keys,"K00",alternate,5,2)==NULL);Run_TextKeys_Unload(keys);Run_TextData_Unload(data);Run_TextKeys_Unload(keys);Run_TextData_Unload(data);
+        image.assign(96,0x31);for(size_t i=0;i<image.size();i++)image[i]=(uint8_t)(i+trial);cursor=0;offset=17;maximumRead=trial%5;
+        Run_TextKeys_Load(keys,24,7,&offset);Check(keys->numEntries==2&&offset==41);Bytes(keys->entries,24);Run_TextKeys_Unload(keys);cursor=0;offset=9;
+        Run_TextData_Load(data,24,7,&offset);Check(data->numChars==12&&offset==33);Bytes(data->chars,24);Run_TextData_Unload(data);maximumRead=(size_t)-1;
+        cursor=0;offset=29;Run_TextOffsets_Load(offsets,29,7,&offset,0x58000);Check(offsets->size==2&&offset==53);Hash(cursor);Bytes(offsets->data,sizeof offsets->data);
+    }
+}
+static void Encoding()
+{
+    // Cover every UTF-16 input, every original encoding branch and both mutable uppercase tables
+    char encodings[]={'e','f','g','i','s','x'};uint16_t source[260],copy[260];
+    for(char encoding:encodings){TheText.encoding=encoding;for(unsigned value=0;value<65536;value++)Hash(Run_Text_GetUpperCase(&TheText,(uint16_t)value));}
+    UpperCaseTable[0]=0x3456;FrenchUpperCaseTable[1]=0x6543;TheText.encoding='g';Check(Run_Text_GetUpperCase(&TheText,128)==0x3456);TheText.encoding='f';Check(Run_Text_GetUpperCase(&TheText,129)==0x6543);
+    for(char encoding:encodings){TheText.encoding=encoding;for(int i=0;i<259;i++)source[i]=(uint16_t)(i+1);source[259]=0;Run_Text_UpperCase(&TheText,source);Bytes(source,sizeof source);memset(copy,0x7a,sizeof copy);Run_TextCopy(copy,source);Bytes(copy,sizeof copy);}
+    source[0]=0;Run_Text_UpperCase(&TheText,source);memset(copy,0x7a,sizeof copy);Run_TextCopy(copy,source);Bytes(copy,sizeof copy);
+    for(int flags=0;flags<4;flags++){
+        CGame::russianGame=(flags&1)!=0;CGame::japaneseGame=(flags&2)!=0;
+        for(unsigned start=1;start<65536;start+=127){unsigned length=std::min(127u,65536-start);for(unsigned i=0;i<length;i++)source[i]=(uint16_t)(start+i);source[length]=0;
+            char *a=Run_UnicodeToAscii(source),*b=Run_UnicodeToAsciiForSaveLoad(source),*c=Run_UnicodeToAsciiForMemoryCard(source);Check(a!=b&&a!=c&&b!=c);Bytes(a,length+1);Bytes(b,length+1);Bytes(c,length+1);
+        }
+    }
+    for(int i=0;i<259;i++)source[i]='a'+i%26;source[259]=0;char *shared=Run_UnicodeToAscii(source);Check(strlen(shared)==255);Bytes(shared,256);
+    source[255]=0;char *save=Run_UnicodeToAsciiForSaveLoad(source),*card=Run_UnicodeToAsciiForMemoryCard(source);Check(strlen(save)==255&&strlen(card)==255);source[0]=0;
+    Check(Run_UnicodeToAscii(source)==shared&&Run_UnicodeToAsciiForSaveLoad(source)==save&&Run_UnicodeToAsciiForMemoryCard(source)==card);Bytes(shared,256);Bytes(save,256);Bytes(card,256);
+}
+static void RepairMissionNames(CText *text)
+{
+    // Keep complete mission-loader paths defined after separately observing the original byte-reader's diagonal-name bug
+    for(int i=0;i<8;i++){memset(text->MissionTextOffsets.data[i].szMissionName,0,8);if(i<2){text->MissionTextOffsets.data[i].szMissionName[0]='M';text->MissionTextOffsets.data[i].szMissionName[1]='0'+i;}}
+}
+static void Loader(CText *text)
+{
+    // Exercise the whole loader, fallback lookup, mission replacement, failed lookup and repeated unload
+#ifdef MORE_LANGUAGES
+    int languages=8;
+#else
+    int languages=5;
+#endif
+    for(int trial=0;trial<32;trial++){
+        FrontEndMenuManager.m_PrefsLanguage=trial%languages;SetupImage(trial%3,(trial%4)!=0);Run_Text_Load(text);State(*text);Check(text->keyArray.numEntries==4&&text->data.numChars>0&&!text->bIsMissionTextLoaded);
+        Wide(Run_Text_Get(text,"HELLO"));Wide(Run_Text_Get(text,"SHARED"));Wide(Run_Text_Get(text,"ABSENT"));
+        if(text->bHasMissionTextOffsets){
+            RepairMissionNames(text);char first[8]="M0",second[8]="M1",prefix[8]="M0X",missing[8]="NONE";Run_Text_LoadMissionText(text,first);State(*text);Check(text->bIsMissionTextLoaded&&text->mission_keyArray.numEntries==2&&!suspended);
+            Wide(Run_Text_Get(text,"MISSION"));Wide(Run_Text_Get(text,"SHARED"));Wide(Run_Text_Get(text,"ABSENT"));char output[16];memset(output,0x6a,sizeof output);Run_Text_GetNameOfLoadedMissionText(text,output);Check(strcmp(output,"M0")==0);Bytes(output,sizeof output);
+            Run_Text_LoadMissionText(text,second);State(*text);Wide(Run_Text_Get(text,"MISSION"));Run_Text_LoadMissionText(text,prefix);State(*text);Check(strcmp(text->szMissionTableName,"M0X")==0);
+            Run_Text_LoadMissionText(text,missing);State(*text);Check(text->bIsMissionTextLoaded&&!text->mission_keyArray.entries&&!text->mission_data.chars&&strcmp(text->szMissionTableName,"M0X")==0);Wide(Run_Text_Get(text,"MISSION"));
+        }
+        Run_Text_Unload(text);State(*text);Run_Text_Unload(text);State(*text);
+        SetupImage(1);cursor=0;size_t offset=trial;ChunkHeader chunk;memset(&chunk,0x61,sizeof chunk);maximumRead=trial%5;Run_Text_ReadChunkHeader(text,&chunk,7,&offset);Check(offset==(size_t)trial+8);Hash(offset);Bytes(&chunk,sizeof chunk);maximumRead=(size_t)-1;
+    }
+}
+static void Finalising()
+{
+    // Start observing the actual registered global destructor after main returns normally
+    finalising=true;
+}
+int main()
+{
+    // Verify pre-main initialization before any explicit construction can conceal a missing startup hook
+    Check(TheText.encoding=='e'&&!TheText.keyArray.entries&&!TheText.data.chars&&!TheText.mission_keyArray.entries&&!TheText.mission_data.chars&&!TheText.bHasMissionTextOffsets&&!TheText.bIsMissionTextLoaded&&!TheText.MissionTextOffsets.size);
+    for(unsigned i=0;i<25;i++)Check(WideErrorString[i]==0);State(TheText);Trace("startup");RawTables();Trace("tables");Encoding();Trace("encoding");Loader(&TheText);Trace("global-loader");
+    alignas(CText) unsigned char storage[sizeof(CText)];memset(storage,0x53,sizeof storage);CText *local=(CText *)storage;Run_Text_Init(local);
+    // Check all constructor-defined fields before seeding the inactive mission entries that the constructor leaves unspecified
+    Check(local->encoding=='e'&&!local->keyArray.entries&&!local->keyArray.numEntries&&!local->data.chars&&!local->data.numChars&&!local->mission_keyArray.entries&&!local->mission_keyArray.numEntries&&!local->mission_data.chars&&!local->mission_data.numChars&&!local->bHasMissionTextOffsets&&!local->bIsMissionTextLoaded&&!local->MissionTextOffsets.size);
+    for(unsigned i=0;i<8;i++)Check(local->szMissionTableName[i]==0);for(unsigned i=0;i<25;i++)Check(WideErrorString[i]==0);memset(local->MissionTextOffsets.data,0x53,sizeof local->MissionTextOffsets.data);State(*local);Trace("local-init");Loader(local);Trace("local-loader");
+    // Destroy a fully populated explicit receiver and verify all four releases without a message clear
+    FrontEndMenuManager.m_PrefsLanguage=0;SetupImage(1);Run_Text_Load(local);RepairMissionNames(local);char localName[8]="M1";Run_Text_LoadMissionText(local,localName);State(*local);
+    unsigned localIds[]={Identity(local->keyArray.entries),Identity(local->data.chars),Identity(local->mission_keyArray.entries),Identity(local->mission_data.chars)};uint64_t clearsBefore=clears;Run_Text_Destroy(local);Check(clears==clearsBefore);
+    for(unsigned id:localIds)Check(!allocations[id].live);
+    FrontEndMenuManager.m_PrefsLanguage=0;SetupImage(2);Run_Text_Load(&TheText);RepairMissionNames(&TheText);char name[8]="M0";Run_Text_LoadMissionText(&TheText,name);State(TheText);
+    unsigned ids[]={Identity(TheText.mission_data.chars),Identity(TheText.mission_keyArray.entries),Identity(TheText.data.chars),Identity(TheText.keyArray.entries)};
+    unsigned live=0;for(unsigned i=1;i<=allocationCount;i++)live+=allocations[i].live;Check(live==4);Check(suspends==resumes&&!suspended);Check(atexit(Finalising)==0);
+    printf("\nstates=%llu checks=%llu reads=%llu clears=%llu suspend=%llu resume=%llu language=%llu locale=%llu allocations=%u hash=%016" PRIx64 " exit=%u,%u,%u,%u\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)reads,(unsigned long long)clears,(unsigned long long)suspends,(unsigned long long)resumes,(unsigned long long)languageReads,(unsigned long long)localeReads,allocationCount,fingerprint,ids[0],ids[1],ids[2],ids[3]);return 0;
+}

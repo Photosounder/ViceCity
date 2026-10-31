@@ -1,0 +1,17 @@
+//+ rouz edit (ChatGPT)
+#pragma once
+#include "config.h"
+enum TextLanguage
+	{
+		TEXT_LANGUAGE_AMERICAN,
+		TEXT_LANGUAGE_FRENCH,
+		TEXT_LANGUAGE_GERMAN,
+		TEXT_LANGUAGE_ITALIAN,
+		TEXT_LANGUAGE_SPANISH,
+#ifdef MORE_LANGUAGES
+		TEXT_LANGUAGE_POLISH,
+		TEXT_LANGUAGE_RUSSIAN,
+		TEXT_LANGUAGE_JAPANESE,
+#endif
+	};
+//- rouz edit (ChatGPT)

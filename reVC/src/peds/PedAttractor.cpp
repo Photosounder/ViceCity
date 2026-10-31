@@ -197,17 +197,17 @@ void CPedPizzaAttractor::UpdatePedStateOnDeparture(CPed* pPed) const
 
 void CPedAtmAttractor::UpdatePedStateOnDeparture(CPed* pPed) const
 {
-	pPed->m_nPedMoney += 20 * CGeneral::GetRandomNumberInRange(1, 51);
+	pPed->m_nPedMoney += 20 * General_GetRandomNumberInRangeInt(1, 51);
 };
 
 float CPedAttractor::ComputeDeltaHeading() const
 {
-	return CGeneral::GetRandomNumberInRange(-m_fMaxHeadingDisplacement, m_fMaxHeadingDisplacement);
+	return General_GetRandomNumberInRangeFloat(-m_fMaxHeadingDisplacement, m_fMaxHeadingDisplacement);
 }
 
 float CPedAttractor::ComputeDeltaPos() const
 {
-	return CGeneral::GetRandomNumberInRange(-m_fMaxPositionDisplacement, m_fMaxPositionDisplacement);
+	return General_GetRandomNumberInRangeFloat(-m_fMaxPositionDisplacement, m_fMaxPositionDisplacement);
 }
 
 void CPedAttractor::ComputeAttractTime(int32 id, bool approacher, float& time) const
@@ -234,8 +234,8 @@ CVector CPedShelterAttractor::GetDisplacement(int32 qid) const
 	if (ms_displacements.empty()) {
 		int i = 0;
 		while (i < gcMaxSizeOfShelterQueue) {
-			float fRandomAngle = CGeneral::GetRandomNumberInRange(0.0f, TWOPI);
-			float fRandomOffset = CGeneral::GetRandomNumberInRange(0.0f, 2.0f);
+			float fRandomAngle = General_GetRandomNumberInRangeFloat(0.0f, TWOPI);
+			float fRandomOffset = General_GetRandomNumberInRangeFloat(0.0f, 2.0f);
 			CVector vecDisplacement(fRandomOffset * Sin(fRandomAngle), fRandomOffset * Cos(fRandomAngle), 0.0f);
 			bool close = false;
 			for (std::vector<CVector>::const_iterator v = ms_displacements.begin(); v != ms_displacements.end(); ++v) {
@@ -262,14 +262,14 @@ void CPedShelterAttractor::ComputeAttractPos(int32 qid, CVector& pos) const
 
 void CPedAttractor::ComputeAttractHeading(int32 qid, float& heading) const
 {
-	heading = CGeneral::GetRadianAngleBetweenPoints(qid != 0 ? vecQueueDir.x : vecUseDir.x, qid != 0 ? vecQueueDir.y : vecUseDir.y, 0.0f, 0.0f);
+	heading = General_GetRadianAngleBetweenPoints(qid != 0 ? vecQueueDir.x : vecUseDir.x, qid != 0 ? vecQueueDir.y : vecUseDir.y, 0.0f, 0.0f);
 	if (qid != 0)
 		heading += ComputeDeltaHeading();
 }
 
 void CPedShelterAttractor::ComputeAttractHeading(int32 qid, float& heading) const
 {
-	heading = CGeneral::GetRandomNumberInRange(0.0f, TWOPI);
+	heading = General_GetRandomNumberInRangeFloat(0.0f, TWOPI);
 }
 
 bool CPedAttractor::RegisterPed(CPed* pPed)
@@ -340,7 +340,7 @@ bool CPedAttractor::DeRegisterPed(CPed* pPed)
 			vApproachingQueue.erase(pPedIt);
 			return true;
 		}
-		pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
+		pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
 		vApproachingQueue.erase(pPedIt);
 		return true;
 	}
@@ -397,16 +397,16 @@ bool CPedAttractor::BroadcastDeparture(CPed* pPed)
 	pPed->bHasAlreadyUsedAttractor = true;
 	if (!IsPedUsingAttractorOfThisType(p2dEffect->pedattr.type, pPed)) {
 		if (pPed->GetPedState() == PED_IDLE || pPed->GetPedState() == PED_NONE)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
 	}
 	else {
 		pPed->SetObjective(OBJECTIVE_NONE);
 		if (qid == 0)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(vecQueueDir.x, vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(vecQueueDir.x, vecQueueDir.y));
 		else if (qid == vWaitingQueue.size() - 1)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
 		else
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.y, -vecQueueDir.x));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.y, -vecQueueDir.x));
 		UpdatePedStateOnDeparture(pPed);
 	}
 	vWaitingQueue.erase(vWaitingQueue.begin() + qid);
@@ -438,16 +438,16 @@ bool CPedShelterAttractor::BroadcastDeparture(CPed* pPed)
 	pPed->bHasAlreadyUsedAttractor = true;
 	if (!IsPedUsingAttractorOfThisType(p2dEffect->pedattr.type, pPed)) {
 		if (pPed->GetPedState() == PED_IDLE || pPed->GetPedState() == PED_NONE)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
 	}
 	else {
 		pPed->SetObjective(OBJECTIVE_NONE);
 		if (qid == 0)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(vecQueueDir.x, vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(vecQueueDir.x, vecQueueDir.y));
 		else if (qid == vWaitingQueue.size() - 1)
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.x, -vecQueueDir.y));
 		else
-			pPed->SetWanderPath(CGeneral::GetNodeHeadingFromVector(-vecQueueDir.y, -vecQueueDir.x));
+			pPed->SetWanderPath(General_GetNodeHeadingFromVector(-vecQueueDir.y, -vecQueueDir.x));
 		UpdatePedStateOnDeparture(pPed);
 	}
 	vWaitingQueue.erase(vWaitingQueue.begin() + qid);

@@ -1,0 +1,209 @@
+#include "loader.h"
+#include <stdarg.h>
+
+static unsigned checks,loads,reads,opens,closes,allocations,frees,pushes,pops,registrations,debugCalls;
+static unsigned long long digest=1469598103934665603ULL;
+static std::map<void*,size_t> live;
+static RwStream *namedStream;
+static void require(bool condition)
+{
+    // Fail quietly at the first stream or ownership invariant violation
+    ++checks;if(!condition){fprintf(stderr,"loader check %u failed\n",checks);exit(2);}
+}
+static void hash(unsigned value)
+{
+    // Accumulate only initialized observable values and exclude native addresses
+    digest=(digest^value)*1099511628211ULL;
+}
+static void hashFloat(float value)
+{
+    // Compare exact stored floating point bits after all original conversion operations
+    uint32_t bits;memcpy(&bits,&value,4);hash(bits);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned line,const char*)
+{
+    // Report a project precondition without launching a native assertion dialog
+    fprintf(stderr,"assertion %s line %u\n",expression,line);exit(3);
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Compare the actual loading and toe-frame messages at their original call positions
+    char text[512];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);
+    ++debugCalls;for(const unsigned char *p=(unsigned char*)text;*p;++p)hash(*p);hash(debugCalls);
+}
+void RwStreamRead(RwStream *stream,void *buffer,uint32 bytes)
+{
+    // Read exactly the requested byte count and record the complete parser read schedule
+    require(stream->position+bytes<=stream->bytes.size());hash(bytes);hash((unsigned)stream->position);++reads;
+    memcpy(buffer,stream->bytes.data()+stream->position,bytes);stream->position+=bytes;
+}
+RwStream *RwStreamOpen(int type,int access,const char *filename)
+{
+    // Observe only the native filename stream primitive without replacing loader policy
+    require(type==rwSTREAMFILENAME&&access==rwSTREAMREAD);require(strcmp(filename,"fixture.ifp")==0);++opens;return namedStream;
+}
+void RwStreamClose(RwStream *stream,void *data)
+{
+    // Confirm that the filename entry point closes the same completed stream
+    require(stream==namedStream&&data==NULL);require(stream->position==stream->bytes.size());++closes;
+}
+extern "C" void *AnimSequence_BackendAllocate(size_t bytes)
+{
+    // Track real sequence storage and initialize padding so accidental observations are detectable
+    void *memory=malloc(bytes?bytes:1);require(memory!=NULL);memset(memory,0xA5,bytes);require(live.emplace(memory,bytes).second);++allocations;hash((unsigned)bytes);return memory;
+}
+extern "C" void AnimSequence_BackendFree(void *memory)
+{
+    // Require each real keyframe allocation to be freed exactly once
+    require(live.erase(memory)==1);++frees;free(memory);
+}
+extern "C" void AnimSequence_BackendPushAnimation(void)
+{
+    // Observe the existing native allocation category boundary used by real sequence conversion
+    ++pushes;
+}
+extern "C" void AnimSequence_BackendPopMemory(void)
+{
+    // Confirm category operations remain balanced after decompression
+    ++pops;require(pops<=pushes);
+}
+extern "C" void AnimSequence_BackendRegister(void **memory)
+{
+    // Require conversion to register an actual live keyframe buffer
+    require(live.count(*memory)==1);++registrations;
+}
+extern "C" void *AnimSequence_BackendMoveMemory(void *memory)
+{
+    // Preserve the native no-relocation result for paths outside this loader comparison
+    return memory;
+}
+extern "C" int myrand(void)
+{
+    // Reject unrelated random operations while linking the complete real General C owner
+    require(false);return 0;
+}
+extern "C" void mysrand(unsigned)
+{
+    // Reject unrelated random seed changes while linking the complete real General C owner
+    require(false);
+}
+#ifndef ORIGINAL
+extern "C" int AnimManager_HostCompareNames(const char *a,const char *b)
+{
+    // Keep the original case insensitive native string comparison primitive
+    return strcasecmp(a,b);
+}
+extern "C" void *AnimManager_HostOpenStream(const char *filename)
+{
+    // Use the same native stream primitive for the complete C filename entry point
+    return RwStreamOpen(rwSTREAMFILENAME,rwSTREAMREAD,filename);
+}
+extern "C" void AnimManager_HostReadStream(void *stream,void *buffer,uint32 bytes)
+{
+    // Forward the actual C loader read request without changing its buffer or size
+    RwStreamRead((RwStream*)stream,buffer,bytes);
+}
+extern "C" void AnimManager_HostCloseStream(void *stream)
+{
+    // Close the original stream object after the C loader completes
+    RwStreamClose((RwStream*)stream,NULL);
+}
+#endif
+static void append(RwStream &stream,const void *data,size_t size)
+{
+    // Append an independent fixture payload without using production parsing helpers
+    const unsigned char *bytes=(const unsigned char*)data;stream.bytes.insert(stream.bytes.end(),bytes,bytes+size);
+}
+static void chunk(RwStream &stream,const char *name,uint32 size)
+{
+    // Encode the original four-byte tag and little endian size header
+    append(stream,name,4);append(stream,&size,4);
+}
+static void padded(RwStream &stream,const void *data,size_t size)
+{
+    // Emit alignment bytes only for chunks whose payload the loader rounds before reading
+    append(stream,data,size);while(stream.bytes.size()&3)stream.bytes.push_back(0xCD);
+}
+static RwStream makeStream(unsigned trial,unsigned blockNumber)
+{
+    // Build valid independent IFP streams spanning all three frame record types and alignment paths
+    RwStream stream;stream.position=0;unsigned char buf[128]={0};int count=(trial%64==63)?32:1+(trial+blockNumber)%4;
+    chunk(stream,"ANPK",31+trial%4);chunk(stream,"INFO",14);memcpy(buf,&count,4);sprintf((char*)buf+4,"block%u",blockNumber);padded(stream,buf,14);
+    for(int anim=0;anim<count;++anim){
+        // Vary animation names and sizes while retaining a deterministic exclusion-list target
+        memset(buf,0,sizeof(buf));sprintf((char*)buf,"anim%u_%d",blockNumber,anim);size_t size=strlen((char*)buf)+1;chunk(stream,"NAME",(uint32)size);padded(stream,buf,size);
+        int sequences=1+(trial+anim)%4;chunk(stream,"DGAN",23+trial%4);chunk(stream,"INFO",4);append(stream,&sequences,4);
+        for(int node=0;node<sequences;++node){
+            // Cover optional bone tags, zero-frame nodes and toe debug output
+            unsigned kind=(trial+anim+node)%3;int frames=((trial+node)%7==0)?0:1+(trial+anim+node)%6;
+            uint32 animSize=((trial+node)&1)?44:32;memset(buf,0,sizeof(buf));sprintf((char*)buf,node==0?"L Toe%u":"node%u",(unsigned)node);memcpy(buf+28,&frames,4);int tag=100+node;memcpy(buf+40,&tag,4);
+            chunk(stream,"CPAN",13+node);chunk(stream,"ANIM",animSize);append(stream,buf,animSize);
+            if(!frames)continue;
+            chunk(stream,kind==0?"KR00":kind==1?"KRT0":"KRTS",0);
+            for(int frame=0;frame<frames;++frame){
+                // Keep values inside packed ranges and include alternating quaternion signs and signed zero
+                float sign=(frame&1)?-1.0f:1.0f;
+                float values[11]={sign*0.125f,sign*-0.25f,sign*0.375f,sign*0.5f,(float)(trial%13)*0.125f,-0.0f,(float)node*0.25f,0,2,3,0};
+                float time=(float)frame*0.1375f+(float)(trial%5)*0.025f;
+                values[kind==0?4:kind==1?7:10]=time;
+                append(stream,values,kind==0?0x14:kind==1?0x20:0x2C);
+            }
+        }
+    }
+    return stream;
+}
+static void observe(CAnimBlock *block)
+{
+    // Compare every initialized loaded hierarchy, sequence and frame field without reading record padding
+    hash(block->numAnims);hash(block->firstIndex);hash(block->isLoaded);hash(block->refCount);
+    for(int anim=0;anim<block->numAnims;++anim){
+        // Inspect loaded packed data before asking the actual manager to decompress it
+        CAnimBlendHierarchy *hier=ANIMATION_ID(block->firstIndex+anim);hash(hier->compressed);hash(hier->keepCompressed);hashFloat(hier->totalLength);hash(hier->numSequences);
+        require(hier->keepCompressed==false);require(hier->numSequences>0);
+        for(const unsigned char *p=(unsigned char*)hier->name;*p;++p)hash(*p);
+        for(int node=0;node<hier->numSequences;++node){
+            // Compare packed stores exactly and unpacked rotation/translation/time components by bits
+            CAnimBlendSequence *seq=&hier->sequences[node];hash(seq->type);hash(seq->numFrames);hash((unsigned)seq->boneTag);
+            for(const unsigned char *p=(unsigned char*)seq->name;*p;++p)hash(*p);
+            for(int f=0;f<seq->numFrames;++f){
+                // Select the actual stored frame layout used by the full loader
+                if(hier->compressed){
+                    // Hash only initialized packed values and the optional translation payload
+                    KeyFrameCompressed *kf=AnimSequence_GetKeyFrameCompressed(seq,f);for(int k=0;k<4;++k)hash((unsigned)kf->rot[k]);hash((unsigned)kf->deltaTime);
+                    if(seq->type&ANIM_KEYFRAME_TRANS){KeyFrameTransCompressed *trans=(KeyFrameTransCompressed*)kf;for(int k=0;k<3;++k)hash((unsigned)trans->trans[k]);}
+                }else{
+                    // Hash each unpacked C component after quaternion flip correction and time differencing
+                    KeyFrame *kf=AnimSequence_GetKeyFrame(seq,f);hashFloat(kf->rotation.x);hashFloat(kf->rotation.y);hashFloat(kf->rotation.z);hashFloat(kf->rotation.w);hashFloat(kf->deltaTime);
+                    if(seq->type&ANIM_KEYFRAME_TRANS){KeyFrameVector3 v=((KeyFrameTrans*)kf)->translation;hashFloat(v.x);hashFloat(v.y);hashFloat(v.z);}
+                }
+            }
+        }
+        if(hier->compressed){
+            // Exercise the real manager cache and complete downstream sequence decompression
+            MANAGER(UncompressAnimation)(hier);require(!hier->compressed);require(hier->linkPtr!=NULL);hashFloat(hier->totalLength);
+        }
+    }
+}
+int main(void)
+{
+    // Initialize cache ownership once and repeatedly load and remove complete real animation blocks
+    MANAGER(Initialise)();
+    for(unsigned trial=0;trial<512;++trial){
+        // Exercise both new-block and pre-registered empty-block loading paths
+        if(trial&1){require(MANAGER(RegisterAnimBlock)("block0")==0);require(MANAGER(RegisterAnimBlock)("block1")==1);}
+        for(unsigned block=0;block<2;++block){
+            // Alternate stream and filename entry points and name-list exclusions
+            RwStream stream=makeStream(trial,block);char exclusions[3][32]={{0}};sprintf(exclusions[0],"ANIM%u_0",block);strcpy(exclusions[1],"missing");
+            bool compress=(trial&2)!=0;bool named=(trial%8)==0;namedStream=&stream;
+            if(named)LOAD_NAME("fixture.ifp");else LOAD(&stream,compress,(trial&4)?exclusions:NULL);
+            ++loads;require(stream.position==stream.bytes.size());CAnimBlock *owner=BLOCK_ID(block);require(owner==BLOCK_NAME(block?"BLOCK1":"BLOCK0"));observe(owner);
+        }
+        // Revisit real cache entries and compare every frame after decompression and possible eviction
+        observe(BLOCK_ID(0));observe(BLOCK_ID(1));
+        // Remove in reverse loading order through the complete real manager and hierarchy lifecycle
+        MANAGER(RemoveLastAnimFile)();MANAGER(RemoveLastAnimFile)();require(BLOCK_NAME("block0")==NULL);require(BLOCK_NAME("block1")==NULL);require(live.empty());require(pushes==pops);
+    }
+    require(allocations==frees);require(opens==closes);require(opens>0);require(registrations<=pushes);
+    printf("loads=%u checks=%u reads=%u opens=%u allocations=%u debug=%u hash=%016llx\n",loads,checks,reads,opens,allocations,debugCalls,digest);
+    return 0;
+}

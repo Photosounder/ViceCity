@@ -1,404 +1,237 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "SetPieces.h"
+#include "ColSphere_native.h"
+#include "SetPieces_backend.h"
 #include "Automobile.h"
 #include "CarAI.h"
 #include "CopPed.h"
-#include "GenericGameStorage.h"
 #include "PlayerPed.h"
-#include "Timer.h"
-#include "Vehicle.h"
 #include "Wanted.h"
 #include "World.h"
+#include "Pools.h"
 #include "VarConsole.h"
-#include "SaveBuf.h"
-#include "Pools.h" // rouz edit (ChatGPT)
-
-#define TIME_BETWEEN_SETPIECE_SPAWNS 20000
-
-bool CSetPieces::bDebug;
-uint32 CSetPieces::NumSetPieces;
-CSetPiece CSetPieces::aSetPieces[NUM_SETPIECES];
-
-void CSetPieces::Init(void)
-{
-	bDebug = false;
-	NumSetPieces = 0;
+static_assert(int(SETPIECE_DRIVINGSTYLE_SLOW_DOWN_FOR_CARS)==int(DRIVINGSTYLE_SLOW_DOWN_FOR_CARS),"Original set-piece constant");
+static_assert(int(SETPIECE_DRIVINGSTYLE_PLOUGH_THROUGH)==int(DRIVINGSTYLE_PLOUGH_THROUGH),"Original set-piece constant");
+static_assert(int(SETPIECE_DRIVINGSTYLE_AVOID_CARS)==int(DRIVINGSTYLE_AVOID_CARS),"Original set-piece constant");
+static_assert(int(SETPIECE_MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1)==int(MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1),"Original set-piece constant");
+static_assert(int(SETPIECE_MISSION_BLOCKPLAYER_FORWARDANDBACK)==int(MISSION_BLOCKPLAYER_FORWARDANDBACK),"Original set-piece constant");
+static_assert(int(SETPIECE_MISSION_RAMCAR_CLOSE)==int(MISSION_RAMCAR_CLOSE),"Original set-piece constant");
+static_assert(int(SETPIECE_TEMPACT_GOFORWARD)==int(TEMPACT_GOFORWARD),"Original set-piece constant");
 #ifndef MASTER
-	VarConsole.Add("Show set pieces", &bDebug, true);
+void SetPieces_BackendRegisterDebug(bool *flag)
+{
+    // Access the original typed native operation or canonical named field
+    VarConsole_AddBool(&VarConsole,"Show set pieces",flag,true);
+}
 #endif
-}
-
-void CSetPieces::AddOne(uint8 type, CVector2D vTriggerInf, CVector2D vTriggerSup, CVector2D vSpawn1, CVector2D vTarget1, CVector2D vSpawn2, CVector2D vTarget2)
+SetPieceVector SetPieces_BackendPlayerCoors(void)
 {
-	if (NumSetPieces >= NUM_SETPIECES)
-		return;
-	aSetPieces[NumSetPieces].m_nType = type;
-	aSetPieces[NumSetPieces].m_vTriggerInf.x = Min(vTriggerInf.x, vTriggerSup.x);
-	aSetPieces[NumSetPieces].m_vTriggerInf.y = Min(vTriggerInf.y, vTriggerSup.y);
-	aSetPieces[NumSetPieces].m_vTriggerSup.x = Max(vTriggerInf.x, vTriggerSup.x);
-	aSetPieces[NumSetPieces].m_vTriggerSup.y = Max(vTriggerInf.y, vTriggerSup.y);
-	aSetPieces[NumSetPieces].m_vSpawn1 = vSpawn1;
-	aSetPieces[NumSetPieces].m_vSpawn2 = vSpawn2;
-	aSetPieces[NumSetPieces].m_vTarget1 = vTarget1;
-	aSetPieces[NumSetPieces].m_vTarget2 = vTarget2;
-	++NumSetPieces;
+    // Access the original typed native operation or canonical named field
+    CVector value=FindPlayerCoors();return SetPieceVector{value.x,value.y,value.z};
 }
-
-void CSetPieces::Update(void)
+SetPiecePoint SetPieces_BackendPlayerSpeed(void)
 {
-	int nFirst = NumSetPieces * (CTimer::GetFrameCounter() % 8) / 8;
-	int nLast = NumSetPieces * (CTimer::GetFrameCounter() % 8 + 1) / 8;
-	for (int i = nFirst; i < nLast; i++)
-		aSetPieces[i].Update();
-#ifndef MASTER
-	// TODO: debug code from mobile
-#endif // !MASTER
+    // Access the original typed native operation or canonical named field
+    CVector2D value=FindPlayerSpeed();return SetPiecePoint{value.x,value.y};
 }
-
-void CSetPieces::Save(uint8* buf, uint32* size)
+int32_t SetPieces_BackendWanted(void)
 {
-INITSAVEBUF
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
-	WriteSaveBuf(&buf, &NumSetPieces, sizeof(NumSetPieces));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < NUM_SETPIECES; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
-		{
-			// Preserve record assignment semantics and compiler padding behavior
-			*(CSetPiece*)buf = aSetPieces[i];
-			SkipSaveBuf(&buf, sizeof(aSetPieces[i]));
-		}
-		//- rouz edit (ChatGPT)
-	*size = sizeof(NumSetPieces) + NUM_SETPIECES * sizeof(CSetPiece);
-VALIDATESAVEBUF(*size)
+    // Access the original typed native operation or canonical named field
+    return Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted);
 }
-
-void CSetPieces::Load(uint8* buf, uint32 size)
+CVehicle * SetPieces_BackendPlayerVehicle(void)
 {
-INITSAVEBUF
-	//+ rouz edit (ChatGPT)
-	// Transfer save data through the C buffer API with explicit sizes
-	ReadSaveBuf(&NumSetPieces, &buf, sizeof(NumSetPieces));
-	//- rouz edit (ChatGPT)
-	for (int i = 0; i < NUM_SETPIECES; i++)
-		//+ rouz edit (ChatGPT)
-		// Transfer save data through the C buffer API with explicit sizes
-		{
-			// Preserve record assignment semantics and compiler padding behavior
-			aSetPieces[i] = *(CSetPiece*)buf;
-			SkipSaveBuf(&buf, sizeof(aSetPieces[i]));
-		}
-		//- rouz edit (ChatGPT)
-VALIDATESAVEBUF(size)
+    // Access the original typed native operation or canonical named field
+    return FindPlayerVehicle();
 }
-
-void CSetPiece::Update(void)
+void SetPieces_BackendVehicleStatus(CVehicle *car,uint8_t status)
 {
-	if (m_nLastTimeCreated != 0 && CTimer::GetTimeInMilliseconds() <= m_nLastTimeCreated + TIME_BETWEEN_SETPIECE_SPAWNS)
-		return;
-	CVector pos = FindPlayerCoors();
-	if (pos.x < m_vTriggerInf.x || pos.x > m_vTriggerSup.x ||
-		pos.y < m_vTriggerInf.y || pos.y > m_vTriggerSup.y)
-		return;
-	switch (m_nType) {
-	case SETPIECE_TWOCOPCARSINALLEY:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 1 || FindPlayerVehicle())
-			return;
-		CVehicle* pVehicle1 = TryToGenerateCopCar(m_vSpawn1, m_vTarget1);
-		if (!pVehicle1)
-			return;
-		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
-		if (!pVehicle2) {
-			CWorld::Remove(pVehicle1);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the generated cop car without invoking C++ delete.
-			pVehicle1->~CVehicle();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			return;
-		}
-		pVehicle1->SetStatus(STATUS_PHYSICS);
-		pVehicle1->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 4;
-		pVehicle1->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_SLOW_DOWN_FOR_CARS;
-		pVehicle1->AutoPilot.m_nCarMission = MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1;
-		pVehicle1->AutoPilot.m_vecDestinationCoors.x = m_vTarget1.x;
-		pVehicle1->AutoPilot.m_vecDestinationCoors.y = m_vTarget1.y;
-		pVehicle1->AutoPilot.m_vecDestinationCoors.z = 0.0f;
-		pVehicle1->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 25000;
-		CCarAI::AddPoliceCarOccupants(pVehicle1);
-		pVehicle2->SetStatus(STATUS_PHYSICS);
-		pVehicle2->AutoPilot.m_fMaxTrafficSpeed = pVehicle2->AutoPilot.m_nCruiseSpeed = 4;
-		pVehicle2->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_SLOW_DOWN_FOR_CARS;
-		pVehicle2->AutoPilot.m_nCarMission = MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1;
-		pVehicle2->AutoPilot.m_vecDestinationCoors.x = m_vTarget2.x;
-		pVehicle2->AutoPilot.m_vecDestinationCoors.y = m_vTarget2.y;
-		pVehicle2->AutoPilot.m_vecDestinationCoors.z = 0.0f;
-		pVehicle2->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 25000;
-		CCarAI::AddPoliceCarOccupants(pVehicle2);
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		break;
-	}
-	case SETPIECE_CARBLOCKINGPLAYERFROMSIDE:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 2)
-			return;
-		if (!FindPlayerVehicle())
-			return;
-		if (DotProduct2D(FindPlayerSpeed(), (CVector2D)FindPlayerCoors() - m_vSpawn1) >= 0.0f)
-			return;
-		CVehicle* pVehicle1 = TryToGenerateCopCar(m_vSpawn1, m_vTarget1);
-		if (!pVehicle1)
-			return;
-		pVehicle1->SetStatus(STATUS_PHYSICS);
-		pVehicle1->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle1->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_PLOUGH_THROUGH;
-		pVehicle1->AutoPilot.m_nCarMission = MISSION_BLOCKPLAYER_FORWARDANDBACK;
-		pVehicle1->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle1->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle1->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle1->SetMoveSpeed(2.0f * pVehicle1->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle1);
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	case SETPIECE_CARRAMMINGPLAYERFROMSIDE:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 2)
-			return;
-		if (!FindPlayerVehicle())
-			return;
-		if (DotProduct2D(FindPlayerSpeed(), (CVector2D)FindPlayerCoors() - m_vSpawn1) >= 0.0f)
-			return;
-		CVehicle* pVehicle1 = TryToGenerateCopCar(m_vSpawn1, m_vTarget1);
-		if (!pVehicle1)
-			return;
-		pVehicle1->SetStatus(STATUS_PHYSICS);
-		pVehicle1->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle1->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_AVOID_CARS;
-		pVehicle1->AutoPilot.m_nCarMission = MISSION_RAMCAR_CLOSE;
-		pVehicle1->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle1->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle1->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle1->SetMoveSpeed(2.0f * pVehicle1->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle1);
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	case SETPIECE_CREATECOPPERONFOOT:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 1 || FindPlayerVehicle())
-			return;
-		CCopPed* pCop = TryToGenerateCopPed(m_vSpawn1);
-		if (!pCop)
-			return;
-		float z = CWorld::FindGroundZForCoord(m_vTarget1.x, m_vTarget1.y);
-		pCop->bScriptObjectiveCompleted = false;
-		pCop->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, CVector(m_vTarget1.x, m_vTarget1.y, z));
-		pCop->m_nExtendedRangeTimer = CTimer::GetTimeInMilliseconds() + 10000;
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	case SETPIECE_CREATETWOCOPPERSONFOOT:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 1 || FindPlayerVehicle())
-			return;
-		CCopPed* pCop = TryToGenerateCopPed(m_vSpawn1);
-		if (!pCop)
-			return;
-		float z = CWorld::FindGroundZForCoord(m_vTarget1.x, m_vTarget1.y);
-		pCop->bScriptObjectiveCompleted = false;
-		pCop->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, CVector(m_vTarget1.x, m_vTarget1.y, z));
-		pCop->m_nExtendedRangeTimer = CTimer::GetTimeInMilliseconds() + 10000;
-		CCopPed* pCop2 = TryToGenerateCopPed(m_vSpawn2);
-		if (!pCop2) {
-			CWorld::Remove(pCop);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the generated cop without invoking C++ delete.
-			pCop->~CCopPed();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetPedPool(), pCop);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			return;
-		}
-		z = CWorld::FindGroundZForCoord(m_vTarget2.x, m_vTarget2.y);
-		pCop2->bScriptObjectiveCompleted = false;
-		pCop2->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, CVector(m_vTarget2.x, m_vTarget2.y, z));
-		pCop2->m_nExtendedRangeTimer = CTimer::GetTimeInMilliseconds() + 10000;
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	case SETPIECE_TWOCARSBLOCKINGPLAYERFROMSIDE:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 2)
-			return;
-		if (!FindPlayerVehicle())
-			return;
-		if (DotProduct2D(FindPlayerSpeed(), (CVector2D)FindPlayerCoors() - m_vSpawn1) >= 0.0f)
-			return;
-		CVehicle* pVehicle1 = TryToGenerateCopCar(m_vSpawn1, m_vTarget1);
-		if (!pVehicle1)
-			return;
-		pVehicle1->SetStatus(STATUS_PHYSICS);
-		pVehicle1->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle1->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_PLOUGH_THROUGH;
-		pVehicle1->AutoPilot.m_nCarMission = MISSION_BLOCKPLAYER_FORWARDANDBACK;
-		pVehicle1->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle1->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle1->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle1->SetMoveSpeed(2.0f * pVehicle1->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle1);
-		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
-		if (!pVehicle2) {
-			CWorld::Remove(pVehicle1);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the generated cop car without invoking C++ delete.
-			pVehicle1->~CVehicle();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			return;
-		}
-		pVehicle2->SetStatus(STATUS_PHYSICS);
-		pVehicle2->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle2->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_PLOUGH_THROUGH;
-		pVehicle2->AutoPilot.m_nCarMission = MISSION_BLOCKPLAYER_FORWARDANDBACK;
-		pVehicle2->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle2->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle2->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle2->SetMoveSpeed(2.0f * pVehicle2->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle2);
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	case SETPIECE_TWOCARSRAMMINGPLAYERFROMSIDE:
-	{
-		if (FindPlayerPed()->m_pWanted->GetWantedLevel() < 2)
-			return;
-		if (!FindPlayerVehicle())
-			return;
-		if (DotProduct2D(FindPlayerSpeed(), (CVector2D)FindPlayerCoors() - m_vSpawn1) >= 0.0f)
-			return;
-		CVehicle* pVehicle1 = TryToGenerateCopCar(m_vSpawn1, m_vTarget1);
-		if (!pVehicle1)
-			return;
-		pVehicle1->SetStatus(STATUS_PHYSICS);
-		pVehicle1->AutoPilot.m_fMaxTrafficSpeed = pVehicle1->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle1->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_AVOID_CARS;
-		pVehicle1->AutoPilot.m_nCarMission = MISSION_RAMCAR_CLOSE;
-		pVehicle1->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle1->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle1->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle1->SetMoveSpeed(2.0f * pVehicle1->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle1);
-		CVehicle* pVehicle2 = TryToGenerateCopCar(m_vSpawn2, m_vTarget2);
-		if (!pVehicle2) {
-			CWorld::Remove(pVehicle1);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the generated cop car without invoking C++ delete.
-			pVehicle1->~CVehicle();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicle1);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-			return;
-		}
-		pVehicle2->SetStatus(STATUS_PHYSICS);
-		pVehicle2->AutoPilot.m_fMaxTrafficSpeed = pVehicle2->AutoPilot.m_nCruiseSpeed = 16;
-		pVehicle2->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_AVOID_CARS;
-		pVehicle2->AutoPilot.m_nCarMission = MISSION_RAMCAR_CLOSE;
-		pVehicle2->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
-		pVehicle2->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 100;
-		pVehicle2->m_nSetPieceExtendedRangeTime = CTimer::GetTimeInMilliseconds() + 10000;
-		pVehicle2->SetMoveSpeed(2.0f * pVehicle2->GetForward() / 3.0f);
-		CCarAI::AddPoliceCarOccupants(pVehicle2);
-		m_nLastTimeCreated = CTimer::GetTimeInMilliseconds();
-		return;
-	}
-	}
+    // Access the original typed native operation or canonical named field
+    car->SetStatus(status);
 }
-
-CVehicle* CSetPiece::TryToGenerateCopCar(CVector2D vSpawn, CVector2D vTarget)
+void SetPieces_BackendOccupants(CVehicle *car)
 {
-//+ rouz edit (ChatGPT)
-	// Allocate the set-piece police car without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CVehicle* pVehicle = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-	//- rouz edit (ChatGPT)
-	assert(pVehicle);
-	std::allocator<CAutomobile>().construct((CAutomobile*)pVehicle, MI_POLICE, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
-	CVector pos(vSpawn.x, vSpawn.y, 1000.0f);
-	CColPoint point;
-	CEntity* pEntity;
-	if (CWorld::ProcessVerticalLine(pos, -1000.0f, point, pEntity, true, false, false, false, true, false, nil))
-		pos.z = point.point.z + pVehicle->GetHeightAboveRoad();
-	CVector vDirection(vTarget.x - vSpawn.x, vTarget.y - vSpawn.y, 0.0f);
-	vDirection.Normalise();
-	pVehicle->GetForward() = CVector(vDirection.x, vDirection.y, 0.0f);
-	pVehicle->GetRight() = CVector(vDirection.y, -vDirection.x, 0.0f);
-	pVehicle->GetUp() = CVector(0.0f, 0.0f, 1.0f);
-	pVehicle->SetPosition(pos);
-	int16 total;
-	CWorld::FindObjectsKindaColliding(pos, pVehicle->GetColModel()->spheres->radius, false, &total, 16, nil, false, true, true, false, false);
-	if (total != 0) {
-//+ rouz edit (ChatGPT)
-		// Destroy and release the set-piece police car without invoking C++ delete.
-		pVehicle->~CVehicle();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		return nil;
-	}
-	pVehicle->ChangeLawEnforcerState(true);
-	CWorld::Add(pVehicle);
-	return pVehicle;
+    // Access the original typed native operation or canonical named field
+    CCarAI::AddPoliceCarOccupants(car);
 }
-
-CCopPed* CSetPiece::TryToGenerateCopPed(CVector2D vSpawn)
+void SetPieces_BackendRemoveVehicle(CVehicle *car)
 {
-//+ rouz edit (ChatGPT)
-	// Allocate the set-piece cop without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CCopPed* pCop = (CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));
-	//- rouz edit (ChatGPT)
-	assert(pCop);
-	std::allocator<CCopPed>().construct(pCop, COP_STREET);
-//- rouz edit (ChatGPT)
-	CVector pos(vSpawn.x, vSpawn.y, 1000.0f);
-	CColPoint point;
-	CEntity* pEntity;
-	if (CWorld::ProcessVerticalLine(pos, -1000.0f, point, pEntity, true, false, false, false, true, false, nil))
-		pos.z = point.point.z + 0.9f;
-	pCop->SetPosition(pos);
-	int16 total;
-	CWorld::FindObjectsKindaColliding(pos, pCop->GetColModel()->spheres->radius, false, &total, 16, nil, false, true, true, false, false);
-	if (total != 0) {
-//+ rouz edit (ChatGPT)
-		// Destroy and release the set-piece cop without invoking C++ delete.
-		pCop->~CCopPed();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetPedPool(), pCop);
-		//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		return nil;
-	}
-	CWorld::Add(pCop);
-	return pCop;
+    // Access the original typed native operation or canonical named field
+    CWorld::Remove(car);
 }
+void SetPieces_BackendRemoveCop(CCopPed *cop)
+{
+    // Access the original typed native operation or canonical named field
+    CWorld::Remove(cop);
+}
+void SetPieces_BackendDestroyVehicle(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    car->~CVehicle();CPool_Delete(CPools::GetVehiclePool(),car);
+}
+void SetPieces_BackendDestroyCop(CCopPed *cop)
+{
+    // Access the original typed native operation or canonical named field
+    cop->~CCopPed();CPool_Delete(CPools::GetPedPool(),cop);
+}
+uint8_t * SetPieces_BackendCruiseSpeed(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_nCruiseSpeed;
+}
+float * SetPieces_BackendMaxSpeed(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_fMaxTrafficSpeed;
+}
+uint8_t * SetPieces_BackendDrivingStyle(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_nDrivingStyle;
+}
+uint8_t * SetPieces_BackendCarMission(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_nCarMission;
+}
+uint8_t * SetPieces_BackendTempAction(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_nTempAction;
+}
+uint32_t * SetPieces_BackendTempTime(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_nTimeTempAction;
+}
+uint32_t * SetPieces_BackendVehicleRangeTime(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->m_nSetPieceExtendedRangeTime;
+}
+float * SetPieces_BackendDestinationX(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_vecDestinationCoors.x;
+}
+float * SetPieces_BackendDestinationY(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_vecDestinationCoors.y;
+}
+float * SetPieces_BackendDestinationZ(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return &car->AutoPilot.m_vecDestinationCoors.z;
+}
+SetPieceVector SetPieces_BackendForward(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    const CVector &value=car->GetForward();return SetPieceVector{value.x,value.y,value.z};
+}
+void SetPieces_BackendMoveSpeed(CVehicle *car,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    car->SetMoveSpeed(CVector(value.x,value.y,value.z));
+}
+float SetPieces_BackendGroundZ(float x,float y)
+{
+    // Access the original typed native operation or canonical named field
+    return CWorld::FindGroundZForCoord(x,y);
+}
+void SetPieces_BackendObjectiveCompleted(CCopPed *cop,bool value)
+{
+    // Access the original typed native operation or canonical named field
+    cop->bScriptObjectiveCompleted=value;
+}
+void SetPieces_BackendObjective(CCopPed *cop,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    cop->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT,CVector(value.x,value.y,value.z));
+}
+uint32_t * SetPieces_BackendCopRangeTime(CCopPed *cop)
+{
+    // Access the original typed native operation or canonical named field
+    return &cop->m_nExtendedRangeTimer;
+}
+CVehicle * SetPieces_BackendConstructVehicle(void)
+{
+    // Access the original typed native operation or canonical named field
+    CVehicle *car=(CVehicle*)CPool_New(CPools::GetVehiclePool());assert(car);std::allocator<CAutomobile>().construct((CAutomobile*)car,MI_POLICE,RANDOM_VEHICLE);return car;
+}
+CCopPed * SetPieces_BackendConstructCop(void)
+{
+    // Access the original typed native operation or canonical named field
+    CCopPed *cop=(CCopPed*)((CPed*)CPool_New(CPools::GetPedPool()));assert(cop);std::allocator<CCopPed>().construct(cop,COP_STREET);return cop;
+}
+bool SetPieces_BackendVerticalLine(SetPieceVector value,float *height)
+{
+    // Access the original typed native operation or canonical named field
+    CVector position(value.x,value.y,value.z);CColPoint point;CEntity *entity;bool hit=CWorld::ProcessVerticalLine(position,-1000.0f,point,entity,true,false,false,false,true,false,nil);
+    if(hit){
+        // Copy only the original valid hit-height output before the C controller decides placement
+        *height=point.point.z;
+    }
+    return hit;
+}
+float SetPieces_BackendHeightAboveRoad(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return car->GetHeightAboveRoad();
+}
+void SetPieces_BackendSetForward(CVehicle *car,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    car->GetForward()=CVector(value.x,value.y,value.z);
+}
+void SetPieces_BackendSetRight(CVehicle *car,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    car->GetRight()=CVector(value.x,value.y,value.z);
+}
+void SetPieces_BackendSetUp(CVehicle *car,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    car->GetUp()=CVector(value.x,value.y,value.z);
+}
+void SetPieces_BackendVehiclePosition(CVehicle *car,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    car->SetPosition(CVector(value.x,value.y,value.z));
+}
+void SetPieces_BackendCopPosition(CCopPed *cop,SetPieceVector value)
+{
+    // Access the original typed native operation or canonical named field
+    cop->SetPosition(CVector(value.x,value.y,value.z));
+}
+float SetPieces_BackendVehicleRadius(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    return car->GetColModel()->spheres->bounds.radius;
+}
+float SetPieces_BackendCopRadius(CCopPed *cop)
+{
+    // Access the original typed native operation or canonical named field
+    return cop->GetColModel()->spheres->bounds.radius;
+}
+void SetPieces_BackendColliding(SetPieceVector value,float radius,int16_t *total)
+{
+    // Access the original typed native operation or canonical named field
+    CVector position(value.x,value.y,value.z);CWorld::FindObjectsKindaColliding(position,radius,false,total,16,nil,false,true,true,false,false);
+}
+void SetPieces_BackendLawEnforcer(CVehicle *car,uint8_t enabled)
+{
+    // Access the original typed native operation or canonical named field
+    car->ChangeLawEnforcerState(enabled);
+}
+void SetPieces_BackendAddVehicle(CVehicle *car)
+{
+    // Access the original typed native operation or canonical named field
+    CWorld::Add(car);
+}
+void SetPieces_BackendAddCop(CCopPed *cop)
+{
+    // Access the original typed native operation or canonical named field
+    CWorld::Add(cop);
+}
+//- rouz edit (ChatGPT)

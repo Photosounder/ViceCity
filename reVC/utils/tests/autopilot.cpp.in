@@ -1,0 +1,136 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),states,checks;
+static uint32_t now;
+static CPathNode nodes[16];static CVehicle cars[4];TestPaths ThePaths;
+alignas(CAutoPilot) static uint8_t storage[2][sizeof(CAutoPilot)];
+#ifdef VALIDATE_SAVE_SIZE
+extern "C" {int32_t _saveBufCount;}
+#endif
+static void Number(uint64_t value)
+{
+    // Compare scalar observations without process-specific pointer addresses
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Preserve each meaningful floating-point result and serialized payload bit
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Bytes(const void *pointer,size_t size)
+{
+    // Observe all requested representation bytes including intentionally stale storage
+    const uint8_t *data=(const uint8_t*)pointer;for(size_t i=0;i<size;i++){digest^=data[i];digest*=UINT64_C(1099511628211);}
+}
+static void Check(bool value)
+{
+    // Stop at an independent invariant failure before reporting any final comparison result
+    ++checks;if(!value){fprintf(stderr,"Autopilot invariant %llu state %llu\n",(unsigned long long)checks,(unsigned long long)states);abort();}
+}
+extern "C" const uint32_t *Timer_GetTimeInMilliseconds(void)
+{
+    // Match the actual pure timer accessor without adding observable lookup effects
+    return &now;
+}
+static CAutoPilot *Construct(unsigned slot,uint8_t pattern)
+{
+    // Begin the plain record lifetime without clearing bytes before explicit C initialization
+#ifndef TEST_AUTOPILOT_ORIGINAL
+    ::new ((void*)storage[slot]) CAutoPilot;
+#endif
+    memset(storage[slot],pattern,sizeof(CAutoPilot));CAutoPilot *self=(CAutoPilot*)storage[slot];Run_AutoPilot_Init(self);return self;
+}
+#include "observations.h"
+#ifdef COMPATIBLE_SAVES
+#include "expected-save.h"
+#endif
+static void Snapshot(const CAutoPilot *self)
+{
+    // Compare every declared field, flag byte and active timer after the complete operation
+    ++states;Fields(self);Number(now);
+#ifdef VALIDATE_SAVE_SIZE
+    Number((uint32_t)_saveBufCount);
+#endif
+}
+static CAutoPilot *Seed(unsigned slot,unsigned seed)
+{
+    // Supply valid native pointers and independently varied values for all thirty-three fields
+    CAutoPilot *self=Construct(slot,(uint8_t)(0x80|(seed&0x7f)));self->m_nCurrentRouteNode=(int32_t)(seed*11-700);self->m_nNextRouteNode=(int32_t)(seed*13+5);self->m_nPrevRouteNode=-(int32_t)seed;self->m_nTimeEnteredCurve=(int32_t)(now-100);self->m_nTimeToSpendOnCurrentCurve=1000+(int32_t)(seed%1000);
+    self->m_nCurrentPathNodeInfo=seed%8;self->m_nNextPathNodeInfo=(seed+1)%8;self->m_nPreviousPathNodeInfo=seed*17;self->m_nAntiReverseTimer=now-99;self->m_nTimeToStartMission=now-43;self->m_nPreviousDirection=(int8_t)(seed%7-3);self->m_nCurrentDirection=(int8_t)(seed%5-2);self->m_nNextDirection=(int8_t)((seed/5)%5-2);self->m_nCurrentLane=(int8_t)(seed%7-3);self->m_nNextLane=(int8_t)((seed/7)%7-3);
+    self->m_nDrivingStyle=(uint8_t)(seed*3);self->m_nCarMission=(uint8_t)(seed*5);self->m_nTempAction=(uint8_t)(seed*7);self->m_nTimeTempAction=now+seed;self->m_fMaxTrafficSpeed=(float)seed*0.125f+0.25f;self->m_nCruiseSpeed=(uint8_t)(seed*11);self->m_nCruiseSpeedMultiplierType=(uint8_t)(seed*13);self->m_fCruiseSpeedMultiplier=(float)(seed%17)*0.25f;
+    self->m_bSlowedDownBecauseOfCars=seed&1;self->m_bSlowedDownBecauseOfPeds=(seed>>1)&1;self->m_bStayInCurrentLevel=(seed>>2)&1;self->m_bStayInFastLane=(seed>>3)&1;self->m_bIgnorePathfinding=(seed>>4)&1;self->m_nSwitchDistance=(uint8_t)(seed*19);self->m_vecDestinationCoors.x=(float)seed*0.5f;self->m_vecDestinationCoors.y=-(float)seed*0.25f;self->m_vecDestinationCoors.z=-0.0f;
+    for(unsigned i=0;i<8;i++)self->m_aPathFindNodesInfo[i]=(seed+i)%5?&nodes[(seed+i)%16]:NULL;self->m_nPathFindNodesCount=(int16_t)(seed%9);self->m_pTargetCar=seed%5?&cars[seed%4]:NULL;return self;
+}
+static void Paths(unsigned seed)
+{
+    // Populate the exact native link field types used by the unchanged inline coordinate accessors
+    for(unsigned i=0;i<64;i++){CCarPathLink &link=ThePaths.m_carPathLinks[i];memset(&link,0,sizeof(link));link.x=(int16_t)((i*123+seed)%4000-2000);link.y=(int16_t)((i*317+seed*3)%4000-2000);link.dirX=(int8_t)((i*31+seed)%201-100);link.dirY=(int8_t)((i*59+seed*7)%201-100);}
+}
+static uint32_t constructionTime;
+struct EmbeddedBase {
+    EmbeddedBase()
+    {
+        // Model the unchanged native base constructor completing before autopilot initialization
+        now=constructionTime;
+    }
+};
+struct EmbeddedOwner:EmbeddedBase {
+    CAutoPilot pilot;CVector laterVectors[6];
+    explicit EmbeddedOwner(bool fake)
+    {
+        // Preserve the actual vehicle member order and the explicit C initialization at the body boundary
+#ifndef TEST_AUTOPILOT_ORIGINAL
+        Run_AutoPilot_Init(&pilot);
+#endif
+        Check(pilot.m_nTimeToStartMission==constructionTime&&pilot.m_nAntiReverseTimer==constructionTime);
+        if(!fake){now+=1000;pilot.m_nTimeToStartMission=now;}
+    }
+};
+int main()
+{
+    // Verify both vehicle constructor paths retain the early anti-reverse timestamp and later mission timestamp
+    for(unsigned seed=0;seed<32;seed++){constructionTime=UINT32_MAX-77+seed*13;EmbeddedOwner owner(seed&1);Check(owner.pilot.m_nAntiReverseTimer==constructionTime);Check(owner.pilot.m_nTimeToStartMission==constructionTime+((seed&1)?0:1000));++states;Number(owner.pilot.m_nAntiReverseTimer);Number(owner.pilot.m_nTimeToStartMission);}
+    // Compare every constructor-defined field before supplying defined values for omitted native fields
+    for(unsigned seed=0;seed<256;seed++){now=0x87654321u+seed*17;CAutoPilot *self=Construct(0,(uint8_t)seed);Check(self->m_nCurrentRouteNode==0&&self->m_nNextRouteNode==0&&self->m_nPrevRouteNode==0);Check(self->m_nTimeEnteredCurve==0&&self->m_nTimeToSpendOnCurrentCurve==1000);Check(self->m_nCurrentDirection==1&&self->m_nNextDirection==1&&self->m_nCurrentLane==0&&self->m_nNextLane==0);Check(self->m_nCruiseSpeed==10&&self->m_fMaxTrafficSpeed==10&&self->m_fCruiseSpeedMultiplier==1);Check(self->m_nTimeToStartMission==now&&self->m_nAntiReverseTimer==now&&self->m_pTargetCar==NULL);Check(!self->m_bSlowedDownBecauseOfCars&&!self->m_bSlowedDownBecauseOfPeds&&!self->m_bStayInFastLane);Check(self->m_nCurrentPathNodeInfo==0&&self->m_nNextPathNodeInfo==0&&self->m_nPreviousPathNodeInfo==0);Check(self->m_nDrivingStyle==DRIVINGSTYLE_STOP_FOR_CARS&&self->m_nCarMission==MISSION_NONE&&self->m_nTempAction==TEMPACT_NONE&&self->m_nCruiseSpeedMultiplierType==0&&self->m_nPathFindNodesCount==0);
+        self->m_nPreviousDirection=(int8_t)seed;self->m_nTimeTempAction=seed*31;self->m_bStayInCurrentLevel=seed&1;self->m_bIgnorePathfinding=(seed>>1)&1;self->m_nSwitchDistance=(uint8_t)seed;self->m_vecDestinationCoors.x=(float)seed;self->m_vecDestinationCoors.y=-(float)seed;self->m_vecDestinationCoors.z=-0.0f;for(unsigned i=0;i<8;i++)self->m_aPathFindNodesInfo[i]=&nodes[(seed+i)%16];Snapshot(self);}
+    // Exercise complete path shifts including the original empty-list decrement and unchanged trailing pointers
+    for(int count=-2;count<=8;count++){for(unsigned seed=0;seed<8;seed++){now=10000;CAutoPilot *self=Seed(0,seed);self->m_nPathFindNodesCount=(int16_t)count;CPathNode *expected[8];memcpy(expected,self->m_aPathFindNodesInfo,sizeof(expected));for(int i=0;i<count-1;i++)expected[i]=expected[i+1];Run_AutoPilot_RemoveOnePathNode(self);Check(self->m_nPathFindNodesCount==count-1);Check(memcmp(expected,self->m_aPathFindNodesInfo,sizeof(expected))==0);Snapshot(self);}}
+    // Exercise every cruise-speed byte with finite, signed-zero, infinite and quiet-NaN multipliers
+    uint32_t multipliers[]={0,0x80000000,0x3f000000,0x3f800000,0xbf800000,0x7f800000,0xff800000,0x7fc12345};for(unsigned speed=0;speed<256;speed++){for(unsigned k=0;k<8;k++){now=20000;CAutoPilot *self=Seed(0,speed);self->m_nCruiseSpeed=(uint8_t)speed;memcpy(&self->m_fCruiseSpeedMultiplier,&multipliers[k],4);Floating(Run_AutoPilot_GetCruiseSpeed(self));Snapshot(self);}}
+    // Exercise the complete speed policy inside its defined arithmetic range across signed lanes and timer precision boundaries
+    float speeds[]={-10,0,0.001f,0.01f,0.1f,1,10,77.5f,220,INFINITY};for(unsigned seed=0;seed<1280;seed++){uint32_t times[]={10000,16777218u,1000000001u};now=times[(seed/10)%3];
+#ifdef FIX_BUGS
+        if(seed%11==0)now=3;if(seed%13==0)now=UINT32_MAX-7;
+#endif
+        CAutoPilot *self=Seed(0,seed);Paths(seed);self->m_nTimeEnteredCurve=(int32_t)(now-(seed%233));float speed=speeds[seed%10];Run_AutoPilot_ModifySpeed(self,speed);Check(self->m_fMaxTrafficSpeed==(speed>0.01f?speed:0.01f));Check(self->m_nTimeToSpendOnCurrentCurve>=0);Snapshot(self);}
+    // Exercise native trivial assignment and direct C record assignment without adding a production copy operation
+    for(unsigned seed=0;seed<128;seed++){now=seed*31;CAutoPilot *self=Seed(0,seed),*source=Seed(1,seed+17);Run_AutoPilot_Copy(self,source);Snapshot(self);Run_AutoPilot_Copy(self,self);Snapshot(self);}
+#ifdef COMPATIBLE_SAVES
+    // Verify independent packed bytes, unaligned cursors, guard regions and unchanged source records
+    for(unsigned seed=0;seed<64;seed++){now=seed*137;for(unsigned shift=0;shift<4;shift++){CAutoPilot *self=Seed(0,seed);uint8_t expected[120],buffer[128],image[sizeof(CAutoPilot)];ExpectedSave(self,expected);memset(buffer,0xa5,sizeof(buffer));memcpy(image,self,sizeof(image));uint8_t *cursor=buffer+shift;
+#ifdef VALIDATE_SAVE_SIZE
+        _saveBufCount=0;
+#endif
+        Run_AutoPilot_Save(self,&cursor);Check(cursor==buffer+shift+120);Check(memcmp(buffer+shift,expected,120)==0);Check(memcmp(self,image,sizeof(image))==0);for(unsigned i=0;i<shift;i++)Check(buffer[i]==0xa5);for(unsigned i=shift+120;i<128;i++)Check(buffer[i]==0xa5);
+#ifdef VALIDATE_SAVE_SIZE
+        Check(_saveBufCount==120);
+#endif
+        Bytes(buffer,sizeof(buffer));Snapshot(self);CAutoPilot *other=Seed(1,seed+51);CPathNode *retained[8];memcpy(retained,other->m_aPathFindNodesInfo,sizeof(retained));CVehicle *target=other->m_pTargetCar;cursor=buffer+shift;
+#ifdef VALIDATE_SAVE_SIZE
+        _saveBufCount=0;
+#endif
+        Run_AutoPilot_Load(other,&cursor);Check(cursor==buffer+shift+120);Check(memcmp(retained,other->m_aPathFindNodesInfo,sizeof(retained))==0&&target==other->m_pTargetCar);ExpectedSave(other,expected);Check(memcmp(expected,buffer+shift,120)==0);
+#ifdef VALIDATE_SAVE_SIZE
+        Check(_saveBufCount==120);
+#endif
+        Snapshot(other);}}
+    // Verify all serialized flag bytes and skipped nonzero bytes preserve native pointers and named flag fields
+    for(unsigned flags=0;flags<256;flags++){now=999;CAutoPilot *self=Seed(0,flags);uint8_t buffer[120];ExpectedSave(self,buffer);buffer[64]=(uint8_t)flags;unsigned offsets[]={58,59,66,67};for(unsigned i=0;i<4;i++)buffer[offsets[i]]=0x99;memset(buffer+80,0x55,32);memset(buffer+114,0xaa,6);CAutoPilot *other=Seed(1,flags+37);CPathNode *retained[8];memcpy(retained,other->m_aPathFindNodesInfo,sizeof(retained));CVehicle *target=other->m_pTargetCar;uint8_t *cursor=buffer;
+#ifdef VALIDATE_SAVE_SIZE
+        _saveBufCount=0;
+#endif
+        Run_AutoPilot_Load(other,&cursor);Check(cursor==buffer+120);Check((((uint8_t*)other)[64]&31)==(flags&31));Check(other->m_bSlowedDownBecauseOfCars==!!(flags&1)&&other->m_bSlowedDownBecauseOfPeds==!!(flags&2)&&other->m_bStayInCurrentLevel==!!(flags&4)&&other->m_bStayInFastLane==!!(flags&8)&&other->m_bIgnorePathfinding==!!(flags&16));Check(memcmp(retained,other->m_aPathFindNodesInfo,sizeof(retained))==0&&target==other->m_pTargetCar);Snapshot(other);}
+#endif
+    // Report the complete original/C result from a quiet console executable
+    printf("states=%llu checks=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)digest);return 0;
+}

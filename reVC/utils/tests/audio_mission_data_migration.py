@@ -19,7 +19,8 @@ def logic(source):
 def facade(source):
     # Move both existing public mission-data exports intact into C
     for name in ['GetMissionAudioLoadedLabel','PreloadMissionAudio']:source=source.replace(function(source,'DMAudio_',name)+'\n','')
-    return police.facade(calls(source))
+    import audio_music_state_migration as music
+    return music.calls(police.facade(calls(source)))
 def header(source):
     # Keep all owner fields and add only C mission-data declarations
     source='\n'.join(line for line in source.split('\n') if not re.search(r'\b(?:GetMissionAudioLoadedLabel|PreloadMissionAudio)\(',line))

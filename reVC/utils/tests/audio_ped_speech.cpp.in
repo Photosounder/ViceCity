@@ -1,0 +1,193 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "soundlist.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using bool8=uint8_t;
+#define FALSE 0
+#define TRUE 1
+#define nil NULL
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+enum {@VOLUME_CONSTANTS@};
+static void event(unsigned);
+struct Talking {bool v;operator bool() const {
+    // Observe each original permission read
+    event(18);return v;
+}Talking &operator=(uint8_t status) {
+    // Observe the original boolean field write
+    event(19);v=status!=0;return *this;
+}};
+class CPed {public:Talking m_canTalk;};
+struct CWanted {int32_t level;int32_t GetWantedLevel() const {
+    // Observe each repeated wanted-level query
+    event(13);return level;
+}};
+class CPlayerPed:public CPed {public:CWanted *m_pWanted;};
+struct CVector {float x,y,z;};
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Copy the same original three coordinate arguments
+    return {p->x,p->y,p->z};
+}
+struct Camera {CVector position;const CVector &GetPosition() const {
+    // Observe the original camera argument query
+    event(22);return position;
+}};static Camera TheCamera;
+struct CWorld {static bool GetIsLineOfSightClear(CVector a,CVector b,bool,bool,bool,bool,bool,bool);};
+struct CTimer {static uint32_t GetTimeInMilliseconds();};
+struct CTheScripts {static uint32_t &GetLastMissionPassedTime();};
+struct cAudioManager {
+@FIELDS@
+@DECLARATIONS@
+uint32 GetPedCommentSfx(CPed *,uint16);
+};
+extern "C" cAudioManager AudioManager;cAudioManager AudioManager;
+static cAudioManager other,*active;static cPedParams params;static CPlayerPed players[2];static CWanted wanted[2];
+static uint32_t clockTime,missionTime;static unsigned seedValue,cases,callbacks,adds,moodCalls,permissionWrites;
+static unsigned genericAdds[4];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestPedSpeechC(cAudioManager *,cPedParams *,unsigned,unsigned);
+extern "C" void TestPedSpeechRealAdd(cPedComments *,const tPedComment *);
+static void value(uint32_t v) {
+    // Record query ordering and scalar results
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Hash initialized record words
+    digest=TestAircraftHash(digest,p,size);
+}
+static unsigned identity(const void *p) {
+    // Normalize captured player and wanted pointers
+    return p==&players[0]?1:p==&players[1]?2:p==&wanted[0]?3:p==&wanted[1]?4:0;
+}
+static void clearPadding(tPedComment *p) {
+    // Exclude only unspecified automatic-record padding from comparisons
+    unsigned end=offsetof(tPedComment,m_nLoadingTimeout)+sizeof(p->m_nLoadingTimeout);
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+    // Include the conditional emitting-volume field before clearing trailing padding
+    end=offsetof(tPedComment,m_nEmittingVolume)+sizeof(p->m_nEmittingVolume);
+#endif
+    memset((unsigned char *)p+end,0,sizeof(*p)-end);
+}
+static void observe() {
+    // Hash complete owner fields with comment padding and game pointers normalized
+    cAudioManager owners[2]={AudioManager,other};
+    for(unsigned o=0;o<2;++o)for(unsigned q=0;q<NUM_SOUND_QUEUES;++q)for(unsigned i=0;i<NUM_PED_COMMENTS_SLOTS;++i)clearPadding(&owners[o].m_sPedComments.m_aPedCommentQueue[q][i]);
+    cPedParams copy=params;copy.m_pPed=(CPed *)(uintptr_t)identity(params.m_pPed);CPlayerPed p[2];memcpy(p,players,sizeof(p));for(unsigned i=0;i<2;++i)p[i].m_pWanted=(CWanted *)(uintptr_t)identity(players[i].m_pWanted);
+    bytes(owners,sizeof(owners));bytes(&copy,sizeof(copy));bytes(p,sizeof(p));bytes(wanted,sizeof(wanted));bytes(&TheCamera,sizeof(TheCamera));value(clockTime);value(missionTime);
+}
+static void event(unsigned token) {
+    // Observe live owner state before each callback changes subsequent queries
+    ++callbacks;value(token);observe();
+    if(token==13&&(seedValue&128))players[0].m_pWanted=&wanted[1];
+    if(token==14&&(seedValue&256))missionTime=clockTime+(seedValue%2?1:UINT32_MAX);
+    if(token==10&&(seedValue&512))active->m_bIsInitialised=0;
+}
+uint32_t CTimer::GetTimeInMilliseconds() {
+    // Supply the original live timer query
+    event(10);return clockTime;
+}
+static CPlayerPed *FindPlayerPed() {
+    // Retain the original null-player early return
+    ++moodCalls;event(11);return seedValue%7?&players[0]:nullptr;
+}
+uint32_t &CTheScripts::GetLastMissionPassedTime() {
+    // Supply the original reference-returning mission timestamp
+    event(14);return missionTime;
+}
+uint32 cAudioManager::GetPedCommentSfx(CPed *ped,uint16 sound) {
+    // Observe captured speech selection before changing later live context and scratch fields
+    event(20);value(identity(ped));value(sound);
+    if(seedValue&1024){params.m_pPed=&players[1];params.m_fDistance=4;params.m_bDistanceCalculated=1;m_sQueueSample.m_fDistance=2;}
+    return seedValue%5?SFX_GENERIC_MALE_GRUNT_1+seedValue%41:NO_SAMPLE;
+}
+bool CWorld::GetIsLineOfSightClear(CVector a,CVector b,bool f1,bool f2,bool f3,bool f4,bool f5,bool f6) {
+    // Observe both vector arguments and the original visibility flags before scratch mutation
+    event(21);bytes(&a,sizeof(a));bytes(&b,sizeof(b));value(f1);value(f2);value(f3);value(f4);value(f5);value(f6);
+    if(seedValue&2048){active->m_sQueueSample.m_vecPos={7,8,9};active->m_sQueueSample.m_fDistance=3;active->m_sQueueSample.m_nEntityIndex^=1;}
+    return seedValue%3!=0;
+}
+extern "C" uint32_t AudioPlayerEngineHost_Time() {
+    // Query the same original timer boundary
+    return CTimer::GetTimeInMilliseconds();
+}
+extern "C" CPlayerPed *AudioPoliceHost_FindPlayer() {
+    // Query the same original player lookup
+    return FindPlayerPed();
+}
+extern "C" int32_t AudioPoliceHost_WantedLevel(const CPlayerPed *ped) {
+    // Query the live wanted pointer at each original expression
+    return ped->m_pWanted->GetWantedLevel();
+}
+extern "C" void AudioPedSpeechHost_SetTalking(CPed *ped,uint8_t status) {
+    // Apply the same original boolean field write
+    ++permissionWrites;ped->m_canTalk=status;
+}
+extern "C" uint8_t AudioPedSpeechHost_CanTalk(const CPed *ped) {
+    // Read the same original talking permission
+    return ped->m_canTalk;
+}
+extern "C" uint32_t AudioPedTalk_Select(cAudioManager *manager,CPed *ped,uint16_t sound) {
+    // Invoke the original remaining selector stand-in
+    return manager->GetPedCommentSfx(ped,sound);
+}
+extern "C" uint8_t AudioPedSpeechHost_LineClear(const AudioSoundPosition *position) {
+    // Keep both original vector arguments in the same C++ game expression
+    return CWorld::GetIsLineOfSightClear(TheCamera.GetPosition(),AudioSoundPosition_ToVector(position),true,false,false,false,false,false);
+}
+extern "C" uint32_t AudioPedSpeechHost_MissionTime() {
+    // Read the same original mission-time reference
+    return CTheScripts::GetLastMissionPassedTime();
+}
+extern "C" void AudioPedSpeechHost_SetMissionTime(uint32_t time) {
+    // Assign through the original reference-returning game query
+    CTheScripts::GetLastMissionPassedTime()=time;
+}
+extern "C" void PedComments_Add(cPedComments *queue,const tPedComment *comment) {
+    // Exercise the real C queue insertion after observing every defined comment field
+    ++adds;event(30);tPedComment copy=*comment;clearPadding(&copy);bytes(&copy,sizeof(copy));TestPedSpeechRealAdd(queue,comment);event(31);
+    // Require emitted comments from every generic speech branch
+    if(active->m_bGenericSfx&&seedValue%5<4)++genericAdds[seedValue%5];
+}
+@METHODS@
+static void runOriginal(unsigned kind,unsigned seed) {
+    // Invoke original members and global-owner facade behavior with identical arguments
+    uint16_t sound=(uint16_t)(seed%5==0?SOUND_PED_HELI_PLAYER_FOUND:seed%5==1?SOUND_PED_VCPA_PLAYER_FOUND:seed%5==2?SOUND_INJURED_PED_MALE_OUCH:seed%5==3?SOUND_INJURED_PED_FEMALE:SOUND_BOAT_SLOWDOWN);
+#ifdef TEST_ORIGINAL
+    // Preserve the original operation choice and public facade's global owner
+    switch(kind){case 0:active->SetPedTalkingStatus(seed%7?params.m_pPed:nullptr,(uint8_t)seed);break;case 1:active->SetPlayersMood((uint8_t)(seed%7),seed%11?seed*1000:UINT32_MAX);break;case 2:active->ProcessPlayerMood();break;case 3:active->SetupPedComments(params,sound);break;case 4:AudioManager.SetPedTalkingStatus(seed%7?params.m_pPed:nullptr,(uint8_t)seed);break;case 5:AudioManager.SetPlayersMood((uint8_t)(seed%7),seed%11?seed*1000:UINT32_MAX);break;}
+#endif
+}
+static void prepare(unsigned seed,unsigned kind) {
+    // Cover mood gates, timestamp boundaries, speech ranges and queue replacement
+    seedValue=seed;active=kind>=4?&AudioManager:seed&1?&other:&AudioManager;memset(&AudioManager,0,sizeof(AudioManager));memset(&other,0,sizeof(other));memset(&params,0,sizeof(params));memset(players,0,sizeof(players));memset(wanted,0,sizeof(wanted));
+    clockTime=seed%17==0?UINT32_MAX-3:seed*100;const uint32_t stamps[]={UINT32_MAX,0,clockTime-180001,clockTime-180000,clockTime-179999,clockTime,clockTime+1};missionTime=stamps[(seed/7)%7];
+    for(unsigned i=0;i<2;++i){players[i].m_pWanted=&wanted[i];players[i].m_canTalk.v=(seed/11+i)%2;wanted[i].level=(seed/13+i)%6;}
+    active->m_bIsInitialised=(seed/19)%2;active->m_nPlayerMood=seed%4;active->m_nPlayerMoodTimer=clockTime+(seed%3==0?1:seed%3==1?0:UINT32_MAX);
+    params.m_pPed=seed%3?&players[0]:nullptr;params.m_bDistanceCalculated=(seed/23)%3;const float ranges[]={0,1,39.999f,40,40.001f,399.999f,400,400.001f};float d=ranges[(seed/29)%8];params.m_fDistance=d*d;
+    active->m_sQueueSample.m_fDistance=(seed/31)%31;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nEntityIndex=seed%2;active->m_sQueueSample.m_nVolume=53;active->m_bGenericSfx=1;TheCamera.position={4,5,6};for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)((seed*(i+1))%1001)-500;
+    PedComments_Init(&active->m_sPedComments);active->m_sPedComments.m_nActiveQueue=seed%2;
+    unsigned count=(seed/37)%(NUM_PED_COMMENTS_SLOTS+1);for(unsigned i=0;i<count;++i){tPedComment c;memset(&c,0,sizeof(c));c.m_nVolume=(uint8_t)(10+i*3);c.m_nLoadingTimeout=5;TestPedSpeechRealAdd(&active->m_sPedComments,&c);}
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening error dialogs
+    SetErrorMode(3);
+#endif
+    // Compare all four operations and both public wrappers across complete initialized storage
+    for(unsigned seed=0;seed<32768;++seed){unsigned kind=(seed/7)%6;prepare(seed,kind);observe();@RUN@;observe();++cases;}
+    if(!adds||!moodCalls)return 2;
+    // Require actual insertion from all four generic sound families
+    for(unsigned i=0;i<4;++i)if(!genericAdds[i])return 3;
+    // Emit deterministic state and callback observations
+    printf("%u cases %u callbacks %u comments %llu\n",cases,callbacks,adds,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #if defined RW_D3D9 || defined RWLIBS || defined __MWERKS__
 
 #define _WIN32_WINDOWS 0x0500
@@ -97,7 +99,7 @@ static psGlobalType PsGlobal;
 #include "Game.h"
 #include "PCSave.h"
 #include "AnimViewer.h"
-#include "MemoryMgr.h"
+#include "MemoryMgr_native.h"
 
 #ifdef PS2_MENU
 #include "MemoryCard.h"
@@ -650,7 +652,7 @@ psInitialize(void)
 	PsGlobal.joy1	= nil;
 	PsGlobal.joy2	= nil;
 
-	CFileMgr::Initialise();
+	FileMgr_Initialise();
 
 #ifdef PS2_MENU
 	CPad::Initialise();
@@ -746,8 +748,8 @@ psInitialize(void)
 	if ( _dwOperatingSystemVersion == OS_WIN95 )
 	{
 		MessageBoxW(nil,
-					(LPCWSTR)TheText.Get("WIN_95"),	 // Grand Theft Auto III cannot run on Windows 95
-					(LPCWSTR)TheText.Get("WIN_TTL"), // Grand Theft Auto III
+					(LPCWSTR)Text_Get(&TheText,"WIN_95"),	 // Grand Theft Auto III cannot run on Windows 95
+					(LPCWSTR)Text_Get(&TheText,"WIN_TTL"), // Grand Theft Auto III
 					MB_OK);
 
 		return FALSE;
@@ -756,8 +758,8 @@ psInitialize(void)
 	if ( dwDXVersion < 0x801 )
 	{
 		MessageBoxW(nil,
-					(LPCWSTR)TheText.Get("WIN_DX"),	 // Grand Theft Auto III requires at least DirectX version 8.1
-					(LPCWSTR)TheText.Get("WIN_TTL"), // Grand Theft Auto III
+					(LPCWSTR)Text_Get(&TheText,"WIN_DX"),	 // Grand Theft Auto III requires at least DirectX version 8.1
+					(LPCWSTR)Text_Get(&TheText,"WIN_TTL"), // Grand Theft Auto III
 					MB_OK);
 
 		return FALSE;
@@ -787,14 +789,14 @@ psInitialize(void)
 	if ( _dwMemAvailVideo < (12 * 1024 * 1024) /*12 MB*/ )
 	{
 		MessageBoxW(nil,
-					(LPCWSTR)TheText.Get("WIN_VDM"), // Grand Theft Auto III requires at least 12MB of available video memory
-					(LPCWSTR)TheText.Get("WIN_TTL"), // Grand Theft Auto III
+					(LPCWSTR)Text_Get(&TheText,"WIN_VDM"), // Grand Theft Auto III requires at least 12MB of available video memory
+					(LPCWSTR)Text_Get(&TheText,"WIN_TTL"), // Grand Theft Auto III
 					MB_OK);
 
 		return FALSE;
 	}
 	
-	TheText.Unload();
+	Text_Unload(&TheText);
 
 	return TRUE;
 }
@@ -905,8 +907,8 @@ void _psSelectScreenVM(RwInt32 videoMode)
 		ShowWindow(PSGLOBAL(window), SW_HIDE);
 
 		MessageBoxW(nil,
-			(LPCWSTR)TheText.Get("WIN_RSZ"), // Failed to select new screen resolution
-			(LPCWSTR)TheText.Get("WIN_TTL"), // Grand Theft Auto III
+			(LPCWSTR)Text_Get(&TheText,"WIN_RSZ"), // Failed to select new screen resolution
+			(LPCWSTR)Text_Get(&TheText,"WIN_TTL"), // Grand Theft Auto III
 			MB_OK);		
 	}
 	else
@@ -2006,8 +2008,8 @@ void InitialiseLanguage()
 		}
 	}
 
-	TheText.Unload();
-	TheText.Load();
+	Text_Unload(&TheText);
+	Text_Load(&TheText);
 }
 
 /*
@@ -2227,7 +2229,7 @@ WinMain(HINSTANCE instance,
 		_InputInitialiseJoys();
 	}
 	
-	ControlsManager.InitDefaultControlConfigMouse(MousePointerStateHelper.GetMouseSetUp());
+	ControlsManager.InitDefaultControlConfigMouse(MousePointerState_GetMouseSetUp(&MousePointerStateHelper));
 
 #ifndef IMPROVED_VIDEOMODE
 	SetWindowLong(PSGLOBAL(window), GWL_STYLE, WS_POPUP);
@@ -2295,7 +2297,7 @@ WinMain(HINSTANCE instance,
 	UpdateWindow(PSGLOBAL(window));
 	
 	{
-		CFileMgr::SetDirMyDocuments();
+		FileMgr_SetDirMyDocuments();
 		
 #ifdef LOAD_INI_SETTINGS
 		// At this point InitDefaultControlConfigJoyPad must have set all bindings to default and ms_padButtonsInited to number of detected buttons.
@@ -2304,15 +2306,15 @@ WinMain(HINSTANCE instance,
 		int connectedPadButtons = ControlsManager.ms_padButtonsInited;
 #endif
 
-		int32 gta3set = CFileMgr::OpenFile("gta_vc.set", "r");
+		int32 gta3set = FileMgr_OpenFile("gta_vc.set", "r");
 
 		if ( gta3set )
 		{
 			ControlsManager.LoadSettings(gta3set);
-			CFileMgr::CloseFile(gta3set);
+			FileMgr_CloseFile(gta3set);
 		}
 		
-		CFileMgr::SetDir("");
+		FileMgr_SetDir("");
 
 #ifdef LOAD_INI_SETTINGS
 		LoadINIControllerSettings();
@@ -2335,8 +2337,8 @@ WinMain(HINSTANCE instance,
 	{
 		LoadingScreen(nil, nil, "loadsc0");
 		
-		TheText.Unload();
-		TheText.Load();
+		Text_Unload(&TheText);
+		Text_Load(&TheText);
 		
 		CFont::Initialise();
 		
@@ -2349,7 +2351,7 @@ WinMain(HINSTANCE instance,
 		// This is TheModelViewer in LCS
 		LoadingScreen("Loading the ModelViewer", NULL, GetRandomSplashScreen());
 		CAnimViewer::Initialise();
-		CTimer::Update();
+		Timer_Update();
 #ifndef PS2_MENU
 		FrontEndMenuManager.m_bGameNotLoaded = false;
 #endif
@@ -2380,7 +2382,7 @@ WinMain(HINSTANCE instance,
 		
 		TheMemoryCard.m_bWantToLoad = false;
 		
-		CTimer::Update();
+		Timer_Update();
 		
 		while( !RsGlobal.quit && !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) )
 #else
@@ -2435,7 +2437,7 @@ WinMain(HINSTANCE instance,
 
 						if ( startupDeactivate || ControlsManager.GetJoyButtonJustDown() != 0 )
 							++gGameState;
-						else if ( CPad::GetPad(0)->NewState.CheckForInput() )
+						else if ( ControllerState_CheckForInput(&CPad::GetPad(0)->NewState) )
 							++gGameState;
 						else if ( CPad::GetPad(0)->GetLeftMouseJustDown() )
 							++gGameState;
@@ -2477,7 +2479,7 @@ WinMain(HINSTANCE instance,
 
 						if ( startupDeactivate || ControlsManager.GetJoyButtonJustDown() != 0 )
 							++gGameState;
-						else if ( CPad::GetPad(0)->NewState.CheckForInput() )
+						else if ( ControllerState_CheckForInput(&CPad::GetPad(0)->NewState) )
 							++gGameState;
 						else if ( CPad::GetPad(0)->GetLeftMouseJustDown() )
 							++gGameState;
@@ -2604,8 +2606,8 @@ WinMain(HINSTANCE instance,
 							if (CMenuManager::m_PrefsLanguage != TheMemoryCard.GetLanguageToLoad())
 							{
 								CMenuManager::m_PrefsLanguage = TheMemoryCard.GetLanguageToLoad();
-								TheText.Unload();
-								TheText.Load();
+								Text_Unload(&TheText);
+								Text_Load(&TheText);
 							}
 					
 							CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
@@ -2622,7 +2624,7 @@ WinMain(HINSTANCE instance,
 					
 					case GS_PLAYING_GAME:
 					{
-						float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+						float ms = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerMillisecond();
 						if ( RwInitialised )
 						{
 							if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
@@ -2668,7 +2670,7 @@ WinMain(HINSTANCE instance,
 #ifdef PS2_MENU
 		CGame::ShutDownForRestart();
 #endif
-		CTimer::Stop();
+		Timer_Stop();
 		
 #ifdef PS2_MENU
 		if (FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad)
@@ -2687,7 +2689,7 @@ WinMain(HINSTANCE instance,
 		}
 		
 		CGame::ShutDown();	
-		CTimer::Stop();
+		Timer_Stop();
 		
 		break;
 #else
@@ -2709,7 +2711,7 @@ WinMain(HINSTANCE instance,
 			if ( gGameState == GS_PLAYING_GAME )
 				CGame::ShutDown();
 
-			CTimer::Stop();
+			Timer_Stop();
 			
 			if ( FrontEndMenuManager.m_bFirstTime == true )
 			{
@@ -3598,4 +3600,7 @@ int strncasecmp(const char *str1, const char *str2, size_t len)
 #endif
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

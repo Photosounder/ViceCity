@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "SceneEdit.h"
@@ -105,30 +106,30 @@ static int32 NextValidModelId(int32 mi, int32 step)
 void CSceneEdit::LoadMovie(void)
 {
 	ReInitialise();
-	CFileMgr::SetDir("DATA");
-	int fid = CFileMgr::OpenFile("movie.dat", "r");
+	FileMgr_SetDir("DATA");
+	int fid = FileMgr_OpenFile("movie.dat", "r");
 #ifdef FIX_BUGS
 	if (fid >= 0)
 #endif
 	{
-		CFileMgr::Read(fid, (char*)&Movie, sizeof(Movie));
-		CFileMgr::Read(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
-		CFileMgr::CloseFile(fid);
+		FileMgr_Read(fid, (char*)&Movie, sizeof(Movie));
+		FileMgr_Read(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
+		FileMgr_CloseFile(fid);
 	}
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 	m_bCommandActive = false;
 }
 
 void CSceneEdit::SaveMovie(void)
 {
-	CFileMgr::SetDir("DATA");
-	int fid = CFileMgr::OpenFileForWriting("movie.dat");
+	FileMgr_SetDir("DATA");
+	int fid = FileMgr_OpenFileForWriting("movie.dat");
 	if (fid >= 0) {
-		CFileMgr::Write(fid, (char*)&Movie, sizeof(Movie));
-		CFileMgr::Write(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
-		CFileMgr::CloseFile(fid);
+		FileMgr_Write(fid, (char*)&Movie, sizeof(Movie));
+		FileMgr_Write(fid, (char*)&m_nNumMovieCommands, sizeof(m_nNumMovieCommands));
+		FileMgr_CloseFile(fid);
 	}
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 	m_bCommandActive = false;
 }
 
@@ -665,7 +666,7 @@ void CSceneEdit::ProcessCommand(void)
 					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
 					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
 					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = Max(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 					TheCamera.TakeControl(pActors[m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
 				}
 				else {
@@ -940,7 +941,7 @@ void CSceneEdit::PlayBack(void)
 		m_nActor = Movie[m_nCurrentMovieCommand].m_nActorId;
 		m_nWeaponType = Movie[m_nCurrentMovieCommand].m_nModelIndex;
 		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(CWeaponInfo::GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
 		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
 		m_nCurrentMovieCommand++;
 		break;
@@ -959,7 +960,7 @@ void CSceneEdit::PlayBack(void)
 					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
 					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
 					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = Max(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 					if (m_nCurrentCommand != MOVIE_GOTO_WAIT)
 						++m_nCurrentMovieCommand;
 				}
@@ -1183,7 +1184,7 @@ bool CSceneEdit::SelectWeapon(void)
 			m_nWeaponType = WEAPONTYPE_BRASSKNUCKLE;
 		pActors[m_nActor]->ClearWeapons();
 		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(CWeaponInfo::GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
 		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
 	}
 	else if (CPad::GetPad(1)->GetRightShoulder1JustDown()){
@@ -1191,7 +1192,7 @@ bool CSceneEdit::SelectWeapon(void)
 			m_nWeaponType = WEAPONTYPE_MINIGUN;
 		pActors[m_nActor]->ClearWeapons();
 		pActors[m_nActor]->GiveWeapon((eWeaponType)m_nWeaponType, 1000);
-		pActors[m_nActor]->AddWeaponModel(CWeaponInfo::GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
+		pActors[m_nActor]->AddWeaponModel(WeaponInfo_GetWeaponInfo(pActors[m_nActor]->GetWeapon()->m_eWeaponType)->m_nModelId);
 		pActors[m_nActor]->SetCurrentWeapon(m_nWeaponType);
 	}
 	if (CPad::GetPad(1)->GetTriangleJustDown()) {
@@ -1207,3 +1208,5 @@ bool CSceneEdit::SelectWeapon(void)
 	return false;
 }
 #endif
+
+//- rouz edit (ChatGPT)

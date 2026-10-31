@@ -1,0 +1,122 @@
+extern "C" { uint32_t Timer_frameCounter; }
+float CTimeCycle::ambient[3];
+bool gbShowCollisionPolys;
+static bool backgroundTesting,capturing,bhTriggered;
+static int bhHook;
+static unsigned backgrounds,horizons,bands,rectangles,captures;
+static TestHorizonState initialHorizon;
+
+static void horizonSnapshot(void)
+{
+    // Compare all current/cache coordinates, retained colors and public cloud state
+    snapshot();TestHorizonState s=TestBh_Get();for(int i=0;i<6;i++){floating(s.current[i]);floating(s.last[i]);}word(s.have);for(int i=0;i<3;i++)for(int j=0;j<4;j++)word(s.colors[i][j]);word(Timer_frameCounter);word(gbShowCollisionPolys);
+}
+static int colorId(const CRGBA &color)
+{
+    // Normalize the identity of each actual typed original or preserved color object
+    for(int i=0;i<3;i++)if(&color==TestBh_Color(i))return i;require(false);return -1;
+}
+static void background(void)
+{
+    // Exercise the real public background with original narrowed channel widths
+    backgrounds++;TestBh_Background(201,177,133,67,89,111,223);
+}
+static void horizon(void)
+{
+    // Exercise the complete public horizon operation
+    horizons++;TestBh_Horizon();
+}
+static void backgroundMutation(int point)
+{
+    // Apply one defined live mutation at an actual drawing or capture boundary
+    if(!backgroundTesting || bhTriggered)return;
+    if(bhHook==1 && point==1){bhTriggered=true;CRGBA &color=*(CRGBA *)TestBh_Color(0);color.r=249;color.a=37;}
+    else if(bhHook==2 && point==1){bhTriggered=true;RsGlobal.width=1919;RsGlobal.height=1079;}
+    else if(bhHook==3 && point==2){bhTriggered=true;TestHorizonState s=TestBh_Get();s.current[0]+=47.f;s.current[1]-=19.f;TestBh_Set(&s);}
+    else if(bhHook==4 && point==2){bhTriggered=true;TheCamera.forward=CVector(0.f,1.f,.2f);background();}
+    else if(bhHook==5 && point==2){bhTriggered=true;horizon();}
+    else if(bhHook==6 && point==3){bhTriggered=true;RsGlobal.height=901;capturing=true;}
+    else if(bhHook==7 && point==3){bhTriggered=true;TestHorizonState s=TestBh_Get();s.current[1]+=43.f;TestBh_Set(&s);}
+    else if(bhHook==8 && point==4){bhTriggered=true;CRGBA &color=*(CRGBA *)TestBh_Color(1);color.g=17;color.b=231;}
+    else if(bhHook==9 && point==4){bhTriggered=true;TheCamera.forward=CVector(0.f,1.f,.1f);background();}
+    else if(bhHook==10 && point==2){bhTriggered=true;capturing=!capturing;gbShowCollisionPolys=true;}
+}
+static void BackgroundStateHook(RwRenderState state,void *)
+{
+    // Mutate only at the original blend calls after a band's geometry was calculated
+    if(state==rwRENDERSTATESRCBLEND || state==rwRENDERSTATEDESTBLEND)backgroundMutation(1);
+}
+static void colors(const CRGBA &a,const CRGBA &b,const CRGBA &c,const CRGBA &d)
+{
+    // Compare all four live values and alias relationships through the original typed references
+    const CRGBA *values[]={&a,&b,&c,&d};for(int i=0;i<4;i++){word(colorId(*values[i]));word(values[i]->r);word(values[i]->g);word(values[i]->b);word(values[i]->a);}for(int i=0;i<4;i++)for(int j=0;j<4;j++)word(values[i]==values[j]);
+}
+void CSprite2d::DrawAnyRect(float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &a,const CRGBA &b,const CRGBA &c,const CRGBA &d)
+{
+    // Observe exact band geometry, real color identities and values before and after reentry
+    event(40);bands++;floating(x1);floating(y1);floating(x2);floating(y2);floating(x3);floating(y3);floating(x4);floating(y4);colors(a,b,c,d);backgroundMutation(2);backgroundMutation(4);colors(a,b,c,d);horizonSnapshot();
+}
+void CSprite2d::DrawRect(const CRect &r,const CRGBA &a,const CRGBA &b,const CRGBA &c,const CRGBA &d)
+{
+    // Retain the exact rectangle constructor argument order and original borrowed color references
+    event(41);rectangles++;floating(r.left);floating(r.top);floating(r.right);floating(r.bottom);colors(a,b,c,d);backgroundMutation(2);colors(a,b,c,d);horizonSnapshot();
+}
+bool SoftwarePolygons::CapturingWorldEffects(void)
+{
+    // Preserve capture queries after projection stores and before the conditional screen-Y inversion
+    event(42);captures++;backgroundMutation(3);return capturing;
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject unexpected ownership changes in the actual mock camera CMatrix
+    abort();return 0;
+}
+static void resetBackground(float z)
+{
+    // Reset actual state and a real typed camera matrix before each independent case
+    reset();TestBh_Set(&initialHorizon);bhHook=0;bhTriggered=false;capturing=false;gbShowCollisionPolys=false;Timer_frameCounter=0;CTimeCycle::ambient[0]=.5f;CTimeCycle::ambient[1]=.75f;CTimeCycle::ambient[2]=1.f;float y=sqrtf(Max(0.f,1.f-z*z));TheCamera.forward=CVector(0.f,y,z);TheCamera.up=CVector(0.f,0.f,1.f);CMatrix &m=TheCamera.m_viewMatrix;m.rx=1.f;m.ry=0.f;m.rz=0.f;m.fx=0.f;m.fy=0.f;m.fz=1.f;m.ux=0.f;m.uy=-1.f;m.uz=0.f;m.px=0.f;m.py=1500.f;m.pz=3000.f;
+}
+int main(void)
+{
+    // Retain the entire previously verified five-method effects corpus in the combined comparison
+    CloudEffectsCorpus();backgroundTesting=true;initialHorizon=TestBh_Get();horizonSnapshot();
+    const float zs[]={-1.f,-.90001f,-.9f,-.89999f,0.f,.97999f,.98f,.98001f,.99f,.99999f,1.f,1.00001f};
+    for(int z=0;z<12;z++)for(int viewport=0;viewport<3;viewport++)for(int debug=0;debug<2;debug++)for(int capture=0;capture<2;capture++){
+        // Cover both exact sky gates, first pole entry, debug flicker, capture direction and viewport sizes
+        resetBackground(zs[z]);RsGlobal.width=640+viewport*333;RsGlobal.height=448+viewport*147;gbShowCollisionPolys=debug!=0;Timer_frameCounter=viewport;capturing=capture!=0;background();horizon();horizonSnapshot();
+    }
+    for(int i=0;i<80;i++){
+        // Sweep camera roll, horizon normalization and nonorthogonal view transforms
+        resetBackground((i%17-8)*.1f);float a=(i-40)*.0375f;TheCamera.up=CVector(sinf(a),0.f,cosf(a));TheCamera.m_viewMatrix.rx=.8f+i*.001f;TheCamera.m_viewMatrix.ry=.02f;TheCamera.m_viewMatrix.uz=.03f;TheCamera.position.x=i*.25f;background();horizon();horizonSnapshot();
+    }
+    const float depths[]={-.00101f,-.001f,-.00099f,-.00001f,-0.f,0.f,.00001f,.00099f,.001f,.00101f,1.f,3000.f};
+    for(int i=0;i<12;i++)for(int capture=0;capture<2;capture++){
+        // Verify signed near-zero clamping and exact top-down projection behavior
+        resetBackground(0.f);TheCamera.m_viewMatrix.fz=0.f;TheCamera.m_viewMatrix.uz=0.f;TheCamera.m_viewMatrix.pz=depths[i];capturing=capture!=0;CloudsVector v={3.25f,7.5f,-1.75f};float x,y;TestBh_Project(v,&x,&y);floating(x);floating(y);horizonSnapshot();
+    }
+    const int16_t channels[]={-300,-1,0,1,127,255,256,511,700};
+    for(int i=0;i<9;i++){
+        // Narrow original signed channels before alpha scaling and preserve final full-byte restoration
+        resetBackground(.99f);backgrounds++;TestBh_Background(channels[i],channels[(i+1)%9],channels[(i+2)%9],channels[(i+3)%9],channels[(i+4)%9],channels[(i+5)%9],channels[(i+6)%9]);horizonSnapshot();
+    }
+    for(int h=1;h<=10;h++){
+        // Exercise live color aliases, viewport/cache changes, capture timing and nested drawing
+        resetBackground(h==4?.99f:.25f);bhHook=h;capturing=true;background();
+#ifdef REVC_SOFTWARE_POLYGONS
+        require(bhTriggered);
+#else
+        if(h!=6 && h!=7)require(bhTriggered);
+#endif
+        horizonSnapshot();
+    }
+    for(int i=0;i<33;i++){
+        // Compare all mirrored coordinate and line-direction expressions independently
+        resetBackground(0.f);float in[6]={i*37.f,i*-19.f,i*13.f,i*-7.f,.3f,-.8f},out[6];TestBh_Mirror(in,out);for(int j=0;j<6;j++)floating(out[j]);horizonSnapshot();
+    }
+    resetBackground(0.f);
+    for(int frame=0;frame<700;frame++){
+        // Keep real cached safe horizons across repeated normal, pole and dark transitions
+        float z=zs[frame%12];float y=sqrtf(Max(0.f,1.f-z*z));TheCamera.forward=CVector(0.f,y,z);TheCamera.up=CVector(sinf(frame*.013f),0.f,cosf(frame*.013f));capturing=frame%2!=0;gbShowCollisionPolys=frame%19==0;Timer_frameCounter++;Timer_timeMs+=17;background();horizon();horizonSnapshot();
+    }
+    require(backgrounds>900 && bands>2000 && rectangles>100);printf("backgrounds=%u horizons=%u bands=%u rectangles=%u captures=%u states=%u hash=%016llx\n",backgrounds,horizons,bands,rectangles,captures,states,(unsigned long long)hash);
+}

@@ -1,4 +1,11 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
 #include "main.h"
 
 #include "General.h"
@@ -61,7 +68,7 @@ CFileLoader::LoadLevel(const char *filename)
 		savedTxd = RwTexDictionaryCreate();
 		RwTexDictionarySetCurrent(savedTxd);
 	}
-	fd = CFileMgr::OpenFile(filename, "r");
+	fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
 
 	for(line = LoadLine(fd); line; line = LoadLine(fd)){
@@ -123,13 +130,13 @@ CFileLoader::LoadLevel(const char *filename)
 		}
 	}
 
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 	RwTexDictionarySetCurrent(savedTxd);
 
 	int i;
 	for(i = 1; i < COLSTORESIZE; i++)
 		if(CColStore::GetSlot(i))
-			CColStore::GetBoundingBox(i).Grow(120.0f);
+			Rect_Grow(&CColStore::GetBoundingBox(i), 120.0f);
 	CWorld::RepositionCertainDynamicObjects();
 	CColStore::RemoveAllCollision();
 }
@@ -140,7 +147,7 @@ CFileLoader::LoadLine(int fd)
 	int i;
 	char *line;
 
-	if(CFileMgr::ReadLine(fd, ms_line, 256) == false)
+	if(FileMgr_ReadLine(fd, ms_line, 256) == false)
 		return nil;
 	for(i = 0; ms_line[i] != '\0'; i++)
 		if(ms_line[i] < ' ' || ms_line[i] == ',')
@@ -160,7 +167,8 @@ CFileLoader::LoadTexDictionary(const char *filename)
 	debug("Loading texture dictionary file %s\n", filename);
 	if(stream){
 		if(RwStreamFindChunk(stream, rwID_TEXDICTIONARY, nil, nil))
-			txd = RwTexDictionaryGtaStreamRead(stream);
+			// Use the complete C texture reader with the original live SDK arguments
+			txd = ((RwTexDictionary*)TexRead_ReadDictionary(stream));
 		RwStreamClose(stream, nil);
 	}
 	if(txd == nil)
@@ -185,12 +193,12 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 	PUSH_MEMID(MEMID_COLLISION);
 
 	debug("Loading collision file %s\n", filename);
-	fd = CFileMgr::OpenFile(filename, "rb");
+	fd = FileMgr_OpenFile(filename, "rb");
 	assert(fd > 0);
 
-	while(CFileMgr::Read(fd, (char*)&header, sizeof(header))){
+	while(FileMgr_Read(fd, (char*)&header, sizeof(header))){
 		assert(header.ident == 'LLOC');
-		CFileMgr::Read(fd, (char*)work_buff, header.size);
+		FileMgr_Read(fd, (char*)work_buff, header.size);
 		memcpy(modelname, work_buff, 24);
 
 		mi = CModelInfo::GetModelInfo(modelname, nil);
@@ -205,7 +213,8 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
 				//- rouz edit (ChatGPT)
 				assert(model);
-				std::allocator<CColModel>().construct(model);
+				// Invoke the complete C collision owner at the original native lifetime or operation boundary
+				ColModel_Init(model);
 //- rouz edit (ChatGPT)
 				model->level = colSlot;
 				LoadCollisionModel(work_buff+24, *model, modelname);
@@ -216,7 +225,7 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 		}
 	}
 
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 
 	POP_MEMID();
 }
@@ -253,7 +262,8 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 			CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
 			//- rouz edit (ChatGPT)
 			assert(model);
-			std::allocator<CColModel>().construct(model);
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			ColModel_Init(model);
 //- rouz edit (ChatGPT)
 			model->level = colSlot;
 			LoadCollisionModel(work_buff, *model, modelname);
@@ -297,7 +307,8 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 				CColModel *model = ((CColModel*)CPool_New(CPools::GetColModelPool()));
 				//- rouz edit (ChatGPT)
 				assert(model);
-				std::allocator<CColModel>().construct(model);
+				// Invoke the complete C collision owner at the original native lifetime or operation boundary
+				ColModel_Init(model);
 //- rouz edit (ChatGPT)
 				model->level = colSlot;
 				LoadCollisionModel(work_buff, *model, modelname);
@@ -331,7 +342,11 @@ CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 		model.spheres = (CColSphere*)RwMalloc(model.numSpheres*sizeof(CColSphere));
 		REGISTER_MEMPTR(&model.spheres);
 		for(i = 0; i < model.numSpheres; i++){
-			model.spheres[i].Set(*(float*)buf, *(CVector*)(buf+4), buf[16], buf[17]);
+			{
+			    // Keep the native center expression alive at the former member-call boundary
+			    const CVector &sphereCenter0=*(CVector*)(buf+4);
+			    ColSphere_Set(&model.spheres[i],*(float*)buf,COLLISION_POINT_REF(sphereCenter0),buf[16],buf[17]);
+			}
 			buf += 20;
 		}
 	}else
@@ -357,7 +372,12 @@ CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 		model.boxes = (CColBox*)RwMalloc(model.numBoxes*sizeof(CColBox));
 		REGISTER_MEMPTR(&model.boxes);
 		for(i = 0; i < model.numBoxes; i++){
-			model.boxes[i].Set(*(CVector*)buf, *(CVector*)(buf+12), buf[24], buf[25]);
+			{
+			    // Keep native bound expressions alive through the ordered C update
+			    const CVector &boxMinimum0=*(CVector*)buf;
+			    const CVector &boxMaximum0=*(CVector*)(buf+12);
+			    ColBox_Set(&model.boxes[i],COLLISION_POINT_REF(boxMinimum0),COLLISION_POINT_REF(boxMaximum0),buf[24],buf[25]);
+			}
 			buf += 28;
 		}
 	}else
@@ -369,7 +389,7 @@ CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 		model.vertices = (CompressedVector*)RwMalloc(numVertices*sizeof(CompressedVector));
 		REGISTER_MEMPTR(&model.vertices);
 		for(i = 0; i < numVertices; i++){
-			model.vertices[i].Set(*(float*)buf, *(float*)(buf+4), *(float*)(buf+8));
+			CompressedVector_Set(&model.vertices[i],*(float*)buf, *(float*)(buf+4), *(float*)(buf+8));
 #if 0
 			if(Abs(*(float*)buf) >= 256.0f ||
 			   Abs(*(float*)(buf+4)) >= 256.0f ||
@@ -387,7 +407,7 @@ CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 		model.triangles = (CColTriangle*)RwMalloc(model.numTriangles*sizeof(CColTriangle));
 		REGISTER_MEMPTR(&model.triangles);
 		for(i = 0; i < model.numTriangles; i++){
-			model.triangles[i].Set(*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12]);
+			ColTriangle_Set(&model.triangles[i],*(int32*)buf, *(int32*)(buf+4), *(int32*)(buf+8), buf[12]);
 			buf += 16;
 		}
 	}else
@@ -516,7 +536,8 @@ CFileLoader::StartLoadClumpFile(RwStream *stream, uint32 id)
 {
 	if(RwStreamFindChunk(stream, rwID_CLUMP, nil, nil)){
 		printf("Start loading %s\n", CModelInfo::GetModelInfo(id)->GetModelName());
-		return RpClumpGtaStreamRead1(stream);
+		// Use the complete C clump reader with the original live stream state
+		return ClumpRead_Start(stream);
 	}else{
 		printf("FAILED\n");
 		return false;
@@ -530,7 +551,8 @@ CFileLoader::FinishLoadClumpFile(RwStream *stream, uint32 id)
 	CClumpModelInfo *mi;
 
 	printf("Finish loading %s\n", CModelInfo::GetModelInfo(id)->GetModelName());
-	clump = RpClumpGtaStreamRead2(stream);
+	// Use the complete C clump reader with the original live stream state
+	clump = ((RpClump*)ClumpRead_Finish(stream));
 
 	if(clump){
 		InitClump(clump);
@@ -640,7 +662,7 @@ CFileLoader::LoadObjectTypes(const char *filename)
 	pathIndex = -1;
 	debug("Loading object types from %s...\n", filename);
 
-	fd = CFileMgr::OpenFile(filename, "rb");
+	fd = FileMgr_OpenFile(filename, "rb");
 	assert(fd > 0);
 	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
@@ -701,7 +723,7 @@ CFileLoader::LoadObjectTypes(const char *filename)
 			break;
 		}
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 
 	for(id = minID; id <= maxID; id++){
 		CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
@@ -912,27 +934,27 @@ CFileLoader::LoadVehicleObject(const char *line)
 	mi->m_handlingId = mod_HandlingManager.GetHandlingId(handlingId);
 
 	if(strcmp(vehclass, "normal") == 0)
-		mi->m_vehicleClass = CCarCtrl::NORMAL;
+		mi->m_vehicleClass = CARCLASS_NORMAL;
 	else if(strcmp(vehclass, "poorfamily") == 0)
-		mi->m_vehicleClass = CCarCtrl::POOR;
+		mi->m_vehicleClass = CARCLASS_POOR;
 	else if(strcmp(vehclass, "richfamily") == 0)
-		mi->m_vehicleClass = CCarCtrl::RICH;
+		mi->m_vehicleClass = CARCLASS_RICH;
 	else if(strcmp(vehclass, "executive") == 0)
-		mi->m_vehicleClass = CCarCtrl::EXEC;
+		mi->m_vehicleClass = CARCLASS_EXEC;
 	else if(strcmp(vehclass, "worker") == 0)
-		mi->m_vehicleClass = CCarCtrl::WORKER;
+		mi->m_vehicleClass = CARCLASS_WORKER;
 	else if(strcmp(vehclass, "big") == 0)
-		mi->m_vehicleClass = CCarCtrl::BIG;
+		mi->m_vehicleClass = CARCLASS_BIG;
 	else if(strcmp(vehclass, "taxi") == 0)
-		mi->m_vehicleClass = CCarCtrl::TAXI;
+		mi->m_vehicleClass = CARCLASS_TAXI;
 	else if(strcmp(vehclass, "moped") == 0)
-		mi->m_vehicleClass = CCarCtrl::MOPED;
+		mi->m_vehicleClass = CARCLASS_MOPED;
 	else if(strcmp(vehclass, "motorbike") == 0)
-		mi->m_vehicleClass = CCarCtrl::MOTORBIKE;
+		mi->m_vehicleClass = CARCLASS_MOTORBIKE;
 	else if(strcmp(vehclass, "leisureboat") == 0)
-		mi->m_vehicleClass = CCarCtrl::LEISUREBOAT;
+		mi->m_vehicleClass = CARCLASS_LEISUREBOAT;
 	else if(strcmp(vehclass, "workerboat") == 0)
-		mi->m_vehicleClass = CCarCtrl::WORKERBOAT;
+		mi->m_vehicleClass = CARCLASS_WORKERBOAT;
 	else if(strcmp(vehclass, "ignore") == 0) {
 		mi->m_vehicleClass = -1;
 		return;
@@ -962,10 +984,11 @@ CFileLoader::LoadPedObject(const char *line)
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
 	mi->SetColModel(&CTempColModels::ms_colModelPed1);
-	mi->m_pedType = CPedType::FindPedType(pedType);
-	mi->m_pedStatType = CPedStats::GetPedStatType(pedStats);
+	mi->m_pedType = PedType_FindPedType(pedType);
+	mi->m_pedStatType = PedStats_GetPedStatType(pedStats);
 	for(animGroupId = 0; animGroupId < NUM_ANIM_ASSOC_GROUPS; animGroupId++)
-		if(strcmp(animGroup, CAnimManager::GetAnimGroupName((AssocGroupId)animGroupId)) == 0)
+		// Use the complete C animation manager at the original call boundary
+		if(strcmp(animGroup, AnimManager_GetAnimGroupName((AssocGroupId)animGroupId)) == 0)
 			break;
 	assert(animGroupId < NUM_ANIM_ASSOC_GROUPS);
 	mi->m_animGroup = animGroupId;
@@ -1036,8 +1059,10 @@ CFileLoader::Load2dEffect(const char *line)
 
 	sscanf(line, "%d %f %f %f %d %d %d %d %d", &id, &x, &y, &z, &r, &g, &b, &a, &type);
 
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(CTxdStore::FindTxdSlot("particle"));
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(TxdStore_FindTxdSlot("particle"));
 
 	mi = CModelInfo::GetModelInfo(id);
 	//+ rouz edit (ChatGPT)
@@ -1120,7 +1145,8 @@ CFileLoader::Load2dEffect(const char *line)
 		break;
 	}
 
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 }
 
 void
@@ -1144,7 +1170,7 @@ CFileLoader::LoadScene(const char *filename)
 	pathIndex = -1;
 	debug("Creating objects from %s...\n", filename);
 
-	fd = CFileMgr::OpenFile(filename, "rb");
+	fd = FileMgr_OpenFile(filename, "rb");
 	assert(fd > 0);
 	for(line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)){
 		if(*line == '\0' || *line == '#')
@@ -1194,7 +1220,7 @@ CFileLoader::LoadScene(const char *filename)
 			break;
 		}
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 
 	debug("Finished loading IPL\n");
 }
@@ -1264,7 +1290,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 //- rouz edit (ChatGPT)
 		entity->SetModelIndexNoCreate(id);
 		entity->GetMatrix() = CMatrix(xform);
-		entity->m_level = CTheZones::GetLevelFromPosition(&entity->GetPosition());
+		entity->m_level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&entity->GetPosition())));
 		entity->m_area = area;
 		if(mi->IsBuilding()){
 			if(mi->m_isBigBuilding)
@@ -1278,8 +1304,11 @@ CFileLoader::LoadObjectInstance(const char *line)
 
 		CColModel *col = entity->GetColModel();
 		if(col->numSpheres || col->numBoxes || col->numTriangles){
-			if(col->level != 0)
-				CColStore::GetBoundingBox(col->level).ContainRect(entity->GetBoundRect());
+			if(col->level != 0) {
+                // Keep the returned entity rectangle alive through the C containment call
+                const CRect entityBounds = entity->GetBoundRect();
+                Rect_ContainRect(&CColStore::GetBoundingBox(col->level), &entityBounds);
+            }
 		}else
 			entity->bUsesCollision = false;
 
@@ -1300,7 +1329,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 		CWorld::Add(entity);
 		if(IsGlass(entity->GetModelIndex()) && !mi->m_isArtistGlass)
 			entity->bIsVisible = false;
-		entity->m_level = CTheZones::GetLevelFromPosition(&entity->GetPosition());
+		entity->m_level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&entity->GetPosition())));
 		entity->m_area = area;
 	}
 
@@ -1316,7 +1345,7 @@ CFileLoader::LoadZone(const char *line)
 	float maxx, maxy, maxz;
 
 	if(sscanf(line, "%s %d %f %f %f %f %f %f %d", name, &type, &minx, &miny, &minz, &maxx, &maxy, &maxz, &level) == 9)
-		CTheZones::CreateZone(name, (eZoneType)type, minx, miny, minz, maxx, maxy, maxz, (eLevelName)level);
+		Zones_CreateZone(name, (eZoneType)type, minx, miny, minz, maxx, maxy, maxz, (eLevelName)level);
 }
 
 void
@@ -1333,7 +1362,7 @@ CFileLoader::LoadCullZone(const char *line)
 		&minx, &miny, &minz,
 		&maxx, &maxy, &maxz,
 		&flags, &wantedLevelDrop);
-	CCullZones::AddCullZone(pos, minx, maxx, miny, maxy, minz, maxz, flags, wantedLevelDrop);
+	CullZones_AddCullZone(&pos, minx, maxx, miny, maxy, minz, maxz, flags, wantedLevelDrop);
 }
 
 // unused
@@ -1374,7 +1403,7 @@ CFileLoader::ReloadPaths(const char *filename)
 	int id, pathType, pathIndex = -1;
 	debug("Reloading paths from %s...\n", filename);
 
-	int fd = CFileMgr::OpenFile(filename, "r");
+	int fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
@@ -1410,7 +1439,7 @@ CFileLoader::ReloadPaths(const char *filename)
 			}
 		}
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
 
 void
@@ -1427,10 +1456,10 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 	CModelInfo::ReInit2dEffects();
 	debug("Reloading object types from %s...\n", filename);
 
-	CFileMgr::ChangeDir("\\DATA\\MAPS\\");
-	int fd = CFileMgr::OpenFile(filename, "r");
+	FileMgr_ChangeDir("\\DATA\\MAPS\\");
+	int fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
-	CFileMgr::ChangeDir("\\");
+	FileMgr_ChangeDir("\\");
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
 		if (*line == '\0' || *line == '#')
 			continue;
@@ -1455,7 +1484,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 			}
 		}
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
 
 void
@@ -1503,10 +1532,10 @@ void
 CFileLoader::ReLoadScene(const char *filename)
 {
 	char *line;
-	CFileMgr::ChangeDir("\\DATA\\");
-	int fd = CFileMgr::OpenFile(filename, "r");
+	FileMgr_ChangeDir("\\DATA\\");
+	int fd = FileMgr_OpenFile(filename, "r");
 	assert(fd > 0);
-	CFileMgr::ChangeDir("\\");
+	FileMgr_ChangeDir("\\");
 
 	for (line = CFileLoader::LoadLine(fd); line; line = CFileLoader::LoadLine(fd)) {
 		if (*line == '#')
@@ -1519,5 +1548,12 @@ CFileLoader::ReLoadScene(const char *filename)
 			LoadObjectTypes(line + 4);
 		}
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

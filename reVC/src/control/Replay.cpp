@@ -1,5 +1,11 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h"
 #ifdef GTA_REPLAY
 #include "AnimBlendAssocGroup.h"
 #include "AnimBlendAssociation.h"
@@ -172,32 +178,32 @@ static void(*FindCBFunction(uint8 id))(CAnimBlendAssociation*, void*)
 
 static void ApplyPanelDamageToCar(uint32 panels, CAutomobile* vehicle, bool flying)
 {
-	if(vehicle->Damage.GetPanelStatus(VEHPANEL_FRONT_LEFT) != CDamageManager::GetPanelStatus(panels, VEHPANEL_FRONT_LEFT)){
-		vehicle->Damage.SetPanelStatus(VEHPANEL_FRONT_LEFT, CDamageManager::GetPanelStatus(panels, VEHPANEL_FRONT_LEFT));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHPANEL_FRONT_LEFT) != Damage_GetPanelStatusFromWord(panels, VEHPANEL_FRONT_LEFT)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHPANEL_FRONT_LEFT, Damage_GetPanelStatusFromWord(panels, VEHPANEL_FRONT_LEFT));
 		vehicle->SetPanelDamage(CAR_WING_LF, VEHPANEL_FRONT_LEFT, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHPANEL_FRONT_RIGHT) != CDamageManager::GetPanelStatus(panels, VEHPANEL_FRONT_RIGHT)){
-		vehicle->Damage.SetPanelStatus(VEHPANEL_FRONT_RIGHT, CDamageManager::GetPanelStatus(panels, VEHPANEL_FRONT_RIGHT));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHPANEL_FRONT_RIGHT) != Damage_GetPanelStatusFromWord(panels, VEHPANEL_FRONT_RIGHT)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHPANEL_FRONT_RIGHT, Damage_GetPanelStatusFromWord(panels, VEHPANEL_FRONT_RIGHT));
 		vehicle->SetPanelDamage(CAR_WING_RF, VEHPANEL_FRONT_RIGHT, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHPANEL_REAR_LEFT) != CDamageManager::GetPanelStatus(panels, VEHPANEL_REAR_LEFT)){
-		vehicle->Damage.SetPanelStatus(VEHPANEL_REAR_LEFT, CDamageManager::GetPanelStatus(panels, VEHPANEL_REAR_LEFT));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHPANEL_REAR_LEFT) != Damage_GetPanelStatusFromWord(panels, VEHPANEL_REAR_LEFT)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHPANEL_REAR_LEFT, Damage_GetPanelStatusFromWord(panels, VEHPANEL_REAR_LEFT));
 		vehicle->SetPanelDamage(CAR_WING_LR, VEHPANEL_REAR_LEFT, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHPANEL_REAR_RIGHT) != CDamageManager::GetPanelStatus(panels, VEHPANEL_REAR_RIGHT)){
-		vehicle->Damage.SetPanelStatus(VEHPANEL_REAR_RIGHT, CDamageManager::GetPanelStatus(panels, VEHPANEL_REAR_RIGHT));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHPANEL_REAR_RIGHT) != Damage_GetPanelStatusFromWord(panels, VEHPANEL_REAR_RIGHT)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHPANEL_REAR_RIGHT, Damage_GetPanelStatusFromWord(panels, VEHPANEL_REAR_RIGHT));
 		vehicle->SetPanelDamage(CAR_WING_RR, VEHPANEL_REAR_RIGHT, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHPANEL_WINDSCREEN) != CDamageManager::GetPanelStatus(panels, VEHPANEL_WINDSCREEN)){
-		vehicle->Damage.SetPanelStatus(VEHPANEL_WINDSCREEN, CDamageManager::GetPanelStatus(panels, VEHPANEL_WINDSCREEN));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHPANEL_WINDSCREEN) != Damage_GetPanelStatusFromWord(panels, VEHPANEL_WINDSCREEN)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHPANEL_WINDSCREEN, Damage_GetPanelStatusFromWord(panels, VEHPANEL_WINDSCREEN));
 		vehicle->SetPanelDamage(CAR_WINDSCREEN, VEHPANEL_WINDSCREEN, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHBUMPER_FRONT) != CDamageManager::GetPanelStatus(panels, VEHBUMPER_FRONT)){
-		vehicle->Damage.SetPanelStatus(VEHBUMPER_FRONT, CDamageManager::GetPanelStatus(panels, VEHBUMPER_FRONT));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHBUMPER_FRONT) != Damage_GetPanelStatusFromWord(panels, VEHBUMPER_FRONT)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHBUMPER_FRONT, Damage_GetPanelStatusFromWord(panels, VEHBUMPER_FRONT));
 		vehicle->SetPanelDamage(CAR_BUMP_FRONT, VEHBUMPER_FRONT, flying);
 	}
-	if(vehicle->Damage.GetPanelStatus(VEHBUMPER_REAR) != CDamageManager::GetPanelStatus(panels, VEHBUMPER_REAR)){
-		vehicle->Damage.SetPanelStatus(VEHBUMPER_REAR, CDamageManager::GetPanelStatus(panels, VEHBUMPER_REAR));
+	if(Damage_GetPanelStatus(&vehicle->Damage, VEHBUMPER_REAR) != Damage_GetPanelStatusFromWord(panels, VEHBUMPER_REAR)){
+		Damage_SetPanelStatus(&vehicle->Damage, VEHBUMPER_REAR, Damage_GetPanelStatusFromWord(panels, VEHBUMPER_REAR));
 		vehicle->SetPanelDamage(CAR_BUMP_REAR, VEHBUMPER_REAR, flying);
 	}
 }
@@ -259,7 +265,8 @@ void CReplay::EnableReplays(void)
 void PlayReplayFromHD(void);
 void CReplay::Update(void)
 {
-	if (CCutsceneMgr::IsCutsceneProcessing() || CPad::GetPad(0)->ArePlayerControlsDisabled() || CScriptPaths::IsOneActive() || FrontEndMenuManager.GetIsMenuActive()) {
+	// Enter the C scripted-path operation at the original call point
+	if (CCutsceneMgr::IsCutsceneProcessing() || CPad::GetPad(0)->ArePlayerControlsDisabled() || ScriptPaths_IsOneActive() || FrontEndMenuManager.GetIsMenuActive()) {
 		Init();
 		return;
 	}
@@ -271,7 +278,7 @@ void CReplay::Update(void)
 		PlaybackThisFrame();
 		break;
 	}
-	if (CDraw::FadeValue || !bReplayEnabled)
+	if (Draw_FadeValue || !bReplayEnabled)
 		return;
 	if (Mode == MODE_PLAYBACK){
 		if (CPad::GetPad(0)->GetFJustDown(0))
@@ -319,7 +326,7 @@ void CReplay::RecordThisFrame(void)
 		memory_required += sizeof(tPedUpdatePacket);
 	}
 	for (uint8 i = 0; i < NUMBULLETTRACES; i++) {
-		if (!CBulletTraces::aTraces[i].m_bInUse)
+		if (!BulletTraces_aTraces[i].m_bInUse)
 			continue;
 		memory_required += sizeof(tBulletTracePacket);
 	}
@@ -334,18 +341,18 @@ void CReplay::RecordThisFrame(void)
 	Record.m_nOffset += sizeof(*general);
 	tClockPacket* clock = (tClockPacket*)&Record.m_pBase[Record.m_nOffset];
 	clock->type = REPLAYPACKET_CLOCK;
-	clock->hours = CClock::GetHours();
-	clock->minutes = CClock::GetMinutes();
+	clock->hours = Clock_GetHours();
+	clock->minutes = Clock_GetMinutes();
 	Record.m_nOffset += sizeof(*clock);
 	tWeatherPacket* weather = (tWeatherPacket*)&Record.m_pBase[Record.m_nOffset];
 	weather->type = REPLAYPACKET_WEATHER;
-	weather->old_weather = CWeather::OldWeatherType;
-	weather->new_weather = CWeather::NewWeatherType;
-	weather->interpolation = CWeather::InterpolationValue;
+	weather->old_weather = Weather_OldWeatherType;
+	weather->new_weather = Weather_NewWeatherType;
+	weather->interpolation = Weather_InterpolationValue;
 	Record.m_nOffset += sizeof(*weather);
 	tTimerPacket* timer = (tTimerPacket*)&Record.m_pBase[Record.m_nOffset];
 	timer->type = REPLAYPACKET_TIMER;
-	timer->timer = CTimer::GetTimeInMilliseconds();
+	timer->timer = (*Timer_GetTimeInMilliseconds());
 	Record.m_nOffset += sizeof(*timer);
 	CVehiclePool* vehicles = CPools::GetVehiclePool();
 		// Access raw storage through the C store or pool API
@@ -378,13 +385,15 @@ void CReplay::RecordThisFrame(void)
 		StorePedUpdate(p, i);
 	}
 	for (uint8 i = 0; i < NUMBULLETTRACES; i++){
-		if (!CBulletTraces::aTraces[i].m_bInUse)
+		if (!BulletTraces_aTraces[i].m_bInUse)
 			continue;
 		tBulletTracePacket* bt = (tBulletTracePacket*)&Record.m_pBase[Record.m_nOffset];
 		bt->type = REPLAYPACKET_BULLET_TRACES;
 		bt->index = i;
-		bt->inf = CBulletTraces::aTraces[i].m_vecStartPos;
-		bt->sup = CBulletTraces::aTraces[i].m_vecEndPos;
+		// Copy replay coordinates through the explicit typed vector boundary
+		bt->inf = BulletTraces_ToVector(BulletTraces_aTraces[i].m_vecStartPos);
+		// Copy replay coordinates through the explicit typed vector boundary
+		bt->sup = BulletTraces_ToVector(BulletTraces_aTraces[i].m_vecEndPos);
 		Record.m_nOffset += sizeof(*bt);
 	}
 	tMiscPacket* misc = (tMiscPacket*)&Record.m_pBase[Record.m_nOffset];
@@ -392,8 +401,8 @@ void CReplay::RecordThisFrame(void)
 	misc->cam_shake_start = TheCamera.m_uiCamShakeStart;
 	misc->cam_shake_strength = TheCamera.m_fCamShakeForce;
 	misc->cur_area = CGame::currArea;
-	misc->video_cam = CSpecialFX::bVideoCam;
-	misc->lift_cam = CSpecialFX::bLiftCam;
+	misc->video_cam = SpecialFX_bVideoCam;
+	misc->lift_cam = SpecialFX_bLiftCam;
 	Record.m_nOffset += sizeof(*misc);
 	tEndOfFramePacket* eof = (tEndOfFramePacket*)&Record.m_pBase[Record.m_nOffset];
 	eof->type = REPLAYPACKET_ENDOFFRAME;
@@ -512,9 +521,11 @@ void CReplay::StoreDetailedPedAnimation(CPed *ped, CStoredDetailedAnimationState
 			state->aBlendDelta[i] = 127.0f / 32.0f * Clamp(assoc->blendDelta, -16.0f, 16.0f);
 			state->aFlags[i] = assoc->flags;
 			state->aGroupId[i] = assoc->groupId;
-			if (assoc->callbackType == CAnimBlendAssociation::CB_FINISH || assoc->callbackType == CAnimBlendAssociation::CB_DELETE) {
+			// Use the complete C association at the original native operation boundary
+			if (assoc->callbackType == ANIM_ASSOC_CB_FINISH || assoc->callbackType == ANIM_ASSOC_CB_DELETE) {
 				state->aFunctionCallbackID[i] = FindCBFunctionID(assoc->callback);
-				if (assoc->callbackType == CAnimBlendAssociation::CB_FINISH)
+				// Use the complete C association at the original native operation boundary
+				if (assoc->callbackType == ANIM_ASSOC_CB_FINISH)
 					state->aFunctionCallbackID[i] |= 0x80;
 			}else{
 				state->aFunctionCallbackID[i] = 0;
@@ -538,9 +549,11 @@ void CReplay::StoreDetailedPedAnimation(CPed *ped, CStoredDetailedAnimationState
 			state->aBlendDelta2[i] = 127.0f / 16.0f * Clamp(assoc->blendDelta, -16.0f, 16.0f);
 			state->aFlags2[i] = assoc->flags;
 			state->aGroupId2[i] = assoc->groupId;
-			if (assoc->callbackType == CAnimBlendAssociation::CB_FINISH || assoc->callbackType == CAnimBlendAssociation::CB_DELETE) {
+			// Use the complete C association at the original native operation boundary
+			if (assoc->callbackType == ANIM_ASSOC_CB_FINISH || assoc->callbackType == ANIM_ASSOC_CB_DELETE) {
 				state->aFunctionCallbackID2[i] = FindCBFunctionID(assoc->callback);
-				if (assoc->callbackType == CAnimBlendAssociation::CB_FINISH)
+				// Use the complete C association at the original native operation boundary
+				if (assoc->callbackType == ANIM_ASSOC_CB_FINISH)
 					state->aFunctionCallbackID2[i] |= 0x80;
 			}else{
 				state->aFunctionCallbackID2[i] = 0;
@@ -604,7 +617,8 @@ void CReplay::ProcessPedUpdate(CPed *ped, float interpolation, CAddressInReplayB
 
 bool HasAnimGroupLoaded(uint8 group)
 {
-	CAnimBlendAssocGroup* pGroup = &CAnimManager::GetAnimAssocGroups()[group];
+	// Use the complete C animation manager at the original call boundary
+	CAnimBlendAssocGroup* pGroup = &AnimManager_GetAnimAssocGroups()[group];
 	return pGroup->animBlock && pGroup->animBlock->isLoaded;
 }
 
@@ -612,29 +626,39 @@ void CReplay::RetrievePedAnimation(CPed *ped, CStoredAnimationState *state)
 {
 	CAnimBlendAssociation* anim1;
 	if (state->animId <= ANIM_STD_IDLE)
-		anim1 = CAnimManager::BlendAnimation(
+		// Use the complete C animation manager at the original call boundary
+		anim1 = AnimManager_BlendAnimation(
 			(RpClump*)ped->m_rwObject, ped->m_animGroup, (AnimationId)state->animId, 100.0f);
 	else if (HasAnimGroupLoaded(state->groupId))
-		anim1 = CAnimManager::BlendAnimation((RpClump*)ped->m_rwObject, (AssocGroupId)state->groupId, (AnimationId)state->animId, 100.0f);
+		// Use the complete C animation manager at the original call boundary
+		anim1 = AnimManager_BlendAnimation((RpClump*)ped->m_rwObject, (AssocGroupId)state->groupId, (AnimationId)state->animId, 100.0f);
 	else
-		anim1 = CAnimManager::BlendAnimation((RpClump*)ped->m_rwObject, ASSOCGRP_STD, ANIM_STD_WALK, 100.0f);
+		// Use the complete C animation manager at the original call boundary
+		anim1 = AnimManager_BlendAnimation((RpClump*)ped->m_rwObject, ASSOCGRP_STD, ANIM_STD_WALK, 100.0f);
 
-	anim1->SetCurrentTime(state->time * 4.0f / 255.0f);
+	// Use the complete C association at the original native operation boundary
+	AnimAssociation_SetCurrentTime(anim1,state->time * 4.0f / 255.0f);
 	anim1->speed = state->speed * 3.0f / 255.0f;
-	anim1->SetBlend(1.0f, 1.0f);
-	anim1->callbackType = CAnimBlendAssociation::CB_NONE;
+	// Use the complete C association at the original native operation boundary
+	AnimAssociation_SetBlend(anim1,1.0f, 1.0f);
+	// Use the complete C association at the original native operation boundary
+	anim1->callbackType = ANIM_ASSOC_CB_NONE;
 	if (state->blendAmount && state->secAnimId){
 		float time = state->secTime * 4.0f / 255.0f;
 		float speed = state->secSpeed * 3.0f / 255.0f;
 		float blend = state->blendAmount * 2.0f / 255.0f;
-		CAnimBlendAssociation* anim2 = CAnimManager::BlendAnimation(
+		// Use the complete C animation manager at the original call boundary
+		CAnimBlendAssociation* anim2 = AnimManager_BlendAnimation(
 			(RpClump*)ped->m_rwObject,
 			(state->secAnimId > ANIM_STD_IDLE) ? (AssocGroupId)state->secGroupId : ped->m_animGroup,
 			(AnimationId)state->secAnimId, 100.0f);
-		anim2->SetCurrentTime(time);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetCurrentTime(anim2,time);
 		anim2->speed = speed;
-		anim2->SetBlend(blend, 1.0f);
-		anim2->callbackType = CAnimBlendAssociation::CB_NONE;
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetBlend(anim2,blend, 1.0f);
+		// Use the complete C association at the original native operation boundary
+		anim2->callbackType = ANIM_ASSOC_CB_NONE;
 	}
 	RpAnimBlendClumpRemoveAssociations((RpClump*)ped->m_rwObject, 0x10);
 	if (state->partAnimId){
@@ -642,11 +666,14 @@ void CReplay::RetrievePedAnimation(CPed *ped, CStoredAnimationState *state)
 		float speed = state->partAnimSpeed * 3.0f / 255.0f;
 		float blend = state->partBlendAmount * 2.0f / 255.0f;
 		if (blend > 0.0f && state->partAnimId != ANIM_STD_IDLE && HasAnimGroupLoaded(state->partGroupId)){
-			CAnimBlendAssociation* anim3 = CAnimManager::BlendAnimation(
+			// Use the complete C animation manager at the original call boundary
+			CAnimBlendAssociation* anim3 = AnimManager_BlendAnimation(
 				(RpClump*)ped->m_rwObject, (AssocGroupId)state->partGroupId, (AnimationId)state->partAnimId, 1000.0f);
-			anim3->SetCurrentTime(time);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetCurrentTime(anim3,time);
 			anim3->speed = speed;
-			anim3->SetBlend(blend, 0.0f);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetBlend(anim3,blend, 0.0f);
 		}
 	}
 }
@@ -655,44 +682,58 @@ void CReplay::RetrieveDetailedPedAnimation(CPed *ped, CStoredDetailedAnimationSt
 {
 	CAnimBlendAssociation* assoc;
 	for (int i = 0; ((assoc = RpAnimBlendClumpGetMainAssociation_N(ped->GetClump(), i))); i++)
-		assoc->SetBlend(0.0f, -1.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetBlend(assoc,0.0f, -1.0f);
 	for (int i = 0; ((assoc = RpAnimBlendClumpGetMainPartialAssociation_N(ped->GetClump(), i))); i++)
-		assoc->SetBlend(0.0f, -1.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetBlend(assoc,0.0f, -1.0f);
 	for (int i = 0; i < NUM_MAIN_ANIMS_IN_REPLAY; i++) {
 		if (state->aAnimId[i] == ANIM_STD_NUM)
 			continue;
-		CAnimBlendAssociation* anim = CAnimManager::AddAnimation(ped->GetClump(),
+		// Use the complete C animation manager at the original call boundary
+		CAnimBlendAssociation* anim = AnimManager_AddAnimation(ped->GetClump(),
 			state->aAnimId[i] > ANIM_STD_IDLE ? (AssocGroupId)state->aGroupId[i] : ped->m_animGroup,
 			(AnimationId)state->aAnimId[i]);
-		anim->SetCurrentTime(state->aCurTime[i] * 4.0f / 255.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetCurrentTime(anim,state->aCurTime[i] * 4.0f / 255.0f);
 		anim->speed = state->aSpeed[i] * 3.0f / 255.0f;
-		anim->SetBlend(state->aBlendAmount[i] * 2.0f / 255.0f, state->aBlendDelta[i] * 16.0f / 127.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetBlend(anim,state->aBlendAmount[i] * 2.0f / 255.0f, state->aBlendDelta[i] * 16.0f / 127.0f);
 		anim->flags = state->aFlags[i];
 		uint8 callback = state->aFunctionCallbackID[i];
 		if (!callback)
-			anim->callbackType = CAnimBlendAssociation::CB_NONE;
+			// Use the complete C association at the original native operation boundary
+			anim->callbackType = ANIM_ASSOC_CB_NONE;
 		else if (callback & 0x80)
-			anim->SetFinishCallback(FindCBFunction(callback & 0x7F), ped);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetFinishCallback(anim,FindCBFunction(callback & 0x7F), ped);
 		else
-			anim->SetDeleteCallback(FindCBFunction(callback & 0x7F), ped);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetDeleteCallback(anim,FindCBFunction(callback & 0x7F), ped);
 	}
 	for (int i = 0; i < NUM_PARTIAL_ANIMS_IN_REPLAY; i++) {
 		if (state->aAnimId2[i] == ANIM_STD_NUM)
 			continue;
-		CAnimBlendAssociation* anim = CAnimManager::AddAnimation(ped->GetClump(),
+		// Use the complete C animation manager at the original call boundary
+		CAnimBlendAssociation* anim = AnimManager_AddAnimation(ped->GetClump(),
 			state->aAnimId2[i] > ANIM_STD_IDLE ? (AssocGroupId)state->aGroupId2[i] : ped->m_animGroup,
 			(AnimationId)state->aAnimId2[i]);
-		anim->SetCurrentTime(state->aCurTime2[i] * 4.0f / 255.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetCurrentTime(anim,state->aCurTime2[i] * 4.0f / 255.0f);
 		anim->speed = state->aSpeed2[i] * 3.0f / 255.0f;
-		anim->SetBlend(state->aBlendAmount2[i] * 2.0f / 255.0f, state->aBlendDelta2[i] * 16.0f / 127.0f);
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetBlend(anim,state->aBlendAmount2[i] * 2.0f / 255.0f, state->aBlendDelta2[i] * 16.0f / 127.0f);
 		anim->flags = state->aFlags2[i];
 		uint8 callback = state->aFunctionCallbackID2[i];
 		if (!callback)
-			anim->callbackType = CAnimBlendAssociation::CB_NONE;
+			// Use the complete C association at the original native operation boundary
+			anim->callbackType = ANIM_ASSOC_CB_NONE;
 		else if (callback & 0x80)
-			anim->SetFinishCallback(FindCBFunction(callback & 0x7F), ped);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetFinishCallback(anim,FindCBFunction(callback & 0x7F), ped);
 		else
-			anim->SetDeleteCallback(FindCBFunction(callback & 0x7F), ped);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetDeleteCallback(anim,FindCBFunction(callback & 0x7F), ped);
 	}
 }
 
@@ -730,7 +771,7 @@ void CReplay::TriggerPlaybackLastCoupleOfSeconds(uint32 start, uint8 cam_mode, f
 	TriggerPlayback(cam_mode, cam_x, cam_y, cam_z, true);
 	SlowMotion = slomo;
 	bAllowLookAroundCam = false;
-	if (!FastForwardToTime(CTimer::GetTimeInMilliseconds() - start))
+	if (!FastForwardToTime((*Timer_GetTimeInMilliseconds()) - start))
 		Mode = MODE_RECORD;
 }
 
@@ -772,7 +813,7 @@ void CReplay::StoreCarUpdate(CVehicle *vehicle, int id)
 		vp->door_angles[1] = 127.0f / PI * car->Doors[3].m_fAngle;
 		vp->door_status = 0;
 		for (int i = 0; i < 6; i++){
-			if (car->Damage.GetDoorStatus(i) == DOOR_STATUS_MISSING)
+			if (Damage_GetDoorStatus(&car->Damage, i) == DOOR_STATUS_MISSING)
 				vp->door_status |= BIT(i);
 		}
 	}
@@ -850,31 +891,31 @@ void CReplay::ProcessCarUpdate(CVehicle *vehicle, float interpolation, CAddressI
 		car->Doors[DOOR_FRONT_LEFT].m_fAngle = car->Doors[DOOR_FRONT_LEFT].m_fPrevAngle = vp->door_angles[0] * PI / 127.0f;
 		car->Doors[DOOR_FRONT_RIGHT].m_fAngle = car->Doors[DOOR_FRONT_RIGHT].m_fPrevAngle = vp->door_angles[1] * PI / 127.0f;
 		if (vp->door_angles[0])
-			car->Damage.SetDoorStatus(DOOR_FRONT_LEFT, DOOR_STATUS_SWINGING);
+			Damage_SetDoorStatus(&car->Damage, DOOR_FRONT_LEFT, DOOR_STATUS_SWINGING);
 		if (vp->door_angles[1])
-			car->Damage.SetDoorStatus(DOOR_FRONT_RIGHT, DOOR_STATUS_SWINGING);
-		if (vp->door_status & 1 && car->Damage.GetDoorStatus(DOOR_BONNET) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_BONNET, DOOR_STATUS_MISSING);
+			Damage_SetDoorStatus(&car->Damage, DOOR_FRONT_RIGHT, DOOR_STATUS_SWINGING);
+		if (vp->door_status & 1 && Damage_GetDoorStatus(&car->Damage, DOOR_BONNET) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_BONNET, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_BONNET, DOOR_BONNET, true);
 		}
-		if (vp->door_status & 2 && car->Damage.GetDoorStatus(DOOR_BOOT) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_BOOT, DOOR_STATUS_MISSING);
+		if (vp->door_status & 2 && Damage_GetDoorStatus(&car->Damage, DOOR_BOOT) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_BOOT, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_BOOT, DOOR_BOOT, true);
 		}
-		if (vp->door_status & 4 && car->Damage.GetDoorStatus(DOOR_FRONT_LEFT) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_FRONT_LEFT, DOOR_STATUS_MISSING);
+		if (vp->door_status & 4 && Damage_GetDoorStatus(&car->Damage, DOOR_FRONT_LEFT) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_FRONT_LEFT, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_DOOR_LF, DOOR_FRONT_LEFT, true);
 		}
-		if (vp->door_status & 8 && car->Damage.GetDoorStatus(DOOR_FRONT_RIGHT) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_FRONT_RIGHT, DOOR_STATUS_MISSING);
+		if (vp->door_status & 8 && Damage_GetDoorStatus(&car->Damage, DOOR_FRONT_RIGHT) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_FRONT_RIGHT, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_DOOR_RF, DOOR_FRONT_RIGHT, true);
 		}
-		if (vp->door_status & 0x10 && car->Damage.GetDoorStatus(DOOR_REAR_LEFT) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_REAR_LEFT, DOOR_STATUS_MISSING);
+		if (vp->door_status & 0x10 && Damage_GetDoorStatus(&car->Damage, DOOR_REAR_LEFT) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_REAR_LEFT, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_DOOR_LR, DOOR_REAR_LEFT, true);
 		}
-		if (vp->door_status & 0x20 && car->Damage.GetDoorStatus(DOOR_REAR_RIGHT) != DOOR_STATUS_MISSING) {
-			car->Damage.SetDoorStatus(DOOR_REAR_RIGHT, DOOR_STATUS_MISSING);
+		if (vp->door_status & 0x20 && Damage_GetDoorStatus(&car->Damage, DOOR_REAR_RIGHT) != DOOR_STATUS_MISSING) {
+			Damage_SetDoorStatus(&car->Damage, DOOR_REAR_RIGHT, DOOR_STATUS_MISSING);
 			car->SetDoorDamage(CAR_DOOR_RR, DOOR_REAR_RIGHT, true);
 		}
 	}
@@ -932,7 +973,8 @@ void CReplay::ProcessBikeUpdate(CVehicle* vehicle, float interpolation, CAddress
 
 bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, float interpolation, uint32 *pTimer)
 {
-	CBulletTraces::Init();
+	// Enter the C bullet-trace algorithm with the original owner expressions
+	BulletTraces_Init();
 	float split = 1.0f - interpolation;
 	int ped_min_index = 0; /* Optimization due to peds and vehicles placed in buffer sequentially. */
 	int vehicle_min_index = 0; /* So next ped can't have pool index less than current. */
@@ -1152,16 +1194,16 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 		case REPLAYPACKET_CLOCK:
 		{
 			tClockPacket* pc = (tClockPacket*)&ptr[offset];
-			CClock::SetGameClock(pc->hours, pc->minutes);
+			Clock_SetGameClock(pc->hours, pc->minutes);
 			buffer->m_nOffset += sizeof(tClockPacket);
 			break;
 		}
 		case REPLAYPACKET_WEATHER:
 		{
 			tWeatherPacket* pw = (tWeatherPacket*)&ptr[offset];
-			CWeather::OldWeatherType = pw->old_weather;
-			CWeather::NewWeatherType = pw->new_weather;
-			CWeather::InterpolationValue = pw->interpolation;
+			Weather_OldWeatherType = pw->old_weather;
+			Weather_NewWeatherType = pw->new_weather;
+			Weather_InterpolationValue = pw->interpolation;
 			buffer->m_nOffset += sizeof(tWeatherPacket);
 			break;
 		}
@@ -1177,16 +1219,18 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			tTimerPacket* pt = (tTimerPacket*)&ptr[offset];
 			if (pTimer)
 				*pTimer = pt->timer;
-			CTimer::SetTimeInMilliseconds(pt->timer);
+			Timer_SetTimeInMilliseconds(pt->timer);
 			buffer->m_nOffset += sizeof(tTimerPacket);
 			break;
 		}
 		case REPLAYPACKET_BULLET_TRACES:
 		{
 			tBulletTracePacket* pb = (tBulletTracePacket*)&ptr[offset];
-			CBulletTraces::aTraces[pb->index].m_bInUse = true;
-			CBulletTraces::aTraces[pb->index].m_vecStartPos = pb->inf;
-			CBulletTraces::aTraces[pb->index].m_vecEndPos = pb->sup;
+			BulletTraces_aTraces[pb->index].m_bInUse = true;
+			// Copy replay coordinates through the explicit typed vector boundary
+			BulletTraces_aTraces[pb->index].m_vecStartPos = BulletTraces_FromVector(pb->inf);
+			// Copy replay coordinates through the explicit typed vector boundary
+			BulletTraces_aTraces[pb->index].m_vecEndPos = BulletTraces_FromVector(pb->sup);
 			buffer->m_nOffset += sizeof(tBulletTracePacket);
 			break;
 		}
@@ -1209,8 +1253,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			tMiscPacket* pm = (tMiscPacket*)&ptr[offset];
 			TheCamera.m_uiCamShakeStart = pm->cam_shake_start;
 			TheCamera.m_fCamShakeForce = pm->cam_shake_strength;
-			CSpecialFX::bVideoCam = pm->video_cam;
-			CSpecialFX::bLiftCam = pm->lift_cam;
+			SpecialFX_bVideoCam = pm->video_cam;
+			SpecialFX_bLiftCam = pm->lift_cam;
 			CGame::currArea = pm->cur_area;
 			buffer->m_nOffset += sizeof(tMiscPacket);
 			break;
@@ -1259,7 +1303,7 @@ void CReplay::FinishPlayback(void)
 	Mode = MODE_RECORD;
 	if (bDoLoadSceneWhenDone){
 		CVector v_ls(LoadSceneX, LoadSceneY, LoadSceneZ);
-		CGame::currLevel = CTheZones::GetLevelFromPosition(&v_ls);
+		CGame::currLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&v_ls)));
 		CCollision::SortOutCollisionAfterLoad();
 		CStreaming::LoadScene(v_ls);
 	}
@@ -1331,7 +1375,7 @@ void CReplay::ProcessReplayCamera(void)
 	RwFrameUpdateObjects(RwCameraGetFrame(TheCamera.m_pRwCamera));
 }
 
-extern CWeaponEffects gCrossHair;
+extern WeaponEffects gCrossHair;
 
 void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float cam_z, bool load_scene)
 {
@@ -1349,8 +1393,9 @@ void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float ca
 	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio_SetEffectsFadeVol(0);
 	DMAudio_SetMusicFadeVol(0);
-	CEscalators::Shutdown();
-	CWaterCreatures::RemoveAll();
+	// Enter the C controller or read its canonical count at the original call point
+	Escalators_Shutdown();
+	WaterCreatures_RemoveAll(); // rouz edit (ChatGPT)
 	int current;
 	for (current = 0; current < NUM_REPLAYBUFFERS; current++)
 		if (BufferStatus[current] == REPLAYBUFFER_RECORD)
@@ -1366,7 +1411,8 @@ void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float ca
 	StoreStuffInMem();
 	EmptyPedsAndVehiclePools();
 	SlowMotion = 1;
-	CSkidmarks::Clear();
+	// Enter the C skidmark algorithm with the original owner expressions
+	Skidmarks_Clear();
 	StreamAllNecessaryCarsAndPeds();
 	if (load_scene)
 		bDoLoadSceneWhenDone = false;
@@ -1377,7 +1423,7 @@ void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float ca
 		LoadSceneZ = TheCamera.GetPosition().z;
 		CVector ff_coord;
 		FindFirstFocusCoordinate(&ff_coord);
-		CGame::currLevel = CTheZones::GetLevelFromPosition(&ff_coord);
+		CGame::currLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&ff_coord)));
 		CCollision::SortOutCollisionAfterLoad();
 		CStreaming::LoadScene(ff_coord);
 	}
@@ -1385,11 +1431,12 @@ void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float ca
 		TheCamera.CarZoomIndicator = CAM_ZOOM_CINEMATIC;
 	gCrossHair.m_bActive = false;
 	CExplosion::ClearAllExplosions();
-	CPlaneBanners::Init();
+	// Enter the C plane-banner algorithm with the original input capture
+	PlaneBanners_Init();
 #ifndef FIX_BUGS // this doesn't do anything useful and accesses destroyed player ped
 	TheCamera.Restore();
 #endif
-	CDraw::SetFOV(70.0f);
+	Draw_SetFOV(70.0f);
 }
 
 void CReplay::StoreStuffInMem(void)
@@ -1423,28 +1470,28 @@ void CReplay::StoreStuffInMem(void)
 	pPickups = (uint8*)malloc(sizeof(CPickup) * NUMPICKUPS); // rouz edit (ChatGPT)
 	memcpy(pPickups, CPickups::aPickUps, NUMPICKUPS * sizeof(CPickup));
 	pReferences = (uint8*)malloc(sizeof(CReference) * NUMREFERENCES); // rouz edit (ChatGPT)
-	memcpy(pReferences, CReferences::aRefs, NUMREFERENCES * sizeof(CReference));
-	pEmptyReferences = CReferences::pEmptyList;
+	memcpy(pReferences, References_aRefs, NUMREFERENCES * sizeof(CReference));
+	pEmptyReferences = References_pEmptyList;
 	pStoredCam = (uint8*)malloc(sizeof(CCamera)); // rouz edit (ChatGPT)
 	memcpy(pStoredCam, &TheCamera, sizeof(CCamera));
 	pRadarBlips = (uint8*)malloc(sizeof(sRadarTrace) * NUMRADARBLIPS); // rouz edit (ChatGPT)
 	memcpy(pRadarBlips, CRadar::ms_RadarTrace, NUMRADARBLIPS * sizeof(sRadarTrace));
 	PlayerWanted = *FindPlayerPed()->m_pWanted;
 	PlayerInfo = CWorld::Players[0];
-	Time1 = CTimer::GetTimeInMilliseconds();
-	Time2 = CTimer::GetTimeInMillisecondsNonClipped();
-	Time3 = CTimer::GetPreviousTimeInMilliseconds();
-	Time4 = CTimer::GetTimeInMillisecondsPauseMode();
-	Frame = CTimer::GetFrameCounter();
-	ClockHours = CClock::GetHours();
-	ClockMinutes = CClock::GetMinutes();
-	OldWeatherType = CWeather::OldWeatherType;
-	NewWeatherType = CWeather::NewWeatherType;
-	WeatherInterpolationValue = CWeather::InterpolationValue;
+	Time1 = (*Timer_GetTimeInMilliseconds());
+	Time2 = Timer_GetTimeInMillisecondsNonClipped();
+	Time3 = Timer_GetPreviousTimeInMilliseconds();
+	Time4 = Timer_GetTimeInMillisecondsPauseMode();
+	Frame = (*Timer_GetFrameCounter());
+	ClockHours = Clock_GetHours();
+	ClockMinutes = Clock_GetMinutes();
+	OldWeatherType = Weather_OldWeatherType;
+	NewWeatherType = Weather_NewWeatherType;
+	WeatherInterpolationValue = Weather_InterpolationValue;
 	CurrArea = CGame::currArea;
-	TimeStepNonClipped = CTimer::GetTimeStepNonClipped();
-	TimeStep = CTimer::GetTimeStep();
-	TimeScale = CTimer::GetTimeScale();
+	TimeStepNonClipped = (*Timer_GetTimeStepNonClipped());
+	TimeStep = (*Timer_GetTimeStep());
+	TimeScale = (*Timer_GetTimeScale());
 	ms_nNumCivMale_Stored = CPopulation::ms_nNumCivMale;
 	ms_nNumCivFemale_Stored = CPopulation::ms_nNumCivFemale;
 	ms_nNumCop_Stored = CPopulation::ms_nNumCop;
@@ -1477,11 +1524,12 @@ void CReplay::StoreStuffInMem(void)
 	FireArray = (CFire*)malloc(sizeof(CFire)*NUM_FIRES); // rouz edit (ChatGPT)
 	memcpy(FireArray, gFireManager.m_aFires, sizeof(gFireManager.m_aFires));
 	NumOfFires = gFireManager.m_nTotalFires;
-	paProjectileInfo = (uint8*)malloc(sizeof(gaProjectileInfo)); // rouz edit (ChatGPT)
-	memcpy(paProjectileInfo, gaProjectileInfo, sizeof(gaProjectileInfo));
-	paProjectiles = (uint8*)malloc(sizeof(CProjectileInfo::ms_apProjectile)); // rouz edit (ChatGPT)
-	memcpy(paProjectiles, CProjectileInfo::ms_apProjectile, sizeof(CProjectileInfo::ms_apProjectile));
-	CScriptPaths::Save_ForReplay();
+	paProjectileInfo = (uint8*)malloc(sizeof(ProjectileInfo_records)); // rouz edit (ChatGPT)
+	memcpy(paProjectileInfo, ProjectileInfo_records, sizeof(ProjectileInfo_records));
+	paProjectiles = (uint8*)malloc(sizeof(ProjectileInfo_projectiles)); // rouz edit (ChatGPT)
+	memcpy(paProjectiles, ProjectileInfo_projectiles, sizeof(ProjectileInfo_projectiles));
+	// Enter the C scripted-path operation at the original call point
+	ScriptPaths_Save_ForReplay();
 }
 
 void CReplay::RestoreStuffFromMem(void)
@@ -1501,10 +1549,10 @@ void CReplay::RestoreStuffFromMem(void)
 	memcpy(CPickups::aPickUps, pPickups, sizeof(CPickup) * NUMPICKUPS);
 	free(pPickups); // rouz edit (ChatGPT)
 	pPickups = nil;
-	memcpy(CReferences::aRefs, pReferences, sizeof(CReference) * NUMREFERENCES);
+	memcpy(References_aRefs, pReferences, sizeof(CReference) * NUMREFERENCES);
 	free(pReferences); // rouz edit (ChatGPT)
 	pReferences = nil;
-	CReferences::pEmptyList = pEmptyReferences;
+	References_pEmptyList = pEmptyReferences;
 	pEmptyReferences = nil;
 	memcpy(&TheCamera, pStoredCam, sizeof(CCamera));
 	free(pStoredCam); // rouz edit (ChatGPT)
@@ -1521,10 +1569,10 @@ void CReplay::RestoreStuffFromMem(void)
 		pPlayerPed->RegisterReference((CEntity**)&CWorld::Players[i].m_pPed);
 	}
 #endif
-	// Allocate the restored wanted state without invoking C++ new.
+	// Allocate and copy the complete plain wanted record for replay restoration
 	FindPlayerPed()->m_pWanted = (CWanted*)malloc(sizeof(CWanted));
 	assert(FindPlayerPed()->m_pWanted);
-	std::allocator<CWanted>().construct(FindPlayerPed()->m_pWanted, PlayerWanted);
+	Wanted_Copy(FindPlayerPed()->m_pWanted,&PlayerWanted);
 	CWorld::Players[0] = PlayerInfo;
 		// Access raw storage through the C store or pool API
 	int i = CPool_GetSize(CPools::GetPedPool());
@@ -1544,10 +1592,10 @@ void CReplay::RestoreStuffFromMem(void)
 		DMAudio_SetEntityStatus(ped->m_audioEntityId, TRUE);
 		CPopulation::UpdatePedCount((ePedType)ped->m_nPedType, false);
 		for (int j = 0; j < TOTAL_WEAPON_SLOTS; j++) {
-			int mi1 = CWeaponInfo::GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModelId;
+			int mi1 = WeaponInfo_GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModelId;
 			if (mi1 != -1)
 				CStreaming::RequestModel(mi1, STREAMFLAGS_DEPENDENCY);
-			int mi2 = CWeaponInfo::GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModel2Id;
+			int mi2 = WeaponInfo_GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModel2Id;
 			if (mi2 != -1)
 				CStreaming::RequestModel(mi2, STREAMFLAGS_DEPENDENCY);
 			CStreaming::LoadAllRequestedModels(false);
@@ -1582,7 +1630,8 @@ void CReplay::RestoreStuffFromMem(void)
 		if (vehicle->IsCar()) {
 			CAutomobile* car = (CAutomobile*)vehicle;
 			if (mi == MI_DODO) {
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LF]), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LF])), 0);
 				CMatrix tmp1;
 				tmp1.Attach(RwFrameGetMatrix(car->m_aCarNodes[CAR_WHEEL_RF]), false);
 				CMatrix tmp2(RwFrameGetMatrix(car->m_aCarNodes[CAR_WHEEL_LF]), false);
@@ -1590,14 +1639,20 @@ void CReplay::RestoreStuffFromMem(void)
 				tmp1.UpdateRW();
 			}
 			else if (mi == MI_HUNTER) {
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LB]), 0);
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RB]), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LB])), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RB])), 0);
 			}
 			else if (vehicle->IsRealHeli()) {
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LF]), 0);
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RF]), 0);
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LB]), 0);
-				RpAtomicSetFlags((RpAtomic*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RB]), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LF])), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RF])), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_LB])), 0);
+				// Use the C helper and retain the original typed SDK result
+				RpAtomicSetFlags((RpAtomic*)((RwObject*)GetFirstObject(car->m_aCarNodes[CAR_WHEEL_RB])), 0);
 			}
 		}
 		if (vehicle->IsCar()){
@@ -1666,18 +1721,18 @@ void CReplay::RestoreStuffFromMem(void)
 		dummy->GetMatrix().m_attachment = nil;
 	}
 	++ClockMinutes;
-	CTimer::SetTimeInMilliseconds(Time1);
-	CTimer::SetTimeInMillisecondsNonClipped(Time2);
-	CTimer::SetPreviousTimeInMilliseconds(Time3);
-	CTimer::SetTimeInMillisecondsPauseMode(Time4);
-	CTimer::SetTimeScale(TimeScale);
-	CTimer::SetFrameCounter(Frame);
-	CTimer::SetTimeStep(TimeStep);
-	CTimer::SetTimeStepNonClipped(TimeStepNonClipped);
-	CClock::SetGameClock(ClockHours, ClockMinutes);
-	CWeather::OldWeatherType = OldWeatherType;
-	CWeather::NewWeatherType = NewWeatherType;
-	CWeather::InterpolationValue = WeatherInterpolationValue;
+	Timer_SetTimeInMilliseconds(Time1);
+	Timer_SetTimeInMillisecondsNonClipped(Time2);
+	Timer_SetPreviousTimeInMilliseconds(Time3);
+	Timer_SetTimeInMillisecondsPauseMode(Time4);
+	Timer_SetTimeScale(TimeScale);
+	Timer_SetFrameCounter(Frame);
+	Timer_SetTimeStep(TimeStep);
+	Timer_SetTimeStepNonClipped(TimeStepNonClipped);
+	Clock_SetGameClock(ClockHours, ClockMinutes);
+	Weather_OldWeatherType = OldWeatherType;
+	Weather_NewWeatherType = NewWeatherType;
+	Weather_InterpolationValue = WeatherInterpolationValue;
 	CGame::currArea = CurrArea;
 	CPopulation::ms_nNumCivMale = ms_nNumCivMale_Stored;
 	CPopulation::ms_nNumCivFemale = ms_nNumCivFemale_Stored;
@@ -1714,13 +1769,14 @@ void CReplay::RestoreStuffFromMem(void)
 	free(FireArray); // rouz edit (ChatGPT)
 	FireArray = nil;
 	gFireManager.m_nTotalFires = NumOfFires;
-	memcpy(gaProjectileInfo, paProjectileInfo, sizeof(gaProjectileInfo));
+	memcpy(ProjectileInfo_records, paProjectileInfo, sizeof(ProjectileInfo_records));
 	free(paProjectileInfo); // rouz edit (ChatGPT)
 	paProjectileInfo = nil;
-	memcpy(CProjectileInfo::ms_apProjectile, paProjectiles, sizeof(CProjectileInfo::ms_apProjectile));
+	memcpy(ProjectileInfo_projectiles, paProjectiles, sizeof(ProjectileInfo_projectiles));
 	free(paProjectiles); // rouz edit (ChatGPT)
 	paProjectiles = nil;
-	CScriptPaths::Load_ForReplay();
+	// Enter the C scripted-path operation at the original call point
+	ScriptPaths_Load_ForReplay();
 	CExplosion::ClearAllExplosions();
 	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio_SetRadioInCar(OldRadioStation);
@@ -1812,18 +1868,18 @@ void CReplay::MarkEverythingAsNew(void)
 
 void CReplay::SaveReplayToHD(void)
 {
-	CFileMgr::SetDirMyDocuments();
-	int fw = CFileMgr::OpenFileForWriting("replay.rep");
+	FileMgr_SetDirMyDocuments();
+	int fw = FileMgr_OpenFileForWriting("replay.rep");
 #ifdef FIX_REPLAY_BUGS
 	if (fw == 0) {
 #else
 	if (fw < 0){ // BUG?
 #endif
 		printf("Couldn't open replay.rep for writing");
-		CFileMgr::SetDir("");
+		FileMgr_SetDir("");
 		return;
 	}
-	CFileMgr::Write(fw, "gta3_7f", sizeof("gta3_7f"));
+	FileMgr_Write(fw, "gta3_7f", sizeof("gta3_7f"));
 	int current;
 	for (current = 0; current < NUM_REPLAYBUFFERS; current++)
 		if (BufferStatus[current] == REPLAYBUFFER_RECORD)
@@ -1833,40 +1889,40 @@ void CReplay::SaveReplayToHD(void)
 		if (BufferStatus[first] == REPLAYBUFFER_RECORD || BufferStatus[first] == REPLAYBUFFER_PLAYBACK)
 			break;
 	for(int i = first; ; i = (i + 1) % NUM_REPLAYBUFFERS){
-		CFileMgr::Write(fw, (char*)Buffers[i], sizeof(Buffers[i]));
+		FileMgr_Write(fw, (char*)Buffers[i], sizeof(Buffers[i]));
 		if (BufferStatus[i] == REPLAYBUFFER_RECORD)
 			break;
 	}
-	CFileMgr::CloseFile(fw);
-	CFileMgr::SetDir("");
+	FileMgr_CloseFile(fw);
+	FileMgr_SetDir("");
 }
 
 void CReplay::PlayReplayFromHD(void)
 {
-	CFileMgr::SetDirMyDocuments();
-	int fr = CFileMgr::OpenFile("replay.rep", "rb");
+	FileMgr_SetDirMyDocuments();
+	int fr = FileMgr_OpenFile("replay.rep", "rb");
 	if (fr == 0) {
 		printf("Couldn't open replay.rep for reading");
 #ifdef FIX_REPLAY_BUGS
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("");
 #endif
 		return;
 	}
-	CFileMgr::Read(fr, gString, 8);
+	FileMgr_Read(fr, gString, 8);
 	if (strncmp(gString, "gta3_7f", sizeof("gta3_7f"))){
-		CFileMgr::CloseFile(fr);
+		FileMgr_CloseFile(fr);
 		printf("Wrong file type for replay");
-		CFileMgr::SetDir("");
+		FileMgr_SetDir("");
 		return;
 	}
 	int slot;
-	for (slot = 0; CFileMgr::Read(fr, (char*)Buffers[slot], sizeof(Buffers[slot])); slot++)
+	for (slot = 0; FileMgr_Read(fr, (char*)Buffers[slot], sizeof(Buffers[slot])); slot++)
 		BufferStatus[slot] = REPLAYBUFFER_PLAYBACK;
 	BufferStatus[slot - 1] = REPLAYBUFFER_RECORD;
 	while (slot < NUM_REPLAYBUFFERS)
 		BufferStatus[slot++] = REPLAYBUFFER_UNUSED;
-	CFileMgr::CloseFile(fr);
-	CFileMgr::SetDir("");
+	FileMgr_CloseFile(fr);
+	FileMgr_SetDir("");
 	TriggerPlayback(REPLAYCAMMODE_ASSTORED, 0.0f, 0.0f, 0.0f, false);
 	bPlayingBackFromFile = true;
 	bAllowLookAroundCam = true;
@@ -1952,8 +2008,8 @@ void CReplay::ProcessLookAroundCam(void)
 	CColPoint cp;
 	CEntity* pe = nil;
 	if (CWorld::ProcessLineOfSight(focus, camera_pt, cp, pe, true, false, false, false, false, true, true)){
-		camera_pt = cp.point;
-		CVector direction = focus - cp.point;
+		camera_pt = CollisionVector_ToNative(cp.point);
+		CVector direction = focus - CollisionVector_ToNative(cp.point);
 		direction.Normalise();
 		camera_pt += direction / 4.0f;
 	}
@@ -2020,8 +2076,15 @@ void CReplay::Display()
 	CFont::SetColor(CRGBA(255, 255, 200, 200));
 	CFont::SetFontStyle(FONT_STANDARD);
 	if (Mode == MODE_PLAYBACK)
-		CFont::PrintString(SCREEN_WIDTH/15, SCREEN_HEIGHT/10, TheText.Get("REPLAY"));
+		CFont::PrintString(SCREEN_WIDTH/15, SCREEN_HEIGHT/10, Text_Get(&TheText,"REPLAY"));
 }
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

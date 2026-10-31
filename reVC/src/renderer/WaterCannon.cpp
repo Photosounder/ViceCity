@@ -1,10 +1,6 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "WaterCannon.h"
-#include "Vector.h"
-#include "General.h"
 #include "main.h"
-#include "Timer.h"
 #include "Pools.h"
 #include "Ped.h"
 #include "AnimManager.h"
@@ -12,342 +8,218 @@
 #include "WaterLevel.h"
 #include "Camera.h"
 #include "Particle.h"
-//+ rouz edit (ChatGPT)
+#include "WaterCannon_backend.h"
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 #include "custompipes.h"
 #endif
-//- rouz edit (ChatGPT)
+RwIm3DVertex WaterCannonVertices[4];
 
-#define WATERCANNONVERTS 4
-#define WATERCANNONINDEXES 12
-
-RwIm3DVertex WaterCannonVertices[WATERCANNONVERTS];
-RwImVertexIndex WaterCannonIndexList[WATERCANNONINDEXES];
-
-CWaterCannon CWaterCannons::aCannons[NUM_WATERCANNONS];
-
-void CWaterCannon::Init(void)
+WaterCannonVector WaterCannon_BackendReadVector(const void *value)
 {
-	m_nId = 0;
-	m_nCur = 0;
-	m_nTimeCreated = CTimer::GetTimeInMilliseconds();
-	
-	for ( int32 i = 0; i < NUM_SEGMENTPOINTS; i++ )
-		m_abUsed[i] = false;
-	
-	RwIm3DVertexSetU(&WaterCannonVertices[0], 0.0f);
-	RwIm3DVertexSetV(&WaterCannonVertices[0], 0.0f);
-	
-	RwIm3DVertexSetU(&WaterCannonVertices[1], 1.0f);
-	RwIm3DVertexSetV(&WaterCannonVertices[1], 0.0f);
-	
-	RwIm3DVertexSetU(&WaterCannonVertices[2], 0.0f);
-	RwIm3DVertexSetV(&WaterCannonVertices[2], 0.0f);
-	
-	RwIm3DVertexSetU(&WaterCannonVertices[3], 1.0f);
-	RwIm3DVertexSetV(&WaterCannonVertices[3], 0.0f);
-	
-	WaterCannonIndexList[0]  = 0;
-	WaterCannonIndexList[1]  = 1;
-	WaterCannonIndexList[2]  = 2;
-	
-	WaterCannonIndexList[3]  = 1;
-	WaterCannonIndexList[4]  = 3;
-	WaterCannonIndexList[5]  = 2;
-	
-	WaterCannonIndexList[6]  = 0;
-	WaterCannonIndexList[7]  = 2;
-	WaterCannonIndexList[8]  = 1;
-	
-	WaterCannonIndexList[9]  = 1;
-	WaterCannonIndexList[10] = 2;
-	WaterCannonIndexList[11] = 3;
+	// Read the original typed legacy input only at its copy point
+	const CVector *v = (const CVector *)value;
+	WaterCannonVector result = {v->x, v->y, v->z};
+	return result;
 }
-
-void CWaterCannon::Update_OncePerFrame(int16 index)
+WaterCannonVector WaterCannon_BackendCameraForward(void)
 {
-	ASSERT(index < NUM_WATERCANNONS);
-	
-	if (CTimer::GetTimeInMilliseconds() > m_nTimeCreated + WATERCANNON_LIFETIME )
-	{
-		m_nCur = (m_nCur + 1) % NUM_SEGMENTPOINTS;
-		m_abUsed[m_nCur] = false;
-	}
-	
-	for ( int32 i = 0; i < NUM_SEGMENTPOINTS; i++ )
-	{
-		if ( m_abUsed[i] )
-		{
-			m_avecVelocity[i].z += -WATERCANNON_GRAVITY * CTimer::GetTimeStep();
-			m_avecPos[i]        += m_avecVelocity[i]    * CTimer::GetTimeStep();
-		}
-	}
-	
-	for ( int32 i = 0; i < NUM_SEGMENTPOINTS; i++ )
-	{
-		if ( m_abUsed[i] && gFireManager.ExtinguishPointWithWater(m_avecPos[i], 4.0f) )
-		{
-			break;
-		}
-	}
-	
-	if ( ((index + CTimer::GetFrameCounter()) & 3) == 0 )
-		PushPeds();
-	
-	// free if unused
-	
-	int32 i = 0;
-	while ( 1 )
-	{
-		if ( m_abUsed[i] )
-			break;
-		
-		if ( ++i >= NUM_SEGMENTPOINTS )
-		{
-			m_nId = 0;
-			return;
-		}
-	}
+	// Copy the original typed camera forward value
+	const CVector &v = TheCamera.GetForward();
+	WaterCannonVector result = {v.x, v.y, v.z};
+	return result;
 }
-
-void CWaterCannon::Update_NewInput(CVector *pos, CVector *dir)
+bool WaterCannon_BackendEnvMap(void)
 {
-	ASSERT(pos != NULL);
-	ASSERT(dir != NULL);
-	
-	m_avecPos[m_nCur]      = *pos;
-	m_avecVelocity[m_nCur] = *dir;
-	m_abUsed[m_nCur]       = true;
-}
-
-void CWaterCannon::Render(void)
-{
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      (void *)FALSE);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE,         (void *)TRUE);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER,     (void *)gpWaterRaster);
-	// Orient the spray ribbon to the active camera, including the software reflection camera
-	//+ rouz edit (ChatGPT)
-	CVector cameraForward = TheCamera.GetForward();
-#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
-	if(CustomPipes::bRenderingEnvMap && CustomPipes::EnvMapCam){
-		RwFrame *cameraFrame = RwCameraGetFrame(CustomPipes::EnvMapCam);
-		if(cameraFrame){
-			RwMatrix *cameraMatrix = RwFrameGetMatrix(cameraFrame);
-			if(cameraMatrix){
-				cameraForward = CVector(cameraMatrix->at);
-				cameraForward.Normalise();
-			}
-		}
-	}
+	// Read the live environment-pass flag at each original access
+	#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	return CustomPipes::bRenderingEnvMap;
+#else
+	return false;
 #endif
-	//- rouz edit (ChatGPT)
-	
-	// Keep the auxiliary reflection draw from consuming gameplay random numbers
-	//+ rouz edit (ChatGPT)
-	float v;
-#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
-	if(CustomPipes::bRenderingEnvMap)
-		v = float((CTimer::GetFrameCounter() + m_nId) & 255) / 256.0f;
-	else
+}
+void * WaterCannon_BackendEnvCamera(void)
+{
+	// Read the original auxiliary camera pointer
+	#if defined(LIBRW) && defined(EXTENDED_PIPELINES)
+	return CustomPipes::EnvMapCam;
+#else
+	return NULL;
 #endif
-		v = float(CGeneral::GetRandomNumber() & 255) / 256.0f;
-	//- rouz edit (ChatGPT)
-		
-	RwIm3DVertexSetV(&WaterCannonVertices[0], v);
-	RwIm3DVertexSetV(&WaterCannonVertices[1], v);
-	RwIm3DVertexSetV(&WaterCannonVertices[2], v);
-	RwIm3DVertexSetV(&WaterCannonVertices[3], v);
-	
-	int16 pointA = m_nCur % NUM_SEGMENTPOINTS;
-	
-	int16 pointB = pointA - 1;
-	if ( pointB < 0 )
-		pointB += NUM_SEGMENTPOINTS;
-
-	bool bInit = false;
-	CVector norm;
-	
-	for ( int32 i = 0; i < NUM_SEGMENTPOINTS - 1; i++ )
-	{
-		if ( m_abUsed[pointA] && m_abUsed[pointB] )
-		{
-			if ( !bInit )
-			{
-				CVector cp = CrossProduct(m_avecPos[pointB] - m_avecPos[pointA], cameraForward); // rouz edit (ChatGPT)
-				norm = cp * (0.05f / cp.Magnitude());
-				bInit = true;
-			}
-			
-			float dist       = float(i*i*i) / 300.0f + 1.0f;
-			float brightness = float(i) / NUM_SEGMENTPOINTS;
-			
-			int32 color = (int32)((1.0f - brightness*brightness) * 255.0f);
-			CVector offset = dist * norm;
-			
-			RwIm3DVertexSetRGBA(&WaterCannonVertices[0], color, color, color, color);
-			RwIm3DVertexSetPos (&WaterCannonVertices[0], m_avecPos[pointA].x - offset.x, m_avecPos[pointA].y - offset.y, m_avecPos[pointA].z - offset.z);
-				
-			RwIm3DVertexSetRGBA(&WaterCannonVertices[1], color, color, color, color);
-			RwIm3DVertexSetPos (&WaterCannonVertices[1], m_avecPos[pointA].x + offset.x, m_avecPos[pointA].y + offset.y, m_avecPos[pointA].z + offset.z);
-			
-			RwIm3DVertexSetRGBA(&WaterCannonVertices[2], color, color, color, color);
-			RwIm3DVertexSetPos (&WaterCannonVertices[2], m_avecPos[pointB].x - offset.x, m_avecPos[pointB].y - offset.y, m_avecPos[pointB].z - offset.z);
-			
-			RwIm3DVertexSetRGBA(&WaterCannonVertices[3], color, color, color, color);
-			RwIm3DVertexSetPos (&WaterCannonVertices[3], m_avecPos[pointB].x + offset.x, m_avecPos[pointB].y + offset.y, m_avecPos[pointB].z + offset.z);
-			
-			LittleTest();
-
-			if ( RwIm3DTransform(WaterCannonVertices, WATERCANNONVERTS, NULL, rwIM3D_VERTEXUV) )
-			{
-				RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, WaterCannonIndexList, WATERCANNONINDEXES);
-				RwIm3DEnd();
-			}
-		}
-		
-		pointA = pointB--;
-		if ( pointB < 0 )
-			pointB += NUM_SEGMENTPOINTS;
-	}
-	
-	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      (void *)TRUE);
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)FALSE);
-	RwRenderStateSet(rwRENDERSTATEFOGENABLE,         (void *)FALSE);
 }
-
-void CWaterCannon::PushPeds(void)
+void * WaterCannon_BackendCameraFrame(void *camera)
 {
-	float minx = 10000.0f;
-	float maxx = -10000.0f;
-	float miny = 10000.0f;
-	float maxy = -10000.0f;
-	float minz = 10000.0f;
-	float maxz = -10000.0f;
-  
-	for ( int32 i = 0; i < NUM_SEGMENTPOINTS; i++ )
-	{
-		if ( m_abUsed[i] )
-		{
-			minx = Min(minx, m_avecPos[i].x);
-			maxx = Max(maxx, m_avecPos[i].x);
-			
-			miny = Min(miny, m_avecPos[i].y);
-			maxy = Max(maxy, m_avecPos[i].y);
-			
-			minz = Min(minz, m_avecPos[i].z);
-			maxz = Max(maxz, m_avecPos[i].z);
-		}
-	}
-	
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
-	//- rouz edit (ChatGPT)
-	{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-		if ( ped )
-		{
-			if (   ped->GetPosition().x > minx && ped->GetPosition().x < maxx
-				&& ped->GetPosition().y > miny && ped->GetPosition().y < maxy
-				&& ped->GetPosition().z > minz && ped->GetPosition().z < maxz )
-			{
-				for ( int32 j = 0; j < NUM_SEGMENTPOINTS; j++ )
-				{
-					if ( m_abUsed[j] )
-					{
-						CVector dist = m_avecPos[j] - ped->GetPosition();
-						
-						if ( dist.MagnitudeSqr() < 5.0f )
-						{
-							int32 localDir = ped->GetLocalDirection(CVector2D(1.0f, 0.0f));
-							
-							ped->bIsStanding = false;
-							
-							ped->ApplyMoveForce(0.0f, 0.0f, 2.0f * CTimer::GetTimeStep());
-							
-							ped->m_vecMoveSpeed.x = (0.6f * m_avecVelocity[j].x + ped->m_vecMoveSpeed.x) * 0.5f;
-							ped->m_vecMoveSpeed.y = (0.6f * m_avecVelocity[j].y + ped->m_vecMoveSpeed.y) * 0.5f;
-							
-							float pedSpeed2D = ped->m_vecMoveSpeed.Magnitude2D();
-
-							if ( pedSpeed2D > 0.2f ) {
-								ped->m_vecMoveSpeed.x *= (0.2f / pedSpeed2D);
-								ped->m_vecMoveSpeed.y *= (0.2f / pedSpeed2D);
-							}
-							ped->SetFall(2000, (AnimationId)(localDir + ANIM_STD_HIGHIMPACT_FRONT), 0);
-							CParticle::AddParticle(PARTICLE_STEAM_NY_SLOWMOTION, ped->GetPosition(), ped->m_vecMoveSpeed * 0.3f, 0, 0.5f);
-							CParticle::AddParticle(PARTICLE_CAR_SPLASH, ped->GetPosition(), ped->m_vecMoveSpeed * -0.3f + CVector(0.f, 0.f, 0.5f), 0, 0.5f,
-								CGeneral::GetRandomNumberInRange(0.f, 10.f), CGeneral::GetRandomNumberInRange(0.f, 90.f), 1);
-							
-							j = NUM_SEGMENTPOINTS;
-						}
-					}
-				}
-			}
-		}
-	}	
+	// Query the actual typed auxiliary camera frame
+	return RwCameraGetFrame((RwCamera *)camera);
 }
-
-void CWaterCannons::Init(void)
+void * WaterCannon_BackendFrameMatrix(void *frame)
 {
-	for ( int32 i = 0; i < NUM_WATERCANNONS; i++ )
-		aCannons[i].Init();
+	// Query the actual typed frame matrix
+	return RwFrameGetMatrix((RwFrame *)frame);
 }
-
-void CWaterCannons::UpdateOne(uint32 id, CVector *pos, CVector *dir)
+WaterCannonVector WaterCannon_BackendMatrixForward(void *matrix)
 {
-	ASSERT(pos != NULL);
-	ASSERT(dir != NULL);
-	
-	// find the one by id
-	{
-		int32 n = 0;
-		while ( n < NUM_WATERCANNONS && id != aCannons[n].m_nId )
-			n++;
-		
-		if ( n < NUM_WATERCANNONS )
-		{
-			aCannons[n].Update_NewInput(pos, dir);
-			return;
-		}
-	}
-	
-	// if no luck then find a free one
-	{
-		int32 n = 0;
-		while ( n < NUM_WATERCANNONS && 0 != aCannons[n].m_nId )
-			n++;
-		
-		if ( n < NUM_WATERCANNONS )
-		{
-			aCannons[n].Init();
-			aCannons[n].m_nId = id;
-			aCannons[n].Update_NewInput(pos, dir);
-			return;
-		}
-	}
+	// Copy the actual matrix forward vector before C normalization
+	const RwV3d &v = ((RwMatrix *)matrix)->at;
+	WaterCannonVector result = {v.x, v.y, v.z};
+	return result;
 }
-
-void CWaterCannons::Update(void)
+bool WaterCannon_BackendExtinguish(WaterCannonVector pos, float range)
 {
-	for ( int32 i = 0; i < NUM_WATERCANNONS; i++ )
-	{
-		if ( aCannons[i].m_nId != 0 )
-			aCannons[i].Update_OncePerFrame(i);
-	}
+	// Enter the original fire query at its eligibility gate
+	return FireManager_ExtinguishPointWithWater(&gFireManager,Fire_VectorFromNative(CVector(pos.x, pos.y, pos.z)), range);
 }
-
-void CWaterCannons::Render(void)
+CPool * WaterCannon_BackendPedPool(void)
 {
-	PUSH_RENDERGROUP("CWaterCannons::Render");
-	for ( int32 i = 0; i < NUM_WATERCANNONS; i++ )
-	{
-		if ( aCannons[i].m_nId != 0 )
-			aCannons[i].Render();
-	}
+	// Read the original live ped pool at every query
+	return CPools::GetPedPool();
+}
+CPed * WaterCannon_BackendPed(void *slot)
+{
+	// Convert actual raw pool storage through the original typed owner
+	return (CPed *)slot;
+}
+float WaterCannon_BackendPedX(CPed *ped)
+{
+	// Read only the original live ped X component
+	return ped->GetPosition().x;
+}
+float WaterCannon_BackendPedY(CPed *ped)
+{
+	// Read only the original live ped Y component
+	return ped->GetPosition().y;
+}
+float WaterCannon_BackendPedZ(CPed *ped)
+{
+	// Read only the original live ped Z component
+	return ped->GetPosition().z;
+}
+WaterCannonVector WaterCannon_BackendPedPosition(CPed *ped)
+{
+	// Copy the original complete ped position at its use point
+	const CVector &v = ped->GetPosition();
+	WaterCannonVector result = {v.x, v.y, v.z};
+	return result;
+}
+int32_t WaterCannon_BackendLocalDirection(CPed *ped)
+{
+	// Enter the original typed local-direction query
+	return ped->GetLocalDirection(CVector2D(1.0f, 0.0f));
+}
+void WaterCannon_BackendStanding(CPed *ped)
+{
+	// Clear the original standing bit through its actual owner
+	ped->bIsStanding = false;
+}
+void WaterCannon_BackendForce(CPed *ped, float z)
+{
+	// Apply the original typed vertical force after C computes its magnitude
+	ped->ApplyMoveForce(0.0f, 0.0f, z);
+}
+float WaterCannon_BackendSpeedX(CPed *ped)
+{
+	// Read the current ped X velocity at its original use
+	return ped->m_vecMoveSpeed.x;
+}
+float WaterCannon_BackendSpeedY(CPed *ped)
+{
+	// Read the current ped Y velocity at its original use
+	return ped->m_vecMoveSpeed.y;
+}
+void WaterCannon_BackendSetSpeedX(CPed *ped, float value)
+{
+	// Write the original ped X velocity at its original point
+	ped->m_vecMoveSpeed.x = value;
+}
+void WaterCannon_BackendSetSpeedY(CPed *ped, float value)
+{
+	// Write the original ped Y velocity at its original point
+	ped->m_vecMoveSpeed.y = value;
+}
+WaterCannonVector WaterCannon_BackendVelocity(CPed *ped)
+{
+	// Copy the original full ped velocity for particle direction math
+	const CVector &v = ped->m_vecMoveSpeed;
+	WaterCannonVector result = {v.x, v.y, v.z};
+	return result;
+}
+void WaterCannon_BackendFall(CPed *ped, int32_t animation)
+{
+	// Enter the original typed fall animation after C selects its ID
+	ped->SetFall(2000, (AnimationId)animation, 0);
+}
+void WaterCannon_BackendParticle(int32_t kind, WaterCannonVector pos, WaterCannonVector dir, int32_t rotationSpeed, int32_t rotation, int32_t frame)
+{
+	// Enter the original typed particle overload with C-selected values
+	CParticle::AddParticle((tParticleType)kind, CVector(pos.x, pos.y, pos.z), CVector(dir.x, dir.y, dir.z), NULL, 0.5f, rotationSpeed, rotation, frame);
+}
+void WaterCannon_BackendSetU(int index, float value)
+{
+	// Write the original typed shared U coordinate
+	RwIm3DVertexSetU(&WaterCannonVertices[index], value);
+}
+void WaterCannon_BackendSetV(int index, float value)
+{
+	// Write the original typed shared V coordinate
+	RwIm3DVertexSetV(&WaterCannonVertices[index], value);
+}
+void WaterCannon_BackendSetRGBA(int index, int32_t r, int32_t g, int32_t b, int32_t a)
+{
+	// Retain final narrowing in the actual typed color setter
+	RwIm3DVertexSetRGBA(&WaterCannonVertices[index], r, g, b, a);
+}
+void WaterCannon_BackendSetPos(int index, float x, float y, float z)
+{
+	// Write the original typed shared vertex position
+	RwIm3DVertexSetPos(&WaterCannonVertices[index], x, y, z);
+}
+void WaterCannon_BackendZWrite(bool enabled)
+{
+	// Set the original typed depth-write state
+	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void *)(uintptr_t)enabled);
+}
+void WaterCannon_BackendVertexAlpha(bool enabled)
+{
+	// Set the original typed vertex-alpha state
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)(uintptr_t)enabled);
+}
+void WaterCannon_BackendFog(bool enabled)
+{
+	// Set the original typed fog state
+	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void *)(uintptr_t)enabled);
+}
+void WaterCannon_BackendRaster(void)
+{
+	// Select the original live water raster
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void *)gpWaterRaster);
+}
+void WaterCannon_BackendLittleTest(void)
+{
+	// Enter the original hook after the four vertices are generated
+	LittleTest();
+}
+bool WaterCannon_BackendTransform(void)
+{
+	// Retain the original buffer, count, null matrix and UV flag
+	return RwIm3DTransform(WaterCannonVertices, 4, NULL, rwIM3D_VERTEXUV) != NULL;
+}
+void WaterCannon_BackendRenderIndexed(uint16_t *indices)
+{
+	// Draw the original twelve indices as a triangle list
+	RwIm3DRenderIndexedPrimitive(rwPRIMTYPETRILIST, indices, 12);
+}
+void WaterCannon_BackendEnd(void)
+{
+	// Finish the original successful draw
+	RwIm3DEnd();
+}
+void WaterCannon_BackendPush(const char *name)
+{
+	// Preserve the original debug group boundary
+	PUSH_RENDERGROUP(name);
+}
+void WaterCannon_BackendPop(void)
+{
+	// Close the original debug group when enabled
 	POP_RENDERGROUP();
 }
+//- rouz edit (ChatGPT)

@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "Font.h"
 #include "PedType.h"
@@ -57,7 +59,10 @@ struct intro_script_rectangle
 	CRect m_sRect;
 	CRGBA m_sColor;
 	
-	intro_script_rectangle() { }
+	intro_script_rectangle() {
+        // Initialize the rectangle before the former empty color-constructor boundary
+        Rect_Init(&m_sRect);
+    }
 	~intro_script_rectangle() { }
 };
 
@@ -426,7 +431,7 @@ public:
 	static CRunningScript ScriptsArray[MAX_NUM_SCRIPTS];
 	static intro_text_line IntroTextLines[MAX_NUM_INTRO_TEXT_LINES];
 	static intro_script_rectangle IntroRectangles[MAX_NUM_INTRO_RECTANGLES];
-	static CSprite2d ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
+	static Sprite2d ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
 	static script_sphere_struct ScriptSphereArray[MAX_NUM_SCRIPT_SPHERES];
 	static tUsedObject UsedObjectArray[MAX_NUM_USED_OBJECTS];
 	static int32 MultiScriptArray[MAX_NUM_MISSION_SCRIPTS];
@@ -515,7 +520,7 @@ public:
 		strncpy(buf, (const char*)&CTheScripts::ScriptSpace[*pIp], KEY_LENGTH_IN_SCRIPT);
 	}
 	static wchar* GetTextByKeyFromScript(uint32* pIp) {
-		wchar* text = TheText.Get((const char*)&CTheScripts::ScriptSpace[*pIp]);
+		wchar* text = Text_Get(&TheText,(const char*)&CTheScripts::ScriptSpace[*pIp]);
 		*pIp += KEY_LENGTH_IN_SCRIPT;
 		return text;
 	}
@@ -637,3 +642,5 @@ enum {
 	MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART,
 };
 #endif
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

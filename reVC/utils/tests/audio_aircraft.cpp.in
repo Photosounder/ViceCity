@@ -1,0 +1,293 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include "@VEHICLE_TYPES@"
+#include "AudioGeometry.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using int16=int16_t;using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define ABS(x) ((x)<0?-(x):(x))
+#define Clamp2(v,c,r) ((v)>(c)?Min(v,c+r):Max(v,c-r))
+#define nil NULL
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+inline float Abs(float x) {
+    // Apply the original floating absolute value
+    return fabsf(x);
+}
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe original engine, drowning and bomb field queries
+    event(token);return (uint8_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating reads on Clang and GCC
+    event(token);
+#endif
+    // Keep floating game fields pure in the native MSVC fixture
+    return v;
+}};
+struct ShortValue {int32_t v;unsigned token;operator int16_t() const {
+    // Observe the original direct model-index read
+    event(token);return (int16_t)v;
+}};
+struct CVector:AudioSoundPosition {CVector() {} CVector(float a,float b,float c) {
+    // Supply the original coordinate-constructor behavior
+    x=a;y=b;z=c;
+}};
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Copy plain sound coordinates into the original vector type
+    return CVector(p->x,p->y,p->z);
+}
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &p) {
+    // Copy the original vector coordinates into the sound record
+    return {p.x,p.y,p.z};
+}
+struct CMatrix:AudioCameraMatrix {
+    void *attachment;uint8_t owned,isLocal;
+    CMatrix():attachment(NULL),owned(0),isLocal(1) {}
+    CMatrix &operator=(const CMatrix &rhs) {
+        // Model the original PC basis copy and PS2 attachment transfer before its update
+        (AudioCameraMatrix &)*this=rhs;
+#ifdef GTA_PS2
+        attachment=rhs.attachment;owned=rhs.owned;if(attachment)event(55);
+#endif
+        return *this;
+    }
+    ~CMatrix() {
+#ifdef GTA_PS2
+        // Model original local snapshot cleanup without unrelated global teardown callbacks
+        if(isLocal&&owned&&attachment)event(56);
+#endif
+    }
+
+    CVector GetUp() const {
+        // Return the original copied matrix up vector
+        return CVector(ux,uy,uz);
+    }
+    CVector GetForward() const {
+        // Return the original copied matrix forward vector
+        return CVector(fx,fy,fz);
+    }
+};
+static float DotProduct(const CVector &a,const CVector &b) {
+    // Execute the original three-term dot product
+    return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+static CVector operator*(const CMatrix &m,const CVector &v) {
+    // Execute the original complete matrix-vector multiply
+    return CVector(m.rx*v.x+m.fx*v.y+m.ux*v.z+m.px,m.ry*v.x+m.fy*v.y+m.uy*v.z+m.py,m.rz*v.x+m.fz*v.y+m.uz*v.z+m.pz);
+}
+enum {CAR_BOOT=1};
+struct CCam {enum {MODE_FIXED=1};ByteValue Mode;};
+struct Camera {CMatrix matrix;CCam Cams[1];uint8_t ActiveCam;const CMatrix &GetMatrix() const {
+    // Capture the original camera matrix query
+    event(31);return matrix;
+}};
+static Camera TheCamera;
+class CVehicle {public:ByteValue bEngineOn;FloatValue m_fGasPedal,m_fBrakePedal,m_fMovingSpeed,m_aWheelSpeed[4];ShortValue m_modelIndex;CMatrix matrix;AudioSoundPosition boot;
+    int16_t GetModelIndex() const {
+        // Read the original live model field
+        return m_modelIndex;
+    }
+    CMatrix &GetMatrix() {
+        // Query the original live vehicle basis and position
+        event(32);return matrix;
+    }
+    void GetComponentWorldPosition(int component,CVector &position) {
+        // Query the original captured automobile boot position
+        event(33);position=AudioSoundPosition_ToVector(&boot);(void)component;
+    }
+};
+using CBoat=CVehicle;using CAutomobile=CVehicle;
+static int16_t padQuery(unsigned token);
+class CPad {public:int16_t GetAccelerate() {
+    // Observe the original accelerator query
+    return padQuery(22);
+}int16_t GetBrake() {
+    // Observe the original brake query
+    return padQuery(23);
+}};
+static CPad Pads[1];
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessCarHeli(cVehicleParams &);void ProcessCesna(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CBoat cars[2];
+static unsigned seedValue,cases,callbacks,offsetReads,requests,padReads[2],layers[6],matrixUpdates,matrixReleases;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestAircraftC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash results and exact callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+static void bytes(const void *p,unsigned size) {
+    // Hash the same complete records with independently optimized observer code
+    digest=TestAircraftHash(digest,p,size);
+}
+static void observe() {
+    // Include complete owner and vehicle storage while normalizing parameter pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(&TheCamera,sizeof(TheCamera));
+}
+static void event(unsigned token) {
+    // Change later live vehicle reads after model selection without altering captured objects
+    ++callbacks;if(token==55)++matrixUpdates;if(token==56)++matrixReleases;value(token);observe();if(token==14&&(seedValue&512))params.m_pVehicle=&cars[1];
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *v) {
+    // Query the original live model
+    return v->GetModelIndex();
+}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Read the original live gas input
+    return v->m_fGasPedal;
+}
+extern "C" float AudioVehicleModelHost_BrakePedal(const CVehicle *v) {
+    // Read the original live brake input
+    return v->m_fBrakePedal;
+}
+extern "C" uint8_t AudioVehicleReverseHost_Engine(const CVehicle *v) {
+    // Read the captured automobile engine flag
+    return v->bEngineOn;
+}
+extern "C" float AudioAircraftHost_MovingSpeed(const CVehicle *v) {
+    // Read the captured seaplane rotor input
+    return v->m_fMovingSpeed;
+}
+extern "C" float AudioAircraftHost_WheelSpeed(const CVehicle *v) {
+    // Read the captured automobile rotor input
+    return v->m_aWheelSpeed[1];
+}
+extern "C" void AudioAircraftHost_Forward(CVehicle *v,AudioSoundPosition *out) {
+    // Copy the original live vehicle forward vector
+    *out=AudioSoundPosition_FromVector(v->GetMatrix().GetForward());
+}
+extern "C" void AudioAircraftHost_Boot(CVehicle *v,AudioSoundPosition *out) {
+    // Query the original captured automobile component
+    CVector p;v->GetComponentWorldPosition(CAR_BOOT,p);*out=AudioSoundPosition_FromVector(p);
+}
+extern "C" void AudioAircraftHost_Matrix(CVehicle *v,AudioCameraMatrix *out) {
+    // Copy the exact original vehicle matrix for the rear transform
+    *out=v->GetMatrix();
+}
+extern "C" uint8_t AudioAircraftHost_FixedCamera() {
+    // Query the original active camera mode
+    return TheCamera.Cams[TheCamera.ActiveCam].Mode==CCam::MODE_FIXED;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Copy the original camera matrix at its capture position
+    *out=TheCamera.GetMatrix();
+}
+#ifdef GTA_PS2
+extern "C" void AudioAircraftHost_CameraBegin(AudioCameraMatrix *out,void **attachment,uint8_t *owned) {
+    // Transfer the original snapshot assignment and its eventual cleanup into the C caller
+    CMatrix copy;copy=TheCamera.GetMatrix();*out=copy;*attachment=copy.attachment;*owned=copy.owned;copy.attachment=NULL;copy.owned=0;
+}
+extern "C" void AudioAircraftHost_CameraEnd(void *attachment,uint8_t owned) {
+    // Execute the original local matrix destructor condition at generator exit
+    if(owned&&attachment)event(56);
+}
+#endif
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Supply the shared C distance implementation's current camera coordinates
+    event(35);*out={TheCamera.matrix.px,TheCamera.matrix.py,TheCamera.matrix.pz};
+}
+extern "C" CVehicle *AudioPoliceHost_PlayerVehicle() {
+    // Select player or AI throttle while retaining the comparison's live parameter pointer
+    event(21);return seedValue%3==0?NULL:&cars[(seedValue/3)%2];
+}
+static CVehicle *FindPlayerVehicle() {
+    // Route the original player lookup through the same observer
+    return AudioPoliceHost_PlayerVehicle();
+}
+static int16_t padQuery(unsigned token) {
+    // Exercise conditional repeated queries with changing but valid controller values
+    event(token);unsigned i=token-22;const int16_t values[]={0,1,63,127,128,254,255};return values[(seedValue/5+padReads[i]++*3+i)%7];
+}
+extern "C" int16_t AudioVehicleModelHost_Accelerate() {
+    // Preserve the first pad query and any selected repeated query
+    return Pads[0].GetAccelerate();
+}
+extern "C" int16_t AudioVehicleModelHost_Brake() {
+    // Preserve the second pad query and any selected repeated query
+    return Pads[0].GetBrake();
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Observe far-rotor sample selection before changing later live vehicle and loop arguments
+    event(40);value(sample);if(seedValue&256){params.m_pVehicle=&cars[1];active->m_sQueueSample.m_nSampleIndex=SFX_HELI_1;}return sample*31+22050;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Alter the live loop-end argument after observing the start argument
+    ++offsetReads;event(41);value(sample);if(seedValue&128)active->m_sQueueSample.m_nSampleIndex=SFX_CESNA_REV;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the separate original live end-offset query
+    ++offsetReads;event(42);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Require every ordinary aircraft sound layer to produce request setup
+    ++requests;uint32_t counter=active->m_sQueueSample.m_nCounter;unsigned index=counter==88?0:counter==3?1:counter==12?2:counter==1?3:counter==2?4:5;++layers[index];event(43);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the shared request implementation's unused reflection dependency
+    return 0;
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Cover every rotor branch, camera orientation and distance gate without resetting smoothing history
+    seedValue=seed;padReads[0]=padReads[1]=0;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));memset(&TheCamera,0,sizeof(TheCamera));
+    const float pedals[]={0,0.001f,0.25f,0.5f,1};const float rotor[]={0,0.05f,0.0879f,0.088f,0.0881f,0.2199f,0.22f,0.2201f,0.3f};const int models[]={MI_SKIMMER,MI_HUNTER,MI_MAVERICK,MI_CADDY};
+    for(unsigned i=0;i<2;++i){cars[i].bEngineOn={uint32_t((seed/3+i)&1),10};cars[i].m_modelIndex={models[(seed/5+i)%4],14};cars[i].m_fGasPedal={pedals[(seed/7+i)%5],12};cars[i].m_fBrakePedal={pedals[(seed/11+i)%5],15};cars[i].m_fMovingSpeed={rotor[(seed/13+i)%9],16};for(unsigned j=0;j<4;++j)cars[i].m_aWheelSpeed[j]={rotor[(seed/17+i+j)%9],17+j};cars[i].matrix.rx=1;cars[i].matrix.fy=(seed/19+i)&1?1:-1;cars[i].matrix.uz=1;cars[i].matrix.px=3*i;cars[i].matrix.py=5*i;cars[i].boot={float((seed/23+i)%40),float(i),float(i*3)};}
+    TheCamera.matrix.attachment=(seed/61)&1?(void *)(uintptr_t)1:NULL;TheCamera.matrix.owned=(seed/67)&1;TheCamera.matrix.rx=1;TheCamera.matrix.fy=(seed/29)&1?1:-1;const float upValues[]={-1.0f,-0.5f,-0.0f,0.0f,0.5f,1.0f};TheCamera.matrix.uy=upValues[(seed/31)%6];TheCamera.matrix.uz=1;TheCamera.Cams[0].Mode={uint32_t((seed/37)&1),34};
+    const float distances[]={0,1,399,400,401,624,625,626,899,900,901,1599,1600,1601,8099,8100,8101,19599,19600,19601,39999,40000,40001,62499,62500,62501,NAN,INFINITY};params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/41)%28];params.m_bDistanceCalculated=(seed/43)%3;params.m_VehicleType=(seed/47)&1?VEHICLE_TYPE_HELI:VEHICLE_TYPE_CAR;
+#ifndef FIX_BUGS
+    // Keep the original uninitialized vanilla rear-position branch outside its read domain
+    if(params.m_VehicleType==VEHICLE_TYPE_HELI&&params.m_fDistance<19600)params.m_VehicleType=VEHICLE_TYPE_CAR;
+#endif
+    // Seed owner distance and scratch fields to observe partial writes and position restoration
+    active->m_nActiveSamples=1+(seed/53)%8;active->m_sQueueSample.m_fDistance=(seed/59)%(kind==0?251:201);active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=1;
+#ifndef GTA_PS2
+    // Seed desktop offsets before live backend queries
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Seed random storage to detect unintended changes
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*(i+1)%10001)-5000;
+    if(!(params.m_fDistance<(kind==0?62500.0f:40000.0f)))params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare repeated complete generators and all three smoothing histories on alternating owners
+    for(unsigned seed=0;seed<8192;++seed)for(unsigned kind=0;kind<2;++kind){prepare(seed,kind);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+#ifdef AUDIO_REFLECTIONS
+    // Require long-distance, front, starting, propeller, rear and Cessna request setup
+    for(unsigned i=0;i<6;++i)if(!layers[i])return 2;
+#endif
+#ifndef GTA_PS2
+    // Require the live backend loop-offset path
+    if(!offsetReads)return 3;
+#endif
+#ifdef GTA_PS2
+    // Require both PS2 matrix assignment and destructor side effects
+    if(!matrixUpdates||!matrixReleases)return 4;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

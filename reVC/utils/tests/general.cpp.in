@@ -1,0 +1,93 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "shape.h"
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef int32_t int32;
+static uint64_t digest=UINT64_C(1469598103934665603);
+static uint64_t groups,reads,writes;
+static int injected=-1;
+static void word(uint32_t value) {
+    // Record exact scalar values in a deterministic comparison hash
+    digest^=value;digest*=UINT64_C(1099511628211);
+}
+static void floating(float value) {
+    // Record float bits including signed zero and NaN payloads
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void require(bool value,const char *message) {
+    // Fail immediately when an independent contract check does not hold
+    if(!value){fprintf(stderr,"%s\n",message);exit(1);}
+}
+static float real(uint32_t bits) {
+    // Construct boundary inputs without aliasing or floating conversions
+    float result;memcpy(&result,&bits,4);return result;
+}
+extern "C" {
+@RANDOM@
+}
+@OWNER@
+@CALLERS@
+
+int main(void)
+{
+    // Check the original string return convention and asymmetric prefix behavior
+    require(!Test_faststrcmp("same","same"),"Equal string");
+    require(Test_faststrcmp("a","ab"),"Unequal length");
+    require(!Test_faststrncmp("a","ab",20),"Short first prefix");
+    require(!Test_faststrncmp("x","y",0),"Zero count");
+    require(!Test_faststricmp("AbC","aBc"),"Case fold");
+    // Check endpoint masking, truncation toward zero and one draw for equal bounds
+    injected=1;require(Test_GetRandomNumberInRangeInt(-2,1)==-1,"Negative range truncation");
+    injected=0x7fffffff;require(Test_GetRandomNumber()==MYRAND_MAX,"Random mask");
+    uint64_t prior=reads;injected=42;require(Test_GetRandomNumberInRangeFloat(5.f,5.f)==5.f && reads==prior+1,"Equal range consumes draw");
+    // Check quadratic failure leaves both outputs unchanged and shared output is written in order
+    float first=17.f,second=-23.f;
+    require(!Test_SolveQuadratic(1.f,0.f,1.f,&first,&second) && first==17.f && second==-23.f,"Quadratic failure outputs");
+    require(Test_SolveQuadratic(1.f,-3.f,2.f,&first,&first) && first==1.f,"Quadratic alias order");
+    require(Test_GetATanOfXY(0.f,-0.f)==0.f,"Zero angle");
+    require(Test_LimitAngle(180.f)==-180.f,"Degree boundary");
+    require(Test_LimitRadianAngle(PI)==-PI,"Radian boundary");
+    // Compare every math helper over axes, quadrant boundaries, finite extremes and NaNs
+    const uint32_t special[]={0,0x80000000,0x00000001,0x80000001,0x3f800000,0xbf800000,0x7f800000,0xff800000,0x7fc00000,0x00800000,0x80800000,0x7f7fffff,0xff7fffff};
+    for(unsigned i=0;i<sizeof(special)/sizeof(special[0]);++i){
+        float x=real(special[i]);floating(Test_LimitRadianAngle(x));
+        if(isfinite(x) && fabsf(x)<100000.f)floating(Test_LimitAngle(x));
+        for(unsigned j=0;j<sizeof(special)/sizeof(special[0]);++j){
+            float y=real(special[j]);floating(Test_GetATanOfXY(x,y));
+            floating(Test_GetRadianAngleBetweenPoints(x,y,0.f,0.f));
+            floating(Test_GetAngleBetweenPoints(x,y,0.f,0.f));++groups;
+        }
+    }
+    // Compare all strings and counts using valid ASCII bytes for the original ctype contract
+    const char *strings[]={"","a","ab","abc","A","Ab","ABC","aZ0","AZ0","  !","\177"};
+    for(const char *a:strings)for(const char *b:strings){
+        word(Test_faststrcmp(a,b));word(Test_faststricmp(a,b));
+        for(unsigned count=0;count<20;++count)word(Test_faststrncmp(a,b,count));++groups;
+    }
+    // Compare seeded histories and all scalar helpers without changing undefined input contracts
+    for(uint32_t seed=0;seed<256;++seed){
+        Test_SetRandomSeed((int32_t)(seed*UINT32_C(16777619)));word((uint32_t)myrand_seed);word((uint32_t)((uint64_t)myrand_seed>>32));
+        for(unsigned pass=0;pass<512;++pass){
+            float x=(int32_t)((seed*37+pass*13)%8193)-4096.f;
+            float y=(int32_t)((seed*41+pass*29)%8193)-4096.f;
+            floating(Test_GetATanOfXY(x,y));floating(Test_LimitAngle(x));floating(Test_LimitRadianAngle(y));
+            floating(Test_GetRadianAngleBetweenPoints(x,y,y,x));floating(Test_GetAngleBetweenPoints(x,y,y,x));
+            word(Test_GetNodeHeadingFromVector(x,y));
+            first=real(UINT32_C(0x80000000));second=43.f;
+            float a=(int)(pass%7)-3.f,b=x/64.f,c=y/64.f;
+            word(Test_SolveQuadratic(a,b,c,&first,&second));floating(first);floating(second);
+            first=71.f;word(Test_SolveQuadratic(a,b,c,&first,&first));floating(first);
+            word(Test_GetRandomNumber());word(Test_GetRandomTrueFalse());
+            floating(Test_GetRandomNumberInRangeFloat(x/33.f,y/17.f));
+            word(Test_GetRandomNumberInRangeInt((int32_t)x*128,(int32_t)y*64));
+            floating(Test_GetRandomNumberInRangeFloat(17.f,17.f));word(Test_GetRandomNumberInRangeInt(-7,-7));
+            word((uint32_t)myrand_seed);word((uint32_t)((uint64_t)myrand_seed>>32));++groups;
+        }
+    }
+    printf("%016llx groups=%llu reads=%llu seeds=%llu\n",(unsigned long long)digest,(unsigned long long)groups,(unsigned long long)reads,(unsigned long long)writes);
+}

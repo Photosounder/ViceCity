@@ -1,0 +1,35 @@
+static unsigned coverage[SD_RenderVertexBuffer+1];
+static Sprite2dResult run(unsigned operation,Sprite2dArgs *args)
+{
+    // Compare complete results and private state without inspecting an original object after destruction
+    ++commands;++coverage[operation];Sprite2dResult result;TestSprite2d(operation,args,&result);bytes(&result.flag,sizeof(result.flag));Sprite2dState state;TestSprite2dState(&state);bytes(&state.reciprocal,3*sizeof(float));bytes(&state.vertices,sizeof(state.vertices));bytes(&state.indices,sizeof(state.indices));need(state.vertices>=0&&state.vertices<TEMPBUFFERVERTSIZE);need(state.indices>=0&&state.indices<TEMPBUFFERINDEXSIZE);verticesValue((RwIm2DVertex*)state.immediate,8);verticesValue(TempVertexBuffer.im2d,TEMPBUFFERVERTSIZE);bytes(TempBufferRenderIndexList,sizeof(TempBufferRenderIndexList));bytes(states,sizeof(states));if(operation!=SD_Deinit){void *texture;TestSprite2dInstance(args->self,&texture);uint32_t id=identity(texture);bytes(&id,sizeof(id));}if(operation==SD_GetVertices)need(result.pointer==state.immediate);return result;
+}
+int main(void)
+{
+    // Build actual SDK inputs while leaving all original rendering and resource policy in the complete producers
+    alignas(16) unsigned char instance[64];memset(instance,0xA5,sizeof(instance));CRect rect=Rect_Make(17,23,190,127);CRGBA colours[4]={CRGBA(17,61,103,255),CRGBA(54,98,142,201),CRGBA(91,135,179,147),CRGBA(128,172,216,93)};RwIm2DVertex external[8]={};float positions[16],uvs[16];for(unsigned i=0;i<16;++i){positions[i]=13.5f*i-9.25f;uvs[i]=0.0625f*i;}Sprite2dArgs args={};args.self=instance;args.rect=&rect;args.vertices=external;args.positions=positions;args.uvs=uvs;args.count=4;args.address=7;args.name="first";args.mask="mask";
+    for(unsigned i=0;i<24;++i)args.f[i]=3.5f*i+0.125f;
+    for(unsigned i=0;i<4;++i){
+        // Borrow four independent live native colour objects in the C caller
+        args.colourOwner[i]=&colours[i];args.colours[i][0]=&colours[i].r;args.colours[i][1]=&colours[i].g;args.colours[i][2]=&colours[i].b;args.colours[i][3]=&colours[i].a;
+    }
+    nestedArgs=args;nestedArgs.f[DF_x1]+=47;run(SD_Init,&args);run(SD_GetVertices,&args);run(SD_SetRecipNearClip,&args);run(SD_SetRenderState,&args);run(SD_SetAddressing,&args);run(SD_Delete,&args);run(SD_InitPerFrame,&args);run(SD_SetTexture,&args);run(SD_SetAddressing,&args);run(SD_SetRenderState,&args);run(SD_SetTextureMasked,&args);args.name=NULL;run(SD_SetTexture,&args);args.name="failed";failRead=reads+1;run(SD_SetTextureMasked,&args);failRead=0;args.name="";run(SD_SetTexture,&args);args.name="final";run(SD_SetTextureMasked,&args);
+    for(unsigned operation=SD_DrawXYWH;operation<=SD_SetExternalVertices;++operation){
+        // Exercise every draw and vertex-building overload without adding bounds or resource recovery policy
+        run(operation,&args);if(operation==SD_SetArrayVertices||operation==SD_SetMaskVertices){args.count=0;run(operation,&args);args.count=-1;run(operation,&args);args.count=8;run(operation,&args);args.count=4;}
+    }
+    for(unsigned operation : {SD_SetRectVertices,SD_SetRectUVVertices,SD_SetQuadVertices,SD_SetExternalVertices}){
+        // Verify late rectangle and colour reads across intervening SDK vertex setters
+        mutateColours=colours;mutateRect=&rect;mutateAt=setters+1;run(operation,&args);mutateAt=setters+9;run(operation,&args);mutateAt=0;mutateColours=NULL;mutateRect=NULL;
+    }
+    for(unsigned operation : {SD_DrawSolidRect,SD_DrawFourColourRect,SD_DrawRectXLU,SD_DrawAnyRect,SD_Draw2DPolygon}){
+        // Retain every original blend shade alpha and depth-state choice
+        run(operation,&args);colours[0].a=255;run(operation,&args);colours[0].a=67;run(operation,&args);
+    }
+    reenterDraw=true;run(SD_DrawQuad,&args);run(SD_IsVertexBufferFull,&args);
+    for(unsigned i=0;i<207;++i){
+        // Cross both buffer flush boundaries and retain index order and the original reset timing
+        args.f[DF_u0]=(float)i*0.015625f;run(SD_AddToBuffer,&args);if(i==13)run(SD_InitPerFrame,&args);
+    }
+    run(SD_RenderVertexBuffer,&args);run(SD_RenderVertexBuffer,&args);run(SD_IsVertexBufferFull,&args);run(SD_SetRecipNearClip,&args);run(SD_Delete,&args);run(SD_Delete,&args);args.name="destructor";run(SD_SetTexture,&args);run(SD_Deinit,&args);for(unsigned i=0;i<=SD_RenderVertexBuffer;++i)need(coverage[i]>0);need(reads==destroys+1&&reentries==1&&mutations==8);printf("commands=%u checks=%u events=%u reads=%u destroys=%u failures=1 draws=%u reentries=%u mutations=%u hash=%016llx\n",commands,checks,events,reads,destroys,draws,reentries,mutations,(unsigned long long)hashValue);return 0;
+}

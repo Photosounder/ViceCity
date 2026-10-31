@@ -1,27 +1,26 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CConsole
-{
-	enum
-	{
-		MAX_LINES = 8, // BUG? only shows 7
-		MAX_STR_LEN = 40,
-	};
-
-	uint8 m_nLineCount;
-	uint8 m_nCurrentLine;
-	wchar Buffers[MAX_LINES][MAX_STR_LEN];
-	uint32 m_aTimer[MAX_LINES];
-	uint8 m_aRed[MAX_LINES];
-	uint8 m_aGreen[MAX_LINES];
-	uint8 m_aBlue[MAX_LINES];
-public:
-	void AddLine(char *s, uint8 r, uint8 g, uint8 b);
-	void AddOneLine(char *s, uint8 r, uint8 g, uint8 b);
-	void Display();
-	void Init() { m_nCurrentLine = 0; m_nLineCount = 0; }
-};
-
-extern CConsole TheConsole;
-
-void cprintf(char*, ...);
+#include <stdint.h>
+enum { CONSOLE_MAX_LINES=8,CONSOLE_MAX_STR_LEN=40 };
+typedef struct Console {
+    uint8_t m_nLineCount;
+    uint8_t m_nCurrentLine;
+    uint16_t Buffers[CONSOLE_MAX_LINES][CONSOLE_MAX_STR_LEN];
+    uint32_t m_aTimer[CONSOLE_MAX_LINES];
+    uint8_t m_aRed[CONSOLE_MAX_LINES];
+    uint8_t m_aGreen[CONSOLE_MAX_LINES];
+    uint8_t m_aBlue[CONSOLE_MAX_LINES];
+} Console;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern Console TheConsole;
+void Console_Init(Console *console);
+void Console_AddLine(Console *console,char *s,uint8_t r,uint8_t g,uint8_t b);
+void Console_AddOneLine(Console *console,char *s,uint8_t r,uint8_t g,uint8_t b);
+void Console_Display(Console *console);
+void cprintf(char *format,...);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

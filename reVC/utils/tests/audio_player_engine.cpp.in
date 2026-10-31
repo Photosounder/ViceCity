@@ -1,0 +1,289 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include "@VEHICLE_TYPES@"
+#include "@WHEEL_INDICES@"
+#include "@WHEEL_STATE@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using int32=int32_t;using int16=int16_t;using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+#define Clamp(v,low,high) ((v)<(low)?(low):(v)>(high)?(high):(v))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe the original audio backend operation
+    event(token);return (uint8_t)v;}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating field reads on Clang and GCC
+    event(token);
+#endif
+    // Preserve plain floating fields in the native MSVC fixture
+    return v;
+}};
+struct CVector {float x,y,z;};
+class CVehicle {public:int32_t model;FloatValue m_fGasPedal,m_fBrakePedal;ByteValue m_nCurrentGear,bIsHandbrakeOn,bIsDrowning;uint32_t bAudioChangingGear;struct {float x,y;FloatValue z;} m_vecMoveSpeed;
+    int16_t GetModelIndex() const {
+        // Observe each original model lookup and its short circuit
+        event(10);return (int16_t)model;
+    }
+};
+class CAutomobile:public CVehicle {public:ByteValue m_nDriveWheelsOnGround,m_nDriveWheelsOnGroundPrev,bStuckInSand;enum tWheelState m_aWheelState[4];float m_fGasPedalAudio;FloatValue m_fVelocityChangeForAudio;};
+class CBike:public CVehicle {public:ByteValue m_nDriveWheelsOnGround,m_nDriveWheelsOnGroundPrev,bExtraSpeed;enum tWheelState m_aWheelState[2];float m_fGasPedalAudio;FloatValue m_fVelocityChangeForAudio;};
+class cTransmission {public:ByteValue nNumberOfGears,nDriveType;FloatValue fMaxVelocity,fMaxReverseVelocity;};
+struct Settings {uint32_t m_nBank;};static Settings aVehicleSettings[20];
+struct cAudioManager {
+@FIELDS@
+    void ProcessPlayersVehicleEngine(cVehicleParams &,CVehicle *);
+    void PlayerJustGotInCar();void PlayerJustLeftCar();
+};
+#ifndef GTA_PS2
+#define CHANNEL_PLAYER_VEHICLE_ENGINE m_nActiveSamples
+#endif
+extern "C" { @ENTRY_STORAGE@ }
+static cAudioManager owners[2],*active;static cVehicleParams params;static CAutomobile cars[2];static CBike bikes[2];static CVehicle *vehicles[2];static cTransmission transmission;
+struct Channel {uint32_t used,sample,bank,volume,frequency,pan,loops,loopStart;int32_t loopEnd;uint32_t reverb;float x,y,z,maxDistance,minDistance;};static Channel channels[64];
+static unsigned seedValue,cases,callbacks,currentTime,accelerator,brake,exiting,replay,initializations,failures,starts,stops,geometries,unknowns,sampleRequests;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioVehiclePlayer_AddSample(cAudioManager *,uint8_t,uint32_t,uint32_t,uint8_t,uint8_t,uint8_t);
+extern "C" void TestPlayerEngineC(cAudioManager *,cVehicleParams *,CVehicle *,unsigned);
+static void value(uint32_t v) {
+    // Hash state and callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized records without type punning
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4) {uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Normalize original parameter aliases and include every owner and backend field
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==vehicles[0]?1:2);copy.m_pTransmission=(cTransmission *)(uintptr_t)1;
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(bikes,sizeof(bikes));bytes(&transmission,sizeof(transmission));bytes(channels,sizeof(channels));value(currentTime);value(bPlayerJustEnteredCar);
+}
+static void event(unsigned token) {
+    // Preserve complete state at every observable game and audio access point
+    ++callbacks;value(token);observe();
+}
+class CTimer {public:static uint32_t GetTimeInMilliseconds() {
+    // Exercise first-call initialization, repeated time reads and unsigned wrap
+    event(30);uint32_t result=currentTime;currentTime+=seedValue%2?3:6200;return result;
+}static float GetTimeScale() {
+    // Exercise the original frequency scaling expression
+    event(32);return seedValue%2?0.5f:1.5f;
+}};
+class CReplay {public:static bool IsPlayingBack() {
+    // Preserve replay lookup before the optional exiting-ped query
+    event(31);return replay!=0;
+}};
+enum {PED_EXIT_CAR=50};
+class CPlayerPed {public:int32_t GetPedState() {
+    // Observe the exiting-ped state after the player lookup
+    event(34);return exiting?PED_EXIT_CAR:0;
+}};static CPlayerPed ped;
+static CPlayerPed *FindPlayerPed() {
+    // Observe the original player lookup on the fixed replay branch
+    event(33);return &ped;
+}
+class CPad {public:int16_t GetAccelerate() {
+    // Read the original primary accelerator after the replay branch
+    event(35);return (int16_t)accelerator;
+}int16_t GetBrake() {
+    // Read the original primary brake after the accelerator
+    event(36);return (int16_t)brake;
+}};static CPad Pads[1];
+static void debug(const char *,int32_t type) {
+    // Observe unsupported types quietly
+    ++unknowns;event(37);value(type);
+}
+static CVector AudioSoundPosition_ToVector(const AudioSoundPosition *p) {
+    // Copy the original scratch position before the camera callback
+    return {p->x,p->y,p->z};
+}
+static void AudioGeometry_TranslateVector(const CVector *p,CVector *out) {
+    // Use the same actual C geometry implementation in the original fixture
+    AudioSoundPosition input={p->x,p->y,p->z},output;AudioGeometry_Translate(&input,&output);*out={output.x,output.y,output.z};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Mutate the scratch position after its copied value has been captured
+    ++geometries;event(38);*matrix={1,0,0,0,1,0,0,0,1,1,2,3};active->m_sQueueSample.m_vecPos.x+=0.25f;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *p) {
+    // Supply the unused distance helper dependency
+    *p={0,0,0};
+}
+extern "C" uint8_t AudioEnvironmentHost_Replay() {
+    // Preserve the original field or game operation
+    return CReplay::IsPlayingBack();}
+extern "C" float AudioPoliceHost_TimeScale() {
+    // Preserve the original field or game operation
+    return CTimer::GetTimeScale();}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->GetModelIndex();}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->m_fGasPedal;}
+extern "C" float AudioVehicleModelHost_BrakePedal(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->m_fBrakePedal;}
+extern "C" uint8_t AudioVehicleReverseHost_Gear(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->m_nCurrentGear;}
+extern "C" uint8_t AudioVehicleEngineHost_Handbrake(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->bIsHandbrakeOn;}
+extern "C" uint8_t AudioVehicleModelHost_Drowning(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return v->bIsDrowning;}
+extern "C" int16_t AudioVehicleModelHost_Accelerate() {
+    // Preserve the original field or game operation
+    return Pads[0].GetAccelerate();}
+extern "C" int16_t AudioVehicleModelHost_Brake() {
+    // Preserve the original field or game operation
+    return Pads[0].GetBrake();}
+extern "C" uint8_t AudioVehicleReverseHost_DriveWheels(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((const CAutomobile *)v)->m_nDriveWheelsOnGround;}
+extern "C" uint8_t AudioVehicleReverseHost_PreviousDriveWheels(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((const CAutomobile *)v)->m_nDriveWheelsOnGroundPrev;}
+extern "C" float *AudioVehicleReverseHost_GasAudio(CVehicle *v) {
+    // Preserve the original field or game operation
+    return &((CAutomobile *)v)->m_fGasPedalAudio;}
+extern "C" uint8_t AudioVehicleEngineHost_BikeWheels(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((const CBike *)v)->m_nDriveWheelsOnGround;}
+extern "C" uint8_t AudioVehicleEngineHost_BikePreviousWheels(const CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((const CBike *)v)->m_nDriveWheelsOnGroundPrev;}
+extern "C" float *AudioVehicleEngineHost_BikeGasAudio(CVehicle *v) {
+    // Preserve the original field or game operation
+    return &((CBike *)v)->m_fGasPedalAudio;}
+extern "C" enum tWheelState *AudioVehicleEngineHost_CarStates(CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((CAutomobile *)v)->m_aWheelState;}
+extern "C" enum tWheelState *AudioVehicleEngineHost_BikeStates(CVehicle *v) {
+    // Preserve the original field or game operation
+    return ((CBike *)v)->m_aWheelState;}
+extern "C" int8_t AudioVehicleEngineHost_GearCount(const cTransmission *t) {
+    // Preserve the original field or game operation
+    return (int8_t)(uint8_t)t->nNumberOfGears;}
+extern "C" char AudioVehicleEngineHost_DriveType(const cTransmission *t) {
+    // Preserve the original field or game operation
+    return (char)(uint8_t)t->nDriveType;}
+extern "C" float AudioVehicleRoadHost_MaxVelocity(const cTransmission *t) {
+    // Preserve the original field or game operation
+    return t->fMaxVelocity;}
+extern "C" float AudioVehicleReverseHost_MaxReverse(const cTransmission *t) {
+    // Preserve the original field or game operation
+    return t->fMaxReverseVelocity;}
+extern "C" uint8_t AudioVehicleEngineHost_Bank(int32_t index) {
+    // Preserve the original field or game operation
+    return (uint8_t)aVehicleSettings[index].m_nBank;}
+extern "C" void AudioVehicleEngineHost_Unknown(int32_t type) {
+    // Preserve the original unsupported-type diagnostic
+    debug("",type);}
+extern "C" uint8_t SampleManager_GetChannelUsedFlag(cSampleManager *,uint32_t c) {
+    // Observe the original audio backend operation
+    event(40);value(c);return (uint8_t)channels[c].used;}
+extern "C" uint8_t SampleManager_InitialiseChannel(cSampleManager *,uint32_t c,uint32_t sample,uint8_t bank) {
+    // Observe successful and failed initialization after the changing-gear mutation
+    ++initializations;event(41);value(c);value(sample);value(bank);channels[c].sample=sample;channels[c].bank=bank;if(seedValue%5==0){++failures;return 0;}return 1;
+}
+extern "C" void SampleManager_StopChannel(cSampleManager *,uint32_t c) {
+    // Observe channel stop state
+    ++stops;event(42);value(c);channels[c].used=0;}
+extern "C" void SampleManager_StartChannel(cSampleManager *,uint32_t c) {
+    // Observe channel start state
+    ++starts;event(43);value(c);channels[c].used=1;}
+extern "C" void SampleManager_SetChannelFrequency(cSampleManager *,uint32_t c,uint32_t v) {
+    // Observe the original audio backend operation
+    event(44);value(c);value(v);channels[c].frequency=v;}
+extern "C" void SampleManager_SetChannelVolume(cSampleManager *,uint32_t c,uint32_t v) {
+    // Observe the original audio backend operation
+    event(45);value(c);value(v);channels[c].volume=v;}
+extern "C" void SampleManager_SetChannelEmittingVolume(cSampleManager *,uint32_t c,uint32_t v) {
+    // Observe the original audio backend operation
+    event(46);value(c);value(v);channels[c].volume=v;}
+extern "C" void SampleManager_SetChannelPan(cSampleManager *,uint32_t c,uint32_t v) {
+    // Observe the original audio backend operation
+    event(47);value(c);value(v);channels[c].pan=v;}
+extern "C" void SampleManager_SetChannelLoopCount(cSampleManager *,uint32_t c,uint32_t v) {
+    // Observe the original audio backend operation
+    event(48);value(c);value(v);channels[c].loops=v;}
+extern "C" void SampleManager_SetChannelLoopPoints(cSampleManager *,uint32_t c,uint32_t start,int32_t end) {
+    // Observe the original audio backend operation
+    event(49);value(c);value(start);value(end);channels[c].loopStart=start;channels[c].loopEnd=end;}
+extern "C" void SampleManager_SetChannelReverbFlag(cSampleManager *,uint32_t c,uint8_t v) {
+    // Observe the original audio backend operation
+    event(50);value(c);value(v);channels[c].reverb=v;}
+extern "C" void SampleManager_SetChannel3DPosition(cSampleManager *,uint32_t c,float x,float y,float z) {
+    // Observe the original audio backend operation
+    event(51);value(c);channels[c].x=x;channels[c].y=y;channels[c].z=z;}
+extern "C" void SampleManager_SetChannel3DDistances(cSampleManager *,uint32_t c,float max,float min) {
+    // Observe the original audio backend operation
+    event(52);value(c);channels[c].maxDistance=max;channels[c].minDistance=min;}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Exercise live loop arguments through the actual C player sample helper
+    event(53);value(sample);if(seedValue&512)active->m_sQueueSample.m_nSampleIndex=SFX_CAR_IDLE_5;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the original audio backend operation
+    event(54);value(sample);return sample*5+100;}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C sample insertion
+    ++sampleRequests;event(55);return seedValue&1;}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Preserve the original field or game operation
+    return 0;}
+extern "C" {
+@HOST@
+}
+@METHODS@
+template<class T> static void prepareVehicle(T &v,unsigned seed) {
+    // Populate all vehicle fields with defined numeric inputs and initialized padding
+    memset(&v,0,sizeof(v));const int models[]={MI_LANDSTAL,MI_PIZZABOY,MI_FAGGIO};v.model=models[(seed/3)%3];
+    v.m_fGasPedal={(float)((seed/5)%5)*0.3f-0.1f,11};v.m_fBrakePedal={(float)((seed/7)%4)*0.4f-0.1f,12};v.m_nCurrentGear={(seed/11)%6,13};v.bIsHandbrakeOn={(seed/13)%2,14};v.bIsDrowning={(seed/17)%2,15};v.m_vecMoveSpeed.z={(float)((int)(seed%3)-1)*0.01f,16};
+    v.m_nDriveWheelsOnGround={(seed/19)%3,17};v.m_nDriveWheelsOnGroundPrev={(seed/23)%3,18};v.m_fGasPedalAudio=(seed%5)*0.2f;v.m_fVelocityChangeForAudio={(seed/29)%2?0.0f:0.5f,19};
+    for(unsigned w=0;w<sizeof(v.m_aWheelState)/sizeof(v.m_aWheelState[0]);++w)v.m_aWheelState[w]=(enum tWheelState)((seed/31+w)%4);
+}
+static void prepare(unsigned seed) {
+    // Keep shared engine history across repeated calls while alternating the explicit owner
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(&transmission,0,sizeof(transmission));memset(channels,0,sizeof(channels));
+    bool bike=(seed/37)%2;for(unsigned i=0;i<2;++i) {prepareVehicle(cars[i],seed+i);prepareVehicle(bikes[i],seed+i);cars[i].bStuckInSand={(seed/41)%2,20};bikes[i].bExtraSpeed={(seed/43)%2,21};vehicles[i]=bike?(CVehicle *)&bikes[i]:(CVehicle *)&cars[i];}
+    const char drives[]={'4','F','R','X'};transmission.nNumberOfGears={5,22};transmission.nDriveType={(unsigned)drives[(seed/47)%4],23};transmission.fMaxVelocity={100.0f,24};transmission.fMaxReverseVelocity={-100.0f,25};
+    for(unsigned i=0;i<20;++i)aVehicleSettings[i].m_nBank=CAR_SFX_BANKS_OFFSET+i;
+    const float velocities[]={-0.5f,-0.0011f,-0.001f,-0.0f,0.0f,0.001f,0.01f,0.5f,50.0f};const unsigned controls[]={0,1,149,150,219,220,255};
+    accelerator=controls[(seed/53)%7];brake=(seed/59)%2?0:128;exiting=(seed/61)%3==0;replay=(seed/67)%3==0;
+    params.m_VehicleType=seed%71==0?99:bike?VEHICLE_TYPE_BIKE:VEHICLE_TYPE_CAR;params.m_pVehicle=vehicles[0];params.m_pTransmission=&transmission;params.m_nIndex=(seed/73)%20;params.m_fVelocityChange=velocities[(seed/79)%9];
+    active->m_bIsInitialised=seed%7!=0;active->m_bIsSurround=(seed/83)%2;active->m_bDynamicAcousticModelingStatus=(seed/89)%2;active->m_nActiveSamples=27;active->m_sQueueSample.m_fDistance=seed%51;active->m_sQueueSample.m_vecPos={1,2,3};
+    for(unsigned c=0;c<64;++c)channels[c].used=(seed/97)%2;
+    if(seed%101==0)currentTime=0xFFFFF000;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Exercise entry and exit notifications plus shared engine state across both owners
+    for(unsigned seed=0;seed<2048;++seed) {prepare(seed);if(seed%5==0){@ENTER@;observe();}@LEFT@;observe();
+        for(unsigned call=0;call<4;++call) {@RUN@;observe();++cases;accelerator=call%2?0:accelerator;}
+    }
+    // Require channel initialization, failure, playback, traction and geometry paths
+    if(!initializations||!failures||!starts||!stops||!geometries||!unknowns)return 2;
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

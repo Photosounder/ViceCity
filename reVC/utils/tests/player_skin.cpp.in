@@ -1,0 +1,436 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <initializer_list>
+#include "owners.h"
+#include "caller.h"
+char gString[256];GlobalScene Scene;CPlayerInfo CWorld::Players[2];
+extern "C" {uint32_t Timer_pauseTimeMs;}
+static RpClump clumps[4];static RwTexture textures[4];static RwRaster rasters[4];static RwImage images[4];static RwFrame frames[4];static RwCamera cameras[2];static RwTexDictionary dictionaries[8];static TxdDef slots[8];static RwMatrix matrices[4];
+class FixtureStream:public RwStream {public:
+uint32 write8(const void *,uint32) override { /* Reject unused stream payload dispatch */ abort(); }
+uint32 read8(void *,uint32) override { /* Reject unused stream payload dispatch */ abort(); }
+void seek(int32,int32) override { /* Reject unused stream positioning */ abort(); }
+uint32 tell(void) override { /* Reject unused stream positioning */ abort(); }
+bool eof(void) override { /* Reject unused stream status dispatch */ abort(); }
+};static FixtureStream stream;
+static DirectoryInfo entries[4];static int entryCount,readIndex,imageCount,currentDictionary,storedDictionary,hook;static bool triggered,textureFound,imageFound,chunkFound,readClumpNull,nestedSkin;
+static uint8_t buffer[16384];static uint32_t allocated;static RwMemory *borrowedMemory;static int createdTexture;static char names[4][64];static int filters[4],references[8];static RwRGBAReal ambient;static char *mutableName;
+static unsigned states,calls,finds,loads,textureGets,begins,ends,renders,initializations,shutdowns,allocations,frees,opens,closes,reads;
+static uint64_t hash=1469598103934665603ULL;
+static void require(bool value)
+{
+    // Stop quietly if the original or C execution violates a valid owner contract
+    if(!value){fprintf(stderr,"Player-skin invariant failed at state %u call %u hook %d\n",states,calls,hook);abort();}
+}
+static void word(uint32_t value)
+{
+    // Compare exact scalar values in a stable byte order
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve every float bit including preview rotation and saved FOV
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+template<class T>static int identity(const T *value,const T *array,int count)
+{
+    // Normalize actual typed native object identities without depending on their platform stride
+    if(!value)return -1;for(int i=0;i<count;i++)if(value==&array[i])return i;require(false);return -2;
+}
+static void text(const char *value)
+{
+    // Observe complete live names and paths at the original external-call boundaries
+    if(!value){word(0xffffffffU);return;}while(*value)word((uint8_t)*value++);word(0);
+}
+static void vector(const RwV3d &value)
+{
+    // Compare each native vector component without a C-to-native representation cast
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void matrix(const RwMatrix &value)
+{
+    // Compare all defined native matrix coefficients while excluding unrelated padding
+    vector(value.right);vector(value.up);vector(value.at);vector(value.pos);
+}
+static void canonical(void)
+{
+    // Read the actual controller globals rather than surrogate state in the native simulator
+    word(TestSkin_Slot());word(identity((RpClump*)TestSkin_Clump(),clumps,4));floating(*TestSkin_OldFov());floating(Draw_GetFOV());word(Timer_pauseTimeMs);
+}
+static void event(unsigned code)
+{
+    // Retain every external call and its exact placement among canonical state writes
+    calls++;word(code);canonical();
+}
+static void snapshot(void)
+{
+    // Observe canonical state and every live owner-side field after a complete public operation
+    states++;word(states);canonical();word(imageCount);word(currentDictionary);word(storedDictionary);word(allocated);text(gString);for(int i=0;i<4;i++){text(names[i]);word(filters[i]);matrix(matrices[i]);}for(int i=0;i<8;i++)word(references[i]);floating(ambient.red);floating(ambient.green);floating(ambient.blue);floating(ambient.alpha);
+}
+static void mutation(int point)
+{
+    // Apply mutations only during native operations already called by the original implementation
+    if(triggered)return;
+    if(hook==1 && point==1){
+        // Read the live slot again after dictionary creation changes its owner
+        triggered=true;TestSkin_SetSlot(3);
+    }else if(hook==2 && point==2){
+        // Keep the original borrowed texture name live after the initial texture lookup
+        triggered=true;require(mutableName!=NULL);strcpy(mutableName,"changed");TestSkin_SetSlot(4);
+    }else if(hook==3 && point==3){
+        // Keep the same actual native memory object through its open and close calls
+        triggered=true;require(borrowedMemory!=NULL);borrowedMemory->start+=8;borrowedMemory->length^=16U;
+    }else if(hook==4 && point==4){
+        // Preserve controller reads after renderer setup changes the clump and current FOV
+        triggered=true;TestSkin_SetClump(&clumps[2]);Draw_SetFOV(81.f);
+    }else if(hook==5 && point==5){
+        // Preserve the final live saved-FOV read after native clump destruction
+        triggered=true;*TestSkin_OldFov()=29.f;TestSkin_SetClump(&clumps[3]);
+    }else if(hook==6 && point==6){
+        // Retain the captured frame while later rendering observes the current clump
+        triggered=true;TestSkin_SetClump(&clumps[2]);Scene.camera=&cameras[1];
+    }else if(hook==7 && point==7){
+        // Read the live dictionary slot only after the texture filter operation completes
+        triggered=true;TestSkin_SetSlot(5);if(mutableName)strcpy(mutableName,"afterFilter");
+    }else if(hook==8 && point==8){
+        // Return the already captured texture even after image destruction changes the creation owner
+        triggered=true;createdTexture=2;
+    }
+}
+extern "C" int FileMgr_OpenFile(const char *path,const char *mode)
+{
+    // Return the same directory handle after observing its original path and binary mode
+    event(1);text(path);text(mode);require(strcmp(path,"models\\gta3.dir")==0 && strcmp(mode,"rb")==0);readIndex=0;return 42;
+}
+extern "C" size_t FileMgr_Read(int fd,const char *destination,FileMgrSize length)
+{
+    // Populate the real caller-owned directory record without changing a failed read's outputs
+    event(2);word(fd);word((uint32_t)length);require(fd==42 && length==sizeof(DirectoryInfo));reads++;if(readIndex==entryCount)return 0;memcpy((void*)destination,&entries[readIndex++],sizeof(DirectoryInfo));return sizeof(DirectoryInfo);
+}
+int32 CdStreamGetNumImages(void)
+{
+    // Observe the original image-count branch before any image is added
+    event(3);word(imageCount);return imageCount;
+}
+bool CdStreamAddImage(const char *path)
+{
+    // Retain the original archive path and image-owner side effect
+    event(4);text(path);require(strcmp(path,"models\\gta3.img")==0);imageCount++;return true;
+}
+int32 CdStreamRead(int32 channel,void *destination,uint32 offset,uint32 size)
+{
+    // Observe exact unsigned sector arguments before publishing deterministic buffer contents
+    event(5);word(channel);word(offset);word(size);require(channel==0 && destination==buffer);for(unsigned i=0;i<64;i++)buffer[i]=(uint8_t)(i+offset+size);return 1;
+}
+int32 CdStreamSync(int32 channel)
+{
+    // Keep synchronization between the original sector read and memory-stream open
+    event(6);word(channel);require(channel==0);return 1;
+}
+void CdStreamRemoveImages(void)
+{
+    // Remove only the archive added by the original loader's local ownership flag
+    event(7);imageCount=0;
+}
+void *RwMallocAlign(RwUInt32 size,RwUInt32 alignment)
+{
+    // Observe the original shifted allocation size and alignment without creating a window
+    event(8);word(size);word(alignment);require(size<=sizeof(buffer) && alignment==2048 && allocated==0);allocated=size;allocations++;return buffer;
+}
+void RwFreeAlign(void *value)
+{
+    // Keep buffer ownership until after the original stream close and clump publication
+    event(9);require(value==buffer && borrowedMemory==NULL);allocated=0;frees++;
+}
+RwStream *RwStreamOpen(RwStreamType type,RwStreamAccessType access,const void *data)
+{
+    // Borrow the real native memory object and retain its identity through close
+    event(10);word(type);word(access);require(type==rwSTREAMMEMORY && access==rwSTREAMREAD && borrowedMemory==NULL);borrowedMemory=(RwMemory*)data;require(borrowedMemory->start==buffer && borrowedMemory->length==allocated);word(borrowedMemory->length);opens++;mutation(3);return &stream;
+}
+RwBool RwStreamFindChunk(RwStream *value,RwUInt32 type,RwUInt32 *length,RwUInt32 *version)
+{
+    // Preserve the chunk predicate and both original null output arguments
+    event(11);word(type);require(value==&stream && type==rwID_CLUMP && !length && !version && borrowedMemory!=NULL);word((uint32_t)(borrowedMemory->start-buffer));word(borrowedMemory->length);return chunkFound;
+}
+RpClump *RpClumpStreamRead(RwStream *value)
+{
+    // Publish the same selected native clump only after a successful chunk search
+    event(12);require(value==&stream && borrowedMemory!=NULL);return readClumpNull?NULL:&clumps[0];
+}
+RwBool RwStreamClose(RwStream *value,void *data)
+{
+    // Verify that open and close share the same still-live native memory object and mutations
+    event(13);require(value==&stream && data==borrowedMemory);word((uint32_t)(borrowedMemory->start-buffer));word(borrowedMemory->length);borrowedMemory=NULL;closes++;return 1;
+}
+int CTxdStore::AddTxdSlot(const char *name)
+{
+    // Return the native signed slot after observing the original dictionary name
+    event(14);text(name);require(strcmp(name,"skin")==0);return 1;
+}
+void CTxdStore::Create(int slot)
+{
+    // Preserve live controller changes during the original dictionary-create operation
+    event(15);word(slot);require(slot>=0 && slot<8);mutation(1);
+}
+void CTxdStore::AddRef(int slot)
+{
+    // Observe the slot reread after native dictionary creation
+    event(16);word(slot);require(slot>=0 && slot<8);references[slot]++;
+}
+void CTxdStore::RemoveTxdSlot(int slot)
+{
+    // Keep shutdown tied to the actual current controller slot
+    event(17);word(slot);require(slot>=0 && slot<8);references[slot]=0;
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Retain the original dictionary owner before the skin texture lookup
+    event(18);storedDictionary=currentDictionary;
+}
+void CTxdStore::SetCurrentTxd(int slot)
+{
+    // Select the original captured signed dictionary slot
+    event(19);word(slot);require(slot>=0 && slot<8);currentDictionary=slot;
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Restore the prior dictionary before the original texture result is examined
+    event(20);currentDictionary=storedDictionary;
+}
+TxdDef *CTxdStore::GetSlot(int slot)
+{
+    // Keep the original native slot lookup and exact dictionary object identity
+    event(21);word(slot);require(slot>=0 && slot<8);return &slots[slot];
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Observe the borrowed live texture name and original null mask
+    event(22);text(name);require(mask==NULL);mutation(2);return textureFound?&textures[0]:NULL;
+}
+RwImage *RtBMPImageRead(const char *path)
+{
+    // Observe the complete formatted BMP path after dictionary restoration
+    event(23);text(path);return imageFound?&images[0]:NULL;
+}
+RwImage *RwImageFindRasterFormat(RwImage *image,RwInt32 type,RwInt32 *width,RwInt32 *height,RwInt32 *depth,RwInt32 *format)
+{
+    // Populate the actual caller-owned scalar outputs before raster creation
+    event(24);word(identity(image,images,4));word(type);require(type==rwRASTERTYPETEXTURE);*width=64;*height=32;*depth=32;*format=128;return image;
+}
+RwRaster *RwRasterCreate(RwInt32 width,RwInt32 height,RwInt32 depth,RwInt32 format)
+{
+    // Preserve the exact raster arguments written by the native format query
+    event(25);word(width);word(height);word(depth);word(format);return &rasters[0];
+}
+RwRaster *RwRasterSetFromImage(RwRaster *raster,RwImage *image)
+{
+    // Retain the original raster and captured image pairing
+    event(26);word(identity(raster,rasters,4));word(identity(image,images,4));return raster;
+}
+RwTexture *RwTextureCreate(RwRaster *raster)
+{
+    // Return the selected real native texture identity for the original captured raster
+    event(27);word(identity(raster,rasters,4));word(createdTexture);return &textures[createdTexture];
+}
+RwTexture *RwTextureSetName(RwTexture *texture,const char *name)
+{
+    // Copy the live name at the original name-publication boundary
+    event(28);int id=identity(texture,textures,4);word(id);text(name);require(strlen(name)<sizeof(names[id]));strcpy(names[id],name);return texture;
+}
+RwTexture *RwTextureSetFilterMode(RwTexture *texture,RwTextureFilterMode mode)
+{
+    // Keep filter publication before the dictionary slot is looked up again
+    event(29);int id=identity(texture,textures,4);word(id);word(mode);filters[id]=mode;mutation(7);return texture;
+}
+RwTexture *RwTexDictionaryAddTexture(RwTexDictionary *dictionary,RwTexture *texture)
+{
+    // Publish the original captured texture to the current live dictionary
+    event(30);word(identity(dictionary,dictionaries,8));word(identity(texture,textures,4));return texture;
+}
+RwBool RwImageDestroy(RwImage *image)
+{
+    // Release the captured image after texture publication while keeping the local return value live
+    event(31);word(identity(image,images,4));mutation(8);return 1;
+}
+RpAtomic *CClumpModelInfo::SetAtomicRendererCB(RpAtomic *,void *)
+{
+    // Reject an unexpected invocation of the renderer callback by the narrow owner simulator
+    abort();
+}
+RpAtomic *CVisibilityPlugins::RenderPlayerCB(RpAtomic *)
+{
+    // Reject an unexpected invocation of the render callback by the narrow owner simulator
+    abort();
+}
+RpClump *RpClumpForAllAtomics(RpClump *clump,RpAtomicCallBack callback,void *data)
+{
+    // Verify the actual original static callback and render-function argument identities
+    event(32);word(identity(clump,clumps,4));require(callback==CClumpModelInfo::SetAtomicRendererCB && data==(void*)CVisibilityPlugins::RenderPlayerCB);mutation(4);return clump;
+}
+void CPlayerInfo::LoadPlayerSkin(void)
+{
+    // Preserve the original first-player receiver and valid reentry into the texture operation
+    event(33);require(this==&CWorld::Players[0]);if(nestedSkin){
+        // Enter the real canonical operation during the original player-owner callback
+        nestedSkin=false;textureGets++;word(identity((RwTexture*)TestSkin_RunGetSkinTexture("nested"),textures,4));
+    }
+}
+RwBool RpClumpDestroy(RpClump *clump)
+{
+    // Preserve native destruction before the canonical pointer clear and saved-FOV reread
+    event(34);word(identity(clump,clumps,4));mutation(5);return 1;
+}
+RwFrame *RpClumpGetFrame(const RpClump *clump)
+{
+    // Return the frame captured before timer and camera-owner operations
+    event(35);int id=identity(clump,clumps,4);word(id);require(id>=0);return &frames[id];
+}
+RwFrame *RwCameraGetFrame(const RwCamera *camera)
+{
+    // Read the actual current scene camera inside the native transform expression
+    event(36);int id=identity(camera,cameras,2);word(id);return &frames[id+2];
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Return the same real native matrix owner selected by the scene camera
+    event(37);int id=identity(frame,frames,4);word(id);return &matrices[id];
+}
+RwFrame *RwFrameTransform(RwFrame *frame,const RwMatrix *value,RwOpCombineType combine)
+{
+    // Observe all native transform coefficients before later owner mutations
+    event(38);word(identity(frame,frames,4));word(combine);matrix(*value);require(combine==rwCOMBINEREPLACE);mutation(6);return frame;
+}
+RwFrame *RwFrameTranslate(RwFrame *frame,const RwV3d *value,RwOpCombineType combine)
+{
+    // Preserve the original position components and pre-concatenation mode
+    event(39);word(identity(frame,frames,4));word(combine);vector(*value);require(combine==rwCOMBINEPRECONCAT);return frame;
+}
+RwFrame *RwFrameRotate(RwFrame *frame,const RwV3d *axis,RwReal angle,RwOpCombineType combine)
+{
+    // Observe the exact original axis and persistent C-or-C++ preview rotation
+    event(40);word(identity(frame,frames,4));word(combine);vector(*axis);floating(angle);require(combine==rwCOMBINEPRECONCAT);return frame;
+}
+RwFrame *RwFrameUpdateObjects(RwFrame *frame)
+{
+    // Retain object publication after all three original frame operations
+    event(41);word(identity(frame,frames,4));return frame;
+}
+void SetAmbientColours(RwRGBAReal *color)
+{
+    // Copy the original ambient coefficients during their native borrow lifetime
+    event(42);ambient=*color;floating(color->red);floating(color->green);floating(color->blue);floating(color->alpha);
+}
+RpClump *RpClumpRender(RpClump *clump)
+{
+    // Read the live canonical clump at the final original rendering call
+    event(43);word(identity(clump,clumps,4));return clump;
+}
+extern "C" int8_t Draw_BackendAspectPreference(void)
+{
+    // Supply the original shared Draw implementation with a fixed native screen preference
+    return AR_4_3;
+}
+extern "C" bool Draw_BackendWidescreen(void)
+{
+    // Keep unrelated native widescreen state fixed during the controller comparison
+    return false;
+}
+extern "C" float Draw_BackendScreenWidth(void)
+{
+    // Keep unrelated native screen dimensions fixed during the controller comparison
+    return 640.f;
+}
+extern "C" float Draw_BackendScreenHeight(void)
+{
+    // Keep unrelated native screen dimensions fixed during the controller comparison
+    return 480.f;
+}
+extern "C" bool Draw_BackendCutsceneRunning(void)
+{
+    // Keep the actual shared FOV setter in its original ordinary-game branch
+    return false;
+}
+extern "C" float Draw_BackendFovMultiplier(void)
+{
+    // Keep unrelated native scaled-FOV state fixed during the controller comparison
+    return 1.f;
+}
+static void reset(int target=1)
+{
+    // Restore only explicit owner inputs and canonical globals while retaining both real preview statics
+    require(allocated==0 && borrowedMemory==NULL);hook=0;triggered=false;textureFound=false;imageFound=true;chunkFound=true;readClumpNull=false;nestedSkin=false;mutableName=NULL;createdTexture=1;entryCount=target+1;readIndex=0;imageCount=1;currentDictionary=7;storedDictionary=6;TestSkin_SetSlot(1);TestSkin_SetClump(&clumps[1]);*TestSkin_OldFov()=70.f;Timer_pauseTimeMs=0;Draw_SetFOV(60.f);memset(gString,0,sizeof(gString));memset(names,0,sizeof(names));memset(filters,0,sizeof(filters));memset(references,0,sizeof(references));ambient={0,0,0,0};Scene.camera=&cameras[0];
+    for(int i=0;i<4;i++){
+        // Seed actual C directory records and all named real native matrix coefficients
+        memset(&entries[i],0,sizeof(entries[i]));strcpy(entries[i].name,i==target?"PLAYER.DFF":"other.dff");entries[i].offset=100+i;entries[i].size=1+i;matrices[i].right={1.f+i,.25f,.5f};matrices[i].up={.75f,2.f+i,1.f};matrices[i].at={1.25f,1.5f,3.f+i};matrices[i].pos={4.f+i,5.f+i,6.f+i};
+    }
+    for(int i=0;i<8;i++)slots[i].texDict=&dictionaries[i];
+}
+static void find(uint32_t *offset,uint32_t *size)
+{
+    // Observe complete helper outputs including valid overlapping output references
+    finds++;TestSkin_RunFind(offset,size);word(*offset);word(*size);snapshot();
+}
+static void load(void)
+{
+    // Enter the entire helper from a C caller and observe its final canonical clump
+    loads++;TestSkin_RunLoad();snapshot();require(allocated==0 && borrowedMemory==NULL);
+}
+static void get(const char *name)
+{
+    // Enter the complete texture operation and observe its captured native result
+    textureGets++;word(identity((RwTexture*)TestSkin_RunGetSkinTexture(name),textures,4));snapshot();
+}
+static void begin(void)
+{
+    // Enter complete preview construction and verify the actual shared raw FOV afterward
+    begins++;TestSkin_RunBeginFrontendSkinEdit();snapshot();require(Draw_GetFOV()==30.f);
+}
+static void render(void)
+{
+    // Observe the entire timer gate and all native frame and render operations
+    renders++;TestSkin_RunRenderFrontendSkinEdit();snapshot();
+}
+static void end(void)
+{
+    // Observe destruction, canonical pointer clearing and restoration through the real shared Draw code
+    ends++;TestSkin_RunEndFrontendSkinEdit();snapshot();require(TestSkin_Clump()==NULL && Draw_GetFOV()==*TestSkin_OldFov());
+}
+int main(void)
+{
+    // Verify actual static zero initialization before changing the controller or its native owners
+    require(TestSkin_Slot()==0 && TestSkin_Clump()==NULL && *TestSkin_OldFov()==0.f);reset();
+    for(int target=0;target<4;target++){
+        // Cover matching order, case-insensitive names and overlapping output references
+        reset(target);uint32_t offset=777,size=888;find(&offset,&size);require(offset==100U+target && size==1U+target);find(&offset,&offset);require(offset==1U+target);
+    }
+    reset();entryCount=0;uint32_t offset=777,size=888;find(&offset,&size);require(offset==777 && size==888);
+    for(int count: {0,1,3})for(bool chunk: {false,true}){
+        // Cover both image-ownership branches and both chunk outcomes with valid initialized directory inputs
+        reset();imageCount=count;chunkFound=chunk;load();require(TestSkin_Clump()==(chunk?&clumps[0]:&clumps[1]));
+    }
+    reset();readClumpNull=true;load();require(TestSkin_Clump()==NULL);
+    reset();hook=3;load();require(triggered);
+    for(int i=0;i<4;i++){
+        // Retain every successful allocation size and directory offset selected by the helper
+        reset(i);load();
+    }
+    for(bool existing: {false,true})for(bool image: {false,true})for(const char *name: {"",DEFAULT_SKIN_NAME,"custom","mixed CASE","a.bmp"}){
+        // Cover existing textures, absent images, both default-path forms and ordinary filenames
+        reset();textureFound=existing;imageFound=image;get(name);
+    }
+    reset();hook=1;initializations++;TestSkin_RunInitialise();snapshot();require(triggered && TestSkin_Slot()==3 && references[3]==1);hook=0;shutdowns++;TestSkin_RunShutdown();snapshot();
+    for(int change: {2,7,8}){
+        // Preserve borrowed names, live dictionary slots and the local texture return across native callbacks
+        reset();char name[64]="original";mutableName=name;hook=change;get(name);require(triggered);
+    }
+    for(int count: {0,1}){
+        // Exercise complete preview lifetime and the persistent strict timer gate through rotation wrap
+        reset();imageCount=count;nestedSkin=true;begin();for(uint32_t time: {0U,7U,8U,15U,16U,0xfffffff0U,2U,10U}){Timer_pauseTimeMs=time;render();}for(unsigned frame=0;frame<190;frame++){Timer_pauseTimeMs+=8;render();}end();
+    }
+    reset();hook=4;nestedSkin=true;begin();require(triggered && *TestSkin_OldFov()==81.f);hook=0;end();
+    reset();begin();hook=5;end();require(triggered && *TestSkin_OldFov()==29.f);
+    reset();begin();hook=6;Timer_pauseTimeMs=1000;render();require(triggered);hook=0;end();
+    reset();initializations++;TestSkin_RunInitialise();snapshot();shutdowns++;TestSkin_RunShutdown();snapshot();require(allocations==frees && opens==closes);
+    printf("states=%u calls=%u finds=%u loads=%u textureGets=%u begins=%u ends=%u renders=%u initializations=%u shutdowns=%u allocations=%u frees=%u opens=%u closes=%u reads=%u hash=%016llx\n",states,calls,finds,loads,textureGets,begins,ends,renders,initializations,shutdowns,allocations,frees,opens,closes,reads,(unsigned long long)hash);return 0;
+}

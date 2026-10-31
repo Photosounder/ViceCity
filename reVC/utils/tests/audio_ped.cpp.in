@@ -1,0 +1,92 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioGeometry.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+#define FALSE 0
+static void event(unsigned);
+struct CPhysical {AudioSoundPosition position;const AudioSoundPosition &GetPosition();};
+class CPed:public CPhysical {};
+struct cAudioManager {
+@FIELDS@
+void ProcessPed(CPhysical *ped);
+void ProcessPedOneShots(cPedParams &params);
+};
+static cAudioManager owners[2],*active;static CPed peds[2];static AudioSoundPosition camera;
+static unsigned seedValue,cases,callbacks,handoffs;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestPedC(cAudioManager *,CPed *);
+static void value(uint32_t v) {
+    // Record exact callback order and scalar values
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Hash each initialized storage word
+    digest=TestAircraftHash(digest,p,size);
+}
+static void observe() {
+    // Observe all owner fields and original position storage
+    bytes(owners,sizeof(owners));bytes(peds,sizeof(peds));bytes(&camera,sizeof(camera));
+}
+static void event(unsigned token) {
+    // Record state before each game callback mutates it
+    ++callbacks;value(token);observe();
+}
+const AudioSoundPosition &CPhysical::GetPosition() {
+    // Exercise position-query timing before copying the game vector
+    event(20);
+    if(seedValue&32)active->m_sQueueSample.m_vecPos={51,52,53};
+    return position;
+}
+static AudioSoundPosition AudioSoundPosition_FromVector(const AudioSoundPosition &position) {
+    // Copy the fake game vector exactly as the original plain-record conversion does
+    return position;
+}
+extern "C" void AudioReleaseHost_Position(void *entity,AudioSoundPosition *position) {
+    // Reuse the original position query at the C game boundary
+    *position=AudioSoundPosition_FromVector(((CPhysical *)entity)->GetPosition());
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *out) {
+    // Exercise mutation of the live scratch position during distance calculation
+    event(30);*out=camera;
+    if(seedValue&64)active->m_sQueueSample.m_vecPos={-4,7,12};
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *out) {
+    // Supply the linked geometry dependency
+    memset(out,0,sizeof(*out));
+}
+void cAudioManager::ProcessPedOneShots(cPedParams &params) {
+    // Observe every initialized context field before exercising downstream writes
+    ++handoffs;event(40);value(this==active);value(params.m_bDistanceCalculated);bytes(&params.m_fDistance,4);value(params.m_pPed==&peds[0]?1:params.m_pPed==&peds[1]?2:0);
+    params.m_bDistanceCalculated=1;params.m_fDistance=123;params.m_pPed=nullptr;m_sQueueSample.m_nFrequency=54321;m_sQueueSample.m_vecPos={1,2,3};event(41);
+}
+extern "C" void AudioPedOneShots_Process(cAudioManager *manager,cPedParams *params) {
+    // Invoke the same original downstream event-loop stand-in
+    manager->ProcessPedOneShots(*params);
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Cover independent axes, exceptional floats, alternate owners and stale scratch values
+    seedValue=seed;active=&owners[(seed/2)%2];memset(owners,0,sizeof(owners));memset(peds,0,sizeof(peds));
+    const float positions[]={-100,-1,-0.0f,0,0.1f,1,100,INFINITY,-INFINITY,NAN};
+    for(unsigned i=0;i<2;++i)peds[i].position={positions[(seed+i)%10],positions[(seed/7+i)%10],positions[(seed/11+i)%10]};
+    camera={positions[(seed/13)%10],positions[(seed/17)%10],positions[(seed/19)%10]};
+    active->m_sQueueSample.m_vecPos={31,32,33};active->m_sQueueSample.m_fDistance=123;active->m_sQueueSample.m_nEntityIndex=seed%31;active->m_sQueueSample.m_nFrequency=12345;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening Windows error dialogs
+    SetErrorMode(3);
+#endif
+    // Compare full dispatch operations through the real geometry calculation
+    for(unsigned seed=0;seed<16384;++seed){prepare(seed);observe();@RUN@;observe();++cases;}
+    if(handoffs!=cases||callbacks!=cases*4)return 2;
+    // Emit a deterministic trace for compiler-specific comparisons
+    printf("%u cases %u callbacks %u handoffs %llu\n",cases,callbacks,handoffs,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

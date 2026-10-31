@@ -1,161 +1,95 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "World.h"
 #include "Vehicle.h"
 #include "PlayerPed.h"
 #include "Pools.h"
-#include "References.h"
+#include "References_backend.h"
 
-CReference CReferences::aRefs[NUMREFERENCES];
-CReference *CReferences::pEmptyList;
-
-void
-CReferences::Init(void)
+bool References_BackendIsBuilding(CEntity *entity)
 {
-	int i;
-	pEmptyList = &aRefs[0];
-	for(i = 0; i < NUMREFERENCES; i++){
-		aRefs[i].pentity = nil;
-		aRefs[i].next = &aRefs[i+1];
-	}
-	aRefs[NUMREFERENCES-1].next = nil;
+	// Read the original entity type through its typed owner
+	return entity->IsBuilding();
+}
+CReference **References_BackendFirst(CEntity *entity)
+{
+	// Expose the live list field without duplicating the entity layout
+	return &entity->m_pFirstReference;
+}
+CEntity *References_BackendPlayerVehicle(void)
+{
+	// Preserve each original player query and derived-to-base conversion
+	return FindPlayerVehicle();
+}
+CPlayerPed *References_BackendPlayerPed(void)
+{
+	// Preserve each original player-ped query
+	return FindPlayerPed();
+}
+CEntity *References_BackendPlayerEntity(CPlayerPed *ped)
+{
+	// Convert the original player type through its actual inheritance
+	return ped;
+}
+void References_BackendRestorePlayer(CPlayerPed *ped)
+{
+	// Restore the live focused-player field at the original write point
+	CWorld::Players[CWorld::PlayerInFocus].m_pPed = ped;
+}
+CEntity **References_BackendPlayerSlot(void)
+{
+	// Return the same slot address and cast used by the original registration
+	return (CEntity **)&CWorld::Players[CWorld::PlayerInFocus].m_pPed;
+}
+CPool *References_BackendPedPool(void)
+{
+	// Query the live pedestrian pool at each original access point
+	return CPools::GetPedPool();
+}
+CPool *References_BackendVehiclePool(void)
+{
+	// Query the live vehicle pool at each original access point
+	return CPools::GetVehiclePool();
+}
+CPool *References_BackendObjectPool(void)
+{
+	// Query the live object pool at each original access point
+	return CPools::GetObjectPool();
+}
+CEntity *References_BackendPed(void *slot)
+{
+	// Convert raw pedestrian storage through its actual owner type
+	return (CPed *)slot;
+}
+CEntity *References_BackendVehicle(void *slot)
+{
+	// Convert raw vehicle storage through its actual owner type
+	return (CVehicle *)slot;
+}
+CEntity *References_BackendObject(void *slot)
+{
+	// Convert raw object storage through its actual owner type
+	return (CObject *)slot;
 }
 
-void
-CEntity::RegisterReference(CEntity **pent)
+void CEntity::RegisterReference(CEntity **pent)
 {
-	if(IsBuilding())
-		return;
-	CReference *ref;
-	// check if already registered
-	for(ref = m_pFirstReference; ref; ref = ref->next)
-		if(ref->pentity == pent)
-			return;
-	// have to allocate new reference
-	ref = CReferences::pEmptyList;
-	if(ref){
-		CReferences::pEmptyList = ref->next;
-
-		ref->pentity = pent;
-		ref->next = m_pFirstReference;
-		m_pFirstReference = ref;
-	}
+	// Enter the complete C registration algorithm
+	References_RegisterReference(this, pent);
 }
-
-// Clean up the reference from *pent -> 'this'
-void
-CEntity::CleanUpOldReference(CEntity **pent)
+void CEntity::CleanUpOldReference(CEntity **pent)
 {
-	CReference* ref, ** lastnextp;
-	lastnextp = &m_pFirstReference;
-	for (ref = m_pFirstReference; ref; ref = ref->next) {
-		if (ref->pentity == pent) {
-			*lastnextp = ref->next;
-			ref->next = CReferences::pEmptyList;
-			CReferences::pEmptyList = ref;
-			break;
-		}
-		lastnextp = &ref->next;
-	}
+	// Enter the complete C cleanup algorithm
+	References_CleanUpOldReference(this, pent);
 }
-
-// Clear all references to this entity
-void
-CEntity::ResolveReferences(void)
+void CEntity::ResolveReferences(void)
 {
-	CReference *ref;
-	// clear pointers to this entity
-	for(ref = m_pFirstReference; ref; ref = ref->next)
-		if(*ref->pentity == this)
-			*ref->pentity = nil;
-	// free list
-	if(m_pFirstReference){
-		for(ref = m_pFirstReference; ref->next; ref = ref->next)
-			;
-		ref->next = CReferences::pEmptyList;
-		CReferences::pEmptyList = m_pFirstReference;
-		m_pFirstReference = nil;
-	}
+	// Enter the complete C resolution algorithm
+	References_ResolveReferences(this);
 }
-
-// Free all references that no longer point to this entity
-void
-CEntity::PruneReferences(void)
+void CEntity::PruneReferences(void)
 {
-	CReference *ref, *next, **lastnextp;
-	lastnextp = &m_pFirstReference;
-	for(ref = m_pFirstReference; ref; ref = next){
-		next = ref->next;
-		if(*ref->pentity == this)
-			lastnextp = &ref->next;
-		else{
-			*lastnextp = ref->next;
-			ref->next = CReferences::pEmptyList;
-			CReferences::pEmptyList = ref;
-		}
-	}
+	// Enter the complete C pruning algorithm
+	References_PruneReferences(this);
 }
-
-void
-CReferences::RemoveReferencesToPlayer(void)
-{
-	if(FindPlayerVehicle())
-		FindPlayerVehicle()->ResolveReferences();
-#ifdef FIX_BUGS
-	if (FindPlayerPed()) {
-		CPlayerPed* pPlayerPed = FindPlayerPed();
-		FindPlayerPed()->ResolveReferences();
-		CWorld::Players[CWorld::PlayerInFocus].m_pPed = pPlayerPed;
-		pPlayerPed->RegisterReference((CEntity**)&CWorld::Players[CWorld::PlayerInFocus].m_pPed);
-	}
-#else
-	if(FindPlayerPed())
-		FindPlayerPed()->ResolveReferences();
-#endif
-}
-
-void
-CReferences::PruneAllReferencesInWorld(void)
-{
-	int i;
-	CEntity *e;
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetPedPool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		e = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-		//- rouz edit (ChatGPT)
-		if(e)
-			e->PruneReferences();
-	}
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		e = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if(e)
-			e->PruneReferences();
-	}
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetObjectPool());
-	//- rouz edit (ChatGPT)
-	while(--i >= 0){
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
-		//- rouz edit (ChatGPT)
-		if(e)
-			e->PruneReferences();
-	}
-}
+//- rouz edit (ChatGPT)

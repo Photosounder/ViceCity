@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "WeaponType.h"
@@ -10,7 +11,7 @@ class CPhysical;
 class CVehicle;
 class CPed;
 struct CColPoint;
-class CWeaponInfo;
+struct CWeaponInfo;
 
 class CWeapon
 {
@@ -88,3 +89,4 @@ public:
 VALIDATE_SIZE(CWeapon, 0x18);
 
 void FireOneInstantHitRound(CVector *source, CVector *target, int32 damage);
+//- rouz edit (ChatGPT)

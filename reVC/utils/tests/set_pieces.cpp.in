@@ -1,0 +1,265 @@
+#include "owners.h"
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <initializer_list>
+#ifdef NATIVE_PROJECT_HEADERS
+#undef malloc
+#undef free
+extern "C" void *cita_win_malloc(size_t bytes,const char *,const char *,int)
+{
+    // Supply quiet storage for the actual C pool while preserving its allocation algorithm
+    return (std::malloc)(bytes);
+}
+extern "C" void cita_win_free(void *pointer,const char *,const char *,int)
+{
+    // Release only the storage allocated through this console fixture's native boundary
+    (std::free)(pointer);
+}
+#endif
+extern "C" {uint32_t Timer_timeMs,Timer_frameCounter;int32_t _saveBufCount;VarConsoleState VarConsole;}
+static CPool carPool,copPool;
+static CWanted wanted;static CPlayerPed player={&wanted};
+static CVector playerPosition(0,0,0),playerSpeed(-1,0,0);
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states,calls,updates,frames,adds,saves,loads,carConstructs,copConstructs,destroys,collisions,verticals,occupants,registrations,coorsReads;
+static int caseNumber,wantedLevel,collisionMask,hitMask,spawnNumber,hook;
+static bool inVehicle;
+static CVehicle *lastCars[2];
+static unsigned successes[10],firstRejections[10],partialRejections[10];
+
+static void require(bool condition)
+{
+    // Report the precise corpus case before stopping on an independent invariant failure
+    if(!condition){fprintf(stderr,"Set-piece assertion case %d state %u spawn %d\n",caseNumber,states,spawnNumber);abort();}
+}
+static void word(uint32_t value)
+{
+    // Hash canonical scalar values in a fixed byte order
+    for(unsigned i=0;i<4;i++){hashValue^=(value>>(8*i))&255;hashValue*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact scalar bits including signed zero without a type-punning read
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void vector(const CVector &value)
+{
+    // Observe all coordinates of the actual native vector value
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void record(const SetPiece &entry)
+{
+    // Observe every meaningful persistent record field while excluding compiler padding
+    word(entry.m_nType);word(entry.m_nLastTimeCreated);
+    const SetPiecePoint *points[]={&entry.m_vTriggerInf,&entry.m_vTriggerSup,&entry.m_vSpawn1,&entry.m_vSpawn2,&entry.m_vTarget1,&entry.m_vTarget2};
+    for(const auto *point:points){floating(point->x);floating(point->y);}
+}
+static void entity(const CEntity *value)
+{
+    // Observe each affected native object field and normalize its identity to a pool slot
+    word(value->id);word(value->kind);floating(value->sphere.radius);
+    for(int i=0;i<4;i++)for(int j=0;j<4;j++)floating(value->matrix.f[i][j]);
+    if(value->kind==1){
+        // Observe the vehicle configuration and all original autopilot writes
+        const CVehicle *car=static_cast<const CVehicle*>(value);word(car->status);word(car->m_nSetPieceExtendedRangeTime);word(car->law);vector(car->move);
+        word(car->AutoPilot.m_nCruiseSpeed);floating(car->AutoPilot.m_fMaxTrafficSpeed);word(car->AutoPilot.m_nDrivingStyle);word(car->AutoPilot.m_nCarMission);word(car->AutoPilot.m_nTempAction);word(car->AutoPilot.m_nTimeTempAction);vector(car->AutoPilot.m_vecDestinationCoors);
+    }else{
+        // Observe the pedestrian objective and its live extended-range timer
+        const CCopPed *cop=static_cast<const CCopPed*>(value);word(cop->bScriptObjectiveCompleted);word(cop->m_nExtendedRangeTimer);vector(cop->destination);
+    }
+}
+static void observe(unsigned tag)
+{
+    // Capture all canonical state and allocated objects at each externally visible boundary
+    ++states;word(tag);word(Timer_timeMs);word(Timer_frameCounter);word(*TestPieces_Count());word(*TestPieces_Debug());
+    for(unsigned i=0;i<NUM_SETPIECES;i++){SetPiece entry;TestPieces_Read(i,&entry);record(entry);}
+    for(CPool *pool:{&carPool,&copPool}){
+        // Observe actual pool generations and every fully constructed live slot
+        word(pool->m_allocPtr);
+        for(int i=0;i<pool->m_size;i++){word(pool->m_flags[i]);if(void *slot=CPool_GetSlot(pool,i))entity(pool==&carPool?static_cast<CEntity*>(static_cast<CVehicle*>(slot)):static_cast<CEntity*>(static_cast<CCopPed*>(slot)));}
+    }
+    if(getenv("SETPIECE_TRACE"))printf("%u %d %u %016llx\n",states,caseNumber,tag,(unsigned long long)hashValue);
+}
+static void event(unsigned tag)
+{
+    // Count the original native boundary before observing its complete current state
+    ++calls;observe(tag);
+}
+static void base(CEntity *object,int kind,int id)
+{
+    // Initialize every observed named field of the native shell without changing its real subobjects
+    object->id=id;object->kind=kind;object->sphere.radius=kind==1?2.25f:0.7f;object->collision.spheres=&object->sphere;
+    for(int i=0;i<4;i++)for(int j=0;j<4;j++)object->matrix.f[i][j]=float(i*4+j)+0.125f;
+}
+CAutomobile::CAutomobile(int32 model,uint8 createdBy)
+{
+    // Exercise real pool storage and the actual AutoPilot constructor before the controller runs
+    base(this,1,100+CPool_GetIndex(&carPool,this));status=STATUS_SIMPLE;m_nSetPieceExtendedRangeTime=42;move=CVector(3,4,5);law=false;
+    AutoPilot.m_nCruiseSpeed=99;AutoPilot.m_fMaxTrafficSpeed=101;AutoPilot.m_nDrivingStyle=4;AutoPilot.m_nCarMission=3;AutoPilot.m_nTempAction=6;AutoPilot.m_nTimeTempAction=77;AutoPilot.m_vecDestinationCoors=CVector(31,32,33);
+    require(model==MI_POLICE && createdBy==RANDOM_VEHICLE);if(spawnNumber<2)lastCars[spawnNumber]=this;++spawnNumber;++carConstructs;event(1);
+}
+CVehicle::~CVehicle()
+{
+    // Observe the original explicit base destructor before the raw slot is released
+    ++destroys;event(2);
+}
+CCopPed::CCopPed(int type)
+{
+    // Construct a real native shell in the original pedestrian pool storage
+    base(this,2,200+CPool_GetIndex(&copPool,this));bScriptObjectiveCompleted=true;m_nExtendedRangeTimer=81;destination=CVector(11,12,13);
+    require(type==COP_STREET);++spawnNumber;++copConstructs;event(3);
+}
+CCopPed::~CCopPed()
+{
+    // Observe destruction before the C pool deletes the pedestrian slot
+    ++destroys;event(4);
+}
+CPool *CPools::GetVehiclePool(){
+    // Return the actual canonical raw vehicle pool
+    return &carPool;
+}
+CPool *CPools::GetPedPool(){
+    // Return the actual canonical raw pedestrian pool
+    return &copPool;
+}
+float CVehicle::GetHeightAboveRoad(){
+    // Return a controllable native ride height after the vertical hit query
+    event(5);return 1.25f;
+}
+void CVehicle::SetStatus(uint8 value){
+    // Preserve the original status write before later configuration
+    status=value;event(6);
+}
+void CVehicle::SetMoveSpeed(const CVector &value){
+    // Observe the complete original multiply-then-divide movement vector
+    move=value;event(7);
+}
+void CVehicle::ChangeLawEnforcerState(uint8 value){
+    // Observe the native law-enforcement transition before world insertion
+    law=value;event(8);
+}
+void CCopPed::SetObjective(int objective,CVector value){
+    // Observe the original fixed objective and by-value native destination
+    require(objective==OBJECTIVE_GOTO_AREA_ON_FOOT);destination=value;event(9);
+}
+void CWorld::Add(CEntity *value){
+    // Keep world insertion separate from later occupant and objective configuration
+    require(value->id>=100);event(10);if(hook==1)Timer_timeMs+=17;
+}
+void CWorld::Remove(CEntity *value){
+    // Observe partial-spawn cleanup before destruction and raw pool release
+    require(value->id>=100);event(11);
+}
+float CWorld::FindGroundZForCoord(float x,float y){
+    // Observe both live target components used for a pedestrian objective
+    event(12);floating(x);floating(y);return x*0.125f+y*0.25f;
+}
+bool CWorld::ProcessVerticalLine(const CVector &position,float limit,CColPoint &point,CEntity *&entity,bool buildings,bool vehicles,bool peds,bool objects,bool dummies,bool seeThrough,CStoredCollPoly *poly){
+    // Check every native collision-query argument and initialize outputs only on a hit
+    ++verticals;event(13);vector(position);floating(limit);
+    require(limit==-1000 && position.z==1000 && buildings && !vehicles && !peds && !objects && dummies && !seeThrough && !poly);
+    bool hit=(hitMask&(1<<(spawnNumber-1)))!=0;if(hit){point.point=CVector(position.x,position.y,2.5f+float(spawnNumber));entity=nullptr;}return hit;
+}
+void CWorld::FindObjectsKindaColliding(const CVector &position,float radius,bool only2D,int16 *total,int16 maximum,CEntity **entities,bool buildings,bool vehicles,bool peds,bool objects,bool dummies){
+    // Retain the original collision filter, capacity, output pointer and acceptance count
+    ++collisions;event(14);vector(position);floating(radius);require(!only2D && maximum==16 && !entities && !buildings && vehicles && peds && !objects && !dummies);
+    *total=(collisionMask&(1<<(spawnNumber-1)))?int16(1):int16(0);
+}
+void CCarAI::AddPoliceCarOccupants(CVehicle *car){
+    // Exercise subsequent live timer and record reads after a native occupant operation
+    ++occupants;event(15);require(car->status==STATUS_PHYSICS);if(hook==2){Timer_timeMs+=23;SetPiece entry;TestPieces_Read(0,&entry);entry.m_vTarget2.x+=2.0f;entry.m_vTarget2.y-=3.0f;TestPieces_Write(0,&entry);}
+}
+CVector FindPlayerCoors(){
+    // Return the original by-value coordinate packet without imposing argument evaluation order
+    ++coorsReads;return playerPosition;
+}
+const CVector &FindPlayerSpeed(){
+    // Return the original live native speed reference before its two-dimensional value conversion
+    return playerSpeed;
+}
+CPlayerPed *FindPlayerPed(){
+    // Preserve the original wanted-owner lookup
+    return &player;
+}
+int CWanted::GetWantedLevel(){
+    // Observe wanted-level short-circuit behavior at the actual native query
+    event(16);return wantedLevel;
+}
+CVehicle *FindPlayerVehicle(){
+    // Provide a valid non-null presence sentinel without dereferencing it in the controller
+    event(17);return inVehicle?reinterpret_cast<CVehicle*>(&player):nullptr;
+}
+extern "C" void VarConsole_AddBool(VarConsoleState *console,char *label,bool *flag,uint8_t allow){
+    // Verify registration uses the canonical debug flag with the original console arguments
+    ++registrations;event(18);require(console==&VarConsole && !strcmp(label,"Show set pieces") && flag==TestPieces_Debug() && allow);
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned line,const char *){
+    // Stop on a save-size contract violation without creating an error dialog
+    fprintf(stderr,"Set-piece save assertion %u %s\n",line,expression);abort();
+}
+static void clearPools(){
+    // Destroy only fully constructed objects before releasing their canonical raw slots
+    for(int i=0;i<carPool.m_size;i++)if(void *slot=CPool_GetSlot(&carPool,i)){static_cast<CVehicle*>(slot)->~CVehicle();CPool_Delete(&carPool,slot);}
+    for(int i=0;i<copPool.m_size;i++)if(void *slot=CPool_GetSlot(&copPool,i)){static_cast<CCopPed*>(slot)->~CCopPed();CPool_Delete(&copPool,slot);}
+}
+int main(){
+    // Cover every set-piece branch with actual C pool allocation and valid original object lifetimes
+    require(CPool_Init(&carPool,4,sizeof(CAutomobile),"cars") && CPool_Init(&copPool,4,sizeof(CCopPed),"cops"));observe(100);
+    SetPiece entry={};entry.m_vTriggerInf={-10,-10};entry.m_vTriggerSup={10,10};entry.m_vSpawn1={-2,1};entry.m_vSpawn2={3,-1};entry.m_vTarget1={4,2};entry.m_vTarget2={-4,5};
+    for(int type=0;type<10;type++)for(int wantedValue=0;wantedValue<4;wantedValue++)for(int driving=0;driving<2;driving++)for(int mask=0;mask<4;mask++)for(int position=0;position<5;position++)for(int speedDirection=0;speedDirection<2;speedDirection++){
+        // Exercise inclusive trigger bounds, wanted gates, player-presence gates and first/second collision failures
+        ++caseNumber;wantedLevel=wantedValue;inVehicle=bool(driving);collisionMask=mask;hitMask=caseNumber%4;spawnNumber=0;hook=caseNumber%3;
+        Timer_timeMs=100000u+uint32_t(caseNumber);entry.m_nType=uint8(type);entry.m_nLastTimeCreated=0;
+        if(caseNumber%7==0)entry.m_vTarget1=entry.m_vSpawn1;else entry.m_vTarget1={4,2};
+        static const CVector positions[]={CVector(0,0,0),CVector(-10,10,7),CVector(10,-10,2),CVector(10.001f,0,0),CVector(0,-10.001f,0)};playerPosition=positions[position];playerSpeed=CVector(speedDirection?1.0f:-1.0f,0,7);
+        TestPieces_Write(0,&entry);++updates;RunPieces_Record(0);observe(101);
+        SetPiece after;TestPieces_Read(0,&after);
+        if(after.m_nLastTimeCreated)successes[type]++;
+        if(spawnNumber==1 && (mask&1))firstRejections[type]++;
+        if(spawnNumber==2 && !after.m_nLastTimeCreated)partialRejections[type]++;
+        if(type==SETPIECE_TWOCARSBLOCKINGPLAYERFROMSIDE && after.m_nLastTimeCreated){
+            // Preserve the original asymmetric second-car cruise-speed assignment
+            require(lastCars[0]->AutoPilot.m_nCruiseSpeed==16 && lastCars[1]->AutoPilot.m_nCruiseSpeed==99 && lastCars[1]->AutoPilot.m_fMaxTrafficSpeed==16.0f);
+        }
+        clearPools();
+    }
+    for(unsigned type=1;type<=7;type++){
+        // Require actual success and first-spawn rejection coverage for every supported set-piece kind
+        if(!successes[type] || !firstRejections[type])fprintf(stderr,"Missing coverage type %u success %u first %u partial %u\n",type,successes[type],firstRejections[type],partialRejections[type]);
+        require(successes[type]>0 && firstRejections[type]>0);
+        if(type==1 || type==5 || type==6 || type==7)require(partialRejections[type]>0);
+    }
+    for(uint32_t stamp:{0u,1u,79999u,80000u,80001u,0xfffffff0u}){
+        // Check strict cooldown boundaries and the original unsigned timestamp wrap
+        ++caseNumber;wantedLevel=0;inVehicle=false;collisionMask=0;hitMask=3;spawnNumber=0;hook=0;Timer_timeMs=100000;entry.m_nType=SETPIECE_CREATECOPPERONFOOT;entry.m_nLastTimeCreated=stamp;playerPosition=CVector(0,0,0);TestPieces_Write(0,&entry);++updates;RunPieces_Record(0);observe(102);clearPools();
+    }
+    for(int mask=0;mask<4;mask++)for(int hit=0;hit<4;hit++){
+        // Enter both spawn helpers directly through C, including zero-direction normalization and collision rejection
+        ++caseNumber;collisionMask=mask;hitMask=hit;spawnNumber=0;hook=0;SetPiecePoint spawn={float(mask-2),float(hit-2)},target=(mask&1)?spawn:SetPiecePoint{7,-3};
+        CVehicle *car=RunPieces_Car(0,spawn,target);word(car?car->id:0);CCopPed *cop=RunPieces_Cop(0,spawn);word(cop?cop->id:0);observe(103);clearPools();
+    }
+    for(unsigned count:{0u,1u,7u,8u,9u,95u,96u}){
+        // Verify all eight frame partitions and preserve inactive record slots
+        ++caseNumber;*TestPieces_Count()=count;entry.m_nType=SETPIECE_NONE;entry.m_nLastTimeCreated=0;
+        for(unsigned i=0;i<NUM_SETPIECES;i++)TestPieces_Write(i,&entry);
+        unsigned before=coorsReads;for(unsigned frame=0;frame<8;frame++){Timer_frameCounter=0xfffffff8u+frame;++frames;RunPieces_Update();observe(104);}require(coorsReads-before==count);
+    }
+    // Check initialization, normalized bounds, full capacity and retained stale creation timestamps
+    ++caseNumber;RunPieces_Init();observe(105);require(*TestPieces_Count()==0 && !*TestPieces_Debug());
+    for(unsigned i=0;i<NUM_SETPIECES+2;i++){++adds;RunPieces_Add(uint8_t(i%8),{10,8},{-9,-7},{1,2},{3,4},{5,6},{7,8});observe(106);}require(*TestPieces_Count()==NUM_SETPIECES);
+    alignas(16) uint8_t buffer[5408],roundTrip[5408];
+    for(unsigned offset:{0u,4u,8u,12u}){
+        // Compare every serialized byte and guard at all original valid record alignments
+        memset(buffer,0xA5,sizeof(buffer));uint32_t size=0;++saves;RunPieces_Save(buffer+offset,&size);require(size==5380);for(uint8_t value:buffer)word(value);observe(107);
+        uint32_t loaded=13;memcpy(buffer+offset,&loaded,4);++loads;RunPieces_Load(buffer+offset,size);observe(108);require(*TestPieces_Count()==loaded);
+        for(unsigned i=0;i<NUM_SETPIECES;i++){
+            // Preserve the original assignment behavior for nonzero padding from an existing save
+            buffer[offset+4+i*56+1]=uint8_t(i+17);buffer[offset+4+i*56+2]=0xC3;buffer[offset+4+i*56+3]=0x7E;
+        }
+        ++loads;RunPieces_Load(buffer+offset,size);observe(109);memset(roundTrip,0x6D,sizeof(roundTrip));++saves;RunPieces_Save(roundTrip+offset,&size);for(uint8_t value:roundTrip)word(value);observe(110);
+    }
+    // Release the actual raw pools after all source and behavior observations are complete
+    CPool_Flush(&carPool);CPool_Flush(&copPool);
+    printf("states=%u calls=%u updates=%u frames=%u adds=%u saves=%u loads=%u cars=%u cops=%u destroys=%u collisions=%u verticals=%u occupants=%u registrations=%u coors=%u hash=%016llx\n",states,calls,updates,frames,adds,saves,loads,carConstructs,copConstructs,destroys,collisions,verticals,occupants,registrations,coorsReads,(unsigned long long)hashValue);
+}

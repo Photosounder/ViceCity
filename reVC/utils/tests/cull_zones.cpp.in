@@ -1,0 +1,112 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <limits.h>
+#include <windows.h>
+#include "config.h"
+#include "Pool.h"
+using int16=int16_t;using int32=int32_t;using uint16=uint16_t;using uint8=uint8_t;
+struct CVector { float x,y,z; CVector(float x=0,float y=0,float z=0):x(x),y(y),z(z) {} };
+struct Lead { uint64_t padding; };
+struct CEntity { unsigned bIsSubway:1; unsigned bIsVisible:1; };
+struct CBuilding:Lead,CEntity {};
+struct CTreadable:Lead,CEntity {};
+struct CVehicle:CEntity { bool train;bool IsTrain(){return train;} };
+struct CTrain:CVehicle { uint8 m_nTrackId; };
+enum {TRACK_ELTRAIN=0,TRACK_SUBWAY=1};
+struct Camera {CVector position,game;const CVector &GetPosition(){return position;}CVector &GetGameCamPosition(){return game;}};
+static Camera TheCamera;
+static CVector player;
+static CBuilding buildings[5];static CTreadable treadables[5];static CTrain vehicles[5];
+static uint8_t buildingFlags[5],treadableFlags[5],vehicleFlags[5];
+static CPool buildingPool,treadablePool,vehiclePool;
+struct CPools {
+    static CPool *GetBuildingPool(){return &buildingPool;}
+    static CPool *GetTreadablePool(){return &treadablePool;}
+    static CPool *GetVehiclePool(){return &vehiclePool;}
+};
+extern "C" uint32_t Timer_frameCounter;
+uint32_t Timer_frameCounter;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned seed,groups,callbacks,mutate;
+extern "C" void TestCullWord(uint32_t value)
+{
+    // Observe scalar values without pointer addresses or object padding
+    digest^=value;digest*=1099511628211ULL;
+}
+#define word TestCullWord
+static uint32_t bits(float value)
+{
+    // Preserve exact coordinate and return-value bits
+    uint32_t result;memcpy(&result,&value,sizeof result);return result;
+}
+static CVector FindPlayerCoors();
+@HEADERS@
+@IMPLEMENTATION@
+@DISPATCH@
+#define COUNT @COUNT@
+#define ZONES @ZONES@
+#define WANTED @WANTED@
+#define CAMERA_FLAGS @CAMERA_FLAGS@
+#define PLAYER_FLAGS @PLAYER_FLAGS@
+#define SUBWAY @SUBWAY@
+#define BEACH @BEACH@
+static CVector FindPlayerCoors()
+{
+    // Capture the original value before mutating live inputs at the query boundary
+    CVector result=player;++callbacks;word(1);word(bits(result.x));word(bits(result.y));word(bits(result.z));
+    if(mutate){CAMERA_FLAGS^=32;PLAYER_FLAGS^=16;if(COUNT){ZONES[0].attributes^=8;ZONES[0].wantedLevel=(int16_t)(seed%201);}}
+    return result;
+}
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*)
+{
+    // Fail immediately if the bounded fixture reaches an original assertion
+    abort();
+}
+static void observe()
+{
+    // Observe all zone storage and each live entity bit after the complete operation
+    word(COUNT);word(WANTED);word(CAMERA_FLAGS);word(PLAYER_FLAGS);word(SUBWAY);word(BEACH);word(Timer_frameCounter);
+    for(unsigned i=0;i<NUMATTRIBZONES;i++){
+        // Include stale records to detect unintended clearing during initialization
+        word((uint16_t)ZONES[i].minx);word((uint16_t)ZONES[i].maxx);word((uint16_t)ZONES[i].miny);word((uint16_t)ZONES[i].maxy);word((uint16_t)ZONES[i].minz);word((uint16_t)ZONES[i].maxz);word((uint16_t)ZONES[i].attributes);word((uint16_t)ZONES[i].wantedLevel);
+    }
+    for(unsigned i=0;i<5;i++){
+        // Include holes and both train types alongside ordinary vehicles
+        word(buildingFlags[i]);word(treadableFlags[i]);word(vehicleFlags[i]);word(buildings[i].bIsVisible);word(treadables[i].bIsVisible);word(vehicles[i].bIsVisible);
+    }
+    ++groups;
+}
+static void setup()
+{
+    // Seed bounded overlapping zones and typed pools without changing their original slot layout
+    COUNT=12;WANTED=(int32_t)seed;CAMERA_FLAGS=(int32_t)(seed*37);PLAYER_FLAGS=(int32_t)(seed*19);SUBWAY=(seed&1)!=0;BEACH=(seed&2)!=0;
+    for(unsigned i=0;i<NUMATTRIBZONES;i++){
+        // Retain signed attributes and inclusive bounds within the original conversion domain
+        ZONES[i]={-10,(int16_t)(i%31),-12,15,-8,8,(int16_t)(seed*257+i*11),(int16_t)((int)(i%41)-10)};
+    }
+    TheCamera.position=CVector((float)(seed%1200)-100,(float)(seed%2200)-1700,1);TheCamera.game=CVector((float)(seed%24)-10,0,0);player=CVector((float)(seed%24)-10,0,0);
+    buildingPool={reinterpret_cast<uint8_t*>(buildings),buildingFlags,5,-1,sizeof(CBuilding)};
+    treadablePool={reinterpret_cast<uint8_t*>(treadables),treadableFlags,5,-1,sizeof(CTreadable)};
+    vehiclePool={reinterpret_cast<uint8_t*>(vehicles),vehicleFlags,5,-1,sizeof(CTrain)};
+    for(unsigned i=0;i<5;i++){
+        // Exercise occupied and free slots with subway and elevated train eligibility
+        buildingFlags[i]=(seed+i)%3?0:POOLFLAG_ISFREE;treadableFlags[i]=(seed+i)%4?0:POOLFLAG_ISFREE;vehicleFlags[i]=(seed+i)%3?0:POOLFLAG_ISFREE;
+        buildings[i].bIsSubway=(seed+i)&1;buildings[i].bIsVisible=(seed+i)&1;treadables[i].bIsSubway=(seed+i)&1;treadables[i].bIsVisible=(seed+i+1)&1;
+        vehicles[i].train=(seed+i)%3!=0;vehicles[i].m_nTrackId=(uint8_t)((seed+i)%4);vehicles[i].bIsVisible=(seed+i)&1;
+    }
+}
+int main()
+{
+    // Compare all public operations with mutations and a retained-state pass
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX);
+    @INDEPENDENT@
+    for(seed=0;seed<256;seed++)for(unsigned pass=0;pass<3;pass++){
+        // Reset two passes and retain the third to expose partial initialization and persistent visibility
+        if(pass<2)setup();mutate=pass!=0;
+        for(unsigned op=0;op<24;op++){Timer_frameCounter=seed+op;dispatch((op+seed)%24);observe();}
+        for(unsigned frame=0;frame<8;frame++){Timer_frameCounter=frame;dispatch(9);observe();}
+    }
+    printf("groups=%u callbacks=%u hash=%016llx\n",groups,callbacks,(unsigned long long)digest);
+}

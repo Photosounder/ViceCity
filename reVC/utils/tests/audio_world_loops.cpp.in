@@ -1,0 +1,176 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+enum {@CONSTANTS@};
+static void event(unsigned,unsigned);
+struct CVector {float x,y,z;CVector() {}
+CVector(float x,float y,float z) {
+    // Use the same field assignments as the original game-vector constructor
+    this->x=x;this->y=y;this->z=z;
+}};
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &position) {
+    // Preserve the original position-copy boundary and float values
+    return {position.x,position.y,position.z};
+}
+struct Used {unsigned index;uint8_t v;operator bool() const {
+    // Capture the original in-use flag before callbacks activate later projectiles
+    bool result=v!=0;event(2,index);return result;
+}};
+struct CProjectile {unsigned index;CVector position;const CVector &GetPosition() const {
+    // Return the original live position after position callbacks
+    event(4,index);return position;
+}};
+struct CProjectileInfo {Used m_bInUse;enum eWeaponType m_eWeaponType;
+static CProjectileInfo *GetProjectileInfo(int32 index);
+static CProjectile *ms_apProjectile[NUM_PROJECTILES];
+};
+static CProjectileInfo infos[NUM_PROJECTILES];
+static CProjectile projectiles[NUM_PROJECTILES];
+CProjectile *CProjectileInfo::ms_apProjectile[NUM_PROJECTILES];
+CProjectileInfo *CProjectileInfo::GetProjectileInfo(int32 index) {
+    // Observe each original info query before its following live field read
+    event(1,index);return &infos[index];
+}
+struct EscalatorCount {int32_t v;operator int32_t() const {
+    // Capture the original signed count before callbacks change later loop conditions
+    int32_t result=v;event(7,(unsigned)result);return result;
+}};
+struct CEscalator {unsigned index;bool active;CVector position;
+bool IsActive() const {
+    // Capture the original activation result before later count changes
+    bool result=active;event(9,index);return result;
+}
+const CVector &GetPosition() const {
+    // Read the live midpoint after the second escalator query
+    event(10,index);return position;
+}};
+struct CEscalators {static EscalatorCount NumEscalators;static CEscalator aEscalators[NUM_ESCALATORS];
+static const CEscalator &GetEscalator(int index) {
+    // Observe both original escalator lookups without caching their shared element
+    event(8,index);return aEscalators[index];
+}};
+EscalatorCount CEscalators::NumEscalators;CEscalator CEscalators::aEscalators[NUM_ESCALATORS];
+struct cAudioManager {
+@FIELDS@
+void ProcessProjectiles();void ProcessEscalators();void ProcessExtraSounds();
+float Sqrt(float v) const {
+    // Preserve the original guarded square root
+    return v<=0?0:sqrtf(v);
+}
+};
+@ARRAY@
+@MACROS@
+static cAudioManager owners[2],*active;
+static AudioSoundPosition camera;
+static unsigned seedValue,mutations,cases,callbacks,submits,loops,current;
+static unsigned projectileCounters[NUM_PROJECTILES],escalatorVisits[NUM_ESCALATORS];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestWorldLoopsC(cAudioManager *);
+extern "C" void TestWorldLoopsRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe all callback arguments and exact ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash every initialized owner and game-record field with stable projectile pointer identities
+    uint32_t identities[NUM_PROJECTILES];for(unsigned i=0;i<NUM_PROJECTILES;++i)identities[i]=(uint32_t)(CProjectileInfo::ms_apProjectile[i]-projectiles);
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,infos,sizeof(infos));digest=TestAircraftHash(digest,projectiles,sizeof(projectiles));digest=TestAircraftHash(digest,identities,sizeof(identities));digest=TestAircraftHash(digest,CEscalators::aEscalators,sizeof(CEscalators::aEscalators));digest=TestAircraftHash(digest,&CEscalators::NumEscalators,sizeof(CEscalators::NumEscalators));digest=TestAircraftHash(digest,aVecExtraSoundPosition,sizeof(aVecExtraSoundPosition));digest=TestAircraftHash(digest,&camera,sizeof(camera));
+}
+static void event(unsigned token,unsigned arg) {
+    // Observe complete state before callbacks alter subsequent live gates or positions
+    ++callbacks;value(token);value(arg);observe();
+    if(token==1)current=arg;if(token==8)++escalatorVisits[arg];
+    if(!mutations)return;
+    if(token==2&&(seedValue&1)){infos[(arg+1)%NUM_PROJECTILES].m_bInUse.v=1;infos[(arg+1)%NUM_PROJECTILES].m_eWeaponType=WEAPONTYPE_ROCKET;}
+    if(token==3&&(seedValue&2)){CProjectileInfo::ms_apProjectile[current]=&projectiles[(current+1)%NUM_PROJECTILES];aVecExtraSoundPosition[1].x=2;}
+    if(token==4&&(seedValue&4))projectiles[arg].position.x=3;
+    if(token==5&&(seedValue&8))active->m_sQueueSample.m_vecPos.x=2;
+    if(token==6&&(seedValue&16))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==7&&(seedValue&32))CEscalators::NumEscalators.v=NUM_ESCALATORS;
+    if(token==9&&(seedValue&64))CEscalators::NumEscalators.v=0;
+    if(token==10&&(seedValue&128))CEscalators::aEscalators[arg].position.x=2;
+    if(token==12&&(seedValue&256)){CEscalators::NumEscalators.v=NUM_ESCALATORS;active->m_sQueueSample.m_nFrequency=31000;}
+}
+@HOST@
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager,uint32_t sample) {
+    // Observe frequency setup before original projectile-pointer or arcade sample reads
+    assert(manager==&SampleManager);event(3,sample);return (seedValue&512)?UINT32_MAX-seedValue%17:8000+sample%10000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe original live versus fixed loop-start sample selection
+    assert(manager==&SampleManager);++loops;event(6,sample);return sample%13;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe live projectile samples and fixed escalator or arcade samples after callbacks
+    assert(manager==&SampleManager);event(11,sample);return 200+sample%17;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Query the camera before C geometry reads subsequent live scratch coordinates
+    event(5,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Exercise real queue insertion and changes to later count or frequency reads
+    event(12,0);return (seedValue>>2)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency for these looping sounds
+    return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe complete sound fields before actual C priority insertion and replacement
+    assert(manager==active);++submits;if(manager->m_sQueueSample.m_nCounter<NUM_PROJECTILES)++projectileCounters[manager->m_sQueueSample.m_nCounter];event(13,manager->m_sQueueSample.m_nCounter);TestWorldLoopsRealSubmit(manager);event(14,0);
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Initialize all valid game records and nonnull projectile pointers with zero padding
+    seedValue=seed;mutations=1;memset(owners,0,sizeof(owners));memset(infos,0,sizeof(infos));memset(projectiles,0,sizeof(projectiles));memset(CEscalators::aEscalators,0,sizeof(CEscalators::aEscalators));active=&owners[seed&1];camera={0,0,0};current=0;
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    active->m_sQueueSample.m_nEntityIndex=seed;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_fDistance=-1;active->m_sQueueSample.m_nCounter=777;
+    // Exercise all supported and unsupported representable weapon types and distance boundaries
+    static const enum eWeaponType weapons[]={WEAPONTYPE_UNARMED,WEAPONTYPE_TEARGAS,WEAPONTYPE_ROCKET,WEAPONTYPE_MOLOTOV,WEAPONTYPE_GRENADE,(enum eWeaponType)63};
+    static const float positions[]={0,3.599f,3.6f,5.999f,6,6.001f,17.999f,18,18.001f,29.999f,30,30.001f,39.999f,40,40.001f,89.999f,90,90.001f,NAN,INFINITY};
+    for(unsigned i=0;i<NUM_PROJECTILES;++i){infos[i].m_bInUse.index=i;infos[i].m_bInUse.v=(seed+i)%3!=0;infos[i].m_eWeaponType=weapons[(seed/3+i)%6];projectiles[i].index=i;projectiles[i].position.x=positions[(seed/18+i)%20];projectiles[i].position.z=(float)((seed/360)%3)*50;CProjectileInfo::ms_apProjectile[i]=&projectiles[i];}
+    // Preserve signed count gates while keeping every positive count within the game array
+    static const int32_t counts[]={0,1,5,NUM_ESCALATORS-1,NUM_ESCALATORS,-1,INT32_MIN};CEscalators::NumEscalators.v=counts[seed%7];
+    for(unsigned i=0;i<NUM_ESCALATORS;++i){CEscalators::aEscalators[i].index=i;CEscalators::aEscalators[i].active=(seed+i)%3!=0;CEscalators::aEscalators[i].position.x=positions[(seed/7+i)%20];}
+    // Keep the original writable arcade positions and exercise per-iteration changes to them
+    for(unsigned i=0;i<2;++i){aVecExtraSoundPosition[i].x=positions[(seed+i)%20];aVecExtraSoundPosition[i].y=0;aVecExtraSoundPosition[i].z=(float)((seed/20)%2)*50;}
+}
+int main() {
+    // Keep failures console-only on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Observe exact original arcade initialization before assigning synthetic test positions
+    for(unsigned i=0;i<NUM_PROJECTILES;++i)CProjectileInfo::ms_apProjectile[i]=&projectiles[i];observe();
+    // Exercise repeated live mutations and a fresh pass preserving every seeded boundary
+    for(unsigned seed=0;seed<1024;++seed){prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;prepare(seed);mutations=0;@RUN@;observe();++cases;}
+    // Require every projectile counter and escalator index along with real loop submissions
+    assert(submits);for(unsigned i=0;i<NUM_PROJECTILES;++i)assert(projectileCounters[i]);for(unsigned i=0;i<NUM_ESCALATORS;++i)assert(escalatorVisits[i]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+    printf("%u %u %u %u %llu\n",cases,callbacks,submits,loops,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

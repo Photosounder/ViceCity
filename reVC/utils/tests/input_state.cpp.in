@@ -1,0 +1,126 @@
+#include "owners.h"
+#include "entry.h"
+#include <limits>
+
+static uint64_t digest=1469598103934665603ULL;
+static unsigned states,checks,traceCount;
+static void value(uint64_t input)
+{
+    // Hash defined scalar values independently of native addresses and padding
+    digest=(digest^input)*1099511628211ULL;
+}
+static void require(bool condition)
+{
+    // Stop on the first violated state or platform-call contract
+    ++checks;
+    if(!condition){
+        // Keep failing checks quiet and identifiable
+        fprintf(stderr,"Check %u failed at state %u\n",checks,states);abort();
+    }
+}
+extern "C" void TestTrace(uint32_t code,uint64_t input)
+{
+    // Retain the order and arguments of actual platform operations
+    ++traceCount;value(code);value(input);
+}
+static uint32_t bits(float input)
+{
+    // Observe exact stored float representations without type punning
+    uint32_t output;memcpy(&output,&input,sizeof(output));return output;
+}
+static float fromBits(uint32_t input)
+{
+    // Seed signed zero, finite extremes and NaNs through valid float storage
+    float output;memcpy(&output,&input,sizeof(output));return output;
+}
+static void mouse(CMouseControllerState *state)
+{
+    // Observe the constructor-defined fields while excluding the original uninitialized pad byte
+    ++states;value(state->LMB);value(state->RMB);value(state->MMB);value(state->WHEELUP);value(state->WHEELDN);value(state->MXB1);value(state->MXB2);value(bits(state->x));value(bits(state->y));
+}
+static void seedMouse(CMouseControllerState *state,unsigned mask,uint32_t x,uint32_t y)
+{
+    // Initialize every field before testing the partial clear operation
+    state->LMB=bool(mask&1);state->RMB=bool(mask&2);state->MMB=bool(mask&4);state->WHEELUP=bool(mask&8);state->WHEELDN=bool(mask&16);state->MXB1=bool(mask&32);state->MXB2=bool(mask&64);
+    state->_pad0=char(0x5a);state->x=fromBits(x);state->y=fromBits(y);
+}
+
+int main()
+{
+    // Check the literal global mouse definitions before any explicit clear operation
+    CMouseControllerState *globals[]={&TestPad::OldMouseControllerState,&TestPad::NewMouseControllerState,&TestPad::PCTempMouseControllerState};
+    for(unsigned i=0;i<3;++i){
+        // Original static constructors initialize button and movement fields to zero
+        CMouseControllerState *state=globals[i];
+        require(!state->LMB && !state->RMB && !state->MMB && !state->WHEELUP && !state->WHEELDN && !state->MXB1 && !state->MXB2);
+        require(bits(state->x)==0 && bits(state->y)==0);mouse(state);
+    }
+    require(!MousePointerStateHelper.bInvertHorizontally && !MousePointerStateHelper.bInvertVertically);
+    CControllerState controller;
+    for(int input=-32768;input<=32767;++input){
+        // Exhaust every signed controller-axis value through all four original normalizers
+        memset(&controller,0,sizeof(controller));
+        controller.LeftStickX=controller.LeftStickY=controller.RightStickX=controller.RightStickY=(int16_t)input;
+        float axes[]={Run_ControllerState_GetLeftStickX(&controller),Run_ControllerState_GetLeftStickY(&controller),Run_ControllerState_GetRightStickX(&controller),Run_ControllerState_GetRightStickY(&controller)};
+        for(unsigned axis=0;axis<4;++axis){
+            // Require consistent axis conversion and retain the exact stored result
+            require(bits(axes[axis])==bits(float(input)/32767.0f));value(bits(axes[axis]));
+        }
+        ++states;
+    }
+    const size_t controls[]={offsetof(CControllerState,LeftStickX),offsetof(CControllerState,LeftStickY),offsetof(CControllerState,RightStickX),offsetof(CControllerState,RightStickY),offsetof(CControllerState,LeftShoulder1),offsetof(CControllerState,LeftShoulder2),offsetof(CControllerState,RightShoulder1),offsetof(CControllerState,RightShoulder2),offsetof(CControllerState,DPadUp),offsetof(CControllerState,DPadDown),offsetof(CControllerState,DPadLeft),offsetof(CControllerState,DPadRight),offsetof(CControllerState,Start),offsetof(CControllerState,Select),offsetof(CControllerState,Square),offsetof(CControllerState,Triangle),offsetof(CControllerState,Cross),offsetof(CControllerState,Circle),offsetof(CControllerState,LeftShock),offsetof(CControllerState,RightShock),offsetof(CControllerState,NetworkTalk)};
+    const int16_t signals[]={-32768,-1,0,1,32767};
+    for(unsigned field=0;field<21;++field)for(unsigned signal=0;signal<5;++signal){
+        // Test each activity input independently, including the intentionally ignored network channel
+        memset(&controller,0,sizeof(controller));memcpy((unsigned char*)&controller+controls[field],&signals[signal],sizeof(int16_t));
+        bool active=Run_ControllerState_CheckForInput(&controller);require(active==(field<20 && signals[signal]!=0));value(active);
+        Run_ControllerState_Clear(&controller);
+        const unsigned char *data=(unsigned char*)&controller;
+        for(unsigned i=0;i<sizeof(controller);++i){
+            // Require the complete controller clear to reset every channel
+            require(data[i]==0);value(data[i]);
+        }
+        ++states;
+    }
+    for(unsigned seed=0;seed<256;++seed){
+        // Seed every keyboard channel with a valid signed integer representation
+        CKeyboardState keyboard,expected;unsigned char data[sizeof(keyboard)];
+        for(unsigned i=0;i<sizeof(data);++i)data[i]=(unsigned char)(seed+i*29);
+        memcpy(&keyboard,data,sizeof(keyboard));memset(&expected,0,sizeof(expected));expected.ENTER=keyboard.ENTER;
+        Run_KeyboardState_Clear(&keyboard);require(memcmp(&keyboard,&expected,sizeof(keyboard))==0);
+        for(unsigned i=0;i<sizeof(keyboard);++i)value(((unsigned char*)&keyboard)[i]);
+        ++states;
+    }
+    const uint32_t floats[]={0,0x80000000u,0x3f800000u,0xbf800000u,0x7f800000u,0xff800000u,0x7fc12345u,0x00000001u};
+    for(unsigned flags=0;flags<128;++flags)for(unsigned sample=0;sample<8;++sample){
+        // Verify that mouse clear preserves both movement bit patterns and the defined pad byte
+        CMouseControllerState state;uint32_t x=floats[sample],y=floats[7-sample];seedMouse(&state,flags,x,y);
+        Run_MouseControllerState_Clear(&state);require(bits(state.x)==x && bits(state.y)==y && state._pad0==char(0x5a));
+        require(!state.LMB && !state.RMB && !state.MMB && !state.WHEELUP && !state.WHEELDN && !state.MXB1 && !state.MXB2);mouse(&state);
+        Run_MouseControllerState_Init(&state);require(bits(state.x)==0 && bits(state.y)==0);mouse(&state);
+    }
+    const uint32_t counts[]={0,1,2,3,4,5,6,7,8,9,16,0xffffffffu};
+    const double cursors[]={0.0,-0.0,1.0,-1.0,std::numeric_limits<double>::infinity(),std::numeric_limits<double>::quiet_NaN()};
+    for(unsigned flags=0;flags<16;++flags)for(unsigned button=0;button<12;++button)for(unsigned axis=0;axis<6;++axis){
+        // Exercise existing/missing devices, both initialization outcomes and short-circuit exclusivity
+        bool has=bool(flags&1),menuActive=bool(flags&2),needs=bool(flags&4),create=bool(flags&8);
+        uint32_t axes=axis==5?0xffffffffu:axis;
+        TestConfigure(has,menuActive,needs,create,counts[button],axes,cursors[axis],bool(button&1));traceCount=0;
+        MousePointerStateHelper.bInvertHorizontally=bool(button&1);MousePointerStateHelper.bInvertVertically=bool(axis&1);
+        CMouseControllerState state;Run_MousePointerState_GetMouseSetUp(&MousePointerStateHelper,&state);
+#if defined RW_D3D9 || defined RWLIBS
+        // Preserve the original exact button-count switch and three-axis wheel rule
+        bool available=has || create;uint32_t buttons=counts[button];
+        require(state.LMB==(available && buttons>=1 && buttons<=8));require(state.RMB==(available && buttons>=2 && buttons<=8));require(state.MMB==(available && buttons>=3 && buttons<=8));
+        require(state.WHEELUP==(available && axes==3) && state.WHEELDN==(available && axes==3));
+        require(traceCount==unsigned((!has?1+!menuActive:0)+(available?1:0)));
+#else
+        // Preserve the cursor default, signed-zero handling and nonzero/NaN button availability
+        bool available=(button&1)?cursors[axis]!=0.0:true;
+        require(state.LMB==available && state.RMB==available && state.MMB==available && state.WHEELUP==available && state.WHEELDN==available);
+        require(traceCount==1);
+#endif
+        require(!state.MXB1 && !state.MXB2 && bits(state.x)==0 && bits(state.y)==0);mouse(&state);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+}

@@ -1,500 +1,298 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "Vector.h"
+#include "Fire_backend.h"
 #include "PlayerPed.h"
-#include "Entity.h"
-#include "PointLights.h"
-#include "Particle.h"
-#include "Timer.h"
 #include "Vehicle.h"
-#include "Shadows.h"
 #include "Automobile.h"
 #include "World.h"
-#include "General.h"
+#include "Particle.h"
+#include "Shadows.h"
 #include "EventList.h"
-#include "DamageManager.h"
-#include "Ped.h"
-#include "Fire.h"
 #include "GameLogic.h"
 #include "CarAI.h"
-
-CFireManager gFireManager;
-
-CFire::CFire()
+FireVector Fire_VectorFromNative(const CVector &position)
 {
-	m_bIsOngoing = false;
-	m_bIsScriptFire = false;
-	m_bPropagationFlag = true;
-	m_bAudioSet = true;
-	m_vecPos = CVector(0.0f, 0.0f, 0.0f);
-	m_nExtinguishTime = 0;
-	m_nStartTime = 0;
-	m_pEntity = nil;
-	m_pSource = nil;
-	m_fStrength = 0.8f;
-	m_fWaterExtinguishCountdown = 1.0f;
-  	m_bExtinguishedWithWater = false;
+    // Copy one native value into the plain C position packet at its original value boundary
+    FireVector result={position.x,position.y,position.z};return result;
 }
-
-CFire::~CFire() {}
-
-void
-CFire::ProcessFire(void)
+CVector Fire_VectorToNative(FireVector position)
 {
-	float fDamagePlayer;
-	float fDamagePeds;
-	float fDamageVehicle;
-	int16 nRandNumber;
-	float fGreen;
-	float fRed;
-	CVector lightpos;
-	CVector firePos;
-	CPed *ped = (CPed *)m_pEntity;
-	CVehicle *veh = (CVehicle*)m_pEntity;
-
-	m_fWaterExtinguishCountdown = Min(1.0f, 0.002f * CTimer::GetTimeStep() + m_fWaterExtinguishCountdown);
-
-	if (m_pEntity) {
-		m_vecPos = m_pEntity->GetPosition();
-
-		if (((CPed *)m_pEntity)->IsPed()) {
-			if (ped->m_pFire != this) {
-				Extinguish();
-				return;
-			}
-#if defined GTAVC_JP_PATCH && !defined FIX_BUGS
-			if (m_pEntity == CGameLogic::pShortCutTaxi && CGameLogic::ShortCutState == CGameLogic::SHORTCUT_TRANSITION) {
-				Extinguish();
-				return;
-			}
-#endif
-			if (ped->m_nMoveState != PEDMOVE_RUN)
-				m_vecPos.z -= 1.0f;
-			if (ped->bInVehicle && ped->m_pMyVehicle) {
-				if (ped->m_pMyVehicle->IsCar())
-					ped->m_pMyVehicle->m_fHealth = 75.0f;
-			} else if (m_pEntity == (CPed *)FindPlayerPed()) {
-				fDamagePlayer = 1.2f * CTimer::GetTimeStep();
-
-				((CPlayerPed *)m_pEntity)->InflictDamage(
-					(CPlayerPed *)m_pSource, WEAPONTYPE_FLAMETHROWER,
-						fDamagePlayer, PEDPIECE_TORSO, 0);
-			} else {
-				fDamagePeds = 1.2f * CTimer::GetTimeStep();
-
-				if (((CPlayerPed *)m_pEntity)->InflictDamage(
-					(CPlayerPed *)m_pSource, WEAPONTYPE_FLAMETHROWER,
-					fDamagePeds, PEDPIECE_TORSO, 0)) {
-					m_pEntity->bRenderScorched = true;
-				}
-			}
-		} else if (m_pEntity->IsVehicle()) {
-			if (veh->m_pCarFire != this) {
-				Extinguish();
-				return;
-			}
-#ifdef FIX_BUGS
-			if (m_pEntity == CGameLogic::pShortCutTaxi && CGameLogic::ShortCutState == CGameLogic::SHORTCUT_TRANSITION) {
-				Extinguish();
-				return;
-			}
-#endif
-			if (!m_bIsScriptFire) {
-				fDamageVehicle = 1.2f * CTimer::GetTimeStep();
-				veh->InflictDamage((CVehicle *)m_pSource, WEAPONTYPE_FLAMETHROWER, fDamageVehicle);
-			}
-		}
-	}
-	if (!FindPlayerVehicle() &&
-#ifdef FIX_BUGS
-		FindPlayerPed() &&
-#endif
-		!FindPlayerPed()->m_pFire && !(FindPlayerPed()->bFireProof)
-		&& ((FindPlayerPed()->GetPosition() - m_vecPos).MagnitudeSqr() < 2.0f)) {
-		FindPlayerPed()->DoStuffToGoOnFire();
-		gFireManager.StartFire(FindPlayerPed(), m_pSource, 0.8f, 1);
-	}
-	if (CTimer::GetTimeInMilliseconds() > m_nNextTimeToAddFlames) {
-		m_nNextTimeToAddFlames = CTimer::GetTimeInMilliseconds() + (m_fWaterExtinguishCountdown < 0.3f ? 400 : (m_fWaterExtinguishCountdown < 0.7f ? 200 : 80));
-		firePos = m_vecPos;
-
-		if (veh && veh->IsVehicle() && veh->IsCar()) {
-			CVehicleModelInfo *mi = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(veh->GetModelIndex()));
-			CVector ModelInfo = mi->m_positions[CAR_POS_HEADLIGHTS];
-			ModelInfo = m_pEntity->GetMatrix() * ModelInfo;
-
-			firePos.x = ModelInfo.x;
-			firePos.y = ModelInfo.y;
-			firePos.z = ModelInfo.z + 0.15f;
-		}
-
-		CParticle::AddParticle(PARTICLE_CARFLAME, firePos,
-			CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.0125f, 0.1f) * m_fStrength),
-				0, m_fStrength, 0, 0, 0, 0);
-
-		CGeneral::GetRandomNumber(); CGeneral::GetRandomNumber(); CGeneral::GetRandomNumber(); /* unsure why these three rands are called */
-
-		CParticle::AddParticle(PARTICLE_CARFLAME_SMOKE, firePos,
-			CVector(0.0f, 0.0f, 0.0f), 0, 0.0f, 0, 0, 0, 0);
-	}
-	if (CTimer::GetTimeInMilliseconds() < m_nExtinguishTime || m_bIsScriptFire) {
-		if (CTimer::GetTimeInMilliseconds() > m_nStartTime)
-			m_nStartTime = CTimer::GetTimeInMilliseconds() + 400;
-
-		nRandNumber = CGeneral::GetRandomNumber() & 127;
-		lightpos.x = m_vecPos.x;
-		lightpos.y = m_vecPos.y;
-		lightpos.z = m_vecPos.z + 5.0f;
-
-		if (!m_pEntity) {
-			CShadows::StoreStaticShadow((uintptr)this, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &lightpos, 7.0f, 0.0f, 0.0f, -7.0f, 0, nRandNumber / 2,
-			                            nRandNumber / 2, 0, 10.0f, 1.0f, 40.0f, 0, 0.0f);
-		}
-		fGreen = nRandNumber / 128.f;
-		fRed = nRandNumber / 128.f;
-
-		CPointLights::AddLight(CPointLights::LIGHT_POINT, m_vecPos, CVector(0.0f, 0.0f, 0.0f), 12.0f, fRed, fGreen, 0.0f, 0, 0);
-	} else {
-		Extinguish();
-	}
+    // Supply a native vector value to the still-native caller or external engine operation
+    return CVector(position.x,position.y,position.z);
 }
-
-void
-CFire::ReportThisFire(void)
+FireVector Fire_BackendReadVector(const void *position)
 {
-	gFireManager.m_nTotalFires++;
-	CEventList::RegisterEvent(EVENT_FIRE, m_vecPos, 1000);
+    // Enter the original typed native operation or canonical field at the C decision point
+    const CVector &v=*(const CVector *)position;return FireVector{v.x,v.y,v.z};
 }
-
-void
-CFire::Extinguish(void)
+FireVector Fire_BackendPosition(CEntity *entity)
 {
-	if (m_bIsOngoing) {
-		if (!m_bIsScriptFire)
-			gFireManager.m_nTotalFires--;
-
-		m_nExtinguishTime = 0;
-		m_bIsOngoing = false;
-		m_bExtinguishedWithWater = false;
-
-		if (m_pEntity) {
-			if (m_pEntity->IsPed()) {
-				CPed *ped = (CPed*)m_pEntity;
-				if (ped->CanSetPedState()) {
-					if (ped->m_nPedState != PED_DRIVING && ped->m_nPedState != PED_FALL) {
-						if (ped->IsPlayer()) {
-							ped->SetIdle();
-						} else {
-							ped->m_nLastPedState = PED_NONE;
-							ped->SetWanderPath(0);
-							ped->SetWaitState(WAITSTATE_FINISH_FLEE, 0);
-						}
-					}
-				}
-				ped->m_pFire = nil;
-			} else if (m_pEntity->IsVehicle()) {
-				((CVehicle *)m_pEntity)->m_pCarFire = nil;
-			}
-			m_pEntity = nil;
-		}
-	}
+    // Enter the original typed native operation or canonical field at the C decision point
+    return Fire_VectorFromNative(entity->GetPosition());
 }
-
-void
-CFireManager::StartFire(CVector pos, float size, uint8 propagation)
+bool Fire_BackendIsPed(CEntity *entity)
 {
-	CFire *fire = GetNextFreeFire();
-
-	if (fire) {
-		fire->m_bIsOngoing = true;
-		fire->m_bIsScriptFire = false;
-		fire->m_bPropagationFlag = propagation;
-		fire->m_bAudioSet = true;
-		fire->m_vecPos = pos;
-		fire->m_nExtinguishTime = CTimer::GetTimeInMilliseconds() + 10000;
-		fire->m_nStartTime = CTimer::GetTimeInMilliseconds() + 400;
-		fire->m_pEntity = nil;
-		fire->m_pSource = nil;
-		fire->m_nNextTimeToAddFlames = 0;
-		fire->ReportThisFire();
-		fire->m_fStrength = size;
-		fire->m_bExtinguishedWithWater = false;
-	}
+    // Enter the original typed native operation or canonical field at the C decision point
+    return entity->IsPed();
 }
-
-CFire *
-CFireManager::StartFire(CEntity *entityOnFire, CEntity *fleeFrom, float strength, uint8 propagation)
+bool Fire_BackendIsVehicle(CEntity *entity)
 {
-	CPed *ped = (CPed *)entityOnFire;
-	CVehicle *veh = (CVehicle *)entityOnFire;
-
-	if (entityOnFire->IsPed()) {
-		if (ped->m_pFire)
-			return nil;
-		if (!ped->IsPedInControl())
-			return nil;
-	} else if (entityOnFire->IsVehicle()) {
-		if (veh->m_pCarFire)
-			return nil;
-		if (veh->IsCar() &&  ((CAutomobile *)veh)->Damage.GetEngineStatus() >= 225)
-			return nil;
-	}
-	CFire *fire = GetNextFreeFire();
-
-	if (fire) {
-		if (entityOnFire->IsPed()) {
-			ped->m_pFire = fire;
-			if (ped != FindPlayerPed()) {
-				if (fleeFrom) {
-					ped->SetFlee(fleeFrom, 10000);
-				} else {
-					CVector2D pos = entityOnFire->GetPosition();
-					ped->SetFlee(pos, 10000);
-					ped->m_fleeFrom = nil;
-				}
-				ped->m_fleeTimer = CTimer::GetTimeInMilliseconds() + 10000;
-				ped->bDrawLast = false;
-				ped->SetMoveState(PEDMOVE_SPRINT);
-				ped->SetMoveAnim();
-				ped->SetPedState(PED_ON_FIRE);
-			}
-			if (fleeFrom) {
-				if (ped->m_nPedType == PEDTYPE_COP) {
-					CEventList::RegisterEvent(EVENT_COP_SET_ON_FIRE, EVENT_ENTITY_PED,
-						entityOnFire, (CPed *)fleeFrom, 10000);
-				} else {
-					CEventList::RegisterEvent(EVENT_PED_SET_ON_FIRE, EVENT_ENTITY_PED,
-						entityOnFire, (CPed *)fleeFrom, 10000);
-				}
-			}
-		} else {
-			if (entityOnFire->IsVehicle()) {
-				veh->m_pCarFire = fire;
-				if (CModelInfo::IsBikeModel(veh->GetModelIndex()) || CModelInfo::IsCarModel(veh->GetModelIndex()))
-        				CCarAI::TellOccupantsToFleeCar(veh);
-
-				if (fleeFrom) {
-					CEventList::RegisterEvent(EVENT_CAR_SET_ON_FIRE, EVENT_ENTITY_VEHICLE,
-						entityOnFire, (CPed *)fleeFrom, 10000);
-				}
-			}
-		}
-
-		fire->m_bIsOngoing = true;
-		fire->m_bExtinguishedWithWater = false;
-		fire->m_bIsScriptFire = false;
-		fire->m_vecPos = entityOnFire->GetPosition();
-
-		if (entityOnFire && entityOnFire->IsPed() && ped->IsPlayer()) {
-			fire->m_nExtinguishTime = CTimer::GetTimeInMilliseconds() + 3333;
-		} else if (entityOnFire->IsVehicle()) {
-			fire->m_nExtinguishTime = CTimer::GetTimeInMilliseconds() + CGeneral::GetRandomNumberInRange(4000, 5000);
-		} else {
-			fire->m_nExtinguishTime = CTimer::GetTimeInMilliseconds() + CGeneral::GetRandomNumberInRange(10000, 11000);
-		}
-		fire->m_nStartTime = CTimer::GetTimeInMilliseconds() + 400;
-		fire->m_pEntity = entityOnFire;
-
-		entityOnFire->RegisterReference(&fire->m_pEntity);
-		fire->m_pSource = fleeFrom;
-
-		if (fleeFrom)
-			fleeFrom->RegisterReference(&fire->m_pSource);
-		fire->ReportThisFire();
-		fire->m_nNextTimeToAddFlames = 0;
-		fire->m_fStrength = strength;
-		fire->m_bPropagationFlag = propagation;
-		fire->m_bAudioSet = true;
-	}
-	return fire;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return entity->IsVehicle();
 }
-
-void
-CFireManager::Update(void)
+bool Fire_BackendIsCar(CEntity *entity)
 {
-	for (int i = 0; i < NUM_FIRES; i++) {
-		if (m_aFires[i].m_bIsOngoing)
-			m_aFires[i].ProcessFire();
-	}
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CVehicle *)entity)->IsCar();
 }
-
-CFire* CFireManager::FindNearestFire(CVector vecPos, float *pDistance)
+CFire * Fire_BackendPedFire(CEntity *entity)
 {
-	int fireId = -1;
-	float minDistance = 999999;
-	for (int j = 0; j < NUM_FIRES; j++) {
-		if (!m_aFires[j].m_bIsOngoing)
-			continue;
-		if (m_aFires[j].m_bIsScriptFire)
-			continue;
-		float distance = (m_aFires[j].m_vecPos - vecPos).Magnitude2D();
-		if (distance < minDistance) {
-			minDistance = distance;
-			fireId = j;
-		}
-	}
-	*pDistance = minDistance;
-	if (fireId != -1)
-		return &m_aFires[fireId];
-
-	return nil;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->m_pFire;
 }
-
-CFire *
-CFireManager::FindFurthestFire_NeverMindFireMen(CVector coords, float minRange, float maxRange)
+CFire * Fire_BackendVehicleFire(CEntity *entity)
 {
-	int furthestFire = -1;
-	float lastFireDist = 0.0f;
-	float fireDist;
-
-	for (int i = 0; i < NUM_FIRES; i++) {
-		if (m_aFires[i].m_bIsOngoing && !m_aFires[i].m_bIsScriptFire) {
-			fireDist = (m_aFires[i].m_vecPos - coords).Magnitude2D();
-			if (fireDist > minRange && fireDist < maxRange && fireDist > lastFireDist) {
-				lastFireDist = fireDist;
-				furthestFire = i;
-			}
-		}
-	}
-	if (furthestFire == -1)
-		return nil;
-	else
-		return &m_aFires[furthestFire];
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CVehicle *)entity)->m_pCarFire;
 }
-
-CFire *
-CFireManager::GetNextFreeFire(void)
+void Fire_BackendSetPedFire(CEntity *entity,CFire *fire)
 {
-	for (int i = 0; i < NUM_FIRES; i++) {
-		if (!m_aFires[i].m_bIsOngoing && !m_aFires[i].m_bIsScriptFire)
-			return &m_aFires[i];
-	}
-	return nil;
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->m_pFire=fire;
 }
-
-uint32
-CFireManager::GetTotalActiveFires(void) const
+void Fire_BackendSetVehicleFire(CEntity *entity,CFire *fire)
 {
-	return m_nTotalFires;
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CVehicle *)entity)->m_pCarFire=fire;
 }
-
-void
-CFireManager::ExtinguishPoint(CVector point, float range)
+int32_t Fire_BackendMoveState(CEntity *entity)
 {
-	for (int i = 0; i < NUM_FIRES; i++) {
-		if (m_aFires[i].m_bIsOngoing) {
-			if ((point - m_aFires[i].m_vecPos).MagnitudeSqr() < sq(range))
-				m_aFires[i].Extinguish();
-		}
-	}
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->m_nMoveState;
 }
-
-bool
-CFireManager::ExtinguishPointWithWater(CVector point, float range)
+bool Fire_BackendInVehicle(CEntity *entity)
 {
-    int i;
-    for (i = 0; i < NUM_FIRES;) {
-        if (m_aFires[i].m_bIsOngoing && (point - m_aFires[i].m_vecPos).MagnitudeSqr() < sq(range)) {
-                break;
-        }
-        if (++i >= NUM_FIRES)
-          return false;
-    }
-    
-	CFire *fireToExtinguish = &m_aFires[i];
-	fireToExtinguish->m_fWaterExtinguishCountdown -= 0.012f * CTimer::GetTimeStep();
-	CVector steamPos = fireToExtinguish->m_vecPos +
-		CVector((CGeneral::GetRandomNumber() - 128) * 3.1f / 200.f,
-			(CGeneral::GetRandomNumber() - 128) * 3.1f / 200.f,
-			CGeneral::GetRandomNumber() / 200.f);
-
-	CParticle::AddParticle(PARTICLE_STEAM_NY_SLOWMOTION, steamPos, CVector(0.f, 0.f, 0.2f), nil, 0.5f);
-	CParticle::AddParticle(PARTICLE_STEAM_NY_SLOWMOTION, steamPos, CVector(0.f, 0.f, 0.1f), nil, 0.8f);
-	fireToExtinguish->m_bExtinguishedWithWater = true;
-	if (fireToExtinguish->m_fWaterExtinguishCountdown < 0.0f )
-	  fireToExtinguish->Extinguish();
-
-	return true;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->bInVehicle;
 }
-
-int32
-CFireManager::StartScriptFire(const CVector &pos, CEntity *target, float strength, uint8 propagation)
+CEntity * Fire_BackendMyVehicle(CEntity *entity)
 {
-	CFire *fire;
-	CPed *ped = (CPed *)target;
-	CVehicle *veh = (CVehicle *)target;
-
-	if (target) {
-		if (target->IsPed()) {
-			if (ped->m_pFire)
-				ped->m_pFire->Extinguish();
-		} else if (target->IsVehicle()) {
-			if (veh->m_pCarFire)
-				veh->m_pCarFire->Extinguish();
-			if (veh->IsCar() && ((CAutomobile *)veh)->Damage.GetEngineStatus() >= 225) {
-				((CAutomobile *)veh)->Damage.SetEngineStatus(215);
-			}
-		}
-	}
-
-	fire = GetNextFreeFire();
-	fire->m_bIsOngoing = true;
-	fire->m_bIsScriptFire = true;
-	fire->m_bPropagationFlag = propagation;
-	fire->m_bAudioSet = true;
-	fire->m_vecPos = pos;
-	fire->m_nStartTime = CTimer::GetTimeInMilliseconds() + 400;
-	fire->m_pEntity = target;
-	fire->m_bExtinguishedWithWater = false;
-
-	if (target)
-		target->RegisterReference(&fire->m_pEntity);
-	fire->m_pSource = nil;
-	fire->m_nNextTimeToAddFlames = 0;
-	fire->m_fStrength = strength;
-	fire->m_fWaterExtinguishCountdown = 1.0f;
-
-	if (target) {
-		if (target->IsPed()) {
-			ped->m_pFire = fire;
-			if (target != FindPlayerPed()) {
-				CVector2D pos = target->GetPosition();
-				ped->SetFlee(pos, 10000);
-				ped->SetMoveAnim();
-				ped->SetPedState(PED_ON_FIRE);
-			}
-		} else if (target->IsVehicle()) {
-			veh->m_pCarFire = fire;
-		}
-	}
-	return fire - m_aFires;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->m_pMyVehicle;
 }
-
-bool
-CFireManager::IsScriptFireExtinguish(int16 index)
+void Fire_BackendVehicleHealth(CEntity *entity,float health)
 {
-	return !m_aFires[index].m_bIsOngoing;
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CVehicle *)entity)->m_fHealth=health;
 }
-
-void
-CFireManager::RemoveAllScriptFires(void)
+CEntity * Fire_BackendPlayerPed(void)
 {
-	for (int i = 0; i < NUM_FIRES; i++) {
-		if (m_aFires[i].m_bIsScriptFire) {
-			RemoveScriptFire(i);
-		}
-	}
+    // Enter the original typed native operation or canonical field at the C decision point
+    return FindPlayerPed();
 }
-
-void
-CFireManager::RemoveScriptFire(int16 index)
+CEntity * Fire_BackendPlayerVehicle(void)
 {
-	m_aFires[index].Extinguish();
-	m_aFires[index].m_bIsScriptFire = false;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return FindPlayerVehicle();
 }
-
-void
-CFireManager::SetScriptFireAudio(int16 index, bool state)
+bool Fire_BackendPedDamage(CEntity *entity,CEntity *source,float damage)
 {
-	m_aFires[index].m_bAudioSet = state;
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPlayerPed *)entity)->InflictDamage((CPlayerPed *)source,WEAPONTYPE_FLAMETHROWER,damage,PEDPIECE_TORSO,0);
 }
+void Fire_BackendVehicleDamage(CEntity *entity,CEntity *source,float damage)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CVehicle *)entity)->InflictDamage((CVehicle *)source,WEAPONTYPE_FLAMETHROWER,damage);
+}
+void Fire_BackendScorched(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    entity->bRenderScorched=true;
+}
+CEntity * Fire_BackendShortcutTaxi(void)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return CGameLogic::pShortCutTaxi;
+}
+bool Fire_BackendShortcutTransition(void)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return CGameLogic::ShortCutState==CGameLogic::SHORTCUT_TRANSITION;
+}
+bool Fire_BackendFireProof(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->bFireProof;
+}
+void Fire_BackendPrepareOnFire(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPlayerPed *)entity)->DoStuffToGoOnFire();
+}
+int32_t Fire_BackendModel(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return entity->GetModelIndex();
+}
+FireVector Fire_BackendHeadlights(int32_t model)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return Fire_VectorFromNative(((CVehicleModelInfo *)CModelInfo::GetModelInfo(model))->m_positions[CAR_POS_HEADLIGHTS]);
+}
+FireVector Fire_BackendTransform(CEntity *entity,FireVector position)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return Fire_VectorFromNative(entity->GetMatrix()*Fire_VectorToNative(position));
+}
+void Fire_BackendFlame(FireVector position,FireVector velocity,float size)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    CParticle::AddParticle(PARTICLE_CARFLAME,Fire_VectorToNative(position),Fire_VectorToNative(velocity),0,size,0,0,0,0);
+}
+void Fire_BackendSmoke(FireVector position)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    CParticle::AddParticle(PARTICLE_CARFLAME_SMOKE,Fire_VectorToNative(position),CVector(0.0f,0.0f,0.0f),0,0.0f,0,0,0,0);
+}
+void Fire_BackendSteam(FireVector position,float upward,float size)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    CParticle::AddParticle(PARTICLE_STEAM_NY_SLOWMOTION,Fire_VectorToNative(position),CVector(0.0f,0.0f,upward),nil,size);
+}
+void Fire_BackendShadow(uintptr_t id,FireVector position,int16_t random)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    CVector native=Fire_VectorToNative(position);CShadows::StoreStaticShadow(id,SHADOWTYPE_ADDITIVE,gpShadowExplosionTex,&native,7.0f,0.0f,0.0f,-7.0f,0,random/2,random/2,0,10.0f,1.0f,40.0f,0,0.0f);
+}
+void Fire_BackendReport(FireVector position)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    Events_RegisterPosition(EVENT_FIRE,Events_VectorFromNative(Fire_VectorToNative(position)),1000);
+}
+bool Fire_BackendCanSetState(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->CanSetPedState();
+}
+int32_t Fire_BackendPedState(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->m_nPedState;
+}
+bool Fire_BackendIsPlayer(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->IsPlayer();
+}
+void Fire_BackendIdle(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetIdle();
+}
+void Fire_BackendLastStateNone(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->m_nLastPedState=PED_NONE;
+}
+void Fire_BackendWander(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetWanderPath(0);
+}
+void Fire_BackendWaitFinish(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetWaitState(WAITSTATE_FINISH_FLEE,0);
+}
+bool Fire_BackendInControl(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->IsPedInControl();
+}
+uint8_t Fire_BackendEngineStatus(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return Damage_GetEngineStatus(&((CAutomobile *)entity)->Damage);
+}
+void Fire_BackendSetEngineStatus(CEntity *entity,uint8_t status)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    Damage_SetEngineStatus(&((CAutomobile *)entity)->Damage, status);
+}
+void Fire_BackendFleeEntity(CEntity *entity,CEntity *source)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetFlee(source,10000);
+}
+void Fire_BackendFleePosition(CEntity *entity,FireVector position)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetFlee(CVector2D(position.x,position.y),10000);
+}
+void Fire_BackendClearFleeFrom(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->m_fleeFrom=nil;
+}
+uint32_t * Fire_BackendFleeTimer(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return &((CPed *)entity)->m_fleeTimer;
+}
+void Fire_BackendDrawLastOff(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->bDrawLast=false;
+}
+void Fire_BackendSprint(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetMoveState(PEDMOVE_SPRINT);
+}
+void Fire_BackendMoveAnim(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetMoveAnim();
+}
+void Fire_BackendOnFireState(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    ((CPed *)entity)->SetPedState(PED_ON_FIRE);
+}
+int32_t Fire_BackendPedType(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return ((CPed *)entity)->m_nPedType;
+}
+void Fire_BackendCopEvent(CEntity *entity,CEntity *source)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    Events_RegisterEntity(EVENT_COP_SET_ON_FIRE,EVENT_ENTITY_PED,entity,(CPed *)source,10000);
+}
+void Fire_BackendPedEvent(CEntity *entity,CEntity *source)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    Events_RegisterEntity(EVENT_PED_SET_ON_FIRE,EVENT_ENTITY_PED,entity,(CPed *)source,10000);
+}
+void Fire_BackendVehicleEvent(CEntity *entity,CEntity *source)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    Events_RegisterEntity(EVENT_CAR_SET_ON_FIRE,EVENT_ENTITY_VEHICLE,entity,(CPed *)source,10000);
+}
+bool Fire_BackendBikeModel(int32_t model)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return CModelInfo::IsBikeModel(model);
+}
+bool Fire_BackendCarModel(int32_t model)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    return CModelInfo::IsCarModel(model);
+}
+void Fire_BackendFleeOccupants(CEntity *entity)
+{
+    // Enter the original typed native operation or canonical field at the C decision point
+    CCarAI::TellOccupantsToFleeCar((CVehicle *)entity);
+}
+//- rouz edit (ChatGPT)

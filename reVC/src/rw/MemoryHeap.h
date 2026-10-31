@@ -1,20 +1,11 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-// some windows shit
+#include <stdint.h>
+#include <stdbool.h>
+#include "IntStack.h"
 #ifdef MoveMemory
 #undef MoveMemory
 #endif
-
-#ifdef USE_CUSTOM_ALLOCATOR
-#define PUSH_MEMID(id) gMainHeap.PushMemId(id)
-#define POP_MEMID() gMainHeap.PopMemId()
-#define REGISTER_MEMPTR(ptr) gMainHeap.RegisterMemPointer(ptr)
-#else
-#define PUSH_MEMID(id)
-#define POP_MEMID()
-#define REGISTER_MEMPTR(ptr)
-#endif
-
 enum {
 	MEMID_FREE,
 	MEMID_GAME = 1,	// "Game"
@@ -40,163 +31,82 @@ enum {
 
 	NUM_FIXED_MEMBLOCKS = 6
 };
-
-//+ rouz edit (ChatGPT)
-#include "IntStack.h"
-//- rouz edit (ChatGPT)
-
-
-struct HeapBlockDesc
-{
-	uint32 m_size;
-	int16 m_memId;
-	int16 m_ptrListIndex;
-	HeapBlockDesc *m_next;
-	HeapBlockDesc *m_prev;
-
-	HeapBlockDesc *GetNextConsecutive(void)
-	{
-		return (HeapBlockDesc*)((uintptr)this + sizeof(HeapBlockDesc) + m_size);
-	}
-
-	void *GetDataPointer(void)
-	{
-		return (void*)((uintptr)this + sizeof(HeapBlockDesc));
-	}
-
-	void RemoveHeapFreeBlock(void)
-	{
-		m_next->m_prev = m_prev;
-		m_prev->m_next = m_next;
-	}
-
-	// after node
-	void InsertHeapFreeBlock(HeapBlockDesc *node)
-	{
-		m_next = node->m_next;
-		node->m_next->m_prev = this;
-		m_prev = node;
-		node->m_next = this;
-	}
-
-	HeapBlockDesc *FindSmallestFreeBlock(uint32 size)
-	{
-		HeapBlockDesc *b;
-		for(b = m_next; b->m_size < size; b = b->m_next);
-		return b;
-	}
-};
-
+typedef struct HeapBlockDesc {
+    uint32_t m_size;
+    int16_t m_memId,m_ptrListIndex;
+    struct HeapBlockDesc *m_next,*m_prev;
+} HeapBlockDesc;
 #ifdef USE_CUSTOM_ALLOCATOR
-// TODO: figure something out for 64 bit pointers
-static_assert(sizeof(HeapBlockDesc) == 0x10, "HeapBlockDesc must have 0x10 size otherwise most of assumptions don't make sense");
+#ifdef __cplusplus
+static_assert(sizeof(HeapBlockDesc)==0x10,"HeapBlockDesc must have 0x10 size otherwise most of assumptions don't make sense");
+#else
+_Static_assert(sizeof(HeapBlockDesc)==0x10,"HeapBlockDesc must have 0x10 size otherwise most of assumptions don't make sense");
 #endif
-
-struct HeapBlockList
-{
-	HeapBlockDesc m_first;
-	HeapBlockDesc m_last;
-
-	void Init(void)
-	{
-		m_first.m_next = &m_last;
-		m_last.m_prev = &m_first;
-	}
-
-	void Insert(HeapBlockDesc *node)
-	{
-		node->InsertHeapFreeBlock(&m_first);
-	}
-};
-
-struct CommonSize
-{
-	HeapBlockList m_freeList;
-	uint32 m_size;
-	uint32 m_failed;
-	uint32 m_remaining;
-
-	void Init(uint32 size);
-	void Free(HeapBlockDesc *node)
-	{
-		m_freeList.Insert(node);
-		m_remaining++;
-	}
-	HeapBlockDesc *Malloc(void)
-	{
-		if(m_freeList.m_first.m_next == &m_freeList.m_last){
-			m_failed++;
-			return nil;
-		}
-		HeapBlockDesc *block = m_freeList.m_first.m_next;
-		m_remaining--;
-		block->RemoveHeapFreeBlock();
-		block->m_ptrListIndex = -1;
-		return block;
-	}
-};
-
-class CMemoryHeap
-{
-public:
-	HeapBlockDesc *m_start;
-	HeapBlockDesc *m_end;
-	HeapBlockList m_freeList;
-	CommonSize m_fixedSize[NUM_FIXED_MEMBLOCKS];
-	uint32 m_totalMemUsed;
-	CIntStack16 m_idStack; // rouz edit (ChatGPT)
-	uint32 m_currentMemID;
-	uint32 *m_memUsed;
-	uint32 m_totalBlocksUsed;
-	uint32 *m_blocksUsed;
-	uint32 m_unkMemId;
-
-	//+ rouz edit (ChatGPT)
-	CMemoryHeap(void) : m_start(nil)
-	{
-		// Initialize the embedded stack counter for heaps with automatic storage
-		CIntStack16_Init(&m_idStack);
-	}
-	//- rouz edit (ChatGPT)
-	void Init(uint32 total);
-	void RegisterMalloc(HeapBlockDesc *block);
-	void RegisterFree(HeapBlockDesc *block);
-	void *Malloc(uint32 size);
-	void *Realloc(void *ptr, uint32 size);
-	void Free(void *ptr);
-	void FillInBlockData(HeapBlockDesc *block, HeapBlockDesc *end, uint32 size);
-	uint32 CombineFreeBlocks(HeapBlockDesc *block);
-	void *MoveMemory(void *ptr);
-	HeapBlockDesc *WhereShouldMemoryMove(void *ptr);
-	void *MoveHeapBlock(HeapBlockDesc *dst, HeapBlockDesc *src);
-	void PopMemId(void);
-	void PushMemId(int32 id);
-	void RegisterMemPointer(void *ptr);
-	void TidyHeap(void);
-	uint32 GetMemoryUsed(int32 id);
-	uint32 GetBlocksUsed(int32 id);
-	int32 GetLargestFreeBlock(void) { return m_freeList.m_last.m_prev->m_size; }
-
-	void ParseHeap(void);
-
-	HeapBlockDesc *GetDescFromHeapPointer(void *block)
-	{
-		return (HeapBlockDesc*)((uintptr)block - sizeof(HeapBlockDesc));
-	}
-	uint32 GetSizeBetweenBlocks(HeapBlockDesc *first, HeapBlockDesc *second)
-	{
-		return (uintptr)second - (uintptr)first - sizeof(HeapBlockDesc);
-	}
-	void FreeBlock(HeapBlockDesc *block){
-		for(int i = 0; i < NUM_FIXED_MEMBLOCKS; i++){
-			if(m_fixedSize[i].m_size == block->m_size){
-				m_fixedSize[i].Free(block);
-				return;
-			}
-		}
-		HeapBlockDesc *b = m_freeList.m_first.FindSmallestFreeBlock(block->m_size);
-		block->InsertHeapFreeBlock(b->m_prev);
-	}
-};
-
+#endif
+typedef struct HeapBlockList {HeapBlockDesc m_first,m_last;} HeapBlockList;
+typedef struct CommonSize {
+    HeapBlockList m_freeList;
+    uint32_t m_size,m_failed,m_remaining;
+} CommonSize;
+typedef struct CMemoryHeap {
+    HeapBlockDesc *m_start,*m_end;
+    HeapBlockList m_freeList;
+    CommonSize m_fixedSize[NUM_FIXED_MEMBLOCKS];
+    uint32_t m_totalMemUsed;
+    CIntStack16 m_idStack;
+    uint32_t m_currentMemID;
+    uint32_t *m_memUsed;
+    uint32_t m_totalBlocksUsed;
+    uint32_t *m_blocksUsed;
+    uint32_t m_unkMemId;
+} CMemoryHeap;
+#ifdef USE_CUSTOM_ALLOCATOR
+#define PUSH_MEMID(id) MemoryHeap_PushMemId(&gMainHeap,(id))
+#define POP_MEMID() MemoryHeap_PopMemId(&gMainHeap)
+#define REGISTER_MEMPTR(ptr) MemoryHeap_RegisterMemPointer(&gMainHeap,(ptr))
+#else
+#define PUSH_MEMID(id)
+#define POP_MEMID()
+#define REGISTER_MEMPTR(ptr)
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern CMemoryHeap gMainHeap;
+HeapBlockDesc * HeapBlock_GetNextConsecutive(HeapBlockDesc *self);
+void * HeapBlock_GetDataPointer(HeapBlockDesc *self);
+void HeapBlock_RemoveHeapFreeBlock(HeapBlockDesc *self);
+void HeapBlock_InsertHeapFreeBlock(HeapBlockDesc *self,HeapBlockDesc *node);
+HeapBlockDesc * HeapBlock_FindSmallestFreeBlock(HeapBlockDesc *self,uint32_t size);
+void HeapList_Init(HeapBlockList *self);
+void HeapList_Insert(HeapBlockList *self,HeapBlockDesc *node);
+void HeapCommon_Free(CommonSize *self,HeapBlockDesc *node);
+HeapBlockDesc * HeapCommon_Malloc(CommonSize *self);
+void MemoryHeap_InitRecord(CMemoryHeap *self);
+int32_t MemoryHeap_GetLargestFreeBlock(CMemoryHeap *self);
+HeapBlockDesc * MemoryHeap_GetDescFromHeapPointer(CMemoryHeap *self,void *block);
+uint32_t MemoryHeap_GetSizeBetweenBlocks(CMemoryHeap *self,HeapBlockDesc *first,HeapBlockDesc *second);
+void MemoryHeap_FreeBlock(CMemoryHeap *self,HeapBlockDesc *block);
+void MemoryHeap_Init(CMemoryHeap *self,uint32_t total);
+void MemoryHeap_RegisterMalloc(CMemoryHeap *self,HeapBlockDesc *block);
+void MemoryHeap_RegisterFree(CMemoryHeap *self,HeapBlockDesc *block);
+void * MemoryHeap_Malloc(CMemoryHeap *self,uint32_t size);
+void * MemoryHeap_Realloc(CMemoryHeap *self,void *ptr,uint32_t size);
+void MemoryHeap_Free(CMemoryHeap *self,void *ptr);
+void MemoryHeap_FillInBlockData(CMemoryHeap *self,HeapBlockDesc *block,HeapBlockDesc *end,uint32_t size);
+uint32_t MemoryHeap_CombineFreeBlocks(CMemoryHeap *self,HeapBlockDesc *block);
+void MemoryHeap_TidyHeap(CMemoryHeap *self);
+void MemoryHeap_RegisterMemPointer(CMemoryHeap *self,void *ptr);
+void * MemoryHeap_MoveMemory(CMemoryHeap *self,void *ptr);
+HeapBlockDesc * MemoryHeap_WhereShouldMemoryMove(CMemoryHeap *self,void *ptr);
+void * MemoryHeap_MoveHeapBlock(CMemoryHeap *self,HeapBlockDesc *dst,HeapBlockDesc *src);
+uint32_t MemoryHeap_GetMemoryUsed(CMemoryHeap *self,int32_t id);
+uint32_t MemoryHeap_GetBlocksUsed(CMemoryHeap *self,int32_t id);
+void MemoryHeap_PopMemId(CMemoryHeap *self);
+void MemoryHeap_PushMemId(CMemoryHeap *self,int32_t id);
+void MemoryHeap_ParseHeap(CMemoryHeap *self);
+void HeapCommon_Init(CommonSize *self,uint32_t size);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

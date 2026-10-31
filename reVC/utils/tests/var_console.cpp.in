@@ -1,0 +1,267 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <initializer_list>
+#include <limits>
+#include "owners.h"
+#include "caller.h"
+RsGlobalType RsGlobal;
+struct Values {int8_t i8;int16_t i16;int32_t i32;int64_t i64;uint8_t u8;uint16_t u16;uint32_t u32;uint64_t u64;float f;bool b;uint8_t b8;uint16_t b16;uint32_t b32;} values;
+static char labels[96][32];static bool buttons[14];static CPad pad;static unsigned states,calls,adds,lefts,rights,displays,inputs,processes,checks,constructs,initializations,removes,callbacks,prints,unicodes,padReads;
+static int hook,callbackMode;static bool triggered;static uint64_t hash=1469598103934665603ULL;
+static CRGBA color,shadow,background;static float scaleX,scaleY,wrap,rightWrap;static int style,shadowPosition;static bool proportional,rightJustify,backgroundOn;
+extern "C" void FixtureCallback(void);
+static void require(bool condition)
+{
+    // Stop quietly if a corpus input violates the original console's storage or pointer contracts
+    if(!condition){fprintf(stderr,"Variable-console invariant failed at state %u call %u hook %d\n",states,calls,hook);abort();}
+}
+static void word(uint32_t value)
+{
+    // Compare scalar values using a fixed byte order
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void wide(uint64_t value)
+{
+    // Retain all bits of signed and unsigned 64-bit values
+    word((uint32_t)value);word((uint32_t)(value>>32));
+}
+static void floating(float value)
+{
+    // Observe exact finite arithmetic and signed-zero representations
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static int pointer(const void *value)
+{
+    // Normalize actual name and scalar-owner addresses without changing alias identities
+    if(!value)return -1;for(int i=0;i<96;i++)if(value==labels[i])return i;
+    const void *targets[]={&values.i8,&values.i16,&values.i32,&values.i64,&values.u8,&values.u16,&values.u32,&values.u64,&values.f,&values.b,&values.b8,&values.b16,&values.b32};for(int i=0;i<13;i++)if(value==targets[i])return 100+i;require(false);return -2;
+}
+static void rgba(CRGBA value)
+{
+    // Compare each actual native color component without reading unrelated storage
+    word(value.r);word(value.g);word(value.b);word(value.a);
+}
+static void canonical(void)
+{
+    // Observe all actual live controller fields at every external call boundary
+    VarConsoleState state;TestVC_Read(&state);word(state.m_nCountEntries);word(state.m_bIsOpen);word(state.m_nCurEntry);word(state.m_nFirstEntryOnPage);word(state.m_nCurPage);word(state.m_nNumPages);
+}
+static void event(unsigned code)
+{
+    // Keep the complete original font and second-pad query order
+    calls++;word(code);canonical();
+}
+static void snapshot(void)
+{
+    // Observe every named canonical field and all value owners while excluding unspecified padding
+    states++;word(states);canonical();VarConsoleState state;TestVC_Read(&state);
+    for(int i=0;i<91;i++){
+        // Compare all twenty-nine actual entry fields including unused and stale slots
+        const VarConsoleEntry &e=state.m_aEntries[i];word(pointer(e.text));word(pointer(e.pInt8Value));word(pointer(e.pInt16Value));word(pointer(e.pInt32Value));word(pointer(e.pInt64Value));word(pointer(e.pUint8Value));word(pointer(e.pUint16Value));word(pointer(e.pUint32Value));word(pointer(e.pUint64Value));word(pointer(e.pFloatValue));word(pointer(e.pBoolValue));require(!e.pCallback || e.pCallback==FixtureCallback);word(e.pCallback?1:0);word((uint8_t)e.I8_step);word((uint8_t)e.I8_max);word((uint8_t)e.I8_min);word((uint16_t)e.I16_step);word((uint16_t)e.I16_max);word((uint16_t)e.I16_min);word(e.I32_step);word(e.I32_max);word(e.I32_min);wide((uint64_t)e.I64_step);wide((uint64_t)e.I64_max);wide((uint64_t)e.I64_min);floating(e.F_step);floating(e.F_max);floating(e.F_min);word(e.bAllowExceedBounds);word(e.VarType);
+    }
+    word((uint8_t)values.i8);word((uint16_t)values.i16);word(values.i32);wide((uint64_t)values.i64);word(values.u8);word(values.u16);word(values.u32);wide(values.u64);floating(values.f);word(values.b);word(values.b8);word(values.b16);word(values.b32);word(callbacks);rgba(color);rgba(shadow);rgba(background);floating(scaleX);floating(scaleY);floating(wrap);floating(rightWrap);word(style);word(shadowPosition);word(proportional);word(rightJustify);word(backgroundOn);word(RsGlobal.width);word(RsGlobal.height);
+}
+static void mutate(int point)
+{
+    // Apply changes during original native operations or callback invocations
+    if(triggered)return;
+    if(hook==1 && point==1){
+        // Re-evaluate selected-row state after the original ASCII conversion callback returns
+        triggered=true;VarConsoleState state;TestVC_Read(&state);state.m_nCurEntry=1;TestVC_Write(&state);
+    }else if(hook==2 && point==2){
+        // Keep live page bounds and selection visible after the first row is printed
+        triggered=true;VarConsoleState state;TestVC_Read(&state);state.m_nCountEntries=2;state.m_nFirstEntryOnPage=1;state.m_nCurEntry=1;TestVC_Write(&state);
+    }else if(hook==3 && point==3){
+        // Read later row values and screen dimensions after an earlier native color operation
+        triggered=true;values.f=2.5f;RsGlobal.width=1379;RsGlobal.height=923;Draw_SetAspectRatio(16.f/9.f);
+    }
+}
+void AsciiToUnicode(const char *source,wchar *target)
+{
+    // Populate the actual caller-owned UTF-16 buffer before later selection checks
+    event(1);unicodes++;unsigned n=0;while(source[n]){require(n<255);word((uint8_t)source[n]);target[n]=(uint8_t)source[n];n++;}word(0);target[n]=0;if(unicodes==2)mutate(1);
+}
+void CFont::SetColor(CRGBA value)
+{
+    // Publish the actual native color value before later row formatting
+    event(2);rgba(value);color=value;if(prints==1)mutate(3);
+}
+void CFont::SetFontStyle(int16 value)
+{
+    // Retain the native font-style constant chosen by the original operation
+    event(3);word(value);style=value;
+}
+void CFont::SetScale(float x,float y)
+{
+    // Observe both original screen-scaled font dimensions
+    event(4);floating(x);floating(y);scaleX=x;scaleY=y;
+}
+void CFont::SetDropShadowPosition(int16 value)
+{
+    // Preserve the original native shadow offset argument
+    event(5);word(value);shadowPosition=value;
+}
+void CFont::SetDropColor(CRGBA value)
+{
+    // Keep every original native shadow-color component
+    event(6);rgba(value);shadow=value;
+}
+void CFont::SetPropOn(void)
+{
+    // Retain proportional-font state before any title or row is printed
+    event(7);proportional=true;
+}
+void CFont::SetWrapx(float value)
+{
+    // Observe the original screen-scaled wrapping boundary
+    event(8);floating(value);wrap=value;
+}
+void CFont::SetRightJustifyWrap(float value)
+{
+    // Observe the original right-justification wrap argument
+    event(9);floating(value);rightWrap=value;
+}
+void CFont::SetRightJustifyOn(void)
+{
+    // Keep title justification separate from the subsequent row setup
+    event(10);rightJustify=true;
+}
+void CFont::SetRightJustifyOff(void)
+{
+    // Preserve the native justification change after the title print
+    event(11);rightJustify=false;
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Observe actual UTF-16 contents, positions and selection state at every original print
+    event(12);floating(x);floating(y);unsigned n=0;while(text[n]){require(n<256);word(text[n++]);}word(0);prints++;if(prints==2)mutate(2);
+}
+void CFont::SetBackgroundOn(void)
+{
+    // Retain selection-background activation before the selected row is printed
+    event(13);backgroundOn=true;
+}
+void CFont::SetBackgroundOff(void)
+{
+    // Re-evaluate live selection before the original background deactivation
+    event(14);backgroundOn=false;
+}
+void CFont::SetBackgroundColor(CRGBA value)
+{
+    // Preserve both corrected selected and unselected background colors
+    event(15);rgba(value);background=value;
+}
+CPad *CPad::GetPad(int32 index)
+{
+    // Observe each original fresh second-pad lookup without caching its result in C
+    event(16);word(index);require(index==1);return &pad;
+}
+static bool button(CPad *owner,unsigned index)
+{
+    // Keep each native query and its short-circuit position independently observable
+    event(17);require(owner==&pad && index<14);word(index);word(buttons[index]);padReads++;return buttons[index];
+}
+bool CPad::GetDPadDownJustDown(void){ /* Query the original down-edge owner */ return button(this,0); }
+bool CPad::GetAnaloguePadDown(void){ /* Query the original analogue-down owner */ return button(this,1); }
+bool CPad::GetDPadUpJustDown(void){ /* Query the original up-edge owner */ return button(this,2); }
+bool CPad::GetAnaloguePadUp(void){ /* Query the original analogue-up owner */ return button(this,3); }
+bool CPad::GetSquare(void){ /* Query the original square-button owner */ return button(this,4); }
+bool CPad::GetTriangle(void){ /* Query the original triangle-button owner */ return button(this,5); }
+bool CPad::GetDPadLeftJustDown(void){ /* Query the original left-edge owner */ return button(this,6); }
+bool CPad::GetAnaloguePadLeft(void){ /* Query the original analogue-left owner */ return button(this,7); }
+bool CPad::GetDPadRightJustDown(void){ /* Query the original right-edge owner */ return button(this,8); }
+bool CPad::GetAnaloguePadRight(void){ /* Query the original analogue-right owner */ return button(this,9); }
+bool CPad::GetLeftShoulder2JustDown(void){ /* Query the original page-left owner */ return button(this,10); }
+bool CPad::GetRightShoulder2JustDown(void){ /* Query the original page-right owner */ return button(this,11); }
+bool CPad::GetRightShoulder1JustDown(void){ /* Query the original right close-chord owner */ return button(this,12); }
+bool CPad::GetLeftShoulder1JustDown(void){ /* Query the original left close-chord owner */ return button(this,13); }
+extern "C" int8_t Draw_BackendAspectPreference(void){ /* Supply the shared C screen preference */ return AR_4_3; }
+extern "C" bool Draw_BackendWidescreen(void){ /* Keep unrelated widescreen state fixed */ return false; }
+extern "C" float Draw_BackendScreenWidth(void){ /* Read the actual native test screen width */ return (float)RsGlobal.width; }
+extern "C" float Draw_BackendScreenHeight(void){ /* Read the actual native test screen height */ return (float)RsGlobal.height; }
+extern "C" bool Draw_BackendCutsceneRunning(void){ /* Keep unrelated cutscene state fixed */ return false; }
+extern "C" float Draw_BackendFovMultiplier(void){ /* Keep unrelated scaled-FOV state fixed */ return 1.f; }
+static void add(int type,char *name,uint8_t wrapValue)
+{
+    // Enter the actual typed registration overload or its explicit C replacement
+    adds++;switch(type){
+    case 0:TestVC_RunAddInt8(name,&values.i8,5,-10,10,wrapValue);break;
+    case 1:TestVC_RunAddInt16(name,&values.i16,5,-10,10,wrapValue);break;
+    case 2:TestVC_RunAddInt32(name,&values.i32,5,-10,10,wrapValue);break;
+    case 3:TestVC_RunAddInt64(name,&values.i64,5,-10,10,wrapValue);break;
+    case 4:TestVC_RunAddUInt8(name,&values.u8,5,-10,100,wrapValue);break;
+    case 5:TestVC_RunAddUInt16(name,&values.u16,5,-10,100,wrapValue);break;
+    case 6:TestVC_RunAddUInt32(name,&values.u32,5,-10,100,wrapValue);break;
+    case 7:TestVC_RunAddUInt64(name,&values.u64,5,-10,100,wrapValue);break;
+    case 8:TestVC_RunAddFloat(name,&values.f,.25f,-2.f,2.f,wrapValue);break;
+    case 9:TestVC_RunAddBool(name,&values.b,wrapValue);break;
+    case 10:TestVC_RunAddBool8(name,&values.b8,wrapValue);break;
+    case 11:TestVC_RunAddBool16(name,&values.b16,wrapValue);break;
+    case 12:TestVC_RunAddBool32(name,&values.b32,wrapValue);break;
+    case 13:TestVC_RunAddFunction(name,FixtureCallback);break;
+    default:require(false);
+    }snapshot();
+}
+extern "C" void FixtureCallback(void)
+{
+    // Execute valid reentry while the original entry reference or C entry pointer remains live
+    event(18);callbacks++;if(callbackMode==1){
+        // Replace the active function entry and change later live input queries before returning
+        removes++;TestVC_RunRemove(labels[0]);adds++;TestVC_RunAddFloat(labels[94],&values.f,.25f,-2.f,2.f,1);buttons[4]=false;buttons[5]=false;buttons[6]=true;
+    }
+}
+static void reset(void)
+{
+    // Restore valid named state without inspecting or fabricating native padding
+    VarConsoleState clear={};TestVC_Write(&clear);initializations++;TestVC_RunInitialise();values={-9,-9,-9,(int64_t(1)<<33)+17,250,65530,0xfffffffaU,0xfffffffffffffffaULL,1.25f,true,255,65535,0xffffffffU};for(bool &value:buttons)value=false;hook=0;triggered=false;callbackMode=0;prints=0;unicodes=0;RsGlobal.width=960;RsGlobal.height=720;Draw_SetAspectRatio(4.f/3.f);
+#ifdef PROPER_SCALING
+    // Keep the real shared scaling flag in its original initialized state between scenarios
+    Draw_ms_bProperScaling=true;
+#endif
+    color=CRGBA(0,0,0,0);shadow=CRGBA(0,0,0,0);background=CRGBA(0,0,0,0);scaleX=scaleY=wrap=rightWrap=0;style=shadowPosition=0;proportional=rightJustify=backgroundOn=false;
+}
+static void display(void)
+{
+    // Compare the complete original formatting, selection and font-call sequence
+    displays++;TestVC_RunDisplay();snapshot();
+}
+static void left(void)
+{
+    // Enter the complete original left-edit operation and observe every resulting field
+    lefts++;TestVC_RunModifyLeft();snapshot();
+}
+static void right(void)
+{
+    // Enter the complete original right-edit operation and observe every resulting field
+    rights++;TestVC_RunModifyRight();snapshot();
+}
+int main(void)
+{
+    // Observe actual pre-main constructor behavior before any explicit initialization
+    for(unsigned i=0;i<96;i++)sprintf(labels[i],"entry-%u",i);strcpy(labels[95],labels[0]);snapshot();reset();
+    for(int type=0;type<14;type++)add(type,labels[type],1);display();
+    for(int type=0;type<14;type++)add(type,labels[0],0);VarConsoleState state;TestVC_Read(&state);require(state.m_nCountEntries==14);add(9,labels[95],1);require((TestVC_Read(&state),state.m_nCountEntries)==15);display();
+    for(int type=0;type<14;type++)for(uint8_t allow: {uint8_t(0),uint8_t(1),uint8_t(255)})for(int value: {-12,-10,-1,0,9,10,12,127,128,255}){
+        // Cover all edit kinds and both bounds policies without signed 32-bit or 64-bit overflow
+        reset();values.i8=(int8_t)value;values.i16=(int16_t)value;values.i32=value;values.i64=value;values.u8=(uint8_t)value;values.u16=(uint16_t)value;values.u32=(uint32_t)value;values.u64=(uint64_t)(int64_t)value;values.f=value*.25f;values.b=value!=0;values.b8=(uint8_t)value;values.b16=(uint16_t)value;values.b32=(uint32_t)value;add(type,labels[0],allow);left();right();
+    }
+    for(int used: {0,1,29,30,31,59,60,61,89,90,91}){
+        // Preserve original page counts including the extra empty page at exact multiples of thirty
+        reset();for(int i=0;i<used;i++)add(i%14,labels[i],1);TestVC_RunSortPages();snapshot();display();TestVC_Read(&state);state.m_nFirstEntryOnPage=used>=31?30:0;state.m_nCurEntry=state.m_nFirstEntryOnPage;state.m_nCurPage=used>=31?2:1;TestVC_Write(&state);display();
+    }
+    reset();for(int i=0;i<91;i++)add(i%14,labels[i],1);add(0,labels[90],0);for(int index: {0,45,90,95}){removes++;TestVC_RunRemove(labels[index]);snapshot();}TestVC_RunSortPages();snapshot();display();
+    for(int selected: {0,29,30,59,60})for(int bit=0;bit<16;bit++){
+        // Exercise individual and chord queries across page boundaries with valid current entries
+        reset();for(int i=0;i<61;i++)add(8,labels[i],1);TestVC_Read(&state);state.m_nCurEntry=selected;state.m_nFirstEntryOnPage=selected/30*30;state.m_nCurPage=selected/30+1;state.m_nNumPages=3;state.m_bIsOpen=1;TestVC_Write(&state);if(bit<14)buttons[bit]=true;else if(bit==14)buttons[12]=buttons[13]=true;else buttons[0]=buttons[1]=buttons[2]=buttons[3]=true;inputs++;TestVC_RunInput();snapshot();
+    }
+    reset();add(13,labels[0],1);callbackMode=1;buttons[4]=true;inputs++;TestVC_RunInput();snapshot();require(callbacks>0);
+    for(int change: {1,2,3}){
+        // Keep live row selection, page bounds, scalar owners and screen inputs visible across native calls
+        reset();for(int type=0;type<14;type++)add(type,labels[type],1);hook=change;display();require(triggered);
+    }
+    reset();add(0,labels[0],1);TestVC_Read(&state);state.m_aEntries[0].VarType=255;TestVC_Write(&state);left();right();display();
+    reset();add(9,labels[0],1);TestVC_Read(&state);state.m_nNumPages=8;state.m_bIsOpen=255;TestVC_Write(&state);word(TestVC_RunOpen());constructs++;TestVC_RunConstruct();snapshot();initializations++;TestVC_RunInitialise();snapshot();TestVC_Read(&state);require(state.m_nNumPages==8 && state.m_aEntries[0].text==labels[0]);
+    reset();add(8,labels[0],1);checks++;TestVC_RunCheck();snapshot();buttons[12]=buttons[13]=true;checks++;TestVC_RunCheck();snapshot();buttons[12]=buttons[13]=false;processes++;TestVC_RunProcess();snapshot();checks++;TestVC_RunCheck();snapshot();TestVC_RunExit();snapshot();word(TestVC_RunOpen());TestVC_RunEnter();snapshot();word(TestVC_RunOpen());
+    printf("states=%u calls=%u adds=%u lefts=%u rights=%u displays=%u inputs=%u processes=%u checks=%u constructs=%u initializations=%u removes=%u callbacks=%u padReads=%u hash=%016llx\n",states,calls,adds,lefts,rights,displays,inputs,processes,checks,constructs,initializations,removes,callbacks,padReads,(unsigned long long)hash);return 0;
+}

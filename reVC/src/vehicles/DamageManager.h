@@ -1,8 +1,8 @@
 //+ rouz edit (ChatGPT)
 #pragma once
-
-#include "common.h"
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "VehicleDamageParts.h"
 // TODO: move some of this into Vehicle.h
 
 enum eEngineStatus
@@ -13,13 +13,7 @@ enum eEngineStatus
 	ENGINE_STATUS_ON_FIRE = 225
 };
 
-enum eDoorStatus
-{
-	DOOR_STATUS_OK,
-	DOOR_STATUS_SMASHED,
-	DOOR_STATUS_SWINGING,
-	DOOR_STATUS_MISSING
-};
+#include "DoorTypes.h"
 
 enum ePanelStatus
 {
@@ -37,7 +31,7 @@ enum eLightStatus
 	LIGHT_STATUS_BROKEN
 };
 
-enum tComponent
+typedef enum tComponent
 {
 	COMPONENT_DEFAULT,
 	COMPONENT_WHEEL_FRONT_LEFT,
@@ -57,9 +51,9 @@ enum tComponent
 	COMPONENT_PANEL_WINDSCREEN,
 	COMPONENT_BUMPER_FRONT,
 	COMPONENT_BUMPER_REAR,
-};
+} tComponent;
 
-enum tComponentGroup
+typedef enum tComponentGroup
 {
 	COMPGROUP_BUMPER,
 	COMPGROUP_WHEEL,
@@ -68,46 +62,47 @@ enum tComponentGroup
 	COMPGROUP_BOOT,
 	COMPGROUP_PANEL,
 	COMPGROUP_DEFAULT,
-};
+} tComponentGroup;
 
-enum eLights;
 
-class CDamageManager
-{
-public:
-
+typedef struct CDamageManager {
 	float m_fWheelDamageEffect;
-	uint8 m_engineStatus;
-	uint8 m_wheelStatus[4];
-	uint8 m_doorStatus[6];
-	uint32 m_lightStatus;
-	uint32 m_panelStatus;
-	uint8 field_18;
+	uint8_t m_engineStatus;
+	uint8_t m_wheelStatus[4];
+	uint8_t m_doorStatus[6];
+	uint32_t m_lightStatus;
+	uint32_t m_panelStatus;
+	uint8_t field_18;
 
-	CDamageManager(void);
-
-	void ResetDamageStatus(void);
-	void FuckCarCompletely(void);
-	bool ApplyDamage(tComponent component, float damage, float unused);
-	bool GetComponentGroup(tComponent component, tComponentGroup *componentGroup, uint8 *foo);
-
-	void SetDoorStatus(int32 door, uint32 status);
-	int32 GetDoorStatus(int32 door);
-	bool ProgressDoorDamage(uint8 door);
-	void SetPanelStatus(int32 panel, uint32 status);
-	int32 GetPanelStatus(int32 panel);
-	bool ProgressPanelDamage(uint8 panel);
-	// needed for CReplay
-	static int32 GetPanelStatus(uint32 panelstatus, int32 panel) { return ldb(panel*4, 4, panelstatus); }
-	void SetLightStatus(eLights light, uint32 status);
-	int32 GetLightStatus(eLights light);
-	void SetWheelStatus(int32 wheel, uint32 status);
-	int32 GetWheelStatus(int32 wheel);
-	bool ProgressWheelDamage(uint8 wheel);
-	void SetEngineStatus(uint32 status);
-	int32 GetEngineStatus(void);
-	bool ProgressEngineDamage(void);
-};
-VALIDATE_SIZE(CDamageManager, 0x1C);
-
+} CDamageManager;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern float G_aComponentDamage[7];
+void Damage_Init(CDamageManager *self);
+void Damage_ResetDamageStatus(CDamageManager *self);
+void Damage_FuckCarCompletely(CDamageManager *self);
+bool Damage_ApplyDamage(CDamageManager *self,int32_t component,float damage,float unused);
+bool Damage_GetComponentGroup(CDamageManager *self,int32_t component,tComponentGroup *componentGroup,uint8_t *subComp);
+void Damage_SetDoorStatus(CDamageManager *self,int32_t door,uint32_t status);
+int32_t Damage_GetDoorStatus(CDamageManager *self,int32_t door);
+bool Damage_ProgressDoorDamage(CDamageManager *self,uint8_t door);
+void Damage_SetPanelStatus(CDamageManager *self,int32_t panel,uint32_t status);
+int32_t Damage_GetPanelStatus(CDamageManager *self,int32_t panel);
+bool Damage_ProgressPanelDamage(CDamageManager *self,uint8_t panel);
+int32_t Damage_GetPanelStatusFromWord(uint32_t panelstatus,int32_t panel);
+void Damage_SetLightStatus(CDamageManager *self,int32_t light,uint32_t status);
+int32_t Damage_GetLightStatus(CDamageManager *self,int32_t light);
+void Damage_SetWheelStatus(CDamageManager *self,int32_t wheel,uint32_t status);
+int32_t Damage_GetWheelStatus(CDamageManager *self,int32_t wheel);
+bool Damage_ProgressWheelDamage(CDamageManager *self,uint8_t wheel);
+void Damage_SetEngineStatus(CDamageManager *self,uint32_t status);
+int32_t Damage_GetEngineStatus(CDamageManager *self);
+bool Damage_ProgressEngineDamage(CDamageManager *self);
+#ifdef __cplusplus
+}
+#if defined(VALIDATE_SIZE)
+VALIDATE_SIZE(CDamageManager,0x1C);
+#endif
+#endif
 //- rouz edit (ChatGPT)

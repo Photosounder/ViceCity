@@ -1,0 +1,105 @@
+#include <string>
+#include <cstdio>
+#include "owners.h"
+#include "caller.h"
+uint8_t work_buff[55000];float CWeather::WetRoads;
+static std::string input,replacement;static int hook;static bool triggered;
+static unsigned states,calls,loads,limits,groups,wets,predicates;static uint64_t hash=1469598103934665603ULL;
+static char filename[64];
+static void require(bool condition)
+{
+    // Stop quietly at a broken corpus or mutated native point
+    if(!condition){fprintf(stderr,"Surface corpus failed at state %u, call %u, hook %d\n",states,calls,hook);abort();}
+}
+static void byte(uint8_t value)
+{
+    // Preserve all exact returned float bits and shared-buffer bytes
+    hash^=value;hash*=1099511628211ULL;
+}
+static void word(uint32_t value)
+{
+    // Encode every scalar independently of native byte order
+    for(int i=0;i<4;i++)byte((uint8_t)(value>>(8*i)));
+}
+static void floating(float value)
+{
+    // Retain finite results, signed zero and every parsed binary fraction
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void text(const char *value)
+{
+    // Compare live borrowed filenames and actual file-owner arguments
+    for(;*value;value++)byte((uint8_t)*value);byte(0);
+}
+static void table(void)
+{
+    // Observe every canonical cell through the actual reference or opaque-pointer operation
+    const uint8_t representatives[]={SURFACE_PED,SURFACE_MUD_DRY,SURFACE_TARMAC,SURFACE_GRASS,SURFACE_SAND,SURFACE_WATER};CColPoint point;memset(&point,0xa5,sizeof(point));
+    for(int a=0;a<6;a++)for(int b=0;b<6;b++){
+        // Cover each row and column in the original table indexing order
+        point.surfaceA=representatives[a];point.surfaceB=representatives[b];floating(TestSt_RunLimit(&point));limits++;
+    }
+}
+static void event(unsigned id)
+{
+    // Preserve the full table and live wetness visible before each external file operation
+    calls++;word(id);floating(CWeather::WetRoads);table();
+}
+static void snapshot(void)
+{
+    // Compare all 65,536 surface pairs and prove the native input point remains untouched
+    states++;word(states);CColPoint point;memset(&point,0x5a,sizeof(point));
+    for(int a=0;a<256;a++)for(int b=0;b<256;b++){
+        // Exercise every valid byte value and every default-group fallback combination
+        point.surfaceA=(uint8_t)a;point.surfaceB=(uint8_t)b;uint8_t previous[sizeof(point)];memcpy(previous,&point,sizeof(point));floating(TestSt_RunLimit(&point));limits++;require(memcmp(previous,&point,sizeof(point))==0);
+    }
+    const float wetness[]={-1.f,-0.f,0.f,.125f,.5f,1.f,2.f,1000.f};
+    for(float value:wetness){
+        // Read each current native wetness independently and retain the original unbounded formulas
+        CWeather::WetRoads=value;floating(value);for(int surface=0;surface<256;surface++){word(TestSt_RunGroup((uint8_t)surface));groups++;floating(TestSt_RunWet((uint8_t)surface));wets++;word(TestSt_RunSoft((uint8_t)surface));word(TestSt_RunSee((uint8_t)surface));word(TestSt_RunSeeVertical((uint8_t)surface));word(TestSt_RunShoot((uint8_t)surface));predicates+=4;}
+    }
+    for(size_t i=0;i<sizeof(work_buff);i++)byte(work_buff[i]);
+}
+extern "C" void FileMgr_SetDir(const char *directory)
+{
+    // Verify root restoration remains before loading and preserve the old table at that boundary
+    event(1);text(directory);require(*directory==0);
+    if(hook==1 && !triggered){
+        // Mutate the characters borrowed by the initializer before its load call consumes the name
+        triggered=true;strcpy(filename,"changed-surface.dat");
+    }
+}
+extern "C" FileMgrSize FileMgr_LoadFile(const char *name,uint8_t *buffer,int capacity,const char *mode)
+{
+    // Verify the actual buffer, full original capacity and text-mode input contract
+    event(2);text(name);text(mode);word(capacity);require(buffer==work_buff && capacity==55000 && strcmp(mode,"r")==0 && input.size()<sizeof(work_buff));memcpy(buffer,input.data(),input.size());
+    if(hook==2 && !triggered){
+        // Retain the original ignored error result while leaving complete valid input available
+        triggered=true;return -1;
+    }else if((hook==3 || hook==4) && !triggered){
+        // Reenter loading before the outer parser obtains its cursor into the shared buffer
+        triggered=true;std::string saved=input;input=replacement;loads++;TestSt_RunInit("nested-surface.dat");input=saved;if(hook==4)memcpy(buffer,input.data(),input.size());
+    }
+    return (FileMgrSize)input.size();
+}
+static std::string configuration(unsigned seed)
+{
+    // Include every original delimiter, skipped negative token and failed numeric conversion path
+    const char *values[]={"0","1","1.234567","3e-3","-","-0","-7.5","+2.5","nonnumeric","0x1.8p1","99.125",".625"};std::string result=" \t\r\n;First comment\r\n;Second comment\n";
+    for(unsigned row=0;row<6;row++){
+        // Preserve lower-triangular input and ignored row names with mixed separators and line endings
+        result+="ROW"+std::to_string(row);result+=(seed%2?",":"\t");for(unsigned column=0;column<=row;column++){result+=values[(seed+row*3+column)%12];result+=(column==row?"\n":column%2?",\t":" ");}if(row!=5)result+=(seed%2?";Between rows\r\n":"\r\n\t");
+    }
+    return result;
+}
+static void load(unsigned seed,int mutation=0)
+{
+    // Retain the previous canonical table until each real file and parser operation replaces it
+    input=configuration(seed);replacement=configuration(seed+7);hook=mutation;triggered=false;strcpy(filename,"surface.dat");memset(work_buff,0x6d,sizeof(work_buff));CWeather::WetRoads=.375f;loads++;TestSt_RunInit(filename);if(mutation)require(triggered);snapshot();
+}
+int main(void)
+{
+    // Observe the original static-zero table before any file loads or mutations
+    require(NUMADHESIVEGROUPS==6);snapshot();for(unsigned seed=0;seed<12;seed++)load(seed);for(int mutation=1;mutation<=4;mutation++)load(20+mutation,mutation);
+    printf("states=%u calls=%u loads=%u limits=%u groups=%u wets=%u predicates=%u hash=%016llx\n",states,calls,loads,limits,groups,wets,predicates,(unsigned long long)hash);return 0;
+}

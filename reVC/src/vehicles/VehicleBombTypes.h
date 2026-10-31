@@ -1,0 +1,13 @@
+//+ rouz edit (ChatGPT)
+#pragma once
+
+enum eBombType
+{
+	CARBOMB_NONE,
+	CARBOMB_TIMED,
+	CARBOMB_ONIGNITION,
+	CARBOMB_REMOTE,
+	CARBOMB_TIMEDACTIVE,
+	CARBOMB_ONIGNITIONACTIVE,
+};
+//- rouz edit (ChatGPT)

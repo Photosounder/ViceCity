@@ -1,0 +1,168 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using int16=int16_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define Max(a,b) ((a) > (b) ? (a) : (b))
+#define Min(a,b) ((a) < (b) ? (a) : (b))
+static float Abs(float x) {
+    // Use the exact original float absolute-value operation
+    return fabsf(x);
+}
+enum {@CONSTANTS@};
+static void event(unsigned,unsigned);
+struct Field {unsigned tag;float v;operator float() const {
+    // Capture each original scalar read before later live game-field changes
+    float result=v;event(tag,0);return result;
+}Field &operator=(float value) {
+    // Observe the original tree reset before storing its exact float value
+    unsigned bits;memcpy(&bits,&value,sizeof(bits));event(12,bits);v=value;return *this;
+}};
+struct CVector {float x,y,z;};
+struct CameraState {Field SoundDistUp;CVector position;const CVector &GetPosition() const {
+    // Read the original camera position at the wind-modifier query
+    event(7,0);return position;
+}};
+static CameraState TheCamera;
+struct CWeather {static Field Rain,Wind;};Field CWeather::Rain,CWeather::Wind;
+struct CObject {static Field fDistToNearestTree;};Field CObject::fDistToNearestTree;
+static unsigned cameraNoRain,playerNoRain;
+struct CCullZones {
+static bool CamNoRain() {
+    // Observe the first short-circuit rain-zone query
+    bool result=cameraNoRain!=0;event(2,result);return result;
+}
+static bool PlayerNoRain() {
+    // Observe the second zone query only when the camera zone blocks rain
+    bool result=playerNoRain!=0;event(3,result);return result;
+}};
+static float modifierX,modifierY;
+struct CWindModifiers {static void FindWindModifier(const CVector &position,float *x,float *y) {
+    // Observe the original initialized outputs and camera argument before writing modifiers
+    assert(*x==0&&*y==0);unsigned bits;memcpy(&bits,&position.x,sizeof(bits));event(8,bits);*x=modifierX;*y=modifierY;
+}};
+struct cAudioManager {
+@FIELDS@
+void ProcessWeather(int32);
+void ProcessFrontEnd();
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static unsigned currentId,otherId,variantValue,mutations,cases,callbacks,submits,loops,resets;
+static unsigned counters[256],soundVisits[256],rainGates[2],playerGates[2];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestWeatherFrontendC(cAudioManager *,int32_t);
+extern "C" void TestWeatherFrontendRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe all callback arguments and exact ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash both complete initialized owners and every live game-query input
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,&TheCamera,sizeof(TheCamera));digest=TestAircraftHash(digest,&CWeather::Rain,sizeof(CWeather::Rain));digest=TestAircraftHash(digest,&CWeather::Wind,sizeof(CWeather::Wind));digest=TestAircraftHash(digest,&CObject::fDistToNearestTree,sizeof(CObject::fDistToNearestTree));digest=TestAircraftHash(digest,&modifierX,sizeof(modifierX));digest=TestAircraftHash(digest,&modifierY,sizeof(modifierY));value(cameraNoRain);value(playerNoRain);
+}
+static void event(unsigned token,unsigned arg) {
+    // Observe state before callbacks change following reads or front-end iterations
+    ++callbacks;value(token);value(arg);observe();
+    if(token==2)++rainGates[arg];if(token==3)++playerGates[arg];if(token==12)++resets;
+    if(!mutations)return;
+    if(token==1&&(variantValue&1))CWeather::Rain.v=0.75f;
+    if(token==2&&(variantValue&2))playerNoRain=!playerNoRain;
+    if(token==4&&(variantValue&4))CWeather::Wind.v=CWeather::Wind.v==1.25f?1.5f:1.25f;
+    if(token==6&&(variantValue&8))CWeather::Rain.v=0.5f;
+    if(token==8&&(variantValue&16))CObject::fDistToNearestTree.v=40;
+    if(token==9&&(variantValue&1)){active->m_sQueueSample.m_nSampleIndex=SFX_HURRICANE_MA;CWeather::Wind.v=1.5f;CObject::fDistToNearestTree.v=60;}
+    if(token==10&&(variantValue&2))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==13&&(variantValue&4)){active->m_sQueueSample.m_nEntityIndex=otherId;active->m_sQueueSample.m_nPan=42;++active->m_FrameCounter;}
+    if(token==13&&(variantValue&8))active->m_sQueueSample.m_nSampleIndex=SFX_FE_SELECT_LEFT;
+}
+@HOST@
+extern "C" float AudioVehicleRainHost_Rain() {
+    // Reuse the production rainfall adapter's exact live field expression
+    return CWeather::Rain;
+}
+extern "C" uint8_t AudioVehicleRainHost_CameraNoRain() {
+    // Reuse the production camera rain-zone query
+    return CCullZones::CamNoRain();
+}
+extern "C" uint8_t AudioVehicleRainHost_PlayerNoRain() {
+    // Reuse the production player rain-zone query
+    return CCullZones::PlayerNoRain();
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager,uint32_t sample) {
+    // Observe each original sample frequency argument before scratch changes
+    assert(manager==&SampleManager);event(9,sample);return 8000+sample%10000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the start sample before callbacks alter the next live end sample
+    assert(manager==&SampleManager);++loops;event(10,sample);return sample%13;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the live scratch sample at the second loop-offset query
+    assert(manager==&SampleManager);event(11,sample);return 200+sample%17;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Supply the unused geometry dependency
+    position->x=TheCamera.position.x;position->y=TheCamera.position.y;position->z=TheCamera.position.z;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused camera-matrix dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe an unexpected room query if an original two-dimensional gate changes
+    event(15,0);return 0;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    event(16,0);return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe complete fields before real C insertion and stereo or center scratch changes
+    assert(manager==active);++submits;if(manager->m_sQueueSample.m_nCounter<256)++counters[manager->m_sQueueSample.m_nCounter];event(13,manager->m_sQueueSample.m_nCounter);TestWeatherFrontendRealSubmit(manager);event(14,0);
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Initialize both owners, valid entity indices and all callback inputs without padding noise
+    variantValue=seed/256;mutations=1;currentId=(seed>>1)%NUM_AUDIOENTITIES;otherId=(currentId+1)%NUM_AUDIOENTITIES;memset(owners,0,sizeof(owners));memset(&TheCamera,0,sizeof(TheCamera));memset(&CWeather::Rain,0,sizeof(CWeather::Rain));memset(&CWeather::Wind,0,sizeof(CWeather::Wind));memset(&CObject::fDistToNearestTree,0,sizeof(CObject::fDistToNearestTree));active=&owners[variantValue&1];
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    // Exercise shared cooldowns at strict frame boundaries and unsigned wraparound
+    static const uint32_t frames[]={0,1,4,5,6,UINT32_MAX-5,UINT32_MAX-1,UINT32_MAX};active->m_FrameCounter=frames[variantValue%8];active->m_sQueueSample.m_nEntityIndex=currentId;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_nCounter=777;
+    static const int32_t randoms[]={0,1,-1,INT32_MIN,INT32_MAX,173};for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=randoms[(variantValue+i)%6];
+    // Cover every sound ID, unknown IDs, live event counts and defined float-to-byte volumes
+    static const float volumes[]={0,9.999f,10,10.001f,50,126,127,255};
+    for(unsigned e=0;e<2;++e){tAudioEntity *entity=&active->m_asAudioEntities[e?otherId:currentId];entity->m_AudioEvents=(variantValue+e)%5;for(unsigned i=0;i<NUM_AUDIOENTITY_EVENTS;++i){entity->m_awAudioEvent[i]=(int16_t)((seed+i*17+e*31)%256);entity->m_afVolume[i]=volumes[(variantValue+i)%8];}entity->m_awAudioEvent[1]=SOUND_PICKUP_WEAPON;entity->m_awAudioEvent[2]=SOUND_PART_MISSION_COMPLETE;}
+    if(variantValue%3==0)active->m_asAudioEntities[currentId].m_awAudioEvent[0]=SOUND_LIGHTNING;
+    // Seed rain short-circuit combinations and defined weather volume boundaries
+    static const float rains[]={-1,0,0.001f,0.5f,1,2,10.2f,NAN};static const float winds[]={0,0.1f,1,1.25f,1.5f,2,NAN};static const float trees[]={0,40,74.999f,75,75.001f,999999.9f,NAN};static const float ceilings[]={0,19.999f,20,20.001f,NAN};
+    CWeather::Rain.tag=1;CWeather::Rain.v=rains[variantValue%8];CWeather::Wind.tag=4;CWeather::Wind.v=winds[variantValue%7];CObject::fDistToNearestTree.tag=5;CObject::fDistToNearestTree.v=trees[variantValue%7];TheCamera.SoundDistUp.tag=6;TheCamera.SoundDistUp.v=ceilings[variantValue%5];TheCamera.position.x=(float)variantValue;
+    cameraNoRain=variantValue&1;playerNoRain=(variantValue>>1)&1;modifierX=(variantValue%4==0)?NAN:(variantValue%4-1.5f)*0.1f;modifierY=(variantValue%3-1.0f)*0.1f;
+}
+int main() {
+    // Keep console-only test failures quiet on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Exercise repeated live mutations and a fresh pass preserving every seeded gate boundary
+    for(unsigned seed=0;seed<8192;++seed){prepare(seed);++soundVisits[seed%256];@RUN@;observe();++cases;@RUN@;observe();++cases;prepare(seed);mutations=0;@RUN@;observe();++cases;}
+    // Require every sound byte, shared-counter wrap, both rain-zone results and real tree resets
+    assert(submits&&resets);for(unsigned i=0;i<256;++i)assert(soundVisits[i]&&counters[i]);assert(rainGates[0]&&rainGates[1]&&playerGates[0]&&playerGates[1]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+    printf("%u %u %u %u %u %llu\n",cases,callbacks,submits,loops,resets,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

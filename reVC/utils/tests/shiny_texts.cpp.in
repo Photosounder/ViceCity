@@ -1,0 +1,282 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { int32_t TempBufferVerticesStored,TempBufferIndicesStored,RenderBuffer_VerticesToBeStored,RenderBuffer_IndicesToBeStored;uint16_t TempBufferRenderIndexList[TEMPBUFFERINDEXSIZE]; }
+CCamera TheCamera;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+RwTexture *gpWalkDontTex;
+static RwCamera camera;
+static RwFrame frame;
+static RwMatrix matrix;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,queries,transforms,renders,ends,flushes,attempts,writes;
+static int hook,depth,thresholdV,thresholdI;
+static bool triggered,transformOK;
+
+static void require(bool condition)
+{
+    // Abort at the exact observable corpus position
+    if(!condition){fprintf(stderr,"states=%u calls=%u hook=%d vertices=%d indices=%d\n",states,calls,hook,TempBufferVerticesStored,TempBufferIndicesStored);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observations without process addresses or C++ object padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite results bit for bit and NaNs by classification
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void vectorValue(const RwV3d &v)
+{
+    // Observe each actual typed coordinate
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void recordValue(const ShinyText &v)
+{
+    // Include every declared field in both primary and retained reflection lists
+    for(int i=0;i<4;i++){
+        // Retain each coordinate, UV pair and their exact order
+        floating(v.m_verts[i].x);floating(v.m_verts[i].y);floating(v.m_verts[i].z);floating(v.m_texCoords[i].x);floating(v.m_texCoords[i].y);
+    }
+    floating(v.m_camDist);word(v.m_type);word(v.m_red);word(v.m_green);word(v.m_blue);
+}
+static unsigned textureID(const void *texture)
+{
+    // Normalize only the fixture's opaque texture and raster identities
+    return (unsigned)(uintptr_t)texture;
+}
+static void event(unsigned value)
+{
+    // Compare owner-call order and all live list/shared-buffer counts
+    int mainCount,envCount;TestST_Counts(&mainCount,&envCount);calls++;word(value);word(mainCount);word(envCount);word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(textureID(gpWalkDontTex));
+}
+static ShinyText seeded(int index)
+{
+    // Prepare distinct legal record data including unregistered retained fields
+    ShinyText result={};
+    for(int i=0;i<4;i++){
+        // Distinguish vertices and UVs in every quad
+        result.m_verts[i]={index*.125f+i*.7f,index*-.25f+i*.35f,1.f+i*.125f};result.m_texCoords[i]={i*.3f,index*.01f+i*.2f};
+    }
+    result.m_camDist=91.25f+index;result.m_type=(uint8_t)(index%2+1);result.m_red=(uint8_t)(11+index*3);result.m_green=(uint8_t)(197-index);result.m_blue=(uint8_t)(43+index);return result;
+}
+static void changeRecord(void)
+{
+    // Modify fields that the original renderer reads after cached color selection
+    ShinyText value=TestST_Record(false,0);value.m_verts[0]={-31.5f,71.f,.125f};value.m_texCoords[0]={.731f,.971f};value.m_red=251;value.m_green=17;value.m_blue=3;TestST_SetRecord(false,0,&value);
+}
+CVector &CCamera::GetPosition(void)
+{
+    // Observe the one original main-camera query before optional reflection selection
+    event(1);queries++;
+    if(!triggered && hook==1){
+        // Change the input alias and live registration count before the original field writes
+        triggered=true;changeRecord();TheCamera.position.x+=.125f;int mainCount,envCount;TestST_Counts(&mainCount,&envCount);TestST_SetCounts(mainCount+1,envCount);
+    }
+    if(!triggered && hook==2){
+        // Reenter registration before the outer call publishes its record
+        triggered=true;depth++;ShinyText value=seeded(13);attempts++;TestST_Register(&value,1000.f);depth--;
+    }
+    return position;
+}
+#ifdef NATIVE_PROJECT_HEADERS
+RwMatrix *rw::Frame::getLTM(void)
+#else
+RwMatrix *RwFrame::getLTM(void)
+#endif
+{
+    // Preserve the original typed LTM method and a legal owner-side matrix change
+    event(2);queries++;require(this==&frame);
+    if(!triggered && hook==3){triggered=true;matrix.pos.x+=.25f;matrix.pos.z-=.5f;}
+    return &matrix;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture)
+{
+    // Compare the original raster query and later live texture reread
+    event(3);queries++;word(textureID(texture));require(texture!=NULL);
+    if(!triggered && hook==6){triggered=true;gpWalkDontTex=(RwTexture *)29;}
+    return (RwRaster *)((uintptr_t)texture+100);
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe all texture, blend, depth and alpha-state calls with actual enum values
+    event(4);word(state);word(textureID(value));
+    if(!triggered && hook==4 && state==rwRENDERSTATEVERTEXALPHAENABLE){triggered=true;TestST_Init();}
+    if(!triggered && hook==5 && state==rwRENDERSTATETEXTURERASTER){triggered=true;gpWalkDontTex=(RwTexture *)41;changeRecord();}
+    return 1;
+}
+void LittleTest(void)
+{
+    // Retain the original hook before transformation and all subsequent live count reads
+    event(5);flushes++;
+    if(!triggered && hook==7){triggered=true;TempBufferVerticesStored=12;TempBufferIndicesStored=6;}
+    if(!triggered && hook==14){triggered=true;depth++;TestST_Flush();depth--;}
+    if(!triggered && hook==15){triggered=true;depth++;TestST_Env();depth--;}
+}
+void *RwIm3DTransform(RwIm3DVertex *vertices,RwUInt32 count,RwMatrix *transform,RwUInt32 flags)
+{
+    // Compare exact typed shared storage, flags, transform pointer and count
+    event(6);transforms++;require(vertices==TempBufferRenderVertices && transform==NULL && flags==rwIM3D_VERTEXUV && count<=TEMPBUFFERVERTSIZE);word(count);
+    for(unsigned i=0;i<count;i++){
+        // Observe every submitted actual vertex through its typed accessors
+        RwRGBA c=vertices[i].getColor();floating(vertices[i].getX());floating(vertices[i].getY());floating(vertices[i].getZ());floating(vertices[i].getU());floating(vertices[i].getV());word(c.red);word(c.green);word(c.blue);word(c.alpha);
+    }
+    if(!triggered && hook==8){triggered=true;TempBufferIndicesStored=3;}
+    return transformOK?vertices:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType primitive,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Compare each submitted C-owned index including changes made by the transform owner
+    event(7);renders++;require(primitive==rwPRIMTYPETRILIST && indices==TempBufferRenderIndexList && count>=0 && count<=TEMPBUFFERINDEXSIZE);word(count);
+    for(int i=0;i<count;i++){
+        // Include the complete submitted index stream
+        word(indices[i]);
+    }
+    return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Ensure the original post-end clears discard owner-side counter changes
+    event(8);ends++;
+    if(!triggered && hook==9){triggered=true;TempBufferVerticesStored=77;TempBufferIndicesStored=88;}
+    return 1;
+}
+static int vertexIndex(RwIm3DVertex *vertex)
+{
+    // Check the exact live original buffer element selected by each setter
+    ptrdiff_t index=vertex-TempBufferRenderVertices;require(index>=0 && index<TEMPBUFFERVERTSIZE);return (int)index;
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *vertex,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Retain the original cached color values and the actual typed packing
+    event(9);writes++;word(vertexIndex(vertex));word(r);word(g);word(b);word(a);vertex->setColor(r,g,b,a);
+    if(!triggered && hook==10){triggered=true;changeRecord();}
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *vertex,RwReal x,RwReal y,RwReal z)
+{
+    // Observe fresh original position reads before the following UV reads
+    event(10);writes++;word(vertexIndex(vertex));floating(x);floating(y);floating(z);vertex->setX(x);vertex->setY(y);vertex->setZ(z);
+    if(!triggered && hook==11){triggered=true;changeRecord();}
+}
+void RwIm3DVertexSetU(RwIm3DVertex *vertex,RwReal value)
+{
+    // Preserve the original U write and later live V read
+    event(11);writes++;word(vertexIndex(vertex));floating(value);vertex->setU(value);
+    if(!triggered && hook==12){triggered=true;changeRecord();}
+}
+void RwIm3DVertexSetV(RwIm3DVertex *vertex,RwReal value)
+{
+    // Preserve the final typed V write and shared-counter arithmetic afterward
+    event(12);writes++;int index=vertexIndex(vertex);word(index);floating(value);vertex->setV(value);
+    if(!triggered && hook==13 && index==3){triggered=true;TempBufferVerticesStored=thresholdV-4;TempBufferIndicesStored=thresholdI-6;}
+}
+static void snapshot(void)
+{
+    // Compare both complete arrays, both counts, every shared vertex/index and untouched 2D storage
+    states++;int mainCount,envCount;TestST_Counts(&mainCount,&envCount);word(mainCount);word(envCount);word(TempBufferVerticesStored);word(TempBufferIndicesStored);word(RenderBuffer_VerticesToBeStored);word(RenderBuffer_IndicesToBeStored);
+    for(int i=0;i<NUMSHINYTEXTS;i++){
+        // Include inactive and retained records to detect unwanted initialization and caching
+        recordValue(TestST_Record(false,i));recordValue(TestST_Record(true,i));
+    }
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){
+        // Observe fields without reading platform-dependent vertex padding
+        RwIm3DVertex &v=TempBufferRenderVertices[i];RwRGBA c=v.getColor();floating(v.getX());floating(v.getY());floating(v.getZ());floating(v.getU());floating(v.getV());word(c.red);word(c.green);word(c.blue);word(c.alpha);
+    }
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)word(TempBufferRenderIndexList[i]);
+    const unsigned char *bytes=(const unsigned char *)TempVertexBuffer.im2d;
+    for(size_t i=0;i<sizeof(TempVertexBuffer.im2d);i++)word(bytes[i]);
+    word(textureID(gpWalkDontTex));word(CustomPipes::bRenderingEnvMap);
+}
+static void setFrame(bool present)
+{
+    // Set the real camera parent field without an external allocator or frame update
+#ifdef NATIVE_PROJECT_HEADERS
+    camera.object.object.parent=present?&frame:NULL;
+#else
+    camera.frame=present?&frame:NULL;
+#endif
+}
+static void reset(void)
+{
+    // Seed complete legal state while preserving data the real initializer leaves untouched
+    hook=0;depth=0;triggered=false;transformOK=true;thresholdV=450;thresholdI=960;TheCamera.position=CVector(0.f,0.f,0.f);CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=&camera;setFrame(true);matrix.pos.x=7.25f;matrix.pos.y=-3.5f;matrix.pos.z=.125f;gpWalkDontTex=(RwTexture *)17;TestST_SetCounts(0,0);TempBufferVerticesStored=7;TempBufferIndicesStored=9;RenderBuffer_VerticesToBeStored=11;RenderBuffer_IndicesToBeStored=13;
+    for(int i=0;i<NUMSHINYTEXTS;i++){
+        // Preserve distinct main and cached canaries outside the active counts
+        ShinyText value=seeded(i);TestST_SetRecord(false,i,&value);value.m_red^=0x55;value.m_camDist+=37;TestST_SetRecord(true,i,&value);
+    }
+    memset(TempVertexBuffer.im2d,0x5a,sizeof(TempVertexBuffer.im2d));
+    for(int i=0;i<TEMPBUFFERVERTSIZE;i++){
+        // Use actual vertex methods without instrumenting test initialization
+        RwIm3DVertex &v=TempBufferRenderVertices[i];v.setX(i*.03f);v.setY(i*-.07f);v.setZ(i*.11f);v.setU(i*.005f);v.setV(i*.009f);v.setColor((uint8_t)i,(uint8_t)(i*3),19,71);
+    }
+    for(int i=0;i<TEMPBUFFERINDEXSIZE;i++)TempBufferRenderIndexList[i]=(uint16_t)(i%64);
+}
+static void populate(int count,int pattern)
+{
+    // Supply legal active record lists without substituting any public algorithm
+    for(int i=0;i<count;i++){
+        // Cover walk, flat, unknown and alternating texture groups
+        ShinyText value=seeded(i);value.m_type=(uint8_t)(pattern==0?SHINYTEXT_WALK:pattern==1?SHINYTEXT_FLAT:pattern==2?(i%3):i%2+1);TestST_SetRecord(false,i,&value);
+    }
+    TestST_SetCounts(count,0);
+}
+int main(void)
+{
+    // Verify static initialization and the count-only reset contract
+    snapshot();reset();populate(4,3);TestST_SetCounts(4,7);TestST_Init();snapshot();
+    const float distances[]={-1.f,0.f,.5f,1.f,2.f,4.f,10.f,INFINITY,NAN};
+    for(int d=0;d<9;d++)for(int branch=0;branch<5;branch++){
+        // Cover original rejection/fade boundaries and every legal reflection null branch
+        reset();CustomPipes::bRenderingEnvMap=branch!=0;CustomPipes::EnvMapCam=branch==2?NULL:&camera;setFrame(branch!=3);ShinyText value=seeded(3);value.m_verts[0]={distances[d],0.f,0.f};attempts++;TestST_Register(&value,branch==4?0.f:4.f);snapshot();
+    }
+    for(int occupied=0;occupied<=NUMSHINYTEXTS;occupied++){
+        // Verify every pool length and the capacity check before all camera queries
+        reset();populate(occupied,3);ShinyText value=seeded(5);attempts++;TestST_Register(&value,1000.f);snapshot();
+    }
+    for(int h=1;h<=3;h++){
+        // Check actual pool argument capture, nested registration and live LTM reads
+        reset();hook=h;CustomPipes::bRenderingEnvMap=h==3;attempts++;TestST_Alias(0,1000.f);snapshot();
+    }
+    for(int count=0;count<=NUMSHINYTEXTS;count++)for(int pattern=0;pattern<4;pattern++){
+        // Cover every list length, unknown types, texture grouping and both transform outcomes
+        reset();populate(count,pattern);transformOK=(count&1)!=0;TestST_Render();snapshot();CustomPipes::bRenderingEnvMap=true;TestST_Env();snapshot();TestST_Env();snapshot();
+    }
+    for(int h=4;h<=15;h++){
+        // Compare live texture/count/vertex changes and nested flushing/reflection rendering
+        reset();populate(3,3);hook=h;TestST_Render();snapshot();
+    }
+    for(int v=450;v<=451;v++)for(int i=960;i<=961;i++){
+        // Verify strict greater-than flush thresholds at both exact boundary values
+        reset();populate(2,0);hook=13;thresholdV=v;thresholdI=i;TestST_Render();snapshot();
+    }
+    for(int branch=0;branch<4;branch++){
+        // Check empty flush retention, failed transforms and a null initial walk texture
+        reset();TempBufferVerticesStored=branch==0?7:4;TempBufferIndicesStored=branch==0?0:6;transformOK=branch!=1;TestST_Flush();snapshot();reset();populate(3,3);gpWalkDontTex=branch==2?NULL:(RwTexture *)17;TestST_Render();snapshot();
+    }
+    for(int branch=0;branch<4;branch++){
+        // Compare reflection fallback against an existing camera list and saved-list release
+        reset();populate(4,3);TestST_Render();snapshot();CustomPipes::bRenderingEnvMap=true;if(branch&1)populate(2,0);if(branch&2)transformOK=false;TestST_Env();snapshot();TestST_Init();snapshot();
+    }
+    reset();
+    for(int frameNumber=0;frameNumber<1500;frameNumber++){
+        // Sustain registration, rejected distance writes, list caching and reflection replay
+        TestST_Init();CustomPipes::bRenderingEnvMap=false;transformOK=frameNumber%5!=0;TheCamera.position=CVector(frameNumber*.013f,frameNumber*-.007f,.1f);int count=frameNumber%36;
+        for(int i=0;i<count;i++){
+            // Fill and overflow the original fixed-capacity pool through the real C API
+            ShinyText value=seeded((i+frameNumber)%32);value.m_type=(uint8_t)((frameNumber+i)%4);attempts++;TestST_Register(&value,frameNumber%7==0?2.f:1000.f);
+        }
+        TestST_Render();CustomPipes::bRenderingEnvMap=true;
+        if(frameNumber%3==0){
+            // Let the reflection camera supply its own list instead of falling back
+            ShinyText value=seeded(frameNumber%32);attempts++;TestST_Register(&value,1000.f);
+        }
+        TestST_Env();snapshot();
+    }
+    require(states>2000 && attempts>20000 && writes>100000 && queries>20000);require(renders==ends && transforms>=renders);
+    printf("states=%u calls=%u queries=%u transforms=%u renders=%u flushes=%u attempts=%u writes=%u hash=%016llx\n",states,calls,queries,transforms,renders,flushes,attempts,writes,(unsigned long long)hash);
+}

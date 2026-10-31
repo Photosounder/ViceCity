@@ -1,10 +1,11 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Ped.h"
 
 class CPad;
 class CCopPed;
-class CWanted;
+struct CWanted;
 
 class CPlayerPed : public CPed
 {
@@ -118,3 +119,4 @@ public:
 };
 
 //VALIDATE_SIZE(CPlayerPed, 0x5F0);
+//- rouz edit (ChatGPT)

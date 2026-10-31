@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #ifndef MASTER
 #include "Font.h"
@@ -36,7 +37,7 @@ float FrameInitTime;
 void tbInit()
 {
 	TimerBar.count = 0;
-	uint32 i = CTimer::GetFrameCounter() & 0x7F;
+	uint32 i = (*Timer_GetFrameCounter()) & 0x7F;
 	if (i == 0) {
 		do
 			MaxTimes[i++] = 0.0f;
@@ -46,7 +47,7 @@ void tbInit()
 #endif
 	}
 #ifdef FRAMETIME
-	FrameInitTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	FrameInitTime = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerFrame();
 #endif
 }
 
@@ -54,7 +55,7 @@ void tbStartTimer(int32 unk, Const char *name)
 {
 	strcpy(TimerBar.Timers[TimerBar.count].name, name);
 	TimerBar.Timers[TimerBar.count].unk = unk;
-	TimerBar.Timers[TimerBar.count].startTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	TimerBar.Timers[TimerBar.count].startTime = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerFrame();
 	TimerBar.count++;
 }
 
@@ -66,7 +67,7 @@ void tbEndTimer(Const char* name)
 			n = i;
 	}
 	assert(n != 1500);
-	TimerBar.Timers[n].endTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	TimerBar.Timers[n].endTime = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerFrame();
 }
 
 float Diag_GetFPS()
@@ -80,7 +81,7 @@ void tbDisplay()
 	wchar wtemp[200];
 
 #ifdef FRAMETIME
-	float FrameEndTime = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerFrame();
+	float FrameEndTime = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerFrame();
 #endif
 
 	msCollected[(curMS++) % MAX_MS_COLLECTED] = RsTimer();
@@ -119,3 +120,4 @@ void tbDisplay()
 	}
 }
 #endif // !MASTER
+//- rouz edit (ChatGPT)

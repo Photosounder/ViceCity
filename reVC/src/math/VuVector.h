@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 class TYPEALIGN(16) CVuVector : public CVector
@@ -29,4 +30,9 @@ public:
 void TransformPoint(CVuVector &out, const CMatrix &mat, const CVuVector &in);
 void TransformPoint(CVuVector &out, const CMatrix &mat, const RwV3d &in);
 void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const RwV3d *in, int stride);
+struct CColLine;
+void TransformColLines(CVuVector *out,int numLines,const CMatrix &mat,const CColLine *lines);
+struct CColSphere;
+void TransformColSpheres(CVuVector *out,int numSpheres,const CMatrix &mat,const CColSphere *spheres);
 void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const CVuVector *in);
+//- rouz edit (ChatGPT)

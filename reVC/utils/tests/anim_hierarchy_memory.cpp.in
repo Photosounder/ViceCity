@@ -1,0 +1,31 @@
+unsigned allocations=0,frees=0,eventCount=0,events[8192],moveMode=0;
+CAnimBlendHierarchy *observedHierarchy=NULL;
+CLinkList CAnimManager::ms_animCache;
+TestHeap gMainHeap;
+extern "C" void re3_assert(const char *expression,const char *filename,unsigned int line,const char *function)
+{
+    // Observe the actual project's continuing assertion boundary without opening its native dialog
+    assert(strcmp(expression,"compressed")==0||strcmp(expression,"!compressed")==0||strcmp(expression,"self->compressed")==0||strcmp(expression,"!self->compressed")==0);recordEvent(8,NULL);
+}
+struct Buffer {void *pointer;size_t bytes;};
+static Buffer buffers[256];
+void recordEvent(unsigned operation,void *memory)
+{
+    // Compare original external operation order and the hierarchy fields visible at that boundary
+    assert(eventCount+6<8192);events[eventCount++]=operation;events[eventCount++]=memory!=NULL;events[eventCount++]=observedHierarchy?(unsigned)observedHierarchy->numSequences:0;events[eventCount++]=observedHierarchy?observedHierarchy->compressed:0;events[eventCount++]=observedHierarchy&&observedHierarchy->linkPtr!=NULL;events[eventCount++]=(unsigned)CLinkList_Count(&CAnimManager::ms_animCache);
+}
+void *RwMalloc(size_t bytes)
+{
+    // Allocate actual sequence storage while recording the original memory boundary
+    assert(bytes<=4096);void *p=malloc(bytes?bytes:1);assert(p);memset(p,0xa5,bytes);unsigned slot=0;while(slot<256&&buffers[slot].pointer)++slot;assert(slot<256);buffers[slot]={p,bytes};++allocations;recordEvent(1,p);return p;
+}
+void RwFree(void *memory)
+{
+    // Observe hierarchy and cache state before each actual sequence buffer release
+    recordEvent(2,memory);unsigned slot=0;while(slot<256&&buffers[slot].pointer!=memory)++slot;assert(slot<256);buffers[slot].pointer=NULL;++frees;free(memory);
+}
+void *TestHeap::MoveMemory(void *memory)
+{
+    // Return unchanged or distinct native storage without embedding the hierarchy's early-return policy
+    recordEvent(6,memory);if(!moveMode)return memory;unsigned slot=0;while(slot<256&&buffers[slot].pointer!=memory)++slot;assert(slot<256);void *replacement=RwMalloc(buffers[slot].bytes);memcpy(replacement,memory,buffers[slot].bytes);RwFree(memory);return replacement;
+}

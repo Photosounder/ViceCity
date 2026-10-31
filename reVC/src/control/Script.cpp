@@ -1,4 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -58,7 +63,18 @@ uint8 CTheScripts::ScriptSpace[SIZE_SCRIPT_SPACE];
 CRunningScript CTheScripts::ScriptsArray[MAX_NUM_SCRIPTS];
 intro_text_line CTheScripts::IntroTextLines[MAX_NUM_INTRO_TEXT_LINES];
 intro_script_rectangle CTheScripts::IntroRectangles[MAX_NUM_INTRO_RECTANGLES];
-CSprite2d CTheScripts::ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
+Sprite2d CTheScripts::ScriptSprites[MAX_NUM_SCRIPT_SRPITES];
+static void Sprite2d_Exit_CTheScripts_ScriptSprites(void)
+{
+    // Destroy this original object group in its former reverse array order
+    Sprite2d_DeinitArray(CTheScripts::ScriptSprites,(size_t)(MAX_NUM_SCRIPT_SRPITES));
+}
+static int Sprite2d_Start_CTheScripts_ScriptSprites(void)
+{
+    // Initialize at the original definition boundary and retain its exit registration position
+    Sprite2d_InitArray(CTheScripts::ScriptSprites,(size_t)(MAX_NUM_SCRIPT_SRPITES));atexit(Sprite2d_Exit_CTheScripts_ScriptSprites);return 0;
+}
+static const int Sprite2d_Started_CTheScripts_ScriptSprites=Sprite2d_Start_CTheScripts_ScriptSprites();
 script_sphere_struct CTheScripts::ScriptSphereArray[MAX_NUM_SCRIPT_SPHERES];
 tUsedObject CTheScripts::UsedObjectArray[MAX_NUM_USED_OBJECTS];
 int32 CTheScripts::MultiScriptArray[MAX_NUM_MISSION_SCRIPTS];
@@ -388,17 +404,17 @@ void CMissionCleanup::Process()
 	CPed::nThreatReactionRangeMultiplier = 1;
 	CPed::nEnterCarRangeMultiplier = 1;
 	FindPlayerPed()->m_pWanted->m_fCrimeSensitivity = 1.0f;
-	CRoadBlocks::ClearScriptRoadBlocks();
-	CRouteNode::Initialise();
+	RoadBlocks_ClearScriptRoadBlocks();
+	PedRoutes_Initialise();
 	if (!CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
 		TheCamera.Restore();
 	TheCamera.SetWideScreenOff();
-	CSpecialFX::bLiftCam = false;
-	CSpecialFX::bVideoCam = false;
-	CTimeCycle::StopExtraColour(0);
+	SpecialFX_bLiftCam = false;
+	SpecialFX_bVideoCam = false;
+	TimeCycle_StopExtraColour(0);
 	for (int i = 0; i < MISSION_AUDIO_SLOTS; i++)
 		DMAudio_ClearMissionAudio(i);
-	CWeather::ReleaseWeather();
+	Weather_ReleaseWeather();
 	for (int i = 0; i < NUM_OF_SPECIAL_CHARS; i++)
 		CStreaming::SetMissionDoesntRequireSpecialChar(i);
 	for (int i = 0; i < NUM_OF_CUTSCENE_OBJECTS; i++)
@@ -406,7 +422,7 @@ void CMissionCleanup::Process()
 	CStreaming::ms_disableStreaming = false;
 	CHud::m_ItemToFlash = -1;
 	CHud::SetHelpMessage(nil, false);
-	CUserDisplay::OnscnTimer.m_bDisabled = false;
+	OnscreenTimer_state.m_bDisabled = false;
 	CTheScripts::RemoveScriptTextureDictionary();
 	CWorld::Players[0].m_pPed->m_pWanted->m_bIgnoredByCops = false;
 	CWorld::Players[0].m_pPed->m_pWanted->m_bIgnoredByEveryone = false;
@@ -460,7 +476,7 @@ void CMissionCleanup::Process()
 #ifdef SECUROM
 	if ((myrand() & 3) == 2){
 		// if pirated game
-		CWeather::ForceHurricaneWeather();
+		Weather_ForceHurricaneWeather();
 	}
 #endif
 }
@@ -494,7 +510,7 @@ bool CUpsideDownCarCheck::IsCarUpsideDown(CVehicle* pVehicle)
 
 void CUpsideDownCarCheck::UpdateTimers()
 {
-	uint32 timeStep = CTimer::GetTimeStepInMilliseconds();
+	uint32 timeStep = Timer_GetTimeStepInMilliseconds();
 	for (int i = 0; i < MAX_UPSIDEDOWN_CAR_CHECKS; i++){
 				// Access raw storage through the C store or pool API
 		CVehicle* v = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), m_sCars[i].m_nVehicleIndex));
@@ -570,7 +586,7 @@ void CStuckCarCheck::Init()
 
 void CStuckCarCheck::Process()
 {
-	uint32 timer = CTimer::GetTimeInMilliseconds();
+	uint32 timer = (*Timer_GetTimeInMilliseconds());
 	for (int i = 0; i < MAX_STUCK_CAR_CHECKS; i++){
 		if (m_sCars[i].m_nVehicleIndex < 0)
 			continue;
@@ -604,7 +620,7 @@ void CStuckCarCheck::AddCarToCheck(int32 id, float radius, uint32 time)
 #endif
 	m_sCars[index].m_nVehicleIndex = id;
 	m_sCars[index].m_vecPos = pv->GetPosition();
-	m_sCars[index].m_nLastCheck = CTimer::GetTimeInMilliseconds();
+	m_sCars[index].m_nLastCheck = (*Timer_GetTimeInMilliseconds());
 	m_sCars[index].m_fRadius = radius;
 	m_sCars[index].m_nStuckTime = time;
 	m_sCars[index].m_bStuck = false;
@@ -743,13 +759,13 @@ int CTheScripts::ScriptToLoad = 0;
 
 int CTheScripts::OpenScript()
 {
-	CFileMgr::ChangeDir("\\");
+	FileMgr_ChangeDir("\\");
 	switch (ScriptToLoad) {
-	case 0: return CFileMgr::OpenFile("data\\main.scm", "rb");
-	case 1: return CFileMgr::OpenFile("data\\freeroam_miami.scm", "rb");
-	case 2: return CFileMgr::OpenFile("data\\main_d.scm", "rb");
+	case 0: return FileMgr_OpenFile("data\\main.scm", "rb");
+	case 1: return FileMgr_OpenFile("data\\freeroam_miami.scm", "rb");
+	case 2: return FileMgr_OpenFile("data\\main_d.scm", "rb");
 	}
-	return CFileMgr::OpenFile("data\\main.scm", "rb");
+	return FileMgr_OpenFile("data\\main.scm", "rb");
 }
 #endif
 
@@ -774,12 +790,12 @@ void CTheScripts::Init()
 
 	int mainf = OpenScript();
 #else
-	CFileMgr::SetDir("data");
-	int mainf = CFileMgr::OpenFile("main.scm", "rb");
+	FileMgr_SetDir("data");
+	int mainf = FileMgr_OpenFile("main.scm", "rb");
 #endif
-	CFileMgr::Read(mainf, (char*)ScriptSpace, SIZE_MAIN_SCRIPT);
-	CFileMgr::CloseFile(mainf);
-	CFileMgr::SetDir("");
+	FileMgr_Read(mainf, (char*)ScriptSpace, SIZE_MAIN_SCRIPT);
+	FileMgr_CloseFile(mainf);
+	FileMgr_SetDir("");
 	StoreVehicleIndex = -1;
 	StoreVehicleWasRandom = true;
 	OnAMissionFlag = 0;
@@ -823,7 +839,7 @@ void CTheScripts::Init()
 		IntroRectangles[i].m_bIsUsed = false;
 		IntroRectangles[i].m_bBeforeFade = false;
 		IntroRectangles[i].m_nTextureId = -1;
-		IntroRectangles[i].m_sRect = CRect(0.0f, 0.0f, 0.0f, 0.0f);
+		IntroRectangles[i].m_sRect = Rect_Make(0.0f, 0.0f, 0.0f, 0.0f);
 		IntroRectangles[i].m_sColor = CRGBA(255, 255, 255, 255);
 	}
 	NumberOfIntroRectanglesThisFrame = 0;
@@ -848,10 +864,15 @@ void CTheScripts::Init()
 void CTheScripts::RemoveScriptTextureDictionary()
 {
 	for (int i = 0; i < ARRAY_SIZE(CTheScripts::ScriptSprites); i++)
-		CTheScripts::ScriptSprites[i].Delete();
-	int slot = CTxdStore::FindTxdSlot("script");
+		([](Sprite2d *spriteSelf){
+    // Retain actual native reference objects through the complete synchronous C operation
+    Sprite2d_Delete(spriteSelf);
+})(&(CTheScripts::ScriptSprites[i]));
+	// Use the complete C texture dictionary owner with the original live arguments
+	int slot = TxdStore_FindTxdSlot("script");
 	if (slot != -1)
-		CTxdStore::RemoveTxd(slot);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveTxd(slot);
 }
 
 void CRunningScript::RemoveScriptFromList(CRunningScript** ppScript)
@@ -891,7 +912,7 @@ void CTheScripts::Process()
 		return;
 	CommandsExecuted = 0;
 	ScriptsUpdated = 0;
-	float timeStep = CTimer::GetTimeStepInMilliseconds();
+	float timeStep = Timer_GetTimeStepInMilliseconds();
 	UpsideDownCars.UpdateTimers();
 	StuckCars.Process();
 	MissionCleanUp.CheckIfCollisionHasLoadedForMissionObjects();
@@ -917,10 +938,10 @@ void CTheScripts::Process()
 	switch (AllowMissionReplay) {
 	case MISSION_RETRY_STAGE_START_PROCESSING:
 		AllowMissionReplay = MISSION_RETRY_STAGE_WAIT_FOR_DELAY;
-		TimeToWaitTill = CTimer::GetTimeInMilliseconds() + (AddExtraDeathDelay() > 1000 ? 4000 : 2500);
+		TimeToWaitTill = (*Timer_GetTimeInMilliseconds()) + (AddExtraDeathDelay() > 1000 ? 4000 : 2500);
 		break;
 	case MISSION_RETRY_STAGE_WAIT_FOR_DELAY:
-		if (TimeToWaitTill < CTimer::GetTimeInMilliseconds())
+		if (TimeToWaitTill < (*Timer_GetTimeInMilliseconds()))
 			AllowMissionReplay = MISSION_RETRY_STAGE_WAIT_FOR_MENU;
 		break;
 	case MISSION_RETRY_STAGE_WAIT_FOR_MENU:
@@ -930,7 +951,7 @@ void CTheScripts::Process()
 	case MISSION_RETRY_STAGE_START_RESTARTING:
 		AllowMissionReplay = MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART;
 		AlreadyResetHealth = false;
-		TimeToWaitTill = CTimer::GetTimeInMilliseconds() + 500;
+		TimeToWaitTill = (*Timer_GetTimeInMilliseconds()) + 500;
 		break;
 	case MISSION_RETRY_STAGE_WAIT_FOR_TIMER_AFTER_RESTART:
 		if (!AlreadyResetHealth) {
@@ -942,19 +963,19 @@ void CTheScripts::Process()
 					pPlayerPed->m_fHealth = pPlayerInfo->m_nMaxHealth;
 			}
 		}
-		if (TimeToWaitTill < CTimer::GetTimeInMilliseconds()) {
+		if (TimeToWaitTill < (*Timer_GetTimeInMilliseconds())) {
 			AllowMissionReplay = MISSION_RETRY_STAGE_NORMAL;
 			return;
 		}
 		break;
 	}
 	if (WaitForMissionActivate) {
-		if (WaitForMissionActivate > CTimer::GetTimeInMilliseconds())
+		if (WaitForMissionActivate > (*Timer_GetTimeInMilliseconds()))
 			return;
 		WaitForMissionActivate = 0;
-		WaitForSave = CTimer::GetTimeInMilliseconds() + 3000;
+		WaitForSave = (*Timer_GetTimeInMilliseconds()) + 3000;
 	}
-	if (WaitForSave && WaitForSave > CTimer::GetTimeInMilliseconds())
+	if (WaitForSave && WaitForSave > (*Timer_GetTimeInMilliseconds()))
 		WaitForSave = 0;
 #endif
 
@@ -998,7 +1019,7 @@ void CRunningScript::Process()
 		DoDeatharrestCheck();
 	if (m_bMissionFlag && CTheScripts::FailCurrentMission == 1 && m_nStackPointer == 1)
 		SetIP(m_anStack[--m_nStackPointer]);
-	if (CTimer::GetTimeInMilliseconds() >= m_nWakeTime){
+	if ((*Timer_GetTimeInMilliseconds()) >= m_nWakeTime){
 		while (!ProcessOneCommand())
 			;
 		return;
@@ -1009,11 +1030,11 @@ void CRunningScript::Process()
 		return;
 	m_nWakeTime = 0;
 	for (int i = 0; i < NUMBIGMESSAGES; i++){
-		if (CMessages::BIGMessages[i].m_Stack[0].m_pText != nil)
-			CMessages::BIGMessages[i].m_Stack[0].m_nStartTime = 0;
+		if (Messages_BIGMessages[i].m_Stack[0].m_pText != nil)
+			Messages_BIGMessages[i].m_Stack[0].m_nStartTime = 0;
 	}
-	if (CMessages::BriefMessages[0].m_pText != nil)
-		CMessages::BriefMessages[0].m_nStartTime = 0;
+	if (Messages_BriefMessages[0].m_pText != nil)
+		Messages_BriefMessages[0].m_nStartTime = 0;
 }
 
 int8 CRunningScript::ProcessOneCommand()
@@ -1066,7 +1087,7 @@ int8 CRunningScript::ProcessOneCommand()
 		if (m_bMissionFlag) {
 			char tmp[128];
 			sprintf(tmp, "Comm %d Cmp %d", command, m_bCondResult);
-			CDebug::DebugAddText(tmp);
+			Debug_DebugAddText(tmp);
 		}
 #endif
 	}
@@ -1082,7 +1103,7 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		return 0;
 	case COMMAND_WAIT:
 		CollectParameters(&m_nIp, 1);
-		m_nWakeTime = CTimer::GetTimeInMilliseconds() + ScriptParams[0];
+		m_nWakeTime = (*Timer_GetTimeInMilliseconds()) + ScriptParams[0];
 		m_bSkipWakeTime = false;
 		return 1;
 	case COMMAND_GOTO:
@@ -1895,19 +1916,19 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr += (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_ADD_TIMED_VAL_TO_FLOAT_LVAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr += (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_VAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
@@ -1915,7 +1936,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
@@ -1923,29 +1944,29 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_LVAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_VAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr -= (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_LVAR:
 	{
 		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= CTimer::GetTimeStep() * *(float*)&ScriptParams[0];
+		*(float*)ptr -= (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_VAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 #ifdef FIX_BUGS // in SA it was fixed by reversing their order in enum
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
@@ -1953,7 +1974,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 #ifdef FIX_BUGS
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
@@ -1961,11 +1982,11 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
 #endif
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
+		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
 		return 0;
 	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_LVAR:
 		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= CTimer::GetTimeStep() * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
+		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
 		return 0;
 	case COMMAND_SET_VAR_INT_TO_VAR_INT:
 	{
@@ -2090,20 +2111,20 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	case COMMAND_GENERATE_RANDOM_FLOAT:
 	{
 		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CGeneral::GetRandomNumber();
-		CGeneral::GetRandomNumber();
-		CGeneral::GetRandomNumber(); /* To make it EXTRA random! */
+		General_GetRandomNumber();
+		General_GetRandomNumber();
+		General_GetRandomNumber(); /* To make it EXTRA random! */
 #ifdef FIX_BUGS
-		*ptr = CGeneral::GetRandomNumberInRange(0.0f, 1.0f);
+		*ptr = General_GetRandomNumberInRangeFloat(0.0f, 1.0f);
 #else
-		*ptr = CGeneral::GetRandomNumber() / 65536.0f;
+		*ptr = General_GetRandomNumber() / 65536.0f;
 		/* Between 0 and 0.5 on PC (oh well...), never used in original script. */
 #endif
 
 		return 0;
 	}
 	case COMMAND_GENERATE_RANDOM_INT:
-		*GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL) = CGeneral::GetRandomNumber();
+		*GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL) = General_GetRandomNumber();
 		return 0;
 	case COMMAND_CREATE_CHAR:
 	{
@@ -2170,7 +2191,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		if (m_bIsMissionScript)
 			ped->bIsStaticWaitingForCollision = true;
 		CWorld::Add(ped);
-		ped->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pos);
+		ped->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
 		CPopulation::ms_nTotalMissionPeds++;
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), ped);
@@ -2200,9 +2221,9 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		if (ScriptParams[1] < 0 || ScriptParams[1] > 7)
 			// Max number GetRandomNumberInRange returns is max-1
 #ifdef FIX_BUGS
-			path = CGeneral::GetRandomNumberInRange(0, 8);
+			path = General_GetRandomNumberInRangeInt(0, 8);
 #else
-			path = CGeneral::GetRandomNumberInRange(0, 7);
+			path = General_GetRandomNumberInRangeInt(0, 7);
 #endif
 
 		ped->SetWanderPath(path);
@@ -2418,7 +2439,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 			car->AutoPilot.m_nCruiseSpeed = car->AutoPilot.m_fMaxTrafficSpeed = 9.0f;
 			car->AutoPilot.m_nCurrentLane = car->AutoPilot.m_nNextLane = 0;
 			car->bEngineOn = false;
-			car->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pos);
+			car->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
 			car->bHasBeenOwnedByPlayer = true;
 			if (m_bIsMissionScript)
 				car->bIsStaticWaitingForCollision = true;
@@ -2466,7 +2487,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		car->SetStatus(STATUS_PHYSICS);
 		car->bEngineOn = true;
 		car->AutoPilot.m_nCruiseSpeed = Max(1, car->AutoPilot.m_nCruiseSpeed);
-		car->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+		car->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}
 	case COMMAND_CAR_WANDER_RANDOMLY:
@@ -2479,7 +2500,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		car->AutoPilot.m_nCarMission = MISSION_CRUISE;
 		car->bEngineOn = true;
 		car->AutoPilot.m_nCruiseSpeed = Max(1, car->AutoPilot.m_nCruiseSpeed);
-		car->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+		car->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}
 	case COMMAND_CAR_SET_IDLE:
@@ -2534,11 +2555,11 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 				break;
 			case MISSION_GOTOCOORDS:
 			case MISSION_GOTOCOORDS_STRAIGHT:
-				CCarCtrl::JoinCarWithRoadSystemGotoCoors(car, car->AutoPilot.m_vecDestinationCoors, false);
+				CCarCtrl::JoinCarWithRoadSystemGotoCoors(car, AutoPilot_ToVector(car->AutoPilot.m_vecDestinationCoors), false);
 				break;
 			case MISSION_GOTOCOORDS_ACCURATE:
 			case MISSION_GOTO_COORDS_STRAIGHT_ACCURATE:
-				CCarCtrl::JoinCarWithRoadSystemGotoCoors(car, car->AutoPilot.m_vecDestinationCoors, false);
+				CCarCtrl::JoinCarWithRoadSystemGotoCoors(car, AutoPilot_ToVector(car->AutoPilot.m_vecDestinationCoors), false);
 				break;
 			case MISSION_RAMCAR_FARAWAY:
 			case MISSION_RAMCAR_CLOSE:
@@ -2588,7 +2609,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		CVehicle* car = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(car);
 		car->AutoPilot.m_nCarMission = (uint8)ScriptParams[1];
-		car->AutoPilot.m_nAntiReverseTimer = CTimer::GetTimeInMilliseconds();
+		car->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		car->bEngineOn = true;
 		return 0;
 	}
@@ -2650,21 +2671,21 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		}
 #endif
 		CollectParameters(&m_nIp, 2);
-		CMessages::AddBigMessage(key, ScriptParams[0], ScriptParams[1] - 1);
+		Messages_AddBigMessage(key, ScriptParams[0], ScriptParams[1] - 1);
 		return 0;
 	}
 	case COMMAND_PRINT:
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 2);
-		CMessages::AddMessage(key, ScriptParams[0], ScriptParams[1]);
+		Messages_AddMessage(key, ScriptParams[0], ScriptParams[1]);
 		return 0;
 	}
 	case COMMAND_PRINT_NOW:
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 2);
-		CMessages::AddMessageJumpQ(key, ScriptParams[0], ScriptParams[1]);
+		Messages_AddMessageJumpQ(key, ScriptParams[0], ScriptParams[1]);
 		return 0;
 	}
 	/*
@@ -2672,25 +2693,25 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	{
 		wchar* key = CTheScripts::GetTextByKeyFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 2);
-		CMessages::AddMessageSoon(key, ScriptParams[0], ScriptParams[1]);
+		Messages_AddMessageSoon(key, ScriptParams[0], ScriptParams[1]);
 		return 0;
 	}
 	*/
 	case COMMAND_CLEAR_PRINTS:
-		CMessages::ClearMessages();
+		Messages_ClearMessages();
 		return 0;
 	case COMMAND_GET_TIME_OF_DAY:
-		ScriptParams[0] = CClock::GetHours();
-		ScriptParams[1] = CClock::GetMinutes();
+		ScriptParams[0] = Clock_GetHours();
+		ScriptParams[1] = Clock_GetMinutes();
 		StoreParameters(&m_nIp, 2);
 		return 0;
 	case COMMAND_SET_TIME_OF_DAY:
 		CollectParameters(&m_nIp, 2);
-		CClock::SetGameClock(ScriptParams[0], ScriptParams[1]);
+		Clock_SetGameClock(ScriptParams[0], ScriptParams[1]);
 		return 0;
 	case COMMAND_GET_MINUTES_TO_TIME_OF_DAY:
 		CollectParameters(&m_nIp, 2);
-		ScriptParams[0] = CClock::GetGameClockMinutesUntil(ScriptParams[0], ScriptParams[1]);
+		ScriptParams[0] = Clock_GetGameClockMinutesUntil(ScriptParams[0], ScriptParams[1]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	case COMMAND_IS_POINT_ON_SCREEN:
@@ -3086,7 +3107,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		CRemote::GivePlayerRemoteControlledCar(pos.x, pos.y, pos.z, DEGTORAD(*(float*)&ScriptParams[4]), MI_RCBANDIT);
+		Remote_GivePlayerRemoteControlledCar(pos.x, pos.y, pos.z, DEGTORAD(*(float*)&ScriptParams[4]), MI_RCBANDIT); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_ALTER_WANTED_LEVEL:
@@ -3099,7 +3120,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		return 0;
 	case COMMAND_IS_WANTED_LEVEL_GREATER:
 		CollectParameters(&m_nIp, 2);
-		UpdateCompareFlag(CWorld::Players[ScriptParams[0]].m_pPed->m_pWanted->GetWantedLevel() > ScriptParams[1]);
+		UpdateCompareFlag(Wanted_GetWantedLevel(CWorld::Players[ScriptParams[0]].m_pPed->m_pWanted) > ScriptParams[1]);
 		return 0;
 	case COMMAND_CLEAR_WANTED_LEVEL:
 		CollectParameters(&m_nIp, 1);
@@ -3181,12 +3202,12 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		CPlayerInfo* pPlayer = &CWorld::Players[ScriptParams[0]];
 		char label[12];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, label);
-		int zoneToCheck = CTheZones::FindZoneByLabelAndReturnIndex(label, ZONE_DEFAULT);
+		int zoneToCheck = Zones_FindZoneByLabelAndReturnIndex(label, ZONE_DEFAULT);
 		if (zoneToCheck != -1)
 			m_nIp += KEY_LENGTH_IN_SCRIPT; /* why only if zone != -1? */
 		CVector pos = pPlayer->GetPos();
-		CZone* pZone = CTheZones::GetNavigationZone(zoneToCheck);
-		UpdateCompareFlag(CTheZones::PointLiesWithinZone(&pos, pZone));
+		CZone* pZone = Zones_GetNavigationZone(zoneToCheck);
+		UpdateCompareFlag(Zones_PointLiesWithinZone(ZonesPosition_FromVector(*(&pos)), pZone));
 		return 0;
 	}
 	case COMMAND_IS_PLAYER_PRESSING_HORN:
@@ -3300,7 +3321,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		pVehicle->bEngineOn = true;
 		pPed->bUsesCollision = false;
 		pPed->AddInCarAnims(pVehicle, true);
-		pPed->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pPed->GetPosition());
+		pPed->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pPed->GetPosition())));
 		CWorld::Add(pPed);
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), pPed);
@@ -3340,9 +3361,10 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 			pPlayer->m_pPed->m_pVehicleAnim->blendDelta = -1000.0f;
 		pPlayer->m_pPed->m_pVehicleAnim = nil;
 		pPlayer->m_pPed->SetMoveState(PEDMOVE_NONE);
-		CAnimManager::BlendAnimation(pPlayer->m_pPed->GetClump(), pPlayer->m_pPed->m_animGroup, ANIM_STD_IDLE, 1000.0f);
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_BlendAnimation(pPlayer->m_pPed->GetClump(), pPlayer->m_pPed->m_animGroup, ANIM_STD_IDLE, 1000.0f);
 		pPlayer->m_pPed->RestartNonPartialAnims();
-		AudioManager.PlayerJustLeftCar();
+		AudioPlayerEngine_Left(&AudioManager);
 		pos.z += pPlayer->m_pPed->GetDistanceFromCentreOfMassToBaseOfModel();
 		pPlayer->m_pPed->Teleport(pos);
 		CTheScripts::ClearSpaceForMissionEntity(pos, pPlayer->m_pPed);
@@ -3363,7 +3385,7 @@ bool CRunningScript::CanAllowMissionReplay()
 	if (AllowMissionReplay != MISSION_RETRY_STAGE_NORMAL)
 		return false;
 	for (int i = 0; i < ARRAY_SIZE(MissionScripts); i++) {
-		if (!CGeneral::faststricmp(m_abScriptName, MissionScripts[i]))
+		if (!General_faststricmp(m_abScriptName, MissionScripts[i]))
 			return true;
 	}
 	return false;
@@ -3391,4 +3413,11 @@ void RetryMission(int type, int unk)
 
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

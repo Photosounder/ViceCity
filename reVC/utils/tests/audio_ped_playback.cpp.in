@@ -1,0 +1,171 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "soundlist.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <stddef.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int32=int32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+enum {PED_COMMENT_MAX_DIST=40,PED_COMMENT_POLICE_HELI_MAX_DIST=400};
+static void event(unsigned);
+struct CVector {float x,y,z;};
+class CPed {public:CVector position;const CVector &GetPosition() const {
+    // Observe the original player-zero position query
+    event(10);return position;
+}};
+struct Player {CPed *m_pPed;};
+struct CWorld {static Player Players[2];};Player CWorld::Players[2];
+struct CTimer {static uint32 GetTimeInMilliseconds();static bool GetIsSlowMotionActive();};
+struct cAudioManager {
+@FIELDS@
+void DebugPlayPedComment(int32 sound);
+};
+extern "C" cAudioManager AudioManager;cAudioManager AudioManager;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+static cAudioManager other,*active;
+static cPedComments *queue;
+static CPed peds[2];
+static unsigned seedValue,statusValue,submits,loads[2],queries[2],pauses,debugs,advances;
+static uint32 clockTime;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestPedPlaybackC(cAudioManager *,cPedComments *,int32_t);
+extern "C" void TestPedPlaybackRealAdd(cPedComments *,const tPedComment *);
+extern "C" void TestPedPlaybackRealAdvance(cPedComments *);
+static void value(uint32 v) {
+    // Record scalar callback arguments and ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned n) {
+    // Observe initialized words of the complete owner records
+    digest=TestAircraftHash(digest,p,n);
+}
+static void padding(tPedComment *p) {
+    // Exclude only unspecified trailing padding in automatic comment records
+    unsigned end=offsetof(tPedComment,m_nLoadingTimeout)+sizeof(p->m_nLoadingTimeout);
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+    // Include the conditional emitting-volume field before padding
+    end=offsetof(tPedComment,m_nEmittingVolume)+sizeof(p->m_nEmittingVolume);
+#endif
+    memset((unsigned char *)p+end,0,sizeof(*p)-end);
+}
+static void observe() {
+    // Compare every owner field with only automatic comment padding normalized
+    cAudioManager copy[2]={AudioManager,other};
+    for(unsigned o=0;o<2;++o)for(unsigned q=0;q<NUM_SOUND_QUEUES;++q)for(unsigned i=0;i<NUM_PED_COMMENTS_SLOTS;++i)padding(&copy[o].m_sPedComments.m_aPedCommentQueue[q][i]);
+    bytes(copy,sizeof(copy));bytes(peds,sizeof(peds));value(clockTime);
+}
+static void event(unsigned token) {
+    // Observe live fields before callbacks change later queue reads
+    value(token);observe();
+    if((token==20||token==21)&&(seedValue&128))queue->m_nActiveQueue^=1;
+    if(token==22&&(seedValue&256))AudioManager.m_sQueueSample.m_nSampleIndex=SFX_GENERIC_MALE_GRUNT_1;
+    if(token==10&&(seedValue&512))peds[0].position.x+=1;
+}
+uint32 CTimer::GetTimeInMilliseconds() {
+    // Supply the same timer value including unsigned wraparound
+    event(12);return clockTime;
+}
+bool CTimer::GetIsSlowMotionActive() {
+    // Observe the original slow-motion query
+    event(13);return (seedValue&8)!=0;
+}
+extern "C" uint32_t AudioPlayerEngineHost_Time() {
+    // Match the typed timer adapter used by the C playback body
+    return CTimer::GetTimeInMilliseconds();
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Match the typed slow-motion adapter used by the C playback body
+    return CTimer::GetIsSlowMotionActive();
+}
+@HOST@
+extern "C" uint8_t SampleManager_IsMissionAudioLoaded(cSampleManager *owner,uint8_t slot,uint32_t sample) {
+    // Observe mission loading and its captured sample identifier
+    assert(owner==&SampleManager);++queries[0];value(slot);value(sample);event(20);return statusValue;
+}
+extern "C" uint8_t SampleManager_IsPedCommentLoaded(cSampleManager *owner,uint32_t sample) {
+    // Observe pedestrian loading and allow later live queue reads to change
+    assert(owner==&SampleManager);++queries[1];value(sample);event(21);return statusValue;
+}
+extern "C" uint8_t SampleManager_LoadMissionAudio(cSampleManager *owner,uint8_t slot,uint32_t sample) {
+    // Record the mission load request after its permission query
+    assert(owner==&SampleManager);++loads[0];value(slot);value(sample);event(23);return 1;
+}
+extern "C" uint8_t SampleManager_LoadPedComment(cSampleManager *owner,uint32_t sample) {
+    // Record the pedestrian load request after its permission query
+    assert(owner==&SampleManager);++loads[1];value(sample);event(24);return 1;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *owner,uint32_t sample) {
+    // Observe the live scratch sample and mutate later scratch reads
+    assert(owner==&SampleManager);value(sample);event(22);return 22050+sample%1000;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *owner) {
+    // Require submission through the global owner even for an alternate comment queue
+    assert(owner==&AudioManager);++submits;event(30);
+}
+extern "C" void PedComments_Add(cPedComments *owner,const tPedComment *comment) {
+    // Observe every defined debug or carryover field before real C queue insertion
+    value(owner==&AudioManager.m_sPedComments?0:1);tPedComment copy=*comment;padding(&copy);bytes(&copy,sizeof(copy));event(40);TestPedPlaybackRealAdd(owner,comment);event(41);
+}
+extern "C" void PedComments_Advance(cPedComments *owner) {
+    // Execute the real C carryover operation at the original playback boundary
+    ++advances;event(42);TestPedPlaybackRealAdvance(owner);event(43);
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed complete owners and both queues while retaining process-static histories
+    seedValue=seed;memset(&AudioManager,0,sizeof(AudioManager));memset(&other,0,sizeof(other));active=seed%2?&other:&AudioManager;queue=&active->m_sPedComments;
+    clockTime=seed%3?seed*71:UINT32_MAX-500;statusValue=seed<80?LOADING_STATUS_LOADED:seed%4;
+    static const uint32 samples[]={SFX_GENERIC_MALE_GRUNT_1,SFX_POLICE_BOAT_1,SFX_POLICE_BOAT_23,SFX_POLICE_HELI_1,SFX_POLICE_HELI_20,PLAYER_COMMENTS_START,PLAYER_COMMENTS_END,PLAYER_COMMENTS_START-1,PLAYER_COMMENTS_END+1};
+    for(unsigned o=0;o<2;++o){cAudioManager *m=o?&other:&AudioManager;memset(&m->m_sQueueSample,0x35,sizeof(m->m_sQueueSample));for(unsigned r=0;r<5;++r)m->m_anRandomTable[r]=(int32)(seed*97+r*1009);m->m_sPedComments.m_nActiveQueue=(seed/2)%2;
+        // Create valid priority lists for every possible callback-selected queue
+        for(unsigned q=0;q<NUM_SOUND_QUEUES;++q){m->m_sPedComments.m_nPedCommentCount[q]=1+seed%NUM_PED_COMMENTS_SLOTS;for(unsigned i=0;i<NUM_PED_COMMENTS_SLOTS;++i){m->m_sPedComments.m_aPedCommentOrderList[q][i]=i;tPedComment *c=&m->m_sPedComments.m_aPedCommentQueue[q][i];c->m_nSampleIndex=seed<80?SFX_GENERIC_MALE_GRUNT_1+seed%16:samples[(seed/4+i+q)%ARRAY_SIZE(samples)];c->m_nEntityIndex=seed+i+o*100;c->m_vecPos={(float)i,(float)q,3};c->m_fDistance=seed%39;c->m_nVolume=127-i;c->m_nLoadingTimeout=(int8_t)(seed%12-1);
+#if defined(EXTERNAL_3D_SOUND) && defined(FIX_BUGS)
+            // Seed the conditional emitting volume independently of playback volume
+            c->m_nEmittingVolume=80+i;
+#endif
+        }}
+#ifdef GTA_PC
+        // Exercise delay expiry at and around its strict six-second boundary
+        m->m_sPedComments.m_bDelay=seed&1;m->m_sPedComments.m_nDelayTimer=clockTime-(5999+seed%3);
+#endif
+    }
+    // Cover pause and empty queues without consuming the shared sample history
+    AudioManager.m_bIsPaused=seed>=80&&seed%11==0;pauses+=AudioManager.m_bIsPaused!=0;
+    if(seed>=80&&seed%13==0)queue->m_nPedCommentCount[queue->m_nActiveQueue]=0;
+    peds[0].position={1,(float)seed,3};peds[1].position={90,91,92};CWorld::Players[0].m_pPed=&peds[0];CWorld::Players[1].m_pPed=&peds[1];
+#if !defined(FIX_BUGS) && !defined(GTA_PS2)
+    // Restrict the original undefined vanilla branch to defined repeat-rejection paths
+    for(unsigned o=0;o<2;++o)for(unsigned q=0;q<NUM_SOUND_QUEUES;++q)for(unsigned i=0;i<NUM_PED_COMMENTS_SLOTS;++i)(o?other:AudioManager).m_sPedComments.m_aPedCommentQueue[q][i].m_nSampleIndex=NO_SAMPLE;
+#endif
+}
+int main() {
+    // Run quietly without Windows crash dialogs
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Alternate comment queues and explicit debug owners across shared playback history
+    for(unsigned seed=0;seed<32768;++seed){prepare(seed);int32 sound=PLAYER_COMMENTS_START+seed%20;
+#if !defined(FIX_BUGS) && !defined(GTA_PS2)
+        // Keep the vanilla producer on its defined duplicate-rejection path
+        sound=NO_SAMPLE;
+#endif
+        if(seed%5==0){++debugs;@DEBUG@;}
+        @PROCESS@;observe();
+    }
+    // Require callback coverage before reporting the complete state digest
+    assert(pauses&&debugs&&advances);
+#if defined(FIX_BUGS) || defined(GTA_PS2)
+    assert(submits&&loads[0]&&loads[1]&&queries[0]&&queries[1]);
+#endif
+    printf("%llu %u %u %u %u %u %u\n",(unsigned long long)digest,submits,loads[0],loads[1],debugs,pauses,advances);return 0;
+}
+//- rouz edit (ChatGPT)

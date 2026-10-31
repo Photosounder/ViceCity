@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "templates.h"
@@ -36,7 +38,7 @@ CColStore::Initialise(void)
 //- rouz edit (ChatGPT)
 	AddColSlot("generic");	// slot 0. not streamed
 #ifndef MASTER
-	VarConsole.Add("Display collision in memory", &bDispColInMem, true);
+	VarConsole_AddBool(&VarConsole,"Display collision in memory", &bDispColInMem, true); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -105,7 +107,7 @@ CColStore::FindColSlot(const char *name)
 	//- rouz edit (ChatGPT)
 	for(int i = 0; i < size; i++){
 		def = GetSlot(i);
-		if(def && !CGeneral::faststricmp(def->name, name))
+		if(def && !General_faststricmp(def->name, name))
 			return i;
 	}
 	return -1;
@@ -159,7 +161,8 @@ CColStore::RemoveCol(int32 slot)
 		if(mi){
 			CColModel *col = mi->GetColModel();
 			if(col && col->level == slot)
-				col->RemoveCollisionVolumes();
+				// Invoke the complete C collision owner at the original native lifetime or operation boundary
+				ColModel_RemoveCollisionVolumes(col);
 		}
 	}
 }
@@ -209,8 +212,8 @@ CColStore::LoadCollision(const CVector2D &pos)
 
 		bool wantThisOne = false;
 
-		if(GetBoundingBox(i).IsPointInside(pos) ||
-		   bLoadAtSecondPosition && GetBoundingBox(i).IsPointInside(secondPosition, -119.0f) ||
+		if(Rect_IsPointInside(&GetBoundingBox(i), &pos.x, &pos.y) ||
+		   bLoadAtSecondPosition && Rect_IsPointInsideRadius(&GetBoundingBox(i), &secondPosition.x, &secondPosition.y, -119.0f) ||
 		   strcmp(GetColName(i), "yacht") == 0){
 			wantThisOne = true;
 		}else{
@@ -234,7 +237,9 @@ CColStore::LoadCollision(const CVector2D &pos)
 						continue;
 				}
 				if (pEntity && !pEntity->bDontLoadCollision && !pEntity->bIsFrozen) {
-					if (GetBoundingBox(i).IsPointInside(pEntity->GetPosition(), -80.0f))
+					// Retain the original conversion before the collision point test
+                    const CVector2D collisionPoint(pEntity->GetPosition());
+                    if (Rect_IsPointInsideRadius(&GetBoundingBox(i), &collisionPoint.x, &collisionPoint.y, -80.0f))
 						wantThisOne = true;
 				}
 			}
@@ -254,7 +259,7 @@ CColStore::RequestCollision(const CVector2D &pos)
 	int i;
 
 	for(i = 1; i < COLSTORESIZE; i++)
-		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -115.0f))
+		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -115.0f))
 			CStreaming::RequestCol(i, STREAMFLAGS_PRIORITY);
 }
 
@@ -267,14 +272,14 @@ CColStore::EnsureCollisionIsInMemory(const CVector2D &pos)
 		return;
 
 	for(i = 1; i < COLSTORESIZE; i++)
-		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -110.0f) &&
+		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -110.0f) &&
 		   !CStreaming::HasColLoaded(i)){
 			CStreaming::RequestCol(i, 0);
 			if(TheCamera.GetScreenFadeStatus() == FADE_0)
 				FrontEndMenuManager.MessageScreen("LOADCOL", false);
-			CTimer::Suspend();
+			Timer_Suspend();
 			CStreaming::LoadAllRequestedModels(false);
-			CTimer::Resume();
+			Timer_Resume();
 		}
 }
 
@@ -284,8 +289,11 @@ CColStore::HasCollisionLoaded(const CVector2D &pos)
 	int i;
 
 	for(i = 1; i < COLSTORESIZE; i++)
-		if(GetSlot(i) && GetBoundingBox(i).IsPointInside(pos, -115.0f) &&
+		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -115.0f) &&
 		   !GetSlot(i)->isLoaded)
 			return false;
 	return true;
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

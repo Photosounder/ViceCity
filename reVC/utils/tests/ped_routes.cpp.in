@@ -1,0 +1,104 @@
+#include "owners.h"
+#include "entry.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+static uint64_t digest=UINT64_C(1469598103934665603);
+static unsigned states,checks;
+
+static void hash32(uint32_t value)
+{
+    // Hash field representations independently of indeterminate record padding
+    for(unsigned n=0;n<4;++n){digest^=(uint8_t)(value>>(n*8));digest*=UINT64_C(1099511628211);}
+}
+
+static uint32_t bits(float value)
+{
+    // Inspect copied floating point representations without aliasing
+    uint32_t result;memcpy(&result,&value,sizeof(result));return result;
+}
+
+static float scalar(uint32_t value)
+{
+    // Construct exact signed zero, infinity and quiet NaN test values
+    float result;memcpy(&result,&value,sizeof(result));return result;
+}
+
+static void require(bool condition)
+{
+    // Keep explicit invariants alongside the original-versus-C state comparison
+    ++checks;if(!condition){fprintf(stderr,"route invariant failed at state %u check %u\n",states,checks);exit(1);}
+}
+
+static void snapshot(void)
+{
+    // Observe the complete canonical table and every public indexed accessor
+    ++states;
+    for(int i=0;i<NUMPEDROUTES;++i){
+        hash32((uint16_t)gaRoutes[i].m_route);hash32(bits(gaRoutes[i].m_pos.x));hash32(bits(gaRoutes[i].m_pos.y));hash32(bits(gaRoutes[i].m_pos.z));
+        const TestVector position=Run_GetPointPosition((int16_t)i);
+        require(Run_GetRouteThisPointIsOn((int16_t)i)==gaRoutes[i].m_route);
+        require(bits(position.x)==bits(gaRoutes[i].m_pos.x)&&bits(position.y)==bits(gaRoutes[i].m_pos.y)&&bits(position.z)==bits(gaRoutes[i].m_pos.z));
+    }
+}
+
+static void seed(void)
+{
+    // Give each slot distinct retained data so removal cannot hide stale or misplaced positions
+    for(int i=0;i<NUMPEDROUTES;++i){
+        gaRoutes[i].m_route=(int16_t)(100+i%5);
+        gaRoutes[i].m_pos.x=(float)(i+1);gaRoutes[i].m_pos.y=(float)(-i-1);gaRoutes[i].m_pos.z=(float)i*.25f;
+    }
+}
+
+int main(void)
+{
+    // Verify static zero initialization before the original empty vector constructors have any effects
+    for(int i=0;i<NUMPEDROUTES;++i)require(gaRoutes[i].m_route==0&&bits(gaRoutes[i].m_pos.x)==0&&bits(gaRoutes[i].m_pos.y)==0&&bits(gaRoutes[i].m_pos.z)==0);
+    snapshot();seed();Run_Initialise();
+    for(int i=0;i<NUMPEDROUTES;++i)require(gaRoutes[i].m_route==-1&&bits(gaRoutes[i].m_pos.x)==0&&bits(gaRoutes[i].m_pos.y)==0&&bits(gaRoutes[i].m_pos.z)==0);
+    require(Run_GetRouteStart(-1)==0&&Run_GetRouteStart(0)==-1);snapshot();
+
+    // Sample the complete signed route range through insertion, lookup and removal at a safe slot
+    for(int value=-32768;value<=32767;value+=257){
+        Run_Initialise();TestVector pos={scalar(UINT32_C(0x80000000)),scalar(UINT32_C(0x7fc12345)),scalar(UINT32_C(0xff800000))};
+        Run_AddRoutePoint((int16_t)value,pos);require(gaRoutes[0].m_route==value);require(Run_GetRouteStart((int16_t)value)==0);
+        TestVector copy=Run_GetPointPosition(0);copy.x=123.0f;require(bits(gaRoutes[0].m_pos.x)==UINT32_C(0x80000000));snapshot();
+        Run_RemoveRoute((int16_t)value);snapshot();
+    }
+
+    // Fill the table, reuse an early hole and retain by-value vector payloads
+    Run_Initialise();
+    for(int i=0;i<NUMPEDROUTES;++i){TestVector pos={(float)i,scalar(UINT32_C(0x80000000)),scalar(UINT32_C(0x7fc12345))};Run_AddRoutePoint((int16_t)(i/3),pos);}
+    snapshot();gaRoutes[17].m_route=-1;TestVector special={scalar(UINT32_C(0x7f800000)),scalar(UINT32_C(0xff800000)),scalar(UINT32_C(0x7fc54321))};
+    Run_AddRoutePoint(-32768,special);require(gaRoutes[17].m_route==-32768);require(Run_GetRouteStart(-32768)==17);snapshot();
+#ifdef FIX_BUGS
+    // Verify the fixed exhaustion guard without invoking the original classic out-of-bounds write
+    Run_AddRoutePoint(32767,special);require(Run_GetRouteStart(32767)==-1);snapshot();
+#endif
+
+    // Compare every defined contiguous removal position and length for both historical policies
+    for(int first=0;first<NUMPEDROUTES;++first)for(int length=1;length<=NUMPEDROUTES-first;++length){
+#ifndef FIX_BUGS
+        if(first+2*length>NUMPEDROUTES)continue;
+#endif
+        seed();for(int i=first;i<first+length;++i)gaRoutes[i].m_route=42;
+        require(Run_GetRouteStart(42)==first);Run_RemoveRoute(42);
+        for(int i=NUMPEDROUTES-length;i<NUMPEDROUTES;++i)require(gaRoutes[i].m_route==-1);
+        snapshot();
+    }
+
+    // Preserve first-run removal for fragmented routes and stale tail positions
+    seed();gaRoutes[1].m_route=42;gaRoutes[2].m_route=42;gaRoutes[7].m_route=42;Run_RemoveRoute(42);snapshot();
+    seed();Run_RemoveRoute(42);snapshot();
+    Run_Initialise();gaRoutes[0].m_route=-1;gaRoutes[1].m_route=3;Run_RemoveRoute(-1);snapshot();
+    // Retain the free-slot sentinel as an accepted insertion value without removing its whole free run
+    Run_Initialise();Run_AddRoutePoint(-1,special);require(Run_GetRouteStart(-1)==0);snapshot();
+#ifdef FIX_BUGS
+    // Allow the fixed compaction path to remove the entire free table
+    Run_Initialise();Run_RemoveRoute(-1);snapshot();
+#endif
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);return 0;
+}

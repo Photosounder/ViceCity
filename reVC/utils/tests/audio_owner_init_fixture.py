@@ -1,6 +1,8 @@
 """Compare original owner setup, RNG draws, lifecycle ordering, and native record ABI."""
 from pathlib import Path
 import re
+import clock_migration as clock
+import draw_migration as draw
 import audio_mission_data_migration as data
 import audio_mission_state_migration as mission
 import audio_owner_entities_migration as entities
@@ -27,8 +29,10 @@ assert re.search(r'int32_t m_anRandomTable\[5\];',new_h)
 assert normalize(mission.calls(entities.owner(owner(old))))==normalize((root/'src/audio/AudioManager.cpp').read_text())
 assert normalize(data.header(mission.header(entities.header(header(old_h)))))==normalize(new_h)
 old_common=(out/'before/src/core/common.h').read_text()
-assert old_common.replace('int myrand(void);\nvoid mysrand(unsigned int seed);','#include "Random.h" // rouz edit (ChatGPT)')==(root/'src/core/common.h').read_text()
-assert (out/'before/src/core/re3.cpp').read_bytes()==(root/'src/core/re3.cpp').read_bytes()
+expected_common=draw.calls(old_common.replace('int myrand(void);\nvoid mysrand(unsigned int seed);','#include "Random.h" // rouz edit (ChatGPT)'))
+expected_common='//+ rouz edit (ChatGPT)\n'+expected_common.rstrip()+'\n//- rouz edit (ChatGPT)\n'
+assert expected_common==(root/'src/core/common.h').read_text()
+assert normalize(clock.calls((out/'before/src/core/re3.cpp').read_text()))==normalize((root/'src/core/re3.cpp').read_text())
 assert normalize(fields(old_h))==normalize(fields(new_h))
 headers='\n'.join('#include "'+name+'"' for name in ['AudioSound.h','AudioCollision.h','AudioEntities.h','AudioPedComments.h','AudioMissionPosition.h','AudioState.h','AudioReflectionTypes.h','AudioCrimes.h','AudioPoliceQueue.h'])
 record=fields(new_h)

@@ -1,5 +1,6 @@
 # Known tyre and road-noise generators with live game field adapters
 import re
+import audio_vehicle_reverse_migration as reverse
 from audio_controls_migration import function
 NAMES={'ProcessVehicleFlatTyre':'FlatTyre','ProcessVehicleRoadNoise':'Dry','ProcessWetRoadNoise':'Wet'}
 HOST='''//+ rouz edit (ChatGPT)
@@ -57,17 +58,21 @@ def logic(source):
         for name in NAMES: source=source.replace(function(source,'cAudioManager::',name)+'\n','')
         for block in CONSTANTS: source=source.replace(block,'')
         source+=HOST
-    if HOST in source: source=source.replace(HOST,'')+HOST
+    import weather_migration as weather
+    host=next((candidate for candidate in [HOST,weather.calls(HOST)] if candidate in source),HOST)
+    if host in source: source=source.replace(host,'')+host
     for name,target in NAMES.items(): source=source.replace(name+'(params)', 'AudioVehicleRoad_'+target+'(this, &params)')
-    return source
+    return reverse.logic(source)
 
 def header(source):
     # Keep all owner and parameter fields while exposing explicit C generator operations
     source='\n'.join(line for line in source.split('\n') if not any(re.search(r'\b'+name+r'\(',line) for name in NAMES))
-    return source.replace('void AudioManager_InitState(cAudioManager *manager);',PROTOTYPES+'void AudioManager_InitState(cAudioManager *manager);')
+    return reverse.header(source.replace('void AudioManager_InitState(cAudioManager *manager);',PROTOTYPES+'void AudioManager_InitState(cAudioManager *manager);'))
 
 def body(source):
     # Preserve wheel short circuits, repeated scalar reads, conversions and request ordering
+    import weather_migration as weather
+    source=weather.legacy_member_spelling(source)
     source=source[source.index('{'):]
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source);source=re.sub(r'\bparams\.', 'params->',source)
     source=source.replace('CAutomobile* automobile;', 'CVehicle *automobile;').replace('CBike* bike;', 'CVehicle *bike;')

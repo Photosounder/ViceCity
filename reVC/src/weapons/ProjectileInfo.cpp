@@ -1,576 +1,295 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
+#include "Projectile_backend.h"
 #include "Camera.h"
-#include "General.h"
-#include "Heli.h"
-#include "ModelIndices.h"
-#include "Particle.h"
 #include "Ped.h"
-#include "Plane.h"
-#include "ProjectileInfo.h"
 #include "Projectile.h"
 #include "Explosion.h"
-#include "Weapon.h"
 #include "World.h"
-#include "Pools.h" // rouz edit (ChatGPT)
-
-#ifdef SQUEEZE_PERFORMANCE
-uint32 projectileInUse;
-#endif
-
-CProjectileInfo gaProjectileInfo[NUM_PROJECTILES];
-CProjectile *CProjectileInfo::ms_apProjectile[NUM_PROJECTILES];
-
-#define PROJECTILE_BOUNDARY_MIN_X -2390.0f
-#define PROJECTILE_BOUNDARY_MAX_X 1590.0f
-#define PROJECTILE_BOUNDARY_MIN_Y -1990.0f
-#define PROJECTILE_BOUNDARY_MAX_Y 1990.0f
-
-void
-CProjectileInfo::Initialise()
+#include "Particle.h"
+#include "Heli.h"
+#include "Plane.h"
+#include "Weapon.h"
+#include "Pools.h"
+static_assert(PROJECTILE_COLLRESPONSE_NONE==COLLRESPONSE_NONE && PROJECTILE_COLLRESPONSE_UNKNOWN5==COLLRESPONSE_UNKNOWN5 && PROJECTILE_TEMP_OBJECT==TEMP_OBJECT,"Original projectile collision and pool constants");
+ProjectileVector Projectile_BackendReadVector(const void *position)
 {
-	debug("Initialising CProjectileInfo...\n");
-
-	for (int i = 0; i < ARRAY_SIZE(ms_apProjectile); i++) {
-		ms_apProjectile[i] = nil;
-		gaProjectileInfo[i].m_eWeaponType = WEAPONTYPE_GRENADE;
-		gaProjectileInfo[i].m_pSource = nil;
-		gaProjectileInfo[i].m_nExplosionTime = 0;
-		gaProjectileInfo[i].m_bInUse = false;
-	}
-
-	debug("CProjectileInfo ready\n");
-
-#ifdef SQUEEZE_PERFORMANCE
-	projectileInUse = 0;
-#endif
+    // Access the original native operation or canonical field without moving controller decisions
+    const CVector &v=*(const CVector *)position;return ProjectileVector{v.x,v.y,v.z};
 }
-
-void
-CProjectileInfo::Shutdown()
+void Projectile_BackendWithMatrix(void (*operation)(void *,void *),void *context)
 {
-	debug("Shutting down CProjectileInfo...\n");
-	debug("CProjectileInfo shut down\n");
+    // Access the original native operation or canonical field without moving controller decisions
+    CMatrix matrix;operation(&matrix,context);
 }
-
-CProjectileInfo*
-CProjectileInfo::GetProjectileInfo(int32 id)
+int32_t Projectile_BackendModel(CEntity *entity)
 {
-	return &gaProjectileInfo[id];
+    // Access the original native operation or canonical field without moving controller decisions
+    return entity->GetModelIndex();
 }
-
-bool
-CProjectileInfo::AddProjectile(CEntity *entity, eWeaponType weapon, CVector pos, float speed)
+void Projectile_BackendEntityMatrix(void *matrix,CEntity *entity)
 {
-	int8 SpecialCollisionResponseCase = COLLRESPONSE_NONE;
-	bool gravity = true;
-	CMatrix matrix;
-	float elasticity = 0.75f;
-	CPed* ped = (CPed*)entity;
-	int time;
-	CVector velocity;
-
-	switch (weapon)
-	{
-		case WEAPONTYPE_ROCKET:
-		{
-			float vy = 0.35f;
-			time = CTimer::GetTimeInMilliseconds() + 2000;
-			if (entity->GetModelIndex() == MI_SPARROW || entity->GetModelIndex() == MI_HUNTER || entity->GetModelIndex() == MI_SENTINEL) {
-				matrix = ped->GetMatrix();
-				matrix.GetPosition() = pos;
-				CVector vecSpeed = ((CPhysical*)entity)->m_vecMoveSpeed;
-				vy += Max(0.0f, DotProduct(vecSpeed, entity->GetForward())) + Max(0.0f, DotProduct(vecSpeed, entity->GetUp()));
-			} else {
-				if (ped->IsPlayer()) {
-					matrix.GetForward() = TheCamera.Cams[TheCamera.ActiveCam].Front;
-					matrix.GetUp() = TheCamera.Cams[TheCamera.ActiveCam].Up;
-					matrix.GetRight() = CrossProduct(TheCamera.Cams[TheCamera.ActiveCam].Up, TheCamera.Cams[TheCamera.ActiveCam].Front);
-					matrix.GetPosition() = pos;
-					// rouz edit, added velocity so that we can fire rockets while on a moving vehicle
-					CVector vecSpeed = ((CPhysical*)entity)->m_vecMoveSpeed;
-					vy += Max(0.0f, DotProduct(vecSpeed, entity->GetForward())) + Max(0.0f, DotProduct(vecSpeed, entity->GetUp()));
-				} else if (ped->m_pSeekTarget != nil) {
-					float ry = CGeneral::GetRadianAngleBetweenPoints(1.0f, ped->m_pSeekTarget->GetPosition().z, 1.0f, pos.z);
-					float rz = Atan2(-ped->GetForward().x, ped->GetForward().y);
-					vy = 0.35f * speed + 0.15f;
-					matrix.SetTranslate(0.0f, 1.0f, 1.0f);
-					matrix.Rotate(0.0f, ry, rz);
-					matrix.GetPosition() += pos;
-				} else {
-					matrix = ped->GetMatrix();
-				}
-			}
-			velocity = Multiply3x3(matrix, CVector(0.0f, vy, 0.0f));
-			gravity = false;
-			break;
-		}
-		case WEAPONTYPE_MOLOTOV:
-		{
-			time = CTimer::GetTimeInMilliseconds() + 2000;
-			float scale = 0.22f * speed + 0.15f;
-			if (scale < 0.2f)
-				scale = 0.2f;
-			float angle = Atan2(-ped->GetForward().x, ped->GetForward().y);
-			matrix.SetTranslate(0.0f, 0.0f, 0.0f);
-			matrix.RotateZ(angle);
-			matrix.GetPosition() += pos;
-			velocity.x = -1.0f * scale * Sin(angle);
-			velocity.y = scale * Cos(angle);
-			velocity.z = (0.2f * speed + 0.4f) * scale;
-			break;
-		}
-		case WEAPONTYPE_TEARGAS:
-		{
-			time = CTimer::GetTimeInMilliseconds() + 20000;
-			float scale = 0.0f;
-			if (speed != 0.0f)
-				scale = 0.22f * speed + 0.15f;
-			float angle = Atan2(-ped->GetForward().x, ped->GetForward().y);
-			matrix.SetTranslate(0.0f, 0.0f, 0.0f);
-			matrix.RotateZ(angle);
-			matrix.GetPosition() += pos;
-			SpecialCollisionResponseCase = COLLRESPONSE_UNKNOWN5;
-			velocity.x = -1.0f * scale * Sin(angle);
-			velocity.y = scale * Cos(angle);
-			velocity.z = (0.4f * speed + 0.4f) * scale;
-			elasticity = 0.5f;
-			break;
-		}
-		case WEAPONTYPE_GRENADE:
-		case WEAPONTYPE_DETONATOR_GRENADE:
-		{
-			time = CTimer::GetTimeInMilliseconds() + 2000;
-			float scale = 0.0f;
-			if (speed != 0.0f)
-				scale = 0.22f * speed + 0.15f;
-			float angle = Atan2(-ped->GetForward().x, ped->GetForward().y);
-			matrix.SetTranslate(0.0f, 0.0f, 0.0f);
-			matrix.RotateZ(angle);
-			matrix.GetPosition() += pos;
-			SpecialCollisionResponseCase = COLLRESPONSE_UNKNOWN5;
-			velocity.x = -1.0f * scale * Sin(angle);
-			velocity.y = scale * Cos(angle);
-			velocity.z = (0.4f * speed + 0.4f) * scale;
-			elasticity = 0.5f;
-			break;
-		}
-		default:
-		Error("Undefined projectile type, AddProjectile, ProjectileInfo.cpp");
-		break;
-	}
-
-	int i = 0;
-#ifdef FIX_BUGS
-	while (i < ARRAY_SIZE(gaProjectileInfo) && gaProjectileInfo[i].m_bInUse) i++;
-#else
-	// array overrun is UB
-	while (gaProjectileInfo[i].m_bInUse && i < ARRAY_SIZE(gaProjectileInfo)) i++;
-#endif
-	if (i == ARRAY_SIZE(gaProjectileInfo))
-		return false;
-
-	int32 projectileModel = -1; // rouz edit (ChatGPT)
-	switch (weapon)
-	{
-		case WEAPONTYPE_ROCKET:
-		projectileModel = MI_MISSILE; // rouz edit (ChatGPT)
-		break;
-		case WEAPONTYPE_TEARGAS:
-		projectileModel = MI_TEARGAS; // rouz edit (ChatGPT)
-		break;
-		case WEAPONTYPE_MOLOTOV:
-		projectileModel = MI_MOLOTOV; // rouz edit (ChatGPT)
-		break;
-		case WEAPONTYPE_GRENADE:
-		case WEAPONTYPE_DETONATOR_GRENADE:
-		projectileModel = MI_GRENADE; // rouz edit (ChatGPT)
-		break;
-		default: break;
-	}
-//+ rouz edit (ChatGPT)
-	// Allocate the projectile from the object pool without invoking C++ new.
-	if (projectileModel != -1) {
-		CObjectPool *objectPool = CPools::GetObjectPool();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		ms_apProjectile[i] = (CProjectile*)((CObject*)CPool_New(objectPool));
-		//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
-		if (!ms_apProjectile[i]) {
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			for (int32 j = 0; j < CPool_GetSize(objectPool); j++) {
-				// Access raw storage through the C store or pool API
-				CObject *existing = ((CObject*)CPool_GetSlot(objectPool, j));
-			//- rouz edit (ChatGPT)
-				if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					int32 handle = CPool_GetIndex(objectPool, existing);
-					//- rouz edit (ChatGPT)
-					CWorld::Remove(existing);
-					existing->~CObject();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					CPool_Delete(objectPool, existing);
-					ms_apProjectile[i] = (CProjectile*)((CObject*)CPool_NewAt(objectPool, handle));
-					//- rouz edit (ChatGPT)
-					break;
-				}
-			}
-		}
-		if (ms_apProjectile[i])
-#endif
-			std::allocator<CProjectile>().construct(ms_apProjectile[i], projectileModel);
-	}
+    // Access the original native operation or canonical field without moving controller decisions
+    *(CMatrix *)matrix=entity->GetMatrix();
+}
+void Projectile_BackendMatrixPosition(void *matrix,ProjectileVector position)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->GetPosition()=CVector(position.x,position.y,position.z);
+}
+void Projectile_BackendMatrixTranslate(void *matrix,float x,float y,float z)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->SetTranslate(x,y,z);
+}
+void Projectile_BackendMatrixRotate(void *matrix,float x,float y,float z)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->Rotate(x,y,z);
+}
+void Projectile_BackendMatrixRotateZ(void *matrix,float z)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->RotateZ(z);
+}
+void Projectile_BackendMatrixTranslateBy(void *matrix,ProjectileVector position)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->GetPosition()+=CVector(position.x,position.y,position.z);
+}
+void Projectile_BackendCameraForward(void *matrix)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->GetForward()=TheCamera.Cams[TheCamera.ActiveCam].Front;
+}
+void Projectile_BackendCameraUp(void *matrix)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->GetUp()=TheCamera.Cams[TheCamera.ActiveCam].Up;
+}
+void Projectile_BackendCameraRight(void *matrix)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CMatrix *)matrix)->GetRight()=CrossProduct(TheCamera.Cams[TheCamera.ActiveCam].Up,TheCamera.Cams[TheCamera.ActiveCam].Front);
+}
+ProjectileVector Projectile_BackendMatrixVelocity(void *matrix,float velocity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CVector v=Multiply3x3(*(CMatrix *)matrix,CVector(0.0f,velocity,0.0f));return ProjectileVector{v.x,v.y,v.z};
+}
+ProjectileVector Projectile_BackendMoveSpeed(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    const CVector &v=((CPhysical *)entity)->m_vecMoveSpeed;return ProjectileVector{v.x,v.y,v.z};
+}
+ProjectileVector Projectile_BackendForward(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    const CVector &v=entity->GetForward();return ProjectileVector{v.x,v.y,v.z};
+}
+ProjectileVector Projectile_BackendUp(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    const CVector &v=entity->GetUp();return ProjectileVector{v.x,v.y,v.z};
+}
+bool Projectile_BackendIsPlayer(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return ((CPed *)entity)->IsPlayer();
+}
+bool Projectile_BackendIsPed(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return entity->IsPed();
+}
+bool Projectile_BackendIsVehicle(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return entity->IsVehicle();
+}
+bool Projectile_BackendPointerValid(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return ((CPed *)entity)->IsPointerValid();
+}
+CEntity * Projectile_BackendSeekTarget(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return ((CPed *)entity)->m_pSeekTarget;
+}
+const void * Projectile_BackendEntityPosition(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return &entity->GetPosition();
+}
+const void * Projectile_BackendPosition(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return &projectile->GetPosition();
+}
+CPool * Projectile_BackendObjectPool(void)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return CPools::GetObjectPool();
+}
+int8_t Projectile_BackendCreatedBy(CObject *object)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return object->ObjectCreatedBy;
+}
+void Projectile_BackendDestroyObject(CObject *object)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    object->~CObject();
+}
+void Projectile_BackendConstruct(CProjectile *projectile,int32_t model)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    std::allocator<CProjectile>().construct(projectile,model);
+}
+void Projectile_BackendDestroy(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->~CProjectile();
+}
+void Projectile_BackendSetMatrix(CProjectile *projectile,void *matrix)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->GetMatrix()=*(CMatrix *)matrix;
+}
+void Projectile_BackendSetSpeed(CProjectile *projectile,ProjectileVector speed)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->SetMoveSpeed(CVector(speed.x,speed.y,speed.z));
+}
+void Projectile_BackendGravity(CProjectile *projectile,bool gravity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->bAffectedByGravity=gravity;
+}
+float * Projectile_BackendElasticity(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return &projectile->m_fElasticity;
+}
+void Projectile_BackendCollisionResponse(CProjectile *projectile,int8_t response)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->m_nSpecialCollisionResponseCases=response;
+}
+void Projectile_BackendAdd(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CWorld::Add(projectile);
+}
+void Projectile_BackendRemove(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CWorld::Remove(projectile);
+}
+void Projectile_BackendRemoveObject(CObject *object)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CWorld::Remove(object);
+}
+CEntity * Projectile_BackendColliding(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return ((CPed *)entity)->m_pCollidingEntity;
+}
+void Projectile_BackendSetColliding(CEntity *entity,CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    ((CPed *)entity)->m_pCollidingEntity=projectile;
+}
+CEntity * Projectile_BackendDriver(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return ((CVehicle *)entity)->pDriver;
+}
+void Projectile_BackendExplosion(CEntity *source,enum eExplosionType type,ProjectileVector position)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CExplosion::AddExplosion(nil,source,type,CVector(position.x,position.y,position.z),0);
+}
+void Projectile_BackendProjectileExplosion(CEntity *source,enum eExplosionType type,CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CExplosion::AddExplosion(nil,source,type,projectile->GetPosition(),0);
+}
+ProjectileVector Projectile_BackendProjectileSpeed(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    const CVector &v=projectile->m_vecMoveSpeed;return ProjectileVector{v.x,v.y,v.z};
+}
+void Projectile_BackendScaleSpeed(CProjectile *projectile,float scale)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    projectile->m_vecMoveSpeed*=scale;
+}
+bool Projectile_BackendCollided(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return projectile->bHasCollided;
+}
+void Projectile_BackendIgnore(CProjectile *projectile)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CWorld::pIgnoreEntity=projectile;
+}
+bool Projectile_BackendLineClear(ProjectileVector from,ProjectileVector to)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return CWorld::GetIsLineOfSightClear(CVector(from.x,from.y,from.z),CVector(to.x,to.y,to.z),true,true,true,true,false,false);
+}
+bool Projectile_BackendHeliCollision(ProjectileVector *position)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CVector v(position->x,position->y,position->z);bool result=CHeli::TestRocketCollision(&v);*position=ProjectileVector{v.x,v.y,v.z};return result;
+}
+bool Projectile_BackendPlaneCollision(ProjectileVector *position)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CVector v(position->x,position->y,position->z);bool result=CPlane::TestRocketCollision(&v);*position=ProjectileVector{v.x,v.y,v.z};return result;
+}
+void Projectile_BackendTearGas(const void *position,ProjectileVector velocity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CParticle::AddParticle(PARTICLE_TEARGAS,*(const CVector *)position,CVector(velocity.x,velocity.y,velocity.z),0,0.0f,0,0,0,0);
+}
+void Projectile_BackendSmoke(ProjectileVector from,ProjectileVector to)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CParticle::AddParticlesAlongLine(PARTICLE_ROCKET_SMOKE,CVector(from.x,from.y,from.z),CVector(to.x,to.y,to.z),CVector(0.0f,0.0f,0.0f),0.7f,0,0,0,3000);
+}
+void Projectile_BackendChoking(float x,float y,float z,CEntity *source)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CWorld::SetPedsChoking(x,y,z,6.0f,source);
+}
+enum eWeaponType Projectile_BackendDetonatorType(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CPed *ped=(CPed *)entity;return ped->GetWeapon(ped->GetWeaponSlot(WEAPONTYPE_DETONATOR)).m_eWeaponType;
+}
+uint32_t Projectile_BackendDetonatorAmmo(CEntity *entity)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    CPed *ped=(CPed *)entity;return ped->GetWeapon(ped->GetWeaponSlot(WEAPONTYPE_DETONATOR)).m_nAmmoTotal;
+}
+bool Projectile_BackendSameObject(CProjectile *projectile,CObject *object)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    return projectile==object;
+}
+void Projectile_BackendDebug(const char *message)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    debug("%s",message);
+}
+void Projectile_BackendUndefined(void)
+{
+    // Access the original native operation or canonical field without moving controller decisions
+    Error("Undefined projectile type, AddProjectile, ProjectileInfo.cpp");
+}
 //- rouz edit (ChatGPT)
-
-	if (ms_apProjectile[i] == nil)
-		return false;
-
-	gaProjectileInfo[i].m_eWeaponType = weapon;
-	gaProjectileInfo[i].m_pSource = ped;
-	ms_apProjectile[i]->GetMatrix() = matrix;
-	ms_apProjectile[i]->SetMoveSpeed(velocity);
-	ms_apProjectile[i]->bAffectedByGravity = gravity;
-
-	gaProjectileInfo[i].m_nExplosionTime = time;
-	ms_apProjectile[i]->m_fElasticity = elasticity;
-	ms_apProjectile[i]->m_nSpecialCollisionResponseCases = SpecialCollisionResponseCase;
-
-#ifdef SQUEEZE_PERFORMANCE
-	projectileInUse++;
-#endif
-
-	gaProjectileInfo[i].m_bInUse = true;
-	CWorld::Add(ms_apProjectile[i]);
-
-	gaProjectileInfo[i].m_vecPos = ms_apProjectile[i]->GetPosition();
-
-	if (entity && entity->IsPed() && !ped->m_pCollidingEntity) {
-		ped->m_pCollidingEntity = ms_apProjectile[i];
-	}
-	return true;
-}
-
-void
-CProjectileInfo::RemoveProjectile(CProjectileInfo *info, CProjectile *projectile)
-{
-	// TODO(Miami): New parameter: 1
-	switch (info->m_eWeaponType) {
-		case WEAPONTYPE_GRENADE:
-			CExplosion::AddExplosion(nil, info->m_pSource, EXPLOSION_GRENADE, projectile->GetPosition(), 0);
-			break;
-		case WEAPONTYPE_MOLOTOV:
-			CExplosion::AddExplosion(nil, info->m_pSource, EXPLOSION_MOLOTOV, projectile->GetPosition(), 0);
-			break;
-		case WEAPONTYPE_ROCKET:
-			CExplosion::AddExplosion(nil, info->m_pSource->IsVehicle() ? ((CVehicle*)info->m_pSource)->pDriver : info->m_pSource, EXPLOSION_ROCKET, projectile->GetPosition(), 0);
-			break;
-	}
-#ifdef SQUEEZE_PERFORMANCE
-	projectileInUse--;
-#endif
-
-	info->m_bInUse = false;
-	CWorld::Remove(projectile);
-//+ rouz edit (ChatGPT)
-	// Destroy and release the projectile without invoking C++ delete.
-	projectile->~CProjectile();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CPool_Delete(CPools::GetObjectPool(), projectile);
-	//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-}
-
-void
-CProjectileInfo::RemoveNotAdd(CEntity *entity, eWeaponType weaponType, CVector pos)
-{
-	// TODO(Miami): New parameter: 1
-	switch (weaponType) {
-		case WEAPONTYPE_GRENADE:
-			CExplosion::AddExplosion(nil, entity, EXPLOSION_GRENADE, pos, 0);
-			break;
-		case WEAPONTYPE_MOLOTOV:
-			CExplosion::AddExplosion(nil, entity, EXPLOSION_MOLOTOV, pos, 0);
-			break;
-		case WEAPONTYPE_ROCKET:
-			CExplosion::AddExplosion(nil, entity, EXPLOSION_ROCKET, pos, 0);
-			break;
-	}
-}
-
-void
-CProjectileInfo::Update()
-{
-#ifdef SQUEEZE_PERFORMANCE
-	if (projectileInUse == 0)
-		return;
-#endif
-
-	int tearGasOffset = -0.0f; // unused
-	
-	//+ rouz edit (ChatGPT)
-	static float rocketSmokeFrameCounter[NUM_PROJECTILES];
-	static uint32 rocketSmokeExpirationTime[NUM_PROJECTILES];
-	static CProjectile *rocketSmokeProjectile[NUM_PROJECTILES];
-	static CVector rocketSmokePreviousPos[NUM_PROJECTILES];
-	//- rouz edit (ChatGPT)
-
-	for (int i = 0; i < ARRAY_SIZE(gaProjectileInfo); i++) {
-		if (!gaProjectileInfo[i].m_bInUse) {
-			//+ rouz edit (ChatGPT)
-			rocketSmokeFrameCounter[i] = 0.0f;
-			rocketSmokeExpirationTime[i] = 0;
-			rocketSmokeProjectile[i] = nil;
-			//- rouz edit (ChatGPT)
-			continue;
-		}
-
-		CPed *ped = (CPed*)gaProjectileInfo[i].m_pSource;
-		if (ped != nil && ped->IsPed() && !ped->IsPointerValid())
-			gaProjectileInfo[i].m_pSource = nil;
-
-		if (ms_apProjectile[i] == nil) {
-#ifdef SQUEEZE_PERFORMANCE
-			projectileInUse--;
-#endif
-
-			gaProjectileInfo[i].m_bInUse = false;
-			continue;
-		}
-		if ( (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_DETONATOR_GRENADE || gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_TEARGAS) && ms_apProjectile[i]->m_fElasticity > 0.1f ) {
-			if ( Abs(ms_apProjectile[i]->m_vecMoveSpeed.x) < 0.05f && Abs(ms_apProjectile[i]->m_vecMoveSpeed.y) < 0.05f && Abs(ms_apProjectile[i]->m_vecMoveSpeed.z) < 0.05f ) {
-				ms_apProjectile[i]->m_fElasticity = 0.03f;
-			}
-		}
-		const CVector &projectilePos = ms_apProjectile[i]->GetPosition();
-		CVector nextPos = CTimer::GetTimeStep() * ms_apProjectile[i]->m_vecMoveSpeed + projectilePos;
-
-		if ( nextPos.x <= PROJECTILE_BOUNDARY_MIN_X || nextPos.x >= PROJECTILE_BOUNDARY_MAX_X || nextPos.y <= PROJECTILE_BOUNDARY_MIN_Y || nextPos.y >= PROJECTILE_BOUNDARY_MAX_Y ) {
-			// Not RemoveProjectile, because we don't want no explosion
-			//+ rouz edit (ChatGPT)
-			rocketSmokeFrameCounter[i] = 0.0f;
-			rocketSmokeExpirationTime[i] = 0;
-			rocketSmokeProjectile[i] = nil;
-			//- rouz edit (ChatGPT)
-			gaProjectileInfo[i].m_bInUse = false;
-			CWorld::Remove(ms_apProjectile[i]);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the projectile without invoking C++ delete.
-			ms_apProjectile[i]->~CProjectile();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-        	continue;
-		}
-		if ( gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_TEARGAS && CTimer::GetTimeInMilliseconds() > gaProjectileInfo[i].m_nExplosionTime - 19500 ) {
-			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(0.2f, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);
-			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(-0.2f, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);
-			CParticle::AddParticle(PARTICLE_TEARGAS, projectilePos, CVector(tearGasOffset, tearGasOffset, 0.0f), 0, 0.0f, 0, 0, 0, 0);
-
-			if ( CTimer::GetTimeInMilliseconds() & 0x200 )
-				CWorld::SetPedsChoking(projectilePos.x, projectilePos.y, projectilePos.z, 6.0f, gaProjectileInfo[i].m_pSource);
-		}
-
-		if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_ROCKET) {
-			//+ rouz edit (ChatGPT)
-			if (rocketSmokeProjectile[i] != ms_apProjectile[i] || rocketSmokeExpirationTime[i] != gaProjectileInfo[i].m_nExplosionTime) {
-				rocketSmokeFrameCounter[i] = 0.0f;
-				rocketSmokeExpirationTime[i] = gaProjectileInfo[i].m_nExplosionTime;
-				rocketSmokeProjectile[i] = ms_apProjectile[i];
-				rocketSmokePreviousPos[i] = gaProjectileInfo[i].m_vecPos;
-			}
-
-			rocketSmokeFrameCounter[i] += CTimer::GetTimeStepFix();
-			if (rocketSmokeFrameCounter[i] >= 1.0f) {
-				int32 smokeFrames = (int32)rocketSmokeFrameCounter[i];
-				CVector smokeStart = rocketSmokePreviousPos[i];
-				CVector smokeStep = (projectilePos - rocketSmokePreviousPos[i]) * (1.0f / smokeFrames);
-
-				for (int32 smokeFrame = 0; smokeFrame < smokeFrames; smokeFrame++) {
-					CVector smokeEnd = smokeStart + smokeStep;
-					CParticle::AddParticlesAlongLine(PARTICLE_ROCKET_SMOKE, smokeStart, smokeEnd, CVector(0.0f, 0.0f, 0.0f), 0.7f, 0, 0, 0, 3000);
-					smokeStart = smokeEnd;
-				}
-
-				rocketSmokePreviousPos[i] = projectilePos;
-				rocketSmokeFrameCounter[i] -= smokeFrames;
-			}
-			//- rouz edit (ChatGPT)
-		}
-
-		if (CTimer::GetTimeInMilliseconds() <= gaProjectileInfo[i].m_nExplosionTime || gaProjectileInfo[i].m_nExplosionTime == 0) {
-			if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_ROCKET) {
-				CVector pos = ms_apProjectile[i]->GetPosition();
-				CWorld::pIgnoreEntity = ms_apProjectile[i];
-				//+ rouz edit (ChatGPT)
-				bool removeProjectile = ms_apProjectile[i]->bHasCollided
-					|| !CWorld::GetIsLineOfSightClear(gaProjectileInfo[i].m_vecPos, pos, true, true, true, true, false, false)
-					|| CHeli::TestRocketCollision(&pos) || CPlane::TestRocketCollision(&pos);
-				if (removeProjectile) {
-					RemoveProjectile(&gaProjectileInfo[i], ms_apProjectile[i]);
-					rocketSmokeFrameCounter[i] = 0.0f;
-					rocketSmokeExpirationTime[i] = 0;
-					rocketSmokeProjectile[i] = nil;
-					CWorld::pIgnoreEntity = nil;
-					continue;
-				}
-				CWorld::pIgnoreEntity = nil;
-				ms_apProjectile[i]->m_vecMoveSpeed *= Pow(1.07f, CTimer::GetTimeStepFix());
-				//- rouz edit (ChatGPT)
-
-			} else if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_MOLOTOV) {
-				CVector pos = ms_apProjectile[i]->GetPosition();
-				CWorld::pIgnoreEntity = ms_apProjectile[i];
-
-				if (gaProjectileInfo[i].m_pSource == nil 
-					|| ((gaProjectileInfo[i].m_vecPos - gaProjectileInfo[i].m_pSource->GetPosition()).MagnitudeSqr() >= 2.0f))
-				{
-					if (ms_apProjectile[i]->bHasCollided
-						|| !CWorld::GetIsLineOfSightClear(gaProjectileInfo[i].m_vecPos, pos, true, true, true, true, false, false)) {
-						RemoveProjectile(&gaProjectileInfo[i], ms_apProjectile[i]);
-					}
-				}
-				CWorld::pIgnoreEntity = nil;
-			}
-		} else {
-			if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_DETONATOR_GRENADE) {
-				CEntity *ent = gaProjectileInfo[i].m_pSource;
-				if (ent->IsPed() && ((CPed*)ped)->IsPlayer()) {
-					CPed *ped = (CPed*)ent;
-					if (ped->GetWeapon(ped->GetWeaponSlot(WEAPONTYPE_DETONATOR)).m_eWeaponType != WEAPONTYPE_DETONATOR
-						|| ped->GetWeapon(ped->GetWeaponSlot(WEAPONTYPE_DETONATOR)).m_nAmmoTotal == 0) {
-						gaProjectileInfo[i].m_nExplosionTime = 0;
-					}
-				}
-			} else {
-				RemoveProjectile(&gaProjectileInfo[i], ms_apProjectile[i]);
-			}
-		}
-
-		//+ rouz edit (ChatGPT)
-		if (!gaProjectileInfo[i].m_bInUse)
-			continue;
-		//- rouz edit (ChatGPT)
-
-		gaProjectileInfo[i].m_vecPos = ms_apProjectile[i]->GetPosition();
-	}
-}
-
-bool
-CProjectileInfo::IsProjectileInRange(float x1, float x2, float y1, float y2, float z1, float z2, bool remove)
-{
-	bool result = false;
-	for (int i = 0; i < ARRAY_SIZE(ms_apProjectile); i++) {
-		if (gaProjectileInfo[i].m_bInUse) {
-			if (gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_ROCKET || gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_MOLOTOV || gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_GRENADE) {
-				const CVector &pos = ms_apProjectile[i]->GetPosition();
-				if (pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2 && pos.z >= z1 && pos.z <= z2) {
-					result = true;
-					if (remove) {
-#ifdef SQUEEZE_PERFORMANCE
-						projectileInUse--;
-#endif
-
-						gaProjectileInfo[i].m_bInUse = false;
-						CWorld::Remove(ms_apProjectile[i]);
-//+ rouz edit (ChatGPT)
-						// Destroy and release the projectile without invoking C++ delete.
-						ms_apProjectile[i]->~CProjectile();
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
-						CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
-						//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-					}
-				}
-			}
-		}
-	}
-	return result;
-}
-
-void
-CProjectileInfo::RemoveDetonatorProjectiles()
-{
-	for (int i = 0; i < ARRAY_SIZE(ms_apProjectile); i++) {
-		if (gaProjectileInfo[i].m_bInUse && gaProjectileInfo[i].m_eWeaponType == WEAPONTYPE_DETONATOR_GRENADE) {
-			CExplosion::AddExplosion(nil, gaProjectileInfo[i].m_pSource, EXPLOSION_GRENADE, gaProjectileInfo[i].m_vecPos, 0); // TODO(Miami): New parameter: 1
-			gaProjectileInfo[i].m_bInUse = false;
-			CWorld::Remove(ms_apProjectile[i]);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the projectile without invoking C++ delete.
-			ms_apProjectile[i]->~CProjectile();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		}
-	}
-}
-
-void
-CProjectileInfo::RemoveAllProjectiles()
-{
-#ifdef SQUEEZE_PERFORMANCE
-	if (projectileInUse == 0)
-		return;
-#endif
-
-	for (int i = 0; i < ARRAY_SIZE(ms_apProjectile); i++) {
-		if (gaProjectileInfo[i].m_bInUse) {
-#ifdef SQUEEZE_PERFORMANCE
-			projectileInUse--;
-#endif
-
-			gaProjectileInfo[i].m_bInUse = false;
-			CWorld::Remove(ms_apProjectile[i]);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the projectile without invoking C++ delete.
-			ms_apProjectile[i]->~CProjectile();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
-			//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-		}
-	}
-}
-
-bool
-CProjectileInfo::RemoveIfThisIsAProjectile(CObject *object)
-{
-#ifdef SQUEEZE_PERFORMANCE
-	if (projectileInUse == 0)
-		return false;
-#endif
-
-	int i = 0;
-	while (ms_apProjectile[i++] != object) {
-		if (i >= ARRAY_SIZE(ms_apProjectile))
-			return false;
-	}
-
-#ifdef SQUEEZE_PERFORMANCE
-	projectileInUse--;
-#endif
-
-	gaProjectileInfo[i].m_bInUse = false;
-	CWorld::Remove(ms_apProjectile[i]);
-//+ rouz edit (ChatGPT)
-	// Destroy and release the projectile without invoking C++ delete.
-	ms_apProjectile[i]->~CProjectile();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CPool_Delete(CPools::GetObjectPool(), ms_apProjectile[i]);
-	//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-	ms_apProjectile[i] = nil;
-	return true;
-}

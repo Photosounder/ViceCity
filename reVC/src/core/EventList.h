@@ -1,9 +1,7 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CEntity;
-class CPed;
-
-enum eEventType
+#include "EventsShared.h"
+typedef enum eEventType
 {
 	EVENT_NULL,
 	EVENT_ASSAULT,
@@ -30,39 +28,29 @@ enum eEventType
 	EVENT_SHOPSTALL,
 	EVENT_SHOPWINDOW,
 	EVENT_LAST_EVENT
-};
-
-enum eEventEntity
+} eEventType;
+typedef enum eEventEntity
 {
 	EVENT_ENTITY_NONE,
 	EVENT_ENTITY_PED,
 	EVENT_ENTITY_VEHICLE,
 	EVENT_ENTITY_OBJECT
-};
-
-struct CEvent
-{
-	eEventType type;
-	eEventEntity entityType;
-	int32 entityRef;
-	CPed *criminal;
-	CVector posn;
-	uint32 timeout;
-	int32 state;
-};
-
-class CEventList
-{
-	static int32 ms_nFirstFreeSlotIndex;
-public:
-	static void Initialise(void);
-	static void Update(void);
-	static void RegisterEvent(eEventType type, eEventEntity entityType, CEntity *ent, CPed *criminal, int32 timeout);
-	static void RegisterEvent(eEventType type, CVector posn, int32 timeout);
-	static bool GetEvent(eEventType type, int32 *event);
-	static void ClearEvent(int32 event);
-	static bool FindClosestEvent(eEventType type, CVector posn, int32 *event);
-	static void ReportCrimeForEvent(eEventType type, intptr, bool);
-};
-
+} eEventEntity;
+typedef struct CEvent {eEventType type;eEventEntity entityType;int32_t entityRef;CPed *criminal;EventsVector posn;uint32_t timeout;int32_t state;} CEvent;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int32_t Events_FirstFreeSlotIndex;
 extern CEvent gaEvent[NUMEVENTS];
+void Events_Initialise(void);
+void Events_Update(void);
+void Events_RegisterEntity(eEventType type,eEventEntity entityType,CEntity *entity,CPed *criminal,int32_t timeout);
+void Events_RegisterPosition(eEventType type,EventsVector position,int32_t timeout);
+bool Events_GetEvent(eEventType type,int32_t *event);
+void Events_ClearEvent(int32_t event);
+bool Events_FindClosestEvent(eEventType type,EventsVector position,int32_t *event);
+void Events_ReportCrimeForEvent(eEventType type,intptr_t crimeId,bool copsDontCare);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

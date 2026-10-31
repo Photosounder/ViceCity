@@ -1,0 +1,425 @@
+#include "caller.h"
+#include <limits>
+#include <initializer_list>
+#undef assert
+static void require(bool value,const char *expression,int line)
+{
+    // Keep independent checks active in MASTER as well as development builds
+    if(!value){fprintf(stderr,"Failed %d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+extern "C" {uint32_t Timer_timeMs;float Timer_timeStep;}
+static CPlayerPed player;
+static CPed npc,cop;
+static CAutomobile car;
+static CVehicle bike;
+static CEntity object;
+static CEntity *actors[]={&player,&npc,&cop,&car,&bike,&object};
+static CPlayerPed *livePlayer=&player;
+static CVehicle *liveVehicle;
+static CVehicleModelInfo models[8];
+CAutomobile *CGameLogic::pShortCutTaxi;
+uint8 CGameLogic::ShortCutState;
+RwTexture *gpShadowExplosionTex=(RwTexture *)0x1234;
+static uint32_t randomState=1;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned states,randoms,actions,events,particles,shadows,lights,registrations,playerQueries,vehicleQueries,starts,scripts,waters;
+static bool advanceTime,moveOnIdle,moveOnEvent;
+static TestFireState initial[NUM_FIRES];
+
+static void bytes(const void *data,size_t length)
+{
+    // Hash observable scalar bytes without executable-specific pointer values or unspecified padding
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<length;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep integer event observations independent of pointer width
+    bytes(&value,4);
+}
+static void vector(const CVector &value)
+{
+    // Observe all three native vector components at each external operation
+    bytes(&value.x,4);bytes(&value.y,4);bytes(&value.z,4);
+}
+static int entityId(CEntity *entity)
+{
+    // Preserve null and native entity identity without hashing addresses
+    return entity?entity->id:-1;
+}
+static int fireId(CFire *fire)
+{
+    // Identify the actual canonical fire slot referenced by an entity
+    return fire?int(fire-gFireManager.m_aFires):-1;
+}
+static TestFireState read(int index)
+{
+    // Retrieve all semantic members from the actual original or C record
+    TestFireState result;TestFire_Read(index,&result);return result;
+}
+static void stateBytes(const TestFireState &s)
+{
+    // Include every persistent fire field in each state comparison
+    number(s.ongoing);number(s.script);number(s.propagation);number(s.audio);bytes(&s.x,4);bytes(&s.y,4);bytes(&s.z,4);number(entityId(s.entity));number(entityId(s.source));number(s.extinguish);number(s.start);number(s.next);bytes(&s.strength,4);bytes(&s.water,4);number(s.withWater);
+}
+static int slotId(CEntity **slot)
+{
+    // Check that references retain the same actual field addresses through fire reuse
+    for(int i=0;i<NUM_FIRES;i++){
+        // Distinguish target and source reference slots in the canonical C or original array
+        if(slot==&gFireManager.m_aFires[i].m_pEntity)return 2*i;
+        if(slot==&gFireManager.m_aFires[i].m_pSource)return 2*i+1;
+    }
+    for(CPed *ped:{(CPed *)&player,&npc,&cop})if(slot==&ped->m_fleeFrom)return 100+ped->id;
+    assert(false);return -1;
+}
+static void snapshot()
+{
+    // Observe the complete canonical manager, native entity state and actual reference chains
+    number(TestFire_GetTotal());
+    for(int i=0;i<NUM_FIRES;i++)stateBytes(read(i));
+    for(CEntity *entity:actors){
+        // Include live positions, scorched flags and each reference's field identity and current referent
+        vector(entity->GetPosition());number(entity->bRenderScorched);
+        unsigned count=0;
+        for(CReference *ref=entity->m_pFirstReference;ref;ref=ref->next){assert(++count<100);number(slotId(ref->pentity));number(entityId(*ref->pentity));}
+        number(count);
+    }
+    for(CPed *ped:{(CPed *)&player,&npc,&cop}){
+        // Include every pedestrian field touched by the original fire lifecycle
+        number(fireId(ped->m_pFire));number(ped->m_nMoveState);number(ped->m_nPedState);number(ped->m_nLastPedState);number(entityId(ped->m_fleeFrom));number(ped->m_fleeTimer);number(ped->bDrawLast);bytes(&ped->health,4);
+    }
+    number(fireId(car.m_pCarFire));number(fireId(bike.m_pCarFire));bytes(&car.m_fHealth,4);bytes(&bike.m_fHealth,4);number(car.Damage.status);number(Timer_timeMs);states++;
+}
+extern "C" int myrand(void)
+{
+    // Feed the complete real General C random routines with a deterministic unsigned recurrence
+    randomState=randomState*1664525u+1013904223u;number(1);number(randomState);randoms++;return (int32_t)randomState;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Reject seeding that the original fire module does not perform
+    (void)seed;assert(false);
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail quietly on any violated real reference-pool precondition
+    fprintf(stderr,"%s at %s:%u (%s)\n",expression,file,line,function);abort();
+}
+void TestFire_MatrixUpdate(RwMatrix *matrix)
+{
+    // Reject attachment synchronization absent from the original unattached fixture entity matrices
+    (void)matrix;assert(false);
+}
+void TestFire_MatrixDestroy(RwMatrix *matrix)
+{
+    // Reject unexpected ownership of a rendering matrix without launching a renderer
+    (void)matrix;assert(false);
+}
+void TestFire_Action(int operation,CEntity *entity,CEntity *source,float value)
+{
+    // Observe native action ordering and live record fields before subsequent C writes
+    number(2);number(operation);number(entityId(entity));number(entityId(source));bytes(&value,4);number(TestFire_GetTotal());stateBytes(read(0));actions++;
+    if(advanceTime)Timer_timeMs+=7;
+}
+bool CPed::InflictDamage(CEntity *source,eWeaponType weapon,float damage,int piece,int direction)
+{
+    // Preserve damage defaults and return the independently controlled scorched-state decision
+    assert(weapon==WEAPONTYPE_FLAMETHROWER&&piece==PEDPIECE_TORSO&&direction==0);health-=damage;TestFire_Action(1,this,source,damage);return damageResult;
+}
+void CVehicle::InflictDamage(CVehicle *source,eWeaponType weapon,float damage)
+{
+    // Observe damage only after the original script-fire exclusion check
+    assert(weapon==WEAPONTYPE_FLAMETHROWER);m_fHealth-=damage;TestFire_Action(2,this,source,damage);
+}
+void CPed::SetIdle()
+{
+    // Permit a valid position mutation while a script-fire call still holds its original position reference
+    TestFire_Action(3,this);m_nPedState=PED_NONE;if(moveOnIdle)GetPosition().x+=0.75f;
+}
+void CPed::SetWanderPath(int path)
+{
+    // Observe the exact original wander-path argument
+    assert(path==0);TestFire_Action(4,this);
+}
+void CPed::SetWaitState(int state,int time)
+{
+    // Observe the original flee-finish transition after the wander call
+    assert(state==WAITSTATE_FINISH_FLEE&&time==0);TestFire_Action(5,this);
+}
+void CPed::SetFlee(CEntity *source,int time)
+{
+    // Keep a live entity reference inside the still-native flee operation
+    assert(time==10000);TestFire_Action(6,this,source);m_fleeFrom=source;RegisterReference(&m_fleeFrom);
+}
+void CPed::SetFlee(const CVector2D &position,int time)
+{
+    // Observe only the original two-dimensional flee position value
+    assert(time==10000);number(3);bytes(&position.x,4);bytes(&position.y,4);TestFire_Action(7,this);m_fleeFrom=nil;
+}
+void CPed::SetMoveState(int state)
+{
+    // Observe the original sprint transition before animation and on-fire state
+    assert(state==PEDMOVE_SPRINT);m_nMoveState=state;TestFire_Action(8,this);
+}
+void CPed::SetMoveAnim()
+{
+    // Preserve the native animation operation's place in the ordered lifecycle
+    TestFire_Action(9,this);
+}
+void CPed::SetPedState(int state)
+{
+    // Observe the original on-fire state argument
+    assert(state==PED_ON_FIRE);m_nPedState=state;TestFire_Action(10,this);
+}
+void CPlayerPed::DoStuffToGoOnFire()
+{
+    // Observe preparation before the original player-fire allocation
+    TestFire_Action(11,this);
+}
+CPlayerPed *FindPlayerPed(void)
+{
+    // Count each repeated live player query rather than replacing it with cached state
+    number(4);playerQueries++;return livePlayer;
+}
+CVehicle *FindPlayerVehicle(void)
+{
+    // Count the independent original vehicle eligibility query
+    number(5);vehicleQueries++;return liveVehicle;
+}
+CVehicleModelInfo *CModelInfo::GetModelInfo(int model)
+{
+    // Expose the original model's headlight point to the actual matrix multiplication body
+    assert(model>=0&&model<8);number(6);number(model);return &models[model];
+}
+bool CModelInfo::IsBikeModel(int model)
+{
+    // Keep the first original model-category test observable for short-circuit checks
+    number(7);number(model);return model==2;
+}
+bool CModelInfo::IsCarModel(int model)
+{
+    // Keep the second original model-category test separate from the first
+    number(8);number(model);return model==1;
+}
+void CCarAI::TellOccupantsToFleeCar(CVehicle *vehicle)
+{
+    // Observe occupant notification before references and fire reporting
+    TestFire_Action(12,vehicle);
+}
+void CEventList::RegisterEvent(eEventType type,CVector position,int32 time)
+{
+    // Observe the total count and partially initialized record before the remaining original writes
+    assert(type==EVENT_FIRE&&time==1000);number(9);number(type);vector(position);number(TestFire_GetTotal());stateBytes(read(0));events++;
+    if(moveOnEvent)npc.GetPosition().x+=0.5f;
+    if(advanceTime)Timer_timeMs+=11;
+}
+void CEventList::RegisterEvent(eEventType type,eEventEntity kind,CEntity *entity,CPed *source,int32 time)
+{
+    // Validate original entity-event classifications and their fixed lifetime
+    assert(time==10000&&((type==EVENT_PED_SET_ON_FIRE||type==EVENT_COP_SET_ON_FIRE)?kind==EVENT_ENTITY_PED:kind==EVENT_ENTITY_VEHICLE));number(10);number(type);number(kind);number(entityId(entity));number(entityId(source));events++;
+    if(advanceTime)Timer_timeMs+=13;
+}
+CParticle *CParticle::AddParticle(int type,const CVector &position,const CVector &velocity,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan)
+{
+    // Observe all original flame, smoke and steam defaults without creating a rendering device
+    assert(!entity&&rotationSpeed==0&&rotation==0&&frame==0&&lifespan==0);number(11);number(type);vector(position);vector(velocity);bytes(&size,4);particles++;
+    if(advanceTime)Timer_timeMs+=3;
+    return nil;
+}
+bool CShadows::StoreStaticShadow(uint32 id,uint8 type,RwTexture *texture,const CVector *position,float frontX,float frontY,float sideX,float sideY,int16 intensity,uint8 red,uint8 green,uint8 blue,float distance,float scale,float drawDistance,bool temporary,float up)
+{
+    // Normalize the original truncated pointer key while checking every original shadow argument
+    int slot=-1;for(int i=0;i<NUM_FIRES;i++)if((uint32)(uintptr_t)&gFireManager.m_aFires[i]==id)slot=i;
+    assert(slot>=0&&type==SHADOWTYPE_ADDITIVE&&texture==gpShadowExplosionTex&&frontX==7&&frontY==0&&sideX==0&&sideY==-7&&intensity==0&&red==green&&blue==0&&distance==10&&scale==1&&drawDistance==40&&!temporary&&up==0);
+    number(12);number(slot);vector(*position);number(red);shadows++;return true;
+}
+extern "C" PointLightsVector PointLights_BackendReadVector(const void *position)
+{
+    // Use the actual legacy adapter's typed vector read before its C API call
+    const CVector &v=*(const CVector *)position;PointLightsVector result={v.x,v.y,v.z};return result;
+}
+extern "C" void PointLights_AddLight(uint8_t type,PointLightsVector position,PointLightsVector direction,float radius,float red,float green,float blue,uint8_t fog,bool cast)
+{
+    // Check exact C registration arguments after the original legacy adapter or new direct C call
+    assert(type==POINTLIGHTS_LIGHT_POINT&&direction.x==0&&direction.y==0&&direction.z==0&&radius==12&&red==green&&blue==0&&fog==0&&!cast);number(13);bytes(&position,sizeof(position));bytes(&red,4);lights++;
+}
+extern "C" bool References_BackendIsBuilding(CEntity *entity)
+{
+    // Exercise the actual C reference algorithm's native owner predicate
+    number(14);number(entityId(entity));registrations++;return entity->IsBuilding();
+}
+extern "C" CReference **References_BackendFirst(CEntity *entity)
+{
+    // Expose the actual live head field without substituting a separate reference map
+    return &entity->m_pFirstReference;
+}
+extern "C" CEntity *References_BackendPlayerVehicle(void){
+    // Supply the current vehicle to the actual reference lifecycle
+    return liveVehicle;
+}
+extern "C" CPlayerPed *References_BackendPlayerPed(void){
+    // Supply the current player to the actual reference lifecycle
+    return livePlayer;
+}
+extern "C" CEntity *References_BackendPlayerEntity(CPlayerPed *ped){
+    // Preserve native player-to-entity conversion
+    return ped;
+}
+extern "C" void References_BackendRestorePlayer(CPlayerPed *ped){
+    // Restore the same live player slot if the reference code requests it
+    livePlayer=ped;
+}
+extern "C" CEntity **References_BackendPlayerSlot(void){
+    // Expose the actual live player pointer slot
+    return (CEntity **)&livePlayer;
+}
+extern "C" CPool *References_BackendPedPool(void){
+    // Reject pool pruning outside the exercised reference registration path
+    assert(false);return nil;
+}
+extern "C" CPool *References_BackendVehiclePool(void){
+    // Reject pool pruning outside the exercised reference registration path
+    assert(false);return nil;
+}
+extern "C" CPool *References_BackendObjectPool(void){
+    // Reject pool pruning outside the exercised reference registration path
+    assert(false);return nil;
+}
+extern "C" CEntity *References_BackendPed(void *slot){
+    // Keep the native pedestrian slot conversion available to the real reference code
+    return (CPed *)slot;
+}
+extern "C" CEntity *References_BackendVehicle(void *slot){
+    // Keep the native vehicle slot conversion available to the real reference code
+    return (CVehicle *)slot;
+}
+extern "C" CEntity *References_BackendObject(void *slot){
+    // Keep the native entity slot conversion available to the real reference code
+    return (CEntity *)slot;
+}
+
+static void fresh()
+{
+    // Reset independent scenarios through semantic writes while retaining original constructor defaults
+    for(int i=0;i<NUM_FIRES;i++)TestFire_Write(i,&initial[i]);TestFire_Total(0);References_Init();
+    for(int i=0;i<6;i++){CEntity *e=actors[i];e->id=i;e->m_pFirstReference=nil;e->model=0;e->bRenderScorched=false;e->matrix.SetTranslate(10,20,3);}
+    for(CPed *ped:{(CPed *)&player,&npc,&cop}){
+        // Seed every native field used by the fire state machine without invoking unrelated game initialization
+        ped->m_pFire=nil;ped->m_pMyVehicle=nil;ped->bInVehicle=false;ped->bFireProof=false;ped->bDrawLast=true;ped->inControl=true;ped->canSet=true;ped->damageResult=false;ped->m_nMoveState=PEDMOVE_RUN;ped->m_nPedState=PED_NONE;ped->m_nLastPedState=PED_FALL;ped->m_nPedType=PEDTYPE_CIVMALE;ped->m_fleeFrom=nil;ped->m_fleeTimer=0;ped->health=100;
+    }
+    cop.m_nPedType=PEDTYPE_COP;car.m_pCarFire=bike.m_pCarFire=nil;car.m_fHealth=bike.m_fHealth=1000;car.car=true;bike.car=false;car.model=1;bike.model=2;car.Damage.status=0;object.kind=0;
+    player.GetPosition()=CVector(1000,1000,0);livePlayer=&player;liveVehicle=nil;CGameLogic::pShortCutTaxi=&car;CGameLogic::ShortCutState=0;
+    for(int i=0;i<8;i++)models[i].m_positions[CAR_POS_HEADLIGHTS]=CVector(0.5f,1.75f,0.9f);
+    Timer_timeMs=10000;Timer_timeStep=1.0f;randomState=1;advanceTime=moveOnIdle=moveOnEvent=false;
+}
+static void startup()
+{
+    // Require all forty actual static records to match the original global constructor before any lifecycle call
+    assert(TestFire_GetTotal()==0);
+    for(int i=0;i<NUM_FIRES;i++){
+        // Include the next-flame timer that was only implicitly zeroed in the original global manager
+        TestFire_Read(i,&initial[i]);TestFireState &s=initial[i];assert(!s.ongoing&&!s.script&&s.propagation&&s.audio&&s.x==0&&s.y==0&&s.z==0&&!s.entity&&!s.source&&s.extinguish==0&&s.start==0&&s.next==0&&s.strength==0.8f&&s.water==1.0f&&!s.withWater);
+    }
+    fresh();snapshot();
+}
+static void creationCases()
+{
+    // Exercise point, entity and script creation including each ordered rejection and reference registration
+    for(int kind=0;kind<6;kind++)for(int scenario=0;scenario<12;scenario++){
+        // Keep target types consistent with the original casts and engine-status preconditions
+        fresh();CEntity *target=actors[kind];CEntity *source=scenario%2?&cop:nil;
+        if(scenario==1&&kind<3)((CPed *)target)->inControl=false;
+        if(scenario==2&&kind<3)((CPed *)target)->m_pFire=&gFireManager.m_aFires[4];
+        if(scenario==2&&kind>=3&&kind<=4)((CVehicle *)target)->m_pCarFire=&gFireManager.m_aFires[4];
+        if(scenario==3&&kind==3)car.Damage.status=225;
+        if(scenario==4&&kind==3)car.Damage.status=224;
+        if(scenario==5)advanceTime=true;
+        if(scenario==6)moveOnEvent=true;
+        if(scenario==7)object.kind=3;
+        if(scenario==8){TestFireState s=read(0);s.water=-0.5f;TestFire_Write(0,&s);}
+        if(scenario==9)for(int i=0;i<NUM_FIRES;i++){TestFireState s=read(i);s.script=true;TestFire_Write(i,&s);}
+        int result=TestFire_On(target,source,1.7f,(uint8_t)(scenario%3));starts++;
+        bool rejected=scenario==9||(kind<3&&(scenario==1||scenario==2))||((kind==3||kind==4)&&scenario==2)||(kind==3&&scenario==3);
+        assert((result<0)==rejected);if(result>=0){TestFireState s=read(result);assert(s.ongoing&&!s.script&&s.entity==target&&s.source==source&&s.strength==1.7f&&s.propagation==(scenario%3!=0)&&TestFire_GetTotal()==1);if(scenario==8)assert(s.water==-0.5f);}
+        snapshot();if(result>=0){TestFire_Extinguish(result);assert(TestFire_GetTotal()==0&&!read(result).ongoing&&!read(result).entity);snapshot();}
+    }
+    for(int reserve=0;reserve<=NUM_FIRES;reserve++){
+        // Require first-free selection to skip inactive script reservations and handle the full array
+        fresh();for(int i=0;i<reserve;i++){TestFireState s=read(i);s.script=true;TestFire_Write(i,&s);}
+        assert(TestFire_Free()==(reserve<NUM_FIRES?reserve:-1));TestFire_At(CVector(1,2,3),2.0f,255);starts++;assert(TestFire_GetTotal()==(reserve<NUM_FIRES?1u:0u));snapshot();
+    }
+    for(int kind=-1;kind<6;kind++){
+        // Script creation resets the water countdown and leaves the ordinary total unchanged
+        fresh();CEntity *target=kind<0?nil:actors[kind];CVector position(4,5,6);if(kind==3)car.Damage.status=250;
+        int index=TestFire_Script(&position,target,3.2f,2);scripts++;TestFireState s=read(index);assert(index==0&&s.ongoing&&s.script&&s.audio&&s.water==1&&s.strength==3.2f&&s.entity==target&&!s.source&&TestFire_GetTotal()==0);if(kind==3)assert(car.Damage.status==215);
+        TestFire_Audio(index,false);assert(!read(index).audio);snapshot();TestFire_Remove(index);assert(!read(index).ongoing&&!read(index).script&&TestFire_GetTotal()==0);snapshot();
+    }
+    fresh();assert(TestFire_On(&player,&cop,0.8f,1)==0);moveOnIdle=true;float oldX=player.GetPosition().x;
+    int script=TestFire_Script(&player.GetPosition(),&player,2.0f,1);scripts++;assert(script==0&&read(script).x==oldX+0.75f&&TestFire_GetTotal()==0);snapshot();
+}
+static void processCases()
+{
+    // Cover attachment validity, state gates, temporal thresholds, player ignition and both particle paths
+    for(int kind=-1;kind<6;kind++)for(int scenario=0;scenario<20;scenario++){
+        // Seed valid live targets and independently vary the state-machine conditions
+        fresh();CEntity *target=kind<0?nil:actors[kind];int index=0;
+        if(target){index=TestFire_On(target,&cop,0.9f,1);assert(index==0);}else TestFire_At(CVector(10,20,3),0.9f,1);
+        TestFireState s=read(index);s.next=Timer_timeMs-1;s.extinguish=Timer_timeMs+1000;s.start=Timer_timeMs-1;
+        if(scenario==0)s.next=Timer_timeMs;
+        if(scenario==1)s.extinguish=Timer_timeMs;
+        if(scenario==2)s.extinguish=Timer_timeMs-1;
+        if(scenario==3){s.script=true;TestFire_Total(0);s.extinguish=0;}
+        if(scenario==4){s.water=0.2f;}
+        if(scenario==5){s.water=0.5f;}
+        if(scenario==6){s.water=0.9f;}
+        if(scenario==7&&kind>=0&&kind<3)((CPed *)target)->m_nMoveState=PEDMOVE_WALK;
+        if(scenario==8&&kind>=0&&kind<3){((CPed *)target)->bInVehicle=true;((CPed *)target)->m_pMyVehicle=&car;}
+        if(scenario==9&&kind>=0&&kind<3)((CPed *)target)->damageResult=true;
+        if(scenario==10){if(kind>=0&&kind<3)((CPed *)target)->m_pFire=nil;if(kind==3||kind==4)((CVehicle *)target)->m_pCarFire=nil;}
+        if(scenario==11){CGameLogic::ShortCutState=CGameLogic::SHORTCUT_TRANSITION;}
+        if(scenario==12){advanceTime=true;}
+        if(scenario==13){player.GetPosition()=CVector(10,20,3);}
+        if(scenario==14){player.GetPosition()=CVector(10,20,3);player.bFireProof=true;}
+        if(scenario==15){player.GetPosition()=CVector(10,20,3);liveVehicle=&car;}
+        if(scenario==16){Timer_timeStep=-2.0f;}
+        if(scenario==17){s.water=std::numeric_limits<float>::quiet_NaN();}
+        if(scenario==18&&kind>=0){References_ResolveReferences(target);s.entity=nil;}
+        if(scenario==19){s.start=Timer_timeMs;s.next=Timer_timeMs+1;}
+        TestFire_Write(index,&s);unsigned oldParticles=particles,oldLights=lights;TestFire_Process(index);snapshot();
+        if(scenario==0||scenario==19)assert(particles==oldParticles);
+        if((scenario==1||scenario==2)&&!s.script)assert(!read(index).ongoing&&lights==oldLights);
+        if(scenario==13&&kind!=0)assert(player.m_pFire!=nil);
+        if(scenario==14&&kind!=0)assert(player.m_pFire==nil);
+    }
+    fresh();TestFire_At(CVector(10,20,3),1,1);player.GetPosition()=CVector(10,20,3);TestFire_Update();assert(player.m_pFire!=nil&&player.health<100);snapshot();
+#ifdef FIX_BUGS
+    fresh();TestFire_At(CVector(0,0,0),1,1);livePlayer=nil;TestFire_Process(0);snapshot();
+#endif
+}
+static void queryAndWaterCases()
+{
+    // Cover nearest/furthest ties, strict ranges, first-match water effects and script reservation lifecycle
+    fresh();float distance=-1;assert(TestFire_Nearest(CVector(0,0,0),&distance)==-1&&distance==999999);assert(TestFire_Furthest(CVector(0,0,0),0,100)==-1);
+    for(int i=0;i<5;i++){TestFireState s=read(i);s.ongoing=true;s.x=i==0?-3:i==1?3:i==2?5:i==3?10:0;s.y=i==4?2:0;s.z=100+i;s.extinguish=20000;TestFire_Write(i,&s);}TestFire_Total(5);
+    assert(TestFire_Nearest(CVector(0,0,1000),&distance)==4&&distance==2);assert(TestFire_Furthest(CVector(0,0,0),3,10)==2);assert(TestFire_Furthest(CVector(0,0,0),0,4)==0);snapshot();
+    fresh();TestFire_At(CVector(0,0,0),1,1);TestFire_At(CVector(0,0,0),2,1);TestFireState first=read(0);first.water=0.012f;TestFire_Write(0,&first);
+    unsigned previous=randoms;assert(TestFire_Water(CVector(0,0,0),1));waters++;assert(read(0).ongoing&&read(0).water==0&&read(0).withWater&&read(1).water==1&&randoms==previous+3);snapshot();
+    assert(TestFire_Water(CVector(0,0,0),1));waters++;assert(!read(0).ongoing&&!read(0).withWater&&TestFire_GetTotal()==1);snapshot();
+    TestFire_At(CVector(0,0,0),3,1);assert(read(0).water<0);snapshot();assert(!TestFire_Water(CVector(1,0,0),1));waters++;
+    TestFire_ExtinguishPoint(CVector(0,0,0),1);assert(!read(0).ongoing&&!read(1).ongoing&&TestFire_GetTotal()==0);snapshot();
+    fresh();CVector pos(0,0,0);int a=TestFire_Script(&pos,nil,1,1),b=TestFire_Script(&pos,nil,2,0);scripts+=2;TestFire_Extinguish(a);assert(TestFire_IsOut(a)&&read(a).script&&TestFire_Free()==2);TestFire_RemoveAll();assert(!read(a).script&&!read(b).script&&!read(b).ongoing&&TestFire_Free()==0);snapshot();
+    for(int mode=0;mode<5;mode++){
+        // Preserve native pedestrian cleanup gates and the original script/non-script counter behavior
+        fresh();assert(TestFire_On(&npc,&cop,1,1)==0);if(mode==0)npc.canSet=false;if(mode==1)npc.m_nPedState=PED_DRIVING;if(mode==2)npc.m_nPedState=PED_FALL;if(mode==3){TestFireState s=read(0);s.script=true;TestFire_Write(0,&s);TestFire_Total(0);}if(mode==4)TestFire_Total(0);
+        TestFire_Extinguish(0);assert(!npc.m_pFire&&!read(0).entity&&!read(0).ongoing&&read(0).source==&cop);if(mode==4)assert(TestFire_GetTotal()==UINT32_MAX);snapshot();TestFire_Extinguish(0);snapshot();
+    }
+}
+int main()
+{
+    // Compare complete original and C behavior through quiet console operations only
+    startup();creationCases();processCases();queryAndWaterCases();
+    assert(starts==113&&scripts==10&&waters==3&&randoms>0&&actions>0&&events>0&&particles>0&&shadows>0&&lights>0&&registrations>0&&playerQueries>0&&vehicleQueries>0);
+    printf("states=%u starts=%u scripts=%u water=%u random=%u actions=%u events=%u particles=%u shadows=%u lights=%u references=%u players=%u vehicles=%u hash=%016llx\n",states,starts,scripts,waters,randoms,actions,events,particles,shadows,lights,registrations,playerQueries,vehicleQueries,(unsigned long long)hashValue);
+}

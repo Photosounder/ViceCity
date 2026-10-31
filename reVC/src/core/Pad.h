@@ -1,4 +1,6 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include "InputState.h"
 
 enum {
 	PLAYERCONTROL_ENABLED = 0,
@@ -13,116 +15,21 @@ enum {
 	PLAYERCONTROL_SHORTCUT_TAXI = 256,
 };
 
-class CControllerState
-{
-public:
-	int16 LeftStickX, LeftStickY;
-	int16 RightStickX, RightStickY;
-	int16 LeftShoulder1, LeftShoulder2;
-	int16 RightShoulder1, RightShoulder2;
-	int16 DPadUp, DPadDown, DPadLeft, DPadRight;
-	int16 Start, Select;
-	int16 Square, Triangle, Cross, Circle;
-	int16 LeftShock, RightShock;
-	int16 NetworkTalk;
-	float GetLeftStickX(void) { return LeftStickX/32767.0f; };
-	float GetLeftStickY(void) { return LeftStickY/32767.0f; };
-	float GetRightStickX(void) { return RightStickX/32767.0f; };
-	float GetRightStickY(void) { return RightStickY/32767.0f; };
 
-	bool CheckForInput();
-	void Clear(void);
-};
 VALIDATE_SIZE(CControllerState, 0x2A);
 
-class CMouseControllerState
-{
-public:
-	//uint32 btns;	// bit 0-2 button 1-3
 
-	bool LMB;
-	bool RMB;
-	bool MMB;
-	bool WHEELUP;
-	bool WHEELDN;
-	bool MXB1;
-	bool MXB2;
-	char _pad0;
-	
-	float x, y;
-	
-	CMouseControllerState();
-	void Clear();
-};
 
 VALIDATE_SIZE(CMouseControllerState, 0x10);
 
-class CMousePointerStateHelper
-{
-public:
-	bool bInvertHorizontally;
-	bool bInvertVertically;
-	
-	CMouseControllerState GetMouseSetUp();
-};
+
 
 VALIDATE_SIZE(CMousePointerStateHelper, 0x2);
 
-extern CMousePointerStateHelper MousePointerStateHelper;
 
 
-class CKeyboardState
-{
-public:
-	int16 F[12];
-	int16 VK_KEYS[256];
-	int16 ESC;
-	int16 INS;
-	int16 DEL;
-	int16 HOME;
-	int16 END;
-	int16 PGUP;
-	int16 PGDN;
-	int16 UP;
-	int16 DOWN;
-	int16 LEFT;
-	int16 RIGHT;
-	int16 SCROLLLOCK;
-	int16 PAUSE;
-	int16 NUMLOCK;
-	int16 DIV;
-	int16 MUL;
-	int16 SUB;
-	int16 ADD;
-	int16 ENTER;
-	int16 DECIMAL;
-	int16 NUM1;
-	int16 NUM2;
-	int16 NUM3;
-	int16 NUM4;
-	int16 NUM5;
-	int16 NUM6;
-	int16 NUM7;
-	int16 NUM8;
-	int16 NUM9;
-	int16 NUM0;
-	int16 BACKSP;
-	int16 TAB;
-	int16 CAPSLOCK;
-	int16 EXTENTER;
-	int16 LSHIFT;
-	int16 RSHIFT;
-	int16 SHIFT;
-	int16 LCTRL;
-	int16 RCTRL;
-	int16 LALT;
-	int16 RALT;
-	int16 LWIN;
-	int16 RWIN;
-	int16 APPS;
-	
-	void Clear();
-};
+
+
 
 VALIDATE_SIZE(CKeyboardState, 0x270);
 
@@ -483,3 +390,4 @@ public:
 
 VALIDATE_SIZE(CPad, 0xFC);
 extern CPad Pads[MAX_PADS];
+//- rouz edit (ChatGPT)

@@ -1,0 +1,290 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+extern "C" { uint32_t Timer_timeMs,Timer_frameCounter; }
+CCamera TheCamera;
+CScrollBar aScrollBars[1];
+static CEntity entities[80];
+static CSector sectors[NUMSECTORS_Y][NUMSECTORS_X];
+static CPtrList bigLists[NUM_LEVELS];
+static CPtrNode nodes[128];
+int16 MI_LIGHTBEAM,MI_AIRPORTRADAR,MI_MALLFAN,MI_HOTELFAN_NIGHT,MI_HOTELFAN_DAY,MI_HOTROOMFAN,MI_BLIMP_NIGHT,MI_BLIMP_DAY;
+static int16 *modelIds[]={&MI_LIGHTBEAM,&MI_AIRPORTRADAR,&MI_MALLFAN,&MI_HOTELFAN_NIGHT,&MI_HOTELFAN_DAY,&MI_HOTROOMFAN,&MI_BLIMP_NIGHT,&MI_BLIMP_DAY};
+static unsigned states,calls,registrations,recordUpdates,controllerUpdates,matrixUpdates,frameUpdates,coronas,scans;
+static uint64_t hash=1469598103934665603ULL;
+static int hook;
+static bool triggered;
+static uint8_t hour;
+
+static void check(bool condition,int line)
+{
+    // Reject invalid test topology or a missed required callback immediately
+    if(!condition){fprintf(stderr,"Moving-things corpus check failed at line %d (hook %d)\n",line,hook);abort();}
+}
+#define require(condition) check((condition),__LINE__)
+static void word(uint32_t value)
+{
+    // Observe every scalar bit through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(i*8))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Compare exact finite float bits without tolerance or C++ record layout assumptions
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vector(const CVector &v)
+{
+    // Read named original vector components without reinterpreting their representation
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static int entityId(const void *value)
+{
+    // Normalize real entity identities across the independent original and C executables
+    if(!value)return -1;for(int i=0;i<80;i++)if(value==&entities[i])return i;require(false);return -2;
+}
+static void event(unsigned id)
+{
+    // Retain the exact ordering and count of original external owner operations
+    calls++;word(id);
+}
+static void record(int index)
+{
+    // Observe every actual record field including inactive storage and retained detached links
+    TestMovingView v=TestMo_Get(index);word(v.next);word(v.prev);word(v.type);word(v.distant);floating(v.position.x);floating(v.position.y);floating(v.position.z);word(entityId(v.entity));
+}
+static void snapshot(void)
+{
+    // Compare all fifty records, mutable thresholds, entities, row state and controller globals
+    states++;word(Timer_timeMs);word(Timer_frameCounter);word(hour);word(TestMo_Num());for(int i=0;i<50;i++)record(i);float distances[5];TestMo_Distances(distances);for(int i=0;i<5;i++)floating(distances[i]);vector(TheCamera.position);
+    for(int i=0;i<80;i++){
+        // Include every native entity basis and stored position after original owner callbacks
+        word(entities[i].identity);word(entities[i].model);vector(entities[i].position);vector(entities[i].right);vector(entities[i].forward);vector(entities[i].up);
+    }
+    for(int i=0;i<8;i++)word(*modelIds[i]);word(aScrollBars[0].visible);word(aScrollBars[0].updates);word(aScrollBars[0].renders);vector(aScrollBars[0].first);vector(aScrollBars[0].last);word(aScrollBars[0].type);word(aScrollBars[0].r);word(aScrollBars[0].g);word(aScrollBars[0].b);floating(aScrollBars[0].scale);
+}
+static void updateOne(int index)
+{
+    // Exercise the complete real record algorithm independently of controller scheduling
+    recordUpdates++;TestMo_UpdateOne(index);snapshot();
+}
+static void controllerUpdate(void)
+{
+    // Observe both original scheduling passes with a live count and live distant flags
+    controllerUpdates++;TestMo_Update();snapshot();
+}
+static void mutation(int point,CEntity *owner=NULL)
+{
+    // Apply one defined mutation at an original owner operation and preserve valid topology
+    if(triggered)return;
+    if(hook==1 && point==1){triggered=true;int index=0;for(;index<48;index++)if(TestMo_Get(index).entity==owner)break;require(index<48);TestMovingView v=TestMo_Get(index);v.entity=&entities[60];v.type=3;TestMo_Set(index,&v);}
+    else if(hook==2 && point==1){triggered=true;updateOne(1);}
+    else if(hook==3 && point==2){triggered=true;registrations++;TestMo_Register(&entities[61],2);Timer_frameCounter++;}
+    else if(hook==4 && point==3){triggered=true;TestMo_SetNum(17);aScrollBars[0].visible=true;}
+    else if(hook==5 && point==4){triggered=true;TheCamera.position=CVector(91.f,37.f,200.f);Timer_timeMs+=123;}
+    else if(hook==6 && point==5){triggered=true;TestMo_SetDistance(1,50.f);TheCamera.position=CVector(-1900.f,-900.f,300.f);}
+    else if(hook==7 && point==6){triggered=true;aScrollBars[0].visible=true;Timer_frameCounter=7;}
+    else if(hook==8 && point==7){triggered=true;controllerUpdate();}
+    else if(hook==9 && point==8){triggered=true;aScrollBars[0].visible=false;TestMo_SetNum(0);}
+    else if(hook==10 && point==2){triggered=true;TestMo_SetNum(1);}
+}
+extern "C" uint8_t Clock_GetHours(void)
+{
+    // Preserve each original short-circuit hour query before optional beam coronas
+    event(1);word(hour);return hour;
+}
+void TestMatrix::UpdateRW(void)
+{
+    // Observe the actual entity matrix selected before a callback changes the record owner
+    event(2);matrixUpdates++;word(entityId(owner));vector(owner->position);vector(owner->right);vector(owner->forward);vector(owner->up);mutation(1,owner);
+}
+void CEntity::UpdateRwFrame(void)
+{
+    // Keep the fresh entity-field read after the preceding matrix update
+    event(3);frameUpdates++;word(identity);mutation(2,this);
+}
+CSector *CWorld::GetSector(int x,int y)
+{
+    // Observe the full original x-major sector traversal and actual building-list selection
+    event(4);scans++;word(x);word(y);require(x>=0 && x<NUMSECTORS_X && y>=0 && y<NUMSECTORS_Y);return &sectors[y][x];
+}
+CPtrList &CWorld::GetBigBuildingList(eLevelName level)
+{
+    // Retain all original big-building levels after the sector scan
+    event(5);scans++;word(level);require(level>=0 && level<NUM_LEVELS);return bigLists[level];
+}
+void CScrollBar::Init(CVector a,CVector b,uint8 t,uint8 red,uint8 green,uint8 blue,float value)
+{
+    // Compare all original initialization coordinates, enum conversion, colors and scale
+    event(6);vector(a);vector(b);word(t);word(red);word(green);word(blue);floating(value);first=a;last=b;type=t;r=red;g=green;this->b=blue;scale=value;visible=false;updates=0;renders=0;
+}
+void CScrollBar::SetVisibility(bool value)
+{
+    // Preserve shutdown visibility before the following escalator owner call
+    event(7);word(value);visible=value;
+}
+bool CScrollBar::IsVisible(void)
+{
+    // Observe original short-circuit row decisions without changing the actual pure getter
+    event(8);word(visible);return visible;
+}
+void CScrollBar::Update(void)
+{
+    // Retain row updates after both entity scheduling passes and any live frame changes
+    event(9);updates++;mutation(7);
+}
+void CScrollBar::Render(void)
+{
+    // Preserve row rendering between smoke update and the other effect renderers
+    event(10);renders++;mutation(8);
+}
+void CScrollBar::RenderForEnvMap(RwCamera *camera)
+{
+    // Pass the same actual auxiliary-camera identity through the optional controller loop
+    event(11);word((uint32_t)(uintptr_t)camera);renders++;
+}
+void CEscalators::Init(void)
+{
+    // Observe escalator setup only after the complete world registration scan
+    event(12);word(TestMo_Num());mutation(3);
+}
+void CEscalators::Shutdown(void)
+{
+    // Retain the original shutdown order and any defined controller-state mutation
+    event(13);word(aScrollBars[0].visible);mutation(8);
+}
+void CEscalators::Update(void)
+{
+    // Keep escalator updates before the original frame-block calculation
+    event(14);mutation(6);
+}
+void CCoronas::RegisterCorona(uint32 id,uint8 r,uint8 g,uint8 b,uint8 a,const CVector &coors,float size,float distance,uint8 type,int8 flare,uint8 reflection,uint8 los,uint8 streak,float angle,bool useNear,float nearDistance)
+{
+    // Compare the exact original overload, unusual conversions, defaults and temporary coordinates
+    event(15);coronas++;word(id);word(r);word(g);word(b);word(a);vector(coors);floating(size);floating(distance);word(type);word(flare);word(reflection);word(los);word(streak);floating(angle);word(useNear);floating(nearDistance);word(&coors!=&TheCamera.position);mutation(5);
+}
+void TestSF_Push(const char *name)
+{
+    // Retain the original diagnostic render-group label after removing the C++ class
+    event(16);require(strcmp(name,"CMovingThings::Render")==0);
+}
+void TestSF_Pop(void)
+{
+    // Keep the original render-group end after every scheduled child renderer
+    event(17);
+}
+extern "C" void PlaneTrails_Init(void)
+{
+    // Observe the first child initializer after sentinel link reset and before count reset
+    event(18);record(48);record(49);word(TestMo_Num());
+}
+extern "C" void SmokeTrails_Init(void)
+{
+    // Preserve the second child initialization operation
+    event(19);
+}
+extern "C" void PlaneBanners_Init(void)
+{
+    // Preserve the third child initialization operation
+    event(20);
+}
+extern "C" void PointLights_Init(void)
+{
+    // Keep the last child initializer before count and partial record reset
+    event(21);mutation(3);
+}
+extern "C" void PlaneBanners_Update(void)
+{
+    // Retain banner animation before plane trails and escalators
+    event(22);
+}
+extern "C" void PlaneTrails_Update(void)
+{
+    // Retain trail animation before the controller chooses its live frame block
+    event(23);mutation(4);
+}
+extern "C" void SmokeTrails_Update(void)
+{
+    // Keep smoke attachment updates at the beginning of the original render pass
+    event(24);mutation(6);
+}
+extern "C" void PlaneTrails_Render(void)
+{
+    // Retain the first child renderer after the row loop
+    event(25);
+}
+extern "C" void SmokeTrails_Render(void)
+{
+    // Preserve smoke rendering between plane trails and banners
+    event(26);
+}
+extern "C" void PlaneBanners_Render(void)
+{
+    // Preserve the final child renderer and its allowed controller-state changes
+    event(27);mutation(8);
+}
+static void reset(unsigned seed)
+{
+    // Seed every actual record field, native owner and mutable constant with valid detached topology
+    hook=0;triggered=false;Timer_timeMs=seed*271;Timer_frameCounter=seed%8;hour=23;TheCamera.position=CVector(0.f,0.f,200.f);memset(sectors,0,sizeof(sectors));memset(bigLists,0,sizeof(bigLists));memset(nodes,0,sizeof(nodes));for(int i=0;i<8;i++)*modelIds[i]=100+i;
+    for(int i=0;i<80;i++){
+        // Retain independent entity storage and native matrix ownership for callback selection
+        entities[i].identity=i;entities[i].model=*modelIds[i%8];entities[i].position=CVector((i-32)*11.3f,(i%9)*17.6f,50.f+i);entities[i].right=CVector(1.f,0.f,0.f);entities[i].forward=CVector(0.f,1.f,0.f);entities[i].up=CVector(0.f,0.f,1.f);entities[i].matrix.owner=&entities[i];
+    }
+    for(int i=0;i<50;i++){
+        // Preserve stale detached links and positions independently from the active list
+        TestMovingView v;v.next=-1;v.prev=-1;v.type=i%5;v.distant=1;v.position.x=i*.25f;v.position.y=-i*.75f;v.position.z=seed;v.entity=&entities[i%80];TestMo_Set(i,&v);
+    }
+    TestMovingView head=TestMo_Get(48),tail=TestMo_Get(49);head.next=49;head.prev=-1;tail.next=-1;tail.prev=48;TestMo_Set(48,&head);TestMo_Set(49,&tail);TestMo_SetNum(0);const float d[]={100.f,1500.f,400.f,100.f,2000.f};for(int i=0;i<5;i++)TestMo_SetDistance(i,d[i]);aScrollBars[0].visible=false;aScrollBars[0].updates=0;aScrollBars[0].renders=0;aScrollBars[0].first=CVector(0.f,0.f,0.f);aScrollBars[0].last=CVector(0.f,0.f,0.f);aScrollBars[0].type=0;aScrollBars[0].r=0;aScrollBars[0].g=0;aScrollBars[0].b=0;aScrollBars[0].scale=.3f;
+}
+static void populate(int count)
+{
+    // Register a valid linked pool through the complete original or C public operation
+    for(int i=0;i<count;i++){registrations++;TestMo_Register(&entities[i],i%4+1);}snapshot();
+}
+int main(void)
+{
+    // Observe actual static storage before explicit seeding or initialization
+    snapshot();reset(0);TestMo_Init();snapshot();TestMo_Shutdown();snapshot();
+    for(int count=0;count<=60;count+=10){
+        // Scan nonempty sector and big-building lists in original order through and beyond capacity
+        reset(count);for(int i=0;i<count;i++){nodes[i].item=&entities[i];nodes[i].next=i%10==9 || i==count-1?NULL:&nodes[i+1];}for(int i=0;i<count;i+=10){if(i<30)sectors[(i/10)*3+1][(i/10)*2].m_lists[0].first=&nodes[i];else bigLists[(i/10-3)%NUM_LEVELS].first=&nodes[i];}TestMo_Init();snapshot();require(TestMo_Num()==(count>48?48:count));TestMo_Shutdown();snapshot();
+    }
+    for(int model=0;model<10;model++){
+        // Keep all dynamic model categories, unknown models and first-match precedence
+        reset(model);entities[0].model=model<8?*modelIds[model]:-17;if(model==9){MI_AIRPORTRADAR=MI_LIGHTBEAM;entities[0].model=MI_LIGHTBEAM;}registrations++;TestMo_Possible(&entities[0]);snapshot();
+    }
+    reset(0);populate(48);registrations++;TestMo_Register(NULL,4);snapshot();require(TestMo_Num()==48);
+    reset(0);populate(12);for(int i=0;i<12;i++){TestMo_Remove(i);snapshot();}word(TestMo_Size(48));require(TestMo_Size(48)==1);for(int i=0;i<12;i++){TestMo_Add(i,48);snapshot();word(TestMo_Size(48));}require(TestMo_Size(48)==13);word(TestMo_Size(49));
+    const uint32_t times[]={0,1,1022,1023,1024,2046,2047,2048,16382,16383,16384,262142,262143,262144,0xffffffffU};
+    for(int type=0;type<5;type++)for(int t=0;t<15;t++){
+        // Compare all four animation periods, the default case and timer wraparound
+        reset(t);registrations++;TestMo_Register(&entities[0],type);Timer_timeMs=times[t];updateOne(0);
+    }
+    const float offsets[]={-.01f,0.f,.01f};
+    for(int type=0;type<5;type++)for(int distant=0;distant<2;distant++)for(int edge=0;edge<3;edge++){
+        // Retain strict horizontal distance thresholds and the original link/distant-flag transition order
+        reset(type);registrations++;TestMo_Register(&entities[0],type);float d[5];TestMo_Distances(d);if(distant){TestMo_Remove(0);TestMovingView v=TestMo_Get(0);v.distant=1;TestMo_Set(0,&v);}entities[0].position=CVector(type==4?-115.f:0.f,type==4?1163.f:0.f,260.f);TheCamera.position=CVector(entities[0].position.x+d[type]+offsets[edge],entities[0].position.y,9999.f);Timer_timeMs=0;updateOne(0);
+    }
+    for(int hourValue=0;hourValue<24;hourValue++)for(int position=0;position<5;position++){
+        // Preserve every hour gate, exact beam range rejection, forward cone and coincident-position behavior
+        reset(hourValue);registrations++;TestMo_Register(&entities[0],1);Timer_timeMs=0;hour=hourValue;entities[0].position=CVector(0.f,0.f,0.f);TheCamera.position=CVector(position==0?100.f:position==1?600.f:position==2?600.01f:position==3?-100.f:0.f,0.f,0.f);updateOne(0);
+    }
+    for(int frame=0;frame<8;frame++){
+        // Verify a newly near object can run in both original passes during the same frame
+        reset(frame);populate(48);for(int i=0;i<48;i++){TestMo_Remove(i);TestMovingView v=TestMo_Get(i);v.distant=1;TestMo_Set(i,&v);}Timer_frameCounter=frame;controllerUpdate();
+    }
+    for(int h=1;h<=10;h++){
+        // Observe fresh owner/count/frame/table reads after matrix, child and row callbacks
+        reset(h);populate(2);hook=h;if(h==4){TestMo_Init();snapshot();}else if(h==6){Timer_timeMs=0;entities[0].position=CVector(0.f,0.f,0.f);TheCamera.position=CVector(100.f,0.f,0.f);updateOne(0);}else if(h==9){aScrollBars[0].visible=true;TestMo_Render();snapshot();}else if(h==8){aScrollBars[0].visible=true;controllerUpdate();}else if(h==5 || h==7 || h==3 || h==10){aScrollBars[0].visible=false;controllerUpdate();}else updateOne(0);require(triggered);snapshot();
+    }
+    reset(0);populate(32);
+    for(int frame=0;frame<750;frame++){
+        // Retain live list topology across repeated movement, scheduling, row rendering and reflection passes
+        Timer_timeMs+=137;Timer_frameCounter++;hour=(frame/23)%24;TheCamera.position=CVector(sinf(frame*.017f)*1100.f,cosf(frame*.013f)*900.f,200.f);aScrollBars[0].visible=frame%5!=0;controllerUpdate();TestMo_Render();TestMo_Env(frame%2?(void *)0x7000:NULL);snapshot();if(frame%111==0){TestMo_Shutdown();snapshot();}
+    }
+    require(states>1500 && matrixUpdates>1000 && coronas>10 && scans>100000);printf("states=%u calls=%u registrations=%u recordUpdates=%u controllerUpdates=%u matrixUpdates=%u frameUpdates=%u coronas=%u scans=%u hash=%016llx\n",states,calls,registrations,recordUpdates,controllerUpdates,matrixUpdates,frameUpdates,coronas,scans,(unsigned long long)hash);
+}

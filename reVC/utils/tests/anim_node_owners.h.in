@@ -1,0 +1,94 @@
+#pragma once
+#include "config.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <new>
+#include <assert.h>
+typedef int16_t int16;typedef int32_t int32;typedef uint8_t uint8;
+#define VALIDATE_SIZE(a,b)
+#define nil NULL
+#define PI ((float)3.1415926535897932384626433832795)
+#define TWOPI (PI*2)
+#define PUSH_MEMID(x)
+#define POP_MEMID()
+#define REGISTER_MEMPTR(x)
+struct RwV3d {float x,y,z;};
+struct RwMatrix {RwV3d right;uint32_t flags;RwV3d up;uint32_t pad1;RwV3d at;uint32_t pad2;RwV3d pos;uint32_t pad3;};
+#include "Maths.h"
+#include "Vector.h"
+#include "Vector2D.h"
+#include "Quaternion_native.h"
+#include "AnimBlendSequence.h"
+#ifdef ORIGINAL
+#include "original-AnimBlendNode.h"
+#else
+#include "AnimBlendNode.h"
+#include "AnimBlendNode_backend.h"
+#endif
+#include "AnimBlendAssociation_flags.h"
+#include "KeyFrames_native.h"
+extern unsigned fixtureAllocations,fixtureFrees;
+extern size_t fixtureBytes;
+void *RwMalloc(size_t size);
+void RwFree(void *memory);
+template<class T> static T Max(T a,T b)
+{
+    // Retain the original maximum comparison in sequence-time consumers
+    return a>b?a:b;
+}
+class CAnimBlendAssociation {
+public:
+    float blendAmount,timeStep;int16_t flags;
+    bool IsRunning() {
+        // Supply the original native association flag boundary
+        return (flags&ASSOC_RUNNING)!=0;
+    }
+    bool IsRepeating() {
+        // Supply the original native association repeat boundary
+        return (flags&ASSOC_REPEAT)!=0;
+    }
+    bool IsPartial() {
+        // Supply the original native association partial boundary
+        return (flags&ASSOC_PARTIAL)!=0;
+    }
+    bool HasTranslation() {
+        // Supply the original native association translation boundary
+        return (flags&ASSOC_HAS_TRANSLATION)!=0;
+    }
+    bool HasXTranslation() {
+        // Supply the original native association X translation boundary
+        return (flags&ASSOC_HAS_X_TRANSLATION)!=0;
+    }
+    float GetBlendAmount(float weight) {
+        // Supply deterministic native partial and weighted association amounts
+        return IsPartial()?blendAmount:blendAmount*weight;
+    }
+};
+struct RwFrame {RwMatrix matrix;};
+struct RpHAnimStdInterpFrame {struct {RwV3d imag;float real;} q;RwV3d t;};
+struct AnimBlendFrameData {
+    enum {VELOCITY_EXTRACTION=1,VELOCITY_EXTRACTION_3D=2,IGNORE_ROTATION=4,IGNORE_TRANSLATION=8};
+    unsigned flag;RwFrame *frame;RpHAnimStdInterpFrame *hanimFrame;CVector resetPos;
+};
+struct AnimBlendFrameUpdateData {bool foobar;CAnimBlendNode **nodes;};
+class CAnimBlendClumpData {public:CVector2D *velocity2d;CVector *velocity3d;};
+extern CAnimBlendClumpData *gpAnimBlendClump;
+static inline RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Keep the complete callback's native frame lookup boundary
+    return &frame->matrix;
+}
+static inline void RwMatrixSetIdentity(RwMatrix *matrix)
+{
+    // Provide deterministic native identity behavior while retaining unrelated padding
+    matrix->right={1,0,0};matrix->up={0,1,0};matrix->at={0,0,1};matrix->pos={0,0,0};matrix->flags=1;
+}
+static inline void RwMatrixUpdate(RwMatrix *matrix)
+{
+    // Record the original final native matrix update
+    matrix->flags+=16;
+}

@@ -1,0 +1,53 @@
+#pragma once
+#include "loader.h"
+#include <malloc.h>
+#ifdef _MSC_VER
+#define strncasecmp _strnicmp
+#endif
+struct RwFrame {RwV3d position;};
+struct RpHAnimStdInterpFrame {struct {RwV3d imag;float real;} q;RwV3d t;};
+#include "AnimBlendClumpData.h"
+#include "AnimBlendAssocGroup.h"
+#include "AnimBlendAssocGroup_backend.h"
+#include "AnimBlendAssociation_backend.h"
+#include "AnimBlendClumpData_backend.h"
+#ifndef ORIGINAL
+#include "AnimManager_backend.h"
+#endif
+struct RpClump {CAnimBlendClumpData *data;bool skinned;};
+#define RPANIMBLENDCLUMPDATA(clump) (&((clump)->data))
+enum {rpCLUMP=2,STREAM_OFFSET_ANIM=1000};
+struct RwObject {unsigned type;};
+struct CBaseModelInfo {
+    char name[32];RwObject *object;RpClump *instance;
+    const char *GetModelName(){
+        // Borrow fixture metadata through the original native model primitive
+        return name;
+    }
+    RwObject *GetRwObject(){
+        // Borrow fixture SDK object metadata without group selection logic
+        return object;
+    }
+    RwObject *CreateInstance();
+};
+class CModelInfo {public:static CBaseModelInfo *GetModelInfo(int32);};
+class CStreaming {public:static void RemoveModel(int32);static void RemoveAnim(int32 id){
+    // Retain the original inline animation-to-streaming offset operation
+    RemoveModel(id+STREAM_OFFSET_ANIM);
+}};
+unsigned RwObjectGetType(RwObject*);
+void RpAnimBlendClumpInit(RpClump*);
+bool IsClumpSkinned(RpClump*);
+typedef void *(*AtomicCallback)(void*,void*);
+void *AtomicRemoveAnimFromSkinCB(void*,void*);
+void RpClumpForAllAtomics(RpClump*,AtomicCallback,void*);
+void RpClumpDestroy(RpClump*);
+AnimBlendFrameData *RpAnimBlendClumpFindFrame(RpClump*,const char*);
+AnimBlendFrameData *RpAnimBlendClumpFindBone(RpClump*,uint32);
+#ifdef ORIGINAL
+#define ASSOC_ID(group,id) CAnimManager::GetAnimAssociation(group,id)
+#define ASSOC_NAME(group,name) CAnimManager::GetAnimAssociation(group,name)
+#else
+#define ASSOC_ID(group,id) AnimManager_GetAnimAssociationById(group,id)
+#define ASSOC_NAME(group,name) AnimManager_GetAnimAssociationByName(group,name)
+#endif

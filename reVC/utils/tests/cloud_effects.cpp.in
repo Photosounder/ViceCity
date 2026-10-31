@@ -1,0 +1,323 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs;float Timer_timeStep; }
+RsGlobalType RsGlobal;
+CCamera TheCamera;
+float CCoronas::SunScreenX,CCoronas::SunScreenY;
+int CCoronas::MoonSize;
+bool CCoronas::SunBlockedByClouds;
+float CWeather::Wind,CWeather::Foggyness,CWeather::CloudCoverage,CWeather::ExtraSunnyness,CWeather::Rainbow;
+int32 CTimeCycle::colors[9];
+CVector CTimeCycle::sun;
+RwTexture *gpCoronaTexture[9];
+static RwMatrix cameraMatrix;
+static RwCamera *camera=(RwCamera *)0x5000;
+static RwIm3DVertex vertices[4];
+static uint16_t indices[6];
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,projects,sprites,quads,flushes,randoms;
+static int hour,minute,second,txd,savedTxd,nextTexture,hook,projectIndex;
+static bool outside,framePresent,matrixPresent,triggered;
+static float nearClip,farClip;
+static TestCloudState initial;
+
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Write actual native vertex positions through their typed accessors
+    v->setX(x);v->setY(y);v->setZ(z);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Write the actual native color representation
+    v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal u)
+{
+    // Preserve original typed U publication
+    v->setU(u);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Preserve original typed V publication
+    v->setV(value);
+}
+
+void RwV3dAdd(RwV3d *out,const RwV3d *a,const RwV3d *b)
+{
+    // Execute original native addition or its identical portable component expression
+#ifdef NATIVE_PROJECT_HEADERS
+    *out=add(*a,*b);
+#else
+    RwV3d value={a->x+b->x,a->y+b->y,a->z+b->z};*out=value;
+#endif
+}
+
+static void require(bool value)
+{
+    // Fail without creating a GUI dialog and retain the exact corpus position
+    if(!value){fprintf(stderr,"states=%u calls=%u hook=%d projects=%u\n",states,calls,hook,projects);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Normalize every observation independently of process addresses and native padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite geometry, animation and sprite results exactly
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vectorValue(const RwV3d &v)
+{
+    // Observe original typed vector coordinates in their native component order
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void event(unsigned value)
+{
+    // Capture owner ordering together with live animation, time and resource state
+    calls++;word(value);TestCloudState state=TestCl_Get();floating(state.rotation);word(state.individual);floating(state.roll);word(Timer_timeMs);floating(Timer_timeStep);word(txd);word(CCoronas::SunBlockedByClouds);
+    for(int i=0;i<5;i++)word((uint32_t)(uintptr_t)state.textures[i]);
+}
+static void text(const char *value)
+{
+    // Include all original resource and debug-label strings
+    while(*value)word((unsigned char)*value++);word(0);
+}
+static void snapshot(void)
+{
+    // Compare every C-owned scalar, texture handle, table entry and persistent screen flag
+    states++;TestCloudState s=TestCl_Get();floating(s.rotation);word(s.individual);floating(s.roll);floating(s.horizon);floating(s.tilt);for(int i=0;i<5;i++)word((uint32_t)(uintptr_t)s.textures[i]);for(int i=0;i<37;i++)word(s.visible[i]);for(int i=0;i<174;i++)floating(s.tables[i]);for(int i=0;i<18;i++)word(s.bow[i]);word(CCoronas::SunBlockedByClouds);word(Timer_timeMs);word(txd);
+}
+extern "C" uint8_t Clock_GetHours(void)
+{
+    // Return the original scalar without adding callbacks to a pure clock read
+    return (uint8_t)hour;
+}
+extern "C" uint8_t Clock_GetMinutes(void)
+{
+    // Return the original current minute
+    return (uint8_t)minute;
+}
+extern "C" int16_t Clock_GetSeconds(void)
+{
+    // Return the original signed seconds API
+    return (int16_t)second;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Preserve the exact number of original star-flicker RNG calls
+    event(1);randoms++;return (uint16_t)(randoms*1103515245u+12345u);
+}
+extern "C" float General_GetATanOfXY(float x,float y)
+{
+    // Execute the same stable helper response for both complete sky algorithms
+    event(2);floating(x);floating(y);return atan2f(y,x);
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Keep the original push-before-find dictionary order
+    event(3);savedTxd=txd;
+}
+int CTxdStore::FindTxdSlot(const char *name)
+{
+    // Observe lookup while the original saved dictionary is already captured
+    event(4);text(name);if(!triggered && hook==1){triggered=true;txd=93;}return 17;
+}
+void CTxdStore::SetCurrentTxd(int value)
+{
+    // Preserve dictionary publication before any texture read
+    event(5);word(value);txd=value;
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Restore the saved dictionary before the original rotation reset
+    event(6);txd=savedTxd;
+    if(!triggered && hook==2){triggered=true;TestCloudState s=TestCl_Get();s.rotation=3.5f;s.individual=913;TestCl_Set(&s);}
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Compare load names and all previously published texture slots
+    event(7);text(name);require(mask==NULL);return (RwTexture *)(uintptr_t)(0x1000+nextTexture++*16);
+}
+RwBool RwTextureDestroy(RwTexture *value)
+{
+    // Preserve destruction before null publication, including a nested shutdown
+    event(8);word((uint32_t)(uintptr_t)value);
+    if(!triggered && hook==3){triggered=true;TestCl_Shutdown();}
+    return 1;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *value)
+{
+    // Retain the exact current texture handle read at each raster use
+    event(9);word((uint32_t)(uintptr_t)value);return (RwRaster *)(uintptr_t)((uintptr_t)value+0x1000);
+}
+bool CGame::CanSeeOutSideFromCurrArea(void)
+{
+    // Preserve the original outside-area early gate and its position before state writes
+    event(10);return outside;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Compare every original render state, factor, raster and restoration in order
+    event(11);word(state);word((uint32_t)(uintptr_t)value);return 1;
+}
+void TestSF_Push(const char *name)
+{
+    // Keep the original debug label text and call placement
+    event(12);text(name);
+}
+void TestSF_Pop(void)
+{
+    // Close the original effect pass
+    event(13);
+}
+void CSprite::InitSpriteBuffer(void)
+{
+    // Preserve sprite setup before the original game-camera position copy
+    event(14);projectIndex=0;
+    if(!triggered && hook==4){triggered=true;TheCamera.position.x+=31.f;CWeather::Foggyness=.25f;}
+}
+void CSprite::FlushSpriteBuffer(void)
+{
+    // Preserve each original batch boundary and later live weather/rotation reads
+    event(15);flushes++;
+    if(!triggered && hook==5){triggered=true;TestCloudState s=TestCl_Get();s.rotation+=.75f;s.roll=.35f;TestCl_Set(&s);CWeather::CloudCoverage=.45f;}
+}
+bool CSprite::CalcScreenCoors(const RwV3d &in,RwV3d *out,float *w,float *h,bool farclip)
+{
+    // Observe exact world positions and deterministic clipping without a window or GPU
+    event(16);projects++;projectIndex++;vectorValue(in);word(farclip);require(!farclip);out->x=RsGlobal.width*.5f+in.x*.07f;out->y=RsGlobal.height*.5f+in.y*.05f;out->z=20.f+fabsf(in.z)*.07f;*w=.25f+fabsf(in.x)*.0001f;*h=.3f+fabsf(in.y)*.0001f;
+    if(!triggered && hook==6){triggered=true;TestCloudState s=TestCl_Get();s.roll=-.2f;s.individual+=511;TestCl_Set(&s);CCoronas::SunScreenX=out->x;CCoronas::SunScreenY=out->y;}
+    return projectIndex%5!=0;
+}
+static void sprite(float x,float y,float z,float w,float h,uint8 r,uint8 g,uint8 b,int16 intens,float recipz,float rotation,uint8 a,unsigned mode)
+{
+    // Compare exact overload selection, narrowed colors and all scalar sprite arguments
+    event(20+mode);sprites++;floating(x);floating(y);floating(z);floating(w);floating(h);word(r);word(g);word(b);word((uint16_t)intens);floating(recipz);floating(rotation);word(a);
+}
+void CSprite::RenderOneXLUSprite(float x,float y,float z,float w,float h,uint8 r,uint8 g,uint8 b,int16 intens,float recipz,uint8 a)
+{
+    // Observe the original immediate sprite operation
+    sprite(x,y,z,w,h,r,g,b,intens,recipz,0.f,a,0);
+}
+void CSprite::RenderBufferedOneXLUSprite(float x,float y,float z,float w,float h,uint8 r,uint8 g,uint8 b,int16 intens,float recipz,uint8 a)
+{
+    // Observe the original buffered sprite operation
+    sprite(x,y,z,w,h,r,g,b,intens,recipz,0.f,a,1);
+}
+void CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(float x,float y,float z,float w,float h,uint8 r,uint8 g,uint8 b,int16 intens,float recipz,float roll,uint8 a)
+{
+    // Observe dimension rotation independently of aspect rotation
+    sprite(x,y,z,w,h,r,g,b,intens,recipz,roll,a,2);
+}
+void CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(float x,float y,float z,float w,float h,uint8 r,uint8 g,uint8 b,int16 intens,float recipz,float roll,uint8 a)
+{
+    // Observe the original highlighted sprite rotation
+    sprite(x,y,z,w,h,r,g,b,intens,recipz,roll,a,3);
+}
+void CSprite::RenderBufferedOneXLUSprite_Rotate_2Colours(float x,float y,float z,float w,float h,uint8 r1,uint8 g1,uint8 b1,uint8 r2,uint8 g2,uint8 b2,float cx,float cy,float recipz,float rotation,uint8 a)
+{
+    // Retain the exact two-color overload and gradient direction
+    sprite(x,y,z,w,h,r1,g1,b1,255,recipz,rotation,a,4);word(r2);word(g2);word(b2);floating(cx);floating(cy);
+}
+RwFrame *RwCameraGetFrame(const RwCamera *value)
+{
+    // Preserve reflection-camera frame gating
+    event(30);require(value==camera);return framePresent?(RwFrame *)0x6000:NULL;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *value)
+{
+    // Retain both original matrix queries and permit a live basis change before copying
+    event(31);require(value==(RwFrame *)0x6000);
+    if(!triggered && hook==7){triggered=true;cameraMatrix.pos.x+=3.25f;cameraMatrix.right.z=.3f;}
+    return matrixPresent?&cameraMatrix:NULL;
+}
+RwReal RwCameraGetNearClipPlane(const RwCamera *value)
+{
+    // Compare the original near clip query after basis normalization
+    event(32);require(value==camera);return nearClip;
+}
+RwReal RwCameraGetFarClipPlane(const RwCamera *value)
+{
+    // Retain the original far clip query
+    event(33);require(value==camera);return farClip;
+}
+extern "C" void RenderBuffer_RenderStuffInBuffer(void)
+{
+    // Preserve pending world geometry and every original sky batch flush
+    event(34);flushes++;
+    if(!triggered && hook==8){triggered=true;CWeather::Rainbow=.6f;TestCloudState s=TestCl_Get();s.rotation+=.25f;TestCl_Set(&s);}
+}
+extern "C" void RenderBuffer_ClearRenderBuffer(void)
+{
+    // Observe the exact original shared-buffer clear point
+    event(35);
+}
+extern "C" void RenderBuffer_StartStoring(int32_t ni,int32_t nv,uint16_t **ip,void **vp)
+{
+    // Return real native vertex storage without assuming its stride or color representation
+    event(36);require(ni==6 && nv==4);memset(vertices,0,sizeof(vertices));memset(indices,0,sizeof(indices));*ip=indices;*vp=vertices;
+}
+extern "C" void RenderBuffer_StartStoringLegacy(int32_t ni,int32_t nv,uint16_t **ip,void *vp)
+{
+    // Write the legal actual typed legacy output slot rather than casting it to void **
+    void *value;RenderBuffer_StartStoring(ni,nv,ip,&value);*(RwIm3DVertex **)vp=(RwIm3DVertex *)value;
+}
+extern "C" void RenderBuffer_StopStoring(void)
+{
+    // Compare every actual native position, UV, color and quad index before publication
+    event(37);quads++;for(int i=0;i<4;i++){floating(vertices[i].getX());floating(vertices[i].getY());floating(vertices[i].getZ());RwRGBA c=vertices[i].getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(vertices[i].getU());floating(vertices[i].getV());}for(int i=0;i<6;i++)word(indices[i]);
+}
+static void reset(void)
+{
+    // Reset real effect state and independent owner fixtures without invoking unknown GUI behavior
+    TestCl_Set(&initial);hour=3;minute=0;second=0;txd=51;savedTxd=0;nextTexture=0;hook=0;triggered=false;outside=true;framePresent=true;matrixPresent=true;nearClip=.1f;farClip=1000.f;projectIndex=0;Timer_timeMs=5000;Timer_timeStep=1.5f;RsGlobal.width=1280;RsGlobal.height=720;TheCamera.Orientation=.3f;TheCamera.position=CVector(2.f,3.f,4.f);CCoronas::SunScreenX=640.f;CCoronas::SunScreenY=360.f;CCoronas::MoonSize=3;CCoronas::SunBlockedByClouds=true;CWeather::Wind=.6f;CWeather::Foggyness=.1f;CWeather::CloudCoverage=.2f;CWeather::ExtraSunnyness=.05f;CWeather::Rainbow=.4f;for(int i=0;i<9;i++){gpCoronaTexture[i]=(RwTexture *)(uintptr_t)(0x3000+i*16);CTimeCycle::colors[i]=100+i*13;}CTimeCycle::sun=CVector(.2f,1.f,.3f);memset(&cameraMatrix,0,sizeof(cameraMatrix));cameraMatrix.right.x=1.f;cameraMatrix.up.z=1.f;cameraMatrix.at.y=1.f;
+}
+int main(void)
+{
+    // Observe static state and full lifecycle, retained scalars and repeated shutdown ordering
+    initial=TestCl_Get();snapshot();reset();TestCloudState s=TestCl_Get();s.rotation=2.f;s.individual=913;s.roll=.75f;s.horizon=213.f;s.tilt=-.5f;TestCl_Set(&s);TestCl_Init();snapshot();TestCl_Shutdown();snapshot();TestCl_Shutdown();snapshot();
+    for(int h=1;h<=3;h++){
+        // Exercise dictionary, post-pop rotation reset and nested resource destruction
+        reset();hook=h;TestCl_Init();if(h==3)TestCl_Shutdown();require(triggered);snapshot();
+    }
+    for(int i=0;i<180;i++){
+        // Compare both animation formulas with legal nonnegative integer conversion ranges
+        reset();TheCamera.Orientation=(i-90)*.0375f;CWeather::Wind=(i%11)*.1f;Timer_timeStep=(i%9)*.25f;for(int j=0;j<11;j++)TestCl_Update();snapshot();
+    }
+    for(int hourIndex=0;hourIndex<24;hourIndex++)for(int weather=0;weather<5;weather++){
+        // Cover moon/star time windows, weather coverage and both sprite/reflection paths
+        reset();hour=hourIndex;minute=(weather*17)%60;second=37;CWeather::Foggyness=weather*.2f;CWeather::CloudCoverage=(4-weather)*.2f;CWeather::ExtraSunnyness=weather*.15f;CWeather::Rainbow=weather*.2f;TestCl_Init();TestCl_Render();snapshot();TestCl_Env(camera);snapshot();
+    }
+    for(int branch=0;branch<7;branch++){
+        // Preserve each early gate and exact reflection near/far clipping boundary
+        reset();TestCl_Init();outside=branch!=1;framePresent=branch!=2;matrixPresent=branch!=3;nearClip=branch==4?190.f:.1f;farClip=branch==5?190.f:1000.f;
+        // Exercise the original normalizer's fallback for zero camera bases and sun direction
+        if(branch==6){cameraMatrix.right.x=0.f;cameraMatrix.up.z=0.f;cameraMatrix.at.y=0.f;CTimeCycle::sun=CVector(0.f,0.f,0.f);}
+        TestCl_Render();TestCl_Env(branch==0?NULL:camera);snapshot();
+    }
+    for(int h=4;h<=8;h++){
+        // Compare live game-camera, weather, sun, animation and reflection-basis mutations
+        reset();TestCl_Init();hook=h;if(h<=6)TestCl_Render();else TestCl_Env(camera);
+#ifdef REVC_SOFTWARE_POLYGONS
+        require(triggered);
+#else
+        if(h<=6)require(triggered);
+#endif
+        snapshot();
+    }
+    for(int i=0;i<64;i++){
+        // Compare all four quad corners, color aliases and UV/index order under nonorthogonal bases
+        reset();CloudsVector c={i*.3f,-i*.4f,7.f},r={1.f,.1f,i*.003f},u={.2f,0.f,1.f};CloudsColor t={23,71,199,113},b={151,47,29,241};TestCl_Quad(c,r,u,i*.125f,1.f+i*.25f,(i-32)*.07f,t,b,(i&1)!=0);snapshot();
+    }
+    reset();TestCl_Init();
+    for(int frame=0;frame<900;frame++){
+        // Sustain animation, sky changes, clipping and reflection geometry through timer wrap
+        Timer_timeMs+=37;hour=frame%24;minute=frame%60;second=(frame*7)%60;CWeather::Wind=(frame%10)*.1f;CWeather::Foggyness=(frame%5)*.15f;CWeather::CloudCoverage=(frame%7)*.1f;CWeather::ExtraSunnyness=(frame%3)*.2f;CWeather::Rainbow=(frame%6)*.1f;TheCamera.Orientation=frame*.013f;TheCamera.position.x=frame*.1f;TestCl_Update();TestCl_Render();TestCl_Env(camera);snapshot();
+    }
+    require(states>1300 && projects>20000 && sprites>10000);printf("states=%u calls=%u projects=%u sprites=%u quads=%u flushes=%u randoms=%u hash=%016llx\n",states,calls,projects,sprites,quads,flushes,randoms,(unsigned long long)hash);
+}

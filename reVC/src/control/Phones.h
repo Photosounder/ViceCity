@@ -1,9 +1,10 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Physical.h"
 
 class CPed;
-class CAnimBlendAssociation;
+struct CAnimBlendAssociation;
 
 enum PhoneState {
 	PHONE_STATE_FREE,
@@ -67,3 +68,4 @@ extern CPhoneInfo gPhoneInfo;
 
 void PhonePutDownCB(CAnimBlendAssociation *assoc, void *arg);
 void PhonePickUpCB(CAnimBlendAssociation *assoc, void *arg);
+//- rouz edit (ChatGPT)

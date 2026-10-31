@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "ColModel.h"
@@ -6,15 +7,7 @@
 #include "VuVector.h"
 #endif
 
-struct CStoredCollPoly
-{
-#ifdef VU_COLLISION
-	CVuVector verts[3];
-#else
-	CVector verts[3];
-#endif
-	bool valid;
-};
+#include "StoredCollPoly.h"
 
 // If you spawn many tanks at once, you will see that collisions of two entity exceeds 32.
 #if defined(FIX_BUGS) && !defined(SQUEEZE_PERFORMANCE)
@@ -63,8 +56,8 @@ public:
 	static bool ProcessLineOfSight(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough);
 	static bool ProcessVerticalLine(const CColLine &line, const CMatrix &matrix, CColModel &model, CColPoint &point, float &mindist, bool ignoreSeeThrough, bool ignoreShootThrough, CStoredCollPoly *poly);
 	static int32 ProcessColModels(const CMatrix &matrixA, CColModel &modelA, const CMatrix &matrixB, CColModel &modelB, CColPoint *spherepoints, CColPoint *linepoints, float *linedists);
-	static bool IsStoredPolyStillValidVerticalLine(const CVector &pos, float z, CColPoint &point, CStoredCollPoly *poly);
 
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point);
 	static float DistToLine(const CVector *l0, const CVector *l1, const CVector *point, CVector &closest);
 };
+//- rouz edit (ChatGPT)

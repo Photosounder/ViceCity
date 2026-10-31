@@ -1,0 +1,141 @@
+#include "owners.h"
+#include "RenderBuffer.h"
+#include "sprite2d-entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned events,checks,commands,draws,reads,destroys,failRead,reentries,mutations,setters,mutateAt;
+static bool nesting,reenterDraw;
+static Sprite2dArgs nestedArgs;
+static CRGBA *mutateColours;
+static CRect *mutateRect;
+static RwTexture textures[1024];
+static RwRaster rasters[1024];
+static uint32_t states[1024];
+static RwCamera camera={900,0.5f};
+TestScene Scene={&camera};
+VertexBufferUnion TempVertexBuffer;
+uint16_t TempBufferRenderIndexList[TEMPBUFFERINDEXSIZE];
+static void need(bool value)
+{
+    // Reject a precise diagnostic failure without opening a native error window
+    ++checks;if(!value){fprintf(stderr,"commands=%u checks=%u events=%u\n",commands,checks,events);abort();}
+}
+static void bytes(const void *data,size_t count)
+{
+    // Observe initialized representations and normalize SDK identities separately
+    const uint8_t *p=(const uint8_t*)data;for(size_t i=0;i<count;++i){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(uint32_t op,uint32_t a=0,uint32_t b=0)
+{
+    // Preserve external SDK call order and exact scalar arguments
+    uint32_t values[]={op,a,b};bytes(values,sizeof(values));++events;
+}
+static uint32_t identity(const void *object)
+{
+    // Normalize nullable controlled SDK resource identities
+    return object?*(const uint32_t*)object:0;
+}
+static void setter(void)
+{
+    // Keep actual caller-owned rectangle and colour fields live between SDK writes
+    ++setters;if(setters!=mutateAt)return;++mutations;if(mutateRect){mutateRect->left+=2.5f;mutateRect->right-=1.75f;mutateRect->top-=3;mutateRect->bottom+=4;}if(mutateColours)for(unsigned i=0;i<4;++i){mutateColours[i].r^=0x51;mutateColours[i].g^=0x37;mutateColours[i].b^=0xA5;mutateColours[i].a^=0x73;}
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Supply deterministic SDK texture objects and exact factory failure points
+    event(1);need(name!=NULL);bytes(name,strlen(name)+1);if(mask)bytes(mask,strlen(mask)+1);else event(2);++reads;if(reads==failRead)return NULL;need(reads<1024);RwTexture *texture=&textures[reads];rasters[reads].id=2000+reads;*texture={1000+reads,true,&rasters[reads],0};return texture;
+}
+void RwTextureDestroy(RwTexture *texture)
+{
+    // Observe actual resource destruction and reject double destruction
+    need(texture&&texture->alive);event(3,texture->id);texture->alive=false;++destroys;
+}
+void RwTextureSetAddressing(RwTexture *texture,RwTextureAddressMode mode)
+{
+    // Retain addressing changes only where the owner actually reaches the SDK
+    need(texture&&texture->alive);event(4,texture->id,mode);texture->address=mode;
+}
+RwRaster *RwTextureGetRaster(RwTexture *texture)
+{
+    // Borrow the raster from the actual live SDK texture object
+    need(texture&&texture->alive);event(5,texture->id);return texture->raster;
+}
+float RwCameraGetNearClipPlane(RwCamera *value)
+{
+    // Observe each original camera clip query without caching scene state in the fixture
+    need(value);event(6,value->id);return value->nearClip;
+}
+float RwIm2DGetNearScreenZ(void)
+{
+    // Supply a nonzero SDK near-screen depth
+    event(7);return 0.125f;
+}
+void RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Normalize actual raster addresses separately from integer render-state tokens
+    need(state>=0&&state<1024);uint32_t token=state==rwRENDERSTATETEXTURERASTER?identity(value):(uint32_t)(uintptr_t)value;event(8,state,token);states[state]=token;
+}
+static void verticesValue(const RwIm2DVertex *v,int32 count)
+{
+    // Observe all defined SDK vertex components without depending on structure padding
+    for(int32 i=0;i<count;++i){bytes(&v[i].x,7*sizeof(float));bytes(&v[i].colour,sizeof(RwRGBA));}
+}
+static void draw(RwPrimitiveType kind,RwIm2DVertex *vertices,int32 count)
+{
+    // Retain shared SDK array identity and observe nested writes to the same original buffers
+    Sprite2dState state;TestSprite2dState(&state);need(count>=0&&count<=TEMPBUFFERVERTSIZE);event(9,kind,vertices==state.immediate?1:vertices==TempVertexBuffer.im2d?2:3);bytes(&count,sizeof(count));verticesValue(vertices,count);++draws;
+    if(reenterDraw&&!nesting){
+        // Reenter actual rendering while the outer SDK vertex storage remains live
+        reenterDraw=false;nesting=true;++reentries;Sprite2dResult result;TestSprite2d(SD_DrawSolidRect,&nestedArgs,&result);nesting=false;
+    }
+    verticesValue(vertices,count);
+}
+void RwIm2DRenderPrimitive(RwPrimitiveType kind,RwIm2DVertex *vertices,int32 count)
+{
+    // Enter the observer with the original unindexed primitive topology
+    draw(kind,vertices,count);
+}
+void RwIm2DRenderIndexedPrimitive(RwPrimitiveType kind,RwIm2DVertex *vertices,int32 count,RwImVertexIndex *indices,int32 indexCount)
+{
+    // Observe every original index value before the actual shared-buffer draw
+    event(10,indexCount);bytes(indices,indexCount*sizeof(*indices));draw(kind,vertices,count);
+}
+void RwIm2DVertexSetScreenX(RwIm2DVertex *vertex,float value)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(20);bytes(&value,sizeof(value));vertex->x=value;
+}
+void RwIm2DVertexSetScreenY(RwIm2DVertex *vertex,float value)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(21);bytes(&value,sizeof(value));vertex->y=value;
+}
+void RwIm2DVertexSetScreenZ(RwIm2DVertex *vertex,float value)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(22);bytes(&value,sizeof(value));vertex->z=value;
+}
+void RwIm2DVertexSetCameraZ(RwIm2DVertex *vertex,float value)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(23);bytes(&value,sizeof(value));vertex->cameraZ=value;
+}
+void RwIm2DVertexSetRecipCameraZ(RwIm2DVertex *vertex,float value)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(24);bytes(&value,sizeof(value));vertex->reciprocal=value;
+}
+void RwIm2DVertexSetU(RwIm2DVertex *vertex,float value,float reciprocal)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(25);bytes(&value,sizeof(value));vertex->u=value;bytes(&reciprocal,sizeof(reciprocal));
+}
+void RwIm2DVertexSetV(RwIm2DVertex *vertex,float value,float reciprocal)
+{
+    // Observe the exact SDK scalar conversion and mutate live caller fields only between setter calls
+    setter();event(26);bytes(&value,sizeof(value));vertex->v=value;bytes(&reciprocal,sizeof(reciprocal));
+}
+void RwIm2DVertexSetIntRGBA(RwIm2DVertex *vertex,uint8_t r,uint8_t g,uint8_t b,uint8_t a)
+{
+    // Observe already narrowed SDK channels and preserve actual vertex colour storage
+    setter();event(28);vertex->colour={r,g,b,a};bytes(&vertex->colour,sizeof(RwRGBA));
+}

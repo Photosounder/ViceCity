@@ -1,4 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -23,6 +26,7 @@
 #include "Radar.h"
 #include "RoadBlocks.h"
 #include "Ropes.h"
+#include "Ropes_backend.h"
 #include "SetPieces.h"
 #include "SpecialFX.h"
 #include "Stats.h"
@@ -172,12 +176,12 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_CREATE_SCRIPT_ROADBLOCK:
 	{
 		CollectParameters(&m_nIp, 6);
-		CRoadBlocks::RegisterScriptRoadBlock(*(CVector*)&ScriptParams[0], *(CVector*)&ScriptParams[3]);
+		RoadBlocks_RegisterScriptRoadBlock(RoadBlocks_FromVector(*(CVector*)&ScriptParams[0]),RoadBlocks_FromVector(*(CVector*)&ScriptParams[3]));
 		return 0;
 	}
 	case COMMAND_CLEAR_ALL_SCRIPT_ROADBLOCKS:
 	{
-		CRoadBlocks::ClearScriptRoadBlocks();
+		RoadBlocks_ClearScriptRoadBlocks();
 		return 0;
 	}
 	case COMMAND_SET_CHAR_OBJ_WALK_TO_CHAR:
@@ -235,7 +239,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SWITCH_SECURITY_CAMERA:
 	{
 		CollectParameters(&m_nIp, 1);
-		CSpecialFX::bVideoCam = ScriptParams[0] != 0;
+		SpecialFX_bVideoCam = ScriptParams[0] != 0;
 		return 0;
 	}
 	//case COMMAND_IS_CHAR_IN_FLYING_VEHICLE:
@@ -266,7 +270,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	}
 	case COMMAND_ADD_MONEY_SPENT_ON_CLOTHES:
 		CollectParameters(&m_nIp, 1);
-		CStats::MoneySpentOnFashion(ScriptParams[0]);
+		Stats_MoneySpentOnFashion(ScriptParams[0]);
 		return 0;
 		
 	case COMMAND_SET_HELI_ORIENTATION:
@@ -466,25 +470,25 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SET_ZONE_CIVILIAN_CAR_INFO:
 	{
 		char label[12];
-		int16 carDensities[CCarCtrl::NUM_CAR_CLASSES] = { 0 };
-		int16 boatDensities[CCarCtrl::NUM_BOAT_CLASSES] = { 0 };
+		int16 carDensities[CARCLASS_NUM_CAR_CLASSES] = { 0 };
+		int16 boatDensities[CARCLASS_NUM_BOAT_CLASSES] = { 0 };
 		int i;
 
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, label);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		CollectParameters(&m_nIp, 12);
-		for (i = 0; i < CCarCtrl::NUM_CAR_CLASSES; i++)
+		for (i = 0; i < CARCLASS_NUM_CAR_CLASSES; i++)
 			carDensities[i] = ScriptParams[i + 1];
-		for (i = 0; i < CCarCtrl::NUM_BOAT_CLASSES; i++)
-			boatDensities[i] = ScriptParams[i + 1 + CCarCtrl::NUM_CAR_CLASSES];
-		int zone = CTheZones::FindZoneByLabelAndReturnIndex(label, ZONE_INFO);
+		for (i = 0; i < CARCLASS_NUM_BOAT_CLASSES; i++)
+			boatDensities[i] = ScriptParams[i + 1 + CARCLASS_NUM_CAR_CLASSES];
+		int zone = Zones_FindZoneByLabelAndReturnIndex(label, ZONE_INFO);
 		if (zone < 0) {
 			debug("Couldn't find zone - %s\n", label);
 			return 0;
 		}
 		while (zone >= 0) {
-			CTheZones::SetZoneCivilianCarInfo(zone, ScriptParams[0], carDensities, boatDensities);
-			zone = CTheZones::FindNextZoneByLabelAndReturnIndex(label, ZONE_INFO);
+			Zones_SetZoneCivilianCarInfo(zone, ScriptParams[0], carDensities, boatDensities);
+			zone = Zones_FindNextZoneByLabelAndReturnIndex(label, ZONE_INFO);
 		}
 		return 0;
 	}
@@ -493,7 +497,8 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		char key[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CStreaming::RequestAnim(CAnimManager::GetAnimationBlockIndex(key), STREAMFLAGS_SCRIPTOWNED);
+		// Use the complete C animation manager at the original call boundary
+		CStreaming::RequestAnim(AnimManager_GetAnimationBlockIndex(key), STREAMFLAGS_SCRIPTOWNED);
 		return 0;
 	}
 	case COMMAND_HAS_ANIMATION_LOADED:
@@ -501,7 +506,8 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		char key[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		UpdateCompareFlag(CAnimManager::GetAnimationBlock(key)->isLoaded);
+		// Use the complete C animation manager at the original call boundary
+		UpdateCompareFlag(AnimManager_GetAnimationBlockByName(key)->isLoaded);
 		return 0;
 	}
 	case COMMAND_REMOVE_ANIMATION:
@@ -509,7 +515,8 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		char key[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CStreaming::RemoveAnim(CAnimManager::GetAnimationBlockIndex(key));
+		// Use the complete C animation manager at the original call boundary
+		CStreaming::RemoveAnim(AnimManager_GetAnimationBlockIndex(key));
 		return 0;
 	}
 	case COMMAND_IS_CHAR_WAITING_FOR_WORLD_COLLISION:
@@ -572,31 +579,31 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		script_assert(CTheScripts::ScriptSpace[m_nIp++] == ARGUMENT_GLOBALVAR);
 		uint16 var = CTheScripts::Read2BytesFromScript(&m_nIp);
 		CollectParameters(&m_nIp, 2);
-		wchar* text = TheText.Get((char*)&CTheScripts::ScriptSpace[m_nIp]); // ???
+		wchar* text = Text_Get(&TheText,(char*)&CTheScripts::ScriptSpace[m_nIp]); // ???
 		strncpy(onscreen_str, (char*)&CTheScripts::ScriptSpace[m_nIp], KEY_LENGTH_IN_SCRIPT);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		CUserDisplay::OnscnTimer.AddCounter(var, ScriptParams[0], onscreen_str, ScriptParams[1] - 1);
+		OnscreenTimer_AddCounter(&OnscreenTimer_state,var, ScriptParams[0], onscreen_str, ScriptParams[1] - 1);
 		return 0;
 	}
 	case COMMAND_ADD_SET_PIECE:
 	{
 		CollectParameters(&m_nIp, 13);
-		CSetPieces::AddOne(ScriptParams[0],
-			*(CVector2D*)&ScriptParams[1], *(CVector2D*)&ScriptParams[3],
-			*(CVector2D*)&ScriptParams[5], *(CVector2D*)&ScriptParams[7],
-			*(CVector2D*)&ScriptParams[9], *(CVector2D*)&ScriptParams[11]);
+		SetPieces_AddOne(ScriptParams[0], // rouz edit (ChatGPT)
+			SetPiecePoint{*(float*)&ScriptParams[1],*(float*)&ScriptParams[1+1]}, SetPiecePoint{*(float*)&ScriptParams[3],*(float*)&ScriptParams[3+1]}, // rouz edit (ChatGPT)
+			SetPiecePoint{*(float*)&ScriptParams[5],*(float*)&ScriptParams[5+1]}, SetPiecePoint{*(float*)&ScriptParams[7],*(float*)&ScriptParams[7+1]}, // rouz edit (ChatGPT)
+			SetPiecePoint{*(float*)&ScriptParams[9],*(float*)&ScriptParams[9+1]}, SetPiecePoint{*(float*)&ScriptParams[11],*(float*)&ScriptParams[11+1]}); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_SET_EXTRA_COLOURS:
 	{
 		CollectParameters(&m_nIp, 2);
-		CTimeCycle::StartExtraColour(ScriptParams[0]-1, ScriptParams[1] != 0);
+		TimeCycle_StartExtraColour(ScriptParams[0]-1, ScriptParams[1] != 0);
 		return 0;
 	}
 	case COMMAND_CLEAR_EXTRA_COLOURS:
 	{
 		CollectParameters(&m_nIp, 1);
-		CTimeCycle::StopExtraColour(ScriptParams[0]);
+		TimeCycle_StopExtraColour(ScriptParams[0]);
 		return 0;
 	}
 	//case COMMAND_CLOSE_CAR_BOOT:
@@ -683,7 +690,8 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_CREATE_SWAT_ROPE:
 	{
 		CollectParameters(&m_nIp, 3);
-		CRopes::CreateRopeWithSwatComingDown(*(CVector*)&ScriptParams[0]);
+		// Enter the C rope algorithm with the original owner expressions
+		Ropes_CreateRopeWithSwatComingDown(Ropes_BackendCopyVector(*(CVector*)&ScriptParams[0]));
 		return 0;
 	}
 	//case COMMAND_SET_FIRST_PERSON_CONTROL_CAMERA:
@@ -697,7 +705,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_SWITCH_LIFT_CAMERA:
 	{
 		CollectParameters(&m_nIp, 1);
-		CSpecialFX::bLiftCam = ScriptParams[0] != 0;
+		SpecialFX_bLiftCam = ScriptParams[0] != 0;
 		return 0;
 	}
 	case COMMAND_CLOSE_ALL_CAR_DOORS:
@@ -805,7 +813,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		char key[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		// TheText.Get(key);
+		// Text_Get(&TheText,key);
 		CPickups::GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
 		ScriptParams[0] = CPickups::GenerateNewOne(pos, MI_PICKUP_PROPERTY, PICKUP_PROPERTY_LOCKED, 0, 0, false, key);
 		StoreParameters(&m_nIp, 1);
@@ -820,7 +828,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		char key[KEY_LENGTH_IN_SCRIPT];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		// TheText.Get(key);
+		// Text_Get(&TheText,key);
 		CPickups::GetActualPickupIndex(CollectNextParameterWithoutIncreasingPC(m_nIp));
 		ScriptParams[0] = CPickups::GenerateNewOne(pos, MI_PICKUP_PROPERTY_FORSALE, PICKUP_PROPERTY_FORSALE, ScriptParams[3], 0, false, key);
 		StoreParameters(&m_nIp, 1);
@@ -918,11 +926,11 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	//case COMMAND_IS_MISSION_AUDIO_LOADING:
 	case COMMAND_ADD_MONEY_SPENT_ON_WEAPONS:
 		CollectParameters(&m_nIp, 1);
-		CStats::MoneySpentOnWeapons(ScriptParams[0]);
+		Stats_MoneySpentOnWeapons(ScriptParams[0]);
 		return 0;
 	case COMMAND_ADD_MONEY_SPENT_ON_PROPERTY:
 		CollectParameters(&m_nIp, 1);
-		CStats::MoneySpentOnProperty(ScriptParams[0]);
+		Stats_MoneySpentOnProperty(ScriptParams[0]);
 		return 0;
 	//case COMMAND_ADD_MONEY_SPENT_ON_AUTO_PAINTING:
 	case COMMAND_SET_CHAR_ANSWERING_MOBILE:
@@ -943,7 +951,8 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		pPlayerInfo->m_pPed->m_nDrunkenness = ScriptParams[1];
 		pPlayerInfo->m_pPed->m_nFadeDrunkenness = 0;
 		if (pPlayerInfo->m_pPed->m_nDrunkenness == 0)
-			CMBlur::ClearDrunkBlur();
+			// Use the complete C motion-blur owner and its live shared state
+			MBlur_ClearDrunkBlur();
 		return 0;
 	}
 	//case COMMAND_GET_PLAYER_DRUNKENNESS:
@@ -952,21 +961,21 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	//case COMMAND_ADD_LOAN_SHARK_VISITS:
 	case COMMAND_ADD_STORES_KNOCKED_OFF:
 		CollectParameters(&m_nIp, 1);
-		CStats::NumOfStoresKnockedOff(ScriptParams[0]);
+		Stats_NumOfStoresKnockedOff(ScriptParams[0]);
 		return 0;
 	//case COMMAND_ADD_MOVIE_STUNTS:
 	case COMMAND_ADD_NUMBER_OF_ASSASSINATIONS:
 		CollectParameters(&m_nIp, 1);
-		CStats::NumOfAssassinations(ScriptParams[0]);
+		Stats_NumOfAssassinations(ScriptParams[0]);
 		return 0;
 	case COMMAND_ADD_PIZZAS_DELIVERED:
 		CollectParameters(&m_nIp, 1);
-		CStats::NumOfPizzasDelivered(ScriptParams[0]);
+		Stats_NumOfPizzasDelivered(ScriptParams[0]);
 		return 0;
 	//case COMMAND_ADD_GARBAGE_PICKUPS:
 	case COMMAND_ADD_ICE_CREAMS_SOLD:
 		CollectParameters(&m_nIp, 1);
-		CStats::NumOfIceCreamSold(ScriptParams[0]);
+		Stats_NumOfIceCreamSold(ScriptParams[0]);
 		return 0;
 	//case COMMAND_SET_TOP_SHOOTING_RANGE_SCORE:
 	//case COMMAND_ADD_SHOOTING_RANGE_RANK:
@@ -1043,27 +1052,27 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		CollectParameters(&m_nIp, 1);
 				// Access raw storage through the C store or pool API
 		CVehicle *pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
-				if (CTimer::GetTimeInMilliseconds() > pVehicle->m_nGunFiringTime + 150) {
+				if ((*Timer_GetTimeInMilliseconds()) > pVehicle->m_nGunFiringTime + 150) {
 			CWeapon gun(WEAPONTYPE_HELICANNON, 5000);
-			CVector worldGunPos = (pVehicle->GetMatrix() * vecHunterGunPos) + (CTimer::GetTimeStep() * pVehicle->m_vecMoveSpeed);
+			CVector worldGunPos = (pVehicle->GetMatrix() * vecHunterGunPos) + ((*Timer_GetTimeStep()) * pVehicle->m_vecMoveSpeed);
 			gun.FireInstantHit(pVehicle, &worldGunPos);
 			gun.AddGunshell(pVehicle, worldGunPos, CVector2D(0.f, 0.1f), 0.025f);
 			DMAudio_PlayOneShot(pVehicle->m_audioEntityId, SOUND_WEAPON_SHOT_FIRED, 0.f);
-			pVehicle->m_nGunFiringTime = CTimer::GetTimeInMilliseconds();
+			pVehicle->m_nGunFiringTime = (*Timer_GetTimeInMilliseconds());
 		}
 		return 0;
 	}
 	case COMMAND_SET_PROPERTY_AS_OWNED:
 		CollectParameters(&m_nIp, 1);
-		CStats::AddPropertyAsOwned(ScriptParams[0]);
+		Stats_AddPropertyAsOwned(ScriptParams[0]);
 		return 0;
 	case COMMAND_ADD_BLOOD_RING_KILLS:
 		CollectParameters(&m_nIp, 1);
-		CStats::AddNumBloodRingKills(ScriptParams[0]);
+		Stats_AddNumBloodRingKills(ScriptParams[0]);
 		return 0;
 	case COMMAND_SET_LONGEST_TIME_IN_BLOOD_RING:
 		CollectParameters(&m_nIp, 1);
-		CStats::LongestTimeInBloodRing(ScriptParams[0]);
+		Stats_LongestTimeInBloodRing(ScriptParams[0]);
 		return 0;
 	case COMMAND_REMOVE_EVERYTHING_FOR_HUGE_CUTSCENE:
 	{
@@ -1138,13 +1147,14 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		char key[8];
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
-		TheText.LoadMissionText(key);
+		Text_LoadMissionText(&TheText,key);
 		return 0;
 	}
 	case COMMAND_SET_TONIGHTS_EVENT:
 	{
 		CollectParameters(&m_nIp, 1);
-		CScrollBar::TonightsEvent = ScriptParams[0];
+		// Publish the stadium event to the canonical C scrolling-sign state
+		ScrollBar_TonightsEvent = ScriptParams[0];
 		return 0;
 	}
 	case COMMAND_CLEAR_CHAR_LAST_DAMAGE_ENTITY:
@@ -1199,7 +1209,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	//case COMMAND_GET_CLOSEST_WATER_NODE:
 	case COMMAND_ADD_PORN_LEAFLET_TO_RUBBISH:
 		CollectParameters(&m_nIp, 1);
-		CStats::PamphletMissionPassed = ScriptParams[0];
+		Stats_PamphletMissionPassed = ScriptParams[0];
 		return 0;
 	case COMMAND_CREATE_CLOTHES_PICKUP:
 	{
@@ -1260,7 +1270,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		if (pVehicle->m_vehType == VEHICLE_TYPE_BOAT)
 			pVehicle->AutoPilot.m_nCarMission = MISSION_CRUISE;
 		pVehicle->bEngineOn = true;
-		pVehicle->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pVehicle->GetPosition());
+		pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		CPopulation::ms_nTotalMissionPeds++;
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), pPed);
@@ -1284,7 +1294,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 		pPed->SetPosition(pVehicle->GetPosition());
 		pPed->SetOrientation(0.0f, 0.0f, 0.0f);
 		CPopulation::ms_nTotalMissionPeds++;
-		pVehicle->m_nZoneLevel = CTheZones::GetLevelFromPosition(&pVehicle->GetPosition());
+		pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		if (ScriptParams[1] >= 0)
 			pVehicle->AddPassenger(pPed, ScriptParams[1]);
 		else
@@ -1478,4 +1488,8 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	return -1;
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

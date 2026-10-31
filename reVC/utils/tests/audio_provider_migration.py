@@ -18,4 +18,5 @@ def facade(source, host=False):
     which='index' if host else 'which'
     include='AudioManager.h' if host else 'AudioControls.h'
     source=source.replace('#include "'+include+'"','#include "'+include+'"\n#include "AudioProvider.h"')
-    return source.replace('AudioManager.SetCurrent3DProvider('+which+')','AudioProvider_SetCurrent('+ARGS.format(which=which)+')')
+    import audio_music_state_migration as music
+    return music.calls(source.replace('AudioManager.SetCurrent3DProvider('+which+')','AudioProvider_SetCurrent('+ARGS.format(which=which)+')'))

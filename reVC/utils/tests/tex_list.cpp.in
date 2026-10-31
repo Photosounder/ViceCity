@@ -1,0 +1,67 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <climits>
+#include "common.h"
+#include "caller.h"
+#include "FileMgr.h"
+static uint64_t hash=1469598103934665603ULL;
+static unsigned states,searches,sets,loads,initializations,shutdowns,directories;
+static bool mutateDirectory;
+static void require(bool value)
+{
+    // Stop quietly if the original program or C program violates a corpus invariant
+    if(!value){fprintf(stderr,"Texture-list invariant failed at state %u\n",states);abort();}
+}
+static void word(uint32_t value)
+{
+    // Compare every scalar using a stable byte order
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void snapshot(void)
+{
+    // Observe all four hundred actual canonical flags after each public operation
+    states++;word(states);for(int i=0;i<400;i++)word(TestTex_Flags()[i]);word(directories);
+}
+extern "C" void FileMgr_SetDir(const char *directory)
+{
+    // Observe the original literal and permit the external owner to change live usage flags
+    require(strcmp(directory,"TEXTURES")==0);directories++;for(const char *p=directory;*p;p++)word((unsigned char)*p);word(0);
+    if(mutateDirectory){
+        // Keep owner-side flag mutations visible after the original global-list call returns
+        unsigned index=directories%400;TestTex_Flags()[index]=!TestTex_Flags()[index];
+    }
+}
+static void check(int expected)
+{
+    // Exercise all six complete public operations without substituting texture-loading behavior
+    searches++;require(TestTex_RunFree()==expected);word((uint32_t)expected);snapshot();
+    initializations++;TestTex_RunInit();snapshot();shutdowns++;TestTex_RunShutdown();snapshot();
+    searches++;require(TestTex_RunFree()==expected);snapshot();
+    char empty[]="",name[]="texture.bmp",other[]="../different name";char *names[]={NULL,empty,name,other};const int32_t slots[]={INT_MIN,-1,0,399,400,INT_MAX};
+    for(char *text:names){
+        // Retain the original null result for every slot without marking or reading a texture name
+        for(int32_t slot:slots){sets++;require(TestTex_RunSet(slot,text)==NULL);word((uint32_t)slot);snapshot();}
+        loads++;require(TestTex_RunLoad(text)==NULL);snapshot();
+    }
+    searches++;require(TestTex_RunFree()==expected);snapshot();mutateDirectory=false;TestTex_RunGlobal();snapshot();
+}
+int main(void)
+{
+    // Verify zero initialization before entering any operation
+    for(int i=0;i<400;i++)require(!TestTex_Flags()[i]);snapshot();
+    for(int used=0;used<=400;used++){
+        // Cover every first-free result and complete exhaustion with exact prefix masks
+        for(int i=0;i<400;i++)TestTex_Flags()[i]=i<used;check(used==400?-1:used);
+    }
+    uint32_t seed=0x31415926U;
+    for(unsigned pattern=0;pattern<64;pattern++){
+        // Check holes and sparse distributions independently of the prefix corpus
+        int expected=-1;for(int i=0;i<400;i++){seed=seed*1664525U+1013904223U;bool used=(seed>>24)>pattern*4;TestTex_Flags()[i]=used;if(!used && expected<0)expected=i;}check(expected);
+    }
+    for(unsigned i=0;i<16;i++){
+        // Keep live external mutations and initialization/shutdown no-ops observable over repeated calls
+        mutateDirectory=true;TestTex_RunGlobal();snapshot();initializations++;TestTex_RunInit();snapshot();shutdowns++;TestTex_RunShutdown();snapshot();
+    }
+    printf("states=%u searches=%u sets=%u loads=%u initializations=%u shutdowns=%u directories=%u hash=%016llx\n",states,searches,sets,loads,initializations,shutdowns,directories,(unsigned long long)hash);return 0;
+}

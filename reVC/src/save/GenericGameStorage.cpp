@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #include "crossplatform.h"
@@ -41,6 +43,7 @@
 #include "Zones.h"
 #include "Timecycle.h"
 #include "Fluff.h"
+#include "Plane.h" // rouz edit (ChatGPT)
 
 #define BLOCK_COUNT 22
 #define SIZE_OF_SIMPLEVARS 0xE4
@@ -72,27 +75,9 @@ bool StillToFadeOut;
 uint32 TimeStartedCountingForFade;
 uint32 TimeToStayFadedBeforeFadeOut = 1750;
 
-int32 RadioStationPosition[NUM_RADIOS];
 
-void
-InitRadioStationPositionList()
-{
-	for (int i = 0; i < NUM_RADIOS; i++)
-		RadioStationPosition[i] = -1;
-}
 
-int32
-GetSavedRadioStationPosition(int32 station)
-{
-	return RadioStationPosition[station];
-}
 
-void
-PopulateRadioStationPositionList()
-{
-	for (int i = 0; i < NUM_RADIOS; i++)
-		RadioStationPosition[i] = DMAudio_GetRadioPosition(i);
-}
 
 #define ReadDataFromBufferPointer(buf, to) memcpy(&to, buf, sizeof(to)); buf += align4bytes(sizeof(to));
 #define WriteDataToBufferPointer(buf, from) memcpy(buf, &from, sizeof(from)); buf += align4bytes(sizeof(from));
@@ -150,7 +135,7 @@ GenericSave(int file)
 	reserved = 0;
 
 	// Save simple vars
-	lastMissionPassed = TheText.Get(CStats::LastMissionPassedName[0] ? CStats::LastMissionPassedName : "ITBEG");
+	lastMissionPassed = Text_Get(&TheText,Stats_LastMissionPassedName[0] ? Stats_LastMissionPassedName : "ITBEG");
 	AsciiToUnicode("...'", suffix);
 	suffix[3] = L'\0';
 #ifdef FIX_BUGS
@@ -180,25 +165,25 @@ GenericSave(int file)
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().x);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().y);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().z);
-	WriteDataToBufferPointer(buf, CClock::ms_nMillisecondsPerGameMinute);
-	WriteDataToBufferPointer(buf, CClock::ms_nLastClockTick);
-	WriteDataToBufferPointer(buf, CClock::ms_nGameClockHours);
-	WriteDataToBufferPointer(buf, CClock::ms_nGameClockMinutes);
+	WriteDataToBufferPointer(buf, Clock_millisecondsPerMinute);
+	WriteDataToBufferPointer(buf, Clock_lastTick);
+	WriteDataToBufferPointer(buf, Clock_hours);
+	WriteDataToBufferPointer(buf, Clock_minutes);
 	currPad = CPad::GetPad(0);
 	WriteDataToBufferPointer(buf, currPad->Mode);
-	WriteDataToBufferPointer(buf, CTimer::m_snTimeInMilliseconds);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeScale);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeStep);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeStepNonClipped);
-	WriteDataToBufferPointer(buf, CTimer::m_FrameCounter);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fTimeStep);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fFramesPerUpdate);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fTimeScale);
-	WriteDataToBufferPointer(buf, CWeather::OldWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::NewWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::ForcedWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::InterpolationValue);
-	WriteDataToBufferPointer(buf, CWeather::WeatherTypeInList);
+	WriteDataToBufferPointer(buf, Timer_timeMs);
+	WriteDataToBufferPointer(buf, Timer_timeScale);
+	WriteDataToBufferPointer(buf, Timer_timeStep);
+	WriteDataToBufferPointer(buf, Timer_nonClippedTimeStep);
+	WriteDataToBufferPointer(buf, Timer_frameCounter);
+	WriteDataToBufferPointer(buf, TimeStep_timeStep);
+	WriteDataToBufferPointer(buf, TimeStep_framesPerUpdate);
+	WriteDataToBufferPointer(buf, TimeStep_timeScale);
+	WriteDataToBufferPointer(buf, Weather_OldWeatherType);
+	WriteDataToBufferPointer(buf, Weather_NewWeatherType);
+	WriteDataToBufferPointer(buf, Weather_ForcedWeatherType);
+	WriteDataToBufferPointer(buf, Weather_InterpolationValue);
+	WriteDataToBufferPointer(buf, Weather_WeatherTypeInList);
 #ifdef COMPATIBLE_SAVES
 	// converted to float for compatibility with original format
 	// TODO: maybe remove this? not really gonna break anything vital
@@ -213,9 +198,9 @@ GenericSave(int file)
 	WriteDataToBufferPointer(buf, CGame::currArea);
 	WriteDataToBufferPointer(buf, CVehicle::bAllTaxisHaveNitro);
 	WriteDataToBufferPointer(buf, CPad::bInvertLook4Pad);
-	WriteDataToBufferPointer(buf, CTimeCycle::m_ExtraColour);
-	WriteDataToBufferPointer(buf, CTimeCycle::m_bExtraColourOn);
-	WriteDataToBufferPointer(buf, CTimeCycle::m_ExtraColourInter);
+	WriteDataToBufferPointer(buf, TimeCycle_m_ExtraColour);
+	WriteDataToBufferPointer(buf, TimeCycle_m_bExtraColourOn);
+	WriteDataToBufferPointer(buf, TimeCycle_m_ExtraColourInter);
 	PopulateRadioStationPositionList();
 	WriteDataToBufferPointer(buf, RadioStationPosition);
 	assert(buf - work_buff == SIZE_OF_SIMPLEVARS);
@@ -242,19 +227,20 @@ GenericSave(int file)
 	WriteSaveDataBlock(CCranes::Save, "CranesSize");
 	WriteSaveDataBlock(CPickups::Save, "PickUpsSize");
 	WriteSaveDataBlock(gPhoneInfo.Save, "PhoneInfoSize");
-	WriteSaveDataBlock(CRestart::SaveAllRestartPoints, "RestartPointsBufferSize");
+	WriteSaveDataBlock(Restart_SaveAllRestartPoints, "RestartPointsBufferSize"); // rouz edit (ChatGPT)
 	WriteSaveDataBlock(CRadar::SaveAllRadarBlips, "RadarBlipsBufferSize");
-	WriteSaveDataBlock(CTheZones::SaveAllZones, "AllZonesBufferSize");
-	WriteSaveDataBlock(CGangs::SaveAllGangData, "AllGangDataSize");
+	WriteSaveDataBlock(Zones_SaveAllZones, "AllZonesBufferSize");
+	WriteSaveDataBlock(Gangs_SaveAllGangData, "AllGangDataSize");
 	WriteSaveDataBlock(CTheCarGenerators::SaveAllCarGenerators, "AllCarGeneratorsSize");
 	WriteSaveDataBlock(CParticleObject::SaveParticle, "ParticlesSize");
 	WriteSaveDataBlock(AudioScriptObject_SaveAll, "AllAudioScriptObjectsSize");
-	WriteSaveDataBlock(CScriptPaths::Save, "ScriptPathsSize");
+	// Enter the C scripted-path operation at the original call point
+	WriteSaveDataBlock(ScriptPaths_Save, "ScriptPathsSize");
 	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo, "PlayerInfoSize");
-	WriteSaveDataBlock(CStats::SaveStats, "StatsSize");
-	WriteSaveDataBlock(CSetPieces::Save, "SetPiecesSize");
+	WriteSaveDataBlock(Stats_SaveStats, "StatsSize");
+	WriteSaveDataBlock(SetPieces_Save, "SetPiecesSize"); // rouz edit (ChatGPT)
 	WriteSaveDataBlock(CStreaming::MemoryCardSave, "StreamingSize");
-	WriteSaveDataBlock(CPedType::Save, "PedTypeSize");
+	WriteSaveDataBlock(PedType_Save, "PedTypeSize");
 
 	// sure just write garbage data repeatedly ...
 #ifndef THIS_IS_STUPID
@@ -274,8 +260,8 @@ GenericSave(int file)
 	}
 	
 	// Write checksum and close
-	CFileMgr::Write(file, (const char *) &CheckSum, sizeof(CheckSum));
-	if (CFileMgr::GetErrorReadWrite(file)) {
+	FileMgr_Write(file, (const char *) &CheckSum, sizeof(CheckSum));
+	if (FileMgr_GetErrorReadWrite(file)) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_SAVE_WRITE;
 		if (!CloseFile(file))
 			PcSaveHelper.nErrorCode = SAVESTATUS_ERR_SAVE_CLOSE;
@@ -303,6 +289,8 @@ GenericLoad()
 	// Load SimpleVars and Scripts
 	CheckSum = 0;
 	CDate dummy; // unused
+	// Initialize the former date object at its original declaration point
+	Date_Initialize(&dummy);
 	CPad::ResetCheats();
 	if (!ReadInSizeofSaveFileBuffer(file, size))
 		return false;
@@ -317,30 +305,30 @@ GenericLoad()
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().x);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().y);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().z);
-	ReadDataFromBufferPointer(buf, CClock::ms_nMillisecondsPerGameMinute);
-	ReadDataFromBufferPointer(buf, CClock::ms_nLastClockTick);
-	ReadDataFromBufferPointer(buf, CClock::ms_nGameClockHours);
-	ReadDataFromBufferPointer(buf, CClock::ms_nGameClockMinutes);
+	ReadDataFromBufferPointer(buf, Clock_millisecondsPerMinute);
+	ReadDataFromBufferPointer(buf, Clock_lastTick);
+	ReadDataFromBufferPointer(buf, Clock_hours);
+	ReadDataFromBufferPointer(buf, Clock_minutes);
 	currPad = CPad::GetPad(0);
 	ReadDataFromBufferPointer(buf, currPad->Mode);
-	ReadDataFromBufferPointer(buf, CTimer::m_snTimeInMilliseconds);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeScale);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeStep);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeStepNonClipped);
-	ReadDataFromBufferPointer(buf, CTimer::m_FrameCounter);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fTimeStep);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fFramesPerUpdate);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fTimeScale);
-	ReadDataFromBufferPointer(buf, CWeather::OldWeatherType);
-	ReadDataFromBufferPointer(buf, CWeather::NewWeatherType);
-	ReadDataFromBufferPointer(buf, CWeather::ForcedWeatherType);
+	ReadDataFromBufferPointer(buf, Timer_timeMs);
+	ReadDataFromBufferPointer(buf, Timer_timeScale);
+	ReadDataFromBufferPointer(buf, Timer_timeStep);
+	ReadDataFromBufferPointer(buf, Timer_nonClippedTimeStep);
+	ReadDataFromBufferPointer(buf, Timer_frameCounter);
+	ReadDataFromBufferPointer(buf, TimeStep_timeStep);
+	ReadDataFromBufferPointer(buf, TimeStep_framesPerUpdate);
+	ReadDataFromBufferPointer(buf, TimeStep_timeScale);
+	ReadDataFromBufferPointer(buf, Weather_OldWeatherType);
+	ReadDataFromBufferPointer(buf, Weather_NewWeatherType);
+	ReadDataFromBufferPointer(buf, Weather_ForcedWeatherType);
 #ifdef SECUROM
-	if (CTimer::m_FrameCounter > 72000){
+	if (Timer_frameCounter > 72000){
 		buf += align4bytes(4);
 	}
 #endif
-	ReadDataFromBufferPointer(buf, CWeather::InterpolationValue);
-	ReadDataFromBufferPointer(buf, CWeather::WeatherTypeInList);
+	ReadDataFromBufferPointer(buf, Weather_InterpolationValue);
+	ReadDataFromBufferPointer(buf, Weather_WeatherTypeInList);
 #ifdef COMPATIBLE_SAVES
 	// converted to float for compatibility with original format
 	// TODO: maybe remove this? not really gonna break anything vital
@@ -360,15 +348,15 @@ GenericLoad()
 #else
 	ReadDataFromBufferPointer(buf, CPad::bInvertLook4Pad);
 #endif
-	ReadDataFromBufferPointer(buf, CTimeCycle::m_ExtraColour);
-	ReadDataFromBufferPointer(buf, CTimeCycle::m_bExtraColourOn);
-	ReadDataFromBufferPointer(buf, CTimeCycle::m_ExtraColourInter);
+	ReadDataFromBufferPointer(buf, TimeCycle_m_ExtraColour);
+	ReadDataFromBufferPointer(buf, TimeCycle_m_bExtraColourOn);
+	ReadDataFromBufferPointer(buf, TimeCycle_m_ExtraColourInter);
 	ReadDataFromBufferPointer(buf, RadioStationPosition);
 	assert(buf - work_buff == SIZE_OF_SIMPLEVARS);
 #ifdef MISSION_REPLAY
 	WaitForSave = 0;
 	if (FrontEndMenuManager.m_nCurrSaveSlot == PAUSE_SAVE_SLOT && qs == 3)
-		WaitForMissionActivate = CTimer::GetTimeInMilliseconds() + 2000;
+		WaitForMissionActivate = (*Timer_GetTimeInMilliseconds()) + 2000;
 #endif
 	ReadDataFromBlock("Loading Scripts \n", CTheScripts::LoadAllScripts);
 
@@ -382,7 +370,7 @@ GenericLoad()
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Vehicles \n", CPools::LoadVehiclePool);
 	LoadSaveDataBlock();
-	CProjectileInfo::RemoveAllProjectiles();
+	ProjectileInfo_RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	ReadDataFromBlock("Loading Objects \n", CPools::LoadObjectPool);
 	LoadSaveDataBlock();
@@ -394,13 +382,13 @@ GenericLoad()
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Phoneinfo \n", gPhoneInfo.Load);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Restart \n", CRestart::LoadAllRestartPoints);
+	ReadDataFromBlock("Loading Restart \n", Restart_LoadAllRestartPoints); // rouz edit (ChatGPT)
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Radar Blips \n", CRadar::LoadAllRadarBlips);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Zones \n", CTheZones::LoadAllZones);
+	ReadDataFromBlock("Loading Zones \n", Zones_LoadAllZones);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Gang Data \n", CGangs::LoadAllGangData);
+	ReadDataFromBlock("Loading Gang Data \n", Gangs_LoadAllGangData);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Car Generators \n", CTheCarGenerators::LoadAllCarGenerators);
 	CParticle::ReloadConfig();
@@ -409,17 +397,18 @@ GenericLoad()
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading AudioScript Objects \n", AudioScriptObject_LoadAll);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading ScriptPaths \n", CScriptPaths::Load);
+	// Enter the C scripted-path operation at the original call point
+	ReadDataFromBlock("Loading ScriptPaths \n", ScriptPaths_Load);
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Player Info \n", CWorld::Players[CWorld::PlayerInFocus].LoadPlayerInfo);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Stats \n", CStats::LoadStats);
+	ReadDataFromBlock("Loading Stats \n", Stats_LoadStats);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading Set Pieces \n", CSetPieces::Load);
+	ReadDataFromBlock("Loading Set Pieces \n", SetPieces_Load); // rouz edit (ChatGPT)
 	LoadSaveDataBlock();
 	ReadDataFromBlock("Loading Streaming Stuff \n", CStreaming::MemoryCardLoad);
 	LoadSaveDataBlock();
-	ReadDataFromBlock("Loading PedType Stuff \n", CPedType::Load);
+	ReadDataFromBlock("Loading PedType Stuff \n", PedType_Load);
 
 	DMAudio_SetMusicMasterVolume(FrontEndMenuManager.m_PrefsMusicVolume);
 	DMAudio_SetEffectsMasterVolume(FrontEndMenuManager.m_PrefsSfxVolume);
@@ -436,13 +425,13 @@ GenericLoad()
 bool
 ReadInSizeofSaveFileBuffer(int32 &file, uint32 &size)
 {
-	file = CFileMgr::OpenFile(LoadFileName, "rb");
+	file = FileMgr_OpenFile(LoadFileName, "rb");
 	if (file == 0) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_OPEN;
 		return false;
 	}
-	CFileMgr::Read(file, (const char*)&size, sizeof(size));
-	if (CFileMgr::GetErrorReadWrite(file)) {
+	FileMgr_Read(file, (const char*)&size, sizeof(size));
+	if (FileMgr_GetErrorReadWrite(file)) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_READ;
 		if (!CloseFile(file))
 			PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_CLOSE;
@@ -458,8 +447,8 @@ ReadDataFromFile(int32 file, uint8 *buf, uint32 size)
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_OPEN;
 		return false;
 	}
-	size_t read_size = CFileMgr::Read(file, (const char*)buf, size);
-	if (CFileMgr::GetErrorReadWrite(file) || read_size != size) {
+	size_t read_size = FileMgr_Read(file, (const char*)buf, size);
+	if (FileMgr_GetErrorReadWrite(file) || read_size != size) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_READ;
 		if (!CloseFile(file))
 			PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_CLOSE;
@@ -471,7 +460,7 @@ ReadDataFromFile(int32 file, uint8 *buf, uint32 size)
 bool
 CloseFile(int32 file)
 {
-	return CFileMgr::CloseFile(file) == 0;
+	return FileMgr_CloseFile(file) == 0;
 }
 
 void
@@ -561,7 +550,7 @@ CheckDataNotCorrupt(int32 slot, char *name)
 	CheckSum = 0;
 	uint32 bytes_processed = 0;
 	sprintf(filename, "%s%i%s", DefaultPCSaveFileName, slot + 1, ".b");
-	int file = CFileMgr::OpenFile(filename, "rb");
+	int file = FileMgr_OpenFile(filename, "rb");
 	if (file == 0)
 		return false;
 	strcpy(name, filename);
@@ -613,13 +602,13 @@ RestoreForStartLoad()
 {
 	uint8 buf[999];
 
-	int file = CFileMgr::OpenFile(LoadFileName, "rb");
+	int file = FileMgr_OpenFile(LoadFileName, "rb");
 	if (file == 0) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_OPEN;
 		return false;
 	}
 	ReadDataFromFile(file, buf, sizeof(buf));
-	if (CFileMgr::GetErrorReadWrite(file)) {
+	if (FileMgr_GetErrorReadWrite(file)) {
 		PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_READ;
 		if (!CloseFile(file))
 			PcSaveHelper.nErrorCode = SAVESTATUS_ERR_LOAD_CLOSE;
@@ -651,9 +640,9 @@ align4bytes(int32 size)
 #ifdef FIX_INCOMPATIBLE_SAVES
 #define LoadSaveDataBlockNoCheck(buf, file, size) \
 do { \
-	CFileMgr::Read(file, (const char *)&size, sizeof(size)); \
+	FileMgr_Read(file, (const char *)&size, sizeof(size)); \
 	size = align4bytes(size); \
-	CFileMgr::Read(file, (const char *)work_buff, size); \
+	FileMgr_Read(file, (const char *)work_buff, size); \
 	buf = work_buff; \
 } while(0)
 
@@ -705,13 +694,13 @@ uint8
 GetSaveType(char *savename)
 {
 	uint8 save_type = SAVE_TYPE_NONE;
-	int file = CFileMgr::OpenFile(savename, "rb");
+	int file = FileMgr_OpenFile(savename, "rb");
 
 	uint32 size;
-	CFileMgr::Read(file, (const char *)&size, sizeof(size));
+	FileMgr_Read(file, (const char *)&size, sizeof(size));
 
 	uint8 *buf = work_buff;
-	CFileMgr::Read(file, (const char *)work_buff, size); // simple vars + scripts
+	FileMgr_Read(file, (const char *)work_buff, size); // simple vars + scripts
 
 	buf += 0x40 + sizeof(int32) + sizeof(int32) + sizeof(float) * 3;
 
@@ -736,7 +725,7 @@ GetSaveType(char *savename)
 
 	LoadSaveDataBlockNoCheck(buf, file, size); // cranes
 
-	CFileMgr::CloseFile(file);
+	FileMgr_CloseFile(file);
 
 	ReadDataFromBufferPointer(buf, size);
 
@@ -1074,17 +1063,17 @@ FixSave(int32 slot, uint8 save_type)
 
 	assert(caserename(savename, savename_bak) == 0);
 
-	int file_in = CFileMgr::OpenFile(savename_bak, "rb");
-	int file_out = CFileMgr::OpenFileForWriting(savename);
+	int file_in = FileMgr_OpenFile(savename_bak, "rb");
+	int file_out = FileMgr_OpenFileForWriting(savename);
 
 	CheckSum = 0;
 	totalSize = 0;
 
-	CFileMgr::Read(file_in, (const char *)&size, sizeof(size));
+	FileMgr_Read(file_in, (const char *)&size, sizeof(size));
 	size = align4bytes(size);
 
 	buf = work_buff;
-	CFileMgr::Read(file_in, (const char *)work_buff, size); // simple vars + scripts
+	FileMgr_Read(file_in, (const char *)work_buff, size); // simple vars + scripts
 
 	if (save_type & SAVE_TYPE_STEAM && save_type & SAVE_TYPE_MSVC && save_type & SAVE_TYPE_32_BIT) {
 		memset(work_buff2, 0, sizeof(work_buff2));
@@ -1193,14 +1182,14 @@ FixSave(int32 slot, uint8 save_type)
 		}
 	}
 
-	if (!CFileMgr::Write(file_out, (const char *)&CheckSum, sizeof(CheckSum)))
+	if (!FileMgr_Write(file_out, (const char *)&CheckSum, sizeof(CheckSum)))
 		goto fail;
 
 	success = true;
 
 fail:;
-	CFileMgr::CloseFile(file_in);
-	CFileMgr::CloseFile(file_out);
+	FileMgr_CloseFile(file_in);
+	FileMgr_CloseFile(file_out);
 
 	return success;
 }
@@ -1229,23 +1218,27 @@ bool SaveGameForPause(int type)
 		debug("SaveGameForPause failed during AllowMissionReplay %d", AllowMissionReplay);
 		return false;
 	}
-	if (type != SAVE_TYPE_QUICKSAVE_FOR_MISSION_REPLAY && WaitForSave > CTimer::GetTimeInMilliseconds()) {
+	if (type != SAVE_TYPE_QUICKSAVE_FOR_MISSION_REPLAY && WaitForSave > (*Timer_GetTimeInMilliseconds())) {
 		debug("SaveGameForPause failed WaitForSave");
 		return false;
 	}
 	WaitForSave = 0;
 	if (gGameState != GS_PLAYING_GAME || (CTheScripts::bAlreadyRunningAMissionScript && type != SAVE_TYPE_QUICKSAVE_FOR_SCRIPT_ON_A_MISSION)) {
-		DisplaySaveResult(3, CStats::LastMissionPassedName);
+		DisplaySaveResult(3, Stats_LastMissionPassedName);
 		return false;
 	}
-	debug("SaveGameForPause ******************************** %s doSave %d", CStats::LastMissionPassedName, !CTheScripts::bAlreadyRunningAMissionScript);
+	debug("SaveGameForPause ******************************** %s doSave %d", Stats_LastMissionPassedName, !CTheScripts::bAlreadyRunningAMissionScript);
 	IsQuickSave = type;
 	MissionStartTime = 0;
 	int res = PcSaveHelper.SaveSlot(PAUSE_SAVE_SLOT);
 	PcSaveHelper.PopulateSlotInfo();
 	IsQuickSave = 0;
-	DisplaySaveResult(res, CStats::LastMissionPassedName);
+	DisplaySaveResult(res, Stats_LastMissionPassedName);
 	return true;
 }
 #endif
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

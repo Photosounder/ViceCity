@@ -1,0 +1,72 @@
+#include "sdk.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,registrations,streamRegistrations,reads,writes;
+static int32_t nextOffset,streamResult;
+static int32_t observedOffset;
+static bool reenter;
+static void *expectedBuffer;
+static RwPluginObjectConstructor construct;
+static RwPluginObjectDestructor destruct;
+static RwPluginObjectCopy copyObject;
+static RwPluginDataChunkReadCallBack readObject;
+static RwPluginDataChunkWriteCallBack writeObject;
+static RwPluginDataChunkGetSizeCallBack sizeObject;
+static void require(bool value)
+{
+    // Fail quietly at the exact fixture contract violation
+    ++checks;if(!value){fprintf(stderr,"check=%u\n",checks);abort();}
+}
+static void hashBytes(const void *value,size_t count)
+{
+    // Observe every initialized byte while excluding process-specific pointer addresses
+    const unsigned char *bytes=(const unsigned char*)value;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+RwInt32 RwFrameRegisterPlugin(RwInt32 size,RwUInt32 id,RwPluginObjectConstructor ctor,RwPluginObjectDestructor dtor,RwPluginObjectCopy copy)
+{
+    // Capture actual registered callbacks and verify registration observes the previous global offset
+    require(size==24&&id==0x0253F2FE&&ctor&&dtor&&copy);RwFrame probe={};char *name=TestName(&probe);require(name==(observedOffset<0?NULL:(char*)&probe+observedOffset));++registrations;construct=ctor;destruct=dtor;copyObject=copy;return nextOffset;
+}
+RwInt32 RwFrameRegisterPluginStream(RwUInt32 id,RwPluginDataChunkReadCallBack read,RwPluginDataChunkWriteCallBack write,RwPluginDataChunkGetSizeCallBack size)
+{
+    // Capture the actual typed SDK stream callbacks even when object registration reports failure
+    require(id==0x0253F2FE&&read&&write&&size);require(registrations==streamRegistrations+1);++streamRegistrations;readObject=read;writeObject=write;sizeObject=size;observedOffset=nextOffset;return streamResult;
+}
+RwUInt32 RwStreamRead(RwStream *stream,void *buffer,RwUInt32 length)
+{
+    // Preserve partial SDK reads and expose any cached caller buffer address
+    require(buffer==expectedBuffer&&length==stream->requested);++reads;uint32_t count=length<stream->limit?length:stream->limit;memcpy(buffer,stream->bytes,count);
+    // Reenter registration at the native boundary to verify the terminator uses the new live global offset
+    if(reenter){reenter=false;nextOffset=observedOffset+4;require(TestAttach());}
+    return count;
+}
+RwStream *RwStreamWrite(RwStream *stream,const void *buffer,RwUInt32 length)
+{
+    // Observe the exact requested bytes and preserve the SDK write failure return
+    require(buffer==expectedBuffer&&length==stream->requested);++writes;uint32_t count=length<stream->limit?length:stream->limit;memcpy(stream->bytes,buffer,count);return stream->failure?NULL:stream;
+}
+int main(void)
+{
+    // Check the original zero-initialized global slot before any SDK registration
+    RwFrame first;memset(&first,0xa5,sizeof(first));require(TestName(&first)==(char*)&first);observedOffset=0;
+    // Cover failed, zero and positive registered offsets while varying ignored callback arguments
+    const int32_t offsets[]={-2,-1,0,16,24,32,40,48};unsigned copies=0,reentries=0;
+    for(unsigned test=0;test<4096;++test){
+        // Preserve noncanonical registration results and ignored stream-registration failures
+        nextOffset=offsets[test%8];streamResult=(test&1)?-1:0;int32_t offset=nextOffset;require(TestAttach()==(offset!=-1));require(registrations==streamRegistrations);RwFrame source,target;memset(&source,0xa5,sizeof(source));memset(&target,0xd7,sizeof(target));char *name=TestName(&source);require(name==(offset<0?NULL:(char*)&source+offset));
+        // Prove construction uses the registered global offset and leaves all other bytes untouched
+        require(construct(&source,91,3)==&source);for(unsigned i=0;i<sizeof(source);++i)require(source.bytes[i]==(offset>0&&i==(unsigned)offset?0:0xa5));require(destruct(&source,-77,1)==&source);hashBytes(&source,sizeof(source));
+        if(offset<0)continue;
+        // Exercise zero padding, truncation and the untouched twenty-fourth destination byte
+        unsigned length=(test/8)%32;for(unsigned i=0;i<length;++i)source.bytes[offset+i]=(unsigned char)('A'+(test+i)%26);source.bytes[offset+length]=0;require(copyObject(&target,&source,87,1)==NULL);++copies;
+        for(unsigned i=0;i<sizeof(target);++i){unsigned char value=0xd7;if(i>=(unsigned)offset&&i<(unsigned)offset+23)value=i<(unsigned)offset+length?source.bytes[i]:0;require(target.bytes[i]==value);}require(sizeObject(&source,99,-3)==(int32_t)length);hashBytes(&target,sizeof(target));
+        // Keep binary read length independent of the actual SDK byte count and callback offset arguments
+        unsigned binaryLength=(test/8)%24;RwStream stream={};stream.requested=binaryLength;stream.limit=binaryLength?binaryLength-(test%3):0;if(stream.limit>binaryLength)stream.limit=0;for(unsigned i=0;i<sizeof(stream.bytes);++i)stream.bytes[i]=(unsigned char)('a'+i%26);memset(&target,0xa5,sizeof(target));expectedBuffer=target.bytes+offset;reenter=(test%8)==7;if(reenter)++reentries;
+        require(readObject(&stream,(int32_t)binaryLength,&target,101,2)==&stream);int32_t finalOffset=observedOffset;require(TestName(&target)==(char*)&target+finalOffset);
+        for(unsigned i=0;i<sizeof(target);++i){unsigned char value=0xa5;if(i>=(unsigned)offset&&i<(unsigned)offset+stream.limit)value=stream.bytes[i-offset];if(i==(unsigned)finalOffset+binaryLength)value=0;require(target.bytes[i]==value);}hashBytes(&target,sizeof(target));
+        // Prove writes use the current registered slot and return the caller stream even after SDK failure
+        memset(&stream,0,sizeof(stream));memset(stream.bytes,0xd7,sizeof(stream.bytes));stream.requested=binaryLength;stream.limit=binaryLength/2;stream.failure=(test&1)!=0;expectedBuffer=source.bytes+finalOffset;require(writeObject(&stream,(int32_t)binaryLength,&source,55,-8)==&stream);for(unsigned i=0;i<sizeof(stream.bytes);++i)require(stream.bytes[i]==(i<stream.limit?source.bytes[finalOffset+i]:0xd7));hashBytes(stream.bytes,sizeof(stream.bytes));hashBytes(&finalOffset,sizeof(finalOffset));
+    }
+    // Report observations that must match for whole original and complete C producers
+    require(copies==3072&&reentries==512&&reads==3072&&writes==3072&&registrations==4608&&streamRegistrations==4608);printf("cases=4096 checks=%u copies=%u reads=%u writes=%u registrations=%u reentries=%u hash=%016llx\n",checks,copies,reads,writes,registrations,reentries,(unsigned long long)hashValue);return 0;
+}

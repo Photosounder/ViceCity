@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare actual scalar kernels and random history with the saved C++ methods."""
 from pathlib import Path
 import re
@@ -26,6 +27,8 @@ def function(source, signature):
     return source[start:end]
 
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Check statement equivalence independently of comments and formatting
     return re.sub(r'\s+', '', re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.S))
 

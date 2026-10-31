@@ -1,0 +1,156 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned,unsigned);
+struct Flag {
+    uint32_t id,tag,v;
+    operator bool() const {
+        // Observe each original live boolean read at its short-circuit point
+        event(tag,id);return v!=0;
+    }
+    Flag &operator=(bool value) {
+        // Observe the original water flag write before the countdown read
+        v=value;event(13,id);return *this;
+    }
+};
+struct Countdown {uint32_t id;float v;operator float() const {
+    // Observe the original live countdown after the water flag was cleared
+    event(14,id);return v;
+}};
+struct CVector {float x,y,z;};
+class CEntity {public:uint8_t type;uint32_t id;uint8_t GetType() const;};
+struct CFire {Flag m_bIsOngoing,m_bAudioSet,m_bExtinguishedWithWater;CVector m_vecPos;CEntity *m_pEntity;Countdown m_fWaterExtinguishCountdown;};
+struct FireManager {CFire m_aFires[NUM_FIRES];};static FireManager gFireManager;
+static AudioSoundPosition AudioSoundPosition_FromVector(CVector position) {
+    // Copy the same original game-vector components
+    return {position.x,position.y,position.z};
+}
+struct cAudioManager {
+@FIELDS@
+void ProcessFires(int32);
+float Sqrt(float v) const {
+    // Preserve the original guarded square root
+    return v<=0?0:sqrtf(v);
+}
+};
+@MACROS@
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+static cAudioManager owners[2],*active;
+static CEntity entities[2];
+static AudioSoundPosition camera;
+static unsigned seedValue,cases,callbacks,submits,loops,waters,branches[4],currentFire;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestFiresC(cAudioManager *,int32_t);
+extern "C" void TestFiresRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Record callback arguments and ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned n) {
+    // Observe every initialized record word
+    digest=TestAircraftHash(digest,p,n);
+}
+static void observe() {
+    // Hash both owners and normalize game entity pointers in the complete fire state
+    FireManager copy=gFireManager;for(unsigned i=0;i<NUM_FIRES;++i)copy.m_aFires[i].m_pEntity=(CEntity *)(uintptr_t)(copy.m_aFires[i].m_pEntity==NULL?0:copy.m_aFires[i].m_pEntity==&entities[0]?1:2);
+    bytes(owners,sizeof(owners));bytes(&copy,sizeof(copy));bytes(entities,sizeof(entities));bytes(&camera,sizeof(camera));
+}
+static void event(unsigned token,unsigned id) {
+    // Observe each original read before changing subsequent live state
+    ++callbacks;value(token);value(id);observe();
+    if(token==1)currentFire=id;
+    if(token==3&&(seedValue&64))gFireManager.m_aFires[currentFire].m_pEntity=&entities[1];
+    if(token==4&&(seedValue&128))gFireManager.m_aFires[currentFire].m_vecPos.x=2;
+    if(token==7&&(seedValue&256))active->m_sQueueSample.m_nSampleIndex=SFX_PED_ON_FIRE;
+    if(token==10&&(seedValue&512)){
+        // Keep re-enabled water sounds in the defined volume domain after an entity change
+        gFireManager.m_aFires[currentFire].m_bExtinguishedWithWater.v=1;gFireManager.m_aFires[currentFire].m_vecPos.x=2;
+    }
+    if(token==13&&(seedValue&1024))gFireManager.m_aFires[id].m_fWaterExtinguishCountdown.v=0.5f;
+}
+uint8_t CEntity::GetType() const {
+    // Preserve the captured entity even if the stored fire entity changes
+    event(3,id);return type;
+}
+extern "C" uint8_t AudioPedOneShotsHost_EntityType(const void *entity) {
+    // Reuse the existing typed game entity query
+    return ((const CEntity *)entity)->GetType();
+}
+@HOST@
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager,uint32_t sample) {
+    // Observe the selected base sample before the live fire position is copied
+    assert(manager==&SampleManager);event(4,sample);++branches[sample==SFX_PED_ON_FIRE?1:entities[0].type==ENTITY_TYPE_BUILDING?0:2];return 18000+sample%1000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe loop-start selection before the next live scratch sample read
+    assert(manager==&SampleManager);++loops;event(7,sample);return sample%17;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the live sample identifier after loop-start callbacks
+    assert(manager==&SampleManager);event(8,sample);return 200+sample%31;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Preserve the camera query before reading current scratch coordinates
+    event(6,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Exercise actual queue insertion and post-submission live water reads
+    event(10,0);return (seedValue>>3)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency for fire sounds
+    return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe complete burning or extinguishing scratch fields before real insertion
+    assert(manager==active);++submits;waters+=manager->m_sQueueSample.m_nCounter>=40;event(9,manager->m_sQueueSample.m_nCounter);TestFiresRealSubmit(manager);event(11,0);
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Initialize complete owners, game records, entity branches and queue capacities
+    seedValue=seed;memset(owners,0,sizeof(owners));memset(&gFireManager,0,sizeof(gFireManager));memset(entities,0,sizeof(entities));active=&owners[seed&1];camera={0,0,0};
+    entities[0].type=(seed/3)%8;entities[1].type=ENTITY_TYPE_PED;entities[1].id=1;
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    active->m_sQueueSample.m_nEntityIndex=seed;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_fDistance=0;active->m_sQueueSample.m_nCounter=777;
+    static const float edges[]={0,4.999f,5,24.999f,25,25.001f,79.999f,80,80.001f};
+    static const float countdowns[]={0,0.01f,0.5f,1};
+    for(unsigned i=0;i<NUM_FIRES;++i){CFire *f=&gFireManager.m_aFires[i];f->m_bIsOngoing={i,1,(seed+i)%3!=0};f->m_bAudioSet={i,2,(seed+i)%4!=0};f->m_bExtinguishedWithWater={i,12,(seed+i)%5==0};f->m_pEntity=(seed+i)%3?&entities[0]:NULL;branches[3]+=f->m_pEntity==NULL;
+        // Keep water-volume conversions defined while testing distance edges on other fires
+        f->m_vecPos={f->m_bExtinguishedWithWater.v?2:edges[(seed/6+i)%9],0,0};f->m_fWaterExtinguishCountdown={i,countdowns[(seed+i)%4]};
+    }
+}
+int main() {
+    // Keep console-only failures quiet on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Exercise burning and extinguishing twice across every fire slot and both owners
+    for(unsigned seed=0;seed<2048;++seed){prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;}
+    // Require all entity choices and actual extinguishing submissions
+    assert(submits&&waters);for(unsigned i=0;i<4;++i)assert(branches[i]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+    printf("%u %u %u %u %u %llu\n",cases,callbacks,submits,waters,loops,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

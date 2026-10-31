@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "AudioManager.h"
+#include "MusicManager.h"
 #include "AudioScriptObject.h"
 #include "../core/Pools.h"
 #include "DMAudio.h"
@@ -28,7 +29,7 @@ AudioReload_ResetTimers(cAudioManager *manager, uint32_t time)
 		SampleManager_StopChannel(&SampleManager, CHANNEL_POLICE_RADIO);
 		SampleManager_SetEffectsFadeVolume(&SampleManager, 0);
 		SampleManager_SetMusicFadeVolume(&SampleManager, 0);
-		AudioReloadHost_ResetMusic();
+		MusicReload_ResetMusicAfterReload(&MusicManager);
 		manager->m_bIsPlayerShutUp = 0;
 #ifdef AUDIO_OAL
 		SampleManager_Service(&SampleManager);

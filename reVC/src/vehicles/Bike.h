@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Vehicle.h"
@@ -16,10 +17,7 @@ enum eBikeNodes {
 	BIKE_NUM_NODES
 };
 
-enum {
-	BIKEWHEEL_FRONT,
-	BIKEWHEEL_REAR,
-};
+#include "WheelIndices.h"
 
 enum {
 	BIKESUSP_F1,
@@ -170,3 +168,4 @@ inline int8 GetBikeDoorFlagInclJumpInFromFront(int32 carnode) {
 			return CAR_DOOR_FLAG_UNKNOWN;
 	}
 }
+//- rouz edit (ChatGPT)

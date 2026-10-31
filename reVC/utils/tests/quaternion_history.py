@@ -1,0 +1,20 @@
+"""Audit every earlier snapshot of the seven affected sources through explicit successor projections."""
+from pathlib import Path
+import hashlib,importlib,json
+import quaternion_migration as m
+from stats_successor import current_path
+from stats_successor import verify
+root=Path(__file__).resolve().parents[2];out=root/'.diagnostics/quaternion-c-tests';changes=json.loads((out/'changes.json').read_text());results=[]
+stages=['events','wanted','darkel','stats','roadblocks','debug-display','autopilot','profile-power','lists','streaming-info','input-state','transmission','doors','damage','ped-routes','stored-car','rect','compressed-vector','col-triangle','col-line','col-box','col-sphere','col-point','stored-poly']
+for stage in stages:
+    folder=root/f'.diagnostics/{stage}-c-tests';untouched=json.loads((folder/'untouched.json').read_text());migration=importlib.import_module(stage.replace('-','_')+'_migration')
+    for name in changes:
+        if name in untouched:
+            verify(root,name,untouched[name])
+        else:
+            original=folder/'before'/name;assert original.exists(),(stage,name)
+            expected=migration.calls(original.read_text());current=current_path(root,m.RENAMES.get(name,name)).read_text();assert expected==current,(stage,name)
+        results.append({'stage':stage,'source':name,'exit':0})
+    print(stage,'seven historical source projections passed',flush=True)
+assert len(results)==168
+(out/'historical-source-projections.json').write_text(json.dumps(results,indent=2),newline='\n')

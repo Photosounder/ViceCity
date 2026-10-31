@@ -1,69 +1,57 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CVehicle;
-
-enum eDoorState
-{
-	DOORST_SWINGING,
-	// actually wrong though,
-	// OPEN is really MAX_ANGLE and CLOSED is MIN_ANGLE
-	DOORST_OPEN,
-	DOORST_CLOSED
-};
-
-class CDoor
-{
-public:
+#include <stdint.h>
+#include <stdbool.h>
+#include "DoorTypes.h"
+typedef struct DoorVector {float x,y,z;} DoorVector;
+typedef struct CDoor {
 	float m_fMaxAngle;
 	float m_fMinAngle;
 	// direction of rotation for air resistance
-	int8 m_nDirn;
+	int8_t m_nDirn;
 	// axis in which this door rotates
-	int8 m_nAxis;
-	int8 m_nDoorState;
+	int8_t m_nAxis;
+	int8_t m_nDoorState;
 	float m_fAngle;
 	float m_fPrevAngle;
 	float m_fAngVel;
-	CVector m_vecSpeed;
+	DoorVector m_vecSpeed;
 
-	CDoor(void);
-	void Init(float minAngle, float maxAngle, int8 dir, int8 axis) {
-		m_fMinAngle = minAngle;
-		m_fMaxAngle = maxAngle;
-		m_nDirn = dir;
-		m_nAxis = axis;
-	}
-	void Open(float ratio);
-	void Process(CVehicle *veh);
-	float RetAngleWhenClosed(void);	// dead
-	float RetAngleWhenOpen(void);
-	float GetAngleOpenRatio(void);
-	bool IsFullyOpen(void);
-	bool IsClosed(void);	// dead
-};
-
-class CTrainDoor
-{
-public:
+} CDoor;
+typedef struct CTrainDoor {
 	float m_fClosedPosn;
 	float m_fOpenPosn;
-	int8 m_nDirn;
-	int8 m_nDoorState;	// same enum as above?
-	int8 m_nAxis;
+	int8_t m_nDirn;
+	int8_t m_nDoorState;	// same enum as above?
+	int8_t m_nAxis;
 	float m_fPosn;
 	float m_fPrevPosn;
 	int field_14;	// unused?
 
-	CTrainDoor(void);
-	void Init(float open, float closed, int8 dir, int8 axis) {
-		m_fOpenPosn = open;
-		m_fClosedPosn = closed;
-		m_nDirn = dir;
-		m_nAxis = axis;
-	}
-	bool IsClosed(void);
-	bool IsFullyOpen(void);
-	float RetTranslationWhenClosed(void);
-	float RetTranslationWhenOpen(void);
-	void Open(float ratio);
-};
+} CTrainDoor;
+#ifdef __cplusplus
+class CVehicle;
+extern "C" {
+#else
+typedef struct CVehicle CVehicle;
+#endif
+void Door_Init(CDoor *self);
+void Door_SetLimits(CDoor *self,float minAngle,float maxAngle,int8_t dir,int8_t axis);
+void Door_Open(CDoor *self,float ratio);
+void Door_Process(CDoor *self,CVehicle *vehicle);
+float Door_RetAngleWhenClosed(CDoor *self);
+float Door_RetAngleWhenOpen(CDoor *self);
+float Door_GetAngleOpenRatio(CDoor *self);
+bool Door_IsFullyOpen(CDoor *self);
+bool Door_IsClosed(CDoor *self);
+void TrainDoor_Init(CTrainDoor *self);
+void TrainDoor_SetLimits(CTrainDoor *self,float open,float closed,int8_t dir,int8_t axis);
+void TrainDoor_Open(CTrainDoor *self,float ratio);
+float TrainDoor_RetTranslationWhenClosed(CTrainDoor *self);
+float TrainDoor_RetTranslationWhenOpen(CTrainDoor *self);
+bool TrainDoor_IsFullyOpen(CTrainDoor *self);
+bool TrainDoor_IsClosed(CTrainDoor *self);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

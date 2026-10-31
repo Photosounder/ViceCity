@@ -1,0 +1,190 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned commands,checks,events,allocations,frees,geometryCount,atomicCount,clumpCount,frameCount,reentries,allocationFailures;
+static RpGeometry geometries[4096];
+static RpAtomic atomics[4096];
+static RpClump clumps[2048];
+static RwFrame frames[8192];
+static struct Allocation {void *memory;size_t size;unsigned kind;} storage[2048];
+static rwFrameList *observedFrames;
+static bool failAllocation,failAtomic,failClump;
+static void requireAt(bool value,unsigned line)
+{
+    // Stop quietly at the failing diagnostic line without invoking native dialogs
+    ++checks;if(!value){fprintf(stderr,"line=%u checks=%u commands=%u\n",line,checks,commands);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Observe initialized scalar data while excluding process-specific pointer values
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(uint32_t operation,uint32_t a=0,uint32_t b=0)
+{
+    // Retain exact external operation order and normalized resource identities
+    uint32_t values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static ClumpResult run(unsigned operation,void *a=NULL,void *b=NULL,void *c=NULL)
+{
+    // Exercise all complete original or C algorithms through independent callers
+    ++commands;return TestClump(operation,a,b,c);
+}
+static void position(RwStream *stream,int value)
+{
+    // Keep only the controlled SDK cursor representations synchronized
+    stream->position=value;stream->Type.memory.position=(uint32_t)value;
+}
+static RwStream makeStream(unsigned id,int mode,int geoms,int atoms=0,int numFrames=3,bool old=false)
+{
+    // Supply controlled SDK packet metadata rather than implementing clump splitting or cleanup
+    RwStream stream={};stream.id=id;stream.mode=mode;stream.section=mode==1?0:mode==2?2:1;stream.totalGeometries=geoms;stream.totalAtomics=atoms;stream.totalFrames=numFrames;stream.failGeometryChunk=-1;stream.failGeometryRead=-1;stream.failAtomicChunk=-1;stream.missingKind=-1;stream.shortSection=-1;stream.version=old?0x32000:0x34000;stream.atomicSize=16;return stream;
+}
+static void *allocate(size_t size,unsigned kind)
+{
+    // Allocate actual untyped backing at the SDK boundary and retain each allocation's independent identity
+    require(allocations<2048);void *memory=_aligned_malloc(size?size:1,16);require(memory!=NULL);memset(memory,0xa5,size?size:1);storage[allocations].memory=memory;storage[allocations].size=size;storage[allocations].kind=kind;event(1,allocations,(uint32_t)size);++allocations;return memory;
+}
+void *RwMalloc(size_t size)
+{
+    // Fail only the core geometry-array request while SDK frame allocation remains separately controlled
+    event(2,(uint32_t)size,failAllocation);if(failAllocation){++allocationFailures;return NULL;}return allocate(size,0);
+}
+void RwFree(void *memory)
+{
+    // Observe the precise original free sequence including null SDK frame-list releases
+    if(!memory){event(3,UINT32_MAX);return;}unsigned i=0;while(i<allocations&&storage[i].memory!=memory)++i;require(i<allocations);event(3,i,storage[i].kind);storage[i].memory=NULL;++frees;_aligned_free(memory);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int line,const char*)
+{
+    // Report unexpected original-owner assertions without opening a native window
+    fprintf(stderr,"owner assertion=%s line=%u\n",expression,line);require(false);
+}
+int32_t RwStream::tell(void)
+{
+    // Preserve each native SDK position query at the saved/resumed stream boundary
+    event(4,id,(uint32_t)position);return position;
+}
+RwBool RwStreamFindChunk(RwStream *stream,uint32_t kind,uint32_t *size,uint32_t *version)
+{
+    // Return controlled SDK chunk identities and failures without choosing owner control flow
+    require(stream&&kind>=rwID_STRUCT&&kind<=rwID_ATOMIC);event(5,stream->id,kind);if((int)kind==stream->missingKind)return 0;if(kind==rwID_GEOMETRY){int limit=stream->totalGeometries;if(stream->mode==2||!limit)limit=stream->mode==2?1:stream->totalAtomics;if(stream->nextGeometry>=limit||stream->nextGeometry==stream->failGeometryChunk)return 0;}if(kind==rwID_ATOMIC&&stream->nextAtomic==stream->failAtomicChunk)return 0;if(kind==rwID_GEOMETRYLIST)stream->section=1;if(kind==rwID_ATOMIC)stream->section=2;if(size)*size=stream->section==0?(stream->version>=0x33000?12:4):stream->section==2?stream->atomicSize:4;if(version)*version=stream->version;position(stream,stream->position+12);return 1;
+}
+uint32_t RwStreamRead(RwStream *stream,void *output,uint32_t size)
+{
+    // Supply original serialized fields at the separate SDK stream boundary
+    require(stream&&output);event(6,stream->id,size);if(stream->section==stream->shortSection)return 0;if(stream->section==0){require(size==4||size==12);int32_t values[]={stream->totalAtomics,7,9};memcpy(output,values,size);}else if(stream->section==1){require(size==4);memcpy(output,&stream->totalGeometries,4);}else{require(size==12||size==16);int index=stream->nextAtomic++;int32_t values[]={stream->totalFrames?index%stream->totalFrames:0,stream->totalGeometries?index%stream->totalGeometries:0,(int32_t)(UINT32_C(0x80000040)+(unsigned)index),99};memcpy(output,values,size);}position(stream,stream->position+(int)size);if(stream->section==1)stream->geometryBase=stream->position;return size;
+}
+RpGeometry *RpGeometryStreamRead(RwStream *stream)
+{
+    // Create independent SDK geometry references or a controlled decoder failure
+    int index=stream->nextGeometry++;event(7,stream->id,(uint32_t)index);if(index==stream->failGeometryRead)return NULL;require(geometryCount<4095);RpGeometry *geometry=&geometries[++geometryCount];geometry->id=geometryCount;geometry->refs=1;geometry->alive=true;position(stream,stream->position+32);return geometry;
+}
+RwBool RpGeometryDestroy(RpGeometry *geometry)
+{
+    // Apply SDK reference release rather than reproducing reader-owned geometry-list policy
+    require(geometry&&geometry->alive&&geometry->refs>0);event(8,geometry->id,geometry->refs);if(--geometry->refs==0)geometry->alive=false;return 1;
+}
+RpAtomic *RpAtomicCreate(void)
+{
+    // Supply SDK atomics independently of stream parsing and list ownership
+    event(9,failAtomic);if(failAtomic)return NULL;require(atomicCount<4095);RpAtomic *atomic=&atomics[++atomicCount];atomic->id=atomicCount;atomic->alive=true;atomic->flags=0;atomic->frame=NULL;atomic->geometry=NULL;return atomic;
+}
+RwBool RpAtomicDestroy(RpAtomic *atomic)
+{
+    // Release only the SDK atomic's own geometry reference
+    require(atomic&&atomic->alive);event(10,atomic->id);if(atomic->geometry)RpGeometryDestroy(atomic->geometry);atomic->alive=false;return 1;
+}
+RpAtomic *RpAtomicSetFlags(RpAtomic *atomic,uint32_t flags)
+{
+    // Record the original serialized flag bits at the typed SDK boundary
+    require(atomic&&atomic->alive);event(11,atomic->id,flags);atomic->flags=flags;return atomic;
+}
+RpAtomic *RpAtomicSetFrame(RpAtomic *atomic,RwFrame *frame)
+{
+    // Borrow the actual selected SDK frame without changing its owner
+    require(atomic&&atomic->alive&&frame&&frame->alive);event(12,atomic->id,frame->id);atomic->frame=frame;return atomic;
+}
+RpAtomic *RpAtomicSetGeometry(RpAtomic *atomic,RpGeometry *geometry,uint32_t flags)
+{
+    // Retain one SDK reference for every actual atomic attachment
+    require(atomic&&atomic->alive&&geometry&&geometry->alive&&flags==0);event(13,atomic->id,geometry->id);if(atomic->geometry)RpGeometryDestroy(atomic->geometry);atomic->geometry=geometry;++geometry->refs;return atomic;
+}
+rwFrameList *rwFrameListStreamRead(RwStream *stream,rwFrameList *list)
+{
+    // Mutate the same SDK record before callbacks so the C bridge must preserve in-place visibility
+    require(stream&&list);event(14,stream->id);observedFrames=list;list->numFrames=0;list->frames=NULL;if(stream->failFrames)return NULL;list->numFrames=stream->totalFrames;if(list->numFrames){list->frames=(RwFrame**)allocate(sizeof(RwFrame*)*list->numFrames,1);unsigned root=frameCount+1;for(int i=0;i<list->numFrames;++i){require(frameCount<8191);RwFrame *frame=&frames[++frameCount];frame->id=frameCount;frame->root=root;frame->alive=true;list->frames[i]=frame;}}position(stream,stream->position+8+stream->totalFrames*16);if(stream->cancelInFrames){++reentries;event(15);run(OP_Cancel);require(list->numFrames==0&&list->frames==NULL);}return list;
+}
+rwFrameList *rwFrameListDeinitialize(rwFrameList *list)
+{
+    // Preserve the SDK's array-only cleanup and its unchanged frame count
+    require(list);event(16,(uint32_t)list->numFrames);RwFree(list->frames);list->frames=NULL;return list;
+}
+RwStream *RwStreamSkip(RwStream *stream,uint32_t offset)
+{
+    // Seek only the controlled external packet stream so saved-position arithmetic remains in the owner
+    require(stream&&offset<10000);event(17,stream->id,offset);position(stream,stream->position+(int)offset);if(stream->position>=stream->geometryBase)stream->nextGeometry=(stream->position-stream->geometryBase)/44;return stream;
+}
+RpClump *RpClumpCreate(void)
+{
+    // Create controlled SDK clumps without implementing first/second stage decisions
+    event(18,failClump);if(failClump)return NULL;require(clumpCount<2047);RpClump *clump=&clumps[++clumpCount];clump->id=clumpCount;clump->count=0;clump->alive=true;clump->frame=NULL;return clump;
+}
+RpClump *RpClumpSetFrame(RpClump *clump,RwFrame *frame)
+{
+    // Attach the original root frame chosen by the actual clump reader
+    require(clump&&clump->alive&&frame&&frame->alive);event(19,clump->id,frame->id);clump->frame=frame;return clump;
+}
+RpClump *RpClumpAddAtomic(RpClump *clump,RpAtomic *atomic)
+{
+    // Retain actual SDK atomic ownership after the reader completes each atomic
+    require(clump&&clump->alive&&atomic&&atomic->alive&&clump->count<32);event(20,clump->id,atomic->id);clump->atomics[clump->count++]=atomic;return clump;
+}
+RwBool RpClumpDestroy(RpClump *clump)
+{
+    // Release SDK-owned atomics and the attached frame hierarchy at the reader-selected boundary
+    require(clump&&clump->alive);event(21,clump->id,clump->count);for(unsigned i=0;i<clump->count;++i)RpAtomicDestroy(clump->atomics[i]);if(clump->frame){unsigned root=clump->frame->root;for(unsigned i=1;i<=frameCount;++i)if(frames[i].root==root)frames[i].alive=false;}clump->alive=false;return 1;
+}
+static void snapshot(void)
+{
+    // Compare every initialized SDK resource and live frame-list field without hashing addresses or padding
+    for(unsigned i=1;i<=geometryCount;++i){uint32_t values[]={geometries[i].id,geometries[i].refs,geometries[i].alive};hashBytes(values,sizeof(values));}for(unsigned i=1;i<=atomicCount;++i){RpAtomic *atomic=&atomics[i];uint32_t values[]={atomic->id,atomic->alive,atomic->flags,atomic->frame?atomic->frame->id:0,atomic->geometry?atomic->geometry->id:0};hashBytes(values,sizeof(values));}for(unsigned i=1;i<=frameCount;++i){uint32_t values[]={frames[i].id,frames[i].root,frames[i].alive};hashBytes(values,sizeof(values));}if(observedFrames){uint32_t values[]={(uint32_t)observedFrames->numFrames,observedFrames->frames!=NULL};hashBytes(values,sizeof(values));}
+}
+static void controls(void)
+{
+    // Reset only independent external failure controls between public owner scenarios
+    failAllocation=false;failAtomic=false;failClump=false;
+}
+static void prime(unsigned id)
+{
+    // Begin a valid empty transaction to overwrite prior private geometry state without modifying the producer
+    controls();RwStream stream=makeStream(id,1,0,0,1);require(run(OP_Start,&stream).number==1);run(OP_Cancel);require(observedFrames&&observedFrames->numFrames==0&&!observedFrames->frames);
+}
+static void listSnapshot(FixtureGeometryList *list)
+{
+    // Observe exact geometry slot initialization and replacement through the real public record
+    hashBytes(&list->numGeoms,sizeof(list->numGeoms));for(int i=0;i<list->numGeoms;++i){RpGeometry *geometry=(RpGeometry*)list->geometries[i];uint32_t id=geometry?geometry->id:0;hashBytes(&id,4);}
+}
+int main(void)
+{
+    // Compare complete odd/even/empty geometry lists using both original splitting stages
+    for(int total=0;total<=9;++total){FixtureGeometryList list={};RwStream stream=makeStream(10+total,0,total);require(run(OP_Geometry1,&stream,&list).pointer==&list&&list.numGeoms==total);for(int i=0;i<total;++i)require((list.geometries[i]!=NULL)==(i<total/2));listSnapshot(&list);require(run(OP_Geometry2,&stream,&list).pointer==&list);for(int i=0;i<total;++i)require(list.geometries[i]!=NULL);listSnapshot(&list);run(OP_Deinitialize,&list);require(list.numGeoms==0);snapshot();}
+    // Exercise allocation, structure-read and geometry decode failures without assuming extra original cleanup
+    for(unsigned mode=0;mode<5;++mode){FixtureGeometryList list={};RwStream stream=makeStream(30+mode,0,4);if(mode==0)stream.missingKind=rwID_STRUCT;if(mode==1)stream.shortSection=1;if(mode==2)failAllocation=true;if(mode==3)stream.failGeometryChunk=1;if(mode==4)stream.failGeometryRead=1;require(run(OP_Geometry1,&stream,&list).pointer==NULL);snapshot();failAllocation=false;if(list.geometries)run(OP_Deinitialize,&list);}
+    // Compare inline and shared geometry, missing frames, partial atomic headers and all atomic error branches
+    for(unsigned mode=0;mode<7;++mode){rwFrameList frameList={};RwStream frameStream=makeStream(50+mode,1,0,0,mode==1?0:3);require(rwFrameListStreamRead(&frameStream,&frameList));FixtureGeometryList list={};bool shared=mode==2;if(shared){RwStream geometry=makeStream(70,0,2);require(run(OP_Geometry1,&geometry,&list).pointer);require(run(OP_Geometry2,&geometry,&list).pointer);}RwStream stream=makeStream(80+mode,2,1,1,frameList.numFrames);stream.atomicSize=mode==1?12:16;if(mode==3)failAtomic=true;if(mode==4)stream.missingKind=rwID_GEOMETRY;if(mode==5)stream.failGeometryRead=0;if(mode==6)stream.shortSection=2;RpAtomic *atomic=(RpAtomic*)run(OP_Atomic,&stream,&frameList,&list).pointer;require((atomic!=NULL)==(mode<3));if(atomic){require(atomic->flags==UINT32_C(0x80000040)&&atomic->frame==(frameList.numFrames?frameList.frames[0]:NULL));require(atomic->geometry&&atomic->geometry->refs==(shared?2u:1u));}controls();run(OP_Deinitialize,&list);if(atomic)RpAtomicDestroy(atomic);rwFrameListDeinitialize(&frameList);snapshot();}
+    // Preserve the atomic reader's shared-counter reset rather than silently repairing that original side effect
+    FixtureGeometryList list={};RwStream stream=makeStream(100,0,4);require(run(OP_Geometry1,&stream,&list).pointer);RpGeometry *lost0=(RpGeometry*)list.geometries[0],*lost1=(RpGeometry*)list.geometries[1];FixtureGeometryList empty={};rwFrameList noFrames={};RwStream invalid=makeStream(101,2,1,1,0);invalid.missingKind=rwID_STRUCT;require(run(OP_Atomic,&invalid,&noFrames,&empty).pointer==NULL);require(run(OP_Geometry2,&stream,&list).pointer==NULL&&list.geometries[2]==NULL&&list.geometries[3]==NULL);require(list.geometries[0]!=lost0&&list.geometries[1]!=lost1);listSnapshot(&list);snapshot();run(OP_Deinitialize,&list);RpGeometryDestroy(lost0);RpGeometryDestroy(lost1);
+    // Compare both clump header versions, inline/shared geometry and original retained SDK geometry references
+    for(unsigned old=0;old<2;++old)for(int total=0;total<=6;++total){prime(120+old*10+total);RwStream first=makeStream(150+old*10+total,1,total,3,3,old!=0);require(run(OP_Start,&first).number==1);RwStream second=makeStream(180+old*10+total,1,total,3,3,old!=0);second.geometryBase=first.geometryBase;RpClump *clump=(RpClump*)run(OP_Finish,&second).pointer;require(clump&&clump->count==3&&clump->frame&&clump->frame->alive);for(unsigned i=0;i<3;++i){require(clump->atomics[i]->flags==UINT32_C(0x80000040)+i);RpGeometry *geometry=clump->atomics[i]->geometry;unsigned refs=0;for(unsigned j=0;j<3;++j)if(clump->atomics[j]->geometry==geometry)++refs;require(geometry->refs==refs);}snapshot();RpClumpDestroy(clump);run(OP_Cancel);}
+    // Cover every first-stage failure and explicit caller cancellation with the actual original partial-state behavior
+    for(unsigned mode=0;mode<7;++mode){prime(220+mode);RwStream first=makeStream(240+mode,1,4,2);if(mode==0)first.missingKind=rwID_STRUCT;if(mode==1)first.shortSection=0;if(mode==2)first.missingKind=rwID_FRAMELIST;if(mode==3)first.failFrames=true;if(mode==4)first.missingKind=rwID_GEOMETRYLIST;if(mode==5)first.failGeometryChunk=1;if(mode==6)first.failGeometryRead=1;require(run(OP_Start,&first).number==0);snapshot();run(OP_Cancel);}
+    // Preserve allocation failure's null-array state and recover only through a subsequent valid empty transaction
+    prime(260);failAllocation=true;RwStream first=makeStream(261,1,4,2);require(run(OP_Start,&first).number==0);snapshot();prime(262);
+    // Cover clump allocation, remaining geometry, atomic chunk/create/read and inline geometry failures in stage two
+    for(unsigned mode=0;mode<7;++mode){prime(280+mode);int total=mode==6?0:4;RwStream first=makeStream(300+mode,1,total,3);require(run(OP_Start,&first).number==1);RwStream second=makeStream(320+mode,1,total,3);second.geometryBase=first.geometryBase;if(mode==0)failClump=true;if(mode==1)second.failGeometryChunk=2;if(mode==2)second.failGeometryRead=2;if(mode==3)second.failAtomicChunk=1;if(mode==4)failAtomic=true;if(mode==5)second.shortSection=2;if(mode==6)second.failGeometryRead=0;require(run(OP_Finish,&second).pointer==NULL);snapshot();controls();run(OP_Cancel);}
+    // Cancel during the SDK frame callback and require immediate mutation of the exact SDK object being read
+    prime(350);first=makeStream(351,1,0,0,2);first.cancelInFrames=true;require(run(OP_Start,&first).number==1&&reentries==1&&observedFrames->numFrames==0&&!observedFrames->frames);snapshot();run(OP_Cancel);
+    // Require all actually allocated raw arrays to be released without disguising baseline SDK frame-object retention
+    require(allocations==frees&&allocationFailures==2);for(unsigned i=0;i<allocations;++i)require(storage[i].memory==NULL);unsigned liveFrames=0,liveGeometries=0;for(unsigned i=1;i<=frameCount;++i)liveFrames+=frames[i].alive;for(unsigned i=1;i<=geometryCount;++i)liveGeometries+=geometries[i].alive;printf("commands=%u checks=%u events=%u geometries=%u atomics=%u clumps=%u frames=%u retained=%u/%u reentries=%u allocations=%u frees=%u failures=%u hash=%016llx\n",commands,checks,events,geometryCount,atomicCount,clumpCount,frameCount,liveFrames,liveGeometries,reentries,allocations,frees,allocationFailures,(unsigned long long)hashValue);return 0;
+}

@@ -1,5 +1,6 @@
 # Known rain-on-vehicle generator migration with unchanged counter storage
 import re
+import cull_zones_migration as cull
 import audio_vehicle_road_migration as road
 from audio_controls_migration import function
 HOST='''//+ rouz edit (ChatGPT)
@@ -40,7 +41,10 @@ def logic(source):
     if 'cAudioManager::ProcessRainOnVehicle(' in source:
         source=source.replace(function(source,'cAudioManager::','ProcessRainOnVehicle')+'\n','').replace(CONSTANTS,'')+HOST
     # Keep this newest game adapter block after earlier migration adapters
-    if HOST in source: source=source.replace(HOST,'')+HOST
+    import weather_migration as weather
+    transformed=cull.calls(HOST)
+    host=next((candidate for candidate in [HOST,transformed,weather.legacy_member_spelling(transformed),weather.calls(HOST)] if candidate in source),HOST)
+    if host in source: source=source.replace(host,'')+host
     return road.logic(source.replace('ProcessRainOnVehicle(params);','AudioVehicleRain_Process(this, &params);'))
 def header(source):
     # Keep owner and vehicle parameter fields while exposing the C generator
@@ -48,6 +52,8 @@ def header(source):
     return road.header(source.replace('void AudioManager_InitState(cAudioManager *manager);',PROTOTYPES+'void AudioManager_InitState(cAudioManager *manager);'))
 def body(source):
     # Retain the ordered gates, captured vehicle, live rainfall and byte increments
+    import weather_migration as weather
+    source=weather.legacy_member_spelling(source)
     source=source[source.index('{'):]
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source)
     source=re.sub(r'\bparams\.', 'params->',source)

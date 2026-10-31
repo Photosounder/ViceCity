@@ -1,4 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "RwHelper.h"
@@ -50,9 +55,8 @@ GetPadFromPlayer(CPlayerPed*)
 
 CPlayerPed::~CPlayerPed()
 {
-	// Destroy and release the wanted data without invoking C++ delete.
+	// Release the plain wanted record through the original allocator
 	if(m_pWanted){
-		m_pWanted->~CWanted();
 		free(m_pWanted);
 		m_pWanted = nil;
 	}
@@ -67,11 +71,11 @@ CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
 #endif
 	SetInitialState();
 
-	// Allocate wanted data without invoking C++ new.
+	// Allocate and value-initialize the plain wanted record through the original allocator
 	m_pWanted = (CWanted*)malloc(sizeof(CWanted));
 	assert(m_pWanted);
-	std::allocator<CWanted>().construct(m_pWanted);
-	m_pWanted->Initialise();
+	Wanted_ConstructValue(m_pWanted);
+	Wanted_Initialise(m_pWanted);
 	m_pArrestingCop = nil;
 	m_currentWeapon = WEAPONTYPE_UNARMED;
 	m_nSelectedWepSlot = WEAPONSLOT_UNARMED;
@@ -106,7 +110,8 @@ CPlayerPed::CPlayerPed(void) : CPed(PEDTYPE_PLAYER1)
 	}
 	m_nAttackDirToCheck = 0;
 	m_nLastBusFareCollected = 0;
-	idleAnimBlockIndex = CAnimManager::GetAnimationBlockIndex("playidles");
+	// Use the complete C animation manager at the original call boundary
+	idleAnimBlockIndex = AnimManager_GetAnimationBlockIndex("playidles");
 #ifdef FREE_CAM
 	m_bFreeAimActive = false;
 #endif
@@ -118,7 +123,8 @@ CPlayerPed::ClearWeaponTarget()
 	if (m_nPedType == PEDTYPE_PLAYER1) {
 		SetWeaponLockOnTarget(nil);
 		TheCamera.ClearPlayerWeaponMode();
-		CWeaponEffects::ClearCrossHair();
+		// Enter the complete C weapon effect operation
+		WeaponEffects_ClearCrossHair();
 	}
  	ClearPointGunAt();
 }
@@ -126,13 +132,13 @@ CPlayerPed::ClearWeaponTarget()
 void
 CPlayerPed::SetWantedLevel(int32 level)
 {
-	m_pWanted->SetWantedLevel(level);
+	Wanted_SetWantedLevel(m_pWanted,level);
 }
 
 void
 CPlayerPed::SetWantedLevelNoDrop(int32 level)
 {
-	m_pWanted->SetWantedLevelNoDrop(level);
+	Wanted_SetWantedLevelNoDrop(m_pWanted,level);
 }
 
 void
@@ -165,7 +171,7 @@ CPlayerPed::ClearAdrenaline(void)
 {
 	if (m_bAdrenalineActive && m_nAdrenalineTime != 0) {
 		m_nAdrenalineTime = 0;
-		CTimer::SetTimeScale(1.0f);
+		Timer_SetTimeScale(1.0f);
 	}
 }
 
@@ -197,8 +203,8 @@ CPlayerPed::SetupPlayerPed(int32 index)
 	player->m_wepAccuracy = 100;
 
 #ifndef MASTER
-	VarConsole.Add("Debug PlayerPed", &CPlayerPed::bDebugPlayerInfo, true);
-	VarConsole.Add("Tweak Vehicle Handling", &CVehicle::m_bDisplayHandlingInfo, true);
+	VarConsole_AddBool(&VarConsole,"Debug PlayerPed", &CPlayerPed::bDebugPlayerInfo, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool(&VarConsole,"Tweak Vehicle Handling", &CVehicle::m_bDisplayHandlingInfo, true); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -219,8 +225,8 @@ CPlayerPed::UseSprintEnergy(void)
 {
 	if (m_fCurrentStamina > -150.0f && !CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint
 		&& !m_bAdrenalineActive) {
-		m_fCurrentStamina = m_fCurrentStamina - CTimer::GetTimeStep();
-		m_fStaminaProgress = m_fStaminaProgress + CTimer::GetTimeStep();
+		m_fCurrentStamina = m_fCurrentStamina - (*Timer_GetTimeStep());
+		m_fStaminaProgress = m_fStaminaProgress + (*Timer_GetTimeStep());
 	}
 
 	if (m_fStaminaProgress >= 500.0f) {
@@ -240,15 +246,16 @@ CPlayerPed::MakeChangesForNewWeapon(eWeaponType weapon)
 	SetCurrentWeapon(weapon);
 	m_nSelectedWepSlot = m_currentWeapon;
 
-	GetWeapon()->m_nAmmoInClip = Min(GetWeapon()->m_nAmmoTotal, CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nAmountofAmmunition);
+	GetWeapon()->m_nAmmoInClip = Min(GetWeapon()->m_nAmmoTotal, WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nAmountofAmmunition);
 
-	if (CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_CANAIM))
+	if (WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_CANAIM))
 		ClearWeaponTarget();
 
 	// WEAPONTYPE_SNIPERRIFLE? Wut?
-	CAnimBlendAssociation* weaponAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetPrimaryFireAnim(CWeaponInfo::GetWeaponInfo(WEAPONTYPE_SNIPERRIFLE)));
+	CAnimBlendAssociation* weaponAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetPrimaryFireAnim(WeaponInfo_GetWeaponInfo(WEAPONTYPE_SNIPERRIFLE)));
 	if (weaponAnim) {
-		weaponAnim->SetRun();
+		// Use the complete C association at the original native operation boundary
+		AnimAssociation_SetRun(weaponAnim);
 		weaponAnim->flags |= ASSOC_FADEOUTWHENDONE;
 	}
 	TheCamera.ClearPlayerWeaponMode();
@@ -269,8 +276,10 @@ CPlayerPed::ReApplyMoveAnims(void)
 	for(int i = 0; i < ARRAY_SIZE(moveAnims); i++) {
 		CAnimBlendAssociation *curMoveAssoc = RpAnimBlendClumpGetAssociation(GetClump(), moveAnims[i]);
 		if (curMoveAssoc) {
-			if (CGeneral::faststrcmp(CAnimManager::GetAnimAssociation(m_animGroup, moveAnims[i])->hierarchy->name, curMoveAssoc->hierarchy->name)) {
-				CAnimBlendAssociation *newMoveAssoc = CAnimManager::AddAnimation(GetClump(), m_animGroup, moveAnims[i]);
+			// Use the complete C animation manager at the original call boundary
+			if (General_faststrcmp(AnimManager_GetAnimAssociationById(m_animGroup, moveAnims[i])->hierarchy->name, curMoveAssoc->hierarchy->name)) {
+				// Use the complete C animation manager at the original call boundary
+				CAnimBlendAssociation *newMoveAssoc = AnimManager_AddAnimation(GetClump(), m_animGroup, moveAnims[i]);
 				newMoveAssoc->blendDelta = curMoveAssoc->blendDelta;
 				newMoveAssoc->blendAmount = curMoveAssoc->blendAmount;
 				curMoveAssoc->blendDelta = -1000.0f;
@@ -285,11 +294,12 @@ CPlayerPed::SetInitialState(void)
 {
 	m_nDrunkenness = 0;
 	m_nFadeDrunkenness = 0;
-	CMBlur::ClearDrunkBlur();
+	// Use the complete C motion-blur owner and its live shared state
+	MBlur_ClearDrunkBlur();
 	m_nDrunkCountdown = 0;
 	m_bAdrenalineActive = false;
 	m_nAdrenalineTime = 0;
-	CTimer::SetTimeScale(1.0f);
+	Timer_SetTimeScale(1.0f);
 	m_pSeekTarget = nil;
 	m_vecSeekPos = CVector(0.0f, 0.0f, 0.0f);
 	m_fleeFromPos = CVector2D(0.0f, 0.0f);
@@ -303,7 +313,7 @@ CPlayerPed::SetInitialState(void)
 	bIsPointingGunAt = false;
 	bRenderPedInCar = true;
 	if (m_pFire)
-		m_pFire->Extinguish();
+		Fire_Extinguish(m_pFire);
 
 	RpAnimBlendClumpRemoveAllAssociations(GetClump());
 	SetPedState(PED_IDLE);
@@ -338,11 +348,14 @@ CPlayerPed::SetRealMoveAnim(void)
 	CAnimBlendAssociation *curRunStopRAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_RUNSTOP2);
 	if (bResetWalkAnims) {
 		if (curWalkAssoc)
-			curWalkAssoc->SetCurrentTime(0.0f);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetCurrentTime(curWalkAssoc,0.0f);
 		if (curRunAssoc)
-			curRunAssoc->SetCurrentTime(0.0f);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetCurrentTime(curRunAssoc,0.0f);
 		if (curSprintAssoc)
-			curSprintAssoc->SetCurrentTime(0.0f);
+			// Use the complete C association at the original native operation boundary
+			AnimAssociation_SetCurrentTime(curSprintAssoc,0.0f);
 		bResetWalkAnims = false;
 	}
 
@@ -353,7 +366,8 @@ CPlayerPed::SetRealMoveAnim(void)
 	if (!curIdleAssoc)
 		curIdleAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_MELEE_IDLE_FIGHTMODE);
 
-	if (!((curRunStopAssoc && curRunStopAssoc->IsRunning()) || (curRunStopRAssoc && curRunStopRAssoc->IsRunning()))) {
+	// Use the complete C association at the original native operation boundary
+	if (!((curRunStopAssoc && AnimAssociation_IsRunning(curRunStopAssoc)) || (curRunStopRAssoc && AnimAssociation_IsRunning(curRunStopRAssoc)))) {
 
 		if (curRunStopAssoc && curRunStopAssoc->blendDelta >= 0.0f || curRunStopRAssoc && curRunStopRAssoc->blendDelta >= 0.0f) {
 			if (curRunStopAssoc) {
@@ -370,12 +384,14 @@ CPlayerPed::SetRealMoveAnim(void)
 			if (!curIdleAssoc) {
 				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f,
 						nil, true, false, false, false, false, false)) {
-					curIdleAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 8.0f);
+					// Use the complete C animation manager at the original call boundary
+					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 8.0f);
 
 				} else {
-					curIdleAssoc = CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 8.0f);
+					// Use the complete C animation manager at the original call boundary
+					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 8.0f);
 				}
-				m_nWaitTimer = CTimer::GetTimeInMilliseconds() + CGeneral::GetRandomNumberInRange(2500, 4000);
+				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(2500, 4000);
 			}
 			curIdleAssoc->blendAmount = 0.0f;
 			curIdleAssoc->blendDelta = 8.0f;
@@ -384,25 +400,30 @@ CPlayerPed::SetRealMoveAnim(void)
 			if (!curIdleAssoc) {
 				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f,
 						nil, true, false, false, false, false, false)) {
-					curIdleAssoc = CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
+					// Use the complete C animation manager at the original call boundary
+					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
 					
 				} else {
-					curIdleAssoc = CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
+					// Use the complete C animation manager at the original call boundary
+					curIdleAssoc = AnimManager_BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
 				}
 
-				m_nWaitTimer = CTimer::GetTimeInMilliseconds() + CGeneral::GetRandomNumberInRange(2500, 4000);
+				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(2500, 4000);
 			}
 
 			if ((m_fCurrentStamina > 0.0f || bIsAimingGun) && curIdleAssoc->animId == ANIM_STD_IDLE_TIRED) {
-				CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
+				// Use the complete C animation manager at the original call boundary
+				AnimManager_BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
 
 			} else if (m_nPedState != PED_FIGHT) {
 				if (m_fCurrentStamina < 0.0f && !bIsAimingGun && curIdleAssoc->animId != ANIM_STD_IDLE_TIRED
 					&& !CWorld::TestSphereAgainstWorld(GetPosition(), 0.5f, nil, true, false, false, false, false, false)) {
-					CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
+					// Use the complete C animation manager at the original call boundary
+					AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
 
 				} else if (curIdleAssoc->animId != ANIM_STD_IDLE) {
-					CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
+					// Use the complete C animation manager at the original call boundary
+					AnimManager_BlendAnimation(GetClump(), m_animGroup, ANIM_STD_IDLE, 4.0f);
 				}
 			}
 			m_nMoveState = PEDMOVE_STILL;
@@ -413,30 +434,37 @@ CPlayerPed::SetRealMoveAnim(void)
 					curWalkStartAssoc->blendAmount = 1.0f;
 					curWalkStartAssoc->blendDelta = 0.0f;
 				} else {
-					curWalkStartAssoc = CAnimManager::AddAnimation(GetClump(), m_animGroup, ANIM_STD_STARTWALK);
+					// Use the complete C animation manager at the original call boundary
+					curWalkStartAssoc = AnimManager_AddAnimation(GetClump(), m_animGroup, ANIM_STD_STARTWALK);
 				}
 				if (curWalkAssoc)
-					curWalkAssoc->SetCurrentTime(0.0f);
+					// Use the complete C association at the original native operation boundary
+					AnimAssociation_SetCurrentTime(curWalkAssoc,0.0f);
 				if (curRunAssoc)
-					curRunAssoc->SetCurrentTime(0.0f);
+					// Use the complete C association at the original native operation boundary
+					AnimAssociation_SetCurrentTime(curRunAssoc,0.0f);
 
 				// Destroy optional movement associations without invoking C++ delete.
-				curIdleAssoc->~CAnimBlendAssociation();
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_Destroy(curIdleAssoc);
 				free(curIdleAssoc);
 				CAnimBlendAssociation *tiredIdleAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_IDLE_TIRED);
 				if(tiredIdleAssoc){
-					tiredIdleAssoc->~CAnimBlendAssociation();
+					// Use the complete C association at the original native operation boundary
+					AnimAssociation_Destroy(tiredIdleAssoc);
 					free(tiredIdleAssoc);
 				}
 				CAnimBlendAssociation *fightIdleAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FIGHT_IDLE);
 				if (!fightIdleAnim)
 					fightIdleAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_MELEE_IDLE_FIGHTMODE);
 				if(fightIdleAnim){
-					fightIdleAnim->~CAnimBlendAssociation();
+					// Use the complete C association at the original native operation boundary
+					AnimAssociation_Destroy(fightIdleAnim);
 					free(fightIdleAnim);
 				}
 				if(curSprintAssoc){
-					curSprintAssoc->~CAnimBlendAssociation();
+					// Use the complete C association at the original native operation boundary
+					AnimAssociation_Destroy(curSprintAssoc);
 					free(curSprintAssoc);
 				}
 
@@ -445,31 +473,39 @@ CPlayerPed::SetRealMoveAnim(void)
 			}
 			if (curRunStopAssoc) {
 				// Destroy the run-stop animation without invoking C++ delete.
-				curRunStopAssoc->~CAnimBlendAssociation();
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_Destroy(curRunStopAssoc);
 				free(curRunStopAssoc);
 				RestoreHeadingRate();
 			}
 			if (curRunStopRAssoc) {
 				// Destroy the alternate run-stop animation without invoking C++ delete.
-				curRunStopRAssoc->~CAnimBlendAssociation();
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_Destroy(curRunStopRAssoc);
 				free(curRunStopRAssoc);
 				RestoreHeadingRate();
 			}
 			if (!curWalkAssoc) {
-				curWalkAssoc = CAnimManager::AddAnimation(GetClump(), m_animGroup, ANIM_STD_WALK);
+				// Use the complete C animation manager at the original call boundary
+				curWalkAssoc = AnimManager_AddAnimation(GetClump(), m_animGroup, ANIM_STD_WALK);
 				curWalkAssoc->blendAmount = 0.0f;
 			}
 			if (!curRunAssoc) {
-				curRunAssoc = CAnimManager::AddAnimation(GetClump(), m_animGroup, ANIM_STD_RUN);
+				// Use the complete C animation manager at the original call boundary
+				curRunAssoc = AnimManager_AddAnimation(GetClump(), m_animGroup, ANIM_STD_RUN);
 				curRunAssoc->blendAmount = 0.0f;
 			}
-			if (curWalkStartAssoc && !(curWalkStartAssoc->IsRunning())) {
+			// Use the complete C association at the original native operation boundary
+			if (curWalkStartAssoc && !(AnimAssociation_IsRunning(curWalkStartAssoc))) {
 				// Destroy the walk-start animation without invoking C++ delete.
-				curWalkStartAssoc->~CAnimBlendAssociation();
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_Destroy(curWalkStartAssoc);
 				free(curWalkStartAssoc);
 				curWalkStartAssoc = nil;
-				curWalkAssoc->SetRun();
-				curRunAssoc->SetRun();
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_SetRun(curWalkAssoc);
+				// Use the complete C association at the original native operation boundary
+				AnimAssociation_SetRun(curRunAssoc);
 			}
 			if (m_nMoveState == PEDMOVE_SPRINT) {
 				if (m_fCurrentStamina < 0.0f && (m_fCurrentStamina <= -150.0f || !curSprintAssoc || curSprintAssoc->blendDelta < 0.0f))
@@ -488,13 +524,16 @@ CPlayerPed::SetRealMoveAnim(void)
 				} else if (curSprintAssoc->blendDelta >= 0.0f || curSprintAssoc->blendAmount >= 0.8f) {
 					if (m_fMoveSpeed < 0.4f) {
 						AnimationId runStopAnim;
-						if (curSprintAssoc->GetProgress() < 0.5) // double
+						// Use the complete C association at the original native operation boundary
+						if (AnimAssociation_GetProgress(curSprintAssoc) < 0.5) // double
 							runStopAnim = ANIM_STD_RUNSTOP1;
 						else
 							runStopAnim = ANIM_STD_RUNSTOP2;
-						CAnimBlendAssociation* newRunStopAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, runStopAnim);
+						// Use the complete C animation manager at the original call boundary
+						CAnimBlendAssociation* newRunStopAssoc = AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, runStopAnim);
 						newRunStopAssoc->blendAmount = 1.0f;
-						newRunStopAssoc->SetDeleteCallback(RestoreHeadingRateCB, this);
+						// Use the complete C association at the original native operation boundary
+						AnimAssociation_SetDeleteCallback(newRunStopAssoc,RestoreHeadingRateCB, this);
 						m_headingRate = 0.0f;
 						curSprintAssoc->flags |= ASSOC_DELETEFADEDOUT;
 						curSprintAssoc->blendDelta = -1000.0f;
@@ -534,7 +573,8 @@ CPlayerPed::SetRealMoveAnim(void)
 					// Transition between run-sprint
 					curWalkAssoc->blendAmount = 0.0f;
 					curRunAssoc->blendAmount = 1.0f;
-					curSprintAssoc = CAnimManager::BlendAnimation(GetClump(), m_animGroup, ANIM_STD_RUNFAST, 2.0f);
+					// Use the complete C animation manager at the original call boundary
+					curSprintAssoc = AnimManager_BlendAnimation(GetClump(), m_animGroup, ANIM_STD_RUNFAST, 2.0f);
 				}
 				UseSprintEnergy();
 			} else {
@@ -557,9 +597,9 @@ CPlayerPed::SetRealMoveAnim(void)
 		}
 	}
 	if (m_bAdrenalineActive) {
-		if (CTimer::GetTimeInMilliseconds() > m_nAdrenalineTime) {
+		if ((*Timer_GetTimeInMilliseconds()) > m_nAdrenalineTime) {
 			m_bAdrenalineActive = false;
-			CTimer::SetTimeScale(1.0f);
+			Timer_SetTimeScale(1.0f);
 			if (curWalkStartAssoc)
 				curWalkStartAssoc->speed = 1.0f;
 			if (curWalkAssoc)
@@ -569,7 +609,7 @@ CPlayerPed::SetRealMoveAnim(void)
 			if (curSprintAssoc)
 				curSprintAssoc->speed = 1.0f;
 		} else {
-			CTimer::SetTimeScale(1.0f / 3);
+			Timer_SetTimeScale(1.0f / 3);
 			if (curWalkStartAssoc)
 				curWalkStartAssoc->speed = 2.0f;
 			if (curWalkAssoc)
@@ -591,14 +631,14 @@ void
 CPlayerPed::RestoreSprintEnergy(float restoreSpeed)
 {
 	if (m_fCurrentStamina < m_fMaxStamina)
-		m_fCurrentStamina += restoreSpeed * CTimer::GetTimeStep() * 0.5f;
+		m_fCurrentStamina += restoreSpeed * (*Timer_GetTimeStep()) * 0.5f;
 }
 
 float
 CPlayerPed::DoWeaponSmoothSpray(void)
 {
 	if (m_nPedState == PED_ATTACK && !m_pPointGunAt) {
-		CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
+		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		switch (GetWeapon()->m_eWeaponType) {
 			case WEAPONTYPE_GOLFCLUB:
 			case WEAPONTYPE_NIGHTSTICK:
@@ -659,7 +699,7 @@ CPlayerPed::DoesTargetHaveToBeBroken(CVector target, CWeapon *weaponUsed)
 {
 	CVector distVec = target - GetPosition();
 
-	if (distVec.Magnitude() > CWeaponInfo::GetWeaponInfo(weaponUsed->m_eWeaponType)->m_fRange)
+	if (distVec.Magnitude() > WeaponInfo_GetWeaponInfo(weaponUsed->m_eWeaponType)->m_fRange)
 		return true;
 
 	return false;
@@ -676,7 +716,9 @@ CPlayerPed::RunningLand(CPad *padUsed)
 		landAssoc->blendDelta = -1000.0f;
 		landAssoc->flags |= ASSOC_DELETEFADEDOUT;
 
-		CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_JUMP_LAND)->SetFinishCallback(FinishJumpCB, this);
+		// Use the complete C association at the original native operation boundary
+		// Use the complete C animation manager at the original call boundary
+		AnimAssociation_SetFinishCallback(AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_JUMP_LAND),FinishJumpCB, this);
 
 		if (m_nPedState == PED_JUMP)
 			RestorePreviousState();
@@ -726,13 +768,13 @@ CPlayerPed::PlayerControlSniper(CPad *padUsed)
 	}
 
 	int firingRate = GetWeapon()->m_eWeaponType == WEAPONTYPE_LASERSCOPE ? 333 : 266;
-	if (padUsed->WeaponJustDown() && CTimer::GetTimeInMilliseconds() > GetWeapon()->m_nTimer) {
+	if (padUsed->WeaponJustDown() && (*Timer_GetTimeInMilliseconds()) > GetWeapon()->m_nTimer) {
 		CVector firePos(0.0f, 0.0f, 0.6f);
 		firePos = GetMatrix() * firePos;
 		GetWeapon()->Fire(this, &firePos);
-		m_nPadDownPressedInMilliseconds = CTimer::GetTimeInMilliseconds();
-	} else if (CTimer::GetTimeInMilliseconds() > m_nPadDownPressedInMilliseconds + firingRate &&
-		CTimer::GetTimeInMilliseconds() - CTimer::GetTimeStepInMilliseconds() < m_nPadDownPressedInMilliseconds + firingRate && padUsed->GetWeapon()) {
+		m_nPadDownPressedInMilliseconds = (*Timer_GetTimeInMilliseconds());
+	} else if ((*Timer_GetTimeInMilliseconds()) > m_nPadDownPressedInMilliseconds + firingRate &&
+		(*Timer_GetTimeInMilliseconds()) - Timer_GetTimeStepInMilliseconds() < m_nPadDownPressedInMilliseconds + firingRate && padUsed->GetWeapon()) {
 		
 		if (GetWeapon()->m_nAmmoTotal > 0) {
 			DMAudio_PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
@@ -745,7 +787,7 @@ CPlayerPed::PlayerControlSniper(CPad *padUsed)
 void
 CPlayerPed::ProcessWeaponSwitch(CPad *padUsed)
 {
-	if (CDarkel::FrenzyOnGoing() || m_attachedTo)
+	if (Darkel_FrenzyOnGoing() || m_attachedTo)
 		goto switchDetectDone;
 
 	if (!m_pPointGunAt && !bDontAllowWeaponChange && GetWeapon()->m_eWeaponType != WEAPONTYPE_DETONATOR) {
@@ -802,7 +844,7 @@ CPlayerPed::ProcessWeaponSwitch(CPad *padUsed)
 	}
 	
 spentAmmoCheck:
-	if (CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_eWeaponFire != WEAPON_FIRE_MELEE
+	if (WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_eWeaponFire != WEAPON_FIRE_MELEE
 		&& (!padUsed->GetWeapon() || GetWeapon()->m_eWeaponType != WEAPONTYPE_MINIGUN)) {
 		if (GetWeapon()->m_nAmmoTotal <= 0) {
 			if (TheCamera.PlayerWeaponMode.Mode == CCam::MODE_M16_1STPERSON
@@ -862,18 +904,18 @@ CPlayerPed::PlayerControlM16(CPad *padUsed)
 		TheCamera.ClearPlayerWeaponMode();
 	}
 
-	if (padUsed->GetWeapon() && CTimer::GetTimeInMilliseconds() > GetWeapon()->m_nTimer) {
+	if (padUsed->GetWeapon() && (*Timer_GetTimeInMilliseconds()) > GetWeapon()->m_nTimer) {
 		if (GetWeapon()->m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO) {
 			DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 0.f);
-			GetWeapon()->m_nTimer = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nFiringRate + CTimer::GetTimeInMilliseconds();
+			GetWeapon()->m_nTimer = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_nFiringRate + (*Timer_GetTimeInMilliseconds());
 		} else {
 			CVector firePos(0.0f, 0.0f, 0.6f);
 			firePos = GetMatrix() * firePos;
 			GetWeapon()->Fire(this, &firePos);
-			m_nPadDownPressedInMilliseconds = CTimer::GetTimeInMilliseconds();
+			m_nPadDownPressedInMilliseconds = (*Timer_GetTimeInMilliseconds());
 		}
-	} else if (CTimer::GetTimeInMilliseconds() > GetWeapon()->m_nTimer &&
-		CTimer::GetTimeInMilliseconds() - CTimer::GetTimeStepInMilliseconds() < GetWeapon()->m_nTimer && GetWeapon()->m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO) {
+	} else if ((*Timer_GetTimeInMilliseconds()) > GetWeapon()->m_nTimer &&
+		(*Timer_GetTimeInMilliseconds()) - Timer_GetTimeStepInMilliseconds() < GetWeapon()->m_nTimer && GetWeapon()->m_eWeaponState != WEAPONSTATE_OUT_OF_AMMO) {
 		DMAudio_PlayFrontEndSound(SOUND_WEAPON_AK47_BULLET_ECHO, GetWeapon()->m_eWeaponType);
 	}
 	GetWeapon()->Update(m_audioEntityId, nil);
@@ -887,13 +929,13 @@ CPlayerPed::PlayerControlFighter(CPad *padUsed)
 	float padMove = CVector2D(leftRight, upDown).Magnitude();
 
 	if (padMove > 0.0f) {
-		m_fRotationDest = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown) - TheCamera.Orientation;
+		m_fRotationDest = General_GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown) - TheCamera.Orientation;
 		m_takeAStepAfterAttack = padMove > (2 * PAD_MOVE_TO_GAME_WORLD_MOVE);
 		if (padUsed->GetSprint() && padMove > (1 * PAD_MOVE_TO_GAME_WORLD_MOVE))
 			bIsAttacking = false;
 	}
 
-	if (!CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY) && padUsed->JumpJustDown()) {
+	if (!WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_HEAVY) && padUsed->JumpJustDown()) {
 		if (m_nEvadeAmount != 0 && m_pEvadingFrom) {
 			SetEvasiveDive((CPhysical*)m_pEvadingFrom, 1);
 			m_nEvadeAmount = 0;
@@ -912,8 +954,8 @@ CPlayerPed::PlayerControl1stPersonRunAround(CPad *padUsed)
 	float padMove = CVector2D(leftRight, upDown).Magnitude();
 	float padMoveInGameUnit = padMove / PAD_MOVE_TO_GAME_WORLD_MOVE;
 	if (padMoveInGameUnit > 0.0f) {
-		m_fRotationDest = CGeneral::LimitRadianAngle(TheCamera.Orientation);
-		m_fMoveSpeed = Min(padMoveInGameUnit, 0.07f * CTimer::GetTimeStep() + m_fMoveSpeed);
+		m_fRotationDest = General_LimitRadianAngle(TheCamera.Orientation);
+		m_fMoveSpeed = Min(padMoveInGameUnit, 0.07f * (*Timer_GetTimeStep()) + m_fMoveSpeed);
 	} else {
 		m_fMoveSpeed = 0.0f;
 	}
@@ -921,7 +963,7 @@ CPlayerPed::PlayerControl1stPersonRunAround(CPad *padUsed)
 	if (m_nPedState == PED_JUMP) {
 		if (bIsInTheAir) {
 			if (bUsesCollision && !bHitSteepSlope && (!bHitSomethingLastFrame || m_vecDamageNormal.z > 0.6f)
-				&& m_fDistanceTravelled < CTimer::GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
+				&& m_fDistanceTravelled < Timer_GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
 
 				float angleSin = Sin(m_fRotationCur); // originally sin(DEGTORAD(RADTODEG(m_fRotationCur))) o_O
 				float angleCos = Cos(m_fRotationCur);
@@ -937,13 +979,13 @@ CPlayerPed::PlayerControl1stPersonRunAround(CPad *padUsed)
 		return;
 	}
 
-	if (!CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY) && padUsed->GetSprint()) {
+	if (!WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_HEAVY) && padUsed->GetSprint()) {
 		m_nMoveState = PEDMOVE_SPRINT;
 	}
 	if (m_nPedState != PED_FIGHT)
 		SetRealMoveAnim();
 
-	if (!bIsInTheAir && !(CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY)) &&
+	if (!bIsInTheAir && !(WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_HEAVY)) &&
 		padUsed->JumpJustDown() && m_nPedState != PED_JUMP) {
 
 		ClearAttack();
@@ -998,14 +1040,14 @@ CPlayerPed::KeepAreaAroundPlayerClear(void)
 			if (veh->GetStatus() != STATUS_PLAYER && veh->GetStatus() != STATUS_PLAYER_DISABLED) {
 				if ((veh->GetPosition() - playerPos).MagnitudeSqr() > 25.0f) {
 					veh->AutoPilot.m_nTempAction = TEMPACT_WAIT;
-					veh->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 5000;
+					veh->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 5000;
 				} else {
 					if (DotProduct2D(playerPos - veh->GetPosition(), veh->GetForward()) > 0.0f)
 						veh->AutoPilot.m_nTempAction = TEMPACT_REVERSE;
 					else
 						veh->AutoPilot.m_nTempAction = TEMPACT_GOFORWARD;
 
-					veh->AutoPilot.m_nTimeTempAction = CTimer::GetTimeInMilliseconds() + 2000;
+					veh->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2000;
 				}
 				CCarCtrl::PossiblyRemoveVehicle(veh);
 			}
@@ -1020,10 +1062,10 @@ CPlayerPed::EvaluateNeighbouringTarget(CEntity *candidate, CEntity **targetPtr, 
 	CVector distVec = candidate->GetPosition() - GetPosition();
 	if (distVec.Magnitude2D() <= distLimit) {
 		if (!DoesTargetHaveToBeBroken(candidate->GetPosition(), GetWeapon())) {
-			float angleBetweenUs = CGeneral::GetATanOfXY(candidate->GetPosition().x - TheCamera.GetPosition().x,
+			float angleBetweenUs = General_GetATanOfXY(candidate->GetPosition().x - TheCamera.GetPosition().x,
 				candidate->GetPosition().y - TheCamera.GetPosition().y);
 
-			angleBetweenUs = CGeneral::LimitAngle(angleBetweenUs - angleOffset);
+			angleBetweenUs = General_LimitAngle(angleBetweenUs - angleOffset);
 			float closeness;
 			if (lookToLeft) {
 				closeness = angleBetweenUs > 0.0f ? -Abs(angleBetweenUs) : -100000.0f;
@@ -1046,8 +1088,8 @@ CPlayerPed::EvaluateTarget(CEntity *candidate, CEntity **targetPtr, float *lastC
 	float dist = distVec.Magnitude2D();
 	if (dist <= distLimit) {
 		if (!DoesTargetHaveToBeBroken(candidate->GetPosition(), GetWeapon())) {
-			float angleBetweenUs = CGeneral::GetATanOfXY(distVec.x, distVec.y);
-			angleBetweenUs = CGeneral::LimitAngle(angleBetweenUs - angleOffset);
+			float angleBetweenUs = General_GetATanOfXY(distVec.x, distVec.y);
+			angleBetweenUs = General_LimitAngle(angleBetweenUs - angleOffset);
 
 			float closeness = -dist - 5.0f * Abs(angleBetweenUs);
 			if (priority) {
@@ -1065,24 +1107,24 @@ CPlayerPed::EvaluateTarget(CEntity *candidate, CEntity **targetPtr, float *lastC
 bool
 CPlayerPed::CanIKReachThisTarget(CVector target, CWeapon* weapon, bool zRotImportant)
 {
-	float angleToFace = CGeneral::GetRadianAngleBetweenPoints(target.x, target.y, GetPosition().x, GetPosition().y);
-	float angleDiff = CGeneral::LimitRadianAngle(angleToFace - m_fRotationCur);
+	float angleToFace = General_GetRadianAngleBetweenPoints(target.x, target.y, GetPosition().x, GetPosition().y);
+	float angleDiff = General_LimitRadianAngle(angleToFace - m_fRotationCur);
 
-	return (!zRotImportant || CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM) || Abs(angleDiff) <= HALFPI) &&
-		(CWeaponInfo::GetWeaponInfo(weapon->m_eWeaponType)->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM) || Abs(target.z - GetPosition().z) <= (target - GetPosition()).Magnitude2D());
+	return (!zRotImportant || WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM) || Abs(angleDiff) <= HALFPI) &&
+		(WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM) || Abs(target.z - GetPosition().z) <= (target - GetPosition()).Magnitude2D());
 }
 
 void
 CPlayerPed::RotatePlayerToTrackTarget(void)
 {
-	if (CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM))
+	if (WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM))
 		return;
 
-	float angleToFace = CGeneral::GetRadianAngleBetweenPoints(
+	float angleToFace = General_GetRadianAngleBetweenPoints(
 		m_pPointGunAt->GetPosition().x, m_pPointGunAt->GetPosition().y,
 		GetPosition().x, GetPosition().y);
 
-	float angleDiff = CGeneral::LimitRadianAngle(m_fRotationCur - angleToFace);
+	float angleDiff = General_LimitRadianAngle(m_fRotationCur - angleToFace);
 	if (angleDiff < -DEGTORAD(25.0f)) {
 		m_fRotationCur -= angleDiff + DEGTORAD(25.0f);
 		m_fRotationDest -= angleDiff + DEGTORAD(25.0f);
@@ -1097,12 +1139,12 @@ bool
 CPlayerPed::FindNextWeaponLockOnTarget(CEntity *previousTarget, bool lookToLeft)
 {
 	CEntity *nextTarget = nil;
-	float weaponRange = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange;
+	float weaponRange = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange;
 	// nextTarget = nil; // duplicate
 	float lastCloseness = -10000.0f;
 	// CGeneral::GetATanOfXY(GetForward().x, GetForward().y); // unused
 	CVector distVec = previousTarget->GetPosition() - TheCamera.GetPosition();
-	float referenceBeta = CGeneral::GetATanOfXY(distVec.x, distVec.y);
+	float referenceBeta = General_GetATanOfXY(distVec.x, distVec.y);
 
 		// Access raw storage through the C store or pool API
 	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
@@ -1142,7 +1184,7 @@ bool
 CPlayerPed::FindWeaponLockOnTarget(void)
 {
 	CEntity *nextTarget = nil;
-	float weaponRange = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange;
+	float weaponRange = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType)->m_fRange;
 
 	if (m_pPointGunAt) {
 		CVector distVec = m_pPointGunAt->GetPosition() - GetPosition();
@@ -1156,7 +1198,7 @@ CPlayerPed::FindWeaponLockOnTarget(void)
 
 	// nextTarget = nil; // duplicate
 	float lastCloseness = -10000.0f;
-	float referenceBeta = CGeneral::GetATanOfXY(GetForward().x, GetForward().y);
+	float referenceBeta = General_GetATanOfXY(GetForward().x, GetForward().y);
 		// Access raw storage through the C store or pool API
 	for (int h = CPool_GetSize(CPools::GetPedPool()) - 1; h >= 0; h--) {
 		// Access raw storage through the C store or pool API
@@ -1270,10 +1312,11 @@ CPlayerPed::ProcessAnimGroups(void)
 void
 CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 {
-	CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
+	CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
 	if (m_bHasLockOnTarget && !m_pPointGunAt) {
 		TheCamera.ClearPlayerWeaponMode();
-		CWeaponEffects::ClearCrossHair();
+		// Enter the complete C weapon effect operation
+		WeaponEffects_ClearCrossHair();
 		ClearPointGunAt();
 	}
 
@@ -1297,7 +1340,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 		bCrouchWhenShooting = false;
 	}
 
-	if(weaponInfo->IsFlagSet(WEAPONFLAG_CANAIM))
+	if(WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM))
 		m_wepAccuracy = 95;
 	else
 		m_wepAccuracy = 100;
@@ -1312,7 +1355,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 			if (padUsed->TargetJustDown() || TheCamera.m_bJustJumpedOutOf1stPersonBecauseOfTarget) {
 #ifdef FREE_CAM
 				if (CCamera::bFreeCam && TheCamera.Cams[0].Using3rdPersonMouseCam()) {
-					m_fRotationCur = CGeneral::LimitRadianAngle(-TheCamera.Orientation);
+					m_fRotationCur = General_LimitRadianAngle(-TheCamera.Orientation);
 					SetHeading(m_fRotationCur);
 				}
 #endif
@@ -1326,7 +1369,8 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 					TheCamera.SetNewPlayerWeaponMode(CCam::MODE_M16_1STPERSON, 0, 0);
 
 				m_fMoveSpeed = 0.0f;
-				CAnimManager::BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE, 1000.0f);
+				// Use the complete C animation manager at the original call boundary
+				AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE, 1000.0f);
 				SetPedState(PED_SNIPER_MODE);
 				return;
 			}
@@ -1340,7 +1384,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 		if (m_nSelectedWepSlot == m_currentWeapon) {
 			if (m_pPointGunAt) {
 				if (m_nPedState == PED_ATTACK) {
-					m_fAttackButtonCounter *= Pow(0.94f, CTimer::GetTimeStep());
+					m_fAttackButtonCounter *= Pow(0.94f, (*Timer_GetTimeStep()));
 				} else {
 					m_fAttackButtonCounter = 0.0f;
 				}
@@ -1350,14 +1394,14 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 					if (padUsed->WeaponJustDown()) {
 						m_bHaveTargetSelected = true;
 					} else if (!m_bHaveTargetSelected) {
-						m_fAttackButtonCounter += CTimer::GetTimeStepNonClipped();
+						m_fAttackButtonCounter += (*Timer_GetTimeStepNonClipped());
 					}
 				} else {
 					m_fAttackButtonCounter = 0.0f;
 					m_bHaveTargetSelected = false;
 				}
 				if (GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED && GetWeapon()->m_eWeaponType != WEAPONTYPE_BRASSKNUCKLE &&
-					!weaponInfo->IsFlagSet(WEAPONFLAG_FIGHTMODE)) {
+					!WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_FIGHTMODE)) {
 
 					if (GetWeapon()->m_eWeaponType != WEAPONTYPE_DETONATOR && GetWeapon()->m_eWeaponType != WEAPONTYPE_DETONATOR_GRENADE ||
 						padUsed->WeaponJustDown())
@@ -1389,11 +1433,11 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 	if (CCamera::m_bUseMouse3rdPerson && CCamera::bFreeCam &&
 		m_nSelectedWepSlot == m_currentWeapon && m_nMoveState != PEDMOVE_SPRINT) {
 
-#define CAN_AIM_WITH_ARM (weaponInfo->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM) && !bIsDucking && !bCrouchWhenShooting)
+#define CAN_AIM_WITH_ARM (WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM_WITHARM) && !bIsDucking && !bCrouchWhenShooting)
 		// Weapons except throwable and melee ones
 		if (weaponInfo->m_nWeaponSlot > 2) {
 			if ((padUsed->GetTarget() && CAN_AIM_WITH_ARM) || padUsed->GetWeapon()) {
-				float limitedCam = CGeneral::LimitRadianAngle(-TheCamera.Orientation);
+				float limitedCam = General_LimitRadianAngle(-TheCamera.Orientation);
 
 				m_cachedCamSource = TheCamera.Cams[TheCamera.ActiveCam].Source;
 				m_cachedCamFront = TheCamera.Cams[TheCamera.ActiveCam].Front;
@@ -1417,8 +1461,8 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 					m_headingRate = 12.5f;
 
 					// Anim. fix for shotgun, ak47 and m16 (we must finish rot. it quickly)
-					if (weaponInfo->IsFlagSet(WEAPONFLAG_CANAIM) && padUsed->WeaponJustDown()) {
-						m_fRotationCur = CGeneral::LimitRadianAngle(m_fRotationCur);
+					if (WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM) && padUsed->WeaponJustDown()) {
+						m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
 						float limitedRotDest = m_fRotationDest;
 
 						if (m_fRotationCur - PI > m_fRotationDest) {
@@ -1441,7 +1485,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 	if (pointedGun == 1) {
 		if (m_nPedState == PED_ATTACK) {
 			if (!padUsed->GetWeapon() && (m_pedIK.m_flags & CPedIK::GUN_POINTED_SUCCESSFULLY) == 0) {
-				float limitedCam = CGeneral::LimitRadianAngle(-TheCamera.Orientation);
+				float limitedCam = General_LimitRadianAngle(-TheCamera.Orientation);
 
 				SetAimFlag(limitedCam);
 				((CPlayerPed*)this)->m_fFPSMoveHeading = TheCamera.Find3rdPersonQuickAimPitch();
@@ -1454,7 +1498,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 	}
 #endif
 
-	if (padUsed->GetTarget() && m_nSelectedWepSlot == m_currentWeapon && m_nMoveState != PEDMOVE_SPRINT && !TheCamera.Using1stPersonWeaponMode() && weaponInfo->IsFlagSet(WEAPONFLAG_CANAIM)) {
+	if (padUsed->GetTarget() && m_nSelectedWepSlot == m_currentWeapon && m_nMoveState != PEDMOVE_SPRINT && !TheCamera.Using1stPersonWeaponMode() && WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM)) {
 		if (m_pPointGunAt) {
 			// what??
 			if (!m_pPointGunAt
@@ -1477,7 +1521,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 				return;
 			}
 			if (CPlayerPed::DoesTargetHaveToBeBroken(m_pPointGunAt->GetPosition(), GetWeapon()) || 
-				(!bCanPointGunAtTarget && !weaponInfo->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM))) { // this line isn't on Mobile, idk why
+				(!bCanPointGunAtTarget && !WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM_WITHARM))) { // this line isn't on Mobile, idk why
 				ClearWeaponTarget();
 				return;
 			}
@@ -1511,9 +1555,17 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 			markPos = m_pPointGunAt->GetPosition();
 		}
 		if (bCanPointGunAtTarget) {
-			CWeaponEffects::MarkTarget(markPos, 64, 0, 0, 255, 0.8f);
+			([](CVector weaponPosition,uint8_t red,uint8_t green,uint8_t blue,uint8_t alpha,float size){
+    // Copy the original by-value vector before entering the complete C operation
+    WeaponEffectsVector position={weaponPosition.x,weaponPosition.y,weaponPosition.z};
+    WeaponEffects_MarkTarget(position,red,green,blue,alpha,size);
+})(markPos, 64, 0, 0, 255, 0.8f);
 		} else {
-			CWeaponEffects::MarkTarget(markPos, 64, 32, 0, 255, 0.8f);
+			([](CVector weaponPosition,uint8_t red,uint8_t green,uint8_t blue,uint8_t alpha,float size){
+    // Copy the original by-value vector before entering the complete C operation
+    WeaponEffectsVector position={weaponPosition.x,weaponPosition.y,weaponPosition.z};
+    WeaponEffects_MarkTarget(position,red,green,blue,alpha,size);
+})(markPos, 64, 32, 0, 255, 0.8f);
 		}
 	}
 	m_bHasLockOnTarget = m_pPointGunAt != nil;
@@ -1522,7 +1574,7 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 bool
 CPlayerPed::MovementDisabledBecauseOfTargeting(void)
 {
-	return m_pPointGunAt && !CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_CANAIM_WITHARM);
+	return m_pPointGunAt && !WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM);
 }
 
 void
@@ -1555,15 +1607,15 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 #endif
 
 	if (padMoveInGameUnit > 0.0f || smoothSprayWithoutMove) {
-		float padHeading = CGeneral::GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown);
-		float neededTurn = CGeneral::LimitRadianAngle(padHeading - camOrientation);
+		float padHeading = General_GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown);
+		float neededTurn = General_LimitRadianAngle(padHeading - camOrientation);
 		if (smoothSprayRate > 0.0f) {
-			m_fRotationDest = m_fRotationCur - leftRight / 128.0f * smoothSprayRate * CTimer::GetTimeStep();
+			m_fRotationDest = m_fRotationCur - leftRight / 128.0f * smoothSprayRate * (*Timer_GetTimeStep());
 		} else {
 			m_fRotationDest = neededTurn;
 		}
 
-		float maxAcc = 0.07f * CTimer::GetTimeStep();
+		float maxAcc = 0.07f * (*Timer_GetTimeStep());
 		m_fMoveSpeed = Min(padMoveInGameUnit, m_fMoveSpeed + maxAcc);
 
 	} else {
@@ -1573,7 +1625,7 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 	if (m_nPedState == PED_JUMP) {
 		if (bIsInTheAir) {
 			if (bUsesCollision && !bHitSteepSlope && (!bHitSomethingLastFrame || m_vecDamageNormal.z > 0.6f)
-				&& m_fDistanceTravelled < CTimer::GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
+				&& m_fDistanceTravelled < Timer_GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
 
 				float angleSin = Sin(m_fRotationCur); // originally sin(DEGTORAD(RADTODEG(m_fRotationCur))) o_O
 				float angleCos = Cos(m_fRotationCur);
@@ -1589,7 +1641,7 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 		return;
 	}
 
-	if (!CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY) && padUsed->GetSprint()) {
+	if (!WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_HEAVY) && padUsed->GetSprint()) {
 		if (!m_pCurrentPhysSurface || (!m_pCurrentPhysSurface->bInfiniteMass || m_pCurrentPhysSurface->m_phy_flagA08))
 			m_nMoveState = PEDMOVE_SPRINT;
 	}
@@ -1597,7 +1649,7 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 	if (m_nPedState != PED_FIGHT)
 		SetRealMoveAnim();
 
-	if (!bIsInTheAir && !CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType)->IsFlagSet(WEAPONFLAG_HEAVY)
+	if (!bIsInTheAir && !WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType),WEAPONFLAG_HEAVY)
 		&& padUsed->JumpJustDown() && m_nPedState != PED_JUMP) {
 		ClearAttack();
 		ClearWeaponTarget();
@@ -1709,7 +1761,7 @@ CPlayerPed::ProcessControl(void)
 	if (m_nEvadeAmount == 0)
 		m_pEvadingFrom = nil;
 
-	if (m_pWanted->GetWantedLevel() > 0)
+	if (Wanted_GetWantedLevel(m_pWanted) > 0)
 		FindNewAttackPoints();
 	
 	UpdateMeleeAttackers();
@@ -1757,7 +1809,7 @@ CPlayerPed::ProcessControl(void)
 	if (m_pCurrentPhysSurface && m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat()) {
 		bTryingToReachDryLand = true;
 
-	} else if (!(((uint8)CTimer::GetFrameCounter() + m_randomSeed) & 0xF)) {
+	} else if (!(((uint8)(*Timer_GetFrameCounter()) + m_randomSeed) & 0xF)) {
 		CVehicle *nearVeh = (CVehicle*)CWorld::TestSphereAgainstWorld(GetPosition(), 7.0f, nil, false, true, false, false, false, false);
 		if (nearVeh && nearVeh->IsBoat())
 			bTryingToReachDryLand = true;
@@ -1770,12 +1822,14 @@ CPlayerPed::ProcessControl(void)
 			--m_nDrunkenness;
 		} else {
 			m_nDrunkenness = 0;
-			CMBlur::ClearDrunkBlur();
+			// Use the complete C motion-blur owner and its live shared state
+			MBlur_ClearDrunkBlur();
 			m_nFadeDrunkenness = 0;
 		}
 	}
 	if (m_nDrunkenness != 0) {
-		CMBlur::SetDrunkBlur(m_nDrunkenness / 255.f);
+		// Use the complete C motion-blur owner and its live shared state
+		MBlur_SetDrunkBlur(m_nDrunkenness / 255.f);
 	}
 	CPed::ProcessControl();
 	SetNearbyPedsToInteractWithPlayer();
@@ -1783,15 +1837,15 @@ CPlayerPed::ProcessControl(void)
 		return;
 
 	CPad *padUsed = GetPadFromPlayer(this);
-	m_pWanted->Update();
+	Wanted_Update(m_pWanted);
 	PruneReferences();
 
 	if (GetWeapon()->m_eWeaponType == WEAPONTYPE_MINIGUN) {
-		CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(GetWeapon()->m_eWeaponType);
+		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
 		CAnimBlendAssociation *fireAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetPrimaryFireAnim(weaponInfo));
 		if (fireAnim && fireAnim->currentTime - fireAnim->timeStep < weaponInfo->m_fAnimLoopEnd && m_nPedState == PED_ATTACK) {
 			if (m_fGunSpinSpeed < 0.45f) {
-				m_fGunSpinSpeed = Min(0.45f, m_fGunSpinSpeed + CTimer::GetTimeStep() * 0.013f);
+				m_fGunSpinSpeed = Min(0.45f, m_fGunSpinSpeed + (*Timer_GetTimeStep()) * 0.013f);
 			}
 
 			if (padUsed->GetWeapon() && GetWeapon()->m_nAmmoTotal > 0 && fireAnim->currentTime >= weaponInfo->m_fAnimLoopStart) {
@@ -1804,7 +1858,7 @@ CPlayerPed::ProcessControl(void)
 				if (m_fGunSpinSpeed >= 0.45f) {
 					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_3,  0.0f);
 				}
-				m_fGunSpinSpeed = Max(0.0f, m_fGunSpinSpeed - CTimer::GetTimeStep() * 0.003f);
+				m_fGunSpinSpeed = Max(0.0f, m_fGunSpinSpeed - (*Timer_GetTimeStep()) * 0.003f);
 			}
 		}
 	}
@@ -1823,13 +1877,13 @@ CPlayerPed::ProcessControl(void)
 	}
 	if (m_nPedState == PED_DIE) {
 		ClearWeaponTarget();
-		if (CTimer::GetTimeInMilliseconds() > m_bloodyFootprintCountOrDeathTime + 4000)
+		if ((*Timer_GetTimeInMilliseconds()) > m_bloodyFootprintCountOrDeathTime + 4000)
 			SetDead();
 		return;
 	}
 	if (m_nPedState == PED_DRIVING && m_objective != OBJECTIVE_LEAVE_CAR) {
 		if (!CReplay::IsPlayingBack() || m_pMyVehicle) {
-			if (m_pMyVehicle->IsCar() && ((CAutomobile*)m_pMyVehicle)->Damage.GetDoorStatus(DOOR_FRONT_LEFT) == DOOR_STATUS_SWINGING) {
+			if (m_pMyVehicle->IsCar() && Damage_GetDoorStatus(&((CAutomobile*)m_pMyVehicle)->Damage, DOOR_FRONT_LEFT) == DOOR_STATUS_SWINGING) {
 				CAnimBlendAssociation *rollDoorAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LHS);
 
 				if (m_pMyVehicle->m_nGettingOutFlags & CAR_DOOR_FLAG_LF || rollDoorAssoc || (rollDoorAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LO_LHS))) {
@@ -1845,11 +1899,14 @@ CPlayerPed::ProcessControl(void)
 					} else {
 						m_pMyVehicle->m_nGettingOutFlags |= CAR_DOOR_FLAG_LF;
 						if (m_pMyVehicle->bLowVehicle)
-							rollDoorAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LO_LHS);
+							// Use the complete C animation manager at the original call boundary
+							rollDoorAssoc = AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LO_LHS);
 						else
-							rollDoorAssoc = CAnimManager::AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LHS);
+							// Use the complete C animation manager at the original call boundary
+							rollDoorAssoc = AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LHS);
 
-						rollDoorAssoc->SetFinishCallback(PedAnimDoorCloseRollingCB, this);
+						// Use the complete C association at the original native operation boundary
+						AnimAssociation_SetFinishCallback(rollDoorAssoc,PedAnimDoorCloseRollingCB, this);
 					}
 				}
 			}
@@ -1880,7 +1937,8 @@ CPlayerPed::ProcessControl(void)
 		case PED_FIGHT:
 		case PED_AIM_GUN:
 		case PED_ANSWER_MOBILE:
-			if (!RpAnimBlendClumpGetFirstAssociation(GetClump(), ASSOC_BLOCK) && !m_attachedTo) {
+			// Use the complete C animation plugin API with explicit overload and render arguments
+			if (!RpAnimBlendClumpGetFirstAssociationWithMask(GetClump(), ASSOC_BLOCK) && !m_attachedTo) {
 				if (TheCamera.Using1stPersonWeaponMode()) {
 					if (padUsed)
 						PlayerControlSniper(padUsed);
@@ -1996,13 +2054,13 @@ CPlayerPed::ProcessControl(void)
 			&& TheCamera.Cams[TheCamera.ActiveCam].DirectionWasLooking == LOOKING_BEHIND) {
 
 			m_lookTimer = 0;
-			float camAngle = CGeneral::LimitRadianAngle(TheCamera.Cams[TheCamera.ActiveCam].Front.Heading());
+			float camAngle = General_LimitRadianAngle(TheCamera.Cams[TheCamera.ActiveCam].Front.Heading());
 			float angleBetweenPlayerAndCam = Abs(camAngle - m_fRotationCur);
 
 			if (m_nPedState != PED_ATTACK && angleBetweenPlayerAndCam > DEGTORAD(30.0f) && angleBetweenPlayerAndCam < DEGTORAD(330.0f)) {
 				if (angleBetweenPlayerAndCam > DEGTORAD(150.0f) && angleBetweenPlayerAndCam < DEGTORAD(210.0f)) {
-					float rightTurnAngle = CGeneral::LimitRadianAngle(m_fRotationCur - DEGTORAD(150.0f));
-					float leftTurnAngle = CGeneral::LimitRadianAngle(DEGTORAD(150.0f) + m_fRotationCur);
+					float rightTurnAngle = General_LimitRadianAngle(m_fRotationCur - DEGTORAD(150.0f));
+					float leftTurnAngle = General_LimitRadianAngle(DEGTORAD(150.0f) + m_fRotationCur);
 
 					if (m_fLookDirection == 999999.0f || bIsDucking)
 						camAngle = rightTurnAngle;
@@ -2012,7 +2070,7 @@ CPlayerPed::ProcessControl(void)
 						camAngle = leftTurnAngle;
 				}
 				SetLookFlag(camAngle, true);
-				SetLookTimer(CTimer::GetTimeStepInMilliseconds() * 5.0f);
+				SetLookTimer(Timer_GetTimeStepInMilliseconds() * 5.0f);
 			} else {
 				ClearLookFlag();
 			}
@@ -2025,10 +2083,10 @@ CPlayerPed::ProcessControl(void)
 
 	if (m_vecMoveSpeed.Magnitude2D() < 0.1f) {
 		if (m_nSpeedTimer) {
-			if (CTimer::GetTimeInMilliseconds() > m_nSpeedTimer)
+			if ((*Timer_GetTimeInMilliseconds()) > m_nSpeedTimer)
 				m_bSpeedTimerFlag = true;
 		} else {
-			m_nSpeedTimer = CTimer::GetTimeInMilliseconds() + 500;
+			m_nSpeedTimer = (*Timer_GetTimeInMilliseconds()) + 500;
 		}
 	} else {
 		m_nSpeedTimer = 0;
@@ -2041,7 +2099,7 @@ CPlayerPed::ProcessControl(void)
 	}
 
 	if (m_nPedState != PED_SNIPER_MODE && (GetWeapon()->m_eWeaponState == WEAPONSTATE_FIRING || m_nPedState == PED_ATTACK))
-		m_nPadDownPressedInMilliseconds = CTimer::GetTimeInMilliseconds();
+		m_nPadDownPressedInMilliseconds = (*Timer_GetTimeInMilliseconds());
 
 	if (!bIsVisible)
 		UpdateRpHAnim();
@@ -2051,7 +2109,7 @@ bool
 CPlayerPed::DoesPlayerWantNewWeapon(eWeaponType weapon, bool onlyIfSlotIsEmpty)
 {
 	// GetPadFromPlayer(); // unused
-	uint32 slot = CWeaponInfo::GetWeaponInfo(weapon)->m_nWeaponSlot;
+	uint32 slot = WeaponInfo_GetWeaponInfo(weapon)->m_nWeaponSlot;
 
 	if (!HasWeaponSlot(slot) || GetWeapon(slot).m_eWeaponType == weapon)
 		return true;
@@ -2088,7 +2146,8 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 	static int32 lastAnim = -1;
 
 	bool hasIdleAnim = false;
-	CAnimBlock *idleAnimBlock = CAnimManager::GetAnimationBlock(idleAnimBlockIndex);
+	// Use the complete C animation manager at the original call boundary
+	CAnimBlock *idleAnimBlock = AnimManager_GetAnimationBlockById(idleAnimBlockIndex);
 	uint32 sinceLastInput = padUsed->InputHowLongAgo();
 	if (sinceLastInput <= 30000) {
 		if (idleAnimBlock->isLoaded) {
@@ -2108,7 +2167,8 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 		if (idleAnimBlock->isLoaded) {
 			for(CAnimBlendAssociation *assoc = RpAnimBlendClumpGetFirstAssociation(GetClump()); assoc; assoc = RpAnimBlendGetNextAssociation(assoc)) {
 				int firstIdle = idleAnimBlock->firstIndex;
-				int index = assoc->hierarchy - CAnimManager::GetAnimation(0);
+				// Use the complete C animation manager at the original call boundary
+				int index = assoc->hierarchy - AnimManager_GetAnimationById(0);
 				if (index >= firstIdle && index < firstIdle + idleAnimBlock->numAnims) {
 					hasIdleAnim = true;
 					break;
@@ -2118,10 +2178,11 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 			if (!hasIdleAnim && !bIsLooking && !bIsRestoringLook && sinceLastInput - lastTime > 25000) {
 				int anim;
 				do
-					anim = CGeneral::GetRandomNumberInRange(0, ARRAY_SIZE(idleAnims));
+					anim = General_GetRandomNumberInRangeInt(0, ARRAY_SIZE(idleAnims));
 				while (lastAnim == anim);
 
-				assoc = CAnimManager::BlendAnimation(GetClump(), idleAnims[anim].groupId, idleAnims[anim].animId, 8.0f);
+				// Use the complete C animation manager at the original call boundary
+				assoc = AnimManager_BlendAnimation(GetClump(), idleAnims[anim].groupId, idleAnims[anim].animId, 8.0f);
 				assoc->flags |= ASSOC_IDLE;
 				lastAnim = anim;
 				lastTime = sinceLastInput;
@@ -2138,7 +2199,7 @@ CPlayerPed::SetNearbyPedsToInteractWithPlayer(void)
 
 	for (int i = 0; i < m_numNearPeds; ++i) {
 		CPed *nearPed = m_nearPeds[i];
-		if (nearPed && nearPed->m_objectiveTimer < CTimer::GetTimeInMilliseconds() && !CTheScripts::IsPlayerOnAMission()) {
+		if (nearPed && nearPed->m_objectiveTimer < (*Timer_GetTimeInMilliseconds()) && !CTheScripts::IsPlayerOnAMission()) {
 			int mi = nearPed->GetModelIndex();
 			if (CPopulation::CanSolicitPlayerOnFoot(mi)) {
 				CVector distToMe = nearPed->GetPosition() - GetPosition();
@@ -2147,7 +2208,7 @@ CPlayerPed::SetNearbyPedsToInteractWithPlayer(void)
 				if (DotProduct(dirToMe, nearPed->GetForward()) > 0.707 && DotProduct(GetForward(), nearPed->GetForward()) < -0.707 // those are double
 					&& distToMe.MagnitudeSqr() < 9.0f && nearPed->m_objective == OBJECTIVE_NONE) {
 					nearPed->SetObjective(OBJECTIVE_SOLICIT_FOOT, this);
-					nearPed->m_objectiveTimer = CTimer::GetTimeInMilliseconds() + 10000;
+					nearPed->m_objectiveTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
 					nearPed->Say(SOUND_PED_SOLICIT);
 				}
 			} else if (CPopulation::CanSolicitPlayerInCar(mi)) {
@@ -2168,7 +2229,7 @@ void
 CPlayerPed::UpdateMeleeAttackers(void)
 {
 	CVector attackCoord;
-	if (((CTimer::GetFrameCounter() + m_randomSeed + 7) & 3) == 0) {
+	if ((((*Timer_GetFrameCounter()) + m_randomSeed + 7) & 3) == 0) {
 		GetMeleeAttackCoords(attackCoord, m_nAttackDirToCheck, 2.0f);
 
 		// Check if there is any vehicle/building inbetween us and m_nAttackDirToCheck. Peds will be able to attack us from those available directions.
@@ -2301,10 +2362,10 @@ CPlayerPed::FindMeleeAttackPoint(CPed *victim, CVector &dist, uint32 &endOfAttac
 		if (dirToAttack != -1) {
 			m_pMeleeList[dirToAttack] = victim;
 			victim->RegisterReference((CEntity**) &m_pMeleeList[dirToAttack]);
-			if (endOfAttackOut > CTimer::GetTimeInMilliseconds())
-				victim->m_attackTimer = endOfAttackOut + CGeneral::GetRandomNumberInRange(1000, 2000);
+			if (endOfAttackOut > (*Timer_GetTimeInMilliseconds()))
+				victim->m_attackTimer = endOfAttackOut + General_GetRandomNumberInRangeInt(1000, 2000);
 			else
-				victim->m_attackTimer = CTimer::GetTimeInMilliseconds() + CGeneral::GetRandomNumberInRange(500, 1000);
+				victim->m_attackTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(500, 1000);
 		}
 	}
 	return dirToAttack;
@@ -2350,4 +2411,10 @@ CPlayerPed::Load(uint8*& buf)
 #undef CopyToBuf
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

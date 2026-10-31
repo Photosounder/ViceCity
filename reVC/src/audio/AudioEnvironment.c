@@ -42,7 +42,7 @@ AudioEnvironment_Special(cAudioManager *manager)
 		}
 	} else {
 		if (!AudioEnvironmentHost_Replay())
-			AudioEnvironmentHost_Mood(manager);
+			AudioPedSpeech_Mood(manager);
 		remoteVehicle = AudioEnvironmentHost_Remote();
 		playerPed = AudioPoliceHost_FindPlayer();
 		if (playerPed) {

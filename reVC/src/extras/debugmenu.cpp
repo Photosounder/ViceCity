@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #ifdef DEBUGMENU
 #include "RwHelper.h"
@@ -885,7 +886,7 @@ processInput(void)
 	// Implement auto-repeat
 #define X(var, keycode) \
 	if(var){ \
-		repeattime = downtime = CTimer::GetTimeInMilliseconds(); \
+		repeattime = downtime = (*Timer_GetTimeInMilliseconds()); \
 		lastkeydown = keycode; \
 		keyptr = &var; \
 	}
@@ -893,7 +894,7 @@ processInput(void)
 #undef X
 	if(lastkeydown){
 		if(KEYDOWN(lastkeydown)){
-			int curtime = CTimer::GetTimeInMilliseconds();
+			int curtime = (*Timer_GetTimeInMilliseconds());
 			if(curtime - downtime > REPEATDELAY){
 				if(curtime - repeattime > REPEATINTERVAL){
 					repeattime = curtime;
@@ -908,7 +909,7 @@ processInput(void)
 	// Also for mouse buttons
 #define X(var, num)							  \
 	if(var){							  \
-		repeattime = downtime = CTimer::GetTimeInMilliseconds();	  \
+		repeattime = downtime = (*Timer_GetTimeInMilliseconds());	  \
 		lastbuttondown = num;					  \
 		buttonptr = &var;					  \
 	}
@@ -916,7 +917,7 @@ processInput(void)
 #undef X
 	if(lastbuttondown){
 		if(buttondown[lastbuttondown-1]){
-			int curtime = CTimer::GetTimeInMilliseconds();
+			int curtime = (*Timer_GetTimeInMilliseconds());
 			if(curtime - downtime > REPEATDELAY){
 				if(curtime - repeattime > REPEATINTERVAL){
 					repeattime = curtime;
@@ -1367,3 +1368,5 @@ DebugMenuEntrySetAddress(MenuEntry *e, void *addr)
 	}
 }
 #endif
+
+//- rouz edit (ChatGPT)

@@ -1,0 +1,151 @@
+#define CINTERFACE
+#define COBJMACROS
+#include "entry.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned commands,checks,events,allocations,frees,texturesCreated,releases,deviceCreates,reentries,citaCalls;
+static bool failCreate,failDescription,reenter;
+static IDirect3DTexture8 **expectedOutput;
+static struct Texture {IDirect3DTexture8 base;unsigned id,refs,levels;D3DSURFACE_DESC desc;} textures[8192];
+static IDirect3DTexture8Vtbl textureVtable;
+static IDirect3DDevice8Vtbl deviceVtable;
+static IDirect3DDevice8 device;
+extern "C" {IDirect3DDevice8 *_RwD3DDevice=&device;}
+static struct Allocation {void *pointer;size_t size;} storage[8192];
+static void requireAt(bool condition,unsigned line)
+{
+    // Fail quietly at the exact observation without creating any native dialogs
+    ++checks;if(!condition){fprintf(stderr,"line=%u commands=%u checks=%u\n",line,commands,checks);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Compare only initialized bytes and stable resource identities
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,uint64_t a=0,uint64_t b=0)
+{
+    // Retain original allocation and COM operation order across native Windows pointer widths
+    uint64_t values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static Texture *object(IDirect3DTexture8 *texture)
+{
+    // Recover controlled backing from the first actual C COM interface subobject
+    return (Texture*)texture;
+}
+static unsigned identity(IDirect3DTexture8 *texture)
+{
+    // Normalize process-specific SDK pointers into stable test resource identities
+    return texture?object(texture)->id:0;
+}
+static PoolState poolState(void *record)
+{
+    // Observe complete old or C record state through its independently compiled caller
+    PoolState state;TestPoolState(record,&state);hashBytes(&state.Format,sizeof(state.Format));hashBytes(&state.size,sizeof(state.size));hashBytes(&state.levels,sizeof(state.levels));hashBytes(&state.texturesMax,sizeof(state.texturesMax));hashBytes(&state.texturesUsed,sizeof(state.texturesUsed));hashBytes(&state.texturesNum,sizeof(state.texturesNum));
+    for(int i=0;i<state.texturesNum&&i<state.texturesMax;++i){unsigned id=identity(state.pTextures[i]);hashBytes(&id,sizeof(id));}return state;
+}
+static PaletteState paletteState(void *record)
+{
+    // Observe initialized palette entries while retaining original stale counts after shrinking
+    PaletteState state;TestPaletteState(record,&state);hashBytes(&state.Max,sizeof(state.Max));hashBytes(&state.Num,sizeof(state.Num));for(int i=0;i<state.Num&&i<state.Max;++i)hashBytes(&state.Data[i],sizeof(int));return state;
+}
+static PoolResult run(unsigned operation,void *record=NULL,IDirect3DTexture8 *texture=NULL,int a=0,int b=0,int c=0,int d=0)
+{
+    // Dispatch complete algorithms through the independent old C++ or new C API consumer
+    ++commands;PoolResult result;TestPools(operation,record,texture,a,b,c,d,&result);hashBytes(&result.value,sizeof(result.value));hashBytes(&numTexturePools,sizeof(numTexturePools));hashBytes(&MaxPaletteIndex,sizeof(MaxPaletteIndex));hashBytes(&bUsePaletteIndex,sizeof(bUsePaletteIndex));return result;
+}
+extern "C" void *TestAlloc(size_t size)
+{
+    // Record exact requested backing sizes without supplying allocation policy to the owner
+    require(allocations<8192);void *memory=malloc(size?size:1);require(memory!=NULL);memset(memory,0xa5,size?size:1);storage[allocations++]={memory,size};event(1,size);return memory;
+}
+extern "C" void TestFree(void *memory)
+{
+    // Verify backing lifetime independently of the original and C allocator calls
+    if(!memory){event(2);return;}unsigned i=0;while(i<allocations&&storage[i].pointer!=memory)++i;require(i<allocations);event(2,storage[i].size);storage[i].pointer=NULL;free(memory);++frees;
+}
+static void allocatorMetadata(const char *filename,const char *function,int line)
+{
+    // Verify the actual macro boundary supplies owner filenames, function identities and source locations
+#ifdef ORIGINAL
+    require(filename&&strstr(filename,"TexturePools.cpp")&&function&&line>0);
+#else
+    require(filename&&strstr(filename,"TexturePools.c")&&function&&line>0);
+#endif
+    const char *name=function;if(strncmp(name,"CTexturePool_",13)==0)name+=13;else if(strncmp(name,"CPaletteList_",13)==0)name+=13;
+    const char *operations[]={"Create","Release","Resize","Alloc","Free"};unsigned operation=0;while(operation<5&&strcmp(name,operations[operation])!=0)++operation;require(operation<5);++citaCalls;event(40,operation);
+}
+extern "C" void *cita_win_malloc(size_t size,const char *filename,const char *function,int line)
+{
+    // Observe the real allocator ABI and preserve exact backing requests without replacing pool policy
+    allocatorMetadata(filename,function,line);return TestAlloc(size);
+}
+extern "C" void cita_win_free(void *memory,const char *filename,const char *function,int line)
+{
+    // Observe the real allocator ABI for both nonnull and null original release paths
+    allocatorMetadata(filename,function,line);TestFree(memory);
+}
+static ULONG STDMETHODCALLTYPE releaseTexture(IDirect3DTexture8 *texture)
+{
+    // Exercise the actual SDK Release vtable slot and original COM ownership transfers
+    Texture *value=object(texture);require(value->refs>0);--value->refs;++releases;event(3,value->id,value->refs);return value->refs;
+}
+static DWORD STDMETHODCALLTYPE levelCount(IDirect3DTexture8 *texture)
+{
+    // Supply controlled SDK mip-level metadata through the actual COM signature
+    event(4,identity(texture),object(texture)->levels);return object(texture)->levels;
+}
+static HRESULT STDMETHODCALLTYPE levelDescription(IDirect3DTexture8 *texture,UINT level,D3DSURFACE_DESC *desc)
+{
+    // Supply defined descriptor bytes even when testing the original ignored HRESULT path
+    require(level==0);*desc=object(texture)->desc;event(5,identity(texture),failDescription);return failDescription?E_FAIL:D3D_OK;
+}
+static IDirect3DTexture8 *makeTexture(unsigned width,unsigned height,unsigned levels,D3DFORMAT format)
+{
+    // Create controlled COM backing without allocating GPU resources or implementing pooling decisions
+    require(texturesCreated<8192);Texture *value=&textures[texturesCreated++];memset(value,0,sizeof(*value));value->base.lpVtbl=&textureVtable;value->id=texturesCreated;value->refs=1;value->levels=levels;value->desc.Width=width;value->desc.Height=height;value->desc.Format=format;event(6,value->id,width);return &value->base;
+}
+static HRESULT STDMETHODCALLTYPE createTexture(IDirect3DDevice8 *receiver,UINT width,UINT height,UINT levels,DWORD usage,D3DFORMAT format,D3DPOOL pool,IDirect3DTexture8 **output)
+{
+    // Verify direct C and original virtual calls use the same actual COM receiver and output address
+    require(receiver==&device&&output==expectedOutput&&usage==0&&pool==D3DPOOL_MANAGED);++deviceCreates;event(7,width,height);event(8,levels,format);
+    if(reenter){
+        // Observe live global palette state through a nested public operation during an SDK call
+        reenter=false;++reentries;run(OP_FindIndex);
+    }
+    *output=failCreate?NULL:makeTexture(width,height,levels,format);return failCreate?E_FAIL:D3D_OK;
+}
+int main(void)
+{
+    // Populate only the real COM vtable slots reached by complete original and C producers
+    textureVtable.Release=releaseTexture;textureVtable.GetLevelCount=levelCount;textureVtable.GetLevelDesc=levelDescription;deviceVtable.CreateTexture=createTexture;device.lpVtbl=&deviceVtable;
+    require(numTexturePools==0&&MaxPaletteIndex==0&&bUsePaletteIndex);for(int i=0;i<12;++i){PoolState state=poolState(TestGlobalPool(i));require(state.Format==0&&state.size==0&&state.levels==0&&state.texturesMax==0&&state.texturesNum==0&&state.texturesUsed==0&&state.pTextures==NULL);}PaletteState initial=paletteState(TestGlobalPalette());require(initial.Max==0&&initial.Num==0&&initial.Data==NULL);
+    for(unsigned cycle=0;cycle<16;++cycle){
+        // Cover every pool method with empty, full, failed insertion, growth and unsafe shrink states
+        void *pool=TestPoolRecord(false);run(OP_Create,pool,NULL,D3DFMT_A8R8G8B8,16777217,1,4);require(run(OP_GetSize,pool).value==
+#ifdef FIX_BUGS
+        16777217
+#else
+        16777216
+#endif
+        );require(run(OP_Find,pool).pointer==NULL);
+        for(int i=0;i<4;++i)require(run(OP_Add,pool,makeTexture(64,64,1,D3DFMT_A8R8G8B8)).value==1);IDirect3DTexture8 *rejected=makeTexture(64,64,1,D3DFMT_A8R8G8B8);require(run(OP_Add,pool,rejected).value==0);IDirect3DTexture8_Release(rejected);require(poolState(pool).texturesUsed==5);run(OP_Resize,pool,NULL,4);run(OP_Resize,pool,NULL,8);require(poolState(pool).texturesNum==4);run(OP_Resize,pool,NULL,2);PoolState shrunk=poolState(pool);require(shrunk.texturesNum==4&&shrunk.texturesMax==2);TestPoolTruncate(pool,2);
+        IDirect3DTexture8 *popped=(IDirect3DTexture8*)run(OP_Find,pool).pointer;require(popped!=NULL);IDirect3DTexture8_Release(popped);run(OP_Release,pool);PoolState released=poolState(pool);require(released.pTextures==NULL&&released.texturesNum==0&&released.texturesUsed==0);run(OP_Release,pool);TestPoolDelete(pool,false);
+        void *palette=TestPoolRecord(true);run(OP_PalAlloc,palette,NULL,4);for(int i=0;i<81;++i)run(OP_PalAdd,palette,NULL,i-40);PaletteState grown=paletteState(palette);require(grown.Max==128&&grown.Num==81);for(int i=80;i>=0;--i)require(run(OP_PalFind,palette).value==i-40);require(run(OP_PalFind,palette).value==-1);run(OP_PalResize,palette,NULL,128);for(int i=0;i<8;++i)run(OP_PalAdd,palette,NULL,i);run(OP_PalResize,palette,NULL,2);PaletteState smaller=paletteState(palette);require(smaller.Num==8&&smaller.Max==2);run(OP_PalFree,palette);require(paletteState(palette).Data==NULL);run(OP_PalFree,palette);TestPoolDelete(palette,true);
+        // Cover global palette LIFO order, allocation growth, disabled recycling and index generation
+        bUsePaletteIndex=true;run(OP_Init);require(paletteState(TestGlobalPalette()).Max==100&&MaxPaletteIndex==0);for(int i=0;i<205;++i)run(OP_AddIndex,NULL,NULL,i+1000);for(int i=204;i>=0;--i)require(run(OP_FindIndex).value==i+1000);require(run(OP_FindIndex).value==0);bUsePaletteIndex=false;run(OP_AddIndex,NULL,NULL,88);require(run(OP_FindIndex).value==1);bUsePaletteIndex=true;run(OP_AddIndex,NULL,NULL,-1);require(run(OP_FindIndex).value==2);
+        // Exercise matching pools, original wrong-size reuse and capacity pressure thresholds
+        IDirect3DTexture8 *first=makeTexture(64,64,1,D3DFMT_A8R8G8B8);IDirect3DTexture8 *second=makeTexture(128,128,1,D3DFMT_A8R8G8B8);run(OP_ReleaseTexture,NULL,first);run(OP_ReleaseTexture,NULL,second);require(numTexturePools==2);IDirect3DTexture8 *output=NULL;expectedOutput=&output;require(run(OP_CreateTexture,&output,NULL,128,128,1,D3DFMT_A8R8G8B8).value==D3D_OK&&output==first);IDirect3DTexture8_Release(output);output=NULL;require(run(OP_CreateTexture,&output,NULL,64,64,1,D3DFMT_A8R8G8B8).value==D3D_OK&&output==second);IDirect3DTexture8_Release(output);
+        for(int i=0;i<27;++i)run(OP_ReleaseTexture,NULL,makeTexture(64,64,1,D3DFMT_A8R8G8B8));PoolState pressured=poolState(TestGlobalPool(0));require(pressured.texturesMax==32&&pressured.texturesNum==19&&pressured.texturesUsed==27);
+        // Exercise mipmapped, nonsquare, unsupported-size and disabled-new-pool releases
+        run(OP_ReleaseTexture,NULL,makeTexture(64,64,3,D3DFMT_A8R8G8B8));run(OP_ReleaseTexture,NULL,makeTexture(64,32,1,D3DFMT_A8R8G8B8));run(OP_ReleaseTexture,NULL,makeTexture(32,32,1,D3DFMT_A8R8G8B8));bUsePaletteIndex=false;run(OP_ReleaseTexture,NULL,makeTexture(256,256,1,D3DFMT_R5G6B5));bUsePaletteIndex=true;
+        for(int i=0;i<11;++i){run(OP_ReleaseTexture,NULL,makeTexture(256,256,1,(D3DFORMAT)(100+i)));}require(numTexturePools==12);
+        // Preserve ignored descriptor errors, direct HRESULT propagation and reentry through real COM slots
+        failDescription=true;run(OP_ReleaseTexture,NULL,makeTexture(128,128,1,D3DFMT_A8R8G8B8));failDescription=false;output=NULL;expectedOutput=&output;reenter=true;require(run(OP_CreateTexture,&output,NULL,97,31,2,D3DFMT_R5G6B5).value==D3D_OK&&output!=NULL);IDirect3DTexture8_Release(output);output=NULL;failCreate=true;require(run(OP_CreateTexture,&output,NULL,91,31,1,D3DFMT_R5G6B5).value==E_FAIL&&output==NULL);failCreate=false;output=makeTexture(97,31,1,D3DFMT_R5G6B5);unsigned calls=deviceCreates;require(run(OP_CreateTexture,&output,NULL,97,31,1,D3DFMT_R5G6B5).value==D3D_OK&&deviceCreates==calls);IDirect3DTexture8_Release(output);
+        run(OP_Shutdown);require(numTexturePools==0&&!bUsePaletteIndex&&paletteState(TestGlobalPalette()).Data==NULL);for(int i=0;i<12;++i)require(poolState(TestGlobalPool(i)).pTextures==NULL);run(OP_Init);require(!bUsePaletteIndex&&MaxPaletteIndex==0);run(OP_Shutdown);
+    }
+    require(allocations==frees);for(unsigned i=0;i<texturesCreated;++i)require(textures[i].refs==0);require(reentries==16);
+    require(citaCalls==896);printf("commands=%u checks=%u events=%u allocations=%u/%u cita=%u textures=%u releases=%u creates=%u reentries=%u hash=%016llx\n",commands,checks,events,allocations,frees,citaCalls,texturesCreated,releases,deviceCreates,reentries,(unsigned long long)hashValue);return 0;
+}

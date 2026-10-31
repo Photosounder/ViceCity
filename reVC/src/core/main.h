@@ -1,9 +1,9 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #ifndef FINAL
-// defined in RwHelpder.cpp
-void PushRendergroup(const char *name);
-void PopRendergroup(void);
+#include "RwHelper.h"
 #define PUSH_RENDERGROUP(str) PushRendergroup(str)
 #define POP_RENDERGROUP() PopRendergroup()
 #else
@@ -35,7 +35,7 @@ extern bool gbShowTimebars;
 extern bool gbPrintMemoryUsage;
 #endif
 
-class CSprite2d;
+struct Sprite2d;
 
 bool DoRWStuffStartOfFrame(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomRed, int16 BottomGreen, int16 BottomBlue, int16 Alpha);
 bool DoRWStuffStartOfFrame_Horizon(int16 TopRed, int16 TopGreen, int16 TopBlue, int16 BottomRed, int16 BottomGreen, int16 BottomBlue, int16 Alpha);
@@ -44,7 +44,7 @@ void PreAllocateRwObjects(void);
 void InitialiseGame(void);
 void LoadingScreen(const char *str1, const char *str2, const char *splashscreen);
 void LoadingIslandScreen(const char *levelName);
-CSprite2d *LoadSplash(const char *name);
+Sprite2d *LoadSplash(const char *name);
 void DestroySplashScreen(void);
 Const char *GetLevelSplashScreen(int level);
 Const char *GetRandomSplashScreen(void);
@@ -81,3 +81,5 @@ extern void rouz_update();
 extern float get_airflow_angle_of_attack(void *p_ptr, void *normal_vec_ptr);
 extern float get_horizon_angle_of_attack(void *p_ptr);
 extern int rouz_acceleration_cheats(void *ptr);
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

@@ -1,0 +1,79 @@
+#pragma once
+#include <stddef.h>
+#include <math.h>
+typedef int32 RwTextureAddressMode,RwTextureFilterMode,RwCameraProjection,RwOpCombineType;
+typedef uint16_t RwImVertexIndex;
+struct RwRGBAReal {float red,green,blue,alpha;};
+struct RpLight {unsigned id;bool alive;RwFrame *frame;RwRGBAReal colour;};
+typedef RpAtomic *(*RpAtomicCallBackRender)(RpAtomic*);
+namespace rw {typedef RwRGBA RGBA;}
+#ifndef ASSERT
+#define ASSERT(expression) assert(expression)
+#endif
+enum {rpATOMIC=700};
+enum {rpCLUMP=701};
+enum {rpGEOMETRYLIGHT=4};
+enum {rpGEOMETRYMODULATEMATERIALCOLOR=8};
+enum {rpGEOMETRYNORMALS=16};
+enum {rpGEOMETRYPRELIT=32};
+enum {rpGEOMETRYTEXTURED=64};
+enum {rpGEOMETRYTEXTURED2=128};
+enum {rpLIGHTDIRECTIONAL=708};
+enum {rwBLENDINVDESTCOLOR=709};
+enum {rwBLENDONE=710};
+enum {rwBLENDSRCCOLOR=711};
+enum {rwBLENDZERO=712};
+enum {rwCAMERACLEARIMAGE=713};
+enum {rwCAMERACLEARZ=714};
+enum {rwCOMBINEPOSTCONCAT=715};
+enum {rwCOMBINEREPLACE=716};
+enum {rwFILTERNAFILTERMODE=717};
+enum {rwPARALLEL=718};
+enum {rwPRIMTYPEPOLYLINE=719};
+enum {rwRASTERTYPECAMERATEXTURE=720};
+enum {rwRENDERSTATETEXTURERASTER=721};
+enum {rwSHADEMODEFLAT=722};
+enum {rwTEXTUREADDRESSCLAMP=723};
+RwTexture *RwTextureCreate(RwRaster*);
+void RwTextureSetRaster(RwTexture*,RwRaster*);
+void RwTextureDestroy(RwTexture*);
+void RwTextureSetAddressing(RwTexture*,RwTextureAddressMode);
+void RwTextureSetFilterMode(RwTexture*,RwTextureFilterMode);
+void RwCameraSetProjection(RwCamera*,RwCameraProjection);
+void RwCameraSetFarClipPlane(RwCamera*,float);
+void RwCameraSetNearClipPlane(RwCamera*,float);
+float RwCameraGetFarClipPlane(RwCamera*);
+float RwCameraGetNearClipPlane(RwCamera*);
+RwFrame *RpLightGetFrame(RpLight*);
+void RpLightSetFrame(RpLight*,RwFrame*);
+void RpLightDestroy(RpLight*);
+RpLight *RpLightCreate(int32);
+void RpLightSetColor(RpLight*,const RwRGBAReal*);
+int32 RwObjectGetType(RwObject*);
+RwFrame *RpAtomicGetFrame(RpAtomic*);
+RwV3d *RwMatrixGetRight(RwMatrix*);
+RwV3d *RwMatrixGetUp(RwMatrix*);
+RwV3d *RwMatrixGetAt(RwMatrix*);
+RwV3d *RwMatrixGetPos(RwMatrix*);
+void RwMatrixUpdate(RwMatrix*);
+void RwFrameUpdateObjects(RwFrame*);
+void RwFrameOrthoNormalize(RwFrame*);
+void RwV3dIncrementScaled(RwV3d*,const RwV3d*,float);
+void RwFrameRotate(RwFrame*,const RwV3d*,float,RwOpCombineType);
+uint32 RpGeometryGetFlags(RpGeometry*);
+void RpGeometrySetFlags(RpGeometry*,uint32);
+RwCamera *RwCameraBeginUpdate(RwCamera*);
+void RwCameraEndUpdate(RwCamera*);
+void RwCameraClear(RwCamera*,const RwRGBA*,int32);
+float RwIm2DGetNearScreenZ(void);
+RpAtomicCallBackRender RpAtomicGetRenderCallBack(RpAtomic*);
+void RpAtomicSetRenderCallBack(RpAtomic*,RpAtomicCallBackRender);
+RpAtomic *AtomicDefaultRenderCallBack(RpAtomic*);
+void RpAtomicRender(RpAtomic*);
+void RwIm2DRenderLine(RwIm2DVertex*,int32,int32,int32);
+void RwIm2DRenderIndexedPrimitive(int32,RwIm2DVertex*,int32,RwImVertexIndex*,int32);
+struct SoftwarePolygons {
+    static bool BeginOffscreenFrame(RwCamera*,const rw::RGBA&);
+    static bool BeginOffscreenFrame(RwCamera*,RwRaster*);
+    static void EndOffscreenFrame(RwRaster*);
+};

@@ -1,4 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "AnimBlendFrameData_native.h"
 
 #include "Bones.h"
 #include "Camera.h"
@@ -34,7 +37,8 @@ CPedIK::CPedIK(CPed *ped) : m_ped(ped)
 inline RwMatrix*
 GetBoneMatrix(CPed *ped, int32 bone)
 {
-	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(ped->GetClump());
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(ped->GetClump()));
 	int idx = RpHAnimIDGetIndex(hier, bone);
 	RwMatrix *mats = RpHAnimHierarchyGetMatrixArray(hier);
 	return &mats[idx];
@@ -48,7 +52,8 @@ GetComponentMatrix(CPed *ped, int32 node)
 void
 CPedIK::RotateTorso(AnimBlendFrameData *node, LimbOrientation *limb, bool changeRoll)
 {
-	RtQuat *q = &node->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuat *q = &AnimBlendFrame_GetHAnim(node)->q;
 	RtQuatRotate(q, &XaxisIK, RADTODEG(limb->yaw), rwCOMBINEREPLACE);
 	RtQuatRotate(q, &ZaxisIK, RADTODEG(limb->pitch), rwCOMBINEPRECONCAT);
 	m_ped->bDontAcceptIKLookAts = true;
@@ -116,34 +121,37 @@ CPedIK::LookInDirection(float targetYaw, float targetPitch)
 {
 	bool success = true;
 	float yaw, pitch;
-	if (!(m_ped->m_pFrames[PED_HEAD]->flag & AnimBlendFrameData::IGNORE_ROTATION)) {
-		m_ped->m_pFrames[PED_HEAD]->flag |= AnimBlendFrameData::IGNORE_ROTATION;
+	// Use the C animation frame while retaining the original live SDK objects
+	if (!(m_ped->m_pFrames[PED_HEAD]->flag & ANIM_FRAME_IGNORE_ROTATION)) {
+		// Use the C animation frame while retaining the original live SDK objects
+		m_ped->m_pFrames[PED_HEAD]->flag |= ANIM_FRAME_IGNORE_ROTATION;
 		RwMatrix *m = GetComponentMatrix(m_ped, PED_NECK);
 		m_headOrient.yaw = Atan2(-m->at.y, -m->at.x);
 		m_headOrient.yaw -= m_ped->m_fRotationCur;
-		m_headOrient.yaw = CGeneral::LimitRadianAngle(m_headOrient.yaw);
+		m_headOrient.yaw = General_LimitRadianAngle(m_headOrient.yaw);
 		float up = Clamp(m->up.z, -1.0f, 1.0f);
 		m_headOrient.pitch = Atan2(-up, Sqrt(1.0f - SQR(-up)));
 	}
 
 	// parent of head is neck
 	RwMatrix *m = GetComponentMatrix(m_ped, PED_NECK);
-	yaw = CGeneral::LimitRadianAngle(Atan2(-m->at.y, -m->at.x));
+	yaw = General_LimitRadianAngle(Atan2(-m->at.y, -m->at.x));
 	float up = Clamp(m->up.z, -1.0f, 1.0f);
 	pitch = Atan2(-up, Sqrt(1.0f - SQR(-up)));
-	float headYaw = CGeneral::LimitRadianAngle(targetYaw - (yaw + m_torsoOrient.yaw));
-	float headPitch = CGeneral::LimitRadianAngle(targetPitch - pitch) * Cos(Min(Abs(headYaw), HALFPI));
+	float headYaw = General_LimitRadianAngle(targetYaw - (yaw + m_torsoOrient.yaw));
+	float headPitch = General_LimitRadianAngle(targetPitch - pitch) * Cos(Min(Abs(headYaw), HALFPI));
 
 	LimbMoveStatus headStatus = MoveLimb(m_headOrient, headYaw, headPitch, ms_headInfo);
 	if (headStatus == ANGLES_SET_TO_MAX)
 		success = false;
 
 	if (headStatus != ANGLES_SET_EXACTLY && !(m_flags & LOOKAROUND_HEAD_ONLY))
-		if (MoveLimb(m_torsoOrient, CGeneral::LimitRadianAngle(targetYaw-m_ped->m_fRotationCur), targetPitch, ms_torsoInfo))
+		if (MoveLimb(m_torsoOrient, General_LimitRadianAngle(targetYaw-m_ped->m_fRotationCur), targetPitch, ms_torsoInfo))
 			success = true;
 
 	// This was RotateHead
-	RtQuat *q = &m_ped->m_pFrames[PED_HEAD]->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuat *q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_HEAD])->q;
 	RtQuatRotate(q, &ZaxisIK, RADTODEG(m_headOrient.pitch), rwCOMBINEREPLACE);
 	RtQuatRotate(q, &XaxisIK, RADTODEG(m_headOrient.yaw), rwCOMBINEPRECONCAT);
 	m_ped->bDontAcceptIKLookAts = true;
@@ -157,11 +165,11 @@ bool
 CPedIK::LookAtPosition(CVector const &pos)
 {
 	RwV3d *pedpos = &GetComponentMatrix(m_ped, PED_MID)->pos;
-	float yawToFace = CGeneral::GetRadianAngleBetweenPoints(
+	float yawToFace = General_GetRadianAngleBetweenPoints(
 		pos.x, pos.y,
 		pedpos->x, pedpos->y);
 
-	float pitchToFace = CGeneral::GetRadianAngleBetweenPoints(
+	float pitchToFace = General_GetRadianAngleBetweenPoints(
 		// BUG? not using pedpos here
 		pos.z, (m_ped->GetPosition() - pos).Magnitude2D(),
 		pedpos->z, 0.0f);
@@ -174,12 +182,12 @@ CPedIK::PointGunInDirection(float targetYaw, float targetPitch)
 {
 	bool result = true;
 	bool armPointedToGun = false;
-	targetYaw = CGeneral::LimitRadianAngle(targetYaw - m_ped->GetForward().Heading());
+	targetYaw = General_LimitRadianAngle(targetYaw - m_ped->GetForward().Heading());
 	m_flags &= ~GUN_POINTED_SUCCESSFULLY;
 	m_flags |= LOOKAROUND_HEAD_ONLY;
 	if (m_flags & AIMS_WITH_ARM) {
 		armPointedToGun = PointGunInDirectionUsingArm(targetYaw, targetPitch);
-		targetYaw = CGeneral::LimitRadianAngle(targetYaw - (m_upperArmOrient.yaw + m_lowerArmOrient.yaw));
+		targetYaw = General_LimitRadianAngle(targetYaw - (m_upperArmOrient.yaw + m_lowerArmOrient.yaw));
 	}
 	if (armPointedToGun) {
 		if (m_flags & AIMS_WITH_ARM && m_torsoOrient.yaw * m_upperArmOrient.yaw < 0.0f)
@@ -210,17 +218,19 @@ CPedIK::PointGunInDirection(float targetYaw, float targetPitch)
 #ifdef FIX_BUGS
 	RwMatrix *m = GetBoneMatrix(m_ped, BONE_spine);
 #else
-	RpHAnimHierarchy* hier = GetAnimHierarchyFromSkinClump(m_ped->GetClump());
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy* hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(m_ped->GetClump()));
 	RwMatrix *mats = RpHAnimHierarchyGetMatrixArray(hier);
 	RwMatrix *m = &mats[2];
 #endif
 	RwV3d axis = { 0.0f, 0.0f, 0.0f };
-	float axisangle = -CGeneral::LimitRadianAngle(Atan2(-m->at.y, -m->at.x) - m_ped->m_fRotationCur);
+	float axisangle = -General_LimitRadianAngle(Atan2(-m->at.y, -m->at.x) - m_ped->m_fRotationCur);
 	axis.y = -Sin(axisangle);
 	axis.z = Cos(axisangle);
 
 	// this was RotateTorso
-	RtQuat *q = &m_ped->m_pFrames[PED_MID]->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuat *q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_MID])->q;
 	RtQuatRotate(q, &axis, RADTODEG(m_torsoOrient.pitch), rwCOMBINEPOSTCONCAT);
 	RtQuatRotate(q, &XaxisIK, RADTODEG(m_torsoOrient.yaw), rwCOMBINEPOSTCONCAT);
 	m_ped->bDontAcceptIKLookAts = true;
@@ -239,12 +249,12 @@ CPedIK::PointGunInDirectionUsingArm(float targetYaw, float targetPitch)
 	float handRoll = 30.0f;
 
 	matrix = GetComponentMatrix(m_ped, PED_CLAVICLER);
-	yaw = CGeneral::LimitRadianAngle(Atan2(matrix->right.y, matrix->right.x) - m_ped->m_fRotationCur);
+	yaw = General_LimitRadianAngle(Atan2(matrix->right.y, matrix->right.x) - m_ped->m_fRotationCur);
 	pitch = Atan2(matrix->up.z, Sqrt(1.0f - SQR(matrix->up.z)));
 
 	float uaYaw, uaPitch;
-	uaYaw = CGeneral::LimitRadianAngle(targetYaw - yaw - DEGTORAD(15.0f));
-	uaPitch = CGeneral::LimitRadianAngle(targetPitch - pitch + DEGTORAD(10.0f));
+	uaYaw = General_LimitRadianAngle(targetYaw - yaw - DEGTORAD(15.0f));
+	uaPitch = General_LimitRadianAngle(targetPitch - pitch + DEGTORAD(10.0f));
 	LimbMoveStatus uaStatus = MoveLimb(m_upperArmOrient, uaYaw, uaPitch, ms_upperArmInfo);
 	if (uaStatus == ANGLES_SET_EXACTLY) {
 		m_flags |= GUN_POINTED_SUCCESSFULLY;
@@ -277,19 +287,22 @@ CPedIK::PointGunInDirectionUsingArm(float targetYaw, float targetPitch)
 		}
 
 		// game does this stupidly by going through the clump extension...
-		RtQuat *q = &m_ped->m_pFrames[PED_FOREARMR]->hanimFrame->q;
+		// Use the C animation frame while retaining the original live SDK objects
+		RtQuat *q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_FOREARMR])->q;
 		RtQuatRotate(q, &ZaxisIK, -RADTODEG(m_lowerArmOrient.yaw), rwCOMBINEREPLACE);
 		RtQuatRotate(q, &XaxisIK, -RADTODEG(m_lowerArmOrient.pitch), rwCOMBINEPOSTCONCAT);
 		m_ped->bDontAcceptIKLookAts = true;
 	}
 
-	RtQuat *q = &m_ped->m_pFrames[PED_UPPERARMR]->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuat *q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_UPPERARMR])->q;
 	RtQuatRotate(q, &XaxisIK, uaRoll, rwCOMBINEREPLACE);
 	RtQuatRotate(q, &YaxisIK, -RADTODEG(m_upperArmOrient.pitch), rwCOMBINEPOSTCONCAT);
 	RtQuatRotate(q, &ZaxisIK, -RADTODEG(m_upperArmOrient.yaw+HALFPI), rwCOMBINEPOSTCONCAT);
 	m_ped->bDontAcceptIKLookAts = true;
 
-	q = &m_ped->m_pFrames[PED_HANDR]->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_HANDR])->q;
 	RtQuatRotate(q, &XaxisIK, handRoll, rwCOMBINEPRECONCAT);
 
 	return result;
@@ -310,8 +323,8 @@ CPedIK::PointGunAtPosition(CVector const& position)
 	}
 
 	return PointGunInDirection(
-		CGeneral::GetRadianAngleBetweenPoints(position.x, position.y, startPoint.x, startPoint.y),
-		CGeneral::GetRadianAngleBetweenPoints(position.z, Distance2D(m_ped->GetPosition(), position.x, position.y), startPoint.z, 0.0f));
+		General_GetRadianAngleBetweenPoints(position.x, position.y, startPoint.x, startPoint.y),
+		General_GetRadianAngleBetweenPoints(position.z, Distance2D(m_ped->GetPosition(), position.x, position.y), startPoint.z, 0.0f));
 }
 
 bool
@@ -320,8 +333,10 @@ CPedIK::RestoreLookAt(void)
 	bool result = false;
 	float yaw, pitch;
 
-	if (m_ped->m_pFrames[PED_HEAD]->flag & AnimBlendFrameData::IGNORE_ROTATION) {
-		m_ped->m_pFrames[PED_HEAD]->flag &= (~AnimBlendFrameData::IGNORE_ROTATION);
+	// Use the C animation frame while retaining the original live SDK objects
+	if (m_ped->m_pFrames[PED_HEAD]->flag & ANIM_FRAME_IGNORE_ROTATION) {
+		// Use the C animation frame while retaining the original live SDK objects
+		m_ped->m_pFrames[PED_HEAD]->flag &= (~ANIM_FRAME_IGNORE_ROTATION);
 	} else {
 		ExtractYawAndPitchLocalSkinned(m_ped->m_pFrames[PED_HEAD], &yaw, &pitch);
 		if (MoveLimb(m_headOrient, yaw, pitch, ms_headRestoreInfo) == ANGLES_SET_EXACTLY)
@@ -329,7 +344,8 @@ CPedIK::RestoreLookAt(void)
 	}
 
 	// This was RotateHead
-	RtQuat *q = &m_ped->m_pFrames[PED_HEAD]->hanimFrame->q;
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuat *q = &AnimBlendFrame_GetHAnim(m_ped->m_pFrames[PED_HEAD])->q;
 	RtQuatRotate(q, &XaxisIK, RADTODEG(m_headOrient.yaw), rwCOMBINEREPLACE);
 	RtQuatRotate(q, &ZaxisIK, RADTODEG(m_headOrient.pitch), rwCOMBINEPRECONCAT);
 	m_ped->bDontAcceptIKLookAts = true;
@@ -369,7 +385,11 @@ void
 CPedIK::ExtractYawAndPitchLocalSkinned(AnimBlendFrameData *node, float *yaw, float *pitch)
 {
 	RwMatrix *mat = RwMatrixCreate();
-	RtQuatConvertToMatrix(&node->hanimFrame->q, mat);
+	// Use the C animation frame while retaining the original live SDK objects
+	RtQuatConvertToMatrix(&AnimBlendFrame_GetHAnim(node)->q, mat);
 	ExtractYawAndPitchLocal(mat, yaw, pitch);
 	RwMatrixDestroy(mat);
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

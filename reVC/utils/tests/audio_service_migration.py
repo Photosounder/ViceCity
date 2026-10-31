@@ -2,6 +2,7 @@
 import re
 import audio_collision_report_migration as collision_report
 import audio_effects_migration as effects
+import audio_music_service_migration as music
 from audio_controls_migration import function
 HOST='//+ rouz edit (ChatGPT)\nvoid\nAudioServiceHost_ResetMusicTimers(uint32_t time)\n{\n    // Read the music timer argument at the original deferred reset point\n    MusicManager.ResetTimers(time);\n}\n\nuint8_t\nAudioServiceHost_UserPaused(void)\n{\n    // Query the existing user pause flag after retaining the previous pause state\n    return CTimer::GetIsUserPaused();\n}\n\nvoid\nAudioServiceHost_SoundEffects(cAudioManager *manager)\n{\n    // Invoke sound effects at the original service point after reflection updates\n    manager->ServiceSoundEffects();\n}\n\nvoid\nAudioServiceHost_Music(void)\n{\n    // Invoke music after the sound effects service callback completes\n    MusicManager.Service();\n}\n//- rouz edit (ChatGPT)\n'
 PED_HOST='//+ rouz edit (ChatGPT)\nuint8_t\nAudioServiceHost_IsPed(CPed *ped)\n{\n    // Preserve the original game type test on each physical entity\n    return ped->IsPed();\n}\n\nvoid\nAudioServiceHost_PedLastStart(CPed *ped, uint32_t time)\n{\n    // Write the previous sound start before evaluating the randomized next start\n    ped->m_lastSoundStart = time;\n}\n\nvoid\nAudioServiceHost_PedSoundStart(CPed *ped, uint32_t time)\n{\n    // Write the randomized sound start using the original unsigned timer arithmetic\n    ped->m_soundStart = time;\n}\n//- rouz edit (ChatGPT)\n'
@@ -39,4 +40,4 @@ def body(source):
     source=source.replace('CTimer::GetIsUserPaused()', 'AudioServiceHost_UserPaused()').replace('ServiceSoundEffects()', 'AudioServiceHost_SoundEffects(manager)').replace('MusicManager.Service()', 'AudioServiceHost_Music()')
     source=source.replace('AudioReflections_Update(this)', 'AudioReflections_Update(manager)').replace('AudioMission_Clear(this,', 'AudioMission_Clear(manager,')
     source=source.replace('ped->IsPed()', 'AudioServiceHost_IsPed(ped)').replace('ped->m_lastSoundStart = timer;', 'AudioServiceHost_PedLastStart(ped, timer);').replace('ped->m_soundStart = timer + manager->m_anRandomTable[0] % 3000;', 'AudioServiceHost_PedSoundStart(ped, timer + manager->m_anRandomTable[0] % 3000);')
-    return effects.calls(source)
+    return music.calls(effects.calls(source))

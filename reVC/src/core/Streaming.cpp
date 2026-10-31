@@ -1,4 +1,13 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "General.h"
@@ -33,7 +42,7 @@
 #include "ColStore.h"
 #include "DMAudio.h"
 #include "Script.h"
-#include "MemoryMgr.h"
+#include "MemoryMgr_native.h"
 #include "MemoryHeap.h"
 #include "Font.h"
 #include "Frontend.h"
@@ -88,41 +97,9 @@ bool gbPrintVehiclesInMemory;  // TODO
 bool gbPrintStreamingBuffer; // TODO
 #endif
 
-bool
-CStreamingInfo::GetCdPosnAndSize(uint32 &posn, uint32 &size)
-{
-	if(m_size == 0)
-		return false;
-	posn = m_position;
-	size = m_size;
-	return true;
-}
 
-void
-CStreamingInfo::SetCdPosnAndSize(uint32 posn, uint32 size)
-{
-	m_position = posn;
-	m_size = size;
-}
 
-void
-CStreamingInfo::AddToList(CStreamingInfo *link)
-{
-	// Insert this after link
-	m_next = link->m_next;
-	m_prev = link;
-	link->m_next = this;
-	m_next->m_prev = this;
-}
 
-void
-CStreamingInfo::RemoveFromList(void)
-{
-	m_next->m_prev = m_prev;
-	m_prev->m_next = m_next;
-	m_next = nil;
-	m_prev = nil;
-}
 
 void
 CStreaming::Init2(void)
@@ -185,7 +162,8 @@ CStreaming::Init2(void)
 	}
 
 	for(i = 0; i < TXDSTORESIZE; i++)
-		if(CTxdStore::GetSlot(i) && CTxdStore::GetSlot(i)->texDict)
+		// Use the complete C texture dictionary owner with the original live arguments
+		if(TxdStore_GetSlot(i) && ((RwTexDictionary*)TxdStore_GetSlot(i)->texDict))
 			ms_aInfoForModel[i + STREAM_OFFSET_TXD].m_loadState = STREAMSTATE_LOADED;
 
 
@@ -200,7 +178,7 @@ CStreaming::Init2(void)
 	// Allocate the extra-object directory without invoking C++ new.
 	ms_pExtraObjectsDir = (CDirectory*)malloc(sizeof(CDirectory));
 	assert(ms_pExtraObjectsDir);
-	std::allocator<CDirectory>().construct(ms_pExtraObjectsDir, EXTRADIRSIZE);
+	Directory_Initialize(ms_pExtraObjectsDir, EXTRADIRSIZE);
 	ms_numPriorityRequests = 0;
 	ms_currentPedGrp = -1;
 	ms_lastCullZone = -1;		// unused because RemoveModelsNotVisibleFromCullzone is gone
@@ -254,9 +232,9 @@ CStreaming::Init2(void)
 	CModelInfo::GetModelInfo("IslandLODbeach", &islandLODbeach);
 
 #ifndef MASTER
-	VarConsole.Add("Streaming Debug", &gbPrintStats, true);
-	VarConsole.Add("Streaming Vehicle Debug", &gbPrintVehiclesInMemory, true);
-	VarConsole.Add("Printf Streaming Buffer contents", &gbPrintStreamingBuffer, true);
+	VarConsole_AddBool(&VarConsole,"Streaming Debug", &gbPrintStats, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool(&VarConsole,"Streaming Vehicle Debug", &gbPrintVehiclesInMemory, true); // rouz edit (ChatGPT)
+	VarConsole_AddBool(&VarConsole,"Printf Streaming Buffer contents", &gbPrintStreamingBuffer, true); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -264,16 +242,19 @@ void
 CStreaming::Init(void)
 {
 #ifdef USE_TXD_CDIMAGE
-	if(!CanVideoCardDoDXT()){
-		int txdHandle = CFileMgr::OpenFile("MODELS\\TXD.IMG", "r");
+	// Use the complete C texture reader with the original live SDK arguments
+	if(!TexRead_CanVideoCardDoDXT()){
+		int txdHandle = FileMgr_OpenFile("MODELS\\TXD.IMG", "r");
 		if (txdHandle)
-			CFileMgr::CloseFile(txdHandle);
-		if (!CheckVideoCardCaps() && txdHandle) {
+			FileMgr_CloseFile(txdHandle);
+		// Use the complete C texture reader with the original live SDK arguments
+		if (!TexRead_CheckVideoCardCaps() && txdHandle) {
 			CdStreamAddImage("MODELS\\TXD.IMG");
 			CStreaming::Init2();
 		} else {
 			CStreaming::Init2();
-			if (CreateTxdImageForVideoCard()) {
+			// Use the complete C texture reader with the original live SDK arguments
+			if (TexRead_CreateTxdImageForVideoCard()) {
 				CStreaming::Shutdown();
 				CdStreamAddImage("MODELS\\TXD.IMG");
 				CStreaming::Init2();
@@ -306,7 +287,7 @@ CStreaming::Shutdown(void)
 	ms_streamingBufferSize = 0;
 	if(ms_pExtraObjectsDir) {
 		// Destroy and release the extra-object directory without invoking C++ delete.
-		ms_pExtraObjectsDir->~CDirectory();
+		Directory_Shutdown(ms_pExtraObjectsDir);
 		free(ms_pExtraObjectsDir);
 #ifdef FIX_BUGS
 		ms_pExtraObjectsDir = nil;
@@ -337,7 +318,7 @@ CStreaming::Update(void)
 		return;
 	}
 
-	if(CTimer::GetIsPaused())
+	if(Timer_GetIsPaused())
 		return;
 
 	LoadBigBuildingsWhenNeeded();
@@ -413,16 +394,16 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 {
 	int fd, lastID, imgSelector;
 	int modelId;
-	CDirectory::DirectoryInfo direntry;
+	DirectoryInfo direntry;
 	char *dot;
 
 	lastID = -1;
-	fd = CFileMgr::OpenFile(dirname, "rb");
+	fd = FileMgr_OpenFile(dirname, "rb");
 	assert(fd > 0);
 
 	imgSelector = n<<24;
 	assert(sizeof(direntry) == 32);
-	while(CFileMgr::Read(fd, (char*)&direntry, sizeof(direntry))){
+	while(FileMgr_Read(fd, (char*)&direntry, sizeof(direntry))){
 		bool bAddToStreaming = false;
 
 		if(direntry.size > (uint32)ms_streamingBufferSize)
@@ -443,16 +424,18 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 			}else{
 #ifdef FIX_BUGS
 				// remember which cdimage this came from
-				ms_pExtraObjectsDir->AddItem(direntry, n);
+				Directory_AddItemWithImage(ms_pExtraObjectsDir, &direntry, n);
 #else
-				ms_pExtraObjectsDir->AddItem(direntry);
+				Directory_AddItem(ms_pExtraObjectsDir, &direntry);
 #endif
 				lastID = -1;
 			}
 		}else if(strncasecmp(dot+1, "TXD", 3) == 0){
-			modelId = CTxdStore::FindTxdSlot(direntry.name);
+			// Use the complete C texture dictionary owner with the original live arguments
+			modelId = TxdStore_FindTxdSlot(direntry.name);
 			if(modelId == -1)
-				modelId = CTxdStore::AddTxdSlot(direntry.name);
+				// Use the complete C texture dictionary owner with the original live arguments
+				modelId = TxdStore_AddTxdSlot(direntry.name);
 			modelId += STREAM_OFFSET_TXD;
 			bAddToStreaming = true;
 		}else if(strncasecmp(dot+1, "COL", 3) == 0){
@@ -462,7 +445,8 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 			modelId += STREAM_OFFSET_COL;
 			bAddToStreaming = true;
 		}else if(strncasecmp(dot+1, "IFP", 3) == 0){
-			modelId = CAnimManager::RegisterAnimBlock(direntry.name);
+			// Use the complete C animation manager at the original call boundary
+			modelId = AnimManager_RegisterAnimBlock(direntry.name);
 			modelId += STREAM_OFFSET_ANIM;
 			bAddToStreaming = true;
 		}else{
@@ -471,12 +455,12 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		}
 
 		if(bAddToStreaming){
-			if(ms_aInfoForModel[modelId].GetCdSize()){
+			if(StreamingInfo_GetCdSize(&ms_aInfoForModel[modelId])){
 				debug("%s.%s appears more than once in %s\n", direntry.name, dot+1, dirname);
 				lastID = -1;
 			}else{
 				direntry.offset |= imgSelector;
-				ms_aInfoForModel[modelId].SetCdPosnAndSize(direntry.offset, direntry.size);
+				StreamingInfo_SetCdPosnAndSize(&ms_aInfoForModel[modelId], direntry.offset, direntry.size);
 				if(lastID != -1)
 					ms_aInfoForModel[lastID].m_nextID = modelId;
 				lastID = modelId;
@@ -484,7 +468,7 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		}
 	}
 
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
 
 static char*
@@ -494,12 +478,14 @@ GetObjectName(int streamId)
 	if(streamId < STREAM_OFFSET_TXD)
 		sprintf(objname, "%s.dff", CModelInfo::GetModelInfo(streamId)->GetModelName());
 	else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL)
-		sprintf(objname, "%s.txd", CTxdStore::GetTxdName(streamId-STREAM_OFFSET_TXD));
+		// Use the complete C texture dictionary owner with the original live arguments
+		sprintf(objname, "%s.txd", TxdStore_GetTxdName(streamId-STREAM_OFFSET_TXD));
 	else if(streamId >= STREAM_OFFSET_COL && streamId < STREAM_OFFSET_ANIM)
 		sprintf(objname, "%s.col", CColStore::GetColName(streamId-STREAM_OFFSET_COL));
 	else{
 		assert(streamId < NUMSTREAMINFO);
-		sprintf(objname, "%s.ifp", CAnimManager::GetAnimationBlock(streamId-STREAM_OFFSET_ANIM)->name);
+		// Use the complete C animation manager at the original call boundary
+		sprintf(objname, "%s.ifp", AnimManager_GetAnimationBlockById(streamId-STREAM_OFFSET_ANIM)->name);
 	}
 	return objname;
 }
@@ -523,9 +509,9 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 	CBaseModelInfo *mi;
 	bool success;
 
-	startTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+	startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 
-	cdsize = ms_aInfoForModel[streamId].GetCdSize();
+	cdsize = StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]);
 	mem.start = (uint8*)buf;
 	mem.length = cdsize * CDSTREAM_SECTOR_SIZE;
 	stream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &mem);
@@ -540,9 +526,11 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		if(!HasTxdLoaded(mi->GetTxdSlot()) ||
 #else
 		// texDict will exist even if only first part has loaded
-		if(CTxdStore::GetSlot(mi->GetTxdSlot())->texDict == nil ||
+		// Use the complete C texture dictionary owner with the original live arguments
+		if(((RwTexDictionary*)TxdStore_GetSlot(mi->GetTxdSlot())->texDict) == nil ||
 #endif
-		   animId != -1 && !CAnimManager::GetAnimationBlock(animId)->isLoaded){
+		   // Use the complete C animation manager at the original call boundary
+		   animId != -1 && !AnimManager_GetAnimationBlockById(animId)->isLoaded){
 			RemoveModel(streamId);
 			ReRequestModel(streamId);
 			RwStreamClose(stream, &mem);
@@ -550,14 +538,17 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		}
 
 		// Set Txd and anims to use
-		CTxdStore::AddRef(mi->GetTxdSlot());
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_AddRef(mi->GetTxdSlot());
 #if GTA_VERSION > GTAVC_PS2
 		if(animId != -1)
-			CAnimManager::AddAnimBlockRef(animId);
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_AddAnimBlockRef(animId);
 #endif
 
 		PUSH_MEMID(MEMID_STREAM_MODELS);
-		CTxdStore::SetCurrentTxd(mi->GetTxdSlot());
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_SetCurrentTxd(mi->GetTxdSlot());
 		if(mi->IsSimple()){
 			success = CFileLoader::LoadAtomicFile(stream, streamId);
 			// TODO(MIAMI)? complain if file is not pre-instanced. we hardly are interested in that
@@ -579,10 +570,12 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 
 		// Txd and anims no longer needed unless we only read part of the file
 		if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
-			CTxdStore::RemoveRefWithoutDelete(mi->GetTxdSlot());
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveRefWithoutDelete(mi->GetTxdSlot());
 #if GTA_VERSION > GTAVC_PS2
 			if(animId != -1)
-				CAnimManager::RemoveAnimBlockRefWithoutDelete(animId);
+				// Use the complete C animation manager at the original call boundary
+				AnimManager_RemoveAnimBlockRefWithoutDelete(animId);
 #endif
 		}
 
@@ -604,16 +597,19 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 
 		PUSH_MEMID(MEMID_STREAM_TEXUTRES);
 		if(ms_bLoadingBigModel || cdsize > 200){
-			success = CTxdStore::StartLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
+			// Use the complete C texture dictionary owner with the original live arguments
+			success = TxdStore_StartLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
 			if(success)
 				ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_STARTED;
 		}else
-		        success = CTxdStore::LoadTxd(streamId - STREAM_OFFSET_TXD, stream);
+		        // Use the complete C texture dictionary owner with the original live arguments
+		        success = TxdStore_LoadStream(streamId - STREAM_OFFSET_TXD, stream);
 		POP_MEMID();
 		UpdateMemoryUsed();
 
 		if(!success){
-			debug("Failed to load %s.txd\n", CTxdStore::GetTxdName(streamId - STREAM_OFFSET_TXD));
+			// Use the complete C texture dictionary owner with the original live arguments
+			debug("Failed to load %s.txd\n", TxdStore_GetTxdName(streamId - STREAM_OFFSET_TXD));
 			RemoveModel(streamId);
 			ReRequestModel(streamId);
 			RwStreamClose(stream, &mem);
@@ -639,8 +635,10 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 			return false;
 		}
 		PUSH_MEMID(MEMID_STREAM_ANIMATION);
-		CAnimManager::LoadAnimFile(stream, true, nil);
-		CAnimManager::CreateAnimAssocGroups();
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_LoadAnimStream(stream, true, nil);
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_CreateAnimAssocGroups();
 		POP_MEMID();
 	}
 
@@ -661,25 +659,25 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 			}
 
 			if(CanRemoveModel(streamId))
-				ms_aInfoForModel[streamId].AddToList(&ms_startLoadedList);
+				StreamingInfo_AddToList(&ms_aInfoForModel[streamId], &ms_startLoadedList);
 		}
 	}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL ||
 	         streamId >= STREAM_OFFSET_ANIM){
 		assert(streamId < NUMSTREAMINFO);
 		// Txd and anims
 		if(CanRemoveModel(streamId))
-			ms_aInfoForModel[streamId].AddToList(&ms_startLoadedList);
+			StreamingInfo_AddToList(&ms_aInfoForModel[streamId], &ms_startLoadedList);
 	}
 
 	// Mark objects as loaded
 	if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
 		ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
 #ifndef USE_CUSTOM_ALLOCATOR
-		ms_memoryUsed += ms_aInfoForModel[streamId].GetCdSize() * CDSTREAM_SECTOR_SIZE;
+		ms_memoryUsed += StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
 #endif
 	}
 
-	endTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+	endTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 	timeDiff = endTime - startTime;
 	if(timeDiff > 5)
 		debug("%s took %d ms\n", GetObjectName(streamId), timeDiff);
@@ -696,7 +694,7 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 	CBaseModelInfo *mi;
 	bool success;
 
-	startTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+	startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 
 	if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
 		if(streamId < STREAM_OFFSET_TXD)
@@ -705,14 +703,15 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 	}
 
 	mem.start = (uint8*)buf;
-	mem.length = ms_aInfoForModel[streamId].GetCdSize() * CDSTREAM_SECTOR_SIZE;
+	mem.length = StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
 	stream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &mem);
 
 	if(streamId < STREAM_OFFSET_TXD){
 		// Model
 		mi = CModelInfo::GetModelInfo(streamId);
 		PUSH_MEMID(MEMID_STREAM_MODELS);
-		CTxdStore::SetCurrentTxd(mi->GetTxdSlot());
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_SetCurrentTxd(mi->GetTxdSlot());
 		success = CFileLoader::FinishLoadClumpFile(stream, streamId);
 		if(success){
 #ifdef USE_CUSTOM_ALLOCATOR
@@ -722,18 +721,23 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 		}
 		POP_MEMID();
 		mi->RemoveRef();
-		CTxdStore::RemoveRefWithoutDelete(mi->GetTxdSlot());
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveRefWithoutDelete(mi->GetTxdSlot());
 #if GTA_VERSION > GTAVC_PS2
 		if(mi->GetAnimFileIndex() != -1)
-			CAnimManager::RemoveAnimBlockRefWithoutDelete(mi->GetAnimFileIndex());
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_RemoveAnimBlockRefWithoutDelete(mi->GetAnimFileIndex());
 #endif
 	}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL){
 		// Txd
-		CTxdStore::AddRef(streamId - STREAM_OFFSET_TXD);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_AddRef(streamId - STREAM_OFFSET_TXD);
 		PUSH_MEMID(MEMID_STREAM_TEXUTRES);
-		success = CTxdStore::FinishLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
+		// Use the complete C texture dictionary owner with the original live arguments
+		success = TxdStore_FinishLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
 		POP_MEMID();
-		CTxdStore::RemoveRefWithoutDelete(streamId - STREAM_OFFSET_TXD);
+		// Use the complete C texture dictionary owner with the original live arguments
+		TxdStore_RemoveRefWithoutDelete(streamId - STREAM_OFFSET_TXD);
 	}else{
 		assert(0 && "invalid streamId");
 	}
@@ -742,7 +746,7 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 
 	ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
 #ifndef USE_CUSTOM_ALLOCATOR
-	ms_memoryUsed += ms_aInfoForModel[streamId].GetCdSize() * CDSTREAM_SECTOR_SIZE;
+	ms_memoryUsed += StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
 #endif
 
 	if(!success){
@@ -754,7 +758,7 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 
 	UpdateMemoryUsed();
 
-	endTime = CTimer::GetCurrentTimeInCycles() / CTimer::GetCyclesPerMillisecond();
+	endTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 	timeDiff = endTime - startTime;
 	if(timeDiff > 5)
 		debug("%s took %d ms\n", GetObjectName(streamId), timeDiff);
@@ -769,7 +773,7 @@ CStreaming::RequestModel(int32 id, int32 flags)
 
 	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_INQUEUE){
 		// updgrade to priority
-		if(flags & STREAMFLAGS_PRIORITY && !ms_aInfoForModel[id].IsPriority()){
+		if(flags & STREAMFLAGS_PRIORITY && !StreamingInfo_IsPriority(&ms_aInfoForModel[id])){
 			ms_numPriorityRequests++;
 			ms_aInfoForModel[id].m_flags |= STREAMFLAGS_PRIORITY;
 		}
@@ -789,9 +793,9 @@ CStreaming::RequestModel(int32 id, int32 flags)
 
 		// reinsert into list
 		if(ms_aInfoForModel[id].m_next){
-			ms_aInfoForModel[id].RemoveFromList();
+			StreamingInfo_RemoveFromList(&ms_aInfoForModel[id]);
 			if(CanRemoveModel(id))
-				ms_aInfoForModel[id].AddToList(&ms_startLoadedList);
+				StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
 		}
 	}else if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_NOTLOADED ||
 	         ms_aInfoForModel[id].m_loadState == STREAMSTATE_LOADED){	// how can this be true again?
@@ -804,7 +808,7 @@ CStreaming::RequestModel(int32 id, int32 flags)
 				if(anim != -1)
 					RequestAnim(anim, STREAMFLAGS_DEPENDENCY);
 			}
-			ms_aInfoForModel[id].AddToList(&ms_startRequestedList);
+			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startRequestedList);
 			ms_numModelsRequested++;
 			if(flags & STREAMFLAGS_PRIORITY)
 				ms_numPriorityRequests++;
@@ -1014,7 +1018,7 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 			}
 		}
 	}
-	if(!CGeneral::faststrcmp(mi->GetModelName(), modelName)){
+	if(!General_faststrcmp(mi->GetModelName(), modelName)){
 		// Already have the correct name, just request it
 		RequestModel(modelId, flags);
 		return;
@@ -1051,24 +1055,29 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 
 	// What exactly is going on here?
 	if(CModelInfo::GetModelInfo(oldName, nil)){
-		txdId = CTxdStore::FindTxdSlot(oldName);
-		if(txdId != -1 && CTxdStore::GetSlot(txdId)->texDict){
-			CTxdStore::AddRef(txdId);
+		// Use the complete C texture dictionary owner with the original live arguments
+		txdId = TxdStore_FindTxdSlot(oldName);
+		// Use the complete C texture dictionary owner with the original live arguments
+		if(txdId != -1 && ((RwTexDictionary*)TxdStore_GetSlot(txdId)->texDict)){
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_AddRef(txdId);
 			RemoveModel(modelId);
-			CTxdStore::RemoveRefWithoutDelete(txdId);
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveRefWithoutDelete(txdId);
 		}else
 			RemoveModel(modelId);
 	}else
 		RemoveModel(modelId);
 
-	bool found = ms_pExtraObjectsDir->FindItem(modelName, pos, size);
+	bool found = Directory_FindItem(ms_pExtraObjectsDir, modelName, &pos, &size);
 	assert(found);
 	mi->ClearTexDictionary();
-	if(CTxdStore::FindTxdSlot(modelName) == -1)
+	// Use the complete C texture dictionary owner with the original live arguments
+	if(TxdStore_FindTxdSlot(modelName) == -1)
 		mi->SetTexDictionary("generic");
 	else
 		mi->SetTexDictionary(modelName);
-	ms_aInfoForModel[modelId].SetCdPosnAndSize(pos, size);
+	StreamingInfo_SetCdPosnAndSize(&ms_aInfoForModel[modelId], pos, size);
 	RequestModel(modelId, flags);
 }
 
@@ -1094,7 +1103,7 @@ void
 CStreaming::DecrementRef(int32 id)
 {
 	ms_numModelsRequested--;
-	if(ms_aInfoForModel[id].IsPriority()){
+	if(StreamingInfo_IsPriority(&ms_aInfoForModel[id])){
 		ms_aInfoForModel[id].m_flags &= ~STREAMFLAGS_PRIORITY;
 		ms_numPriorityRequests--;
 	}
@@ -1112,21 +1121,23 @@ CStreaming::RemoveModel(int32 id)
 		if(id < STREAM_OFFSET_TXD)
 			CModelInfo::GetModelInfo(id)->DeleteRwObject();
 		else if(id >= STREAM_OFFSET_TXD && id < STREAM_OFFSET_COL)
-			CTxdStore::RemoveTxd(id - STREAM_OFFSET_TXD);
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveTxd(id - STREAM_OFFSET_TXD);
 		else if(id >= STREAM_OFFSET_COL && id < STREAM_OFFSET_ANIM)
 			CColStore::RemoveCol(id - STREAM_OFFSET_COL);
 		else if(id >= STREAM_OFFSET_ANIM){
 			assert(id < NUMSTREAMINFO);
-			CAnimManager::RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
 		}
-		ms_memoryUsed -= ms_aInfoForModel[id].GetCdSize()*CDSTREAM_SECTOR_SIZE;
+		ms_memoryUsed -= StreamingInfo_GetCdSize(&ms_aInfoForModel[id])*CDSTREAM_SECTOR_SIZE;
 	}
 
 	if(ms_aInfoForModel[id].m_next){
 		// Remove from list, model is neither loaded nor requested
 		if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_INQUEUE)
 			DecrementRef(id);
-		ms_aInfoForModel[id].RemoveFromList();
+		StreamingInfo_RemoveFromList(&ms_aInfoForModel[id]);
 	}else if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_READING){
 		for(i = 0; i < 4; i++){
 			if(ms_channel[0].streamIds[i] == id)
@@ -1138,14 +1149,17 @@ CStreaming::RemoveModel(int32 id)
 
 	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_STARTED){
 		if(id < STREAM_OFFSET_TXD)
-			RpClumpGtaCancelStream();
+			// Use the complete C clump reader with the original live stream state
+			ClumpRead_Cancel();
 		else if(id >= STREAM_OFFSET_TXD && id < STREAM_OFFSET_COL)
-			CTxdStore::RemoveTxd(id - STREAM_OFFSET_TXD);
+			// Use the complete C texture dictionary owner with the original live arguments
+			TxdStore_RemoveTxd(id - STREAM_OFFSET_TXD);
 		else if(id >= STREAM_OFFSET_COL && id < STREAM_OFFSET_ANIM)
 			CColStore::RemoveCol(id - STREAM_OFFSET_COL);
 		else if(id >= STREAM_OFFSET_ANIM){
 			assert(id < NUMSTREAMINFO);
-			CAnimManager::RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
+			// Use the complete C animation manager at the original call boundary
+			AnimManager_RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
 		}
 	}
 
@@ -1421,14 +1435,16 @@ CStreaming::RemoveLeastUsedModel(uint32 excludeMask)
 				return true;
 			}
 		}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL){
-			if(CTxdStore::GetNumRefs(streamId - STREAM_OFFSET_TXD) == 0 &&
+			// Use the complete C texture dictionary owner with the original live arguments
+			if(TxdStore_GetNumRefs(streamId - STREAM_OFFSET_TXD) == 0 &&
 			   !IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD)){
 				RemoveModel(streamId);
 				return true;
 			}
 		}else if(streamId >= STREAM_OFFSET_ANIM){
 			assert(streamId < NUMSTREAMINFO);
-			if(CAnimManager::GetNumRefsToAnimBlock(streamId - STREAM_OFFSET_ANIM) == 0 &&
+			// Use the complete C animation manager at the original call boundary
+			if(AnimManager_GetNumRefsToAnimBlock(streamId - STREAM_OFFSET_ANIM) == 0 &&
 			   !AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM)){
 				RemoveModel(streamId);
 				return true;
@@ -1613,7 +1629,7 @@ bool
 CStreaming::IsObjectInCdImage(int32 id)
 {
 	uint32 posn, size;
-	return ms_aInfoForModel[id].GetCdPosnAndSize(posn, size);
+	return StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[id], &posn, &size);
 }
 
 void
@@ -1625,7 +1641,7 @@ CStreaming::SetModelIsDeletable(int32 id)
 		if(ms_aInfoForModel[id].m_loadState != STREAMSTATE_LOADED)
 			RemoveModel(id);
 		else if(ms_aInfoForModel[id].m_next == nil)
-			ms_aInfoForModel[id].AddToList(&ms_startLoadedList);
+			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
 	}
 }
 
@@ -1644,7 +1660,7 @@ CStreaming::SetMissionDoesntRequireModel(int32 id)
 		if(ms_aInfoForModel[id].m_loadState != STREAMSTATE_LOADED)
 			RemoveModel(id);
 		else if(ms_aInfoForModel[id].m_next == nil)
-			ms_aInfoForModel[id].AddToList(&ms_startLoadedList);
+			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
 	}
 }
 
@@ -1691,7 +1707,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 	if(FindPlayerPed()==NULL)
 		return;
 
-	if(FindPlayerPed()->m_pWanted->AreSwatRequired()){
+	if(Wanted_AreSwatRequired(FindPlayerPed()->m_pWanted)){
 		RequestModel(MI_ENFORCER, STREAMFLAGS_DONT_REMOVE);
 		RequestModel(MI_SWAT, STREAMFLAGS_DONT_REMOVE);
 	}else{
@@ -1700,7 +1716,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 			SetModelIsDeletable(MI_SWAT);
 	}
 
-	if(FindPlayerPed()->m_pWanted->AreFbiRequired()){
+	if(Wanted_AreFbiRequired(FindPlayerPed()->m_pWanted)){
 		RequestModel(MI_FBIRANCH, STREAMFLAGS_DONT_REMOVE);
 		RequestModel(MI_FBI, STREAMFLAGS_DONT_REMOVE);
 	}else{
@@ -1709,7 +1725,7 @@ CStreaming::StreamVehiclesAndPeds(void)
 			SetModelIsDeletable(MI_FBI);
 	}
 
-	if(FindPlayerPed()->m_pWanted->AreArmyRequired()){
+	if(Wanted_AreArmyRequired(FindPlayerPed()->m_pWanted)){
 		RequestModel(MI_RHINO, STREAMFLAGS_DONT_REMOVE);
 		RequestModel(MI_BARRACKS, STREAMFLAGS_DONT_REMOVE);
 		RequestModel(MI_ARMY, STREAMFLAGS_DONT_REMOVE);
@@ -1720,12 +1736,12 @@ CStreaming::StreamVehiclesAndPeds(void)
 			SetModelIsDeletable(MI_ARMY);
 	}
 
-	if(FindPlayerPed()->m_pWanted->NumOfHelisRequired() > 0)
+	if(Wanted_NumOfHelisRequired(FindPlayerPed()->m_pWanted) > 0)
 		RequestModel(MI_CHOPPER, STREAMFLAGS_DONT_REMOVE);
 	else
 		SetModelIsDeletable(MI_CHOPPER);
 
-	if (FindPlayerPed()->m_pWanted->AreMiamiViceRequired()) {
+	if (Wanted_AreMiamiViceRequired(FindPlayerPed()->m_pWanted)) {
 		SetModelIsDeletable(MI_VICE1);
 		SetModelIsDeletable(MI_VICE2);
 		SetModelIsDeletable(MI_VICE3);
@@ -1772,16 +1788,16 @@ CStreaming::StreamVehiclesAndPeds(void)
 	else if(ms_numVehiclesLoaded <= desiredNumVehiclesLoaded){
 		CZoneInfo zone;
 		CVector coors = FindPlayerCoors();
-		CTheZones::GetZoneInfoForTimeOfDay(&coors, &zone);
+		Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&coors)), &zone);
 		int32 maxReq = -1;
 		int32 mostRequestedRating = 0;
-		for(i = 0; i < CCarCtrl::TOTAL_CUSTOM_CLASSES; i++){
+		for(i = 0; i < CARCLASS_TOTAL_CUSTOM_CLASSES; i++){
 			if(CCarCtrl::NumRequestsOfCarRating[i] > maxReq &&
 				((i == 0 && zone.carThreshold[0] != 0) ||
 #ifdef FIX_BUGS
-				(i < CCarCtrl::NUM_CAR_CLASSES && zone.carThreshold[i] != zone.carThreshold[i-1]) ||
-				(i == CCarCtrl::NUM_CAR_CLASSES && zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES] != 0) ||
-				(i > CCarCtrl::NUM_CAR_CLASSES && i < CCarCtrl::TOTAL_CUSTOM_CLASSES && zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES] != zone.boatThreshold[i - CCarCtrl::NUM_CAR_CLASSES - 1]))) {
+				(i < CARCLASS_NUM_CAR_CLASSES && zone.carThreshold[i] != zone.carThreshold[i-1]) ||
+				(i == CARCLASS_NUM_CAR_CLASSES && zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES] != 0) ||
+				(i > CARCLASS_NUM_CAR_CLASSES && i < CARCLASS_TOTAL_CUSTOM_CLASSES && zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES] != zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES - 1]))) {
 #else
 				(i != 0 && zone.carThreshold[i] != zone.carThreshold[i-1]))) {
 #endif
@@ -1806,7 +1822,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 	CZoneInfo info;
 	static int timeBeforeNextLoad = 0;
 
-	CTheZones::GetZoneInfoForTimeOfDay(&pos, &info);
+	Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &info);
 
 	if(info.pedGroup != ms_currentPedGrp){
 
@@ -1824,7 +1840,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 
 		for(i = 0; i < MAXZONEPEDSLOADED; i++){
 			do
-				j = CGeneral::GetRandomNumberInRange(0, NUMMODELSPERPEDGROUP);
+				j = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
 			while(ms_bIsPedFromPedGroupLoaded[j]);
 			ms_bIsPedFromPedGroupLoaded[j] = true;
 			if(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j] != -1)
@@ -1849,7 +1865,7 @@ CStreaming::StreamZoneModels(const CVector &pos)
 		// And load a new one
 		if(i != NUMMODELSPERPEDGROUP || ms_numPedsLoaded < MAXZONEPEDSLOADED){
 			do
-				j = CGeneral::GetRandomNumberInRange(0, NUMMODELSPERPEDGROUP);
+				j = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
 			while(ms_bIsPedFromPedGroupLoaded[j]);
 			if(ms_numPedsLoaded == MAXZONEPEDSLOADED)
 				ms_bIsPedFromPedGroupLoaded[i] = false;
@@ -1895,23 +1911,23 @@ CStreaming::StreamZoneModels(const CVector &pos)
 			bit = 1<<i;
 
 			if(gangModelsToload & bit && (ms_loadedGangs & bit) == 0){
-				RequestModel(CGangs::GetGangPedModel1(i), STREAMFLAGS_DEPENDENCY);
-				RequestModel(CGangs::GetGangPedModel2(i), STREAMFLAGS_DEPENDENCY);
+				RequestModel(Gangs_GetGangPedModel1(i), STREAMFLAGS_DEPENDENCY);
+				RequestModel(Gangs_GetGangPedModel2(i), STREAMFLAGS_DEPENDENCY);
 				ms_loadedGangs |= bit;
 			}else if((gangModelsToload & bit) == 0 && ms_loadedGangs & bit){
-				SetModelIsDeletable(CGangs::GetGangPedModel1(i));
-				SetModelIsDeletable(CGangs::GetGangPedModel2(i));
-				SetModelTxdIsDeletable(CGangs::GetGangPedModel1(i));
-				SetModelTxdIsDeletable(CGangs::GetGangPedModel2(i));
+				SetModelIsDeletable(Gangs_GetGangPedModel1(i));
+				SetModelIsDeletable(Gangs_GetGangPedModel2(i));
+				SetModelTxdIsDeletable(Gangs_GetGangPedModel1(i));
+				SetModelTxdIsDeletable(Gangs_GetGangPedModel2(i));
 				ms_loadedGangs &= ~bit;
 			}
 
-			if(CGangs::GetGangVehicleModel(i) != -1){
+			if(Gangs_GetGangVehicleModel(i) != -1){
 				if((gangCarsToLoad & bit) && (ms_loadedGangCars & bit) == 0){
-					RequestModel(CGangs::GetGangVehicleModel(i), STREAMFLAGS_DEPENDENCY);
+					RequestModel(Gangs_GetGangVehicleModel(i), STREAMFLAGS_DEPENDENCY);
 				}else if((gangCarsToLoad & bit) == 0 && ms_loadedGangCars & bit){
-					SetModelIsDeletable(CGangs::GetGangVehicleModel(i));
-					SetModelTxdIsDeletable(CGangs::GetGangVehicleModel(i));
+					SetModelIsDeletable(Gangs_GetGangVehicleModel(i));
+					SetModelTxdIsDeletable(Gangs_GetGangVehicleModel(i));
 				}
 			}
 		}
@@ -1940,17 +1956,17 @@ CStreaming::RemoveCurrentZonesModels(void)
 	CStreaming::RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE);
 
 	for (i = 0; i < NUM_GANGS; i++) {
-		if (CGangs::GetGangPedModel1(i) != -1) {
-			SetModelIsDeletable(CGangs::GetGangPedModel1(i));
-			SetModelTxdIsDeletable(CGangs::GetGangPedModel1(i));
+		if (Gangs_GetGangPedModel1(i) != -1) {
+			SetModelIsDeletable(Gangs_GetGangPedModel1(i));
+			SetModelTxdIsDeletable(Gangs_GetGangPedModel1(i));
 		}
-		if (CGangs::GetGangPedModel2(i) != -1) {
-			SetModelIsDeletable(CGangs::GetGangPedModel2(i));
-			SetModelTxdIsDeletable(CGangs::GetGangPedModel2(i));
+		if (Gangs_GetGangPedModel2(i) != -1) {
+			SetModelIsDeletable(Gangs_GetGangPedModel2(i));
+			SetModelTxdIsDeletable(Gangs_GetGangPedModel2(i));
 		}
-		if (CGangs::GetGangVehicleModel(i) != -1) {
-			SetModelIsDeletable(CGangs::GetGangVehicleModel(i));
-			SetModelTxdIsDeletable(CGangs::GetGangVehicleModel(i));
+		if (Gangs_GetGangVehicleModel(i) != -1) {
+			SetModelIsDeletable(Gangs_GetGangVehicleModel(i));
+			SetModelTxdIsDeletable(Gangs_GetGangVehicleModel(i));
 		}
 	}
 
@@ -1966,12 +1982,12 @@ CStreaming::LoadBigBuildingsWhenNeeded(void)
 	if(CCutsceneMgr::IsCutsceneProcessing())
 		return;
 
-	if(CTheZones::m_CurrLevel == LEVEL_GENERIC || 
-	   CTheZones::m_CurrLevel == CGame::currLevel)
+	if(Zones_currentLevel == LEVEL_GENERIC || 
+	   Zones_currentLevel == CGame::currLevel)
 		return;
 
-	CTimer::Suspend();
-	CGame::currLevel = CTheZones::m_CurrLevel;
+	Timer_Suspend();
+	CGame::currLevel = Zones_currentLevel;
 	ISLAND_LOADING_IS(LOW)
 	{
 		DMAudio_SetEffectsFadeVol(0);
@@ -2000,7 +2016,7 @@ CStreaming::LoadBigBuildingsWhenNeeded(void)
 	CStreaming::LoadAllRequestedModels(false);
 
 	CGame::TidyUpMemory(true, true);
-	CTimer::Resume();
+	Timer_Resume();
 
 	ISLAND_LOADING_IS(LOW)
 		DMAudio_SetEffectsFadeVol(127);
@@ -2074,7 +2090,7 @@ CStreaming::GetNextFileOnCd(int32 lastPosn, bool priority)
 		streamId = si - ms_aInfoForModel;
 
 		// only priority requests if there are any
-		if(priority && ms_numPriorityRequests != 0 && !si->IsPriority())
+		if(priority && ms_numPriorityRequests != 0 && !StreamingInfo_IsPriority(si))
 			continue;
 
 		// request Txds or anims if necessary
@@ -2092,7 +2108,7 @@ CStreaming::GetNextFileOnCd(int32 lastPosn, bool priority)
 		}else if(streamId >= STREAM_OFFSET_ANIM && CCutsceneMgr::IsCutsceneProcessing())
 			continue;
 
-		if(ms_aInfoForModel[streamId].GetCdPosnAndSize(posn, size)){
+		if(StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)){
 			if(posn < posnFirst){
 				// find first requested file in image
 				streamIdFirst = streamId;
@@ -2106,7 +2122,7 @@ CStreaming::GetNextFileOnCd(int32 lastPosn, bool priority)
 		}else{
 			// empty file
 			DecrementRef(streamId);
-			si->RemoveFromList();
+			StreamingInfo_RemoveFromList(si);
 			si->m_loadState = STREAMSTATE_LOADED;
 		}
 	}
@@ -2160,14 +2176,14 @@ CStreaming::RequestModelStream(int32 ch)
 			break;
 		RemoveModel(streamId);
 		// so try next file
-		ms_aInfoForModel[streamId].GetCdPosnAndSize(posn, size);
+		StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size);
 		streamId = GetNextFileOnCd(posn + size, true);
 	}
 
 	if(streamId == -1)
 		return;
 
-	ms_aInfoForModel[streamId].GetCdPosnAndSize(posn, size);
+	StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size);
 	if(size > (uint32)ms_streamingBufferSize){
 		// Can only load big models on channel 0, and 1 has to be idle
 		if(ch == 1 || ms_channel[1].state != CHANNELSTATE_IDLE)
@@ -2185,8 +2201,8 @@ CStreaming::RequestModelStream(int32 ch)
 			break;
 
 		// also stop at non-priority files
-		ms_aInfoForModel[streamId].GetCdPosnAndSize(unused, size);
-		if(ms_numPriorityRequests != 0 && !ms_aInfoForModel[streamId].IsPriority())
+		StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &unused, &size);
+		if(ms_numPriorityRequests != 0 && !StreamingInfo_IsPriority(&ms_aInfoForModel[streamId]))
 			break;
 
 		// Can't load certain combinations of files together
@@ -2221,7 +2237,7 @@ CStreaming::RequestModelStream(int32 ch)
 				haveBigFile = 1;
 		}
 		ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_READING;
-		ms_aInfoForModel[streamId].RemoveFromList();
+		StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
 		DecrementRef(streamId);
 
 		streamId = ms_aInfoForModel[streamId].m_nextID;
@@ -2271,7 +2287,7 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 			if(id == -1)
 				continue;
 
-			cdsize = ms_aInfoForModel[id].GetCdSize();
+			cdsize = StreamingInfo_GetCdSize(&ms_aInfoForModel[id]);
 			if(id < STREAM_OFFSET_TXD && CModelInfo::GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
 			   ms_numVehiclesLoaded >= desiredNumVehiclesLoaded &&
 			   !RemoveLoadedVehicle() &&
@@ -2280,7 +2296,8 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 				RemoveModel(id);
 				if(!CanRemoveModel(id))
 					ReRequestModel(id);
-				else if(CTxdStore::GetNumRefs(CModelInfo::GetModelInfo(id)->GetTxdSlot()) == 0)
+				// Use the complete C texture dictionary owner with the original live arguments
+				else if(TxdStore_GetNumRefs(CModelInfo::GetModelInfo(id)->GetTxdSlot()) == 0)
 					RemoveTxd(CModelInfo::GetModelInfo(id)->GetTxdSlot());
 			}else{
 				MakeSpaceFor(cdsize * CDSTREAM_SECTOR_SIZE);
@@ -2324,8 +2341,8 @@ CStreaming::RetryLoadFile(int32 ch)
 		case STREAM_ERROR_WRONGCD: key = "WRONGCD"; break;
 		default: key = "CDERROR"; break;
 		}
-		CHud::SetMessage(TheText.Get(key));
-		CTimer::SetCodePause(true);
+		CHud::SetMessage(Text_Get(&TheText,key));
+		Timer_SetCodePause(true);
 	}
 
 	switch(ms_channel[ch].state){
@@ -2340,7 +2357,7 @@ CStreaming::RetryLoadFile(int32 ch)
 	case CHANNELSTATE_READING:
 		if(ProcessLoadingChannel(ch)){
 			ms_channelError = -1;
-			CTimer::SetCodePause(false);
+			Timer_SetCodePause(false);
 		}
 		break;
 	}
@@ -2415,7 +2432,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 					break;
 				}
 
-				if (ms_aInfoForModel[streamId].GetCdPosnAndSize(posn, size)) {
+				if (StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)) {
 					streamIds[i] = -1;
 
 					// Big file, needs 2 buffer
@@ -2430,7 +2447,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 						if (i != 0 && streamIds[i-1] != -1 && streamSizes[i-1] > (uint32)ms_streamingBufferSize)
 							continue;
 					}
-					ms_aInfoForModel[streamId].RemoveFromList();
+					StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
 					DecrementRef(streamId);
 
 					streamIds[i] = streamId;
@@ -2449,7 +2466,7 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 					readI = (readI + 1) % ARRAY_SIZE(readOrder);
 				} else {
-					ms_aInfoForModel[streamId].RemoveFromList();
+					StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
 					DecrementRef(streamId);
 
 					ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
@@ -2526,11 +2543,11 @@ CStreaming::LoadAllRequestedModels(bool priority)
 		if(streamId == -1)
 			break;
 
-		ms_aInfoForModel[streamId].RemoveFromList();
+		StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
 		ms_channel[0].streamIds[0] = streamId;
 		DecrementRef(streamId);
 
-		if(ms_aInfoForModel[streamId].GetCdPosnAndSize(posn, size)){
+		if(StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)){
 			do
 				status = CdStreamRead(0, ms_pStreamingBuffer[0], imgOffset+posn, size);
 			while(CdStreamSync(0) || status == STREAM_NONE);
@@ -2621,12 +2638,13 @@ void
 CStreaming::UpdateMemoryUsed(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
+	// Read streaming categories through the complete C heap owner
 	ms_memoryUsed =
-		gMainHeap.GetMemoryUsed(MEMID_STREAM) +
-		gMainHeap.GetMemoryUsed(MEMID_STREAM_MODELS) +
-		gMainHeap.GetMemoryUsed(MEMID_STREAM_TEXUTRES) +
-		gMainHeap.GetMemoryUsed(MEMID_STREAM_COLLISION) +
-		gMainHeap.GetMemoryUsed(MEMID_STREAM_ANIMATION);
+		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM) +
+		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_MODELS) +
+		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_TEXUTRES) +
+		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_COLLISION) +
+		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_ANIMATION);
 #endif
 }
 
@@ -2699,7 +2717,7 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float 
 		e->m_scanCode = CWorld::GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
 			CTimeModelInfo *mi = (CTimeModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
-			if (mi->GetModelType() != MITYPE_TIME || CClock::GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff())) {
+			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff())) {
 				lodDistSq = sq(mi->GetLargestLodDistance());
 				lodDistSq = Min(lodDistSq, sq(STREAM_DIST));
 				pos = CVector2D(e->GetPosition());
@@ -2727,7 +2745,7 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
 		e->m_scanCode = CWorld::GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
 			CTimeModelInfo *mi = (CTimeModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
-			if (mi->GetModelType() != MITYPE_TIME || CClock::GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
+			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
 				RequestModel(e->GetModelIndex(), flags);
 		}
 	}
@@ -3167,7 +3185,7 @@ CStreaming::LoadScene(const CVector &pos)
 	CStreamingInfo *si, *prev;
 	eLevelName level;
 
-	level = CTheZones::GetLevelFromPosition(&pos);
+	level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
 	debug("Start load scene\n");
 	for(si = ms_endRequestedList.m_prev; si != &ms_startRequestedList; si = prev){
 		prev = si->m_prev;
@@ -3192,7 +3210,7 @@ CStreaming::LoadScene(const CVector &pos)
 	if (!CGame::IsInInterior()) {
 		for (int i = 0; i < 5; i++) {
 			CZoneInfo zone;
-			CTheZones::GetZoneInfoForTimeOfDay(&pos, &zone);
+			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &zone);
 			int32 model = CCarCtrl::ChooseCarModelToLoad(CCarCtrl::ChooseCarRating(&zone));
 			CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
 		}
@@ -3259,18 +3277,19 @@ CStreaming::PrintStreamingBufferState()
 	wchar wstr[128];
 	uint32 offset, size;
 
-	CTimer::Stop();
+	Timer_Stop();
 	int i = 0;
 	while (i < NUMSTREAMINFO) {
 		while (true) {
 			int j = 0;
 			DoRWStuffStartOfFrame(50, 50, 50, 0, 0, 0, 255);
 			CPad::UpdatePads();
-			CSprite2d::InitPerFrame();
+			// Preserve the original operation through the C sprite interface
+			Sprite2d_InitPerFrame();
 			CFont::InitPerFrame();
 			DefinedState();
 
-			CRect unusedRect(0, 0, RsGlobal.maximumWidth, RsGlobal.maximumHeight);
+			CRect unusedRect = Rect_Make(0, 0, RsGlobal.maximumWidth, RsGlobal.maximumHeight);
 			CRGBA unusedColor(255, 255, 255, 255);
 			CFont::SetFontStyle(FONT_BANK);
 			CFont::SetBackgroundOff();
@@ -3287,12 +3306,14 @@ CStreaming::PrintStreamingBufferState()
 				for ( ; j < 34 && modelIndex < NUMSTREAMINFO; modelIndex++) {
 					CStreamingInfo *streamingInfo = &ms_aInfoForModel[modelIndex];
 					CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(modelIndex);
-					if (streamingInfo->m_loadState != STREAMSTATE_LOADED || !streamingInfo->GetCdPosnAndSize(offset, size))
+					if (streamingInfo->m_loadState != STREAMSTATE_LOADED || !StreamingInfo_GetCdPosnAndSize(streamingInfo, &offset, &size))
 						continue;
 
 					if (modelIndex >= STREAM_OFFSET_TXD)
-						sprintf(str, "txd %s, refs %d, size %dK, flags 0x%x", CTxdStore::GetTxdName(modelIndex - STREAM_OFFSET_TXD),
-						        CTxdStore::GetNumRefs(modelIndex - STREAM_OFFSET_TXD), 2 * size, streamingInfo->m_flags);
+						// Use the complete C texture dictionary owner with the original live arguments
+						sprintf(str, "txd %s, refs %d, size %dK, flags 0x%x", TxdStore_GetTxdName(modelIndex - STREAM_OFFSET_TXD),
+						        // Use the complete C texture dictionary owner with the original live arguments
+						        TxdStore_GetNumRefs(modelIndex - STREAM_OFFSET_TXD), 2 * size, streamingInfo->m_flags);
 					else
 						sprintf(str, "model %d,%s, refs%d, size%dK, flags%x", modelIndex, modelInfo->GetModelName(), modelInfo->GetNumRefs(), 2 * size,
 						        streamingInfo->m_flags);
@@ -3316,7 +3337,18 @@ CStreaming::PrintStreamingBufferState()
 		CFont::DrawFonts();
 		DoRWStuffEndOfFrame();
 	}
-	CTimer::Update();
+	Timer_Update();
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -1,192 +1,128 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "main.h"
-#include "Timer.h"
 #include "ModelIndices.h"
 #include "Streaming.h"
 #include "CopPed.h"
 #include "Population.h"
 #include "RenderBuffer.h"
 #include "Camera.h"
-#include "Ropes.h"
+#include "Ropes_backend.h"
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
-#include "custompipes.h" // rouz edit (ChatGPT)
+#include "custompipes.h"
 #endif
 
-CRope CRopes::aRopes[8];
-
-RwImVertexIndex RopeIndices[64] = {
-	0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7,
-	7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15,
-	15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23,
-	23, 24, 24, 25, 25, 26, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31,
-	31, 32	// unused
-};
-
-//+ rouz edit (ChatGPT)
-static bool
-IsRopeVisibleToActiveCamera(const CVector &center, float radius)
+RopesVector Ropes_BackendCopyVector(const CVector &vector)
 {
-	// Let the active auxiliary camera clip ropes during environment rendering
+	// Copy the original typed value including temporary caller expressions
+	RopesVector result = {vector.x, vector.y, vector.z};
+	return result;
+}
+void Ropes_BackendStoreVector(void *destination, RopesVector vector)
+{
+	// Write the original typed output object only after a successful lookup
+	*(CVector *)destination = CVector(vector.x, vector.y, vector.z);
+}
+bool Ropes_BackendEnvMap(void)
+{
+	// Read the live environment-pass state through its original owner
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
-	if(CustomPipes::bRenderingEnvMap)
-		return true;
-#endif
-	return TheCamera.IsSphereVisible(center, radius);
-}
-//- rouz edit (ChatGPT)
-
-void
-CRope::Update(void)
-{
-	int i;
-	float step = Pow(0.85f, CTimer::GetTimeStep());
-	if(!m_bWasRegistered && CTimer::GetTimeInMilliseconds() > m_updateTimer){
-		m_speed[0].z -= 0.0015f*CTimer::GetTimeStep();
-		m_pos[0] += m_speed[0]*CTimer::GetTimeStep();
-	}
-	for(i = 1; i < ARRAY_SIZE(m_pos); i++){
-		CVector prevPos = m_pos[i];
-		m_pos[i] += m_speed[i]*step*CTimer::GetTimeStep();
-		m_pos[i].z -= 0.05f*CTimer::GetTimeStep();
-		CVector dist = m_pos[i] - m_pos[i-1];
-		m_pos[i] = m_pos[i-1] + (0.625f/dist.Magnitude())*dist;
-		m_speed[i] = (m_pos[i] - prevPos)/CTimer::GetTimeStep();
-	}
-	if(!m_bWasRegistered && m_pos[0].z < 0.0f)
-		m_bActive = false;
-	m_bWasRegistered = false;
-}
-
-void
-CRope::Render(void)
-{
-	int i;
-	int numVerts = 0;
-	if(!IsRopeVisibleToActiveCamera(m_pos[16], 20.0f)) // rouz edit (ChatGPT)
-		return;
-
-	for(i = 0; i < ARRAY_SIZE(m_pos); i++){
-		RwIm3DVertexSetRGBA(&TempBufferRenderVertices[i], 128, 128, 128, 100);
-		RwIm3DVertexSetPos(&TempBufferRenderVertices[i], m_pos[i].x, m_pos[i].y, m_pos[i].z);
-	}
-
-	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
-	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
-
-	if(RwIm3DTransform(TempBufferRenderVertices, ARRAY_SIZE(m_pos), nil, rwIM3D_VERTEXXYZ|rwIM3D_VERTEXRGBA)){
-#ifdef FIX_BUGS
-		RwIm3DRenderIndexedPrimitive(rwPRIMTYPELINELIST, RopeIndices, 2*(ARRAY_SIZE(m_pos)-1));
+	return CustomPipes::bRenderingEnvMap;
 #else
-		RwIm3DRenderIndexedPrimitive(rwPRIMTYPEPOLYLINE, RopeIndices, 2*(ARRAY_SIZE(m_pos)-1));
+	return false;
 #endif
-		RwIm3DEnd();
-	}
 }
-
-
-void
-CRopes::Init(void)
+bool Ropes_BackendSphereVisible(RopesVector center, float radius)
 {
-	int i;
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		aRopes[i].m_bActive = false;
+	// Query the actual camera with the original typed sphere value
+	return TheCamera.IsSphereVisible(CVector(center.x, center.y, center.z), radius);
 }
-
-void
-CRopes::Update(void)
+void Ropes_BackendPush(const char *name)
 {
-	int i;
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		if(aRopes[i].m_bActive)
-			aRopes[i].Update();
+	// Preserve the original debug render-group boundary
+	PUSH_RENDERGROUP(name);
 }
-
-void
-CRopes::Render(void)
+void Ropes_BackendPop(void)
 {
-	int i;
-	PUSH_RENDERGROUP("CRopes::Render");
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		if(aRopes[i].m_bActive)
-			aRopes[i].Render();
+	// Close the original render group when enabled
 	POP_RENDERGROUP();
 }
-
-bool
-CRopes::RegisterRope(uintptr id, CVector pos, bool setUpdateTimer)
+void Ropes_BackendSetRGBA(int index, int red, int green, int blue, int alpha)
 {
-	int i, j;
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++){
-		if(aRopes[i].m_bActive && aRopes[i].m_id == id){
-			aRopes[i].m_pos[0] = pos;
-			aRopes[i].m_speed[0] = CVector(0.0f, 0.0f, 0.0f);
-			aRopes[i].m_bWasRegistered = true;
-			return true;
-		}
-	}
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		if(!aRopes[i].m_bActive){
-			aRopes[i].m_id = id;
-			aRopes[i].m_pos[0] = pos;
-			aRopes[i].m_speed[0] = CVector(0.0f, 0.0f, 0.0f);
-			aRopes[i].m_unk = false;
-			aRopes[i].m_bWasRegistered = true;
-			aRopes[i].m_updateTimer = setUpdateTimer ? CTimer::GetTimeInMilliseconds() + 20000 : 0;
-			for(j = 1; j < ARRAY_SIZE(aRopes[0].m_pos); j++){
-				if(j & 1)
-					aRopes[i].m_pos[j] = aRopes[i].m_pos[j-1] + CVector(0.0f, 0.0f, 0.625f);
-				else
-					aRopes[i].m_pos[j] = aRopes[i].m_pos[j-1] - CVector(0.0f, 0.0f, 0.625f);
-				aRopes[i].m_speed[j] = CVector(0.0f, 0.0f, 0.0f);
-			}
-			aRopes[i].m_bActive = true;
-			return true;
-		}
-	return false;
+	// Write the existing shared render buffer through the typed color setter
+	RwIm3DVertexSetRGBA(&TempBufferRenderVertices[index], red, green, blue, alpha);
 }
-
-void
-CRopes::SetSpeedOfTopNode(uintptr id, CVector speed)
+void Ropes_BackendSetPos(int index, float x, float y, float z)
 {
-	int i;
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		if(aRopes[i].m_bActive && aRopes[i].m_id == id){
-			aRopes[i].m_speed[0] = speed;
-			return;
-		}
+	// Write the same shared render buffer through the typed position setter
+	RwIm3DVertexSetPos(&TempBufferRenderVertices[index], x, y, z);
 }
-
-bool
-CRopes::FindCoorsAlongRope(uintptr id, float t, CVector *coors)
+void Ropes_BackendVertexAlpha(void)
 {
-	int i, j;
-	float f;
-	for(i = 0; i < ARRAY_SIZE(aRopes); i++)
-		if(aRopes[i].m_bActive && aRopes[i].m_id == id){
-			t = (ARRAY_SIZE(aRopes[0].m_pos)-1)*Clamp(t, 0.0f, 0.999f);
-			j = t;
-			f = t - j; 
-			*coors = (1.0f-f)*aRopes[i].m_pos[j] + f*aRopes[i].m_pos[j+1];
-			return true;
-		}
-	return false;
+	// Enable the original vertex-alpha state
+	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)TRUE);
 }
-
-bool
-CRopes::CreateRopeWithSwatComingDown(CVector pos)
+void Ropes_BackendSrcBlend(void)
 {
-	static uint32 ropeId = 0;
-
-	if(!CStreaming::HasModelLoaded(MI_SWAT) || !RegisterRope(ropeId+100, pos, true))
-		return false;
-	CCopPed *swat = (CCopPed*)CPopulation::AddPed(PEDTYPE_COP, COP_HELI_SWAT, pos);
-	swat->bUsesCollision = false;
-	swat->m_pRopeEntity = (CEntity*)1;
-	swat->m_nRopeID = 100 + ropeId;
-	CAnimManager::BlendAnimation(swat->GetClump(), ASSOCGRP_STD, ANIM_STD_ABSEIL, 4.0f);
-	ropeId++;
-	return true;
+	// Select the original source blend mode
+	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 }
+void Ropes_BackendDestBlend(void)
+{
+	// Select the original destination blend mode
+	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+}
+void Ropes_BackendTextureRaster(void)
+{
+	// Clear the original texture-raster state
+	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil);
+}
+bool Ropes_BackendTransform(int count)
+{
+	// Retain the original shared vertices, null matrix and XYZ/RGBA flags
+	return RwIm3DTransform(TempBufferRenderVertices, count, nil, rwIM3D_VERTEXXYZ|rwIM3D_VERTEXRGBA) != nil;
+}
+void Ropes_BackendRenderIndexed(bool lineList, uint16_t *indices, int count)
+{
+	// Map the C algorithm's original primitive choice to the actual typed enum
+	RwIm3DRenderIndexedPrimitive(lineList ? rwPRIMTYPELINELIST : rwPRIMTYPEPOLYLINE, indices, count);
+}
+void Ropes_BackendEnd(void)
+{
+	// End the original successful immediate-mode draw
+	RwIm3DEnd();
+}
+bool Ropes_BackendSwatLoaded(void)
+{
+	// Query the original live SWAT model state
+	return CStreaming::HasModelLoaded(MI_SWAT);
+}
+CCopPed *Ropes_BackendAddSwat(RopesVector pos)
+{
+	// Retain the original population call and actual derived-pointer conversion
+	return (CCopPed *)CPopulation::AddPed(PEDTYPE_COP, COP_HELI_SWAT, CVector(pos.x, pos.y, pos.z));
+}
+void Ropes_BackendDisableCollision(CCopPed *ped)
+{
+	// Write the original collision bit through its typed owner
+	ped->bUsesCollision = false;
+}
+void Ropes_BackendRopeSentinel(CCopPed *ped)
+{
+	// Preserve the original entity-pointer sentinel exactly
+	ped->m_pRopeEntity = (CEntity *)1;
+}
+void Ropes_BackendRopeID(CCopPed *ped, uint32_t id)
+{
+	// Assign the original wrapped 32-bit counter result to its pointer-width field
+	ped->m_nRopeID = id;
+}
+void Ropes_BackendBlendSwat(CCopPed *ped)
+{
+	// Enter the original typed clump access and animation blend operation
+	// Use the complete C animation manager at the original call boundary
+	AnimManager_BlendAnimation(ped->GetClump(), ASSOCGRP_STD, ANIM_STD_ABSEIL, 4.0f);
+}
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

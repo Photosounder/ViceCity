@@ -1,0 +1,305 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned commands,checks,events,creates,destroys,draws,refractions,textures,postCalls,prints,groups,randomCalls,reentries,liveMutations,createFailures,subFailures;
+static unsigned failCreate,failSubRaster;
+static bool framePending,capturing,sampling,reenterDraw,insideDraw,mutateRectangle;
+static RwRect *liveRectangle;
+static RwRaster rasters[4096];
+static RwRaster sourceRaster={1,640,448,32,0,true,NULL};
+static RwCamera camera={1,&sourceRaster,0.5f};
+static RwRaster special[7];
+static RwIm2DVertex publicVertices[4];
+static TestBlurArgs nestedArgs;
+static RwIm2DVertex *outerVertices;
+static uint32_t randomState=0x13572468;
+static float aspect=4.0f/3.0f,scaleY=1.0f;
+static float lightColours[6]={1.1f,-0.5f,0.25f,0.8f,-0.1f,1.8f};
+float Timer_timeScale=0.375f;
+TestScreen RsGlobal={640,448};
+TestCamera TheCamera;
+TestFrontend FrontEndMenuManager;
+int32 CHud::m_VehicleState,CHud::m_ZoneState;
+extern "C" {D3DCAPS8 _RwD3D8DeviceCaps={4096,4096};}
+DWORD _dwMemTotalVideo=256*1024*1024;
+RwRaster *gpDotRaster=&special[0],*gpHeatHazeRaster=&special[1],*gpRainDripRaster[2]={&special[2],&special[3]},*gpRainDripDarkRaster[2]={&special[4],&special[5]},*gpCarSplashRaster[1]={&special[6]};
+static void requireAt(bool value,unsigned line)
+{
+    // Stop at the exact failed observation without opening native dialogs
+    ++checks;if(!value){fprintf(stderr,"line=%u commands=%u checks=%u events=%u\n",line,commands,checks,events);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Observe initialized values without comparing process-specific pointer addresses
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,uint32_t a=0,uint32_t b=0)
+{
+    // Retain external operation order and normalized SDK resource identities
+    uint32_t values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static unsigned identity(RwRaster *raster)
+{
+    // Preserve nullable SDK resource identities in all original state transitions
+    return raster?raster->id:0;
+}
+static TestBlurState state(void)
+{
+    // Observe every shared variable through the separately compiled public caller
+    TestBlurState result;TestBlurGetState(&result);unsigned id=identity((RwRaster*)result.front);hashBytes(&id,sizeof(id));hashBytes(&result.justInitialised,sizeof(result.justInitialised));hashBytes(&result.scaled,sizeof(result.scaled));hashBytes(&result.on,sizeof(result.on));hashBytes(&result.drunkness,sizeof(result.drunkness));hashBytes(&result.count,sizeof(result.count));hashBytes(&Timer_timeScale,sizeof(Timer_timeScale));return result;
+}
+static int32_t run(unsigned operation,TestBlurArgs *args)
+{
+    // Enter the entire original or C operation without reproducing its rendering decisions
+#if defined(GTA_PS2) && !defined(EXTENDED_COLOURFILTER)
+    // Mark the controlled successful fresh-open case before calling either producer so its missing return is never read
+    if(operation==OP_Open){TestBlurState current;TestBlurGetState(&current);args->discardOpenResult=current.front==NULL&&failCreate==0&&failSubRaster==0;}
+#endif
+    ++commands;int32_t result=TestBlur(operation,args);hashBytes(&result,sizeof(result));state();if(args->rectangle)hashBytes(args->rectangle,sizeof(RwRect));return result;
+}
+static TestBlurArgs argumentsFor(RwRect *rect)
+{
+    // Supply native rectangle subobjects to the independent pure C consumer without casting record types
+    TestBlurArgs args={};args.camera=&camera;args.raster=&sourceRaster;args.vertices=publicVertices;args.rectangle=rect;
+    if(rect){
+        // Exercise the actual native borrow helper on the converted SDK-client side
+#ifdef ORIGINAL
+        args.x=&rect->x;args.y=&rect->y;args.w=&rect->w;args.h=&rect->h;
+#else
+        MBlurRectRef ref=MBlur_NativeRect(rect);args.x=ref.x;args.y=ref.y;args.w=ref.w;args.h=ref.h;
+#endif
+    }
+    args.red=137;args.green=257;args.blue=511;args.alpha=225;args.blur=173;args.blurAlpha=197;args.z=0.75f;return args;
+}
+static void observeVertices(RwIm2DVertex *vertices,int32_t count)
+{
+    // Observe exactly the initialized SDK fields consumed by the rendering primitive
+    for(int i=0;i<count;++i)hashBytes(&vertices[i],sizeof(RwIm2DVertex));
+}
+static void message(unsigned kind,const char *format,va_list args)
+{
+    // Compare fully formatted diagnostics including the original debug prefix and fixed failure messages
+    char buffer[512];int size=vsnprintf(buffer,sizeof(buffer),format,args);require(size>=0&&(size_t)size<sizeof(buffer));event(kind,(uint32_t)size);hashBytes(buffer,size);
+}
+extern "C" int TestBlurPrintf(const char *format,...)
+{
+    // Capture original stdout diagnostics without displaying graphics or polluting result records
+    va_list args;va_start(args,format);message(1,format,args);va_end(args);++prints;return 0;
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Retain the real external debug logging ABI and the original formatting behavior
+    va_list args;va_start(args,format);message(2,format,args);va_end(args);
+}
+RwRaster *RwCameraGetRaster(RwCamera *value)
+{
+    // Observe the original SDK camera lookup and inject one controlled live caller mutation
+    require(value==&camera);event(3,value->id);if(mutateRectangle){require(liveRectangle!=NULL);mutateRectangle=false;liveRectangle->w+=7;liveRectangle->h+=11;++liveMutations;}return value->frameBuffer;
+}
+float RwCameraGetNearClipPlane(RwCamera *value)
+{
+    // Read live near-clip metadata at every original setter argument site
+    require(value==&camera);event(4,value->id);return value->nearClip;
+}
+int32 RwRasterGetWidth(RwRaster *value)
+{
+    // Retain each original width query through its actual SDK primitive
+    require(value&&value->alive);event(5,value->id);return value->width;
+}
+int32 RwRasterGetHeight(RwRaster *value)
+{
+    // Retain each original height query through its actual SDK primitive
+    require(value&&value->alive);event(6,value->id);return value->height;
+}
+int32 RwRasterGetDepth(RwRaster *value)
+{
+    // Retain each original depth query through its actual SDK primitive
+    require(value&&value->alive);event(7,value->id);return value->depth;
+}
+RwRaster *RwRasterCreate(int32 width,int32 height,int32 depth,uint32 flags)
+{
+    // Control SDK allocation failures without implementing blur sizing or allocation policy
+    event(8,(uint32)width,(uint32)height);hashBytes(&depth,sizeof(depth));hashBytes(&flags,sizeof(flags));if(failCreate){--failCreate;++createFailures;return NULL;}require(creates<4096);RwRaster *value=&rasters[creates++];value->id=100+creates;value->width=width;value->height=height;value->depth=depth;value->flags=flags;value->alive=true;value->parent=NULL;return value;
+}
+void RwRasterDestroy(RwRaster *value)
+{
+    // Verify SDK raster lifetime and forbid double destruction
+    require(value&&value->alive);event(9,value->id);value->alive=false;++destroys;
+}
+RwRaster *RwRasterSubRaster(RwRaster *raster,RwRaster *parent,RwRect *rect)
+{
+    // Control the original subraster primitive and its failure result without choosing geometry
+    require(raster&&raster->alive&&parent&&parent->alive);event(10,raster->id,parent->id);hashBytes(rect,sizeof(*rect));if(failSubRaster){--failSubRaster;++subFailures;return NULL;}raster->width=rect->w;raster->height=rect->h;raster->depth=parent->depth;raster->parent=parent;return raster;
+}
+void RwRasterPushContext(RwRaster *raster)
+{
+    // Retain nullable SDK context pushes at the original call sites
+    event(11,identity(raster));
+}
+void RwRasterPopContext(void)
+{
+    // Retain the original SDK context pop even when no blur allocation succeeded
+    event(12);
+}
+void RwRasterRenderFast(RwRaster *raster,int32 x,int32 y)
+{
+    // Observe all original framebuffer-copy arguments
+    require(raster&&raster->alive);event(13,raster->id);hashBytes(&x,sizeof(x));hashBytes(&y,sizeof(y));
+}
+float RwIm2DGetNearScreenZ(void)
+{
+    // Supply controlled SDK screen-depth metadata without duplicating vertex-building policy
+    event(14);return 0.25f;
+}
+void RwIm2DRenderIndexedPrimitive(int32 kind,RwIm2DVertex *vertices,int32 count,RwImVertexIndex *indices,int32 indexCount)
+{
+    // Observe final initialized SDK vertex output and original index ordering
+    require(kind==rwPRIMTYPETRILIST&&count==4&&indexCount==6);event(15,count,indexCount);observeVertices(vertices,count);hashBytes(indices,indexCount*sizeof(*indices));++draws;
+    if(insideDraw){
+        // Require recursive effect draws to use a distinct live SDK stack array
+        require(vertices!=outerVertices);
+    }
+    if(reenterDraw&&!insideDraw){
+        // Reenter the complete public effect operation while the outer SDK vertex buffer remains borrowed
+        RwIm2DVertex saved[4];memcpy(saved,vertices,sizeof(saved));reenterDraw=false;insideDraw=true;outerVertices=vertices;++reentries;run(OP_Effects,&nestedArgs);require(memcmp(saved,vertices,sizeof(saved))==0);insideDraw=false;outerVertices=NULL;
+    }
+}
+void RwRenderStateSet(RwRenderState kind,void *value)
+{
+    // Normalize texture pointers while retaining all original SDK blend and boolean identities
+    event(16,(uint32)kind,kind==rwRENDERSTATETEXTURERASTER?identity((RwRaster*)value):(uint32)(uintptr_t)value);
+}
+void rw::SetRenderState(int32 kind,uint32 value)
+{
+    // Observe the original librw stencil primitive independently of the C-side abstract identities
+    event(17,(uint32)kind,value);
+}
+void RwD3D8SetRenderState(uint32 kind,uint32 value)
+{
+    // Observe the original legacy stencil primitive with its distinct SDK state identities
+    event(18,kind,value);
+}
+void DefinedState(void)
+{
+    // Retain the external render-state reset as one independently observed primitive
+    event(19);
+}
+void PushRendergroup(const char *name)
+{
+    // Verify the literal original debug group name rather than the new C operation name
+    require(strcmp(name,"CMBlur::MotionBlurRender")==0);event(20);++groups;
+}
+void PopRendergroup(void)
+{
+    // Observe the original debug group exit operation
+    event(21);++groups;
+}
+void _GetVideoMemInfo(LPDWORD total,LPDWORD available)
+{
+    // Supply actual native DWORD subobjects while preserving the original video-memory query order
+    *total=128*1024*1024;*available=64*1024*1024;event(22);
+}
+int TestCamera::GetScreenFadeStatus(void)
+{
+    // Expose the original live camera fade query
+    event(23,(uint32)fade);return fade;
+}
+float Draw_GetAspectRatio(void)
+{
+    // Keep aspect-ratio reads independently observable at each original scaling expression
+    event(24);return aspect;
+}
+float Draw_ScaleY(float value)
+{
+    // Provide controlled external scaling without reproducing overlap or HUD exclusion policy
+    event(25);hashBytes(&value,sizeof(value));return value*scaleY;
+}
+float General_GetRandomNumberInRangeFloat(float low,float high)
+{
+    // Supply distinct deterministic random values so argument evaluation order remains observable
+    event(26,randomCalls++);hashBytes(&low,sizeof(low));hashBytes(&high,sizeof(high));randomState=randomState*1664525+1013904223;return low+(high-low)*((randomState>>8)&65535)/65535.0f;
+}
+#ifdef EXTENDED_COLOURFILTER
+void CPostFX::Open(RwCamera *value)
+{
+    // Observe the original delegation without implementing the external post-processing owner
+    require(value==&camera);event(28);++postCalls;
+}
+void CPostFX::Close(void)
+{
+    // Observe the original delegation and leave blur-owned globals untouched
+    event(29);++postCalls;
+}
+void CPostFX::Render(RwCamera *value,uint32 red,uint32 green,uint32 blue,uint32 blur,int32 type,uint32 alpha)
+{
+    // Observe every original argument before any external post-processing work
+    require(value==&camera);event(30,red,green);event(31,blue,blur);event(32,(uint32)type,alpha);++postCalls;
+}
+#endif
+bool SoftwarePolygons::FramePending(void)
+{
+    // Supply the original software-renderer activity gate
+    event(33,framePending);return framePending;
+}
+bool SoftwarePolygons::CapturingWorldEffects(void)
+{
+    // Supply the original software effect-capture gate separately from frame activity
+    event(34,capturing);return capturing;
+}
+bool SoftwarePolygons::BeginScreenTextureSampling(void)
+{
+    // Control the original snapshot failure path without selecting whether the owner should request it
+    event(35,sampling);return sampling;
+}
+void SoftwarePolygons::RenderScreenRefraction(float left,float top,float right,float bottom,int width,int height,RwRaster *raster,float u1,float v1,float u2,float v2,int strength)
+{
+    // Observe complete refraction geometry, source texture, distortion offsets and strength
+    event(36,identity(raster),(uint32)strength);float values[]={left,top,right,bottom,u1,v1,u2,v2};hashBytes(values,sizeof(values));hashBytes(&width,sizeof(width));hashBytes(&height,sizeof(height));++refractions;
+}
+void SoftwarePolygons::RenderScreenTexture(float left,float top,float right,float bottom,int width,int height,RwRaster *raster,int red,int green,int blue,int alpha,bool additive)
+{
+    // Observe complete software texture geometry and tint without duplicating overlay ordering
+    event(37,identity(raster),additive);float values[]={left,top,right,bottom};int colours[]={red,green,blue,alpha,width,height};hashBytes(values,sizeof(values));hashBytes(colours,sizeof(colours));++textures;
+}
+int main(void)
+{
+    // Initialize controlled SDK resources independently of all owner allocation and rendering decisions
+    for(unsigned i=0;i<7;++i){special[i]={10+i,64,64,32,0,true,NULL};}framePending=true;capturing=true;sampling=true;FrontEndMenuManager.m_PrefsBrightness=384;
+    RwRect rect={190,140,240,190};TestBlurArgs args=argumentsFor(&rect);TestBlurState initial=state();require(initial.front==NULL&&!initial.on&&!initial.justInitialised&&!initial.scaled&&initial.drunkness==0.0f&&initial.count==0);
+    for(unsigned cycle=0;cycle<12;++cycle){
+        // Exercise complete open and close policy under both bit depths and multiple viewport sizes
+        sourceRaster.width=cycle&1?800:640;sourceRaster.height=cycle&1?600:448;sourceRaster.depth=cycle&2?16:32;RsGlobal.width=sourceRaster.width;RsGlobal.height=sourceRaster.height;aspect=cycle&1?16.0f/9.0f:4.0f/3.0f;scaleY=cycle&1?0.875f:1.0f;camera.nearClip=cycle&1?0.25f:0.5f;
+        TestBlurState setup={};setup.on=(cycle&1)!=0;setup.scaled=true;TestBlurSetState(&setup);run(OP_Close,&args);_RwD3D8DeviceCaps.MaxTextureWidth=cycle==3?128:4096;_dwMemTotalVideo=cycle==7?8*1024*1024:256*1024*1024;failCreate=cycle%4==1?1:0;failSubRaster=cycle%5==0?1:0;run(OP_Open,&args);failCreate=failSubRaster=0;if(state().front)run(OP_Open,&args);
+        // Test both complete vertex builders including caller mutation during an SDK query
+        rect={17,29,213,187};args.fullTexture=cycle&1;args.u1=-0.125f;args.v1=0.25f;args.u2=0.375f;args.v2=-0.5f;args.z=cycle&1?0.5f:2.0f;liveRectangle=&rect;mutateRectangle=true;run(OP_Immediate,&args);require(!mutateRectangle);mutateRectangle=true;run(OP_Vertices,&args);require(!mutateRectangle||args.fullTexture);mutateRectangle=false;observeVertices(publicVertices,4);
+        // Cover clamping, invalid rectangles, duplicate rejection and every effect kind
+        setup=state();setup.count=0;TestBlurSetState(&setup);rect={-19,-13,RsGlobal.width+9,RsGlobal.height+7};args.type=FXTYPE_WATER1;run(OP_Add,&args);require(rect.x==0&&rect.y==0&&rect.w==(int)SCREEN_WIDTH&&rect.h==(int)SCREEN_HEIGHT);rect={230,150,220,190};require(run(OP_Add,&args)==0);
+        for(int type=0;type<8;++type){rect={190+type*11,140,240+type*11,190};args.type=type;run(OP_Add,&args);}rect={190,140,240,190};args.x1=180;args.y1=130;args.x2=250;args.y2=200;require(run(OP_Inside,&args)==1);args.x1=400;args.y1=400;args.x2=450;args.y2=450;require(run(OP_Inside,&args)==0);
+        // Cover both footer-label gates and the independently protected top-right HUD and radar regions
+        rect={(int)SCREEN_WIDTH-80,(int)SCREEN_HEIGHT-60,(int)SCREEN_WIDTH-20,(int)SCREEN_HEIGHT-20};args.type=FXTYPE_WATER1;CHud::m_VehicleState=1;CHud::m_ZoneState=0;require(run(OP_Add,&args)==0);CHud::m_VehicleState=0;CHud::m_ZoneState=1;args.type=FXTYPE_SPLASH1;require(run(OP_Add,&args)==0);CHud::m_ZoneState=0;rect={(int)SCREEN_WIDTH-90,10,(int)SCREEN_WIDTH-10,60};args.type=FXTYPE_SPLASH2;require(run(OP_Add,&args)==0);rect={(int)SCREEN_SCALE_X(45.0f),(int)SCREEN_SCALE_FROM_BOTTOM(111.0f),(int)SCREEN_SCALE_X(129.0f),(int)SCREEN_SCALE_FROM_BOTTOM(45.0f)};args.type=FXTYPE_HEATHAZE;require(run(OP_Add,&args)==0);
+        // Exercise complete effect rendering across fading, software activity and snapshot outcomes
+        TheCamera.fade=cycle%3;CHud::m_VehicleState=cycle&1;CHud::m_ZoneState=cycle&2;FrontEndMenuManager.m_PrefsBrightness=cycle%3==0?200:cycle%3==1?256:512;framePending=cycle%4!=0;capturing=cycle%5!=0;sampling=cycle%4!=1;args.raster=&sourceRaster;run(OP_Effects,&args);
+        // Saturate the queue without duplicate filtering and preserve the early return before caller clamping
+        setup=state();setup.count=0;TestBlurSetState(&setup);CHud::m_VehicleState=CHud::m_ZoneState=0;args.type=FXTYPE_SPLASH1;for(int i=0;i<64;++i){rect={190,140,210,160};require(run(OP_Add,&args)==1);}rect={-9,-7,99,97};require(run(OP_Add,&args)==0&&rect.x==-9&&rect.y==-7);framePending=capturing=sampling=true;TheCamera.fade=FADE_0;run(OP_Effects,&args);
+        // Exercise colour presets, first-frame suppression and the complete drunk-colour waveform
+        setup=state();setup.count=0;setup.on=(cycle&1)!=0;setup.drunkness=0.625f;TestBlurSetState(&setup);for(int type=0;type<10;++type){args.type=type;run(OP_Overlay,&args);run(OP_Render,&args);}for(int i=0;i<40;++i){args.type=MOTION_BLUR_NONE;run(OP_Overlay,&args);}args.drunkness=cycle%3==0?-1.0f:cycle%3==1?0.5f:2.0f;run(OP_SetDrunk,&args);require(state().drunkness>=0.0f&&state().drunkness<=1.0f);run(OP_ClearDrunk,&args);require(state().drunkness==0.0f&&Timer_timeScale==1.0f);
+        // Release only owner-created front buffers and preserve extended-filter close's original return behavior
+        run(OP_Close,&args);setup=state();require(setup.front==NULL);setup.count=0;TestBlurSetState(&setup);
+    }
+    // Verify nested hardware calls borrow distinct SDK stack arrays and leave the outer array intact
+#ifndef REVC_SOFTWARE_POLYGONS
+    TestBlurState setup=state();setup.count=0;TestBlurSetState(&setup);RsGlobal.width=640;RsGlobal.height=448;aspect=4.0f/3.0f;scaleY=1.0f;args.type=FXTYPE_SPLASH1;rect={190,140,240,190};require(run(OP_Add,&args)==1);nestedArgs=args;reenterDraw=true;run(OP_Effects,&args);require(reentries==1&&!reenterDraw);
+#endif
+    require(creates==destroys&&liveMutations==18&&randomCalls>0);
+#ifdef REVC_SOFTWARE_POLYGONS
+    require(refractions>0&&textures>0);
+#endif
+#ifndef EXTENDED_COLOURFILTER
+    require(createFailures==3);
+#ifdef GTA_PS2
+    require(subFailures==2);
+#endif
+#endif
+    printf("commands=%u checks=%u events=%u rasters=%u/%u failures=%u/%u draws=%u refractions=%u textures=%u post=%u prints=%u groups=%u random=%u reentries=%u mutations=%u hash=%016llx\n",commands,checks,events,creates,destroys,createFailures,subFailures,draws,refractions,textures,postCalls,prints,groups,randomCalls,reentries,liveMutations,(unsigned long long)hashValue);return 0;
+}

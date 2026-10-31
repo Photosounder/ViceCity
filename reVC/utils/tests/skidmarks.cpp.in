@@ -1,0 +1,275 @@
+@COMMON@
+#include "caller.h"
+#include "TxdStore.h"
+#include "Replay.h"
+#include "Timer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stddef.h>
+extern RwIm3DVertex SkidmarkVertices[SKIDMARK_LENGTH*2];
+extern "C" { uint32_t Timer_timeMs; }
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,attempts,renders,ends,hooks,replays,loads,destroys,groups,phase[2],depth;
+static unsigned mode,txdStage,textureSerial;
+static bool playing,recursive;
+static CVector *mutatePosition;
+static bool *mutateBlood;
+static uint32_t rng=0x19d5a13;
+
+static void require(bool condition)
+{
+    // Fail quietly with the complete draw position needed for diagnosis
+    if(!condition){fprintf(stderr,"states=%u attempts=%u phase=%u\n",states,attempts,phase[depth]);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate logical state without process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void identity(uintptr_t value)
+{
+    // Observe all pointer-sized ID bits on each target architecture
+    word((uint32_t)value);
+#if UINTPTR_MAX>UINT32_MAX
+    word((uint32_t)(value>>32));
+#endif
+}
+static uint32_t bits(float value)
+{
+    // Observe float storage without scalar aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static float fromBits(uint32_t value)
+{
+    // Construct exact exceptional coordinate values
+    float result;memcpy(&result,&value,4);return result;
+}
+static void floating(float value)
+{
+    // Preserve all finite bits while comparing NaNs by classification
+    word(isnan(value)?0x7fc00000u:bits(value));
+}
+static uint32_t randomWord(void)
+{
+    // Generate fixed histories using defined unsigned arithmetic
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+static CVector position(void)
+{
+    // Generate each input component in the same order across compilers
+    float x=((int)(randomWord()%1025)-512)*0.0625f;
+    float y=((int)(randomWord()%1025)-512)*0.0625f;
+    float z=((int)(randomWord()%1025)-512)*0.0625f;
+    return CVector(x,y,z);
+}
+static void record(Skidmark value)
+{
+    // Observe every declared field including inactive record payloads
+    for(int i=0;i<SKIDMARK_LENGTH;i++){
+        // Preserve all original position and side-array scalar values
+        floating(value.m_pos[i].x);floating(value.m_pos[i].y);floating(value.m_pos[i].z);floating(value.m_sideX[i]);floating(value.m_sideY[i]);
+    }
+    identity(value.m_id);word(value.m_lastUpdate);word(value.m_fadeStart);word(value.m_fadeEnd);word(value.m_type);word((uint16_t)value.m_last);word(value.m_state);word(value.m_wasUpdated);
+}
+static void snapshot(void)
+{
+    // Compare the entire pool, including all 96 original index entries and texture publication
+    for(int i=0;i<NUMSKIDMARKS;i++)record(TestS_Record(i));
+    for(int i=0;i<SKIDMARK_LENGTH*6;i++)word(SkidmarkIndexList[i]);
+    identity((uintptr_t)TestS_Texture());states++;
+}
+bool CReplay::IsPlayingBack(void)
+{
+    // Mutate valid borrowed inputs at the original query point to expose eager copies
+    word(1);word(playing);replays++;
+    if(mutatePosition){mutatePosition->x+=2.0f;mutatePosition->y-=3.0f;mutatePosition->z+=4.0f;}
+    if(mutateBlood)*mutateBlood=!*mutateBlood;
+    return playing;
+}
+void CTxdStore::PushCurrentTxd(void)
+{
+    // Observe texture dictionary push before every acquisition
+    require(txdStage==0);txdStage=1;word(2);identity((uintptr_t)TestS_Texture());
+}
+int CTxdStore::FindTxdSlot(const char *name)
+{
+    // Preserve the exact original particle dictionary name and result
+    require(txdStage==1 && strcmp(name,"particle")==0);txdStage=2;word(3);return 7;
+}
+void CTxdStore::SetCurrentTxd(int slot)
+{
+    // Preserve dictionary selection before reading the texture
+    require(txdStage==2 && slot==7);txdStage=3;word(4);word((uint32_t)slot);
+}
+RwTexture *RwTextureRead(const char *name,const char *mask)
+{
+    // Return an opaque test resource without creating renderer resources
+    require(txdStage==3 && strcmp(name,"particleskid")==0 && mask==NULL);txdStage=4;word(5);loads++;
+    return (RwTexture *)(uintptr_t)(++textureSerial+100);
+}
+void CTxdStore::PopCurrentTxd(void)
+{
+    // Verify the new texture is published before restoring the dictionary
+    require(txdStage==4);txdStage=0;word(6);identity((uintptr_t)TestS_Texture());
+}
+RwBool RwTextureDestroy(RwTexture *texture)
+{
+    // Observe release before the original handle is cleared
+    require(texture==(RwTexture *)TestS_Texture());word(7);identity((uintptr_t)texture);destroys++;return 1;
+}
+RwRaster *RwTextureGetRaster(const RwTexture *texture)
+{
+    // Observe raster lookup at the original render-state access point
+    require(texture==(RwTexture *)TestS_Texture() && texture!=NULL);word(8);identity((uintptr_t)texture);return (RwRaster *)((uintptr_t)texture+1000);
+}
+void PushRendergroup(const char *name)
+{
+    // Preserve original group labels and render timing
+    word(9);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Preserve the closing original group boundary
+    word(10);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe all original state identifiers and their exact values
+    word(11);word((uint32_t)state);identity((uintptr_t)value);return 1;
+}
+static void vertexSnapshot(void)
+{
+    // Observe the whole real vertex buffer including fields not changed by shorter draws
+    for(int i=0;i<SKIDMARK_LENGTH*2;i++){
+        // Inspect typed D3D or GL fields rather than assuming their storage layouts
+        RwIm3DVertex &v=SkidmarkVertices[i];floating(v.getX());floating(v.getY());floating(v.getZ());
+        RwRGBA color=v.getColor();word(color.red);word(color.green);word(color.blue);word(color.alpha);floating(v.getU());floating(v.getV());
+    }
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *value,RwUInt8 red,RwUInt8 green,RwUInt8 blue,RwUInt8 alpha)
+{
+    // Verify the original color-position-U-V sequence for every vertex
+    require(phase[depth]<128 && phase[depth]%4==0 && value==SkidmarkVertices+phase[depth]/4);
+    word(12);word(phase[depth]/4);word(red);word(green);word(blue);word(alpha);phase[depth]++;value->setColor(red,green,blue,alpha);
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *value,RwReal x,RwReal y,RwReal z)
+{
+    // Preserve the original signed side offsets and z bias
+    require(phase[depth]<128 && phase[depth]%4==1 && value==SkidmarkVertices+phase[depth]/4);
+    word(13);floating(x);floating(y);floating(z);phase[depth]++;value->setX(x);value->setY(y);value->setZ(z);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *value,RwReal u)
+{
+    // Preserve the original left/right U values and write order
+    require(phase[depth]<128 && phase[depth]%4==2 && value==SkidmarkVertices+phase[depth]/4);word(14);floating(u);phase[depth]++;value->setU(u);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *value,RwReal v)
+{
+    // Preserve the original 5.01f V progression
+    require(phase[depth]<128 && phase[depth]%4==3 && value==SkidmarkVertices+phase[depth]/4);word(15);floating(v);phase[depth]++;value->setV(v);
+}
+void LittleTest(void)
+{
+    // Reenter the renderer only after complete original vertex generation
+    require(phase[depth]>=8 && phase[depth]<=128 && phase[depth]%4==0);hooks++;word(16);vertexSnapshot();
+    if(recursive && depth==0 && hooks%47==0){
+        // Retain the shared vertex buffer while a nested render changes its contents
+        depth=1;phase[depth]=0;TestS_Render();require(phase[depth]==0);depth=0;
+    }
+}
+void *RwIm3DTransform(RwIm3DVertex *value,RwUInt32 count,RwMatrix *matrix,RwUInt32 flags)
+{
+    // Preserve counts, the null matrix, UV flags and all transform outcome paths
+    require(value==SkidmarkVertices && count==phase[depth]/4 && matrix==NULL && flags==rwIM3D_VERTEXUV);
+    attempts++;word(17);word(count);vertexSnapshot();bool success=mode==0 || (mode==2 && attempts%5!=0);
+    value[31].setU((float)(attempts%31));phase[depth]=success?1000:0;word(success);return success?value:NULL;
+}
+RwBool RwIm3DRenderIndexedPrimitive(RwPrimitiveType type,RwImVertexIndex *indices,RwInt32 count)
+{
+    // Observe the original triangle count and every original index entry
+    require(phase[depth]==1000 && type==rwPRIMTYPETRILIST && count>=6 && count<=90 && count%6==0);phase[depth]=1001;
+    word(18);word((uint32_t)count);for(int i=0;i<96;i++)word(indices[i]);vertexSnapshot();renders++;return 1;
+}
+RwBool RwIm3DEnd(void)
+{
+    // Match every successful draw with exactly one end
+    require(phase[depth]==1001);phase[depth]=0;word(19);ends++;return 1;
+}
+static Skidmark seed(unsigned length,unsigned type)
+{
+    // Construct complete valid pool states for all fade and render boundaries
+    Skidmark value={};value.m_id=length+100;value.m_type=type;value.m_last=(int16_t)length;value.m_state=1;
+    for(unsigned i=0;i<16;i++){value.m_pos[i]={(float)i,-(float)i,1.0f};value.m_sideX[i]=0.125f;value.m_sideY[i]=-0.25f;}
+    return value;
+}
+int main(void)
+{
+    // Verify the measured plain record layout on each compiler and architecture
+    static_assert(sizeof(Skidmark)==(sizeof(void *)==8?352:344),"C record size");
+    static_assert(alignof(Skidmark)==alignof(uintptr_t),"C record alignment");
+    static_assert(offsetof(Skidmark,m_pos)==0 && offsetof(Skidmark,m_sideX)==192 && offsetof(Skidmark,m_sideY)==256 && offsetof(Skidmark,m_id)==320,"C arrays");
+    static_assert(offsetof(Skidmark,m_last)==(sizeof(void *)==8?344:340),"C last index");
+    TestS_Init();snapshot();TestS_Render();
+    // Compare replay early returns, valid borrowed-position mutations and lazy pointer reads
+    CVector pos(1.0f,2.0f,3.0f);bool blood=false,mud=false;
+    playing=true;TestS_Type(1,&pos,0.0f,0.0f,0,NULL);snapshot();playing=false;
+    mutatePosition=&pos;TestS_Type(1,&pos,1.0f,0.0f,0,&blood);snapshot();mutatePosition=NULL;
+    blood=true;TestS_Flags(2,&pos,0.0f,1.0f,NULL,&blood);snapshot();
+    mutateBlood=&blood;TestS_Flags(3,&pos,0.0f,0.0f,&blood,&blood);mutateBlood=NULL;snapshot();
+    // Exercise bool pointer aliases to the original updated field before and after writes
+    TestS_Clear();*TestS_Updated(0)=false;TestS_Type(90,&pos,1.0f,0.0f,0,TestS_Updated(0));snapshot();
+    TestS_Clear();*TestS_Updated(0)=false;TestS_Flags(91,&pos,1.0f,0.0f,TestS_Updated(0),TestS_Updated(0));snapshot();
+    // Cover exact recent-update boundaries and length/blood cutoffs
+    for(unsigned kind=0;kind<4;kind++){
+        // Continue enough points to exhaust each original 16-position record
+        TestS_Clear();blood=kind==3;Timer_timeMs=1000;
+        for(unsigned i=0;i<22;i++){
+            // Alternate <=100ms updates and actual point extension
+            Timer_timeMs+=(i%3==0?100:101);pos=CVector((float)i,(float)(i%3),0.0f);TestS_Type(10,&pos,1.0f,0.5f,(int)kind,&blood);word(blood);snapshot();
+        }
+    }
+    // Cover first-free selection, capacity rejection and pointer-width identities
+    TestS_Clear();Timer_timeMs=UINT32_MAX-33;
+    for(unsigned i=0;i<NUMSKIDMARKS+3;i++){blood=true;TestS_Type((uintptr_t)i,&pos,1.0f,0.0f,3,&blood);word(blood);snapshot();}
+    TestS_Clear();blood=false;TestS_Type(17,&pos,1.0f,0.0f,0,&blood);TestS_Type((uintptr_t)UINT64_C(0x1234567800000011),&pos,1.0f,0.0f,0,&blood);snapshot();
+    // Cover exact fade ranges, strict expiry, unknown render types and unsigned wrap
+    unsigned lengths[]={0,1,3,4,8,9,15};
+    for(unsigned wrap=0;wrap<2;wrap++)for(unsigned length:lengths){
+        // Finish one record at each original fade-length boundary
+        TestS_Clear();Skidmark value=seed(length,length%5==4?99:length%4);TestS_SetRecord(0,&value);Timer_timeMs=wrap?UINT32_MAX-100:100000;TestS_Update();snapshot();value=TestS_Record(0);
+        uint32_t times[]={value.m_fadeStart-1,value.m_fadeStart,value.m_fadeStart+1,value.m_fadeEnd-1,value.m_fadeEnd,value.m_fadeEnd+1,UINT32_MAX};
+        for(uint32_t time:times){Timer_timeMs=time;for(mode=0;mode<3;mode++)TestS_Render();snapshot();}
+        Timer_timeMs=value.m_fadeEnd;TestS_Update();require(TestS_Record(0).m_state==2);Timer_timeMs=value.m_fadeEnd+1;TestS_Update();require(TestS_Record(0).m_state==0);snapshot();
+    }
+    // Exercise valid normalization edge cases without changing array bounds
+    uint32_t values[]={0,0x80000000u,1,0x80000001u,0x3f800000u,0xbf800000u,0x7f7fffffu,0x7f800000u,0x7fc01234u};
+    for(uint32_t value:values){
+        // Supply exact coordinate and forward-direction words before each continuation
+        TestS_Clear();Timer_timeMs=2000;blood=false;pos=CVector(0.0f,-0.0f,0.0f);TestS_Type(12,&pos,0.0f,0.0f,0,&blood);
+        Timer_timeMs+=101;pos=CVector(fromBits(value),-0.0f,1.0f);TestS_Type(12,&pos,fromBits(value),-0.0f,0,&blood);snapshot();mode=2;TestS_Render();
+    }
+    // Compare long mixed registration, update, render and lifecycle histories
+    TestS_Clear();Timer_timeMs=0;mode=2;
+    for(unsigned i=0;i<12000;i++){
+        // Generate every argument in a fixed order across C++ compilers
+        unsigned action=randomWord()%12;uintptr_t id=randomWord()%41;Timer_timeMs+=randomWord()%251;pos=position();float x=(float)(randomWord()%17)-8.0f,y=(float)(randomWord()%17)-8.0f;int type=(int)(randomWord()%4);blood=(randomWord()&1)!=0;mud=(randomWord()&1)!=0;
+        if(action<5)TestS_Type(id,&pos,x,y,type,&blood);
+        else if(action<7)TestS_Flags(id,&pos,x,y,&mud,&blood);
+        else if(action==7)TestS_Update();
+        else if(action==8)TestS_Render();
+        else if(action==9)TestS_Clear();
+        else if(action==10){playing=!playing;TestS_Type(id,&pos,x,y,type,&blood);}
+        else TestS_Temporary(id,pos.x,pos.y,pos.z,type,&blood);
+        word(blood);word(mud);if(i%29==0)snapshot();
+    }
+    playing=false;
+    // Reenter from LittleTest while preserving shared vertices and index storage
+    TestS_Clear();for(int i=0;i<4;i++){Skidmark value=seed(1+i*4,i);TestS_SetRecord(i,&value);}mode=2;recursive=true;for(unsigned i=0;i<64;i++)TestS_Render();recursive=false;snapshot();
+    // Check complete lifecycle and protocol accounting before reporting results
+    TestS_Shutdown();require(TestS_Texture()==NULL);snapshot();TestS_Init();snapshot();TestS_Shutdown();snapshot();
+    require(loads==2 && destroys==2 && txdStage==0 && attempts==hooks && renders==ends && phase[0]==0 && phase[1]==0);
+    printf("%016llx states=%u attempts=%u renders=%u replays=%u groups=%u bytes=%u\n",(unsigned long long)hash,states,attempts,renders,replays,groups,(unsigned)sizeof(Skidmark));
+    return 0;
+}

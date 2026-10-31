@@ -1,0 +1,280 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+extern "C" { uint32_t Timer_timeMs; }
+RsGlobalType RsGlobal;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,projects,prints,conversions,locales,registrations;
+static int projectionMode,hook,target,depth;
+static bool japanese;
+static float aspect,distX,distY,fontX,fontY,centre;
+static CRGBA fontColor;
+static bool prop,background,centred,justify,backgroundOnly;
+static int style=FONT_HEADING;
+
+static void require(bool condition)
+{
+    // Abort at the exact failing observable corpus position
+    if(!condition){fprintf(stderr,"states=%u calls=%u hook=%d\n",states,calls,hook);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observations independently of padding and process addresses
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite floating bits exactly and NaNs by classification
+    uint32_t bits;memcpy(&bits,&value,4);word(isnan(value)?0x7fc00000u:bits);
+}
+static void record(const MoneyMessage &v)
+{
+    // Observe every timestamp, coordinate, text unit, color byte and scalar
+    word(v.m_nTimeRegistered);floating(v.m_vecPosition.x);floating(v.m_vecPosition.y);floating(v.m_vecPosition.z);
+    for(int i=0;i<16;i++){
+        // Include text beyond the terminator to detect unwanted initialization or copying
+        word(v.m_aText[i]);
+    }
+    word(v.m_Colour.r);word(v.m_Colour.g);word(v.m_Colour.b);word(v.m_Colour.a);floating(v.m_fSize);floating(v.m_fOpacity);
+}
+static void event(unsigned value)
+{
+    // Record the original owner ordering and state visible before each call
+    calls++;word(value);word(Timer_timeMs);record(TestMM_Record(target));
+}
+static void snapshot(void)
+{
+    // Compare the complete private pool and persistent font state after each operation
+    states++;word(0xff);word(Timer_timeMs);
+    for(int i=0;i<NUMMONEYMESSAGES;i++){
+        // Compare each legal original record without copying C++ object bytes
+        record(TestMM_Record(i));
+    }
+    floating(fontX);floating(fontY);floating(centre);word(fontColor.r);word(fontColor.g);word(fontColor.b);word(fontColor.a);word(prop);word(background);word(centred);word(justify);word(backgroundOnly);word(style);word(RsGlobal.width);word(RsGlobal.height);
+}
+static int textIndex(const void *text)
+{
+    // Compare exact subobject identity through the legal observation boundary
+    for(int i=0;i<NUMMONEYMESSAGES;i++){
+        // Resolve only actual original or C pool text addresses
+        if(text==TestMM_Text(i))return i;
+    }
+    require(false);return -1;
+}
+static void changeRecord(void)
+{
+    // Mutate live fields after an owner call while preserving legal alpha inputs
+    MoneyMessage v=TestMM_Record(target);v.m_vecPosition={-33.0f,87.5f,-.125f};v.m_fSize=1.75f;v.m_fOpacity=.25f;v.m_Colour={21,87,193,61};v.m_aText[0]='Q';v.m_aText[1]=0;TestMM_SetRecord(target,&v);
+}
+float Draw_GetAspectRatio(void)
+{
+    // Read the same original aspect state without an artificial getter side effect
+    return aspect;
+}
+#ifdef PROPER_SCALING
+bool Draw_ms_bProperScaling;
+@SCALE@
+#endif
+void AsciiToUnicode(const char *src,wchar *dst)
+{
+    // Observe original pre-write state and preserve the exact original conversion loop
+    event(1);conversions++;word(textIndex(dst));
+    if(!depth && hook==1){
+        // Check that time is read after conversion while position was captured before it
+        Timer_timeMs+=37;changeRecord();
+    }
+    if(!depth && hook==2){
+        // Reenter the original free slot before the outer converter has published its timestamp
+        depth++;TestMM_RegisterC({91.0f,-31.0f,6.0f},"inner",9,8,7,.5f,.25f);depth--;
+    }
+    @CONVERT@
+}
+bool CSprite::CalcScreenCoors(const RwV3d &in,RwV3d *out,float *width,float *height,bool farclip)
+{
+    // Observe the original raised position and exact far-clip argument
+    event(2);projects++;floating(in.x);floating(in.y);floating(in.z);require(farclip);
+    if(!depth && hook==3){
+        // Modify live size and color after the projection input and lifetime were captured
+        changeRecord();Timer_timeMs+=1111;
+    }
+    if(!depth && hook==4){
+        // Clear timestamps during projection while retaining the current original render path
+        TestMM_Init();
+    }
+    if(projectionMode==0)return false;
+    out->x=in.x*1.73f+17.f;out->y=in.y*-.375f+6.f;out->z=in.z+.13f;*width=distX;*height=distY;return true;
+}
+void CFont::SetPropOn(void)
+{
+    // Preserve the state write and allow later reads to change after distance scaling
+    event(3);prop=true;
+    if(hook==5)changeRecord();
+}
+void CFont::SetBackgroundOff(void)
+{
+    // Change live screen inputs at the original point before font scaling
+    event(4);background=false;
+    if(hook==6){RsGlobal.width=853;RsGlobal.height=517;aspect=1.37f;}
+}
+void CFont::SetScale(float x,float y)
+{
+    // Compare both original scale arguments including clamps and conditional screen scaling
+    event(5);floating(x);floating(y);fontX=x;fontY=y;
+    if(hook==7){RsGlobal.width=1573;RsGlobal.height=943;}
+}
+void CFont::SetCentreOn(void)
+{
+    // Preserve the original centering state
+    event(6);centred=true;
+}
+void CFont::SetCentreSize(float value)
+{
+    // Observe the live full-screen centre width
+    event(7);floating(value);centre=value;
+}
+void CFont::SetJustifyOff(void)
+{
+    // Change color only at its original use boundary
+    event(8);justify=false;
+    if(hook==8)changeRecord();
+}
+void CFont::SetColor(CRGBA value)
+{
+    // Compare the actual narrowed color and the unchanged original font style
+    event(9);word(value.r);word(value.g);word(value.b);word(value.a);fontColor=value;require(style==FONT_HEADING);
+}
+void CFont::SetBackGroundOnlyTextOff(void)
+{
+    // Preserve the state write and the otherwise-unused following locale query
+    event(10);backgroundOnly=false;
+    if(hook==9)japanese=true;
+}
+bool CFont::IsJapanese(void)
+{
+    // Record the original locale expression even though it does not set the font style
+    event(11);locales++;return japanese;
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Compare projected output, mutable text identity and exact Unicode contents
+    event(12);prints++;floating(x);floating(y);word(textIndex(text));require(style==FONT_HEADING);
+    for(int i=0;i<16;i++){
+        // Include every text unit passed to the actual owner overload
+        word(text[i]);
+    }
+    if(!depth && hook==10){
+        // Clear future manager records during the current owner's print call
+        TestMM_Init();
+    }
+    if(!depth && hook==11){
+        // Reenter the entire manager once while both render frames retain their own local values
+        depth++;TestMM_Render();depth--;
+    }
+}
+static MoneyMessage seeded(int index)
+{
+    // Seed recognizable retained data with a legal terminated text buffer
+    MoneyMessage v={0,{index*1.25f-.125f,index*-.35f,7.25f},{0},{(uint8_t)(index+1),(uint8_t)(index*7),(uint8_t)(255-index),(uint8_t)(137+index)},.6f,.5f};
+    for(int i=0;i<15;i++){
+        // Distinguish all untouched trailing text units
+        v.m_aText[i]=(uint16_t)(0x141+index*16+i);
+    }
+    v.m_aText[15]=0;return v;
+}
+static void reset(void)
+{
+    // Reset owner controls and seed all records without using the initializer under test
+    hook=0;target=0;depth=0;projectionMode=1;distX=1.37f;distY=.89f;Timer_timeMs=5000;RsGlobal.width=1133;RsGlobal.height=637;aspect=16.f/9.f;japanese=false;fontX=-3;fontY=-7;centre=19;fontColor=CRGBA(31,47,61,79);prop=false;background=true;centred=false;justify=true;backgroundOnly=true;style=FONT_HEADING;
+#ifdef PROPER_SCALING
+    Draw_ms_bProperScaling=false;
+#endif
+    for(int i=0;i<NUMMONEYMESSAGES;i++){
+        // Keep a canary in every field that partial initialization should retain
+        MoneyMessage v=seeded(i);TestMM_SetRecord(i,&v);
+    }
+}
+static void registerC(MoneyMessageVector position,const char *text)
+{
+    // Count registration attempts separately from successful converter calls
+    registrations++;TestMM_RegisterC(position,text,255,50,0,.6f,.5f);
+}
+int main(void)
+{
+    // Compare the original static initialization before any test seeding
+    snapshot();reset();
+    for(int i=0;i<NUMMONEYMESSAGES;i++){
+        // Mark every record active before verifying the timestamp-only initializer
+        MoneyMessage v=TestMM_Record(i);v.m_nTimeRegistered=777+i;TestMM_SetRecord(i,&v);
+    }
+    TestMM_Init();snapshot();
+    for(int occupied=0;occupied<=NUMMONEYMESSAGES;occupied++){
+        // Preserve the original unfixed out-of-bounds condition without invoking it in an oracle
+#ifndef FIX_BUGS
+        if(occupied==NUMMONEYMESSAGES)continue;
+#endif
+        for(int legacy=0;legacy<2;legacy++){
+            // Verify first-free choice, full-pool rejection and both value input boundaries
+            reset();for(int i=0;i<occupied;i++){
+                // Seed the exact requested occupied prefix
+                MoneyMessage v=TestMM_Record(i);v.m_nTimeRegistered=4997;TestMM_SetRecord(i,&v);
+            }
+            CVector position(-0.f,3.75f,81.125f);
+            if(legacy){registrations++;TestMM_RegisterLegacy(&position,occupied==16?NULL:"ABCDEFGHIJKLMNO",17,51,203,1.f,1.f);}
+            else registerC({position.x,position.y,position.z},occupied==16?NULL:"$12345");
+            snapshot();TestMM_Render();snapshot();
+        }
+    }
+    const uint32_t origins[]={0,1,5000,UINT32_MAX-299,UINT32_MAX};
+    const uint32_t ages[]={0,1,999,1999,2000,2001,UINT32_MAX};
+    for(unsigned o=0;o<5;o++)for(unsigned a=0;a<7;a++){
+        // Verify unsigned wrap, the exact expiration threshold and direct inactive-record behavior
+        reset();MoneyMessage v=seeded(0);v.m_nTimeRegistered=origins[o];TestMM_SetRecord(0,&v);Timer_timeMs=origins[o]+ages[a];TestMM_Member(0);snapshot();
+    }
+    const char highText[]={(char)0x81,(char)0xff,'X',0};
+    const char *texts[]={"","ABCDEFGHIJKLMNO",highText,"$-123"};
+    for(int t=0;t<4;t++)for(int h=0;h<3;h++)for(int legacy=0;legacy<2;legacy++){
+        // Exercise exact unsigned byte conversion, text tails, timestamp zero and converter reentry
+        reset();hook=h;Timer_timeMs=t==0?0:5100;TestMM_Alias(0,texts[t],legacy!=0);snapshot();
+    }
+    for(int h=3;h<=11;h++){
+        // Compare live state mutations at each owner boundary and one nested manager render
+        reset();for(int i=0;i<3;i++){
+            // Keep multiple active records so a reentrant initializer changes later manager decisions
+            MoneyMessage v=seeded(i);v.m_nTimeRegistered=4500;TestMM_SetRecord(i,&v);
+        }
+        hook=h;TestMM_Render();snapshot();
+    }
+    const float distances[]={-23.5f,-0.f,0.f,.001f,99.9f,199.5f,200.f,100000.f,INFINITY,NAN};
+    for(int mode=0;mode<2;mode++)for(int d=0;d<10;d++)for(int jp=0;jp<2;jp++){
+        // Cover projection rejection, scale limits, nonfinite clamp inputs, odd screens and locale
+        reset();MoneyMessage v=seeded(0);v.m_nTimeRegistered=Timer_timeMs-999;v.m_fOpacity=jp?0.f:1.f;v.m_vecPosition.x=-0.f;TestMM_SetRecord(0,&v);projectionMode=mode;distX=distances[d];distY=distances[9-d];japanese=jp!=0;RsGlobal.width=jp?640:1921;RsGlobal.height=jp?448:1081;aspect=jp?4.f/3.f:1.71f;
+#ifdef PROPER_SCALING
+        Draw_ms_bProperScaling=jp!=0;
+#endif
+        TestMM_Render();snapshot();
+    }
+    reset();
+    for(int frame=0;frame<2000;frame++){
+        // Sustain slot reuse, expiration, both caller styles and changing owner state
+        Timer_timeMs+=79;projectionMode=frame%7!=0;distX=1.f+(frame%53)*.17f;distY=.7f+(frame%17)*.13f;bool freeSlot=false;
+        for(int i=0;i<NUMMONEYMESSAGES;i++){
+            // Avoid only the original unfixed undefined full-pool read
+            if(TestMM_Record(i).m_nTimeRegistered==0)freeSlot=true;
+        }
+#ifdef FIX_BUGS
+        freeSlot=true;
+#endif
+        if(freeSlot){
+            // Alternate the actual legacy and C registration boundaries
+            CVector position(frame*.125f,-frame*.17f,frame%13);
+            if(frame&1){registrations++;TestMM_RegisterLegacy(&position,"bounce",17,31,79,.75f,.5f);}
+            else registerC({position.x,position.y,position.z},"$123");
+        }
+        TestMM_Render();snapshot();
+    }
+    require(prints>10000 && projects>prints && conversions>1000);require(style==FONT_HEADING);
+    printf("states=%u calls=%u projects=%u prints=%u conversions=%u locales=%u registrations=%u hash=%016llx\n",states,calls,projects,prints,conversions,locales,registrations,(unsigned long long)hash);
+}

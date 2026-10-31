@@ -1,12 +1,16 @@
+import weather_migration as _weather_conversion
 """Compare service and timer control flow with controlled game callbacks and real C primitives."""
 from pathlib import Path
 import re
 from audio_controls_migration import function
 from audio_owner_init_migration import fields
 import audio_service_migration as migration
+import audio_music_service_migration as music
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-service-c-tests'
 old=(out/'before/src/audio/AudioManager.cpp').read_text();oldlogic=(out/'before/src/audio/AudioLogic.cpp').read_text();kernel=(root/'src/audio/AudioService.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare all statements independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 methods=[]
@@ -23,7 +27,20 @@ for variant in ['before','after']:
     source=template.replace('@METHODS@','\n'.join(methods) if variant=='before' else '').replace('@HOST@',migration.HOST.replace('AudioServiceHost_SoundEffects', 'AudioEffects_Service')+'\n'+migration.PED_HOST if variant=='after' else '')
     source=source.replace('@SERVICE@','active->Service()' if variant=='before' else 'AudioService_Run(active)').replace('@RESET@','active->ResetAudioLogicTimers(time)' if variant=='before' else 'AudioService_ResetLogicTimers(active,time)').replace('@FACADE@','AudioManager.Service()' if variant=='before' else 'TestAudioServiceC()')
     source=source.replace('AudioServiceHost_SoundEffects', 'AudioEffects_Service')
+    if variant=='after':
+        # Replace the removed wrapper with an observer of the direct C music entry and actual global record
+        source=music.remove_host(source).replace('MusicManager','fakeMusic')
+        source='#include <stdlib.h>\n#include "Validate.h"\n#include "MusicManager.h"\n'+source
+        source=source.replace('static FakeMusic fakeMusic;', '''static FakeMusic fakeMusic;
+extern "C" void MusicService_Run(cMusicManager *manager)
+{
+    // Preserve the original music callback after verifying the direct global C owner
+    if(manager!=&MusicManager)abort();
+    fakeMusic.Service();
+}
+''')
     (out/(variant+'.cpp')).write_text(source,newline='\n')
+(out/'music-owner.c').write_text('#include "MusicManager.h"\ncMusicManager MusicManager;\n',newline='\n')
 (out/'caller.c').write_text('#include "DMAudio.h"\nvoid TestAudioServiceC(void)\n{\n    // Service the live owner through the actual C facade declaration\n    DMAudio_Service();\n}\n',newline='\n')
 for name,flags in {'default':'#define AUDIO_OAL\n','vanilla':'#define AUDIO_OAL\n#undef FIX_BUGS\n','no-reflections':'#undef AUDIO_REFLECTIONS\n','no-external':'#undef EXTERNAL_3D_SOUND\n','ps2':'#undef GTA_PC\n#undef EXTERNAL_3D_SOUND\n#define GTA_PS2\n'}.items():
     (out/(name+'.h')).write_text('#include "config.h"\n'+flags,newline='\n')

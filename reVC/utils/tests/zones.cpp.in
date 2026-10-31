@@ -1,0 +1,161 @@
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <assert.h>
+#include <windows.h>
+#include "config.h"
+using int16=int16_t;using int32=int32_t;using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using uint64=uint64_t;using wchar=uint16_t;using ssize_t=ptrdiff_t;
+struct CVector {float x,y,z;CVector(float x=0,float y=0,float z=0):x(x),y(y),z(z){}};
+static CVector player;
+static unsigned seed,groups,callbacks,mutate;
+static uint64_t digest=1469598103934665603ULL;
+static uint16_t textBuffer[8];
+static uint8_t saveBuffer[65536];
+extern "C" uint32_t Timer_frameCounter;
+uint32_t Timer_frameCounter;
+extern "C" uint8_t Clock_hours;
+uint8_t Clock_hours;
+#ifdef VALIDATE_SAVE_SIZE
+extern "C" int32_t _saveBufCount;
+int32_t _saveBufCount;
+#endif
+extern "C" void TestZonesWord(uint32_t value)
+{
+    // Observe exact scalar values independently of addresses and object padding
+    digest^=value;digest*=1099511628211ULL;
+}
+#define word TestZonesWord
+static uint32_t bits(float value)
+{
+    // Capture exact coordinate and floating-point result representations
+    uint32_t result;memcpy(&result,&value,sizeof result);return result;
+}
+static CVector FindPlayerCoors();
+struct Text {
+    uint16_t *Get(const char *name){
+        // Observe the captured zone label before returning its original live text pointer
+        ++callbacks;word(2);for(unsigned i=0;i<8;i++)word((uint8_t)name[i]);textBuffer[0]=(uint16_t)(seed+1);return textBuffer;
+    }
+};
+static Text TheText;
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*)
+{
+    // Fail immediately if bounded inputs violate an original assertion
+    abort();
+}
+#define nil NULL
+@HEADERS@
+@CLOCK@
+#undef assert
+#ifndef MASTER
+#define assert(expression) ((void)((!!(expression)) || (re3_assert(#expression,__FILE__,__LINE__,__func__),0)))
+#else
+#define assert(expression) (expression)
+#endif
+#include "SaveBuf.h"
+#define nil NULL
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof((array)[0]))
+@IMPLEMENTATION@
+#undef assert
+#define assert(expression) ((expression) ? (void)0 : TestZonesFailed(__LINE__))
+static void TestZonesFailed(unsigned line)
+{
+    // Report failed fixture invariants quietly through the console
+    fprintf(stderr,"Zone fixture assertion at %u\n",line);abort();
+}
+#define NAV @NAV@
+#define INFO @INFO@
+#define MAP @MAP@
+#define DATA @DATA@
+#define NAV_COUNT @NAV_COUNT@
+#define INFO_COUNT @INFO_COUNT@
+#define MAP_COUNT @MAP_COUNT@
+#define DATA_COUNT @DATA_COUNT@
+#define AUDIO_COUNT @AUDIO_COUNT@
+#define AUDIO @AUDIO@
+#define LEVEL @LEVEL@
+#define FIND @FIND@
+static uint32_t zoneId(const CZone *zone)
+{
+    // Encode pointer identity without pointer subtraction outside its original array
+    if(!zone)return 0;
+    for(unsigned i=0;i<NUMNAVIGZONES;i++)if(zone==&NAV[i])return 1+i;
+    for(unsigned i=0;i<NUMINFOZONES;i++)if(zone==&INFO[i])return 1001+i;
+    for(unsigned i=0;i<NUMMAPZONES;i++)if(zone==&MAP[i])return 2001+i;
+    abort();
+}
+extern "C" void TestZonesZone(const CZone *zone)
+{
+    // Observe every serialized field and all three live hierarchy links
+    for(unsigned i=0;i<8;i++)word((uint8_t)zone->name[i]);
+    word(bits(zone->minx));word(bits(zone->miny));word(bits(zone->minz));word(bits(zone->maxx));word(bits(zone->maxy));word(bits(zone->maxz));
+    word(zone->type);word(zone->level);word((uint16_t)zone->zoneinfoDay);word((uint16_t)zone->zoneinfoNight);
+    word(zoneId(zone->child));word(zoneId(zone->parent));word(zoneId(zone->next));
+}
+extern "C" void TestZonesInfo(const CZoneInfo *info)
+{
+    // Observe the entire fixed-width density record including signed thresholds
+    for(unsigned i=0;i<sizeof(*info)/2;i++){uint16_t value;memcpy(&value,(const uint8_t*)info+i*2,2);word(value);}
+}
+static CVector FindPlayerCoors()
+{
+    // Capture coordinates before mutating live map and level inputs at the original query boundary
+    CVector result=player;++callbacks;word(1);word(bits(result.x));word(bits(result.y));word(bits(result.z));
+    if(mutate){LEVEL=LEVEL_GENERIC;if(MAP_COUNT>1)MAP[1].level=(seed&1)?LEVEL_MAINLAND:LEVEL_BEACH;}
+    return result;
+}
+extern "C" void TestZonesClearLinks()
+{
+    // Provide the original fresh-hierarchy precondition for repeated insertion operations
+    for(unsigned i=0;i<NUMNAVIGZONES;i++){NAV[i].child=NAV[i].parent=NAV[i].next=NULL;}AUDIO_COUNT=0;
+}
+static void setup()
+{
+    // Build bounded nested and overlapping zones through the original public creation operations
+    @P@Init();Clock_hours=(uint8_t)(seed%24);player=CVector((float)(seed%401)-200,0,0);
+    char outer[]="outer",inner[]="inner",sibling[]="sibling",day1[]="density",day2[]="density",map[]="beach";
+    @P@CreateZone(inner,ZONE_NAVIG,-100,-100,-10,100,100,10,LEVEL_GENERIC);
+    @P@CreateZone(outer,ZONE_DEFAULT,300,-300,-30,-300,300,30,LEVEL_GENERIC);
+    @P@CreateZone(sibling,ZONE_DEFAULT,120,-100,-10,200,100,10,LEVEL_GENERIC);
+    @P@CreateZone(day1,ZONE_INFO,-250,-100,-10,250,100,10,LEVEL_GENERIC);
+    @P@CreateZone(day2,ZONE_INFO,-100,-100,-10,100,100,10,LEVEL_GENERIC);
+    @P@CreateZone(map,ZONE_MAPZONE,-120,-100,-10,120,100,10,LEVEL_BEACH);
+    @P@PostZoneCreation();
+    for(unsigned i=0;i<2*NUMINFOZONES;i++){
+        // Seed different day and night records with bounded conversion inputs
+        DATA[i].carDensity=(int16_t)((int)(seed%201)-100+i%51);DATA[i].pedDensity=(uint16_t)(100+seed+i%97);DATA[i].pedGroup=(uint16_t)(seed+i);
+        for(unsigned j=0;j<9;j++){DATA[i].carThreshold[j]=(int16_t)(j*100+seed+i%31);DATA[i].gangThreshold[j]=(int16_t)(j*90+seed+i%31);DATA[i].gangPedThreshold[j]=(uint16_t)(j*100+seed+i%61);}
+    }
+}
+@DISPATCH@
+static void observe()
+{
+    // Observe all records, lookup cursors, counts and optional save validation state
+    word(NAV_COUNT);word(INFO_COUNT);word(MAP_COUNT);word(DATA_COUNT);word(AUDIO_COUNT);word(LEVEL);word((uint16_t)FIND);word(Clock_hours);word(Timer_frameCounter);
+    for(unsigned i=0;i<NUMNAVIGZONES;i++)TestZonesZone(&NAV[i]);
+    for(unsigned i=0;i<NUMINFOZONES;i++)TestZonesZone(&INFO[i]);
+    for(unsigned i=0;i<NUMMAPZONES;i++)TestZonesZone(&MAP[i]);
+    for(unsigned i=0;i<2*NUMINFOZONES;i++)TestZonesInfo(&DATA[i]);
+    for(unsigned i=0;i<NUMAUDIOZONES;i++)word((uint16_t)AUDIO[i]);
+#ifdef VALIDATE_SAVE_SIZE
+    // Include byte counts produced by the actual save-buffer helpers
+    word((uint32_t)_saveBufCount);
+#endif
+    ++groups;
+}
+int main()
+{
+    // Compare every complete operation and accessor with mutations and retained state
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX);mutate=0;setup();
+    @INDEPENDENT@
+    for(seed=0;seed<256;seed++)for(unsigned pass=0;pass<3;pass++){
+        // Reset two passes and retain the third while keeping hierarchy preconditions valid
+        if(pass<2)setup();mutate=pass!=0;
+        for(unsigned op=0;op<36;op++){Timer_frameCounter=seed+op;dispatch((op+seed)%36);observe();}
+        for(unsigned frame=0;frame<5;frame++){Timer_frameCounter=frame;dispatch(1);observe();}
+    }
+    printf("groups=%u callbacks=%u hash=%016llx\n",groups,callbacks,(unsigned long long)digest);
+}

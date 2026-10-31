@@ -1,4 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
 #ifdef PS2_MENU
@@ -206,6 +209,8 @@ CMemoryCard::Init(void)
 
 CMemoryCard::CMemoryCard(void)
 {
+	// Initialize the compile date before the memory-card constructor body uses it
+	Date_Initialize(&CompileDateAndTime);
 	_unk0 = 0;
 	CurrentCard = CARD_ONE;
 	Cards[CARD_ONE].port = 0;
@@ -337,6 +342,8 @@ CMemoryCard::LoadSavedGame(void)
 {
 	CheckSum = 0;
 	CDate date;
+	// Initialize the former date object before any subsequent load work
+	Date_Initialize(&date);
 	
 	int32 saveSize = 0;
 	uint32 size = 0;
@@ -375,23 +382,23 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().x);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().y);
 	ReadDataFromBufferPointer(buf, TheCamera.GetMatrix().GetPosition().z);
-	ReadDataFromBufferPointer(buf, CClock::ms_nMillisecondsPerGameMinute);
-	ReadDataFromBufferPointer(buf, CClock::ms_nLastClockTick);
-	ReadDataFromBufferPointer(buf, CClock::ms_nGameClockHours);
-	ReadDataFromBufferPointer(buf, CClock::ms_nGameClockMinutes);
+	ReadDataFromBufferPointer(buf, Clock_millisecondsPerMinute);
+	ReadDataFromBufferPointer(buf, Clock_lastTick);
+	ReadDataFromBufferPointer(buf, Clock_hours);
+	ReadDataFromBufferPointer(buf, Clock_minutes);
 	ReadDataFromBufferPointer(buf, CPad::GetPad(0)->Mode);
-	ReadDataFromBufferPointer(buf, CTimer::m_snTimeInMilliseconds);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeScale);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeStep);
-	ReadDataFromBufferPointer(buf, CTimer::ms_fTimeStepNonClipped);
-	ReadDataFromBufferPointer(buf, CTimer::m_FrameCounter);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fTimeStep);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fFramesPerUpdate);
-	ReadDataFromBufferPointer(buf, CTimeStep::ms_fTimeScale);
-	ReadDataFromBufferPointer(buf, CWeather::OldWeatherType);
-	ReadDataFromBufferPointer(buf, CWeather::NewWeatherType);
-	ReadDataFromBufferPointer(buf, CWeather::ForcedWeatherType);
-	ReadDataFromBufferPointer(buf, CWeather::InterpolationValue);
+	ReadDataFromBufferPointer(buf, Timer_timeMs);
+	ReadDataFromBufferPointer(buf, Timer_timeScale);
+	ReadDataFromBufferPointer(buf, Timer_timeStep);
+	ReadDataFromBufferPointer(buf, Timer_nonClippedTimeStep);
+	ReadDataFromBufferPointer(buf, Timer_frameCounter);
+	ReadDataFromBufferPointer(buf, TimeStep_timeStep);
+	ReadDataFromBufferPointer(buf, TimeStep_framesPerUpdate);
+	ReadDataFromBufferPointer(buf, TimeStep_timeScale);
+	ReadDataFromBufferPointer(buf, Weather_OldWeatherType);
+	ReadDataFromBufferPointer(buf, Weather_NewWeatherType);
+	ReadDataFromBufferPointer(buf, Weather_ForcedWeatherType);
+	ReadDataFromBufferPointer(buf, Weather_InterpolationValue);
 	ReadDataFromBufferPointer(buf, CMenuManager::m_PrefsMusicVolume);
 	ReadDataFromBufferPointer(buf, CMenuManager::m_PrefsSfxVolume);
 	ReadDataFromBufferPointer(buf, CMenuManager::m_PrefsControllerConfig);
@@ -407,7 +414,8 @@ CMemoryCard::LoadSavedGame(void)
 #ifdef PS2
 	ReadDataFromBufferPointer(buf, BlurOn);
 #else
-	ReadDataFromBufferPointer(buf, CMBlur::BlurOn);
+	// Use the complete C motion-blur owner and its live shared state
+	ReadDataFromBufferPointer(buf, MBlur_BlurOn);
 #endif
 	ReadDataFromBufferPointer(buf, date.m_nSecond);
 	ReadDataFromBufferPointer(buf, date.m_nMinute);
@@ -415,14 +423,14 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBufferPointer(buf, date.m_nDay);
 	ReadDataFromBufferPointer(buf, date.m_nMonth);
 	ReadDataFromBufferPointer(buf, date.m_nYear);
-	ReadDataFromBufferPointer(buf, CWeather::WeatherTypeInList);
+	ReadDataFromBufferPointer(buf, Weather_WeatherTypeInList);
 	ReadDataFromBufferPointer(buf, TheCamera.CarZoomIndicator);
 	ReadDataFromBufferPointer(buf, TheCamera.PedZoomIndicator);
 	
-	if ( date > CompileDateAndTime )
+	if ( Date_IsAfter(&date, &CompileDateAndTime) )
 		;
 	else
-	if ( date < CompileDateAndTime )
+	if ( Date_IsBefore(&date, &CompileDateAndTime) )
 		;
 	
 	#define ReadDataFromBlock(load_func)\
@@ -449,7 +457,7 @@ CMemoryCard::LoadSavedGame(void)
 	
 	LoadSaveDataBlock();
 	
-	CProjectileInfo::RemoveAllProjectiles();
+	ProjectileInfo_RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	
 	printf("Loading Objects \n");
@@ -470,16 +478,16 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(gPhoneInfo.Load);
 	
 	printf("Loading Restart \n");
-	ReadDataFromBlock(CRestart::LoadAllRestartPoints);
+	ReadDataFromBlock(Restart_LoadAllRestartPoints); // rouz edit (ChatGPT)
 	
 	printf("Loading Radar Blips \n");
 	ReadDataFromBlock(CRadar::LoadAllRadarBlips);
 	
 	printf("Loading Zones \n");
-	ReadDataFromBlock(CTheZones::LoadAllZones);
+	ReadDataFromBlock(Zones_LoadAllZones);
 	
 	printf("Loading Gang Data \n");
-	ReadDataFromBlock(CGangs::LoadAllGangData);
+	ReadDataFromBlock(Gangs_LoadAllGangData);
 	
 	printf("Loading Car Generators \n");
 	ReadDataFromBlock(CTheCarGenerators::LoadAllCarGenerators);
@@ -494,13 +502,13 @@ CMemoryCard::LoadSavedGame(void)
 	ReadDataFromBlock(CWorld::Players[CWorld::PlayerInFocus].LoadPlayerInfo);
 	
 	printf("Loading Stats \n");
-	ReadDataFromBlock(CStats::LoadStats);
+	ReadDataFromBlock(Stats_LoadStats);
 	
 	printf("Loading Streaming Stuff \n");
 	ReadDataFromBlock(CStreaming::MemoryCardLoad);
 	
 	printf("Loading PedType Stuff \n");
-	ReadDataFromBlock(CPedType::Load);
+	ReadDataFromBlock(PedType_Load);
 	
 	#undef LoadSaveDataBlock
 	#undef ReadDataFromBlock
@@ -515,8 +523,8 @@ CMemoryCard::LoadSavedGame(void)
 	
 	if ( oldLang != CMenuManager::m_PrefsLanguage )
 	{
-		TheText.Unload();
-		TheText.Load();
+		Text_Unload(&TheText);
+		Text_Load(&TheText);
 	}
 	
 	JustLoadedDontFadeInYet = true;
@@ -536,7 +544,7 @@ CMemoryCard::CheckCardInserted(int32 cardID)
 	int cmd  = sceMcFuncNoCardInfo;
 	int type = sceMcTypeNoCard;
 	
-	CTimer::Stop();
+	Timer_Stop();
 	
 	while ( sceMcGetInfo(Cards[cardID].port, 0, &type, 0, 0) != sceMcResSucceed )
 		;
@@ -577,7 +585,7 @@ CMemoryCard::PopulateCardFlags(int32 cardID, bool bSlotFlag, bool bTypeFlag, boo
 	int free = 0;
 	int format = 0;
 	
-	CTimer::Stop();
+	Timer_Stop();
 	
 	Cards[cardID].type = 0;
 	Cards[cardID].free = 0;
@@ -622,7 +630,7 @@ CMemoryCard::PopulateCardFlags(int32 cardID, bool bSlotFlag, bool bTypeFlag, boo
 	nError = ERR_NONE;
 	return nError;
 #else
-	CTimer::Stop();
+	Timer_Stop();
 	
 	Cards[cardID].type = 0;
 	Cards[cardID].free = 0;
@@ -650,7 +658,7 @@ CMemoryCard::PopulateCardFlags(int32 cardID, bool bSlotFlag, bool bTypeFlag, boo
 int32
 CMemoryCard::FormatCard(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoFormat;
@@ -690,7 +698,7 @@ CMemoryCard::FormatCard(int32 cardID)
 int32
 CMemoryCard::PopulateFileTable(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined (PS2)
 	int cmd = sceMcFuncNoGetDir;
@@ -770,7 +778,7 @@ CMemoryCard::PopulateFileTable(int32 cardID)
 int32
 CMemoryCard::CreateRootDirectory(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 #if defined(PS2)
 	int cmd = sceMcFuncNoMkdir;
 	
@@ -831,7 +839,7 @@ CMemoryCard::CreateRootDirectory(int32 cardID)
 int32
 CMemoryCard::ChangeDirectory(int32 cardID, char *dir)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoChDir;
@@ -1019,9 +1027,9 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	strncpy(icon3_path+hostlen, icon_three, sizeof(icon3_path) - 1 - hostlen);
 	
 	// ico1 copy
-	int32 ico1file = CFileMgr::OpenFile(icon1_path);
-	CFileMgr::Read(ico1file, (char *)data, size);
-	CFileMgr::CloseFile(ico1file);
+	int32 ico1file = FileMgr_OpenFileDefault(icon1_path);
+	FileMgr_Read(ico1file, (char *)data, size);
+	FileMgr_CloseFile(ico1file);
 	
 	int32 ico1mc = CreateMemCardFileReadWrite(Cards[cardID].port, icon1);
 	
@@ -1048,9 +1056,9 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	}
 	
 	// ico2 copy
-	int32 ico2file = CFileMgr::OpenFile(icon2_path);
-	CFileMgr::Read(ico2file, (char *)data, size);
-	CFileMgr::CloseFile(ico2file);
+	int32 ico2file = FileMgr_OpenFileDefault(icon2_path);
+	FileMgr_Read(ico2file, (char *)data, size);
+	FileMgr_CloseFile(ico2file);
 	
 	int32 ico2mc = CreateMemCardFileReadWrite(Cards[cardID].port, icon2);
 	
@@ -1077,9 +1085,9 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 	}
 	
 	// ico3 copy
-	int32 ico3file = CFileMgr::OpenFile(icon3_path);
-	CFileMgr::Read(ico3file, (char *)data, size);
-	CFileMgr::CloseFile(ico3file);
+	int32 ico3file = FileMgr_OpenFileDefault(icon3_path);
+	FileMgr_Read(ico3file, (char *)data, size);
+	FileMgr_CloseFile(ico3file);
 	
 	int32 ico3mc = CreateMemCardFileReadWrite(Cards[cardID].port, icon3);
 	
@@ -1116,7 +1124,7 @@ CMemoryCard::LoadIconFiles(int32 cardID, char *icon_one, char *icon_two, char *i
 int32
 CMemoryCard::CloseMemCardFile(int32 file)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoClose;
@@ -1154,7 +1162,7 @@ CMemoryCard::CloseMemCardFile(int32 file)
 	nError = ERR_NONE;
 	return nError;
 #else
-	CFileMgr::CloseFile(file);
+	FileMgr_CloseFile(file);
 	printf("File %i closed\n", file);
 	
 	nError = NO_ERR_SUCCESS;
@@ -1165,7 +1173,7 @@ CMemoryCard::CloseMemCardFile(int32 file)
 int32
 CMemoryCard::CreateMemCardFileReadWrite(int32 cardID, char *filename)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoOpen;
@@ -1224,11 +1232,11 @@ CMemoryCard::CreateMemCardFileReadWrite(int32 cardID, char *filename)
 #else
 	char path[512];
 	sprintf(path, "%s\\%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], CardCurDir[cardID], filename);
-	int32 file = CFileMgr::OpenFile(path, "wb+");
+	int32 file = FileMgr_OpenFile(path, "wb+");
 	if (file == 0)
 	{
 		sprintf(path, "%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], filename);
-		file = CFileMgr::OpenFile(path, "wb+");
+		file = FileMgr_OpenFile(path, "wb+");
 	}
 
 	if ( file )
@@ -1248,7 +1256,7 @@ CMemoryCard::CreateMemCardFileReadWrite(int32 cardID, char *filename)
 int32
 CMemoryCard::OpenMemCardFileForReading(int32 cardID, char *filename)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoOpen;
@@ -1307,11 +1315,11 @@ CMemoryCard::OpenMemCardFileForReading(int32 cardID, char *filename)
 #else	
 	char path[512];
 	sprintf(path, "%s\\%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], CardCurDir[cardID], filename);
-	int32 file = CFileMgr::OpenFile(path, "rb");
+	int32 file = FileMgr_OpenFile(path, "rb");
 	if (file == 0)
 	{
 		sprintf(path, "%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], filename);
-		file = CFileMgr::OpenFile(path, "rb");
+		file = FileMgr_OpenFile(path, "rb");
 	}
 
 	if ( file )
@@ -1330,7 +1338,7 @@ CMemoryCard::OpenMemCardFileForReading(int32 cardID, char *filename)
 int32
 CMemoryCard::ReadFromMemCard(int32 file, void *buff, int32 size)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoRead;
@@ -1375,7 +1383,7 @@ CMemoryCard::ReadFromMemCard(int32 file, void *buff, int32 size)
 	nError = ERR_NONE;
 	return result;
 #else		
-	int32 s = CFileMgr::Read(file, (const char *)buff, size);
+	int32 s = FileMgr_Read(file, (const char *)buff, size);
 	if ( s == size )
 	{
 		printf("%i Bytes Read for Filehandle %i \n", s, file);
@@ -1394,7 +1402,7 @@ CMemoryCard::ReadFromMemCard(int32 file, void *buff, int32 size)
 int32
 CMemoryCard::DeleteMemoryCardFile(int32 cardID, char *filename)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoDelete;
@@ -1450,16 +1458,16 @@ CMemoryCard::DeleteMemoryCardFile(int32 cardID, char *filename)
 #else
 	char path[512];
 	sprintf(path, "%s\\%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], CardCurDir[cardID], filename);
-	int32 file = CFileMgr::OpenFile(path, "rb");
+	int32 file = FileMgr_OpenFile(path, "rb");
 	if (file == 0)
 	{
 		sprintf(path, "%s\\%s\\%s", PCCardsPath, PCCardDir[cardID], filename);
-		file = CFileMgr::OpenFile(path, "rb");
+		file = FileMgr_OpenFile(path, "rb");
 	}
 
 	if ( file )
 	{
-		CFileMgr::CloseFile(file);
+		FileMgr_CloseFile(file);
 		
 		DeleteFile(path);
 		
@@ -1485,16 +1493,16 @@ CMemoryCard::PopulateErrorMessage()
 	{
 		case ERR_WRITEFULLDEVICE:
 		case ERR_DIRFULLDEVICE:
-			pErrorMsg = TheText.Get("SLONDR"); break; // Insufficient space to save. Please insert a Memory Card (PS2) with at least 500KB of free space available into MEMORY CARD slot 1.
+			pErrorMsg = Text_Get(&TheText,"SLONDR"); break; // Insufficient space to save. Please insert a Memory Card (PS2) with at least 500KB of free space available into MEMORY CARD slot 1.
 		case ERR_FORMATFAILED:
-			pErrorMsg = TheText.Get("SLONFM"); break; // Error formatting Memory Card (PS2) in MEMORY CARD slot 1.
+			pErrorMsg = Text_Get(&TheText,"SLONFM"); break; // Error formatting Memory Card (PS2) in MEMORY CARD slot 1.
 		case ERR_SAVEFAILED:
-			pErrorMsg = TheText.Get("SLNSP");  break; // Insufficient space to save. Please insert a Memory Card (PS2) with at least 200KB of free space available into MEMORY CARD slot 1.
+			pErrorMsg = Text_Get(&TheText,"SLNSP");  break; // Insufficient space to save. Please insert a Memory Card (PS2) with at least 200KB of free space available into MEMORY CARD slot 1.
 		case ERR_DELETEDENIED:
 		case ERR_NOFORMAT:
-			pErrorMsg = TheText.Get("SLONNF"); break; // Memory Card (PS2) in MEMORY CARD slot 1 is unformatted.
+			pErrorMsg = Text_Get(&TheText,"SLONNF"); break; // Memory Card (PS2) in MEMORY CARD slot 1 is unformatted.
 		case ERR_NONE:
-			pErrorMsg = TheText.Get("SLONNO"); break; // No Memory Card (PS2) in MEMORY CARD slot 1.
+			pErrorMsg = Text_Get(&TheText,"SLONNO"); break; // No Memory Card (PS2) in MEMORY CARD slot 1.
 	}
 }
 
@@ -1506,7 +1514,7 @@ CMemoryCard::WritetoMemCard(int32 file, void *buff, int32 size)
 	int result = sceMcResSucceed;
 	int result1 = sceMcResSucceed;
 	
-	CTimer::Stop();
+	Timer_Stop();
 	
 	while ( sceMcWrite(file, buff, size) != sceMcResSucceed )
 		;
@@ -1604,9 +1612,9 @@ CMemoryCard::WritetoMemCard(int32 file, void *buff, int32 size)
 	nError = NO_ERR_SUCCESS;
 	return nError;
 #else
-	CTimer::Stop();
+	Timer_Stop();
 
-	int32 s = CFileMgr::Write(file, (const char *)buff, size);
+	int32 s = FileMgr_Write(file, (const char *)buff, size);
 	if ( s == size )
 	{
 		printf("%i Bytes written for Filehandle %i \n", s, file);
@@ -1666,15 +1674,15 @@ CMemoryCard::SaveGame(void)
 	
 	if ( Cards[CurrentCard].free < 200 )
 	{
-		CTimer::Update();
-		uint32 startTime = CTimer::GetTimeInMillisecondsPauseMode();
+		Timer_Update();
+		uint32 startTime = Timer_GetTimeInMillisecondsPauseMode();
 		
-		while ( CTimer::GetTimeInMillisecondsPauseMode()-startTime < 1250 )
+		while ( Timer_GetTimeInMillisecondsPauseMode()-startTime < 1250 )
 		{
 			for ( int32 i = 0; i < 1000; i++ )
 				powf(3.33f, 3.444f);
 			
-			CTimer::Update();
+			Timer_Update();
 		}
 			
 		nError = ERR_SAVEFAILED;
@@ -1683,15 +1691,15 @@ CMemoryCard::SaveGame(void)
 	
 	if ( Cards[CurrentCard].free < minfree )
 	{
-		CTimer::Update();
-		uint32 startTime = CTimer::GetTimeInMillisecondsPauseMode();
+		Timer_Update();
+		uint32 startTime = Timer_GetTimeInMillisecondsPauseMode();
 		
-		while ( CTimer::GetTimeInMillisecondsPauseMode()-startTime < 1250 )
+		while ( Timer_GetTimeInMillisecondsPauseMode()-startTime < 1250 )
 		{
 			for ( int32 i = 0; i < 1000; i++ )
 				powf(3.33f, 3.444f);
 			
-			CTimer::Update();
+			Timer_Update();
 		}
 			
 		nError = ERR_SAVEFAILED;
@@ -1715,23 +1723,23 @@ CMemoryCard::SaveGame(void)
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().x);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().y);
 	WriteDataToBufferPointer(buf, TheCamera.GetPosition().z);
-	WriteDataToBufferPointer(buf, CClock::ms_nMillisecondsPerGameMinute);
-	WriteDataToBufferPointer(buf, CClock::ms_nLastClockTick);
-	WriteDataToBufferPointer(buf, CClock::ms_nGameClockHours);
-	WriteDataToBufferPointer(buf, CClock::ms_nGameClockMinutes);
+	WriteDataToBufferPointer(buf, Clock_millisecondsPerMinute);
+	WriteDataToBufferPointer(buf, Clock_lastTick);
+	WriteDataToBufferPointer(buf, Clock_hours);
+	WriteDataToBufferPointer(buf, Clock_minutes);
 	WriteDataToBufferPointer(buf, CPad::GetPad(0)->Mode);
-	WriteDataToBufferPointer(buf, CTimer::m_snTimeInMilliseconds);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeScale);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeStep);
-	WriteDataToBufferPointer(buf, CTimer::ms_fTimeStepNonClipped);
-	WriteDataToBufferPointer(buf, CTimer::m_FrameCounter);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fTimeStep);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fFramesPerUpdate);
-	WriteDataToBufferPointer(buf, CTimeStep::ms_fTimeScale);
-	WriteDataToBufferPointer(buf, CWeather::OldWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::NewWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::ForcedWeatherType);
-	WriteDataToBufferPointer(buf, CWeather::InterpolationValue);
+	WriteDataToBufferPointer(buf, Timer_timeMs);
+	WriteDataToBufferPointer(buf, Timer_timeScale);
+	WriteDataToBufferPointer(buf, Timer_timeStep);
+	WriteDataToBufferPointer(buf, Timer_nonClippedTimeStep);
+	WriteDataToBufferPointer(buf, Timer_frameCounter);
+	WriteDataToBufferPointer(buf, TimeStep_timeStep);
+	WriteDataToBufferPointer(buf, TimeStep_framesPerUpdate);
+	WriteDataToBufferPointer(buf, TimeStep_timeScale);
+	WriteDataToBufferPointer(buf, Weather_OldWeatherType);
+	WriteDataToBufferPointer(buf, Weather_NewWeatherType);
+	WriteDataToBufferPointer(buf, Weather_ForcedWeatherType);
+	WriteDataToBufferPointer(buf, Weather_InterpolationValue);
 	WriteDataToBufferPointer(buf, CMenuManager::m_PrefsMusicVolume);
 	WriteDataToBufferPointer(buf, CMenuManager::m_PrefsSfxVolume);
 	WriteDataToBufferPointer(buf, CMenuManager::m_PrefsControllerConfig);
@@ -1747,7 +1755,8 @@ CMemoryCard::SaveGame(void)
 #ifdef PS2
 	WriteDataToBufferPointer(buf, BlurOn);
 #else
-	WriteDataToBufferPointer(buf, CMBlur::BlurOn);
+	// Use the complete C motion-blur owner and its live shared state
+	WriteDataToBufferPointer(buf, MBlur_BlurOn);
 #endif
 	WriteDataToBufferPointer(buf, CompileDateAndTime.m_nSecond);
 	WriteDataToBufferPointer(buf, CompileDateAndTime.m_nMinute);
@@ -1755,7 +1764,7 @@ CMemoryCard::SaveGame(void)
 	WriteDataToBufferPointer(buf, CompileDateAndTime.m_nDay);
 	WriteDataToBufferPointer(buf, CompileDateAndTime.m_nMonth);
 	WriteDataToBufferPointer(buf, CompileDateAndTime.m_nYear);
-	WriteDataToBufferPointer(buf, CWeather::WeatherTypeInList);
+	WriteDataToBufferPointer(buf, Weather_WeatherTypeInList);
 	WriteDataToBufferPointer(buf, TheCamera.CarZoomIndicator);
 	WriteDataToBufferPointer(buf, TheCamera.PedZoomIndicator);
 	
@@ -1820,16 +1829,16 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(gPhoneInfo.Save);
 	printf("Phones Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CRestart::SaveAllRestartPoints);
+	WriteSaveDataBlock(Restart_SaveAllRestartPoints); // rouz edit (ChatGPT)
 	printf("RestartPoints Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(CRadar::SaveAllRadarBlips);
 	printf("Radar Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CTheZones::SaveAllZones);
+	WriteSaveDataBlock(Zones_SaveAllZones);
 	printf("Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CGangs::SaveAllGangData);
+	WriteSaveDataBlock(Gangs_SaveAllGangData);
 	printf("Gangs Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(CTheCarGenerators::SaveAllCarGenerators);
@@ -1844,13 +1853,13 @@ CMemoryCard::SaveGame(void)
 	WriteSaveDataBlock(CWorld::Players[CWorld::PlayerInFocus].SavePlayerInfo);
 	printf("Player Info Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CStats::SaveStats);
+	WriteSaveDataBlock(Stats_SaveStats);
 	printf("Stats Save Size %d, \n", size);
 	
 	WriteSaveDataBlock(CStreaming::MemoryCardSave);
 	printf("Streaming Save Size %d, \n", size);
 	
-	WriteSaveDataBlock(CPedType::Save);
+	WriteSaveDataBlock(PedType_Save);
 	printf("PedType Save Size %d, \n", size);
 	
 	DoClassSaveRoutine(file, work_buff, buf - work_buff);
@@ -1930,7 +1939,7 @@ CMemoryCard::DoHackRoundSTUPIDSonyDateTimeStuff(int32 port, char *filename)
 int32
 CMemoryCard::LookForRootDirectory(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)	
 	int cmd = sceMcFuncNoGetDir;
@@ -2017,7 +2026,7 @@ CMemoryCard::LookForRootDirectory(int32 cardID)
 int32
 CMemoryCard::FillFirstFileWithGuff(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 	char buff[80];
 	strncpy(buff, Cards[cardID].dir+1, sizeof(buff) - 1);
@@ -2049,8 +2058,11 @@ bool
 CMemoryCard::FindMostRecentFileName(int32 cardID, char *filename)
 {
 	CDate date1, date2;
+	// Initialize both former date objects in their original construction order
+	Date_Initialize(&date1);
+	Date_Initialize(&date2);
 	
-	CTimer::Stop();
+	Timer_Stop();
 	
 #if defined(PS2)
 	int cmd = sceMcFuncNoGetDir;
@@ -2119,8 +2131,8 @@ CMemoryCard::FindMostRecentFileName(int32 cardID, char *filename)
 			if ( found )
 			{
 				int32 d;
-				if ( date1 > date2 )      d = 1;
-				else if ( date1 < date2 ) d = 2;
+				if ( Date_IsAfter(&date1, &date2) )      d = 1;
+				else if ( Date_IsBefore(&date1, &date2) ) d = 2;
 				else                      d = 0;
 				
 				if ( d == 1 )
@@ -2133,8 +2145,8 @@ CMemoryCard::FindMostRecentFileName(int32 cardID, char *filename)
 				else
 				{
 					int32 d;
-					if ( date1 > date2 )      d = 1;
-					else if ( date1 < date2 ) d = 2;
+					if ( Date_IsAfter(&date1, &date2) )      d = 1;
+					else if ( Date_IsBefore(&date1, &date2) ) d = 2;
 					else                      d = 0;
 					
 					if ( d == 0 )
@@ -2258,8 +2270,8 @@ CMemoryCard::FindMostRecentFileName(int32 cardID, char *filename)
 			if ( found )
 			{
 				int32 d;
-				if ( date1 > date2 )      d = 1;
-				else if ( date1 < date2 ) d = 2;
+				if ( Date_IsAfter(&date1, &date2) )      d = 1;
+				else if ( Date_IsBefore(&date1, &date2) ) d = 2;
 				else                      d = 0;
 				
 				if ( d == 1 )
@@ -2272,8 +2284,8 @@ CMemoryCard::FindMostRecentFileName(int32 cardID, char *filename)
 				else
 				{
 					int32 d;
-					if ( date1 > date2 )      d = 1;
-					else if ( date1 < date2 ) d = 2;
+					if ( Date_IsAfter(&date1, &date2) )      d = 1;
+					else if ( Date_IsBefore(&date1, &date2) ) d = 2;
 					else                      d = 0;
 					
 					if ( d == 0 )
@@ -2323,7 +2335,7 @@ CMemoryCard::GetClusterAmountForFileCreation(int32 port)
 	int cmd = sceMcFuncNoEntSpace;
 	int result = 0;
 	
-	CTimer::Stop();
+	Timer_Stop();
 	
 	while ( sceMcGetEntSpace(port, 0, TheGameRootDirectory) != sceMcResSucceed )
 		;
@@ -2345,7 +2357,7 @@ CMemoryCard::GetClusterAmountForFileCreation(int32 port)
 	nError = ERR_NONE;
 	return nError;
 #else
-	CTimer::Stop();
+	Timer_Stop();
 	nError = NO_ERR_SUCCESS;
 	return 0;
 #endif
@@ -2354,7 +2366,7 @@ CMemoryCard::GetClusterAmountForFileCreation(int32 port)
 bool
 CMemoryCard::DeleteEverythingInGameRoot(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 	ChangeDirectory(CurrentCard, Cards[CurrentCard].dir);
 	
@@ -2491,15 +2503,15 @@ CMemoryCard::CreateGameDirectoryFromScratch(int32 cardID)
 	
 	if ( Cards[CurrentCard].free < 500 )
 	{
-		CTimer::Update();
-		uint32 startTime = CTimer::GetTimeInMillisecondsPauseMode();
+		Timer_Update();
+		uint32 startTime = Timer_GetTimeInMillisecondsPauseMode();
 		
-		while ( CTimer::GetTimeInMillisecondsPauseMode()-startTime < 1250 )
+		while ( Timer_GetTimeInMillisecondsPauseMode()-startTime < 1250 )
 		{
 			for ( int32 i = 0; i < 1000; i++ )
 				powf(3.33f, 3.444f);
 			
-			CTimer::Update();
+			Timer_Update();
 		}
 			
 		nError = ERR_DIRFULLDEVICE;
@@ -2757,7 +2769,7 @@ CMemoryCard::CheckGameDirectoryThere(int32 cardID)
 void
 CMemoryCard::PopulateSlotInfo(int32 cardID)
 {
-	CTimer::Stop();
+	Timer_Stop();
 	
 	for ( int32 i = 0; i < MAX_SLOTS; i++ )
 	{
@@ -2769,7 +2781,7 @@ CMemoryCard::PopulateSlotInfo(int32 cardID)
 		for ( int32 j = 0; j < ARRAY_SIZE(SlotSaveDate[i]); j++ )
 			SlotSaveDate[i][j] = L'\0';
 		
-		UnicodeStrcpy(SlotSaveDate[i], TheText.Get("DEFDT"));
+		UnicodeStrcpy(SlotSaveDate[i], Text_Get(&TheText,"DEFDT"));
 	}
 	
 	TheMemoryCard.PopulateCardFlags(cardID, false, false, true, true);
@@ -2846,18 +2858,18 @@ CMemoryCard::PopulateSlotInfo(int32 cardID)
 							char *monthstr;
 							switch ( month )
 							{
-								case  1: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("JAN")); break;
-								case  2: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("FEB")); break;
-								case  3: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("MAR")); break;
-								case  4: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("APR")); break;
-								case  5: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("MAY")); break;
-								case  6: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("JUN")); break;
-								case  7: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("JUL")); break;
-								case  8: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("AUG")); break;
-								case  9: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("SEP")); break;
-								case 10: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("OCT")); break;
-								case 11: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("NOV")); break;
-								case 12: monthstr = UnicodeToAsciiForMemoryCard(TheText.Get("DEC")); break;
+								case  1: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"JAN")); break;
+								case  2: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"FEB")); break;
+								case  3: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"MAR")); break;
+								case  4: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"APR")); break;
+								case  5: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"MAY")); break;
+								case  6: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"JUN")); break;
+								case  7: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"JUL")); break;
+								case  8: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"AUG")); break;
+								case  9: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"SEP")); break;
+								case 10: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"OCT")); break;
+								case 11: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"NOV")); break;
+								case 12: monthstr = UnicodeToAsciiForMemoryCard(Text_Get(&TheText,"DEC")); break;
 							}
 							
 							sprintf(slotdate, "%02d %s %04d %02d:%02d:%02d", day, monthstr, year, hour, min, sec);
@@ -2983,11 +2995,11 @@ CMemoryCard::SaveSlot(int32 slotID)
 	sprintf(buff, "%i ", slotID+1);
 	strncat(ValidSaveName, buff, sizeof(ValidSaveName) - 1);
 	
-	if ( CStats::LastMissionPassedName[0] != '\0' )
+	if ( Stats_LastMissionPassedName[0] != '\0' )
 	{
 		char mission[100];
 		
-		strcpy(mission, UnicodeToAsciiForMemoryCard(TheText.Get(CStats::LastMissionPassedName)));
+		strcpy(mission, UnicodeToAsciiForMemoryCard(Text_Get(&TheText,Stats_LastMissionPassedName)));
 		
 #ifdef FIX_BUGS
 		strncat(ValidSaveName, mission, sizeof(ValidSaveName)-1);
@@ -3015,12 +3027,12 @@ CMemoryCard::SaveSlot(int32 slotID)
 		SaveGame();
 	}
 	
-	CTimer::Stop();
+	Timer_Stop();
 	CStreaming::FlushRequestList();
 	CStreaming::DeleteRwObjectsAfterDeath(FindPlayerPed()->GetPosition());
 	CStreaming::RemoveUnusedModelsInLoadedList();
 	CGame::DrasticTidyUpMemory(false);
-	CTimer::Update();
+	Timer_Update();
 }
 
 void
@@ -3083,4 +3095,9 @@ CMemoryCard::DoClassSaveRoutine(int32 file, uint8 *data, uint32 size)
 }
 
 #endif
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

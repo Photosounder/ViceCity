@@ -1,0 +1,430 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned commands,checks,events,draws,transforms,assertions,reentries,mutations,debugLines,rasterFailures;
+static unsigned camerasCreated,camerasDestroyed,framesCreated,framesDestroyed,rastersCreated,rastersDestroyed,charsetsCreated,charsetsDestroyed,animationsCreated;
+static unsigned cameraCalls,frameCalls,rasterCalls,animationCalls,failCameraCall,failFrameCall,failRasterCall,failRasterCall2,failAnimationCall;
+static bool failParent,reenterQuad,insideQuad,reenterSphere,insideSphere,reenterHierarchy,insideHierarchy,reenterPlatform,insidePlatform;
+static const RwIm2DVertex *outerVertices;
+static RwV3d *outerTransform;
+static TestHelperArgs nestedArgs;
+static RwRect *mutateRectangle;
+static unsigned mutateRasterCall;
+static RwCamera cameras[256];
+static RwFrame frames[512];
+static RwRaster rasters[2048];
+static RtCharset charsets[128];
+static RpHAnimAnimation animations[128];
+static TestInterpInfo interpInfo[128];
+alignas(16) static uint8_t animationBytes[128][4096];
+static uint32 renderStates[4096];
+static RwVideoMode videoMode={640,448,0};
+TestGlobal RsGlobal={640,448};
+bool MBlur_BlurOn;
+bool GLAD_GL_KHR_debug;
+namespace rw {int32 platform=1;PipelineGlobals skinGlobals,matFXGlobals;}
+static void requireAt(bool value,unsigned line)
+{
+    // Fail at a precise diagnostic line without opening a native error dialog
+    ++checks;if(!value){fprintf(stderr,"line=%u commands=%u checks=%u events=%u\n",line,commands,checks,events);abort();}
+}
+#define require(value) requireAt(!!(value),__LINE__)
+static void bytes(const void *data,size_t count)
+{
+    // Observe only initialized values and normalize resource addresses separately
+    const uint8_t *p=(const uint8_t*)data;for(size_t i=0;i<count;++i){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static unsigned identity(const void *object)
+{
+    // Normalize nullable controlled SDK object identities
+    return object?*(const unsigned*)object:0;
+}
+static void event(unsigned operation,uint32 a=0,uint32 b=0)
+{
+    // Retain each external SDK operation and its initialized scalar inputs in exact order
+    uint32 values[]={operation,a,b};bytes(values,sizeof(values));++events;
+}
+static void vectorValue(const RwV3d *v)
+{
+    // Observe the three initialized SDK vector components
+    bytes(v,sizeof(*v));
+}
+static void matrixValue(const RwMatrix *m)
+{
+    // Observe initialized SDK matrix inputs supplied by the fixture or prior SDK operations
+    bytes(m,sizeof(*m));
+}
+static TestHelperResult run(unsigned operation,TestHelperArgs *args)
+{
+    // Enter complete original or C operations through an independently compiled public caller
+    ++commands;TestHelperResult result;TestHelper(operation,args,&result);unsigned ids[]={identity(result.object),identity(result.output)};bytes(ids,sizeof(ids));bytes(&result.value,sizeof(result.value));TestHelperState state;TestHelperGetState(&state);bytes(&state.ps2,sizeof(state.ps2));bytes(&state.cull,sizeof(state.cull));bytes(&state.debug,sizeof(state.debug));bytes(&state.sphere,sizeof(state.sphere));bytes(&state.blur,sizeof(state.blur));bytes(&RsGlobal,sizeof(RsGlobal));bytes(&rw::platform,sizeof(rw::platform));return result;
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned int,const char*)
+{
+    // Observe assertion expressions while excluding changed source locations and callback function names
+    ++assertions;event(1);bytes(expression,strlen(expression));
+}
+void RtCharsetOpen(void)
+{
+    // Observe the external charset initialization boundary
+    event(2);
+}
+void RtCharsetClose(void)
+{
+    // Observe the original external charset shutdown boundary
+    event(3);
+}
+RtCharset *RtCharsetCreate(RwRGBA *foreground,RwRGBA *background)
+{
+    // Observe both complete original colours and allocate one controlled SDK charset
+    event(4);bytes(foreground,sizeof(*foreground));bytes(background,sizeof(*background));require(charsetsCreated<128);RtCharset *value=&charsets[charsetsCreated++];*value={400000+charsetsCreated,true};return value;
+}
+void RtCharsetDestroy(RtCharset *value)
+{
+    // Require each observed charset destruction to retain its actual resource identity
+    require(value&&value->alive);event(5,value->id);value->alive=false;++charsetsDestroyed;
+}
+void RtCharsetPrintBuffered(RtCharset *value,const char *text,int32 x,int32 y,bool hide)
+{
+    // Observe original character-grid coordinate conversion and the borrowed text
+    require(value&&value->alive);event(6,value->id,hide);bytes(&x,sizeof(x));bytes(&y,sizeof(y));bytes(text,strlen(text));
+}
+void RtCharsetBufferFlush(void)
+{
+    // Observe the original buffered text flush
+    event(7);
+}
+void RwRenderStateSet(int32 state,void *value)
+{
+    // Retain SDK render-state values without interpreting pointer-sized integer tokens as objects
+    require(state>=0&&state<4096);event(8,state,(uint32)(uintptr_t)value);renderStates[state]=(uint32)(uintptr_t)value;
+}
+void rw::SetRenderState(RenderState state,uint32 value)
+{
+    // Observe the actual librw state table separately from the SDK compatibility state calls
+    require(state>=0&&state<4096);event(9,state,value);renderStates[state]=value;
+}
+uint32 rw::GetRenderState(RenderState state)
+{
+    // Return live external render-state metadata at the original read point
+    require(state>=0&&state<4096);event(10,state,renderStates[state]);return renderStates[state];
+}
+void RwD3D8SetRenderState(uint32 state,uint32 value)
+{
+    // Preserve legacy Direct3D state inputs on the original non-librw branch
+    require(state<4096);event(11,state,value);renderStates[state]=value;
+}
+void RwD3D8GetRenderState(uint32 state,uint32 *value)
+{
+    // Preserve the original external legacy state read
+    require(state<4096);event(12,state,renderStates[state]);*value=renderStates[state];
+}
+int MultiByteToWideChar(int page,int flags,const char *name,int length,WCHAR *destination,int count)
+{
+    // Check the original byte-count argument while using only short representable names in this fixture
+    require(page==CP_ACP&&flags==MB_PRECOMPOSED&&length==-1&&count==512&&strlen(name)<128);event(13,count);bytes(name,strlen(name));size_t i=0;do{destination[i]=(uint8_t)name[i];}while(name[i++]);return (int)i;
+}
+void D3DPERF_BeginEvent(uint32 colour,const WCHAR *name)
+{
+    // Observe the initialized wide string without reading unused static buffer entries
+    require(colour==0xFFFFFFFF);event(14,colour);size_t n=0;while(name[n])++n;bytes(name,(n+1)*sizeof(WCHAR));
+}
+void D3DPERF_EndEvent(void)
+{
+    // Observe the matching external Direct3D group exit
+    event(15);
+}
+void glPushDebugGroup(uint32 source,uint32 id,int32 length,const char *name)
+{
+    // Observe the original OpenGL debug-group primitive and borrowed label
+    require(source==GL_DEBUG_SOURCE_APPLICATION&&id==0&&length==-1);event(16);bytes(name,strlen(name));
+}
+void glPopDebugGroup(void)
+{
+    // Observe the matching external OpenGL group exit
+    event(17);
+}
+void RwFrameForAllChildren(RwFrame *frame,RwFrame *(*callback)(RwFrame*,void*),void *data)
+{
+    // Let the actual original or C callback determine traversal termination
+    require(frame);event(18,frame->id,frame->childCount);for(int i=0;i<frame->childCount;++i){RwFrame *value=callback(frame->children[i],data);event(19,identity(value));if(!value)break;}
+}
+void RwFrameForAllObjects(RwFrame *frame,RwObject *(*callback)(RwObject*,void*),void *data)
+{
+    // Keep callback data borrowed synchronously without exposing wrapper-context addresses in the trace
+    require(frame);event(20,frame->id,frame->objectCount);for(int i=0;i<frame->objectCount;++i){RwObject *value=callback(frame->objects[i],data);event(21,identity(value));if(!value)break;}
+}
+void RpClumpForAllAtomics(RpClump *clump,RpAtomic *(*callback)(RpAtomic*,void*),void *data)
+{
+    // Preserve original callback order and return-controlled traversal semantics
+    require(clump);event(22,clump->id,clump->count);for(int i=0;i<clump->count;++i){RpAtomic *value=callback(clump->atomics[i],data);event(23,identity(value));if(!value)break;}
+}
+void RwTexDictionaryForAllTextures(RwTexDictionary *dictionary,RwTexture *(*callback)(RwTexture*,void*),void *data)
+{
+    // Traverse actual controlled texture entries until the original callback requests a stop
+    require(dictionary);event(24,dictionary->id,dictionary->count);for(int i=0;i<dictionary->count;++i){RwTexture *value=callback(dictionary->textures[i],data);event(25,identity(value));if(!value)break;}
+}
+RpGeometry *RpAtomicGetGeometry(RpAtomic *atomic)
+{
+    // Observe the original geometry getter rather than shadowing its result in C policy
+    require(atomic);event(26,atomic->id);return atomic->geometry;
+}
+RpSkin *RpSkinGeometryGetSkin(RpGeometry *geometry)
+{
+    // Return the live external skin association at each original access
+    require(geometry);event(27,geometry->id);return geometry->skin;
+}
+RpHAnimHierarchy *RpSkinAtomicGetHAnimHierarchy(RpAtomic *atomic)
+{
+    // Return the original atomic hierarchy metadata
+    require(atomic);event(28,atomic->id);return atomic->hierarchy;
+}
+RpHAnimHierarchy *RpHAnimFrameGetHierarchy(RwFrame *frame)
+{
+    // Reenter hierarchy traversal while the outer iterator context remains borrowed
+    require(frame);event(29,frame->id);if(reenterHierarchy&&!insideHierarchy){reenterHierarchy=false;insideHierarchy=true;++reentries;run(OP_GetAnimHierarchyFromClump,&nestedArgs);insideHierarchy=false;}return frame->hierarchy;
+}
+RwFrame *RpClumpGetFrame(RpClump *clump)
+{
+    // Observe the original owning-clump frame lookup
+    require(clump);event(30,clump->id);return clump->frame;
+}
+int32 RpSkinGetNumBones(RpSkin *skin)
+{
+    // Supply live external bone-count metadata
+    require(skin);event(31,skin->id,skin->count);return skin->count;
+}
+const RwMatrix *RpSkinGetSkinToBoneMatrices(RpSkin *skin)
+{
+    // Borrow the original SDK matrix array without copying or changing its stride
+    require(skin);event(32,skin->id);return skin->matrices;
+}
+void RwMatrixCopy(RwMatrix *destination,const RwMatrix *source)
+{
+    // Observe the complete initialized SDK input and preserve the original copy primitive
+    event(33);matrixValue(source);*destination=*source;
+}
+void RwMatrixInvert(RwMatrix *destination,const RwMatrix *source)
+{
+    // Supply one deterministic external affine inverse without replacing application traversal or parent selection
+    event(34);matrixValue(source);RwMatrix value=*source;float a=source->right.x,b=source->up.x,c=source->at.x,d=source->right.y,e=source->up.y,f=source->at.y,g=source->right.z,h=source->up.z,i=source->at.z;float det=a*(e*i-f*h)-b*(d*i-f*g)+c*(d*h-e*g);require(det!=0.0f);float q=1.0f/det;value.right={(e*i-f*h)*q,(f*g-d*i)*q,(d*h-e*g)*q};value.up={(c*h-b*i)*q,(a*i-c*g)*q,(b*g-a*h)*q};value.at={(b*f-c*e)*q,(c*d-a*f)*q,(a*e-b*d)*q};RwV3d p=source->pos;value.pos={-(value.right.x*p.x+value.up.x*p.y+value.at.x*p.z),-(value.right.y*p.x+value.up.y*p.y+value.at.y*p.z),-(value.right.z*p.x+value.up.z*p.y+value.at.z*p.z)};*destination=value;
+}
+void RwV3dTransformPoints(RwV3d *destination,const RwV3d *source,int32 count,const RwMatrix *matrix)
+{
+    // Observe exact borrowed inputs and support the SDK's in-place point transformation
+    require(count==1);event(35,count);vectorValue(source);matrixValue(matrix);RwV3d p=*source;*destination={matrix->right.x*p.x+matrix->up.x*p.y+matrix->at.x*p.z+matrix->pos.x,matrix->right.y*p.x+matrix->up.y*p.y+matrix->at.y*p.z+matrix->pos.y,matrix->right.z*p.x+matrix->up.z*p.y+matrix->at.z*p.z+matrix->pos.z};++transforms;if(insideSphere)require(destination!=outerTransform);
+    if(reenterSphere&&!insideSphere){
+        // Reenter complete sphere policy after writing the outer SDK vector and verify its native scope remains live
+        RwV3d saved=*destination;outerTransform=destination;reenterSphere=false;insideSphere=true;++reentries;run(OP_RpClumpGetBoundingSphere,&nestedArgs);require(memcmp(&saved,destination,sizeof(saved))==0);insideSphere=false;outerTransform=NULL;
+    }
+}
+RpHAnimAnimation *RpHAnimAnimationCreate(int32 type,int32 count,int32 flags,float duration)
+{
+    // Expose a padded external keyframe stride and controlled factory failures
+    require(type==rpHANIMSTDKEYFRAMETYPEID&&flags==0&&duration==0.0f&&count>=0&&count<=32);event(36,count);++animationCalls;if(animationCalls==failAnimationCall)return NULL;require(animationsCreated<128);unsigned index=animationsCreated++;RpHAnimAnimation *value=&animations[index];int32 stride=(int32)sizeof(RpHAnimStdKeyFrame)+16;interpInfo[index]={stride,stride};memset(animationBytes[index],0xA5,sizeof(animationBytes[index]));*value={500000+animationsCreated,count,animationBytes[index],animationBytes[index],&interpInfo[index]};return value;
+}
+RwMatrix *RpHAnimHierarchyGetMatrixArray(RpHAnimHierarchy *hierarchy)
+{
+    // Borrow the actual controlled hierarchy matrix array
+    require(hierarchy);event(37,hierarchy->id);return hierarchy->matrices;
+}
+void RwIm2DRenderPrimitive(int32 kind,RwIm2DVertex *vertices,int32 count)
+{
+    // Observe initialized quad fields and validate independent native vertex scopes during reentrant draws
+    require(kind==rwPRIMTYPETRISTRIP&&count==4);event(38,count);bytes(vertices,count*sizeof(*vertices));++draws;if(insideQuad)require(vertices!=outerVertices);
+    if(reenterQuad&&!insideQuad){
+        // Keep the outer initialized SDK vertices unchanged while another complete quad is constructed
+        RwIm2DVertex saved[4];memcpy(saved,vertices,sizeof(saved));outerVertices=vertices;reenterQuad=false;insideQuad=true;++reentries;run(OP_Im2DRenderQuad,&nestedArgs);require(memcmp(saved,vertices,sizeof(saved))==0);insideQuad=false;outerVertices=NULL;
+    }
+}
+RwSphere *RpAtomicGetBoundingSphere(RpAtomic *atomic)
+{
+    // Return the actual atomic sphere storage at the original accessor point
+    require(atomic);event(39,atomic->id);return &atomic->sphere;
+}
+RwMatrix *RwFrameGetLTM(RwFrame *frame)
+{
+    // Keep local-to-world and modelling matrix choices externally distinguishable
+    require(frame);event(40,frame->id);return &frame->ltm;
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Return the original modelling matrix without substituting the world transform
+    require(frame);event(41,frame->id);return &frame->matrix;
+}
+void RwV3dAdd(RwV3d *destination,const RwV3d *a,const RwV3d *b)
+{
+    // Supply the original external vector-add primitive including in-place destinations
+    event(42);vectorValue(a);vectorValue(b);*destination={a->x+b->x,a->y+b->y,a->z+b->z};
+}
+void RwV3dSub(RwV3d *destination,const RwV3d *a,const RwV3d *b)
+{
+    // Supply the original external vector-subtract primitive
+    event(43);vectorValue(a);vectorValue(b);*destination={a->x-b->x,a->y-b->y,a->z-b->z};
+}
+void RwV3dScale(RwV3d *destination,const RwV3d *source,float scale)
+{
+    // Preserve original scaling coefficients and SDK source values
+    event(44);vectorValue(source);bytes(&scale,sizeof(scale));*destination={source->x*scale,source->y*scale,source->z*scale};
+}
+float RwV3dLength(const RwV3d *value)
+{
+    // Supply the external SDK vector-length result from all three initialized components
+    event(45);vectorValue(value);return sqrtf(value->x*value->x+value->y*value->y+value->z*value->z);
+}
+int32 RpClumpGetNumAtomics(RpClump *clump)
+{
+    // Return live external atomic-count metadata
+    require(clump);event(46,clump->id,clump->count);return clump->count;
+}
+int32 RwEngineGetCurrentVideoMode(void)
+{
+    // Observe the original external mode-index query
+    event(47);return 3;
+}
+void RwEngineGetVideoModeInfo(RwVideoMode *mode,int32 index)
+{
+    // Supply controlled exclusive and windowed mode metadata through the original SDK call
+    require(index==3);event(48,index);*mode=videoMode;
+}
+RwRaster *RwCameraGetRaster(RwCamera *camera)
+{
+    // Preserve the live framebuffer lookup and nullable result
+    require(camera&&camera->alive);event(49,camera->id,identity(camera->frameBuffer));return camera->frameBuffer;
+}
+RwRaster *RwCameraGetZRaster(RwCamera *camera)
+{
+    // Preserve the independent live depth-raster lookup
+    require(camera&&camera->alive);event(50,camera->id,identity(camera->zBuffer));return camera->zBuffer;
+}
+int32 RwRasterGetWidth(RwRaster *raster)
+{
+    // Observe original SDK raster width reads
+    require(raster&&raster->alive);event(51,raster->id,raster->width);return raster->width;
+}
+int32 RwRasterGetHeight(RwRaster *raster)
+{
+    // Observe original SDK raster height reads
+    require(raster&&raster->alive);event(52,raster->id,raster->height);return raster->height;
+}
+void RwRasterDestroy(RwRaster *raster)
+{
+    // Require original resource cleanup order without inventing alias or failure recovery
+    require(raster&&raster->alive);event(53,raster->id);raster->alive=false;++rastersDestroyed;
+}
+RwRaster *RwRasterCreate(int32 width,int32 height,int32 depth,int32 type)
+{
+    // Control allocation outcomes and mutate only the real caller rectangle at a selected external call
+    event(54,width,height);bytes(&depth,sizeof(depth));bytes(&type,sizeof(type));++rasterCalls;if(mutateRectangle&&rasterCalls==mutateRasterCall){mutateRectangle->x=7;mutateRectangle->y=11;mutateRectangle->w=37;mutateRectangle->h=53;++mutations;}if(rasterCalls==failRasterCall||rasterCalls==failRasterCall2){++rasterFailures;return NULL;}require(rastersCreated<2048);RwRaster *value=&rasters[rastersCreated++];*value={300000+rastersCreated,true,width,height,depth,type,NULL};value->parent=failParent?NULL:value;return value;
+}
+void RwCameraSetRaster(RwCamera *camera,RwRaster *raster)
+{
+    // Observe the exact original SDK framebuffer setter including null fallback results
+    require(camera&&camera->alive);event(55,camera->id,identity(raster));camera->frameBuffer=raster;
+}
+void RwCameraSetZRaster(RwCamera *camera,RwRaster *raster)
+{
+    // Preserve the separate SDK depth-raster setter
+    require(camera&&camera->alive);event(56,camera->id,identity(raster));camera->zBuffer=raster;
+}
+void RwCameraSetViewWindow(RwCamera *camera,const RwV2d *window)
+{
+    // Observe the complete computed C or original camera view window
+    require(camera&&camera->alive);event(57,camera->id);bytes(window,sizeof(*window));camera->viewWindow=*window;
+}
+RwFrame *RwCameraGetFrame(RwCamera *camera)
+{
+    // Return the actual current SDK camera frame
+    require(camera&&camera->alive);event(58,camera->id,identity(camera->frame));return camera->frame;
+}
+void RwFrameDestroy(RwFrame *frame)
+{
+    // Observe original frame destruction before camera raster teardown
+    require(frame&&frame->alive);event(59,frame->id);frame->alive=false;++framesDestroyed;
+}
+RwRaster *RwRasterGetParent(RwRaster *raster)
+{
+    // Preserve self, null and separate SDK raster parent identities
+    require(raster&&raster->alive);event(60,raster->id,identity(raster->parent));return raster->parent;
+}
+void RwCameraDestroy(RwCamera *camera)
+{
+    // Observe final SDK camera destruction after all owner cleanup decisions
+    require(camera&&camera->alive);event(61,camera->id);camera->alive=false;++camerasDestroyed;
+}
+RwCamera *RwCameraCreate(void)
+{
+    // Supply controlled SDK camera allocation and factory failure
+    event(62);++cameraCalls;if(cameraCalls==failCameraCall)return NULL;require(camerasCreated<256);RwCamera *value=&cameras[camerasCreated++];memset(value,0,sizeof(*value));value->id=100000+camerasCreated;value->alive=true;return value;
+}
+RwFrame *RwFrameCreate(void)
+{
+    // Supply controlled SDK frame allocation without initializing unused matrix fields for the owner
+    event(63);++frameCalls;if(frameCalls==failFrameCall)return NULL;require(framesCreated<512);RwFrame *value=&frames[framesCreated++];memset(value,0,sizeof(*value));value->id=200000+framesCreated;value->alive=true;return value;
+}
+void RwCameraSetFrame(RwCamera *camera,RwFrame *frame)
+{
+    // Observe nullable frame assignment before original camera validation
+    require(camera&&camera->alive);event(64,camera->id,identity(frame));camera->frame=frame;
+}
+void RpGeometryForAllMaterials(RpGeometry *geometry,RpMaterial *(*callback)(RpMaterial*,void*),void *data)
+{
+    // Enter the unchanged external vehicle-material callback through the original SDK traversal
+    require(geometry);event(65,geometry->id,geometry->materialCount);for(int i=0;i<geometry->materialCount;++i){RpMaterial *value=callback(geometry->materials[i],data);event(66,identity(value));if(!value)break;}
+}
+int32 RpMatFXMaterialGetEffects(RpMaterial *material)
+{
+    // Supply controlled metadata to the separately owned material callback
+    require(material);event(67,material->id,material->effects);return material->effects;
+}
+RpMaterial *CVehicleModelInfo::GetMatFXEffectMaterialCB(RpMaterial *material,void *data)
+{
+    // Retain the complete original external callback body rather than simulating its result in helper policy
+    if(RpMatFXMaterialGetEffects(material)==rpMATFXEFFECTNULL)return material;
+    *(int*)data=RpMatFXMaterialGetEffects(material);return nil;
+}
+void RpMatFXAtomicEnableEffects(RpAtomic *atomic)
+{
+    // Supply the external material-effects pipeline binding selected by C or original policy
+    require(atomic);event(68,atomic->id,rw::platform);atomic->pipeline=rw::matFXGlobals.pipelines[rw::platform];
+}
+void rw::Atomic::uninstance(void)
+{
+    // Observe the temporary SDK platform and pipeline while external uninstancing executes
+    event(69,id,rw::platform);event(169,pipeline?pipeline->platform:0,pipeline?pipeline->pluginID:0);if(pipeline&&(pipeline->pluginID==ID_SKIN||pipeline->pluginID==ID_MATFX))require(pipeline->platform==rw::platform);if(reenterPlatform&&!insidePlatform){reenterPlatform=false;insidePlatform=true;++reentries;run(OP_ConvertPlatformAtomic,&nestedArgs);insidePlatform=false;}geometry->flags&=~Geometry::NATIVE;pipeline=NULL;
+}
+extern "C" int32_t MBlur_MotionBlurClose(void)
+{
+    // Observe the delegated blur shutdown at its original resize point
+    event(70);return 0;
+}
+extern "C" int32_t MBlur_MotionBlurOpen(void *camera)
+{
+    // Observe the actual camera and framebuffer state at the original blur reopen boundary
+    RwCamera *value=(RwCamera*)camera;event(71,value->id,identity(value->frameBuffer));return 1;
+}
+extern "C" int32_t TimeCycle_GetFogRed(void)
+{
+    // Supply live external colour metadata through the original C owner API
+    event(72);return 17;
+}
+extern "C" int32_t TimeCycle_GetFogGreen(void)
+{
+    // Preserve the separate external green getter and its call order
+    event(73);return 83;
+}
+extern "C" int32_t TimeCycle_GetFogBlue(void)
+{
+    // Preserve the separate external blue getter and its call order
+    event(74);return 149;
+}
+Debug_Vector Debug_FromVector(CVector value)
+{
+    // Retain only the original C++ vector-to-C ABI conversion for the original owner
+    Debug_Vector result={value.x,value.y,value.z};return result;
+}
+extern "C" void Debug_AddLine(Debug_Vector a,Debug_Vector b,uint32_t first,uint32_t second)
+{
+    // Observe the original debug-line API with all positions and both colour arguments
+    event(75,first,second);bytes(&a,sizeof(a));bytes(&b,sizeof(b));++debugLines;
+}

@@ -1,74 +1,55 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "main.h"
-#include "Lines.h"
+#include "Lines_backend.h"
 
-// This is super inefficient, why split the line into segments at all?
-void
-CLines::RenderLineWithClipping(float x1, float y1, float z1, float x2, float y2, float z2, uint32 c1, uint32 c2)
+void *
+Lines_BackendVertices(void)
 {
+	// Retain the original function-local typed vertex buffer and its lifetime
 	static RwIm3DVertex v[2];
-#ifdef THIS_IS_STUPID
-	int i;
-	float f1, f2;
-	float len = sqrt(sq(x1-x2) + sq(y1-y2) + sq(z1-z2));
-	int numsegs = len/1.5f + 1.0f;
-
-	RwRGBA col1;
-	col1.red = c1>>24;
-	col1.green = c1>>16;
-	col1.blue = c1>>8;
-	col1.alpha = c1;
-	RwRGBA col2;
-	col2.red = c2>>24;
-	col2.green = c2>>16;
-	col2.blue = c2>>8;
-	col2.alpha = c2;
-
-	float dx = x2 - x1;
-	float dy = y2 - y1;
-	float dz = z2 - z1;
-	for(i = 0; i < numsegs; i++){
-		f1 = (float)i/numsegs;
-		f2 = (float)(i+1)/numsegs;
-
-		RwIm3DVertexSetRGBA(&v[0], (int)(col1.red + (col2.red-col1.red)*f1),
-			(int)(col1.green + (col2.green-col1.green)*f1),
-			(int)(col1.blue + (col2.blue-col1.blue)*f1),
-			(int)(col1.alpha + (col2.alpha-col1.alpha)*f1));
-		RwIm3DVertexSetRGBA(&v[1], (int)(col1.red + (col2.red-col1.red)*f2),
-			(int)(col1.green + (col2.green-col1.green)*f2),
-			(int)(col1.blue + (col2.blue-col1.blue)*f2),
-			(int)(col1.alpha + (col2.alpha-col1.alpha)*f2));
-		RwIm3DVertexSetPos(&v[0], x1 + dx*f1, y1 + dy*f1, z1 + dz*f1);
-		RwIm3DVertexSetPos(&v[1], x1 + dx*f2, y1 + dy*f2, z1 + dz*f2);
-
-		LittleTest();
-		if(RwIm3DTransform(v, 2, nil, 0)){
-			RwIm3DRenderLine(0, 1);
-			RwIm3DEnd();
-		}
-	}
-#else
-	RwRGBA col1;
-	col1.red = c1>>24;
-	col1.green = c1>>16;
-	col1.blue = c1>>8;
-	col1.alpha = c1;
-	RwRGBA col2;
-	col2.red = c2>>24;
-	col2.green = c2>>16;
-	col2.blue = c2>>8;
-	col2.alpha = c2;
-
-	RwIm3DVertexSetRGBA(&v[0], col1.red, col1.green, col1.blue, col1.alpha);
-	RwIm3DVertexSetRGBA(&v[1], col2.red, col2.green, col2.blue, col2.alpha);
-	RwIm3DVertexSetPos(&v[0], x1, y1, z1);
-	RwIm3DVertexSetPos(&v[1], x2, y2, z2);
-	LittleTest();
-	if(RwIm3DTransform(v, 2, nil, 0)){
-		RwIm3DRenderLine(0, 1);
-		RwIm3DEnd();
-	}
-#endif
+	return v;
 }
+
+void
+Lines_BackendSetRGBA(void *vertices, int index, int red, int green, int blue, int alpha)
+{
+	// Write the original vertex color through RenderWare's typed setter
+	RwIm3DVertexSetRGBA(&((RwIm3DVertex *)vertices)[index], red, green, blue, alpha);
+}
+
+void
+Lines_BackendSetPos(void *vertices, int index, float x, float y, float z)
+{
+	// Write the original vertex position without assuming a backend layout
+	RwIm3DVertexSetPos(&((RwIm3DVertex *)vertices)[index], x, y, z);
+}
+
+void
+Lines_BackendLittleTest(void)
+{
+	// Preserve the original hook before each transform attempt
+	LittleTest();
+}
+
+bool
+Lines_BackendTransform(void *vertices)
+{
+	// Preserve both vertices, the null matrix and the original transform flags
+	return RwIm3DTransform((RwIm3DVertex *)vertices, 2, nil, 0) != nil;
+}
+
+void
+Lines_BackendRenderLine(void)
+{
+	// Render the same two vertex indices after a successful transform
+	RwIm3DRenderLine(0, 1);
+}
+
+void
+Lines_BackendEnd(void)
+{
+	// Finish the successful immediate-mode draw
+	RwIm3DEnd();
+}
+//- rouz edit (ChatGPT)

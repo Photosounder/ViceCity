@@ -1,96 +1,75 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-#include <stdarg.h>
-
-#include "Console.h"
+#include "Console_backend.h"
 #include "Font.h"
-#include "Timer.h"
-
-#define CONSOLE_X_POS (30.0f)
-#define CONSOLE_Y_POS (10.0f)
-#define CONSOLE_LINE_HEIGHT (12.0f)
-
-CConsole TheConsole;
-
-void
-CConsole::AddLine(char *s, uint8 r, uint8 g, uint8 b)
+int32_t Console_BackendScreenWidth(void)
 {
-	char tempstr[MAX_STR_LEN+1];
-
-	while (strlen(s) > MAX_STR_LEN) {
-		strncpy(tempstr, s, MAX_STR_LEN);
-		tempstr[MAX_STR_LEN-1] = '\0';
-		s += MAX_STR_LEN - 1;
-		AddOneLine(tempstr, r, g, b);
-	}
-	AddOneLine(s, r, g, b);
+    // Read the original live integer screen width
+    return RsGlobal.width;
 }
-
-void
-CConsole::AddOneLine(char *s, uint8 r, uint8 g, uint8 b)
+void Console_BackendFontScale(float x,float y)
 {
-	int32 StrIndex = (m_nLineCount + m_nCurrentLine) % MAX_LINES;
-
-	for (int32 i = 0; i < MAX_STR_LEN; i++) {
-		Buffers[StrIndex][i] = s[i];
-		if (s[i] == '\0') break;
-	}
-
-	uint8 _strNum1 = m_nLineCount;
-	if (_strNum1 < MAX_LINES)
-		_strNum1++;
-
-	m_aTimer[StrIndex] = CTimer::GetTimeInMilliseconds();
-	Buffers[StrIndex][MAX_STR_LEN-1] = '\0';
-	m_aRed[StrIndex] = r;
-	m_aGreen[StrIndex] = g;
-	m_aBlue[StrIndex] = b;
-
-	if (_strNum1 >= MAX_LINES)
-		m_nCurrentLine = (m_nCurrentLine + 1) % MAX_LINES;
-	else
-		m_nLineCount = _strNum1;
-
+    // Retain the original fixed font scale
+    CFont::SetScale(x,y);
 }
-
-void
-CConsole::Display()
+void Console_BackendFontColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a)
 {
-	CFont::SetPropOn();
-	CFont::SetBackgroundOff();
-	CFont::SetScale(0.6f, 0.6f); 
-	CFont::SetCentreOff();
-	CFont::SetRightJustifyOff();
-	CFont::SetJustifyOn();
-	CFont::SetRightJustifyWrap(0.0f);
-	CFont::SetBackGroundOnlyTextOff();
-	CFont::SetFontStyle(FONT_STANDARD);
-#ifndef FIX_BUGS
-	CFont::SetPropOff(); // not sure why this is here anyway
-#endif
-	CFont::SetWrapx(RsGlobal.width);
-
-	while (m_nLineCount != 0 && CTimer::GetTimeInMilliseconds() - m_aTimer[m_nCurrentLine] > 20000) {
-		m_nLineCount--;
-		m_nCurrentLine = (m_nCurrentLine + 1) % MAX_LINES;
-	}
-
-	for (int16 i = 0; i < m_nLineCount; i++) {
-		int16 line = (i + m_nCurrentLine) % MAX_LINES;
-		CFont::SetColor(CRGBA(0, 0, 0, 200));
-		CFont::PrintString(CONSOLE_X_POS + 1.0f, CONSOLE_Y_POS + 1.0f + i * CONSOLE_LINE_HEIGHT, Buffers[line]);
-		CFont::SetColor(CRGBA(m_aRed[line], m_aGreen[line], m_aBlue[line], 200));
-		CFont::PrintString(CONSOLE_X_POS, CONSOLE_Y_POS + i * CONSOLE_LINE_HEIGHT, Buffers[line]);
-	}
+    // Construct the original typed font color from live C record bytes
+    CFont::SetColor(CRGBA(r,g,b,a));
 }
-
-void
-cprintf(char* format, ...)
+void Console_BackendPrintString(float x,float y,uint16_t *text)
 {
-	char s[256];
-	va_list vl1, vl2;
-
-	va_start(vl1, format);
-	va_copy(vl2, vl1);
-	vsprintf(s, format, vl1);
-	TheConsole.AddLine(s, 255, 255, 128);
+    // Borrow the actual mutable C Unicode row through the original print overload
+    CFont::PrintString(x,y,text);
 }
+void Console_BackendFontStyle(int16_t style)
+{
+    // Select the original font style
+    CFont::SetFontStyle(style);
+}
+void Console_BackendFontRightJustifyWrap(float wrap)
+{
+    // Retain the original right-justify wrap write
+    CFont::SetRightJustifyWrap(wrap);
+}
+void Console_BackendFontWrapx(float wrap)
+{
+    // Retain the original live screen-width wrap value
+    CFont::SetWrapx(wrap);
+}
+void Console_BackendFontPropOn(void)
+{
+    // Retain the original font PropOn operation
+    CFont::SetPropOn();
+}
+void Console_BackendFontBackgroundOff(void)
+{
+    // Retain the original font BackgroundOff operation
+    CFont::SetBackgroundOff();
+}
+void Console_BackendFontCentreOff(void)
+{
+    // Retain the original font CentreOff operation
+    CFont::SetCentreOff();
+}
+void Console_BackendFontRightJustifyOff(void)
+{
+    // Retain the original font RightJustifyOff operation
+    CFont::SetRightJustifyOff();
+}
+void Console_BackendFontJustifyOn(void)
+{
+    // Retain the original font JustifyOn operation
+    CFont::SetJustifyOn();
+}
+void Console_BackendFontBackGroundOnlyTextOff(void)
+{
+    // Retain the original font BackGroundOnlyTextOff operation
+    CFont::SetBackGroundOnlyTextOff();
+}
+void Console_BackendFontPropOff(void)
+{
+    // Retain the original font PropOff operation
+    CFont::SetPropOff();
+}
+//- rouz edit (ChatGPT)

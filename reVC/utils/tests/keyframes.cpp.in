@@ -1,0 +1,161 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+void FrameUpdateCallBackNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionNonSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWithVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackWith3dVelocityExtractionSkinned(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackNonSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackSkinnedCompressed(AnimBlendFrameData*,void*);
+void FrameUpdateCallBackOffscreen(AnimBlendFrameData*,void*);
+static uint64_t hashValue=1469598103934665603ULL;
+static uint32_t randomState=0x93a2b3c4U;
+static unsigned states=0,checks=0;
+extern "C" void *NativeKeyFrameDefault(unsigned type,void *memory);
+static void require(bool condition)
+{
+    // Report the first failed invariant without opening a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations across independent executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence fixture inputs independently of C++ argument evaluation order
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Cover full stored bit patterns without evaluating arbitrary floating-point representations
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static float finiteValue()
+{
+    // Keep matrix branch and animation inputs finite and exactly representable
+    return ((int32_t)(nextBits()%8193)-4096)/1024.0f;
+}
+static void canonical(float &value)
+{
+    // Compare arithmetic NaNs without imposing a new payload propagation policy
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void result(CQuaternion value)
+{
+    // Retain finite and signed-zero results while canonicalizing arithmetic NaN payloads
+    canonical(value.x);canonical(value.y);canonical(value.z);canonical(value.w);observe(&value,16);
+}
+static void vectorResult(RwV3d value)
+{
+    // Compare all three initialized arithmetic coordinates
+    canonical(value.x);canonical(value.y);canonical(value.z);observe(&value,12);
+}
+static void matrixResult(RwMatrix matrix)
+{
+    // Include every matrix byte while canonicalizing only the nine arithmetic outputs
+    canonical(matrix.right.x);canonical(matrix.right.y);canonical(matrix.right.z);canonical(matrix.up.x);canonical(matrix.up.y);canonical(matrix.up.z);canonical(matrix.at.x);canonical(matrix.at.y);canonical(matrix.at.z);observe(&matrix,64);
+}
+
+#ifdef ORIGINAL
+#define UNPACKED(value) static_cast<KeyFrame&>(value)
+#define PACKED(value) static_cast<KeyFrameCompressed&>(value)
+#else
+#define UNPACKED(value) ((value).base)
+#define PACKED(value) ((value).base)
+#endif
+static KeyFrame staticFrame;
+static KeyFrameTrans staticTranslated;
+static KeyFrameCompressed staticPacked;
+static KeyFrameTransCompressed staticPackedTranslated;
+static unsigned timeDifferences=0;
+static void setTranslation(KeyFrameTrans &frame,const CVector &value)
+{
+    // Keep actual native assignment before conversion and exact C coordinate storage afterward
+#ifdef ORIGINAL
+    frame.translation=value;
+#else
+    frame.translation=KeyFrame_FromNative(value);
+#endif
+}
+static void lifetimes()
+{
+    // Verify default construction leaves every byte untouched for all four record owners
+    const size_t sizes[]={20,32,10,16};
+    for(unsigned type=0;type<4;++type){alignas(4) unsigned char memory[32],expected[32];memset(memory,0xa5,32);memset(expected,0xa5,32);require(NativeKeyFrameDefault(type,memory)==memory&&memcmp(memory,expected,32)==0);observe(memory,sizes[type]);++states;}
+    // Retain zero-filled static storage with no new record initialization policy
+    unsigned char zero[32]={0};require(memcmp(&staticFrame,zero,20)==0&&memcmp(&staticTranslated,zero,32)==0&&memcmp(&staticPacked,zero,10)==0&&memcmp(&staticPackedTranslated,zero,16)==0);observe(&staticFrame,20);observe(&staticTranslated,32);observe(&staticPacked,10);observe(&staticPackedTranslated,16);++states;
+}
+static void packedOperations()
+{
+    // Decode every signed 16-bit representation and compare complete untouched packed storage
+    for(unsigned test=0;test<65536;++test){
+        KeyFrameTransCompressed frame,prior;fill(&frame,16);uint16_t bits=(uint16_t)test;memcpy(&PACKED(frame).deltaTime,&bits,2);memcpy(&frame.trans[0],&bits,2);memcpy(&PACKED(frame).rot[0],&bits,2);memcpy(&prior,&frame,16);CQuaternion rotation;fill(&rotation,16);Run_GetRotation(&PACKED(frame),&rotation);result(rotation);float time=Run_GetTime(&PACKED(frame));observe(&time,4);float multiplied=PACKED(frame).deltaTime*(1.0f/60.0f);if(memcmp(&time,&multiplied,4))++timeDifferences;
+        CVector translation;fill(&translation,12);Run_GetTranslation(&frame,&translation);vectorResult(translation);require(memcmp(&frame,&prior,16)==0);
+        // Retain signed truncation across exact packed quanta and fractional boundaries
+        int32_t n=(int32_t)test-32768;float fraction=(test&1)?0.25f:-0.25f;CQuaternion input=Quaternion_Make((n+fraction)/4096.0f,(-n-1)/4096.0f,((int32_t)((test*73)&65535)-32768)/4096.0f,n/4096.0f);Run_SetRotation(&PACKED(frame),&input);require(memcmp((unsigned char*)&frame+8,(unsigned char*)&prior+8,8)==0);observe(&frame,16);memcpy(&prior,&frame,16);
+        Run_SetTime(&PACKED(frame),(n+fraction)/60.0f);require(memcmp(&frame,&prior,8)==0&&memcmp(frame.trans,prior.trans,6)==0);observe(&frame,16);memcpy(&prior,&frame,16);
+        CVector position((n+fraction)/1024.0f,n/1024.0f,-(n+fraction)/1024.0f);if(n==-32768)position.z=32767.0f/1024.0f;Run_SetTranslation(&frame,&position);require(memcmp(&frame,&prior,10)==0);observe(&frame,16);KeyFrameTransCompressed copy=frame;require(memcmp(&copy,&frame,16)==0);++states;
+    }
+    require(timeDifferences>0);observe(&timeDifferences,4);
+}
+static void basePointersAndCopies()
+{
+    // Verify sequence getters address real common subobjects and preserve original array strides
+    for(unsigned translated=0;translated<2;++translated){
+        CAnimBlendSequence sequence;KeyFrame base[4];KeyFrameTrans extended[4];KeyFrameCompressed packedBase[4];KeyFrameTransCompressed packedExtended[4];sequence.type=translated?3:1;sequence.numFrames=4;sequence.keyFrames=translated?(void*)extended:base;sequence.keyFramesCompressed=translated?(void*)packedExtended:packedBase;
+        for(unsigned i=0;i<4;++i){KeyFrame *expected=translated?&UNPACKED(extended[i]):&base[i];KeyFrameCompressed *packedExpected=translated?&PACKED(packedExtended[i]):&packedBase[i];require(sequence.GetKeyFrame(i)==expected&&sequence.GetKeyFrameCompressed(i)==packedExpected);fill(expected,20);fill(packedExpected,10);if(translated){fill((unsigned char*)&extended[i]+20,12);fill(packedExtended[i].trans,6);KeyFrameTrans copy=extended[i];require(memcmp(&copy,&extended[i],32)==0);observe(&copy,32);}observe(expected,20);observe(packedExpected,10);++states;}
+    }
+}
+static void bulkSequences()
+{
+    // Execute complete original allocation, packing and unpacking bodies with actual typed records
+    for(unsigned test=0;test<1024;++test){
+        CAnimBlendSequence sequence;const unsigned count=test%17;const bool translated=(test&32)!=0;sequence.SetNumFrames(count,translated,false);
+        for(unsigned i=0;i<count;++i){KeyFrame *frame=sequence.GetKeyFrame(i);frame->rotation=Quaternion_Make(0.1f*(i%4),-0.2f,0.3f,0.75f);frame->deltaTime=((int)(i%7)-3)*0.125f;if(translated){KeyFrameTrans *full=(KeyFrameTrans*)frame;CVector value((float)i,-0.5f*i,0.25f*i);setTranslation(*full,value);}}
+        unsigned beforeAlloc=fixtureAllocations;sequence.CompressKeyframes();require(fixtureAllocations==beforeAlloc+(count!=0));size_t packedSize=count*(translated?16:10);if(count)observe(sequence.keyFramesCompressed,packedSize);RwFree(sequence.keyFrames);sequence.keyFrames=NULL;sequence.Uncompress();if(count){require(sequence.keyFrames!=NULL&&sequence.keyFramesCompressed==NULL);observe(sequence.keyFrames,count*(translated?32:20));}RwFree(sequence.keyFrames);sequence.keyFrames=NULL;
+        // Keep the existing compressed-allocation size policy intact rather than changing it with record layout
+        sequence.SetNumFrames(count,translated,true);if(count){size_t allocation=count*(translated?32:20);unsigned char *bytes=(unsigned char*)sequence.keyFramesCompressed;for(size_t i=0;i<allocation;++i)require(bytes[i]==0xa5);}RwFree(sequence.keyFramesCompressed);sequence.keyFramesCompressed=NULL;observe(&fixtureAllocations,4);observe(&fixtureFrees,4);observe(&fixtureBytes,sizeof(fixtureBytes));++states;
+    }
+}
+static void animation()
+{
+    // Execute complete original and converted animation methods and every frame callback
+    typedef void (*Callback)(AnimBlendFrameData*,void*);const Callback callbacks[]={FrameUpdateCallBackNonSkinned,FrameUpdateCallBackWithVelocityExtractionNonSkinned,FrameUpdateCallBackWith3dVelocityExtractionNonSkinned,FrameUpdateCallBackSkinned,FrameUpdateCallBackWithVelocityExtractionSkinned,FrameUpdateCallBackWith3dVelocityExtractionSkinned,FrameUpdateCallBackNonSkinnedCompressed,FrameUpdateCallBackSkinnedCompressed,FrameUpdateCallBackOffscreen};
+    for(unsigned test=0;test<2048;++test)for(unsigned which=0;which<9;++which){
+        CAnimBlendSequence sequences[2];KeyFrameTrans frames[2][3];KeyFrameTransCompressed packed[2][3];KeyFrame rotations[2][3];KeyFrameCompressed packedRotations[2][3];CAnimBlendAssociation associations[2];CAnimBlendNode nodes[2][2];CAnimBlendNode *pointers[3]={nodes[0],nodes[1],NULL};
+        for(unsigned channel=0;channel<2;++channel){
+            // Supply initialized keyframes with alternating quaternion signs and safe packed ranges
+            for(unsigned key=0;key<3;++key){
+                float sign=((test+channel+key)&1)?-1.0f:1.0f;UNPACKED(frames[channel][key]).rotation=Quaternion_Make(sign*0.1f*(key+1),sign*0.2f,sign*0.3f,sign*0.8f);UNPACKED(frames[channel][key]).deltaTime=0.25f+key*0.125f;CVector framePosition((float)key+channel,-0.3f*(key+1),0.2f*(key+1));setTranslation(frames[channel][key],framePosition);Run_SetRotation(&PACKED(packed[channel][key]),&UNPACKED(frames[channel][key]).rotation);Run_SetTime(&PACKED(packed[channel][key]),UNPACKED(frames[channel][key]).deltaTime);Run_SetTranslation(&packed[channel][key],&framePosition);
+            }
+            sequences[channel].type=CAnimBlendSequence::KF_ROT|((test&16)?CAnimBlendSequence::KF_TRANS:0);sequences[channel].numFrames=3;sequences[channel].keyFrames=frames[channel];sequences[channel].keyFramesCompressed=packed[channel];
+            // Keep rotation-only fixture arrays at the correct original record stride
+            if(!(test&16)){
+                for(unsigned k=0;k<3;++k){rotations[channel][k]=UNPACKED(frames[channel][k]);packedRotations[channel][k]=PACKED(packed[channel][k]);}sequences[channel].keyFrames=rotations[channel];sequences[channel].keyFramesCompressed=packedRotations[channel];
+            }
+            sequences[channel].RemoveQuaternionFlips();associations[channel].blendAmount=(test&32)?0.7f:0.25f;associations[channel].timeStep=(test&64)?0.6f:0.05f;associations[channel].flags=((test>>5)+channel)&31;
+            nodes[channel][0].Init();nodes[channel][0].sequence=&sequences[channel];nodes[channel][0].association=&associations[channel];nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;nodes[channel][0].remainingTime=0.2f;nodes[channel][0].CalcDeltas();nodes[channel][1].Init();
+            // Exercise compressed sign correction and actual scalar interpolation before frame accumulation
+            CVector translation;CQuaternion rotation;nodes[channel][0].CalcDeltasCompressed();nodes[channel][0].UpdateCompressed(translation,rotation,0.75f);result(rotation);vectorResult(translation);nodes[channel][0].remainingTime=0.2f;nodes[channel][0].frameA=1;nodes[channel][0].frameB=0;nodes[channel][0].CalcDeltas();
+        }
+        // Cover ignore flags, velocity extraction, partial weights, looping and native frame output
+        RwFrame frame;fill(&frame.matrix,64);RpHAnimStdInterpFrame skin;memset(&skin,0x5a,sizeof(skin));AnimBlendFrameData data;data.flag=test&15;data.frame=&frame;data.hanimFrame=&skin;data.resetPos=CVector(0.5f,-1.25f,0.3f);AnimBlendFrameUpdateData update={(test&128)!=0,pointers};CVector2D velocity2(0.125f,-0.5f);CVector velocity3(0.25f,-0.5f,0.75f);CAnimBlendClumpData clump;clump.velocity2d=((test&256)&&(which==0||which==3||which>=6))?NULL:&velocity2;clump.velocity3d=&velocity3;gpAnimBlendClump=&clump;callbacks[which](&data,&update);matrixResult(frame.matrix);vectorResult(skin.q.imag);float real=skin.q.real;canonical(real);observe(&real,4);vectorResult(skin.t);canonical(velocity2.x);canonical(velocity2.y);observe(&velocity2,8);vectorResult(velocity3);
+        for(unsigned channel=0;channel<2;++channel){
+            // Observe complete animation state without comparing implementation-owned pointer values
+            require(pointers[channel]==nodes[channel]||pointers[channel]==nodes[channel]+1);unsigned advanced=(unsigned)(pointers[channel]-nodes[channel]);observe(&advanced,4);CAnimBlendNode &node=nodes[channel][0];canonical(node.theta);canonical(node.invSin);observe(&node.theta,20);observe(sequences[channel].keyFrames,(test&16)?sizeof(frames[channel]):3*sizeof(KeyFrame));observe(sequences[channel].keyFramesCompressed,(test&16)?sizeof(packed[channel]):3*sizeof(KeyFrameCompressed));
+        }
+        ++states;
+    }
+}
+int main()
+{
+    // Compare four complete record owners, six packed operations and actual animation behavior
+    lifetimes();packedOperations();basePointersAndCopies();bulkSequences();animation();printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

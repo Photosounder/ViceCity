@@ -1,0 +1,124 @@
+#include "owners.h"
+#include "entry.h"
+
+float Timer_timeStep=1.0f;
+static uint64_t digest=1469598103934665603ULL;
+static unsigned states,checks;
+static void value(uint64_t input)
+{
+    // Hash defined data without relying on native addresses
+    digest=(digest^input)*1099511628211ULL;
+}
+static void require(bool condition)
+{
+    // Stop silently at the first violated behavioral contract
+    ++checks;
+    if(!condition){
+        // Identify the exact fixture state without opening an assertion window
+        fprintf(stderr,"Check %u failed at state %u\n",checks,states);exit(2);
+    }
+}
+extern "C" void re3_assert(const char *expr,const char *file,unsigned int line,const char *func)
+{
+    // Make the original and C assertion contracts observable without native dialogs
+    (void)expr;(void)file;(void)line;(void)func;
+    puts("transmission assertion");exit(73);
+}
+static uint32_t bits(float input)
+{
+    // Observe stored float representations without aliasing violations
+    uint32_t result;memcpy(&result,&input,sizeof(result));return result;
+}
+static float fromBits(uint32_t input)
+{
+    // Provide explicit signed-zero and quiet-NaN inputs through valid float storage
+    float result;memcpy(&result,&input,sizeof(result));return result;
+}
+static void observe(const cTransmission *self)
+{
+    // Observe every record field after initialization and stateful operations
+    ++states;
+    for(unsigned i=0;i<6;++i){
+        // Retain all gear limits, including unused forward slots
+        value(bits(self->Gears[i].fMaxVelocity));value(bits(self->Gears[i].fShiftUpVelocity));value(bits(self->Gears[i].fShiftDownVelocity));
+    }
+    value((unsigned char)self->nDriveType);value((unsigned char)self->nEngineType);value((uint8_t)self->nNumberOfGears);value(self->Flags);
+    value(bits(self->fEngineAcceleration));value(bits(self->fMaxVelocity));value(bits(self->fMaxCruiseVelocity));value(bits(self->fMaxReverseVelocity));value(bits(self->fCurVelocity));
+}
+static void seed(cTransmission *self,int gears,unsigned flags,float maximum=2.0f)
+{
+    // Initialize all metadata while leaving gear contents for the real ratio initializer
+    memset(self,0xa5,sizeof(*self));self->nDriveType='R';self->nEngineType='P';self->nNumberOfGears=(int8_t)gears;self->Flags=(uint8_t)flags;
+    self->fEngineAcceleration=0.125f;self->fMaxVelocity=maximum;self->fMaxCruiseVelocity=maximum*0.9f;self->fMaxReverseVelocity=-maximum*0.25f;self->fCurVelocity=17.25f;
+    Run_Init(self);
+}
+static void drive(cTransmission *self,float gas,uint8_t *gear,float *time,float velocity,bool cheat)
+{
+    // Compare return values, mutable gear state and the unused external time reference
+    uint32_t oldTime=bits(*time);float result=Run_Drive(self,&gas,gear,time,&velocity,cheat);
+    require(bits(*time)==oldTime);require(*gear<=self->nNumberOfGears);value(bits(result));value(*gear);value(bits(*time));observe(self);
+}
+int main(int argc,char **argv)
+{
+    // Exercise the same invalid logical gear in debug and MASTER without out-of-bounds storage access
+    if(argc>1){
+        // Debug must assert while MASTER continues through its original expression-only assertion
+        (void)argv;cTransmission self;seed(&self,1,0);
+        for(unsigned i=0;i<6;++i){
+            // Keep every physically addressed gear valid even when the logical count is exceeded
+            self.Gears[i].fMaxVelocity=2.0f;self.Gears[i].fShiftUpVelocity=3.0f;self.Gears[i].fShiftDownVelocity=-1.0f;
+        }
+        uint8_t gear=2;float gas=1.0f,time=19.0f,velocity=0.25f;
+        float result=Run_Drive(&self,&gas,&gear,&time,&velocity,false);value(bits(result));value(gear);observe(&self);
+        printf("assertion-disabled states=%u hash=%016llx\n",states,(unsigned long long)digest);return 0;
+    }
+    const int counts[]={-128,-1,0,1,2,3,4,5};
+    for(unsigned count=0;count<8;++count){
+        // Nonpositive counts skip the forward loop while retaining reverse and first-gear limits
+        cTransmission self;seed(&self,counts[count],0xa5);require(self.fCurVelocity==17.25f && self.Flags==0xa5 && self.fEngineAcceleration==0.125f);observe(&self);
+    }
+    const unsigned flagValues[]={0,1,2,3,255};
+    const float pedals[]={-1.0f,-0.5f,-0.0f,0.0f,0.25f,1.0f};
+    const float timeSteps[]={-1.0f,0.0f,0.25f,1.0f,2.0f};
+    for(int count=1;count<=5;++count)for(unsigned flag=0;flag<5;++flag){
+        // Cover every forward/reverse gear with both boost bits and ignored high flags
+        cTransmission base;seed(&base,count,flagValues[flag]);observe(&base);
+        for(unsigned initial=0;initial<=unsigned(count);++initial){
+            // Include exact and adjacent shift thresholds, direction changes and both early exits
+            float down=base.Gears[initial].fShiftDownVelocity,up=base.Gears[initial].fShiftUpVelocity;
+            float speeds[]={base.fMaxReverseVelocity-0.25f,base.fMaxReverseVelocity,-0.01f,-0.0f,0.0f,0.1f,down,nextafterf(down,-INFINITY),nextafterf(down,INFINITY),up,nextafterf(up,-INFINITY),nextafterf(up,INFINITY),base.fMaxVelocity,base.fMaxVelocity+0.25f};
+            for(unsigned speed=0;speed<14;++speed){
+                // Simple cars retain unclamped upward gear increments and the reverse downshift floor
+                cTransmission self=base;uint8_t gear=(uint8_t)initial;Run_Simple(&self,speeds[speed],&gear);value(gear);observe(&self);
+                for(unsigned pedal=0;pedal<6;++pedal)for(unsigned step=0;step<5;++step)for(unsigned cheat=0;cheat<2;++cheat){
+                    // Retain recursive cheat cancellation, time-step multiplication and integer gear division
+                    self=base;gear=(uint8_t)initial;float time=fromBits(0x7fc12345u);Timer_timeStep=timeSteps[step];
+                    drive(&self,pedals[pedal],&gear,&time,speeds[speed],bool(cheat));
+                    if(speeds[speed]<base.fMaxReverseVelocity || speeds[speed]>base.fMaxVelocity)require(self.fCurVelocity==17.25f && gear==initial);
+                }
+            }
+        }
+    }
+    for(unsigned flag=0;flag<256;++flag){
+        // Exhaust the full flag byte independently of the normal boost selection cases
+        cTransmission self;seed(&self,5,flag);uint8_t gear=1;float time=-0.0f;Timer_timeStep=1.0f;drive(&self,1.0f,&gear,&time,0.1f,true);
+    }
+    for(unsigned alias=0;alias<8;++alias)for(unsigned initial=0;initial<=5;++initial){
+        // Keep live input references bound to record fields while recursive shifts update the record
+        cTransmission self;seed(&self,5,initial);Timer_timeStep=1.0f;
+        uint8_t externalGear=(uint8_t)initial;uint8_t *gear=(alias&1)?&self.Flags:&externalGear;
+        float externalGas=0.5f,externalVelocity=0.6f,externalTime=37.0f;
+        const float *gas=(alias&2)?&self.fCurVelocity:&externalGas;
+        const float *velocity=(alias&4)?&self.fCurVelocity:&externalVelocity;
+        float result=Run_Drive(&self,gas,gear,&externalTime,velocity,true);value(bits(result));value(*gear);value(bits(externalTime));observe(&self);
+    }
+    for(unsigned sample=0;sample<4;++sample){
+        // Preserve floating comparisons for quiet NaNs and signed-zero inputs without invalid indexing
+        cTransmission self;seed(&self,5,3);uint8_t gear=1;Timer_timeStep=1.0f;
+        float gas=sample==0?fromBits(0x7fc12345u):1.0f,velocity=sample==1?fromBits(0x7fc12345u):sample==2?-0.0f:0.0f,time=19.0f;
+        float result=Run_Drive(&self,&gas,&gear,&time,&velocity,true);uint32_t resultBits=bits(result);
+        if((resultBits&0x7fffffff)>0x7f800000u)resultBits=0x7fc00000u;
+        value(resultBits);value(gear);observe(&self);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+}

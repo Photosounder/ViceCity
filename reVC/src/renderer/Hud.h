@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "Sprite2d.h"
 
@@ -50,7 +51,7 @@ enum eSprites
 class CHud
 {
 public:
-	static CSprite2d Sprites[NUM_HUD_SPRITES];
+	static Sprite2d Sprites[NUM_HUD_SPRITES];
 	static wchar m_HelpMessage[HELP_MSG_LENGTH];
 	static wchar m_LastHelpMessage[HELP_MSG_LENGTH];
 	static uint32 m_HelpMessageState;
@@ -137,3 +138,4 @@ public:
 	static float DrawFadeState(DRAW_FADE_STATE, int);
 	static void ResetWastedText(void);
 };
+//- rouz edit (ChatGPT)

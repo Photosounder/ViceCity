@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #define WITHD3D
 #include "common.h"
 
@@ -217,7 +219,8 @@ ScreenDroplets::Render(void)
 #ifdef REVC_SOFTWARE_POLYGONS
 	// Use the camera raster dimensions when the software path has no GPU postfx buffer
 	//+ rouz edit (ChatGPT)
-	RwRaster *sampleRaster = CPostFX::pBackBuffer;
+	// Use the complete C post-processing owner and its live shared state
+	RwRaster *sampleRaster = PostFX_pBackBuffer;
 	if(!sampleRaster && Scene.camera)
 		sampleRaster = RwCameraGetRaster(Scene.camera);
 	if(ms_numDrops <= 0 || !sampleRaster || RwRasterGetWidth(sampleRaster) <= 0 ||
@@ -237,7 +240,8 @@ ScreenDroplets::Render(void)
 
 	//+ rouz edit (ChatGPT)
 #ifndef REVC_SOFTWARE_POLYGONS
-	RwTextureSetRaster(ms_screenTex, CPostFX::pBackBuffer);
+	// Use the complete C post-processing owner and its live shared state
+	RwTextureSetRaster(ms_screenTex, PostFX_pBackBuffer);
 #ifdef RW_D3D9
 	rw::d3d::im2dOverridePS = screenDroplet_PS;
 	rw::d3d::setTexture(1, ms_screenTex);
@@ -249,7 +253,8 @@ ScreenDroplets::Render(void)
 #endif
 	//- rouz edit (ChatGPT)
 
-	RenderBuffer::ClearRenderBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_ClearRenderBuffer();
 	for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++)
 		if(drop->active)
 			AddToRenderList(drop);
@@ -293,7 +298,8 @@ ScreenDroplets::AddToRenderList(ScreenDroplets::ScreenDrop *drop)
 
 	// Resolve the source dimensions used to map droplet refraction back to the scene
 	//+ rouz edit (ChatGPT)
-	RwRaster *sampleRaster = CPostFX::pBackBuffer;
+	// Use the complete C post-processing owner and its live shared state
+	RwRaster *sampleRaster = PostFX_pBackBuffer;
 	if(!sampleRaster && Scene.camera)
 		sampleRaster = RwCameraGetRaster(Scene.camera);
 	if(!sampleRaster)
@@ -408,9 +414,9 @@ ScreenDroplets::FillScreen(int n)
 	for(drop = &ms_drops[0]; drop < &ms_drops[MAXDROPS]; drop++){
 		drop->active = false;
 		if(drop < &ms_drops[n]){
-			x = CGeneral::GetRandomNumber() % (int)SCREEN_WIDTH;
-			y = CGeneral::GetRandomNumber() % (int)SCREEN_HEIGHT;
-			size = CGeneral::GetRandomNumberInRange(MINSIZE, MAXSIZE);
+			x = General_GetRandomNumber() % (int)SCREEN_WIDTH;
+			y = General_GetRandomNumber() % (int)SCREEN_HEIGHT;
+			size = General_GetRandomNumberInRangeInt(MINSIZE, MAXSIZE);
 			NewDrop(x, y, size, 2000.0f, true);
 		}
 	}
@@ -425,9 +431,9 @@ ScreenDroplets::FillScreenMoving(float amount, bool isBlood)
 
 	while(n--)
 		if(ms_numDrops < MAXDROPS && ms_numDropsMoving < MAXDROPSMOVING){
-			x = CGeneral::GetRandomNumber() % (int)SCREEN_WIDTH;
-			y = CGeneral::GetRandomNumber() % (int)SCREEN_HEIGHT;
-			size = CGeneral::GetRandomNumberInRange(MINSIZE, MAXSIZE);
+			x = General_GetRandomNumber() % (int)SCREEN_WIDTH;
+			y = General_GetRandomNumber() % (int)SCREEN_HEIGHT;
+			size = General_GetRandomNumberInRangeInt(MINSIZE, MAXSIZE);
 			drop = nil;
 			if(isBlood)
 				drop = NewDrop(x, y, size, 2000.0f, true, 255, 0, 0);
@@ -480,12 +486,12 @@ ScreenDroplets::ProcessCameraMovement(void)
 void
 ScreenDroplets::SprayDrops(void)
 {
-	bool noRain = CCullZones::PlayerNoRain() || CCullZones::CamNoRain();
-	if(!noRain && CWeather::Rain > 0.0f && ms_enabled){
+	bool noRain = CullZones_PlayerNoRain() || CullZones_CamNoRain();
+	if(!noRain && Weather_Rain > 0.0f && ms_enabled){
 		// 180 when looking stright up, 0 when looking up or down
 		float angle = 180.0f - ms_camUpAngle;
 		angle = Max(angle, 40.0f);	// want at least some rain
-		FillScreenMoving((angle - 40.0f) / 150.0f * CWeather::Rain * 0.5f);
+		FillScreenMoving((angle - 40.0f) / 150.0f * Weather_Rain * 0.5f);
 	}
 
 	int i;
@@ -515,9 +521,9 @@ ScreenDroplets::SprayDrops(void)
 			int n = ndrops[ms_splashDuration] * numDropMult;
 			while(n--)
 				if(ms_numDrops < MAXDROPS){
-					float x = CGeneral::GetRandomNumber() % (int)SCREEN_WIDTH;
-					float y = CGeneral::GetRandomNumber() % (int)SCREEN_HEIGHT;
-					float size = CGeneral::GetRandomNumberInRange(MINSIZE, MAXSIZE);
+					float x = General_GetRandomNumber() % (int)SCREEN_WIDTH;
+					float y = General_GetRandomNumber() % (int)SCREEN_HEIGHT;
+					float size = General_GetRandomNumberInRangeInt(MINSIZE, MAXSIZE);
 					NewDrop(x, y, size, 10000.0f, false);
 				}
 		}
@@ -607,7 +613,7 @@ ScreenDroplets::Fade(void)
 void
 ScreenDroplets::ScreenDrop::Fade(void)
 {
-	int delta = CTimer::GetTimeStepInMilliseconds();
+	int delta = Timer_GetTimeStepInMilliseconds();
 	time += delta;
 	if(time < lifetime){
 		color.a = 255 - time/lifetime*255;
@@ -830,7 +836,8 @@ RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, Rw
 	if(SoftwarePolygons::FramePending()){
 		// Map screen-space droplet coordinates against the active camera raster without requiring a GPU backbuffer
 		//+ rouz edit (ChatGPT)
-		RwRaster *sampleRaster = CPostFX::pBackBuffer;
+		// Use the complete C post-processing owner and its live shared state
+		RwRaster *sampleRaster = PostFX_pBackBuffer;
 		if(!sampleRaster && Scene.camera)
 			sampleRaster = RwCameraGetRaster(Scene.camera);
 		if(SoftwarePolygons::CapturingWorldEffects() && sampleRaster &&
@@ -892,3 +899,6 @@ RenderIndexedPrimitive_UV2(RwPrimitiveType primType, Im2DVertexUV2 *vertices, Rw
 #endif
 
 #endif
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

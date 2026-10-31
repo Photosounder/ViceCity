@@ -1,55 +1,44 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CRegisteredPointLight
-{
-public:
-	CVector coors;
-	CVector dir;
-	float radius;
-	float red;
-	float green;
-	float blue;
-	int8 type;
-	int8 fogType;
-	bool castExtraShadows;
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
+typedef struct PointLightsVector { float x,y,z; } PointLightsVector;
+typedef struct PointLight {
+    PointLightsVector coors,dir;
+    float radius,red,green,blue;
+    int8_t type,fogType;
+    bool castExtraShadows;
+} PointLight;
+enum {
+    POINTLIGHTS_LIGHT_POINT, POINTLIGHTS_LIGHT_DIRECTIONAL, POINTLIGHTS_LIGHT_DARKEN,
+    POINTLIGHTS_LIGHT_FOGONLY_ALWAYS, POINTLIGHTS_LIGHT_FOGONLY
 };
-VALIDATE_SIZE(CRegisteredPointLight, 0x2C);
-
-class CPointLights
-{
-public:
-	static int16 NumLights;
-	static CRegisteredPointLight aLights[NUMPOINTLIGHTS];
-	static CVector aCachedMapReads[32];
-	static float aCachedMapReadResults[32];
-	static int32 NextCachedValue;
-
-	enum {
-		LIGHT_POINT,
-		LIGHT_DIRECTIONAL,
-		LIGHT_DARKEN,	// no effects at all
-		// these have only fog, otherwise no difference?
-		// only used by CEntity::ProcessLightsForEntity it seems
-		// and there used together with fog type
-		LIGHT_FOGONLY_ALWAYS,
-		LIGHT_FOGONLY,
-	};
-	enum {
-		FOG_NONE,
-		FOG_NORMAL,	// taken from Foggyness
-		FOG_ALWAYS
-	};
-
-	static void Init(void);
-	static void InitPerFrame(void);
-	static void AddLight(uint8 type, CVector coors, CVector dir, float radius, float red, float green, float blue, uint8 fogType, bool castExtraShadows);
-	static float GenerateLightsAffectingObject(Const CVector *objCoors);
-	static void RemoveLightsAffectingObject(void);
-	static void RenderFogEffect(void);
-	//+ rouz edit (ChatGPT)
-	static void RenderFogEffectForEnvMap(RwCamera *camera);
-	static void RenderFogEffectForEnvMapLights(RwCamera *camera, CRegisteredPointLight *lights, int32 lightCount);
-	static void ResetEnvMapLights(void);
-	//- rouz edit (ChatGPT)
-	static bool ProcessVerticalLineUsingCache(CVector coors, float *groundZ);
-};
+enum { POINTLIGHTS_FOG_NONE, POINTLIGHTS_FOG_NORMAL, POINTLIGHTS_FOG_ALWAYS };
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int16_t PointLights_NumLights;
+extern PointLight PointLights_aLights[NUMPOINTLIGHTS];
+extern PointLightsVector PointLights_aCachedMapReads[32];
+extern float PointLights_aCachedMapReadResults[32];
+extern int32_t PointLights_NextCachedValue;
+extern float FogSizes[8];
+void PointLights_Init(void);
+void PointLights_InitPerFrame(void);
+void PointLights_ResetEnvMapLights(void);
+void PointLights_AddLight(uint8_t type, PointLightsVector coors, PointLightsVector dir, float radius, float red, float green, float blue, uint8_t fogType, bool castExtraShadows);
+float PointLights_GenerateLightsAffectingObject(const PointLightsVector *objCoors);
+float PointLights_GenerateLightsAffectingObjectLegacy(const void *objCoors);
+void PointLights_RemoveLightsAffectingObject(void);
+void PointLights_RenderFogEffect(void);
+void PointLights_RenderFogEffectForEnvMap(void *camera);
+void PointLights_RenderFogEffectForEnvMapLights(void *camera, PointLight *lights, int32_t lightCount);
+bool PointLights_ProcessVerticalLineUsingCache(PointLightsVector coors,float *groundZ);
+#ifdef __cplusplus
+}
+class CVector;
+void PointLights_AddLightLegacy(uint8_t type,CVector coors,CVector dir,float radius,float red,float green,float blue,uint8_t fogType,bool castExtraShadows);
+CVector PointLights_VectorToLegacy(PointLightsVector value);
+#endif
+//- rouz edit (ChatGPT)

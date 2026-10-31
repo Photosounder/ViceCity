@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 class CEntity;
@@ -23,7 +24,7 @@ extern bool gbDontRenderObjects;
 extern bool gbDontRenderVehicles;
 
 class CVehicle;
-class CPtrList;
+struct CPtrList;
 
 // unused
 struct BlockedRange
@@ -110,3 +111,4 @@ public:
 #endif
 	static void InsertEntityIntoList(CEntity *ent);
 };
+//- rouz edit (ChatGPT)

@@ -1,0 +1,144 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <windows.h>
+@HEADERS@
+struct CVehicle {uint8_t m_nRadioStation;};
+@MUSIC@
+using uint8=uint8_t;
+using uint32=uint32_t;
+using wchar=uint16_t;
+#define nil nullptr
+static cMusicManager owners[2];
+static cMusicManager *active;
+static CVehicle vehicles[2],*vehicle;
+cSampleManager SampleManager;
+extern "C" {int32_t gNumRetunePresses,gRetuneCounter;uint8_t g_bAnnouncementReadPosAlready;}
+static uint8_t paused,wide,replay,inCar,mp3;
+static uint32_t frames,seed,pass,step,calls,draws,prints;
+static uint16_t buffers[4][16];
+uint16_t WideErrorString[25];
+static uint16_t *texts[11];
+static uint64_t hash=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void*,uint32_t);
+extern "C" void TestMusicDisplayC(cMusicManager*);
+static void word(uint32_t value){hash=(hash^value)*1099511628211ULL;}
+static void floating(float value){uint32_t bits;memcpy(&bits,&value,4);word(bits);}
+static uint32_t identity(const uint16_t *p){if(!p)return 0;if(p==WideErrorString)return 5;for(unsigned i=0;i<4;i++)if(p==buffers[i])return i+1;assert(false);return 6;}
+struct {int32_t width,height;} RsGlobal;
+static float drawTestAspectRatio;
+bool Draw_ms_bProperScaling;
+static float Draw_GetAspectRatio(void)
+{
+    // Model the same live scalar provider used by both complete display implementations
+    return drawTestAspectRatio;
+}
+@SCALING@
+#ifdef PROPER_SCALING
+float Draw_ScaleY(float y) @SCALE_Y@
+#endif
+static void event(unsigned kind){
+    // Record callback order and mutate only inputs that can change during an external operation
+    word(kind);word(calls++);word((uint32_t)gNumRetunePresses);word(active->m_nFrontendTrack);
+    if(pass==1){
+        // Change live display inputs after the callback captured its arguments or return value
+        unsigned n=seed+calls*7+kind;
+        if(kind==1){paused=(n&1);wide=(n>>1)&1;vehicle=(n&4)?&vehicles[1]:nullptr;}
+        if(kind==2){vehicles[0].m_nRadioStation=(uint8_t)n;vehicles[1].m_nRadioStation=(uint8_t)(n+9);active->m_nFrontendTrack=n%13;}
+        if(kind==3||kind==4||kind==5){gNumRetunePresses=(int32_t)(n%45)-22;active->m_bRadioStreamReady=(uint8_t)n;active->m_bGameplayAllowsRadio=(uint8_t)(n>>1);}
+        if(kind>=6){RsGlobal.width=640+(int32_t)(n%5)*160;RsGlobal.height=448+(int32_t)(n%3)*32;drawTestAspectRatio=4.f/3.f+(float)(n%3)/3.f;Draw_ms_bProperScaling=(n&1)!=0;gNumRetunePresses=(n&1)?0:3;}
+        texts[n%11]=(n&1)?buffers[n%4]:WideErrorString;
+    }
+}
+struct CTimer {
+    static bool GetIsPaused(){return paused!=0;}
+    static uint32 GetLogicalFramesPassed(){return frames;}
+};
+struct {bool m_WideScreenOn;} TheCamera;
+struct CReplay {static bool IsPlayingBack(){return replay!=0;}};
+extern "C" uint8_t AudioEnvironmentHost_Replay(){return CReplay::IsPlayingBack();}
+extern "C" uint32_t AudioPoliceHost_LogicalFramesPassed(){return CTimer::GetLogicalFramesPassed();}
+extern "C" CVehicle *AudioGame_FindVehicle(){CVehicle *result=vehicle;word(result==nullptr?0:result==vehicles?1:2);event(2);return result;}
+extern "C" uint8_t *MusicRadioHost_Station(CVehicle *v){return &v->m_nRadioStation;}
+extern "C" uint8_t MusicRadio_PlayerInCar(cMusicManager *m){assert(m==active);uint8_t result=inCar;word(result);event(1);return result;}
+extern "C" uint32_t MusicRadio_GetCarTuning(cMusicManager *m){assert(m==active);uint32_t result=vehicle?vehicle->m_nRadioStation:0;word(result);event(5);return result;}
+extern "C" uint8_t SampleManager_IsMP3RadioChannelAvailable(cSampleManager *m){assert(m==&SampleManager);uint8_t result=mp3;word(result);event(4);return result;}
+extern "C" uint8_t DMAudio_IsMP3RadioChannelAvailable(){uint8_t result=mp3;word(result);event(4);return result;}
+struct Text {
+    uint16_t *Get(const char *key){
+        // Preserve text pointer identity independently of string contents and record exact keys
+        unsigned index;
+        if(!strcmp(key,"FEA_MP3"))index=9;
+        else if(!strcmp(key,"FEA_NON"))index=10;
+        else {assert(strlen(key)==7&&!memcmp(key,"FEA_FM",6)&&key[6]>='0'&&key[6]<='8');index=(unsigned)(key[6]-'0');}
+        uint16_t *result=texts[index];word(index);word(identity(result));event(3);return result;
+    }
+} TheText;
+struct CRGBA {uint8_t r,g,b,a;CRGBA(uint8_t R,uint8_t G,uint8_t B,uint8_t A):r(R),g(G),b(B),a(A){}};
+enum {FONT_BANK,FONT_STANDARD,FONT_HEADING};
+struct CFont {
+    static void SetJustifyOff(){event(6);}
+    static void SetBackgroundOff(){event(7);}
+    static void SetScale(float x,float y){floating(x);floating(y);event(8);}
+    static void SetPropOn(){event(9);}
+    static void SetFontStyle(int16_t style){assert(style==FONT_STANDARD);word((uint32_t)style);event(10);}
+    static void SetCentreOn(){event(11);}
+    static void SetCentreSize(float size){floating(size);event(12);}
+    static void SetColor(CRGBA c){word(c.r);word(c.g);word(c.b);word(c.a);event(13);}
+    static void PrintString(float x,float y,uint16_t *p){floating(x);floating(y);word(identity(p));prints++;event(14);}
+    static void DrawFonts(){draws++;event(15);}
+};
+cMusicManager::cMusicManager(){memset(this,0,sizeof(*this));}
+@METHOD@
+static void run(){TheCamera.m_WideScreenOn=wide!=0;@RUN@;}
+static void snapshot(){
+    // Compare complete owner records and callback-visible provider, screen and text state
+    static_assert(sizeof(owners)%4==0&&sizeof(SampleManager)%4==0,"Observer word buffers");
+    hash=TestAircraftHash(hash,owners,sizeof(owners));hash=TestAircraftHash(hash,&SampleManager,sizeof(SampleManager));
+    word(vehicles[0].m_nRadioStation);word(vehicles[1].m_nRadioStation);word((uint32_t)gNumRetunePresses);
+    word(paused);word(wide);word(replay);word(inCar);word(mp3);word(frames);word(draws);word(prints);
+    word((uint32_t)RsGlobal.width);word((uint32_t)RsGlobal.height);floating(drawTestAspectRatio);word(Draw_ms_bProperScaling);
+    for(auto p:texts)word(identity(p));
+}
+static void initialize(unsigned n){
+    // Keep original signed addition and all provider inputs inside their defined domains
+    memset(owners,0,sizeof(owners));memset(&SampleManager,0,sizeof(SampleManager));
+    active=&owners[n&1];vehicle=(n%7)?&vehicles[n&1]:nullptr;
+    vehicles[0].m_nRadioStation=(uint8_t)n;vehicles[1].m_nRadioStation=(uint8_t)(n+11);
+    paused=(n%13==0);wide=(n%17==0);replay=(n%19==0);inCar=(n%11!=0);mp3=(uint8_t)((n%3)?255:0);
+    owners[0].m_nFrontendTrack=n%14;owners[1].m_nFrontendTrack=(n+3)%14;
+    active->m_bRadioStreamReady=(n%5)?255:0;active->m_bGameplayAllowsRadio=(n%3)?1:0;
+    gNumRetunePresses=(n%4)?0:(int32_t)(n%65)-32;
+    frames=(n%5==0)?65:(n%5==1)?0:(n%5==2)?1:(n%5==3)?60:UINT32_MAX;
+    RsGlobal.width=640+(int32_t)(n%4)*320;RsGlobal.height=448+(int32_t)(n%4)*64;
+    drawTestAspectRatio=4.f/3.f+(float)(n%3)/3.f;Draw_ms_bProperScaling=(n&1)!=0;
+    for(unsigned i=0;i<11;i++)texts[i]=(n%23==0)?WideErrorString:buffers[(n+i)%4];
+}
+static void independent(){
+    // Check expiry across owners and the original byte subtraction wrap without relying on a hash
+    pass=0;initialize(1);vehicle=vehicles;vehicle->m_nRadioStation=WILDSTYLE;owners[0].m_nFrontendTrack=owners[1].m_nFrontendTrack=WILDSTYLE;
+    for(auto &p:texts)p=buffers[3];paused=wide=replay=0;inCar=mp3=1;gNumRetunePresses=0;frames=60;
+    active=owners;uint32_t before=draws;run();active=owners+1;run();active=owners;run();
+#ifdef FIX_BUGS
+    assert(draws==before+2);
+    // A different text pointer resets the timer even when the text contents are identical
+    texts[0]=buffers[2];before=draws;frames=65;run();run();run();assert(draws==before+3);
+#else
+    assert(draws==before+3);
+#endif
+    // Exhaust the unchanged station timer and require precisely sixty-one rendered calls
+    texts[0]=buffers[1];before=draws;frames=1;for(unsigned i=0;i<72;i++)run();assert(draws==before+61);
+}
+int main(){
+    // Prevent trap failures from opening a Windows crash dialog during quiet comparisons
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
+    for(auto &b:buffers){b[0]='X';b[1]=0;}
+    independent();uint32_t groups=0;
+    for(seed=0;seed<256;seed++)for(pass=0;pass<3;pass++){
+        // Repeated calls retain static state while the mutation pass changes live callback inputs
+        if(pass!=2)initialize(seed);
+        for(step=0;step<72;step++){if(step%9==0)active=&owners[(seed+step/9)&1];run();snapshot();groups++;}
+    }
+    assert(prints==2*draws);printf("groups=%u callbacks=%u draws=%u hash=%016llx\n",groups,calls,draws,(unsigned long long)hash);
+}

@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -1034,7 +1035,7 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 		side2length = *(float*)&ScriptParams[5];
 		debug = ScriptParams[6];
 	}
-	float initAngle = CGeneral::GetRadianAngleBetweenPoints(infX, infY, supX, supY) + HALFPI;
+	float initAngle = General_GetRadianAngleBetweenPoints(infX, infY, supX, supY) + HALFPI;
 	while (initAngle < 0.0f)
 		initAngle += TWOPI;
 	while (initAngle > TWOPI)
@@ -1433,7 +1434,7 @@ void CRunningScript::DoDeatharrestCheck()
 	while (m_nStackPointer > 1)
 		--m_nStackPointer;
 	m_nIp = m_anStack[--m_nStackPointer];
-	CMessages::ClearSmallMessagesOnly();
+	Messages_ClearSmallMessagesOnly();
 	*(int32*)&CTheScripts::ScriptSpace[CTheScripts::OnAMissionFlag] = 0;
 	m_bDeatharrestExecuted = true;
 	m_nWakeTime = 0;
@@ -2149,7 +2150,8 @@ void CTheScripts::RenderTheScriptDebugLines()
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)1);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
 	for (int i = 0; i < NumScriptDebugLines; i++) {
-		CLines::RenderLineWithClipping(
+		// Draw the original endpoints and colors through the C line API
+		Lines_RenderLineWithClipping(
 			aStoredLines[i].vecInf.x,
 			aStoredLines[i].vecInf.y,
 			aStoredLines[i].vecInf.z,
@@ -2909,7 +2911,7 @@ bool CTheScripts::IsPlayerStopped(CPlayerInfo* pPlayer)
 
 bool CTheScripts::IsVehicleStopped(CVehicle* pVehicle)
 {
-	return 0.01f * CTimer::GetTimeStep() >= pVehicle->m_fDistanceTravelled;
+	return 0.01f * (*Timer_GetTimeStep()) >= pVehicle->m_fDistanceTravelled;
 }
 
 void CTheScripts::RemoveThisPed(CPed* pPed)
@@ -2951,7 +2953,7 @@ void CTheScripts::CleanUpThisPed(CPed* pPed)
 		return;
 	pPed->CharCreatedBy = RANDOM_CHAR;
 	if (pPed->m_nPedType == PEDTYPE_PROSTITUTE)
-		pPed->m_objectiveTimer = CTimer::GetTimeInMilliseconds() + 30000;
+		pPed->m_objectiveTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
 	if (pPed->InVehicle()) {
 		if (pPed->m_pMyVehicle->pDriver == pPed) {
 			if (pPed->m_pMyVehicle->m_vehType == VEHICLE_TYPE_CAR) {
@@ -2980,7 +2982,7 @@ void CTheScripts::CleanUpThisPed(CPed* pPed)
 	pPed->bKindaStayInSamePlace = false;
 	pPed->ClearLeader();
 	if (pPed->IsPedInControl())
-		pPed->SetWanderPath(CGeneral::GetRandomNumber() & 7);
+		pPed->SetWanderPath(General_GetRandomNumber() & 7);
 	if (flees) {
 		pPed->SetPedState(state);
 		pPed->SetMoveState(ms);
@@ -3008,7 +3010,7 @@ void CTheScripts::CleanUpThisObject(CObject* pObject)
 	if (pObject->ObjectCreatedBy != MISSION_OBJECT)
 		return;
 	pObject->ObjectCreatedBy = TEMP_OBJECT;
-	pObject->m_nEndOfLifeTime = CTimer::GetTimeInMilliseconds() + 20000000;
+	pObject->m_nEndOfLifeTime = (*Timer_GetTimeInMilliseconds()) + 20000000;
 	pObject->m_nRefModelIndex = -1;
 	pObject->bUseVehicleColours = false;
 	++CObject::nNoTempObjects;
@@ -3070,3 +3072,5 @@ void CTheScripts::ReadMultiScriptFileOffsetsFromScript()
 		MultiScriptArray[i] = Read4BytesFromScript(&ip);
 	}
 }
+
+//- rouz edit (ChatGPT)

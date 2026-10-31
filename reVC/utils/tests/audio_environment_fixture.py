@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit reverb/special service and compare game-field read order with instrumented fields."""
 from pathlib import Path
 import re
@@ -7,6 +8,8 @@ import audio_environment_migration as migration
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-environment-c-tests'
 old=(out/'before/src/audio/AudioLogic.cpp').read_text();kernel=(root/'src/audio/AudioEnvironment.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare every statement independently of formatting and comments
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 methods=[]
@@ -21,7 +24,7 @@ for name,transform in [('AudioManager.cpp',migration.owner),('AudioLogic.cpp',mi
 includes='\n'.join('#include "'+name+'"' for name in ['AudioSound.h','AudioCollision.h','AudioEntities.h','AudioPedComments.h','AudioMissionPosition.h','AudioState.h','AudioReflectionTypes.h','AudioCrimes.h','AudioPoliceQueue.h','sampman.h'])
 template=(root/'utils/tests/audio_environment.cpp.in').read_text().replace('@INCLUDES@',includes).replace('@FIELDS@',fields((root/'src/audio/AudioManager.h').read_text())).replace('@CHANNEL_MACRO@',channel_macro)
 for variant in ('before','after'):
-    source=template.replace('@METHODS@','\n'.join(methods) if variant=='before' else '').replace('@HOST@',migration.HOST if variant=='after' else '')
+    source=template.replace('@METHODS@','\n'.join(methods) if variant=='before' else '').replace('@HOST@',__import__('audio_ped_speech_migration').logic(migration.HOST)+'\nextern \"C\" void AudioPedSpeech_Mood(cAudioManager *manager) {\n    // Observe the original remaining mood operation through the C routing boundary\n    manager->ProcessPlayerMood();\n}\n' if variant=='after' else '')
     source=source.replace('@REVERB@','active->ProcessReverb()' if variant=='before' else 'AudioEnvironment_Reverb(active)').replace('@SPECIAL@','active->ProcessSpecial()' if variant=='before' else 'AudioEnvironment_Special(active)')
     source=source.replace('@CALLER@','active->ProcessReverb();active->ProcessSpecial()' if variant=='before' else 'TestEnvironmentC(active)')
     (out/(variant+'.cpp')).write_text(source,newline='\n')

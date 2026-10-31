@@ -1,0 +1,192 @@
+#include "owners.h"
+#include <float.h>
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),checks,states,blurReads,blurs,shadows,forwards,cutscenes,debugs,loads,clockHours,clockMinutes,clockSeconds;
+static unsigned mode;static bool armed,triggered,cutscene;static uint8_t hours,minutes;static int16_t seconds;
+static char fileImage[55000];static size_t imageLength;
+static void Number(uint64_t value)
+{
+    // Compare normalized scalar observations without including process-specific addresses
+    for(int i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Bytes(const void *pointer,size_t length)
+{
+    // Compare all initialized canonical storage bytes including complete input tables and history arrays
+    const uint8_t *bytes=(const uint8_t *)pointer;Number(length);for(size_t i=0;i<length;i++){digest^=bytes[i];digest*=UINT64_C(1099511628211);}
+}
+static void Floating(float value)
+{
+    // Observe exact floating-point representations and preserve signed zero
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Check(bool value)
+{
+    // Stop a quiet comparison immediately at its first violated invariant
+    ++checks;if(!value){fprintf(stderr,"Time-cycle check failed at %llu\n",(unsigned long long)checks);abort();}
+}
+extern "C" void re3_assert(const char *,const char *,unsigned int,const char *)
+{
+    // Stop quietly if a complete native primitive receives an invalid fixture argument
+    Check(false);
+}
+#include "observations.h"
+extern "C" {
+float Timer_timeStep;
+int16_t Weather_OldWeatherType,Weather_NewWeatherType;
+float Weather_InterpolationValue;
+bool Weather_bScriptsForceRain;
+int32_t CullZones_playerFlags,CullZones_cameraFlags;
+}
+uint8 work_buff[55000];
+TestCycleCamera TheCamera;
+static void Mutate(unsigned point)
+{
+    // Exercise live canonical aliases and later native reads at their original statement boundaries
+    if(!armed||triggered)return;
+    if(mode==1&&point==2){triggered=true;TC(m_CurrentStoredValue)=(TC(m_CurrentStoredValue)+5)&15;}
+    else if(mode==2&&point==2){triggered=true;TC(m_nCurrentSkyTopRed)+=17;TC(m_fCurrentAmbientRed)+=.25f;TC(m_fCurrentBlurBlue)=77.25f;}
+    else if(mode==3&&point==3){triggered=true;TC(m_CurrentStoredValue)=(TC(m_CurrentStoredValue)+3)&15;}
+    else if(mode==4&&point==3){triggered=true;TheCamera.forward.z=-1.0f;Weather_bScriptsForceRain=true;}
+    else if(mode==5&&point==4){triggered=true;Weather_bScriptsForceRain=false;CullZones_playerFlags=0;CullZones_cameraFlags=0;cutscene=true;}
+    else if(mode==6&&point==5){triggered=true;TC(m_FogReduction)=63;}
+    else if(mode==7&&point==1){triggered=true;TheCamera.m_BlurType=2;}
+}
+TestObservedBlur::operator int()const
+{
+    // Observe each sequenced camera blur read before any callback changes the live type
+    int result=value;++blurReads;Number(1);Number((uint32_t)result);Mutate(1);return result;
+}
+TestObservedBlur &TestObservedBlur::operator=(int next)
+{
+    // Assign camera state without introducing an observed native read
+    value=next;return *this;
+}
+void TestCycleCamera::SetMotionBlur(int red,int green,int blue,int alpha,int type)
+{
+    // Observe the original scalar narrowing and permit callbacks to change later canonical fields
+    ++blurs;Number(2);Number((uint32_t)red);Number((uint32_t)green);Number((uint32_t)blue);Number((uint32_t)alpha);Number((uint32_t)type);m_BlurType=type;Mutate(2);
+}
+const CVector &TestCycleCamera::GetForward()
+{
+    // Borrow the live native forward vector after the shadow calculation
+    ++forwards;Number(4);Mutate(4);Floating(forward.z);return forward;
+}
+bool CCutsceneMgr::IsRunning()
+{
+    // Observe only the original non-short-circuited cutscene queries
+    ++cutscenes;Number(5);Mutate(5);Number(cutscene);return cutscene;
+}
+static unsigned ShadowAddress(float *pointer)
+{
+    // Normalize the six output arrays while retaining the actual selected history element
+    float *arrays[]={TC(m_fShadowFrontX),TC(m_fShadowFrontY),TC(m_fShadowSideX),TC(m_fShadowSideY),TC(m_fShadowDisplacementX),TC(m_fShadowDisplacementY)};
+    for(unsigned a=0;a<6;a++)for(unsigned i=0;i<16;i++)if(pointer==arrays[a]+i)return 1+a*16+i;Check(false);return 0;
+}
+void CShadows::CalcPedShadowValues(CVector direction,float *frontX,float *frontY,float *sideX,float *sideY,float *displacementX,float *displacementY)
+{
+    // Observe the full native primitive's input and aliased outputs before executing its untouched calculation
+    ++shadows;Number(3);Floating(direction.x);Floating(direction.y);Floating(direction.z);Number(ShadowAddress(frontX));Number(ShadowAddress(frontY));Number(ShadowAddress(sideX));Number(ShadowAddress(sideY));Number(ShadowAddress(displacementX));Number(ShadowAddress(displacementY));
+    RealCalcPedShadowValues(direction,frontX,frontY,sideX,sideY,displacementX,displacementY);Mutate(3);
+}
+void TestTimeCycle_Debug(const char *format,...)
+{
+    // Compare the resolved original debug messages despite the native binding's explicit format argument
+    char message[128];va_list args;va_start(args,format);vsnprintf(message,sizeof message,format,args);va_end(args);++debugs;Number(6);Bytes(message,strlen(message));
+}
+extern "C" uint8_t Clock_GetHours(void)
+{
+    // Preserve the original getter value while counting pure clock reads independently of unspecified operand evaluation order
+    ++clockHours;return hours;
+}
+extern "C" uint8_t Clock_GetMinutes(void)
+{
+    // Preserve the original minute value without introducing mutations into a pure clock read
+    ++clockMinutes;return minutes;
+}
+extern "C" int16_t Clock_GetSeconds(void)
+{
+    // Preserve the original signed seconds accessor and count every original read
+    ++clockSeconds;return seconds;
+}
+extern "C" void FileMgr_SetDir(const char *directory)
+{
+    // Retain directory changes on both sides of the complete data-file load
+    Number(7);Bytes(directory,strlen(directory));
+}
+extern "C" FileMgrSize FileMgr_LoadFile(const char *file,uint8_t *buffer,int capacity,const char *access)
+{
+    // Verify the exact shared-buffer extent and copy a complete deterministic input image
+    Check(strcmp(file,"TIMECYC.DAT")==0&&strcmp(access,"rb")==0&&buffer==work_buff&&capacity==55000&&imageLength+1<=55000);++loads;Number(8);Number(capacity);memcpy(buffer,fileImage,imageLength);buffer[imageLength]=0;return (FileMgrSize)imageLength;
+}
+static void Append(const char *format,...)
+{
+    // Build bounded numeric records without allocating memory or starting a platform service
+    Check(imageLength<sizeof fileImage);va_list args;va_start(args,format);int length=vsnprintf(fileImage+imageLength,sizeof fileImage-imageLength,format,args);va_end(args);Check(length>=0&&(size_t)length<sizeof fileImage-imageLength);imageLength+=(size_t)length;
+}
+static void MakeImage(unsigned variant)
+{
+    // Exercise complete numeric rows, comments, blank separators, CRLF and defined partial-row retention
+    imageLength=0;Append("/ Full original lighting input\n \n\r\n");fileImage[imageLength++]=0;
+    for(int w=0;w<NUMWEATHERS;w++)for(int h=0;h<NUMHOURS;h++){
+        if(h%7==0)Append("// Palette %d hour %d\n",w,h);
+        int count=(variant==3&&(h+w)%5==1)?50:52;
+        for(int column=0;column<count;column++){
+            int base=(h*13+w*37+column*7+variant*11)%200;
+            if(column>=27&&column<=29)Append(" %.3f",.125+(base%70)*.125);
+            else if(column==33)Append(" %.3f",1000.0+base*9.5);
+            else if(column==34)Append(" %.3f",300.0+base*2.25);
+            else if(column==35)Append(" %.3f",.125+(base%40)*.125);
+            else if(column>=45)Append(" %.3f",base+.375);
+            else Append(column==0?"%d":" %d",base);
+        }
+        if(variant==1)Append("\r\n");else{
+#ifdef FIX_BUGS
+            if(variant!=2||w!=NUMWEATHERS-1||h!=NUMHOURS-1)Append("\n");
+#else
+            Append("\n");
+#endif
+        }
+    }
+    Check(imageLength<sizeof work_buff);
+}
+static void Observe()
+{
+    // Compare complete owner state, private coefficients, all accessor conversions and external flags
+    ++states;ObserveFields();ObserveGetters();float coefficients[4];TestCycle_Coefficients(coefficients);Bytes(coefficients,sizeof coefficients);Floating(Timer_timeStep);Number((uint16_t)Weather_OldWeatherType);Number((uint16_t)Weather_NewWeatherType);Floating(Weather_InterpolationValue);Number(Weather_bScriptsForceRain);Number((uint32_t)CullZones_playerFlags);Number((uint32_t)CullZones_cameraFlags);Number((uint32_t)TheCamera.m_BlurType.value);Floating(TheCamera.forward.z);Number(cutscene);Number(triggered);
+}
+static void Setup(unsigned n)
+{
+    // Select finite inputs covering both weather dimensions, interpolation boundaries and each fog short-circuit branch
+    static const float blend[]={-.25f,0.0f,.125f,.5f,.99f,1.0f,1.25f};static const float steps[]={0.0f,.5f,1.0f,2.0f,120.0f};static const float directions[]={-1.0f,-.9001f,-.9f,0.0f,.25f};
+    hours=n%24;minutes=(n/3)%60;seconds=(n/7)%60;Weather_OldWeatherType=(n/11)%7;Weather_NewWeatherType=(n/13)%7;Weather_InterpolationValue=blend[n%7];Timer_timeStep=steps[n%5];Weather_bScriptsForceRain=(n&1)!=0;CullZones_playerFlags=(n&2)?ATTRZONE_NORAIN:0;CullZones_cameraFlags=(n&4)?ATTRZONE_NORAIN:0;cutscene=(n&8)!=0;TheCamera.forward=CVector(.3f,.8f,directions[n%5]);TheCamera.m_BlurType=(n/5)%5;triggered=false;armed=false;mode=0;
+}
+int main()
+{
+    // Observe genuine static initialization before any fixture seeding can conceal missing canonical storage
+    Check(TC(m_CurrentStoredValue)==0&&TC(m_FogReduction)==0&&TC(m_bExtraColourOn)==0);Observe();
+    for(unsigned variant=0;variant<4;variant++){
+        SeedFields(variant);TC(m_CurrentStoredValue)=11;TC(m_ExtraColour)=5;TC(m_bExtraColourOn)=1;TC(m_ExtraColourInter)=.375f;TC(m_FogReduction)=32;MakeImage(variant);Run_TimeCycle_Initialise();
+        Check(TC(m_FogReduction)==0&&TC(m_CurrentStoredValue)==11&&TC(m_ExtraColour)==5&&TC(m_bExtraColourOn)==1&&TC(m_ExtraColourInter)==.375f);Observe();Bytes(work_buff,sizeof work_buff);
+    }
+    // Verify every mutable sun accessor returns the actual selected canonical history element
+    for(int i=0;i<16;i++){TC(m_CurrentStoredValue)=i;TimeCycleVector *borrowed=Run_TimeCycle_GetSunDirection();Check(borrowed==&TC(m_VectorToSun)[i]);borrowed->x=-7.25f+i;TC(m_CurrentStoredValue)=(i+3)&15;Check(borrowed==&TC(m_VectorToSun)[i]);Floating(borrowed->x);}TC(m_CurrentStoredValue)=0;
+    // Compare the complete normalization primitive including signed zero, underflow and overflowing finite squares
+    const float vectors[][3]={{0,0,0},{-0.0f,0.0f,-0.0f},{0,1,0},{-3,4,-5},{1e-30f,1e-30f,-1e-30f},{FLT_MAX,1,2},{.1f,.2f,.3f}};
+    for(const auto &input:vectors){float x=input[0],y=input[1],z=input[2];TestCycle_Normalise(&x,&y,&z);Floating(x);Floating(y);Floating(z);}
+    // Cover every hour/weather pair and both interpolation/fade directions across the rotating history
+    SeedFields(19);
+    for(unsigned n=0;n<3072;n++){
+        Setup(n);if(n%13==0)Run_TimeCycle_StartExtraColour(n%24,(n&1)!=0);if(n%17==0)Run_TimeCycle_StopExtraColour((n&1)!=0);
+        if(n%29==0){int extra=TC(m_ExtraColour);TC(m_nSkyTopRed)[extra][WEATHER_EXTRACOLOURS]=0;TC(m_nSkyTopGreen)[extra][WEATHER_EXTRACOLOURS]=0;TC(m_nSkyTopBlue)[extra][WEATHER_EXTRACOLOURS]=0;}
+        Run_TimeCycle_Update();Observe();
+        int8_t a[7],b[7];uint8_t ua[7],ub[7];int16_t sa[7],sb[7];for(int i=0;i<7;i++){a[i]=(int8_t)(-128+i*31);b[i]=(int8_t)(127-i*29);ua[i]=(uint8_t)(i*39);ub[i]=(uint8_t)(255-i*37);sa[i]=(int16_t)(-30000+i*9000);sb[i]=(int16_t)(30000-i*8000);}
+        Floating(Run_TimeCycle_InterpolateI8(a,b));Floating(Run_TimeCycle_InterpolateU8(ua,ub));Floating(Run_TimeCycle_InterpolateI16(sa,sb));
+    }
+    // Exercise callbacks that mutate later state without replacing the earlier borrowed sun vector
+    for(unsigned scenario=1;scenario<=7;scenario++)for(unsigned n=0;n<32;n++){
+        SeedFields(n);Setup(n*3);Run_TimeCycle_StartExtraColour(n%24,(n&1)!=0);TC(m_CurrentStoredValue)=n%16;TC(m_FogReduction)=n%2?64:0;
+        mode=scenario;armed=true;TheCamera.m_BlurType=scenario==7?3:0;if(scenario==6){TheCamera.forward.z=0;Weather_bScriptsForceRain=false;CullZones_playerFlags=0;CullZones_cameraFlags=0;cutscene=true;}
+        Run_TimeCycle_Update();armed=false;Observe();Check(triggered);
+    }
+    printf("states=%llu checks=%llu loads=%llu debug=%llu blurReads=%llu blurs=%llu shadows=%llu forwards=%llu cutscenes=%llu clock=%llu,%llu,%llu hash=%016" PRIx64 "\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)loads,(unsigned long long)debugs,(unsigned long long)blurReads,(unsigned long long)blurs,(unsigned long long)shadows,(unsigned long long)forwards,(unsigned long long)cutscenes,(unsigned long long)clockHours,(unsigned long long)clockMinutes,(unsigned long long)clockSeconds,digest);return 0;
+}

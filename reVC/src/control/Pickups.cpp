@@ -1,5 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
 
 #include "main.h"
 
@@ -152,7 +156,7 @@ CPickup::ExtractAmmoFromPickup(CPlayerPed *player)
 {
 	eWeaponType weaponType = CPickups::WeaponForModel(m_pObject->GetModelIndex());
 	
-	if (m_eType == PICKUP_IN_SHOP || !CWeaponInfo::IsWeaponSlotAmmoMergeable(CWeaponInfo::GetWeaponInfo(weaponType)->m_nWeaponSlot))
+	if (m_eType == PICKUP_IN_SHOP || !WeaponInfo_IsWeaponSlotAmmoMergeable(WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot))
 		return;
 
 	uint32 ammo = m_nQuantity;
@@ -187,7 +191,7 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 
 	int32 modelId = -1;
 	if (CModelInfo::GetModelInfo(m_eModelIndex)->GetModelType() == MITYPE_WEAPON) {
-		CWeaponInfo *weaponInfo = CWeaponInfo::GetWeaponInfo(((CWeaponModelInfo*)CModelInfo::GetModelInfo(m_eModelIndex))->GetWeaponInfo());
+		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(((CWeaponModelInfo*)CModelInfo::GetModelInfo(m_eModelIndex))->GetWeaponInfo());
 		modelId = weaponInfo->m_nModelId;
 		if (modelId == m_eModelIndex)
 			modelId = weaponInfo->m_nModel2Id;
@@ -343,8 +347,8 @@ CPickup::CanBePickedUp(CPlayerPed *player, int playerId)
 	bool cannotBePickedUp =
 		(m_pObject->GetModelIndex() == MI_PICKUP_BODYARMOUR && player->m_fArmour > CWorld::Players[playerId].m_nMaxArmour - 0.2f)
 		|| (m_pObject->GetModelIndex() == MI_PICKUP_HEALTH && player->m_fHealth > CWorld::Players[playerId].m_nMaxHealth - 0.2f)
-		|| (m_pObject->GetModelIndex() == MI_PICKUP_BRIBE && player->m_pWanted->GetWantedLevel() == 0)
-		|| (m_pObject->GetModelIndex() == MI_PICKUP_KILLFRENZY && (CTheScripts::IsPlayerOnAMission() || CDarkel::FrenzyOnGoing() || !CGame::nastyGame))
+		|| (m_pObject->GetModelIndex() == MI_PICKUP_BRIBE && Wanted_GetWantedLevel(player->m_pWanted) == 0)
+		|| (m_pObject->GetModelIndex() == MI_PICKUP_KILLFRENZY && (CTheScripts::IsPlayerOnAMission() || Darkel_FrenzyOnGoing() || !CGame::nastyGame))
 		|| (m_eType == PICKUP_ASSET_REVENUE && m_fRevenue < 10.0f);
 	return !cannotBePickedUp;
 }
@@ -361,8 +365,8 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			m_pExtraObject->GetMatrix().GetPosition() = m_vecPos;
 	}
 	if (m_eType == PICKUP_ASSET_REVENUE) {
-		uint32 timePassed = CTimer::GetTimeInMilliseconds() - m_nTimer;
-		m_nTimer = CTimer::GetTimeInMilliseconds();
+		uint32 timePassed = (*Timer_GetTimeInMilliseconds()) - m_nTimer;
+		m_nTimer = (*Timer_GetTimeInMilliseconds());
 
 		if (Distance(FindPlayerCoors(), m_vecPos) > 10.0f)
 			m_fRevenue += float(timePassed * m_nMoneySpeed) / SQR(1200.0f);
@@ -373,7 +377,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 	}
 
 	if (m_bRemoved) {
-		if (CTimer::GetTimeInMilliseconds() > m_nTimer) {
+		if ((*Timer_GetTimeInMilliseconds()) > m_nTimer) {
 			// respawn pickup if we're far enough
 			float dist = (FindPlayerCoors().x - m_vecPos.x) * (FindPlayerCoors().x - m_vecPos.x) + (FindPlayerCoors().y - m_vecPos.y) * (FindPlayerCoors().y - m_vecPos.y);
 			if (dist > 100.0f || m_eType == PICKUP_IN_SHOP && dist > 2.4f) {
@@ -426,22 +430,22 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 
 		if (isPickupTouched) {
 			eWeaponType weaponType = CPickups::WeaponForModel(m_pObject->GetModelIndex());
-			if (weaponType < WEAPONTYPE_TOTALWEAPONS && CDarkel::FrenzyOnGoing()) {
+			if (weaponType < WEAPONTYPE_TOTALWEAPONS && Darkel_FrenzyOnGoing()) {
 				isPickupTouched = false;
 				m_bWasControlMessageShown = false;
 			} else if (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType != WEAPONTYPE_UNARMED) {
-				uint32 slot = CWeaponInfo::GetWeaponInfo(weaponType)->m_nWeaponSlot;
+				uint32 slot = WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot;
 				eWeaponType plrWeaponSlot = FindPlayerPed()->GetWeapon(slot).m_eWeaponType;
 				if (plrWeaponSlot != weaponType) {
 					if (CStreaming::ms_aInfoForModel[m_pObject->GetModelIndex()].m_loadState == STREAMSTATE_LOADED) {
-						if (plrWeaponSlot == WEAPONTYPE_UNARMED || (FindPlayerPed()->GetWeapon(slot).m_nAmmoTotal == 0 && !CWeaponInfo::IsWeaponSlotAmmoMergeable(slot))) {
-							if (CTimer::GetTimeInMilliseconds() - FindPlayerPed()->m_nPadDownPressedInMilliseconds < 1500) {
+						if (plrWeaponSlot == WEAPONTYPE_UNARMED || (FindPlayerPed()->GetWeapon(slot).m_nAmmoTotal == 0 && !WeaponInfo_IsWeaponSlotAmmoMergeable(slot))) {
+							if ((*Timer_GetTimeInMilliseconds()) - FindPlayerPed()->m_nPadDownPressedInMilliseconds < 1500) {
 								CPickups::PlayerOnWeaponPickup = 6;
 								isPickupTouched = false;
 							}
 						} else {
 							CPickups::PlayerOnWeaponPickup = 6;
-							if (CWeaponInfo::IsWeaponSlotAmmoMergeable(slot)) {
+							if (WeaponInfo_IsWeaponSlotAmmoMergeable(slot)) {
 								if (m_eType == PICKUP_ONCE_TIMEOUT || m_eType == PICKUP_ONCE || m_eType == PICKUP_ON_STREET) {
 									ExtractAmmoFromPickup(player);
 									FindPlayerPed()->GetWeapon(slot).Reload();
@@ -452,13 +456,13 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 								{
 								case 0:
 								case 1:
-									CHud::SetHelpMessage(TheText.Get("PU_CF1"), false);
+									CHud::SetHelpMessage(Text_Get(&TheText,"PU_CF1"), false);
 									break;
 								case 2:
-									CHud::SetHelpMessage(TheText.Get("PU_CF3"), false);
+									CHud::SetHelpMessage(Text_Get(&TheText,"PU_CF3"), false);
 									break;
 								case 3:
-									CHud::SetHelpMessage(TheText.Get("PU_CF4"), false);
+									CHud::SetHelpMessage(Text_Get(&TheText,"PU_CF4"), false);
 									break;
 								default:
 									break;
@@ -467,7 +471,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 							}
 							if (CollectPickupBuffer == 0)
 								isPickupTouched = false;
-							if (CTimer::GetTimeInMilliseconds() - FindPlayerPed()->m_nPadDownPressedInMilliseconds < 1500)
+							if ((*Timer_GetTimeInMilliseconds()) - FindPlayerPed()->m_nPadDownPressedInMilliseconds < 1500)
 								isPickupTouched = false;
 						}
 					} else
@@ -518,16 +522,16 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 						CPickups::bPickUpcamActivated = true;
 						CPickups::pPlayerVehicle = FindPlayerVehicle();
 						CPickups::StaticCamCoors = m_pObject->GetPosition();
-						CPickups::StaticCamStartTime = CTimer::GetTimeInMilliseconds();
+						CPickups::StaticCamStartTime = (*Timer_GetTimeInMilliseconds());
 					}
 				}
 				if (m_eType == PICKUP_ON_STREET)
-					m_nTimer = CTimer::GetTimeInMilliseconds() + 30000;
+					m_nTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
 				else if (m_eType == PICKUP_ON_STREET_SLOW) {
 					if (MI_PICKUP_BRIBE == m_pObject->GetModelIndex())
-						m_nTimer = CTimer::GetTimeInMilliseconds() + 300000;
+						m_nTimer = (*Timer_GetTimeInMilliseconds()) + 300000;
 					else
-						m_nTimer = CTimer::GetTimeInMilliseconds() + 720000;
+						m_nTimer = (*Timer_GetTimeInMilliseconds()) + 720000;
 				}
 
 				result = true;
@@ -573,7 +577,8 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 				CWorld::Players[playerId].m_nMoney += m_nQuantity;
 				sprintf(gString, "$%d", m_nQuantity);
 #ifdef MONEY_MESSAGES
-				CMoneyMessages::RegisterOne(m_vecPos + CVector(0.0f, 0.0f, 1.0f), gString, 0, 255, 0, 0.5f, 0.5f);
+				// Enter the C money-message algorithm with the original arguments
+				MoneyMessages_RegisterOneLegacy(m_vecPos + CVector(0.0f, 0.0f, 1.0f), gString, 0, 255, 0, 0.5f, 0.5f);
 #endif
 				result = true;
 				Remove();
@@ -588,19 +593,19 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			case PICKUP_PROPERTY_LOCKED:
 				if (!m_bWasControlMessageShown) {
 					m_bWasControlMessageShown = true;
-					CHud::SetHelpMessage(TheText.Get(m_sTextKey), false);
+					CHud::SetHelpMessage(Text_Get(&TheText,m_sTextKey), false);
 				}
 				break;
 			case PICKUP_PROPERTY_FORSALE:
 				ModifyStringLabelForControlSetting(m_sTextKey);
-				CMessages::InsertNumberInString(TheText.Get(m_sTextKey), m_nQuantity,
+				Messages_InsertNumberInString(Text_Get(&TheText,m_sTextKey), m_nQuantity,
 					0, 0, 0, 0, 0, gUString);
 				if (!CHud::IsHelpMessageBeingDisplayed())
 					CHud::SetHelpMessage(gUString, false);
 				if (CollectPickupBuffer == 0)
 					break;
 				if (CTheScripts::IsPlayerOnAMission())
-					CHud::SetHelpMessage(TheText.Get("PROP_2"), true);
+					CHud::SetHelpMessage(Text_Get(&TheText,"PROP_2"), true);
 				else {
 					if (CWorld::Players[CWorld::PlayerInFocus].m_nMoney >= m_nQuantity) {
 						CWorld::Players[CWorld::PlayerInFocus].m_nMoney -= m_nQuantity;
@@ -609,7 +614,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 						Remove();
 						break;
 					}
-					CHud::SetHelpMessage(TheText.Get("PROP_1"), true);
+					CHud::SetHelpMessage(Text_Get(&TheText,"PROP_1"), true);
 				}
 				break;
 			default:
@@ -622,7 +627,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 		case PICKUP_MINE_INACTIVE:
 			if (vehicle != nil && !vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 2.0f)) {
 				m_eType = PICKUP_MINE_ARMED;
-				m_nTimer = CTimer::GetTimeInMilliseconds() + 10000;
+				m_nTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
 			}
 			break;
 		case PICKUP_NAUTICAL_MINE_INACTIVE:
@@ -648,7 +653,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 
 			if (!touched) {
 				m_eType = PICKUP_NAUTICAL_MINE_ARMED;
-				m_nTimer = CTimer::GetTimeInMilliseconds() + 10000;
+				m_nTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
 			}
 			break;
 		}
@@ -662,7 +667,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 		case PICKUP_MINE_ARMED:
 		{
 			bool explode = false;
-			if (CTimer::GetTimeInMilliseconds() > m_nTimer)
+			if ((*Timer_GetTimeInMilliseconds()) > m_nTimer)
 				explode = true;
 #ifdef FIX_BUGS
 			else// added else here since vehicle lookup is useless
@@ -687,8 +692,8 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 			break;
 		}
 		case PICKUP_FLOATINGPACKAGE:
-			m_pObject->m_vecMoveSpeed.z -= 0.01f * CTimer::GetTimeStep();
-			m_pObject->GetMatrix().GetPosition() += m_pObject->GetMoveSpeed() * CTimer::GetTimeStep();
+			m_pObject->m_vecMoveSpeed.z -= 0.01f * (*Timer_GetTimeStep());
+			m_pObject->GetMatrix().GetPosition() += m_pObject->GetMoveSpeed() * (*Timer_GetTimeStep());
 
 			m_pObject->GetMatrix().UpdateRW();
 			m_pObject->UpdateRwFrame();
@@ -711,7 +716,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 		}
 	}
 
-	if (!m_bRemoved && (m_eType == PICKUP_ONCE_TIMEOUT || m_eType == PICKUP_ONCE_TIMEOUT_SLOW || m_eType == PICKUP_MONEY) && CTimer::GetTimeInMilliseconds() > m_nTimer)
+	if (!m_bRemoved && (m_eType == PICKUP_ONCE_TIMEOUT || m_eType == PICKUP_ONCE_TIMEOUT_SLOW || m_eType == PICKUP_MONEY) && (*Timer_GetTimeInMilliseconds()) > m_nTimer)
 		Remove();
 	
 	return result;
@@ -720,11 +725,14 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 void
 CPickup::ProcessGunShot(CVector *vec1, CVector *vec2)
 {
-	CColLine line(*vec1, *vec2);
+	// Retain the line record at its original construction boundary
+	CColLine line;
+	// Initialize the line at the former parameterized constructor boundary
+	ColLine_Init(&line,COLLISION_POINT_REF(*vec1),COLLISION_POINT_REF(*vec2));
 	if (m_pObject) {
 		CColSphere sphere;
-		sphere.radius = 4.0f;
-		sphere.center = m_pObject->GetPosition();
+		sphere.bounds.radius = 4.0f;
+		sphere.bounds.center = CollisionVector_FromNative(m_pObject->GetPosition());
 		if (CCollision::TestLineSphere(line, sphere)) {
 			CExplosion::AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
 			CWorld::Remove(m_pObject);
@@ -844,7 +852,7 @@ CPickups::GivePlayerGoodiesWithPickUpMI(int16 modelIndex, int playerIndex)
 
 	if (modelIndex == MI_PICKUP_ADRENALINE) {
 		player->m_bAdrenalineActive = true;
-		player->m_nAdrenalineTime = CTimer::GetTimeInMilliseconds() + 20000;
+		player->m_nAdrenalineTime = (*Timer_GetTimeInMilliseconds()) + 20000;
 		player->m_fCurrentStamina = player->m_fMaxStamina;
 		DMAudio_PlayFrontEndSound(SOUND_PICKUP_ADRENALINE, 0);
 		return true;
@@ -863,7 +871,7 @@ CPickups::GivePlayerGoodiesWithPickUpMI(int16 modelIndex, int playerIndex)
 		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
 	} else if (modelIndex == MI_PICKUP_BRIBE) {
-		int32 level = Max(FindPlayerPed()->m_pWanted->GetWantedLevel() - 1, 0);
+		int32 level = Max(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) - 1, 0);
 		player->SetWantedLevel(level);
 		DMAudio_PlayFrontEndSound(SOUND_PICKUP_BONUS, 0);
 		return true;
@@ -945,21 +953,21 @@ CPickups::GenerateNewOne(CVector pos, uint32 modelIndex, uint8 type, uint32 quan
 	aPickUps[slot].m_nQuantity = quantity;
 	aPickUps[slot].m_nMoneySpeed = rate;
 	aPickUps[slot].m_fRevenue = 0.0f;
-	aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds();
+	aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds());
 	aPickUps[slot].m_bWasAmmoCollected = highPriority;
 	aPickUps[slot].m_bWasControlMessageShown = false;
 	if (type == PICKUP_ONCE_TIMEOUT)
-		aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds() + 20000;
+		aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds()) + 20000;
 	else if (type == PICKUP_ONCE_TIMEOUT_SLOW)
-		aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds() + 120000;
+		aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds()) + 120000;
 	else if (type == PICKUP_MONEY)
-		aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds() + 30000;
+		aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
 	else if (type == PICKUP_MINE_INACTIVE || type == PICKUP_MINE_ARMED) {
 		aPickUps[slot].m_eType = PICKUP_MINE_INACTIVE;
-		aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds() + 1500;
+		aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds()) + 1500;
 	} else if (type == PICKUP_NAUTICAL_MINE_INACTIVE || type == PICKUP_NAUTICAL_MINE_ARMED) {
 		aPickUps[slot].m_eType = PICKUP_NAUTICAL_MINE_INACTIVE;
-		aPickUps[slot].m_nTimer = CTimer::GetTimeInMilliseconds() + 1500;
+		aPickUps[slot].m_nTimer = (*Timer_GetTimeInMilliseconds()) + 1500;
 	}
 	aPickUps[slot].m_eModelIndex = modelIndex;
 	if (pText)
@@ -995,7 +1003,7 @@ CPickups::GetNewUniquePickupIndex(int32 slot)
 int32
 CPickups::ModelForWeapon(eWeaponType weaponType)
 {
-	return CWeaponInfo::GetWeaponInfo(weaponType)->m_nModelId;
+	return WeaponInfo_GetWeaponInfo(weaponType)->m_nModelId;
 }
 
 eWeaponType
@@ -1034,16 +1042,16 @@ CPickups::Update()
 			mult = 0.0f;
 
 		CVector pos = StaticCamCoors;
-		pos.z += (pPlayerVehicle->GetColModel()->boundingBox.GetSize().z + 2.0f) * mult;
+		pos.z += (CollisionVector_ToNative(Box_GetSize(&pPlayerVehicle->GetColModel()->boundingBox)).z + 2.0f) * mult;
 
-		if ( (CTimer::GetTimeInMilliseconds() - StaticCamStartTime) > 750 )
+		if ( ((*Timer_GetTimeInMilliseconds()) - StaticCamStartTime) > 750 )
 		{
 			TheCamera.SetCamPositionForFixedMode(pos, CVector(0.0f, 0.0f, 0.0f));
 			TheCamera.TakeControl(FindPlayerVehicle(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_SCRIPT);
 		}
 
 		if ( FindPlayerVehicle() != pPlayerVehicle || Distance(StaticCamCoors, FindPlayerCoors()) > 40.0f
-			|| ((CTimer::GetTimeInMilliseconds() - StaticCamStartTime) > 60000) )
+			|| (((*Timer_GetTimeInMilliseconds()) - StaticCamStartTime) > 60000) )
 		{
 			TheCamera.RestoreWithJumpCut();
 			bPickUpcamActivated = false;
@@ -1060,9 +1068,9 @@ CPickups::Update()
 
 #define PICKUPS_FRAME_SPAN (6)
 #ifdef FIX_BUGS
-	for (uint32 i = NUMGENERALPICKUPS * (CTimer::GetFrameCounter() % PICKUPS_FRAME_SPAN) / PICKUPS_FRAME_SPAN; i < NUMGENERALPICKUPS * (CTimer::GetFrameCounter() % PICKUPS_FRAME_SPAN + 1) / PICKUPS_FRAME_SPAN; i++) {
+	for (uint32 i = NUMGENERALPICKUPS * ((*Timer_GetFrameCounter()) % PICKUPS_FRAME_SPAN) / PICKUPS_FRAME_SPAN; i < NUMGENERALPICKUPS * ((*Timer_GetFrameCounter()) % PICKUPS_FRAME_SPAN + 1) / PICKUPS_FRAME_SPAN; i++) {
 #else // BUG: this code can only reach 318 out of 320 pickups
-	for (uint32 i = NUMGENERALPICKUPS / PICKUPS_FRAME_SPAN * (CTimer::GetFrameCounter() % PICKUPS_FRAME_SPAN); i < NUMGENERALPICKUPS / PICKUPS_FRAME_SPAN * (CTimer::GetFrameCounter() % PICKUPS_FRAME_SPAN + 1); i++) {
+	for (uint32 i = NUMGENERALPICKUPS / PICKUPS_FRAME_SPAN * ((*Timer_GetFrameCounter()) % PICKUPS_FRAME_SPAN); i < NUMGENERALPICKUPS / PICKUPS_FRAME_SPAN * ((*Timer_GetFrameCounter()) % PICKUPS_FRAME_SPAN + 1); i++) {
 #endif
 		if (aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].Update(FindPlayerPed(), FindPlayerVehicle(), CWorld::PlayerInFocus))
 			AddToCollectedPickupsArray(i);
@@ -1091,10 +1099,10 @@ CPickups::DoPickUpEffects(CEntity *entity)
 	CPickup *pickup = FindPickUpForThisObject(entity);
 
 	if (entity->GetModelIndex() == MI_PICKUP_KILLFRENZY)
-		entity->bDoNotRender = CTheScripts::IsPlayerOnAMission() || CDarkel::FrenzyOnGoing() || !CGame::nastyGame;
+		entity->bDoNotRender = CTheScripts::IsPlayerOnAMission() || Darkel_FrenzyOnGoing() || !CGame::nastyGame;
 
 	if (!entity->bDoNotRender) {
-		float modifiedSin = 0.3f * (Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800)) + 1.0f);
+		float modifiedSin = 0.3f * (Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800)) + 1.0f);
 
 #ifdef FIX_BUGS
 		int16 colorId = 0;
@@ -1143,12 +1151,12 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		if (doOuterGlow) {
 			bool corona1 = false;
 			bool corona2 = false;
-			int timerVal = (CTimer::GetTimeInMilliseconds() >> 9) & 7;
+			int timerVal = ((*Timer_GetTimeInMilliseconds()) >> 9) & 7;
 
 			if (timerVal < 3)
 				corona1 = false;
 			else if (timerVal == 3)
-				corona1 = (CGeneral::GetRandomNumber() & 3) != 0;
+				corona1 = (General_GetRandomNumber() & 3) != 0;
 			else
 				corona1 = true;
 
@@ -1156,7 +1164,7 @@ CPickups::DoPickUpEffects(CEntity *entity)
 			if (timerVal < 3)
 				corona2 = false;
 			else if (timerVal == 3)
-				corona2 = (CGeneral::GetRandomNumber() & 3) != 0;
+				corona2 = (General_GetRandomNumber() & 3) != 0;
 			else
 				corona2 = true;
 
@@ -1175,8 +1183,9 @@ CPickups::DoPickUpEffects(CEntity *entity)
 					SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0,
 					aPickupColors[colorId].r * 0.3f, aPickupColors[colorId].g * 0.3f, aPickupColors[colorId].b * 0.3f,
 					4.0f, 1.0f, 40.0f, false, 0.0f);
-				float radius = (CGeneral::GetRandomNumber() & 0xF) * 0.1f + 3.0f;
-				CPointLights::AddLight(CPointLights::LIGHT_POINT, pos, CVector(0.0f, 0.0f, 0.0f), radius, aPickupColors[colorId].r / 256.0f, aPickupColors[colorId].g / 256.0f, aPickupColors[colorId].b / 256.0f, CPointLights::FOG_NONE, true);
+				float radius = (General_GetRandomNumber() & 0xF) * 0.1f + 3.0f;
+				// Enter the C point-light algorithm with the original owner expressions
+				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, pos, CVector(0.0f, 0.0f, 0.0f), radius, aPickupColors[colorId].r / 256.0f, aPickupColors[colorId].g / 256.0f, aPickupColors[colorId].b / 256.0f, POINTLIGHTS_FOG_NONE, true);
 			} else
 				CCoronas::RegisterCorona((uintptr)entity, 0, 0, 0, 255, pos, 0.57f, 65.0f, CCoronas::TYPE_RING, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 
@@ -1207,7 +1216,11 @@ CPickups::DoPickUpEffects(CEntity *entity)
 			if (dist < MAXDIST && NumMessages < NUMPICKUPMESSAGES) {
 				RwV3d vecOut;
 				float fDistX, fDistY;
-				if (CSprite::CalcScreenCoors(entity->GetPosition() + CVector(0.0f, 0.0f, 0.7f), &vecOut, &fDistX, &fDistY, true)) {
+				if (([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(entity->GetPosition() + CVector(0.0f, 0.0f, 0.7f), &vecOut, &fDistX, &fDistY, true)) {
 					aMessages[NumMessages].m_pos.x = vecOut.x;
 					aMessages[NumMessages].m_pos.y = vecOut.y;
 					aMessages[NumMessages].m_dist.x = fDistX;
@@ -1227,14 +1240,14 @@ CPickups::DoPickUpEffects(CEntity *entity)
 
 		uint32 model = entity->GetModelIndex();
 		CColModel *colModel = entity->GetColModel();
-		CVector colLength = colModel->boundingBox.max - colModel->boundingBox.min;
+		CVector colLength = CollisionVector_ToNative(colModel->boundingBox.max) - CollisionVector_ToNative(colModel->boundingBox.min);
 		float maxDimension = Max(colLength.x, Max(colLength.y, colLength.z));
 
 		float scale = (Max(1.f, 1.2f / maxDimension) - 1.0f) * 0.6f + 1.0f;
 		if (model == MI_MINIGUN || model == MI_MINIGUN2)
 			scale = 1.2f;
 
-		float angle = (float)(CTimer::GetTimeInMilliseconds() & 0x7FF) * DEGTORAD(360.0f / 0x800);
+		float angle = (float)((*Timer_GetTimeInMilliseconds()) & 0x7FF) * DEGTORAD(360.0f / 0x800);
 		float c = Cos(angle) * scale;
 		float s = Sin(angle) * scale;
 
@@ -1309,7 +1322,7 @@ CPickups::DoMineEffects(CEntity *entity)
 	const float MAXDIST = 20.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x1FF) * DEGTORAD(360.0f / 0x200));
+		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x1FF) * DEGTORAD(360.0f / 0x200));
 
 		int32 red = (MAXDIST - dist) * (0.5f * s + 0.5f) / MAXDIST * 64.0f;
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, red, 0, 0, 4.0f, 1.0f, 40.0f,
@@ -1317,7 +1330,7 @@ CPickups::DoMineEffects(CEntity *entity)
 		CCoronas::RegisterCorona((uintptr)entity, red, 0, 0, 255, pos, 0.6f, 60.0f, CCoronas::TYPE_RING, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)(CTimer::GetTimeInMilliseconds() & 0x3FF) * DEGTORAD(360.0f / 0x400));
+	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0x3FF) * DEGTORAD(360.0f / 0x400));
 }
 
 void
@@ -1328,7 +1341,7 @@ CPickups::DoMoneyEffects(CEntity *entity)
 	const float MAXDIST = 20.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x3FF) * DEGTORAD(360.0f / 0x400));
+		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x3FF) * DEGTORAD(360.0f / 0x400));
 
 		int32 green = (MAXDIST - dist) * (0.2f * s + 0.3f) / MAXDIST * 64.0f;
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, 0, green, 0, 4.0f, 1.0f,
@@ -1336,7 +1349,7 @@ CPickups::DoMoneyEffects(CEntity *entity)
 		CCoronas::RegisterCorona((uintptr)entity, 0, green, 0, 255, pos, 0.4f, 40.0f, CCoronas::TYPE_RING, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)(CTimer::GetTimeInMilliseconds() & 0x7FF) * DEGTORAD(360.0f / 0x800));
+	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0x7FF) * DEGTORAD(360.0f / 0x800));
 }
 
 void
@@ -1347,7 +1360,7 @@ CPickups::DoCollectableEffects(CEntity *entity)
 	const float MAXDIST = 14.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)((CTimer::GetTimeInMilliseconds() + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800));
+		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800));
 
 		int32 color = (MAXDIST - dist) * (0.5f * s + 0.5f) / MAXDIST * 255.0f;
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, color, color, color, 4.0f,
@@ -1355,7 +1368,7 @@ CPickups::DoCollectableEffects(CEntity *entity)
 		CCoronas::RegisterCorona((uintptr)entity, color, color, color, 255, pos, 0.6f, 40.0f, CCoronas::TYPE_HEX, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)(CTimer::GetTimeInMilliseconds() & 0xFFF) * DEGTORAD(360.0f / 0x1000));
+	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0xFFF) * DEGTORAD(360.0f / 0x1000));
 }
 
 void
@@ -1376,7 +1389,7 @@ CPickups::RenderPickUpText()
 					strToPrint = nil;
 				} else {
 					if (aMessages[i].m_bOutOfStock)
-						strToPrint = TheText.Get("STOCK");
+						strToPrint = Text_Get(&TheText,"STOCK");
 					else {
 						sprintf(gString, "$%d", CostOfWeapon[aMessages[i].m_weaponType]);
 						AsciiToUnicode(gString, gUString);
@@ -1385,43 +1398,43 @@ CPickups::RenderPickUpText()
 				}
 				break;
 			case 1:
-				strToPrint = TheText.Get("OUTFT1");
+				strToPrint = Text_Get(&TheText,"OUTFT1");
 				break;
 			case 2:
-				strToPrint = TheText.Get("OUTFT2");
+				strToPrint = Text_Get(&TheText,"OUTFT2");
 				break;
 			case 3:
-				strToPrint = TheText.Get("OUTFT3");
+				strToPrint = Text_Get(&TheText,"OUTFT3");
 				break;
 			case 4:
-				strToPrint = TheText.Get("OUTFT4");
+				strToPrint = Text_Get(&TheText,"OUTFT4");
 				break;
 			case 5:
-				strToPrint = TheText.Get("OUTFT5");
+				strToPrint = Text_Get(&TheText,"OUTFT5");
 				break;
 			case 6:
-				strToPrint = TheText.Get("OUTFT6");
+				strToPrint = Text_Get(&TheText,"OUTFT6");
 				break;
 			case 7:
-				strToPrint = TheText.Get("OUTFT7");
+				strToPrint = Text_Get(&TheText,"OUTFT7");
 				break;
 			case 8:
-				strToPrint = TheText.Get("OUTFT8");
+				strToPrint = Text_Get(&TheText,"OUTFT8");
 				break;
 			case 9:
-				strToPrint = TheText.Get("OUTFT9");
+				strToPrint = Text_Get(&TheText,"OUTFT9");
 				break;
 			case 10:
-				strToPrint = TheText.Get("OUTFT10");
+				strToPrint = Text_Get(&TheText,"OUTFT10");
 				break;
 			case 11:
-				strToPrint = TheText.Get("OUTFT11");
+				strToPrint = Text_Get(&TheText,"OUTFT11");
 				break;
 			case 12:
-				strToPrint = TheText.Get("OUTFT12");
+				strToPrint = Text_Get(&TheText,"OUTFT12");
 				break;
 			case 13:
-				strToPrint = TheText.Get("OUTFT13");
+				strToPrint = Text_Get(&TheText,"OUTFT13");
 				break;
 			default:
 				break;
@@ -1467,11 +1480,11 @@ CPickups::CreateSomeMoney(CVector pos, int money)
 
 	for (int i = 0; i < pickupCount; i++) {
 		// (CGeneral::GetRandomNumber() % 256) * PI / 128 gives a float up to something TWOPI-ish.
-		pos.x += 1.5f * Sin((CGeneral::GetRandomNumber() % 256) * PI / 128);
-		pos.y += 1.5f * Cos((CGeneral::GetRandomNumber() % 256) * PI / 128);
+		pos.x += 1.5f * Sin((General_GetRandomNumber() % 256) * PI / 128);
+		pos.y += 1.5f * Cos((General_GetRandomNumber() % 256) * PI / 128);
 		pos.z = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &found) + 0.5f;
 		if (found) {
-			CPickups::GenerateNewOne(CVector(pos.x, pos.y, pos.z), MI_MONEY, PICKUP_MONEY, moneyPerPickup + (CGeneral::GetRandomNumber() & 3));
+			CPickups::GenerateNewOne(CVector(pos.x, pos.y, pos.z), MI_MONEY, PICKUP_MONEY, moneyPerPickup + (General_GetRandomNumber() & 3));
 		}
 	}
 }
@@ -1479,12 +1492,12 @@ CPickups::CreateSomeMoney(CVector pos, int money)
 void
 CPickups::RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(eWeaponType weaponType)
 {
-	uint32 weaponSlot = CWeaponInfo::GetWeaponInfo(weaponType)->m_nWeaponSlot;
-	if (CWeaponInfo::IsWeaponSlotAmmoMergeable(weaponSlot)) {
+	uint32 weaponSlot = WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot;
+	if (WeaponInfo_IsWeaponSlotAmmoMergeable(weaponSlot)) {
 		for (int slot = 0; slot < NUMPICKUPS; slot++) {
 			if (aPickUps[slot].m_eType == PICKUP_ONCE || aPickUps[slot].m_eType == PICKUP_ONCE_TIMEOUT || aPickUps[slot].m_eType == PICKUP_ONCE_TIMEOUT_SLOW) {
 				if (aPickUps[slot].m_pObject) {
-					if (CWeaponInfo::GetWeaponInfo(WeaponForModel(aPickUps[slot].m_pObject->GetModelIndex()))->m_nWeaponSlot == weaponSlot &&
+					if (WeaponInfo_GetWeaponInfo(WeaponForModel(aPickUps[slot].m_pObject->GetModelIndex()))->m_nWeaponSlot == weaponSlot &&
 						aPickUps[slot].m_nQuantity == 0) {
 						CWorld::Remove(aPickUps[slot].m_pObject);
 						// Destroy and release the empty weapon pickup without invoking C++ delete.
@@ -1814,8 +1827,8 @@ CPed::CreateDeadPedPickupCoors(float *x, float *y, float *z)
 	for (int i = 0; i < NUMBER_OF_ATTEMPTS; i++) {
 
 		pickupPos = GetPosition();
-		pickupPos.x = 1.5f * Sin((CGeneral::GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().x;
-		pickupPos.y = 1.5f * Cos((CGeneral::GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().y;
+		pickupPos.x = 1.5f * Sin((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().x;
+		pickupPos.y = 1.5f * Cos((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().y;
 		pickupPos.z = CWorld::FindGroundZFor3DCoord(pickupPos.x, pickupPos.y, pickupPos.z, &found) + 0.5f;
 
 		if (!found)
@@ -1855,4 +1868,7 @@ CPed::CreateDeadPedPickupCoors(float *x, float *y, float *z)
 #undef NUMBER_OF_ATTEMPTS
 }
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

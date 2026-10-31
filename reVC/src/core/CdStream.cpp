@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #ifdef _WIN32
 #define WITHWINDOWS
 #include "common.h"
@@ -5,7 +6,7 @@
 #include "CdStream.h"
 #include "rwcore.h"
 #include "RwHelper.h"
-#include "MemoryMgr.h"
+#include "MemoryMgr_native.h"
 
 struct CdReadInfo
 {
@@ -536,3 +537,4 @@ CdStreamGetNumImages(void)
 	return gNumImages;
 }
 #endif
+//- rouz edit (ChatGPT)

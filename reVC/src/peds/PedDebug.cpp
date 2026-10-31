@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #ifndef MASTER
 #include "main.h"
@@ -304,7 +305,11 @@ CPed::DebugRenderOnePedText(void)
 		RwV3d screenCoords;
 		CVector bitAbove = GetPosition();
 		bitAbove.z += 2.0f;
-		if (CSprite::CalcScreenCoors(bitAbove, &screenCoords, &width, &height, true)) {
+		if (([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(bitAbove, &screenCoords, &width, &height, true)) {
 
 			float lineHeight = SCREEN_SCALE_Y(Min(height / 100.0f, 0.7f) * 22.0f);
 
@@ -346,4 +351,4 @@ CPed::DebugRenderClosePedText()
 {
 	// TODO: mobile code
 }
-#endif
+#endif//- rouz edit (ChatGPT)

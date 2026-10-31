@@ -1,0 +1,155 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdarg>
+#include <initializer_list>
+#include <limits>
+#include "owners.h"
+#include "caller.h"
+CPathFind ThePaths;
+extern "C" {int32_t _saveBufCount;}
+static CVector *liveInput;static int hook;static bool triggered;static unsigned states,calls,initializations,adds,overrides,cancels,finds,saves,loads,zoneReads,pathReads,diagnostics;
+static uint64_t hash=1469598103934665603ULL;
+static void require(bool condition)
+{
+    // Stop quietly if the corpus violates the original point-table or native owner contracts
+    if(!condition){fprintf(stderr,"Restart invariant failed at state %u call %u hook %d\n",states,calls,hook);abort();}
+}
+static void word(uint32_t value)
+{
+    // Compare scalar values in a fixed byte order
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact float bits including signed zero and nearest-point ties
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void point(RestartPoint value)
+{
+    // Observe every named C point coordinate
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void vector(const CVector &value)
+{
+    // Observe every actual native coordinate without a C-to-vector layout cast
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static void canonical(void)
+{
+    // Observe all thirteen actual canonical variables and every inactive table slot
+    RestartTestState s;TestRestart_Read(&s);word(s.OverrideHospitalLevel);word(s.OverridePoliceStationLevel);word(s.bFadeInAfterNextArrest);word(s.bFadeInAfterNextDeath);word(s.bOverrideRestart);point(s.OverridePosition);floating(s.OverrideHeading);word(s.NumberOfHospitalRestarts);word(s.NumberOfPoliceRestarts);for(int i=0;i<8;i++){point(s.HospitalRestartPoints[i]);floating(s.HospitalRestartHeadings[i]);point(s.PoliceRestartPoints[i]);floating(s.PoliceRestartHeadings[i]);}
+}
+static void event(unsigned code)
+{
+    // Retain the original order of zone queries, fallback diagnostics and path searches
+    calls++;word(code);canonical();
+}
+static void snapshot(void)
+{
+    // Observe complete canonical state after every actual public operation
+    states++;word(states);canonical();
+}
+static void mutate(int boundary)
+{
+    // Change only live owners reachable during an external operation in the original algorithm
+    if(triggered)return;
+    if(hook==1 && boundary==1){
+        // Keep the borrowed input live after its initial level was captured
+        triggered=true;require(liveInput!=NULL);liveInput->x=50.f;
+    }else if(hook==2 && boundary==2){
+        // Read the current table coordinates, heading and loop count after the point-level query
+        triggered=true;RestartTestState s;TestRestart_Read(&s);s.HospitalRestartPoints[0]={1.f,0,0};s.HospitalRestartHeadings[0]=123.f;s.PoliceRestartPoints[0]={1.f,0,0};s.PoliceRestartHeadings[0]=123.f;s.NumberOfHospitalRestarts=3;s.NumberOfPoliceRestarts=3;TestRestart_Write(&s);
+    }else if(hook==3 && boundary==3){
+        // Preserve input changes made by the native path search for the later hospital diagnostic
+        triggered=true;require(liveInput!=NULL);liveInput->x=901.f;liveInput->y=-902.f;
+    }else if(hook==4 && boundary==4){
+        // Run the police fallback diagnostic before capturing the path search's native input value
+        triggered=true;require(liveInput!=NULL);*liveInput=CVector(5,6,7);
+    }
+}
+extern "C" eLevelName Zones_GetLevelFromPosition(ZonesPosition position)
+{
+    // Execute the actual unchanged C zone algorithms using the same captured value packet
+    event(1);zoneReads++;floating(position.x);floating(position.y);floating(position.z);eLevelName result=TestRestart_RealLevel(position);word((int32_t)result);if(zoneReads==1)mutate(1);if(zoneReads==2)mutate(2);return result;
+}
+int32 CPathFind::FindNodeClosestToCoors(CVector position,uint8 type,float limit,bool disabled,bool between,bool selected,bool water)
+{
+    // Keep the real native by-value input and all original implicit default arguments
+    event(2);pathReads++;vector(position);word(type);floating(limit);word(disabled);word(between);word(selected);word(water);require(type==PATH_PED && limit==999999.9f && !disabled && !between && !selected && !water);mutate(3);return 2;
+}
+extern "C" int TestRestart_Printf(const char *format,...)
+{
+    // Observe the original complete diagnostic text at its actual pre-search or post-assignment boundary
+    event(3);diagnostics++;char line[512];va_list args;va_start(args,format);int length=vsnprintf(line,sizeof(line),format,args);va_end(args);require(length>=0 && length<(int)sizeof(line));for(int i=0;i<=length;i++)word((uint8_t)line[i]);if(strcmp(format,"Couldn't find a police restart zone near the player\n")==0)mutate(4);return length;
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Reject an invalid save header or size without opening a native error dialog
+    fprintf(stderr,"Restart native assertion at %u: %s\n",line,expression);abort();
+}
+static void reset(void)
+{
+    // Restore actual owner records and canonical module data between independent scenarios
+    hook=0;triggered=false;liveInput=NULL;zoneReads=0;initializations++;TestRestart_RunInitialise();Zones_mapCount=3;memset(Zones_map,0,sizeof(Zones_map));Zones_map[0].level=LEVEL_GENERIC;Zones_map[1].level=LEVEL_BEACH;Zones_map[1].minx=0;Zones_map[1].maxx=5000;Zones_map[2].level=LEVEL_MAINLAND;Zones_map[2].minx=-5000;Zones_map[2].maxx=-.001f;
+    for(int i=0;i<3;i++){
+        // Use the actual C zone record's inclusive bounds and actual native path-node coordinates
+        Zones_map[i].miny=Zones_map[i].minz=-5000;Zones_map[i].maxy=Zones_map[i].maxz=5000;ThePaths.m_pathNodes[i].x=(int16_t)(8*(i+3));ThePaths.m_pathNodes[i].y=(int16_t)(-8*(i+7));ThePaths.m_pathNodes[i].z=(int16_t)(4*(i+11));
+    }
+}
+static void add(bool police,const CVector &position,float heading)
+{
+    // Enter the actual reference-based original or opaque native-pointer C registration operation
+    adds++;if(police)TestRestart_RunAddPoliceRestartPoint(&position,heading);else TestRestart_RunAddHospitalRestartPoint(&position,heading);snapshot();
+}
+static void find(bool police,CVector &position,bool alias=false,bool headingAlias=false)
+{
+    // Retain actual native input/output identities and valid heading-to-position aliases
+    finds++;CVector output(-100,-200,-300);float heading=-99;liveInput=&position;CVector *destination=alias?&position:&output;float *angle=headingAlias?&destination->z:&heading;if(police)TestRestart_RunFindClosestPoliceRestartPoint(&position,destination,angle);else TestRestart_RunFindClosestHospitalRestartPoint(&position,destination,angle);vector(*destination);floating(*angle);vector(position);snapshot();liveInput=NULL;
+}
+static void saveRound(unsigned offset)
+{
+    // Compare every byte of the original 292-byte block and surrounding guard bytes at every alignment
+    uint8_t storage[320];memset(storage,0xcd,sizeof(storage));uint32_t size=0;saves++;TestRestart_RunSaveAllRestartPoints(storage+offset,&size);require(size==292);word(size);for(unsigned i=0;i<sizeof(storage);i++){if(i<offset || i>=offset+size)require(storage[i]==0xcd);word(storage[i]);}require(storage[offset+269]==0 && storage[offset+270]==0 && storage[offset+271]==0);snapshot();
+    // Verify ignored reserved bytes and the complete load order after initialization
+    storage[offset+269]=0x5a;storage[offset+270]=0xa5;storage[offset+271]=0xff;loads++;TestRestart_RunLoadAllRestartPoints(storage+offset,size);snapshot();
+}
+int main(void)
+{
+    // Observe actual vector/scalar static zero initialization before the explicit initializer
+    snapshot();reset();
+    const CVector queries[]={CVector(0,0,0),CVector(50,50,0),CVector(-50,-50,0),CVector(6000,0,0),CVector(0,0,6000),CVector(-100,50,2)};
+    for(int count=0;count<=8;count++){
+        // Compare empty, partial and full tables with all original level-override choices
+        reset();for(int i=0;i<count;i++){CVector position(i%2? -float(i*20+10):float(i*20+10),float((i%3)*10),0);add(false,position,float(i*15));add(true,position,float(-i*15));}
+        for(uint8_t level: {uint8_t(0),uint8_t(1),uint8_t(2),uint8_t(255)}){
+            // Use raw original uint8 overrides without adding validation or changing fallback selection
+            RestartTestState s;TestRestart_Read(&s);s.OverrideHospitalLevel=s.OverridePoliceStationLevel=level;TestRestart_Write(&s);for(const CVector &query:queries)for(bool police: {false,true}){CVector position=query;find(police,position);}
+        }
+    }
+    for(float distance: {3999.9995f,4000.f,4000.0005f}){
+        // Preserve the inclusive four-thousand-unit threshold in both selection passes
+        reset();add(false,CVector(distance,0,0),33);add(true,CVector(distance,0,0),44);for(bool police: {false,true}){CVector query(0,0,0);find(police,query);}
+    }
+    reset();for(int i=0;i<8;i++){add(false,CVector(10,0,0),float(i));add(true,CVector(10,0,0),float(i));}for(bool police: {false,true}){CVector query(0,0,0);find(police,query);}
+    for(bool police: {false,true})for(bool alias: {false,true})for(bool headingAlias: {false,true}){
+        // Preserve override consumption and native output aliasing before any zone or path query
+        reset();overrides++;CVector overridePosition(1.25f,-2.5f,3.75f);TestRestart_RunOverrideNextRestart(&overridePosition,123.5f);snapshot();CVector query(7,8,9);find(police,query,alias,headingAlias);RestartTestState s;TestRestart_Read(&s);require(!s.bOverrideRestart);cancels++;TestRestart_RunCancelOverrideRestart();snapshot();
+    }
+    for(bool police: {false,true})for(bool alias: {false,true})for(bool headingAlias: {false,true}){
+        // Retain fallback diagnostics after the original output and heading writes
+        reset();CVector query(6000,0,0);find(police,query,alias,headingAlias);
+    }
+    for(int change: {1,2})for(bool police: {false,true}){
+        // Read live inputs, table contents, headings and loop counts after actual zone-query callbacks
+        reset();for(int i=0;i<3;i++){add(false,CVector(float(i*20+20),0,0),float(i));add(true,CVector(float(i*20+20),0,0),float(i));}RestartTestState s;TestRestart_Read(&s);s.NumberOfHospitalRestarts=s.NumberOfPoliceRestarts=2;TestRestart_Write(&s);hook=change;triggered=false;zoneReads=0;CVector query(0,0,0);find(police,query);require(triggered);
+    }
+    for(bool alias: {false,true}){
+        // Preserve the hospital's late input reads after path-owner mutations and output aliasing
+        reset();hook=3;CVector query(6000,0,0);find(false,query,alias,true);require(triggered);
+    }
+    reset();hook=4;CVector query(6000,0,0);find(true,query);require(triggered);
+    reset();for(int i=0;i<8;i++){add(false,CVector(i*.125f,-i*.25f,i*.5f),float(i*30));add(true,CVector(-i*.25f,i*.5f,-0.0f),float(-i*30));}RestartTestState s;TestRestart_Read(&s);s.OverrideHospitalLevel=255;s.OverridePoliceStationLevel=2;s.bFadeInAfterNextArrest=false;s.bFadeInAfterNextDeath=true;s.bOverrideRestart=true;s.OverridePosition={-0.0f,1.25f,-2.5f};s.OverrideHeading=359.5f;TestRestart_Write(&s);for(unsigned offset=0;offset<4;offset++)saveRound(offset);
+    reset();overrides++;CVector overridePosition(8,9,10);TestRestart_RunOverrideNextRestart(&overridePosition,77);cancels++;TestRestart_RunCancelOverrideRestart();snapshot();query=CVector(0,0,0);find(false,query);
+    printf("states=%u calls=%u initializations=%u adds=%u overrides=%u cancels=%u finds=%u saves=%u loads=%u paths=%u diagnostics=%u hash=%016llx\n",states,calls,initializations,adds,overrides,cancels,finds,saves,loads,pathReads,diagnostics,(unsigned long long)hash);return 0;
+}

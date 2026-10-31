@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Physical.h"
@@ -11,7 +12,7 @@
 class CPed;
 class CPlayerPed;
 class CCopPed;
-class CFire;
+struct CFire;
 
 enum {
 	RANDOM_VEHICLE = 1,
@@ -63,15 +64,7 @@ enum eCarLock {
 	CARLOCK_LOCKED_BUT_CAN_BE_DAMAGED
 };
 
-enum eBombType
-{
-	CARBOMB_NONE,
-	CARBOMB_TIMED,
-	CARBOMB_ONIGNITION,
-	CARBOMB_REMOTE,
-	CARBOMB_TIMEDACTIVE,
-	CARBOMB_ONIGNITIONACTIVE,
-};
+#include "VehicleBombTypes.h"
 
 enum eDoors
 {
@@ -83,24 +76,8 @@ enum eDoors
 	DOOR_REAR_RIGHT
 };
 
-enum ePanels
-{
-	VEHPANEL_FRONT_LEFT,
-	VEHPANEL_FRONT_RIGHT,
-	VEHPANEL_REAR_LEFT,
-	VEHPANEL_REAR_RIGHT,
-	VEHPANEL_WINDSCREEN,
-	VEHBUMPER_FRONT,
-	VEHBUMPER_REAR,
-};
+#include "VehicleDamageParts.h"
 
-enum eLights
-{
-	VEHLIGHT_FRONT_LEFT,
-	VEHLIGHT_FRONT_RIGHT,
-	VEHLIGHT_REAR_LEFT,
-	VEHLIGHT_REAR_RIGHT,
-};
 
 enum
 {
@@ -123,13 +100,7 @@ enum
 	CAR_PIECE_WINDSCREEN,
 };
 
-enum tWheelState
-{
-	WHEEL_STATE_NORMAL,	// standing still or rolling normally
-	WHEEL_STATE_SPINNING,	// rotating but not moving
-	WHEEL_STATE_SKIDDING,
-	WHEEL_STATE_FIXED,	// not rotating
-};
+#include "WheelState.h"
 
 enum eFlightModel
 {
@@ -142,15 +113,7 @@ enum eFlightModel
 	FLIGHT_MODEL_HELI
 };
 
-enum eVehicleAppearance
-{
-	VEHICLE_APPEARANCE_NONE,
-	VEHICLE_APPEARANCE_CAR,
-	VEHICLE_APPEARANCE_BIKE,
-	VEHICLE_APPEARANCE_HELI,
-	VEHICLE_APPEARANCE_BOAT,
-	VEHICLE_APPEARANCE_PLANE,
-};
+#include "../modelinfo/VehicleAppearance.h"
 
 // TODO: what is this even?
 enum eBikeWheelSpecial
@@ -278,7 +241,10 @@ public:
 	float m_fSteerInput;
 	eVehicleType m_vehType;
 
-	CVehicle(void) {}	// FAKE
+	CVehicle(void) {
+        // Preserve the original autopilot initialization in the fake vehicle constructor
+        AutoPilot_Init(&AutoPilot);
+    }	// FAKE
 	CVehicle(uint8 CreatedBy);
 	~CVehicle(void);
 	// from CEntity
@@ -444,3 +410,5 @@ inline int8 GetEnterCarDoorFlag(int32 carnode, uint8 numMaxPassengers) {
 		return CAR_DOOR_FLAG_UNKNOWN;
 	}
 }
+
+//- rouz edit (ChatGPT)

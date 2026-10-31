@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "General.h"
@@ -25,7 +26,8 @@ CSimpleModelInfo::DeleteRwObject(void)
 			m_atomics[i] = nil;
 			RemoveTexDictionaryRef();
 			if(GetAnimFileIndex() != -1)
-				CAnimManager::RemoveAnimBlockRef(GetAnimFileIndex());
+				// Use the complete C animation manager at the original call boundary
+				AnimManager_RemoveAnimBlockRef(GetAnimFileIndex());
 		}
 }
 
@@ -84,7 +86,8 @@ CSimpleModelInfo::SetAtomic(int n, RpAtomic *atomic)
 	AddTexDictionaryRef();
 	m_atomics[n] = atomic;
 	if(GetAnimFileIndex() != -1)
-		CAnimManager::AddAnimBlockRef(GetAnimFileIndex());
+		// Use the complete C animation manager at the original call boundary
+		AnimManager_AddAnimBlockRef(GetAnimFileIndex());
 	RpGeometry *geo = RpAtomicGetGeometry(atomic);
 	if(m_ignoreLight)
 		RpGeometrySetFlags(geo, RpGeometryGetFlags(geo) & ~rpGEOMETRYLIGHT);
@@ -179,7 +182,7 @@ CSimpleModelInfo::FindRelatedModel(int32 minID, int32 maxID)
 	for(i = minID; i <= maxID; i++){
 		mi = CModelInfo::GetModelInfo(i);
 		if(mi && mi != this &&
-		   !CGeneral::faststrcmp(GetModelName()+3, mi->GetModelName()+3)){
+		   !General_faststrcmp(GetModelName()+3, mi->GetModelName()+3)){
 			assert(mi->IsSimple());
 			this->SetRelatedModel((CSimpleModelInfo*)mi);
 			return;
@@ -207,3 +210,4 @@ CSimpleModelInfo::SetupBigBuilding(int32 minID, int32 maxID)
 			m_lodDistances[2] = NEAR_DRAW_DIST;
 	}
 }
+//- rouz edit (ChatGPT)

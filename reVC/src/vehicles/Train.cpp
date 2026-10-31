@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -43,14 +44,17 @@ static bool bTrainArrivalAnnounced[3] = {false, false, false};
 CTrain::CTrain(int32 id, uint8 CreatedBy)
  : CVehicle(CreatedBy)
 {
+    // Initialize both doors even when the optional train body is disabled
+    for(int doorIndex=0;doorIndex<2;++doorIndex)
+        TrainDoor_Init(&Doors[doorIndex]);
 #ifdef GTA_TRAIN
 	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
 	m_vehType = VEHICLE_TYPE_TRAIN;
 	pHandling = mod_HandlingManager.GetHandlingData((tVehicleType)mi->m_handlingId);
 	SetModelIndex(id);
 
-	Doors[0].Init(0.8f, 0.0f, 1, 0);
-	Doors[1].Init(-0.8f, 0.0f, 0, 0);
+	TrainDoor_SetLimits(&Doors[0], 0.8f, 0.0f, 1, 0);
+	TrainDoor_SetLimits(&Doors[1], -0.8f, 0.0f, 0, 0);
 
 	m_fMass = 100000000.0f;
 	m_fTurnMass = 100000000.0f;
@@ -61,7 +65,7 @@ CTrain::CTrain(int32 id, uint8 CreatedBy)
 	m_bTrainStopping = false;
 	m_nTrackId = TRACK_ELTRAIN;
 	m_nNumMaxPassengers = 5;
-	m_nDoorTimer = CTimer::GetTimeInMilliseconds();
+	m_nDoorTimer = (*Timer_GetTimeInMilliseconds());
 	m_nDoorState = TRAIN_DOOR_CLOSED;
 
 	bUsesCollision = true;
@@ -92,7 +96,7 @@ void
 CTrain::ProcessControl(void)
 {
 #ifdef GTA_TRAIN
-	if(gbModelViewer || m_isFarAway && (CTimer::GetFrameCounter() + m_nWagonId) & 0xF)
+	if(gbModelViewer || m_isFarAway && ((*Timer_GetFrameCounter()) + m_nWagonId) & 0xF)
 		return;
 
 	CTrainNode *trackNodes;
@@ -211,15 +215,15 @@ CTrain::ProcessControl(void)
 		switch(m_nDoorState){
 		case TRAIN_DOOR_CLOSED:
 			if(m_bTrainStopping){
-				m_nDoorTimer = CTimer::GetTimeInMilliseconds() + 1000;
+				m_nDoorTimer = (*Timer_GetTimeInMilliseconds()) + 1000;
 				m_nDoorState = TRAIN_DOOR_OPENING;
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_CLOSE, 0.0f);
 			}
 			break;
 
 		case TRAIN_DOOR_OPENING:
-			if(CTimer::GetTimeInMilliseconds() < m_nDoorTimer){
-				OpenTrainDoor(1.0f - (m_nDoorTimer - CTimer::GetTimeInMilliseconds())/1000.0f);
+			if((*Timer_GetTimeInMilliseconds()) < m_nDoorTimer){
+				OpenTrainDoor(1.0f - (m_nDoorTimer - (*Timer_GetTimeInMilliseconds()))/1000.0f);
 			}else{
 				OpenTrainDoor(1.0f);
 				m_nDoorState = TRAIN_DOOR_OPEN;
@@ -228,15 +232,15 @@ CTrain::ProcessControl(void)
 
 		case TRAIN_DOOR_OPEN:
 			if(!m_bTrainStopping){
-				m_nDoorTimer = CTimer::GetTimeInMilliseconds() + 1000;
+				m_nDoorTimer = (*Timer_GetTimeInMilliseconds()) + 1000;
 				m_nDoorState = TRAIN_DOOR_CLOSING;
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_TRAIN_DOOR_OPEN, 0.0f);
 			}
 			break;
 
 		case TRAIN_DOOR_CLOSING:
-			if(CTimer::GetTimeInMilliseconds() < m_nDoorTimer){
-				OpenTrainDoor((m_nDoorTimer - CTimer::GetTimeInMilliseconds())/1000.0f);
+			if((*Timer_GetTimeInMilliseconds()) < m_nDoorTimer){
+				OpenTrainDoor((m_nDoorTimer - (*Timer_GetTimeInMilliseconds()))/1000.0f);
 			}else{
 				OpenTrainDoor(0.0f);
 				m_nDoorState = TRAIN_DOOR_CLOSED;
@@ -269,7 +273,7 @@ CTrain::ProcessControl(void)
 
 	// Hit stuff
 	if(m_bIsFirstWagon && GetStatus()== STATUS_TRAIN_MOVING){
-		CVector front = GetPosition() + GetForward()*GetColModel()->boundingBox.max.y + m_vecMoveSpeed*CTimer::GetTimeStep();
+		CVector front = GetPosition() + GetForward()*GetColModel()->boundingBox.max.y + m_vecMoveSpeed*(*Timer_GetTimeStep());
 
 		int x, xmin, xmax;
 		int y, ymin, ymax;
@@ -417,13 +421,13 @@ CTrain::OpenTrainDoor(float ratio)
 	CVector posL = doorL.GetPosition();
 	CVector posR = doorR.GetPosition();
 
-	bool isClosed = Doors[0].IsClosed();	// useless
+	bool isClosed = TrainDoor_IsClosed(&Doors[0]);	// useless
 
-	Doors[0].Open(ratio);
-	Doors[1].Open(ratio);
+	TrainDoor_Open(&Doors[0], ratio);
+	TrainDoor_Open(&Doors[1], ratio);
 
 	if(isClosed)
-		Doors[0].RetTranslationWhenClosed();	// useless
+		TrainDoor_RetTranslationWhenClosed(&Doors[0]);	// useless
 
 	posL.y = Doors[0].m_fPosn;
 	posR.y = Doors[1].m_fPosn;
@@ -542,7 +546,7 @@ CTrain::ReadAndInterpretTrackFile(Const char *filename, CTrainNode **nodes, int1
 	if(*nodes == nil){
 		readingFile = true;
 
-		CFileMgr::LoadFile(filename, work_buff, sizeof(work_buff), "r");
+		FileMgr_LoadFile(filename, work_buff, sizeof(work_buff), "r");
 		*gString = '\0';
 		for(bp = 0, lp = 0; work_buff[bp] != '\n'; bp++, lp++)
 			gString[lp] = work_buff[bp];
@@ -725,7 +729,7 @@ CTrain::UpdateTrains(void)
 	   TheCamera.GetPosition().y > -1000.0f && TheCamera.GetPosition().y < 500.0f){
 		// Update El-Train
 
-		time = CTimer::GetTimeInMilliseconds();
+		time = (*Timer_GetTimeInMilliseconds());
 		for(i = 0; i < 2; i++){
 			t = TotalDurationOfTrack * (float)(time & 0x1FFFF)/0x20000;
 			// find current frame
@@ -755,7 +759,7 @@ CTrain::UpdateTrains(void)
 	}
 
 	// Update Subway
-	time = CTimer::GetTimeInMilliseconds();
+	time = (*Timer_GetTimeInMilliseconds());
 	for(i = 0; i < 4; i++){
 		t = TotalDurationOfTrack_S * (float)(time & 0x3FFFF)/0x40000;
 		// find current frame
@@ -782,4 +786,6 @@ CTrain::UpdateTrains(void)
 	}
 #endif
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

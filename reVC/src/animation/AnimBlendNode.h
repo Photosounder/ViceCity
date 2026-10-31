@@ -1,37 +1,38 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "KeyFrames.h"
 #include "AnimBlendSequence.h"
-
-class CAnimBlendAssociation;
-
-// The interpolated state between two key frames in a sequence
-class CAnimBlendNode
-{
-public:
-	// for slerp
-	float theta;		// angle between quaternions
-	float invSin;		// 1/Sin(theta)
-	// indices into array in sequence
-	int32 frameA;		// next key frame
-	int32 frameB;		// previous key frame
-	float remainingTime;	// time until frames have to advance
-	CAnimBlendSequence *sequence;
-	CAnimBlendAssociation *association;
-
-	void Init(void);
-	bool Update(CVector &trans, CQuaternion &rot, float weight);
-	bool UpdateCompressed(CVector &trans, CQuaternion &rot, float weight);
-	bool NextKeyFrame(void);
-	bool NextKeyFrameCompressed(void);
-	bool FindKeyFrame(float t);
-	bool SetupKeyFrameCompressed(void);
-	void CalcDeltas(void);
-	void CalcDeltasCompressed(void);
-	void GetCurrentTranslation(CVector &trans, float weight);
-	void GetCurrentTranslationCompressed(CVector &trans, float weight);
-	void GetEndTranslation(CVector &trans, float weight);
-	void GetEndTranslationCompressed(CVector &trans, float weight);
-};
-
-
-VALIDATE_SIZE(CAnimBlendNode, 0x1C);
+#ifdef __cplusplus
+struct CAnimBlendAssociation;
+#else
+typedef struct CAnimBlendAssociation CAnimBlendAssociation;
+#endif
+typedef struct CAnimBlendNode {
+    float theta,invSin;
+    int32_t frameA,frameB;
+    float remainingTime;
+    CAnimBlendSequence *sequence;
+    CAnimBlendAssociation *association;
+} CAnimBlendNode;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void AnimBlendNode_Init(CAnimBlendNode *self);
+bool AnimBlendNode_Update(CAnimBlendNode *self,KeyFrameVectorOut trans,CQuaternion *rot,float weight);
+bool AnimBlendNode_UpdateCompressed(CAnimBlendNode *self,KeyFrameVectorOut trans,CQuaternion *rot,float weight);
+bool AnimBlendNode_NextKeyFrame(CAnimBlendNode *self);
+bool AnimBlendNode_NextKeyFrameCompressed(CAnimBlendNode *self);
+bool AnimBlendNode_FindKeyFrame(CAnimBlendNode *self,float t);
+bool AnimBlendNode_SetupKeyFrameCompressed(CAnimBlendNode *self);
+void AnimBlendNode_CalcDeltas(CAnimBlendNode *self);
+void AnimBlendNode_CalcDeltasCompressed(CAnimBlendNode *self);
+void AnimBlendNode_GetCurrentTranslation(CAnimBlendNode *self,KeyFrameVectorOut trans,float weight);
+void AnimBlendNode_GetCurrentTranslationCompressed(CAnimBlendNode *self,KeyFrameVectorOut trans,float weight);
+void AnimBlendNode_GetEndTranslation(CAnimBlendNode *self,KeyFrameVectorOut trans,float weight);
+void AnimBlendNode_GetEndTranslationCompressed(CAnimBlendNode *self,KeyFrameVectorOut trans,float weight);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

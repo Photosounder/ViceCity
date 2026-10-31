@@ -1,0 +1,181 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned checks,commands,events,lightsCreated,framesCreated,lightsDestroyed,framesDestroyed,transforms,colours,blurReads;
+static RpLight lights[4096];
+static RwFrame frames[4096];
+static RpWorld world={37,0};
+static bool blur;
+static float timeColours[15];
+float CCoronas::LightsMult=1.0f;
+bool CMBlur::BlurOn;
+TestFrontend FrontEndMenuManager;
+uint32_t Timer_timeMs;
+bool Weather_LightningFlash;
+int32_t CullZones_cameraFlags;
+int32_t TimeCycle_m_CurrentStoredValue;
+TimeCycleVector TimeCycle_m_VectorToSun[16];
+static void requireAt(bool value,unsigned line)
+{
+    // Stop on a failed quiet runtime observation without displaying native dialogs
+    ++checks;if(!value){fprintf(stderr,"line=%u checks=%u commands=%u\n",line,checks,commands);abort();}
+}
+#define require(value) requireAt((value),__LINE__)
+static void hashBytes(const void *memory,size_t count)
+{
+    // Observe initialized fields while excluding pointers and uninitialized original storage
+    const uint8_t *bytes=(const uint8_t*)memory;for(size_t i=0;i<count;++i){hashValue^=bytes[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void event(unsigned operation,unsigned a=0,unsigned b=0)
+{
+    // Retain SDK operation order and stable resource identities
+    const unsigned values[]={operation,a,b};hashBytes(values,sizeof(values));++events;
+}
+static void rgb(const RwRGBAReal *colour)
+{
+    // Observe exactly the RGB components consumed by the librw colour primitive
+    hashBytes(&colour->red,3*sizeof(float));
+}
+static void *run(unsigned operation,const float *values=NULL,void *target=&world)
+{
+    // Enter the independent public caller and observe public C-owned light-selection state
+    ++commands;void *result=TestLights(operation,target,values);hashBytes(LightStrengths,sizeof(LightStrengths));hashBytes(&NumExtraDirLightsInWorld,sizeof(NumExtraDirLightsInWorld));return result;
+}
+static RpLight *handle(unsigned index)
+{
+    // Obtain a live SDK object through the independent original or C public handle consumer
+    return (RpLight*)TestLightsHandle(index);
+}
+bool CPostFX::UseBlurColours(void)
+{
+    // Observe preference reads at the original two separate ambient-colour branches
+    ++blurReads;event(1,blur);return blur;
+}
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*)
+{
+    // Fail quietly if any real C inline primitive detects an invalid condition
+    abort();
+}
+CVector TimeCycle_ToNativeVector(TimeCycleVector value)
+{
+    // Copy the same original vector components without altering their representation
+    return CVector(value.x,value.y,value.z);
+}
+RpLight *RpLightCreate(int kind)
+{
+    // Supply initialized SDK object backing with stable identities and observable lifetime
+    require(lightsCreated<4096);RpLight *light=&lights[lightsCreated++];memset(light,0,sizeof(*light));light->id=lightsCreated;light->kind=kind;light->alive=true;event(2,light->id,kind);return light;
+}
+void RpLightDestroy(RpLight *light)
+{
+    // Verify the original SDK release order and prohibit double destruction
+    require(light&&light->alive);light->alive=false;++lightsDestroyed;event(3,light->id);
+}
+void RpLightSetFlags(RpLight *light,int flags)
+{
+    // Observe exact native light flag changes
+    require(light&&light->alive);light->flags=flags;event(4,light->id,flags);
+}
+void RpLightSetColor(RpLight *light,const RwRGBAReal *colour)
+{
+    // Consume exactly the initialized RGB values used by the real librw implementation
+    require(light&&light->alive);light->colour.red=colour->red;light->colour.green=colour->green;light->colour.blue=colour->blue;event(5,light->id);rgb(colour);++colours;
+}
+void RpLightSetRadius(RpLight *light,float radius)
+{
+    // Retain the original SDK radius argument
+    require(light&&light->alive);light->radius=radius;event(6,light->id);hashBytes(&radius,sizeof(radius));
+}
+RwFrame *RwFrameCreate(void)
+{
+    // Supply independent SDK frame backing without introducing lighting policy
+    require(framesCreated<4096);RwFrame *frame=&frames[framesCreated++];memset(frame,0,sizeof(*frame));frame->id=framesCreated;frame->alive=true;event(7,frame->id);return frame;
+}
+void RwFrameDestroy(RwFrame *frame)
+{
+    // Verify all original directional frames are released exactly once
+    require(frame&&frame->alive);frame->alive=false;++framesDestroyed;event(8,frame->id);
+}
+RwFrame *RpLightGetFrame(RpLight *light)
+{
+    // Retain the original live frame lookup and its place in the SDK trace
+    require(light&&light->alive);event(9,light->id);return light->frame;
+}
+void RpLightSetFrame(RpLight *light,RwFrame *frame)
+{
+    // Observe SDK light attachment without changing the owner's lifetime decisions
+    require(light&&light->alive&&frame&&frame->alive);light->frame=frame;event(10,light->id,frame->id);
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *frame)
+{
+    // Borrow the actual SDK frame matrix at every original lookup site
+    require(frame&&frame->alive);event(11,frame->id);return &frame->matrix;
+}
+RwV3d *RwMatrixGetAt(RwMatrix *matrix)
+{
+    // Expose the native direction subobject for the owner's scalar writes
+    event(12);return &matrix->at;
+}
+void RwMatrixUpdate(RwMatrix *matrix)
+{
+    // Observe initialized direction components without inspecting unspecified matrix fields
+    event(13);hashBytes(&matrix->at,sizeof(matrix->at));
+}
+void RwFrameUpdateObjects(RwFrame *frame)
+{
+    // Retain the original explicit frame-object update
+    require(frame&&frame->alive);event(14,frame->id);
+}
+void RpWorldAddLight(RpWorld *target,RpLight *light)
+{
+    // Track real SDK membership changes without selecting lights in the fixture
+    require(target==&world&&light&&light->alive);++target->count;event(15,light->id);
+}
+void RpWorldRemoveLight(RpWorld *target,RpLight *light)
+{
+    // Verify each world removal precedes its SDK destruction
+    require(target==&world&&target->count&&light&&light->alive);--target->count;event(16,light->id);
+}
+void RwFrameRotate(RwFrame *frame,const RwV3d *axis,float angle,int mode)
+{
+    // Observe all original rotation arguments without reimplementing SDK matrix operations
+    require(frame&&frame->alive&&mode==rwCOMBINEPRECONCAT);event(17,frame->id);hashBytes(axis,sizeof(*axis));hashBytes(&angle,sizeof(angle));
+}
+void RwFrameTransform(RwFrame *frame,const RwMatrix *matrix,int mode)
+{
+    // Compare only the nine basis floats explicitly written by the original owner
+    require(frame&&frame->alive&&mode==rwCOMBINEREPLACE);event(18,frame->id);hashBytes(&matrix->right,sizeof(matrix->right));hashBytes(&matrix->up,sizeof(matrix->up));hashBytes(&matrix->at,sizeof(matrix->at));frame->matrix.right=matrix->right;frame->matrix.up=matrix->up;frame->matrix.at=matrix->at;++transforms;
+}
+static void snapshot(void)
+{
+    // Observe every public handle and all initialized SDK light state after complete operations
+    for(unsigned i=0;i<6;++i){
+        // Hash resource identities rather than process-specific pointer addresses
+        RpLight *light=handle(i);unsigned id=light?light->id:0;hashBytes(&id,sizeof(id));if(!light)continue;require(light->alive);hashBytes(&light->kind,sizeof(light->kind));hashBytes(&light->flags,sizeof(light->flags));hashBytes(&light->radius,sizeof(light->radius));rgb(&light->colour);
+    }
+}
+int main(void)
+{
+    // Exercise all 19 complete operations across colour, weather, brightness and vector edge cases
+    require(run(OP_Create,NULL,NULL)==NULL);run(OP_Destroy,NULL,NULL);run(OP_Time);require(world.count==0);
+    for(unsigned cycle=0;cycle<24;++cycle){
+        // Verify complete creation and initial SDK state independently of either implementation
+        require(run(OP_Create)==&world);require(world.count==6&&handle(0)->kind==rpLIGHTAMBIENT&&handle(1)->kind==rpLIGHTDIRECTIONAL);snapshot();
+        for(unsigned sample=0;sample<64;++sample){
+            // Vary each original branch input and include vertical and zero sun vectors
+            for(unsigned j=0;j<15;++j)timeColours[j]=((sample*17+j*13+cycle)%512)/255.0f;
+            const int brightness[]={-1,0,255,256,257,384,512,1024};CCoronas::LightsMult=(sample%5)*0.375f;blur=(sample&1)!=0;CMBlur::BlurOn=blur;Weather_LightningFlash=(sample&2)!=0;CullZones_cameraFlags=(sample&4)?ATTRZONE_NORAIN:0;FrontEndMenuManager.m_PrefsBrightness=brightness[sample%8];TimeCycle_m_CurrentStoredValue=sample%16;
+            TimeCycleVector sun={(int)(sample%7)-3.0f,(int)(sample%5)-2.0f,(int)(sample%3)-1.0f};if(sample%8==0)sun={0.0f,0.0f,1.0f};if(sample%8==1)sun={0.0f,0.0f,0.0f};TimeCycle_m_VectorToSun[TimeCycle_m_CurrentStoredValue]=sun;
+            run(OP_Time);snapshot();float values[]={sample/32.0f,-0.25f,0.5f,0.125f};run(OP_Scale,values);run(OP_Reset);run(OP_Objects);run(OP_Ambient);run(OP_Full);run(OP_Colour,values);run(OP_Scorch,values);require(handle(1)->flags==0);run(OP_Normal);require(handle(1)->flags==rpLIGHTLIGHTATOMICS);run(OP_Off);require(handle(1)->flags==0);run(OP_On);run(OP_Marker,values);
+            Timer_timeMs=sample*128;run(OP_Flash,values);run(OP_Mild,values);values[0]=(float)(sample%35);run(OP_Road,values);snapshot();
+        }
+        for(unsigned i=0;i<32;++i){
+            // Exercise capacity, integer strength truncation, replacement ties and rejected lights
+            float values[]={i*0.125f,-(int)i*0.25f,0.5f,(i%9)*0.375f,(i%7)*0.125f,(i%5)*0.25f};run(OP_Extra,values);require(NumExtraDirLightsInWorld>=1&&NumExtraDirLightsInWorld<=4);snapshot();
+        }
+        run(OP_Remove);require(NumExtraDirLightsInWorld==0);for(unsigned i=2;i<6;++i)require(handle(i)->flags==0);run(OP_Remove);
+        run(OP_Destroy,NULL,NULL);require(world.count==6);run(OP_Destroy);require(world.count==0);for(unsigned i=0;i<6;++i)require(handle(i)==NULL);run(OP_Destroy);run(OP_Time);
+    }
+    require(lightsCreated==lightsDestroyed&&framesCreated==framesDestroyed&&world.count==0);
+    printf("commands=%u checks=%u events=%u lights=%u/%u frames=%u/%u colours=%u transforms=%u blur=%u hash=%016llx\n",commands,checks,events,lightsCreated,lightsDestroyed,framesCreated,framesDestroyed,colours,transforms,blurReads,(unsigned long long)hashValue);return 0;
+}

@@ -1,0 +1,181 @@
+#include "common.h"
+#include "World.h"
+#include "Pools.h"
+#include "References.h"
+#include "driver.h"
+#include <stdio.h>
+#include <string.h>
+#include <new>
+
+static uint64_t fingerprint=UINT64_C(1469598103934665603);
+static unsigned events,states;
+static CEntity entities[12];
+static CPlayerPed players[3];
+static CVehicle vehicles[4];
+static CPed peds[5];
+static CObject objects[3];
+static CEntity *slots[4096];
+static CPool pedPool,vehiclePool,objectPool;
+static unsigned pedQuery,vehicleQuery,pedSequence,vehicleSequence;
+TestPlayerInfo CWorld::Players[NUMPLAYERS];
+uint8 CWorld::PlayerInFocus;
+
+static void mix(uint64_t value)
+{
+    // Accumulate only logical values so pointer addresses never affect comparisons
+    fingerprint^=value;fingerprint*=UINT64_C(1099511628211);
+}
+void TestEvent(unsigned event,unsigned value)
+{
+    // Preserve the order and count of player queries, pool queries and type checks
+    mix(0x70000000u+event);mix(value);events++;
+}
+static CEntity *owner(unsigned index)
+{
+    // Use typed conversions for ordinary entities and every derived owner
+    if(index<12)return &entities[index];
+    if(index<15)return &players[index-12];
+    if(index<19)return &vehicles[index-15];
+    if(index<24)return &peds[index-19];
+    if(index<27)return &objects[index-24];
+    return nullptr;
+}
+static unsigned identity(CEntity *entity)
+{
+    // Classify pointer identity without inspecting arbitrary memory
+    if(!entity)return 0;
+    for(unsigned i=0;i<27;i++)if(owner(i)==entity)return i+1;
+    abort();
+}
+static unsigned node(CReference *ref)
+{
+    // Encode actual pool indices including the null terminator
+    if(!ref)return 0;
+    uintptr_t address=(uintptr_t)ref,base=(uintptr_t)Test_Records();
+    if(address>=base && address<base+NUMREFERENCES*sizeof(CReference) && (address-base)%sizeof(CReference)==0)return (unsigned)((address-base)/sizeof(CReference))+1;
+    abort();
+}
+static unsigned location(CEntity **slot)
+{
+    // Preserve stale record payload addresses even after records return to the free list
+    if(!slot)return 0;
+    uintptr_t address=(uintptr_t)slot,base=(uintptr_t)slots;
+    if(address>=base && address<base+sizeof(slots) && (address-base)%sizeof(slots[0])==0)return (unsigned)((address-base)/sizeof(slots[0]))+1;
+    for(unsigned i=0;i<NUMPLAYERS;i++)if((CEntity **)&CWorld::Players[i].m_pPed==slot)return 5000+i;
+    abort();
+}
+static void snapshot(void)
+{
+    // Observe every record including inactive payloads and the exact free-list order
+    mix(node(*Test_Free()));
+    for(unsigned i=0;i<NUMREFERENCES;i++){mix(node(Test_Records()[i].next));mix(location(Test_Records()[i].pentity));}
+    for(unsigned i=0;i<27;i++)mix(node(owner(i)->m_pFirstReference));
+    for(unsigned i=0;i<4096;i++)mix(identity(slots[i]));
+    for(unsigned i=0;i<NUMPLAYERS;i++){
+        // Compare the player pointer in its original declared type
+        unsigned id=0;
+        for(unsigned p=0;p<3;p++)if(CWorld::Players[i].m_pPed==&players[p])id=p+1;
+        mix(id);
+    }
+    states++;
+}
+CPlayerPed *FindPlayerPed(int32)
+{
+    // Return scripted non-null query changes to expose repeated player reads
+    unsigned query=pedQuery++;TestEvent(2,query);
+    if(pedSequence==0)return nullptr;
+    return &players[pedSequence==1?0:query%3];
+}
+CVehicle *FindPlayerVehicle(int32,bool)
+{
+    // Preserve both vehicle queries when the first query succeeds
+    unsigned query=vehicleQuery++;TestEvent(3,query);
+    if(vehicleSequence==0)return nullptr;
+    return &vehicles[vehicleSequence==1?0:query%4];
+}
+CPool *CPools::GetPedPool(void)
+{
+    // Expose each original live pool query in the trace
+    TestEvent(4,0);return &pedPool;
+}
+CPool *CPools::GetVehiclePool(void)
+{
+    // Expose each original live pool query in the trace
+    TestEvent(5,0);return &vehiclePool;
+}
+CPool *CPools::GetObjectPool(void)
+{
+    // Expose each original live pool query in the trace
+    TestEvent(6,0);return &objectPool;
+}
+template<class T> static void pool(CPool *value,T *storage,unsigned count,uint8 *flags)
+{
+    // Use the production CPool raw-storage representation and real typed strides
+    value->m_entries=(uint8 *)storage;value->m_flags=flags;value->m_size=(int32)count;value->m_allocPtr=-1;value->m_entrySize=sizeof(T);
+}
+static void reset(void)
+{
+    // Restart the pool only after detaching all owners and caller slots
+    for(unsigned i=0;i<27;i++){owner(i)->m_pFirstReference=nullptr;owner(i)->testId=i+1;owner(i)->building=false;}
+    memset(slots,0,sizeof(slots));memset(CWorld::Players,0,sizeof(CWorld::Players));CWorld::PlayerInFocus=0;
+    pedQuery=vehicleQuery=0;Test_Init();snapshot();
+}
+static uint32_t randomState=0x17382;
+static unsigned randomValue(void)
+{
+    // Generate the same operation stream for the independently linked implementations
+    randomState^=randomState<<13;randomState^=randomState>>17;randomState^=randomState<<5;return randomState;
+}
+int main(void)
+{
+    // Verify original record layout and initialize sparse typed pool storage
+    static_assert(sizeof(CReference)==2*sizeof(void *),"Reference record size");
+    static_assert(alignof(CReference)==alignof(void *),"Reference record alignment");
+    static_assert(offsetof(CReference,pentity)==sizeof(void *),"Reference payload offset");
+    uint8 pedFlags[5]={0,POOLFLAG_ISFREE,2,POOLFLAG_ISFREE,4},vehicleFlags[4]={0,1,POOLFLAG_ISFREE,3},objectFlags[3]={POOLFLAG_ISFREE,1,2};
+    pool(&pedPool,peds,5,pedFlags);pool(&vehiclePool,vehicles,4,vehicleFlags);pool(&objectPool,objects,3,objectFlags);
+    reset();
+    // Exercise pool exhaustion, duplicate registration and building rejection
+    for(unsigned i=0;i<2000;i++){slots[i]=owner(i%27);Test_Register(owner(i%27),&slots[i]);}
+    snapshot();
+    for(unsigned i=0;i<2000;i++){Test_Register(owner(i%27),&slots[i]);}
+    entities[0].building=true;Test_Register(&entities[0],&slots[3000]);snapshot();entities[0].building=false;
+    for(unsigned i=0;i<27;i++){Test_Resolve(owner(i));snapshot();}
+    // Exercise arbitrary valid retargeting histories with stale and duplicate references
+    reset();
+    for(unsigned i=0;i<36000;i++){
+        unsigned action=randomValue()%8,index=randomValue()%2048,entity=randomValue()%27;
+        if(action<3){slots[index]=owner(entity);Test_Register(owner(entity),&slots[index]);}
+        else if(action==3)Test_Clean(owner(entity),&slots[index]);
+        else if(action==4)slots[index]=(randomValue()&1)?owner(randomValue()%27):nullptr;
+        else if(action==5)Test_Resolve(owner(entity));
+        else if(action==6)Test_Prune(owner(entity));
+        else {owner(entity)->building=!owner(entity)->building;Test_Register(owner(entity),&slots[index]);}
+        if(i%37==0)snapshot();
+    }
+    snapshot();
+    // Cover every three-reference stale/live arrangement and cleanup position
+    for(unsigned mask=0;mask<8;mask++)for(unsigned cleanup=0;cleanup<5;cleanup++){
+        reset();
+        for(unsigned i=0;i<3;i++){slots[i]=&entities[0];Test_Register(&entities[0],&slots[i]);}
+        for(unsigned i=0;i<3;i++)if(mask&(1u<<i))slots[i]=&entities[1];
+        Test_Clean(&entities[0],&slots[cleanup]);snapshot();Test_Prune(&entities[0]);snapshot();Test_Resolve(&entities[0]);snapshot();
+    }
+    // Compare world visitation through sparse pools, including empty pool boundaries
+    for(unsigned shape=0;shape<8;shape++){
+        reset();pedPool.m_size=(shape&1)?0:5;vehiclePool.m_size=(shape&2)?0:4;objectPool.m_size=(shape&4)?0:3;
+        for(unsigned i=0;i<27;i++)for(unsigned j=0;j<3;j++){slots[i*3+j]=owner(i);Test_Register(owner(i),&slots[i*3+j]);if(j!=1)slots[i*3+j]=nullptr;}
+        Test_World();snapshot();
+    }
+    pedPool.m_size=5;vehiclePool.m_size=4;objectPool.m_size=3;
+    // Exercise absent, stable and changing player queries with focused-slot references
+    for(pedSequence=0;pedSequence<3;pedSequence++)for(vehicleSequence=0;vehicleSequence<3;vehicleSequence++)for(unsigned full=0;full<2;full++){
+        reset();CWorld::Players[0].m_pPed=&players[0];
+        for(unsigned i=12;i<19;i++){slots[i]=owner(i);Test_Register(owner(i),&slots[i]);}
+        players[0].RegisterReference((CEntity **)&CWorld::Players[0].m_pPed);
+        if(full)for(unsigned i=100;i<2100;i++){slots[i]=&entities[0];Test_Register(&entities[0],&slots[i]);}
+        snapshot();Test_Player();snapshot();mix(pedQuery);mix(vehicleQuery);
+    }
+    printf("%016llx states=%u events=%u records=%u\n",(unsigned long long)fingerprint,states,events,(unsigned)NUMREFERENCES);
+    return 0;
+}

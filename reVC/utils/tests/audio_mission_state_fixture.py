@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare actual C mission state and facade behavior against saved C++ methods."""
 from pathlib import Path
 import re
@@ -8,6 +9,8 @@ from audio_mission_state_migration import MAP,METHODS,FACADES,calls,logic,facade
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-mission-state-c-tests'
 old=(out/'before/src/audio/AudioLogic.cpp').read_text();kernel=(root/'src/audio/AudioMissionState.c').read_text()
 def normalize(source):
+    # Apply the explicit verified weather rename before comparing every original statement
+    source=_weather_conversion.calls(source)
     # Compare executable statements without formatting or comments
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',source,flags=re.S))
 for name,target in MAP.items():

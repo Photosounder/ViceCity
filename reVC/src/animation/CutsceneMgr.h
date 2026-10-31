@@ -1,10 +1,11 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 #include "CutsceneObject.h"
 
 #define CUTSCENENAMESIZE 8
 
-class CDirectory;
-class CAnimBlendAssocGroup;
+struct CDirectory;
+struct CAnimBlendAssocGroup;
 class CCutsceneHead;
 
 class CCutsceneMgr
@@ -59,3 +60,4 @@ public:
 	static void RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver();
 	static void DisableCutsceneShadows() { ms_useCutsceneShadows = false; }
 };
+//- rouz edit (ChatGPT)

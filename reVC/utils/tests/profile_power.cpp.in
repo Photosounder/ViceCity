@@ -1,0 +1,66 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),states,checks;
+static void Number(uint64_t value)
+{
+    // Compare complete scalar observations without process-specific addresses
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static uint32_t FloatBits(float value)
+{
+    // Preserve signed zero and quiet-NaN payloads when observing initialized floating-point state
+    uint32_t bits;memcpy(&bits,&value,4);return bits;
+}
+static void Bytes(const void *pointer,size_t size)
+{
+    // Observe all initialized caller and color bytes
+    const uint8_t *data=(const uint8_t*)pointer;for(size_t i=0;i<size;i++){digest^=data[i];digest*=UINT64_C(1099511628211);}
+}
+static void Check(bool value)
+{
+    // Stop at the exact independent contract failure instead of hiding it in a final hash
+    ++checks;if(!value){fprintf(stderr,"Profile/power invariant %llu state %llu\n",(unsigned long long)checks,(unsigned long long)states);abort();}
+}
+#ifndef MASTER
+static const char *names[]={"Frame rate","Physics","Collision","Ped AI","Processing time","Rendering time","Total"};
+static const char sentinels[7][12]={"sentinel0","sentinel1","sentinel2","sentinel3","sentinel4","sentinel5","sentinel6"};
+static uint32_t patterns[]={0,0x80000000,0x3f800000,0xbf800000,0x41200000,0xc1200000,0x7f800000,0xff800000,0x7fc12345,0xffc34567,1,0x7f7fffff};
+static void Set(float *value,uint32_t bits)
+{
+    // Supply exact initialized input representations without aliasing through integer pointers
+    memcpy(value,&bits,4);
+}
+static void Snapshot()
+{
+    // Compare every profiler array, label identity relation and color component
+    ++states;float *arrays[]={GLOBAL(ms_afStartTime),GLOBAL(ms_afCumulativeTime),GLOBAL(ms_afEndTime),GLOBAL(ms_afMaxEndTime),GLOBAL(ms_afMaxCumulativeTime)};
+    for(unsigned k=0;k<5;k++)for(unsigned i=0;i<7;i++)Number(FloatBits(arrays[k][i]));
+    for(unsigned i=0;i<7;i++){const char *label=GLOBAL(ms_pProfileString)[i];if(!label)Number(0);else{unsigned id=0;for(unsigned j=0;j<7;j++){if(label==sentinels[j])id=100+j;if(strcmp(label,names[j])==0)id=1+j;}Check(id!=0);Number(id);}Bytes(&GLOBAL(ms_aBarColours)[i],4);}
+}
+static void Seed(unsigned seed)
+{
+    // Vary all five time arrays, all label pointers and all seven defined color records
+    float *arrays[]={GLOBAL(ms_afStartTime),GLOBAL(ms_afCumulativeTime),GLOBAL(ms_afEndTime),GLOBAL(ms_afMaxEndTime),GLOBAL(ms_afMaxCumulativeTime)};
+    for(unsigned k=0;k<5;k++)for(unsigned i=0;i<7;i++)Set(&arrays[k][i],patterns[(seed+3*k+i)%12]);
+    for(unsigned i=0;i<7;i++){GLOBAL(ms_pProfileString)[i]=sentinels[(seed+i)%7];TestProfileColor &color=GLOBAL(ms_aBarColours)[i];color.red=(uint8_t)(seed+i);color.green=(uint8_t)(seed*3+i);color.blue=(uint8_t)(seed*5+i);color.alpha=(uint8_t)(seed*7+i);}
+}
+#endif
+int main()
+{
+#ifndef MASTER
+    // Verify fully defined static initialization before any test supplies profiler values
+    for(unsigned i=0;i<7;i++){Check(FloatBits(GLOBAL(ms_afStartTime)[i])==0&&FloatBits(GLOBAL(ms_afCumulativeTime)[i])==0&&FloatBits(GLOBAL(ms_afEndTime)[i])==0&&FloatBits(GLOBAL(ms_afMaxEndTime)[i])==0&&FloatBits(GLOBAL(ms_afMaxCumulativeTime)[i])==0);Check(!GLOBAL(ms_pProfileString)[i]);TestProfileColor empty={0,0,0,0};Check(memcmp(&empty,&GLOBAL(ms_aBarColours)[i],4)==0);}Snapshot();
+    // Verify partial initialization retains live start/cumulative/end arrays and the frame-rate color
+    const uint8_t palette[6][4]={{0,127,255,255},{0,255,255,255},{255,0,0,255},{0,255,0,255},{0,0,255,255},{255,255,255,255}};
+    for(unsigned seed=0;seed<32;seed++){Seed(seed);float unchanged[3][7];memcpy(unchanged[0],GLOBAL(ms_afStartTime),28);memcpy(unchanged[1],GLOBAL(ms_afCumulativeTime),28);memcpy(unchanged[2],GLOBAL(ms_afEndTime),28);TestProfileColor frame=GLOBAL(ms_aBarColours)[0];Run_Profile_Initialise();Check(memcmp(unchanged[0],GLOBAL(ms_afStartTime),28)==0&&memcmp(unchanged[1],GLOBAL(ms_afCumulativeTime),28)==0&&memcmp(unchanged[2],GLOBAL(ms_afEndTime),28)==0);Check(memcmp(&frame,&GLOBAL(ms_aBarColours)[0],4)==0);
+        const char *labels[7];for(unsigned i=0;i<7;i++){Check(FloatBits(GLOBAL(ms_afMaxEndTime)[i])==0&&FloatBits(GLOBAL(ms_afMaxCumulativeTime)[i])==0);Check(strcmp(GLOBAL(ms_pProfileString)[i],names[i])==0);labels[i]=GLOBAL(ms_pProfileString)[i];if(i)Check(memcmp(&GLOBAL(ms_aBarColours)[i],palette[i-1],4)==0);}Snapshot();Run_Profile_Initialise();for(unsigned i=0;i<7;i++)Check(labels[i]==GLOBAL(ms_pProfileString)[i]);Snapshot();}
+    // Exercise every initialized profile slot and all special start/cumulative input combinations
+    for(unsigned a=0;a<12;a++)for(unsigned b=0;b<12;b++)for(unsigned profile=0;profile<7;profile++){Seed(a+b+profile);for(unsigned i=0;i<7;i++){Set(&GLOBAL(ms_afStartTime)[i],patterns[(a+i)%12]);Set(&GLOBAL(ms_afCumulativeTime)[i],patterns[(b+i)%12]);}Run_Profile_SuspendProfile((int32_t)profile);Snapshot();Run_Profile_SuspendProfile((int32_t)profile);Snapshot();}
+    // Exercise the original greater-than selection for all pairings including signed zero and both NaN positions
+    for(unsigned a=0;a<12;a++)for(unsigned b=0;b<12;b++){Seed(a+b);uint32_t left[7],right[7];for(unsigned i=0;i<7;i++){left[i]=patterns[(a+i)%12];right[i]=patterns[(b+3*i)%12];Set(&GLOBAL(ms_afMaxEndTime)[i],left[i]);Set(&GLOBAL(ms_afEndTime)[i],right[i]);Set(&GLOBAL(ms_afMaxCumulativeTime)[i],patterns[(b+5*i)%12]);Set(&GLOBAL(ms_afCumulativeTime)[i],patterns[(a+7*i)%12]);}Run_Profile_ShowResults();for(unsigned i=0;i<7;i++){bool nanLeft=(left[i]&0x7fffffff)>0x7f800000,nanRight=(right[i]&0x7fffffff)>0x7f800000;bool zeros=(left[i]&0x7fffffff)==0&&(right[i]&0x7fffffff)==0;if(nanLeft||nanRight||zeros)Check(FloatBits(GLOBAL(ms_afMaxEndTime)[i])==right[i]);}Snapshot();Run_Profile_ShowResults();Snapshot();}
+#endif
+    // Verify every cut-feature operation preserves caller storage, cursor and size, including null static-operation arguments
+    for(unsigned seed=0;seed<16;seed++){CPowerPoint point;uint8_t *pointByte=(uint8_t*)&point;*pointByte=(uint8_t)(seed*13);uint8_t buffer[32],expected[32];memset(buffer,(int)seed,sizeof(buffer));memcpy(expected,buffer,sizeof(buffer));uint8_t *cursor=buffer+7;uint32_t size=0xabcdef00u+seed;Run_PowerPoint_Update(&point);Run_PowerPoints_Init();Run_PowerPoints_Update();Run_PowerPoints_GenerateNewOne((float)seed,-0.0f,INFINITY,-INFINITY,1.0f,-1.0f,(uint8_t)seed);Run_PowerPoints_Save(&cursor,&size);Run_PowerPoints_Load(buffer,UINT32_MAX);Check(*pointByte==(uint8_t)(seed*13));Check(cursor==buffer+7&&size==0xabcdef00u+seed);Check(memcmp(buffer,expected,sizeof(buffer))==0);Run_PowerPoints_Save(NULL,NULL);Run_PowerPoints_Load(NULL,UINT32_MAX);++states;Number(*pointByte);Number(size);Bytes(buffer,sizeof(buffer));}
+    // Report the complete original/C state sequence from a quiet console executable
+    printf("states=%llu checks=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)digest);return 0;
+}

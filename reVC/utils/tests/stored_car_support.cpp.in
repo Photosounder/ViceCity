@@ -1,0 +1,81 @@
+#include "host.h"
+Controls controls;
+unsigned traceCount;
+uint32_t traceValues[128];
+static CVehicleModelInfo info;
+static CPed player,originalDriver,originalRigger;
+alignas(CAutomobile) static unsigned char storage[sizeof(CAutomobile)];
+
+void trace(uint32_t value)
+{
+    // Record only native engine calls without changing any values observed by the policy
+    if(traceCount>=128)abort();traceValues[traceCount++]=value;
+}
+
+void construct(CVehicle *vehicle,int model,int created,int kind)
+{
+    // Give construction observable fields that restoration must overwrite or deliberately retain
+    trace(100+kind);trace((uint32_t)model);trace((uint32_t)created);
+    vehicle->model=model;vehicle->status=9;vehicle->type=controls.reportedType<0?kind:controls.reportedType;
+    vehicle->pos=CVector(11,12,13);vehicle->forward=CVector(21,22,23);vehicle->right=CVector(31,32,33);vehicle->up=CVector(41,42,43);
+    vehicle->m_currentColour1=7;vehicle->m_currentColour2=8;vehicle->m_nRadioStation=9;vehicle->m_aExtras[0]=controls.first;vehicle->m_aExtras[1]=controls.second;
+    vehicle->m_bombType=7;vehicle->m_pBombRigger=&originalRigger;vehicle->pDriver=&originalDriver;
+    vehicle->bBulletProof=!!(controls.proofs&1);vehicle->bFireProof=!!(controls.proofs&2);vehicle->bExplosionProof=!!(controls.proofs&4);vehicle->bCollisionProof=!!(controls.proofs&8);vehicle->bMeleeProof=!!(controls.proofs&16);
+    vehicle->bFreebies=true;vehicle->bHasBeenOwnedByPlayer=false;vehicle->bIsStanding=false;vehicle->m_nDoorLock=7;
+}
+
+void CStreaming::RequestModel(int32 model,int32 flags)
+{
+    // Observe the required dependency request before readiness is queried
+    trace(1);trace((uint32_t)model);trace((uint32_t)flags);
+}
+bool CStreaming::HasModelLoaded(int32 model)
+{
+    // Return the configured native readiness result without altering model state
+    trace(2);trace((uint32_t)model);return controls.loaded;
+}
+CVehicleModelInfo *CModelInfo::GetModelInfo(int32 model)
+{
+    // Supply native component metadata or the deliberate debug assertion case
+    trace(3);trace((uint32_t)model);info.m_numComps=(int8_t)controls.components;return controls.nullInfo?NULL:&info;
+}
+void CVehicleModelInfo::SetComponentsToUse(int8_t first,int8_t second)
+{
+    // Keep the previous native component selection when the policy skips this call
+    trace(4);trace((uint8_t)first);trace((uint8_t)second);controls.first=first;controls.second=second;
+}
+bool CModelInfo::IsBoatModel(int32 model)
+{
+    // Record the boat-first selection order
+    trace(5);trace((uint32_t)model);return controls.boat;
+}
+bool CModelInfo::IsBikeModel(int32 model)
+{
+    // Leave bike selection observable when boat selection short-circuits it
+    trace(6);trace((uint32_t)model);return controls.bike;
+}
+void *CPools::GetVehiclePool()
+{
+    // Provide an opaque pool identity without changing allocation behavior
+    return storage;
+}
+void *CPool_New(void *pool)
+{
+    // Preserve the allocation boundary independently of the selected constructor
+    trace(7);return controls.nullPool?NULL:pool;
+}
+CPed *FindPlayerPed(void)
+{
+    // Supply the original bomb ownership dependency only when requested
+    trace(8);return &player;
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned,const char *)
+{
+    // Fail deliberate assertion probes quietly instead of opening a native dialog
+    printf("assertion %s\n",expression);exit(73);
+}
+int pointerCode(const void *value)
+{
+    // Compare logical pointer identities across independently linked executables
+    return value==NULL?0:value==&player?1:value==&originalDriver?2:value==&originalRigger?3:4;
+}

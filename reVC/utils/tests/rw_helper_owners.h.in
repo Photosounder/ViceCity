@@ -1,0 +1,149 @@
+#pragma once
+#include "config.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "Debug.h"
+#include "MBlur.h"
+#include "Timecycle.h"
+#if defined(RW_GL3) || defined(RW_WDGL)
+#define RW_OPENGL
+#endif
+#define RWCORE_H
+#define nil NULL
+#define TRUE 1
+#define FALSE 0
+typedef int32_t int32,RwInt32,RwBool;
+typedef uint32_t uint32,RwUInt32;
+typedef uint8_t RwUInt8;
+typedef float RwReal;
+typedef uint16_t WCHAR;
+struct RwV3d {float x,y,z;};
+struct RwV2d {float x,y;};
+struct RwRGBA {uint8_t red,green,blue,alpha;};
+struct RwMatrix {RwV3d right;uint32 flags;RwV3d up;uint32 pad1;RwV3d at;uint32 pad2;RwV3d pos;uint32 pad3;};
+struct RwSphere {RwV3d center;float radius;};
+struct RwRect {int32 x,y,w,h;};
+struct RwVideoMode {int32 width,height;uint32 flags;};
+struct RwIm2DVertex {float x,y,z,reciprocal,u,v;RwRGBA colour;};
+struct RwFrame;
+struct RpClump;
+struct RpSkin;
+struct RpHAnimHierarchy;
+struct RpMaterial {unsigned id;int32 effects;};
+namespace rw {
+struct InstanceDataHeader {int32 platform;};
+struct ObjPipeline {int32 platform;uint32 pluginID;};
+struct Geometry {enum {NATIVE=1};unsigned id;InstanceDataHeader *instData;uint32 flags;RpSkin *skin;int32 materialCount;RpMaterial *materials[8];};
+struct Atomic {unsigned id;Geometry *geometry;ObjPipeline *pipeline;RpClump *clump;RwSphere sphere;RpHAnimHierarchy *hierarchy;void uninstance(void);};
+enum RenderState {ALPHATESTFUNC=300,ALPHATESTREF,GSALPHATEST};
+enum {ID_SKIN=0x1001,ID_MATFX=0x1002,ALPHAGREATEREQUAL=0x201};
+struct PipelineGlobals {ObjPipeline *pipelines[8];};
+extern PipelineGlobals skinGlobals,matFXGlobals;
+extern int32 platform;
+void SetRenderState(RenderState,uint32);
+uint32 GetRenderState(RenderState);
+}
+typedef rw::Atomic RpAtomic;
+typedef rw::Geometry RpGeometry;
+struct RwObject {unsigned id;};
+struct RwTexture {unsigned id;};
+struct RwTexDictionary {unsigned id;int32 count;RwTexture *textures[8];};
+struct RpHAnimNodeInfo {uint32 flags;};
+struct RpHAnimHierarchy {unsigned id;int32 numNodes;RpHAnimNodeInfo nodeInfo[16],*pNodeInfo;RwMatrix matrices[16];};
+struct RpSkin {unsigned id;int32 count;RwMatrix matrices[16];};
+struct RwFrame {unsigned id;bool alive;RwMatrix matrix,ltm;int32 childCount,objectCount;RwFrame *children[8];RwObject *objects[8];RpHAnimHierarchy *hierarchy;};
+struct RpClump {unsigned id;RwFrame *frame;int32 count;RpAtomic *atomics[8];};
+struct RwRaster {unsigned id;bool alive;int32 width,height,depth,type;RwRaster *parent;};
+struct RwCamera {unsigned id;bool alive;RwFrame *frame;RwRaster *frameBuffer,*zBuffer;RwV2d viewWindow;};
+struct RtCharset {unsigned id;bool alive;};
+struct RtQuat {float real;RwV3d imag;};
+struct RpHAnimStdKeyFrame {RpHAnimStdKeyFrame *prevFrame;float time;RtQuat q;RwV3d t;};
+struct TestInterpInfo {int32 animKeyFrameSize,keyFrameSize;};
+struct RpHAnimAnimation {unsigned id;int32 count;void *keyframes,*pFrames;TestInterpInfo *interpInfo;};
+struct CVector {float x,y,z;CVector()=default;CVector(const RwV3d &value){
+    // Preserve the original vector conversion's three initialized components
+    x=value.x;y=value.y;z=value.z;
+}};
+struct TestGlobal {int32 width,height;};
+extern TestGlobal RsGlobal;
+#define RWRGBALONG(r,g,b,a) ((RwUInt32)(((a)<<24)|((r)<<16)|((g)<<8)|(b)))
+#ifdef LIBRW
+#define HIERNODEINFO(hier) ((hier)->nodeInfo)
+#define HANIMFRAME(anim,i) ((RwUInt8*)(anim)->keyframes+(i)*(anim)->interpInfo->animKeyFrameSize)
+#else
+#define HIERNODEINFO(hier) ((hier)->pNodeInfo)
+#define HANIMFRAME(anim,i) ((RwUInt8*)(anim)->pFrames+(i)*(anim)->interpInfo->keyFrameSize)
+#endif
+extern "C" void re3_assert(const char*,const char*,unsigned int,const char*);
+#ifndef MASTER
+#define assert(expression) (void)((!!(expression)) || (re3_assert(#expression,__FILE__,__LINE__,__func__),0))
+#else
+#define assert(expression) (expression)
+#endif
+void RtCharsetOpen(void);
+void RtCharsetClose(void);
+RtCharset *RtCharsetCreate(RwRGBA*,RwRGBA*);
+void RtCharsetDestroy(RtCharset*);
+void RtCharsetPrintBuffered(RtCharset*,const char*,int32,int32,bool);
+void RtCharsetBufferFlush(void);
+void RwRenderStateSet(int32,void*);
+void RwD3D8SetRenderState(uint32,uint32);
+void RwD3D8GetRenderState(uint32,uint32*);
+int MultiByteToWideChar(int,int,const char*,int,WCHAR*,int);
+void D3DPERF_BeginEvent(uint32,const WCHAR*);
+void D3DPERF_EndEvent(void);
+extern bool GLAD_GL_KHR_debug;
+enum {CP_ACP=0,MB_PRECOMPOSED=1,GL_DEBUG_SOURCE_APPLICATION=4};
+void glPushDebugGroup(uint32,uint32,int32,const char*);
+void glPopDebugGroup(void);
+void RwFrameForAllChildren(RwFrame*,RwFrame*(*)(RwFrame*,void*),void*);
+void RwFrameForAllObjects(RwFrame*,RwObject*(*)(RwObject*,void*),void*);
+void RpClumpForAllAtomics(RpClump*,RpAtomic*(*)(RpAtomic*,void*),void*);
+void RwTexDictionaryForAllTextures(RwTexDictionary*,RwTexture*(*)(RwTexture*,void*),void*);
+RpGeometry *RpAtomicGetGeometry(RpAtomic*);
+RpSkin *RpSkinGeometryGetSkin(RpGeometry*);
+RpHAnimHierarchy *RpSkinAtomicGetHAnimHierarchy(RpAtomic*);
+RpHAnimHierarchy *RpHAnimFrameGetHierarchy(RwFrame*);
+RwFrame *RpClumpGetFrame(RpClump*);
+int32 RpSkinGetNumBones(RpSkin*);
+const RwMatrix *RpSkinGetSkinToBoneMatrices(RpSkin*);
+void RwMatrixCopy(RwMatrix*,const RwMatrix*);
+void RwMatrixInvert(RwMatrix*,const RwMatrix*);
+void RwV3dTransformPoints(RwV3d*,const RwV3d*,int32,const RwMatrix*);
+RpHAnimAnimation *RpHAnimAnimationCreate(int32,int32,int32,float);
+RwMatrix *RpHAnimHierarchyGetMatrixArray(RpHAnimHierarchy*);
+void RwIm2DRenderPrimitive(int32,RwIm2DVertex*,int32);
+RwSphere *RpAtomicGetBoundingSphere(RpAtomic*);
+RwMatrix *RwFrameGetLTM(RwFrame*);
+RwMatrix *RwFrameGetMatrix(RwFrame*);
+void RwV3dAdd(RwV3d*,const RwV3d*,const RwV3d*);
+void RwV3dSub(RwV3d*,const RwV3d*,const RwV3d*);
+void RwV3dScale(RwV3d*,const RwV3d*,float);
+float RwV3dLength(const RwV3d*);
+int32 RpClumpGetNumAtomics(RpClump*);
+int32 RwEngineGetCurrentVideoMode(void);
+void RwEngineGetVideoModeInfo(RwVideoMode*,int32);
+RwRaster *RwCameraGetRaster(RwCamera*);
+RwRaster *RwCameraGetZRaster(RwCamera*);
+int32 RwRasterGetWidth(RwRaster*);
+int32 RwRasterGetHeight(RwRaster*);
+void RwRasterDestroy(RwRaster*);
+RwRaster *RwRasterCreate(int32,int32,int32,int32);
+void RwCameraSetRaster(RwCamera*,RwRaster*);
+void RwCameraSetZRaster(RwCamera*,RwRaster*);
+void RwCameraSetViewWindow(RwCamera*,const RwV2d*);
+RwFrame *RwCameraGetFrame(RwCamera*);
+void RwFrameDestroy(RwFrame*);
+RwRaster *RwRasterGetParent(RwRaster*);
+void RwCameraDestroy(RwCamera*);
+RwCamera *RwCameraCreate(void);
+RwFrame *RwFrameCreate(void);
+void RwCameraSetFrame(RwCamera*,RwFrame*);
+void RpGeometryForAllMaterials(RpGeometry*,RpMaterial*(*)(RpMaterial*,void*),void*);
+int32 RpMatFXMaterialGetEffects(RpMaterial*);
+void RpMatFXAtomicEnableEffects(RpAtomic*);
+struct CVehicleModelInfo {static RpMaterial *GetMatFXEffectMaterialCB(RpMaterial*,void*);};

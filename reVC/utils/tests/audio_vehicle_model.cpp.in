@@ -1,0 +1,207 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioPoliceGame.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using int16=int16_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+#define Clamp2(v,center,radius) ((v)>(center)?Min(v,(center)+(radius)):Max(v,(center)-(radius)))
+static float Abs(float v) {
+    // Apply the same float conversion and absolute value as the game helper
+    return fabsf(v);
+}
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v;unsigned token;operator uint8_t() const {event(token);return (uint8_t)v;}};
+struct ShortValue {int32_t v;unsigned token;operator int16_t() const {event(token);return (int16_t)v;}};
+struct FloatValue {float v;unsigned token;operator float() const {event(token);return v;}};
+struct CVector {float x,y,z;CVector()=default;CVector(float a,float b,float c):x(a),y(b),z(c){}};
+static float DotProduct(const CVector &a,const CVector &b) {
+    // Retain the game's three original dot-product terms
+    return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+class CVehicle {public:ShortValue m_modelIndex;FloatValue m_fGasPedal,m_fBrakePedal;ByteValue bIsDrowning;CVector up;
+    const CVector &GetUp() const {
+        // Observe the original up-vector query before the frequency tilt calculation
+        event(40);return up;
+    }
+};
+class CAutomobile:public CVehicle {public:ByteValue m_nDriveWheelsOnGround;};
+struct PointerValue {unsigned id;operator CVehicle *() const;};
+struct PlayerRecord {PointerValue m_pRemoteVehicle;};
+class CWorld {public:static PlayerRecord Players[2];static unsigned PlayerInFocus;};
+PlayerRecord CWorld::Players[2];unsigned CWorld::PlayerInFocus;
+class CPad {public:int32_t accelerator,brake,gun;
+    int16_t GetAccelerate() {
+        // Change only this pad value to expose repeated macro queries without cross-operand writes
+        event(31);int16_t result=(int16_t)accelerator;++accelerator;return result;
+    }
+    int16_t GetBrake() {
+        // Observe the different helicopter/car brake ordering
+        event(30);return (int16_t)brake;
+    }
+    int16_t GetCarGunUpDown() {
+        // Return the original signed gun axis through its float absolute-value conversion
+        event(32);return (int16_t)gun;
+    }
+};
+static CPad Pads[1];
+struct cAudioManager {
+@FIELDS@
+    void ProcessModelHeliVehicle(cVehicleParams &);
+    void ProcessModelVehicle(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CAutomobile cars[3];
+static unsigned playerId,seedValue,cases,callbacks,playerReads,remoteReads,modelReads,gasReads,brakePedalReads,driveReads,upReads,drowningReads,padBrakes,padAccelerates,padGuns,offsetReads,requestReads;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" void AudioVehicleModel_Heli(cAudioManager *,cVehicleParams *);
+extern "C" void AudioVehicleModel_Car(cAudioManager *,cVehicleParams *);
+extern "C" void TestVehicleModelC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash complete state and query order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe every initialized record byte in four-byte words
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4) {uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static unsigned identity(const CVehicle *p) {
+    // Normalize selected vehicle pointers across process addresses
+    return p==&cars[0]?1:p==&cars[1]?2:p==&cars[2]?3:0;
+}
+static CVehicle *vehicle(unsigned id) {
+    // Materialize controlled player or remote vehicle identities
+    return id?&cars[(id-1)%3]:NULL;
+}
+static AudioSoundPosition AudioSoundPosition_FromVector(const CVector &v) {
+    // Copy all original vector components for the alternate up-vector calculation
+    return {v.x,v.y,v.z};
+}
+static void observe() {
+    // Preserve complete owner, parameter, vehicle and control observations with normalized pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)identity(params.m_pVehicle);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(Pads,sizeof(Pads));
+    value(playerId);value(CWorld::PlayerInFocus);value(CWorld::Players[0].m_pRemoteVehicle.id);value(CWorld::Players[1].m_pRemoteVehicle.id);
+}
+static void event(unsigned token) {
+    // Change later live vehicle and remote reads without introducing undefined numeric inputs
+    ++callbacks;value(token);observe();
+    switch(token) {
+    case 10:++playerReads;if(seedValue&1024) CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle.id=2;break;
+    case 11:++remoteReads;break;
+    case 20:++modelReads;if(seedValue&2048) params.m_pVehicle=&cars[1];break;
+    case 25:++gasReads;if(seedValue&4096) params.m_pVehicle=&cars[2];break;
+    case 26:++brakePedalReads;break;
+    case 27:++driveReads;break;
+    case 30:++padBrakes;break;
+    case 31:++padAccelerates;break;
+    case 32:++padGuns;break;
+    case 40:++upReads;break;
+    case 41:++drowningReads;break;
+    }
+}
+PointerValue::operator CVehicle *() const {
+    // Observe the selected remote pointer conversion at the original comparison
+    event(11);return vehicle(id);
+}
+static CVehicle *FindPlayerVehicle() {
+    // Retain player lookup before any separate remote vehicle read
+    event(10);return vehicle(playerId);
+}
+extern "C" CVehicle *AudioPoliceHost_PlayerVehicle() {
+    // Reuse the existing exact player vehicle adapter in the C model unit
+    return FindPlayerVehicle();
+}
+extern "C" CVehicle *AudioEnvironmentHost_Remote() {
+    // Reuse the current focus and remote field access from the game environment adapter
+    return CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle;
+}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Reuse the original gas pedal field adapter
+    return v->m_fGasPedal;
+}
+extern "C" uint8_t AudioVehicleReverseHost_DriveWheels(const CVehicle *v) {
+    // Reuse the original automobile drive-wheel contact adapter
+    return ((const CAutomobile *)v)->m_nDriveWheelsOnGround;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live sample index while constant model loop arguments remain constant
+    ++offsetReads;event(50);value(sample);
+    if(seedValue&512) active->m_sQueueSample.m_nSampleIndex=SFX_RC_IDLE;
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the constant or live sample argument at the end-offset query
+    ++offsetReads;event(51);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after all branch-specific sound fields are populated
+    ++requestReads;event(52);return (seedValue>>4)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection helper dependency
+    return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Seed both owners and all model/control paths while preserving function-static history between cases
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));memset(Pads,0,sizeof(Pads));
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_bIsInitialised=(seed>>2)&1;active->m_bIsPaused=(seed>>3)&1;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i) {active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*800;}
+    const float pedals[]={-1.0f,-0.01f,-0.0f,0.0f,0.01f,0.5f,1.0f};
+    const float speeds[]={-1.0f,-0.1f,-0.001f,-0.0f,0.0f,0.001f,0.1f,1.0f};
+    const float distances[]={-1.0f,0.0f,48.99f,49.0f,100.0f,1224.99f,1225.0f,1225.01f,NAN,INFINITY};
+    const int controls[]={-100,-1,0,1,127,128,254,255};
+    const int axes[]={-128,-1,0,1,127,128};
+    for(unsigned i=0;i<3;++i) {
+        cars[i].m_modelIndex={int32_t((seed/11+i)%3==0?MI_RCBANDIT:MI_RCBARON),20};
+        cars[i].m_fGasPedal={pedals[(seed/13+i)%7],25};cars[i].m_fBrakePedal={pedals[(seed/17+i)%7],26};
+        cars[i].bIsDrowning={uint32_t((seed/19+i)%2),41};cars[i].m_nDriveWheelsOnGround={uint32_t((seed/23+i)%3),27};
+        cars[i].up=CVector(0.25f,((float)((seed/29+i)%9)-4)*0.25f,-0.5f);
+    }
+    playerId=(seed/3)%4;CWorld::PlayerInFocus=(seed>>3)&1;CWorld::Players[0].m_pRemoteVehicle.id=(seed/5)%4;CWorld::Players[1].m_pRemoteVehicle.id=(seed/7)%4;
+    Pads[0].accelerator=controls[(seed/31)%8];Pads[0].brake=controls[(seed/37)%8];Pads[0].gun=axes[(seed/41)%6];
+    params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/43)%10];params.m_bDistanceCalculated=(seed/430)%4==0?0:(seed/430)%4==1?1:255;params.m_fVelocityChange=speeds[(seed/47)%8];params.m_nIndex=seed;
+    active->m_sQueueSample.m_fDistance=(float)(seed%36);active->m_sQueueSample.m_nVolume=77;active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_nFrequency=54321;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nFramesToPlay=17;
+    if(!(params.m_fDistance<1225.0f)) params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet instead of opening a Windows crash dialog
+    SetErrorMode(3);
+#endif
+    // Compare both model generators across repeated calls and shared history on alternating owners
+    for(unsigned seed=0;seed<8192;++seed) for(unsigned kind=0;kind<2;++kind) {
+        prepare(seed);@RUN@;observe();++cases;@RUN@;observe();++cases;
+    }
+    // Require player and non-player model, pedal, orientation and drowning boundaries
+    if(!playerReads || !remoteReads || !modelReads || !gasReads || !brakePedalReads || !driveReads || !upReads || !drowningReads || !padBrakes || !padAccelerates || !padGuns) return 2;
+#ifndef GTA_PS2
+    if(!offsetReads) return 3;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    if(!requestReads) return 4;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

@@ -1,0 +1,162 @@
+@COMMON@
+#include "caller.h"
+#include "Draw.h"
+#include "Frontend.h"
+#include "Camera.h"
+#include "CutsceneMgr.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <initializer_list>
+#ifdef NATIVE_PROJECT_HEADERS
+CCamera TheCamera;
+CMenuManager FrontEndMenuManager;
+RsGlobalType RsGlobal;
+rouz_t rouz;
+static bool *testRunning;
+bool CCutsceneMgr::ms_running=(testRunning=&CCutsceneMgr::ms_running,false);
+CMatrix::CMatrix(void)
+{
+    // Supply only fixture-owned matrix lifetime with no rendering resources
+    m_attachment=NULL;m_hasRwMatrix=false;
+}
+CMatrix::~CMatrix(void)
+{
+    // Reject an unexpected renderer resource in the drawing fixture
+    if(m_attachment!=NULL || m_hasRwMatrix)abort();
+}
+CPlaceable::CPlaceable(void)
+{
+    // Leave unrelated placement state unused by the drawing calculations
+}
+void CCam::Init(void)
+{
+    // Leave unrelated camera initialization outside the drawing fixture
+}
+CCamPathSplines::CCamPathSplines(void)
+{
+    // Leave unrelated spline state outside the drawing calculations
+}
+CCamera::CCamera(void)
+{
+    // Let each case explicitly set the only camera field consumed by Draw
+    m_WideScreenOn=false;
+}
+CMenuManager::CMenuManager(void)
+{
+    // Let each case explicitly set the signed aspect preference
+    m_PrefsUseWideScreen=0;
+}
+void CMenuManager::UnloadTextures(void)
+{
+    // Retain an empty fixture texture lifetime without calling graphics APIs
+}
+void CSprite2d::Delete(void)
+{
+    // Reject texture ownership outside the isolated drawing calculations
+    if(m_pTexture!=NULL)abort();
+}
+#else
+DrawTestCamera TheCamera;
+DrawTestMenu FrontEndMenuManager;
+DrawTestScreen RsGlobal;
+DrawTestRouz rouz;
+bool CCutsceneMgr::running;
+static bool *testRunning=&CCutsceneMgr::running;
+#endif
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t checks,cases;
+static void require(bool condition)
+{
+    // Report failures quietly without opening the game assertion window
+    if(!condition)exit(2);checks++;
+}
+static uint32_t bits(float value)
+{
+    // Observe exact float storage without aliasing through a different scalar type
+    uint32_t result;memcpy(&result,&value,sizeof(result));return result;
+}
+static void observe(float value)
+{
+    // Compare all finite result bits and classify NaNs independently of their sign or payload
+    uint32_t word=isnan(value)?UINT32_C(0x7fc00000):bits(value);
+    hash^=word;hash*=UINT64_C(1099511628211);
+}
+static void settingChecks(void)
+{
+    // Verify zero startup state, live setting addresses and byte-sized fade storage
+    float *lod=TestDraw_ms_fLODDistance();require(*lod==0 && lod==TestDraw_ms_fLODDistance());*lod=500;require(*TestDraw_ms_fLODDistance()==500);
+    uint8_t *fade[]={TestDraw_FadeValue(),TestDraw_FadeRed(),TestDraw_FadeGreen(),TestDraw_FadeBlue()};
+    for(unsigned i=0;i<4;i++){require(*fade[i]==0);*fade[i]=(uint8_t)(240+i);}
+    require(*TestDraw_FadeValue()==240 && *TestDraw_FadeRed()==241 && *TestDraw_FadeGreen()==242 && *TestDraw_FadeBlue()==243);
+    require(sizeof(*fade[0])==1);
+#ifdef PROPER_SCALING
+    // Exercise the live debug-menu flag and each original screen-height profile
+    bool *proper=TestDraw_ms_bProperScaling();require(*proper && proper==TestDraw_ms_bProperScaling());
+    for(bool enabled:{false,true}){
+        *proper=enabled;
+        for(float y:{-512.f,-0.f,0.f,1.f,17.f,448.f,480.f,10000.f}){
+            float value=TestDraw_ScaleY(y);float expected=enabled?y:y*((float)DEFAULT_SCREEN_HEIGHT/SCREEN_HEIGHT_NTSC);
+            require(bits(value)==bits(expected));observe(value);
+        }
+    }
+#endif
+#ifdef FIX_RADAR
+    // Verify direct radar-setting writes remain live and byte-sized
+    bool *radar=TestDraw_ms_bFixRadar();require(*radar && sizeof(*radar)==1);*radar=false;require(!*TestDraw_ms_bFixRadar());
+#endif
+#ifdef FIX_SPRITES
+    // Verify direct sprite-setting writes remain live and byte-sized
+    bool *sprites=TestDraw_ms_bFixSprites();require(*sprites && sizeof(*sprites)==1);*sprites=false;require(!*TestDraw_ms_bFixSprites());
+#endif
+}
+int main(void)
+{
+    // Check startup defaults before any setter or environment-dependent calculation
+    rouz.fov_mul=1;require(TestDraw_GetNearClipZ()==0 && TestDraw_GetFarClipZ()==0);
+    require(TestDraw_GetFOV()==45 && TestDraw_GetScaledFOV()==45 && TestDraw_GetAspectRatio()==DEFAULT_ASPECT_RATIO);
+    require(AR_AUTO==0 && AR_4_3==1 && AR_5_4==2 && AR_16_10==3 && AR_16_9==4 && AR_21_9==5 && AR_MAX==6);
+    settingChecks();
+    // Compare all signed menu preferences, camera branches and platform screen dimensions
+    const int screens[][2]={{640,480},{1920,1080},{3840,1080},{720,512},{0,480},{1920,0},{-640,480}};
+    for(int preference=-128;preference<=127;preference++)for(bool wide:{false,true})for(const auto &screen:screens){
+        FrontEndMenuManager.m_PrefsUseWideScreen=(int8_t)preference;TheCamera.m_WideScreenOn=wide;RsGlobal.width=screen[0];RsGlobal.height=screen[1];
+        float aspect=TestDraw_CalculateAspectRatio();require(bits(aspect)==bits(TestDraw_GetAspectRatio()));observe(aspect);cases++;
+#ifdef ASPECT_RATIO_SCALE
+        // Check the independent fixed-ratio expectations and AUTO's platform-dependent dimensions
+        float base;
+        switch(preference){case AR_AUTO:base=SCREEN_WIDTH/SCREEN_HEIGHT;break;case AR_5_4:base=5.f/4.f;break;case AR_16_10:base=16.f/10.f;break;case AR_16_9:base=16.f/9.f;break;case AR_21_9:base=21.f/9.f;break;default:base=4.f/3.f;}
+        float expected=wide?(5.f/3.f)*base/(16.f/9.f):base;require(bits(expected)==bits(aspect));
+#else
+        // Check the original four preference and camera combinations without aspect scaling
+        float expected=preference?(wide?5.f/3.f:16.f/9.f):(wide?5.f/4.f:4.f/3.f);require(bits(expected)==bits(aspect));
+#endif
+        // Compare complete FOV updates, cutscene bypass, multiplier changes and cached scaled values
+        for(float fov:{-180.f,-90.f,-1.f,-0.f,0.f,1.f,30.f,45.f,70.f,120.f,179.f,180.f,270.f})for(bool running:{false,true}){
+            *testRunning=running;rouz.fov_mul=1;TestDraw_SetFOV(fov);require(bits(TestDraw_GetFOV())==bits(fov));
+            float scaled=TestDraw_GetScaledFOV();observe(scaled);
+#ifdef ASPECT_RATIO_SCALE
+            if(running)require(bits(scaled)==bits(fov));else observe(TestDraw_ConvertFOV(fov));
+#else
+            require(bits(scaled)==bits(fov));
+#endif
+            for(float multiplier:{-2.f,-0.f,0.f,0.5f,1.f,1.3f,2.f}){
+                rouz.fov_mul=multiplier;float value=TestDraw_GetScaledFOV();observe(value);
+#ifdef ASPECT_RATIO_SCALE
+                if(!isnan(scaled))require(bits(value)==bits(scaled*multiplier));
+#else
+                require(bits(value)==bits(fov));
+#endif
+            }
+        }
+    }
+    // Retain scalar setter bits and the separation between aspect cache and scaled-FOV cache
+    for(float value:{-0.f,0.f,0.9f,30.f,500.f,-1.f}){
+        TestDraw_SetNearClipZ(value);TestDraw_SetFarClipZ(value);TestDraw_SetAspectRatio(value);
+        require(bits(TestDraw_GetNearClipZ())==bits(value));require(bits(TestDraw_GetFarClipZ())==bits(value));require(bits(TestDraw_GetAspectRatio())==bits(value));
+        observe(TestDraw_GetNearClipZ());observe(TestDraw_GetFarClipZ());observe(TestDraw_GetAspectRatio());
+    }
+    rouz.fov_mul=1;*testRunning=true;TestDraw_SetFOV(70);TestDraw_SetAspectRatio(2);require(TestDraw_GetScaledFOV()==70);
+    printf("%016llx cases=%u checks=%u\n",(unsigned long long)hash,cases,checks);
+}

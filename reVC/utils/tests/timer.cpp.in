@@ -1,0 +1,134 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <stdarg.h>
+using uint32=uint32_t;using int32=int32_t;
+@HEADER@
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define debug(f,...) re3_debug("[DBG]: " f, ##__VA_ARGS__)
+static uint64_t hash=1469598103934665603ULL;
+static uint32_t seed,pass,calls,frequencyAvailable,updates;
+static bool snapshotFlag,playingBack,chaseRecording;
+static void event(unsigned);
+static void word(uint32_t value){hash=(hash^value)*1099511628211ULL;}
+static uint32_t bits(float value){uint32_t result;memcpy(&result,&value,4);return result;}
+static void dbl(double value){uint64_t result;memcpy(&result,&value,8);word((uint32_t)result);word((uint32_t)(result>>32));}
+extern "C" uint32_t TestTimerC(unsigned,uint32_t,float,bool);
+struct CSpecialFX {static bool bSnapShotActive;};
+bool CSpecialFX::bSnapShotActive;
+struct CRecordDataForGame {static bool IsPlayingBack(){bool result=playingBack;word(result);event(4);return result;}};
+struct CRecordDataForChase {static bool IsRecording(){bool result=chaseRecording;word(result);event(5);return result;}};
+#ifdef _WIN32
+using PlatformTime=uint32_t;
+#else
+using PlatformTime=double;
+#endif
+static PlatformTime RsTimer();
+extern "C" void DMAudio_ResetTimers(uint32_t value){word(value);event(6);}
+extern "C" void re3_debug(const char *format,...){
+    // Retain original initialization messages and the portable output-debug-string format
+    if(!strcmp(format,"[DBG-2]: %s\n")){va_list args;va_start(args,format);const char *text=va_arg(args,const char*);TestTimerOutput(text);va_end(args);return;}
+    assert(!strcmp(format,"[DBG]: Initialising CTimer...\n")||!strcmp(format,"[DBG]: CTimer ready\n"));word(!strcmp(format,"[DBG]: CTimer ready\n"));event(7);
+}
+extern "C" void TestTimerOutput(const char *text){
+    // Check the original provider-selection strings including their spelling and newline
+    assert(!strcmp(text,"Performance counter available\n")||!strcmp(text,"Performance counter not available, using millesecond timer\n"));
+    word(!strcmp(text,"Performance counter available\n"));event(8);
+}
+#ifdef _WIN32
+extern "C" {
+extern uint32_t _nCyclesPerMS;
+extern LARGE_INTEGER _oldPerfCounter,perfSuspendCounter;
+extern PlatformTime oldPcTimer,suspendPcTimer;
+extern uint32_t suspendDepth;
+}
+#else
+extern "C" {
+extern uint32_t _nCyclesPerMS,suspendDepth;
+extern PlatformTime oldPcTimer,suspendPcTimer;
+}
+#endif
+@BODY@
+static void snapshot(){
+    // Compare all public timer state, provider state and platform-specific retained timing fields
+    word(@m_snTimeInMilliseconds@);word(@m_snTimeInMillisecondsPauseMode@);word(@m_snTimeInMillisecondsNonClipped@);word(@m_snPreviousTimeInMilliseconds@);
+    word(@m_FrameCounter@);word(bits(@ms_fTimeScale@));word(bits(@ms_fTimeStep@));word(bits(@ms_fTimeStepNonClipped@));word(@m_UserPause@);word(@m_CodePause@);
+#ifdef FIX_BUGS
+    word(@m_LogicalFrameCounter@);word(@m_LogicalFramesPassed@);
+#endif
+    word(_nCyclesPerMS);word(suspendDepth);dbl((double)oldPcTimer);dbl((double)suspendPcTimer);
+#ifdef _WIN32
+    word(_oldPerfCounter.LowPart);word((uint32_t)_oldPerfCounter.HighPart);word(perfSuspendCounter.LowPart);word((uint32_t)perfSuspendCounter.HighPart);
+#endif
+    word(CSpecialFX::bSnapShotActive);word(playingBack);word(chaseRecording);word(frequencyAvailable);
+}
+static void event(unsigned kind){
+    // Observe callback order and captured provider arguments before changing live inputs
+    word(kind);word(calls++);snapshot();
+    if(pass==1){
+        // Keep float-to-unsigned conversions defined while mutating live pause, scale and clipping inputs
+        uint32_t n=seed+calls*13+kind;
+        @ms_fTimeScale@=(float)(n%9)/4.f;@m_UserPause@=(n%5==0);@m_CodePause@=(n%7==0);
+        @m_snPreviousTimeInMilliseconds@=n%4096;@m_snTimeInMilliseconds@=n%4096;
+        if(kind==4||kind==5)@ms_fTimeStep@=(float)(n%40)/4.f;
+        playingBack=(n&1)!=0;chaseRecording=(n&2)!=0;CSpecialFX::bSnapShotActive=(n&4)!=0;
+    }
+}
+extern "C" BOOL WINAPI TestTimerFrequency(LARGE_INTEGER *value){
+    // Capture availability and fill the same performance-frequency result before callback mutation
+    BOOL result=frequencyAvailable!=0;value->QuadPart=1000000;word((uint32_t)result);event(1);return result;
+}
+extern "C" BOOL WINAPI TestTimerCounter(LARGE_INTEGER *value){
+    // Advance low words by bounded positive deltas while retaining observable high-word changes
+#ifdef _WIN32
+    value->LowPart=_oldPerfCounter.LowPart+(1+seed%80)*1000+125;value->HighPart=(LONG)(seed%3);
+#else
+    value->QuadPart=0;
+#endif
+    event(2);return TRUE;
+}
+static PlatformTime RsTimer(){
+    // Preserve the platform timer return type and positive elapsed-time domain of the original casts
+    PlatformTime result=oldPcTimer+(PlatformTime)(1+seed%80);
+#ifndef _WIN32
+    result+=0.125;
+#endif
+    dbl((double)result);event(3);return result;
+}
+static uint32_t run(unsigned op,uint32_t arg=0,float f=1.f,bool b=false){@RUN@}
+static void initialize(unsigned n){
+    // Set valid scalar inputs without resetting the original shared fractional accumulators
+    @m_snTimeInMilliseconds@=n%4096;@m_snTimeInMillisecondsPauseMode@=1+n%4096;
+    @m_snTimeInMillisecondsNonClipped@=n%4096;@m_snPreviousTimeInMilliseconds@=n%4096;
+    @m_FrameCounter@=UINT32_MAX-n;@ms_fTimeScale@=(float)(n%9)/4.f;@ms_fTimeStep@=(float)(n%20)/4.f;@ms_fTimeStepNonClipped@=1.f;
+    @m_UserPause@=(n&1)!=0;@m_CodePause@=(n&2)!=0;
+#ifdef FIX_BUGS
+    @m_LogicalFrameCounter@=UINT32_MAX-n;@m_LogicalFramesPassed@=n%3;
+#endif
+    _nCyclesPerMS=(n&4)?1000:0;oldPcTimer=(PlatformTime)(n%1000);suspendPcTimer=oldPcTimer;suspendDepth=n%3;
+#ifdef _WIN32
+    _oldPerfCounter.LowPart=(n&8)?UINT32_MAX-1000:n*1000;_oldPerfCounter.HighPart=0;perfSuspendCounter=_oldPerfCounter;
+#endif
+    CSpecialFX::bSnapShotActive=(n&16)!=0;playingBack=(n&32)!=0;chaseRecording=(n&64)!=0;frequencyAvailable=(n&4)!=0;
+}
+static void independent(){
+    // Require nested suspend/resume to query providers only at the outer boundaries
+    pass=0;seed=1;initialize(1);suspendDepth=0;uint32_t start=calls;run(3);run(3);assert(suspendDepth==2&&calls==start+1);run(4);assert(suspendDepth==1&&calls==start+1);run(4);assert(suspendDepth==0&&calls==start+2);
+    // Preserve unsigned suspend-depth underflow and the original constant cycle count
+    start=calls;run(4);assert(suspendDepth==UINT32_MAX&&calls==start);assert(run(11)==20);
+    // Verify chase recording overrides the step and clipped time even while paused
+    initialize(1);@m_UserPause@=true;@m_CodePause@=false;playingBack=false;chaseRecording=true;uint32_t before=@m_snTimeInMilliseconds@;run(2);assert(@ms_fTimeStep@==1.f&&@m_snTimeInMilliseconds@==before+16);
+}
+int main(){
+    // Keep assertion and sanitizer failures quiet without opening a Windows crash dialog
+    SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
+    assert(@m_snTimeInMillisecondsPauseMode@==1&&_nCyclesPerMS==1);independent();uint32_t groups=0;
+    for(seed=0;seed<1024;seed++)for(pass=0;pass<3;pass++){
+        // Repeat whole operations, inline accessors and subsequent updates without resetting fractions
+        if(pass!=2)initialize(seed);
+        for(unsigned op=0;op<40;op++){word(run(op,seed*17,(float)(seed%9)/4.f,(seed&1)!=0));snapshot();groups++;}
+        for(unsigned j=0;j<4;j++){word(run(2));snapshot();groups++;}
+    }
+    printf("groups=%u callbacks=%u hash=%016llx\n",groups,calls,(unsigned long long)hash);
+}

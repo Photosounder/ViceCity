@@ -57,6 +57,8 @@ def header(source):
 
 def body(source):
     # Preserve loop bounds, fading expressions and live callback reads
+    # Retain the original timer boundary when upstream calls already use C names
+    source=source.replace('Timer_GetTimeStepFix()', 'CTimer::GetTimeStepFix()')
     source=source[source.index('{'):]
     source=re.sub(r'(?<![.>\w])\b(m_\w+)\b',r'manager->\1',source)
     source=source.replace('tSound &sample = ', 'tSound *sample = &')

@@ -1,0 +1,113 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeLineDefault(void *memory);
+extern "C" void *NativeLineInit(void *memory,const CVector *a,const CVector *b);
+
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0;
+static uint32_t randomState=0x12345678;
+static void require(bool condition)
+{
+    // Stop quietly on the first observable contract violation
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Hash only initialized object representations
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence generation explicitly so argument evaluation order cannot change the inputs
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *value,size_t size)
+{
+    // Supply arbitrary initialized bytes including nonfinite coordinate representations
+    unsigned char *p=(unsigned char*)value;
+    for(size_t i=0;i<size;i+=4){uint32_t bits=nextBits();memcpy(p+i,&bits,4);}
+}
+static void copyEndpoints(void *destination,const void *a,const void *b)
+{
+    // Model complete first-vector assignment before reading the second vector
+    unsigned char temporary[12];memcpy(temporary,a,12);memcpy(destination,temporary,12);
+    memcpy(temporary,b,12);memcpy((unsigned char*)destination+16,temporary,12);
+}
+static void defaultLifetime(void *memory)
+{
+    // Inspect storage only while the default-constructed object is alive
+    CColLine *line=(CColLine*)NativeLineDefault(memory);
+    unsigned char expected[32];memset(expected,0xa5,32);
+    require(memcmp(line,expected,32)==0);observe(line,32);line->~CColLine();++states;
+}
+static void coordinateCases()
+{
+    // Compare ordered updates for every legal choice of self or external endpoints
+    for(unsigned test=0;test<2048;++test){
+        for(unsigned a=0;a<3;++a)for(unsigned b=0;b<3;++b){
+            CColLine actual,expected;CVector external;fill(&actual,32);fill(&external,12);memcpy(&expected,&actual,32);
+            const void *sources[3]={&external,&actual.p0,&actual.p1};
+            const void *models[3]={&external,&expected.p0,&expected.p1};
+            copyEndpoints(&expected,models[a],models[b]);
+            Run_Set(&actual,sources[a],sources[b]);require(memcmp(&actual,&expected,32)==0);observe(&actual,32);++states;
+        }
+    }
+    // Preserve exact coordinate payloads and both padding words through each construction path
+    for(unsigned test=0;test<65536;++test){
+        CColLine initial,expected,actual;CVector a,b;fill(&initial,32);fill(&a,12);fill(&b,12);
+        uint32_t bits=(test<<16)|test;memcpy(&a.x,&bits,4);bits^=0x80000000U;memcpy(&b.z,&bits,4);
+        memcpy(&expected,&initial,32);copyEndpoints(&expected,&a,&b);
+        memcpy(&actual,&initial,32);Run_Init(&actual,&a,&b);require(memcmp(&actual,&expected,32)==0);observe(&actual,32);
+        memcpy(&actual,&initial,32);Run_Make(&actual,&a,&b);require(memcmp(&actual,&expected,32)==0);observe(&actual,32);
+        Run_Raw(&actual,&initial);require(memcmp(&actual,&initial,32)==0);observe(&actual,32);++states;
+    }
+    // Check construction through the native caller independently of the C11 adapter
+    for(unsigned test=0;test<1024;++test){
+        CVector a,b;fill(&a,12);fill(&b,12);CColLine expected;fill(&expected,32);
+        alignas(CColLine) unsigned char memory[32];memcpy(memory,&expected,32);copyEndpoints(&expected,&a,&b);
+        CColLine *value=(CColLine*)NativeLineInit(memory,&a,&b);
+        require(memcmp(value,&expected,32)==0);observe(value,32);value->~CColLine();++states;
+    }
+}
+static void nativeBoundaries()
+{
+    // Transfer every fourth-lane bit without depending on incompatible struct views
+    for(unsigned test=0;test<2048;++test){
+        CColLine line;fill(&line,32);CVuVector points[2];
+#ifdef ORIGINAL
+        memcpy(points,&line,32);
+#else
+        points[0]=ColLine_ToVu(line,0);points[1]=ColLine_ToVu(line,1);
+        CVector native=CollisionVector_ToNative(line.p0);CollisionVector3 returned=CollisionVector_FromNative(native);
+        require(memcmp(&native,&line.p0,12)==0&&memcmp(&returned,&line.p0,12)==0);
+#endif
+        require(memcmp(points,&line,32)==0);observe(points,32);++states;
+    }
+    // Compare complete strided transforms for zero, one and multiple lines with output guards
+    for(unsigned test=0;test<2048;++test){
+        CMatrix matrix;CColLine lines[8];CVuVector actual[18],expected[18];
+        for(unsigned i=0;i<4;++i)for(unsigned j=0;j<4;++j){int value=(int)(nextBits()%2049)-1024;matrix.f[i][j]=value/32.0f;}
+        for(unsigned i=0;i<8;++i){
+            CVector a,b;float *pa[3]={&a.x,&a.y,&a.z},*pb[3]={&b.x,&b.y,&b.z};
+            for(unsigned j=0;j<3;++j){int value=(int)(nextBits()%65537)-32768;*pa[j]=value/128.0f;value=(int)(nextBits()%65537)-32768;*pb[j]=value/128.0f;}
+            Run_Init(&lines[i],&a,&b);
+        }
+        unsigned count=test%9;memset(actual,0xa5,sizeof(actual));memset(expected,0xa5,sizeof(expected));
+        for(unsigned i=0;i<count*2;++i){CVector value;memcpy(&value,(const unsigned char*)lines+i*16,12);CVector result=matrix*value;memcpy(&expected[i+1],&result,12);}
+#ifdef ORIGINAL
+        TransformPoints(actual+1,(int)count*2,matrix,&lines[0].p0,16);
+#else
+        TransformColLines(actual+1,(int)count,matrix,lines);
+#endif
+        for(unsigned i=0;i<count*2;++i){require(memcmp(&actual[i+1],&expected[i+1],12)==0);observe(&actual[i+1],12);}
+        require(memcmp(&actual[0],&expected[0],16)==0&&memcmp(&actual[count*2+1],&expected[count*2+1],16)==0);++states;
+    }
+}
+int main()
+{
+    // Verify the original no-write default lifetime before testing all public operations and boundaries
+    alignas(CColLine) unsigned char memory[32];memset(memory,0xa5,32);defaultLifetime(memory);
+    coordinateCases();nativeBoundaries();printf("states=%u hash=%016" PRIx64 "\n",states,hashValue);return 0;
+}

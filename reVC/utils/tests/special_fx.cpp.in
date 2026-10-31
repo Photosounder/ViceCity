@@ -1,0 +1,253 @@
+#include "common.h"
+#include "owners.h"
+#include "SpecialFX_control.h"
+#ifdef TEST_ORIGINAL
+#include "original-SpecialFX.h"
+#define SF(name) CSpecialFX::name
+extern "C" bool TimerHost_SnapshotActive(void)
+{
+    // Read the unchanged original live snapshot flag
+    return CSpecialFX::bSnapShotActive;
+}
+#else
+#define SF(name) SpecialFX_##name
+RwObject *LookForBatCB(RwObject *,void *);
+#endif
+extern "C" { uint32_t Timer_timeMs,Timer_frameCounter;float Timer_timeScale; }
+RsGlobalType RsGlobal;
+char gString[256];
+wchar gUString[256];
+bool gbNewRenderer;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,calls,polygons,rectangles,randoms,streaks,groups,pedQueries;
+static uint32_t rng=0x982123u;
+static int hook,hookAt,polyCalls,pedMode;
+static bool japanese,firstPerson;
+static float aspect;
+static CPlayerPed ped;
+static RpAtomic atomic;
+static RwFrame frame;
+static RwMatrix matrix;
+static CSimpleModelInfo model,other;
+
+static void require(bool value)
+{
+    // Abort at the exact failing corpus position
+    if(!value){fprintf(stderr,"states=%u calls=%u hook=%d\n",states,calls,hook);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Compare observable values independently of process addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare every original floating result bit for bit
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void event(unsigned value)
+{
+    // Retain the exact owner call order and controller state at each boundary
+    calls++;word(value);word(SF(bVideoCam));word(SF(bLiftCam));word(SF(bSnapShotActive));word(SF(SnapShotFrames));floating(Timer_timeScale);
+}
+static void color(const CRGBA &c)
+{
+    // Observe every narrowed color byte
+    word(c.r);word(c.g);word(c.b);word(c.a);
+}
+static void snapshot(void)
+{
+    // Observe complete controller state and both shared text buffers
+    states++;word(0xff);word(SF(bVideoCam));word(SF(bLiftCam));word(SF(bSnapShotActive));word(SF(SnapShotFrames));floating(Timer_timeScale);word(TimerHost_SnapshotActive());word(rng);word(RsGlobal.width);word(RsGlobal.height);
+    for(int i=0;i<256;i++){
+        // Include untouched trailing units to detect excess writes
+        word((unsigned char)gString[i]);word(gUString[i]);
+    }
+}
+CPlayerPed *FindPlayerPed(void)
+{
+    // Preserve repeated live queries including a weapon change at the final ID read
+    event(1);pedQueries++;
+    if(pedMode==2 && pedQueries==4)ped.m_pWeaponModel=NULL;
+    return pedMode==0?NULL:&ped;
+}
+CSimpleModelInfo *CVisibilityPlugins::GetAtomicModelInfo(RpAtomic *a)
+{
+    // Observe the original typed atomic identity query
+    event(2);require(a==&atomic);return &model;
+}
+RwFrame *RpAtomicGetFrame(const RpAtomic *a)
+{
+    // Observe each typed frame access without inventing atomic layout assumptions
+    event(3);require(a==&atomic);return &frame;
+}
+RwMatrix *RwFrameGetLTM(RwFrame *f)
+{
+    // Supply nontrivial real matrix vectors to both original matrix implementations
+    event(4);require(f==&frame);return &matrix;
+}
+RwBool RwMatrixDestroy(RwMatrix *)
+{
+    // Reject unexpected ownership changes or destruction by the lazy matrices
+    require(false);return 0;
+}
+RwMatrix *RwMatrixUpdate(RwMatrix *m)
+{
+    // Reject writes to the borrowed source matrix
+    require(false);return m;
+}
+bool FredIsInFirstPersonCam(void)
+{
+    // Observe the original renderer predicate and its short circuit
+    event(5);return firstPerson;
+}
+void TestSF_Push(const char *name)
+{
+    // Compare the original debug label and group placement
+    event(6);require(strcmp(name,"CSpecialFX::Render")==0);groups++;
+}
+void TestSF_Pop(void)
+{
+    // Observe the matching group end
+    event(7);
+}
+float Draw_GetAspectRatio(void)
+{
+    // Supply the same live aspect value without adding an artificial query side effect
+    return aspect;
+}
+#ifdef PROPER_SCALING
+bool Draw_ms_bProperScaling;
+@DRAW_SCALE@
+#endif
+void AsciiToUnicode(const char *source,wchar *target)
+{
+    // Compare both pointer identities and the complete original conversion call
+    event(8);require(source==gString && target==gUString);
+    while((*target++=(unsigned char)*source++)!=0){}
+}
+void CFont::SetScale(float x,float y)
+{
+    // Observe both scaling expressions before later calls can change screen size
+    event(9);floating(x);floating(y);
+}
+void CFont::SetCentreSize(float value)
+{
+    // Observe the original nominally unused centre-size assignment
+    event(10);floating(value);
+}
+void CFont::SetColor(CRGBA c)
+{
+    // Retain the actual by-value original font color boundary
+    event(11);color(c);
+}
+void CFont::SetFontStyle(int16 value)
+{
+    // Record the exact locale-dependent font style
+    event(12);word(value);
+}
+bool CFont::IsJapanese(void)
+{
+    // Observe conditional language queries
+    event(13);return japanese;
+}
+void CFont::PrintString(float x,float y,wchar *text)
+{
+    // Compare the original overload and allow later live screen reads to change
+    event(14);floating(x);floating(y);require(text==gUString);
+    if(hook==1){RsGlobal.width=853;RsGlobal.height=29;}
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Compare each blend-state call with the actual original enum values
+    event(15);word(state);word((uint32_t)(uintptr_t)value);return 1;
+}
+void CSprite2d::Draw2DPolygon(float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &c)
+{
+    // Compare all coordinates, color bytes and live mid-overlay flag changes
+    event(16);polygons++;polyCalls++;floating(x1);floating(y1);floating(x2);floating(y2);floating(x3);floating(y3);floating(x4);floating(y4);color(c);
+    if(polyCalls==hookAt){
+        // Mutate owner values only at a shared original rendering boundary
+        if(hook==2){RsGlobal.width=777;RsGlobal.height=31;}
+        if(hook==3){SF(bLiftCam)=true;SF(bSnapShotActive)=true;SF(SnapShotFrames)=7;}
+        if(hook==4){SF(bSnapShotActive)=false;}
+        if(hook==5){Timer_timeMs+=2051;Timer_frameCounter+=65;aspect=1.31f;}
+    }
+}
+void CSprite2d::DrawRect(const CRect &r,const CRGBA &c)
+{
+    // Compare the original unusual top and bottom order and every random rectangle
+    event(17);rectangles++;floating(r.left);floating(r.top);floating(r.right);floating(r.bottom);color(c);
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Supply and record the same deterministic sixteen-bit random stream
+    event(18);randoms++;rng=rng*1664525u+1013904223u;return (uint16_t)(rng>>16);
+}
+static void registerStreak(uintptr_t id,uint8_t r,uint8_t g,uint8_t b,MotionBlurStreakVector p1,MotionBlurStreakVector p2)
+{
+    // Compare the stable original ID identity and all transformed coordinates
+    event(19);streaks++;word(id==(uintptr_t)&atomic?1:id==0?0:2);word(r);word(g);word(b);floating(p1.x);floating(p1.y);floating(p1.z);floating(p2.x);floating(p2.y);floating(p2.z);
+}
+void MotionBlurStreaks_RegisterStreak(uintptr_t id,uint8_t r,uint8_t g,uint8_t b,MotionBlurStreakVector p1,MotionBlurStreakVector p2)
+{
+    // Observe the real C record signature at the downstream boundary
+    registerStreak(id,r,g,b,p1,p2);
+}
+void MotionBlurStreaks_RegisterStreakLegacy(uintptr_t id,uint8_t r,uint8_t g,uint8_t b,CVector p1,CVector p2)
+{
+    // Observe the unchanged original legacy values at the equivalent downstream boundary
+    registerStreak(id,r,g,b,{p1.x,p1.y,p1.z},{p2.x,p2.y,p2.z});
+}
+@OWNER_METHODS@
+static void reset(void)
+{
+    // Supply identical complete legal initial state while retaining original lazy matrix lifetimes
+    hook=0;hookAt=1;polyCalls=0;pedQueries=0;pedMode=1;ped.m_pWeaponModel=&atomic;SF(bVideoCam)=false;SF(bLiftCam)=false;SF(bSnapShotActive)=false;SF(SnapShotFrames)=0;Timer_timeScale=.75f;Timer_timeMs=123456;Timer_frameCounter=126;RsGlobal.width=640;RsGlobal.height=48;aspect=16.f/9.f;japanese=false;gbNewRenderer=false;firstPerson=false;
+    memset(gString,0x71,sizeof(gString));for(int i=0;i<256;i++)gUString[i]=0x4b71;
+    matrix.right.x=.83f;matrix.right.y=-2.5f;matrix.right.z=1.07f;matrix.up.x=3.1f;matrix.up.y=.97f;matrix.up.z=-.6f;matrix.at.x=-.13f;matrix.at.y=.4f;matrix.at.z=2.2f;matrix.pos.x=99.125f;matrix.pos.y=-31.5f;matrix.pos.z=.003f;
+#ifdef PROPER_SCALING
+    Draw_ms_bProperScaling=false;
+#endif
+}
+int main(void)
+{
+    // Verify lifecycle ordering and every original combination of rendering flags
+    reset();SF(bVideoCam)=SF(bLiftCam)=SF(bSnapShotActive)=true;SF(SnapShotFrames)=19;SF(Init)();snapshot();SF(Update)();snapshot();SF(Shutdown)();snapshot();
+    for(int flags=0;flags<8;flags++)for(int fr=0;fr<23;fr++){
+        // Exercise snapshot flash, frozen interval and release threshold with both overlay combinations
+        reset();SF(bVideoCam)=(flags&1)!=0;SF(bLiftCam)=(flags&2)!=0;SF(bSnapShotActive)=(flags&4)!=0;SF(SnapShotFrames)=fr;Timer_frameCounter=fr*63;Timer_timeMs=fr*2047;SF(Render2DFXs)();snapshot();
+    }
+    for(int h=0;h<6;h++)for(int stage=1;stage<4;stage++){
+        // Exercise owner changes between stages and within the scanline loops
+        reset();SF(bVideoCam)=true;hook=h;hookAt=stage;SF(bSnapShotActive)=true;SF(Render2DFXs)();snapshot();
+    }
+    for(int size=0;size<4;size++)for(int jp=0;jp<2;jp++){
+        // Cover original integer rounding, odd resolutions, locale and optional proper scaling
+        reset();RsGlobal.width=size==0?640:size==1?1133:size==2?1920:17;RsGlobal.height=size==0?448:size==1?637:size==2?1080:13;aspect=size==0?4.f/3.f:size==1?1.37f:16.f/9.f;japanese=jp!=0;SF(bVideoCam)=true;SF(bLiftCam)=true;
+#ifdef PROPER_SCALING
+        Draw_ms_bProperScaling=jp!=0;
+#endif
+        SF(Render2DFXs)();snapshot();
+    }
+    for(int mode=0;mode<4;mode++){
+        // Verify first-person short circuit and exact child renderer ordering
+        reset();gbNewRenderer=(mode&1)!=0;firstPerson=(mode&2)!=0;SF(Render)();snapshot();
+    }
+    const int weapons[]={WEAPONTYPE_BASEBALLBAT,WEAPONTYPE_GOLFCLUB,WEAPONTYPE_KATANA,WEAPONTYPE_UNARMED};
+    for(int mode=0;mode<4;mode++)for(int w=0;w<4;w++){
+        // Compare three weapon transforms, null branches and the repeated final weapon-ID read
+        reset();pedMode=mode==3?1:mode;if(mode==3)ped.m_pWeaponModel=NULL;SF(AddWeaponStreak)(weapons[w]);snapshot();
+    }
+    for(int i=0;i<1000;i++){
+        // Sustain interleaved independent matrix uses with nonorthogonal changing source coefficients
+        reset();matrix.pos.x+=(i%57)*.13f;matrix.up.z-=i*.007f;SF(AddWeaponStreak)(weapons[i%4]);require(LookForBatCB((RwObject *)&atomic,i%3?&model:&other)==NULL);snapshot();
+    }
+    reset();SF(bSnapShotActive)=true;
+    for(int i=0;i<25;i++){
+        // Verify one uninterrupted snapshot sequence and its live timer bridge
+        SF(Render2DFXs)();snapshot();
+    }
+    require(randoms==400*(92+8+3));require(rectangles==randoms/2);require(streaks>1000);
+    printf("states=%u calls=%u polygons=%u rectangles=%u randoms=%u streaks=%u groups=%u hash=%016llx\n",states,calls,polygons,rectangles,randoms,streaks,groups,(unsigned long long)hash);
+}

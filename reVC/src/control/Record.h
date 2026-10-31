@@ -1,8 +1,9 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 class CAutomobile;
 class CVehicle;
-class CControllerState;
+struct CControllerState;
 
 class CCarStateEachFrame
 {
@@ -102,3 +103,4 @@ private:
 	static uint8* PackCurrentPadValues(uint8*, CControllerState*, CControllerState*);
 	static uint8* UnPackCurrentPadValues(uint8*, uint8, CControllerState*);
 };
+//- rouz edit (ChatGPT)

@@ -1,35 +1,12 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Game.h"
 
-enum {
-	STREAM_OFFSET_TXD = MODELINFOSIZE,
-	STREAM_OFFSET_COL = STREAM_OFFSET_TXD+TXDSTORESIZE,
-	STREAM_OFFSET_ANIM = STREAM_OFFSET_COL+COLSTORESIZE,
-	NUMSTREAMINFO = STREAM_OFFSET_ANIM+NUMANIMBLOCKS
-};
+#include "Streaming_constants.h"
 
-enum StreamFlags
-{
-	STREAMFLAGS_DONT_REMOVE = 0x01,
-	STREAMFLAGS_SCRIPTOWNED = 0x02,
-	STREAMFLAGS_DEPENDENCY  = 0x04,	// Is this right?
-	STREAMFLAGS_PRIORITY    = 0x08,
-	STREAMFLAGS_NOFADE      = 0x10,
-	STREAMFLAGS_20          = 0x20,	// TODO(MIAMI): what's this
-
-	STREAMFLAGS_CANT_REMOVE = STREAMFLAGS_DONT_REMOVE|STREAMFLAGS_SCRIPTOWNED,
-	STREAMFLAGS_KEEP_IN_MEMORY = STREAMFLAGS_DONT_REMOVE|STREAMFLAGS_SCRIPTOWNED|STREAMFLAGS_DEPENDENCY,
-};
-
-enum StreamLoadState
-{
-	STREAMSTATE_NOTLOADED = 0,
-	STREAMSTATE_LOADED    = 1,
-	STREAMSTATE_INQUEUE   = 2,
-	STREAMSTATE_READING   = 3,	// channel is reading
-	STREAMSTATE_STARTED   = 4,	// first part loaded
-};
+#include "StreamingInfo.h"
 
 enum ChannelState
 {
@@ -39,25 +16,6 @@ enum ChannelState
 	CHANNELSTATE_ERROR = 3,
 };
 
-class CStreamingInfo
-{
-public:
-	CStreamingInfo *m_next;
-	CStreamingInfo *m_prev;
-	uint8 m_loadState;
-	uint8 m_flags;
-
-	int16  m_nextID;
-	uint32 m_position;
-	uint32 m_size;
-
-	bool GetCdPosnAndSize(uint32 &posn, uint32 &size);
-	void SetCdPosnAndSize(uint32 posn, uint32 size);
-	void AddToList(CStreamingInfo *link);
-	void RemoveFromList(void);
-	uint32 GetCdSize(void) { return m_size; }
-	bool IsPriority(void) { return !!(m_flags & STREAMFLAGS_PRIORITY); }
-};
 
 struct CStreamingChannel
 {
@@ -71,8 +29,8 @@ struct CStreamingChannel
 	int32 status;	// from CdStream
 };
 
-class CDirectory;
-class CPtrList;
+struct CDirectory;
+struct CPtrList;
 
 class CStreaming
 {
@@ -217,3 +175,5 @@ public:
 
 	static void PrintStreamingBufferState();
 };
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

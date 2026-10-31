@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Pools.h"
@@ -31,9 +32,9 @@ CDummy::Add(void)
 				list = &s->m_lists[ENTITYLIST_DUMMIES];
 			else
 				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
-			CPtrNode *node = list->InsertItem(this);
+			CPtrNode *node = PtrList_InsertItem(list, this);
 			assert(node);
-			m_entryInfoList.InsertItem(list, node, s);
+			EntryInfoList_InsertItem(&m_entryInfoList, list, node, s);
 		}
 }
 
@@ -43,8 +44,8 @@ CDummy::Remove(void)
 	CEntryInfoNode *node, *next;
 	for(node = m_entryInfoList.first; node; node = next){
 		next = node->next;
-		node->list->DeleteNode(node->listnode);
-		m_entryInfoList.DeleteNode(node);
+		PtrList_DeleteNode(node->list, node->listnode);
+		EntryInfoList_DeleteNode(&m_entryInfoList, node);
 	}
 }
 
@@ -71,3 +72,4 @@ IsDummyPointerValid(CDummy* pDummy)
 		return false;
 	return pDummy->m_entryInfoList.first;
 }
+//- rouz edit (ChatGPT)

@@ -1,9 +1,10 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Treadable.h"
 
 class CVehicle;
-class CPtrList;
+struct CPtrList;
 
 #define LANE_WIDTH 5.0f
 #define WIDTH_TO_PED_NODE_WIDTH (31.f/(500.f * 8.f))
@@ -299,3 +300,4 @@ inline void CPathNode::SetNext(CPathNode *node) { nextIndex = ThePaths.GetIndex(
 extern bool gbShowPedPaths;
 extern bool gbShowCarPaths;
 extern bool gbShowCarPathsLinks;
+//- rouz edit (ChatGPT)

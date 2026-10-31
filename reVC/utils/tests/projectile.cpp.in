@@ -1,0 +1,337 @@
+#include "caller.h"
+#include "General.h"
+#include <stdarg.h>
+#include <vector>
+#include <string>
+#include <limits.h>
+extern "C" {uint32_t Timer_timeMs;float Timer_timeStep;}
+static CPool pool;
+static RwMatrix attachments[64];
+static bool alive[64];
+static unsigned states,creations,destroys,explosions,gas,smoke,choking,lines,helis,planes,worldAdds,worldRemoves,debugs,weaponSlots,weaponReads;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static bool collideHeli,collidePlane,clearLine=true,mutatePosition,advanceTime,shiftOnAdd;
+static unsigned successfulWeapons[5],rocketBranches[5],earlyCollisions[4];
+static int explosionSource,explosionKind;
+static ProjectileVector lastHeli,lastPlane;
+CEntity *CWorld::pIgnoreEntity;
+TestProjectileCamera TheCamera;
+
+static void bytes(const void *data,size_t count)
+{
+    // Hash deterministic data bytes while excluding native addresses and unspecified matrix flags
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<count;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep integer observations independent of native pointer width
+    bytes(&value,4);
+}
+static void vector(const CVector &value)
+{
+    // Observe each ordered vector component at the native call boundary
+    bytes(&value.x,4);bytes(&value.y,4);bytes(&value.z,4);
+}
+static void packet(ProjectileVector value)
+{
+    // Observe the canonical plain record's three position components
+    bytes(&value.x,4);bytes(&value.y,4);bytes(&value.z,4);
+}
+static int identity(CEntity *entity)
+{
+    // Map live native identities without embedding executable-specific addresses
+    return entity?entity->id:-1;
+}
+static int indexOf(const CObject *object)
+{
+    // Require every pool operation to refer to its actual native slot
+    intptr_t offset=(const uint8_t *)object-pool.m_entries;assert(offset>=0&&offset%(intptr_t)pool.m_entrySize==0);
+    int result=(int)(offset/(intptr_t)pool.m_entrySize);assert(result<pool.m_size);return result;
+}
+void TestProjectile_Construct(CObject *object)
+{
+    // Observe actual CObject base construction during the real projectile constructor
+    int index=indexOf(object);assert(!alive[index]);alive[index]=true;object->id=index;
+    object->matrix.m_attachment=&attachments[index];object->matrix.m_hasRwMatrix=false;
+    number(1);number(index);creations++;
+}
+void TestProjectile_Destroy(CObject *object)
+{
+    // Observe actual destruction before the original pool release and catch any repeated destruction
+    int index=indexOf(object);assert(alive[index]);alive[index]=false;number(2);number(index);destroys++;
+    object->GetPosition()=CVector(-9000,-9000,-9000);
+}
+void TestProjectile_MatrixUpdate(RwMatrix *matrix)
+{
+    // Observe complete real matrix synchronization without invoking a rendering backend
+    number(3);vector(CVector(matrix->right));vector(CVector(matrix->up));vector(CVector(matrix->at));vector(CVector(matrix->pos));
+}
+void TestProjectile_MatrixDestroy(RwMatrix *matrix)
+{
+    // Reject ownership changes because the original controller's temporary matrix is unattached
+    (void)matrix;assert(false);
+}
+void TestProjectile_Debug(const char *format,...)
+{
+    // Compare exact original debug strings after the native bridge formats them
+    char message[256];va_list args;va_start(args,format);vsnprintf(message,sizeof(message),format,args);va_end(args);
+    bytes(message,strlen(message));debugs++;
+}
+void TestProjectile_Error(const char *format,...)
+{
+    // Reject invalid weapon inputs that leave the original creation locals undefined
+    (void)format;assert(false);
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail quietly if an original native pool precondition rejects a valid fixture operation
+    fprintf(stderr,"%s at %s:%u (%s)\n",expression,file,line,function);abort();
+}
+extern "C" int myrand(void)
+{
+    // Reject random draws because projectile management has no random-provider dependency
+    assert(false);return 0;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Reject unexpected seeding while linking the complete General C implementation
+    (void)seed;assert(false);
+}
+CObjectPool *CPools::GetObjectPool()
+{
+    // Expose the actual C pool used by both the original controller and converted controller
+    return &pool;
+}
+int CPed::GetWeaponSlot(eWeaponType type)
+{
+    // Verify each original repeated detonator-slot lookup rather than caching its result
+    assert(type==WEAPONTYPE_DETONATOR);weaponSlots++;number(4);return 2;
+}
+TestProjectileWeapon &CPed::GetWeapon(int slot)
+{
+    // Return live weapon storage after each independent slot query
+    assert(slot==2);weaponReads++;number(5);return weapon;
+}
+void CWorld::Add(CEntity *entity)
+{
+    // Observe the original add before the controller records its final position
+    assert(alive[entity->id]);number(6);number(entity->id);worldAdds++;
+    if(shiftOnAdd){entity->GetPosition().x+=0.5f;entity->GetPosition().z+=0.25f;}
+}
+void CWorld::Remove(CEntity *entity)
+{
+    // Require world removal before native destruction and pool release
+    assert(alive[entity->id]);number(7);number(entity->id);worldRemoves++;
+}
+bool CWorld::GetIsLineOfSightClear(const CVector &from,const CVector &to,bool buildings,bool vehicles,bool peds,bool objects,bool dummies,bool seeThrough,bool someObjects)
+{
+    // Check all original visibility flags and the live ignored projectile
+    assert(buildings&&vehicles&&peds&&objects&&!dummies&&!seeThrough&&!someObjects&&pIgnoreEntity);
+    number(8);vector(from);vector(to);number(identity(pIgnoreEntity));lines++;return clearLine;
+}
+void CWorld::SetPedsChoking(float x,float y,float z,float radius,CEntity *source)
+{
+    // Observe gas coordinates after all three original particle calls and timer reads
+    assert(radius==6.0f);number(9);vector(CVector(x,y,z));number(identity(source));choking++;
+}
+bool CExplosion::AddExplosion(CEntity *victim,CEntity *source,eExplosionType type,const CVector &position,uint32 lifetime,bool sound)
+{
+    // Check the original explosion defaults and preserve source identity independently of record storage
+    assert(!victim&&lifetime==0&&sound);number(10);number(identity(source));number(type);vector(position);explosions++;
+    explosionSource=identity(source);explosionKind=type;return true;
+}
+CParticle *CParticle::AddParticle(int type,const CVector &position,const CVector &direction,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan)
+{
+    // Mutate live gas positions and time between calls to detect prematurely copied references
+    assert(type==PARTICLE_TEARGAS&&!entity&&size==0&&rotationSpeed==0&&rotation==0&&frame==0&&lifespan==0);
+    number(11);vector(position);vector(direction);gas++;
+    if(mutatePosition){CVector &livePosition=const_cast<CVector &>(position);livePosition.x+=0.125f;livePosition.z+=0.25f;}
+    if(advanceTime)Timer_timeMs++;
+    return nil;
+}
+void CParticle::AddParticlesAlongLine(int type,const CVector &from,const CVector &to,const CVector &direction,float power,CEntity *entity,float size,int32 rotationSpeed,int32 rotation,int32 frame,int32 lifespan)
+{
+    // Preserve the original positional argument 3000 as rotation and its default frame/lifespan values
+    assert(type==PARTICLE_ROCKET_SMOKE&&power==0.7f&&!entity&&size==0&&rotationSpeed==0&&rotation==3000&&frame==0&&lifespan==0);
+    assert(direction.x==0&&direction.y==0&&direction.z==0);number(12);vector(from);vector(to);smoke++;
+}
+bool CHeli::TestRocketCollision(CVector *position)
+{
+    // Preserve mutations of the shared local vector before the plane collision test
+    assert(CWorld::pIgnoreEntity);number(13);vector(*position);lastHeli={position->x,position->y,position->z};position->x+=0.125f;helis++;return collideHeli;
+}
+bool CPlane::TestRocketCollision(CVector *position)
+{
+    // Require the plane query to receive the helicopter query's updated local coordinates
+    assert(CWorld::pIgnoreEntity&&position->x==lastHeli.x+0.125f);number(14);vector(*position);lastPlane={position->x,position->y,position->z};position->z+=0.25f;planes++;return collidePlane;
+}
+
+static ProjectileInfo read(int slot)
+{
+    // Retrieve actual canonical record bytes through the real getter
+    ProjectileInfo value;TestProjectile_Read(slot,&value);return value;
+}
+static void snapshot()
+{
+    // Compare every semantic record field, canonical pointer and live native projectile field
+    for(int i=0;i<NUM_PROJECTILES;i++){
+        // Avoid dereferencing the deliberately retained pointer after a record has been released
+        ProjectileInfo value=read(i);number(value.m_eWeaponType);number(identity(value.m_pSource));number(value.m_nExplosionTime);number(value.m_bInUse);packet(value.m_vecPos);
+        CProjectile *p=TestProjectile_Get(i);number(p?indexOf(p)+1:0);
+        if(value.m_bInUse&&p){
+            // Observe matrix basis, position, velocity, constructor values and mutable physical flags
+            assert(alive[indexOf(p)]);vector(p->GetMatrix().GetRight());vector(p->GetForward());vector(p->GetUp());vector(p->GetPosition());vector(p->m_vecMoveSpeed);
+            number(p->model);number(p->bAffectedByGravity);number(p->bHasCollided);number(p->bExplosionProof);number(p->ObjectCreatedBy);number(p->m_nSpecialCollisionResponseCases);
+            bytes(&p->m_fMass,4);bytes(&p->m_fTurnMass,4);bytes(&p->m_fAirResistance,4);bytes(&p->m_fElasticity,4);bytes(&p->m_fBuoyancy,4);
+        }
+    }
+    number(TestProjectile_Count());number(identity(CWorld::pIgnoreEntity));states++;
+}
+static void fresh()
+{
+    // Clear live objects through the original API while retaining original function-static smoke state
+    TestProjectile_SetCount(1000);TestProjectile_All();
+    for(int i=0;i<pool.m_size;i++)assert(!alive[i]&&CPool_GetIsFree(&pool,i));
+    TestProjectile_Init();pool.m_allocPtr=-1;clearLine=true;collideHeli=collidePlane=mutatePosition=advanceTime=shiftOnAdd=false;CWorld::pIgnoreEntity=nil;
+    Timer_timeMs=10000;Timer_timeStep=50.0f/30.0f;
+}
+static void seedSource(CPed &ped,int branch)
+{
+    // Independently vary vehicle, player, targeted-NPC and untargeted-NPC launch bases
+    ped.player=branch==1;ped.valid=true;ped.m_pSeekTarget=nil;ped.m_pCollidingEntity=nil;ped.kind=1;ped.id=100;
+    ped.model=branch==0?MI_SPARROW:branch==4?MI_HUNTER:MI_COP;
+    ped.GetMatrix().SetTranslate(2,3,4);ped.GetMatrix().Rotate(0.15f,-0.2f,0.4f);ped.m_vecMoveSpeed=CVector(0.3f,-0.1f,0.2f);
+    TheCamera.ActiveCam=1;TheCamera.Cams[1].Front=CVector(0.2f,0.9f,0.1f);TheCamera.Cams[1].Up=CVector(-0.1f,0.0f,1.0f);
+    ped.weapon={WEAPONTYPE_DETONATOR,3};
+}
+static void addCases()
+{
+    // Exercise all five supported weapons, launch branches, scales and post-add position changes
+    const eWeaponType weapons[]={WEAPONTYPE_ROCKET,WEAPONTYPE_MOLOTOV,WEAPONTYPE_TEARGAS,WEAPONTYPE_GRENADE,WEAPONTYPE_DETONATOR_GRENADE};
+    const float speeds[]={-2.0f,-0.1f,0.0f,0.5f,1.0f,2.0f};
+    for(int weapon=0;weapon<5;weapon++)for(int branch=0;branch<5;branch++)for(float speed:speeds){
+        // Keep each original launch source valid and independently seed the target-height branch
+        fresh();CPed ped;seedSource(ped,branch);CEntity target;target.id=101;target.GetPosition().z=9.0f;if(branch==2)ped.m_pSeekTarget=&target;
+        CVector position(10,-20,3);shiftOnAdd=branch%2==0;
+        assert(TestProjectile_Add(&ped,weapons[weapon],&position,speed));successfulWeapons[weapon]++;if(weapon==0)rocketBranches[branch]++;
+        CProjectile *p=TestProjectile_Get(0);ProjectileInfo value=read(0);assert(value.m_bInUse&&value.m_pSource==&ped&&value.m_eWeaponType==weapons[weapon]);
+        assert(value.m_nExplosionTime==Timer_timeMs+(weapon==2?20000:2000));
+        assert(value.m_vecPos.x==p->GetPosition().x&&value.m_vecPos.y==p->GetPosition().y&&value.m_vecPos.z==p->GetPosition().z);
+        assert(ped.m_pCollidingEntity==p&&p->ObjectCreatedBy==MISSION_OBJECT&&p->bExplosionProof&&p->m_fMass==1.0f&&p->m_fTurnMass==1.0f);
+        assert(p->bAffectedByGravity==(weapon!=0));assert(p->m_fElasticity==((weapon>=2)?0.5f:0.75f));
+        assert(p->m_nSpecialCollisionResponseCases==(weapon>=2?COLLRESPONSE_UNKNOWN5:COLLRESPONSE_NONE));
+        snapshot();TestProjectile_Remove(0);assert(!read(0).m_bInUse);snapshot();
+        if(weapon==0||weapon==1||weapon==3)assert(explosionKind==(weapon==0?EXPLOSION_ROCKET:weapon==1?EXPLOSION_MOLOTOV:EXPLOSION_GRENADE));
+        else {number(0);}
+        for(int i=0;i<pool.m_size;i++)assert(!alive[i]);
+    }
+    fresh();CPed ped;seedSource(ped,0);ped.kind=2;ped.id=105;
+    CVehicle car;car.id=106;CPed driver;driver.id=107;car.pDriver=&driver;
+    CVector position(1,2,3);assert(TestProjectile_Add(&ped,WEAPONTYPE_ROCKET,&position,1));ProjectileInfo value=read(0);value.m_pSource=&car;TestProjectile_Write(0,&value);TestProjectile_Remove(0);assert(explosionSource==107);snapshot();
+    for(eWeaponType weapon:weapons){TestProjectile_NotAdd(&ped,weapon,&position);}
+}
+
+static void updateCases()
+{
+    // Cover expiration, collision short-circuiting, gas references, boundaries and sub-frame smoke accumulation
+    const eWeaponType weapons[]={WEAPONTYPE_ROCKET,WEAPONTYPE_MOLOTOV,WEAPONTYPE_TEARGAS,WEAPONTYPE_GRENADE,WEAPONTYPE_DETONATOR_GRENADE};
+    for(eWeaponType weapon:weapons)for(int scenario=0;scenario<20;scenario++){
+        // Keep original null-source detonator and rocket dereference preconditions valid
+        fresh();CPed ped;seedSource(ped,1);CVector position(10,20,3);assert(TestProjectile_Add(&ped,weapon,&position,1));CProjectile *p=TestProjectile_Get(0);
+        ProjectileInfo value=read(0);p->m_vecMoveSpeed=CVector(0.01f,-0.02f,0.03f);
+        Timer_timeMs=scenario<4?value.m_nExplosionTime:scenario<8?value.m_nExplosionTime+1:(scenario%2?10512:11024);
+        if(scenario==0)p->bHasCollided=true;
+        if(scenario==1)clearLine=false;
+        if(scenario==2)collideHeli=true;
+        if(scenario==3)collidePlane=true;
+        if(scenario==4)ped.weapon.m_eWeaponType=WEAPONTYPE_UNARMED;
+        if(scenario==5)ped.weapon.m_nAmmoTotal=0;
+        if(scenario==6)value.m_nExplosionTime=0;
+        if(scenario==7)value.m_nExplosionTime=Timer_timeMs;
+        if(scenario==8){p->GetPosition().x=-2390;p->m_vecMoveSpeed.x=-0.2f;}
+        if(scenario==9){p->GetPosition().x=1590;p->m_vecMoveSpeed.x=0;}
+        if(scenario==10){p->GetPosition().y=-1990;p->m_vecMoveSpeed.y=0;}
+        if(scenario==11){p->GetPosition().y=1990;p->m_vecMoveSpeed.y=0;}
+        if(scenario==12){p->m_vecMoveSpeed.x=0.05f;}
+        if(scenario==13){p->m_fElasticity=0.1f;}
+        if(scenario==14){mutatePosition=true;advanceTime=true;}
+        if(scenario==15&&weapon!=WEAPONTYPE_ROCKET&&weapon!=WEAPONTYPE_DETONATOR_GRENADE){value.m_pSource=nil;}
+        if(scenario==16&&weapon!=WEAPONTYPE_ROCKET&&weapon!=WEAPONTYPE_DETONATOR_GRENADE){ped.valid=false;}
+        if(scenario==17){ped.GetPosition()=CVector(10,20,3);p->bHasCollided=true;}
+        if(scenario==18){Timer_timeStep=0.25f;}
+        if(scenario==19){Timer_timeStep=4.0f;}
+        TestProjectile_Write(0,&value);unsigned oldLines=lines,oldHelis=helis,oldPlanes=planes,oldSmoke=smoke;
+        for(int frame=0;frame<5;frame++){
+            // Preserve live coordinates and timer changes between consecutive update calls
+            ProjectileInfo before=read(0);if(before.m_bInUse){p->GetPosition().x+=0.1f;p->GetPosition().z+=0.03f;}
+            TestProjectile_Update();assert(CWorld::pIgnoreEntity==nil);snapshot();
+        }
+        if(weapon==WEAPONTYPE_ROCKET&&scenario<4){
+            // Independently require each successive collision failure to stop all later tests
+            assert(!read(0).m_bInUse);assert(lines-oldLines==(scenario==0?0:1));assert(helis-oldHelis==(scenario<2?0:1));assert(planes-oldPlanes==(scenario<3?0:1));earlyCollisions[scenario]++;
+        }
+        if(weapon==WEAPONTYPE_ROCKET&&scenario==19)assert(smoke>oldSmoke);
+        if(scenario>=8&&scenario<=11)assert(!read(0).m_bInUse);
+        if(weapon==WEAPONTYPE_MOLOTOV&&scenario==17)assert(read(0).m_bInUse);
+        if(weapon==WEAPONTYPE_DETONATOR_GRENADE&&(scenario==4||scenario==5))assert(read(0).m_nExplosionTime==0);
+        TestProjectile_All();
+    }
+    fresh();CPed ped;seedSource(ped,1);CVector position(0,0,0);assert(TestProjectile_Add(&ped,WEAPONTYPE_ROCKET,&position,1));Timer_timeStep=0.25f;TestProjectile_Update();snapshot();
+    fresh();assert(TestProjectile_Add(&ped,WEAPONTYPE_ROCKET,&position,1));TestProjectile_Update();snapshot();
+    fresh();ProjectileInfo missing=read(0);missing.m_bInUse=true;missing.m_pSource=&ped;missing.m_eWeaponType=WEAPONTYPE_GRENADE;TestProjectile_Write(0,&missing);TestProjectile_SetCount(1);TestProjectile_Update();assert(!read(0).m_bInUse);snapshot();
+}
+
+static void allocationCases()
+{
+    // Exercise exact pool exhaustion and TEMP_OBJECT eviction using the actual C pool implementation
+#ifdef FIX_BUGS
+    for(int temporary=-1;temporary<2;temporary++){
+        // Place the reclaimable temporary at the first or last slot, or omit it entirely
+        fresh();for(int i=0;i<pool.m_size;i++){CObject *p=(CObject *)CPool_New(&pool);std::allocator<CObject>().construct(p);p->ObjectCreatedBy=(temporary>=0&&i==(temporary?pool.m_size-1:0))?TEMP_OBJECT:MISSION_OBJECT;}
+        CPed ped;seedSource(ped,1);CVector position(0,0,0);bool result=TestProjectile_Add(&ped,WEAPONTYPE_GRENADE,&position,0);assert(result==(temporary>=0));snapshot();
+        TestProjectile_All();
+        for(int i=0;i<pool.m_size;i++){CObject *object=(CObject *)CPool_GetSlot(&pool,i);if(object){object->~CObject();CPool_Delete(&pool,object);}}
+    }
+    fresh();ProjectileInfo value=read(0);value.m_bInUse=true;
+    for(int i=0;i<NUM_PROJECTILES;i++)TestProjectile_Write(i,&value);
+    CPed ped;seedSource(ped,1);CVector position(0,0,0);assert(!TestProjectile_Add(&ped,WEAPONTYPE_ROCKET,&position,1));TestProjectile_Init();snapshot();
+#endif
+}
+
+static void removalCases()
+{
+    // Cover inclusive ranges, weapon filtering, explicit detonation and the original post-increment lookup behavior
+    const eWeaponType weapons[]={WEAPONTYPE_ROCKET,WEAPONTYPE_MOLOTOV,WEAPONTYPE_GRENADE,WEAPONTYPE_TEARGAS,WEAPONTYPE_DETONATOR_GRENADE};
+    fresh();CPed ped;seedSource(ped,1);CVector position(1,2,3);
+    for(eWeaponType weapon:weapons)assert(TestProjectile_Add(&ped,weapon,&position,0));
+    for(int i=0;i<5;i++)TestProjectile_Get(i)->GetPosition()=position;
+    assert(!TestProjectile_Range(2,1,0,4,0,4,false));assert(TestProjectile_Range(1,1,2,2,3,3,false));snapshot();
+    assert(TestProjectile_Range(1,1,2,2,3,3,true));assert(!read(0).m_bInUse&&!read(1).m_bInUse&&!read(2).m_bInUse&&read(3).m_bInUse&&read(4).m_bInUse);snapshot();
+    TestProjectile_Detonators();assert(!read(4).m_bInUse&&read(3).m_bInUse);snapshot();TestProjectile_All();
+    for(int target: {0,2,9,30}){
+        // Match before the final slot so the original off-by-one access remains within its defined range
+        fresh();for(int i=0;i<target+2;i++)assert(TestProjectile_Add(&ped,WEAPONTYPE_GRENADE,&position,0));
+        CProjectile *matched=TestProjectile_Get(target);assert(TestProjectile_If(matched));assert(TestProjectile_Get(target)==matched&&read(target).m_bInUse);assert(!TestProjectile_Get(target+1)&&!read(target+1).m_bInUse);snapshot();
+        assert(!TestProjectile_If((CObject *)&ped));TestProjectile_All();
+    }
+    fresh();assert(TestProjectile_Add(&ped,WEAPONTYPE_GRENADE,&position,0));unsigned before=destroys;TestProjectile_Shutdown();assert(destroys==before&&read(0).m_bInUse);snapshot();
+#ifdef SQUEEZE_PERFORMANCE
+    TestProjectile_SetCount(0);TestProjectile_All();assert(read(0).m_bInUse);snapshot();TestProjectile_SetCount(1);
+#endif
+    TestProjectile_All();fresh();snapshot();
+}
+
+int main()
+{
+    // Compare complete original and converted lifecycles using only quiet console and compiler operations
+    assert(CPool_Init(&pool,64,sizeof(CProjectile),"Projectile fixture"));memset(alive,0,sizeof(alive));
+    addCases();updateCases();allocationCases();removalCases();fresh();
+    for(int i=0;i<pool.m_size;i++)assert(!alive[i]);
+    for(unsigned coverage:successfulWeapons)assert(coverage==30);
+    for(unsigned coverage:rocketBranches)assert(coverage==6);
+    for(unsigned coverage:earlyCollisions)assert(coverage==1);
+    assert(creations==destroys&&gas>0&&smoke>0&&choking>0&&weaponSlots==weaponReads&&weaponReads>0&&worldAdds>0&&worldRemoves>0);
+    CPool_Flush(&pool);
+    printf("states=%u creations=%u destroys=%u explosions=%u gas=%u smoke=%u choking=%u lines=%u helis=%u planes=%u adds=%u removes=%u debugs=%u slots=%u weapons=%u hash=%016llx\n",states,creations,destroys,explosions,gas,smoke,choking,lines,helis,planes,worldAdds,worldRemoves,debugs,weaponSlots,weaponReads,(unsigned long long)hashValue);
+}

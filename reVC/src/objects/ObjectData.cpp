@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -63,8 +64,8 @@ CObjectData::Initialise(const char *filename)
 	ms_aObjectInfo[3].m_nSpecialCollisionResponseCases = 4;
 	ms_aObjectInfo[3].m_bCameraToAvoidThisObject = true;
 
-	CFileMgr::SetDir("");
-	CFileMgr::LoadFile(filename, work_buff, sizeof(work_buff), "r");
+	FileMgr_SetDir("");
+	FileMgr_LoadFile(filename, work_buff, sizeof(work_buff), "r");
 
 	id = 4;
 	p = (char*)work_buff;
@@ -159,3 +160,4 @@ CObjectData::SetObjectData(int32 modelId, CObject &object)
 		object.bExplosionProof = true;
 	}
 }
+//- rouz edit (ChatGPT)

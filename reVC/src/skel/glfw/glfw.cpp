@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #if defined RW_GL3 && !defined LIBRW_SDL2
 
 #ifdef _WIN32
@@ -51,7 +53,7 @@ long _dwOperatingSystemVersion;
 #include "Sprite2d.h"
 #include "AnimViewer.h"
 #include "Font.h"
-#include "MemoryMgr.h"
+#include "MemoryMgr_native.h"
 
 // This is defined on project-level, via premake5 or cmake
 #ifdef GET_KEYBOARD_INPUT_FROM_X11
@@ -378,10 +380,10 @@ static void _psHandleVibration()
 		SwitchVibrationValues[0].freq_low = pad->ShakeFreq == 0.0 ? 160.0f : (float)pad->ShakeFreq * 1.26f;
 		SwitchVibrationValues[0].freq_high = pad->ShakeFreq == 0.0 ? 320.0f : (float)pad->ShakeFreq * 1.26f;
 
-		if (pad->ShakeDur < CTimer::GetTimeStepInMilliseconds())
+		if (pad->ShakeDur < Timer_GetTimeStepInMilliseconds())
 			pad->ShakeDur = 0;
 		else
-			pad->ShakeDur -= CTimer::GetTimeStepInMilliseconds();
+			pad->ShakeDur -= Timer_GetTimeStepInMilliseconds();
 		if (pad->ShakeDur == 0) pad->ShakeFreq = 0;
 
 
@@ -417,7 +419,7 @@ psInitialize(void)
 	PsGlobal.joy1id	= -1;
 	PsGlobal.joy2id	= -1;
 
-	CFileMgr::Initialise();
+	FileMgr_Initialise();
 	
 #ifdef PS2_MENU
 	CPad::Initialise();
@@ -580,7 +582,7 @@ psInitialize(void)
 	_dwOperatingSystemVersion = OS_WINXP; // To fool other classes
 #endif
   
-  TheText.Unload();
+  Text_Unload(&TheText);
 
 	return TRUE;
 }
@@ -1344,8 +1346,8 @@ void InitialiseLanguage()
 	setlocale(LC_NUMERIC, "C");
 #endif
 
-	TheText.Unload();
-	TheText.Load();
+	Text_Unload(&TheText);
+	Text_Load(&TheText);
 }
 
 /*
@@ -1985,7 +1987,7 @@ main(int argc, char *argv[])
 
 	psPostRWinit();
 
-	ControlsManager.InitDefaultControlConfigMouse(MousePointerStateHelper.GetMouseSetUp());
+	ControlsManager.InitDefaultControlConfigMouse(MousePointerState_GetMouseSetUp(&MousePointerStateHelper));
 
 //	glfwSetWindowPos(PSGLOBAL(window), 0, 0);
 
@@ -2029,7 +2031,7 @@ main(int argc, char *argv[])
 #endif
 
 	{
-		CFileMgr::SetDirMyDocuments();
+		FileMgr_SetDirMyDocuments();
 		
 #ifdef LOAD_INI_SETTINGS
 		// At this point InitDefaultControlConfigJoyPad must have set all bindings to default and ms_padButtonsInited to number of detected buttons.
@@ -2038,15 +2040,15 @@ main(int argc, char *argv[])
 		int connectedPadButtons = ControlsManager.ms_padButtonsInited;
 #endif
 
-		int32 gta3set = CFileMgr::OpenFile("gta_vc.set", "r");
+		int32 gta3set = FileMgr_OpenFile("gta_vc.set", "r");
 		
 		if ( gta3set )
 		{
 			ControlsManager.LoadSettings(gta3set);
-			CFileMgr::CloseFile(gta3set);
+			FileMgr_CloseFile(gta3set);
 		}
 		
-		CFileMgr::SetDir("");
+		FileMgr_SetDir("");
 
 #ifdef LOAD_INI_SETTINGS
 		LoadINIControllerSettings();
@@ -2070,8 +2072,8 @@ main(int argc, char *argv[])
 	{
 		LoadingScreen(nil, nil, "loadsc0");
 		
-		TheText.Unload();
-		TheText.Load();
+		Text_Unload(&TheText);
+		Text_Load(&TheText);
 		
 		CFont::Initialise();
 		
@@ -2102,7 +2104,7 @@ main(int argc, char *argv[])
 			// This is TheModelViewer in LCS
 			LoadingScreen("Loading the ModelViewer", NULL, GetRandomSplashScreen());
 			CAnimViewer::Initialise();
-			CTimer::Update();
+			Timer_Update();
 #ifndef PS2_MENU
 			FrontEndMenuManager.m_bGameNotLoaded = false;
 #endif
@@ -2115,7 +2117,7 @@ main(int argc, char *argv[])
 		
 		TheMemoryCard.m_bWantToLoad = false;
 		
-		CTimer::Update();
+		Timer_Update();
 		
 		while( !RsGlobal.quit && !(FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad) && !glfwWindowShouldClose(PSGLOBAL(window)) )
 #else
@@ -2310,8 +2312,8 @@ main(int argc, char *argv[])
 							if (CMenuManager::m_PrefsLanguage != TheMemoryCard.GetLanguageToLoad())
 							{
 								CMenuManager::m_PrefsLanguage = TheMemoryCard.GetLanguageToLoad();
-								TheText.Unload();
-								TheText.Load();
+								Text_Unload(&TheText);
+								Text_Load(&TheText);
 							}
 					
 							CGame::currLevel = (eLevelName)TheMemoryCard.GetLevelToLoad();
@@ -2328,7 +2330,7 @@ main(int argc, char *argv[])
 					
 					case GS_PLAYING_GAME:
 					{
-						float ms = (float)CTimer::GetCurrentTimeInCycles() / (float)CTimer::GetCyclesPerMillisecond();
+						float ms = (float)Timer_GetCurrentTimeInCycles() / (float)Timer_GetCyclesPerMillisecond();
 						if ( RwInitialised )
 						{
 							if (!FrontEndMenuManager.m_PrefsFrameLimiter || (1000.0f / (float)RsGlobal.maxFPS) < ms)
@@ -2374,7 +2376,7 @@ main(int argc, char *argv[])
 		CGame::ShutDownForRestart();
 #endif
 		
-		CTimer::Stop();
+		Timer_Stop();
 		
 #ifdef PS2_MENU
 		if (FrontEndMenuManager.m_bWantToRestart || TheMemoryCard.b_FoundRecentSavedGameWantToLoad)
@@ -2393,7 +2395,7 @@ main(int argc, char *argv[])
 		}
 		
 		CGame::ShutDown();	
-		CTimer::Stop();
+		Timer_Stop();
 		
 		break;
 #else
@@ -2415,7 +2417,7 @@ main(int argc, char *argv[])
 			if ( gGameState == GS_PLAYING_GAME )
 				CGame::ShutDown();
 			
-			CTimer::Stop();
+			Timer_Stop();
 			
 			if ( FrontEndMenuManager.m_bFirstTime == true )
 			{
@@ -2613,4 +2615,7 @@ int strncasecmp(const char *str1, const char *str2, size_t len)
 #endif
 #endif
 
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -1,0 +1,309 @@
+#include "owners.h"
+#include "entry.h"
+#include <map>
+#include <stdarg.h>
+static unsigned checks,registrationCalls,enumerations,objectUpdates,heapAllocations,heapFrees,uncompressCalls;
+static uint64_t digest=UINT64_C(1469598103934665603);
+static TestLifecycle constructorCallback,destructorCallback;
+static TestCopy copyCallback;
+static int32_t registrationResult;
+static std::map<void*,size_t> alignedMemory;
+static unsigned deletionCallbacks,finishCallbacks,playbackSteps;
+static RpClump *searchReentryTarget;
+static bool searchReentryActive;
+static void require(bool value)
+{
+    // Fail quietly at the first registration, ownership or mapping invariant mismatch
+    ++checks;if(!value){fprintf(stderr,"plugin check %u failed\n",checks);exit(2);}
+}
+static void record(unsigned value)
+{
+    // Normalize observations to values rather than native addresses
+    digest=(digest^value)*UINT64_C(1099511628211);
+}
+static void recordFloat(float value)
+{
+    // Observe exact initialized arithmetic results without native padding bytes
+    uint32_t bits;memcpy(&bits,&value,4);record(bits);
+}
+extern "C" void re3_assert(const char *expression,const char*,unsigned,const char*)
+{
+    // Report unexpected project assertions without opening a native dialog
+    fprintf(stderr,"plugin assertion %s\n",expression);exit(3);
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Observe existing loading diagnostics without emitting game or SDK windows
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);for(unsigned char *p=(unsigned char*)text;*p;++p)record(*p);
+}
+int32_t RpClumpRegisterPlugin(int32_t size,uint32_t id,TestLifecycle create,TestLifecycle destroy,TestCopy copy)
+{
+    // Capture real lifecycle function pointers and preserve the SDK registration return value
+    require(size==sizeof(CAnimBlendClumpData*)&&id==0x0253F2FD);constructorCallback=create;destructorCallback=destroy;copyCallback=copy;++registrationCalls;record(id);return registrationResult;
+}
+void RwFrameForAllChildren(RwFrame *frame,TestFrameCallback callback,void *argument)
+{
+    // Enumerate SDK children only while the plugin callbacks retain recursion and filling policy
+    ++enumerations;for(RwFrame *child:frame->children)if(!callback(child,argument))break;
+}
+RpAtomic *GetFirstAtomic(RpClump *clump)
+{
+    // Borrow native metadata through the original external primitive
+    return clump->atomic;
+}
+RpGeometry *RpAtomicGetGeometry(RpAtomic *atomic)
+{
+    // Preserve the original native geometry lookup
+    return atomic->geometry;
+}
+RpSkin *RpSkinGeometryGetSkin(RpGeometry *geometry)
+{
+    // Preserve the original native skin lookup
+    return geometry->skin;
+}
+int RpSkinGetNumBones(RpSkin *skin)
+{
+    // Return the controlled SDK bone-count input
+    return skin->numBones;
+}
+RpHAnimHierarchy *GetAnimHierarchyFromSkinClump(RpClump *clump)
+{
+    // Borrow the same live hierarchy for initialization and indexed lookup
+    return clump->hierarchy;
+}
+void SkinGetBonePositionsToTable(RpClump *clump,RwV3d *positions)
+{
+    // Supply the separate external skin owner result and require preserved zero initialization
+    for(int i=0;i<64;++i){require(positions[i].x==0&&positions[i].y==0&&positions[i].z==0);}
+    for(int i=0;i<clump->atomic->geometry->skin->numBones;++i)positions[i]={(float)i*0.125f,-(float)i*0.25f,(float)i*0.5f};
+}
+bool IsClumpSkinned(RpClump *clump)
+{
+    // Read the current SDK classification without implementing plugin dispatch
+    return clump->skinned;
+}
+RwFrame *RpClumpGetFrame(RpClump *clump)
+{
+    // Return the actual SDK root frame handle
+    return clump->root;
+}
+int RpHAnimIDGetIndex(RpHAnimHierarchy *hierarchy,int tag)
+{
+    // Supply the existing SDK node lookup primitive
+    for(int i=0;i<64;++i)if(hierarchy->nodes[i].id==tag)return i;return -1;
+}
+char *GetFrameNodeName(RwFrame *frame)
+{
+    // Borrow the original live mutable frame name
+    if(searchReentryTarget&&!searchReentryActive){
+        // Reenter the real global search policy through the SDK metadata boundary
+        searchReentryActive=true;Run_FindFrame(searchReentryTarget,"target");searchReentryActive=false;
+    }
+    return frame->name;
+}
+int CVisibilityPlugins::GetFrameHierarchyId(RwFrame *frame)
+{
+    // Read only native visibility metadata for frame-array indexing
+    return frame->hierarchyId;
+}
+void RwFrameUpdateObjects(RwFrame*)
+{
+    // Record the terminal SDK object update after the real playback owner completes
+    ++objectUpdates;
+}
+void *RwMallocAlign(uint32_t bytes,uint32_t alignment)
+{
+    // Track real aligned allocations used by complete clump and association owners
+    void *memory=_aligned_malloc(bytes?bytes:64,alignment);require(memory!=NULL);memset(memory,0xA5,bytes);require(alignedMemory.emplace(memory,bytes).second);++heapAllocations;return memory;
+}
+void RwFreeAlign(void *memory)
+{
+    // Require exactly one native release for each real frame or node allocation
+    require(alignedMemory.erase(memory)==1);++heapFrees;_aligned_free(memory);
+}
+void *RwMalloc(size_t bytes)
+{
+    // Preserve the separate sequence allocation primitive
+    return malloc(bytes);
+}
+void RwFree(void *memory)
+{
+    // Preserve the matching sequence free primitive
+    free(memory);
+}
+extern "C" int myrand(void)
+{
+    // Reject unrelated random-number policy while linking the real General implementation
+    abort();return 0;
+}
+extern "C" void mysrand(unsigned)
+{
+    // Reject unrelated random seed mutations
+    abort();
+}
+extern "C" void AnimManager_UncompressAnimation(CAnimBlendHierarchy *hierarchy)
+{
+    // Observe the separate manager boundary while using real hierarchy decompression when requested
+    ++uncompressCalls;if(hierarchy->keepCompressed){if(hierarchy->totalLength==0)AnimHierarchy_CalcTotalTimeCompressed(hierarchy);}else if(hierarchy->compressed)AnimHierarchy_Uncompress(hierarchy);
+}
+extern "C" void AnimAssociation_HostUncompressAnimation(CAnimBlendHierarchy *hierarchy)
+{
+    // Route complete association playback setup through the same controlled external manager boundary
+    AnimManager_UncompressAnimation(hierarchy);
+}
+extern "C" void AnimHierarchy_HostRemoveCache(CAnimBlendHierarchy *hierarchy)
+{
+    // Keep the external cache slot empty in this plugin-focused ownership comparison
+    require(hierarchy->linkPtr==NULL);
+}
+static void registration(void)
+{
+    // Compare failed and successful native registration and all three actual plugin callbacks
+    registrationResult=-1;require(!Run_Attach());require(ClumpOffset==-1);
+    registrationResult=(int32_t)offsetof(RpClump,data);require(Run_Attach());require(ClumpOffset==registrationResult);
+    RpClump clump;clump.data=(CAnimBlendClumpData*)(uintptr_t)1;require(constructorCallback(&clump,ClumpOffset,sizeof(void*))==&clump);require(clump.data==NULL);
+    require(copyCallback(&clump,&clump,ClumpOffset,sizeof(void*))==NULL);require(destructorCallback(&clump,ClumpOffset,sizeof(void*))==&clump);require(clump.data==NULL);
+    // Require construction to use the SDK-provided offset independently of the registered global slot
+    CAnimBlendClumpData *slots[3]={(CAnimBlendClumpData*)(uintptr_t)1,(CAnimBlendClumpData*)(uintptr_t)1,(CAnimBlendClumpData*)(uintptr_t)1};
+    require(constructorCallback(slots,2*sizeof(void*),sizeof(void*))==slots);require(slots[0]&&slots[1]&&!slots[2]);require(constructorCallback(slots,0,sizeof(void*))==slots);require(!slots[0]&&slots[1]&&!slots[2]);
+}
+static void hierarchies(void)
+{
+    // Exercise actual recursive enumeration and skinned initialization through complete owner entry points
+    for(unsigned test=1;test<=64;++test){
+        // Build SDK trees whose node identities and output positions are independent of plugin traversal code
+        RwFrame root,frames[64];for(unsigned i=0;i<test;++i){frames[i].hierarchyId=(int)i;strcpy(frames[i].name,(i&1)?"duplicate":"ROOT");frames[i].matrix.pos={(float)i*.5f,-(float)i,.25f};if(i==0)root.children.push_back(&frames[i]);else frames[(i-1)/2].children.push_back(&frames[i]);}
+        RpClump clump;clump.root=&root;Run_Init(&clump);require(clump.data&&clump.data->numFrames==(int)test);require(Run_Initialized(&clump));
+        AnimBlendFrameData *indexed[64]={};Run_Fill(&clump,indexed);
+        for(unsigned i=0;i<test;++i){require(indexed[i]&&indexed[i]->frame==&frames[i]);require(indexed[i]->resetPos.x==frames[i].matrix.pos.x);recordFloat(indexed[i]->resetPos.z);}
+        AnimBlendFrameData *last=NULL;for(unsigned i=0;i<test;++i)if(strcmp(((RwFrame*)clump.data->frames[i].frame)->name,"ROOT")==0)last=&clump.data->frames[i];
+        require(Run_FindFrame(&clump,"root")==last);require(Run_FindFrame(&clump,"absent")==NULL);
+        // Bind a real association through the original plugin-data and frame-name owner interfaces
+        CAnimBlendHierarchy bindingHierarchy={};CAnimBlendSequence bindingSequence;KeyFrame bindingKey={};AnimHierarchy_Init(&bindingHierarchy);AnimSequence_Init(&bindingSequence);strcpy(bindingSequence.name,"root");bindingSequence.numFrames=1;bindingSequence.type=ANIM_KEYFRAME_ROT;bindingSequence.keyFrames=&bindingKey;bindingHierarchy.numSequences=1;bindingHierarchy.sequences=&bindingSequence;
+        CAnimBlendAssociation binding;AnimAssociation_Init(&binding);AnimAssociation_BindClump(&binding,&clump,&bindingHierarchy);require(binding.numNodes==test);require(binding.nodes[last-clump.data->frames].sequence==&bindingSequence);AnimAssociation_Destroy(&binding);
+        require(destructorCallback(&clump,ClumpOffset,sizeof(void*))==&clump);require(clump.data==NULL);require(alignedMemory.empty());
+        // Initialize every supported native skin size and inspect real C frame records and pose pointers
+        RpSkin skin={(int)test};RpGeometry geometry={&skin};RpAtomic atomic={&geometry};RpHAnimHierarchy hierarchy={};
+        for(unsigned i=0;i<64;++i)hierarchy.nodes[i].id=(int)i;
+        clump.skinned=true;clump.atomic=&atomic;clump.hierarchy=&hierarchy;Run_Init(&clump);require(clump.data->numFrames==(int)test);
+        for(unsigned i=0;i<test;++i){AnimBlendFrameData *frame=&clump.data->frames[i];require(frame->nodeID==(int)i);require(frame->hanimFrame==&hierarchy.poses[i]);require(frame->resetPos.y==-(float)i*.25f);require(Run_FindBone(&clump,i)==frame);record(frame->flag);recordFloat(frame->resetPos.x);recordFloat(frame->resetPos.y);recordFloat(frame->resetPos.z);}
+        require(Run_FindBone(&clump,0xFFFFFFFFU)==NULL);require(Run_FindFrame(&clump,"ROOT")==&clump.data->frames[0]);
+        // Bind the real C association through the original signed bone-tag lookup boundary
+        bindingSequence.boneTag=0;AnimAssociation_Init(&binding);AnimAssociation_BindClump(&binding,&clump,&bindingHierarchy);require(binding.nodes[0].sequence==&bindingSequence);AnimAssociation_Destroy(&binding);
+        if(test==64){
+            // Preserve ped-node indexing and leave the unsupported torso slot untouched
+            AnimBlendFrameData *indexedSkin[PED_NODE_MAX]={};Run_Fill(&clump,indexedSkin);require(indexedSkin[PED_TORSO]==NULL);
+            for(int n=PED_MID;n<PED_NODE_MAX;++n)require(indexedSkin[n]==&clump.data->frames[ConvertPedNode2BoneTag(n)]);
+        }
+        if(test>1){
+            // Require the original last-match behavior for duplicate tags and names plus signed tag transport
+            clump.data->frames[test-1].nodeID=0;require(Run_FindBone(&clump,0)==&clump.data->frames[test-1]);require(Run_FindFrame(&clump,"ROOT")==&clump.data->frames[test-1]);
+            clump.data->frames[test-1].nodeID=-1;require(Run_FindBone(&clump,0xFFFFFFFFU)==&clump.data->frames[test-1]);record(test-1);
+        }
+        destructorCallback(&clump,ClumpOffset,sizeof(void*));require(clump.data==NULL&&alignedMemory.empty());
+    }
+}
+static void removalAndReentry(void)
+{
+    // Exercise real masked deletion and global lookup reentry without replacing either plugin algorithm
+    for(unsigned test=0;test<256;++test){
+        // Allocate actual plugin ownership and heap associations with tracked real node arrays
+        RpClump clump;Run_Allocate(&clump);require(clump.data&&!Run_Initialized(&clump));uint32_t mask=test%4==0?0:test%4==1?0x8000U:test%4==2?0xFFFFFFFFU:ASSOC_PARTIAL;
+        bool removed[8];for(unsigned i=0;i<8;++i){
+            // Include signed association flag patterns and zero-mask removal semantics
+            CAnimBlendAssociation *association=(CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));AnimAssociation_Init(association);association->numNodes=1;association->animId=(int16_t)i;association->flags=(int16_t)(test*311+i*17);AnimAssociation_AllocateAnimBlendNodeArray(association,1);AnimBlendLink_Prepend(&clump.data->link,&association->link);
+            removed[i]=mask==0||(((uint32_t)(int32_t)association->flags&mask)!=0);
+        }
+        Run_Remove(&clump,mask,false);int next=7;
+        for(CAnimBlendLink *link=clump.data->link.next;link;link=link->next){
+            // Check survivor order independently of the removal loop's cached next pointer
+            while(next>=0&&removed[next])--next;require(next>=0);CAnimBlendAssociation *association=AnimAssociation_FromLink(link);require(association->animId==next);record((unsigned)next);--next;
+        }
+        while(next>=0&&removed[next])--next;require(next==-1);Run_Remove(&clump,0,true);require(clump.data->link.next==NULL);destructorCallback(&clump,ClumpOffset,sizeof(void*));require(alignedMemory.empty());
+    }
+    // Preserve the original shared search-result state when a native name getter reenters another lookup
+    RwFrame rootA,rootB,frameA,frameB;strcpy(frameA.name,"unmatched");strcpy(frameB.name,"target");rootA.children.push_back(&frameA);rootB.children.push_back(&frameB);RpClump a,b;a.root=&rootA;b.root=&rootB;Run_Init(&a);Run_Init(&b);
+    searchReentryTarget=&b;require(Run_FindFrame(&a,"absent")==&b.data->frames[0]);searchReentryTarget=NULL;require(Run_FindFrame(&a,"absent")==NULL);
+    destructorCallback(&a,ClumpOffset,sizeof(void*));destructorCallback(&b,ClumpOffset,sizeof(void*));require(alignedMemory.empty());
+}
+static void queries(void)
+{
+    // Compare all association query policies, strict blend ties, masks and untouched null-owner outputs
+    for(unsigned test=0;test<4096;++test){
+        // Populate actual initialized associations and their original linked-list order
+        RpClump clump;CAnimBlendClumpData data;AnimBlendClump_Init(&data);clump.data=&data;data.numFrames=(test&1)?1:0;CAnimBlendAssociation associations[8];
+        for(unsigned i=0;i<8;++i){memset(&associations[i],0,sizeof(associations[i]));AnimAssociation_Init(&associations[i]);associations[i].animId=(int16_t)(i%3);associations[i].flags=(int16_t)((test>>(i%4))&255);associations[i].blendAmount=(float)((test+i)%5)*.25f;AnimBlendLink_Prepend(&data.link,&associations[i].link);}
+        uint32_t mask=(test%4)==0?0:(test%4)==1?ASSOC_PARTIAL:(test%4)==2?0xFFFFFFFFU:ASSOC_MOVEMENT;
+        for(unsigned op=0;op<10;++op){
+            // Encode selected owner identities and optional out-parameters without assuming pointer addresses
+            CAnimBlendAssociation *second=(CAnimBlendAssociation*)(uintptr_t)1;float blend=-3;CAnimBlendAssociation *value=Run_Query(op,&clump,&associations[4],mask,(int)(test%11)-2,&second,&blend);unsigned identity=9;for(unsigned i=0;i<8;++i)if(value==&associations[i])identity=i;record(identity);if(op==4){unsigned other=9;for(unsigned i=0;i<8;++i)if(second==&associations[i])other=i;record(other);recordFloat(blend);}
+        }
+        Run_Deltas(&clump,mask,.375f);for(auto &association:associations)recordFloat(association.blendDelta);
+        clump.data=NULL;CAnimBlendAssociation *second=(CAnimBlendAssociation*)(uintptr_t)1;float blend=-3;require(Run_Query(4,&clump,NULL,mask,0,&second,&blend)==NULL);require(second==(CAnimBlendAssociation*)(uintptr_t)1&&blend==-3);
+    }
+}
+static void onDelete(CAnimBlendAssociation *association,void*)
+{
+    // Observe callback execution before the actual association releases its node array and link
+    require(association->nodes&&alignedMemory.count(association->nodes)==1);++deletionCallbacks;record(500);
+}
+static void onFinish(CAnimBlendAssociation *association,void*)
+{
+    // Mutate live playback state after the real association clears its finish discriminator
+    require(association->callbackType==ANIM_ASSOC_CB_NONE);association->blendDelta=.125f;++finishCallbacks;record(501);
+}
+static void playback(void)
+{
+    // Run complete plugin playback against actual C associations, nodes, frames and hierarchy operations
+    for(unsigned test=0;test<512;++test){
+        // Provide one real initialized SDK frame for each native skin/render mode
+        RwFrame root,frame;strcpy(frame.name,"root");root.children.push_back(&frame);RpSkin skin={1};RpGeometry geometry={&skin};RpAtomic atomic={&geometry};RpHAnimHierarchy nativeHierarchy={};
+        RpClump clump;clump.root=&root;clump.skinned=(test&1)!=0;clump.atomic=&atomic;clump.hierarchy=&nativeHierarchy;Run_Init(&clump);
+        CAnimBlendHierarchy hierarchies[15]={};CAnimBlendSequence sequences[15];KeyFrameTrans frames[15][3]={};KeyFrameTransCompressed packedFrames[15][3]={};
+        bool packed=false;
+#ifdef ANIM_COMPRESSION
+        // Preserve packed frame dispatch even when rendering is disabled
+        packed=(test&2)!=0;
+#endif
+        unsigned count=(test%5)==0?15:1+test%4;
+        for(unsigned i=0;i<count;++i){
+            // Bind actual three-keyframe sequences and allow the real blend owner to delete faded instances
+            AnimHierarchy_Init(&hierarchies[i]);strcpy(hierarchies[i].name,"fixture");hierarchies[i].totalLength=1.0f;hierarchies[i].keepCompressed=packed;hierarchies[i].numSequences=1;hierarchies[i].sequences=&sequences[i];
+            AnimSequence_Init(&sequences[i]);sequences[i].type=ANIM_KEYFRAME_ROT|ANIM_KEYFRAME_TRANS;sequences[i].numFrames=3;sequences[i].keyFrames=frames[i];sequences[i].keyFramesCompressed=packedFrames[i];
+            for(unsigned k=0;k<3;++k){
+                // Initialize both real frame layouts while keeping rotations and durations in safe packed ranges
+                frames[i][k].base.rotation=Quaternion_Make(.1f,.2f,0,.9f);frames[i][k].base.deltaTime=k==0?0.0f:.5f;frames[i][k].translation={(float)k*.25f,(float)k*.5f,(float)i*.025f};
+                KeyFrameCompressed_SetRotation(&packedFrames[i][k].base,&frames[i][k].base.rotation);KeyFrameCompressed_SetTime(&packedFrames[i][k].base,frames[i][k].base.deltaTime);KeyFrameVectorRef ref={&frames[i][k].translation.x,&frames[i][k].translation.y,&frames[i][k].translation.z};KeyFrameTransCompressed_SetTranslation(&packedFrames[i][k],ref);
+            }
+            CAnimBlendAssociation *association=(CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));AnimAssociation_Init(association);association->numNodes=1;association->hierarchy=&hierarchies[i];association->animId=(int16_t)i;association->blendAmount=.25f*(1+i%4);association->speed=1.0f+(float)i*.125f;
+            association->flags=ASSOC_RUNNING|ASSOC_HAS_TRANSLATION|((i%3)==0?ASSOC_MOVEMENT:0)|((i%4)==0?ASSOC_PARTIAL:0)|((test&8)?ASSOC_REPEAT:0);
+            AnimAssociation_AllocateAnimBlendNodeArray(association,1);association->nodes[0].association=association;association->nodes[0].sequence=&sequences[i];association->nodes[0].frameA=1;association->nodes[0].frameB=0;association->nodes[0].remainingTime=.5f;
+            if(packed)AnimBlendNode_CalcDeltasCompressed(&association->nodes[0]);else AnimBlendNode_CalcDeltas(&association->nodes[0]);
+            if(i==0&&(test&16)){association->blendAmount=.1f;association->blendDelta=-2;association->flags|=ASSOC_DELETEFADEDOUT;AnimAssociation_SetDeleteCallback(association,onDelete,NULL);}else AnimAssociation_SetFinishCallback(association,onFinish,NULL);
+            if((test&256)&&i==1)hierarchies[i].sequences=NULL;
+            AnimBlendLink_Prepend(&clump.data->link,&association->link);
+        }
+        CVector2D velocity2(.125f,-.25f);CVector velocity3(.25f,-.5f,.75f);
+        if(packed)clump.data->frames[0].flag|=ANIM_FRAME_COMPRESSED;
+        if(packed||(test&4))clump.data->frames[0].flag|=ANIM_FRAME_VELOCITY_EXTRACTION_3D;
+        for(unsigned step=0;step<3;++step){
+            // Preserve valid native storage dimensionality for each real offscreen and packed callback path
+            bool render=(test&4)||((test+step)&1);if(packed||(test&4))clump.data->velocity3d=&velocity3;else if(!render&&!clump.skinned)clump.data->velocity2d=NULL;else clump.data->velocity2d=&velocity2;
+            Run_Update(&clump,.375f,render);++playbackSteps;record(clump.data->frames[0].flag);record(objectUpdates);record(uncompressCalls);
+            for(CAnimBlendLink *link=clump.data->link.next;link;link=link->next){
+                // Compare every remaining actual association after callbacks, node accumulation and time updates
+                CAnimBlendAssociation *association=AnimAssociation_FromLink(link);record((unsigned)association->animId);record((unsigned)association->flags);recordFloat(association->blendAmount);recordFloat(association->blendDelta);recordFloat(association->timeStep);recordFloat(association->currentTime);record((unsigned)association->callbackType);
+                record((unsigned)association->nodes[0].frameA);record((unsigned)association->nodes[0].frameB);recordFloat(association->nodes[0].remainingTime);
+            }
+            recordFloat(velocity2.x);recordFloat(velocity2.y);recordFloat(velocity3.x);recordFloat(velocity3.y);recordFloat(velocity3.z);
+            RwV3d position=clump.skinned?nativeHierarchy.poses[0].t:frame.matrix.pos;recordFloat(position.x);recordFloat(position.y);recordFloat(position.z);
+        }
+        destructorCallback(&clump,ClumpOffset,sizeof(void*));require(clump.data==NULL&&alignedMemory.empty());
+    }
+    require(deletionCallbacks>0&&finishCallbacks>0);
+}
+int main(void)
+{
+    // Execute the complete producer's registration, frame hierarchy and association query boundaries
+    registration();hierarchies();queries();removalAndReentry();playback();require(heapAllocations==heapFrees);printf("queries=4096 hierarchies=128 removals=256 playback=%u checks=%u registrations=%u enumerations=%u allocations=%u delete=%u finish=%u hash=%016llx\n",playbackSteps,checks,registrationCalls,enumerations,heapAllocations,deletionCallbacks,finishCallbacks,(unsigned long long)digest);return 0;
+}

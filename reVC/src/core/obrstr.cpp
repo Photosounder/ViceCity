@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "Debug.h"
 #include "obrstr.h"
@@ -8,7 +9,7 @@ char obrstr2[128];
 void ObrInt(int32 n1)
 {
 	IntToStr(n1, obrstr);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void ObrInt2(int32 n1, int32 n2)
@@ -17,7 +18,7 @@ void ObrInt2(int32 n1, int32 n2)
 	strcat(obrstr, "  ");
 	IntToStr(n2, obrstr2);
 	strcat(obrstr, obrstr2);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void ObrInt3(int32 n1, int32 n2, int32 n3)
@@ -29,7 +30,7 @@ void ObrInt3(int32 n1, int32 n2, int32 n3)
 	strcat(obrstr, "  ");
 	IntToStr(n3, obrstr2);
 	strcat(obrstr, obrstr2);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void ObrInt4(int32 n1, int32 n2, int32 n3, int32 n4)
@@ -44,7 +45,7 @@ void ObrInt4(int32 n1, int32 n2, int32 n3, int32 n4)
 	strcat(obrstr, "  ");
 	IntToStr(n4, obrstr2);
 	strcat(obrstr, obrstr2);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void ObrInt5(int32 n1, int32 n2, int32 n3, int32 n4, int32 n5)
@@ -62,7 +63,7 @@ void ObrInt5(int32 n1, int32 n2, int32 n3, int32 n4, int32 n5)
 	strcat(obrstr, "  ");
 	IntToStr(n5, obrstr2);
 	strcat(obrstr, obrstr2);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void ObrInt6(int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
@@ -83,7 +84,7 @@ void ObrInt6(int32 n1, int32 n2, int32 n3, int32 n4, int32 n5, int32 n6)
 	strcat(obrstr, "  ");
 	IntToStr(n6, obrstr2);
 	strcat(obrstr, obrstr2);
-	CDebug::DebugAddText(obrstr);
+	Debug_DebugAddText(obrstr);
 }
 
 void IntToStr(int32 inNum, char *outStr)
@@ -117,3 +118,4 @@ void IntToStr(int32 inNum, char *outStr)
 	} while (++i < strSize);
 	outStr[strSize] = '\0';
 }
+//- rouz edit (ChatGPT)

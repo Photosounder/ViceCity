@@ -1,0 +1,157 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeStoredDefault(void *memory);
+extern "C" bool NativeStoredTemporary(float x,float y,float z,float end,void *point,void *poly);
+extern "C" void NativeStoredFromXYZ(void *poly,uint32_t index,const CVector *value);
+static CStoredCollPoly staticPolys[3];
+static uint64_t hashValue=1469598103934665603ULL;
+static uint32_t randomState=0x41a2b3c4U;
+static unsigned states=0,checks=0,hits=0,misses=0;
+static void require(bool condition)
+{
+    // Report the first failed contract without displaying a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations across independent executables
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence random input generation independently of argument evaluation order
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static float coordinate()
+{
+    // Keep randomized geometry finite and within the original plane representation
+    return ((int32_t)(nextBits()%8193)-4096)/128.0f;
+}
+static void fill(void *memory,size_t size)
+{
+    // Initialize padding and stored representations without evaluating arbitrary floats
+    unsigned char *p=(unsigned char*)memory;
+    for(size_t i=0;i<size;++i)p[i]=(unsigned char)nextBits();
+}
+static void canonical(float &value)
+{
+    // Normalize arithmetic NaN payloads while preserving finite and signed-zero results
+    uint32_t bits;memcpy(&bits,&value,4);
+    if((bits&0x7f800000U)==0x7f800000U&&(bits&0x007fffffU)){bits=0x7fc00000U;memcpy(&value,&bits,4);}
+}
+static void initialize(CStoredCollPoly &poly,const float vertices[9],bool valid)
+{
+    // Set valid object representations while retaining deterministic padding and VU lanes
+    memset(&poly,0xa5,sizeof(poly));poly.valid=valid;
+    for(unsigned i=0;i<3;++i){
+        // Write XYZ directly into actual native or C vertex subobjects
+        memcpy(&poly.verts[i].x,vertices+3*i,12);
+#ifdef VU_COLLISION
+        poly.verts[i].w=(float)(i+11);
+#endif
+    }
+}
+static void observePoly(const CStoredCollPoly &poly)
+{
+    // Exclude unspecified aggregate tail padding from copy observations
+    observe(poly.verts,sizeof(poly.verts));observe(&poly.valid,sizeof(poly.valid));
+}
+static void lifetimeAndVertices()
+{
+    // Inspect no-write default construction during the constructed object's lifetime
+    alignas(CStoredCollPoly) unsigned char memory[sizeof(CStoredCollPoly)],expected[sizeof(CStoredCollPoly)];memset(memory,0xa5,sizeof(memory));memset(expected,0xa5,sizeof(expected));
+    CStoredCollPoly *value=(CStoredCollPoly*)NativeStoredDefault(memory);require(value==(void*)memory&&memcmp(memory,expected,sizeof(memory))==0);observe(memory,sizeof(memory));value->~CStoredCollPoly();++states;
+    // Retain zero-filled static records without introducing constructor writes
+    unsigned char zero[sizeof(staticPolys)]={0};require(memcmp(staticPolys,zero,sizeof(zero))==0);observe(staticPolys,sizeof(staticPolys));++states;
+    // Exercise full vertex representations, self-aliasing, XYZ conversions and ordinary record copies
+    for(unsigned test=0;test<65536;++test){
+        CStoredCollPoly poly,model;float vertices[9]={0};initialize(poly,vertices,(test&1)!=0);memcpy(&model,&poly,sizeof(poly));unsigned index=test%3;
+#ifdef VU_COLLISION
+        CVuVector vertex;
+#else
+        CVector vertex;
+#endif
+        fill(&vertex,sizeof(vertex));memcpy(&model.verts[index],&vertex,sizeof(vertex));Run_Set(&poly,index,&vertex);require(memcmp(&poly,&model,sizeof(poly))==0);
+        Run_Set(&poly,index,&poly.verts[index]);require(memcmp(&poly,&model,sizeof(poly))==0);
+        float xyz[3];Run_Get(&poly,index,xyz);require(memcmp(xyz,&vertex,12)==0);observe(xyz,12);observePoly(poly);
+        // Compare initialized member representations after normal aggregate assignment
+        CStoredCollPoly copy;copy=poly;require(memcmp(copy.verts,poly.verts,sizeof(poly.verts))==0&&copy.valid==poly.valid);observePoly(copy);
+        // Native XYZ conversion intentionally leaves its VU fourth lane unspecified
+        CVector native;fill(&native,12);NativeStoredFromXYZ(&poly,index,&native);Run_Get(&poly,index,xyz);require(memcmp(xyz,&native,12)==0);observe(xyz,12);require(poly.valid==model.valid);++states;
+    }
+}
+static bool validation(CStoredCollPoly &poly,const void *position,float end,bool temporary=false)
+{
+    // Preserve a complete contact sentinel and every unrelated cached-polygon byte
+    CColPoint point;fill(&point,sizeof(point));CColPoint prior;memcpy(&prior,&point,sizeof(point));CStoredCollPoly old;memcpy(&old,&poly,sizeof(poly));
+    float xyz[3];memcpy(xyz,position,12);
+    const bool hit=temporary?NativeStoredTemporary(xyz[0],xyz[1],xyz[2],end,&point,&poly):Run_Validate(position,end,&point,&poly);
+    require(memcmp(poly.verts,old.verts,sizeof(poly.verts))==0);require(memcmp((unsigned char*)&poly+offsetof(CStoredCollPoly,valid)+1,(unsigned char*)&old+offsetof(CStoredCollPoly,valid)+1,sizeof(poly)-offsetof(CStoredCollPoly,valid)-1)==0);
+    require(memcmp((unsigned char*)&point+12,(unsigned char*)&prior+12,sizeof(point)-12)==0);
+    if(hit){
+        // A successful cached query updates only the point and keeps the cache valid
+        require(old.valid&&poly.valid);canonical(point.point.x);canonical(point.point.y);canonical(point.point.z);++hits;
+    }else{
+        // Preserve both original failure policies and all contact fields on a miss
+        require(memcmp(&point,&prior,sizeof(point))==0);++misses;
+#if defined(VU_COLLISION) && !defined(FIX_BUGS)
+        require(poly.valid==old.valid);
+#else
+        require(!poly.valid);
+#endif
+    }
+    if(!old.valid)require(!hit&&memcmp(&poly,&old,sizeof(poly))==0);
+    observe(&hit,sizeof(hit));observe(&point,sizeof(point));observePoly(poly);++states;return hit;
+}
+static void structuredGeometry()
+{
+    // Cover every dominant projection direction, both windings, boundaries and degenerate triangles
+    const float triangles[][9]={
+        {-4,-4,0,4,-4,0,0,4,0},
+        {0,-4,-4,0,4,-4,0,0,4},
+        {-4,0,-4,4,0,-4,0,0,4},
+        {-4,-4,-2,4,-4,2,0,4,0},
+        {-1,-4,-4,1,4,-4,0,0,4},
+        {-4,-1,-4,4,1,-4,0,0,4},
+        {1,2,3,1,2,3,1,2,3},
+        {-4,-4,-4,0,0,0,4,4,4}
+    };
+    const float positions[][3]={{0,0,10},{0,0,-10},{0,0,0},{-4,-4,10},{4,-4,10},{0,4,10},{0,-4,10},{2,0,10},{9,9,10},{1,2,3}};
+    const float ends[]={-20,-4,0,3,10,20};
+    for(unsigned t=0;t<sizeof(triangles)/sizeof(*triangles);++t)for(unsigned winding=0;winding<2;++winding)for(unsigned p=0;p<sizeof(positions)/sizeof(*positions);++p)for(unsigned e=0;e<sizeof(ends)/sizeof(*ends);++e){
+        float vertices[9];memcpy(vertices,triangles[t],sizeof(vertices));
+        if(winding){
+            // Reverse winding without changing the first triangle vertex
+            float temp[3];memcpy(temp,vertices+3,12);memcpy(vertices+3,vertices+6,12);memcpy(vertices+6,temp,12);
+        }
+        // Compare fresh and repeated cache queries with both named and temporary native positions
+        CStoredCollPoly poly;initialize(poly,vertices,true);CVector position(positions[p][0],positions[p][1],positions[p][2]);validation(poly,&position,ends[e]);validation(poly,&position,ends[e],true);
+        initialize(poly,vertices,false);validation(poly,&position,ends[e]);
+        // Retain valid aliases from a native position into an actual cached vertex
+        initialize(poly,vertices,true);validation(poly,&poly.verts[(p+e)%3],ends[e]);
+    }
+    // Assert representative hit and miss behavior independently of the differential hash
+    CStoredCollPoly poly;CVector center(0,0,10),outside(20,20,10);initialize(poly,triangles[0],true);require(validation(poly,&center,-10));initialize(poly,triangles[0],true);require(!validation(poly,&outside,-10));
+}
+static void randomGeometry()
+{
+    // Exercise changing cache geometry and native temporary lifetimes with finite inputs
+    for(unsigned test=0;test<16384;++test){
+        float vertices[9];for(unsigned i=0;i<9;++i)vertices[i]=coordinate();CStoredCollPoly poly;initialize(poly,vertices,true);
+        const float x=coordinate(),y=coordinate(),z=coordinate(),end=coordinate();CVector position(x,y,z);validation(poly,&position,end,(test&1)!=0);validation(poly,&position,end);
+    }
+    // Retain IEEE nonfinite position behavior without undefined compressed-coordinate casts
+    const uint32_t specials[]={0,0x80000000U,1,0x80000001U,0x3f800000U,0xbf800000U,0x7f800000U,0xff800000U,0x7fc12345U};
+    const float vertices[9]={-4,-4,0,4,-4,0,0,4,0};
+    for(unsigned x=0;x<9;++x)for(unsigned y=0;y<9;++y)for(unsigned z=0;z<9;++z){
+        CStoredCollPoly poly;initialize(poly,vertices,true);CVector position;memcpy(&position.x,&specials[x],4);memcpy(&position.y,&specials[y],4);memcpy(&position.z,&specials[z],4);validation(poly,&position,-10);
+    }
+}
+int main()
+{
+    // Compare the complete original policy with the C11 record and implementation
+    lifetimeAndVertices();structuredGeometry();randomGeometry();require(hits>0&&misses>0);
+    printf("states=%u checks=%u hits=%u misses=%u hash=%016" PRIx64 "\n",states,checks,hits,misses,hashValue);return 0;
+}

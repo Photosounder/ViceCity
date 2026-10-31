@@ -1,0 +1,186 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include "@ENTITY_STATUS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+inline float Abs(float x) {
+    // Apply the original floating absolute value
+    return fabsf(x);
+}
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe original engine, drowning and bomb field queries
+    event(token);return (uint8_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating reads on Clang and GCC
+    event(token);
+#endif
+    // Keep floating game fields pure in the native MSVC fixture
+    return v;
+}};
+struct ShortValue {int32_t v;unsigned token;operator int16_t() const {
+    // Observe the original direct model-index read
+    event(token);return (int16_t)v;
+}};
+class CVehicle {public:ByteValue status;FloatValue m_fGasPedal,m_fBrakePedal;ShortValue m_modelIndex;
+    int32_t GetStatus() const {
+        // Query the captured boat status
+        return status;
+    }
+    int16_t GetModelIndex() const {
+        // Read the captured boat model at both original query positions
+        return m_modelIndex;
+    }
+};
+class CBoat:public CVehicle {public:ByteValue bPropellerInWater,bBoatInWater;};
+static int16_t padQuery(unsigned token);
+class CPad {public:int16_t GetAccelerate() {
+    // Observe the original accelerator query
+    return padQuery(22);
+}int16_t GetBrake() {
+    // Observe the original brake query
+    return padQuery(23);
+}};
+static CPad Pads[1];
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessBoatEngine(cVehicleParams &);bool8 ProcessBoatMovingOverWater(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CBoat cars[2];
+static unsigned seedValue,cases,callbacks,offsetReads,requests,padReads[2],engineRequests,waterRequests,idleRequests;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestBoatC(cAudioManager *,cVehicleParams *,unsigned);
+static void value(uint32_t v) {
+    // Hash results and exact callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized records without type punning
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4){uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Include complete owner and vehicle storage while normalizing parameter pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));
+}
+static void event(unsigned token) {
+    // Preserve captured boat reads while changing later live parameters after status and propeller queries
+    ++callbacks;value(token);observe();if((token==13||token==16)&&(seedValue&512))params.m_pVehicle=&cars[1];
+}
+extern "C" int32_t AudioVehicleEngineHost_Status(const CVehicle *v) {
+    // Query the original captured status
+    return v->GetStatus();
+}
+extern "C" int16_t AudioVehicleReverseHost_Model(const CVehicle *v) {
+    // Query the original captured model
+    return v->GetModelIndex();
+}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Read each live gas expression
+    return v->m_fGasPedal;
+}
+extern "C" float AudioVehicleModelHost_BrakePedal(const CVehicle *v) {
+    // Read each live brake expression
+    return v->m_fBrakePedal;
+}
+extern "C" uint8_t AudioBoatHost_Propeller(const CVehicle *v) {
+    // Query the captured boat propeller flag
+    return ((const CBoat *)v)->bPropellerInWater;
+}
+extern "C" uint8_t AudioBoatHost_InWater(const CVehicle *v) {
+    // Query the live boat-in-water flag
+    return ((const CBoat *)v)->bBoatInWater;
+}
+extern "C" CVehicle *AudioPoliceHost_PlayerVehicle() {
+    // Select player or AI throttle while retaining the comparison's live parameter pointer
+    event(21);return seedValue%3==0?NULL:&cars[(seedValue/3)%2];
+}
+static CVehicle *FindPlayerVehicle() {
+    // Route the original player lookup through the same observer
+    return AudioPoliceHost_PlayerVehicle();
+}
+static int16_t padQuery(unsigned token) {
+    // Exercise conditional repeated queries with changing but valid controller values
+    event(token);unsigned i=token-22;const int16_t values[]={0,1,63,127,128,254,255};return values[(seedValue/5+padReads[i]++*3+i)%7];
+}
+extern "C" int16_t AudioVehicleModelHost_Accelerate() {
+    // Preserve the first pad query and any selected repeated query
+    return Pads[0].GetAccelerate();
+}
+extern "C" int16_t AudioVehicleModelHost_Brake() {
+    // Preserve the second pad query and any selected repeated query
+    return Pads[0].GetBrake();
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live loop sample after the first backend query
+    ++offsetReads;event(21);value(sample);if(seedValue&128){active->m_sQueueSample.m_nSampleIndex=SFX_BOAT_WATER_LOOP;params.m_pVehicle=&cars[1];cars[0].m_modelIndex.v=MI_REEFER;}return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the live end-offset argument
+    ++offsetReads;event(22);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after vehicle-condition sound setup
+    ++requests;if(active->m_sQueueSample.m_nCounter==40)++engineRequests;if(active->m_sQueueSample.m_nCounter==38)++waterRequests;if(active->m_sQueueSample.m_nCounter==39)++idleRequests;event(26);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Sweep all supported models, throttle ranges and exact water-speed boundaries without resetting shared history
+    seedValue=seed;padReads[0]=padReads[1]=0;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    const float pedals[]={-0.0f,0.0f,0.001f,0.05f,0.25f,0.5f,0.99f,1.0f};
+    const int models[]={MI_RIO,MI_PREDATOR,MI_SQUALO,MI_SPEEDER,MI_COASTG,MI_DINGHY,MI_JETMAX,MI_REEFER,MI_TROPIC,MI_MARQUIS,MI_CADDY,-1};
+    for(unsigned i=0;i<2;++i){cars[i].status={uint32_t((seed/3+i)%10),13};cars[i].m_modelIndex={models[(seed/7+i)%12],14};cars[i].m_fGasPedal={pedals[(seed/11+i)%8],12};cars[i].m_fBrakePedal={pedals[(seed/13+i)%8],15};cars[i].bPropellerInWater={uint32_t((seed/17+i)&1),16};cars[i].bBoatInWater={uint32_t((seed/19+i)&1),17};}
+    const float distances[]={-1.0f,0.0f,100.0f,2499.0f,2500.0f,2501.0f,8099.0f,8100.0f,8101.0f,NAN,INFINITY};params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/23)%11];params.m_bDistanceCalculated=(seed/29)%3;
+    const float speeds[]={-INFINITY,-0.751f,-0.75f,-0.749f,-0.00051f,-0.0005f,-0.00049f,-0.0f,0.0f,0.00049f,0.0005f,0.00051f,0.749f,0.75f,0.751f,INFINITY,NAN};params.m_fVelocityChange=speeds[(seed/31)%17];
+    active->m_nActiveSamples=1+(seed/37)%8;active->m_sQueueSample.m_fDistance=(seed/41)%(kind==0?91:51);active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};active->m_bDynamicAcousticModelingStatus=1;
+#ifndef GTA_PS2
+    // Seed desktop loop offsets before live backend queries
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Seed random storage to detect unintended state changes
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*(i+1)%10001)-5000;
+    if(!(params.m_fDistance<(kind==0?8100.0f:2500.0f)))params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare repeated complete generators and shared smoothing history on alternating owners
+    for(unsigned seed=0;seed<4096;++seed)for(unsigned kind=0;kind<2;++kind){prepare(seed,kind);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+    // Require backend sound selection and the preserved unsupported-vehicle diagnostic
+    #ifdef AUDIO_REFLECTIONS
+    // Require ordinary engine, water and reefer-idle request setup
+    if(!engineRequests||!waterRequests||!idleRequests)return 2;
+#endif
+#ifndef GTA_PS2
+    // Require both live loop-offset queries
+    if(!offsetReads)return 3;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

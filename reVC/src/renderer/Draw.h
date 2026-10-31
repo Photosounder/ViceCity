@@ -1,5 +1,8 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
 enum eAspectRatio 
 {
 	// Make sure these work the same as FrontEndMenuManager.m_PrefsUseWideScreen
@@ -13,54 +16,37 @@ enum eAspectRatio
 
 	AR_MAX,
 };
-
-class CDraw
-{
-private:
-	static float ms_fNearClipZ;
-	static float ms_fFarClipZ;
-	static float ms_fFOV;
-	// we use this variable to scale a lot of 2D elements
-	// so better cache it
-	static float ms_fAspectRatio;
-#ifdef ASPECT_RATIO_SCALE
-	// similar thing for 3D rendering
-	static float ms_fScaledFOV;
+#ifdef __cplusplus
+extern "C" {
 #endif
-public:
-	static float ms_fLODDistance;	// set but unused?
-
-	static uint8 FadeValue;
-	static uint8 FadeRed;
-	static uint8 FadeGreen;
-	static uint8 FadeBlue;
-	
-#ifdef PROPER_SCALING	
-	static bool ms_bProperScaling;
+extern float Draw_ms_fLODDistance;
+extern uint8_t Draw_FadeValue, Draw_FadeRed, Draw_FadeGreen, Draw_FadeBlue;
+#ifdef PROPER_SCALING
+extern bool Draw_ms_bProperScaling;
 #endif
 #ifdef FIX_RADAR
-	static bool ms_bFixRadar;	
+extern bool Draw_ms_bFixRadar;
 #endif
 #ifdef FIX_SPRITES
-	static bool ms_bFixSprites;	
+extern bool Draw_ms_bFixSprites;
 #endif
-
-	static void SetNearClipZ(float nearclip) { ms_fNearClipZ = nearclip; }
-	static float GetNearClipZ(void) { return ms_fNearClipZ; }
-	static void SetFarClipZ(float farclip) { ms_fFarClipZ = farclip; }
-	static float GetFarClipZ(void) { return ms_fFarClipZ; }
-
-	static void SetFOV(float fov);
-	static float GetFOV(void) { return ms_fFOV; }
-	static float GetScaledFOV(void);
-
-	static float CalculateAspectRatio(void);
+void Draw_SetNearClipZ(float nearclip);
+float Draw_GetNearClipZ(void);
+void Draw_SetFarClipZ(float farclip);
+float Draw_GetFarClipZ(void);
+void Draw_SetFOV(float fov);
+float Draw_GetFOV(void);
+float Draw_GetScaledFOV(void);
+float Draw_CalculateAspectRatio(void);
 #ifdef ASPECT_RATIO_SCALE
-	static float ConvertFOV(float fov);
+float Draw_ConvertFOV(float fov);
 #endif
-	static float GetAspectRatio(void) { return ms_fAspectRatio; }
-	static void SetAspectRatio(float ratio) { ms_fAspectRatio = ratio; }
-#ifdef PROPER_SCALING	
-	static float ScaleY(float y);
-#endif 
-};
+float Draw_GetAspectRatio(void);
+void Draw_SetAspectRatio(float ratio);
+#ifdef PROPER_SCALING
+float Draw_ScaleY(float y);
+#endif
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

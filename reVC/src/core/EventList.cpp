@@ -1,251 +1,147 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
+#include "Events_backend.h"
+#include "main.h"
+#include "Game.h"
+#include "Ped.h"
+#include "PlayerPed.h"
 #include "Pools.h"
-#include "ModelIndices.h"
 #include "World.h"
 #include "Wanted.h"
-#include "EventList.h"
-#include "Messages.h"
-#include "Text.h"
-#include "main.h"
-#include "Accident.h"
-
-int32 CEventList::ms_nFirstFreeSlotIndex;
-CEvent gaEvent[NUMEVENTS];
-
-enum
+EventsVector Events_VectorFromNative(const CVector &v)
 {
-	EVENT_STATE_0,
-	EVENT_STATE_CANDELETE,
-	EVENT_STATE_CLEAR,
-};
-
-void
-CEventList::Initialise(void)
+    // Capture original caller vector values explicitly without assuming a native object representation
+    EventsVector result={v.x,v.y,v.z};return result;
+}
+void Events_BackendDebug(const char *message)
 {
-	int i;
-
-	debug("Initialising CEventList...");
-	for(i = 0; i < NUMEVENTS; i++){
-		gaEvent[i].type = EVENT_NULL;
-		gaEvent[i].entityType = EVENT_ENTITY_NONE;
-		gaEvent[i].entityRef = 0;
-		gaEvent[i].posn.x = 0.0f;
-		gaEvent[i].posn.y = 0.0f;
-		gaEvent[i].posn.z = 0.0f;
-		gaEvent[i].timeout = 0;
-		gaEvent[i].state = EVENT_STATE_0;
-	}
-	ms_nFirstFreeSlotIndex = 0;
+    // Access the original typed native primitive only at its original C policy access point
+    debug("%s",message);
 }
 
-void
-CEventList::Update(void)
+void Events_BackendError(const char *message)
 {
-	int i;
-
-	ms_nFirstFreeSlotIndex = 0;
-	for(i = 0; i < NUMEVENTS; i++){
-		if(gaEvent[i].type == EVENT_NULL)
-			continue;
-		if(CTimer::GetTimeInMilliseconds() > gaEvent[i].timeout || gaEvent[i].state == EVENT_STATE_CANDELETE){
-			gaEvent[i].type = EVENT_NULL;
-			gaEvent[i].state = EVENT_STATE_0;
-		}
-		if(gaEvent[i].state == EVENT_STATE_CLEAR)
-			gaEvent[i].state = EVENT_STATE_CANDELETE;
-	}
+    // Access the original typed native primitive only at its original C policy access point
+    Error("%s",message);
 }
 
-void
-CEventList::RegisterEvent(eEventType type, eEventEntity entityType, CEntity *ent, CPed *criminal, int32 timeout)
+int32_t Events_BackendPedRef(CEntity *entity)
 {
-	int i;
-	int ref;
-	bool copsDontCare;
-
-#ifdef SQUEEZE_PERFORMANCE
-	if (type == EVENT_INJURED_PED) {
-		gAccidentManager.ReportAccident((CPed*)ent);
-		return;
-	}
-#endif
-
-	copsDontCare = false;
-	switch(entityType){
-	case EVENT_ENTITY_PED:
-		ref = CPools::GetPedRef((CPed*)ent);
-		break;
-	case EVENT_ENTITY_VEHICLE:
-		ref = CPools::GetVehicleRef((CVehicle*)ent);
-		break;
-	case EVENT_ENTITY_OBJECT:
-		ref = CPools::GetObjectRef((CObject*)ent);
-		break;
-	default:
-		Error("Undefined entity type, RegisterEvent, EventList.cpp");
-		ref = 0;
-		break;
-	}
-
-	// only update time if event exists already
-	for(i = 0; i < NUMEVENTS; i++)
-		if(gaEvent[i].type == type &&
-		   gaEvent[i].entityType == entityType &&
-		   gaEvent[i].entityRef == ref){
-			gaEvent[i].timeout = CTimer::GetTimeInMilliseconds() + timeout;
-			return;
-		}
-
-	for(i = ms_nFirstFreeSlotIndex; i < NUMEVENTS; i++)
-		if(gaEvent[i].type == EVENT_NULL){
-			ms_nFirstFreeSlotIndex = i;
-			break;
-		}
-	if(i < NUMEVENTS){
-		gaEvent[i].type = type;
-		gaEvent[i].entityType = entityType;
-		gaEvent[i].timeout = CTimer::GetTimeInMilliseconds() + timeout;
-		gaEvent[i].entityRef = ref;
-		gaEvent[i].posn = ent->GetPosition();
-		gaEvent[i].criminal = criminal;
-		if(gaEvent[i].criminal)
-			gaEvent[i].criminal->RegisterReference((CEntity**)&gaEvent[i].criminal);
-		if(type == EVENT_GUNSHOT)
-			gaEvent[i].state = EVENT_STATE_CLEAR;
-		else
-			gaEvent[i].state = EVENT_STATE_0;
-	}
-
-	if(criminal == FindPlayerPed())
-		ReportCrimeForEvent(type, (intptr)ent, copsDontCare);
+    // Access the original typed native primitive only at its original C policy access point
+    return CPools::GetPedRef((CPed*)entity);
 }
 
-void
-CEventList::RegisterEvent(eEventType type, CVector posn, int32 timeout)
+int32_t Events_BackendVehicleRef(CEntity *entity)
 {
-	int i;
-
-	// only update time if event exists already
-	for(i = 0; i < NUMEVENTS; i++)
-		if(gaEvent[i].type == type &&
-		   gaEvent[i].posn.x == posn.x &&
-		   gaEvent[i].posn.y == posn.y &&
-		   gaEvent[i].posn.z == posn.z &&
-		   gaEvent[i].entityType == EVENT_ENTITY_NONE){
-			gaEvent[i].timeout = CTimer::GetTimeInMilliseconds() + timeout;
-			return;
-		}
-
-	for(i = ms_nFirstFreeSlotIndex; i < NUMEVENTS; i++)
-		if(gaEvent[i].type == EVENT_NULL){
-			ms_nFirstFreeSlotIndex = i;
-			break;
-		}
-	if(i < NUMEVENTS){
-		gaEvent[i].type = type;
-		gaEvent[i].entityType = EVENT_ENTITY_NONE;
-		gaEvent[i].timeout = CTimer::GetTimeInMilliseconds() + timeout;
-		gaEvent[i].posn = posn;
-		gaEvent[i].entityRef = 0;
-		if(type == EVENT_GUNSHOT)
-			gaEvent[i].state = EVENT_STATE_CLEAR;
-		else
-			gaEvent[i].state = EVENT_STATE_0;
-	}
+    // Access the original typed native primitive only at its original C policy access point
+    return CPools::GetVehicleRef((CVehicle*)entity);
 }
 
-bool
-CEventList::GetEvent(eEventType type, int32 *event)
+int32_t Events_BackendObjectRef(CEntity *entity)
 {
-	int i;
-	for(i = 0; i < NUMEVENTS; i++)
-		if(gaEvent[i].type == type){
-			*event = i;
-			return true;
-		}
-	return false;
+    // Access the original typed native primitive only at its original C policy access point
+    return CPools::GetObjectRef((CObject*)entity);
 }
 
-void
-CEventList::ClearEvent(int32 event)
+CPed * Events_BackendPedFromEntity(CEntity *entity)
 {
-	if(gaEvent[event].state != EVENT_STATE_CANDELETE)
-		gaEvent[event].state = EVENT_STATE_CLEAR;
+    // Access the original typed native primitive only at its original C policy access point
+    return (CPed*)entity;
 }
 
-bool
-CEventList::FindClosestEvent(eEventType type, CVector posn, int32 *event)
+EventsVector Events_BackendEntityPosition(CEntity *entity)
 {
-	int i;
-	float dist;
-	bool found = false;
-	float mindist = 60.0f;
-
-	for(i = 0; i < NUMEVENTS; i++){
-		if(gaEvent[i].type != type)
-			continue;
-		dist = (posn - gaEvent[i].posn).Magnitude();
-		if(dist < mindist){
-			mindist = dist;
-			found = true;
-			*event = i;
-		}
-	}
-	return found;
+    // Access the original typed native primitive only at its original C policy access point
+    const CVector &v=entity->GetPosition();EventsVector result={v.x,v.y,v.z};return result;
 }
 
-void
-CEventList::ReportCrimeForEvent(eEventType type, intptr crimeId, bool copsDontCare)
+void Events_BackendRegisterReference(CPed *ped,CPed **slot)
 {
-	eCrimeType crime;
-	switch(type){
-	case EVENT_ASSAULT: crime = CRIME_HIT_PED; break;
-	case EVENT_RUN_REDLIGHT: crime = CRIME_RUN_REDLIGHT; break;
-	case EVENT_ASSAULT_POLICE: crime = CRIME_HIT_COP; break;
-	case EVENT_GUNSHOT: crime = CRIME_POSSESSION_GUN; break;
-	case EVENT_STEAL_CAR: crime = CRIME_STEAL_CAR; break;
-	case EVENT_HIT_AND_RUN: crime = CRIME_RUNOVER_PED; break;
-	case EVENT_HIT_AND_RUN_COP: crime = CRIME_RUNOVER_COP; break;
-	case EVENT_SHOOT_PED: crime = CRIME_SHOOT_PED; break;
-	case EVENT_SHOOT_COP: crime = CRIME_SHOOT_COP; break;
-	case EVENT_EXPLOSION: crime = CRIME_EXPLOSION; break;
-	case EVENT_PED_SET_ON_FIRE: crime = CRIME_PED_BURNED; break;
-	case EVENT_COP_SET_ON_FIRE: crime = CRIME_COP_BURNED; break;
-	case EVENT_CAR_SET_ON_FIRE: crime = CRIME_VEHICLE_BURNED; break;
-	case EVENT_ASSAULT_NASTYWEAPON: crime = CRIME_HIT_PED_NASTYWEAPON; break;
-	case EVENT_ASSAULT_NASTYWEAPON_POLICE: crime = CRIME_HIT_COP_NASTYWEAPON; break;
-	default: crime = CRIME_NONE; break;
-	}
-	
-	if (crime == CRIME_HIT_PED && IsPedPointerValid((CPed*)crimeId) && FindPlayerPed()->m_pWanted->GetWantedLevel() == 0 && ((CPed*)crimeId)->bBeingChasedByPolice) {
-		if (!((CPed*)crimeId)->DyingOrDead()) {
-			CMessages::AddBigMessage(TheText.Get("GOODBOY"), 5000, 0);
-			CWorld::Players[CWorld::PlayerInFocus].m_nMoney += 50;
-		}
-		return;
-	}
-
-	if(crime == CRIME_NONE)
-		return;
-
-#ifdef FIX_BUGS
-	CVector playerPedCoors = FindPlayerCoors();
-#else
-	CVector playerPedCoors = FindPlayerPed()->GetPosition();
-#endif
-	CVector playerCoors = FindPlayerCoors();
-
-	if(CWanted::WorkOutPolicePresence(playerCoors, 14.0f) != 0 ||
-		CGame::germanGame && (crime == CRIME_SHOOT_PED || crime == CRIME_SHOOT_COP || crime == CRIME_COP_BURNED || crime == CRIME_VEHICLE_BURNED)){
-		FindPlayerPed()->m_pWanted->RegisterCrime_Immediately(crime, playerPedCoors, (uint32)crimeId, copsDontCare);
-		FindPlayerPed()->m_pWanted->SetWantedLevelNoDrop(1);
-	}else
-		FindPlayerPed()->m_pWanted->RegisterCrime(crime, playerPedCoors, (uint32)crimeId, copsDontCare);
-
-	if(type == EVENT_ASSAULT_POLICE)
-		FindPlayerPed()->SetWantedLevelNoDrop(1);
-	if(type == EVENT_SHOOT_COP || type == EVENT_ASSAULT_NASTYWEAPON_POLICE)
-		FindPlayerPed()->SetWantedLevelNoDrop(2);
-
+    // Access the original typed native primitive only at its original C policy access point
+    ped->RegisterReference((CEntity**)slot);
 }
+
+CPed * Events_BackendPlayer(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return FindPlayerPed();
+}
+
+bool Events_BackendPedValid(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return IsPedPointerValid(ped);
+}
+
+int32_t Events_BackendWantedLevel(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted);
+}
+
+bool Events_BackendChased(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->bBeingChasedByPolice;
+}
+
+bool Events_BackendDyingOrDead(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->DyingOrDead();
+}
+
+int32_t * Events_BackendMoney(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return &CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
+}
+
+EventsVector Events_BackendPlayerCoors(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    CVector v=FindPlayerCoors();EventsVector result={v.x,v.y,v.z};return result;
+}
+
+EventsVector Events_BackendPlayerPedPosition(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    const CVector &v=FindPlayerPed()->GetPosition();EventsVector result={v.x,v.y,v.z};return result;
+}
+
+int32_t Events_BackendPolicePresence(EventsVector position,float radius)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return Wanted_WorkOutPolicePresence(Wanted_VectorFromNative(CVector(position.x,position.y,position.z)),radius);
+}
+
+bool Events_BackendGermanGame(void)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return CGame::germanGame;
+}
+
+void Events_BackendCrime(enum eCrimeType type,EventsVector position,uint32_t id,bool copsDontCare)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    Wanted_RegisterCrime(FindPlayerPed()->m_pWanted,type,Wanted_ReferenceNative(CVector(position.x,position.y,position.z)),id,copsDontCare);
+}
+
+void Events_BackendImmediateCrime(enum eCrimeType type,EventsVector position,uint32_t id,bool copsDontCare)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    Wanted_RegisterCrime_Immediately(FindPlayerPed()->m_pWanted,type,Wanted_ReferenceNative(CVector(position.x,position.y,position.z)),id,copsDontCare);
+}
+
+void Events_BackendWantedNoDrop(int32_t level)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    Wanted_SetWantedLevelNoDrop(FindPlayerPed()->m_pWanted,level);
+}
+
+void Events_BackendPedWantedNoDrop(int32_t level)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    FindPlayerPed()->SetWantedLevelNoDrop(level);
+}
+//- rouz edit (ChatGPT)

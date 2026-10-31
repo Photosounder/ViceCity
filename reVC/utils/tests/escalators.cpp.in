@@ -1,0 +1,180 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <climits>
+
+static unsigned constructed,states,calls,initializations,controllerUpdates,shutdowns,registrations,recordUpdates,recordOffs,recordAdds,replayQueries;
+static uint64_t hash=1469598103934665603ULL;
+static int hook;
+static bool triggered,replaying;
+static const void *savedOwners[NUM_ESCALATORS];
+static void check(bool condition,int line)
+{
+    // Reject invalid pool identities and missed callback preconditions immediately
+    if(!condition){fprintf(stderr,"Escalator-controller corpus check failed at line %d (hook %d)\n",line,hook);abort();}
+}
+#define require(condition) check((condition),__LINE__)
+static void word(uint32_t value)
+{
+    // Compare complete scalar values through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact endpoint bits including signed zero through the C by-value boundary
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vector(const CVector &value)
+{
+    // Observe the actual declared native vector fields without a representation cast
+    floating(value.x);floating(value.y);floating(value.z);
+}
+static CEscalator *owner(int index)
+{
+    // Borrow the actual pool record returned by the original or compatibility getter
+    require(index>=0 && index<NUM_ESCALATORS);const void *value=TestEs_Owner(index);if(savedOwners[index])require(savedOwners[index]==value);CEscalator *record=const_cast<CEscalator *>((const CEscalator *)value);require(record->identity==index);return record;
+}
+static void snapshot(void)
+{
+    // Observe the canonical signed count, all 22 records and retained native reference identities
+    states++;word(TestEs_Count());word(replaying);for(int i=0;i<NUM_ESCALATORS;i++){
+        // Include inactive records and every endpoint, direction and live midpoint
+        CEscalator *record=owner(i);word(record->identity);for(int j=0;j<4;j++)vector(record->positions[j]);vector(record->midpoint);word(record->active);word(record->movingDown);word(record->updates);word(record->offs);word(record->adds);word(record->IsActive());require(&record->GetPosition()==&record->midpoint);vector(record->GetPosition());
+    }
+}
+static void event(unsigned id)
+{
+    // Retain external-call order and the count visible inside each record callback
+    calls++;word(id);word(TestEs_Count());
+}
+static void initialise(void)
+{
+    // Exercise complete initialization through a separate C11 caller
+    initializations++;TestEs_RunInit();snapshot();
+}
+static void update(void)
+{
+    // Observe the complete replay gate and fixed-capacity update traversal
+    controllerUpdates++;TestEs_RunUpdate();snapshot();
+}
+static void shutdown(void)
+{
+    // Observe all original switch-off calls and the final canonical count reset
+    shutdowns++;TestEs_RunShutdown();snapshot();
+}
+static void add(EscalatorVector first,EscalatorVector lower,EscalatorVector upper,EscalatorVector last,bool movingDown)
+{
+    // Preserve all four captured C vector values and the original boolean width
+    registrations++;TestEs_RunAdd(first,lower,upper,last,movingDown);snapshot();
+}
+static void mutation(int point)
+{
+    // Apply one bounded callback mutation while preserving every valid pool index
+    if(triggered)return;
+    if(hook==1 && point==2){
+        // Change the next registration index after the original postincrement has completed
+        triggered=true;TestEs_SetCount(0);
+    }else if(hook==2 && point==2){
+        // Overwrite an aliased source record and register another row before the outer write
+        triggered=true;owner(1)->positions[0]=CVector(901.f,902.f,903.f);TestEs_SetCount(1);EscalatorVector a={71.f,72.f,73.f},b={81.f,82.f,83.f},c={91.f,92.f,93.f},d={101.f,102.f,103.f};add(a,b,c,d,true);
+    }else if(hook==3 && point==3){
+        // Change replay and count during traversal without adding another replay check
+        triggered=true;TestEs_SetCount(-17);replaying=true;
+    }else if(hook==4 && point==4){
+        // Preserve the final shutdown reset after a record changes the registration count
+        triggered=true;TestEs_SetCount(27);
+    }else if(hook==5 && point==1){
+        // Return a live replay result after mutating the canonical count
+        triggered=true;TestEs_SetCount(-19);replaying=true;
+    }else if(hook==6 && point==4){
+        // Reenter update while shutdown still owns its fixed-capacity traversal
+        triggered=true;update();
+    }else if(hook==7 && point==3){
+        // Clear every record during the first update callback and then resume the outer loop
+        triggered=true;shutdown();
+    }else if(hook==8 && point==4 && recordAdds>0){
+        // Retain count mutations during the final initialization switch-off pass
+        triggered=true;TestEs_SetCount(9);
+    }else if(hook==9 && point==3){
+        // Reinitialize all records before the outer controller resumes at its next fixed slot
+        triggered=true;initialise();
+    }else if(hook==10 && point==1){
+        // Finish nested shutdown before the original replay predicate returns false
+        triggered=true;shutdown();
+    }else if(hook==11 && point==2){
+        // Keep initialization independent of replay changes during record registration
+        triggered=true;replaying=true;
+    }else if(hook==12 && point==4){
+        // Exercise a negative extreme without deriving the shutdown loop bound from count
+        triggered=true;TestEs_SetCount(INT_MIN);
+    }
+}
+CEscalator::CEscalator()
+{
+    // Give each native simulator record a stable identity before either controller runs
+    identity=(int32_t)constructed++;for(int i=0;i<4;i++)positions[i]=CVector(0.f,0.f,0.f);midpoint=CVector(0.f,0.f,0.f);active=movingDown=false;updates=offs=adds=0;
+}
+void CEscalator::AddThisOne(CVector first,CVector lower,CVector upper,CVector last,bool down)
+{
+    // Observe all actual captured endpoints and count publication before record mutation
+    event(2);recordAdds++;word(identity);vector(first);vector(lower);vector(upper);vector(last);word(down);mutation(2);positions[0]=first;positions[1]=lower;positions[2]=upper;positions[3]=last;movingDown=down;midpoint=(first+last)/2.f;adds++;
+}
+void CEscalator::Update(void)
+{
+    // Distinguish all native record updates even for inactive or unregistered slots
+    event(3);recordUpdates++;word(identity);mutation(3);updates++;active=true;midpoint.x+=.015625f;midpoint.y-=.03125f;
+}
+void CEscalator::SwitchOff(void)
+{
+    // Observe calls to every original slot while retaining stale endpoint and midpoint state
+    event(4);recordOffs++;word(identity);mutation(4);offs++;active=false;
+}
+bool CReplay::IsPlayingBack(void)
+{
+    // Observe the single original replay query and its live return value
+    event(1);replayQueries++;word(replaying);mutation(1);word(replaying);return replaying;
+}
+static EscalatorVector point(const CVector &value)
+{
+    // Capture named native components before any registration destination or callback write
+    EscalatorVector result={value.x,value.y,value.z};return result;
+}
+static void reset(unsigned seed)
+{
+    // Seed all native records while retaining their real pool identities and object lifetimes
+    hook=0;triggered=replaying=false;TestEs_SetCount((int32_t)(seed%23));recordAdds=0;for(int i=0;i<NUM_ESCALATORS;i++){
+        // Keep inactive fields and differently oriented endpoints visible through partial lifecycle calls
+        CEscalator *record=owner(i);for(int j=0;j<4;j++)record->positions[j]=CVector(i*17.f+j*.125f,-i*7.f+j*.25f,9.f+seed*.0625f+j*.5f);record->midpoint=CVector(i*.5f,seed*.25f,-i*.125f);record->active=(i+seed)%2!=0;record->movingDown=(i+seed)%3==0;record->updates=seed+i;record->offs=seed*3+i;record->adds=seed*7+i;
+    }
+}
+int main(void)
+{
+    // Observe static storage and stable const references before any controller initialization
+    require(constructed==NUM_ESCALATORS && NUM_ESCALATORS==22);for(int i=0;i<NUM_ESCALATORS;i++)savedOwners[i]=TestEs_Owner(i);snapshot();initialise();require(TestEs_Count()==22);snapshot();shutdown();require(TestEs_Count()==0);
+    const int32_t counts[]={INT_MIN,-1,0,1,21,22,INT_MAX};
+    for(int count=0;count<7;count++)for(int replay=0;replay<2;replay++){
+        // Cover fixed-capacity traversal independently of count and both replay outcomes
+        reset(count);TestEs_SetCount(counts[count]);replaying=replay!=0;unsigned before=recordUpdates;update();require(recordUpdates-before==(replay?0U:22U));before=recordOffs;shutdown();require(recordOffs-before==22 && TestEs_Count()==0);
+    }
+    for(int index=0;index<22;index++)for(int direction=0;direction<2;direction++){
+        // Register at every valid destination with by-value endpoints borrowed from that destination
+        reset(index);TestEs_SetCount(index);CEscalator *record=owner(index);CVector first=record->positions[0],lower=record->positions[1],upper=record->positions[2],last=record->positions[3];add(point(first),point(lower),point(upper),point(last),direction!=0);require(TestEs_Count()==index+1);vector(owner(index)->positions[0]);
+    }
+    const float values[]={0.f,-0.f,1.f,-1.f,1.e12f,-1.e12f,.125f};
+    for(int value=0;value<7;value++){
+        // Preserve signed-zero and large finite endpoint values across all four C arguments
+        reset(value);TestEs_SetCount(0);EscalatorVector a={values[value],values[(value+1)%7],values[(value+2)%7]},b={values[(value+3)%7],values[(value+4)%7],values[(value+5)%7]};add(a,b,b,a,value%2!=0);
+    }
+    for(int h=1;h<=12;h++){
+        // Exercise count changes and nested lifecycle calls at original record and replay boundaries
+        reset(h);hook=h;if(h==1 || h==8 || h==11)initialise();else if(h==2){TestEs_SetCount(0);CEscalator *record=owner(1);add(point(record->positions[0]),point(record->positions[1]),point(record->positions[2]),point(record->positions[3]),true);}else if(h==4 || h==6 || h==12)shutdown();else update();require(triggered);if(h==1)require(TestEs_Count()==21);if(h==8)require(TestEs_Count()==9);
+    }
+    for(unsigned frame=0;frame<2000;frame++){
+        // Sustain initialization, replay skips and shutdown while keeping every native owner stable
+        if(frame==0)reset(31);replaying=frame%17==0;if(frame%47==0)initialise();if(frame%31==0)shutdown();update();
+    }
+    printf("states=%u calls=%u initializations=%u controllerUpdates=%u shutdowns=%u registrations=%u recordUpdates=%u recordOffs=%u replayQueries=%u hash=%016llx\n",states,calls,initializations,controllerUpdates,shutdowns,registrations,recordUpdates,recordOffs,replayQueries,(unsigned long long)hash);return 0;
+}

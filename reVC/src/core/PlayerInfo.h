@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "ColModel.h"
@@ -89,6 +90,10 @@ public:
 	RwTexture *m_pSkinTexture;
 #endif
 
+	CPlayerInfo(void);
+	~CPlayerInfo(void);
+	CPlayerInfo &operator=(const CPlayerInfo &other);
+
 	void MakePlayerSafe(bool);
 	const CVector &GetPos();
 	void Process(void);
@@ -122,3 +127,4 @@ const CVector &FindPlayerSpeed(void);
 const CVector &FindPlayerCentreOfWorld(int32 player);
 const CVector &FindPlayerCentreOfWorld_NoSniperShift(void);
 float FindPlayerHeading(void);
+//- rouz edit (ChatGPT)

@@ -1,0 +1,88 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0,callbacks=0;
+extern "C" uint64_t Association_FrameConsumers(void);
+static AssociationResult run(unsigned op,CAnimBlendAssociation *value,float x=0,float y=0)
+{
+    // Exercise the actual owner through its separately compiled C caller
+    AssociationInput input={};input.self=value;input.x=x;input.y=y;return Run_Association(op,input);
+}
+static void require(bool condition)
+{
+    // Report a failed invariant quietly without a native game error dialog
+    ++checks;if(!condition){fprintf(stderr,"Failure at %u/%u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare named values without including native addresses or removed dispatch pointers
+    const unsigned char *bytes=(const unsigned char*)value;for(size_t i=0;i<size;++i){hashValue^=bytes[i];hashValue*=1099511628211ULL;}
+}
+static void number(float value)
+{
+    // Preserve signed zeros and finite values while normalizing arithmetic NaN payloads
+    uint32_t bits;memcpy(&bits,&value,4);if((bits&0x7f800000U)==0x7f800000U&&(bits&0x7fffffU))bits=0x7fc00000U;observe(&bits,4);
+}
+static void changed(CAnimBlendAssociation *value,void *argument)
+{
+    // Mutate live playback state from the actual finish/delete callback boundary
+    ++callbacks;observe(&value->callbackType,4);value->blendAmount=.25f;value->blendDelta=-.5f;value->flags^=ASSOC_REPEAT;value->callbackType=2;
+}
+static CAnimBlendAssociation *create(CAnimBlendHierarchy *hierarchy)
+{
+    // Begin the real original/C lifetime before filling original indeterminate fields
+    void *memory=malloc(sizeof(CAnimBlendAssociation));require(memory!=NULL);CAnimBlendAssociation *value=(CAnimBlendAssociation*)memory;run(0,value);require(value->nodes==NULL&&value->groupId==-1&&value->blendAmount==1&&value->speed==1&&value->callbackType==0);value->numNodes=0;value->hierarchy=hierarchy;value->callback=changed;value->callbackArg=NULL;return value;
+}
+static void state(CAnimBlendAssociation *value)
+{
+    // Observe every initialized playback scalar after complete owner operations
+    number(value->blendAmount);number(value->blendDelta);number(value->currentTime);number(value->speed);number(value->timeStep);observe(&value->flags,2);observe(&value->callbackType,4);
+}
+static void nodeState(CAnimBlendAssociation *owner)
+{
+    // Observe actual node values while normalizing association and sequence identities
+    for(int i=0;i<owner->numNodes;++i){CAnimBlendNode *node=&owner->nodes[i];require(node->association==owner);number(node->theta);number(node->invSin);observe(&node->frameA,4);observe(&node->frameB,4);number(node->remainingTime);bool sequence=node->sequence!=NULL;observe(&sequence,1);}
+}
+static void storageAndCopying()
+{
+    // Preserve exact unsigned allocation narrowing and the original free operation's unchanged pointer field
+    const int counts[]={0,1,7,-1,INT32_MIN,32};CAnimBlendHierarchy hierarchy={};hierarchy.totalLength=1.25f;
+    for(unsigned test=0;test<6;++test){CAnimBlendAssociation *value=create(&hierarchy);AssociationInput input={};input.self=value;input.count=counts[test];Run_Association(3,input);require(lastBytes==(uint32_t)((size_t)counts[test]*sizeof(CAnimBlendNode))&&lastAlignment==64);CAnimBlendNode *prior=value->nodes;unsigned before=frees;run(4,value);require(value->nodes==prior&&frees==before+1);value->nodes=NULL;run(2,value);free(value);++states;}
+    // Bind real sequence records to native frame identities before cloning complete node arrays
+    for(unsigned test=0;test<2048;++test){
+        CAnimBlendSequence sequences[4];AnimBlendFrameData frames[4]={};CAnimBlendClumpData data={};data.numFrames=4;data.frames=frames;RpClump clump={&data};hierarchy.numSequences=4;hierarchy.sequences=sequences;hierarchy.keepCompressed=false;
+        for(unsigned i=0;i<4;++i){AnimSequence_Init(&sequences[i]);sequences[i].name[0]=(char)i;sequences[i].boneTag=(test&(1U<<i))?(int16_t)(90+i):-1;sequences[i].numFrames=((test+i)%3)?3:0;frames[i].nodeID=90+i;}
+        CAnimBlendAssociation *source=create(&hierarchy);AssociationInput input={};input.self=source;input.clump=&clump;input.hierarchy=&hierarchy;Run_Association(5,input);require(source->numNodes==4&&source->hierarchy==&hierarchy);
+        for(unsigned i=0;i<4;++i){require(source->nodes[i].sequence==(sequences[i].numFrames?&sequences[i]:NULL));source->nodes[i].theta=.1f*i;source->nodes[i].invSin=.2f*i;source->nodes[i].frameA=i;source->nodes[i].frameB=3-i;source->nodes[i].remainingTime=.125f*i;AssociationInput query={};query.self=source;query.count=i;require(Run_Association(23,query).pointer==&source->nodes[i]);}
+        source->flags=(int16_t)test;source->animId=(int16_t)(test+7);source->groupId=(int16_t)(test+9);nodeState(source);
+        // Exercise the actual copy constructor and InitFrom with distinct and aliased owners
+        CAnimBlendAssociation *copy=(CAnimBlendAssociation*)malloc(sizeof(CAnimBlendAssociation));require(copy!=NULL);input={};input.self=copy;input.other=source;Run_Association(1,input);copy->callback=changed;copy->callbackArg=NULL;require(copy->hierarchy==source->hierarchy&&copy->numNodes==4&&copy->flags==source->flags&&copy->animId==source->animId&&copy->groupId==source->groupId&&copy->blendAmount==1&&copy->currentTime==0&&copy->callbackType==0);nodeState(copy);state(copy);
+        CAnimBlendAssociation *target=create(&hierarchy);input.self=target;input.other=(test&1)?source:copy;Run_Association(6,input);require(target->nodes!=source->nodes&&target->nodes!=copy->nodes);nodeState(target);
+        if(test&2){CAnimBlendNode *orphan=target->nodes;input.self=target;input.other=target;Run_Association(6,input);nodeState(target);RwFreeAlign(orphan);}
+        // Verify link recovery and freeing allocated nodes before detaching the original embedded link
+        CAnimBlendLink head;AnimBlendLink_Init(&head);AnimBlendLink_Prepend(&head,&target->link);input={};input.self=&target->link;require(Run_Association(27,input).pointer==target);observedOwner=target;unsigned before=freeWasLinked;run(2,target);require(freeWasLinked==before+1&&head.next==NULL);observedOwner=NULL;free(target);run(2,copy);free(copy);run(2,source);free(source);++states;
+    }
+}
+static void playbackSetup()
+{
+    // Execute real node keyframe searches, packed setup and the original time wrapping policy
+    for(unsigned test=0;test<2048;++test){CAnimBlendHierarchy hierarchy={};hierarchy.totalLength=1.25f;hierarchy.keepCompressed=(test&1)!=0;CAnimBlendSequence sequence;AnimSequence_Init(&sequence);sequence.type=3;sequence.numFrames=3;KeyFrameTrans frames[3]={};KeyFrameTransCompressed packed[3]={};sequence.keyFrames=frames;sequence.keyFramesCompressed=packed;
+        for(unsigned i=0;i<3;++i){frames[i].base.rotation=Quaternion_Make(.1f,.2f,.3f,.5f);frames[i].base.deltaTime=.5f;packed[i].base.rot[0]=410;packed[i].base.rot[1]=820;packed[i].base.rot[2]=1230;packed[i].base.rot[3]=2050;packed[i].base.deltaTime=30;}
+        CAnimBlendAssociation *value=create(&hierarchy);AssociationInput input={};input.self=value;input.count=1;Run_Association(3,input);value->numNodes=1;value->nodes[0].association=value;value->nodes[0].sequence=&sequence;value->flags=(test&2)?ASSOC_REPEAT:0;
+        // Test both callback setters rather than directly assigning their discriminator fields
+        input={};input.self=value;input.callback=changed;input.argument=&sequence;Run_Association((test&4)?8:9,input);require(value->callback==changed&&value->callbackArg==&sequence&&value->callbackType==((test&4)?1:2));
+        float time=((int)(test%37)-5)*.125f;run(10,value,time);state(value);nodeState(value);run(12,value,time+.125f);require(value->flags&ASSOC_RUNNING);state(value);nodeState(value);
+        CAnimBlendHierarchy otherHierarchy={};otherHierarchy.totalLength=2.5f;CAnimBlendAssociation *other=create(&otherHierarchy);other->currentTime=(test%17)*.125f;input={};input.self=value;input.other=other;Run_Association(11,input);state(value);nodeState(value);
+        // Self-destruction keeps allocated node cleanup before unlink even when a callback mutates playback state
+        CAnimBlendLink head;AnimBlendLink_Init(&head);AnimBlendLink_Prepend(&head,&value->link);value->flags|=ASSOC_DELETEFADEDOUT;run(7,value,.125f,-4.0f);observedOwner=value;unsigned before=freeWasLinked;require(!run(15,value,.25f).boolean);require(freeWasLinked==before+1&&head.next==NULL);observedOwner=NULL;run(2,other);free(other);++states;
+    }
+}
+int main()
+{
+    // Compare all flag patterns and complete callback playback paths using actual association owners
+    CAnimBlendHierarchy hierarchy={};hierarchy.totalLength=1.25f;
+    for(unsigned test=0;test<65536;++test){CAnimBlendAssociation *value=create(&hierarchy);value->flags=(int16_t)test;for(unsigned op=16;op<=21;++op){bool result=run(op,value).boolean;observe(&result,1);}number(run(22,value,(test&1)?-.5f:.75f).number);run(24,value);require(value->flags&ASSOC_RUNNING);run(2,value);free(value);++states;}
+    for(unsigned test=0;test<4096;++test){CAnimBlendAssociation *value=create(&hierarchy);value->flags=(int16_t)(test&255);value->currentTime=((int)(test%17)-4)*.125f;value->timeStep=((int)(test%13)-3)*.25f;value->speed=(test&256)?-.5f:1.5f;value->blendAmount=(test&512)?.125f:.875f;value->blendDelta=(test&1024)?-4.0f:2.0f;value->callbackType=test%3;run(13,value,.25f,.75f);run(14,value,.25f,.75f);state(value);number(run(25,value).number);number(run(26,value).number);bool alive=run(15,value,.25f).boolean;observe(&alive,1);if(alive){state(value);run(2,value);free(value);}++states;}
+    storageAndCopying();playbackSetup();require(allocations==frees);observe(&callbacks,4);uint64_t frames=Association_FrameConsumers();observe(&frames,8);printf("states=%u checks=%u frames=18432 hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

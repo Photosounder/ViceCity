@@ -1,6 +1,8 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-enum eProfile
+#include <stdint.h>
+#include "config.h"
+typedef enum eProfile
 {
 	PROFILE_FRAME_RATE,
 	PROFILE_PHYSICS,
@@ -10,19 +12,22 @@ enum eProfile
 	PROFILE_RENDERING_TIME,
 	PROFILE_TOTAL,
 	NUM_PROFILES,
-};
-
-class CProfile
-{
-	static float ms_afStartTime[NUM_PROFILES];
-	static float ms_afCumulativeTime[NUM_PROFILES];
-	static float ms_afEndTime[NUM_PROFILES];
-	static float ms_afMaxEndTime[NUM_PROFILES];
-	static float ms_afMaxCumulativeTime[NUM_PROFILES];
-	static Const char *ms_pProfileString[NUM_PROFILES];
-	static RwRGBA ms_aBarColours[NUM_PROFILES];
-public:
-	static void Initialise();
-	static void SuspendProfile(eProfile profile);
-	static void ShowResults();
-};
+} eProfile;
+typedef struct ProfileColor {uint8_t red,green,blue,alpha;} ProfileColor;
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern float Profile_ms_afStartTime[NUM_PROFILES];
+extern float Profile_ms_afCumulativeTime[NUM_PROFILES];
+extern float Profile_ms_afEndTime[NUM_PROFILES];
+extern float Profile_ms_afMaxEndTime[NUM_PROFILES];
+extern float Profile_ms_afMaxCumulativeTime[NUM_PROFILES];
+extern const char *Profile_ms_pProfileString[NUM_PROFILES];
+extern ProfileColor Profile_ms_aBarColours[NUM_PROFILES];
+void Profile_Initialise(void);
+void Profile_SuspendProfile(eProfile profile);
+void Profile_ShowResults(void);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

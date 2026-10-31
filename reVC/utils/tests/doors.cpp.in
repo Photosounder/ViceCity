@@ -1,0 +1,152 @@
+#include "owners.h"
+#include "entry.h"
+
+static uint64_t digest=1469598103934665603ULL;
+static unsigned states,checks;
+static void value(uint64_t input)
+{
+    // Hash defined scalar observations independently of pointers and record padding
+    digest=(digest^input)*1099511628211ULL;
+}
+static void require(bool condition)
+{
+    // Stop quietly at the first broken state or initialization contract
+    ++checks;
+    if(!condition){
+        // Report the exact fixture state without assertion windows
+        fprintf(stderr,"Check %u failed at state %u\n",checks,states);exit(2);
+    }
+}
+static uint32_t bits(float input)
+{
+    // Normalize computed NaN payloads while retaining finite values and signed zero exactly
+    uint32_t result;memcpy(&result,&input,sizeof(result));
+    return (result&0x7fffffffu)>0x7f800000u?0x7fc00000u:result;
+}
+static void zero(const void *record,size_t size)
+{
+    // Verify complete constructor zeroing including all padding bytes
+    const unsigned char *bytes=(const unsigned char*)record;
+    for(size_t i=0;i<size;++i){
+        // Every initialized byte must match the original memset contract
+        require(bytes[i]==0);value(bytes[i]);
+    }
+    ++states;
+}
+struct AutoOwner {
+    CDoor Doors[VEHICLE_DOOR_COUNT];CColPoint subsequent[4];
+    AutoOwner(){
+@CAR_INIT@
+        // Observe initialization before the first original automobile body operation
+        zero(Doors,sizeof(Doors));
+    }
+};
+struct BoatOwner {
+    CDoor m_boom;CVector subsequent;CVector2D wake[32];
+    BoatOwner(){
+@BOAT_INIT@
+        // Observe initialization after the actual empty vector constructors
+        zero(&m_boom,sizeof(m_boom));
+    }
+};
+struct TrainOwner {
+    CTrainDoor Doors[2];void *subsequent[3];
+    TrainOwner(){
+@TRAIN_INIT@
+        // Observe unconditional initialization outside the optional train body
+        zero(Doors,sizeof(Doors));
+    }
+};
+static void observe(CDoor *self)
+{
+    // Retain every car/boat door field after state transitions
+    ++states;value(bits(self->m_fMaxAngle));value(bits(self->m_fMinAngle));value((uint8_t)self->m_nDirn);value((uint8_t)self->m_nAxis);value((uint8_t)self->m_nDoorState);
+    value(bits(self->m_fAngle));value(bits(self->m_fPrevAngle));value(bits(self->m_fAngVel));value(bits(self->m_vecSpeed.x));value(bits(self->m_vecSpeed.y));value(bits(self->m_vecSpeed.z));
+}
+static void observe(CTrainDoor *self)
+{
+    // Retain all train-door fields including the unused integer
+    ++states;value(bits(self->m_fClosedPosn));value(bits(self->m_fOpenPosn));value((uint8_t)self->m_nDirn);value((uint8_t)self->m_nAxis);value((uint8_t)self->m_nDoorState);
+    value(bits(self->m_fPosn));value(bits(self->m_fPrevPosn));value((uint32_t)self->field_14);
+}
+static void queries(CDoor *self)
+{
+    // Exercise every original angular query after both stable and changing states
+    value(bits(Run_Door_RetAngleWhenClosed(self)));value(bits(Run_Door_RetAngleWhenOpen(self)));value(bits(Run_Door_GetAngleOpenRatio(self)));value(Run_Door_IsFullyOpen(self));value(Run_Door_IsClosed(self));
+}
+static void queries(CTrainDoor *self)
+{
+    // Exercise every original translation query independently of its direction metadata
+    value(bits(Run_TrainDoor_RetTranslationWhenClosed(self)));value(bits(Run_TrainDoor_RetTranslationWhenOpen(self)));value(Run_TrainDoor_IsFullyOpen(self));value(Run_TrainDoor_IsClosed(self));
+}
+static void vehicle(CVehicle *self,unsigned sample)
+{
+    // Populate every input read by the literal physical-speed and matrix-multiply primitives
+    float x=float(int(sample%11)-5)*0.037f,y=float(int(sample%7)-3)*0.061f,z=float(int(sample%5)-2)*0.053f;
+    self->m_vecMoveSpeed=CVector(x,y,z);self->m_vecMoveFriction=CVector(z*.25f,x*.5f,y*.75f);self->m_vecTurnSpeed=CVector(y,z,x);self->m_vecTurnFriction=CVector(x*.125f,y*.25f,z*.5f);
+    self->matrix.rx=sample%2?0.0f:1.0f;self->matrix.ry=sample%2?-1.0f:0.0f;self->matrix.rz=sample%3?0.0f:.25f;
+    self->matrix.fx=sample%2?1.0f:0.0f;self->matrix.fy=sample%2?0.0f:1.0f;self->matrix.fz=sample%3?.125f:0.0f;
+    self->matrix.ux=sample%5?.0f:.5f;self->matrix.uy=sample%5?.0f:-.25f;self->matrix.uz=1.0f;
+}
+int main()
+{
+    // Verify all explicit owner initialization sites on prefilled storage rather than zero-filled globals
+    alignas(AutoOwner) unsigned char autoBytes[sizeof(AutoOwner)];memset(autoBytes,0xa5,sizeof(autoBytes));AutoOwner *automatic=new(autoBytes) AutoOwner();automatic->~AutoOwner();
+    alignas(BoatOwner) unsigned char boatBytes[sizeof(BoatOwner)];memset(boatBytes,0xa5,sizeof(boatBytes));BoatOwner *boat=new(boatBytes) BoatOwner();boat->~BoatOwner();
+    alignas(TrainOwner) unsigned char trainBytes[sizeof(TrainOwner)];memset(trainBytes,0xa5,sizeof(trainBytes));TrainOwner *train=new(trainBytes) TrainOwner();train->~TrainOwner();
+    CDoor door;CTrainDoor trainDoor;memset(&door,0xa5,sizeof(door));memset(&trainDoor,0xa5,sizeof(trainDoor));Run_Door_Init(&door);Run_TrainDoor_Init(&trainDoor);zero(&door,sizeof(door));zero(&trainDoor,sizeof(trainDoor));
+    const float limits[][2]={{-1.0f,1.0f},{0.0f,1.0f},{-1.0f,0.0f},{0.0f,0.0f},{.1f,.2f},{1.0f,-1.0f},{-.25f,.25f},{-2.0f,1.0f}};
+    const float ratios[]={-2.0f,-1.0f,-0.0f,0.0f,.25f,.5f,.99999994f,1.0f,1.00000012f,2.0f,INFINITY,NAN};
+    for(unsigned bounds=0;bounds<8;++bounds)for(int axis=-2;axis<=3;++axis)for(int direction=-1;direction<=1;++direction){
+        // Preserve limit assignment order and all fields outside the inline initializer contract
+        Run_Door_Init(&door);door.m_fAngle=.31f;door.m_fPrevAngle=-.47f;door.m_fAngVel=.19f;door.m_nDoorState=-7;door.m_vecSpeed.x=.1f;door.m_vecSpeed.y=-.2f;door.m_vecSpeed.z=.3f;
+        Run_Door_SetLimits(&door,limits[bounds][0],limits[bounds][1],(int8_t)direction,(int8_t)axis);require(door.m_fAngle==.31f && door.m_fPrevAngle==-.47f && door.m_fAngVel==.19f && door.m_nDoorState==-7);observe(&door);queries(&door);
+        for(unsigned ratio=0;ratio<12;++ratio){
+            // Include negative ratios, signed zero, exact opening and unordered comparisons
+            CDoor current=door;Run_Door_Open(&current,ratios[ratio]);require(current.m_fPrevAngle==door.m_fAngle);observe(&current);queries(&current);
+        }
+        Run_TrainDoor_Init(&trainDoor);trainDoor.m_fPosn=.31f;trainDoor.m_fPrevPosn=-.47f;trainDoor.m_nDoorState=-7;trainDoor.field_14=0x12345678;
+        Run_TrainDoor_SetLimits(&trainDoor,limits[bounds][0],limits[bounds][1],(int8_t)direction,(int8_t)axis);require(trainDoor.m_fPosn==.31f && trainDoor.m_fPrevPosn==-.47f && trainDoor.field_14==0x12345678);observe(&trainDoor);queries(&trainDoor);
+        for(unsigned ratio=0;ratio<12;++ratio){
+            // Train opening retains its separate state and angular-velocity-free behavior
+            CTrainDoor current=trainDoor;Run_TrainDoor_Open(&current,ratios[ratio]);require(current.m_fPrevPosn==trainDoor.m_fPosn);observe(&current);queries(&current);
+        }
+    }
+    CVehicle physical;
+    for(unsigned bounds=0;bounds<8;++bounds)for(int axis=-2;axis<=3;++axis)for(int direction=-1;direction<=1;++direction)for(unsigned sample=0;sample<64;++sample){
+        // Exercise supported and unsupported axes, damping, clamp limits and both collision stops
+        vehicle(&physical,sample);Run_Door_Init(&door);Run_Door_SetLimits(&door,limits[bounds][0],limits[bounds][1],(int8_t)direction,(int8_t)axis);
+        door.m_fAngle=float(int(sample%9)-4)*.29f;door.m_fAngVel=float(int(sample%13)-6)*.07f;
+        door.m_vecSpeed.x=float(int(sample%3)-1)*.11f;door.m_vecSpeed.y=float(int(sample%5)-2)*.13f;door.m_vecSpeed.z=float(int(sample%7)-3)*.17f;
+        Run_Door_Process(&door,&physical);observe(&door);queries(&door);
+        for(unsigned frame=0;frame<5;++frame){
+            // Retain cached world velocity across multiple moving-vehicle updates
+            vehicle(&physical,sample+frame+1);Run_Door_Process(&door,&physical);observe(&door);
+        }
+    }
+    const float forces[]={nextafterf(-.2f,-INFINITY),-.2f,nextafterf(-.2f,INFINITY),nextafterf(-.002f,-INFINITY),-.002f,nextafterf(-.002f,INFINITY),-0.0f,0.0f,nextafterf(.002f,-INFINITY),.002f,nextafterf(.002f,INFINITY),nextafterf(.2f,-INFINITY),.2f,nextafterf(.2f,INFINITY)};
+    const float velocities[]={-.3f/.945f,-.3f,-.002f,-0.0f,0.0f,.002f,.3f,.3f/.945f};
+    for(unsigned force=0;force<14;++force)for(unsigned velocity=0;velocity<8;++velocity){
+        // Resolve exact and adjacent resistance/dead-zone/clamp thresholds through identity geometry
+        physical.m_vecMoveSpeed=CVector(0,forces[force],0);physical.m_vecMoveFriction=CVector(0,0,0);physical.m_vecTurnSpeed=CVector(0,0,0);physical.m_vecTurnFriction=CVector(0,0,0);
+        physical.matrix.rx=physical.matrix.fy=physical.matrix.uz=1.0f;physical.matrix.ry=physical.matrix.rz=physical.matrix.fx=physical.matrix.fz=physical.matrix.ux=physical.matrix.uy=0.0f;
+        Run_Door_Init(&door);Run_Door_SetLimits(&door,-10.0f,10.0f,0,2);door.m_fAngVel=velocities[velocity];Run_Door_Process(&door,&physical);observe(&door);queries(&door);
+    }
+    const float stops[]={nextafterf(-1.0f,-INFINITY),-1.0f,nextafterf(-1.0f,INFINITY),nextafterf(1.0f,-INFINITY),1.0f,nextafterf(1.0f,INFINITY)};
+    physical.m_vecMoveSpeed=CVector(0,0,0);
+    for(unsigned position=0;position<6;++position){
+        // Retain strict stop comparisons at and immediately beside each closed/open boundary
+        Run_Door_Init(&door);Run_Door_SetLimits(&door,-1.0f,1.0f,0,2);door.m_fAngle=stops[position];Run_Door_Process(&door,&physical);observe(&door);queries(&door);
+    }
+    for(int direction=-128;direction<=127;++direction){
+        // Keep signed-byte direction truthiness without reducing it to the normal zero/one cases
+        vehicle(&physical,unsigned(direction+128));Run_Door_Init(&door);Run_Door_SetLimits(&door,-1.0f,1.0f,(int8_t)direction,2);Run_Door_Process(&door,&physical);observe(&door);
+    }
+    const float unusual[]={-0.0f,0.0f,INFINITY,-INFINITY,NAN};
+    for(unsigned low=0;low<5;++low)for(unsigned high=0;high<5;++high){
+        // Preserve unordered boundary selection and zero-denominator query guards
+        Run_Door_Init(&door);Run_Door_SetLimits(&door,unusual[low],unusual[high],0,2);door.m_fAngle=.1f;queries(&door);observe(&door);
+        Run_TrainDoor_Init(&trainDoor);Run_TrainDoor_SetLimits(&trainDoor,unusual[low],unusual[high],0,2);trainDoor.m_fPosn=.1f;queries(&trainDoor);observe(&trainDoor);
+    }
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);
+}

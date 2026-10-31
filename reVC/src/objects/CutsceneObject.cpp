@@ -1,4 +1,9 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "AnimBlendFrameData_native.h"
 
 #include "main.h"
 #include "RwHelper.h"
@@ -37,7 +42,8 @@ CCutsceneObject::~CCutsceneObject(void)
 	{
 //+ rouz edit (ChatGPT)
 		// Destroy and release the cutscene shadow without invoking C++ delete.
-		m_pShadow->~CCutsceneShadow();
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		CutsceneShadow_Deinit(m_pShadow);
 		free(m_pShadow);
 //- rouz edit (ChatGPT)
 		m_pShadow = nil;
@@ -51,7 +57,8 @@ CCutsceneObject::SetModelIndex(uint32 id)
 	assert(RwObjectGetType(m_rwObject) == rpCLUMP);
 	RpAnimBlendClumpInit((RpClump*)m_rwObject);
 	(*RPANIMBLENDCLUMPDATA(m_rwObject))->velocity3d = &m_vecMoveSpeed;
-	(*RPANIMBLENDCLUMPDATA(m_rwObject))->frames[0].flag |= AnimBlendFrameData::VELOCITY_EXTRACTION_3D;
+	// Use the C animation frame while retaining the original live SDK objects
+	(*RPANIMBLENDCLUMPDATA(m_rwObject))->frames[0].flag |= ANIM_FRAME_VELOCITY_EXTRACTION_3D;
 }
 
 void
@@ -61,12 +68,15 @@ CCutsceneObject::CreateShadow(void)
 	{
 //+ rouz edit (ChatGPT)
 		// Allocate the cutscene shadow without invoking C++ new.
-		m_pShadow = (CCutsceneShadow*)malloc(sizeof(CCutsceneShadow));
+		m_pShadow = (CutsceneShadow*)malloc(sizeof(CutsceneShadow));
 		assert(m_pShadow);
-		std::allocator<CCutsceneShadow>().construct(m_pShadow);
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		CutsceneShadow_Init(m_pShadow);
 //- rouz edit (ChatGPT)
-		if (!m_pShadow->IsInitialized())
-			m_pShadow->Create(m_rwObject, 6, true, 4, true);
+		// Use the C shadow operation with its canonical record and explicit lifecycle
+		if (!CutsceneShadow_IsInitialized(m_pShadow))
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			CutsceneShadow_Create(m_pShadow,m_rwObject, 6, true, 4, true);
 	}
 }
 
@@ -84,10 +94,10 @@ CCutsceneObject::ProcessControl(void)
 	}
 	else
 	{
-		if(CTimer::GetTimeStep() < 1/100.0f)
+		if((*Timer_GetTimeStep()) < 1/100.0f)
 			m_vecMoveSpeed *= 100.0f;
 		else
-			m_vecMoveSpeed *= 1.0f/CTimer::GetTimeStep();
+			m_vecMoveSpeed *= 1.0f/(*Timer_GetTimeStep());
 	
 		ApplyMoveSpeed();
 	}
@@ -115,8 +125,10 @@ CCutsceneObject::PreRender(void)
 		
 		if ( RwObjectGetType(m_rwObject) == rpCLUMP && IsClumpSkinned(GetClump()) )
 		{
-			RpAtomic *atomic = GetFirstAtomic(GetClump());
-			atomic->boundingSphere.center = (*RPANIMBLENDCLUMPDATA(GetClump()))->frames[0].hanimFrame->t;
+			// Use the C helper and retain the original typed SDK result
+			RpAtomic *atomic = ((RpAtomic*)GetFirstAtomic(GetClump()));
+			// Use the C animation frame while retaining the original live SDK objects
+			atomic->boundingSphere.center = AnimBlendFrame_GetHAnim(&(*RPANIMBLENDCLUMPDATA(GetClump()))->frames[0])->t;
 		}
 	}
 	
@@ -128,29 +140,32 @@ CCutsceneObject::PreRender(void)
 		if ( m_pShadow == nil )
 		{
 			CShadows::StoreShadowForPedObject(this,
-				CTimeCycle::m_fShadowDisplacementX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowDisplacementY[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowFrontX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowFrontY[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowSideX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowSideY[CTimeCycle::m_CurrentStoredValue]);
+				TimeCycle_m_fShadowDisplacementX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowDisplacementY[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowFrontX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowFrontY[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowSideX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowSideY[TimeCycle_m_CurrentStoredValue]);
 		}
 		else
 		{
-			if ( m_pShadow->IsInitialized() )
-				m_pShadow->UpdateForCutscene();
+			// Use the C shadow operation with its canonical record and explicit lifecycle
+			if ( CutsceneShadow_IsInitialized(m_pShadow) )
+				// Use the C shadow operation with its canonical record and explicit lifecycle
+				CutsceneShadow_UpdateForCutscene(m_pShadow);
 			
 			CShadows::StoreShadowForCutscenePedObject(this,
-				CTimeCycle::m_fShadowDisplacementX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowDisplacementY[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowFrontX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowFrontY[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowSideX[CTimeCycle::m_CurrentStoredValue],
-				CTimeCycle::m_fShadowSideY[CTimeCycle::m_CurrentStoredValue]);
+				TimeCycle_m_fShadowDisplacementX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowDisplacementY[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowFrontX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowFrontY[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowSideX[TimeCycle_m_CurrentStoredValue],
+				TimeCycle_m_fShadowSideY[TimeCycle_m_CurrentStoredValue]);
 		}
 			
 		// For some reason xbox/android limbs are transparent here...
-		RpGeometry *geometry = RpAtomicGetGeometry(GetFirstAtomic(GetClump()));
+		// Use the C helper and retain the original typed SDK result
+		RpGeometry *geometry = RpAtomicGetGeometry(((RpAtomic*)GetFirstAtomic(GetClump())));
 		RpGeometrySetFlags(geometry, RpGeometryGetFlags(geometry) | rpGEOMETRYMODULATEMATERIALCOLOR);
 		RpGeometryForAllMaterials(geometry, MaterialSetAlpha, (void*)255);
 	}
@@ -167,16 +182,21 @@ CCutsceneObject::Render(void)
 bool
 CCutsceneObject::SetupLighting(void)
 {
-	ActivateDirectional();
-	SetAmbientColoursForPedsCarsAndObjects();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_ActivateDirectional();
+	// Use the complete C lighting owner and its borrowed SDK handles
+	Lights_SetAmbientColoursForPedsCarsAndObjects();
 
 	if(bRenderScorched){
-		WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
+		// Use the complete C lighting owner and its borrowed SDK handles
+		Lights_WorldReplaceNormalLightsWithScorched(Scene.world, 0.1f);
 	}else{
 		CVector coors = GetPosition();
-		float lighting = CPointLights::GenerateLightsAffectingObject(&coors);
+		// Enter the C point-light algorithm with the original owner expressions
+		float lighting = PointLights_GenerateLightsAffectingObjectLegacy(&coors);
 		if(lighting != 1.0f){
-			SetAmbientAndDirectionalColours(lighting);
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_SetAmbientAndDirectionalColours(lighting);
 			return true;
 		}
 	}
@@ -189,3 +209,8 @@ CCutsceneObject::RemoveLighting(bool reset)
 {
 	CRenderer::RemoveVehiclePedLights(this, reset);
 }
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

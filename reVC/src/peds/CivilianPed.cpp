@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "CivilianPed.h"
@@ -34,9 +35,9 @@ CCivilianPed::CCivilianPed(ePedType pedtype, uint32 mi) : CPed(pedtype)
 	m_bStealCarEvenIfThereIsSomeoneInIt = false;
 	for (int i = 0; i < ARRAY_SIZE(m_nStealWishList); i++) {
 #ifdef FIX_BUGS
-		uint32 randomCarModel = CGeneral::GetRandomNumberInRange(MI_LANDSTAL, MI_LAST_VEHICLE);
+		uint32 randomCarModel = General_GetRandomNumberInRangeInt(MI_LANDSTAL, MI_LAST_VEHICLE);
 #else
-		uint32 randomCarModel = CGeneral::GetRandomNumberInRange(MI_LANDSTAL, MI_LANDSTAL + VEHICLEMODELSIZE);
+		uint32 randomCarModel = General_GetRandomNumberInRangeInt(MI_LANDSTAL, MI_LANDSTAL + VEHICLEMODELSIZE);
 #endif
 		if (CModelInfo::IsCarModel(randomCarModel) || CModelInfo::IsBikeModel(randomCarModel))
 			m_nStealWishList[i] = randomCarModel;
@@ -44,13 +45,13 @@ CCivilianPed::CCivilianPed(ePedType pedtype, uint32 mi) : CPed(pedtype)
 			m_nStealWishList[i] = MI_CHEETAH;
 	}
 	m_nAttractorCycleState = 0;
-	m_bAttractorUnk = (CGeneral::GetRandomNumberInRange(0.0f, 1.0f) < 1.25f);
+	m_bAttractorUnk = (General_GetRandomNumberInRangeFloat(0.0f, 1.0f) < 1.25f);
 }
 
 void
 CCivilianPed::CivilianAI(void)
 {
-	if (CTimer::GetTimeInMilliseconds() <= m_fleeTimer || m_objective != OBJECTIVE_NONE && !bRespondsToThreats
+	if ((*Timer_GetTimeInMilliseconds()) <= m_fleeTimer || m_objective != OBJECTIVE_NONE && !bRespondsToThreats
 		|| !IsPedInControl())  {
 
 		if (m_objective == OBJECTIVE_GUARD_SPOT)
@@ -60,18 +61,18 @@ CCivilianPed::CivilianAI(void)
 			if (m_pedInObjective && m_pedInObjective->IsPlayer())
 				return;
 		}
-		if (CTimer::GetTimeInMilliseconds() <= m_lookTimer)
+		if ((*Timer_GetTimeInMilliseconds()) <= m_lookTimer)
 			return;
 
 		ScanForDelayedResponseThreats();
-		if (!m_threatFlags || CTimer::GetTimeInMilliseconds() <= m_threatCheckTimer)
+		if (!m_threatFlags || (*Timer_GetTimeInMilliseconds()) <= m_threatCheckTimer)
 			return;
 		CheckThreatValidity();
 		uint32 closestThreatFlag = m_threatFlags;
 		m_threatFlags = 0;
 		m_threatCheckTimer = 0;
 		if (closestThreatFlag == PED_FLAG_EXPLOSION) {
-			float angleToFace = CGeneral::GetRadianAngleBetweenPoints(
+			float angleToFace = General_GetRadianAngleBetweenPoints(
 				m_eventOrThreat.x,  m_eventOrThreat.y,
 				GetPosition().x, GetPosition().y);
 			SetLookFlag(angleToFace, true);
@@ -84,7 +85,7 @@ CCivilianPed::CivilianAI(void)
 		return;
 	}
 	ScanForDelayedResponseThreats();
-	if (!m_threatFlags || CTimer::GetTimeInMilliseconds() <= m_threatCheckTimer)
+	if (!m_threatFlags || (*Timer_GetTimeInMilliseconds()) <= m_threatCheckTimer)
 		return;
 	CheckThreatValidity();
 	uint32 closestThreatFlag = m_threatFlags;
@@ -182,7 +183,7 @@ CCivilianPed::CivilianAI(void)
 		} else if (eventDistSqr < sq(20.0f)) {
 			bMakeFleeScream = true;
 			SetFlee(m_eventOrThreat, 2000);
-			float angleToFace = CGeneral::GetRadianAngleBetweenPoints(
+			float angleToFace = General_GetRadianAngleBetweenPoints(
 				m_eventOrThreat.x, m_eventOrThreat.y,
 				GetPosition().x, GetPosition().y);
 			SetLookFlag(angleToFace, true);
@@ -193,8 +194,8 @@ CCivilianPed::CivilianAI(void)
 					SetInvestigateEvent(EVENT_EXPLOSION, m_eventOrThreat, 6.0f, 30000, 0.0f);
 
 			} else {
-				float eventHeading = CGeneral::GetRadianAngleBetweenPoints(eventDistVec.x, eventDistVec.y, 0.0f, 0.0f);
-				eventHeading = CGeneral::LimitRadianAngle(eventHeading);
+				float eventHeading = General_GetRadianAngleBetweenPoints(eventDistVec.x, eventDistVec.y, 0.0f, 0.0f);
+				eventHeading = General_LimitRadianAngle(eventHeading);
 				if (eventHeading < 0.0f)
 					eventHeading = eventHeading + TWOPI;
 
@@ -291,7 +292,7 @@ CCivilianPed::ProcessControl(void)
 			break;
 		case PED_MAKE_CALL:
 			if (MakePhonecall())
-				SetWanderPath(CGeneral::GetRandomNumber() & 7);
+				SetWanderPath(General_GetRandomNumber() & 7);
 			break;
 		case PED_MUG:
 			Mug();
@@ -326,7 +327,7 @@ CCivilianPed::ProcessControl(void)
 			if (CWorld::Players[CWorld::PlayerInFocus].m_pHooker != this)
 				break;
 
-			if (CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime) {
+			if ((*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime) {
 				if (m_nPedState == PED_DRIVING
 					&& m_pMyVehicle->pDriver && m_pMyVehicle->pDriver->IsPlayer() && m_pMyVehicle->pDriver->m_nPedState == PED_DRIVING) {
 					CColPoint foundCol;
@@ -339,7 +340,7 @@ CCivilianPed::ProcessControl(void)
 						&& foundCol.surfaceB != SURFACE_DEFAULT && foundCol.surfaceB != SURFACE_TARMAC && foundCol.surfaceB != SURFACE_PAVEMENT) {
 
 						if (m_pMyVehicle->CarHasRoof()) {
-							m_pMyVehicle->ApplyTurnForce(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(-0.8f, -1.2f) * m_fMass,
+							m_pMyVehicle->ApplyTurnForce(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(-0.8f, -1.2f) * m_fMass,
 								GetPosition().x - m_pMyVehicle->GetPosition().x, GetPosition().y - m_pMyVehicle->GetPosition().y, 0.0f);
 
 							DMAudio_PlayOneShot(m_pMyVehicle->m_audioEntityId, SOUND_CAR_JERK, 0.0f);
@@ -348,7 +349,7 @@ CCivilianPed::ProcessControl(void)
 
 							int playerSexFrequency = CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency;
 							if (CWorld::Players[CWorld::PlayerInFocus].m_nMoney >= 10 && playerSexFrequency > 250) {
-									CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = CTimer::GetTimeInMilliseconds() + playerSexFrequency;
+									CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + playerSexFrequency;
 									if (playerSexFrequency >= 350) {
 										CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = Max(250, playerSexFrequency - 30);
 									} else {
@@ -357,7 +358,7 @@ CCivilianPed::ProcessControl(void)
 
 									m_pMyVehicle->pDriver->m_fHealth = Min(CWorld::Players[0].m_nMaxHealth + 25.0f, 1.0f + m_pMyVehicle->pDriver->m_fHealth);
 									if (CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency == 250)
-										CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = CTimer::GetTimeInMilliseconds() + 3000;
+										CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 							} else {
 								bWanderPathAfterExitingCar = true;
 								CWorld::Players[CWorld::PlayerInFocus].m_pHooker = nil;
@@ -374,7 +375,7 @@ CCivilianPed::ProcessControl(void)
 							m_pMyVehicle->pDriver->Say(SOUND_PED_PLAYER_AFTERSEX);
 						}
 					} else {
-						CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = CTimer::GetTimeInMilliseconds() + 3000;
+						CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 						int playerSexFrequency = CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency;
 						if (playerSexFrequency >= 1000 || playerSexFrequency <= 250)
 							CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = 1200;
@@ -389,14 +390,14 @@ CCivilianPed::ProcessControl(void)
 				}
 			}
 
-			if (CTimer::GetTimeInMilliseconds() > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime) {
+			if ((*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime) {
 				int playerMoney = CWorld::Players[CWorld::PlayerInFocus].m_nMoney;
 				if (playerMoney <= 1) {
 					CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = 250;
 				} else {
 					CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, playerMoney - 1);
 				}
-				CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime = CTimer::GetTimeInMilliseconds() + 1000;
+				CWorld::Players[CWorld::PlayerInFocus].m_nNextSexMoneyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 1000;
 			}
 			break;
 		default:
@@ -410,7 +411,7 @@ CCivilianPed::ProcessControl(void)
 		UseNearbyAttractors();
 	}
 
-	if (CTimer::GetTimeInMilliseconds() > m_timerUnused) {
+	if ((*Timer_GetTimeInMilliseconds()) > m_timerUnused) {
 		m_stateUnused = 0;
 		m_timerUnused = 0;
 	}
@@ -478,7 +479,7 @@ void CCivilianPed::FindNearbyAttractorsSectorList(CPtrList& list, float& minDist
 
 void CCivilianPed::UseNearbyAttractors()
 {
-	if (CWeather::Rain < 0.2f && !m_bAttractorUnk)
+	if (Weather_Rain < 0.2f && !m_bAttractorUnk)
 		return;
 	if (HasAttractor())
 		return;
@@ -525,7 +526,7 @@ bool CCivilianPed::IsAttractedTo(int8 type)
 	case ATTRACTOR_SEAT: return true;
 	case ATTRACTOR_STOP: return true;
 	case ATTRACTOR_PIZZA: return true;
-	case ATTRACTOR_SHELTER: return CWeather::Rain >= 0.2f;
+	case ATTRACTOR_SHELTER: return Weather_Rain >= 0.2f;
 	case ATTRACTOR_ICECREAM: return false;
 	}
 	return false;
@@ -609,5 +610,7 @@ CCivilianPed::IsOnStealWishList(int32 model)
 	}
 	return false;
 }
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)

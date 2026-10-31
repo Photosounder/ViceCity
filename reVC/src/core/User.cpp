@@ -1,135 +1,73 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "GameLogic.h"
 #include "Hud.h"
 #include "PlayerPed.h"
 #include "Replay.h"
 #include "Text.h"
-#include "User.h"
 #include "Vehicle.h"
 #include "World.h"
-#include "Zones.h"
+#include "User_backend.h"
 
-CPlaceName CUserDisplay::PlaceName;
-COnscreenTimer CUserDisplay::OnscnTimer;
-CPager CUserDisplay::Pager;
-CCurrentVehicle CUserDisplay::CurrentVehicle;
-
-CPlaceName::CPlaceName()
+ZonesPosition UserDisplay_BackendPlayerPosition(void)
 {
-	Init();
+    // Capture the original player position once before either navigation-zone query
+    CVector position=CWorld::Players[CWorld::PlayerInFocus].GetPos();
+    return ZonesPosition_FromVector(position);
 }
-
-void
-CPlaceName::Init()
+void UserDisplay_BackendSetZoneName(uint16_t *name)
 {
-	m_pZone = nil;
-	m_pZone2 = nil;
-	m_nAdditionalTimer = 0;
+    // Publish the selected original UTF-16 label through the native HUD owner
+    CHud::SetZoneName(name);
 }
-
-void
-CPlaceName::Process()
+uint16_t **UserDisplay_BackendLastZoneName(void)
 {
-	CVector pos = CWorld::Players[CWorld::PlayerInFocus].GetPos();
-	CZone *navigZone = CTheZones::FindSmallestNavigationZoneForPosition(&pos, false, true);
-	CZone *defaultZone = CTheZones::FindSmallestNavigationZoneForPosition(&pos, true, false);
-
-	if (navigZone == nil) m_pZone = nil;
-	if (defaultZone == nil) m_pZone2 = nil;
-
-	if (navigZone == m_pZone) {
-		if (defaultZone == m_pZone2 || m_pZone != nil) {
-			if (navigZone != nil || defaultZone != nil) {
-				if (m_nAdditionalTimer != 0)
-					m_nAdditionalTimer--;
-			} else {
-				m_nAdditionalTimer = 0;
-				m_pZone = nil;
-				m_pZone2 = nil;
-			}
-		} else {
-			m_pZone2 = defaultZone;
-			m_nAdditionalTimer = 250;
-		}
-	} else {
-		m_pZone = navigZone;
-		m_nAdditionalTimer = 250;
-	}
-	Display();
+    // Expose the original HUD history slot for the ordered C reset
+    return &CHud::m_pLastZoneName;
 }
-
-void
-CPlaceName::Display()
+uint32_t *UserDisplay_BackendZoneState(void)
 {
-	wchar *text;
-	if (m_pZone != nil)
-		text = m_pZone->GetTranslatedName();
-	else if (m_pZone2 != nil)
-		text = m_pZone2->GetTranslatedName();
-#ifdef FIX_BUGS
-	else
-		text = nil;
-#endif
-	CHud::SetZoneName(text);
+    // Expose the original HUD state slot for the following C reset
+    return &CHud::m_ZoneState;
 }
-
-void
-CPlaceName::ProcessAfterFrontEndShutDown(void)
+bool UserDisplay_BackendInVehicle(void)
 {
-	CHud::m_pLastZoneName = nil;
-	CHud::m_ZoneState = 0;
-	m_nAdditionalTimer = 250;
+    // Query the live focused pedestrian at the original vehicle-state check
+    return CWorld::Players[CWorld::PlayerInFocus].m_pPed->InVehicle();
 }
-
-CCurrentVehicle::CCurrentVehicle()
+CVehicle *UserDisplay_BackendVehicle(void)
 {
-	Init();
+    // Read the focused pedestrian again after the original predicate has returned
+    return CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle;
 }
-
-void
-CCurrentVehicle::Init()
+CVehicle *UserDisplay_BackendShortCutTaxi(void)
 {
-	m_pCurrentVehicle = nil;
+    // Convert the original typed taxi pointer through its native vehicle base
+    return CGameLogic::pShortCutTaxi;
 }
-
-void
-CCurrentVehicle::Process()
+int16_t UserDisplay_BackendModelIndex(const CVehicle *vehicle)
 {
-	if (CWorld::Players[CWorld::PlayerInFocus].m_pPed->InVehicle())
-		m_pCurrentVehicle = CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle;
-	else
-		m_pCurrentVehicle = nil;
-	Display();
+    // Read the model index through the actual native vehicle inheritance
+    return vehicle->GetModelIndex();
 }
-
-void
-CCurrentVehicle::Display()
+char *UserDisplay_BackendGameName(int16_t model)
 {
-	wchar *text = nil;
-	if (m_pCurrentVehicle != nil && m_pCurrentVehicle != CGameLogic::pShortCutTaxi)
-		text = TheText.Get(((CVehicleModelInfo*)CModelInfo::GetModelInfo(m_pCurrentVehicle->GetModelIndex()))->m_gameName);
-	CHud::SetVehicleName(text);
+    // Resolve the original typed model record and borrow its existing game-name array
+    return ((CVehicleModelInfo*)CModelInfo::GetModelInfo(model))->m_gameName;
 }
-
-void
-CUserDisplay::Init()
+uint16_t *UserDisplay_BackendText(const char *name)
 {
-	PlaceName.Init();
-	OnscnTimer.Init();
-	Pager.Init();
-	CurrentVehicle.Init();
+    // Perform the original native text lookup after the C display controller selects a model
+    return Text_Get(&TheText,name);
 }
-
-void
-CUserDisplay::Process()
+void UserDisplay_BackendSetVehicleName(uint16_t *name)
 {
-#ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack())
-		return;
-#endif
-	PlaceName.Process();
-	OnscnTimer.Process();
-	Pager.Process();
-	CurrentVehicle.Process();
+    // Publish the original borrowed UTF-16 vehicle name through the native HUD owner
+    CHud::SetVehicleName(name);
 }
+bool UserDisplay_BackendPlayingBack(void)
+{
+    // Query the original replay predicate at the compile-time guarded update gate
+    return CReplay::IsPlayingBack();
+}
+//- rouz edit (ChatGPT)

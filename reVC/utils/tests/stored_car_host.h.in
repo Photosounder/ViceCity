@@ -1,0 +1,67 @@
+#pragma once
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <new>
+#include <memory>
+#include "EntityStatus.h"
+#include "VehicleBombTypes.h"
+#include "StreamingInfo.h"
+typedef int32_t int32;typedef uint32_t uint32;typedef int8_t int8;typedef uint8_t uint8;
+#define nil NULL
+#define RANDOM_VEHICLE 1
+#define CARLOCK_UNLOCKED 1
+#define VALIDATE_SIZE(type,size) static_assert(sizeof(type)==size,"Original record size")
+struct RwV3d {float x,y,z;};
+class CVector:public RwV3d {
+public:
+    CVector(void) {}
+    CVector(float x,float y,float z) {this->x=x;this->y=y;this->z=z;}
+};
+struct CVector2D {float x,y;};
+struct CEntity {};
+struct CPed:CEntity {};
+struct CVehicle;
+struct CVehicleModelInfo {int8_t m_numComps;static void SetComponentsToUse(int8_t,int8_t);};
+struct Controls {bool loaded,boat,bike,nullInfo,nullPool;int components,proofs,reportedType;int8_t first,second;};
+extern Controls controls;
+extern unsigned traceCount;
+extern uint32_t traceValues[128];
+void trace(uint32_t value);
+struct CVehicle {
+    int32 model,status,type;
+    CVector pos,forward,right,up;
+    uint8 m_currentColour1,m_currentColour2,m_nRadioStation;
+    int8 m_aExtras[2];
+    unsigned m_bombType:3;
+    bool bBulletProof,bFireProof,bExplosionProof,bCollisionProof,bMeleeProof;
+    bool bFreebies,bHasBeenOwnedByPlayer,bIsStanding;
+    CPed *pDriver,*m_pBombRigger;
+    int m_nDoorLock;
+    int GetModelIndex(){return model;}
+    CVector &GetPosition(){return pos;}
+    CVector &GetForward(){return forward;}
+    CVector &GetRight(){return right;}
+    CVector &GetUp(){return up;}
+    bool IsCar(){return type==0;}
+    bool IsBike(){return type==1;}
+    void SetPosition(CVector value){pos=value;}
+    void SetStatus(eEntityStatus value){status=value;}
+};
+void construct(CVehicle *,int,int,int);
+struct CBoat:CVehicle {CBoat(int model,int created){construct(this,model,created,2);}};
+struct CBike:CVehicle {CBike(int model,int created){construct(this,model,created,1);}};
+struct CAutomobile:CVehicle {CAutomobile(int model,int created){construct(this,model,created,0);}};
+struct CStreaming {static void RequestModel(int32,int32);static bool HasModelLoaded(int32);};
+struct CModelInfo {static CVehicleModelInfo *GetModelInfo(int32);static bool IsBoatModel(int32);static bool IsBikeModel(int32);};
+struct CPools {static void *GetVehiclePool();};
+void *CPool_New(void *);
+CPed *FindPlayerPed(void);
+extern "C" void re3_assert(const char *,const char *,unsigned,const char *);
+#ifdef MASTER
+#define assert(expression) (expression)
+#else
+#define assert(expression) (void)((!!(expression))||(re3_assert(#expression,__FILE__,__LINE__,__FUNCTION__),0))
+#endif

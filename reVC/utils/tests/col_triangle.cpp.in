@@ -1,0 +1,114 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t digest=UINT64_C(1469598103934665603);
+static unsigned states,checks;
+static uint32_t randomState=UINT32_C(0x1234abcd);
+static void hash32(uint32_t value)
+{
+    // Compare stable field representations independently of pointer widths
+    for(unsigned n=0;n<4;++n){digest^=(uint8_t)(value>>(n*8));digest*=UINT64_C(1099511628211);}
+}
+static uint32_t bits(float value)
+{
+    // Inspect exact signed zeros and stored NaN payloads without aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static void observeFloat(float value)
+{
+    // Compare finite results exactly while leaving arithmetic NaN payload selection to the native implementation
+    hash32(isnan(value)?UINT32_C(0x7fc00000):bits(value));
+}
+static float scalar(uint32_t value)
+{
+    // Construct exact special-value input representations
+    float result;memcpy(&result,&value,4);return result;
+}
+static void require(bool condition)
+{
+    // Keep explicit layout, padding, copy and packed-lane invariants beside the original/C comparison
+    ++checks;if(!condition){fprintf(stderr,"triangle invariant failed at %u/%u\n",states,checks);exit(1);}
+}
+static float nextValue(void)
+{
+    // Keep random geometry within the original defined VU distance and normalization range
+    randomState=randomState*UINT32_C(1664525)+UINT32_C(1013904223);return ((int)(randomState>>24)-128)*.125f;
+}
+static CVector nextVector(void)
+{
+    // Sequence random input generation independently of function argument evaluation order
+    const float x=nextValue();const float y=nextValue();const float z=nextValue();return CVector(x,y,z);
+}
+static void observe(CColTrianglePlane *plane)
+{
+    // Exercise complete normal decoding, point evaluation and representation-specific accessors
+    ++states;CVector value;Run_GetNormal(plane,&value);
+    observeFloat(value.x);observeFloat(value.y);observeFloat(value.z);
+#ifdef VU_COLLISION
+    // Retain all four sign-extended packed lanes and output guards
+    int32_t packed[6]={123456789,1,2,3,4,-123456789};Run_Unpack(plane,packed+1);
+    require(packed[0]==123456789&&packed[5]==-123456789);require(packed[1]==plane->normal.x&&packed[2]==plane->normal.y&&packed[3]==plane->normal.z&&packed[4]==plane->dist);
+    for(unsigned i=1;i<5;++i)hash32((uint32_t)packed[i]);
+#else
+    // Keep getter payloads exact even when plane arithmetic itself produces implementation-specific NaNs
+    require(bits(value.x)==bits(plane->normal.x)&&bits(value.y)==bits(plane->normal.y)&&bits(value.z)==bits(plane->normal.z));
+    require(bits(Run_GetNormalX(plane))==bits(plane->normal.x)&&bits(Run_GetNormalY(plane))==bits(plane->normal.y)&&bits(Run_GetNormalZ(plane))==bits(plane->normal.z));
+    observeFloat(plane->dist);hash32(plane->dir);
+    const uint8_t *bytes=(const uint8_t*)plane;require(bytes[17]==0xa5&&bytes[18]==0xa5&&bytes[19]==0xa5);
+#endif
+    const CVector points[]={CVector(0,0,0),CVector(1,2,3),CVector(-3,-2,-1),CVector(scalar(UINT32_C(0x80000000)),0,1)};
+    for(unsigned i=0;i<4;++i)observeFloat(Run_CalcPoint(plane,&points[i]));
+}
+static void geometry(const CVector &a,const CVector &b,const CVector &c)
+{
+    // Seed every intentionally unwritten plane byte before the original/C setup operation
+    CColTrianglePlane plane;memset(&plane,0xa5,sizeof(plane));Run_Set(&plane,&a,&b,&c);observe(&plane);
+    // Exercise the production C++ reference-record calling convention independently of the C11 caller
+    CColTrianglePlane native;memset(&native,0xa5,sizeof(native));
+#ifdef ORIGINAL
+    native.Set(a,b,c);
+#else
+    ColTrianglePlane_Set(&native,COLLISION_POINT_REF(a),COLLISION_POINT_REF(b),COLLISION_POINT_REF(c));
+#endif
+    require(!memcmp(&plane,&native,sizeof(plane)));
+}
+int main(void)
+{
+    // Cover the entire sixteen-bit index space, integer narrowing and untouched triangle padding
+    for(unsigned n=0;n<65536;++n){
+        CColTriangle triangle;memset(&triangle,0xa5,sizeof(triangle));const int32_t a=(int32_t)n-32768,b=~(int32_t)n,c=(int32_t)(UINT32_C(0x80000000)|n);
+        Run_TriangleSet(&triangle,a,b,c,(uint8_t)n);require(triangle.a==(uint16_t)a&&triangle.b==(uint16_t)b&&triangle.c==(uint16_t)c&&triangle.surface==(uint8_t)n);require(((uint8_t*)&triangle)[7]==0xa5);
+        hash32(triangle.a);hash32(triangle.b);hash32(triangle.c);hash32(triangle.surface);++states;
+    }
+
+    // Compare ordinary and degenerate geometry with all original setup/query operations
+    for(unsigned n=0;n<12000;++n){
+        const CVector a=nextVector();const CVector b=nextVector();const CVector c=nextVector();geometry(a,b,c);
+        if(n%17==0)geometry(a,a,c);
+    }
+    geometry(CVector(0,0,0),CVector(1,0,1),CVector(0,1,1));geometry(CVector(1,0,0),CVector(1,1,0),CVector(1,0,1));geometry(CVector(0,0,0),CVector(0,0,0),CVector(0,0,0));
+
+    // Verify complete temporary decoding before indexed plane setup
+    for(unsigned n=0;n<2048;++n){
+        CompressedVector vertices[4];for(unsigned i=0;i<4;++i){const CVector point=nextVector();CompressedVector_Set(&vertices[i],point.x,point.y,point.z);}
+        CColTriangle triangle;Run_TriangleSet(&triangle,n%4,(n+1)%4,(n+3)%4,(uint8_t)n);CColTrianglePlane plane;memset(&plane,0xa5,sizeof(plane));Run_SetFromVertices(&plane,vertices,&triangle);observe(&plane);
+    }
+#ifdef VU_COLLISION
+    // Cover every packed normal code, exact decoding and the self-referential compressed vertex source
+    for(int n=-32768;n<=32767;++n){
+        CColTrianglePlane plane;plane.normal.x=(int16_t)n;plane.normal.y=(int16_t)~n;plane.normal.z=(int16_t)(n^0x5555);plane.dist=(int16_t)(n^0x3333);observe(&plane);
+        if((n&255)==0){CColTriangle tri;Run_TriangleSet(&tri,0,0,0,0);Run_SetFromVertices(&plane,&plane.normal,&tri);observe(&plane);}
+    }
+#else
+    // Preserve valid source aliases after the scalar destination normal is overwritten and normalized
+    for(unsigned n=0;n<512;++n)for(unsigned alias=0;alias<8;++alias){
+        CColTrianglePlane plane;memset(&plane,0xa5,sizeof(plane));plane.normal.x=nextValue();plane.normal.y=nextValue();plane.normal.z=nextValue();plane.dist=nextValue();
+        const CVector a=nextVector();const CVector b=nextVector();const CVector c=nextVector();
+        Run_Set(&plane,alias&1?(const void*)&plane.normal:&a,alias&2?(const void*)&plane.normal:&b,alias&4?(const void*)&plane.normal:&c);observe(&plane);
+        observeFloat(Run_CalcPoint(&plane,&plane.normal));Run_GetNormal(&plane,&plane.normal);observe(&plane);
+    }
+    // Exercise special IEEE inputs and the original partial normalization fallback
+    const uint32_t values[]={0,UINT32_C(0x80000000),UINT32_C(0x7f800000),UINT32_C(0xff800000),UINT32_C(0x7fc12345),UINT32_C(0xffc54321),UINT32_C(0x7f7fffff),1};
+    for(unsigned n=0;n<512;++n){const CVector a(scalar(values[n%8]),scalar(values[(n/8)%8]),scalar(values[(n/64)%8]));geometry(a,CVector(0,1,0),CVector(0,0,1));}
+#endif
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);return 0;
+}

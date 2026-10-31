@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 enum BoneTag
@@ -26,5 +27,12 @@ enum BoneTag
 	BONE_r_foot = 53,
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 int ConvertPedNode2BoneTag(int node);
 const char *ConvertBoneTag2BoneName(int tag);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

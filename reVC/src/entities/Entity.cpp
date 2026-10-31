@@ -1,4 +1,8 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
+#include "CollisionVector_native.h"
 
 #include "VuVector.h"
 #include "General.h"
@@ -20,12 +24,14 @@
 #include "SpecialFX.h"
 #include "TxdStore.h"
 #include "Zones.h"
+#include "Vehicle.h"
 #include "MemoryHeap.h"
 #include "Bones.h"
 #include "Debug.h"
 #include "Ped.h"
 #include "Dummy.h"
 #include "WindModifiers.h"
+#include "WindModifiers_backend.h"
 #include "SaveBuf.h"
 //+ rouz edit (ChatGPT)
 #ifdef REVC_SOFTWARE_POLYGONS
@@ -89,7 +95,7 @@ CEntity::CEntity(void)
 	m_modelIndex = -1;
 	m_rwObject = nil;
 	m_area = AREA_MAIN_MAP;
-	m_randomSeed = CGeneral::GetRandomNumber();
+	m_randomSeed = General_GetRandomNumber();
 	m_pFirstReference = nil;
 }
 
@@ -207,19 +213,29 @@ CRect
 CEntity::GetBoundRect(void)
 {
 	CRect rect;
+	// Initialize rectangle bounds at the former local constructor boundary
+	Rect_Init(&rect);
 	CVector v;
 	CColModel *col = CModelInfo::GetColModel(m_modelIndex);
 
-	rect.ContainPoint(GetMatrix() * col->boundingBox.min);
-	rect.ContainPoint(GetMatrix() * col->boundingBox.max);
+	// Pass the native point once while retaining live coordinate reads
+	const CVector &rectanglePoint0 = GetMatrix() * CollisionVector_ToNative(col->boundingBox.min);
+	Rect_ContainPoint(&rect, &rectanglePoint0.x, &rectanglePoint0.y);
+	// Pass the native point once while retaining live coordinate reads
+	const CVector &rectanglePoint1 = GetMatrix() * CollisionVector_ToNative(col->boundingBox.max);
+	Rect_ContainPoint(&rect, &rectanglePoint1.x, &rectanglePoint1.y);
 
-	v = col->boundingBox.min;
+	v = CollisionVector_ToNative(col->boundingBox.min);
 	v.x = col->boundingBox.max.x;
-	rect.ContainPoint(GetMatrix() * v);
+	// Pass the native point once while retaining live coordinate reads
+	const CVector &rectanglePoint2 = GetMatrix() * v;
+	Rect_ContainPoint(&rect, &rectanglePoint2.x, &rectanglePoint2.y);
 
-	v = col->boundingBox.max;
+	v = CollisionVector_ToNative(col->boundingBox.max);
 	v.x = col->boundingBox.min.x;
-	rect.ContainPoint(GetMatrix() * v);
+	// Pass the native point once while retaining live coordinate reads
+	const CVector &rectanglePoint3 = GetMatrix() * v;
+	Rect_ContainPoint(&rect, &rectanglePoint3.x, &rectanglePoint3.y);
 
 	return rect;
 }
@@ -227,20 +243,20 @@ CEntity::GetBoundRect(void)
 CVector
 CEntity::GetBoundCentre(void)
 {
-	return GetMatrix() * CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center;
+	return GetMatrix() * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
 }
 
 #ifdef GTA_PS2
 void
 CEntity::GetBoundCentre(CVuVector &out)
 {
-	TransformPoint(out, GetMatrix(), CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
+	TransformPoint(out, GetMatrix(), CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center));
 }
 #else
 void
 CEntity::GetBoundCentre(CVector &out)
 {
-	out = GetMatrix() * CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center;
+	out = GetMatrix() * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
 }
 #endif
 
@@ -261,7 +277,8 @@ void
 CEntity::UpdateRpHAnim(void)
 {
 	if(IsClumpSkinned(GetClump())){
-		RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(GetClump());
+		// Use the C helper and retain the original typed SDK result
+		RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(GetClump()));
 		RpHAnimHierarchyUpdateMatrices(hier);
 #if 0
 	int i;
@@ -274,18 +291,18 @@ CEntity::UpdateRpHAnim(void)
 			kf->t.x, kf->t.y, kf->t.z,
 			HIERNODEID(hier, i),
 			ConvertBoneTag2BoneName(HIERNODEID(hier, i)));
-		CDebug::PrintAt(buf, 10, 1+i*3);
+		Debug_PrintAt(buf, 10, 1+i*3);
 
 		RwMatrix *m = &RpHAnimHierarchyGetMatrixArray(hier)[i];
 		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
 			m->right.x, m->up.x, m->at.x, m->pos.x);
-		CDebug::PrintAt(buf, 80, 1+i*3+0);
+		Debug_PrintAt(buf, 80, 1+i*3+0);
 		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
 			m->right.y, m->up.y, m->at.y, m->pos.y);
-		CDebug::PrintAt(buf, 80, 1+i*3+1);
+		Debug_PrintAt(buf, 80, 1+i*3+1);
 		sprintf(buf, "%6.3f %6.3f %6.3f %6.3f",
 			m->right.z, m->up.z, m->at.z, m->pos.z);
-		CDebug::PrintAt(buf, 80, 1+i*3+2);
+		Debug_PrintAt(buf, 80, 1+i*3+2);
 	}
 
 	void RenderSkeleton(RpHAnimHierarchy *hier);
@@ -348,19 +365,20 @@ CEntity::PreRender(void)
 			}
 		}else if(GetModelIndex() == MI_MISSILE){
 			CVector pos = GetPosition();
-			float flicker = (CGeneral::GetRandomNumber() & 0xF)/(float)0x10;
+			float flicker = (General_GetRandomNumber() & 0xF)/(float)0x10;
 			CShadows::StoreShadowToBeRendered(SHADOWTYPE_ADDITIVE,
 				gpShadowExplosionTex, &pos,
 				8.0f, 0.0f, 0.0f, -8.0f,
 				255, 200.0f*flicker, 160.0f*flicker, 120.0f*flicker,
 				20.0f, false, 1.0f, nil, false);
-			CPointLights::AddLight(CPointLights::LIGHT_POINT,
+			// Enter the C point-light algorithm with the original owner expressions
+			PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT,
 				pos, CVector(0.0f, 0.0f, 0.0f),
 				8.0f,
 				1.0f*flicker,
 				0.8f*flicker,
 				0.6f*flicker,
-				CPointLights::FOG_NONE, true);
+				POINTLIGHTS_FOG_NONE, true);
 			CCoronas::RegisterCorona((uintptr)this,
 				255.0f*flicker, 220.0f*flicker, 190.0f*flicker, 255,
 				pos, 6.0f*flicker, 80.0f, gpCoronaTexture[CCoronas::TYPE_STAR],
@@ -373,12 +391,14 @@ CEntity::PreRender(void)
 			GetMatrix().UpdateRW();
 			UpdateRwFrame();
 		} else if (GetModelIndex() == MI_GRENADE) {
-			CMotionBlurStreaks::RegisterStreak((uintptr)this,
+			// Enter the C motion-blur streak algorithm with the original owner expressions
+			MotionBlurStreaks_RegisterStreakLegacy((uintptr)this,
 				100, 100, 100,
 				GetPosition() - 0.07f * TheCamera.GetRight(),
 				GetPosition() + 0.07f * TheCamera.GetRight());
 		} else if (GetModelIndex() == MI_MOLOTOV) {
-			CMotionBlurStreaks::RegisterStreak((uintptr)this,
+			// Enter the C motion-blur streak algorithm with the original owner expressions
+			MotionBlurStreaks_RegisterStreakLegacy((uintptr)this,
 				0, 100, 0,
 				GetPosition() - 0.07f * TheCamera.GetRight(),
 				GetPosition() + 0.07f * TheCamera.GetRight());
@@ -387,24 +407,24 @@ CEntity::PreRender(void)
 			CShadows::StoreShadowToBeRendered(SHADOWTYPE_DARK,
 				gpShadowPedTex, &pos,
 				0.4f, 0.0f, 0.0f, 0.4f,
-				CTimeCycle::GetShadowStrength(),
-				CTimeCycle::GetShadowStrength(),
-				CTimeCycle::GetShadowStrength(),
-				CTimeCycle::GetShadowStrength(),
+				TimeCycle_GetShadowStrength(),
+				TimeCycle_GetShadowStrength(),
+				TimeCycle_GetShadowStrength(),
+				TimeCycle_GetShadowStrength(),
 				20.0f, false, 1.0f, nil, false);
 		}
 		// fall through
 	case ENTITY_TYPE_DUMMY:
 		if(GetModelIndex() == MI_TRAFFICLIGHTS){
-			CTrafficLights::DisplayActualLight(this);
+			TrafficLights_DisplayActualLight(this);
 			CShadows::StoreShadowForPole(this, 2.957f, 0.147f, 0.0f, 16.0f, 0.4f, 0);
 		}else if(GetModelIndex() == MI_TRAFFICLIGHTS_VERTICAL){
-			CTrafficLights::DisplayActualLight(this);
+			TrafficLights_DisplayActualLight(this);
 		}else if(GetModelIndex() == MI_TRAFFICLIGHTS_MIAMI){
-			CTrafficLights::DisplayActualLight(this);
+			TrafficLights_DisplayActualLight(this);
 			CShadows::StoreShadowForPole(this, 4.819f, 1.315f, 0.0f, 16.0f, 0.4f, 0);
 		}else if(GetModelIndex() == MI_TRAFFICLIGHTS_TWOVERTICAL){
-			CTrafficLights::DisplayActualLight(this);
+			TrafficLights_DisplayActualLight(this);
 			CShadows::StoreShadowForPole(this, 7.503f, 0.0f, 0.0f, 16.0f, 0.4f, 0);
 		}else if(GetModelIndex() == MI_SINGLESTREETLIGHTS1)
 			CShadows::StoreShadowForPole(this, 0.744f, 0.0f, 0.0f, 16.0f, 0.4f, 0);
@@ -571,7 +591,7 @@ CEntity::Add(void)
 				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
 				break;
 			}
-			list->InsertItem(this);
+			PtrList_InsertItem(list, this);
 		}
 }
 
@@ -631,7 +651,7 @@ CEntity::Remove(void)
 				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
 				break;
 			}
-			list->RemoveItem(this);
+			PtrList_RemoveItem(list, this);
 		}
 }
 
@@ -650,7 +670,7 @@ CEntity::SetupBigBuilding(void)
 	bIsBIGBuilding = true;
 	bStreamingDontDelete = true;
 	bUsesCollision = false;
-	m_level = CTheZones::GetLevelFromPosition(&GetPosition());
+	m_level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&GetPosition())));
 	if(mi->m_lodDistances[0] <= 2000.0f)
 		bStreamBIGBuilding = true;
 	if(mi->m_lodDistances[0] > 2500.0f || mi->m_ignoreDrawDist)
@@ -671,25 +691,25 @@ CEntity::ModifyMatrixForTreeInWind(void)
 	float f;
 	float strength, flutter;
 
-	if(CTimer::GetIsPaused())
+	if(Timer_GetIsPaused())
 		return;
 
 	CMatrix mat(GetMatrix().m_attachment);
 
-	if(CWeather::Wind >= 0.5){
-		t = m_randomSeed + 8*CTimer::GetTimeInMilliseconds();
+	if(Weather_Wind >= 0.5){
+		t = m_randomSeed + 8*(*Timer_GetTimeInMilliseconds());
 		f = (t & 0xFFF)/(float)0x1000;
 		flutter = f * WindTabel[(t>>12)+1 & 0xF] +
 			(1.0f - f) * WindTabel[(t>>12) & 0xF] +
 			1.0f;
-		strength = -0.015f*CWeather::Wind;
-	}else if(CWeather::Wind >= 0.2){
-		t = (uintptr)this + CTimer::GetTimeInMilliseconds();
+		strength = -0.015f*Weather_Wind;
+	}else if(Weather_Wind >= 0.2){
+		t = (uintptr)this + (*Timer_GetTimeInMilliseconds());
 		f = (t & 0xFFF)/(float)0x1000;
 		flutter = Sin(f * 6.28f);
 		strength = -0.008f;
 	}else{
-		t = (uintptr)this + CTimer::GetTimeInMilliseconds();
+		t = (uintptr)this + (*Timer_GetTimeInMilliseconds());
 		f = (t & 0xFFF)/(float)0x1000;
 		flutter = Sin(f * 6.28f);
 		strength = -0.005f;
@@ -697,10 +717,10 @@ CEntity::ModifyMatrixForTreeInWind(void)
 
 	mat.GetUp().x = strength * flutter;
 	if(IsPalmTreeModel(GetModelIndex()))
-		mat.GetUp().x += -0.07f*CWeather::Wind;
+		mat.GetUp().x += -0.07f*Weather_Wind;
 	mat.GetUp().y = mat.GetUp().x;
 
-	CWindModifiers::FindWindModifier(GetPosition(), &mat.GetUp().x, &mat.GetUp().y);
+	WindModifiers_FindWindModifier(WindModifiers_BackendVector(&GetPosition()), &mat.GetUp().x, &mat.GetUp().y);
 
 	mat.UpdateRW();
 	UpdateRwFrame();
@@ -722,17 +742,17 @@ CEntity::ModifyMatrixForBannerInWind(void)
 	float strength, flutter;
 	CVector right, up;
 
-	if(CTimer::GetIsPaused())
+	if(Timer_GetIsPaused())
 		return;
 
-	if(CWeather::Wind < 0.1f)
+	if(Weather_Wind < 0.1f)
 		strength = 0.2f;
-	else if(CWeather::Wind < 0.8f)
+	else if(Weather_Wind < 0.8f)
 		strength = 0.43f;
 	else
 		strength = 0.66f;
 
-	t = ((int)(GetMatrix().GetPosition().x + GetMatrix().GetPosition().y) << 10) + 16*CTimer::GetTimeInMilliseconds();
+	t = ((int)(GetMatrix().GetPosition().x + GetMatrix().GetPosition().y) << 10) + 16*(*Timer_GetTimeInMilliseconds());
 	f = (t & 0x7FF)/(float)0x800;
 	flutter = f * BannerWindTabel[(t>>11)+1 & 0x1F] +
 		(1.0f - f) * BannerWindTabel[(t>>11) & 0x1F];
@@ -937,3 +957,6 @@ CEntity::LoadEntityFlags(uint8*& buf)
 }
 
 #endif
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

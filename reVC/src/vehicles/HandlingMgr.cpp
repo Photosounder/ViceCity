@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -148,9 +149,9 @@ cHandlingDataMgr::LoadHandlingData(void)
 	tBoatHandlingData *boatHandling;
 	tBikeHandlingData *bikeHandling;
 
-	CFileMgr::SetDir("DATA");
-	CFileMgr::LoadFile(HandlingFilename, work_buff, sizeof(work_buff), "r");
-	CFileMgr::SetDir("");
+	FileMgr_SetDir("DATA");
+	FileMgr_LoadFile(HandlingFilename, work_buff, sizeof(work_buff), "r");
+	FileMgr_SetDir("");
 
 	start = (char*)work_buff;
 	end = start+1;
@@ -395,7 +396,7 @@ cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData *handling)
 	else
 		handling->Transmission.fEngineAcceleration /= 2.0f;
 
-	handling->Transmission.InitGearRatios();
+	Transmission_InitGearRatios(&handling->Transmission);
 }
 
 void
@@ -432,3 +433,4 @@ cHandlingDataMgr::GetBoatPointer(uint8 id)
 		return &BoatHandlingData[id-HANDLING_PREDATOR];
 	return &BoatHandlingData[0];
 }
+//- rouz edit (ChatGPT)

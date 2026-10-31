@@ -1,38 +1,32 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-#include "templates.h"
-
-#ifdef MoveMemory
-#undef MoveMemory	// windows shit
+#include <stdint.h>
+#include <stdbool.h>
+#include "AnimBlendSequence.h"
+#include "LinkList.h"
+typedef struct CAnimBlendHierarchy {
+    char name[24];
+    CAnimBlendSequence *sequences;
+    int16_t numSequences;
+    bool compressed,keepCompressed;
+    float totalLength;
+    CLink *linkPtr;
+} CAnimBlendHierarchy;
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-class CAnimBlendSequence;
-
-// A collection of sequences
-class CAnimBlendHierarchy
-{
-public:
-	char name[24];
-	CAnimBlendSequence *sequences;
-	int16 numSequences;
-	bool compressed;
-	bool keepCompressed;
-	float totalLength;
-	//+ rouz edit (ChatGPT)
-	CLink *linkPtr;
-	//- rouz edit (ChatGPT)
-
-	CAnimBlendHierarchy(void);
-	void Shutdown(void);
-	void SetName(char *name);
-	void CalcTotalTime(void);
-	void CalcTotalTimeCompressed(void);
-	void RemoveQuaternionFlips(void);
-	void RemoveAnimSequences(void);
-	void Uncompress(void);
-	void RemoveUncompressedData(void);
-	void MoveMemory(bool onlyone = false);
-	bool IsCompressed() { return !!compressed; };
-};
-
-VALIDATE_SIZE(CAnimBlendHierarchy, 0x28);
+void AnimHierarchy_Init(CAnimBlendHierarchy *self);
+void AnimHierarchy_Shutdown(CAnimBlendHierarchy *self);
+void AnimHierarchy_SetName(CAnimBlendHierarchy *self,char *name);
+void AnimHierarchy_CalcTotalTime(CAnimBlendHierarchy *self);
+void AnimHierarchy_CalcTotalTimeCompressed(CAnimBlendHierarchy *self);
+void AnimHierarchy_RemoveQuaternionFlips(CAnimBlendHierarchy *self);
+void AnimHierarchy_RemoveAnimSequences(CAnimBlendHierarchy *self);
+void AnimHierarchy_Uncompress(CAnimBlendHierarchy *self);
+void AnimHierarchy_RemoveUncompressedData(CAnimBlendHierarchy *self);
+void AnimHierarchy_MoveMemory(CAnimBlendHierarchy *self,bool onlyone);
+bool AnimHierarchy_IsCompressed(CAnimBlendHierarchy *self);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

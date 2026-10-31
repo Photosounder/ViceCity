@@ -1,0 +1,52 @@
+static CPlayerInfo *parentDestination;
+static const CPlayerInfo *parentSource;
+static CVehicle *previousVehicle;
+static char previousName;
+static int32 previousMoney;
+static bool assigningParent,exitPhase;
+static unsigned boundaries,parentCopies,exitNext,exitCount;
+static void ParentObserveBoundary(void)
+{
+    // Verify the native parent copies fields before and after the model at their original callback-visible positions
+    if(!assigningParent)return;++boundaries;require(parentDestination->m_pPed==parentSource->m_pPed&&parentDestination->m_pRemoteVehicle==parentSource->m_pRemoteVehicle);require(parentDestination->m_pVehicleEx==previousVehicle&&parentDestination->m_aPlayerName[0]==previousName&&parentDestination->m_nMoney==previousMoney);
+}
+static void StaticObserveFree(unsigned id)
+{
+    // Verify process-exit cleanup releases every actual static model in reverse registration order
+    if(!exitPhase)return;require(id==exitNext);--exitNext;++exitCount;
+}
+static void CompleteExitObservation(void)
+{
+    // Report only after all real original or C static destructors have completed
+    require(exitCount==20&&allocations==frees&&depth==0);for(unsigned i=0;i<64;++i)require(blocks[i].pointer==NULL);printf("parents=%u static=20 boundaries=%u checks=%u allocations=%u exit=%u hash=%016llx\n",parentCopies,boundaries,checks,allocations,exitCount,(unsigned long long)hashValue);
+}
+struct EarlyExitObserver {
+    EarlyExitObserver()
+    {
+        // Place the final observer before client static registrations so it runs after their cleanup
+        atexit(CompleteExitObservation);
+    }
+};
+#ifdef _MSC_VER
+#pragma init_seg(lib)
+static EarlyExitObserver earlyExitObserver;
+#else
+static EarlyExitObserver earlyExitObserver __attribute__((init_priority(101)));
+#endif
+extern CColModel *TestRotorModel(void);
+extern CColModel *TestWorldModel(void);
+static void AssignParent(CPlayerInfo *destination,const CPlayerInfo *source)
+{
+    // Invoke the original implicit or new explicit native parent assignment around the same complete model owner
+    parentDestination=destination;parentSource=source;previousVehicle=destination->m_pVehicleEx;previousName=destination->m_aPlayerName[0];previousMoney=destination->m_nMoney;assigningParent=true;*destination=*source;assigningParent=false;++parentCopies;CheckParent(destination,*source);
+}
+int main(void)
+{
+    // Exercise player-state assignment in both directions as used by replay capture and restoration
+    CLinkList_Init(&CCollision::ms_colModelCache,cacheLinks,16);for(unsigned test=0;test<512;++test){void *sourceMemory=malloc(sizeof(CPlayerInfo)),*targetMemory=malloc(sizeof(CPlayerInfo));require(sourceMemory&&targetMemory);CPlayerInfo *source=new(sourceMemory) CPlayerInfo,*target=new(targetMemory) CPlayerInfo;FillParent(source,test);FillParent(target,test*7+3);AssignParent(target,source);AssignParent(source,target);source->~CPlayerInfo();target->~CPlayerInfo();free(sourceMemory);free(targetMemory);}
+    // Populate all real static model definitions and then trigger the lazy world model exactly once
+    CColModel *models[]={&CTempColModels::ms_colModelPed1,&CTempColModels::ms_colModelPed2,&CTempColModels::ms_colModelBBox,&CTempColModels::ms_colModelBumper1,&CTempColModels::ms_colModelWheel1,&CTempColModels::ms_colModelPanel1,&CTempColModels::ms_colModelBodyPart2,&CTempColModels::ms_colModelBodyPart1,&CTempColModels::ms_colModelCutObj[0],&CTempColModels::ms_colModelCutObj[1],&CTempColModels::ms_colModelCutObj[2],&CTempColModels::ms_colModelCutObj[3],&CTempColModels::ms_colModelCutObj[4],&CTempColModels::ms_colModelPedGroundHit,&CTempColModels::ms_colModelBoot1,&CTempColModels::ms_colModelDoor1,&CTempColModels::ms_colModelBonnet1,&CTempColModels::ms_colModelWeapon,TestRotorModel(),TestWorldModel()};require(TestWorldModel()==models[19]);
+    for(unsigned i=0;i<20;++i){CColModel *model=models[i];require(model->ownsCollisionVolumes&&model->level==0&&model->numSpheres==0&&model->numTriangles==0&&!model->spheres&&!model->trianglePlanes);for(unsigned j=0;j<sizeof(CSphere)+sizeof(CBox);++j)require(((unsigned char*)model)[j]==0);model->numSpheres=1;model->spheres=(CColSphere*)RwMalloc(sizeof(CColSphere));}
+    // Let the actual original or C callbacks perform all remaining frees at process exit
+    require(allocations==frees+20&&boundaries>1024);exitNext=allocations;exitPhase=true;return 0;
+}

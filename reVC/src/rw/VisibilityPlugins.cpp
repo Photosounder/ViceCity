@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "RwHelper.h"
@@ -315,8 +316,10 @@ CVisibilityPlugins::RenderFadingEntities(CSortedLinkList *list)
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, FALSE);
 
 		if(e->bDistanceFade){
-			DeActivateDirectional();
-			SetAmbientColours();
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_DeActivateDirectional();
+			// Use the complete C lighting owner and its borrowed SDK handles
+			Lights_SetAmbientColours();
 			e->bImBeingRendered = true;
 			PUSH_RENDERGROUP(mi->GetModelName());
 			RenderFadingAtomic((RpAtomic*)e->m_rwObject, node->item.sort);
@@ -1087,3 +1090,4 @@ CVisibilityPlugins::IsClumpVisible(RpClump *clump)
 {
 	return CLUMPEXT(clump)->visibilityCB(clump);
 }
+//- rouz edit (ChatGPT)

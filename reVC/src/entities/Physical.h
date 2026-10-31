@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Lists.h"
@@ -156,7 +157,7 @@ public:
 	void ApplyFrictionTurnForce(const CVector &j, const CVector &p) { ApplyFrictionTurnForce(j.x, j.y, j.z, p.x, p.y, p.z); }
 	// springRatio: 1.0 fully extended, 0.0 fully compressed
 	bool ApplySpringCollision(float springConst, CVector &springDir, CVector &point, float springRatio, float bias);
-	bool ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CVector &forceDir);
+	bool ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CColPoint &contact);
 	bool ApplySpringDampening(float damping, CVector &springDir, CVector &point, CVector &speed);
 	void ApplyGravity(void);
 	void ApplyFriction(void);
@@ -173,3 +174,4 @@ public:
 	bool CheckCollision(void);
 	bool CheckCollision_SimpleCar(void);
 };
+//- rouz edit (ChatGPT)

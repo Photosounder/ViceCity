@@ -1,0 +1,233 @@
+#include "caller.h"
+#include <limits>
+#include <initializer_list>
+#undef assert
+static void require(bool value,const char *expression,int line)
+{
+    // Keep independent checks active in MASTER as well as development profiles
+    if(!value){fprintf(stderr,"Failed %d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+extern "C" {uint32_t Timer_timeMs;}
+int32 CStats::CommercialPassed;
+CPathFind ThePaths;
+static CBuilding buildings[8];
+static RwMatrix attachments[8];
+static RwObject objects[8];
+static uint8_t flags[8],alternateFlags[8];
+static CPool pool,alternatePool;
+static uint32_t poolReads,modelReads,matrixUpdates,parentReads,frameUpdates,lightCalls,states,updates,initializations,finds,queries;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned localPoolReads,localModelReads[8];
+static bool switchPool,changeModel,swapPointers,swapped,changeState;
+static void bytes(const void *data,size_t length)
+{
+    // Hash observable scalar bytes without native pointer values or unspecified padding
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<length;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Observe integer decisions independently of the native pointer width
+    bytes(&value,4);
+}
+static int entityId(CEntity *entity)
+{
+    // Preserve null and actual native entity identity
+    return entity?entity->id:-1;
+}
+static TestBridgeState read()
+{
+    // Read every field from the actual canonical original or C controller
+    TestBridgeState state;TestBridge_Read(&state);return state;
+}
+static void stateBytes()
+{
+    // Include partially updated controller state at each native callback
+    TestBridgeState s=read();number(entityId(s.road));number(entityId(s.lift));number(entityId(s.weight));number(s.state);number(s.oldState);bytes(&s.partZ,4);bytes(&s.roadZ,4);bytes(&s.weightZ,4);bytes(&s.oldLift,4);number(s.operational);
+}
+static void snapshot()
+{
+    // Observe all canonical fields, native positions, synchronized matrices and real path-link flags
+    stateBytes();number(Timer_timeMs);number(CStats::CommercialPassed);
+    for(int i=0;i<8;i++){
+        // Observe real native storage while checking that typed building conversion preserves its prefix
+        CBuilding &entity=buildings[i];number(entity.model);bytes(&entity.GetPosition().z,4);bytes(&attachments[i].pos.z,4);number(flags[i]);number(alternateFlags[i]);
+        for(unsigned j=0;j<3;j++)assert(entity.padding[j]==UINT64_C(0x1234567800000000)+i*3+j);
+    }
+    for(int i=0;i<ThePaths.m_numCarPathLinks;i++){
+        // Include every field affected by the real path setter and its unaffected traffic classification
+        CCarPathLink &link=ThePaths.m_carPathLinks[i];number((uint16_t)link.x);number((uint16_t)link.y);number(link.bBridgeLights);number(link.trafficLightType);number(link.width);
+    }
+    states++;
+}
+CPool *CPools::GetBuildingPool(void)
+{
+    // Expose each original repeated pool lookup and optionally switch the live pool after its size read
+    number(1);stateBytes();poolReads++;localPoolReads++;return switchPool&&localPoolReads>1?&alternatePool:&pool;
+}
+int TestBridge_Model(CEntity *entity)
+{
+    // Observe separate model reads and optionally change a model between its ordered comparisons
+    int id=entity->id,result=entity->model;assert(id>=0&&id<8);number(2);number(id);number(result);stateBytes();modelReads++;localModelReads[id]++;
+    if(changeModel&&id==7&&localModelReads[id]==1)entity->model=MI_BRIDGEROADSEGMENT;
+    return result;
+}
+void TestBridge_MatrixUpdate(RwMatrix *matrix)
+{
+    // Observe the real matrix copy before its original frame update and any subsequent pointer rereads
+    int id=-1;for(int i=0;i<8;i++)if(matrix==&attachments[i])id=i;assert(id>=0);number(3);number(id);bytes(&matrix->pos.z,4);stateBytes();matrixUpdates++;
+    if(swapPointers&&!swapped){
+        // Change live controller pointers and a later default height at the original callback boundary
+        TestBridgeState s=read();s.lift=&buildings[3];s.road=&buildings[4];s.weight=&buildings[5];s.roadZ=100;TestBridge_Write(&s);swapped=true;
+    }
+}
+void TestBridge_MatrixDestroy(RwMatrix *matrix)
+{
+    // Reject rendering-resource destruction outside these borrowed matrix attachments
+    (void)matrix;assert(false);
+}
+void *TestBridge_ObjectParent(RwObject *object)
+{
+    // Preserve the original parent lookup from each actual frame-update call
+    int id=-1;for(int i=0;i<8;i++)if(object==&objects[i])id=i;assert(id>=0);number(4);number(id);stateBytes();parentReads++;return (void *)(uintptr_t)(id+1);
+}
+void TestBridge_FrameUpdate(RwFrame *frame)
+{
+    // Observe frame synchronization and the still-live state before the final controller writes
+    unsigned id=(unsigned)(uintptr_t)frame-1;assert(id<8);number(5);number(id);stateBytes();frameUpdates++;
+    if(changeState){
+        // Let a native callback change the state subsequently used by the original light transition gate
+        TestBridgeState s=read();s.state=STATE_LIFT_PART_IS_DOWN;s.oldState=STATE_LIFT_PART_MOVING_DOWN;TestBridge_Write(&s);changeState=false;
+    }
+}
+void CPathFind::SetLinksBridgeLights(float x1,float x2,float y1,float y2,bool enabled)
+{
+    // Observe the original call and enter the complete actual path-link routine under its original gate
+    assert(x1==-330&&x2==-230&&y1==-700&&y2==-588);number(6);number(enabled);stateBytes();lightCalls++;
+#ifdef GTA_BRIDGE
+    ApplyLinks(x1,x2,y1,y2,enabled);
+#else
+    assert(false);
+#endif
+}
+static void fresh()
+{
+    // Seed real native objects, pool metadata and canonical fields without replacing production algorithms
+    TestBridgeState s={nil,nil,nil,-41,57,30,40,50,-99,0};TestBridge_Write(&s);
+    for(int i=0;i<8;i++){
+        // Keep physically constructed building slots and their nonzero native base adjustment intact
+        CBuilding &entity=buildings[i];entity.id=i;entity.model=i<6?(i%3==0?MI_BRIDGELIFT:i%3==1?MI_BRIDGEROADSEGMENT:MI_BRIDGEWEIGHT):12000+i;
+        for(unsigned j=0;j<3;j++)entity.padding[j]=UINT64_C(0x1234567800000000)+i*3+j;
+        entity.matrix.SetTranslate(10+i,20-i,100+i*2);entity.matrix.m_attachment=&attachments[i];entity.matrix.m_hasRwMatrix=false;entity.m_rwObject=&objects[i];
+        memset(&attachments[i],0,sizeof(attachments[i]));flags[i]=alternateFlags[i]=POOLFLAG_ISFREE;localModelReads[i]=0;
+    }
+    pool.m_entries=(uint8_t *)buildings;pool.m_flags=flags;pool.m_size=8;pool.m_entrySize=sizeof(CBuilding);pool.m_allocPtr=-1;alternatePool=pool;alternatePool.m_flags=alternateFlags;
+    localPoolReads=0;switchPool=changeModel=swapPointers=swapped=changeState=false;Timer_timeMs=1000;CStats::CommercialPassed=0;
+    ThePaths.m_numCarPathLinks=16;
+    const int16 x[]={-330,-230,-280,-280,-280,-329,-231,-280,-280,-400,-200,-280,-280,-330,-230,-280};
+    const int16 y[]={-644,-644,-700,-588,-644,-699,-589,-701,-587,-644,-644,-650,-600,-700,-588,-644};
+    for(int i=0;i<16;i++){
+        // Include strict rectangle edges and preserve unrelated path-link fields
+        CCarPathLink &link=ThePaths.m_carPathLinks[i];memset(&link,0,sizeof(link));link.x=x[i]*8;link.y=y[i]*8;link.bBridgeLights=(i&1);link.trafficLightType=i%4;link.width=3+i;
+    }
+}
+static void scanCases()
+{
+    // Exercise every component subset, duplicate selection, sparse flags and partial initialization
+    for(unsigned mask=0;mask<64;mask++){
+        // Ensure the reverse scan chooses the lowest occupied matching model
+        fresh();for(int i=0;i<6;i++)if(mask&(1u<<i))flags[i]=i&0x7f;
+        TestBridge_RunFind();finds++;
+#ifdef GTA_BRIDGE
+        TestBridgeState s=read();int lift=-1,road=-1,weight=-1;
+        for(int i=5;i>=0;i--)if(mask&(1u<<i)){
+            // Derive expected component identity from the seeded model categories
+            if(i%3==0)lift=i;else if(i%3==1)road=i;else weight=i;
+        }
+        assert(entityId(s.lift)==lift&&entityId(s.road)==road&&entityId(s.weight)==weight&&localPoolReads==9);
+#endif
+        snapshot();TestBridge_RunInit();initializations++;
+#ifdef GTA_BRIDGE
+        s=read();assert(s.oldLift==-1&&s.state==-41&&s.oldState==57&&s.operational==0);
+        if(lift>=0&&weight>=0){assert(s.partZ==100+lift*2&&s.weightZ==100+weight*2);if(road>=0)assert(s.roadZ==100+road*2);}
+        else assert(s.partZ==30&&s.roadZ==40&&s.weightZ==50);
+#endif
+        snapshot();TestBridge_RunUpdate();updates++;snapshot();
+    }
+    fresh();switchPool=true;alternateFlags[0]=alternateFlags[1]=alternateFlags[2]=0;TestBridge_RunFind();finds++;
+#ifdef GTA_BRIDGE
+    assert(read().lift==&buildings[0]&&read().road==&buildings[1]&&read().weight==&buildings[2]);
+#endif
+    snapshot();fresh();changeModel=true;flags[7]=0;TestBridge_RunFind();finds++;
+#ifdef GTA_BRIDGE
+    assert(read().road==&buildings[7]&&localModelReads[7]==2);
+#endif
+    snapshot();fresh();pool.m_size=0;TestBridge_RunInit();initializations++;snapshot();
+}
+static void cycleCases()
+{
+    // Compare every millisecond of the original sixteen-bit cycle and both wraparound samples
+#ifdef GTA_BRIDGE
+    fresh();flags[0]=flags[1]=flags[2]=0;TestBridge_RunInit();initializations++;CStats::CommercialPassed=-1;
+    TestBridgeState s=read();s.state=STATE_BRIDGE_LOCKED;s.operational=1000;TestBridge_Write(&s);
+    unsigned previousLights=lightCalls;
+    for(uint32_t elapsed=0;elapsed<65538;elapsed++){
+        // Keep all native callbacks and canonical state observable across the full timed state machine
+        Timer_timeMs=1000+elapsed;TestBridge_RunUpdate();updates++;snapshot();
+        if(elapsed==10000)assert(read().state==STATE_LIFT_PART_IS_DOWN&&read().oldLift==0);
+        if(elapsed==40000)assert(read().state==STATE_LIFT_PART_ABOUT_TO_MOVE_UP&&read().oldLift==0);
+        if(elapsed==60000)assert(read().state==STATE_LIFT_PART_IS_UP&&read().oldLift==25);
+        if(elapsed==65536)assert(read().state==STATE_LIFT_PART_MOVING_DOWN&&read().oldLift==25);
+    }
+    assert(lightCalls==previousLights+2);
+    const uint32_t elapsed[]={0,1,9999,10000,39999,40000,49999,50000,59999,60000,65535,65536,UINT32_MAX};
+    for(uint32_t start:{1u,UINT32_MAX-20000u})for(uint32_t delta:elapsed){
+        // Preserve unsigned platform-timer wrap before the original sixteen-bit conversion
+        fresh();s=read();s.lift=&buildings[0];s.weight=&buildings[2];s.operational=start;TestBridge_Write(&s);CStats::CommercialPassed=1;Timer_timeMs=start+delta;TestBridge_RunUpdate();updates++;snapshot();
+    }
+    fresh();s=read();s.lift=&buildings[0];s.weight=&buildings[2];s.oldLift=25;TestBridge_Write(&s);CStats::CommercialPassed=0;unsigned oldMatrices=matrixUpdates;TestBridge_RunUpdate();updates++;assert(matrixUpdates==oldMatrices&&read().state==STATE_BRIDGE_LOCKED&&read().operational==0);snapshot();
+    fresh();s=read();s.lift=&buildings[0];s.weight=&buildings[2];TestBridge_Write(&s);CStats::CommercialPassed=1;Timer_timeMs=0;TestBridge_RunUpdate();updates++;assert(read().operational==0);Timer_timeMs=17;TestBridge_RunUpdate();updates++;assert(read().operational==17);snapshot();
+#endif
+}
+static void callbacksAndQueries()
+{
+    // Exercise optional native attachments, live pointer changes, state rereads and every query state
+    for(int mode=0;mode<8;mode++){
+        // Vary independent native callback gates while retaining the original public preconditions
+        fresh();TestBridgeState s=read();s.lift=&buildings[0];s.road=&buildings[1];s.weight=&buildings[2];s.operational=100;TestBridge_Write(&s);Timer_timeMs=50100;CStats::CommercialPassed=1;
+        if(mode==1)buildings[0].matrix.m_attachment=nil;
+        if(mode==2)buildings[1].m_rwObject=nil;
+        if(mode==3)swapPointers=true;
+        if(mode==4)changeState=true;
+        if(mode==5){s.oldLift=std::numeric_limits<float>::quiet_NaN();TestBridge_Write(&s);}
+        if(mode==6){s.partZ=std::numeric_limits<float>::infinity();s.weightZ=-std::numeric_limits<float>::infinity();TestBridge_Write(&s);}
+        if(mode==7){s.lift=nil;TestBridge_Write(&s);}
+        TestBridge_RunUpdate();updates++;snapshot();
+#ifdef GTA_BRIDGE
+        if(mode==3)assert(swapped&&read().road==&buildings[4]&&buildings[4].GetPosition().z==100);
+        if(mode==4)assert(read().state==STATE_LIFT_PART_IS_DOWN&&ThePaths.m_carPathLinks[4].bBridgeLights==0);
+#endif
+    }
+    const int32_t models[]={INT32_MIN,-1,0,MI_BRIDGELIFT,MI_BRIDGEROADSEGMENT,MI_BRIDGEWEIGHT,INT32_MAX};
+    for(int state=-3;state<10;state++)for(int32_t model:models){
+        // Require bridge model qualification and flashing behavior for valid and unknown states
+        fresh();TestBridgeState s=read();s.state=state;TestBridge_Write(&s);bool flashing=TestBridge_RunFlashing(),moving=TestBridge_RunMoving(model);queries+=2;number(flashing);number(moving);
+#ifdef GTA_BRIDGE
+        assert(flashing==(state!=STATE_LIFT_PART_IS_DOWN));assert(moving==((model==MI_BRIDGELIFT||model==MI_BRIDGEROADSEGMENT)&&(state==STATE_LIFT_PART_ABOUT_TO_MOVE_UP||state==STATE_LIFT_PART_MOVING_UP)));
+#else
+        assert(!flashing&&!moving);
+#endif
+        snapshot();
+    }
+}
+int main()
+{
+    // Check static storage before any seeding and compare the complete controller through quiet console calls
+    TestBridgeState s=read();assert(!s.road&&!s.lift&&!s.weight&&s.state==0&&s.oldState==0&&s.partZ==0&&s.roadZ==0&&s.weightZ==0&&s.oldLift==0&&s.operational==0);
+    assert((CEntity *)&buildings[0]!=(CEntity *)(void *)&buildings[0]);scanCases();cycleCases();callbacksAndQueries();
+#ifndef GTA_BRIDGE
+    assert(poolReads==0&&modelReads==0&&matrixUpdates==0&&frameUpdates==0&&lightCalls==0);
+#endif
+    printf("states=%u updates=%u initializations=%u finds=%u queries=%u pools=%u models=%u matrices=%u parents=%u frames=%u lights=%u hash=%016llx\n",states,updates,initializations,finds,queries,poolReads,modelReads,matrixUpdates,parentReads,frameUpdates,lightCalls,(unsigned long long)hashValue);
+}

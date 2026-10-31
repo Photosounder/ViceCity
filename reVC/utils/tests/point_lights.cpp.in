@@ -1,0 +1,242 @@
+@COMMON@
+#include "caller.h"
+#include "main.h"
+#include "CutsceneMgr.h"
+#include "Camera.h"
+#include "Weather.h"
+#include "World.h"
+#include "Sprite.h"
+#include "RenderBuffer.h"
+#include "custompipes.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
+extern "C" { uint32_t Timer_timeMs; }
+static uint64_t hash=UINT64_C(1469598103934665603);
+static unsigned states,queries,grounds,extras,sprites,projections,starts,stops,flushes,groups,depth;
+static unsigned groundMode,screenMode;
+static bool cutscene,matrixPresent=true,liveCamera,reentrant,mutateAlias;
+static RwCamera camera;
+static RwFrame frame;
+static RwMatrix matrix;
+static RwIm3DVertex vertices[2][4];
+static RwImVertexIndex indices[2][6];
+CCamera TheCamera;
+float CWeather::Foggyness;
+GlobalScene Scene;
+RwRaster *gpPointlightRaster=(RwRaster *)19;
+namespace CustomPipes { bool bRenderingEnvMap;RwCamera *EnvMapCam; }
+static void require(bool condition)
+{
+    // Fail quietly at the current observable corpus position
+    if(!condition){fprintf(stderr,"states=%u queries=%u grounds=%u starts=%u\n",states,queries,grounds,starts);exit(2);}
+}
+static void word(uint32_t value)
+{
+    // Accumulate values independently of process addresses and padding
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static void floating(float value)
+{
+    // Compare finite bits exactly and NaNs by classification
+    uint32_t storage;memcpy(&storage,&value,4);word(isnan(value)?0x7fc00000u:storage);
+}
+static void vectorValue(const RwV3d &v)
+{
+    // Observe actual typed vector components in their original order
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void vectorValue(PointLightsVector v)
+{
+    // Observe the same components through the C record boundary
+    floating(v.x);floating(v.y);floating(v.z);
+}
+static void recordValue(PointLight value)
+{
+    // Observe all declared light fields without reading padding
+    vectorValue(value.coors);vectorValue(value.dir);floating(value.radius);floating(value.red);floating(value.green);floating(value.blue);word((uint8_t)value.type);word((uint8_t)value.fogType);word(value.castExtraShadows);
+}
+bool CCutsceneMgr::IsRunning(void)
+{
+    // Observe the original live eligibility query and its short-circuit order
+    word(1);word(cutscene);queries++;return cutscene;
+}
+CVector &CCamera::GetPosition(void)
+{
+    // Preserve repeated camera queries and legal getter-side changes
+    word(2);queries++;if(liveCamera){position.x+=0.00025f;position.y-=0.0005f;}return position;
+}
+#ifdef NATIVE_PROJECT_HEADERS
+RwMatrix *rw::Frame::getLTM(void)
+#else
+RwMatrix *RwFrame::getLTM(void)
+#endif
+{
+    // Preserve repeated original local-to-world matrix queries
+    require(this==&frame);word(3);queries++;return matrixPresent?&matrix:NULL;
+}
+RwFrame *RwCameraGetFrame(const RwCamera *value)
+{
+    // Observe the separate RenderWare frame entry point
+    require(value==&camera);word(4);queries++;return value->getFrame();
+}
+RwMatrix *RwFrameGetMatrix(RwFrame *value)
+{
+    // Observe the separate RenderWare frame-matrix entry point
+    require(value==&frame);word(5);queries++;return matrixPresent?&matrix:NULL;
+}
+bool CWorld::ProcessVerticalLine(const CVector &coors,float z2,CColPoint &point,CEntity *&entity,bool buildings,bool vehicles,bool peds,bool objects,bool dummies,bool seeThrough,CStoredCollPoly *poly)
+{
+    // Observe every query and all original collision flags with typed output storage
+    require(buildings && !vehicles && !peds && !objects && dummies && !seeThrough && poly==NULL);require(z2==coors.z-20.0f);word(6);vectorValue(coors);floating(z2);grounds++;bool hit=groundMode==0 || (groundMode==2 && grounds%3!=0);word(hit);if(hit){point.point=CVector(coors.x,coors.y,0.4f+coors.x*0.01f);entity=NULL;}return hit;
+}
+void AddAnExtraDirectionalLight(RpWorld *world,float x,float y,float z,float red,float green,float blue)
+{
+    // Observe every C-selected light and a live alias change from its legal owner sink
+    require(world==Scene.world);word(7);floating(x);floating(y);floating(z);floating(red);floating(green);floating(blue);extras++;if(mutateAlias){mutateAlias=false;PointLight value=TestPL_Record(false,0);value.coors={3.0f,0.0f,0.0f};TestPL_SetRecord(false,0,&value);}
+}
+void RemoveExtraDirectionalLights(RpWorld *world)
+{
+    // Observe original world selection and removal timing
+    require(world==Scene.world);word(8);
+}
+void CSprite::InitSpriteBuffer(void)
+{
+    // Preserve original main-fog buffer initialization
+    word(9);
+}
+void CSprite::FlushSpriteBuffer(void)
+{
+    // Preserve original main-fog flush timing
+    word(10);flushes++;
+}
+bool CSprite::CalcScreenCoors(const RwV3d &coors,RwV3d *screen,float *width,float *height,bool farclip)
+{
+    // Observe projection decisions and write actual output vector fields
+    require(farclip);word(11);vectorValue(coors);projections++;screen->x=coors.x*0.5f;screen->y=coors.y*0.25f;screen->z=10.0f+coors.z*0.02f;*width=0.125f;*height=0.25f;bool visible=screenMode==0 || (screenMode==2 && projections%5!=0);word(visible);return visible;
+}
+void CSprite::RenderBufferedOneXLUSprite_Rotate_Aspect(float x,float y,float z,float width,float height,uint8 red,uint8 green,uint8 blue,int16 intensity,float reciprocal,float rotation,uint8 alpha)
+{
+    // Observe the exact original sprite signature including narrowed colors and intensity
+    require(alpha==255);word(12);floating(x);floating(y);floating(z);floating(width);floating(height);word(red);word(green);word(blue);word((uint16_t)intensity);floating(reciprocal);floating(rotation);word(alpha);sprites++;
+}
+void PushRendergroup(const char *name)
+{
+    // Retain the original renderer labels and group configuration
+    word(13);for(const char *p=name;*p;p++)word((unsigned char)*p);groups++;
+}
+void PopRendergroup(void)
+{
+    // Retain the original final debug boundary
+    word(14);groups++;
+}
+RwBool RwRenderStateSet(RwRenderState state,void *value)
+{
+    // Observe all real render-state identifiers and values
+    word(15);word((uint32_t)state);word((uint32_t)(uintptr_t)value);return 1;
+}
+static void geometry(void)
+{
+    // Observe both allocated buffers including persistent vertex and index contents
+    for(int buffer=0;buffer<2;buffer++)for(int i=0;i<4;i++){RwIm3DVertex &v=vertices[buffer][i];floating(v.getX());floating(v.getY());floating(v.getZ());RwRGBA c=v.getColor();word(c.red);word(c.green);word(c.blue);word(c.alpha);floating(v.getU());floating(v.getV());}
+    for(int b=0;b<2;b++)for(int i=0;i<6;i++)word(indices[b][i]);
+}
+void RenderBuffer::RenderStuffInBuffer(void)
+{
+    // Observe shared geometry before every original flush
+    word(16);geometry();flushes++;
+}
+void RenderBuffer::ClearRenderBuffer(void)
+{
+    // Preserve the original clear event without inventing vertex zeroing
+    word(17);
+}
+void RenderBuffer::StartStoring(int indicesCount,int verticesCount,RwImVertexIndex **outputIndices,RwIm3DVertex **outputVertices)
+{
+    // Return legal alternating allocations and test reentry after publishing the original pointers
+    require(indicesCount==6 && verticesCount==4);word(18);unsigned buffer=starts++&1;*outputIndices=indices[buffer];*outputVertices=vertices[buffer];if(reentrant && depth==0 && starts%11==0){depth=1;TestPL_Billboard({1.0f,2.0f,3.0f},{1.0f,0.0f,0.0f},{0.0f,1.0f,0.0f},0.5f,0.5f,0.6f,0.7f,100.0f,0.25f);depth=0;}
+}
+void RenderBuffer::StopStoring(void)
+{
+    // Observe all writes committed through the original local allocation pointers
+    word(19);geometry();stops++;
+}
+void RwIm3DVertexSetPos(RwIm3DVertex *v,RwReal x,RwReal y,RwReal z)
+{
+    // Write the actual typed position storage
+    v->setX(x);v->setY(y);v->setZ(z);
+}
+void RwIm3DVertexSetRGBA(RwIm3DVertex *v,RwUInt8 r,RwUInt8 g,RwUInt8 b,RwUInt8 a)
+{
+    // Write the actual typed color storage
+    v->setColor(r,g,b,a);
+}
+void RwIm3DVertexSetU(RwIm3DVertex *v,RwReal value)
+{
+    // Write the actual typed U coordinate
+    v->setU(value);
+}
+void RwIm3DVertexSetV(RwIm3DVertex *v,RwReal value)
+{
+    // Write the actual typed V coordinate
+    v->setV(value);
+}
+static void snapshot(void)
+{
+    // Compare all light payloads and the complete ground-cache ring
+    for(int env=0;env<2;env++){word((uint16_t)TestPL_Count(env!=0));for(int i=0;i<NUMPOINTLIGHTS;i++)recordValue(TestPL_Record(env!=0,i));}
+    for(int i=0;i<32;i++){vectorValue(TestPL_Cache(i));floating(TestPL_CacheResult(i));}word((uint32_t)TestPL_Next());for(int i=0;i<8;i++)floating(FogSizes[i]);states++;
+}
+static void setFrame(bool present)
+{
+    // Configure an actual camera object without calling an external allocator
+#ifdef NATIVE_PROJECT_HEADERS
+    camera.object.object.parent=present?&frame:NULL;
+#else
+    camera.frame=present?&frame:NULL;
+#endif
+}
+static void reset(void)
+{
+    // Reinitialize only the state reset by the original public operations
+    TheCamera.position=CVector(0.0f,0.0f,0.0f);CWeather::Foggyness=0.5f;groundMode=0;screenMode=2;cutscene=false;liveCamera=false;matrixPresent=true;setFrame(true);CustomPipes::bRenderingEnvMap=false;CustomPipes::EnvMapCam=&camera;gpPointlightRaster=(RwRaster *)19;Scene.world=(RpWorld *)17;Timer_timeMs=3141;matrix.pos.x=0.0f;matrix.pos.y=0.0f;matrix.pos.z=1.0f;matrix.at.x=0.0f;matrix.at.y=2.0f;matrix.at.z=0.0f;matrix.right.x=3.0f;matrix.right.y=0.0f;matrix.right.z=0.0f;matrix.up.x=0.0f;matrix.up.y=0.0f;matrix.up.z=4.0f;TestPL_Init();TestPL_InitPerFrame();snapshot();
+}
+static PointLight light(int type,float x,float radius,int fog)
+{
+    // Construct complete records with bounded colors and deterministic directions
+    PointLight r={{x,0.0f,1.0f},{1.0f,0.0f,0.0f},radius,0.5f,0.6f,0.7f,(int8_t)type,(int8_t)fog,true};return r;
+}
+int main(void)
+{
+    // Verify original record offsets at the public C boundary
+    static_assert(sizeof(PointLight)==44 && alignof(PointLight)==4,"C record");static_assert(offsetof(PointLight,dir)==12 && offsetof(PointLight,radius)==24 && offsetof(PointLight,type)==40 && offsetof(PointLight,castExtraShadows)==42,"C fields");
+    reset();CVector position(0.0f,0.0f,0.0f),direction(1.0f,0.0f,0.0f);float height=77.0f;unsigned oldGrounds=grounds;require(TestPL_Vertical(&position,&height) && height==0.0f && grounds==oldGrounds);snapshot();
+    // Exercise success/failure, exact cache hits, full ring wrap and signed-zero coordinates
+    for(unsigned i=0;i<300;i++){groundMode=i%3;position=CVector((float)(i%47)+0.25f,(float)(i%5)-2.0f,3.0f);height=77.0f;bool found=TestPL_Vertical(&position,&height);word(found);floating(height);if(found){oldGrounds=grounds;require(TestPL_Vertical(&position,&height) && grounds==oldGrounds);}snapshot();}
+    // Cover capacity, strict registration distance gates, camera branches and fading boundaries
+    float distances[]={0.0f,16.4999f,16.5f,21.9999f,22.0f,22.0001f,-21.9999f,-22.0f};
+    for(unsigned branch=0;branch<5;branch++){
+        // Preserve live repeated matrix queries and independent reflection capacity
+        reset();CustomPipes::bRenderingEnvMap=branch!=0;CustomPipes::EnvMapCam=branch==1?NULL:&camera;setFrame(branch!=2);matrixPresent=branch!=3;liveCamera=branch==0;
+        for(unsigned i=0;i<80;i++){position=CVector(distances[i%8],i%3==0?22.0f:0.0f,i%7==0?22.0f:1.0f);if(i&1)TestPL_Add((uint8_t)(i%6),&position,&direction,5.0f,0.5f,0.6f,0.7f,(uint8_t)(i%3),(i&2)!=0);else TestPL_AddC((uint8_t)(i%6),&position,&direction,5.0f,0.5f,0.6f,0.7f,(uint8_t)(i%3),(i&2)!=0);snapshot();}TestPL_ResetEnv();snapshot();TestPL_InitPerFrame();snapshot();
+    }
+    // Compare exact lighting thresholds, directional cones, darkening and duplicate preference
+    for(unsigned env=0;env<2;env++)for(unsigned variant=0;variant<10;variant++){
+        // Seed both camera lists with equal and just-distinct reflection sources
+        reset();CustomPipes::bRenderingEnvMap=env!=0;TestPL_SetCounts(6,3);for(int i=0;i<6;i++){PointLight l=light(i%5,(float)i-2.0f,variant==0?0.0f:5.0f,i%3);TestPL_SetRecord(false,i,&l);if(i<3){if(variant&1)l.coors.y=variant==1?0.0099f:0.0101f;l.red=0.8f;TestPL_SetRecord(true,i,&l);}}
+        for(unsigned j=0;j<7;j++){position=CVector((float)j-2.0f,0.0f,j&1?1.0f:0.0f);floating(TestPL_Generate(&position));snapshot();}TestPL_Remove();
+    }
+    // Keep object-coordinate aliases live across directional-light owner calls
+    reset();TestPL_SetCounts(4,0);for(int i=0;i<4;i++){PointLight l=light(0,(float)i*1.5f,9.0f,0);TestPL_SetRecord(false,i,&l);}mutateAlias=true;floating(TestPL_GenerateAlias());require(!mutateAlias);snapshot();
+    // Compare every main and auxiliary fog branch with bounded deterministic samples
+    for(unsigned type=0;type<5;type++)for(unsigned mode=0;mode<3;mode++){
+        // Preserve early camera/texture/cutscene exits and both ground/projection outcomes
+        reset();PointLight l=light((int)type,-1.25f,7.0f,mode==0?1:2);TestPL_SetRecord(false,0,&l);TestPL_SetRecord(true,0,&l);TestPL_SetCounts(1,1);groundMode=mode;screenMode=mode;CWeather::Foggyness=mode==0?0.0f:0.75f;TestPL_Fog();for(unsigned branch=0;branch<6;branch++){cutscene=branch==1;gpPointlightRaster=branch==2?NULL:(RwRaster *)19;setFrame(branch!=3);matrixPresent=branch!=4;CustomPipes::bRenderingEnvMap=true;TestPL_Env(branch==0?NULL:&camera);snapshot();}cutscene=false;gpPointlightRaster=(RwRaster *)19;setFrame(true);matrixPresent=true;TestPL_EnvLights(&camera,&l,1);snapshot();
+    }
+    // Cover independently supplied fog lists, duplicate merge capacity and sample-buffer reentry
+    reset();TestPL_SetCounts(NUMPOINTLIGHTS,NUMPOINTLIGHTS);for(int i=0;i<NUMPOINTLIGHTS;i++){PointLight l=light(i%5,(float)(i%7)-3.0f,5.0f,i%3);TestPL_SetRecord(false,i,&l);if(i&1)l.coors.y+=0.02f;l.red=0.4f;TestPL_SetRecord(true,i,&l);}CustomPipes::bRenderingEnvMap=true;reentrant=true;TestPL_Env(&camera);reentrant=false;snapshot();
+    // Exercise the complete billboard helper including invisible and degenerate-basis cases
+    for(unsigned i=0;i<40;i++){TestPL_Billboard({1.0f,2.0f,3.0f},i&1?PointLightsVector{1.0f,0.0f,0.0f}:PointLightsVector{0.0f,0.0f,0.0f},{0.0f,1.0f,0.0f},(float)i*0.25f,0.5f,0.6f,0.7f,i%3==0?0.0f:132.0f,(float)i*0.125f);snapshot();}
+    require(starts==stops && sprites>0 && extras>0 && grounds>300);printf("%016llx states=%u queries=%u grounds=%u extras=%u sprites=%u projections=%u quads=%u flushes=%u groups=%u\n",(unsigned long long)hash,states,queries,grounds,extras,sprites,projections,starts,flushes,groups);return 0;
+}

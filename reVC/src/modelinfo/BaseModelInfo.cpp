@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "templates.h"
@@ -39,7 +41,8 @@ CBaseModelInfo::DeleteCollisionModel(void)
 //+ rouz edit (ChatGPT)
 			// Destroy and release the collision model without invoking C++ delete.
 		{
-			m_colModel->~CColModel();
+			// Invoke the complete C collision owner at the original native lifetime or operation boundary
+			ColModel_Destroy(m_colModel);
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
 			CPool_Delete(CPools::GetColModelPool(), m_colModel);
@@ -67,22 +70,26 @@ CBaseModelInfo::RemoveRef(void)
 void
 CBaseModelInfo::SetTexDictionary(const char *name)
 {
-	int slot = CTxdStore::FindTxdSlot(name);
+	// Use the complete C texture dictionary owner with the original live arguments
+	int slot = TxdStore_FindTxdSlot(name);
 	if(slot == -1)
-		slot = CTxdStore::AddTxdSlot(name);
+		// Use the complete C texture dictionary owner with the original live arguments
+		slot = TxdStore_AddTxdSlot(name);
 	m_txdSlot = slot;
 }
 
 void
 CBaseModelInfo::AddTexDictionaryRef(void)
 {
-	CTxdStore::AddRef(m_txdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_AddRef(m_txdSlot);
 }
 
 void
 CBaseModelInfo::RemoveTexDictionaryRef(void)
 {
-	CTxdStore::RemoveRef(m_txdSlot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveRef(m_txdSlot);
 }
 
 void
@@ -117,3 +124,5 @@ CBaseModelInfo::Get2dEffect(int n)
 	else
 		return nil;
 }
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

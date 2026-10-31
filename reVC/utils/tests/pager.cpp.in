@@ -1,0 +1,281 @@
+#include "owners.h"
+#include <limits.h>
+#include <initializer_list>
+#undef assert
+static unsigned checks,states,lengths,expansions,briefs,displays,callbacks;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static CPager *active;
+static int callbackMode;
+static uint16_t texts[12][240];
+static uint16_t lastLength;
+static void require(bool value,const char *expression,int line)
+{
+    // Retain independent behavior checks in development, vanilla and MASTER profiles
+    checks++;if(!value){fprintf(stderr,"%d: %s\n",line,expression);abort();}
+}
+#define assert(expression) require(!!(expression),#expression,__LINE__)
+static void bytes(const void *pointer,size_t size)
+{
+    // Hash native state bytes without embedding process-dependent pointer values
+    const uint8_t *p=(const uint8_t *)pointer;
+    for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Normalize scalar observations to the same integer width on both architectures
+    bytes(&value,4);
+}
+static uint32_t pointerId(const uint16_t *pointer)
+{
+    // Identify borrowed source strings and interior aliases independently of ASLR
+    uintptr_t address=(uintptr_t)pointer,start=(uintptr_t)&texts[0][0];
+    if(!pointer)return 0;
+    if(address>=start&&address<start+sizeof(texts))return 1+(uint32_t)((address-start)/2);
+    return UINT32_MAX;
+}
+static unsigned wideLength(const uint16_t *text)
+{
+    // Observe bounded fixture text without invoking another controller boundary
+    unsigned result=0;if(text)while(text[result])result++;return result;
+}
+static void observeText(const uint16_t *text)
+{
+    // Include exact UTF-16 contents while preserving null versus empty inputs
+    number(text?1:0);if(text)bytes(text,(wideLength(text)+1)*2);
+}
+uint32_t Timer_timeMs;
+bool CHud::m_Wants_To_Draw_Hud;
+wchar CHud::m_BigMessage[6][128];
+wchar CHud::m_PagerMessage[256];
+TestCamera TheCamera;
+uint8 CFont::LanguageSet;
+tPreviousBrief CMessages::PreviousBriefs[NUMPREVIOUSBRIEFS];
+static CPager &canonical()
+{
+    // Exercise the actual C-owned static queue after conversion
+#ifdef TEST_PAGER_ORIGINAL
+    static CPager original;return original;
+#else
+    return Pager_state;
+#endif
+}
+static void observe()
+{
+    // Include all queue bytes except pointer representations and every native history/HUD result
+    bytes(active,offsetof(CPager,m_messages));
+    for(int i=0;i<NUMPAGERMESSAGES;i++){
+        // Retain inactive fields, record padding and stable borrowed-pointer identity
+        PagerMessage &message=active->m_messages[i];number(pointerId(message.m_pText));
+        bytes((const uint8_t *)&message+sizeof(message.m_pText),sizeof(message)-sizeof(message.m_pText));
+    }
+    for(int i=0;i<NUMPREVIOUSBRIEFS;i++){
+        // Compare the untouched native previous-brief owner using all named fields
+        number(pointerId(CMessages::PreviousBriefs[i].m_pText));bytes(CMessages::PreviousBriefs[i].m_nNumber,24);number(pointerId(CMessages::PreviousBriefs[i].m_pString));
+    }
+    bytes(CHud::m_PagerMessage,sizeof(CHud::m_PagerMessage));number(Timer_timeMs);
+}
+static void snapshot()
+{
+    // Record complete observable state after each operation
+    observe();states++;
+}
+static void resetTexts()
+{
+    // Supply persistent writable UTF-16 strings with safe original numeric expansion bounds
+    memset(texts,0,sizeof(texts));
+    const char *source[]={"","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef","Second message","Third message","A","0123456789","A=~1~/B=~1~/C=~1~/D=~1~/E=~1~/F=~1~","Value ~1~","~1~ and ~1~","","","Long text"};
+    for(int i=0;i<12;i++)for(unsigned j=0;source[i][j];j++)texts[i][j]=(uint8_t)source[i][j];
+    texts[9][0]=0x6771;texts[9][1]=0x8000|'~';texts[9][2]=0x8000|'1';texts[9][3]=0x8000|'~';texts[9][4]=0x4eac;
+    texts[10][0]=0x00e9;texts[10][1]=0x03bb;texts[10][2]=0x4e2d;
+    for(int j=0;j<200;j++)texts[11][j]=(uint16_t)('a'+j%26);texts[11][200]=0;
+}
+static void seed(CPager &state,bool filled=false,uint8_t pattern=0x5a)
+{
+    // Give every pointer and consumed scalar valid values while retaining nonzero padding and stale fields
+    resetTexts();memset(&state,pattern,sizeof(state));state.m_nNumDisplayLetters=8;
+    for(int i=0;i<NUMPAGERMESSAGES;i++){
+        // Seed complete active or inactive records without changing their actual storage addresses
+        PagerMessage &m=state.m_messages[i];m.m_pText=filled?texts[1+i%5]:NULL;m.m_nSpeedMs=(uint16_t)(100+i);m.m_nCurrentPosition=0;
+        m.m_nStringLength=(uint16_t)wideLength(texts[1+i%5]);m.m_nPriority=(uint16_t)(8-i);m.m_nTimeToChangePosition=100;m.unused=(int16_t)(200+i);
+        for(int n=0;n<6;n++)m.m_nNumber[n]=(i+n)*11-17;
+    }
+    active=&state;callbackMode=0;Timer_timeMs=0;TheCamera.m_WideScreenOn=false;CHud::m_Wants_To_Draw_Hud=true;CFont::LanguageSet=0;
+    memset(CHud::m_BigMessage,0,sizeof(CHud::m_BigMessage));memset(CHud::m_PagerMessage,0x31,sizeof(CHud::m_PagerMessage));memset(CMessages::PreviousBriefs,0,sizeof(CMessages::PreviousBriefs));
+}
+uint16 CMessages::GetWideStringLength(wchar *str)
+{
+    // Observe the native length boundary and run its complete original implementation
+    number(1);observeText(str);observe();lengths++;uint16 result=RealGetWideStringLength(str);lastLength=result;
+    if(callbackMode==1){
+        // Change width, time and borrowed text after its original length has been captured
+        active->m_nNumDisplayLetters=12;Timer_timeMs=500;texts[1][32]='!';texts[1][33]=0;callbacks++;
+    }
+    if(callbackMode==8&&pointerId(str)==UINT32_MAX){
+        // Mutate live insertion settings only after measuring the temporary expanded string
+        active->m_nNumDisplayLetters=-2;Timer_timeMs=UINT32_MAX-5;callbacks++;
+    }
+    return result;
+}
+void CMessages::InsertNumberInString(wchar *str,int32 n1,int32 n2,int32 n3,int32 n4,int32 n5,int32 n6,wchar *output)
+{
+    // Execute the entire original UTF-16 expansion before any display-state callback
+    number(2);observeText(str);int32 numbers[]={n1,n2,n3,n4,n5,n6};bytes(numbers,sizeof(numbers));observe();expansions++;
+    RealInsertNumberInString(str,n1,n2,n3,n4,n5,n6,output);observeText(output);
+    if(callbackMode==2){
+        // Preserve the captured expansion while changing the subsequently read scroll fields
+        active->m_messages[0].m_pText=texts[2];active->m_messages[0].m_nCurrentPosition=2;active->m_nNumDisplayLetters=4;callbacks++;
+    }
+}
+void CMessages::AddToPreviousBriefArray(wchar *str,int32 n1,int32 n2,int32 n3,int32 n4,int32 n5,int32 n6,wchar *string)
+{
+    // Observe the exact captured payload and execute full native history insertion and deduplication
+    number(3);number(pointerId(str));int32 numbers[]={n1,n2,n3,n4,n5,n6};bytes(numbers,sizeof(numbers));number(pointerId(string));observe();briefs++;
+    RealAddToPreviousBriefArray(str,n1,n2,n3,n4,n5,n6,string);
+    if(callbackMode==6){
+        // Remove the just-registered head after all original payload writes have completed
+        active->m_messages[0].m_pText=NULL;active->m_nNumDisplayLetters=10;callbacks++;
+    }
+    if(callbackMode==7){
+        // Replace a newly promoted head before Process enters its subsequent display call
+        active->m_messages[0].m_pText=texts[3];active->m_messages[0].m_nCurrentPosition=1;callbacks++;
+    }
+}
+void CHud::SetPagerMessage(wchar *message)
+{
+    // Copy the exact original scroll slice through the entire native HUD setter
+    number(4);observeText(message);observe();displays++;RealSetPagerMessage(message);
+    if(callbackMode==3){
+        // Remove the head before Process performs its original post-display registration check
+        active->m_messages[0].m_pText=NULL;callbacks++;
+    }
+    if(callbackMode==4||callbackMode==5){
+        // Change the live timing operands after display but before the strict update comparison
+        Timer_timeMs=callbackMode==4?900:901;active->m_messages[0].m_nCurrentPosition=5;active->m_messages[0].m_nTimeToChangePosition=900;active->m_messages[0].m_nSpeedMs=17;callbacks++;
+    }
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Fail violated native preconditions quietly without a Windows assertion dialog
+    fprintf(stderr,"%s %s:%u %s\n",expression,file,line,function);abort();
+}
+static uint32_t randomState=0x13895aa1;
+static uint32_t random32()
+{
+    // Generate reproducible queue operations with valid text and arithmetic preconditions
+    randomState^=randomState<<13;randomState^=randomState>>17;randomState^=randomState<<5;return randomState;
+}
+int main()
+{
+    // Verify static zero initialization before any state preparation
+    CPager &state=canonical();active=&state;const uint8_t *startup=(const uint8_t *)&state;
+    for(size_t i=0;i<sizeof(state);i++)assert(startup[i]==0);
+    seed(state,true);CPager expected;memcpy(&expected,&state,sizeof(state));expected.m_nNumDisplayLetters=8;for(int i=0;i<8;i++)expected.m_messages[i].m_pText=NULL;
+    Run_Pager_Init(&state);assert(memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    seed(state,true);state.m_nNumDisplayLetters=17;memcpy(&expected,&state,sizeof(state));for(int i=0;i<8;i++)expected.m_messages[i].m_pText=NULL;
+    Run_Pager_ClearMessages(&state);assert(memcmp(&expected,&state,sizeof(state))==0);snapshot();Run_Pager_RestartCurrentMessage(&state);assert(memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    seed(state);Run_Pager_Init(&state);uint16_t priorities[]={7,7,5,9,5,0,65535,1};int order[]={6,3,0,1,2,4,7,5};
+    for(int i=0;i<8;i++){
+        // Insert complete queue payloads with stable ordering among equal priorities
+        Run_Pager_AddMessage(&state,texts[1+i%5],(uint16_t)(i*100),priorities[i],(uint16_t)(1000+i));snapshot();
+    }
+    for(int i=0;i<8;i++)assert(state.m_messages[i].unused==1000+order[i]);
+    memcpy(&expected,&state,sizeof(state));unsigned count=lengths,previous=briefs;Run_Pager_AddMessage(&state,texts[2],1,0,900);
+    assert(lengths==count+1&&briefs==previous&&memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    count=lengths;unsigned expanded=expansions;Run_Pager_AddMessageWithNumber(&state,texts[1],1,2,3,4,5,6,1,0,901);
+    assert(lengths==count+2&&expansions==expanded+1&&memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    Run_Pager_AddMessage(&state,texts[2],0,65535,900);assert(state.m_messages[0].unused==1006&&state.m_messages[1].unused==900&&state.m_messages[7].unused==1007&&briefs==previous);snapshot();
+    seed(state,true);state.m_messages[2].m_pText=NULL;PagerMessage tail=state.m_messages[3];Run_Pager_AddMessage(&state,texts[4],55,0,65535);
+    assert(state.m_messages[2].m_pText==texts[4]&&state.m_messages[2].unused==-1&&memcmp(&tail,&state.m_messages[3],sizeof(tail))==0);snapshot();
+    seed(state);Timer_timeMs=UINT32_MAX-1;Run_Pager_AddMessage(&state,texts[1]+1,65535,1,65535);
+    assert(state.m_messages[0].m_pText==texts[1]+1&&state.m_messages[0].m_nStringLength==31&&state.m_messages[0].m_nTimeToChangePosition==65533&&state.m_messages[0].unused==-1);snapshot();
+    seed(state);Run_Pager_AddMessageWithNumber(&state,NULL,INT_MIN,INT_MAX,-1,0,7,8,0,0,0);
+    assert(state.m_messages[0].m_pText==NULL&&state.m_messages[0].m_nStringLength==0&&state.m_messages[0].m_nNumber[0]==INT_MIN&&state.m_messages[0].m_nNumber[1]==INT_MAX);snapshot();
+    for(int width:{-3,0,1,8,16})for(int position:{-20,-18,-8,-1,0,1,7,31,32}){
+        // Compare negative padding, exact slices, terminators and zero-width displays without queue mutation
+        seed(state,true);state.m_nNumDisplayLetters=(int16_t)width;state.m_messages[0].m_nCurrentPosition=(int16_t)position;memcpy(&expected,&state,sizeof(state));
+        Run_Pager_Display(&state);unsigned n=0;
+        for(;n<(unsigned)(width<0?0:width);n++){
+            // Derive the independent expected slice directly from the original plain UTF-16 source
+            int index=position+(int)n;if(index>=0&&!texts[1][index])break;assert(CHud::m_PagerMessage[n]==(index<0?' ':texts[1][index]));
+        }
+        assert(CHud::m_PagerMessage[n]==0&&memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    }
+    for(int locale:{0,(int)FONT_LANGSET_JAPANESE})for(int text:{6,7,8,9,10,11}){
+        // Retain all six numbers, native locale-dependent expansion length and UTF-16 source identity
+        seed(state);CFont::LanguageSet=(uint8)locale;Run_Pager_AddMessageWithNumber(&state,texts[text],12,-3,456,0,9999999,-12345678,65535,42,900);
+        assert(state.m_messages[0].m_pText==texts[text]&&state.m_messages[0].m_nStringLength==lastLength&&state.m_messages[0].m_nNumber[5]==-12345678);
+        state.m_messages[0].m_nCurrentPosition=0;Run_Pager_Display(&state);
+        if(text==6&&locale==0)assert(CHud::m_PagerMessage[0]=='A'&&CHud::m_PagerMessage[2]=='1'&&CHud::m_PagerMessage[3]=='2');
+        if(text==9)assert(CHud::m_PagerMessage[0]==0x6771);
+        snapshot();
+    }
+    for(uint32_t time:{99u,100u,101u,UINT32_MAX}){
+        // Distinguish the strict timer comparison and retain display-before-position-update behavior
+        seed(state,true);Timer_timeMs=time;Run_Pager_Process(&state);
+        assert(CHud::m_PagerMessage[0]=='A'&&state.m_messages[0].m_nCurrentPosition==(time>100?1:0));
+        assert(state.m_messages[0].m_nTimeToChangePosition==(time>100?time+100:100));snapshot();
+    }
+    for(unsigned flags=0;flags<16;flags++){
+        // Restart only for the original camera/HUD/two-channel gates even when the old deadline is still in the future
+        seed(state,true);state.m_messages[0].m_nCurrentPosition=7;state.m_messages[0].m_nTimeToChangePosition=10000;Timer_timeMs=1;
+        TheCamera.m_WideScreenOn=(flags&1)!=0;CHud::m_Wants_To_Draw_Hud=(flags&2)==0;CHud::m_BigMessage[0][0]=(flags&4)?'X':0;CHud::m_BigMessage[2][0]=(flags&8)?'Y':0;
+        CHud::m_BigMessage[1][0]='Z';Run_Pager_Process(&state);assert(CHud::m_PagerMessage[0]=='H'&&state.m_messages[0].m_nCurrentPosition==(flags?-18:7)&&state.m_messages[0].m_nTimeToChangePosition==(flags?101u:10000u));snapshot();
+    }
+    seed(state);memcpy(&expected,&state,sizeof(state));count=displays;Run_Pager_Process(&state);assert(displays==count+1&&CHud::m_PagerMessage[0]==0&&memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    for(int amount:{1,2,8}){
+        // Retain full record assignments and the first empty-slot stop rule when a completed head expires
+        seed(state,true);for(int i=amount;i<8;i++)state.m_messages[i].m_pText=NULL;state.m_messages[0].m_nCurrentPosition=(int16_t)state.m_messages[0].m_nStringLength;
+        if(amount>1)state.m_messages[1].m_nCurrentPosition=3;memcpy(&expected,&state,sizeof(state));
+        for(int i=0;i<amount-1;i++)expected.m_messages[i]=state.m_messages[i+1];expected.m_messages[amount-1].m_pText=NULL;
+        count=briefs;Run_Pager_Process(&state);assert(memcmp(&expected,&state,sizeof(state))==0&&briefs==count+(amount>1?1:0));snapshot();
+    }
+    seed(state,true);state.m_messages[0].m_nCurrentPosition=(int16_t)state.m_messages[0].m_nStringLength;state.m_messages[1].m_pText=NULL;
+    tail=state.m_messages[2];count=briefs;Run_Pager_Process(&state);assert(state.m_messages[0].m_pText==NULL&&memcmp(&tail,&state.m_messages[2],sizeof(tail))==0&&briefs==count);snapshot();
+    for(int width:{-3,0,8,20}){
+        // Preserve explicit restarts, unsigned deadline wrap and the unchanged fields of all other slots
+        seed(state,true);state.m_nNumDisplayLetters=(int16_t)width;Timer_timeMs=UINT32_MAX-5;memcpy(&expected,&state,sizeof(state));
+        expected.m_messages[0].m_nCurrentPosition=(int16_t)(-(width+10));expected.m_messages[0].m_nTimeToChangePosition=94;
+        Run_Pager_RestartCurrentMessage(&state);assert(memcmp(&expected,&state,sizeof(state))==0);snapshot();
+    }
+    for(int mode:{1,2,3,4,5,6,7,8}){
+        // Check live queue mutations at every stateful native string/history/HUD boundary
+        seed(state,(mode>=2&&mode<=5)||mode==7);callbackMode=mode;
+        if(mode==1){Run_Pager_AddMessage(&state,texts[1],37,1,9);assert(state.m_messages[0].m_nStringLength==32&&state.m_messages[0].m_nCurrentPosition==-22&&state.m_messages[0].m_nTimeToChangePosition==537&&state.m_messages[0].m_pText==texts[1]);}
+        if(mode==2){Run_Pager_Display(&state);assert(CHud::m_PagerMessage[0]=='C'&&CHud::m_PagerMessage[3]=='F'&&CHud::m_PagerMessage[4]==0&&state.m_messages[0].m_pText==texts[2]);}
+        if(mode==3){Timer_timeMs=101;Run_Pager_Process(&state);assert(state.m_messages[0].m_pText==NULL&&state.m_messages[0].m_nCurrentPosition==0&&state.m_messages[0].m_nTimeToChangePosition==100);}
+        if(mode==4||mode==5){Run_Pager_Process(&state);assert(state.m_messages[0].m_nCurrentPosition==(mode==4?5:6)&&state.m_messages[0].m_nTimeToChangePosition==(mode==4?900u:918u)&&CHud::m_PagerMessage[0]=='A');}
+        if(mode==6){Run_Pager_AddMessage(&state,texts[1],37,1,9);assert(state.m_messages[0].m_pText==NULL&&state.m_messages[0].m_nSpeedMs==37&&state.m_nNumDisplayLetters==10);}
+        if(mode==7){state.m_messages[0].m_nCurrentPosition=(int16_t)state.m_messages[0].m_nStringLength;Run_Pager_Process(&state);assert(state.m_messages[0].m_pText==texts[3]&&CHud::m_PagerMessage[0]==texts[3][1]);}
+        if(mode==8){Run_Pager_AddMessageWithNumber(&state,texts[7],123,-1,-1,-1,-1,-1,37,1,9);assert(state.m_nNumDisplayLetters==-2&&state.m_messages[0].m_nCurrentPosition==-8&&state.m_messages[0].m_nTimeToChangePosition==31);}
+        snapshot();
+    }
+    seed(state);Run_Pager_AddMessage(&state,texts[1],0,1,0);texts[1][0]='Z';state.m_messages[0].m_nCurrentPosition=0;Run_Pager_Display(&state);assert(CHud::m_PagerMessage[0]=='Z'&&state.m_messages[0].m_pText==texts[1]);snapshot();
+    seed(state);Run_Pager_Init(&state);
+    for(int i=0;i<10000;i++){
+        // Compare full interleaved queue operations with valid bounded text, positions and numeric expansions
+        callbackMode=0;Timer_timeMs=random32();TheCamera.m_WideScreenOn=(random32()%9)==0;CHud::m_Wants_To_Draw_Hud=(random32()%7)!=0;CHud::m_BigMessage[0][0]=(random32()%11)==0;CHud::m_BigMessage[2][0]=(random32()%13)==0;
+        switch(random32()%8){
+        case 0:Run_Pager_Init(&state);break;
+        case 1:Run_Pager_Process(&state);break;
+        case 2:Run_Pager_Display(&state);break;
+        case 3:{
+            // Draw each call argument in a fixed sequence independent of compiler evaluation order
+            uint32_t text=random32()%6;uint16_t speed=(uint16_t)random32(),priority=(uint16_t)(random32()%20),unused=(uint16_t)random32();
+            Run_Pager_AddMessage(&state,texts[text],speed,priority,unused);break;
+        }
+        case 4:{
+            // Keep every original fixed-size numeric temporary within its established valid range
+            int32_t values[6];for(int n=0;n<6;n++)values[n]=(int32_t)(random32()%2000000)-1000000;
+            uint32_t text=6+random32()%3;uint16_t speed=(uint16_t)random32(),priority=(uint16_t)(random32()%20),unused=(uint16_t)random32();
+            Run_Pager_AddMessageWithNumber(&state,texts[text],values[0],values[1],values[2],values[3],values[4],values[5],speed,priority,unused);break;
+        }
+        case 5:Run_Pager_ClearMessages(&state);break;
+        case 6:Run_Pager_RestartCurrentMessage(&state);break;
+        case 7:if(state.m_messages[0].m_pText)state.m_messages[0].m_nCurrentPosition=(int16_t)state.m_messages[0].m_nStringLength;Run_Pager_Process(&state);break;
+        }
+        snapshot();
+    }
+    // Check a local explicit receiver independently of the canonical queue
+    CPager local;seed(local,false,0x21);Run_Pager_Init(&local);Run_Pager_AddMessage(&local,texts[2],33,7,19);assert(local.m_messages[0].m_pText==texts[2]&&local.m_messages[0].m_nCurrentPosition==-18);snapshot();
+    printf("states=%u checks=%u lengths=%u expansions=%u briefs=%u displays=%u callbacks=%u hash=%016llx\n",states,checks,lengths,expansions,briefs,displays,callbacks,(unsigned long long)hashValue);
+}

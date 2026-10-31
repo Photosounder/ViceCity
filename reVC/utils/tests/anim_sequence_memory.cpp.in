@@ -1,0 +1,35 @@
+unsigned fixtureAllocations=0,fixtureFrees=0,eventCount=0,events[1024],moveMode=0;
+size_t fixtureBytes=0,lastBytes=0;
+CAnimBlendSequence *observedSequence=NULL;
+TestHeap gMainHeap;
+struct Allocation {void *pointer;unsigned identity;bool alive;};
+static Allocation live[256];
+static unsigned identity=0;
+static unsigned pointerIdentity(void *pointer)
+{
+    // Normalize allocation identity independently of executable addresses and sequence layout
+    if(!pointer)return 0;
+    for(unsigned i=0;i<256;++i)if(live[i].alive&&live[i].pointer==pointer)return live[i].identity;
+    for(unsigned i=0;i<256;++i)if(live[i].pointer==pointer)return live[i].identity;
+    assert(false);return 0;
+}
+void recordEvent(unsigned operation,void *memory)
+{
+    // Retain operation order and live owner fields at each native allocator boundary
+    assert(eventCount+6<1024);events[eventCount++]=operation;events[eventCount++]=pointerIdentity(memory);events[eventCount++]=observedSequence?(unsigned)observedSequence->type:0;events[eventCount++]=observedSequence?(unsigned)observedSequence->numFrames:0;events[eventCount++]=observedSequence?pointerIdentity(observedSequence->keyFrames):0;events[eventCount++]=observedSequence?pointerIdentity(observedSequence->keyFramesCompressed):0;
+}
+void *RwMalloc(size_t bytes)
+{
+    // Bound diagnostic storage while retaining the exact original allocation size and live owner state
+    lastBytes=bytes;fixtureBytes=bytes;void *p=malloc(4096);assert(p);memset(p,0xa5,4096);unsigned slot=0;while(slot<256&&live[slot].alive)++slot;assert(slot<256);live[slot]={p,++identity,true};++fixtureAllocations;recordEvent(1,p);return p;
+}
+void RwFree(void *pointer)
+{
+    // Observe freeing before pointer fields are changed by the original owner
+    recordEvent(2,pointer);unsigned slot=0;while(slot<256&&(!live[slot].alive||live[slot].pointer!=pointer))++slot;assert(slot<256);live[slot].alive=false;++fixtureFrees;free(pointer);
+}
+void *TestHeap::MoveMemory(void *pointer)
+{
+    // Supply unchanged or relocated native storage to the original owner policy
+    recordEvent(6,pointer);if(!moveMode)return pointer;void *replacement=RwMalloc(4096);memcpy(replacement,pointer,4096);RwFree(pointer);return replacement;
+}

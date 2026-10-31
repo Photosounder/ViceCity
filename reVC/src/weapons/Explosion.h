@@ -1,23 +1,10 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 class CEntity;
 class CVector;
 
-enum eExplosionType
-{
-	EXPLOSION_GRENADE,
-	EXPLOSION_MOLOTOV,
-	EXPLOSION_ROCKET,
-	EXPLOSION_CAR,
-	EXPLOSION_CAR_QUICK,
-	EXPLOSION_BOAT,
-	EXPLOSION_HELI,
-	EXPLOSION_HELI2,
-	EXPLOSION_MINE,
-	EXPLOSION_BARREL,
-	EXPLOSION_TANK_GRENADE,
-	EXPLOSION_HELI_BOMB
-};
+#include "ExplosionTypes.h"
 
 class CExplosion
 {
@@ -56,3 +43,4 @@ public:
 };
 
 extern CExplosion gaExplosion[NUM_EXPLOSIONS];
+//- rouz edit (ChatGPT)

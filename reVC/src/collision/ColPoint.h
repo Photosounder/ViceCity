@@ -1,34 +1,27 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-struct CColPoint
-{
-	CVector point;
-	int pad1;
-	// the surface normal on the surface of point
-	CVector normal;
-	int pad2;
-	uint8 surfaceA;
-	uint8 pieceA;
-	uint8 surfaceB;
-	uint8 pieceB;
-	float depth;
-
-	const CVector &GetNormal() { return normal; }
-	float GetDepth() { return depth; }
-	void Set(float depth, uint8 surfA, uint8 pieceA, uint8 surfB, uint8 pieceB) {
-		this->depth = depth;
-		this->surfaceA = surfA;
-		this->pieceA = pieceA;
-		this->surfaceB = surfB;
-		this->pieceB = pieceB;
-	}
-	void Set(uint8 surfA, uint8 pieceA, uint8 surfB, uint8 pieceB) {
-		this->surfaceA = surfA;
-		this->pieceA = pieceA;
-		this->surfaceB = surfB;
-		this->pieceB = pieceB;
-	}
-
-	CColPoint &operator=(const CColPoint &other);
-};
-
+#include <stdint.h>
+#include "CollisionVector.h"
+typedef struct CColPoint {
+    CollisionVector3 point;
+    int32_t pad1;
+    CollisionVector3 normal;
+    int32_t pad2;
+    uint8_t surfaceA,pieceA,surfaceB,pieceB;
+    float depth;
+} CColPoint;
+#ifdef __cplusplus
+extern "C" {
+#endif
+const CollisionVector3 *ColPoint_GetNormal(const CColPoint *self);
+float ColPoint_GetDepth(const CColPoint *self);
+void ColPoint_Set(CColPoint *self,float depth,uint8_t surfaceA,uint8_t pieceA,uint8_t surfaceB,uint8_t pieceB);
+void ColPoint_SetSurfaces(CColPoint *self,uint8_t surfaceA,uint8_t pieceA,uint8_t surfaceB,uint8_t pieceB);
+CColPoint *ColPoint_Assign(CColPoint *self,const CColPoint *other);
+CColPoint ColPoint_CopyValue(CColPoint value);
+void ColPoint_NormaliseNormal(CColPoint *self);
+void ColPoint_ReverseNormal(CColPoint *self);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

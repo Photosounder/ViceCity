@@ -1,95 +1,38 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-// TODO: actually implement this
-class CQuaternion
-{
-public:
-	float x, y, z, w;
-	CQuaternion(void) {}
-	CQuaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-
-	float Magnitude(void) const { return Sqrt(x*x + y*y + z*z + w*w); }
-	float MagnitudeSqr(void) const { return x*x + y*y + z*z + w*w; }
-	void Normalise(void);
-	void Multiply(const CQuaternion &q1, const CQuaternion &q2);
-	void Invert(void){	// Conjugate would have been a better name
-		x = -x;
-		y = -y;
-		z = -z;
-	}
-
-	const CQuaternion &operator+=(CQuaternion const &right) {
-		x += right.x;
-		y += right.y;
-		z += right.z;
-		w += right.w;
-		return *this;
-	}
-
-	const CQuaternion &operator-=(CQuaternion const &right) {
-		x -= right.x;
-		y -= right.y;
-		z -= right.z;
-		w -= right.w;
-		return *this;
-	}
-
-	const CQuaternion &operator*=(float right) {
-		x *= right;
-		y *= right;
-		z *= right;
-		w *= right;
-		return *this;
-	}
-
-	const CQuaternion &operator/=(float right) {
-		x /= right;
-		y /= right;
-		z /= right;
-		w /= right;
-		return *this;
-	}
-
-	CQuaternion operator-() const {
-		return CQuaternion(-x, -y, -z, -w);
-	}
-
-	void Slerp(const CQuaternion &q1, const CQuaternion &q2, float theta, float invSin, float t);
-	void Get(RwV3d *axis, float *angle);
-	void Set(RwV3d *axis, float angle);
-	void Get(RwMatrix *matrix);
-	void Set(const RwMatrix &matrix);
-	void Set(float f1, float f2, float f3);
-	void Get(float *f1, float *f2, float *f3);
-};
-
-inline float
-DotProduct(const CQuaternion &q1, const CQuaternion &q2)
-{
-	return q1.x*q2.x + q1.y*q2.y + q1.z*q2.z + q1.w*q2.w;
+typedef struct CQuaternion {float x,y,z,w;} CQuaternion;
+typedef struct QuaternionVectorRef {const float *x,*y,*z;} QuaternionVectorRef;
+typedef struct QuaternionVectorOut {float *x,*y,*z;} QuaternionVectorOut;
+typedef struct QuaternionMatrixRef {QuaternionVectorRef right,up,at;} QuaternionMatrixRef;
+typedef struct QuaternionMatrixOut {QuaternionVectorOut right,up,at;} QuaternionMatrixOut;
+#ifdef __cplusplus
+extern "C" {
+#endif
+CQuaternion Quaternion_Make(float x,float y,float z,float w);
+float Quaternion_Magnitude(const CQuaternion *self);
+float Quaternion_MagnitudeSqr(const CQuaternion *self);
+void Quaternion_Normalise(CQuaternion *self);
+void Quaternion_Multiply(CQuaternion *self,const CQuaternion *q1,const CQuaternion *q2);
+void Quaternion_Invert(CQuaternion *self);
+const CQuaternion * Quaternion_AddAssign(CQuaternion *self,const CQuaternion *right);
+const CQuaternion * Quaternion_SubAssign(CQuaternion *self,const CQuaternion *right);
+const CQuaternion * Quaternion_ScaleAssign(CQuaternion *self,float right);
+const CQuaternion * Quaternion_DivideAssign(CQuaternion *self,float right);
+CQuaternion Quaternion_Negate(CQuaternion value);
+float Quaternion_Dot(CQuaternion q1,CQuaternion q2);
+CQuaternion Quaternion_Add(CQuaternion left,CQuaternion right);
+CQuaternion Quaternion_Sub(CQuaternion left,CQuaternion right);
+CQuaternion Quaternion_Scale(CQuaternion left,float right);
+CQuaternion Quaternion_LeftScale(float left,CQuaternion right);
+CQuaternion Quaternion_Divide(CQuaternion left,float right);
+void Quaternion_Slerp(CQuaternion *self,const CQuaternion *q1,const CQuaternion *q2,float theta,float invSin,float t);
+void Quaternion_GetAxisAngle(const CQuaternion *self,QuaternionVectorOut axis,float *angle);
+void Quaternion_SetAxisAngle(CQuaternion *self,QuaternionVectorRef axis,float angle);
+void Quaternion_GetMatrix(const CQuaternion *self,QuaternionMatrixOut matrix);
+void Quaternion_SetMatrix(CQuaternion *self,QuaternionMatrixRef matrix);
+void Quaternion_GetEuler(const CQuaternion *self,float *f1,float *f2,float *f3);
+void Quaternion_SetEuler(CQuaternion *self,float f1,float f2,float f3);
+#ifdef __cplusplus
 }
-
-inline CQuaternion operator+(const CQuaternion &left, const CQuaternion &right)
-{
-	return CQuaternion(left.x + right.x, left.y + right.y, left.z + right.z, left.w + right.w);
-}
-
-inline CQuaternion operator-(const CQuaternion &left, const CQuaternion &right)
-{
-	return CQuaternion(left.x - right.x, left.y - right.y, left.z - right.z, left.w - right.w);
-}
-
-inline CQuaternion operator*(const CQuaternion &left, float right)
-{
-	return CQuaternion(left.x * right, left.y * right, left.z * right, left.w * right);
-}
-
-inline CQuaternion operator*(float left, const CQuaternion &right)
-{
-	return CQuaternion(left * right.x, left * right.y, left * right.z, left * right.w);
-}
-
-inline CQuaternion operator/(const CQuaternion &left, float right)
-{
-	return CQuaternion(left.x / right, left.y / right, left.z / right, left.w / right);
-}
+#endif
+//- rouz edit (ChatGPT)

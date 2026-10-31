@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "DMAudio.h"
@@ -31,7 +32,7 @@ uint32_t
 AudioPoliceHost_LogicalFramesPassed(void)
 {
 	// Read the existing game timer at the original wait-counter update point
-	return CTimer::GetLogicalFramesPassed();
+	return Timer_GetLogicalFramesPassed();
 }
 #endif
 
@@ -40,7 +41,7 @@ float
 AudioPoliceHost_TimeScale(void)
 {
 	// Read the existing game time scale at the original frequency update point
-	return CTimer::GetTimeScale();
+	return (*Timer_GetTimeScale());
 }
 #endif
 //- rouz edit (ChatGPT)
@@ -76,7 +77,7 @@ int32_t
 AudioPoliceHost_WantedLevel(const CPlayerPed *player)
 {
 	// Read the existing wanted level after the original player gate
-	return player->m_pWanted->GetWantedLevel();
+	return Wanted_GetWantedLevel(player->m_pWanted);
 }
 
 #ifdef FIX_BUGS
@@ -93,14 +94,14 @@ AudioPoliceHost_FindZone(const AudioCrimePosition *position)
 {
 	// Supply the same three coordinates to the existing audio-zone lookup
 	CVector gamePosition(position->x, position->y, position->z);
-	return CTheZones::FindAudioZone(&gamePosition);
+	return Zones_FindAudioZone(ZonesPosition_FromVector(*(&gamePosition)));
 }
 
 void
 AudioPoliceHost_GetZone(int16_t id, AudioPoliceZoneView *view)
 {
 	// Expose pointers to the existing zone fields without copying their values
-	const CZone *zone = CTheZones::GetAudioZone(id);
+	const CZone *zone = Zones_GetAudioZone(id);
 	view->name = zone->name;
 	view->minx = &zone->minx;
 	view->miny = &zone->miny;
@@ -162,4 +163,6 @@ AudioPoliceHost_CrimePosition(const CVector *position, AudioCrimePosition *plain
 	plain->y = position->y;
 	plain->z = position->z;
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

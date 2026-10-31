@@ -1,45 +1,32 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
 #include "AnimBlendList.h"
-
-
-struct AnimBlendFrameData
-{
-	enum {
-		IGNORE_ROTATION = 2,
-		IGNORE_TRANSLATION = 4,
-		VELOCITY_EXTRACTION = 8,
-		VELOCITY_EXTRACTION_3D = 0x10,
-		UPDATE_KEYFRAMES = 0x20,
-		COMPRESSED = 0x40
-	};
-
-	uint8 flag;
-	RwV3d resetPos;
-	union {
-		RwFrame *frame;
-		RpHAnimStdInterpFrame *hanimFrame;
-	};
-	int32 nodeID;
-};
-VALIDATE_SIZE(AnimBlendFrameData, 0x18);
-
-
-class CAnimBlendClumpData
-{
-public:
-	CAnimBlendLink link;
-	int32 numFrames;
-	union {
-		CVector2D *velocity2d;
-		CVector *velocity3d;
-	};
-	// order of frames is determined by RW hierarchy
-	AnimBlendFrameData *frames;
-
-	CAnimBlendClumpData(void);
-	~CAnimBlendClumpData(void);
-	void SetNumberOfFrames(int n);
-	void SetNumberOfBones(int n) { SetNumberOfFrames(n); }
-	void ForAllFrames(void (*cb)(AnimBlendFrameData*, void*), void *arg);
-};
+#include "AnimBlendFrameData.h"
+#ifdef __cplusplus
+#include "AnimBlendFrameData_native.h"
+class CVector;
+class CVector2D;
+#else
+typedef struct CVector CVector;
+typedef struct CVector2D CVector2D;
+#endif
+typedef struct CAnimBlendClumpData {
+    CAnimBlendLink link;
+    int32_t numFrames;
+    union {CVector2D *velocity2d;CVector *velocity3d;};
+    AnimBlendFrameData *frames;
+} CAnimBlendClumpData;
+typedef void (*AnimBlendFrameCallback)(AnimBlendFrameData *frame,void *arg);
+#ifdef __cplusplus
+extern "C" {
+#endif
+void AnimBlendClump_Init(CAnimBlendClumpData *self);
+void AnimBlendClump_Destroy(CAnimBlendClumpData *self);
+void AnimBlendClump_SetNumberOfFrames(CAnimBlendClumpData *self,int32_t count);
+void AnimBlendClump_SetNumberOfBones(CAnimBlendClumpData *self,int32_t count);
+void AnimBlendClump_ForAllFrames(CAnimBlendClumpData *self,AnimBlendFrameCallback callback,void *arg);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

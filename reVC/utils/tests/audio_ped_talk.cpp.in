@@ -1,0 +1,147 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioSamples.h"
+#include "soundlist.h"
+#include "@MODEL_IDS@"
+#include "@PED_STATES@"
+#include <stdio.h>
+#include <string.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint16=uint16_t;using uint32=uint32_t;using int32=int32_t;
+#define TRUE 1
+static void event(unsigned);
+struct IntValue {int32_t v;unsigned token;operator int32_t() const {
+    // Observe each original model field read
+    event(token);return v;
+}};
+struct TimerValue {uint32_t v;unsigned token;operator uint32_t() const {
+    // Observe each repeated original get-up timer read
+    event(token);return v;
+}};
+struct StateValue {int32_t v;unsigned token;operator PedState() const {
+    // Preserve the original enum field type and observe its read
+    event(token);return (PedState)v;
+}};
+class CPed {public:StateValue m_nPedState;TimerValue m_getUpTimer;IntValue model;uint32_t m_lastComment,player;
+    bool IsPlayer() {
+        // Observe the original player predicate
+        event(23);return player!=0;
+    }
+    int16_t GetModelIndex() const {
+        // Observe each signed model query independently
+        return (int16_t)(int32_t)model;
+    }
+};
+struct CWanted {int32_t level;int32_t GetWantedLevel() const {
+    // Observe the original live wanted-level query
+    event(26);return level;
+}};
+class CPlayerPed:public CPed {public:CWanted *m_pWanted;};
+struct CTimer {static uint32_t GetTimeInMilliseconds();};
+struct cAudioManager {
+@FIELDS@
+@DECLARATIONS@
+};
+@MACRO@
+static cAudioManager owners[2],*active;static CPlayerPed peds[2];static CWanted wanted[2];static uint32_t clockTime,phraseValues[2];
+static unsigned seedValue,cases,callbacks,emitted,rejected,visits[@KINDS@];static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" uint32_t TestPedTalkC(cAudioManager *,unsigned,unsigned,CPed *,uint16_t,int32_t,uint32_t *,uint32_t,uint32_t);
+static void value(uint32_t v) {
+    // Record scalar results and exact query order
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Normalize wanted pointers and hash every initialized owner and game field
+    CPlayerPed actors[2];memcpy(actors,peds,sizeof(actors));for(unsigned i=0;i<2;++i)actors[i].m_pWanted=(CWanted *)(uintptr_t)(peds[i].m_pWanted==&wanted[0]?1:2);
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,actors,sizeof(actors));digest=TestAircraftHash(digest,wanted,sizeof(wanted));digest=TestAircraftHash(digest,phraseValues,sizeof(phraseValues));value(clockTime);
+}
+static void event(unsigned token) {
+    // Observe original queries before changing later live model, timer and owner reads
+    ++callbacks;value(token);observe();
+    if(token==21&&(seedValue&128))peds[0].m_getUpTimer.v=clockTime+(seedValue%3?1:UINT32_MAX);
+    if(token==24&&(seedValue&256))peds[0].model.v=MI_SPECIAL02;
+    if(token==25&&(seedValue&512))peds[0].m_nPedState.v=PED_ATTACK;
+    if(token==26&&(seedValue&1024)){active->m_nPlayerMood=PLAYER_MOOD_ANGRY;active->m_sQueueSample.m_nEntityIndex^=1;}
+}
+uint32_t CTimer::GetTimeInMilliseconds() {
+    // Observe the original get-up eligibility timer query
+    event(22);return clockTime;
+}
+static CPlayerPed *FindPlayerPed() {
+    // Supply the original non-null player required by character handlers
+    event(25);return &peds[(seedValue/7)%2];
+}
+extern "C" uint32_t AudioPlayerEngineHost_Time() {
+    // Use the original game timer expression
+    return CTimer::GetTimeInMilliseconds();
+}
+extern "C" CPlayerPed *AudioPoliceHost_FindPlayer() {
+    // Use the original live player lookup
+    return FindPlayerPed();
+}
+extern "C" int32_t AudioPoliceHost_WantedLevel(const CPlayerPed *ped) {
+    // Use the original wanted-pointer query
+    return ped->m_pWanted->GetWantedLevel();
+}
+extern "C" int32_t AudioPedOneShotsHost_State(const CPed *ped) {
+    // Read the original enum field
+    return ped->m_nPedState;
+}
+extern "C" uint8_t AudioPedOneShotsHost_IsPlayer(CPed *ped) {
+    // Query the original player predicate
+    return ped->IsPlayer();
+}
+extern "C" uint32_t AudioPedTalkHost_GetUpTimer(const CPed *ped) {
+    // Read every original timer expression
+    return ped->m_getUpTimer;
+}
+extern "C" int16_t AudioPedTalkHost_Model(const CPed *ped) {
+    // Read every original signed model expression
+    return ped->GetModelIndex();
+}
+extern "C" uint32_t *AudioPedTalkHost_LastComment(CPed *ped) {
+    // Resolve the original writable phrase-history field without side effects
+    return &ped->m_lastComment;
+}
+extern "C" int32_t AudioPedTalkHost_PlayerState() {
+    // Preserve the original live player lookup and state read
+    return FindPlayerPed()->m_nPedState;
+}
+@METHODS@
+@EVENTS@
+@MODELS@
+static uint32_t runOriginal(unsigned kind,unsigned seed,CPed *ped,uint16_t sound,int32_t model,uint32_t sample,uint32_t offset) {
+    // Select the original complete operation with identical arguments
+#ifdef TEST_ORIGINAL
+    switch(kind){@ORIGINAL_CALLS@ default:return UINT32_MAX;}
+#else
+    return UINT32_MAX;
+#endif
+}
+static void prepare(unsigned seed) {
+    // Cover both owners, live model/state gates, signed random values and unsigned phrase bounds
+    seedValue=seed;active=&owners[seed&1];memset(owners,0,sizeof(owners));clockTime=seed%17==0?UINT32_MAX-3:seed*100;
+    const uint32_t times[]={UINT32_MAX,clockTime-1,clockTime,clockTime+1,0};
+    for(unsigned i=0;i<2;++i){peds[i].m_nPedState={(int32_t)((seed/13+i)%PED_DEPLOY_STINGER),20};peds[i].m_getUpTimer={times[(seed/17+i)%5],21};peds[i].model={models[(seed/19+i)%(sizeof(models)/sizeof(models[0]))],24};peds[i].player=(seed/23+i)%7==0;peds[i].m_pWanted=&wanted[i];wanted[i].level=(int32_t)((seed/29+i)%6);}
+    active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%4);active->m_nPlayerMood=(seed/31)%MAX_PLAYER_MOODS;active->m_bIsPlayerShutUp=(seed/37)%5==0;
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)((seed*(i+1))%1001)-500;
+    phraseValues[0]=seed%3?seed:UINT32_MAX;phraseValues[1]=seed%5?seed:0;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer traps from opening Windows error dialogs
+    SetErrorMode(3);
+#endif
+    // Retain shared cooldowns and per-pedestrian phrase history across exhaustive handler/event combinations
+    memset(peds,0,sizeof(peds));
+    for(unsigned seed=0;seed<65536;++seed){prepare(seed);unsigned kind=seed%@KINDS@;CPed *ped=&peds[(seed/7)%2];uint16_t sound=events[(seed/@KINDS@)%(sizeof(events)/sizeof(events[0]))];int32_t model=peds[0].model.v;uint32_t sample=seed%5?SFX_PLAYER_HIT_BULLET_1:UINT32_MAX-2;const uint32_t offsets[]={1,2,3,8,33,UINT32_MAX};uint32_t offset=offsets[(seed/11)%6];observe();uint32_t result=@RUN@;value(result);observe();++visits[kind];++cases;if(result==NO_SAMPLE)++rejected;else ++emitted;}
+    // Require every original operation and both successful and rejected selection paths
+    for(unsigned i=0;i<@KINDS@;++i)if(!visits[i])return 2;
+    if(!emitted||!rejected||!callbacks)return 3;
+    // Emit the complete deterministic comparison trace
+    printf("%u cases %u callbacks %u emitted %u rejected %llu\n",cases,callbacks,emitted,rejected,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

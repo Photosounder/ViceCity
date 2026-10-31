@@ -27,7 +27,13 @@ for variant in ('before','after'):
     source=template.replace('@METHODS@','\n'.join(methods) if variant=='before' else '')
     source=source.replace('@RESET@','active->ResetTimers(time)' if variant=='before' else 'AudioReload_ResetTimers(active,time)').replace('@DESTROY@','active->DestroyAllGameCreatedEntities()' if variant=='before' else 'AudioReload_DestroyEntities(active)')
     source=source.replace('@FACADE@','AudioManager.ResetTimers(time); AudioManager.DestroyAllGameCreatedEntities();' if variant=='before' else 'TestReloadFacadesC(time);')
+    if variant=='after':
+        # Observe the direct C music reset at the original reload point using the real global owner
+        source='#include "Validate.h"\n#include "MusicManager.h"\n#include <stdlib.h>\n'+source
+        source=source.replace('static FakeMusic MusicManager;', 'static FakeMusic fakeMusic;').replace('MusicManager.ResetMusicAfterReload();','fakeMusic.ResetMusicAfterReload();')
+        source=source.replace('void AudioReloadHost_ResetMusic(void) {','void MusicReload_ResetMusicAfterReload(cMusicManager *manager) {\n    // Check the global owner before observing the original reset boundary\n    if(manager!=&MusicManager)abort();')
     (out/(variant+'.cpp')).write_text(source,newline='\n')
+(out/'music-owner.c').write_text('#include "MusicManager.h"\n/* Provide the actual C music record for the isolated reload boundary observer */\ncMusicManager MusicManager;\n',newline='\n')
 (out/'caller.c').write_text('#include "DMAudio.h"\nvoid TestReloadFacadesC(uint32_t time)\n{\n    // Exercise all three public C facades against the live global owner\n    DMAudio_ResetTimers(time);\n    DMAudio_DestroyAllGameCreatedEntities();\n    DMAudio_SetOutputMode(255);\n}\n',newline='\n')
 reset=function((root/'src/audio/AudioScriptObject.c').read_text(),'AudioScriptObject_','Reset')
 (out/'script-reset.c').write_text('#include "AudioScriptObject.h"\n#include "soundlist.h"\n#include "sampman.h"\n'+reset+'\n',newline='\n')

@@ -1,0 +1,107 @@
+#ifdef NATIVE_PROJECT_HEADERS
+@NATIVE_HEADERS@
+#else
+#include "common.h"
+#include "CarCtrl.h"
+#include "main.h"
+#include "Population.h"
+#endif
+#include "caller.h"
+#include "FileMgr.h"
+#include <stdlib.h>
+#include <math.h>
+#include <string>
+
+char gString[256];
+int32 CPopulation::MaxNumberOfPedsInUse;
+int32 CPopulation::MaxNumberOfPedsInUseInterior;
+int32 CCarCtrl::MaxNumberOfCarsInUse;
+static uint64_t hash=UINT64_C(1469598103934665603);
+static uint32_t cases,checks,rng=0x497fd431;
+
+static void require(bool condition)
+{
+    // Exit quietly if the original parser behavior changes
+    if(!condition)exit(2);checks++;
+}
+static void word(uint32_t value)
+{
+    // Record exact float words, integer limits and shared-buffer contents
+    hash^=value;hash*=UINT64_C(1099511628211);
+}
+static uint32_t bits(float value)
+{
+    // Preserve finite float bits and signed zeros in the comparison fingerprint
+    uint32_t valueBits;memcpy(&valueBits,&value,4);return valueBits;
+}
+extern "C" void re3_assert(const char *,const char *,unsigned int,const char *)
+{
+    // Fail rather than invoking the game's graphical assertion handler
+    exit(3);
+}
+extern "C" const char *FileMgr_BackendUserFilesFolder(void)
+{
+    // Fail if this INI-only test unexpectedly requests the platform documents folder
+    exit(4);
+}
+static void file(const char *text)
+{
+    // Create or remove only the fixture-owned INI inside the child-process sandbox
+    if(!text){remove("gta3.ini");return;}
+    FILE *f=fopen("gta3.ini","wb");require(f!=NULL);require(fwrite(text,1,strlen(text),f)==strlen(text));require(fclose(f)==0);
+}
+static void load(const char *text,const char *stale,float ped,float car)
+{
+    // Seed live slider values and the original shared parse buffer before loading
+    file(text);*TestIniPed()=ped;*TestIniCar()=car;
+    memset(gString,0xa5,sizeof(gString));strcpy(gString,stale);
+    CPopulation::MaxNumberOfPedsInUse=12345;CPopulation::MaxNumberOfPedsInUseInterior=23456;CCarCtrl::MaxNumberOfCarsInUse=34567;
+    TestIniLoad();cases++;
+    word(bits(*TestIniPed()));word(bits(*TestIniCar()));
+    word(CPopulation::MaxNumberOfPedsInUse);word(CPopulation::MaxNumberOfPedsInUseInterior);word(CCarCtrl::MaxNumberOfCarsInUse);
+    for(unsigned char c:gString)word(c);
+    require(CPopulation::MaxNumberOfPedsInUse==(int32)(25.0f**TestIniPed()));
+    require(CPopulation::MaxNumberOfPedsInUseInterior==(int32)(40.0f**TestIniPed()));
+    require(CCarCtrl::MaxNumberOfCarsInUse==(int32)(12.0f**TestIniCar()));
+}
+static uint32_t randomWord(void)
+{
+    // Generate deterministic bounded inputs that keep all integer conversions defined
+    rng^=rng<<13;rng^=rng>>17;rng^=rng<<5;return rng;
+}
+int main(void)
+{
+    // Check original static defaults and live multiplier pointer identity
+    FileMgr_Initialise();float *ped=TestIniPed(),*car=TestIniCar();
+    require(ped!=car && *ped==0.6f && *car==0.6f);
+    load(NULL,"7.25",-2.75f,3.4f);require(*ped==-2.75f && *car==3.4f);
+    load("","0.75",1.25f,2.25f);require(*ped==0.75f && *car==0.75f);
+    load("1.25\r\n","2.75",0.2f,3.4f);require(*ped==1.25f && *car==1.25f);
+    load("invalid\ninvalid\n","1",2.25f,0.2f);require(*ped==2.25f && *car==0.5f);
+    load("-100\n100\n","1",1,1);require(*ped==0.5f && *car==3.0f);
+    load("-0\n0\n","1",1,1);require(*ped==0.5f && *car==0.5f);
+    load("0.6\n0.6\n","1",0,0);require(CPopulation::MaxNumberOfPedsInUse==15 && CPopulation::MaxNumberOfPedsInUseInterior==24 && CCarCtrl::MaxNumberOfCarsInUse==7);
+
+    // Exercise CRT formats, parse failures, overflow-to-infinity and ignored extra lines
+    const char *formats[]={" \t1.75 trailing\n2.625\n","1e99\n-1e99\n","inf\n-inf\n","0x1.8p+0\n0x1.4p+1\n","\n\n",".\n+\n","2.875\n3.125\nignored\n","1.5\x1a\n2.5\n"};
+    for(const char *text:formats)load(text,"1.125",0.6f,0.7f);
+    std::string longLine="1.25"+std::string(500,' ') +"\n2.5\n";load(longLine.c_str(),"1",1.5f,2.75f);require(*ped==1.25f && *car==2.75f);
+
+    // Check finite clamp boundaries and integer truncation against independent bounded inputs
+    for(unsigned i=0;i<4096;i++){
+        float p=((int)(randomWord()%2049)-1024)*0.015625f;
+        float c=((int)(randomWord()%2049)-1024)*0.015625f;
+        float sp=((int)(randomWord()%1025)-512)*0.015625f;
+        float sc=((int)(randomWord()%1025)-512)*0.015625f;
+        char text[160];snprintf(text,sizeof(text),"%.9g\r\n%.9g\r\n",p,c);
+        load(text,"1.125",sp,sc);
+        require(*ped==(p<0.5f?0.5f:p>3.0f?3.0f:p));require(*car==(c<0.5f?0.5f:c>3.0f?3.0f:c));
+        if(i%17==0)load(NULL,"-2.5",sp,sc);
+        if(i%29==0)load("bad\n","0.625",sp,sc);
+    }
+    // Reuse the initialized state across additional loads without resetting it
+    file("0.875\n1.375\n");TestIniLoad();require(*ped==0.875f && *car==1.375f);
+    file(NULL);TestIniLoad();require(*ped==0.875f && *car==1.375f);
+    require(ped==TestIniPed() && car==TestIniCar());
+    printf("%016llx cases=%u checks=%u\n",(unsigned long long)hash,cases,checks);
+}

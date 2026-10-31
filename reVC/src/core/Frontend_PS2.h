@@ -1,4 +1,7 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #pragma once
+#include "TextLanguages.h"
 #include "Sprite2d.h"
 
 enum
@@ -59,7 +62,7 @@ enum eFrontendSprites
 };
 
 
-class CSprite2d;
+struct Sprite2d;
 class CVector2D;
 
 #ifdef GTA_PC
@@ -75,15 +78,15 @@ class CMenuManager
 public:
 	enum LANGUAGE
 	{
-		LANGUAGE_AMERICAN,
-		LANGUAGE_FRENCH,
-		LANGUAGE_GERMAN,
-		LANGUAGE_ITALIAN,
-		LANGUAGE_SPANISH,
+		LANGUAGE_AMERICAN = TEXT_LANGUAGE_AMERICAN,
+		LANGUAGE_FRENCH = TEXT_LANGUAGE_FRENCH,
+		LANGUAGE_GERMAN = TEXT_LANGUAGE_GERMAN,
+		LANGUAGE_ITALIAN = TEXT_LANGUAGE_ITALIAN,
+		LANGUAGE_SPANISH = TEXT_LANGUAGE_SPANISH,
 #ifdef MORE_LANGUAGES
-		LANGUAGE_POLISH,
-		LANGUAGE_RUSSIAN,
-		LANGUAGE_JAPANESE,
+		LANGUAGE_POLISH = TEXT_LANGUAGE_POLISH,
+		LANGUAGE_RUSSIAN = TEXT_LANGUAGE_RUSSIAN,
+		LANGUAGE_JAPANESE = TEXT_LANGUAGE_JAPANESE,
 #endif
 	};
 	
@@ -146,7 +149,7 @@ public:
 	bool m_bTexturesLoaded;
 	//char field_3E; //unused ?
 	//char field_3F; //unused ?
-	CSprite2d m_sprites[NUM_SPRIRES];
+	Sprite2d m_sprites[NUM_SPRIRES];
 	
 	static int32 m_PrefsSfxVolume;
 	static int32 m_PrefsMusicVolume;
@@ -212,10 +215,17 @@ public:
 
 	CMenuManager(void);
 #ifdef FIX_BUGS
-	~CMenuManager(void)
-	{
-		UnloadTextures();
-	}
+    ~CMenuManager(void)
+    {
+        // Retain parent shutdown before reversing embedded C sprite lifetimes
+        UnloadTextures();Sprite2d_DeinitArray(m_sprites,sizeof(m_sprites)/sizeof(m_sprites[0]));
+    }
+#else
+    ~CMenuManager(void)
+    {
+        // Retain original implicit member destruction even without the optional parent shutdown body
+        Sprite2d_DeinitArray(m_sprites,sizeof(m_sprites)/sizeof(m_sprites[0]));
+    }
 #endif
 	
 	void LoadAllTextures(void);
@@ -245,3 +255,5 @@ public:
 };
 
 extern CMenuManager FrontEndMenuManager;
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

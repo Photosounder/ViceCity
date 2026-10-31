@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Camera.h"
@@ -24,10 +25,12 @@ CTimeModelInfo::FindOtherTimeModel(void)
 	for(i = 0; i < MODELINFOSIZE; i++){
 		CBaseModelInfo *mi = CModelInfo::GetModelInfo(i);
 		if (mi && mi->GetModelType() == MITYPE_TIME &&
-		   !CGeneral::faststrncmp(name, mi->GetModelName(), MAX_MODEL_NAME)){
+		   !General_faststrncmp(name, mi->GetModelName(), MAX_MODEL_NAME)){
 			m_otherTimeModelID = i;
 			return (CTimeModelInfo*)mi;
 		}
 	}
 	return nil;
 }
+
+//- rouz edit (ChatGPT)

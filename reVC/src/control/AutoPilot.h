@@ -1,10 +1,15 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
 #include "Timer.h"
-
-class CVehicle;
-struct CPathNode;
-
-enum eCarMission
+#ifdef __cplusplus
+class CVehicle;struct CPathNode;
+#else
+typedef struct CVehicle CVehicle;typedef struct CPathNode CPathNode;
+#endif
+typedef enum eCarMission
 {
 	MISSION_NONE,
 	MISSION_CRUISE,
@@ -33,9 +38,9 @@ enum eCarMission
 	MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_1,
 	MISSION_SLOWLY_DRIVE_TOWARDS_PLAYER_2,
 	MISSION_BLOCKPLAYER_FORWARDANDBACK
-};
+} eCarMission;
 
-enum eCarTempAction
+typedef enum eCarTempAction
 {
 	TEMPACT_NONE,
 	TEMPACT_WAIT,
@@ -48,90 +53,72 @@ enum eCarTempAction
 	TEMPACT_GOFORWARD,
 	TEMPACT_SWERVELEFT,
 	TEMPACT_SWERVERIGHT
-};
+} eCarTempAction;
 
-enum eCarDrivingStyle
+typedef enum eCarDrivingStyle
 {
 	DRIVINGSTYLE_STOP_FOR_CARS,
 	DRIVINGSTYLE_SLOW_DOWN_FOR_CARS,
 	DRIVINGSTYLE_AVOID_CARS,
 	DRIVINGSTYLE_PLOUGH_THROUGH,
 	DRIVINGSTYLE_STOP_FOR_CARS_IGNORE_LIGHTS
-};
+} eCarDrivingStyle;
 
-class CAutoPilot {
-public:
-	int32 m_nCurrentRouteNode;
-	int32 m_nNextRouteNode;
-	int32 m_nPrevRouteNode;
-	int32 m_nTimeEnteredCurve;
-	int32 m_nTimeToSpendOnCurrentCurve;
-	uint32 m_nCurrentPathNodeInfo;
-	uint32 m_nNextPathNodeInfo;
-	uint32 m_nPreviousPathNodeInfo;
-	uint32 m_nAntiReverseTimer;
-	uint32 m_nTimeToStartMission;
-	int8 m_nPreviousDirection;
-	int8 m_nCurrentDirection;
-	int8 m_nNextDirection;
-	int8 m_nCurrentLane;
-	int8 m_nNextLane;
-	uint8 m_nDrivingStyle;
-	uint8 m_nCarMission;
-	uint8 m_nTempAction;
-	uint32 m_nTimeTempAction;
+typedef struct AutoPilotVector {float x,y,z;} AutoPilotVector;
+typedef struct CAutoPilot {
+	int32_t m_nCurrentRouteNode;
+	int32_t m_nNextRouteNode;
+	int32_t m_nPrevRouteNode;
+	int32_t m_nTimeEnteredCurve;
+	int32_t m_nTimeToSpendOnCurrentCurve;
+	uint32_t m_nCurrentPathNodeInfo;
+	uint32_t m_nNextPathNodeInfo;
+	uint32_t m_nPreviousPathNodeInfo;
+	uint32_t m_nAntiReverseTimer;
+	uint32_t m_nTimeToStartMission;
+	int8_t m_nPreviousDirection;
+	int8_t m_nCurrentDirection;
+	int8_t m_nNextDirection;
+	int8_t m_nCurrentLane;
+	int8_t m_nNextLane;
+	uint8_t m_nDrivingStyle;
+	uint8_t m_nCarMission;
+	uint8_t m_nTempAction;
+	uint32_t m_nTimeTempAction;
 	float m_fMaxTrafficSpeed;
-	uint8 m_nCruiseSpeed;
-	uint8 m_nCruiseSpeedMultiplierType;
+	uint8_t m_nCruiseSpeed;
+	uint8_t m_nCruiseSpeedMultiplierType;
 	float m_fCruiseSpeedMultiplier;
-	uint8 m_bSlowedDownBecauseOfCars : 1;
-	uint8 m_bSlowedDownBecauseOfPeds : 1;
-	uint8 m_bStayInCurrentLevel : 1;
-	uint8 m_bStayInFastLane : 1;
-	uint8 m_bIgnorePathfinding : 1;
-	uint8 m_nSwitchDistance;
-	CVector m_vecDestinationCoors;
+	uint8_t m_bSlowedDownBecauseOfCars : 1;
+	uint8_t m_bSlowedDownBecauseOfPeds : 1;
+	uint8_t m_bStayInCurrentLevel : 1;
+	uint8_t m_bStayInFastLane : 1;
+	uint8_t m_bIgnorePathfinding : 1;
+	uint8_t m_nSwitchDistance;
+	AutoPilotVector m_vecDestinationCoors;
 	CPathNode *m_aPathFindNodesInfo[NUM_PATH_NODES_IN_AUTOPILOT];
-	int16 m_nPathFindNodesCount;
+	int16_t m_nPathFindNodesCount;
 	CVehicle *m_pTargetCar;
 
-	CAutoPilot(void) {
-		m_nPrevRouteNode = 0;
-		m_nNextRouteNode = m_nPrevRouteNode;
-		m_nCurrentRouteNode = m_nNextRouteNode;
-		m_nTimeEnteredCurve = 0;
-		m_nTimeToSpendOnCurrentCurve = 1000;
-		m_nPreviousPathNodeInfo = 0;
-		m_nNextPathNodeInfo = m_nPreviousPathNodeInfo;
-		m_nCurrentPathNodeInfo = m_nNextPathNodeInfo;
-		m_nNextDirection = 1;
-		m_nCurrentDirection = m_nNextDirection;
-		m_nCurrentLane = m_nNextLane = 0;
-		m_nDrivingStyle = DRIVINGSTYLE_STOP_FOR_CARS;
-		m_nCarMission = MISSION_NONE;
-		m_nTempAction = TEMPACT_NONE;
-		m_nCruiseSpeed = 10;
-		m_fMaxTrafficSpeed = 10.0f;
-		m_bSlowedDownBecauseOfPeds = false;
-		m_bSlowedDownBecauseOfCars = false;
-		m_nPathFindNodesCount = 0;
-		m_pTargetCar = 0;
-		m_nTimeToStartMission = CTimer::GetTimeInMilliseconds();
-		m_nAntiReverseTimer = m_nTimeToStartMission;
-		m_bStayInFastLane = false;
-		m_nCruiseSpeedMultiplierType = 0;
-		m_fCruiseSpeedMultiplier = 1.0f;
-	}
-
-	void ModifySpeed(float);
-	void RemoveOnePathNode();
-#ifdef COMPATIBLE_SAVES
-	void Save(uint8*& buf);
-	void Load(uint8*& buf);
+} CAutoPilot;
+#ifdef __cplusplus
+extern "C" {
 #endif
-
-	float GetCruiseSpeed(void) { return m_nCruiseSpeed * m_fCruiseSpeedMultiplier; }
-
-};
-
-VALIDATE_SIZE(CAutoPilot, 0x70);
+void AutoPilot_Init(CAutoPilot *self);
+void AutoPilot_ModifySpeed(CAutoPilot *self,float speed);
+void AutoPilot_RemoveOnePathNode(CAutoPilot *self);
+float AutoPilot_GetCruiseSpeed(const CAutoPilot *self);
+#ifdef COMPATIBLE_SAVES
+void AutoPilot_Save(CAutoPilot *self,uint8_t **buf);
+void AutoPilot_Load(CAutoPilot *self,uint8_t **buf);
+#endif
+#ifdef __cplusplus
+}
+class CVector;
+AutoPilotVector AutoPilot_FromVector(CVector value);
+CVector AutoPilot_ToVector(AutoPilotVector value);
+#ifdef VALIDATE_SIZE
+VALIDATE_SIZE(CAutoPilot,0x70);
+#endif
+#endif
+//- rouz edit (ChatGPT)

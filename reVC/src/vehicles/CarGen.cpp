@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "CarGen.h"
@@ -45,7 +46,7 @@ void CCarGenerator::SwitchOn()
 
 uint32 CCarGenerator::CalcNextGen()
 {
-	return CTimer::GetTimeInMilliseconds() + 4;
+	return (*Timer_GetTimeInMilliseconds()) + 4;
 }
 
 void CCarGenerator::DoInternalProcessing()
@@ -66,7 +67,7 @@ void CCarGenerator::DoInternalProcessing()
 		if (m_nModelIndex == -1 || !CStreaming::HasModelLoaded(mi)) {
 			CZoneInfo pZone;
 			CVector pos = FindPlayerCoors();
-			CTheZones::GetZoneInfoForTimeOfDay(&pos, &pZone);
+			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &pZone);
 			mi = CCarCtrl::ChooseCarModel(CCarCtrl::ChooseCarRating(&pZone));
 			if (mi < 0)
 				return;
@@ -153,9 +154,9 @@ void CCarGenerator::DoInternalProcessing()
 	pVehicle->SetStatus(STATUS_ABANDONED);
 	pVehicle->m_nDoorLock = CARLOCK_UNLOCKED;
 	CWorld::Add(pVehicle);
-	if (CGeneral::GetRandomNumberInRange(0, 100) < m_nAlarm)
+	if (General_GetRandomNumberInRangeInt(0, 100) < m_nAlarm)
 		pVehicle->m_nAlarmState = -1;
-	if (CGeneral::GetRandomNumberInRange(0, 100) < m_nDoorlock)
+	if (General_GetRandomNumberInRangeInt(0, 100) < m_nDoorlock)
 		pVehicle->m_nDoorLock = CARLOCK_LOCKED;
 	if (m_nColor1 != -1 && m_nColor2 != -1) {
 		pVehicle->m_currentColour1 = m_nColor1;
@@ -186,7 +187,7 @@ void CCarGenerator::DoInternalProcessing()
 void CCarGenerator::Process()
 {
 	if (m_nVehicleHandle == -1 && 
-		(CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter || CTimer::GetTimeInMilliseconds() >= m_nTimer) &&
+		(CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter || (*Timer_GetTimeInMilliseconds()) >= m_nTimer) &&
 		m_nUsesRemaining != 0 && CheckIfWithinRangeOfAnyPlayers())
 		DoInternalProcessing();
 	if (m_nVehicleHandle == -1)
@@ -223,7 +224,7 @@ void CCarGenerator::Setup(float x, float y, float z, float angle, int32 mi, int1
 	m_nMinDelay = min_delay;
 	m_nMaxDelay = max_delay;
 	m_nVehicleHandle = -1;
-	m_nTimer = CTimer::GetTimeInMilliseconds() + 1;
+	m_nTimer = (*Timer_GetTimeInMilliseconds()) + 1;
 	m_nUsesRemaining = 0;
 	m_bIsBlocking = false;
 }
@@ -374,3 +375,5 @@ INITSAVEBUF
 		//- rouz edit (ChatGPT)
 VALIDATESAVEBUF(size)
 }
+
+//- rouz edit (ChatGPT)

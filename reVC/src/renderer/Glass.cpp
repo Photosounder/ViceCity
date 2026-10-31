@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
 
 #include "Glass.h"
 #include "Timer.h"
@@ -120,19 +122,19 @@ int32 TempBufferVerticesStoredReflection = 0;
 void
 CFallingGlassPane::Update(void)
 {
-	if ( CTimer::GetTimeInMilliseconds() >= m_nTimer )
+	if ( (*Timer_GetTimeInMilliseconds()) >= m_nTimer )
 	{
 		// Apply MoveSpeed
 		if ( m_bCarGlass )
-			GetPosition()    += m_vecMoveSpeed * CTimer::GetTimeStep() * 0.35f;
+			GetPosition()    += m_vecMoveSpeed * (*Timer_GetTimeStep()) * 0.35f;
 		else
-			GetPosition()    += m_vecMoveSpeed * CTimer::GetTimeStep();
+			GetPosition()    += m_vecMoveSpeed * (*Timer_GetTimeStep());
 
 		// Apply Gravity
 		if ( m_bCarGlass )
-			m_vecMoveSpeed.z -= 0.01f          *  CTimer::GetTimeStep();
+			m_vecMoveSpeed.z -= 0.01f          *  (*Timer_GetTimeStep());
 		else
-			m_vecMoveSpeed.z -= 0.02f          *  CTimer::GetTimeStep();
+			m_vecMoveSpeed.z -= 0.02f          *  (*Timer_GetTimeStep());
 
 		// Apply TurnSpeed
 		GetRight()   += CrossProduct(m_vecTurn, GetRight());
@@ -162,17 +164,17 @@ CFallingGlassPane::Update(void)
 	
 				for ( int32 i = 0; i < 4; i++ )
 				{
-					dir.x = CGeneral::GetRandomNumberInRange(-0.35f, 0.35f);
-					dir.y = CGeneral::GetRandomNumberInRange(-0.35f, 0.35f);
-					dir.z = CGeneral::GetRandomNumberInRange(0.05f, 0.20f);
+					dir.x = General_GetRandomNumberInRangeFloat(-0.35f, 0.35f);
+					dir.y = General_GetRandomNumberInRangeFloat(-0.35f, 0.35f);
+					dir.z = General_GetRandomNumberInRangeFloat(0.05f, 0.20f);
 	
 					CParticle::AddParticle(PARTICLE_CAR_DEBRIS,
 						pos,
 						dir,
 						nil,
-						CGeneral::GetRandomNumberInRange(0.02f, 0.2f),
+						General_GetRandomNumberInRangeFloat(0.02f, 0.2f),
 						color,
-						CGeneral::GetRandomNumberInRange(-40, 40),
+						General_GetRandomNumberInRangeInt(-40, 40),
 						0,
 						++nFrameGen & 3,
 						500);
@@ -195,9 +197,9 @@ CFallingGlassPane::Render(void)
 	uint8 alpha = CGlass::CalcAlphaWithNormal(&fwdNorm);
 
 #ifdef FIX_BUGS
-	uint16 time = Clamp(CTimer::GetTimeInMilliseconds() > m_nTimer ? CTimer::GetTimeInMilliseconds() - m_nTimer : 0u, 0u, 500u);
+	uint16 time = Clamp((*Timer_GetTimeInMilliseconds()) > m_nTimer ? (*Timer_GetTimeInMilliseconds()) - m_nTimer : 0u, 0u, 500u);
 #else
-	uint16 time = Clamp(CTimer::GetTimeInMilliseconds() - m_nTimer, 0, 500);
+	uint16 time = Clamp((*Timer_GetTimeInMilliseconds()) - m_nTimer, 0, 500);
 #endif
 
 	uint8 color = int32( float(alpha) * (float(time) / 500) );
@@ -315,7 +317,7 @@ CGlass::Render(void)
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE,      (void *)FALSE);
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER,     (void *)rwFILTERLINEAR);
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE,         (void *)TRUE);
-	RwRenderStateSet(rwRENDERSTATEFOGCOLOR,          (void *)RWRGBALONG(CTimeCycle::GetFogRed(), CTimeCycle::GetFogGreen(), CTimeCycle::GetFogBlue(), 255));
+	RwRenderStateSet(rwRENDERSTATEFOGCOLOR,          (void *)RWRGBALONG(TimeCycle_GetFogRed(), TimeCycle_GetFogGreen(), TimeCycle_GetFogBlue(), 255));
 	RwRenderStateSet(rwRENDERSTATESRCBLEND,          (void *)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND,         (void *)rwBLENDONE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void *)TRUE);
@@ -416,8 +418,8 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 										+ up    / upLen    * (upScl    * CentersWithTriangle[i].y + stepy)
 										+ pos;
 
-					pane->m_vecMoveSpeed.x = float((CGeneral::GetRandomNumber() & 127) - 64) * 0.0015f + speed.x;
-					pane->m_vecMoveSpeed.y = float((CGeneral::GetRandomNumber() & 127) - 64) * 0.0015f + speed.y;
+					pane->m_vecMoveSpeed.x = float((General_GetRandomNumber() & 127) - 64) * 0.0015f + speed.x;
+					pane->m_vecMoveSpeed.y = float((General_GetRandomNumber() & 127) - 64) * 0.0015f + speed.y;
 					pane->m_vecMoveSpeed.z = 0.0f + speed.z;
 
 					if ( moveSpeed != 0.0f )
@@ -428,19 +430,19 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 						pane->m_vecMoveSpeed += moveSpeed * dist;
 					}
 
-					pane->m_vecTurn.x = float((CGeneral::GetRandomNumber() & 127) - 64) * 0.002f;
-					pane->m_vecTurn.y = float((CGeneral::GetRandomNumber() & 127) - 64) * 0.002f;
-					pane->m_vecTurn.z = float((CGeneral::GetRandomNumber() & 127) - 64) * 0.002f;
+					pane->m_vecTurn.x = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
+					pane->m_vecTurn.y = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
+					pane->m_vecTurn.z = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
 
 					switch ( type )
 					{
 						case 0:
 						case 2:
-							pane->m_nTimer = CTimer::GetTimeInMilliseconds();
+							pane->m_nTimer = (*Timer_GetTimeInMilliseconds());
 							break;
 						case 1:
 							float dist = (pane->GetPosition() - center).Magnitude();
-							pane->m_nTimer = uint32(dist*100 + CTimer::GetTimeInMilliseconds());
+							pane->m_nTimer = uint32(dist*100 + (*Timer_GetTimeInMilliseconds()));
 							break;
 					}
 
@@ -493,10 +495,18 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 	ASSERT(col!=nil);
 	if ( col->numTriangles >= 2 )
 	{
-		CVector a = object->GetMatrix() * col->vertices[0].Get();
-		CVector b = object->GetMatrix() * col->vertices[1].Get();
-		CVector c = object->GetMatrix() * col->vertices[2].Get();
-		CVector d = object->GetMatrix() * col->vertices[3].Get();
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue0_0=CompressedVector_Get(&col->vertices[0]);
+		CVector a = object->GetMatrix() * CVector(collisionVertexValue0_0.x,collisionVertexValue0_0.y,collisionVertexValue0_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue1_0=CompressedVector_Get(&col->vertices[1]);
+		CVector b = object->GetMatrix() * CVector(collisionVertexValue1_0.x,collisionVertexValue1_0.y,collisionVertexValue1_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue2_0=CompressedVector_Get(&col->vertices[2]);
+		CVector c = object->GetMatrix() * CVector(collisionVertexValue2_0.x,collisionVertexValue2_0.y,collisionVertexValue2_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue3_0=CompressedVector_Get(&col->vertices[3]);
+		CVector d = object->GetMatrix() * CVector(collisionVertexValue3_0.x,collisionVertexValue3_0.y,collisionVertexValue3_0.z);
 
 		if ( object->bGlassCracked )
 		{
@@ -558,7 +568,7 @@ CGlass::RenderEntityInGlass(CEntity *entity)
 		//+ rouz edit (ChatGPT)
 		// Align the glass reflection texture with the camera currently rendering the pane
 		CVector cameraForward = GetGlassRenderCameraForward();
-		float FwdAngle = CGeneral::GetATanOfXY(cameraForward.x, cameraForward.y);
+		float FwdAngle = General_GetATanOfXY(cameraForward.x, cameraForward.y);
 		float v = 2.0f * cameraForward.z * 0.2f;
 		//- rouz edit (ChatGPT)
 		float u = float(object->m_randomSeed & 15) * 0.02f + (FwdAngle / TWOPI);
@@ -691,10 +701,18 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 	
 	if ( col->numTriangles == 2 )
 	{
-		CVector a = col->vertices[0].Get();
-		CVector b = col->vertices[1].Get();
-		CVector c = col->vertices[2].Get();
-		CVector d = col->vertices[3].Get();
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue4_0=CompressedVector_Get(&col->vertices[0]);
+		CVector a = CVector(collisionVertexValue4_0.x,collisionVertexValue4_0.y,collisionVertexValue4_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue5_0=CompressedVector_Get(&col->vertices[1]);
+		CVector b = CVector(collisionVertexValue5_0.x,collisionVertexValue5_0.y,collisionVertexValue5_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue6_0=CompressedVector_Get(&col->vertices[2]);
+		CVector c = CVector(collisionVertexValue6_0.x,collisionVertexValue6_0.y,collisionVertexValue6_0.z);
+		// Copy complete decoded values before the original native vector expression
+		const CollisionVector3 collisionVertexValue7_0=CompressedVector_Get(&col->vertices[3]);
+		CVector d = CVector(collisionVertexValue7_0.x,collisionVertexValue7_0.y,collisionVertexValue7_0.z);
 	
 		float minx = Min(Min(a.x, b.x), Min(c.x, d.x));
 		float maxx = Max(Max(a.x, b.x), Max(c.x, d.x));
@@ -781,7 +799,7 @@ CGlass::WasGlassHitByBullet(CEntity *entity, CVector point)
 			}
 			else
 			{
-				if ( (CGeneral::GetRandomNumber() & 3) == 2 )
+				if ( (General_GetRandomNumber() & 3) == 2 )
 					WindowRespondsToCollision(object, 0.0f, CVector(0.0f, 0.0f, 0.0f), point, false);
 			}
 		}
@@ -857,7 +875,7 @@ CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
 		return;
 	
 	CVector planeNormal;
-	triPlanes[triIndex].GetNormal(planeNormal);
+	ColTrianglePlane_GetNormal(&triPlanes[triIndex],&planeNormal.x,&planeNormal.y,&planeNormal.z);
 	planeNormal = Multiply3x3(vehicle->GetMatrix(), planeNormal);
 	
 	CVector vec1 = CrossProduct(vehicle->GetRight(), planeNormal);
@@ -870,13 +888,25 @@ CGlass::CarWindscreenShatters(CVehicle *vehicle, bool unk)
 	float proj1[6];
 	float proj2[6];
 	
-	v[0] = col->vertices[tria->a].Get();
-	v[1] = col->vertices[tria->b].Get();
-	v[2] = col->vertices[tria->c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue8_0=CompressedVector_Get(&col->vertices[tria->a]);
+	v[0] = CVector(collisionVertexValue8_0.x,collisionVertexValue8_0.y,collisionVertexValue8_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue9_0=CompressedVector_Get(&col->vertices[tria->b]);
+	v[1] = CVector(collisionVertexValue9_0.x,collisionVertexValue9_0.y,collisionVertexValue9_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue10_0=CompressedVector_Get(&col->vertices[tria->c]);
+	v[2] = CVector(collisionVertexValue10_0.x,collisionVertexValue10_0.y,collisionVertexValue10_0.z);
 	
-	v[3] = col->vertices[trib->a].Get();
-	v[4] = col->vertices[trib->b].Get();
-	v[5] = col->vertices[trib->c].Get();
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue11_0=CompressedVector_Get(&col->vertices[trib->a]);
+	v[3] = CVector(collisionVertexValue11_0.x,collisionVertexValue11_0.y,collisionVertexValue11_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue12_0=CompressedVector_Get(&col->vertices[trib->b]);
+	v[4] = CVector(collisionVertexValue12_0.x,collisionVertexValue12_0.y,collisionVertexValue12_0.z);
+	// Copy complete decoded values before the original native vector expression
+	const CollisionVector3 collisionVertexValue13_0=CompressedVector_Get(&col->vertices[trib->c]);
+	v[5] = CVector(collisionVertexValue13_0.x,collisionVertexValue13_0.y,collisionVertexValue13_0.z);
 	
 	v[0] = vehicle->GetMatrix() * v[0];
 	v[1] = vehicle->GetMatrix() * v[1];
@@ -1013,12 +1043,12 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 {
 	static uint32 breakTime = 0;
 	
-	if ( CTimer::GetTimeInMilliseconds() < breakTime + 1000 && CTimer::GetTimeInMilliseconds() >= breakTime )
+	if ( (*Timer_GetTimeInMilliseconds()) < breakTime + 1000 && (*Timer_GetTimeInMilliseconds()) >= breakTime )
 		return;
 	
 	CColSphere sphere;
 	sphere.piece = 0;
-	sphere.radius = radius;
+	sphere.bounds.radius = radius;
 	sphere.surface = 0;
 	
 	//+ rouz edit (ChatGPT)
@@ -1046,9 +1076,9 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 					
 					CVector dist = pos - object->GetPosition();
 					
-					sphere.center.x = DotProduct(dist, object->GetRight());
-					sphere.center.y = DotProduct(dist, object->GetForward());
-					sphere.center.z = DotProduct(dist, object->GetUp());
+					sphere.bounds.center.x = DotProduct(dist, object->GetRight());
+					sphere.bounds.center.y = DotProduct(dist, object->GetForward());
+					sphere.bounds.center.z = DotProduct(dist, object->GetUp());
 					
 					CCollision::CalculateTrianglePlanes(col);
 					
@@ -1063,14 +1093,22 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 					
 					if ( hit )
 					{
-						breakTime = CTimer::GetTimeInMilliseconds();
+						breakTime = (*Timer_GetTimeInMilliseconds());
 						
 						if ( object->bGlassCracked )
 						{
-							CVector a = col->vertices[0].Get();
-							CVector b = col->vertices[1].Get();
-							CVector c = col->vertices[2].Get();
-							CVector d = col->vertices[3].Get();
+							// Copy complete decoded values before the original native vector expression
+							const CollisionVector3 collisionVertexValue14_0=CompressedVector_Get(&col->vertices[0]);
+							CVector a = CVector(collisionVertexValue14_0.x,collisionVertexValue14_0.y,collisionVertexValue14_0.z);
+							// Copy complete decoded values before the original native vector expression
+							const CollisionVector3 collisionVertexValue15_0=CompressedVector_Get(&col->vertices[1]);
+							CVector b = CVector(collisionVertexValue15_0.x,collisionVertexValue15_0.y,collisionVertexValue15_0.z);
+							// Copy complete decoded values before the original native vector expression
+							const CollisionVector3 collisionVertexValue16_0=CompressedVector_Get(&col->vertices[2]);
+							CVector c = CVector(collisionVertexValue16_0.x,collisionVertexValue16_0.y,collisionVertexValue16_0.z);
+							// Copy complete decoded values before the original native vector expression
+							const CollisionVector3 collisionVertexValue17_0=CompressedVector_Get(&col->vertices[3]);
+							CVector d = CVector(collisionVertexValue17_0.x,collisionVertexValue17_0.y,collisionVertexValue17_0.z);
 						
 							float minx = Min(Min(a.x, b.x), Min(c.x, d.x));
 							float maxx = Max(Max(a.x, b.x), Max(c.x, d.x));
@@ -1113,4 +1151,6 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 		}
 	}
 }
+//- rouz edit (ChatGPT)
+
 //- rouz edit (ChatGPT)

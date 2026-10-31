@@ -46,7 +46,8 @@ def facade(source):
     # Move the existing public C-linkage facade into its actual C translation unit
     if re.search(r'(?m)^DMAudio_ReportCollision\(',source):
         source=source.replace(function(source,'DMAudio_','ReportCollision')+'\n','')
-    return source
+    import audio_ped_speech_migration
+    return audio_ped_speech_migration.facade(source)
 
 def body(source):
     # Keep rejection order, chained position-copy order and the original float operation sequence

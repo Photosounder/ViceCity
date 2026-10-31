@@ -1,0 +1,111 @@
+#include <cstdio>
+#include <limits>
+#include "owners.h"
+#include "caller.h"
+namespace OriginalRng { int myrand(void);void mysrand(unsigned int); }
+static unsigned states,draws,seeds,initializations,contains,randoms,debugs;static uint64_t hash=1469598103934665603ULL;
+static int dimension,indexNow,drawInCall,hook,forced=-1;static bool triggered;
+static void require(bool condition)
+{
+    // Reject invalid random widths and fixture lifetime errors without opening a window
+    if(!condition){fprintf(stderr,"Range corpus failed at state %u, draw %u, hook %d\n",states,draws,hook);abort();}
+}
+static void word(uint32_t value)
+{
+    // Preserve every declared scalar and exact float bit in a deterministic fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(i*8))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Observe signed zero, finite rounding and predicate-only nonfinite inputs exactly
+    uint32_t bits;memcpy(&bits,&value,4);word(bits);
+}
+static void point2(Range2DPoint point)
+{
+    // Preserve the complete original two-component result value
+    floating(point.x);floating(point.y);
+}
+static void point3(Range3DPoint point)
+{
+    // Preserve the complete original three-component result value
+    floating(point.x);floating(point.y);floating(point.z);
+}
+static void records(void)
+{
+    // Observe actual class or C storage without exposing native private members
+    for(int i=0;i<4;i++){Range2D a=TestRanges_Get2(i);Range3D b=TestRanges_Get3(i);point2(a.min);point2(a.max);point3(b.min);point3(b.max);}
+}
+static void snapshot(void)
+{
+    // Compare all endpoint fields after each complete constructor, predicate, debug or sampling sequence
+    states++;word(states);records();
+}
+static Range2DPoint random2(int index)
+{
+    // Retain outer draw context through nested sampling of another actual range
+    int savedDimension=dimension,savedIndex=indexNow,savedDraw=drawInCall;dimension=2;indexNow=index;drawInCall=0;randoms++;Range2DPoint result=TestRanges_RunRandom2(index);require(drawInCall==2);dimension=savedDimension;indexNow=savedIndex;drawInCall=savedDraw;point2(result);return result;
+}
+static Range3DPoint random3(int index)
+{
+    // Preserve three separate axis draws and the original by-value return contract
+    int savedDimension=dimension,savedIndex=indexNow,savedDraw=drawInCall;dimension=3;indexNow=index;drawInCall=0;randoms++;Range3DPoint result=TestRanges_RunRandom3(index);require(drawInCall==3);dimension=savedDimension;indexNow=savedIndex;drawInCall=savedDraw;point3(result);return result;
+}
+extern "C" int myrand(void)
+{
+    // Observe the unchanged original random provider and the live record at its public call boundary
+    draws++;drawInCall++;word(7);word(dimension);word(indexNow);word(drawInCall);records();int result=forced>=0?forced:OriginalRng::myrand();word((uint32_t)result);
+    if(hook==1 && !triggered){
+        // Change later-axis minima and all future widths after the original widths have already been captured
+        triggered=true;if(dimension==2){Range2D range=TestRanges_Get2(indexNow);range.min.y+=.375f;range.max.x+=100.f;range.max.y+=200.f;TestRanges_RunInit2(indexNow,range.min,range.max);}else{Range3D range=TestRanges_Get3(indexNow);range.min.y+=.375f;range.min.z-=.625f;range.max.x+=100.f;range.max.y+=200.f;range.max.z+=300.f;TestRanges_RunInit3(indexNow,range.min,range.max);}initializations++;
+    }else if(hook==2 && !triggered){
+        // Keep the outer captured widths alive through a complete nested sampling operation
+        triggered=true;if(dimension==2)random3(1);else random2(1);
+    }
+    return result;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Preserve the actual original seed conversion and provider state update
+    seeds++;word(8);word(seed);OriginalRng::mysrand(seed);
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Stop quietly if an unused native header dependency unexpectedly asserts
+    fprintf(stderr,"Native range assertion at %u: %s\n",line,expression);abort();
+}
+static void initialise(unsigned seed)
+{
+    // Construct actual records before any private-field observation or RNG event
+    for(int i=0;i<4;i++){float offset=seed*.125f+i*.25f;TestRanges_RunInit2(i,{offset-3.25f,offset+2.5f},{offset+5.75f,offset+9.875f});TestRanges_RunInit3(i,{offset-4.25f,offset+1.5f,offset-8.125f},{offset+7.75f,offset+10.875f,offset-1.0625f});initializations+=2;}
+}
+static void predicates(void)
+{
+    // Include strict faces, degenerate/inverted bounds, signed zero and nonfinite predicate-only values
+    const float values[]={-10.f,-1.f,-0.f,0.f,.125f,.5f,1.f,10.f,std::numeric_limits<float>::infinity(),-std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()};
+    for(float min:values)for(float max:values){
+        // Retain constructor endpoint ordering independently of whether a range is usable for random sampling
+        TestRanges_RunInit2(0,{min,-1.f},{max,1.f});TestRanges_RunInit3(0,{-1.f,min,-1.f},{1.f,max,1.f});initializations+=2;
+        for(float value:values){word(TestRanges_RunContains2(0,{value,0.f}));word(TestRanges_RunContains2(0,{value,-1.f}));word(TestRanges_RunContains2(0,{value,1.f}));word(TestRanges_RunContains3(0,{0.f,value,0.f}));word(TestRanges_RunContains3(0,{-1.f,value,0.f}));word(TestRanges_RunContains3(0,{0.f,value,1.f}));contains+=6;}snapshot();
+    }
+}
+int main(void)
+{
+    // Compare true constructor results before random-provider observation begins
+    initialise(0);snapshot();predicates();
+    const float widths[]={1.f,1.125f,1.999f,2.f,2.75f,7.5f,255.875f,65536.5f};const int injected[]={0,1,32767,32768,65535,65536,2147483647};
+    for(float width:widths)for(int inverted=0;inverted<2;inverted++)for(int raw:injected){
+        // Preserve truncation to integer widths, modulo sampling and the original behavior for reversed endpoints
+        float sign=inverted?-1.f:1.f;Range2DPoint min2={-3.25f,2.125f},max2={min2.x+sign*width,min2.y+sign*(width+1.f)};Range3DPoint min3={-4.5f,1.25f,-6.875f},max3={min3.x+sign*width,min3.y+sign*(width+1.f),min3.z+sign*(width+2.f)};TestRanges_RunInit2(0,min2,max2);TestRanges_RunInit3(0,min3,max3);initializations+=2;forced=raw;random2(0);random3(0);TestRanges_RunDebug2(0,-0.f,-1);TestRanges_RunDebug3(0,std::numeric_limits<float>::quiet_NaN(),2147483647);debugs+=2;snapshot();
+    }
+    forced=-1;
+    const int32_t seedValues[]={0,1,-1,12345,2147483647,(-2147483647-1)};
+    for(int32_t seed:seedValues){
+        // Sustain real original-provider sequences with both captured range records
+        initialise((uint32_t)seed&31);General_SetRandomSeed(seed);for(int frame=0;frame<80;frame++){random2(frame%4);random3(frame%4);if(frame%10==0)snapshot();}
+    }
+    for(int dimensions=2;dimensions<=3;dimensions++)for(int mutation=1;mutation<=2;mutation++){
+        // Observe defined later-axis mutations and nested calls without relying on operand evaluation order
+        initialise(7);General_SetRandomSeed(91);hook=mutation;triggered=false;if(dimensions==2)random2(0);else random3(0);require(triggered);hook=0;snapshot();
+    }
+    printf("states=%u draws=%u seeds=%u initializations=%u contains=%u randoms=%u debugs=%u hash=%016llx\n",states,draws,seeds,initializations,contains,randoms,debugs,(unsigned long long)hash);return 0;
+}

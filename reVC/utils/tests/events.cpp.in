@@ -1,0 +1,329 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),checks,states,observations;
+static CPed peds[32];static CPlayerPed players[2];static CVehicle vehicle;static CObject object;
+static CWanted wanted[2];static unsigned activePlayer,mode;static bool armed,triggered,lineHit;static int police;
+static unsigned references,crimes,immediate,messages,positionReads;static uintptr_t slots[128];static unsigned slotCount;
+TestPlayerInfo CWorld::Players[2];uint8 CWorld::PlayerInFocus;bool CGame::germanGame;
+extern "C" {uint32_t TestTime;int TheText;}
+static void Number(uint64_t value)
+{
+    // Compare ordered observations without process-specific addresses or uninitialized padding
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Check(bool value)
+{
+    // Stop the console comparison immediately on a violated independent invariant
+    ++checks;if(!value){fprintf(stderr,"Events check failed at %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static void Floating(float value)
+{
+    // Include exact floating-point results including signed zero in the behavior trace
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Vector(const CVector &value)
+{
+    // Observe all three native vector components in their declared order
+    Floating(value.x);Floating(value.y);Floating(value.z);
+}
+static unsigned PedId(CPed *value)
+{
+    // Distinguish actual pedestrian subobject pointers from adjusted entity and player addresses
+    if(!value)return 0;for(unsigned i=0;i<32;i++)if(value==&peds[i])return 10+i;
+    for(unsigned i=0;i<2;i++)if(value==(CPed*)&players[i])return 100+i;
+    Check(false);return 999;
+}
+static unsigned EntityId(CEntity *value)
+{
+    // Validate native downcasts and base adjustments independently of pointer-sized integer crime IDs
+    if(!value)return 0;for(unsigned i=0;i<32;i++)if(value==(CEntity*)&peds[i])return 10+i;
+    for(unsigned i=0;i<2;i++)if(value==(CEntity*)&players[i])return 100+i;
+    if(value==(CEntity*)&vehicle)return 200;if(value==(CEntity*)&object)return 201;Check(false);return 999;
+}
+static unsigned AccidentId(CAccident *value)
+{
+    // Preserve canonical manager slot identity across calls and pedestrian last-accident aliases
+    if(!value)return 0;for(unsigned i=0;i<NUM_ACCIDENTS;i++)if(value==&gAccidentManager.m_aAccidents[i])return i+1;
+    Check(false);return 999;
+}
+static unsigned SlotId(const void *value)
+{
+    // Check the exact registered canonical pointer-field address without dereferencing a reinterpreted base pointer
+    for(unsigned i=0;i<NUMEVENTS;i++)if(value==&gaEvent[i].criminal)return 1000+i;
+    for(unsigned i=0;i<NUM_ACCIDENTS;i++)if(value==&gAccidentManager.m_aAccidents[i].m_pVictim)return 2000+i;
+    Check(false);return 999;
+}
+static void CrimeId(uint32 value)
+{
+    // Normalize the original intentional 32-bit pointer-ID truncation while retaining distinct subobject addresses
+    for(unsigned i=0;i<32;i++){
+        if(value==(uint32)(uintptr_t)(CPed*)&peds[i]){Number(300+i);return;}
+        if(value==(uint32)(uintptr_t)(CEntity*)&peds[i]){Number(400+i);return;}
+    }
+    for(unsigned i=0;i<2;i++){
+        if(value==(uint32)(uintptr_t)(CPed*)&players[i]){Number(500+i);return;}
+        if(value==(uint32)(uintptr_t)(CEntity*)&players[i]){Number(600+i);return;}
+    }
+    if(value==(uint32)(uintptr_t)(CEntity*)&vehicle){Number(700);return;}
+    if(value==(uint32)(uintptr_t)(CEntity*)&object){Number(701);return;}Number(value);
+}
+void Observe(unsigned point,int identity)
+{
+    // Record each ordered native read and mutate only at a selected original statement boundary
+    ++observations;Number(point);Number(identity);
+    if(!armed||triggered)return;
+    if(mode==4&&point==50){triggered=true;CWorld::PlayerInFocus=1;}
+    else if(mode==5&&point==51){triggered=true;CWorld::PlayerInFocus=1;}
+    else if(mode==6&&(point==40||point==41)){triggered=true;activePlayer=1;}
+    else if(mode==7&&point==1&&++positionReads==1){triggered=true;peds[0].position.z+=9;}
+}
+const CVector &CEntity::GetPosition()
+{
+    // Expose the actual native reference at each original position access
+    Observe(1,id);return position;
+}
+void CEntity::RegisterReference(CEntity **slot)
+{
+    // Preserve the exact pedestrian-pointer representation stored in an opaque reference slot
+    Observe(2,id);Number(SlotId(slot));++references;Check(slotCount<128);slots[slotCount++]=(uintptr_t)slot;
+    CPed *value;memcpy(&value,slot,sizeof(value));Number(PedId(value));
+    if(armed&&!triggered&&mode>=1&&mode<=3){
+        triggered=true;value=mode==1?NULL:&peds[2];memcpy(slot,&value,sizeof(value));
+        if(mode==3){FIRST=17;for(unsigned i=0;i<NUM_ACCIDENTS;i++){gAccidentManager.m_aAccidents[i].m_nMedicsAttending=9;gAccidentManager.m_aAccidents[i].m_nMedicsPerformingCPR=8;}}
+    }
+}
+bool CPed::IsPlayer()
+{
+    // Preserve the original first eligibility read before all short-circuited flags
+    Observe(10,id);return player;
+}
+bool CPed::DyingOrDead()
+{
+    // Observe the chased-pedestrian reward gate at its original access point
+    Observe(18,id);return dead;
+}
+void CPed::SetWantedLevelNoDrop(int value)
+{
+    // Preserve the separate pedestrian-level wanted escalation and receiver identity
+    Observe(42,id);Number(value);m_pWanted->level=value;
+}
+int CWanted::GetWantedLevel()
+{
+    // Read the currently selected player's wanted object without caching it across callbacks
+    Observe(30,id);Number(level);return level;
+}
+void CWanted::RegisterCrime(eCrimeType type,const CVector &position,uint32 identity,bool dontCare)
+{
+    // Observe queued crime mapping, position, truncated ID and the receiver before any mutation
+    ++crimes;Observe(40,id);Number(type);Vector(position);CrimeId(identity);Number(dontCare);
+}
+void CWanted::RegisterCrime_Immediately(eCrimeType type,const CVector &position,uint32 identity,bool dontCare)
+{
+    // Observe immediate crime mapping independently from the later fresh wanted-object lookup
+    ++immediate;Observe(41,id);Number(type);Vector(position);CrimeId(identity);Number(dontCare);
+}
+void CWanted::SetWantedLevelNoDrop(int value)
+{
+    // Preserve the wanted-object escalation receiver after crime registration callbacks
+    Observe(43,id);Number(value);level=value;
+}
+int CWanted::WorkOutPolicePresence(const CVector &position,float radius)
+{
+    // Capture the separate police-position snapshot and the original fourteen-unit radius
+    Observe(31,0);Vector(position);Floating(radius);Check(radius==14.0f);return police;
+}
+CPlayerPed *FindPlayerPed()
+{
+    // Return the complete native player object so implicit base conversions remain observable
+    Observe(32,(int)activePlayer);return &players[activePlayer];
+}
+CVector FindPlayerCoors()
+{
+    // Keep the player-coordinate provider distinct from pedestrian-position access
+    Observe(33,(int)activePlayer);return CVector(37+(float)activePlayer,48,59);
+}
+bool IsPedPointerValid(CPed *value)
+{
+    // Compare actual pedestrian pointers without dereferencing integer-reinterpreted entity addresses
+    Observe(34,0);for(unsigned i=0;i<32;i++)if(value==&peds[i]){Number(10+i);return true;}
+    for(unsigned i=0;i<2;i++)if(value==(CPed*)&players[i]){Number(100+i);return true;}
+    Number(0);return false;
+}
+int CPools::GetPedRef(CPed *value)
+{
+    // Validate the original entity-to-pedestrian downcast before producing its pool handle
+    Observe(35,PedId(value));return (int)PedId(value)+1000;
+}
+int CPools::GetVehicleRef(CVehicle *value)
+{
+    // Validate the vehicle downcast across a deliberately nonzero entity-base offset
+    Check(value==&vehicle);Observe(36,200);return 2200;
+}
+int CPools::GetObjectRef(CObject *value)
+{
+    // Validate the object downcast across a deliberately nonzero entity-base offset
+    Check(value==&object);Observe(37,201);return 2201;
+}
+CPed *CPools::GetPed(int reference)
+{
+    // Preserve a missing pool result without clearing its pending injury event
+    Observe(38,reference);if(reference>=1010&&reference<1042)return &peds[reference-1010];return NULL;
+}
+bool CWorld::ProcessVerticalLine(const CVector &point,float end,CColPoint &,CEntity *&,bool buildings,bool vehicles,bool pedsFlag,bool objects,bool dummies,bool seeThrough,CEntity *ignore)
+{
+    // Verify the original collision query's position, endpoint and every fixed option
+    Observe(39,0);Vector(point);Floating(end);Check(end==-100&&buildings&&!vehicles&&!pedsFlag&&!objects&&!dummies&&!seeThrough&&!ignore);return lineHit;
+}
+void debug(const char *format,...)
+{
+    // Compare the complete original initialization diagnostic text
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);Observe(60,0);for(const char *p=text;*p;p++)Number((unsigned char)*p);
+}
+void Error(const char *format,...)
+{
+    // Preserve the invalid event-kind diagnostic without terminating the controlled fixture
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);Observe(61,0);for(const char *p=text;*p;p++)Number((unsigned char)*p);
+}
+extern "C" uint16_t *Text_Get(void *text,const char *key)
+{
+    // Exercise a language callback before the focused reward account is selected
+    Check(text==&TheText&&strcmp(key,"GOODBOY")==0);Observe(50,0);static uint16_t words[]={65,66,0};return words;
+}
+extern "C" void Messages_AddBigMessage(uint16_t *text,uint32_t duration,uint16_t style)
+{
+    // Exercise the big-message callback before the subsequent original money mutation
+    Check(text[0]==65&&text[1]==66&&duration==5000&&style==0);++messages;Observe(51,0);
+}
+static EventsVector Position(float x,float y,float z)
+{
+    // Produce the same named vector values for the original C++ and independent C caller ABIs
+    EventsVector value;value.x=x;value.y=y;value.z=z;return value;
+}
+static void InitPed(CPed *ped,int id)
+{
+    // Initialize every controlled native field without clearing object padding or changing base layout
+    ped->id=id;ped->position=CVector(3,4,-1);ped->player=false;ped->dead=false;
+    ped->CharCreatedBy={RANDOM_CHAR,id,11};ped->bRenderScorched={false,id,12};ped->bBodyPartJustCameOff={false,id,13};
+    ped->bAllowMedicsToReviveMe={true,id,14};ped->bIsInWater={false,id,15};ped->bBeingChasedByPolice={false,id,16};ped->m_fHealth={0,id,17};
+    ped->m_pCurrentPhysSurface=NULL;ped->m_lastAccident=NULL;ped->m_pWanted=&wanted[0];
+}
+static void Reset()
+{
+    // Seed all named storage deterministically and retain stale criminal fields across the original initializer
+    armed=false;triggered=false;mode=0;slotCount=0;positionReads=0;references=crimes=immediate=messages=0;lineHit=false;police=0;activePlayer=0;
+    CGame::germanGame=false;CWorld::PlayerInFocus=0;CWorld::Players[0].m_nMoney=100;CWorld::Players[1].m_nMoney=900;TestTime=100;
+    for(unsigned i=0;i<2;i++){wanted[i].id=100+i;wanted[i].level=0;InitPed(&players[i],100+i);players[i].player=true;players[i].m_pWanted=&wanted[i];players[i].position=CVector(7+(float)i,8,9);}
+    for(unsigned i=0;i<32;i++)InitPed(&peds[i],10+i);
+    vehicle.id=200;vehicle.position=CVector(11,12,13);object.id=201;object.position=CVector(14,15,16);
+    for(unsigned i=0;i<NUMEVENTS;i++){gaEvent[i].criminal=&peds[i%32];}
+    Run_Events_Initialise();Run_AccidentManager_Init(&gAccidentManager);
+}
+static void Snapshot()
+{
+    // Observe every canonical named field and every external mutation after a complete public operation
+    ++states;Number(states);Number(FIRST);Number(TestTime);Number(slotCount);Number(references);Number(crimes);Number(immediate);Number(messages);
+    for(unsigned i=0;i<NUMEVENTS;i++){const CEvent &e=gaEvent[i];Number(e.type);Number(e.entityType);Number(e.entityRef);Number(PedId(e.criminal));Floating(e.posn.x);Floating(e.posn.y);Floating(e.posn.z);Number(e.timeout);Number(e.state);}
+    for(unsigned i=0;i<NUM_ACCIDENTS;i++){const CAccident &a=gAccidentManager.m_aAccidents[i];Number(PedId(a.m_pVictim));Number(a.m_nMedicsAttending);Number(a.m_nMedicsPerformingCPR);}
+    for(unsigned i=0;i<32;i++)Number(AccidentId(peds[i].m_lastAccident));
+    for(unsigned i=0;i<2;i++){Number(wanted[i].level);Number(CWorld::Players[i].m_nMoney);}Number(activePlayer);Number(triggered);
+}
+static void EventCases()
+{
+    // Cover every event kind, all native pool downcasts, timeout wrap and duplicate refresh without new crimes
+    for(int type=0;type<EVENT_LAST_EVENT;type++)for(unsigned kind=0;kind<4;kind++)for(unsigned criminal=0;criminal<3;criminal++){
+#ifdef SQUEEZE_PERFORMANCE
+        if(type==EVENT_INJURED_PED&&kind!=EVENT_ENTITY_PED)continue;
+#endif
+        Reset();TestTime=criminal==2?UINT32_MAX-5:100;CEntity *entity=kind==2?(CEntity*)&vehicle:kind==3?(CEntity*)&object:(CEntity*)&peds[0];
+        CPed *who=criminal==0?NULL:criminal==1?&peds[1]:(CPed*)&players[0];
+        Run_Events_RegisterEntity((eEventType)type,(eEventEntity)kind,entity,who,criminal==1?-101:20);Snapshot();
+        TestTime+=7;Run_Events_RegisterEntity((eEventType)type,(eEventEntity)kind,entity,who,-1);Snapshot();
+        Run_Events_Update();Snapshot();TestTime+=100;Run_Events_Update();Snapshot();
+    }
+    // Exercise exact positional duplicates, preserved stale references, first-free semantics and full queues
+    for(unsigned full=0;full<3;full++)for(unsigned callback=0;callback<4;callback++){
+        Reset();if(full)for(unsigned i=0;i<NUMEVENTS;i++){gaEvent[i].type=EVENT_FIRE;gaEvent[i].entityRef=500+i;gaEvent[i].entityType=EVENT_ENTITY_OBJECT;gaEvent[i].timeout=500;}
+        if(full==2){gaEvent[1].type=EVENT_NULL;gaEvent[18].type=EVENT_NULL;FIRST=17;}
+        mode=callback;armed=true;Run_Events_RegisterEntity(EVENT_SHOOT_COP,EVENT_ENTITY_PED,&peds[0],&players[0],50);Snapshot();
+        Run_Events_RegisterPosition(EVENT_GUNSHOT,Position(1,2,3),-1);Snapshot();
+        Run_Events_RegisterPosition(EVENT_GUNSHOT,Position(1,2,3),44);Snapshot();
+        Run_Events_Initialise();Snapshot();Check(gaEvent[0].criminal!=NULL||callback==1);
+    }
+    // Verify strict expiry, the two-step clear state machine and untouched lookup outputs on failure
+    Reset();Run_Events_RegisterPosition(EVENT_FIRE,Position(60,0,0),0);Check(gaEvent[0].criminal==&peds[0]);
+    Run_Events_Update();Check(gaEvent[0].type==EVENT_FIRE);int32 output=-29;
+    Check(!Run_Events_FindClosestEvent(EVENT_FIRE,Position(0,0,0),&output)&&output==-29);
+    gaEvent[0].posn.x=59;Check(Run_Events_FindClosestEvent(EVENT_FIRE,Position(0,0,0),&output)&&output==0);
+    Run_Events_ClearEvent(0);Check(gaEvent[0].state==2);Run_Events_Update();Check(gaEvent[0].state==1&&gaEvent[0].type==EVENT_FIRE);
+    Run_Events_ClearEvent(0);Check(gaEvent[0].state==1);Run_Events_Update();Check(gaEvent[0].type==EVENT_NULL);
+    output=-29;Check(!Run_Events_GetEvent(EVENT_FIRE,&output)&&output==-29);Check(Run_Events_GetEvent(EVENT_NULL,&output)&&output==0);Snapshot();
+    // Cover all clear-state and timeout relationships including NULL-type records that update skips
+    for(unsigned state=0;state<3;state++)for(unsigned delta=0;delta<3;delta++){
+        Reset();gaEvent[0].type=EVENT_FIRE;gaEvent[0].state=state;gaEvent[0].timeout=99+delta;gaEvent[1].state=state;
+        Run_Events_Update();Snapshot();Check(gaEvent[1].state==(int)state);Run_Events_Update();Snapshot();
+    }
+    // Exercise the complete event-to-crime switch under every police, locale, wanted and callback alternative
+    for(int type=0;type<EVENT_LAST_EVENT;type++)for(unsigned flags=0;flags<16;flags++)for(unsigned callback=0;callback<3;callback++){
+        Reset();CGame::germanGame=(flags&1)!=0;police=(flags&2)?-1:0;wanted[0].level=(flags&4)?2:0;peds[0].bBeingChasedByPolice.value=(flags&8)!=0;
+        mode=callback==1?6:0;armed=true;Run_Events_ReportCrimeForEvent((eEventType)type,(intptr)&peds[0],callback==2);Snapshot();
+    }
+    // Preserve reward callback order, focused money selection and the dead-victim early return
+    for(unsigned callback=0;callback<3;callback++)for(unsigned dead=0;dead<2;dead++){
+        Reset();peds[0].bBeingChasedByPolice.value=true;peds[0].dead=dead!=0;mode=callback==1?4:callback==2?5:0;armed=true;
+        Run_Events_ReportCrimeForEvent(EVENT_ASSAULT,(intptr)&peds[0],false);Check(messages==(dead?0u:1u));
+        Check(CWorld::Players[callback&& !dead?1:0].m_nMoney==(callback&&!dead?950:dead?100:150));Snapshot();
+    }
+}
+static void AccidentCases()
+{
+    // Prove explicit C construction preserves every original named field for individual and array records
+    alignas(CAccident) unsigned char storage[sizeof(CAccident)];memset(storage,0xA7,sizeof(storage));CAccident *local=(CAccident*)storage;
+    Run_Accident_Init(local);Check(!local->m_pVictim&&!local->m_nMedicsAttending&&!local->m_nMedicsPerformingCPR);
+    alignas(CAccidentManager) unsigned char managerStorage[sizeof(CAccidentManager)];memset(managerStorage,0xA7,sizeof(managerStorage));CAccidentManager *manager=(CAccidentManager*)managerStorage;
+    Run_AccidentManager_Init(manager);for(unsigned i=0;i<NUM_ACCIDENTS;i++)Check(!manager->m_aAccidents[i].m_pVictim&&!manager->m_aAccidents[i].m_nMedicsAttending&&!manager->m_aAccidents[i].m_nMedicsPerformingCPR);
+    // Exercise all lazy injury eligibility gates, surface and collision alternatives, capacity and reference mutation
+    for(unsigned flags=0;flags<64;flags++)for(unsigned environment=0;environment<4;environment++)for(unsigned callback=0;callback<4;callback++){
+        Reset();peds[0].player=(flags&1)!=0;peds[0].CharCreatedBy.value=(flags&2)?MISSION_CHAR:RANDOM_CHAR;peds[0].bRenderScorched.value=(flags&4)!=0;
+        peds[0].bBodyPartJustCameOff.value=(flags&8)!=0;peds[0].bAllowMedicsToReviveMe.value=(flags&16)==0;peds[0].bIsInWater.value=(flags&32)!=0;
+        if(environment==1)peds[0].m_pCurrentPhysSurface=&vehicle;lineHit=environment==2;
+        if(environment==3)for(unsigned i=0;i<NUM_ACCIDENTS;i++)gAccidentManager.m_aAccidents[i].m_pVictim=&peds[i+1];
+        mode=callback;armed=true;Run_AccidentManager_ReportAccident(&gAccidentManager,&peds[0]);Snapshot();
+        Run_AccidentManager_ReportAccident(&gAccidentManager,&peds[0]);Snapshot();
+        Number(AccidentId(Run_AccidentManager_GetNextFreeAccident(&gAccidentManager)));
+        Number(Run_AccidentManager_CountActiveAccidents(&gAccidentManager));Number(Run_AccidentManager_WorkToDoForMedics(&gAccidentManager));Number(Run_AccidentManager_UnattendedAccidents(&gAccidentManager));
+    }
+    // Preserve missing injury-pool entries, queue clear ordering and the direct injury route under squeeze mode
+    for(unsigned missing=0;missing<2;missing++){
+        Reset();Run_Events_RegisterEntity(EVENT_INJURED_PED,EVENT_ENTITY_PED,&peds[0],NULL,500);Snapshot();
+        if(missing)gaEvent[0].entityRef=-1;Run_AccidentManager_Update(&gAccidentManager);Snapshot();Run_AccidentManager_Update(&gAccidentManager);Snapshot();
+    }
+    // Confirm CPR priority wins over proximity and the attending count is not a nearest-accident filter
+    Reset();gAccidentManager.m_aAccidents[0].m_pVictim=&peds[0];gAccidentManager.m_aAccidents[0].m_nMedicsAttending=9;
+    gAccidentManager.m_aAccidents[1].m_pVictim=&peds[1];gAccidentManager.m_aAccidents[1].m_nMedicsPerformingCPR=1;peds[0].position=CVector(100,0,0);peds[1].position=CVector(1,0,0);
+    float distance=-9;Check(Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance)==&gAccidentManager.m_aAccidents[0]&&distance==100);
+    // Compare exact distance and vertical-boundary decisions over deterministic mixed candidate sets
+    uint32_t random=0x54719A3Bu;
+    for(unsigned iteration=0;iteration<3000;iteration++){
+        Reset();for(unsigned i=0;i<NUM_ACCIDENTS;i++){
+            random=random*1664525u+1013904223u;CAccident &a=gAccidentManager.m_aAccidents[i];a.m_pVictim=(random&3)?&peds[i]:NULL;
+            a.m_nMedicsAttending=(random>>2)&3;a.m_nMedicsPerformingCPR=(random>>4)&3;peds[i].CharCreatedBy.value=(random&64)?RANDOM_CHAR:MISSION_CHAR;peds[i].m_fHealth.value=(random&128)?0.0f:50.0f;
+            peds[i].position=CVector((float)(int)((random>>8)&127)-63,(float)(int)((random>>15)&127)-63,(float)(int)((random>>22)&63)-31);
+        }
+        mode=iteration%5==0?7:0;armed=true;distance=-9;CAccident *nearest=Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance);
+        Number(AccidentId(nearest));Floating(distance);Number(Run_AccidentManager_CountActiveAccidents(&gAccidentManager));Number(Run_AccidentManager_WorkToDoForMedics(&gAccidentManager));Number(Run_AccidentManager_UnattendedAccidents(&gAccidentManager));Snapshot();
+    }
+    // Verify strict vertical equality, zero planar distance, exact ties and the no-result output sentinel
+    Reset();gAccidentManager.m_aAccidents[0].m_pVictim=&peds[0];peds[0].position=CVector(6,8,5);distance=-9;
+    Check(!Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance)&&distance==999999);
+    peds[0].position.z=4;Check(Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance)==&gAccidentManager.m_aAccidents[0]&&distance==10);
+    peds[0].position=CVector(0,0,0);Check(!Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance)&&distance==999999);
+    peds[0].position=CVector(0,0,-1);Check(Run_AccidentManager_FindNearestAccident(&gAccidentManager,Position(0,0,0),&distance)==&gAccidentManager.m_aAccidents[0]&&distance==0);Snapshot();
+}
+int main()
+{
+    // Check canonical startup state before any fixture initialization or explicit constructor call
+    Check(FIRST==0);for(unsigned i=0;i<NUMEVENTS;i++)Check(!gaEvent[i].criminal&&gaEvent[i].type==EVENT_NULL&&gaEvent[i].timeout==0&&gaEvent[i].state==0);
+    for(unsigned i=0;i<NUM_ACCIDENTS;i++)Check(!gAccidentManager.m_aAccidents[i].m_pVictim&&!gAccidentManager.m_aAccidents[i].m_nMedicsAttending&&!gAccidentManager.m_aAccidents[i].m_nMedicsPerformingCPR);
+    Check((uintptr_t)(CPed*)&peds[0]!=(uintptr_t)(CEntity*)&peds[0]);Check((uintptr_t)&players[0]!=(uintptr_t)(CPed*)&players[0]);
+    EventCases();AccidentCases();printf("states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

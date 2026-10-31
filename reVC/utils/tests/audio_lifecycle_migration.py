@@ -45,4 +45,5 @@ def body(source):
         method=event+('GameSpecificSetup' if 'Initialise' in event else 'GameSpecificShutdown')
         source=source.replace(method+'()', 'AudioLifecycleHost_'+event+'(manager)')
     for event in ['Initialise','Terminate']:source=source.replace('MusicManager.'+event+'()', 'AudioLifecycleHost_Music'+event+'()')
-    return re.sub(r'(?<![\w.:>])Terminate\(\)', 'AudioLifecycle_Terminate(manager)',source)
+    import audio_game_setup_migration
+    return audio_game_setup_migration.calls(re.sub(r'(?<![\w.:>])Terminate\(\)', 'AudioLifecycle_Terminate(manager)',source))

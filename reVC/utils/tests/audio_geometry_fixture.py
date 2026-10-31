@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Audit camera geometry and compare actual C kernels with original C++ arithmetic."""
 from pathlib import Path
 import re
@@ -5,6 +6,8 @@ from audio_controls_migration import function
 import audio_geometry_migration as migration
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-geometry-c-tests'
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare complete statements independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 old=(out/'before/src/audio/AudioLogic.cpp').read_text()

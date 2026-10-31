@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #define WITHDINPUT
 #include "common.h"
 #include "platform.h"
@@ -121,7 +122,7 @@ void CControllerConfigManager::SaveSettings(int32 file)
 		{
 			for (int32 j = 0; j < MAX_CONTROLLERACTIONS; j++)
 			{
-				CFileMgr::Write(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
+				FileMgr_Write(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
 			}
 		}
 	}
@@ -138,13 +139,13 @@ void CControllerConfigManager::LoadSettings(int32 file)
 	if (file)
 	{
 		char buff[29];
-		CFileMgr::Read(file, buff, sizeof(buff));
+		FileMgr_Read(file, buff, sizeof(buff));
 
 		if (!strncmp(buff, TopLineEmptyFile, sizeof(TopLineEmptyFile)-1))
 			bValid = false;
 		else {
-			CFileMgr::Seek(file, 0, 0);
-			CFileMgr::Read(file, (char*)&nVersion, sizeof(nVersion));
+			FileMgr_Seek(file, 0, 0);
+			FileMgr_Read(file, (char*)&nVersion, sizeof(nVersion));
 		}
 	}
 
@@ -171,7 +172,7 @@ void CControllerConfigManager::LoadSettings(int32 file)
 				if (skipVehicleFireWeapon && j == VEHICLE_FIREWEAPON)
 					continue;
 #endif
-				CFileMgr::Read(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
+				FileMgr_Read(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
 			}
 		}
 	}
@@ -489,7 +490,7 @@ void CControllerConfigManager::InitialiseControllerActionNameArray()
 {
 	wchar buf[ACTIONNAME_LENGTH + 2];
 
-#define SETACTIONNAME(name) AsciiToUnicode(#name, buf); CMessages::WideStringCopy(m_aActionNames[name], buf, ACTIONNAME_LENGTH);
+#define SETACTIONNAME(name) AsciiToUnicode(#name, buf); Messages_WideStringCopy(m_aActionNames[name], buf, ACTIONNAME_LENGTH);
 
 	SETACTIONNAME(PED_LOOKBEHIND);
 	SETACTIONNAME(PED_CYCLE_WEAPON_LEFT);
@@ -2047,7 +2048,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 		{
 			char c = GetControllerKeyAssociatedWithAction(action, type);
 			if (c == ' ')
-				return TheText.Get("FEC_SPC"); // "SPC"
+				return Text_Get(&TheText,"FEC_SPC"); // "SPC"
 			else
 			{
 				ActionText[0] = CFont::character_code(c);
@@ -2074,7 +2075,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 				case rsF11:
 				case rsF12:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_FNC"), // "F~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_FNC"), // "F~1~"
 						GetControllerKeyAssociatedWithAction(action, type) - rsESC,
 						-1, -1, -1, -1, -1,
 						NewStringWithNumber);
@@ -2084,97 +2085,97 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsINS:
 				{
-					return TheText.Get("FEC_IRT"); // "INS"
+					return Text_Get(&TheText,"FEC_IRT"); // "INS"
 					break;
 				}
 
 				case rsDEL:
 				{
-					return TheText.Get("FEC_DLL"); // "DEL"
+					return Text_Get(&TheText,"FEC_DLL"); // "DEL"
 					break;
 				}
 
 				case rsHOME:
 				{
-					return TheText.Get("FEC_HME"); // "HOME"
+					return Text_Get(&TheText,"FEC_HME"); // "HOME"
 					break;
 				}
 
 				case rsEND:
 				{
-					return TheText.Get("FEC_END"); // "END"
+					return Text_Get(&TheText,"FEC_END"); // "END"
 					break;
 				}
 
 				case rsPGUP:
 				{
-					return TheText.Get("FEC_PGU"); // "PGUP"
+					return Text_Get(&TheText,"FEC_PGU"); // "PGUP"
 					break;
 				}
 
 				case rsPGDN:
 				{
-					return TheText.Get("FEC_PGD"); // "PGDN"
+					return Text_Get(&TheText,"FEC_PGD"); // "PGDN"
 					break;
 				}
 
 				case rsUP:
 				{
-					return TheText.Get("FEC_UPA"); // "UP"
+					return Text_Get(&TheText,"FEC_UPA"); // "UP"
 					break;
 				}
 
 				case rsDOWN:
 				{
-					return TheText.Get("FEC_DWA"); // "DOWN"
+					return Text_Get(&TheText,"FEC_DWA"); // "DOWN"
 					break;
 				}
 
 				case rsLEFT:
 				{
-					return TheText.Get("FEC_LFA"); // "LEFT"
+					return Text_Get(&TheText,"FEC_LFA"); // "LEFT"
 					break;
 				}
 
 				case rsRIGHT:
 				{
-					return TheText.Get("FEC_RFA"); // "RIGHT"
+					return Text_Get(&TheText,"FEC_RFA"); // "RIGHT"
 					break;
 				}
 
 				case rsDIVIDE:
 				{
-					return TheText.Get("FEC_FWS"); // "NUM /"
+					return Text_Get(&TheText,"FEC_FWS"); // "NUM /"
 					break;
 				}
 
 				case rsTIMES:
 				{
-					return TheText.Get("FEC_STR"); // "NUM STAR"
+					return Text_Get(&TheText,"FEC_STR"); // "NUM STAR"
 					break;
 				}
 
 				case rsPLUS:
 				{
-					return TheText.Get("FEC_PLS"); // "NUM +"
+					return Text_Get(&TheText,"FEC_PLS"); // "NUM +"
 					break;
 				}
 
 				case rsMINUS:
 				{
-					return TheText.Get("FEC_MIN"); // "NUM -"
+					return Text_Get(&TheText,"FEC_MIN"); // "NUM -"
 					break;
 				}
 
 				case rsPADDEL:
 				{
-					return TheText.Get("FEC_DOT"); // "NUM ."
+					return Text_Get(&TheText,"FEC_DOT"); // "NUM ."
 					break;
 				}
 
 				case rsPADEND:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						1, -1, -1, -1, -1, -1, NewStringWithNumber);
 					return NewStringWithNumber;
 					break;
@@ -2182,7 +2183,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADDOWN:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						2, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2191,7 +2192,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADPGDN:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						3, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2200,7 +2201,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADLEFT:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						4, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2209,7 +2210,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPAD5:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						5, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2218,13 +2219,13 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsNUMLOCK:
 				{
-					return TheText.Get("FEC_NLK"); // "NUMLOCK"
+					return Text_Get(&TheText,"FEC_NLK"); // "NUMLOCK"
 					break;
 				}
 
 				case rsPADRIGHT:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						6, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2233,7 +2234,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADHOME:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						7, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2242,7 +2243,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADUP:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						8, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2251,7 +2252,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADPGUP:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						9, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2260,7 +2261,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADINS:
 				{
-					CMessages::InsertNumberInString(TheText.Get("FEC_NMN"), // "NUM~1~"
+					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_NMN"), // "NUM~1~"
 						0, -1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2269,103 +2270,103 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 
 				case rsPADENTER:
 				{
-					return TheText.Get("FEC_ETR"); // "ENT"
+					return Text_Get(&TheText,"FEC_ETR"); // "ENT"
 					break;
 				}
 
 				case rsSCROLL:
 				{
-					return TheText.Get("FEC_SLK"); // "SCROLL LOCK"
+					return Text_Get(&TheText,"FEC_SLK"); // "SCROLL LOCK"
 					break;
 				}
 
 				case rsPAUSE:
 				{
-					return TheText.Get("FEC_PSB"); // "BREAK"
+					return Text_Get(&TheText,"FEC_PSB"); // "BREAK"
 					break;
 				}
 
 				case rsBACKSP:
 				{
-					return TheText.Get("FEC_BSP"); // "BSPACE"
+					return Text_Get(&TheText,"FEC_BSP"); // "BSPACE"
 					break;
 				}
 
 				case rsTAB:
 				{
-					return TheText.Get("FEC_TAB"); // "TAB"
+					return Text_Get(&TheText,"FEC_TAB"); // "TAB"
 					break;
 				}
 
 				case rsCAPSLK:
 				{
-					return TheText.Get("FEC_CLK"); // "CAPSLOCK"
+					return Text_Get(&TheText,"FEC_CLK"); // "CAPSLOCK"
 					break;
 				}
 
 				case rsENTER:
 				{
-					return TheText.Get("FEC_RTN"); // "RET"
+					return Text_Get(&TheText,"FEC_RTN"); // "RET"
 					break;
 				}
 
 				case rsLSHIFT:
 				{
-					return TheText.Get("FEC_LSF"); // "LSHIFT"
+					return Text_Get(&TheText,"FEC_LSF"); // "LSHIFT"
 					break;
 				}
 
 				case rsRSHIFT:
 				{
-					return TheText.Get("FEC_RSF"); // "RSHIFT"
+					return Text_Get(&TheText,"FEC_RSF"); // "RSHIFT"
 					break;
 				}
 
 				case rsLCTRL:
 				{
-					return TheText.Get("FEC_LCT"); // "LCTRL"
+					return Text_Get(&TheText,"FEC_LCT"); // "LCTRL"
 					break;
 				}
 
 				case rsRCTRL:
 				{
-					return TheText.Get("FEC_RCT"); // "RCTRL"
+					return Text_Get(&TheText,"FEC_RCT"); // "RCTRL"
 					break;
 				}
 
 				case rsLALT:
 				{
-					return TheText.Get("FEC_LAL"); // "LALT"
+					return Text_Get(&TheText,"FEC_LAL"); // "LALT"
 					break;
 				}
 
 				case rsRALT:
 				{
-					return TheText.Get("FEC_RAL"); // "RALT"
+					return Text_Get(&TheText,"FEC_RAL"); // "RALT"
 					break;
 				}
 
 				case rsLWIN:
 				{
-					return TheText.Get("FEC_LWD"); // "LWIN"
+					return Text_Get(&TheText,"FEC_LWD"); // "LWIN"
 					break;
 				}
 
 				case rsRWIN:
 				{
-					return TheText.Get("FEC_RWD"); // "RWIN"
+					return Text_Get(&TheText,"FEC_RWD"); // "RWIN"
 					break;
 				}
 
 				case rsAPPS:
 				{
-					return TheText.Get("FEC_WRC"); // "WINCLICK"
+					return Text_Get(&TheText,"FEC_WRC"); // "WINCLICK"
 					break;
 				}
 
 				case rsSHIFT:
 				{
-					return TheText.Get("FEC_SFT"); // "SHIFT"
+					return Text_Get(&TheText,"FEC_SFT"); // "SHIFT"
 					break;
 				}
 				default: break;
@@ -2381,25 +2382,25 @@ wchar *CControllerConfigManager::GetControllerSettingTextMouse(e_ControllerActio
 	switch (m_aSettings[action][MOUSE].m_Key)
 	{
 	case 1:
-		return TheText.Get("FEC_MSL");	// LMB
+		return Text_Get(&TheText,"FEC_MSL");	// LMB
 		break;
 	case 2:
-		return TheText.Get("FEC_MSM");	// MMB
+		return Text_Get(&TheText,"FEC_MSM");	// MMB
 		break;
 	case 3:
-		return TheText.Get("FEC_MSR");	// RMB
+		return Text_Get(&TheText,"FEC_MSR");	// RMB
 		break;
 	case 4:
-		return TheText.Get("FEC_MWF");	// WHEEL UP
+		return Text_Get(&TheText,"FEC_MWF");	// WHEEL UP
 		break;
 	case 5:
-		return TheText.Get("FEC_MWB");	// WHEEL DN
+		return Text_Get(&TheText,"FEC_MWB");	// WHEEL DN
 		break;
 	case 6:
-		return TheText.Get("FEC_MXO");	// MXB1
+		return Text_Get(&TheText,"FEC_MXO");	// MXB1
 		break;
 	case 7:
-		return TheText.Get("FEC_MXT");	// MXB2
+		return Text_Get(&TheText,"FEC_MXT");	// MXB2
 		break;
 	default: break;
 	}
@@ -2414,7 +2415,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextJoystick(e_ControllerAc
 
 	static wchar NewStringWithNumber[30];
 
-	CMessages::InsertNumberInString(TheText.Get("FEC_JBO"),		// JOY ~1~
+	Messages_InsertNumberInString(Text_Get(&TheText,"FEC_JBO"),		// JOY ~1~
 		m_aSettings[action][JOYSTICK].m_Key, -1, -1, -1, -1, -1,
 		NewStringWithNumber);
 
@@ -2736,7 +2737,7 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 		assert(Buttons[CPad::GetPad(0)->Mode][action] != nil); // we cannot use these
 		AsciiToUnicode(Buttons[CPad::GetPad(0)->Mode][action], wstr);
 
-		CMessages::WideStringCopy(text, wstr, leight);
+		Messages_WideStringCopy(text, wstr, leight);
 		return;
 	}
 #endif
@@ -2750,34 +2751,34 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 		wchar *textorder = ControlsManager.GetControllerSettingTextWithOrderNumber((e_ControllerAction)action, (eContSetOrder)i);
 		if (textorder != NULL)
 		{
-			uint16 len = CMessages::GetWideStringLength(text);
-			CMessages::WideStringCopy(&text[len], textorder, leight - len);
+			uint16 len = Messages_GetWideStringLength(text);
+			Messages_WideStringCopy(&text[len], textorder, leight - len);
 
 			if (++sets < nums)
 			{
 				if (sets == nums - 1)
 				{
 					// if last - text += ' or ';
-					uint16 pos1 = CMessages::GetWideStringLength(text);
+					uint16 pos1 = Messages_GetWideStringLength(text);
 					text[pos1] = ' ';
 
-					CMessages::WideStringCopy(&text[pos1 + 1],
-						TheText.Get("FEC_ORR"),	// "or"
+					Messages_WideStringCopy(&text[pos1 + 1],
+						Text_Get(&TheText,"FEC_ORR"),	// "or"
 						leight - (pos1 + 1));
 					
-					uint16 pos2 = CMessages::GetWideStringLength(text);
+					uint16 pos2 = Messages_GetWideStringLength(text);
 					text[pos2 + 0] = ' ';
 					text[pos2 + 1] = '\0';
 				}
 				else
 				{
 					// text += ', ';
-					uint16 pos1 = CMessages::GetWideStringLength(text);
+					uint16 pos1 = Messages_GetWideStringLength(text);
 					text[pos1 + 0] = ',';
 					text[pos1 + 1] = ' ';
 					text[pos1 + 2] = '\0';
 
-					uint16 pos2 = CMessages::GetWideStringLength(text);
+					uint16 pos2 = Messages_GetWideStringLength(text);
 				}
 			}
 		}
@@ -2838,15 +2839,15 @@ wchar *CControllerConfigManager::GetButtonComboText(e_ControllerAction action)
 	switch (action)
 	{
 	case PED_CYCLE_TARGET_LEFT:
-		return TheText.Get("FEC_PTL");	// Use LockTarget with Weapon Switch Left.
+		return Text_Get(&TheText,"FEC_PTL");	// Use LockTarget with Weapon Switch Left.
 		break;
 	
 	case PED_CYCLE_TARGET_RIGHT:
-		return TheText.Get("FEC_PTR");	// Use LockTarget with Weapon Switch Right.
+		return Text_Get(&TheText,"FEC_PTR");	// Use LockTarget with Weapon Switch Right.
 		break;
 	
 	case VEHICLE_LOOKBEHIND:
-		return TheText.Get("FEC_LBC");	// Use Look Left With Look Right. 
+		return Text_Get(&TheText,"FEC_LBC");	// Use Look Left With Look Right. 
 		break;
 	default: break;
 	}
@@ -2916,3 +2917,4 @@ void CControllerConfigManager::ResetSettingOrder(e_ControllerAction action)
 		}
 	}
 }
+//- rouz edit (ChatGPT)

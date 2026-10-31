@@ -1,3 +1,4 @@
+import weather_migration as _weather_conversion
 """Compare the complete color table, model IDs and original/C vehicle report."""
 from pathlib import Path
 import re
@@ -5,9 +6,12 @@ import audio_game_entries_migration as entries
 from audio_controls_migration import function
 import audio_police_suspect_migration as suspect
 import audio_police_state_fixture as state
+import model_indices_migration as models
 root=Path(__file__).resolve().parents[2];out=root/'build/audio-police-suspect-c-tests'
 old=(out/'before/src/audio/PolRadio.cpp').read_text();kernel=(root/'src/audio/AudioPoliceSuspect.c').read_text()
 def normalize(s):
+    # Apply the explicit verified weather rename before comparing every original statement
+    s=_weather_conversion.calls(s)
     # Compare actual statements and declarations independently of comments and whitespace
     return re.sub(r'\s+','',re.sub(r'//[^\n]*|/\*.*?\*/','',s,flags=re.S))
 actual=function(kernel,'AudioPolice_','SuspectReport')
@@ -18,7 +22,7 @@ for file,transform in [('PolRadio.cpp',suspect.radio),('AudioManager.h',suspect.
     assert normalize(transform((out/'before/src/audio'/file).read_text()))==normalize((root/'src/audio'/file).read_text()),file
 model=(out/'before/src/modelinfo/ModelIndices.h').read_text()
 expected=model.replace(suspect.ENUMS,'#include "ModelIds.h"')
-assert normalize(expected)==normalize((root/'src/modelinfo/ModelIndices.h').read_text())
+models.verify_header(expected,root)
 assert normalize('#pragma once\n'+suspect.ENUMS)==normalize((root/'src/modelinfo/ModelIds.h').read_text())
 names=re.findall(r'(?m)^\s*([A-Z][A-Z_0-9]*)\s*(?:=|,)',suspect.ENUMS)
 assert names and len(names)==len(set(names))

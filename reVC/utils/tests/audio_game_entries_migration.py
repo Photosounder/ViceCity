@@ -40,9 +40,11 @@ def game_header(source):
     return source
 
 def facade(source):
+    import audio_music_state_migration as music
     # Move the public crime facade into C with the same opaque vector pointer ABI
     if re.search(r'(?m)^DMAudio_ReportCrime\(',source):source=source.replace(function(source,'DMAudio_','ReportCrime')+'\n','')
-    return reload.facade(source)
+    import audio_ped_speech_migration
+    return music.calls(audio_ped_speech_migration.facade(reload.facade(source)))
 
 def suspect(source):
     # Use the owner-independent lookup at the same existing report point

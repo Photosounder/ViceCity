@@ -1,57 +1,53 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
+#ifdef __cplusplus
 class CVehicle;
-
+#else
+typedef struct CVehicle CVehicle;
+#endif
 enum {
-	// NB: not all values are allowed, check the code
 #ifdef SQUEEZE_PERFORMANCE
 	NUM_RUBBISH_SHEETS = 32
 #else
 	NUM_RUBBISH_SHEETS = 64
 #endif
 };
-
-class COneSheet
-{
-public:
-	CVector m_basePos;
-	CVector m_animatedPos;
+typedef struct RubbishVector { float x, y, z; } RubbishVector;
+typedef struct RubbishVector2 { float x, y; } RubbishVector2;
+typedef struct RubbishSheet {
+	RubbishVector m_basePos;
+	RubbishVector m_animatedPos;
 	float m_targetZ;
-	int8 m_state;
-	int8 m_animationType;
-	uint32 m_moveStart;
-	uint32 m_moveDuration;
+	int8_t m_state;
+	int8_t m_animationType;
+	uint32_t m_moveStart;
+	uint32_t m_moveDuration;
 	float m_animHeight;
 	float m_xDist;
 	float m_yDist;
 	float m_angle;
 	bool m_isVisible;
 	bool m_targetIsVisible;
-	COneSheet *m_next;
-	COneSheet *m_prev;
-
-	void AddToList(COneSheet *list);
-	void RemoveFromList(void);
-};
-
-class CRubbish
-{
-	static bool bRubbishInvisible;
-	static int RubbishVisibility;
-	static COneSheet aSheets[NUM_RUBBISH_SHEETS];
-	static COneSheet StartEmptyList;
-	static COneSheet EndEmptyList;
-	static COneSheet StartStaticsList;
-	static COneSheet EndStaticsList;
-	static COneSheet StartMoversList;
-	static COneSheet EndMoversList;
-public:
-	static void Render(void);
-	static void StirUp(CVehicle *veh);	// CAutomobile on PS2
-	static void Update(void);
-	static void SetVisibility(bool visible);
-	static void Init(void);
-	static void Shutdown(void);
-};
-
-extern RwTexture *gpRubbishTexture[4];
+	struct RubbishSheet *m_next;
+	struct RubbishSheet *m_prev;
+} RubbishSheet;
+#ifdef __cplusplus
+extern "C" {
+#endif
+void RubbishSheet_AddToList(RubbishSheet *sheet, RubbishSheet *list);
+void RubbishSheet_RemoveFromList(RubbishSheet *sheet);
+void Rubbish_Render(void);
+void Rubbish_StirUp(CVehicle *veh);
+void Rubbish_Update(void);
+void Rubbish_SetVisibility(bool visible);
+void Rubbish_Init(void);
+void Rubbish_Shutdown(void);
+extern void *gpRubbishTexture[4];
+extern uint16_t RubbishIndexList[6];
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

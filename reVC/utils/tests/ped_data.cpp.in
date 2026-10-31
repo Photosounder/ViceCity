@@ -1,0 +1,271 @@
+#include "caller.h"
+#include "config.h"
+#include "FileMgr.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <string>
+#include <vector>
+#include <stdint.h>
+#ifdef VALIDATE_SAVE_SIZE
+extern "C" { int32_t _saveBufCount; }
+#endif
+static std::string pedFile,statsFile;
+static uint64_t hashValue=UINT64_C(1469598103934665603);
+static unsigned states,allocations,frees,loads,dirs,diagnostics,errors,saves,lookups,masks;
+static unsigned assertionFailures;
+static bool allowAssertions;
+struct Allocation {void *address;size_t size;bool active;};
+static std::vector<Allocation> live;
+static const char *names[]={"PLAYER1","PLAYER2","PLAYER3","PLAYER4","CIVMALE","CIVFEMALE","COP","GANG1","GANG2","GANG3","GANG4","GANG5","GANG6","GANG7","GANG8","GANG9","EMERGENCY","FIREMAN","CRIMINAL","PROSTITUTE","SPECIAL","GUN","COP_CAR","FAST_CAR","EXPLOSION","DEADPEDS"};
+static const int types[]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20,21};
+static const uint32_t flags[]={1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768,65536,1u<<24,1u<<18,1u<<17,1u<<19,1u<<20,1u<<21,1u<<22,1u<<23,1u<<25};
+extern "C" int myrand(void)
+{
+    // Reject any unexpected random dependency from the pedestrian data operations
+    assert(false);return 0;
+}
+extern "C" void mysrand(unsigned int seed)
+{
+    // Reject any unexpected random seeding while linking the complete real General C unit
+    (void)seed;assert(false);
+}
+extern "C" void re3_assert(const char *expression,const char *file,unsigned int line,const char *function)
+{
+    // Preserve the native diagnostic callback's ability to return after a rejected header
+    if(!allowAssertions){fprintf(stderr,"Assertion %s at %s:%u in %s\n",expression,file,line,function);abort();}
+    assertionFailures++;
+}
+
+static void bytes(const void *data,size_t size)
+{
+    // Hash observable bytes without including process-specific addresses
+    const uint8_t *p=(const uint8_t *)data;
+    for(size_t i=0;i<size;i++){hashValue^=p[i];hashValue*=UINT64_C(1099511628211);}
+}
+static void number(uint32_t value)
+{
+    // Keep counters and scalar observations at a fixed serialized width
+    bytes(&value,sizeof(value));
+}
+static void snapshot(void)
+{
+    // Observe the actual type and statistics allocations after every complete operation
+    for(int i=0;i<NUM_PEDTYPES;i++)bytes(Test_Type(i),sizeof(PedType));
+    for(int i=0;i<NUM_PEDSTATS;i++)bytes(Test_Stat(i),sizeof(PedStats));
+    states++;
+}
+extern "C" void *Test_Allocate(size_t size)
+{
+    // Poison new memory so missing value initialization is visible in both record families
+    assert(size==sizeof(PedType)||size==sizeof(PedStats)||size==16384);
+    void *memory=malloc(size);assert(memory);memset(memory,0xA5,size);
+    live.push_back({memory,size,true});allocations++;number((uint32_t)size);return memory;
+}
+extern "C" void Test_Free(void *memory)
+{
+    // Require each parser and record allocation to be released once by its original provider
+    bool found=false;
+    for(size_t i=live.size();i>0;i--){
+        // Match the most recent live allocation if the CRT reused a previous address
+        Allocation &a=live[i-1];
+        if(a.active&&a.address==memory){a.active=false;number((uint32_t)a.size);found=true;break;}
+    }
+    assert(found);free(memory);frees++;
+}
+extern "C" void Test_Debug(const char *format,...)
+{
+    // Compare the native boundary's formatted text with the original direct debug calls
+    char message[512];va_list args;va_start(args,format);vsnprintf(message,sizeof(message),format,args);va_end(args);
+    bytes(message,strlen(message));diagnostics++;
+}
+extern "C" void Test_Error(const char *format,...)
+{
+    // Observe unknown type reporting without opening the game's diagnostic UI
+    assert(strcmp(format,"Unknown ped type, Pedtype.cpp")==0);bytes(format,strlen(format));errors++;
+}
+extern "C" void *cita_win_malloc(size_t size,const char *file,const char *function,int line)
+{
+    // Exercise the actual native bridge's allocator entry point without initializing the game allocator
+    assert(file&&function&&line>0);return Test_Allocate(size);
+}
+extern "C" void cita_win_free(void *memory,const char *file,const char *function,int line)
+{
+    // Verify the actual native bridge returns its memory through the matching allocator entry point
+    assert(file&&function&&line>0);Test_Free(memory);
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Check the real common-header prefix before observing the original diagnostic text
+    char message[512];va_list args;va_start(args,format);vsnprintf(message,sizeof(message),format,args);va_end(args);
+    if(strncmp(message,"[DBG]: ",7)==0){Test_Debug("%s",message+7);}
+    else {assert(strncmp(message,"[ERROR]: ",9)==0);Test_Error(message+9);}
+}
+extern "C" void FileMgr_SetDir(const char *dir)
+{
+    // Require the same DATA-directory entry and root restoration for each read
+    assert(strcmp(dir,dirs%2?"":"DATA")==0);bytes(dir,strlen(dir));dirs++;
+}
+extern "C" FileMgrSize FileMgr_LoadFile(const char *name,uint8_t *buffer,int maximum,const char *mode)
+{
+    // Supply complete valid data files through the real parser's existing file-manager contract
+    assert(dirs%2==1&&maximum==16384&&strcmp(mode,"r")==0);
+    assert(strcmp(name,"PED.DAT")==0||strcmp(name,"PEDSTATS.DAT")==0);
+    const std::string &file=strcmp(name,"PED.DAT")==0?pedFile:statsFile;
+    assert(file.size()<size_t(maximum));memcpy(buffer,file.data(),file.size());buffer[file.size()]=0;
+    bytes(name,strlen(name));number((uint32_t)file.size());loads++;return (FileMgrSize)file.size();
+}
+
+static void checkDefaults(void)
+{
+    // Verify every byte originally supplied by value initialization and explicit default assignments
+    for(int i=0;i<NUM_PEDTYPES;i++){
+        // Include the formerly implicit unknown3 zero and all untouched threat/avoid values
+        PedType expected={};expected.m_flag=PED_FLAG_PLAYER1;
+        assert(memcmp(&expected,Test_Type(i),sizeof(expected))==0);
+        for(int j=0;j<i;j++)assert(Test_Type(i)!=Test_Type(j));
+    }
+    for(int i=0;i<NUM_PEDSTATS;i++){
+        // Include every name byte and the two original trailing padding bytes
+        PedStats expected;memset(&expected,0,sizeof(expected));expected.m_type=PEDSTAT_PLAYER;
+        expected.m_name[8]='R';expected.m_fleeDistance=20;expected.m_headingChangeRate=15;
+        expected.m_fear=expected.m_temper=expected.m_lawfulness=expected.m_sexiness=50;
+        expected.m_attackStrength=expected.m_defendWeakness=1;
+        assert(memcmp(&expected,Test_Stat(i),sizeof(expected))==0);
+        for(int j=0;j<i;j++)assert(Test_Stat(i)!=Test_Stat(j));
+    }
+    snapshot();
+}
+
+static void checksNames(void)
+{
+    // Exercise every defined name, case sensitivity, unknown sentinel and all 26 independent flag bits
+    for(int i=0;i<26;i++){
+        // Lookup flags independently of the pedestrian enum's different fireman ordering
+        assert(Test_FindFlag((char *)names[i])==flags[i]);number(Test_FindFlag((char *)names[i]));lookups++;
+        if(i<21){assert(Test_FindType((char *)names[i])==types[i]);number(Test_FindType((char *)names[i]));lookups++;}
+    }
+    const char *unknown[]={"","player1","GANG0","GANG10","UNUSED1","UNUSED2","None","deadpeds"};
+    for(const char *name:unknown){
+        // Keep the original nonfatal diagnostic and fallback when the host lets execution continue
+        assert(Test_FindFlag((char *)name)==0);assert(Test_FindType((char *)name)==NUM_PEDTYPES);lookups+=2;
+    }
+}
+
+static void checkMasks(void)
+{
+    // Cover signed threat arguments, high bits, repeated changes and the original boolean result
+    const uint32_t seeds[]={0,UINT32_MAX,0x80000000u,0x55aa55aau,0x01234567u};
+    const int threats[]={0,1,-1,INT32_MIN,INT32_MAX,0x55555555,1<<25};
+    for(int i=0;i<NUM_PEDTYPES;i++)for(uint32_t seed:seeds)for(int threat:threats){
+        // Mutate canonical live records and check each accessor against independent scalar expectations
+        Test_SetThreats(i,seed);assert(Test_GetThreats(i)==seed);assert(Test_IsThreat(i,threat)==bool(seed&(uint32_t)threat));
+        Test_AddThreat(i,threat);uint32_t expected=seed|(uint32_t)threat;assert(Test_GetThreats(i)==expected);
+        Test_RemoveThreat(i,threat);expected&=~(uint32_t)threat;assert(Test_GetThreats(i)==expected);
+        assert(Test_GetFlag(i)==Test_Type(i)->m_flag);assert(Test_GetAvoid(i)==Test_Type(i)->m_avoid);
+        number(Test_GetThreats(i));number(Test_IsThreat(i,threat));masks++;
+    }
+    snapshot();
+}
+
+static void parseTypes(int pass)
+{
+    // Feed the original valid grammar with comments, whitespace, commas, tabs and mixed flag lists
+    pedFile="# All original type names\r\n";uint32_t expectedThreat[NUM_PEDTYPES]={},expectedAvoid[NUM_PEDTYPES]={};
+    for(int i=0;i<21;i++){
+        // Vary all five numeric fields while keeping complete valid lines within the original limits
+        char line[256];snprintf(line,sizeof(line)," %s,\t%d, %d, %d, %d, %d\r\n",names[i],i*3-pass,50-i,pass*7+i,100+i,-i-pass);pedFile+=line;
+        int a=(i+pass)%26,b=(i*3+pass)%26,c=(i*7+3)%26;
+        pedFile+="Threat ";pedFile+=names[a];pedFile+="\t";pedFile+=names[b];pedFile+=" UNKNOWN ";pedFile+=names[a];pedFile+="\r\n";
+        pedFile+="Avoid ";pedFile+=names[c];pedFile+=" ";pedFile+=names[a];pedFile+="\n";
+        expectedThreat[types[i]]=flags[a]|flags[b];expectedAvoid[types[i]]=flags[c]|flags[a];
+    }
+    Test_TypeRead();
+    for(int i=0;i<21;i++){
+        // Independently verify lookup mapping, normalization, raw parameters and both mask accumulators
+        PedType *p=Test_Type(types[i]);assert(p->m_flag==flags[i]);
+        assert(p->unknown1==(float)(i*3-pass)/50.0f&&p->unknown2==(float)(50-i)/50.0f&&p->unknown3==(float)(pass*7+i)/50.0f);
+        assert(p->unknown4==(float)(100+i)&&p->unknown5==(float)(-i-pass));
+        assert(p->m_threats==expectedThreat[types[i]]&&p->m_avoid==expectedAvoid[types[i]]);
+    }
+    snapshot();
+}
+
+static void parseStats(int count,int pass,bool longName)
+{
+    // Exercise sequential stats assignment, integer narrowing and unchanged records after short files
+    statsFile="# Stats\r\n";PedStats old[NUM_PEDSTATS];
+    for(int i=0;i<NUM_PEDSTATS;i++)memcpy(&old[i],Test_Stat(i),sizeof(PedStats));
+    for(int i=0;i<count;i++){
+        // Supply bounded names and complete fields including both signs of byte and word narrowing
+        char line[256],name[32];snprintf(name,sizeof(name),"STAT_%d",i);
+        if(i==5||i==7)strcpy(name,"DUP");
+        if(longName&&i==0)strcpy(name,"ABCDEFGHIJKLMNOPQRSTUVWXYZ1234");
+        snprintf(line,sizeof(line),"%s, %d, %d, %d, %d, %d, %d, %d, %d, %d\r\n",name,i+pass,-i,127+i,128+i,-128-i,255+i,pass-i,1+i,32767+i);
+        statsFile+=line;
+    }
+    Test_StatsRead();
+    for(int i=0;i<NUM_PEDSTATS;i++){
+        // Compare all fields and name padding without calling string lookup on a truncated long name
+        PedStats *p=Test_Stat(i);
+        if(i>=count){assert(memcmp(p,&old[i],sizeof(PedStats))==0);continue;}
+        assert((int)p->m_type==i&&p->m_fleeDistance==i+pass&&p->m_headingChangeRate==-i);
+        assert(p->m_fear==(int8_t)(127+i)&&p->m_temper==(int8_t)(128+i)&&p->m_lawfulness==(int8_t)(-128-i)&&p->m_sexiness==(int8_t)(255+i));
+        assert(p->m_attackStrength==pass-i&&p->m_defendWeakness==1+i&&p->m_flags==(int16_t)(32767+i));
+    }
+    if(longName){assert(memcmp(Test_Stat(0)->m_name,"ABCDEFGHIJKLMNOPQRSTUVWX",24)==0);}
+    else{
+        // Require first-match semantics, case sensitivity and the exact not-found sentinel
+        assert(Test_FindStat((char *)"DUP")==5);assert(Test_FindStat((char *)"dup")==NUM_PEDSTATS);assert(Test_FindStat((char *)"MISSING")==NUM_PEDSTATS);lookups+=3;
+        for(int i=0;i<count;i++)if(i!=5&&i!=7){char name[32];snprintf(name,sizeof(name),"STAT_%d",i);assert(Test_FindStat(name)==i);lookups++;}
+    }
+    snapshot();
+}
+
+static void saveRoundTrips(void)
+{
+    // Check the original 744-byte save payload at four byte alignments with exact raw-record restoration
+    for(int alignment=0;alignment<4;alignment++){
+        // Include every record byte, preserve pointer identity and guard both ends of each save buffer
+        uint8_t storage[768];memset(storage,0x5A,sizeof(storage));uint8_t *buf=storage+4+alignment;uint32_t size=0;
+        PedType copy[NUM_PEDTYPES];PedType *pointers[NUM_PEDTYPES];
+        for(int i=0;i<NUM_PEDTYPES;i++){pointers[i]=Test_Type(i);memcpy(&copy[i],pointers[i],sizeof(PedType));}
+        Test_Save(buf,&size);assert(size==744&&memcmp(buf,"PTP\0",4)==0);uint32_t payload;memcpy(&payload,buf+4,4);assert(payload==736);
+        for(int i=0;i<NUM_PEDTYPES;i++){assert(memcmp(buf+8+i*32,&copy[i],32)==0);memset(Test_Type(i),0xCE,32);}
+        for(int i=0;i<4+alignment;i++)assert(storage[i]==0x5A);
+        for(size_t i=4+alignment+size;i<sizeof(storage);i++)assert(storage[i]==0x5A);
+        bytes(buf,size);Test_Load(buf,size);
+        for(int i=0;i<NUM_PEDTYPES;i++)assert(Test_Type(i)==pointers[i]&&memcmp(Test_Type(i),&copy[i],32)==0);
+        // Exercise all five original header checks without changing the valid payload or load size
+        memset(buf,0x33,8);unsigned previous=assertionFailures;allowAssertions=true;Test_Load(buf,size);allowAssertions=false;
+#ifdef VALIDATE_SAVE_SIZE
+        assert(assertionFailures==previous+5);
+#else
+        assert(assertionFailures==previous);
+#endif
+        for(int i=0;i<NUM_PEDTYPES;i++)assert(Test_Type(i)==pointers[i]&&memcmp(Test_Type(i),&copy[i],32)==0);
+        saves++;snapshot();
+    }
+}
+
+int main(void)
+{
+    // Repeat full lifecycles so initialization cannot depend on fresh static storage
+    for(int cycle=0;cycle<3;cycle++){
+        // Observe defaults before either data file assigns any records
+        pedFile.clear();statsFile.clear();Test_TypeInit();Test_StatsInit();checkDefaults();checksNames();checkMasks();
+        for(int pass=0;pass<4;pass++){parseTypes(pass);parseStats(NUM_PEDSTATS,pass,false);saveRoundTrips();}
+        parseStats(8,9,false);parseStats(1,11,true);
+        uintptr_t typePointers[NUM_PEDTYPES],statPointers[NUM_PEDSTATS];
+        for(int i=0;i<NUM_PEDTYPES;i++)typePointers[i]=(uintptr_t)Test_Type(i);
+        for(int i=0;i<NUM_PEDSTATS;i++)statPointers[i]=(uintptr_t)Test_Stat(i);
+        Test_TypeShutdown();Test_StatsShutdown();
+        for(int i=0;i<NUM_PEDTYPES;i++)assert((uintptr_t)Test_Type(i)==typePointers[i]);
+        for(int i=0;i<NUM_PEDSTATS;i++)assert((uintptr_t)Test_Stat(i)==statPointers[i]);
+    }
+    for(const Allocation &a:live)assert(!a.active);
+    assert(allocations==frees&&loads==36&&dirs==72&&errors==24&&masks==2415&&saves==48);
+    printf("states=%u allocations=%u frees=%u loads=%u dirs=%u diagnostics=%u errors=%u saves=%u lookups=%u masks=%u assertions=%u hash=%016llx\n",states,allocations,frees,loads,dirs,diagnostics,errors,saves,lookups,masks,assertionFailures,(unsigned long long)hashValue);
+}

@@ -1,0 +1,70 @@
+static unsigned coverage[SH_RenderAtomic+1];
+static uintptr_t shadowIdentity(void *value,void *record,bool parent)
+{
+    // Normalize embedded camera pointers separately from SDK object identities
+    if(!value)return 0;uintptr_t address=(uintptr_t)value,base=(uintptr_t)record;if(record&&address>=base&&address<base+ShadowRecordSize(parent))return 9000000+address-base;return identity(value);
+}
+static ShadowResult shadowRun(unsigned operation,ShadowArgs *args,bool parent=false,bool initialized=false)
+{
+    // Observe complete operation results and canonical owner state after the real producer returns
+    ++commands;++coverage[operation];ShadowResult result={};TestShadow(operation,args,&result);uintptr_t resultId=shadowIdentity(result.object,args->self,parent);bytes(&resultId,sizeof(resultId));bytes(&result.value,sizeof(result.value));if(operation==SH_ParentGetBaseSphere)bytes(result.sphere,sizeof(result.sphere));if(args->self&&operation!=SH_CameraDeinit&&operation!=SH_ParentDeinit){uintptr_t handles[10]={};int32_t flags[4]={};float spheres[8];ShadowRecordState(args->self,parent,handles,flags,initialized?spheres:NULL);for(unsigned i=0;i<(parent?10:2);++i){unsigned id=identity((void*)handles[i]);bytes(&id,sizeof(id));}if(parent){bytes(flags,sizeof(flags));if(initialized)bytes(spheres,sizeof(spheres));}}bytes(renderStates,sizeof(renderStates));return result;
+}
+static void shadowCameraCases(RpLight *light,RpAtomic *atomic,RpClump *clump)
+{
+    // Exercise every complete camera operation through independent public language callers
+    alignas(16) unsigned char record[256];memset(record,0xA5,sizeof(record));ShadowArgs a={};a.self=record;a.size=3;a.passes=2;a.colour[0]=17;a.colour[1]=93;a.colour[2]=201;a.colour[3]=49;shadowRun(SH_CameraInit,&a);RwCamera *camera=(RwCamera*)shadowRun(SH_CameraCreate,&a).object;require(camera);a.values[0]=2.75f;shadowRun(SH_CameraSetFrustum,&a);a.object=light;shadowRun(SH_CameraSetLight,&a);RwV3d center={13,-27,4.5f};a.object=&center;shadowRun(SH_CameraSetCenter,&a);a.object=RwMatrixGetPos(&camera->frame->matrix);shadowRun(SH_CameraSetCenter,&a);for(unsigned op=SH_CameraGetRwRenderRaster;op<=SH_CameraGetRwZRaster;++op)shadowRun(op,&a);shadowRun(SH_CameraGetRwCamera,&a);
+    for(unsigned failure=0;failure<2;++failure){
+        // Compare camera-begin failure against the complete clump and atomic update paths
+        failBeginCall=failure?beginCalls+1:0;a.object=clump;shadowRun(SH_CameraUpdateClump,&a);failBeginCall=failure?beginCalls+1:0;a.object=atomic;shadowRun(SH_CameraUpdateAtomic,&a);require(shadowCallbacks[0]==customRender);failBeginCall=0;
+    }
+    shadowNested={};shadowNested.object=atomic;nestedRender=true;a.object=atomic;shadowRun(SH_CameraUpdateAtomic,&a);require(shadowCallbacks[0]==customRender);shadowRun(SH_RenderAtomic,&shadowNested);shadowNested=a;nestedDraw=true;shadowRun(SH_CameraInvertRaster,&a);shadowRun(SH_CameraMakeGradientRaster,&a);
+    RwRaster *destination=RwRasterCreate(8,8,0,rwRASTERTYPECAMERATEXTURE);a.object=destination;shadowRun(SH_CameraRasterResample,&a);shadowRun(SH_CameraRasterGradient,&a);shadowRun(SH_CameraDrawOutlineBorder,&a);
+    for(int passes=-1;passes<=3;++passes){
+        // Preserve zero and negative blur behavior as well as both rendering halves per positive pass
+        a.passes=passes;shadowRun(SH_CameraRasterBlur,&a);
+    }
+    for(unsigned failure=1;failure<=4;++failure){
+        // Fail each half of two blur passes and retain the original conditional state restoration
+        a.passes=2;failBeginCall=beginCalls+failure;shadowRun(SH_CameraRasterBlur,&a);failBeginCall=0;
+    }
+    for(unsigned op : {SH_CameraMakeGradientRaster,SH_CameraRasterResample,SH_CameraRasterGradient,SH_CameraDrawOutlineBorder}){
+        // Exercise each effect's failed begin path without inventing owner recovery
+        failBeginCall=beginCalls+1;shadowRun(op,&a);failBeginCall=0;
+    }
+    // Retain hardware rendering when software target setup declines to begin
+    softwareEnabled=false;shadowRun(SH_CameraRasterResample,&a);softwareEnabled=true;failSoftwareCall=softwareCalls+1;shadowRun(SH_CameraDrawOutlineBorder,&a);failSoftwareCall=0;
+    shadowRun(SH_CameraDestroy,&a);shadowRun(SH_CameraDestroy,&a);shadowRun(SH_CameraDeinit,&a);RwRasterDestroy(destination);
+    for(unsigned failure=0;failure<5;++failure){
+        // Compare every camera creation factory failure and its exact partial cleanup
+        memset(record,0xA5,sizeof(record));shadowRun(SH_CameraInit,&a);if(failure==0)failCameraCall=cameraCalls+1;if(failure==1)failFrameCall=frameCalls+1;if(failure==2)failRasterCall=rasterCalls+1;if(failure==3)failRasterCall=rasterCalls+2;if(failure==4)failTextureCall=textureCalls+1;require(!shadowRun(SH_CameraCreate,&a).object);failCameraCall=failFrameCall=failRasterCall=failTextureCall=0;shadowRun(SH_CameraDeinit,&a);
+    }
+}
+static void shadowParentCase(void *object,bool resample,int passes,bool gradient)
+{
+    // Retain the original priority among resample blur and gradient for every option combination
+    alignas(16) unsigned char record[256];memset(record,0xA5,sizeof(record));ShadowArgs a={};a.self=record;a.object=object;a.size=3;a.resample=resample;a.passes=passes;a.gradient=gradient;a.colour[0]=23;a.colour[3]=255;shadowRun(SH_ParentInit,&a,true);require(!shadowRun(SH_ParentIsInitialized,&a,true).value);require(shadowRun(SH_ParentCreate,&a,true).value);require(shadowRun(SH_ParentIsInitialized,&a,true,true).value);shadowRun(SH_ParentGetBaseSphere,&a,true,true);
+    for(int type=-1;type<=4;++type){
+        // Observe all defined selector values and the original fallback for invalid values
+        a.type=type;shadowRun(SH_ParentGetShadowCamera,&a,true,true);
+    }
+    a.values[0]=31.5f;a.values[1]=-72.0f;a.gradient=true;shadowRun(SH_ParentSetLightProperties,&a,true,true);shadowRun(SH_ParentUpdate,&a,true,true);shadowRun(SH_ParentUpdateForCutscene,&a,true,true);shadowRun(SH_ParentGetShadowRwTexture,&a,true,true);shadowRun(SH_ParentDrawBorderAroundTexture,&a,true,true);failBeginCall=beginCalls+1;shadowRun(SH_ParentUpdate,&a,true,true);failBeginCall=0;shadowRun(SH_ParentDestroy,&a,true,true);shadowRun(SH_ParentDestroy,&a,true,true);shadowRun(SH_ParentDeinit,&a,true,true);
+}
+int main(void)
+{
+    // Build independent SDK objects while executing the original and C shadow owners in separate processes
+    RwFrame objectFrame={};objectFrame.id=301;objectFrame.alive=true;objectFrame.matrix=matrix(3,-7,9,1);objectFrame.ltm=matrix(11,5,-3,1);shadowObjectFrame=&objectFrame;RpGeometry geometries[3]={};RpAtomic atomics[3]={};RpClump clump={};clump.id=401;clump.frame=&objectFrame;clump.count=3;shadowClump=&clump;
+    for(unsigned i=0;i<3;++i){
+        // Supply distinct geometry and sphere metadata for first-atomic and whole-clump behavior
+        geometries[i].id=501+i;geometries[i].flags=0xffff;atomics[i].id=601+i;atomics[i].geometry=&geometries[i];atomics[i].clump=&clump;atomics[i].sphere={{(float)(2*i),1.5f-i,-3.0f+i},2.25f+i};clump.atomics[i]=&atomics[i];shadowAtomic[i]=&atomics[i];shadowCallbacks[i]=customRender;
+    }
+    RpLight *light=RpLightCreate(rpLIGHTDIRECTIONAL);RwFrame *frame=RwFrameCreate();frame->matrix=matrix(0,0,0,1);RpLightSetFrame(light,frame);shadowCameraCases(light,&atomics[0],&clump);RpLightSetFrame(light,NULL);RwFrameDestroy(frame);RpLightDestroy(light);
+    for(unsigned object=0;object<2;++object)for(unsigned resample=0;resample<2;++resample)for(unsigned blur=0;blur<2;++blur)for(unsigned gradient=0;gradient<2;++gradient){
+        // Compare the full parent operation set for both original SDK object kinds
+        shadowParentCase(object?(void*)&clump:(void*)&atomics[0],resample!=0,blur?2:0,gradient!=0);
+    }
+    for(unsigned failure=0;failure<18;++failure){
+        // Exercise each defined parent allocation failure while leaving the original invalid light-frame case outside the harness
+        alignas(16) unsigned char record[256];memset(record,0xA5,sizeof(record));ShadowArgs a={};a.self=record;a.object=&clump;a.size=3;a.resample=true;a.passes=2;a.gradient=true;shadowRun(SH_ParentInit,&a,true);if(failure==0)a.object=NULL;else if(failure==1)failLightCall=lightCalls+1;else if(failure<=5)failCameraCall=cameraCalls+failure-1;else if(failure<=9)failTextureCall=textureCalls+failure-5;else failRasterCall=rasterCalls+failure-9;require(!shadowRun(SH_ParentCreate,&a,true).value);failCameraCall=failTextureCall=failRasterCall=failLightCall=0;shadowRun(SH_ParentDeinit,&a,true);
+    }
+    for(unsigned i=0;i<=SH_RenderAtomic;++i)require(coverage[i]>0);require(camerasCreated==camerasDestroyed&&framesCreated==framesDestroyed&&rastersCreated==rastersDestroyed&&textureCreated==textureDestroyed&&lightCreated==lightDestroyed);printf("commands=%u checks=%u events=%u draws=%u renders=%u reentries=%u cameras=%u/%u frames=%u/%u rasters=%u/%u textures=%u/%u lights=%u/%u assertions=%u hash=%016llx\n",commands,checks,events,draws,shadowRenders,shadowReentries,camerasCreated,camerasDestroyed,framesCreated,framesDestroyed,rastersCreated,rastersDestroyed,textureCreated,textureDestroyed,lightCreated,lightDestroyed,assertions,(unsigned long long)hashValue);return 0;
+}

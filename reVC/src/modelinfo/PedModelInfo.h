@@ -1,32 +1,11 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "ClumpModelInfo.h"
 #include "ColModel.h"
 #include "PedType.h"
 
-enum PedNode {
-	PED_TORSO = 0,	// has no bone!
-	PED_MID,
-	PED_HEAD,
-	PED_UPPERARML,
-	PED_UPPERARMR,
-	PED_HANDL,
-	PED_HANDR,
-	PED_UPPERLEGL,
-	PED_UPPERLEGR,
-	PED_FOOTL,
-	PED_FOOTR,
-	PED_LOWERLEGR,
-	PED_LOWERLEGL,
-
-	PED_FOREARML,
-	PED_FOREARMR,
-	PED_CLAVICLEL,
-	PED_CLAVICLER,
-	PED_NECK,
-
-	PED_NODE_MAX
-};
+#include "PedNode.h"
 
 class CPedModelInfo : public CClumpModelInfo
 {
@@ -52,3 +31,4 @@ public:
 	CColModel *AnimatePedColModelSkinned(RpClump *clump);
 	CColModel *AnimatePedColModelSkinnedWorld(RpClump *clump);
 };
+//- rouz edit (ChatGPT)

@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
 #include <windows.h>
@@ -87,8 +89,8 @@
 #ifdef PED_CAR_DENSITY_SLIDERS
 	// 0.2f - 3.4f makes it possible to have 1.0f somewhere inbetween
 	#define DENSITY_SLIDERS \
-		MENUACTION_CFO_SLIDER, "FEM_PED", { CFO_NEW(CCFOSlider, &CIniFile::PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange) }, 0, 0, MENUALIGN_LEFT, \
-		MENUACTION_CFO_SLIDER, "FEM_CAR", { CFO_NEW(CCFOSlider, &CIniFile::CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange) }, 0, 0, MENUALIGN_LEFT, 
+		MENUACTION_CFO_SLIDER, "FEM_PED", { CFO_NEW(CCFOSlider, &IniFile_PedNumberMultiplier, "Display", "PedDensity", 0.2f, 3.4f, PedDensityChange) }, 0, 0, MENUALIGN_LEFT, \
+		MENUACTION_CFO_SLIDER, "FEM_CAR", { CFO_NEW(CCFOSlider, &IniFile_CarNumberMultiplier, "Display", "CarDensity", 0.2f, 3.4f, CarDensityChange) }, 0, 0, MENUALIGN_LEFT, 
 #else
 	#define DENSITY_SLIDERS 
 #endif
@@ -101,8 +103,8 @@
 
 #ifdef EXTENDED_COLOURFILTER
 	#define POSTFX_SELECTORS \
-		MENUACTION_CFO_SELECT, "FED_CLF", { CFO_NEW(CCFOSelect, (int8*)&CPostFX::EffectSwitch, "Graphics", "ColourFilter", filterNames, ARRAY_SIZE(filterNames), false) }, 0, 0, MENUALIGN_LEFT, \
-		MENUACTION_CFO_SELECT, "FED_MBL", { CFO_NEW(CCFOSelect, (int8*)&CPostFX::MotionBlurOn, "Graphics", "MotionBlur", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
+		MENUACTION_CFO_SELECT, "FED_CLF", { CFO_NEW(CCFOSelect, (int8*)&PostFX_EffectSwitch, "Graphics", "ColourFilter", filterNames, ARRAY_SIZE(filterNames), false) }, 0, 0, MENUALIGN_LEFT, \
+		MENUACTION_CFO_SELECT, "FED_MBL", { CFO_NEW(CCFOSelect, (int8*)&PostFX_MotionBlurOn, "Graphics", "MotionBlur", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
 #else
 	#define POSTFX_SELECTORS
 #endif	
@@ -150,7 +152,8 @@ void RestoreDefGraphics(int8 action) {
 		#endif
 		FrontEndMenuManager.m_PrefsUseWideScreen = false;
 		FrontEndMenuManager.m_nDisplayVideoMode = FrontEndMenuManager.m_nPrefsVideoMode;
-		CMBlur::BlurOn = false;
+		// Use the complete C motion-blur owner and its live shared state
+		MBlur_BlurOn = false;
 		FrontEndMenuManager.SaveSettings();
 	#endif
 }
@@ -166,7 +169,7 @@ void RestoreDefDisplay(int8 action) {
 		TheCamera.bFreeCam = false;
 	#endif
 	#ifdef PED_CAR_DENSITY_SLIDERS
-		CIniFile::LoadIniFile();
+		IniFile_LoadIniFile();
 	#endif
 	#ifdef GRAPHICS_MENU_OPTIONS // otherwise Frontend will handle those
 		FrontEndMenuManager.m_PrefsBrightness = 256;
@@ -287,7 +290,7 @@ wchar* MultiSamplingDraw(bool *disabled, bool userHovering) {
 
 	switch (FrontEndMenuManager.m_nDisplayMSAALevel) {
 		case 0:
-			return TheText.Get("FEM_OFF");
+			return Text_Get(&TheText,"FEM_OFF");
 		default:
 			sprintf(gString, "%iX", 1 << (FrontEndMenuManager.m_nDisplayMSAALevel));
 			AsciiToUnicode(gString, unicodeTemp);
@@ -845,4 +848,6 @@ CMenuScreenCustom aScreens[] = {
 #endif
 #endif
 
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

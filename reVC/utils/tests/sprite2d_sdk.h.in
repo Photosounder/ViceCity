@@ -1,0 +1,49 @@
+#pragma once
+#include "config.h"
+#include "Rect.h"
+#include <initializer_list>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#define nil NULL
+#define TRUE 1
+#define FALSE 0
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof((array)[0]))
+typedef int32_t int32,RwPrimitiveType,RwRenderState,RwTextureAddressMode;
+typedef uint16_t RwImVertexIndex;
+struct RwRGBA {uint8_t red,green,blue,alpha;};
+struct RwIm2DVertex {float x,y,z,cameraZ,reciprocal,u,v;RwRGBA colour;};
+struct RwIm3DVertex {float data[12];};
+struct RwRaster {uint32_t id;};
+struct RwTexture {uint32_t id;bool alive;RwRaster *raster;int32_t address;};
+struct RwCamera {uint32_t id;float nearClip;};
+struct TestScene {RwCamera *camera;};
+extern TestScene Scene;
+struct CRGBA {
+    union {uint32_t color32;struct {uint8_t r,g,b,a;};struct {uint8_t red,green,blue,alpha;};};
+    CRGBA()=default;
+    CRGBA(uint8_t r0,uint8_t g0,uint8_t b0,uint8_t a0){
+        // Retain the original narrowed channel constructor on actual native colour objects
+        r=r0;g=g0;b=b0;a=a0;
+    }
+};
+RwTexture *RwTextureRead(const char*,const char*);
+void RwTextureDestroy(RwTexture*);
+void RwTextureSetAddressing(RwTexture*,RwTextureAddressMode);
+RwRaster *RwTextureGetRaster(RwTexture*);
+float RwCameraGetNearClipPlane(RwCamera*);
+float RwIm2DGetNearScreenZ(void);
+void RwRenderStateSet(RwRenderState,void*);
+void RwIm2DRenderPrimitive(RwPrimitiveType,RwIm2DVertex*,int32);
+void RwIm2DRenderIndexedPrimitive(RwPrimitiveType,RwIm2DVertex*,int32,RwImVertexIndex*,int32);
+void RwIm2DVertexSetScreenX(RwIm2DVertex*,float);
+void RwIm2DVertexSetScreenY(RwIm2DVertex*,float);
+void RwIm2DVertexSetScreenZ(RwIm2DVertex*,float);
+void RwIm2DVertexSetCameraZ(RwIm2DVertex*,float);
+void RwIm2DVertexSetRecipCameraZ(RwIm2DVertex*,float);
+void RwIm2DVertexSetU(RwIm2DVertex*,float,float);
+void RwIm2DVertexSetV(RwIm2DVertex*,float,float);
+void RwIm2DVertexSetIntRGBA(RwIm2DVertex*,uint8_t,uint8_t,uint8_t,uint8_t);

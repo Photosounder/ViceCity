@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "Game.h"
@@ -41,9 +42,8 @@ enum
 	NUMSECTORENTITYLISTS
 };
 
-class CSector
+struct CSector
 {
-public:
 	CPtrList m_lists[NUMSECTORENTITYLISTS];
 };
 
@@ -54,6 +54,7 @@ class CWorld
 	static CPtrList ms_bigBuildingsList[NUM_LEVELS];
 	static CPtrList ms_listMovingEntityPtrs;
 	static CSector ms_aSectors[NUMSECTORS_Y][NUMSECTORS_X];
+	static int ms_bigBuildingsListLifetime,ms_movingListLifetime,ms_sectorListsLifetime;
 	static uint16 ms_nCurrentScanCode;
 
 public:
@@ -174,3 +175,4 @@ public:
 };
 
 extern CColPoint gaTempSphereColPoints[MAX_COLLISION_POINTS];
+//- rouz edit (ChatGPT)

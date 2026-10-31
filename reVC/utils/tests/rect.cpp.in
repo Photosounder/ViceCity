@@ -1,0 +1,75 @@
+#include "owners.h"
+#include "entry.h"
+static uint64_t digest=UINT64_C(1469598103934665603);
+static unsigned states,checks;
+@GLOBALS@
+
+static void hash32(uint32_t value)
+{
+    // Compare exact field representations across languages and native pointer widths
+    for(unsigned n=0;n<4;++n){digest^=(uint8_t)(value>>(n*8));digest*=UINT64_C(1099511628211);}
+}
+static uint32_t bits(float value)
+{
+    // Inspect signed zeros and NaN payloads without aliasing
+    uint32_t result;memcpy(&result,&value,4);return result;
+}
+static float scalar(uint32_t value)
+{
+    // Materialize exact finite, infinity and quiet NaN inputs
+    float result;memcpy(&result,&value,4);return result;
+}
+static void require(bool condition)
+{
+    // Retain explicit geometry and initialization invariants alongside differential state hashes
+    ++checks;if(!condition){fprintf(stderr,"rectangle invariant failed at %u/%u\n",states,checks);exit(1);}
+}
+static void observe(CRect *value)
+{
+    // Observe every field and both signed extent operations
+    ++states;hash32(bits(value->left));hash32(bits(value->bottom));hash32(bits(value->right));hash32(bits(value->top));hash32(bits(Run_GetWidth(value)));hash32(bits(Run_GetHeight(value)));
+}
+static void lifecycle(void)
+{
+    // Verify default construction of literal water and script arrays before their runtime owners initialize
+    for(unsigned n=0;n<48;++n){CRect *r=&CWaterLevel::ms_aWaterRects[n];require(r->left==1000000.0f&&r->top==1000000.0f&&r->right==-1000000.0f&&r->bottom==-1000000.0f);observe(r);}
+    for(unsigned n=0;n<16;++n){CRect *r=&CTheScripts::IntroRectangles[n].m_sRect;require(r->left==1000000.0f&&r->top==1000000.0f&&r->right==-1000000.0f&&r->bottom==-1000000.0f);observe(r);}
+    for(unsigned n=0;n<19;++n){observe(&ZonePrint[n].rect);for(unsigned k=0;k<11;++k)hash32((uint8_t)ZonePrint[n].name[k]);for(unsigned k=0;k<5;++k)hash32((uint8_t)ZonePrint[n].area[k]);}
+}
+static void nestedLifetime(void)
+{
+    // Preserve local embedded construction before invoking the unchanged empty destructor
+    alignas(intro_script_rectangle) uint8_t storage[sizeof(intro_script_rectangle)];memset(storage,0x5a,sizeof(storage));
+    intro_script_rectangle *value=new(storage) intro_script_rectangle;observe(&value->m_sRect);
+    const float fields[]={1,2,3,4};memcpy(&value->m_sRect,fields,16);
+    for(unsigned i=0;i<16;++i)require(storage[offsetof(intro_script_rectangle,m_sRect)+i]==((const uint8_t*)fields)[i]);
+    value->~intro_script_rectangle();
+}
+
+int main(void)
+{
+    // Exercise all literal initialization sites and the embedded destructor contract
+    lifecycle();nestedLifetime();
+    CRect blank;Run_Init(&blank);require(blank.left==1000000.0f&&blank.top==1000000.0f&&blank.right==-1000000.0f&&blank.bottom==-1000000.0f);observe(&blank);
+    const uint32_t patterns[]={0,UINT32_C(0x80000000),UINT32_C(0x3f800000),UINT32_C(0xbf800000),UINT32_C(0x358637bd),UINT32_C(0x49742400),UINT32_C(0xc9742400),UINT32_C(0x7f7fffff),UINT32_C(0xff7fffff),UINT32_C(0x7f800000),UINT32_C(0xff800000),UINT32_C(0x7fc12345),UINT32_C(0xffc54321)};
+    const unsigned count=sizeof(patterns)/sizeof(patterns[0]);
+
+    // Compare every rectangle field combination through construction, self-containment and each overloaded grow operation
+    for(unsigned a=0;a<count;++a)for(unsigned b=0;b<count;++b)for(unsigned c=0;c<count;++c)for(unsigned d=0;d<count;++d){
+        CRect base;Run_Make(&base,scalar(patterns[a]),scalar(patterns[b]),scalar(patterns[c]),scalar(patterns[d]));observe(&base);
+        CRect copy;Run_CopyValue(&copy,&base);require(memcmp(&base,&copy,16)==0);Run_ContainRect(&copy,&copy);observe(&copy);
+        const float first=scalar(patterns[(a+c)%count]),second=scalar(patterns[(b+d)%count]);
+        Run_Grow(&copy,first);observe(&copy);Run_CopyValue(&copy,&base);Run_GrowSides(&copy,first,second);observe(&copy);
+        Run_CopyValue(&copy,&base);Run_GrowEdges(&copy,first,second,base.top,base.bottom);observe(&copy);
+        Run_CopyValue(&copy,&base);Run_Translate(&copy,first,second);observe(&copy);
+        CRect other;Run_Make(&other,second,first,base.bottom,base.top);Run_CopyValue(&copy,&base);Run_ContainRect(&copy,&other);observe(&copy);
+        CVector point={first,second,scalar(patterns[d])};Run_CopyValue(&copy,&base);Run_ContainPoint(&copy,&point);observe(&copy);
+        CVector2D point2={first,second};hash32(Run_IsPointInside(&base,&point2));hash32(Run_IsPointInsideRadius(&base,&point2,scalar(patterns[(a+b+c+d)%count])));
+    }
+
+    // Verify inclusive edges, rejection, negative expansion and the zero-width/height case
+    CRect edges;Run_Make(&edges,1,2,3,4);CVector2D points[]={{1,2},{3,4},{2,3},{0,3},{4,3},{2,1},{2,5}};
+    for(unsigned n=0;n<7;++n){require(Run_IsPointInside(&edges,&points[n])==(n<3));hash32(Run_IsPointInsideRadius(&edges,&points[n],-1));}
+    Run_Make(&edges,1,2,1,2);CVector2D exact={1,2};require(Run_IsPointInside(&edges,&exact));observe(&edges);
+    printf("states=%u checks=%u hash=%016llx\n",states,checks,(unsigned long long)digest);return 0;
+}

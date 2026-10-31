@@ -1,0 +1,371 @@
+#include "owners.h"
+#include <inttypes.h>
+static uint64_t digest=UINT64_C(1469598103934665603),states,checks,observations;
+static CPool pedPool,vehiclePool,objectPool;
+static CPlayerPed players[2];static CVehicle playerCar,otherCar;static CWanted wanted[2];
+static CBaseModelInfo models[NUM_DEFAULT_MODELS];static uint32_t now,frame,randomState;
+static unsigned activePlayer,mode,collisionMode,groundMode,collisionCalls,groundCalls,nextIdentity;
+static bool armed,triggered,hasVehicle,hasPlayer,loaded[NUM_DEFAULT_MODELS],sirenEnabled;
+static float roadUpZ;static unsigned refs;
+TestPaths ThePaths;
+extern "C" {int16_t MI_ROADWORKBARRIER1=77;}
+#ifdef SECUROM
+extern uint8_t roadBlocksPirateCheck;
+#endif
+static void Number(uint64_t value)
+{
+    // Compare ordered scalar effects without addresses or indeterminate native padding
+    for(unsigned i=0;i<8;i++){digest^=(uint8_t)value;digest*=UINT64_C(1099511628211);value>>=8;}
+}
+static void Floating(float value)
+{
+    // Compare all meaningful coordinate bits including signed zero
+    uint32_t bits;memcpy(&bits,&value,4);Number(bits);
+}
+static void Vector(CVector value)
+{
+    // Observe the original three native vector components
+    Floating(value.x);Floating(value.y);Floating(value.z);
+}
+static void Check(bool value)
+{
+    // Stop at an independently verified invariant instead of hiding a mismatch in a final digest
+    ++checks;if(!value){fprintf(stderr,"Roadblock invariant %llu state %llu mode %u\n",(unsigned long long)checks,(unsigned long long)states,mode);abort();}
+}
+static unsigned Identity(const CEntity *entity)
+{
+    // Compare native base-adjusted entity pointers through stable identities
+    return entity?(unsigned)entity->identity:0;
+}
+static void Observe(unsigned point,int identity=0)
+{
+    // Mutate live dependencies at real external calls while retaining their original access order
+    ++observations;Number(point);Number((uint32_t)identity);if(!armed||triggered)return;
+    if(mode==1&&point==10){triggered=true;activePlayer=1;}
+    else if(mode==2&&point==20){triggered=true;wanted[activePlayer].army=false;wanted[activePlayer].fbi=true;}
+    else if(mode==3&&point==31){triggered=true;activePlayer^=1;now+=99;}
+    else if(mode==4&&point==44){triggered=true;wanted[activePlayer].m_RoadblockDensity=0;}
+    else if(mode==5&&point==61){triggered=true;loaded[MI_ROADWORKBARRIER1]=false;}
+    else if(mode==6&&point==11){triggered=true;frame+=3;}
+    else if(mode==7&&point==70){triggered=true;now+=1234;GLOBAL(aScriptRoadBlocks)[frame&15].m_vInf.x+=100;}
+    else if(mode==8&&point==80){triggered=true;models[MI_ROADWORKBARRIER1].col.boundingSphere.radius+=0.5f;}
+}
+CEntity::CEntity():identity(++nextIdentity),model(0),status(0)
+{
+    // Give each native object initialized observable fields and an unattached identity matrix
+    matrix.SetTranslate(0,0,0);
+}
+CVehicle::CVehicle():radius(3)
+{
+    // Retain a nonzero entity base offset without changing observable vehicle field types
+    prefix=0x1234;
+}
+CPed::CPed()
+{
+    // Retain the same secondary entity base adjustment for native ped operations
+    prefix=0x4321;
+}
+CAutomobile::CAutomobile(int which,int createdBy)
+{
+    // Model the real constructor as an observable external call with initialized vehicle state
+    model=which;m_nDoorLock=(eCarLock)7;memset(&AutoPilot,0x5a,sizeof(AutoPilot));bIsLocked=true;bExtendedRange=false;m_bSirenOrAlarm=false;bCreateRoadBlockPeds=false;isStatic=true;siren=sirenEnabled;m_nRoadblockType=99;m_nSetPieceExtendedRangeTime=123;Observe(30,createdBy);Number(which);
+}
+CAutomobile::~CAutomobile()
+{
+    // Keep rejected vehicle destruction visible before its pool slot is freed
+    Observe(32,identity);
+}
+CCopPed::CCopPed(eCopType kind):m_bIsDisabledCop(false),bKindaStayInSamePlace(false),bNotAllowedToDuck(true),bCrouchWhenShooting(false),bCullExtraFarAway(false),m_nExtendedRangeTimer(1),m_nRoadblockVeh(NULL),m_pMyVehicle(NULL),type(kind),weapon(-1),target(NULL)
+{
+    // Keep cop construction separate from subsequent policy-selected flags and weapons
+    Observe(31,kind);
+}
+CObject::CObject(int which,bool create):ObjectCreatedBy(1),m_nEndOfLifeTime(1)
+{
+    // Preserve barrier constructor arguments before matrix assignment and lifetime extension
+    model=which;Observe(33,which);Number(create);
+}
+CObject::~CObject()
+{
+    // Observe reclaimed temporary object destruction before handle-based reallocation
+    Observe(34,identity);
+}
+int CEntity::GetModelIndex()
+{
+    // Read the live native model at each original model query
+    return model;
+}
+void CEntity::SetStatus(eEntityStatus value)
+{
+    // Retain the original native status write before matrix placement
+    Observe(35,identity);status=value;
+}
+void *CEntity::GetClump()
+{
+    // Preserve native clump identity through the alpha-setting boundary
+    return this;
+}
+void CEntity::SetPosition(CVector point)
+{
+    // Preserve cop position assignment after terrain placement
+    Observe(40,identity);Vector(point);matrix.GetPosition()=point;
+}
+void CEntity::RegisterReference(CEntity **slot)
+{
+    // Check the actual native reference slot address without interpreting a derived pointer as a base pointer
+    ++refs;Observe(44,identity);int kind=0,owner=0;
+    for(int i=0;i<CPool_GetSize(&pedPool);i++){CCopPed *cop=(CCopPed*)CPool_GetSlot(&pedPool,i);if(!cop)continue;if((void*)slot==(void*)&cop->m_nRoadblockVeh){kind=1;owner=cop->identity;}if((void*)slot==(void*)&cop->m_pMyVehicle){kind=2;owner=cop->identity;}}
+    Check(kind!=0);Number(kind);Number(owner);
+}
+float CVehicle::GetBoundRadius()
+{
+    // Preserve the live model scaling radius used for both cop offsets
+    return radius;
+}
+void CCopPed::SetCurrentWeapon(eWeaponType value)
+{
+    // Preserve the original street-cop-only explicit weapon selection
+    Observe(41,identity);weapon=value;
+}
+void CCopPed::SetOrientation(float x,float y,float z)
+{
+    // Preserve the native orientation call and exact HALFPI conversion
+    Observe(42,identity);Floating(x);Floating(y);Floating(z);
+}
+void CCopPed::SetIdle()
+{
+    // Observe flags already written before idle changes native ped behavior
+    Observe(43,identity);Number(m_bIsDisabledCop);
+}
+void CCopPed::SetWeaponLockOnTarget(CEntity *value)
+{
+    // Retain the captured attack target despite callbacks changing player focus
+    Observe(45,identity);target=value;Number(Identity(value));
+}
+void CCopPed::SetAttack(CEntity *value)
+{
+    // Preserve the original distinct attack request after lock-on
+    Observe(46,identity);Number(Identity(value));Check(target==value);
+}
+void CAutomobile::SetMatrix(const CMatrix &value)
+{
+    // Use the actual native matrix assignment operation before road placement
+    Observe(50,identity);matrix=value;
+}
+void CAutomobile::PlaceOnRoadProperly()
+{
+    // Exercise the native up-axis acceptance threshold after placement modifies the matrix
+    Observe(51,identity);matrix.GetUp().z=roadUpZ;
+}
+void CAutomobile::SetIsStatic(bool value)
+{
+    // Preserve the native dynamic-state call before model synchronization
+    Observe(52,identity);isStatic=value;
+}
+bool CAutomobile::UsesSiren()
+{
+    // Keep siren capability as a separate native query before conditional random consumption
+    Observe(53,identity);return siren;
+}
+CColModel *CBaseModelInfo::GetColModel()
+{
+    // Preserve repeated native collision-model accesses for each barrier
+    return &col;
+}
+CColModel *CModelInfo::GetColModel(int model)
+{
+    // Keep external model lookup timing and identity visible
+    Observe(20,model);Check(model>=0&&model<NUM_DEFAULT_MODELS);return &models[model].col;
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int model)
+{
+    // Preserve the distinct barrier model-info lookup before its two collision-model reads
+    Observe(21,model);return &models[model];
+}
+CPool *CPools::GetPedPool()
+{
+    // Return the actual C pool backing native cop construction
+    return &pedPool;
+}
+CPool *CPools::GetVehiclePool()
+{
+    // Return the actual C pool backing native roadblock cars
+    return &vehiclePool;
+}
+CPool *CPools::GetObjectPool()
+{
+    // Preserve the captured object-pool identity during temporary-object reclamation
+    return &objectPool;
+}
+bool CStreaming::HasModelLoaded(int model)
+{
+    // Retain live model availability checks and model fallback timing
+    Observe(22,model);Check(model>=0&&model<NUM_DEFAULT_MODELS);return loaded[model];
+}
+void CStreaming::RequestModel(int model,int flags)
+{
+    // Preserve the unconditional barrier streaming request after the vehicle loop
+    Observe(61,model);Number(flags);
+}
+void CPedPlacement::FindZCoorForPed(CVector *point)
+{
+    // Mutate all vector components through the original live output argument
+    Observe(47);Vector(*point);point->x+=0.25f;point->y-=0.5f;point->z=17.0f;
+}
+void CVisibilityPlugins::SetClumpAlpha(void *clump,int alpha)
+{
+    // Preserve native clump identity and the zero-alpha request before world insertion
+    Observe(62,((CEntity*)clump)->identity);Number(alpha);
+}
+void CWorld::Add(CEntity *entity)
+{
+    // Preserve the correctly adjusted native entity pointer at world insertion
+    Observe(70,entity->identity);Vector(entity->GetPosition());Number(entity->status);
+}
+void CWorld::Remove(CEntity *entity)
+{
+    // Preserve temporary barrier removal before destruction and pool deletion
+    Observe(71,entity->identity);Number(entity->model);
+}
+void CWorld::FindObjectsKindaColliding(CVector point,float radius,int layer,int16 *count,int maximum,CEntity **objects,bool a,bool b,bool c,bool d,bool e)
+{
+    // Verify every original collision-query option and exercise full and alternating rejection
+    Observe(80);Vector(point);Floating(radius);Check(layer==0&&maximum==2&&!objects&&!a&&b&&c&&!d&&!e);++collisionCalls;*count=collisionMode==1?1:collisionMode==2?(collisionCalls&1):0;
+}
+float CWorld::FindGroundZFor3DCoord(float x,float y,float z,bool *found)
+{
+    // Preserve terrain output ordering and missing-ground behavior
+    Observe(81);Floating(x);Floating(y);Floating(z);++groundCalls;*found=groundMode==1?false:groundMode==2?(groundCalls&1):true;return 13.0f+x*0.03125f-y*0.0625f;
+}
+void CCarCtrl::JoinCarWithRoadSystem(CAutomobile *car)
+{
+    // Observe the native road-system join before autopilot fields are cleared
+    Observe(54,car->identity);Number(car->AutoPilot.m_nCarMission);Number(car->m_nDoorLock);Number(car->bIsLocked);
+}
+CVector FindPlayerCoors()
+{
+    // Keep each global coordinate lookup fresh across callbacks
+    Observe(10,activePlayer);return players[activePlayer].GetPosition();
+}
+CVehicle *FindPlayerVehicle()
+{
+    // Retain independent vehicle lookup effects before attack-target or density selection
+    Observe(11);return hasVehicle?&playerCar:NULL;
+}
+CPlayerPed *FindPlayerPed()
+{
+    // Match the real side-effect-free getter while retaining fresh player focus
+    return hasPlayer?&players[activePlayer]:NULL;
+}
+extern "C" bool Wanted_AreArmyRequired(const CWanted *value)
+{
+    // Keep the original wanted-priority query and its live native record identity
+    Observe(90,(int)(value-wanted));return value->army;
+}
+extern "C" bool Wanted_AreFbiRequired(const CWanted *value)
+{
+    // Retain short-circuit FBI evaluation after the army query fails
+    Observe(91,(int)(value-wanted));return value->fbi;
+}
+extern "C" bool Wanted_AreSwatRequired(const CWanted *value)
+{
+    // Retain short-circuit SWAT evaluation after the FBI query fails
+    Observe(92,(int)(value-wanted));return value->swat;
+}
+extern "C" uint16_t General_GetRandomNumber(void)
+{
+    // Compare exact random consumption and allow native callbacks to change later decisions
+    Observe(93);randomState=randomState*1664525u+1013904223u;uint16_t result=(uint16_t)(randomState>>16);Number(result);return result;
+}
+extern "C" const uint32_t *Timer_GetTimeInMilliseconds(void)
+{
+    // Return the same stable unsigned timer storage used by the original inline access
+    return &now;
+}
+extern "C" const uint32_t *Timer_GetFrameCounter(void)
+{
+    // Preserve fresh frame reads before path batching and script batching
+    return &frame;
+}
+void RwMatrixUpdate(RwMatrix*)
+{
+    // Keep native matrix synchronization observable if an attachment is introduced
+    Observe(94);
+}
+void RwMatrixDestroy(RwMatrix*)
+{
+    // Reject accidental ownership of a local unattached matrix
+    Check(false);
+}
+void re3_assert(const char*,const char*,unsigned,const char*)
+{
+    // Reject unexpected producer or C pool assertions without showing any GUI
+    Check(false);
+}
+static void Matrix(CMatrix &value)
+{
+    // Compare the twelve initialized native matrix components and attachment ownership
+    Vector(value.GetRight());Vector(value.GetForward());Vector(value.GetUp());Vector(value.GetPosition());Number(value.m_attachment!=NULL);Number(value.m_hasRwMatrix);
+}
+static void Snapshot()
+{
+    // Observe all canonical records, pool generations, native entity state and dependency state
+    ++states;Number(GLOBAL(NumRoadBlocks));for(int i=0;i<NUMROADBLOCKS;i++){Number((uint16_t)GLOBAL(RoadBlockNodes)[i]);Number(GLOBAL(InOrOut)[i]);}
+    for(int i=0;i<NUM_SCRIPT_ROADBLOCKS;i++){const CScriptRoadblock &b=GLOBAL(aScriptRoadBlocks)[i];Floating(b.m_vInf.x);Floating(b.m_vInf.y);Floating(b.m_vInf.z);Floating(b.m_vSup.x);Floating(b.m_vSup.y);Floating(b.m_vSup.z);Number(b.m_bInUse);}
+    CPool *pools[]={&pedPool,&vehiclePool,&objectPool};for(unsigned k=0;k<3;k++){CPool *pool=pools[k];Number(pool->m_size);Number((uint32_t)pool->m_allocPtr);for(int i=0;i<pool->m_size;i++){Number(pool->m_flags[i]);if(CPool_GetIsFree(pool,i))continue;CEntity *entity=NULL;
+        if(k==0){CCopPed *cop=(CCopPed*)CPool_GetSlot(pool,i);entity=cop;Number(cop->type);Number(cop->weapon);Number(cop->m_bIsDisabledCop);Number(cop->bKindaStayInSamePlace);Number(cop->bNotAllowedToDuck);Number(cop->bCrouchWhenShooting);Number(cop->bCullExtraFarAway);Number(cop->m_nExtendedRangeTimer);Number(Identity(cop->m_nRoadblockVeh));Number(Identity(cop->m_pMyVehicle));Number(Identity(cop->target));}
+        else if(k==1){CAutomobile *car=(CAutomobile*)CPool_GetSlot(pool,i);entity=car;Number(car->m_nDoorLock);Number(car->bIsLocked);Number(car->bExtendedRange);Number(car->m_bSirenOrAlarm);Number(car->bCreateRoadBlockPeds);Number(car->isStatic);Number(car->siren);Number(car->m_nRoadblockType);Number(car->m_nSetPieceExtendedRangeTime);Number((uint8_t)car->AutoPilot.m_nCurrentLane);Number((uint8_t)car->AutoPilot.m_nNextLane);Number(car->AutoPilot.m_nCarMission);Number(car->AutoPilot.m_nTempAction);Number(car->AutoPilot.m_nCruiseSpeed);Floating(car->AutoPilot.m_fMaxTrafficSpeed);}
+        else {CObject *object=(CObject*)CPool_GetSlot(pool,i);entity=object;Number(object->ObjectCreatedBy);Number(object->m_nEndOfLifeTime);}
+        Number(Identity(entity));Number(entity->model);Number(entity->status);Matrix(entity->matrix);
+    }}
+    Number(now);Number(frame);Number(randomState);Number(activePlayer);Number(triggered);Number(refs);Number(collisionCalls);Number(groundCalls);for(int i=0;i<2;i++){Number(wanted[i].m_RoadblockDensity);Number(wanted[i].army);Number(wanted[i].fbi);Number(wanted[i].swat);}Number(loaded[MI_ROADWORKBARRIER1]);Floating(models[MI_ROADWORKBARRIER1].col.boundingSphere.radius);
+#ifdef SECUROM
+    Number(roadBlocksPirateCheck);
+#endif
+}
+static void Reset(unsigned seed,int objects=24)
+{
+    // Recreate real C pools and seed every canonical field before each independent full-policy case
+    armed=false;CPool_Flush(&pedPool);CPool_Flush(&vehiclePool);CPool_Flush(&objectPool);Check(CPool_Init(&pedPool,8,sizeof(CCopPed),"cop"));Check(CPool_Init(&vehiclePool,8,sizeof(CAutomobile),"car"));Check(CPool_Init(&objectPool,objects,sizeof(CObject),"object"));
+    nextIdentity=100;now=seed&1?UINT32_MAX-5000:12345;frame=seed;randomState=seed*17+1;mode=0;activePlayer=0;hasVehicle=hasPlayer=true;triggered=false;collisionMode=groundMode=collisionCalls=groundCalls=refs=0;roadUpZ=1;sirenEnabled=true;
+    for(int i=0;i<NUM_DEFAULT_MODELS;i++){models[i].col.boundingSphere.radius=2.0f+(i%3)*0.25f;models[i].col.boundingBox.min=CVector(-1,-1,-0.75f);loaded[i]=true;}
+    for(int i=0;i<2;i++){wanted[i].m_RoadblockDensity=127;wanted[i].army=wanted[i].fbi=wanted[i].swat=false;players[i].m_pWanted=&wanted[i];players[i].identity=10+i;players[i].matrix.SetTranslate(i?8.0f:0.0f,i?-3.0f:0.0f,i?5.0f:0.0f);}
+    playerCar.identity=20;otherCar.identity=21;playerCar.model=MI_POLICE;playerCar.radius=3;playerCar.matrix.SetTranslate(3,7,2);playerCar.matrix.RotateZ(0.4f);
+    GLOBAL(NumRoadBlocks)=0;for(int i=0;i<NUMROADBLOCKS;i++){GLOBAL(RoadBlockNodes)[i]=(int16_t)(i+seed);GLOBAL(InOrOut)[i]=(i+seed)&1;}
+    for(int i=0;i<NUM_SCRIPT_ROADBLOCKS;i++){CScriptRoadblock &b=GLOBAL(aScriptRoadBlocks)[i];b.m_vInf.x=(float)(seed+i);b.m_vInf.y=-4;b.m_vInf.z=2;b.m_vSup.x=-3;b.m_vSup.y=4;b.m_vSup.z=-2;b.m_bInUse=true;}
+    memset(&ThePaths,0,sizeof(ThePaths));
+#ifdef SECUROM
+    roadBlocksPirateCheck=(uint8_t)(seed%3);
+#endif
+}
+static unsigned Occupied(CPool *pool)
+{
+    // Count actual occupied pool slots independently of producer counters
+    unsigned n=0;for(int i=0;i<CPool_GetSize(pool);i++)if(CPool_GetSlot(pool,i))++n;return n;
+}
+int main()
+{
+    // Prove the mock native hierarchy exercises real base-pointer adjustment
+    Check((void*)&playerCar!=(void*)(CEntity*)&playerCar);Check((void*)&players[0]!=(void*)(CEntity*)&players[0]);
+    // Exercise empty, full, filtered and overflowing path discovery including the early-return script state
+    int counts[]={0,1,299,300,301,312};for(unsigned k=0;k<6;k++){Reset(k);ThePaths.m_numCarPathNodes=counts[k];for(int i=0;i<counts[k];i++){ThePaths.m_pathNodes[i].bUseInRoadBlock=true;ThePaths.m_pathNodes[i].numLinks=2;}Run_RoadBlocks_Init();Check(GLOBAL(NumRoadBlocks)==(counts[k]<NUMROADBLOCKS?counts[k]:NUMROADBLOCKS));Check(GLOBAL(aScriptRoadBlocks)[0].m_bInUse==(counts[k]>NUMROADBLOCKS));Snapshot();}
+    Reset(17);ThePaths.m_numCarPathNodes=312;for(int i=0;i<312;i++){ThePaths.m_pathNodes[i].bUseInRoadBlock=i%3;ThePaths.m_pathNodes[i].numLinks=(uint8_t)(i%4);}Run_RoadBlocks_Init();Snapshot();
+    // Exercise complete registry saturation and midpoint arithmetic through independent C callers
+    Reset(19);Run_RoadBlocks_ClearScriptRoadBlocks();for(int i=0;i<20;i++){RBTestVector a={(float)i,-0.0f,(float)i*0.3f},b={-(float)i,8,3};Run_RoadBlocks_RegisterScriptRoadBlock(a,b);RBTestVector mid=Run_RoadBlocks_Midpoint(a,b);Floating(mid.x);Floating(mid.y);Floating(mid.z);Check(mid.x==0);Snapshot();}Check(GLOBAL(aScriptRoadBlocks)[15].m_vInf.x==15);Run_RoadBlocks_ClearScriptRoadBlocks();Snapshot();
+    // Exercise all six cop offsets, special-unit fallbacks, captured targets and live native callbacks
+    int copModels[]={MI_POLICE,MI_FBIRANCH,MI_ENFORCER,MI_BARRACKS};for(unsigned seed=0;seed<216;seed++){Reset(seed);playerCar.model=copModels[seed%4];playerCar.radius=1.0f+(seed%7)*0.375f;for(int model=0;model<NUM_DEFAULT_MODELS;model++)loaded[model]=(seed/4)%2;hasVehicle=seed%3==0;hasPlayer=seed%3!=2;mode=seed%9;armed=true;Run_RoadBlocks_GenerateRoadBlockCopsForCar(&playerCar,(seed/4)%3);armed=false;Check(Occupied(&pedPool)==2&&refs==4);Snapshot();}
+    // Exercise full vehicle and barrier placement across geometry, wanted priority, streaming and collision boundaries
+    for(unsigned seed=0;seed<576;seed++){Reset(seed);wanted[0].army=seed&1;wanted[0].fbi=seed&2;wanted[0].swat=seed&4;wanted[1].army=seed&8;loaded[MI_BARRACKS]=seed&16;loaded[MI_FBICAR]=seed&32;loaded[MI_ENFORCER]=seed&64;loaded[MI_ROADWORKBARRIER1]=seed%5!=0;collisionMode=(seed/3)%3;groundMode=(seed/9)%3;sirenEnabled=seed&1;float thresholds[]={0.939f,0.94f,0.940001f,1.0f};roadUpZ=thresholds[seed%4];mode=seed%9;armed=true;
+        float lengths[]={0,0.1f,3.99f,4.0f,4.01f,8.0f,12.0f,27.0f,60.0f};float length=lengths[seed%9];RBTestVector a={-length*0.5f,-1.25f,(float)(seed%3)},b={length*0.5f,(seed%2)?-1.25f:2.75f,(float)(seed%3)};Run_RoadBlocks_CreateRoadBlockBetween2Points(a,b);armed=false;Check(Occupied(&vehiclePool)<=6&&Occupied(&objectPool)<=16);Snapshot();}
+#ifdef FIX_BUGS
+    // Exercise exhausted object pools with no temporary entries and deterministic first-temporary handle reuse
+    for(unsigned seed=0;seed<24;seed++){Reset(seed,4);for(int i=0;i<4;i++){CObject *object=(CObject*)CPool_New(&objectPool);std::allocator<CObject>().construct(object,MI_ROADWORKBARRIER1,true);object->ObjectCreatedBy=(seed%3==0||i<(int)(seed%4))?1:TEMP_OBJECT;}RBTestVector a={-8,0,0},b={8,0,0};Run_RoadBlocks_CreateRoadBlockBetween2Points(a,b);Check(Occupied(&objectPool)==4);Snapshot();}
+#endif
+    // Exercise all frame batches, strict spatial boundaries, script one-shot behavior and squeeze gates
+    for(unsigned seed=0;seed<384;seed++){Reset(seed);GLOBAL(NumRoadBlocks)=NUMROADBLOCKS;ThePaths.m_numCarPathNodes=NUMROADBLOCKS;for(int i=0;i<NUMROADBLOCKS;i++){GLOBAL(RoadBlockNodes)[i]=(int16_t)i;GLOBAL(InOrOut)[i]=true;ThePaths.m_pathNodes[i].x=16000;ThePaths.m_pathNodes[i].numLinks=2;ThePaths.m_pathNodes[i].firstLink=(int16_t)(2*i);ThePaths.m_carPathConnections[2*i]=2*i;ThePaths.m_carPathConnections[2*i+1]=2*i+1;ThePaths.m_carPathLinks[2*i].x=-40;ThePaths.m_carPathLinks[2*i+1].x=40;ThePaths.m_carPathLinks[2*i].numLeftLanes=ThePaths.m_carPathLinks[2*i+1].numRightLanes=1;for(int k=0;k<2;k++)ThePaths.m_carPathLinks[2*i+k].numRightLanes=ThePaths.m_carPathLinks[2*i+k].numLeftLanes=1;}
+        int index=NUMROADBLOCKS*(frame&15)/16;float distance[]={89.875f,90,90.125f,0};ThePaths.m_pathNodes[index].x=(int16_t)(distance[(seed/4)%4]*8);ThePaths.m_pathNodes[index].z=24000;ThePaths.m_pathNodes[index].width=(seed/16)&1?(uint8_t)(16+seed%240):0;ThePaths.m_carPathLinks[2*index].numLeftLanes=(int8_t)((seed/32)%7-3);ThePaths.m_carPathLinks[2*index+1].numRightLanes=(int8_t)((seed/48)%7-3);GLOBAL(InOrOut)[index]=false;wanted[0].m_RoadblockDensity=seed%5?127:0;hasVehicle=seed&1;collisionMode=1;groundMode=1;mode=seed%9;
+        for(int i=0;i<16;i++){CScriptRoadblock &block=GLOBAL(aScriptRoadBlocks)[i];block.m_vInf.x=200;block.m_vSup.x=204;block.m_vInf.y=block.m_vSup.y=block.m_vInf.z=block.m_vSup.z=0;block.m_bInUse=true;}
+        CScriptRoadblock &block=GLOBAL(aScriptRoadBlocks)[frame&15];float d[]={99.875f,100,100.125f,0};block.m_vInf.x=d[(seed/4)%4]-2;block.m_vSup.x=d[(seed/4)%4]+2;armed=true;Run_RoadBlocks_GenerateRoadBlocks();armed=false;Snapshot();Run_RoadBlocks_GenerateRoadBlocks();Snapshot();}
+    // Release plain pool storage after the final canonical observation
+    CPool_Flush(&pedPool);CPool_Flush(&vehiclePool);CPool_Flush(&objectPool);printf("states=%llu checks=%llu observations=%llu hash=%016llx\n",(unsigned long long)states,(unsigned long long)checks,(unsigned long long)observations,(unsigned long long)digest);return 0;
+}

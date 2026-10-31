@@ -1,8 +1,9 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 class CEntity;
 class CVehicle;
-class CPtrList;
+struct CPtrList;
 
 class CFallingGlassPane : public CMatrix
 {
@@ -57,3 +58,4 @@ public:
 	static void FindWindowSectorList(CPtrList &list, float *dist, CEntity **entity, float x, float y, float z);
 	static void BreakGlassPhysically(CVector pos, float radius);
 };
+//- rouz edit (ChatGPT)

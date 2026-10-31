@@ -1,4 +1,9 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "main.h"
@@ -14,7 +19,7 @@
 #include "Replay.h"
 #include "Stats.h"
 #include "Weather.h"
-#include "MBlur.h"
+#include "MBlur_native.h"
 #include "main.h"
 #include "AudioScriptObject.h"
 #include "ParticleObject.h"
@@ -256,7 +261,10 @@ void CParticle::ReloadConfig()
 {
 	debug("Initialising CParticleMgr...");
 	
-	mod_ParticleSystemManager.Initialise();
+	//+ rouz edit (ChatGPT)
+	// Enter the C configuration parser and clear the same particle list slots
+	ParticleMgr_Initialise();
+	//- rouz edit (ChatGPT)
 	
 	debug("Initialising CParticle...");
 	
@@ -328,10 +336,13 @@ void CParticle::Initialise()
 		m_CosTable[i] = ::Cos(angle);
 	}
 	
-	int32 slot = CTxdStore::FindTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	int32 slot = TxdStore_FindTxdSlot("particle");
 
-	CTxdStore::PushCurrentTxd();
-	CTxdStore::SetCurrentTxd(slot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PushCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_SetCurrentTxd(slot);
 	
 	for ( int32 i = 0; i < MAX_SMOKE_FILES; i++ )
 	{
@@ -488,7 +499,8 @@ void CParticle::Initialise()
 	gpRainDripDarkTex[1] = RwTextureRead("raindripb64_d", nil);
 	gpRainDripDarkRaster[1] = RwTextureGetRaster(gpRainDripDarkTex[1]);
 	
-	CTxdStore::PopCurrentTxd();
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_PopCurrentTxd();
 	
 	for ( int32 i = 0; i < MAX_PARTICLES; i++ )
 	{
@@ -825,8 +837,10 @@ void CParticle::Shutdown()
 
 	int32 slot;
 
-	slot = CTxdStore::FindTxdSlot("particle");
-	CTxdStore::RemoveTxdSlot(slot);
+	// Use the complete C texture dictionary owner with the original live arguments
+	slot = TxdStore_FindTxdSlot("particle");
+	// Use the complete C texture dictionary owner with the original live arguments
+	TxdStore_RemoveTxdSlot(slot);
 
 	debug("CParticle shut down");
 }
@@ -873,7 +887,7 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 
 CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVector const &vecDir, CEntity *pEntity, float fSize, RwRGBA const &color, int32 nRotationSpeed, int32 nRotation, int32 nCurFrame, int32 nLifeSpan)
 {
-	if ( CTimer::GetIsPaused() )
+	if ( Timer_GetIsPaused() )
 		return nil;
 
 	if ( ( type == PARTICLE_ENGINE_SMOKE
@@ -884,7 +898,7 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 		|| type == PARTICLE_BURNINGRUBBER_SMOKE
 		|| type == PARTICLE_EXHAUST_FUMES
 		|| type == PARTICLE_CARCOLLISION_DUST )
-		&& nParticleCreationInterval & CTimer::GetFrameCounter() )
+		&& nParticleCreationInterval & (*Timer_GetFrameCounter()) )
 	{
 		return nil;
 	}
@@ -907,9 +921,9 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 	pParticle->m_fExpansionRate = psystem->m_fExpansionRate;
 	
 	if ( nLifeSpan != 0 )
-		pParticle->m_nTimeWhenWillBeDestroyed = CTimer::GetTimeInMilliseconds() + nLifeSpan;
+		pParticle->m_nTimeWhenWillBeDestroyed = (*Timer_GetTimeInMilliseconds()) + nLifeSpan;
 	else
-		pParticle->m_nTimeWhenWillBeDestroyed = CTimer::GetTimeInMilliseconds() + psystem->m_nLifeSpan;
+		pParticle->m_nTimeWhenWillBeDestroyed = (*Timer_GetTimeInMilliseconds()) + psystem->m_nLifeSpan;
 
 	pParticle->m_nColorIntensity = psystem->m_nFadeToBlackInitialIntensity;
 	
@@ -946,7 +960,11 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 		CVector screen;
 		float w, h;
 
-		if ( !CSprite::CalcScreenCoors(vecPos, &screen, &w, &h, true) )
+		if ( !([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(vecPos, &screen, &w, &h, true) )
 			return nil;
 		
 		pParticle->m_vecPosition = screen;
@@ -963,14 +981,18 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 		RwRGBAAssign(&pParticle->m_Color, &color);
 	else
 	{
-		RwRGBAAssign(&pParticle->m_Color, psystem->m_RenderColouring);
+		//+ rouz edit (ChatGPT)
+		// Copy the original four C color channels into the native particle color
+		RwRGBA renderColour={psystem->m_RenderColouring.red,psystem->m_RenderColouring.green,psystem->m_RenderColouring.blue,psystem->m_RenderColouring.alpha};
+		RwRGBAAssign(&pParticle->m_Color, &renderColour);
+		//- rouz edit (ChatGPT)
 
 		if ( psystem->m_ColorFadeTime != 0 )
-			pParticle->m_nTimeWhenColorWillBeChanged = CTimer::GetTimeInMilliseconds() + psystem->m_ColorFadeTime;
+			pParticle->m_nTimeWhenColorWillBeChanged = (*Timer_GetTimeInMilliseconds()) + psystem->m_ColorFadeTime;
 
 		if ( psystem->m_InitialColorVariation != 0 )
 		{
-			int32 ColorVariation = CGeneral::GetRandomNumberInRange(-psystem->m_InitialColorVariation, psystem->m_InitialColorVariation);
+			int32 ColorVariation = General_GetRandomNumberInRangeInt(-psystem->m_InitialColorVariation, psystem->m_InitialColorVariation);
 			//float ColorVariation = CGeneral::GetRandomNumberInRange((float)-psystem->m_InitialColorVariation, (float)psystem->m_InitialColorVariation);
   
 			pParticle->m_Color.red   = Clamp(pParticle->m_Color.red +
@@ -994,36 +1016,36 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 	else
 		pParticle->m_nRotationStep = psystem->m_nRotationSpeed;
 	
-	if ( CGeneral::GetRandomNumber() & 1 )
+	if ( General_GetRandomNumber() & 1 )
 		pParticle->m_nRotationStep = -pParticle->m_nRotationStep;
 	
 	if ( psystem->m_fPositionRandomError != 0.0f )
 	{
-		pParticle->m_vecPosition.x += psystem->m_fPositionRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
-		pParticle->m_vecPosition.y += psystem->m_fPositionRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+		pParticle->m_vecPosition.x += psystem->m_fPositionRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
+		pParticle->m_vecPosition.y += psystem->m_fPositionRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
 		
 		if ( psystem->Flags & RAND_VERT_V )
-			pParticle->m_vecPosition.z += psystem->m_fPositionRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+			pParticle->m_vecPosition.z += psystem->m_fPositionRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
 	}
 	
 	if ( psystem->m_fVelocityRandomError != 0.0f )
 	{
-		pParticle->m_vecVelocity.x += psystem->m_fVelocityRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
-		pParticle->m_vecVelocity.y += psystem->m_fVelocityRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+		pParticle->m_vecVelocity.x += psystem->m_fVelocityRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
+		pParticle->m_vecVelocity.y += psystem->m_fVelocityRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
     
 		if ( psystem->Flags & RAND_VERT_V )
-			pParticle->m_vecVelocity.z += psystem->m_fVelocityRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+			pParticle->m_vecVelocity.z += psystem->m_fVelocityRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
 	}
 	
 	if ( psystem->m_fExpansionRateError != 0.0f && !(psystem->Flags & SCREEN_TRAIL) )
-		pParticle->m_fExpansionRate += psystem->m_fExpansionRateError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE] + psystem->m_fExpansionRateError;
+		pParticle->m_fExpansionRate += psystem->m_fExpansionRateError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE] + psystem->m_fExpansionRateError;
 	
 	if ( psystem->m_nRotationRateError != 0 )
-		pParticle->m_nRotationStep += CGeneral::GetRandomNumberInRange(-psystem->m_nRotationRateError, psystem->m_nRotationRateError);
+		pParticle->m_nRotationStep += General_GetRandomNumberInRangeInt(-psystem->m_nRotationRateError, psystem->m_nRotationRateError);
 
 	if ( psystem->m_nLifeSpanErrorShape != 0 )
 	{
-		float randVal = ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+		float randVal = ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
 		if ( randVal > 0.0f )
 			pParticle->m_nTimeWhenWillBeDestroyed += int32(float(psystem->m_nLifeSpan) * randVal * float(psystem->m_nLifeSpanErrorShape));
 		else
@@ -1089,25 +1111,25 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 	switch ( type )
 	{
 		case PARTICLE_DEBRIS:
-			pParticle->m_vecVelocity.z *= CGeneral::GetRandomNumberInRange(0.5f, 3.0f);
+			pParticle->m_vecVelocity.z *= General_GetRandomNumberInRangeFloat(0.5f, 3.0f);
 			break;
 		
 		case PARTICLE_EXPLOSION_MEDIUM:
-			pParticle->m_nColorIntensity -= 30 * (CGeneral::GetRandomNumber() & 1); // mb "+= -30 * rand" here ?
-			pParticle->m_nAnimationSpeedTimer = CGeneral::GetRandomNumber() & 7;
-			pParticle->m_fSize = CGeneral::GetRandomNumberInRange(0.3f, 0.8f);
-			pParticle->m_vecPosition.z -= CGeneral::GetRandomNumberInRange(-0.1f, 0.1f);
+			pParticle->m_nColorIntensity -= 30 * (General_GetRandomNumber() & 1); // mb "+= -30 * rand" here ?
+			pParticle->m_nAnimationSpeedTimer = General_GetRandomNumber() & 7;
+			pParticle->m_fSize = General_GetRandomNumberInRangeFloat(0.3f, 0.8f);
+			pParticle->m_vecPosition.z -= General_GetRandomNumberInRangeFloat(-0.1f, 0.1f);
 			break;
 		
 		case PARTICLE_EXPLOSION_LARGE:
-			pParticle->m_nColorIntensity -= 30 * (CGeneral::GetRandomNumber() & 1); // mb "+= -30 * rand" here ?
-			pParticle->m_nAnimationSpeedTimer = CGeneral::GetRandomNumber() & 7;
-			pParticle->m_fSize = CGeneral::GetRandomNumberInRange(0.8f, 1.4f);
-			pParticle->m_vecPosition.z -= CGeneral::GetRandomNumberInRange(-0.3f, 0.3f);
+			pParticle->m_nColorIntensity -= 30 * (General_GetRandomNumber() & 1); // mb "+= -30 * rand" here ?
+			pParticle->m_nAnimationSpeedTimer = General_GetRandomNumber() & 7;
+			pParticle->m_fSize = General_GetRandomNumberInRangeFloat(0.8f, 1.4f);
+			pParticle->m_vecPosition.z -= General_GetRandomNumberInRangeFloat(-0.3f, 0.3f);
 			break;
 		
 		case PARTICLE_WATER_HYDRANT:
-			pParticle->m_vecPosition.z += 20.0f * psystem->m_fPositionRandomError * ms_afRandTable[CGeneral::GetRandomNumber() % RAND_TABLE_SIZE];
+			pParticle->m_vecPosition.z += 20.0f * psystem->m_fPositionRandomError * ms_afRandTable[General_GetRandomNumber() % RAND_TABLE_SIZE];
 			break;
 		default: break;
 	}
@@ -1126,26 +1148,26 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 
 void CParticle::Update()
 {
-	if ( CTimer::GetIsPaused() )
+	if ( Timer_GetIsPaused() )
 		return;
 
 	CRGBA color(0, 0, 0, 0);
 	
-	float fFricDeccel50 = pow(0.50f, CTimer::GetTimeStep());
-	float fFricDeccel80 = pow(0.80f, CTimer::GetTimeStep());
-	float fFricDeccel90 = pow(0.90f, CTimer::GetTimeStep());
-	float fFricDeccel95 = pow(0.95f, CTimer::GetTimeStep());
-	float fFricDeccel96 = pow(0.96f, CTimer::GetTimeStep());
-	float fFricDeccel99 = pow(0.99f, CTimer::GetTimeStep());
+	float fFricDeccel50 = pow(0.50f, (*Timer_GetTimeStep()));
+	float fFricDeccel80 = pow(0.80f, (*Timer_GetTimeStep()));
+	float fFricDeccel90 = pow(0.90f, (*Timer_GetTimeStep()));
+	float fFricDeccel95 = pow(0.95f, (*Timer_GetTimeStep()));
+	float fFricDeccel96 = pow(0.96f, (*Timer_GetTimeStep()));
+	float fFricDeccel99 = pow(0.99f, (*Timer_GetTimeStep()));
 	
 	CParticleObject::UpdateAll();
 	
 	// ejaculation at 23:00, 23:15, 23:30, 23:45 
-	if ( CClock::ms_nGameClockHours == 23 &&
-		(	   CClock::ms_nGameClockMinutes == 0 
-			|| CClock::ms_nGameClockMinutes == 15 
-			|| CClock::ms_nGameClockMinutes == 30
-			|| CClock::ms_nGameClockMinutes == 45 ) )
+	if ( Clock_hours == 23 &&
+		(	   Clock_minutes == 0 
+			|| Clock_minutes == 15 
+			|| Clock_minutes == 30
+			|| Clock_minutes == 45 ) )
 	{
 		AddParticle(PARTICLE_CAR_SPLASH,
 					CVector(557.03f, -4.0f, 151.46f),
@@ -1175,7 +1197,7 @@ void CParticle::Update()
 			
 			bRemoveParticle = false;
 
-			CVector vecMoveStep = particle->m_vecVelocity * CTimer::GetTimeStep();
+			CVector vecMoveStep = particle->m_vecVelocity * (*Timer_GetTimeStep());
 			CVector vecPos = particle->m_vecPosition;
 			
 			if ( numWaterDropOnScreen == 0 )
@@ -1210,8 +1232,8 @@ void CParticle::Update()
 							}
 							else if ( vecMoveStep.Magnitude() != 0.0f )
 							{
-								vecMoveStep.x += CGeneral::GetRandomNumberInRange(0.01f, 0.05f);
-								vecMoveStep.y += CGeneral::GetRandomNumberInRange(0.01f, 0.05f);
+								vecMoveStep.x += General_GetRandomNumberInRangeFloat(0.01f, 0.05f);
+								vecMoveStep.y += General_GetRandomNumberInRangeFloat(0.01f, 0.05f);
 							}
 						}
 					}
@@ -1270,7 +1292,7 @@ void CParticle::Update()
 			
 			if ( psystem->m_Type == PARTICLE_GUNSMOKE2 )
 			{
-				if ( CTimer::GetFrameCounter() & 10 )
+				if ( (*Timer_GetFrameCounter()) & 10 )
 				{
 #ifdef FIX_BUGS
 					if ( FindPlayerPed() && FindPlayerPed()->GetWeapon()->m_eWeaponType == WEAPONTYPE_MINIGUN )
@@ -1283,13 +1305,13 @@ void CParticle::Update()
 				}
 			}
 			
-			if ( CWeather::Wind > 0.0f )
+			if ( Weather_Wind > 0.0f )
 			{
 				if ( vecMoveStep.Magnitude() != 0.0f )
 				{
-					vecWind.x = CGeneral::GetRandomNumberInRange(0.75f, 1.25f) * -CWeather::Wind;
-					vecWind.y = CGeneral::GetRandomNumberInRange(0.75f, 1.25f) * -CWeather::Wind;
-					vecWind *= PARTICLE_WIND_TEST_SCALE * psystem->m_fWindFactor * CTimer::GetTimeStep();
+					vecWind.x = General_GetRandomNumberInRangeFloat(0.75f, 1.25f) * -Weather_Wind;
+					vecWind.y = General_GetRandomNumberInRangeFloat(0.75f, 1.25f) * -Weather_Wind;
+					vecWind *= PARTICLE_WIND_TEST_SCALE * psystem->m_fWindFactor * (*Timer_GetTimeStep());
 					particle->m_vecVelocity += vecWind;
 				}
 			}
@@ -1336,26 +1358,26 @@ void CParticle::Update()
 				{
 					CVector vecWaterdropTarget
 					(
-						CGeneral::GetRandomNumberInRange(-0.25f, 0.25f),
-						CGeneral::GetRandomNumberInRange(0.1f, 0.75f),
+						General_GetRandomNumberInRangeFloat(-0.25f, 0.25f),
+						General_GetRandomNumberInRangeFloat(0.1f, 0.75f),
 						-0.01f
 					);
 					
 					CVector vecWaterdropPos;
 					
 					if ( TheCamera.m_CameraAverageSpeed < 0.35f )
-						vecWaterdropPos.x = (float)CGeneral::GetRandomNumberInRange(50, int32(SCREEN_WIDTH) - 50);
+						vecWaterdropPos.x = (float)General_GetRandomNumberInRangeInt(50, int32(SCREEN_WIDTH) - 50);
 					else
-						vecWaterdropPos.x = (float)CGeneral::GetRandomNumberInRange(200, int32(SCREEN_WIDTH) - 200);
+						vecWaterdropPos.x = (float)General_GetRandomNumberInRangeInt(200, int32(SCREEN_WIDTH) - 200);
 					
 					if ( psystem->m_Type == PARTICLE_BOAT_SPLASH || psystem->m_Type == PARTICLE_CAR_SPLASH )
-						vecWaterdropPos.y = (float)CGeneral::GetRandomNumberInRange(SCREEN_HEIGHT / 2, SCREEN_HEIGHT);
+						vecWaterdropPos.y = (float)General_GetRandomNumberInRangeFloat(SCREEN_HEIGHT / 2, SCREEN_HEIGHT);
 					else
 					{
 						if ( TheCamera.m_CameraAverageSpeed < 0.35f )
-							vecWaterdropPos.y  = (float)CGeneral::GetRandomNumberInRange(0, int32(SCREEN_HEIGHT));
+							vecWaterdropPos.y  = (float)General_GetRandomNumberInRangeInt(0, int32(SCREEN_HEIGHT));
 						else
-							vecWaterdropPos.y  = (float)CGeneral::GetRandomNumberInRange(150, int32(SCREEN_HEIGHT) - 200);
+							vecWaterdropPos.y  = (float)General_GetRandomNumberInRangeInt(150, int32(SCREEN_HEIGHT) - 200);
 					}
 					
 					vecWaterdropPos.z = 2.0f;
@@ -1364,10 +1386,10 @@ void CParticle::Update()
 										vecWaterdropPos,
 										vecWaterdropTarget,
 										nil,
-										CGeneral::GetRandomNumberInRange(0.1f, 0.15f),
+										General_GetRandomNumberInRangeFloat(0.1f, 0.15f),
 										0,
 										0,
-										CGeneral::GetRandomNumber() & 1,
+										General_GetRandomNumber() & 1,
 										0) != nil )
 					{
 						numWaterDropOnScreen++;
@@ -1375,7 +1397,7 @@ void CParticle::Update()
 				}
 			}
 			
-			if (  CTimer::GetTimeInMilliseconds() > particle->m_nTimeWhenWillBeDestroyed || particle->m_nAlpha == 0 )
+			if (  (*Timer_GetTimeInMilliseconds()) > particle->m_nTimeWhenWillBeDestroyed || particle->m_nAlpha == 0 )
 			{
 				bRemoveParticle = true;
 				continue;
@@ -1383,9 +1405,9 @@ void CParticle::Update()
 
 			if ( particle->m_nTimeWhenColorWillBeChanged != 0 )
 			{
-				if ( particle->m_nTimeWhenColorWillBeChanged > CTimer::GetTimeInMilliseconds() )
+				if ( particle->m_nTimeWhenColorWillBeChanged > (*Timer_GetTimeInMilliseconds()) )
 				{
-					float colorMul = 1.0f - float(particle->m_nTimeWhenColorWillBeChanged - CTimer::GetTimeInMilliseconds()) / float(psystem->m_ColorFadeTime);
+					float colorMul = 1.0f - float(particle->m_nTimeWhenColorWillBeChanged - (*Timer_GetTimeInMilliseconds())) / float(psystem->m_ColorFadeTime);
 				
 					particle->m_Color.red = Clamp(
 						psystem->m_RenderColouring.red + int32(float(psystem->m_FadeDestinationColor.red - psystem->m_RenderColouring.red) * colorMul),
@@ -1399,8 +1421,13 @@ void CParticle::Update()
 						psystem->m_RenderColouring.blue + int32(float(psystem->m_FadeDestinationColor.blue - psystem->m_RenderColouring.blue) * colorMul),
 						0, 255);
 				}
-				else
-					RwRGBAAssign(&particle->m_Color, psystem->m_FadeDestinationColor);
+				else {
+					//+ rouz edit (ChatGPT)
+					// Copy the same four destination channels after the original color-fade gate
+					RwRGBA fadeColour={psystem->m_FadeDestinationColor.red,psystem->m_FadeDestinationColor.green,psystem->m_FadeDestinationColor.blue,psystem->m_FadeDestinationColor.alpha};
+					RwRGBAAssign(&particle->m_Color, &fadeColour);
+					//- rouz edit (ChatGPT)
+				}
 			}
 			
 			if ( psystem->Flags & CLIPOUT2D )
@@ -1478,7 +1505,7 @@ void CParticle::Update()
 			if ( psystem->m_fGravitationalAcceleration > 0.0f )
 			{
 				if ( -50.0f * psystem->m_fGravitationalAcceleration < particle->m_vecVelocity.z )
-					particle->m_vecVelocity.z -= psystem->m_fGravitationalAcceleration * CTimer::GetTimeStep();
+					particle->m_vecVelocity.z -= psystem->m_fGravitationalAcceleration * (*Timer_GetTimeStep());
 
 				if ( psystem->Flags & ZCHECK_FIRST )
 				{
@@ -1491,7 +1518,7 @@ void CParticle::Update()
 								{
 									bRemoveParticle = true;
 									
-									if ( CGeneral::GetRandomNumber() & 1 )
+									if ( General_GetRandomNumber() & 1 )
 									{
 										AddParticle(PARTICLE_RAIN_SPLASH,
 													CVector
@@ -1522,7 +1549,7 @@ void CParticle::Update()
 								{
 									bRemoveParticle = true;
 									
-									int32 randVal = CGeneral::GetRandomNumber();
+									int32 randVal = General_GetRandomNumber();
 									
 									if ( randVal & 1 )
 									{
@@ -1571,7 +1598,7 @@ void CParticle::Update()
 												0.1f, 0.0f, 0.0f, -0.1f,
 												255,
 												255, 0, 0,
-												4.0f, (CGeneral::GetRandomNumber() & 4095) + 2000, 1.0f);
+												4.0f, (General_GetRandomNumber() & 4095) + 2000, 1.0f);
 									}
 									else if ( randVal == 2 )
 									{
@@ -1579,7 +1606,7 @@ void CParticle::Update()
 												0.2f, 0.0f, 0.0f, -0.2f,
 												255,
 												255, 0, 0,
-												4.0f, (CGeneral::GetRandomNumber() & 4095) + 8000, 1.0f);
+												4.0f, (General_GetRandomNumber() & 4095) + 8000, 1.0f);
 									}
 									continue;
 								}
@@ -1630,9 +1657,9 @@ void CParticle::Update()
 												),
 												CVector
 												(
-													CGeneral::GetRandomNumberInRange(-0.02f, 0.02f),
-													CGeneral::GetRandomNumberInRange(-0.02f, 0.02f),
-													CGeneral::GetRandomNumberInRange(0.05f, 0.1f)
+													General_GetRandomNumberInRangeFloat(-0.02f, 0.02f),
+													General_GetRandomNumberInRangeFloat(-0.02f, 0.02f),
+													General_GetRandomNumberInRangeFloat(0.05f, 0.1f)
 												),
 												nil,
 												particle->m_fSize, color, particle->m_nRotationStep, 0, 0, 0);
@@ -1656,7 +1683,7 @@ void CParticle::Update()
 													particle->m_vecPosition.y,
 													0.05f + particle->m_fZGround
 												),
-												CVector(0.0f, 0.0f, CGeneral::GetRandomNumberInRange(0.03f, 0.06f)),
+												CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.03f, 0.06f)),
 												nil,
 												particle->m_fSize, color, 0, 0, 0, 0);
 									
@@ -1684,7 +1711,7 @@ void CParticle::Update()
 				if ( psystem->m_fGravitationalAcceleration < 0.0f )
 				{
 					if ( -5.0f * psystem->m_fGravitationalAcceleration > particle->m_vecVelocity.z )
-						particle->m_vecVelocity.z -= psystem->m_fGravitationalAcceleration * CTimer::GetTimeStep();
+						particle->m_vecVelocity.z -= psystem->m_fGravitationalAcceleration * (*Timer_GetTimeStep());
 				}
 				else
 				{
@@ -1770,7 +1797,7 @@ void CParticle::Update()
 			
 			if ( particle->m_nRotationStep != 0 )
 #ifdef FIX_BUGS
-				particle->m_nRotation = CGeneral::LimitAngle(particle->m_nRotation + particle->m_nRotationStep);
+				particle->m_nRotation = General_LimitAngle(particle->m_nRotation + particle->m_nRotationStep);
 #else
 				particle->m_nRotation += particle->m_nRotationStep;
 #endif
@@ -1807,7 +1834,8 @@ void CParticle::Render()
 	RwRenderStateSet(rwRENDERSTATESRCBLEND, (void *)rwBLENDSRCALPHA);
 	RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void *)rwBLENDINVSRCALPHA);
 	
-	CSprite::InitSpriteBuffer2D();
+	// Use the complete C sprite operation with the original argument values
+	Sprite_InitSpriteBuffer2D();
 	
 	uint32 flags = DRAW_OPAQUE;
 	
@@ -1839,7 +1867,8 @@ void CParticle::Render()
 			if ( (flags & DRAW_OPAQUE) != (psystem->Flags & DRAW_OPAQUE)
 				|| (flags & DRAW_DARK) != (psystem->Flags & DRAW_DARK) )
 			{
-				CSprite::FlushSpriteBuffer();
+				// Use the complete C sprite operation with the original argument values
+				Sprite_FlushSpriteBuffer();
 				
 				if ( psystem->Flags & DRAW_OPAQUE )
 				{
@@ -1864,7 +1893,8 @@ void CParticle::Render()
 				RwRaster *curFrame = *frames;
 				if ( curFrame != prevFrame )
 				{
-					CSprite::FlushSpriteBuffer();
+					// Use the complete C sprite operation with the original argument values
+					Sprite_FlushSpriteBuffer();
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void *)curFrame);
 					prevFrame = curFrame;
 				}
@@ -1883,7 +1913,8 @@ void CParticle::Render()
 				RwRaster *curFrame = frames[particle->m_nCurrentFrame];
 				if ( prevFrame != curFrame )
 				{
-					CSprite::FlushSpriteBuffer();
+					// Use the complete C sprite operation with the original argument values
+					Sprite_FlushSpriteBuffer();
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void *)curFrame);
 					prevFrame = curFrame;
 				}
@@ -1896,11 +1927,13 @@ void CParticle::Render()
 				bool zIsZero = true;
 				if ( particle->m_vecPosition.z != 0.0f ) {
 #endif
-				screenZ = (particle->m_vecPosition.z - CDraw::GetNearClipZ())
-					* (CSprite::GetFarScreenZ() - CSprite::GetNearScreenZ())
-					* CDraw::GetFarClipZ()
-					/ ( (CDraw::GetFarClipZ() - CDraw::GetNearClipZ()) * particle->m_vecPosition.z )
-					+ CSprite::GetNearScreenZ();
+				screenZ = (particle->m_vecPosition.z - Draw_GetNearClipZ())
+					// Use the complete C sprite operation with the original argument values
+					* (Sprite_GetFarScreenZ() - Sprite_GetNearScreenZ())
+					* Draw_GetFarClipZ()
+					/ ( (Draw_GetFarClipZ() - Draw_GetNearClipZ()) * particle->m_vecPosition.z )
+					// Use the complete C sprite operation with the original argument values
+					+ Sprite_GetNearScreenZ();
 #ifdef FIX_BUGS
 				zIsZero = false;
 				}
@@ -1911,13 +1944,13 @@ void CParticle::Render()
 					
 				if ( i == PARTICLE_RAINDROP || i == PARTICLE_RAINDROP_SMALL || i == PARTICLE_RAINDROP_2D )
 				{
-					stretchTexW = CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.x * (float)particle->m_nCurrentFrame + 63.0f;
-					stretchTexH = CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.y * (float)particle->m_nCurrentFrame + 63.0f;
+					stretchTexW = General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.x * (float)particle->m_nCurrentFrame + 63.0f;
+					stretchTexH = General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.y * (float)particle->m_nCurrentFrame + 63.0f;
 				}
 				else
 				{
-					stretchTexW = CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.x + 63.0f;
-					stretchTexH = CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.y + 63.0f;
+					stretchTexW = General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.x + 63.0f;
+					stretchTexH = General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.y + 63.0f;
 				}
 
 #ifdef FIX_BUGS
@@ -1926,7 +1959,7 @@ void CParticle::Render()
 				
 				if ( i == PARTICLE_WATERDROP )
 				{
-					int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - CTimer::GetTimeInMilliseconds()) / particle->m_nTimeWhenWillBeDestroyed;
+					int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - (*Timer_GetTimeInMilliseconds())) / particle->m_nTimeWhenWillBeDestroyed;
 					
 					stretchTexH += (1.0f - (float)timeLeft ) * psystem->m_vecTextureStretch.y;
 					
@@ -1944,14 +1977,15 @@ void CParticle::Render()
 					else
 						fxtype = FXTYPE_WATER1;
 		
-					CMBlur::AddRenderFx(Scene.camera, &rect, screenZ, fxtype);
+					// Use the complete C motion-blur owner and its live shared state
+					MBlur_AddRenderFx(Scene.camera,MBlur_NativeRect(&rect),screenZ,fxtype);
 					
 					canDraw = false;
 				}
 				
 				if ( i == PARTICLE_BLOODDROP )
 				{
-					int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - CTimer::GetTimeInMilliseconds()) / particle->m_nTimeWhenWillBeDestroyed;
+					int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - (*Timer_GetTimeInMilliseconds())) / particle->m_nTimeWhenWillBeDestroyed;
 					
 					stretchTexH += (1.0f + (float)timeLeft) * psystem->m_vecTextureStretch.y;
 					stretchTexW += (1.0f - (float)timeLeft) * psystem->m_vecTextureStretch.x;
@@ -1970,7 +2004,8 @@ void CParticle::Render()
 					else
 						fxtype = FXTYPE_BLOOD1;
 					
-					CMBlur::AddRenderFx(Scene.camera, &rect, screenZ, fxtype);
+					// Use the complete C motion-blur owner and its live shared state
+					MBlur_AddRenderFx(Scene.camera,MBlur_NativeRect(&rect),screenZ,fxtype);
 					
 					canDraw = false;
 				}
@@ -1984,7 +2019,8 @@ void CParticle::Render()
 					rect.w = int32(particle->m_vecPosition.x + SCREEN_STRETCH_X(particle->m_fSize * stretchTexW));
 					rect.h = int32(particle->m_vecPosition.y + SCREEN_STRETCH_Y(particle->m_fSize * stretchTexH * 0.15f));
 					
-					CMBlur::AddRenderFx(Scene.camera, &rect, screenZ, FXTYPE_HEATHAZE);
+					// Use the complete C motion-blur owner and its live shared state
+					MBlur_AddRenderFx(Scene.camera,MBlur_NativeRect(&rect),screenZ,FXTYPE_HEATHAZE);
 					
 					canDraw = false;
 				}
@@ -2020,7 +2056,8 @@ void CParticle::Render()
 							break;
 					}
 														 
-					CMBlur::AddRenderFx(Scene.camera, &rect, screenZ, FXTYPE_HEATHAZE);
+					// Use the complete C motion-blur owner and its live shared state
+					MBlur_AddRenderFx(Scene.camera,MBlur_NativeRect(&rect),screenZ,FXTYPE_HEATHAZE);
 					
 					canDraw = false;
 				}
@@ -2032,7 +2069,11 @@ void CParticle::Render()
 				{
 					if ( particle->m_nRotation != 0 )
 					{
-						CSprite::RenderBufferedOneXLUSprite2D_Rotate_Dimension(
+						([](float x, float y, float w, float h, const RwRGBA &colour, int16_t intens, float rotation, uint8_t alpha){
+    // Retain the original typed colour reference and argument evaluation at the C operation boundary
+    // Use the complete C sprite operation with the original argument values
+    Sprite_RenderBufferedOneXLUSprite2D_Rotate_Dimension(x,y,w,h,Sprite_ColourRef(&colour.red,&colour.green,&colour.blue,&colour.alpha),intens,rotation,alpha);
+})(
 								particle->m_vecPosition.x,
 								particle->m_vecPosition.y,
 								particle->m_fSize * stretchTexW,
@@ -2044,7 +2085,11 @@ void CParticle::Render()
 					}
 					else
 					{
-						CSprite::RenderBufferedOneXLUSprite2D(
+						([](float x, float y, float w, float h, const RwRGBA &colour, int16_t intens, uint8_t alpha){
+    // Retain the original typed colour reference and argument evaluation at the C operation boundary
+    // Use the complete C sprite operation with the original argument values
+    Sprite_RenderBufferedOneXLUSprite2D(x,y,w,h,Sprite_ColourRef(&colour.red,&colour.green,&colour.blue,&colour.alpha),intens,alpha);
+})(
 								particle->m_vecPosition.x,
 								particle->m_vecPosition.y,
 								particle->m_fSize * stretchTexW,
@@ -2064,7 +2109,11 @@ void CParticle::Render()
 				float w;
 				float h;
 
-				if ( CSprite::CalcScreenCoors(particle->m_vecPosition, &coors, &w, &h, true) )
+				if ( ([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(particle->m_vecPosition, &coors, &w, &h, true) )
 				{
 					
 					if ( i == PARTICLE_ENGINE_STEAM
@@ -2080,19 +2129,19 @@ void CParticle::Render()
 						{
 							case LOOKING_LEFT:
 							case LOOKING_RIGHT:
-								w += CGeneral::GetRandomNumberInRange(1.0f, 7.5f) * psystem->m_vecTextureStretch.x;
-								h += CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
+								w += General_GetRandomNumberInRangeFloat(1.0f, 7.5f) * psystem->m_vecTextureStretch.x;
+								h += General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
 								break;
 
 							default:
-								w += CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.x;
-								h += CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
+								w += General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.x;
+								h += General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
 								break;
 						}
 					}
 					else if ( i == PARTICLE_WATER_HYDRANT )
 					{
-						int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - CTimer::GetTimeInMilliseconds()) / particle->m_nTimeWhenWillBeDestroyed;
+						int32 timeLeft = (particle->m_nTimeWhenWillBeDestroyed - (*Timer_GetTimeInMilliseconds())) / particle->m_nTimeWhenWillBeDestroyed;
 					
 						w += (1.0f - (float)timeLeft) * psystem->m_vecTextureStretch.x;
 						h += (1.0f - (float)timeLeft) * psystem->m_vecTextureStretch.y;
@@ -2107,8 +2156,8 @@ void CParticle::Render()
 					}
 					else
 					{
-						w += CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.x;
-						h += CGeneral::GetRandomNumberInRange(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
+						w += General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.x;
+						h += General_GetRandomNumberInRangeFloat(0.1f, 1.0f) * psystem->m_vecTextureStretch.y;
 					}
 					
 					if ( i == PARTICLE_WATER_HYDRANT
@@ -2141,17 +2190,21 @@ void CParticle::Render()
 								rect.y = int32(coors.y + SCREEN_STRETCH_Y(particle->m_fSize * h));
 							}
 							
-							float screenZ = (coors.z - CDraw::GetNearClipZ())
-								* (CSprite::GetFarScreenZ() - CSprite::GetNearScreenZ()) * CDraw::GetFarClipZ()
-								/ ( (CDraw::GetFarClipZ() - CDraw::GetNearClipZ()) * coors.z ) + CSprite::GetNearScreenZ();
+							float screenZ = (coors.z - Draw_GetNearClipZ())
+								// Use the complete C sprite operation with the original argument values
+								* (Sprite_GetFarScreenZ() - Sprite_GetNearScreenZ()) * Draw_GetFarClipZ()
+								// Use the complete C sprite operation with the original argument values
+								/ ( (Draw_GetFarClipZ() - Draw_GetNearClipZ()) * coors.z ) + Sprite_GetNearScreenZ();
 
-							CMBlur::AddRenderFx(Scene.camera, &rect, screenZ, FXTYPE_SPLASH1);
+							// Use the complete C motion-blur owner and its live shared state
+							MBlur_AddRenderFx(Scene.camera,MBlur_NativeRect(&rect),screenZ,FXTYPE_SPLASH1);
 						}
 						else
 						{
 							if ( particle->m_nRotation != 0 && i != PARTICLE_BEASTIE )
 							{					
-								CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
 										particle->m_fSize * w, particle->m_fSize * h,
 										particle->m_Color.red,
 										particle->m_Color.green,
@@ -2192,13 +2245,14 @@ void CParticle::Render()
 									
 									float fSpeed = particle->m_vecVelocity.Magnitude();
 									
-									float fNewTrailLength = fSpeed * CTimer::GetTimeStep() * w * 2.0f;
+									float fNewTrailLength = fSpeed * (*Timer_GetTimeStep()) * w * 2.0f;
 									
 									if ( fDist > fNewTrailLength )
 										fTrailLength = fNewTrailLength;
 								}
 								
-								CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
 										particle->m_fSize * w,
 										particle->m_fSize * h + fTrailLength * psystem->m_fTrailLengthMultiplier,
 										particle->m_Color.red,
@@ -2219,7 +2273,11 @@ void CParticle::Render()
 								float fTrailLength;
 								CVector vecScreenPosition;
 								
-								if ( CSprite::CalcScreenCoors(vecPrevPos, &vecScreenPosition, &fTrailLength, &fRotation, true) )
+								if ( ([](const RwV3d &spriteInput,RwV3d *spriteOutput,float *spriteWidth,float *spriteHeight,bool spriteFarClip){
+    // Keep actual native input and output subobjects alive through the complete synchronous C projection
+    // Use the complete C sprite operation with the original argument values
+    return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
+})(vecPrevPos, &vecScreenPosition, &fTrailLength, &fRotation, true) )
 								{
 									CVector2D vecDist
 									(
@@ -2244,7 +2302,8 @@ void CParticle::Render()
 									fTrailLength = 0.0f;
 								}
 								
-								CSprite::RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite_Rotate_Dimension(coors.x, coors.y, coors.z,
 										particle->m_fSize * w,
 										particle->m_fSize * h + fTrailLength * psystem->m_fTrailLengthMultiplier,
 										particle->m_Color.red,
@@ -2259,7 +2318,8 @@ void CParticle::Render()
 							{
 								float fTrailLength = fabsf(particle->m_vecVelocity.z * 10.0f);
 	
-								CSprite::RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
 										particle->m_fSize * w,
 										(particle->m_fSize + fTrailLength * psystem->m_fTrailLengthMultiplier) * h,
 										particle->m_Color.red,
@@ -2271,7 +2331,8 @@ void CParticle::Render()
 							}
 							else if ( i == PARTICLE_RAINDROP_SMALL )
 							{
-								CSprite::RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
 										particle->m_fSize * w * 0.05f,
 										particle->m_fSize * h,
 										particle->m_Color.red,
@@ -2284,7 +2345,8 @@ void CParticle::Render()
 							/*else if ( i == PARTICLE_BOAT_WAKE )*/
 							else
 							{							
-								CSprite::RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
+								// Use the complete C sprite operation with the original argument values
+								Sprite_RenderBufferedOneXLUSprite(coors.x, coors.y, coors.z,
 										particle->m_fSize * w,
 										particle->m_fSize * h,
 										particle->m_Color.red,
@@ -2302,7 +2364,8 @@ void CParticle::Render()
 			particle = particle->m_pNext;
 		}
 
-		CSprite::FlushSpriteBuffer();
+		// Use the complete C sprite operation with the original argument values
+		Sprite_FlushSpriteBuffer();
 
 	}
 	
@@ -2335,7 +2398,8 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 	cameraUp.Normalise();
 
 	// Preserve queued world geometry before switching the shared buffer to particles
-	RenderBuffer::RenderStuffInBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_RenderStuffInBuffer();
 	PUSH_RENDERGROUP("CParticle::RenderForEnvMap");
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
@@ -2365,7 +2429,8 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 			continue;
 
 		// Set the particle system's original opaque, dark, or additive blend mode
-		RenderBuffer::RenderStuffInBuffer();
+		// Enter the C shared-buffer algorithm with the original arguments
+		RenderBuffer_RenderStuffInBuffer();
 		if(flags & DRAW_OPAQUE){
 			RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
 			RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
@@ -2400,7 +2465,8 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 				continue;
 			// Flush the previous frame texture before changing the bound raster
 			if(raster != activeRaster){
-				RenderBuffer::RenderStuffInBuffer();
+				// Enter the C shared-buffer algorithm with the original arguments
+				RenderBuffer_RenderStuffInBuffer();
 				RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
 				activeRaster = raster;
 			}
@@ -2423,7 +2489,7 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 				else if(flags & (SCREEN_TRAIL|SPEED_TRAIL)){
 					// Estimate screen trails from world velocity without updating their history fields
 					CVector screenVelocity = particle->m_vecVelocity - cameraForward*DotProduct(particle->m_vecVelocity, cameraForward);
-					halfHeight += screenVelocity.Magnitude()*CTimer::GetTimeStep()*system->m_fTrailLengthMultiplier;
+					halfHeight += screenVelocity.Magnitude()*(*Timer_GetTimeStep())*system->m_fTrailLengthMultiplier;
 					float rightVelocity = DotProduct(screenVelocity, cameraRight);
 					float upVelocity = DotProduct(screenVelocity, cameraUp);
 					rotation = Atan2(-rightVelocity, upVelocity);
@@ -2444,7 +2510,8 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 			int blue = particle->m_Color.blue*particle->m_nColorIntensity >> 8;
 			RwImVertexIndex *indices;
 			RwIm3DVertex *vertices;
-			RenderBuffer::StartStoring(6, 4, &indices, &vertices);
+			// Enter the C shared-buffer algorithm with the original arguments
+			RenderBuffer_StartStoringLegacy(6, 4, &indices, &vertices);
 			// Fill the textured quad with the particle's current color and alpha
 			for(int vertex = 0; vertex < 4; vertex++){
 				RwIm3DVertexSetPos(&vertices[vertex], corners[vertex].x, corners[vertex].y, corners[vertex].z);
@@ -2456,12 +2523,14 @@ void CParticle::RenderForEnvMap(RwCamera *camera)
 			RwIm3DVertexSetU(&vertices[3], 1.0f); RwIm3DVertexSetV(&vertices[3], 1.0f);
 			indices[0] = 0; indices[1] = 1; indices[2] = 2;
 			indices[3] = 2; indices[4] = 1; indices[5] = 3;
-			RenderBuffer::StopStoring();
+			// Enter the C shared-buffer algorithm with the original arguments
+			RenderBuffer_StopStoring();
 		}
 	}
 
 	// Flush reflected particles and restore the standard effect states
-	RenderBuffer::RenderStuffInBuffer();
+	// Enter the C shared-buffer algorithm with the original arguments
+	RenderBuffer_RenderStuffInBuffer();
 	RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEZTESTENABLE, (void*)TRUE);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
@@ -2504,9 +2573,9 @@ void CParticle::AddJetExplosion(CVector const &vecPos, float fPower, float fSize
 	
 	CVector vecRandOffset
 	(
-		CGeneral::GetRandomNumberInRange(-0.4f, 0.4f),
-		CGeneral::GetRandomNumberInRange(-0.4f, 0.4f),
-		CGeneral::GetRandomNumberInRange(0.1f, 0.3f)
+		General_GetRandomNumberInRangeFloat(-0.4f, 0.4f),
+		General_GetRandomNumberInRangeFloat(-0.4f, 0.4f),
+		General_GetRandomNumberInRangeFloat(0.1f, 0.3f)
 	);
 	
 	vecRandOffset *= 2.0f;
@@ -2519,9 +2588,9 @@ void CParticle::AddJetExplosion(CVector const &vecPos, float fPower, float fSize
 					vecStepPos,
 					CVector
 					(
-						CGeneral::GetRandomNumberInRange(-0.02f, 0.02f),
-						CGeneral::GetRandomNumberInRange(-0.02f, 0.02f),
-						CGeneral::GetRandomNumberInRange(-0.02f, 0.0f)
+						General_GetRandomNumberInRangeFloat(-0.02f, 0.02f),
+						General_GetRandomNumberInRangeFloat(-0.02f, 0.02f),
+						General_GetRandomNumberInRangeFloat(-0.02f, 0.0f)
 					),
 					nil,
 					fSize, color, 0, 0, 0, 0);
@@ -2530,9 +2599,9 @@ void CParticle::AddJetExplosion(CVector const &vecPos, float fPower, float fSize
 					vecStepPos,
 					CVector
 					(
-						CGeneral::GetRandomNumberInRange(-0.04f, 0.04f),
-						CGeneral::GetRandomNumberInRange(-0.04f, 0.04f),
-						CGeneral::GetRandomNumberInRange(0.0f, 0.07f)
+						General_GetRandomNumberInRangeFloat(-0.04f, 0.04f),
+						General_GetRandomNumberInRangeFloat(-0.04f, 0.04f),
+						General_GetRandomNumberInRangeFloat(0.0f, 0.07f)
 					),
 					nil,
 					fSize, color, 0, 0, 0, 0);
@@ -2541,9 +2610,9 @@ void CParticle::AddJetExplosion(CVector const &vecPos, float fPower, float fSize
 					vecStepPos,
 					CVector
 					(
-						CGeneral::GetRandomNumberInRange(-0.04f, 0.04f),
-						CGeneral::GetRandomNumberInRange(-0.04f, 0.04f),
-						CGeneral::GetRandomNumberInRange(0.0f, 0.07f)
+						General_GetRandomNumberInRangeFloat(-0.04f, 0.04f),
+						General_GetRandomNumberInRangeFloat(-0.04f, 0.04f),
+						General_GetRandomNumberInRangeFloat(0.0f, 0.07f)
 					),
 					nil,
 					fSize, color, 0, 0, 0, 0);
@@ -2564,8 +2633,8 @@ void CParticle::AddYardieDoorSmoke(CVector const &vecPos, CMatrix const &matMatr
 	{
 		CVector pos = vecBasePos;
 
-		pos.x += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
-		pos.y += CGeneral::GetRandomNumberInRange(-0.5f, 0.5f);
+		pos.x += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f);
+		pos.y += General_GetRandomNumberInRangeFloat(-0.5f, 0.5f);
 		
 		AddParticle(PARTICLE_CARCOLLISION_DUST,
 					pos,
@@ -2579,8 +2648,8 @@ void CParticle::CalWindDir(CVector *vecDirIn, CVector *vecDirOut)
 {
 	vecDirOut->x = (Cos(128) * vecDirIn->x) + (Sin(128) * vecDirIn->y);
 
-	vecDirOut->x = (Cos(128) * vecDirIn->x) + (Sin(128) * vecDirIn->y) * CWeather::Wind;
-	vecDirOut->y = (Sin(128) * vecDirIn->x) - (Cos(128) * vecDirIn->y) * CWeather::Wind;
+	vecDirOut->x = (Cos(128) * vecDirIn->x) + (Sin(128) * vecDirIn->y) * Weather_Wind;
+	vecDirOut->y = (Sin(128) * vecDirIn->x) - (Cos(128) * vecDirIn->y) * Weather_Wind;
 }
 
 void CParticle::HandleShipsAtHorizonStuff()
@@ -2589,12 +2658,12 @@ void CParticle::HandleShipsAtHorizonStuff()
 
 	for ( CParticle *particle = psystemdata->m_pParticles; particle; particle = particle->m_pNext )
 	{
-		if ( CTimer::GetTimeInMilliseconds() > particle->m_nTimeWhenWillBeDestroyed - 32000 
-				&& CTimer::GetTimeInMilliseconds() < particle->m_nTimeWhenWillBeDestroyed - 22000 )
+		if ( (*Timer_GetTimeInMilliseconds()) > particle->m_nTimeWhenWillBeDestroyed - 32000 
+				&& (*Timer_GetTimeInMilliseconds()) < particle->m_nTimeWhenWillBeDestroyed - 22000 )
 		{		
 			particle->m_nAlpha = Min(particle->m_nAlpha + 1, 96);
 		}
-		if ( CTimer::GetTimeInMilliseconds() > particle->m_nTimeWhenWillBeDestroyed - 10000 )
+		if ( (*Timer_GetTimeInMilliseconds()) > particle->m_nTimeWhenWillBeDestroyed - 10000 )
 			particle->m_nFadeAlphaTimer = 1;
 	}
 }
@@ -2631,7 +2700,7 @@ void CParticle::HandleShootableBirdsStuff(CEntity *entity, CVector const&camPos)
 		{
 			if ( (camPos - particle->m_vecPosition).MagnitudeSqr() < 40000.0f )
 			{
-				CStats::SeagullsKilled++;
+				Stats_SeagullsKilled++;
 				
 				bRemoveParticle = true;
 
@@ -2641,16 +2710,16 @@ void CParticle::HandleShootableBirdsStuff(CEntity *entity, CVector const&camPos)
 												particle->m_vecPosition,
 												CVector
 												(
-													CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
-													CGeneral::GetRandomNumberInRange(-3.0f, 3.0f),
-													CGeneral::GetRandomNumberInRange(-3.0f, 3.0f)
+													General_GetRandomNumberInRangeFloat(-3.0f, 3.0f),
+													General_GetRandomNumberInRangeFloat(-3.0f, 3.0f),
+													General_GetRandomNumberInRangeFloat(-3.0f, 3.0f)
 												),
 												nil,
 												0.3f,
 												particle->m_Color,
-												CGeneral::GetRandomNumberInRange(20, 40),
+												General_GetRandomNumberInRangeInt(20, 40),
 												0,
-												CGeneral::GetRandomNumber() & 3,
+												General_GetRandomNumber() & 3,
 												200);
 					if ( pBirdDerbis )
 						pBirdDerbis->m_nAlpha = particle->m_nAlpha;
@@ -2700,4 +2769,11 @@ CEntity::AddSteamsFromGround(CVector *unused)
 		}
 	}
 }
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

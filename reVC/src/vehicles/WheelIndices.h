@@ -1,0 +1,15 @@
+//+ rouz edit (ChatGPT)
+#pragma once
+
+enum {
+	CARWHEEL_FRONT_LEFT,
+	CARWHEEL_REAR_LEFT,
+	CARWHEEL_FRONT_RIGHT,
+	CARWHEEL_REAR_RIGHT
+};
+
+enum {
+	BIKEWHEEL_FRONT,
+	BIKEWHEEL_REAR,
+};
+//- rouz edit (ChatGPT)

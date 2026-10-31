@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Pools.h"
@@ -237,7 +239,7 @@ CPools::MakeSureSlotInObjectPoolIsEmpty(int32 slot)
 		CPool_Delete(ms_pObjectPool, object);
 		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
-	} else if (!CProjectileInfo::RemoveIfThisIsAProjectile(object)) {
+	} else if (!ProjectileInfo_RemoveIfThisIsAProjectile(object)) {
 		// relocate to another slot??
 //+ rouz edit (ChatGPT)
 		// Allocate the relocated object without invoking C++ new.
@@ -626,7 +628,7 @@ VALIDATESAVEBUF(*size)
 void CPools::SaveObjectPool(uint8* buf, uint32* size)
 {
 INITSAVEBUF
-	CProjectileInfo::RemoveAllProjectiles();
+	ProjectileInfo_RemoveAllProjectiles();
 	CObject::DeleteAllTempObjects();
 	int nObjects = 0;
 	//+ rouz edit (ChatGPT)
@@ -818,7 +820,7 @@ INITSAVEBUF
 			nNumPeds++;
 	}
 	*size = sizeof(int) + nNumPeds * (sizeof(uint32) + sizeof(int16) + sizeof(int) + CPlayerPed::nSaveStructSize +
-		sizeof(CWanted::MaximumWantedLevel) + sizeof(CWanted::nMaximumWantedLevel) + MAX_MODEL_NAME);
+		sizeof(Wanted_MaximumWantedLevel) + sizeof(Wanted_nMaximumWantedLevel) + MAX_MODEL_NAME);
 	CopyToBuf(buf, nNumPeds);
 	for (int i = 0; i < nPoolSize; i++) {
 		//+ rouz edit (ChatGPT)
@@ -845,8 +847,8 @@ INITSAVEBUF
 			SkipSaveBuf(&buf, sizeof(CPlayerPed));
 			//- rouz edit (ChatGPT)
 #endif
-			CopyToBuf(buf, CWanted::MaximumWantedLevel);
-			CopyToBuf(buf, CWanted::nMaximumWantedLevel);
+			CopyToBuf(buf, Wanted_MaximumWantedLevel);
+			CopyToBuf(buf, Wanted_nMaximumWantedLevel);
 			memcpy(buf, CModelInfo::GetModelInfo(pPed->GetModelIndex())->GetModelName(), MAX_MODEL_NAME);
 			//+ rouz edit (ChatGPT)
 			// Transfer save data through the C buffer API with explicit sizes
@@ -896,8 +898,8 @@ INITSAVEBUF
 
 		pPed->Load(buf);
 		if (pedtype == PEDTYPE_PLAYER1) {
-			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
-			CopyFromBuf(buf, CWanted::nMaximumWantedLevel);
+			CopyFromBuf(buf, Wanted_MaximumWantedLevel);
+			CopyFromBuf(buf, Wanted_nMaximumWantedLevel);
 			//+ rouz edit (ChatGPT)
 			// Transfer save data through the C buffer API with explicit sizes
 			SkipSaveBuf(&buf, MAX_MODEL_NAME);
@@ -921,8 +923,8 @@ INITSAVEBUF
 			// Transfer save data through the C buffer API with explicit sizes
 			SkipSaveBuf(&buf, sizeof(CPlayerPed));
 			//- rouz edit (ChatGPT)
-			CopyFromBuf(buf, CWanted::MaximumWantedLevel);
-			CopyFromBuf(buf, CWanted::nMaximumWantedLevel);
+			CopyFromBuf(buf, Wanted_MaximumWantedLevel);
+			CopyFromBuf(buf, Wanted_nMaximumWantedLevel);
 			CopyFromBuf(buf, name);
 		}
 		CStreaming::RequestSpecialModel(model, name, STREAMFLAGS_DONT_REMOVE);
@@ -950,10 +952,10 @@ INITSAVEBUF
 		pPed->m_maxWeaponTypeAllowed = pBufferPlayer->m_maxWeaponTypeAllowed;
 		for (int i = 0; i < TOTAL_WEAPON_SLOTS; i++) {
 			if (pBufferPlayer->HasWeaponSlot(i)) {
-				int modelId = CWeaponInfo::GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModelId;
+				int modelId = WeaponInfo_GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModelId;
 				if (modelId != -1) {
 					CStreaming::RequestModel(modelId, STREAMFLAGS_DEPENDENCY);
-					int modelId2 = CWeaponInfo::GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModel2Id;
+					int modelId2 = WeaponInfo_GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModel2Id;
 					if (modelId2 != -1)
 						CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
 
@@ -976,3 +978,17 @@ VALIDATESAVEBUF(size)
 
 #undef CopyFromBuf
 #undef CopyToBuf
+//- rouz edit (ChatGPT)
+
+CPool *CPools_GetPtrNodePool(void)
+{
+    // Expose the existing pointer-node pool to the C list owner
+    return CPools::GetPtrNodePool();
+}
+
+CPool *CPools_GetEntryInfoNodePool(void)
+{
+    // Expose the existing entry-info pool to the C list owner
+    return CPools::GetEntryInfoNodePool();
+}
+//- rouz edit (ChatGPT)

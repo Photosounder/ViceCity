@@ -1,0 +1,59 @@
+#pragma once
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
+#include <math.h>
+#include <vector>
+#include <map>
+typedef int32_t int32;
+typedef uint32_t uint32;
+struct RpClump;
+struct RwStream {std::vector<unsigned char> bytes;size_t position;};
+struct RwV3d {float x,y,z;};
+#include "Maths.h"
+#include "Vector.h"
+#include "KeyFrames_native.h"
+#include "AnimBlendAssociation_flags.h"
+#include "ModelIndexData.h"
+#include "General.h"
+#define nil NULL
+#include "AnimManager.h"
+#include "AnimBlendHierarchy_backend.h"
+#include "AnimBlendSequence_backend.h"
+extern "C" void re3_assert(const char*,const char*,unsigned,const char*);
+extern "C" void re3_debug(const char*,...);
+#define ARRAY_SIZE(array) (sizeof(array)/sizeof((array)[0]))
+#undef assert
+#ifndef MASTER
+#define assert(expr) ((void)((!!(expr)) || (re3_assert(#expr,__FILE__,__LINE__,__func__),0)))
+#else
+#define assert(expr) (expr)
+#endif
+#define debug(...) re3_debug("[DBG]: " __VA_ARGS__)
+enum {rwSTREAMFILENAME=1,rwSTREAMREAD=2};
+RwStream *RwStreamOpen(int,int,const char*);
+void RwStreamRead(RwStream*,void*,uint32);
+void RwStreamClose(RwStream*,void*);
+#ifdef ORIGINAL
+#define MANAGER(name) CAnimManager::name
+#define LOAD(stream,compress,names) CAnimManager::LoadAnimFile(stream,compress,names)
+#define LOAD_NAME(name) CAnimManager::LoadAnimFile(name)
+#define BLOCK_NAME(name) CAnimManager::GetAnimationBlock(name)
+#define BLOCK_ID(id) CAnimManager::GetAnimationBlock(id)
+#define ANIMATION_ID(id) CAnimManager::GetAnimation(id)
+#else
+#define MANAGER(name) AnimManager_##name
+#define LOAD(stream,compress,names) AnimManager_LoadAnimStream(stream,compress,names)
+#define LOAD_NAME(name) AnimManager_LoadAnimFileByName(name)
+#define BLOCK_NAME(name) AnimManager_GetAnimationBlockByName(name)
+#define BLOCK_ID(id) AnimManager_GetAnimationBlockById(id)
+#define ANIMATION_ID(id) AnimManager_GetAnimationById(id)
+#endif

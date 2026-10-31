@@ -1,0 +1,50 @@
+#include "native.h"
+#include "InputState_backend.h"
+#include "entry.h"
+
+TestMouse *platformMouse;
+void *platformWindow;
+TestFrontend FrontEndMenuManager;
+static TestMouse device;
+static bool needsExclusive,createMouse,writeCursor;
+static uint32_t buttonCount,axisCount;
+static double cursorX;
+
+extern "C" void TestConfigure(bool hasMouse,bool menu,bool needs,bool create,uint32_t buttons,uint32_t axes,double cursor,bool write)
+{
+    // Configure platform inputs without adding side effects to plain native getters
+    platformMouse=hasMouse?&device:NULL;
+    FrontEndMenuManager.m_bMenuActive=menu;
+    needsExclusive=needs;createMouse=create;buttonCount=buttons;axisCount=axes;
+    cursorX=cursor;writeCursor=write;
+}
+
+bool _InputMouseNeedsExclusive(void)
+{
+    // Observe only the original platform exclusivity query
+    TestTrace(1,needsExclusive);
+    return needsExclusive;
+}
+
+void _InputInitialiseMouse(bool exclusive)
+{
+    // Reproduce device creation and retain the actual selected exclusivity value
+    TestTrace(2,exclusive);
+    platformMouse=createMouse?&device:NULL;
+}
+
+void TestMouse::GetCapabilities(DIDEVCAPS *caps)
+{
+    // Fill successful capabilities and observe the original native structure-size argument
+    TestTrace(3,caps->dwSize);
+    caps->dwButtons=buttonCount;caps->dwAxes=axisCount;
+}
+
+void glfwGetCursorPos(void *window,double *x,double *y)
+{
+    // Permit the platform call to leave X untouched so its original default remains observable
+    (void)window;
+    TestTrace(4,writeCursor);
+    if(writeCursor)*x=cursorX;
+    *y=0;
+}

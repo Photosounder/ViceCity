@@ -1,3 +1,5 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Game.h"
@@ -124,10 +126,10 @@ CPopulation::RemovePed(CPed *ent)
 int32
 CPopulation::ChooseCivilianOccupation(int32 group)
 {
-	if (CWeather::Rain > 0.1f) {
+	if (Weather_Rain > 0.1f) {
 		int32 lastModel;
 		for (int i = 0; i < 8; i++) {
-			gLastSelectedCivilianIndex = CGeneral::GetRandomNumberInRange(0, NUMMODELSPERPEDGROUP);
+			gLastSelectedCivilianIndex = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
 			lastModel = ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
 
 			if (!CPopulation::IsSunbather(lastModel))
@@ -136,7 +138,7 @@ CPopulation::ChooseCivilianOccupation(int32 group)
 		return lastModel;
 
 	} else {
-		gLastSelectedCivilianIndex = CGeneral::GetRandomNumberInRange(0, NUMMODELSPERPEDGROUP);
+		gLastSelectedCivilianIndex = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
 		return ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
 	}
 }
@@ -144,7 +146,7 @@ CPopulation::ChooseCivilianOccupation(int32 group)
 int32
 CPopulation::ChooseNextCivilianOccupation(int32 group)
 {
-	if (CWeather::Rain > 0.1f) {
+	if (Weather_Rain > 0.1f) {
 		int32 lastModel;
 		for (int i = 0; i < NUMMODELSPERPEDGROUP; i++) {
 			++gLastSelectedCivilianIndex;
@@ -169,7 +171,7 @@ CPopulation::ChooseNextCivilianOccupation(int32 group)
 int32
 CPopulation::ChoosePolicePedOccupation()
 {
-	CGeneral::GetRandomNumber();
+	General_GetRandomNumber();
 	return COP_STREET;
 }
 
@@ -182,10 +184,10 @@ CPopulation::LoadPedGroups()
 	// char unused[16]; // non-existence of that in mobile kinda verifies that
 	char modelName[256];
 
-	CFileMgr::ChangeDir("\\DATA\\");
-	fd = CFileMgr::OpenFile("PEDGRP.DAT", "r");
-	CFileMgr::ChangeDir("\\");
-	while (CFileMgr::ReadLine(fd, line, sizeof(line))) {
+	FileMgr_ChangeDir("\\DATA\\");
+	fd = FileMgr_OpenFile("PEDGRP.DAT", "r");
+	FileMgr_ChangeDir("\\");
+	while (FileMgr_ReadLine(fd, line, sizeof(line))) {
 		int end;
 		// find end of line
 		for (end = 0; ; end++) {
@@ -221,7 +223,7 @@ CPopulation::LoadPedGroups()
 		if (i == NUMMODELSPERPEDGROUP)
 			nextPedGroup++;
 	}
-	CFileMgr::CloseFile(fd);
+	FileMgr_CloseFile(fd);
 }
 
 void
@@ -357,7 +359,7 @@ CPopulation::UpdatePedCount(ePedType pedType, bool decrease)
 int
 CPopulation::ChooseGangOccupation(int gangId)
 {
-	return CGangs::ChooseGangPedModel(gangId);
+	return Gangs_ChooseGangPedModel(gangId);
 }
 
 void
@@ -446,7 +448,7 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 			if (ms_bGivePedsWeapons) {
 				eWeaponType weapon;
 
-				switch (CGeneral::GetRandomNumber() & 3) {
+				switch (General_GetRandomNumber() & 3) {
 					case 0:
 						weapon = WEAPONTYPE_COLT45;
 						break;
@@ -464,7 +466,7 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 				}
 				if (weapon != WEAPONTYPE_UNARMED) {
 					ped->GiveDelayedWeapon(weapon, 25001);
-					ped->SetCurrentWeapon(CWeaponInfo::GetWeaponInfo(weapon)->m_nWeaponSlot);
+					ped->SetCurrentWeapon(WeaponInfo_GetWeaponInfo(weapon)->m_nWeaponSlot);
 				}
 			}
 			return ped;
@@ -509,13 +511,13 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 			CWorld::Add(ped);
 
 			eWeaponType weapon;
-			if (CGeneral::GetRandomNumberInRange(0, 100) >= 50)
-				weapon = (eWeaponType)CGangs::GetGangInfo(pedType - PEDTYPE_GANG1)->m_Weapon2;
+			if (General_GetRandomNumberInRangeInt(0, 100) >= 50)
+				weapon = (eWeaponType)Gangs_GetGangInfo(pedType - PEDTYPE_GANG1)->m_Weapon2;
 			else
-				weapon = (eWeaponType)CGangs::GetGangInfo(pedType - PEDTYPE_GANG1)->m_Weapon1;
+				weapon = (eWeaponType)Gangs_GetGangInfo(pedType - PEDTYPE_GANG1)->m_Weapon1;
 
 			ped->GiveDelayedWeapon(weapon, 25001);
-			ped->SetCurrentWeapon(CWeaponInfo::GetWeaponInfo(weapon)->m_nWeaponSlot);
+			ped->SetCurrentWeapon(WeaponInfo_GetWeaponInfo(weapon)->m_nWeaponSlot);
 			return ped;
 		}
 		case PEDTYPE_EMERGENCY:
@@ -588,11 +590,11 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 	bool forceAddingCop = false;
 	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
 	CVector playerCentreOfWorld = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
-	CTheZones::GetZoneInfoForTimeOfDay(&playerCentreOfWorld, &zoneInfo);
+	Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&playerCentreOfWorld)), &zoneInfo);
 	CWanted *wantedInfo = playerInfo->m_pPed->m_pWanted;
 
-	if (wantedInfo->GetWantedLevel() > 2) {
-		if (!CGame::IsInInterior() && (CGeneral::GetRandomNumber() % 32 == 0) && FindPlayerVehicle())
+	if (Wanted_GetWantedLevel(wantedInfo) > 2) {
+		if (!CGame::IsInInterior() && (General_GetRandomNumber() % 32 == 0) && FindPlayerVehicle())
 			forceAddingCop = true;
 
 		uint32 maxCops = CGame::IsInInterior() ? wantedInfo->m_MaxCops * 1.6f : wantedInfo->m_MaxCops;
@@ -607,7 +609,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			maxDist = PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE);
 		}
 	}
-	float missionAndWeatherMult = -0.8f * Sqrt(CWeather::Rain) + 1.0f;
+	float missionAndWeatherMult = -0.8f * Sqrt(Weather_Rain) + 1.0f;
 
 	// Taxi side mission
 	if (CTheScripts::IsPlayerOnAMission()) {
@@ -615,17 +617,17 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 		if (player && player->InVehicle() && player->m_pMyVehicle->IsTaxi())
 			missionAndWeatherMult = 1.0f;
 	}
-	if (CDarkel::FrenzyOnGoing())
+	if (Darkel_FrenzyOnGoing())
 		missionAndWeatherMult = 1.0f;
 	int selectedMaxPeds = CGame::IsInInterior() ? CPopulation::MaxNumberOfPedsInUseInterior : CPopulation::MaxNumberOfPedsInUse;
 
 	// Yeah, float
 	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * PedDensityMultiplier
-		* (CDarkel::FrenzyOnGoing() ? 1.f : CIniFile::PedNumberMultiplier) * missionAndWeatherMult;
+		* (Darkel_FrenzyOnGoing() ? 1.f : IniFile_PedNumberMultiplier) * missionAndWeatherMult;
 	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
 
 	if (ms_nTotalPeds - rouz.driver_ped_count < rouz.ped_mul * maxPossiblePedsForArea || addCop) {
-		int decisionThreshold = CGeneral::GetRandomNumberInRange(0, 1000);
+		int decisionThreshold = General_GetRandomNumberInRangeInt(0, 1000);
 		if (decisionThreshold < zoneInfo.copPedThreshold || addCop) {
 			pedTypeToAdd = PEDTYPE_COP;
 			modelToAdd = ChoosePolicePedOccupation();
@@ -638,7 +640,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			}
 
 			if (i == NUM_GANGS) {
-				if (CGeneral::GetRandomNumberInRange(0.0f, 1.0f) <= 0.95f) {
+				if (General_GetRandomNumberInRangeFloat(0.0f, 1.0f) <= 0.95f) {
 					modelToAdd = ChooseCivilianOccupation(zoneInfo.pedGroup);
 
 					if (modelToAdd == -1)
@@ -685,13 +687,13 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			return;
 
 		uint8 nodeSpawnRate = Min(ThePaths.m_pathNodes[node1].spawnRate, ThePaths.m_pathNodes[node2].spawnRate);
-		int randomRate = CGeneral::GetRandomNumber() & 0xF;
+		int randomRate = General_GetRandomNumber() & 0xF;
 		if (randomRate > nodeSpawnRate)
 			return;
 
-		CPathFind::TakeWidthIntoAccountForCoors(&ThePaths.m_pathNodes[node1], &ThePaths.m_pathNodes[node2], CGeneral::GetRandomNumber(), &generatedCoors.x, &generatedCoors.y);
+		CPathFind::TakeWidthIntoAccountForCoors(&ThePaths.m_pathNodes[node1], &ThePaths.m_pathNodes[node2], General_GetRandomNumber(), &generatedCoors.x, &generatedCoors.y);
 		if (CGame::currArea == AREA_MALL && (pedTypeToAdd == PEDTYPE_CIVMALE || pedTypeToAdd == PEDTYPE_CIVFEMALE || pedTypeToAdd == PEDTYPE_CRIMINAL) &&
-			CGeneral::GetRandomNumberInRange(0.f, 1.f) > 0.5f) {
+			General_GetRandomNumberInRangeFloat(0.f, 1.f) > 0.5f) {
 
 			PlaceMallPedsAsStationaryGroup(generatedCoors, zoneInfo.pedGroup);
 			return;
@@ -716,16 +718,16 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 						return;
 
 				} else if (modelToAdd == COP_FBI) {
-					if (!CStreaming::HasModelLoaded(MI_COP) || !CStreaming::HasModelLoaded(CWeaponInfo::GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId))
+					if (!CStreaming::HasModelLoaded(MI_COP) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId))
 						return;
 
 				} else if (modelToAdd == COP_SWAT) {
-					if (!CStreaming::HasModelLoaded(MI_SWAT) || !CStreaming::HasModelLoaded(CWeaponInfo::GetWeaponInfo(WEAPONTYPE_UZI)->m_nModelId))
+					if (!CStreaming::HasModelLoaded(MI_SWAT) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_UZI)->m_nModelId))
 						return;
 
 				} else if (modelToAdd == COP_ARMY) {
 					if (!CStreaming::HasModelLoaded(MI_ARMY) ||
-						!CStreaming::HasModelLoaded(CWeaponInfo::GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId) || !CStreaming::HasModelLoaded(CWeaponInfo::GetWeaponInfo(WEAPONTYPE_GRENADE)->m_nModelId))
+						!CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_GRENADE)->m_nModelId))
 						return;
 				}
 			} else if (!CStreaming::HasModelLoaded(modelToAdd)) {
@@ -741,11 +743,11 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 					// Align gang members in formation. (btw i can't be 0 in here)
 					float offsetMin = i * 0.75f;
 					float offsetMax = (i + 1.0f) * 0.75f - offsetMin;
-					float xOffset = CGeneral::GetRandomNumberInRange(offsetMin, offsetMin + offsetMax);
-					float yOffset = CGeneral::GetRandomNumberInRange(offsetMin, offsetMin + offsetMax);
-					if (CGeneral::GetRandomNumber() & 1)
+					float xOffset = General_GetRandomNumberInRangeFloat(offsetMin, offsetMin + offsetMax);
+					float yOffset = General_GetRandomNumberInRangeFloat(offsetMin, offsetMin + offsetMax);
+					if (General_GetRandomNumber() & 1)
 						xOffset = -xOffset;
-					if (CGeneral::GetRandomNumber() & 1)
+					if (General_GetRandomNumber() & 1)
 						yOffset = -yOffset;
 					generatedCoors.x = xOffset + gangLeader->GetPosition().x;
 					generatedCoors.y = yOffset + gangLeader->GetPosition().y;
@@ -797,7 +799,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 				CWorld::ProcessVerticalLine(generatedCoors + CVector(0.f, 0.f, 2.f), generatedCoors.z - 2.0f, foundCol, foundEnt, true, false, false, false, false, false, nil);
 				if (foundEnt) {
 					if ((foundCol.surfaceB == SURFACE_CONCRETE_BEACH || foundCol.surfaceB == SURFACE_SAND)
-						&& CClock::GetHours() >= 10 && CClock::GetHours() <= 18 && 0.0f == CWeather::Rain) {
+						&& Clock_GetHours() >= 10 && Clock_GetHours() <= 18 && 0.0f == Weather_Rain) {
 						gonnaSunbathe = true;
 						if (CPedPlacement::IsPositionClearForPed(generatedCoors, 3.0f, ARRAY_SIZE(gSunbatheObstacles), gSunbatheObstacles)) {
 							for (int j = 0; j < ARRAY_SIZE(gSunbatheObstacles); j++) {
@@ -809,7 +811,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 				}
 			}
 			if (gonnaSunbathe) {
-				float heading = CGeneral::GetRandomNumberInRange(0.f, 1.f) * TWOPI;
+				float heading = General_GetRandomNumberInRangeFloat(0.f, 1.f) * TWOPI;
 				newPed->m_fRotationDest = heading;
 				newPed->m_fRotationCur = heading;
 				// unused
@@ -823,12 +825,12 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 					if (toy)
 						toy->SetHeading(heading);
 
-					if (!(CGeneral::GetRandomNumber() & 3)) {
-						CWaterLevel::CreateBeachToy(toyPos + CVector(CGeneral::GetRandomNumberInRange(-2.f, 2.f), CGeneral::GetRandomNumberInRange(-2.f, 2.f), 0.f), BEACHTOY_LOTION);
+					if (!(General_GetRandomNumber() & 3)) {
+						CWaterLevel::CreateBeachToy(toyPos + CVector(General_GetRandomNumberInRangeFloat(-2.f, 2.f), General_GetRandomNumberInRangeFloat(-2.f, 2.f), 0.f), BEACHTOY_LOTION);
 					}
 				}
 			} else {
-				newPed->SetWanderPath(CGeneral::GetRandomNumberInRange(0, 8));
+				newPed->SetWanderPath(General_GetRandomNumberInRangeInt(0, 8));
 			}
 			
 			if (i != 0) {
@@ -865,7 +867,7 @@ CPopulation::AddPedInCar(CVehicle* car, bool isDriver)
 	// May be eCopType, model index or non-sense(for medic), AddPed knows that by looking to ped type.
 	int preferredModel;
 
-	CTheZones::GetZoneInfoForTimeOfDay(&coors, &zoneInfo);
+	Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&coors)), &zoneInfo);
 	switch (car->GetModelIndex()) {
 		case MI_FIRETRUCK:
 			preferredModel = 0;
@@ -914,7 +916,7 @@ CPopulation::AddPedInCar(CVehicle* car, bool isDriver)
 			int gangOfPed = 0;
 			imSureThatModelIsLoaded = false;
 
-			while (gangOfPed < NUM_GANGS && CGangs::GetGangInfo(gangOfPed)->m_nVehicleMI != car->GetModelIndex())
+			while (gangOfPed < NUM_GANGS && Gangs_GetGangInfo(gangOfPed)->m_nVehicleMI != car->GetModelIndex())
 				gangOfPed++;
 
 			if (gangOfPed < NUM_GANGS) {
@@ -952,7 +954,7 @@ CPopulation::AddPedInCar(CVehicle* car, bool isDriver)
 	newPed->bUsesCollision = false;
 
 	if (newPed->GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED) {
-		newPed->RemoveWeaponModel(CWeaponInfo::GetWeaponInfo(newPed->GetWeapon()->m_eWeaponType)->m_nModelId);
+		newPed->RemoveWeaponModel(WeaponInfo_GetWeaponInfo(newPed->GetWeapon()->m_eWeaponType)->m_nModelId);
 	}
 
 	newPed->AddInCarAnims(car, isDriver);
@@ -1159,7 +1161,7 @@ CPopulation::ManagePopulation(void)
 	if (FindPlayerPed()==NULL)	// rouz edit
 		return;
 
-	int frameMod32 = CTimer::GetFrameCounter() & 31;
+	int frameMod32 = (*Timer_GetFrameCounter()) & 31;
 	CVector playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
 
 	// Why this code is here?! Delete temporary objects when they got too far, and convert others to "dummy" objects. (like lamp posts)
@@ -1176,7 +1178,7 @@ CPopulation::ManagePopulation(void)
 			float objPlayerDist = (obj->GetPosition() - playerPos).Magnitude();
 			if (obj->ObjectCreatedBy == TEMP_OBJECT) {
 				if (obj->GetModelIndex() != MI_ROADWORKBARRIER1 && obj->GetModelIndex() != MI_BEACHBALL) {
-					if (objPlayerDist > 51.0f || objPlayerDist > 25.0f && !obj->GetIsOnScreen() || CTimer::GetTimeInMilliseconds() > obj->m_nEndOfLifeTime) {
+					if (objPlayerDist > 51.0f || objPlayerDist > 25.0f && !obj->GetIsOnScreen() || (*Timer_GetTimeInMilliseconds()) > obj->m_nEndOfLifeTime) {
 						CWorld::Remove(obj);
 //+ rouz edit (ChatGPT)
 						// Destroy and release the temporary object without invoking C++ delete.
@@ -1238,8 +1240,8 @@ CPopulation::ManagePopulation(void)
 		//- rouz edit (ChatGPT)
 
 		if (ped && !ped->IsPlayer() && ped->CanBeDeleted() && !ped->bInVehicle) {
-			uint32 timeSinceDeath = CTimer::GetTimeInMilliseconds() - ped->m_bloodyFootprintCountOrDeathTime;
-			if (ped->m_nPedState == PED_DEAD && (timeSinceDeath > 30000 || CDarkel::FrenzyOnGoing() && timeSinceDeath > 15000))
+			uint32 timeSinceDeath = (*Timer_GetTimeInMilliseconds()) - ped->m_bloodyFootprintCountOrDeathTime;
+			if (ped->m_nPedState == PED_DEAD && (timeSinceDeath > 30000 || Darkel_FrenzyOnGoing() && timeSinceDeath > 15000))
 				ped->bFadeOut = true;
 
 			if (ped->bFadeOut && CVisibilityPlugins::GetClumpAlpha(ped->GetClump()) == 0) {
@@ -1262,7 +1264,7 @@ CPopulation::ManagePopulation(void)
 			}
 #ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
 			else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) {
-				if (CTimer::GetTimeInMilliseconds() > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
+				if ((*Timer_GetTimeInMilliseconds()) > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
 					if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
 						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
 						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_CAMERA
@@ -1276,7 +1278,7 @@ CPopulation::ManagePopulation(void)
 			}
 #endif
 			else {
-				ped->m_nExtendedRangeTimer = ped->m_nPedType == PEDTYPE_COP ? CTimer::GetTimeInMilliseconds() + 10000 : CTimer::GetTimeInMilliseconds() + 4000;
+				ped->m_nExtendedRangeTimer = ped->m_nPedType == PEDTYPE_COP ? (*Timer_GetTimeInMilliseconds()) + 10000 : (*Timer_GetTimeInMilliseconds()) + 4000;
 			}
 
 			if (!pedIsFarAway)
@@ -1285,8 +1287,8 @@ CPopulation::ManagePopulation(void)
 			if (ped->m_nPedState == PED_DEAD && !ped->bFadeOut) {
 				CVector pedPos = ped->GetPosition();
 
-				float randAngle = (uint8) CGeneral::GetRandomNumber() * (3.14f / 128.0f); // Not PI, 3.14
-				switch (CGeneral::GetRandomNumber() % 3) {
+				float randAngle = (uint8) General_GetRandomNumber() * (3.14f / 128.0f); // Not PI, 3.14
+				switch (General_GetRandomNumber() % 3) {
 					case 0:
 						CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline1Tex, &pedPos,
 							0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
@@ -1373,7 +1375,7 @@ CPopulation::CanJeerAtStripper(int32 model)
 void
 CPopulation::RemovePedsIfThePoolGetsFull(void)
 {
-	if ((CTimer::GetFrameCounter() & 7) == 5) {
+	if (((*Timer_GetFrameCounter()) & 7) == 5) {
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 		if (CPool_GetNoOfFreeSpaces(CPools::GetPedPool()) < 8) {
@@ -1524,7 +1526,7 @@ CPopulation::IsSunbather(int32 model)
 int32
 CPopulation::ComputeRandomisedGangSize(void)
 {
-	return CGeneral::GetRandomNumberInRange(3, 6);
+	return General_GetRandomNumberInRangeInt(3, 6);
 }
 
 bool
@@ -1555,7 +1557,7 @@ CPopulation::ChooseCivilianCoupleOccupations(int32 group, int32& man, int32& wom
 		if (man > -1)
 			break;
 
-		int32 model = ms_pPedGroups[group].models[CGeneral::GetRandomNumberInRange(0, NUMMODELSPERPEDGROUP)];
+		int32 model = ms_pPedGroups[group].models[General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP)];
 		if (man == -1 && IsMale(model) && ((CPedModelInfo*)CModelInfo::GetModelInfo(model))->m_pedType == PEDTYPE_CIVMALE) {
 			man = model;
 		}
@@ -1590,7 +1592,7 @@ CPopulation::ChooseCivilianCoupleOccupations(int32 group, int32& man, int32& wom
 void
 CPopulation::PlaceGangMembers(ePedType pedType, int pedAmount, CVector const& coors)
 {
-	if (CGeneral::GetRandomNumberInRange(0.f, 1.f) < 0.333f) {
+	if (General_GetRandomNumberInRangeFloat(0.f, 1.f) < 0.333f) {
 		PlaceGangMembersInFormation(pedType, pedAmount, coors);
 	} else {
 		PlaceGangMembersInCircle(pedType, pedAmount, coors);
@@ -1613,9 +1615,9 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 					CPed *leader = AddPed(pedType, leaderModel, CVector(coors.x, coors.y, finalZ));
 					if (leader) {
 						leader->SetObjective(OBJECTIVE_NONE);
-						leader->SetWanderPath(CGeneral::GetRandomNumberInRange(0, 8));
+						leader->SetWanderPath(General_GetRandomNumberInRangeInt(0, 8));
 						leader->bIsLeader = true;
-						if (CGangs::GetWillAttackPlayerWithCops(pedType))
+						if (Gangs_GetWillAttackPlayerWithCops(pedType))
 							leader->bCanAttackPlayerWithCops = true;
 
 						int pedIdx = 1;
@@ -1642,7 +1644,7 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 									if (CWorld::GetIsLineOfSightClear(finalFormationPos, leader->GetPosition(), true, false, false, false, false, false, false)) {
 										memberPed->SetPosition(finalFormationPos);
 										createdPeds[pedIdx++] = memberPed;
-										if (CGangs::GetWillAttackPlayerWithCops(pedType))
+										if (Gangs_GetWillAttackPlayerWithCops(pedType))
 											leader->bCanAttackPlayerWithCops = true;
 
 										CVisibilityPlugins::SetClumpAlpha(memberPed->GetClump(), 0);
@@ -1691,8 +1693,8 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 #endif
 
 			for (int i = 0; i < pedAmount; i++) {
-				float angleMult = i + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
-				float randomR = circleR + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f) * circleR;
+				float angleMult = i + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+				float randomR = circleR + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * circleR;
 				float xOffset = randomR * Cos(angleMult * circleSector);
 				float yOffset = randomR * Sin(angleMult * circleSector);
 				bool foundGround;
@@ -1733,12 +1735,12 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 							CPed* newPed = AddPed(pedType, gangModel, finalPos);
 							if (newPed) {
 								createdPeds[pedIdx++] = newPed;
-								float angle = CGeneral::GetRadianAngleBetweenPoints(
+								float angle = General_GetRadianAngleBetweenPoints(
 									coors.x, coors.y,
 									finalPos.x, finalPos.y);
 								newPed->m_fRotationDest = angle;
 								newPed->m_fRotationCur = angle;
-								if (CGangs::GetWillAttackPlayerWithCops(pedType))
+								if (Gangs_GetWillAttackPlayerWithCops(pedType))
 									newPed->bCanAttackPlayerWithCops = true;
 
 								CVisibilityPlugins::SetClumpAlpha(newPed->GetClump(), 0);
@@ -1764,7 +1766,7 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 				// Make that extra guy in the middle stand there(PED_UNKNOWN locks him) and do nothing :lmao:
 				if (pedIdx % 2 != 0) {
 					CPed *tmim = createdPeds[(pedIdx - 1) / 2];
-					float angle = CGeneral::GetRadianAngleBetweenPoints(
+					float angle = General_GetRadianAngleBetweenPoints(
 						tmim->GetPosition().x, tmim->GetPosition().y,
 						createdPeds[0]->GetPosition().x, createdPeds[0]->GetPosition().y);
 					tmim->SetHeading(angle);
@@ -1802,7 +1804,7 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 					CPed *man = AddPed(PEDTYPE_CIVMALE, manModel, correctedManPos);
 					if (man) {
 						man->SetObjective(OBJECTIVE_NONE);
-						man->SetWanderPath(CGeneral::GetRandomNumberInRange(0, 8));
+						man->SetWanderPath(General_GetRandomNumberInRangeInt(0, 8));
 						man->bIsLeader = true;
 						CVisibilityPlugins::SetClumpAlpha(man->GetClump(), 0);
 
@@ -1865,7 +1867,7 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 	if (CGame::currArea != AREA_MALL)
 		return;
 
-	int pedAmount = CGeneral::GetRandomNumberInRange(0, 4) + 3;
+	int pedAmount = General_GetRandomNumberInRangeInt(0, 4) + 3;
 
 	float circleSector = TWOPI / pedAmount;
 
@@ -1882,8 +1884,8 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 #endif
 
 			for (int i = 0; i < pedAmount; i++) {	
-				float angleMult = i + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f);
-				float randomR = circleR + CGeneral::GetRandomNumberInRange(-0.2f, 0.2f) * circleR;
+				float angleMult = i + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+				float randomR = circleR + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * circleR;
 				float xOffset = randomR * Cos(angleMult * circleSector);
 				float yOffset = randomR * Sin(angleMult * circleSector);
 				bool foundGround;
@@ -1927,7 +1929,7 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 							CPed *newPed = AddPed(pedModelInfo->m_pedType, pedModel, finalPos);
 							if (newPed) {
 								createdPeds[pedIdx++] = newPed;
-								float angle = CGeneral::GetRadianAngleBetweenPoints(
+								float angle = General_GetRadianAngleBetweenPoints(
 									coors.x, coors.y,
 									finalPos.x, finalPos.y);
 								newPed->m_fRotationDest = angle;
@@ -1956,7 +1958,7 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 				// Make that extra guy in the middle stand there(PED_UNKNOWN locks him) and do nothing :lmao:
 				if (pedIdx % 2 != 0) {
 					CPed *tmim = createdPeds[(pedIdx - 1) / 2];
-					float angle = CGeneral::GetRadianAngleBetweenPoints(
+					float angle = General_GetRadianAngleBetweenPoints(
 						tmim->GetPosition().x, tmim->GetPosition().y,
 						createdPeds[0]->GetPosition().x, createdPeds[0]->GetPosition().y);
 					tmim->SetHeading(angle);
@@ -1975,3 +1977,7 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 		}
 	}
 }
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)

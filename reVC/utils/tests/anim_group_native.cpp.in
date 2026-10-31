@@ -1,0 +1,72 @@
+CAnimBlock block={};
+CAnimBlendHierarchy hierarchies[8]={};
+CBaseModelInfo *models[8]={};
+unsigned debugCalls=0;
+unsigned eventCount=0,events[8192];
+bool skinned=false;
+bool exitOutput=false;
+static void event(unsigned operation,unsigned value=0)
+{
+    // Observe external call ordering without including executable-specific addresses
+    assert(eventCount+2<8192);events[eventCount++]=operation;events[eventCount++]=value;
+}
+extern "C" void re3_debug(const char *format,...)
+{
+    // Observe original diagnostics without opening a game or native window
+    ++debugCalls;
+}
+extern "C" bool General_faststricmp(const char *a,const char *b)
+{
+    // Supply the original case-insensitive equality boundary used by group lookup
+    return strcasecmp(a,b)!=0;
+}
+CAnimBlock *CAnimManager::GetAnimationBlock(const char *name)
+{
+    // Return actual block storage for complete group creation policy
+    event(1);return &block;
+}
+CAnimBlendHierarchy *CAnimManager::GetAnimation(int32_t id)
+{
+    // Preserve direct native hierarchy indexing
+    event(2,(unsigned)id);return &hierarchies[id];
+}
+CAnimBlendHierarchy *CAnimManager::GetAnimation(const char *name,CAnimBlock *value)
+{
+    // Supply the manager lookup boundary without moving group ownership into it
+    event(3);for(int i=0;i<8;++i)if(!strcasecmp(name,hierarchies[i].name))return &hierarchies[i];return NULL;
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int32_t id)
+{
+    // Borrow actual native metadata test objects by their original index
+    event(4,(unsigned)id);return models[id];
+}
+unsigned RwObjectGetType(RwObject *object)
+{
+    // Read actual native object metadata at the original classification boundary
+    event(5,object->type);return object->type;
+}
+void RpAnimBlendClumpInit(RpClump *clump)
+{
+    // Retain the native plugin initialization boundary on actual fixture clump data
+    event(6);
+}
+bool IsClumpSkinned(RpClump *clump)
+{
+    // Supply the SDK classification primitive without group policy
+    event(7,skinned);return skinned;
+}
+void *AtomicRemoveAnimFromSkinCB(void *atomic,void *argument)
+{
+    // Observe invocation of the actual callback selected by group creation
+    event(9);return atomic;
+}
+void RpClumpForAllAtomics(RpClump *clump,AtomicCallback callback,void *argument)
+{
+    // Preserve the native atomic enumeration boundary and callback invocation
+    event(8);callback(clump,argument);
+}
+void RpClumpDestroy(RpClump *clump)
+{
+    // Observe native release after group binding and optional skin removal
+    event(10);
+}

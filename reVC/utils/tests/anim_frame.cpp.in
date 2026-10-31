@@ -1,0 +1,54 @@
+void FrameInitCBnonskin(AnimBlendFrameData*,void*);
+void FrameInitCBskin(AnimBlendFrameData*,void*);
+void FillFrameArrayCBnonskin(AnimBlendFrameData*,void*);
+void FrameFindByBoneCB(AnimBlendFrameData*,void*);
+static AnimBlendFrameData staticFrames[3];
+static void frameValues()
+{
+    // Preserve no-write default construction and zero-filled static record storage
+    alignas(AnimBlendFrameData) unsigned char memory[sizeof(AnimBlendFrameData)],expected[sizeof(AnimBlendFrameData)];memset(memory,0xa5,sizeof(memory));memset(expected,0xa5,sizeof(expected));require(NativeFrameDefault(memory)==memory&&memcmp(memory,expected,sizeof(memory))==0);unsigned char zero[sizeof(staticFrames)]={0};require(memcmp(staticFrames,zero,sizeof(zero))==0);++states;
+    // Materialize arbitrary coordinate payloads and both handle kinds through the C boundary
+    for(unsigned test=0;test<4096;++test){
+        AnimBlendFrameData data,copy;RwFrame nativeFrame;RpHAnimStdInterpFrame nativeSkin;uint32_t position[3]={nextBits(),nextBits(),nextBits()};uint8_t flag=(uint8_t)test;int32_t id;uint32_t idBits=nextBits();memcpy(&id,&idBits,4);bool skin=(test&1)!=0;void *handle=skin?(void*)&nativeSkin:(void*)&nativeFrame;Run_FrameWrite(&data,flag,position,handle,id,skin);require(data.flag==flag&&data.nodeID==id&&memcmp(&data.resetPos,position,12)==0);require((skin?(void*)data.hanimFrame:(void*)data.frame)==handle);Run_FrameCopy(&copy,&data);require(copy.flag==flag&&copy.nodeID==id&&memcmp(&copy.resetPos,position,12)==0&&(skin?(void*)copy.hanimFrame:(void*)copy.frame)==handle);observe(&copy.flag,1);observe(&copy.resetPos,12);observe(&copy.nodeID,4);
+        // Retain coordinates when the position argument borrows the destination's own storage
+        Run_FrameWrite(&data,flag,(const uint32_t*)&data.resetPos,handle,id,skin);require(memcmp(&data.resetPos,position,12)==0);++states;
+    }
+}
+struct WalkState {CAnimBlendClumpData *owner;AnimBlendFrameData *original,*alternate;unsigned mode,calls;int expected;};
+static void walkCallback(AnimBlendFrameData *frame,void *argument)
+{
+    // Retain current storage and current count across callbacks that mutate their owning container
+    WalkState *state=(WalkState*)argument;require(state->calls<64);int index=(int)(frame-state->owner->frames);require(index==(int)state->calls);observe(&index,4);frame->flag^=32;frame->nodeID=index+100;observe(&frame->nodeID,4);++state->calls;
+    if(state->calls==1){
+        // Cover shrink, growth, borrowed replacement, owning reallocation and negative counts
+        if(state->mode==1){state->owner->numFrames=1;state->expected=1;}
+        if(state->mode==2){state->owner->numFrames+=2;state->expected+=2;}
+        if(state->mode==3)state->owner->frames=state->alternate;
+        if(state->mode==4){AnimBlendClump_SetNumberOfFrames(state->owner,state->expected+1);++state->expected;}
+        if(state->mode==5){state->owner->numFrames=-1;state->owner->frames=NULL;state->expected=1;}
+    }
+}
+static void nativeConsumers()
+{
+    // Check original unsigned allocation conversion and alignment against the C record size
+    const int32_t counts[]={0,1,3,16,-1,-17,INT32_MIN,INT32_MAX,0x20000000,0x40000000};
+    for(unsigned i=0;i<10;++i){CAnimBlendClumpData owner;AnimBlendClump_Init(&owner);AnimBlendClump_SetNumberOfBones(&owner,counts[i]);require(lastSize==(uint32_t)((size_t)counts[i]*sizeof(AnimBlendFrameData))&&lastAlignment==64);AnimBlendClump_Destroy(&owner);++states;}
+    // Compare every actual native initialization callback and the live torso IK pose address
+    for(unsigned test=0;test<1024;++test){
+        CAnimBlendClumpData owner;AnimBlendClump_Init(&owner);int count=(int)(test%8)+1;AnimBlendClump_SetNumberOfFrames(&owner,count);RwFrame frames[8];AnimBlendFrameData *lookup[8]={NULL};
+        for(int i=0;i<count;++i){memset(&frames[i],0,sizeof(frames[i]));frames[i].hierarchyId=count-i-1;uint32_t bits[3]={nextBits(),nextBits(),nextBits()};memcpy(&frames[i].matrix.pos,bits,12);owner.frames[i].frame=&frames[i];owner.frames[i].nodeID=i+30;}
+        AnimBlendClump_ForAllFrames(&owner,FrameInitCBnonskin,NULL);for(int i=0;i<count;++i){require(owner.frames[i].flag==0&&memcmp(&owner.frames[i].resetPos,&frames[i].matrix.pos,12)==0);observe(&owner.frames[i].resetPos,12);}
+        AnimBlendClump_ForAllFrames(&owner,FrameInitCBskin,NULL);AnimBlendClump_ForAllFrames(&owner,FillFrameArrayCBnonskin,lookup);for(int i=0;i<count;++i)require(lookup[count-i-1]==&owner.frames[i]);pFrameDataFound=NULL;AnimBlendClump_ForAllFrames(&owner,FrameFindByBoneCB,(void*)(uintptr_t)(30+test%count));require(pFrameDataFound==&owner.frames[test%count]);
+        // Mutate the original SDK pose through the complete unchanged native IK algorithm
+        RpHAnimStdInterpFrame skin={};owner.frames[0].hanimFrame=&skin;CPed ped={false};CPedIK ik={&ped};LimbOrientation limb={(float)(test%29)/32.0f,-(float)(test%19)/16.0f};expectedPose=&skin.q;unsigned prior=poseCalls;ik.RotateTorso(&owner.frames[0],&limb,(test&1)!=0);require(ped.bDontAcceptIKLookAts&&poseCalls==prior+2);vectorResult(skin.q.imag);observe(&skin.q.real,4);AnimBlendClump_Destroy(&owner);++states;
+    }
+    // Preserve live frame address selection and callback counts through the new typed traversal
+    for(unsigned test=0;test<2048;++test){CAnimBlendClumpData owner;AnimBlendClump_Init(&owner);int count=(int)(test%9);AnimBlendClump_SetNumberOfFrames(&owner,count);AnimBlendFrameData alternate[64];memset(alternate,0x5a,sizeof(alternate));WalkState state={&owner,owner.frames,alternate,test%6,0,count};AnimBlendClump_ForAllFrames(&owner,walkCallback,&state);require(state.calls==(unsigned)state.expected);observe(&state.calls,4);if(state.mode==3||state.mode==5)owner.frames=state.original;AnimBlendClump_Destroy(&owner);++states;}
+    // Empty and negative containers avoid touching a null callback or missing frame storage
+    CAnimBlendClumpData owner;AnimBlendClump_Init(&owner);AnimBlendClump_ForAllFrames(&owner,NULL,NULL);owner.numFrames=-7;AnimBlendClump_ForAllFrames(&owner,NULL,NULL);AnimBlendClump_Destroy(&owner);require(allocations==frees);++states;
+}
+int main()
+{
+    // Compare complete frame values, native SDK mutations, live C traversal and all animation callbacks
+    frameValues();nativeConsumers();animation();printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

@@ -1,14 +1,27 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CTexList
-{
-	enum { MAX_TEXUSED = 400, };
-	static bool ms_nTexUsed[MAX_TEXUSED];
-public:
-	static void Initialise();
-	static void Shutdown();
-	static RwTexture *SetTexture(int32 slot, char *name);
-	static int32 GetFirstFreeTexture();
-	static RwTexture *LoadFileNameTexture(char *name);
-	static void LoadGlobalTextureList();
-};
+#include <stdint.h>
+#include <stdbool.h>
+#ifdef __cplusplus
+#ifdef LIBRW
+namespace rw { struct Texture; }
+typedef rw::Texture TexListTexture;
+#else
+typedef struct RwTexture TexListTexture;
+#endif
+extern "C" {
+#else
+typedef struct TexListTexture TexListTexture;
+#endif
+enum { TEXLIST_MAX_TEXUSED=400 };
+extern bool TexList_ms_nTexUsed[TEXLIST_MAX_TEXUSED];
+void TexList_Initialise(void);
+void TexList_Shutdown(void);
+TexListTexture *TexList_SetTexture(int32_t slot,char *name);
+int32_t TexList_GetFirstFreeTexture(void);
+TexListTexture *TexList_LoadFileNameTexture(char *name);
+void TexList_LoadGlobalTextureList(void);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

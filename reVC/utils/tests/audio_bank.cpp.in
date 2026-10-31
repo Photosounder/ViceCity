@@ -1,0 +1,79 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;
+struct cAudioManager {
+@FIELDS@
+#ifdef GTA_PS2
+void LoadBankIfNecessary(uint8 bank);
+#endif
+};
+static cAudioManager owners[2],*active;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+static int8_t loaded[256];static uint8_t loadResults[256];
+static unsigned seedValue,mutations,cases,callbacks,queries,loads,visits[256],resultVisits[2];
+static uint32_t input;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestBankC(uint32_t);
+static void value(uint32_t v) {
+    // Observe exact provider arguments and callback ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash both complete initialized owners and every initialized sample-provider record
+    digest=TestAircraftHash(digest,owners,sizeof(owners));digest=TestAircraftHash(digest,&SampleManager,sizeof(SampleManager));digest=TestAircraftHash(digest,loaded,sizeof(loaded));digest=TestAircraftHash(digest,loadResults,sizeof(loadResults));value(input);
+}
+static void event(unsigned token,uint32_t bank) {
+    // Observe state before mutations expose captured query results and byte-argument stability
+    ++callbacks;value(token);value(bank);observe();
+    if(!mutations)return;
+    if(seedValue&1)loaded[bank]=!loaded[bank];
+    if(seedValue&2)input+=257;
+    if(seedValue&4)active->m_bIsInitialised=!active->m_bIsInitialised;
+    if(seedValue&8)SampleManager.m_aSamples[bank].nFrequency^=seedValue;
+    if(seedValue&16)loadResults[bank]=!loadResults[bank];
+    if(seedValue&32)active->m_nTimer+=bank+token;
+}
+extern "C" int8_t SampleManager_IsSampleBankLoaded(cSampleManager *manager,uint8_t bank) {
+    // Capture the original provider result before callbacks change loading state
+    assert(manager==&SampleManager);++queries;++visits[bank];int8_t result=loaded[bank];event(1,bank);return result;
+}
+extern "C" uint8_t SampleManager_LoadSampleBank(cSampleManager *manager,uint8_t bank) {
+    // Preserve provider failure or success after observing the originally captured byte argument
+    assert(manager==&SampleManager);++loads;uint8_t result=loadResults[bank];++resultVisits[result!=0];event(2,bank);if(result)loaded[bank]=1;event(3,bank);return result;
+}
+#ifdef GTA_PS2
+@METHOD@
+#endif
+static void run() {
+    // Exercise either the unchanged original member or the actual separate C11 API
+    @RUN@;
+}
+static void prepare(unsigned seed) {
+    // Initialize complete owner and provider storage with zero padding and every byte-valued bank state
+    seedValue=seed;mutations=1;memset(owners,0,sizeof(owners));memset(&SampleManager,0,sizeof(SampleManager));active=&owners[seed&1];static const uint32_t inputs[]={0,1,255,256,257,65535,UINT32_MAX,0x80000000u};input=inputs[(seed/256)%8]+(seed&255);static const int8_t states[]={0,1,INT8_MIN,-1};
+    for(unsigned i=0;i<256;++i){loaded[i]=states[(seed/64+i)%4];loadResults[i]=(seed+i)&1;SampleManager.m_aSamples[i].nFrequency=seed+i;}
+    active->m_bIsInitialised=(seed>>1)&1;active->m_nTimer=UINT32_MAX-seed;
+}
+int main() {
+    // Keep failures console-only on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Compare repeated mutations and fresh query boundaries across byte wrapping and provider failures
+    for(unsigned seed=0;seed<4096;++seed){prepare(seed);run();observe();++cases;run();observe();++cases;prepare(seed);mutations=0;run();observe();++cases;}
+    // Require all byte arguments and both load outcomes or a completely inactive desktop feature
+#ifdef GTA_PS2
+    assert(queries&&loads&&resultVisits[0]&&resultVisits[1]);for(unsigned i=0;i<256;++i)assert(visits[i]);
+#else
+    assert(!callbacks&&!queries&&!loads);
+#endif
+    printf("%u %u %u %u %llu\n",cases,callbacks,queries,loads,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

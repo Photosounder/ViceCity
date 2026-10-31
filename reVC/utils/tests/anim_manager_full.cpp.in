@@ -1,0 +1,174 @@
+static CAnimBlendClumpData modelData;
+static AnimBlendFrameData modelFrame;
+static RpClump modelClump={&modelData,false};
+static RwObject modelObject={rpCLUMP};
+static CBaseModelInfo model={"testmodel",&modelObject,&modelClump};
+static unsigned instances,skinRemovals,destroys,streamRemovals,nodeAllocations,nodeFrees;
+static std::map<void*,unsigned> nodeBuffers;
+RwObject *CBaseModelInfo::CreateInstance()
+{
+    // Observe each actual manager model instantiation without moving creation policy into a mock
+    ++instances;hash(200);hash(instances);instance->skinned=(instances&1)!=0;return (RwObject*)instance;
+}
+CBaseModelInfo *CModelInfo::GetModelInfo(int32 index)
+{
+    // Preserve the original model index and provide stable external SDK metadata
+    require(index==MI_COP||index==MI_PLAYER);hash(201);hash((unsigned)index);return &model;
+}
+unsigned RwObjectGetType(RwObject *object)
+{
+    // Return the original SDK object category primitive
+    return object->type;
+}
+void RpAnimBlendClumpInit(RpClump *clump)
+{
+    // Provide one real C frame record at the native plugin initialization boundary
+    require(clump==&modelClump);hash(202);AnimBlendClump_Init(clump->data);clump->data->numFrames=1;clump->data->frames=&modelFrame;modelFrame={};modelFrame.nodeID=0;
+}
+bool IsClumpSkinned(RpClump *clump)
+{
+    // Observe the actual branch input used after group association creation
+    hash(203);hash(clump->skinned);return clump->skinned;
+}
+void *AtomicRemoveAnimFromSkinCB(void *atomic,void*)
+{
+    // Record the callback selected by the complete manager group creation algorithm
+    ++skinRemovals;hash(204);return atomic;
+}
+void RpClumpForAllAtomics(RpClump *clump,AtomicCallback callback,void *arg)
+{
+    // Enumerate one SDK atomic through the exact callback supplied by the manager
+    require(callback==AtomicRemoveAnimFromSkinCB&&arg==NULL);callback(clump,arg);
+}
+void RpClumpDestroy(RpClump *clump)
+{
+    // Observe SDK destruction after all real associations have bound their nodes
+    require(clump==&modelClump);++destroys;hash(205);
+}
+AnimBlendFrameData *RpAnimBlendClumpFindFrame(RpClump *clump,const char *name)
+{
+    // Resolve the generated root sequence through the native frame-name primitive
+    require(strcmp(name,"root")==0);return clump->data->frames;
+}
+AnimBlendFrameData *RpAnimBlendClumpFindBone(RpClump *clump,uint32 tag)
+{
+    // Resolve the generated root sequence through the native bone-tag primitive
+    require(tag==0);return clump->data->frames;
+}
+extern "C" CAnimBlendClumpData *AnimAssociation_HostClumpData(void *clump)
+{
+    // Borrow the same actual C plugin owner for both complete manager implementations
+    return ((RpClump*)clump)->data;
+}
+extern "C" AnimBlendFrameData *AnimAssociation_HostFindFrame(void *clump,const char *name)
+{
+    // Preserve the native name lookup boundary used by complete association binding
+    return RpAnimBlendClumpFindFrame((RpClump*)clump,name);
+}
+extern "C" AnimBlendFrameData *AnimAssociation_HostFindBone(void *clump,uint32 tag)
+{
+    // Preserve the native tag lookup boundary used by complete association binding
+    return RpAnimBlendClumpFindBone((RpClump*)clump,tag);
+}
+extern "C" void *AnimBlendClump_BackendAllocate(uint32 bytes,uint32 alignment)
+{
+    // Allocate real aligned node arrays for complete association copying and binding
+    require(alignment==64);void *memory=_aligned_malloc(bytes?bytes:64,alignment);require(memory!=NULL);memset(memory,0xA5,bytes);require(nodeBuffers.emplace(memory,bytes).second);++nodeAllocations;return memory;
+}
+extern "C" void AnimBlendClump_BackendFree(void *memory)
+{
+    // Require every actual aligned association allocation to be freed exactly once
+    require(nodeBuffers.erase(memory)==1);++nodeFrees;_aligned_free(memory);
+}
+void CStreaming::RemoveModel(int32 id)
+{
+    // Reenter the complete manager at the original streaming unload boundary
+    int block=id-STREAM_OFFSET_ANIM;require(block>=0&&block<NUMANIMBLOCKS);++streamRemovals;hash(206);hash((unsigned)block);
+    if(BLOCK_ID(block)->isLoaded)MANAGER(RemoveAnimBlock)(block);
+}
+static void hashAssociation(CAnimBlendAssociation *association)
+{
+    // Compare initialized association playback state and real bound node relationships
+    hash((unsigned)association->animId);hash((unsigned)association->groupId);hash((unsigned)association->flags);hash(association->numNodes);
+    hashFloat(association->blendAmount);hashFloat(association->blendDelta);hashFloat(association->currentTime);hashFloat(association->speed);hashFloat(association->timeStep);
+    hash((unsigned)(association->hierarchy-ANIMATION_ID(0)));
+    for(int n=0;n<association->numNodes;++n){
+        // Confirm copied and bound nodes point at their actual association and hierarchy sequence
+        require(association->nodes[n].association==association);hash(association->nodes[n].sequence!=NULL);
+        if(association->nodes[n].sequence)require(association->nodes[n].sequence==association->hierarchy->sequences);
+    }
+}
+static void clearClump(RpClump *clump)
+{
+    // Destroy actual active association instances through their complete C owner
+    while(clump->data->link.next){
+        // Preserve live link reads across each destroy and free
+        CAnimBlendAssociation *association=AnimAssociation_FromLink(clump->data->link.next);AnimAssociation_Destroy(association);free(association);
+    }
+}
+static void hashClump(RpClump *clump)
+{
+    // Compare the full active association order after each manager blending decision
+    unsigned count=0;for(CAnimBlendLink *link=clump->data->link.next;link;link=link->next){hashAssociation(AnimAssociation_FromLink(link));require(++count<16);}hash(count);
+}
+static RwStream makePed(void)
+{
+    // Encode all original table names independently so every ped association group can bind real sequences
+    RwStream stream;stream.position=0;int count=(int)ARRAY_SIZE(managerNames);unsigned char buf[64]={0};
+    chunk(stream,"ANPK",0);chunk(stream,"INFO",8);memcpy(buf,&count,4);memcpy(buf+4,"ped",4);append(stream,buf,8);
+    for(int n=0;n<count;++n){
+        // Use two real keyframes with alternating quaternions and valid positive duration
+        size_t size=strlen(managerNames[n])+1;chunk(stream,"NAME",(uint32)size);padded(stream,managerNames[n],size);
+        int sequences=1;chunk(stream,"DGAN",0);chunk(stream,"INFO",4);append(stream,&sequences,4);chunk(stream,"CPAN",0);chunk(stream,"ANIM",44);
+        memset(buf,0,sizeof(buf));strcpy((char*)buf,"root");int frames=2,tag=0;memcpy(buf+28,&frames,4);memcpy(buf+40,&tag,4);append(stream,buf,44);chunk(stream,"KRT0",64);
+        float first[8]={0,0,0,1,0,0,0,0},second[8]={0,0,0,-1,1,2,3,1};append(stream,first,sizeof(first));append(stream,second,sizeof(second));
+    }
+    return stream;
+}
+int main(void)
+{
+    // Initialize and load the full original descriptor tables through complete manager startup
+    MANAGER(Initialise)();RwStream stream=makePed();namedStream=&stream;MANAGER(LoadAnimFiles)();require(stream.position==stream.bytes.size());
+    CAnimBlendAssocGroup *groups=MANAGER(GetAnimAssocGroups)();std::vector<int> ready;
+    for(int g=0;g<NUM_ANIM_ASSOC_GROUPS;++g){
+        // Observe every created group and association rather than assuming only the standard group is affected
+        hash(groups[g].numAssociations);hash((unsigned)groups[g].firstAnimId);hash((unsigned)groups[g].groupId);
+        if(groups[g].assocList){ready.push_back(g);require(groups[g].animBlock==BLOCK_ID(0));for(int a=0;a<groups[g].numAssociations;++a)hashAssociation(&groups[g].assocList[a]);}
+        const char *name=MANAGER(GetAnimGroupName)((AssocGroupId)g);for(const unsigned char *p=(const unsigned char*)name;*p;++p)hash(*p);
+    }
+    require(ready.size()>1);require(instances==destroys);unsigned previous=instances;MANAGER(CreateAnimAssocGroups)();require(instances==previous);
+    // Exercise additions, synchronization, duplicate IDs, running state and partial/full-body fade decisions
+    CAnimBlendClumpData data;AnimBlendClump_Init(&data);RpClump clump={&data,false};unsigned rng=0xABCDEU;
+    for(unsigned trial=0;trial<4096;++trial){
+        // Choose real groups and valid original IDs without changing their descriptor flags
+        rng=rng*1664525U+1013904223U;int g=ready[(rng>>8)%ready.size()];CAnimBlendAssocGroup *group=&groups[g];
+        for(unsigned n=0;n<(trial%4);++n){
+            // Seed the real active list with varied blend state and stopped animations at their end time
+            int id=group->firstAnimId+(int)((trial+n)%group->numAssociations);CAnimBlendAssociation *association=MANAGER(AddAnimation)(&clump,(AssocGroupId)g,(AnimationId)id);
+            association->blendAmount=(float)((trial+n)%5)*0.25f;association->blendDelta=(float)((trial+n)%7)-4.0f;
+            if(n&1){association->flags&=~ASSOC_RUNNING;association->currentTime=association->hierarchy->totalLength;}
+        }
+        int id=group->firstAnimId+(int)((trial>>2)%group->numAssociations);
+        CAnimBlendAssociation *expected=AnimGroup_GetById(group,id);require(ASSOC_ID((AssocGroupId)g,(AnimationId)id)==expected);
+        CAnimBlendAssociation *named=ASSOC_NAME((AssocGroupId)g,expected->hierarchy->name);require(named!=NULL);
+        CAnimBlendAssociation *result=MANAGER(BlendAnimation)(&clump,(AssocGroupId)g,(AnimationId)id,(float)(1+trial%8)*0.5f);require(result->animId==id);hashClump(&clump);
+        CAnimBlendAssociation *sync=MANAGER(AddAnimationAndSync)(&clump,result,(AssocGroupId)g,(AnimationId)id);require(sync->animId==id);hashClump(&clump);
+        CAnimBlendAssociation *copy=MANAGER(CreateAnimAssociation)((AssocGroupId)g,(AnimationId)id);hashAssociation(copy);AnimAssociation_Destroy(copy);free(copy);clearClump(&clump);
+    }
+    // Unload and reload a populated block through the complete ownership path before shutdown reentry
+    MANAGER(RemoveAnimBlock)(0);require(!BLOCK_ID(0)->isLoaded);require(live.empty());
+    RwStream reload=makePed();LOAD(&reload,false,NULL);require(reload.position==reload.bytes.size());MANAGER(CreateAnimAssocGroups)();require(instances==destroys);
+    MANAGER(AddAnimBlockRef)(0);MANAGER(RemoveAnimBlockRef)(0);require(!BLOCK_ID(0)->isLoaded);require(live.empty());
+    // Preserve the project handler's ability to continue after the original registration precondition fails
+    BLOCK_ID(1)->refCount=9;expectedAssertion=true;require(MANAGER(RegisterAnimBlock)("assertion")==1);expectedAssertion=false;require(BLOCK_ID(1)->refCount==9);BLOCK_ID(1)->refCount=0;
+#ifndef MASTER
+    // Require the original custom assertion report rather than a standard-library abort
+    require(assertionCalls==1);
+#else
+    // Keep MASTER registration behavior without invoking the project assertion reporter
+    require(assertionCalls==0);
+#endif
+    MANAGER(Shutdown)();require(nodeBuffers.empty());require(nodeAllocations==nodeFrees);require(allocations==frees);require(pushes==pops);
+    printf("blends=4096 groups=%u checks=%u instances=%u skins=%u removals=%u nodes=%u hash=%016llx\n",(unsigned)ready.size(),checks,instances,skinRemovals,streamRemovals,nodeAllocations,digest);
+    return 0;
+}

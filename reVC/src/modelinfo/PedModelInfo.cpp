@@ -1,4 +1,8 @@
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ColSphere_native.h"
 
 #include "RwHelper.h"
 #include "General.h"
@@ -19,7 +23,8 @@ CPedModelInfo::~CPedModelInfo(void)
 {
 	if(m_hitColModel){
 		// Destroy and release the hit collision model without invoking C++ delete.
-		m_hitColModel->~CColModel();
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		ColModel_Destroy(m_hitColModel);
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
@@ -36,7 +41,8 @@ CPedModelInfo::DeleteRwObject(void)
 //+ rouz edit (ChatGPT)
 		// Destroy and release the hit collision model without invoking C++ delete.
 	{
-		m_hitColModel->~CColModel();
+		// Invoke the complete C collision owner at the original native lifetime or operation boundary
+		ColModel_Destroy(m_hitColModel);
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 		CPool_Delete(CPools::GetColModelPool(), m_hitColModel);
@@ -110,7 +116,8 @@ ColNodeInfo m_pColNodeInfos[NUMPEDINFONODES] = {
 void
 CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 {
-	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(clump);
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(clump));
 //+ rouz edit (ChatGPT)
 	// Construct the hit collision model in pool storage without invoking C++ new.
 	//+ rouz edit (ChatGPT)
@@ -118,7 +125,8 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 	CColModel *colmodel = ((CColModel*)CPool_New(CPools::GetColModelPool()));
 	//- rouz edit (ChatGPT)
 	assert(colmodel);
-	std::allocator<CColModel>().construct(colmodel);
+	// Invoke the complete C collision owner at the original native lifetime or operation boundary
+	ColModel_Init(colmodel);
 //- rouz edit (ChatGPT)
 	CColSphere *spheres = (CColSphere*)RwMalloc(NUMPEDINFONODES*sizeof(CColSphere));
 	RwFrame *root = RpClumpGetFrame(m_clump);
@@ -131,7 +139,7 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 
 		// From LCS. Otherwise gives FPE
 #ifdef FIX_BUGS
-		spheres[i].center = CVector(0.0f, 0.0f, 0.0f);
+		spheres[i].bounds.center = CollisionVector_FromNative(CVector(0.0f, 0.0f, 0.0f));
 #else
 		int id = ConvertPedNode2BoneTag(m_pColNodeInfos[i].pedNode);	// this is wrong, wtf R* ???
 		int idx = RpHAnimIDGetIndex(hier, id);
@@ -141,9 +149,9 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 		RwV3d pos = { 0.0f, 0.0f, 0.0f };
 		RwV3dTransformPoints(&pos, &pos, 1, mat);
 
-		spheres[i].center = pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z);
+		spheres[i].bounds.center = CollisionVector_FromNative(pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z));
 #endif
-		spheres[i].radius = m_pColNodeInfos[i].radius;
+		spheres[i].bounds.radius = m_pColNodeInfos[i].radius;
 		spheres[i].surface = SURFACE_PED;
 		spheres[i].piece = m_pColNodeInfos[i].pieceType;
 	}
@@ -151,8 +159,17 @@ CPedModelInfo::CreateHitColModelSkinned(RpClump *clump)
 	RwMatrixDestroy(mat);
 	colmodel->spheres = spheres;
 	colmodel->numSpheres = NUMPEDINFONODES;
-	colmodel->boundingSphere.Set(2.0f, CVector(0.0f, 0.0f, 0.0f));
-	colmodel->boundingBox.Set(CVector(-0.5f, -0.5f, -1.2f), CVector(0.5f, 0.5f, 1.2f));
+	{
+	    // Keep the native center expression alive at the former member-call boundary
+	    const CVector &sphereCenter0=CVector(0.0f, 0.0f, 0.0f);
+	    Sphere_Set(&colmodel->boundingSphere,2.0f,COLLISION_POINT_REF(sphereCenter0));
+	}
+	{
+	    // Keep native bound expressions alive through the ordered C update
+	    const CVector &boxMinimum0=CVector(-0.5f, -0.5f, -1.2f);
+	    const CVector &boxMaximum0=CVector(0.5f, 0.5f, 1.2f);
+	    Box_Set(&colmodel->boundingBox,COLLISION_POINT_REF(boxMinimum0),COLLISION_POINT_REF(boxMaximum0));
+	}
 	colmodel->level = LEVEL_GENERIC;
 	m_hitColModel = colmodel;
 }
@@ -166,7 +183,8 @@ CPedModelInfo::AnimatePedColModelSkinned(RpClump *clump)
 	}
 	RwMatrix *invmat, *mat;
 	CColSphere *spheres = m_hitColModel->spheres;
-	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(clump);
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(clump));
 	invmat = RwMatrixCreate();
 	mat = RwMatrixCreate();
 	RwMatrixInvert(invmat, RwFrameGetMatrix(RpClumpGetFrame(clump)));
@@ -180,7 +198,7 @@ CPedModelInfo::AnimatePedColModelSkinned(RpClump *clump)
 		RwV3d pos = { 0.0f, 0.0f, 0.0f };
 		RwV3dTransformPoints(&pos, &pos, 1, mat);
 
-		spheres[i].center = pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z);
+		spheres[i].bounds.center = CollisionVector_FromNative(pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z));
 	}
 	RwMatrixDestroy(invmat);
 	RwMatrixDestroy(mat);
@@ -193,7 +211,8 @@ CPedModelInfo::AnimatePedColModelSkinnedWorld(RpClump *clump)
 	if(m_hitColModel == nil)
 		CreateHitColModelSkinned(clump);
 	CColSphere *spheres = m_hitColModel->spheres;
-	RpHAnimHierarchy *hier = GetAnimHierarchyFromSkinClump(clump);
+	// Use the C helper and retain the original typed SDK result
+	RpHAnimHierarchy *hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(clump));
 	RwMatrix *mat;
 
 	for(int i = 0; i < NUMPEDINFONODES; i++){
@@ -204,7 +223,10 @@ CPedModelInfo::AnimatePedColModelSkinnedWorld(RpClump *clump)
 		RwV3d pos = { 0.0f, 0.0f, 0.0f };
 		RwV3dTransformPoints(&pos, &pos, 1, mat);
 
-		spheres[i].center = pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z);
+		spheres[i].bounds.center = CollisionVector_FromNative(pos + CVector(m_pColNodeInfos[i].x, 0.0f, m_pColNodeInfos[i].z));
 	}
 	return m_hitColModel;
 }
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

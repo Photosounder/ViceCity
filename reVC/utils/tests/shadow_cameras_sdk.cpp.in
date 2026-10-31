@@ -1,0 +1,232 @@
+#include "shadow-entry.h"
+static RwTexture shadowTextures[1024];
+static RpLight shadowLights[256];
+static unsigned textureCalls,textureCreated,textureDestroyed,lightCalls,lightCreated,lightDestroyed,failTextureCall,failLightCall;
+static unsigned beginCalls,failBeginCall,failBeginCall2,softwareCalls,failSoftwareCall,shadowRenders,shadowReentries;
+static bool softwareEnabled=true,nestedRender,nestedDraw,insideShadow;
+static RwFrame *shadowObjectFrame;
+static RpAtomic *shadowAtomic[3];
+static RpClump *shadowClump;
+static RpAtomicCallBackRender shadowCallbacks[3];
+static ShadowArgs shadowNested;
+static unsigned atomicIndex(RpAtomic *atomic)
+{
+    // Select controlled SDK atomic metadata without changing the application record representation
+    for(unsigned i=0;i<3;++i)if(shadowAtomic[i]==atomic)return i;require(false);return 0;
+}
+RwTexture *RwTextureCreate(RwRaster *raster)
+{
+    // Allocate deterministic SDK texture identities and inject the original factory failure
+    event(201,identity(raster));++textureCalls;if(textureCalls==failTextureCall)return NULL;require(textureCreated<1024);RwTexture *value=&shadowTextures[textureCreated++];*value={600000+textureCreated,true,raster,0,0};return value;
+}
+void RwTextureSetRaster(RwTexture *texture,RwRaster *raster)
+{
+    // Record detach ordering on the actual SDK texture
+    require(texture&&texture->alive);event(202,texture->id,identity(raster));texture->raster=raster;
+}
+void RwTextureDestroy(RwTexture *texture)
+{
+    // Observe explicit texture destruction after its raster has been detached
+    require(texture&&texture->alive);event(203,texture->id);texture->alive=false;++textureDestroyed;
+}
+void RwTextureSetAddressing(RwTexture *texture,RwTextureAddressMode mode)
+{
+    // Preserve the selected SDK addressing mode
+    event(204,texture->id,mode);texture->address=mode;
+}
+void RwTextureSetFilterMode(RwTexture *texture,RwTextureFilterMode mode)
+{
+    // Preserve the selected SDK filter mode
+    event(205,texture->id,mode);texture->filter=mode;
+}
+void RwCameraSetProjection(RwCamera *camera,RwCameraProjection mode)
+{
+    // Preserve the actual SDK camera projection field
+    event(206,camera->id,mode);camera->projection=mode;
+}
+void RwCameraSetFarClipPlane(RwCamera *camera,float value)
+{
+    // Record the far clip value before changing the live camera
+    event(207,camera->id);bytes(&value,sizeof(value));camera->farClip=value;
+}
+void RwCameraSetNearClipPlane(RwCamera *camera,float value)
+{
+    // Record the near clip value before changing the live camera
+    event(208,camera->id);bytes(&value,sizeof(value));camera->nearClip=value;
+}
+float RwCameraGetFarClipPlane(RwCamera *camera)
+{
+    // Return the actual initialized camera clip field
+    require(camera);return camera->farClip;
+}
+float RwCameraGetNearClipPlane(RwCamera *camera)
+{
+    // Return the actual initialized camera clip field
+    require(camera);return camera->nearClip;
+}
+RpLight *RpLightCreate(int32 kind)
+{
+    // Supply directional light allocation and deterministic failure without replacing owner cleanup
+    event(209,kind);++lightCalls;if(lightCalls==failLightCall)return NULL;require(lightCreated<256);RpLight *light=&shadowLights[lightCreated++];*light={700000+lightCreated,true,NULL,{}};return light;
+}
+void RpLightDestroy(RpLight *light)
+{
+    // Observe final SDK light destruction
+    require(light&&light->alive);event(210,light->id);light->alive=false;++lightDestroyed;
+}
+void RpLightSetColor(RpLight *light,const RwRGBAReal *colour)
+{
+    // Preserve initialized SDK light colour components
+    event(211,light->id);bytes(colour,sizeof(*colour));light->colour=*colour;
+}
+RwFrame *RpLightGetFrame(RpLight *light)
+{
+    // Borrow the current SDK light frame
+    require(light);return light->frame;
+}
+void RpLightSetFrame(RpLight *light,RwFrame *frame)
+{
+    // Record light frame attachment and detachment ordering
+    event(212,light->id,identity(frame));light->frame=frame;
+}
+int32 RwObjectGetType(RwObject *object)
+{
+    // Supply the SDK identities of independently allocated clump and atomic objects
+    if(object==(RwObject*)shadowClump)return rpCLUMP;for(unsigned i=0;i<3;++i)if(object==(RwObject*)shadowAtomic[i])return rpATOMIC;return -41;
+}
+RwFrame *RpAtomicGetFrame(RpAtomic *atomic)
+{
+    // Borrow a real controlled SDK frame for the atomic object
+    event(213,identity(atomic));return shadowObjectFrame;
+}
+RwV3d *RwMatrixGetRight(RwMatrix *matrix)
+{
+    // Borrow the actual SDK right vector without an extra rendering event
+    return &matrix->right;
+}
+RwV3d *RwMatrixGetUp(RwMatrix *matrix)
+{
+    // Borrow the actual SDK up vector without an extra rendering event
+    return &matrix->up;
+}
+RwV3d *RwMatrixGetAt(RwMatrix *matrix)
+{
+    // Borrow the actual SDK forward vector without an extra rendering event
+    return &matrix->at;
+}
+RwV3d *RwMatrixGetPos(RwMatrix *matrix)
+{
+    // Borrow the actual SDK position vector without an extra rendering event
+    return &matrix->pos;
+}
+void RwMatrixUpdate(RwMatrix *matrix)
+{
+    // Observe the completed SDK matrix after the owner updates its fields
+    event(214);matrixValue(matrix);
+}
+void RwFrameUpdateObjects(RwFrame *frame)
+{
+    // Observe SDK frame propagation after matrix changes
+    event(215,frame->id);
+}
+void RwFrameOrthoNormalize(RwFrame *frame)
+{
+    // Keep orthonormalization as an external SDK operation
+    event(216,frame->id);frame->ltm=frame->matrix;
+}
+void RwV3dIncrementScaled(RwV3d *out,const RwV3d *v,float factor)
+{
+    // Perform the SDK vector primitive with its original in-place alias behavior
+    out->x+=v->x*factor;out->y+=v->y*factor;out->z+=v->z*factor;
+}
+void RwFrameRotate(RwFrame *frame,const RwV3d *axis,float angle,RwOpCombineType mode)
+{
+    // Supply a deterministic rotation primitive while the owner selects axes angles and combination order
+    require(frame);event(217,frame->id,mode);vectorValue(axis);bytes(&angle,sizeof(angle));float a=angle*0.017453292519943295f,c=cosf(a),s=sinf(a);if(mode==rwCOMBINEREPLACE){memset(&frame->matrix,0,sizeof(frame->matrix));frame->matrix.right={1,0,0};frame->matrix.up={0,1,0};frame->matrix.at={0,0,1};}RwV3d *vectors[]={&frame->matrix.right,&frame->matrix.up,&frame->matrix.at};for(unsigned i=0;i<3;++i){RwV3d v=*vectors[i];if(axis->y!=0)*vectors[i]={c*v.x+s*v.z,v.y,-s*v.x+c*v.z};else *vectors[i]={v.x,c*v.y-s*v.z,s*v.y+c*v.z};}
+}
+uint32 RpGeometryGetFlags(RpGeometry *geometry)
+{
+    // Read the current controlled geometry flags
+    event(218,geometry->id,geometry->flags);return geometry->flags;
+}
+void RpGeometrySetFlags(RpGeometry *geometry,uint32 flags)
+{
+    // Observe temporary shadow flags and subsequent restoration
+    event(219,geometry->id,flags);geometry->flags=flags;
+}
+RwCamera *RwCameraBeginUpdate(RwCamera *camera)
+{
+    // Fail selected rendering halves without performing owner state restoration
+    require(camera&&camera->alive);event(220,camera->id);++beginCalls;return beginCalls==failBeginCall||beginCalls==failBeginCall2?NULL:camera;
+}
+void RwCameraEndUpdate(RwCamera *camera)
+{
+    // Observe matching SDK camera end calls
+    event(221,camera->id);
+}
+void RwCameraClear(RwCamera *camera,const RwRGBA *colour,int32 flags)
+{
+    // Observe the actual SDK clear colour and selected clear mask
+    event(222,camera->id,flags);bytes(colour,sizeof(*colour));
+}
+float RwIm2DGetNearScreenZ(void)
+{
+    // Supply one stable SDK screen-depth constant
+    return 0.125f;
+}
+static RpAtomic *customRender(RpAtomic *atomic)
+{
+    // Distinguish a caller-installed callback from the SDK default
+    event(223,atomic->id);return atomic;
+}
+RpAtomicCallBackRender RpAtomicGetRenderCallBack(RpAtomic *atomic)
+{
+    // Borrow the actual current SDK callback token
+    return shadowCallbacks[atomicIndex(atomic)];
+}
+void RpAtomicSetRenderCallBack(RpAtomic *atomic,RpAtomicCallBackRender callback)
+{
+    // Observe default selection and restoration of the exact saved typed callback
+    unsigned index=atomicIndex(atomic);event(224,atomic->id,callback==AtomicDefaultRenderCallBack?1:callback==customRender?2:0);shadowCallbacks[index]=callback;
+}
+RpAtomic *AtomicDefaultRenderCallBack(RpAtomic *atomic)
+{
+    // Observe render-time geometry flags and permit nested rendering of the same live SDK object
+    event(225,atomic->id,atomic->geometry->flags);++shadowRenders;if(nestedRender&&!insideShadow){nestedRender=false;insideShadow=true;++shadowReentries;ShadowResult result;TestShadow(SH_RenderAtomic,&shadowNested,&result);require(result.object==shadowNested.object);insideShadow=false;}return atomic;
+}
+void RpAtomicRender(RpAtomic *atomic)
+{
+    // Execute the currently installed SDK callback rather than simulating owner callback policy
+    event(226,atomic->id);RpAtomicCallBackRender callback=RpAtomicGetRenderCallBack(atomic);if(callback)callback(atomic);
+}
+void RwIm2DRenderLine(RwIm2DVertex *vertices,int32 count,int32 first,int32 second)
+{
+    // Observe initialized line fields without reading the original unspecified texture coordinates
+    require(count==2);event(227,first,second);for(int32 i=0;i<count;++i){bytes(&vertices[i].x,4*sizeof(float));bytes(&vertices[i].colour,sizeof(RwRGBA));}++draws;
+}
+void RwIm2DRenderIndexedPrimitive(int32 kind,RwIm2DVertex *vertices,int32 count,RwImVertexIndex *indices,int32 indexCount)
+{
+    // Observe the original border topology and initialized vertex fields
+    event(228,kind,count);bytes(indices,indexCount*sizeof(*indices));for(int32 i=0;i<count;++i){bytes(&vertices[i].x,4*sizeof(float));bytes(&vertices[i].colour,sizeof(RwRGBA));}++draws;
+}
+bool SoftwarePolygons::BeginOffscreenFrame(RwCamera *camera,const rw::RGBA &colour)
+{
+    // Observe clear-target software pass routing independently of camera update success
+    event(229,camera->id);bytes(&colour,sizeof(colour));++softwareCalls;return softwareEnabled&&softwareCalls!=failSoftwareCall;
+}
+bool SoftwarePolygons::BeginOffscreenFrame(RwCamera *camera,RwRaster *raster)
+{
+    // Observe initial-image software pass routing
+    event(230,camera->id,identity(raster));++softwareCalls;return softwareEnabled&&softwareCalls!=failSoftwareCall;
+}
+void SoftwarePolygons::EndOffscreenFrame(RwRaster *raster)
+{
+    // Observe which current SDK raster is uploaded at the end of a live software pass
+    event(231,identity(raster));
+}
+
+void ShadowDrawReentry(RwIm2DVertex *vertices,int32 count)
+{
+    // Reenter a complete effect while the outer SDK vertex array remains live and unchanged
+    if(!nestedDraw||insideShadow)return;require(count==4);RwIm2DVertex saved[4];memcpy(saved,vertices,sizeof(saved));nestedDraw=false;insideShadow=true;++shadowReentries;ShadowResult result;TestShadow(SH_CameraInvertRaster,&shadowNested,&result);require(memcmp(saved,vertices,sizeof(saved))==0);insideShadow=false;
+}

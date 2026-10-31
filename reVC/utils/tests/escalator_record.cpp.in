@@ -1,0 +1,248 @@
+#include "common.h"
+#include "owners.h"
+#include "caller.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#ifdef NATIVE_PROJECT_HEADERS
+#undef malloc
+#undef free
+extern "C" void *cita_win_malloc(size_t size,const char *,const char *,int)
+{
+    // Supply ordinary aligned raw storage for the native header's allocation instrumentation
+    return std::malloc(size);
+}
+extern "C" void cita_win_free(void *memory,const char *,const char *,int)
+{
+    // Release the same raw pool storage without introducing game allocation callbacks
+    std::free(memory);
+}
+extern "C" void re3_assert(const char *expression,const char *,unsigned int line,const char *)
+{
+    // Stop immediately if the actual native pool implementation rejects a corpus precondition
+    fprintf(stderr,"Native escalator pool assertion at %u: %s\n",line,expression);abort();
+}
+#endif
+
+extern "C" { uint32_t Timer_timeMs;float Timer_timeStep;int32_t Escalators_Num; }
+CCamera TheCamera;int16 MI_ESCALATORSTEP=123;
+static CPool pools[2];static bool alive[2][64],inWorld[2][64];static RwMatrix attachments[2][64];static CColModel col;
+static int selectedPool,activeRecord,hook;static bool triggered,visible=true;static unsigned visibilityCalls;
+static unsigned states,calls,adds,updates,offs,constructions,destructions,matrixUpdates,frameUpdates,recoveries;
+static uint64_t hash=1469598103934665603ULL;
+static void check(bool condition,int line)
+{
+    // Reject invalid pool lifetimes and missed corpus preconditions immediately
+    if(!condition){fprintf(stderr,"Escalator-record corpus failed at line %d (hook %d)\n",line,hook);abort();}
+}
+#define require(condition) check((condition),__LINE__)
+static void word(uint32_t value)
+{
+    // Compare complete scalar values through a deterministic byte-wise fingerprint
+    for(int i=0;i<4;i++){hash^=(value>>(8*i))&255;hash*=1099511628211ULL;}
+}
+static void floating(float value)
+{
+    // Preserve exact finite values, signed zero and original degenerate-path float results
+    uint32_t bits;memcpy(&bits,&value,sizeof(bits));word(bits);
+}
+static void vector(float x,float y,float z)
+{
+    // Observe each declared vector component without a record representation cast
+    floating(x);floating(y);floating(z);
+}
+static int objectId(const void *value)
+{
+    // Normalize raw slot identities without dereferencing unconstructed or destroyed objects
+    if(!value)return -1;for(int p=0;p<2;p++)if(pools[p].m_entries){uintptr_t a=(uintptr_t)value,b=(uintptr_t)pools[p].m_entries,size=pools[p].m_entrySize;if(a>=b && a<b+size*(size_t)pools[p].m_size){require((a-b)%size==0);return p*64+(int)((a-b)/size);}}require(false);return -2;
+}
+static int attachmentId(const RwMatrix *value)
+{
+    // Normalize actual native attachment identities independently of matrix layout and pointer width
+    if(!value)return -1;for(int p=0;p<2;p++)for(int i=0;i<64;i++)if(value==&attachments[p][i])return p*64+i;require(false);return -2;
+}
+static void record(int index)
+{
+    // Observe every plain state field including inactive pointers beyond the current step count
+    Escalator v=TestEr_Get(index);vector(v.m_pos0.x,v.m_pos0.y,v.m_pos0.z);vector(v.m_pos1.x,v.m_pos1.y,v.m_pos1.z);vector(v.m_pos2.x,v.m_pos2.y,v.m_pos2.z);vector(v.m_pos3.x,v.m_pos3.y,v.m_pos3.z);word(v.m_bIsActive);word(v.m_bIsMovingDown);word(v.m_stepsCount);floating(v.m_lowerEnd);floating(v.m_upperEnd);vector(v.m_midPoint.x,v.m_midPoint.y,v.m_midPoint.z);floating(v.m_radius);for(int i=0;i<24;i++)word(objectId(v.m_pSteps[i]));
+}
+static void matrix(const CMatrix &value)
+{
+    // Include every native coefficient and both actual ownership metadata fields
+    for(int i=0;i<4;i++)for(int j=0;j<4;j++)floating(value.f[i][j]);word(attachmentId(value.m_attachment));word(value.m_hasRwMatrix);
+}
+static void snapshot(void)
+{
+    // Compare all 22 records, native matrices, actual pool flags and live native object fields
+    states++;word(Timer_timeMs);floating(Timer_timeStep);word(Escalators_Num);word(deletingEscalator);word(selectedPool);vector(TheCamera.position.x,TheCamera.position.y,TheCamera.position.z);for(int i=0;i<22;i++){record(i);matrix(*(CMatrix *)TestEr_Matrix(i));word(TestEr_Active(i));EscalatorVector pos=TestEr_Position(i);vector(pos.x,pos.y,pos.z);word(AudioWorldLoopsHost_EscalatorActive(i));AudioSoundPosition output;AudioWorldLoopsHost_EscalatorPosition(i,&output);vector(output.x,output.y,output.z);}word(AudioWorldLoopsHost_EscalatorCount());
+    for(int p=0;p<2;p++){
+        // Observe occupied flags and allocation cursors without reading raw object padding
+        word(pools[p].m_size);word(pools[p].m_allocPtr);if(pools[p].m_size)require(pools[p].m_entrySize==sizeof(CObject));for(int i=0;i<pools[p].m_size;i++){word(pools[p].m_flags[i]);word(alive[p][i]);word(inWorld[p][i]);if(alive[p][i]){CObject *o=(CObject *)(pools[p].m_entries+pools[p].m_entrySize*i);word(o->model);word(o->ObjectCreatedBy);matrix(o->matrix);vector(o->m_vecMoveSpeed.x,o->m_vecMoveSpeed.y,o->m_vecMoveSpeed.z);}}
+    }
+}
+static void event(unsigned id)
+{
+    // Preserve external operation order and the live record/guard state visible inside each callback
+    calls++;word(id);word(deletingEscalator);word(Timer_timeMs);floating(Timer_timeStep);record(activeRecord);for(int p=0;p<2;p++){word(pools[p].m_allocPtr);for(int i=0;i<pools[p].m_size;i++)word(pools[p].m_flags[i]);}
+}
+static void update(int index=0)
+{
+    // Keep nested record operations distinct while observing complete post-update state
+    int saved=activeRecord;activeRecord=index;updates++;TestEr_RunUpdate(index);snapshot();activeRecord=saved;
+}
+static void off(int index=0)
+{
+    // Enter complete teardown and observe retained fields and native pool generations
+    int saved=activeRecord;activeRecord=index;offs++;TestEr_RunOff(index);snapshot();activeRecord=saved;
+}
+static CObject *spawn(int p,int model=999,int tag=GAME_OBJECT)
+{
+    // Construct an actual native object in a slot allocated by the actual shared C pool
+    CObject *o=(CObject *)CPool_New(&pools[p]);require(o!=NULL);std::allocator<CObject>().construct(o,model,true);o->ObjectCreatedBy=(int8_t)tag;return o;
+}
+static void mutation(int point,CObject *object=NULL)
+{
+    // Apply one bounded live mutation at a real external owner operation
+    if(triggered)return;Escalator v=TestEr_Get(activeRecord);
+    if(hook==1 && point==1){
+        // Change live path fields after input copies and before height adjustment and length calculation
+        triggered=true;v.m_pos1.x+=.125f;v.m_pos2.z+=.25f;v.m_bIsMovingDown=!v.m_bIsMovingDown;TestEr_Set(activeRecord,&v);col.boundingBox.max.z=.375f;
+    }else if(hook==2 && point==2){
+        // Change the live model index before the next actual object construction
+        triggered=true;MI_ESCALATORSTEP=199;
+    }else if((hook==3 || hook==4) && point==5){
+        // Exhaust the real pool during world insertion so later allocations enter the original recovery scan
+        triggered=true;while(CPool_GetNoOfFreeSpaces(&pools[0])>0){CObject *o=spawn(0);int id=objectId(o);o->ObjectCreatedBy=(hook==3 && (id==5 || id==27))?TEMP_OBJECT:GAME_OBJECT;inWorld[0][id]=true;}
+    }else if(hook==5 && point==7){
+        // Read interpolation bounds and time step after the real matrix-assignment publication callback
+        triggered=true;v.m_lowerEnd=.2f;v.m_upperEnd=.8f;v.m_pos1.x+=.5f;v.m_pos2.z+=.75f;TestEr_Set(activeRecord,&v);Timer_timeStep=2.5f;Timer_timeMs=16383;
+    }else if(hook==6 && point==7){
+        // Replace a live step after old-position capture and matrix assignment but before position and speed writes
+        triggered=true;CObject *replacement=spawn(0,777,CONTROLLED_SUB_OBJECT);replacement->SetPosition(CVector(71.f,72.f,73.f));v.m_pSteps[0]=replacement;TestEr_Set(activeRecord,&v);
+    }else if(hook==7 && point==8){
+        // Preserve the captured phase while reading count, direction and time step live on later steps
+        triggered=true;v.m_stepsCount=3;v.m_bIsMovingDown=true;TestEr_Set(activeRecord,&v);Timer_timeMs=8192;Timer_timeStep=.25f;
+    }else if(hook==8 && point==6){
+        // Keep the original per-iteration camera checks after switch-off clears all remaining step pointers
+        triggered=true;TheCamera.position=CVector(v.m_midPoint.x,v.m_midPoint.y,v.m_midPoint.z);
+    }else if(hook==9 && point==9){
+        // Preserve nested teardown's writes to the shared deletion guard
+        triggered=true;off(1);
+    }else if(hook==10 && point==6){
+        // Re-read the current object pool and current step after a world-removal callback changes both
+        triggered=true;CObject *replacement=spawn(1,888,CONTROLLED_SUB_OBJECT);v.m_pSteps[0]=replacement;TestEr_Set(activeRecord,&v);selectedPool=1;
+    }else if(hook==11 && point==9){
+        // Retain the live step-count loop bound during destruction
+        triggered=true;v.m_stepsCount=2;TestEr_Set(activeRecord,&v);
+    }else if(hook==12 && point==5){
+        // Reenter another real record while the outer step is still awaiting its controlled-object tag
+        triggered=true;update(1);
+    }else if(hook==13 && point==3){
+        // Read the activation count and initial placement live after the visibility query returns
+        triggered=true;v.m_stepsCount=3;v.m_pos1.z+=.5f;TestEr_Set(activeRecord,&v);
+    }
+}
+CPool *CPools::GetObjectPool(void)
+{
+    // Preserve the actual inline getter's current-pool semantics without adding a callback
+    return &pools[selectedPool];
+}
+CColModel *CModelInfo::GetColModel(int model)
+{
+    // Observe the live model query after all four original input endpoint copies
+    event(1);word(model);mutation(1);floating(col.boundingBox.max.z);return &col;
+}
+bool CCamera::IsSphereVisible(const CVector &center,float radius)
+{
+    // Capture the original center before a bounded callback mutates later live record reads
+    event(3);visibilityCalls++;vector(center.x,center.y,center.z);floating(radius);mutation(3);word(visible);return visible;
+}
+CObject::CObject(int32_t selectedModel,bool createRW)
+{
+    // Initialize actual native matrix storage before observing original model-construction timing
+    int id=objectId(this),p=id/64,i=id%64;require(!alive[p][i]);alive[p][i]=true;inWorld[p][i]=false;offset=0x12345678;baseTag=4321;model=selectedModel;ObjectCreatedBy=GAME_OBJECT;m_vecMoveSpeed=CVector(.125f,.25f,.5f);for(int a=0;a<4;a++)for(int b=0;b<4;b++)matrix.f[a][b]=(id+1)*.0625f+a*.125f+b*.03125f;matrix.m_attachment=&attachments[p][i];matrix.m_hasRwMatrix=false;event(2);constructions++;word(id);word(selectedModel);word(createRW);mutation(2);
+}
+CObject::~CObject()
+{
+    // Observe the actual guard and object identity before the native matrix subobject is destroyed
+    int id=objectId(this);require(alive[id/64][id%64]);event(9);destructions++;word(id);word(model);word(ObjectCreatedBy);if(ObjectCreatedBy==TEMP_OBJECT)recoveries++;mutation(9);alive[id/64][id%64]=false;inWorld[id/64][id%64]=false;
+}
+void CObject::UpdateRwFrame(void)
+{
+    // Observe position and movement speed after the explicit matrix publication
+    event(8);frameUpdates++;word(objectId(this));matrix.f[3][3]+=0.f;vector(matrix.px,matrix.py,matrix.pz);vector(m_vecMoveSpeed.x,m_vecMoveSpeed.y,m_vecMoveSpeed.z);mutation(8);
+}
+void CWorld::Add(CEntity *entity)
+{
+    // Verify the original typed derived-to-base conversion and insertion-before-tagging order
+    CObject *o=static_cast<CObject *>(entity);int id=objectId(o);require((void *)entity!=(void *)o && entity->baseTag==4321);event(5);word(id);word(o->ObjectCreatedBy);vector(o->matrix.px,o->matrix.py,o->matrix.pz);inWorld[id/64][id%64]=true;mutation(5,o);
+}
+void CWorld::Remove(CEntity *entity)
+{
+    // Preserve the captured world-removal target before later live slot and pool queries
+    CObject *o=static_cast<CObject *>(entity);int id=objectId(o);require((void *)entity!=(void *)o && alive[id/64][id%64]);event(6);word(id);inWorld[id/64][id%64]=false;mutation(6,o);
+}
+RwMatrix *RwMatrixUpdate(RwMatrix *value)
+{
+    // Observe the real native assignment and UpdateRW implementation before reentrant mutations
+    event(7);matrixUpdates++;word(attachmentId(value));vector(value->right.x,value->right.y,value->right.z);vector(value->up.x,value->up.y,value->up.z);vector(value->at.x,value->at.y,value->at.z);vector(value->pos.x,value->pos.y,value->pos.z);mutation(7);return value;
+}
+RwBool RwMatrixDestroy(RwMatrix *value)
+{
+    // Reject an unexpected ownership change to the original non-owning record or object matrices
+    (void)value;require(false);return FALSE;
+}
+static void reset(unsigned seed)
+{
+    // Clear record references before releasing each actual pool's remaining native objects
+    hook=0;triggered=false;activeRecord=0;selectedPool=0;visible=true;deletingEscalator=false;visibilityCalls=0;Timer_timeMs=seed*97;Timer_timeStep=1.f;Escalators_Num=22;MI_ESCALATORSTEP=123;col.boundingBox.max.z=.25f;TheCamera.position=CVector(0.f,0.f,0.f);
+    for(int r=0;r<22;r++){
+        // Seed all plain fields while retaining matrix padding coefficients and ownership metadata
+        Escalator v={};v.m_pos0=EscalatorVector{0.f,0.f,0.f};v.m_pos1=EscalatorVector{1.f,0.f,0.f};v.m_pos2=EscalatorVector{1.f,0.f,2.f};v.m_pos3=EscalatorVector{2.f,0.f,2.f};v.m_stepsCount=4;v.m_lowerEnd=.25f;v.m_upperEnd=.75f;v.m_radius=5.f;v.m_midPoint=EscalatorVector{0.f,0.f,0.f};TestEr_Set(r,&v);CMatrix *m=(CMatrix *)TestEr_Matrix(r);for(int i=0;i<4;i++)for(int j=0;j<4;j++)m->f[i][j]=r*.125f+i*.25f+j*.0625f;m->m_attachment=NULL;m->m_hasRwMatrix=false;
+    }
+    for(int p=0;p<2;p++){
+        // Preserve legal C++ object lifetimes even for slots deliberately left behind by callback mutations
+        for(int i=0;i<pools[p].m_size;i++)if(alive[p][i])((CObject *)(pools[p].m_entries+pools[p].m_entrySize*i))->~CObject();if(pools[p].m_entries)CPool_Flush(&pools[p]);require(CPool_Init(&pools[p],64,sizeof(CObject),"escalator fixture"));for(int i=0;i<64;i++){alive[p][i]=inWorld[p][i]=false;memset(&attachments[p][i],0,sizeof(RwMatrix));}
+    }
+}
+static void seedSteps(int recordIndex,int count)
+{
+    // Construct sparse or complete real pooled steps for direct movement and teardown coverage
+    Escalator v=TestEr_Get(recordIndex);v.m_bIsActive=true;v.m_stepsCount=count;for(int i=0;i<count;i++){v.m_pSteps[i]=spawn(0,123,CONTROLLED_SUB_OBJECT);v.m_pSteps[i]->SetPosition(CVector(i*.3f,-i*.2f,7.f+i*.1f));inWorld[0][objectId(v.m_pSteps[i])]=true;}TestEr_Set(recordIndex,&v);
+}
+int main(void)
+{
+    // Compare the original constructor's static-zero state and all native matrix defaults before any setup
+    snapshot();const float lengths[]={0.f,.3f,.6f,1.1999999f,1.2f,14.39999f,14.4f,14.40001f,30.f};
+    for(int n=0;n<9;n++)for(int direction=0;direction<2;direction++){
+        // Cover truncation, the 24-step cap, zero direction and retained active-step pointers during registration
+        reset(n);if(direction)seedSteps(0,2);float length=lengths[n];EscalatorVector a={0.f,0.f,3.f},b={length*.25f,0.f,3.f},c={length*.75f,0.f,3.f},d={length,0.f,3.f};adds++;TestEr_RunAdd(0,a,b,c,d,direction!=0);snapshot();
+    }
+    const float distances[]={24.99999f,25.f,25.00001f,27.99999f,28.f,28.00001f};
+    for(int d=0;d<6;d++)for(int free=13;free<=15;free++)for(int see=0;see<2;see++){
+        // Preserve both strict distance edges and the strict count-plus-ten free-space guard
+        reset(d);for(int i=0;i<64-free;i++)spawn(0);TheCamera.position.x=distances[d];visible=see!=0;update();off();
+    }
+    const uint32_t times[]={0,1,4095,4096,8191,8192,12287,12288,16383,16384,0xfffffff0U};const float steps[]={0.f,.5f,1.f,1.0001f,2.5f};
+    for(int t=0;t<11;t++)for(int direction=0;direction<2;direction++)for(int step=0;step<5;step++){
+        // Exercise all three interpolation pieces, exact phase wrap and live minimum time-step clamping
+        reset(t);seedSteps(0,4);Escalator v=TestEr_Get(0);v.m_bIsMovingDown=direction!=0;TestEr_Set(0,&v);Timer_timeMs=times[t];Timer_timeStep=steps[step];update();off();
+    }
+    for(int d=3;d<6;d++)for(int see=0;see<2;see++){
+        // Preserve the remaining per-step camera checks after an early switch-off clears all pointers
+        reset(d);seedSteps(0,4);TheCamera.position.x=distances[d];visible=see!=0;update();
+    }
+    for(int h=1;h<=13;h++){
+        // Apply only valid object-pool failures in profiles that contain the original recovery branch
+#ifndef FIX_BUGS
+        if(h==3 || h==4)continue;
+#endif
+        reset(h);if(h==1){hook=h;EscalatorVector a={0,0,3},b={1,0,3},c={1,0,5},d={2,0,5};adds++;TestEr_RunAdd(0,a,b,c,d,false);snapshot();}else if(h==2 || h==3 || h==4 || h==12 || h==13){if(h==12)seedSteps(1,1);hook=h;update();}else if(h==5 || h==6 || h==7){seedSteps(0,h==6?1:4);hook=h;update();}else if(h==8){seedSteps(0,4);TheCamera.position.x=30.f;hook=h;update();require(visibilityCalls==3);}else if(h==9){seedSteps(0,2);seedSteps(1,1);hook=h;off();}else{seedSteps(0,h==10?1:4);hook=h;off();}require(triggered);
+    }
+    reset(0);Escalator v=TestEr_Get(0);v.m_stepsCount=0;TestEr_Set(0,&v);update();TheCamera.position.x=100.f;update();require(TestEr_Active(0));snapshot();
+    for(unsigned frame=0;frame<240;frame++){
+        // Sustain activation, movement, teardown, sparse pointers and phase changes with the real native matrices
+        if(frame%40==0)reset(frame);Timer_timeMs=frame*131;Timer_timeStep=.25f+(frame%7)*.375f;TheCamera.position.x=(frame%53)*.625f;visible=frame%19!=0;update();if(frame%37==0)off();
+    }
+    reset(0);printf("states=%u calls=%u adds=%u updates=%u offs=%u constructions=%u destructions=%u matrixUpdates=%u frameUpdates=%u recoveries=%u hash=%016llx\n",states,calls,adds,updates,offs,constructions,destructions,matrixUpdates,frameUpdates,recoveries,(unsigned long long)hash);return 0;
+}

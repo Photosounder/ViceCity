@@ -1,128 +1,89 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
-#include "Accident.h"
-
+#include "Events_backend.h"
+#include "main.h"
+#include "Game.h"
 #include "Ped.h"
+#include "PlayerPed.h"
 #include "Pools.h"
 #include "World.h"
-
-CAccidentManager gAccidentManager;
-
-CAccident*
-CAccidentManager::GetNextFreeAccident()
+#include "Wanted.h"
+static_assert(int(EVENTS_MISSION_CHAR)==int(MISSION_CHAR),"Original native pedestrian creation code");
+bool Events_BackendIsPlayer(CPed *ped)
 {
-	for (int i = 0; i < NUM_ACCIDENTS; i++) {
-		if (m_aAccidents[i].m_pVictim == nil)
-			return &m_aAccidents[i];
-	}
-
-	return nil;
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->IsPlayer();
 }
 
-void
-CAccidentManager::ReportAccident(CPed *ped)
+uint8_t Events_BackendCreatedBy(CPed *ped)
 {
-	if (!ped->IsPlayer() && ped->CharCreatedBy != MISSION_CHAR && !ped->bRenderScorched && !ped->bBodyPartJustCameOff && ped->bAllowMedicsToReviveMe && !ped->bIsInWater) {
-		for (int i = 0; i < NUM_ACCIDENTS; i++) {
-			if (m_aAccidents[i].m_pVictim != nil && m_aAccidents[i].m_pVictim == ped)
-				return;
-		}
-
-		if (ped->m_pCurrentPhysSurface == nil) {
-			CVector point = ped->GetPosition();
-			point.z -= 2.0f;
-
-			CColPoint colPoint;
-			CEntity *pEntity; 
-
-			if (!CWorld::ProcessVerticalLine(point, -100.0f, colPoint, pEntity, true, false, false, false, false, false, nil)) {
-				CAccident *accident = GetNextFreeAccident();
-				if (accident != nil) {
-					accident->m_pVictim = ped;
-					ped->RegisterReference((CEntity**)&accident->m_pVictim);
-					accident->m_nMedicsPerformingCPR = 0;
-					accident->m_nMedicsAttending = 0;
-					ped->m_lastAccident = accident;
-					WorkToDoForMedics();
-				}
-			}
-		}
-	}
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->CharCreatedBy;
 }
 
-void
-CAccidentManager::Update()
+bool Events_BackendScorched(CPed *ped)
 {
-#ifdef SQUEEZE_PERFORMANCE
-	// Handled after injury registered.
-	return;
-#endif
-	int32 e;
-	if (CEventList::GetEvent(EVENT_INJURED_PED, &e)) {
-		CPed *ped = CPools::GetPed(gaEvent[e].entityRef);
-		if (ped) {
-			ReportAccident(ped);
-			CEventList::ClearEvent(e);
-		}
-	}
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->bRenderScorched;
 }
 
-CAccident*
-CAccidentManager::FindNearestAccident(CVector vecPos, float *pDistance)
+bool Events_BackendBodyPart(CPed *ped)
 {
-	for (int i = 0; i < MAX_MEDICS_TO_ATTEND_ACCIDENT; i++){
-		int accidentId = -1;
-		float minDistance = 999999;
-		for (int j = 0; j < NUM_ACCIDENTS; j++){
-			CPed* pVictim = m_aAccidents[j].m_pVictim;
-			if (!pVictim)
-				continue;
-			if (pVictim->CharCreatedBy == MISSION_CHAR)
-				continue;
-			if (pVictim->m_fHealth != 0.0f)
-				continue;
-			if (m_aAccidents[j].m_nMedicsPerformingCPR != i)
-				continue;
-			float distance = (pVictim->GetPosition() - vecPos).Magnitude2D();
-			if (distance / 2 > pVictim->GetPosition().z - vecPos.z && distance < minDistance){
-				minDistance = distance;
-				accidentId = j;
-			}
-		}
-		*pDistance = minDistance;
-		if (accidentId != -1)
-			return &m_aAccidents[accidentId];
-	}
-	return nil;
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->bBodyPartJustCameOff;
 }
 
-uint16
-CAccidentManager::CountActiveAccidents()
+bool Events_BackendAllowRevive(CPed *ped)
 {
-	uint16 accidents = 0;
-	for (int i = 0; i < NUM_ACCIDENTS; i++) {
-		if (m_aAccidents[i].m_pVictim)
-			accidents++;
-	}
-	return accidents;
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->bAllowMedicsToReviveMe;
 }
 
-bool
-CAccidentManager::WorkToDoForMedics()
+bool Events_BackendInWater(CPed *ped)
 {
-	for (int i = 0; i < NUM_ACCIDENTS; i++) {
-		if (m_aAccidents[i].m_pVictim != nil && m_aAccidents[i].m_nMedicsAttending < MAX_MEDICS_TO_ATTEND_ACCIDENT)
-			return true;
-	}
-	return false;
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->bIsInWater;
 }
 
-bool
-CAccidentManager::UnattendedAccidents()
+bool Events_BackendHasSurface(CPed *ped)
 {
-	for (int i = 0; i < NUM_ACCIDENTS; i++) {
-		if (m_aAccidents[i].m_pVictim != nil && m_aAccidents[i].m_nMedicsAttending == 0)
-			return true;
-	}
-	return false;
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->m_pCurrentPhysSurface!=nil;
 }
+
+EventsVector Events_BackendPedPosition(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    const CVector &v=ped->GetPosition();EventsVector result={v.x,v.y,v.z};return result;
+}
+
+float Events_BackendPedZ(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->GetPosition().z;
+}
+
+bool Events_BackendVerticalLine(EventsVector position,float endZ)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    CColPoint collision;CEntity *entity;return CWorld::ProcessVerticalLine(CVector(position.x,position.y,position.z),endZ,collision,entity,true,false,false,false,false,false,nil);
+}
+
+void Events_BackendSetLastAccident(CPed *ped,CAccident *accident)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    ped->m_lastAccident=accident;
+}
+
+CPed * Events_BackendPed(int32_t reference)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return CPools::GetPed(reference);
+}
+
+float Events_BackendHealth(CPed *ped)
+{
+    // Access the original typed native primitive only at its original C policy access point
+    return ped->m_fHealth;
+}
+//- rouz edit (ChatGPT)

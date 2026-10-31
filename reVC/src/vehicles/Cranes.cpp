@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Cranes.h"
@@ -209,7 +210,7 @@ void CCrane::Update(void)
 		switch (m_nCraneState) {
 		case IDLE:
 			if (GoTowardsTarget(m_fPickupAngle, m_fPickupDistance, GetHeightToPickup()) &&
-				CTimer::GetTimeInMilliseconds() > m_nTimeForNextCheck) {
+				(*Timer_GetTimeInMilliseconds()) > m_nTimeForNextCheck) {
 				CWorld::AdvanceCurrentScanCode();
 #ifdef FIX_BUGS
 				int xstart = Max(0, CWorld::GetSectorIndexX(m_fPickupX1));
@@ -287,7 +288,7 @@ void CCrane::Update(void)
 			RotateCarriedCarProperly();
 			if (GoTowardsHeightTarget(GetHeightToPickupHeight(), CRANE_SLOWDOWN_MULTIPLIER))
 				m_nCraneState = LIFTING_TARGET;
-			TimerForCamInterpolation = CTimer::GetTimeInMilliseconds();
+			TimerForCamInterpolation = (*Timer_GetTimeInMilliseconds());
 			if (!m_pVehiclePickedUp || m_pVehiclePickedUp->pDriver) {
 				m_pVehiclePickedUp = nil;
 				m_nCraneState = IDLE;
@@ -330,7 +331,7 @@ void CCrane::Update(void)
 		case DROPPING_TARGET:
 			if (GoTowardsTarget(m_fDropoffAngle, m_fDropoffDistance, GetHeightToDropoffHeight(), CRANE_SLOWDOWN_MULTIPLIER)) {
 				m_nCraneState = IDLE;
-				m_nTimeForNextCheck = CTimer::GetTimeInMilliseconds() + 10000;
+				m_nTimeForNextCheck = (*Timer_GetTimeInMilliseconds()) + 10000;
 			}
 			break;
 		default:
@@ -338,10 +339,10 @@ void CCrane::Update(void)
 		}
 		CVector vecHook;
 		CalcHookCoordinates(&vecHook.x, &vecHook.y, &vecHook.z);
-		m_vecHookVelocity += ((CVector2D)vecHook - (CVector2D)m_vecHookCurPos) * CTimer::GetTimeStep() * CRANE_MOVEMENT_SPEED;
-		m_vecHookVelocity *= Pow(0.98f, CTimer::GetTimeStep());
-		m_vecHookCurPos.x += m_vecHookVelocity.x * CTimer::GetTimeStep();
-		m_vecHookCurPos.y += m_vecHookVelocity.y * CTimer::GetTimeStep();
+		m_vecHookVelocity += ((CVector2D)vecHook - (CVector2D)m_vecHookCurPos) * (*Timer_GetTimeStep()) * CRANE_MOVEMENT_SPEED;
+		m_vecHookVelocity *= Pow(0.98f, (*Timer_GetTimeStep()));
+		m_vecHookCurPos.x += m_vecHookVelocity.x * (*Timer_GetTimeStep());
+		m_vecHookCurPos.y += m_vecHookVelocity.y * (*Timer_GetTimeStep());
 		m_vecHookCurPos.z = vecHook.z;
 		switch (m_nCraneState) {
 		case LIFTING_TARGET:
@@ -362,16 +363,16 @@ void CCrane::Update(void)
 		}
 	}
 	else {
-		int16 rnd = (m_pCraneEntity->m_randomSeed + (CTimer::GetTimeInMilliseconds() >> 11)) & 0xF;
+		int16 rnd = (m_pCraneEntity->m_randomSeed + ((*Timer_GetTimeInMilliseconds()) >> 11)) & 0xF;
 		// 16 options, lasting 2048 ms each
 		// a bit awkward: why there are 4 periods for -= and 6 for +=? is it a bug?
 		if (rnd < 4) {
-			m_fHookAngle -= OSCILLATION_SPEED * CTimer::GetTimeStep();
+			m_fHookAngle -= OSCILLATION_SPEED * (*Timer_GetTimeStep());
 			if (m_fHookAngle < 0.0f)
 				m_fHookAngle += TWOPI;
 		}
 		else if (rnd > 5 && rnd < 12) {
-			m_fHookAngle += OSCILLATION_SPEED * CTimer::GetTimeStep();
+			m_fHookAngle += OSCILLATION_SPEED * (*Timer_GetTimeStep());
 			if (m_fHookAngle > TWOPI)
 				m_fHookAngle -= TWOPI;
 		}
@@ -395,12 +396,12 @@ bool CCrane::RotateCarriedCarProperly()
 		return true;
 	if (!m_pVehiclePickedUp)
 		return true;
-	float fAngleDelta = m_fDropoffHeading - CGeneral::GetATanOfXY(m_pVehiclePickedUp->GetForward().x, m_pVehiclePickedUp->GetForward().y);
+	float fAngleDelta = m_fDropoffHeading - General_GetATanOfXY(m_pVehiclePickedUp->GetForward().x, m_pVehiclePickedUp->GetForward().y);
 	while (fAngleDelta < -HALFPI)
 		fAngleDelta += PI;
 	while (fAngleDelta > HALFPI)
 		fAngleDelta -= PI;
-	float fDeltaThisFrame = CAR_ROTATION_SPEED * CTimer::GetTimeStep();
+	float fDeltaThisFrame = CAR_ROTATION_SPEED * (*Timer_GetTimeStep());
 	if (Abs(fAngleDelta) <= fDeltaThisFrame) // no rotation is actually applied?
 		return true;
 	m_pVehiclePickedUp->GetMatrix().RotateZ(fAngleDelta < 0 ? -fDeltaThisFrame : fDeltaThisFrame);
@@ -513,7 +514,7 @@ bool CCrane::GoTowardsTarget(float fAngleToTarget, float fDistanceToTarget, floa
 		fHookAngleDelta -= TWOPI;
 	while (fHookAngleDelta < -PI)
 		fHookAngleDelta += TWOPI;
-	float fHookAngleChangeThisFrame = fSpeedMultiplier * CTimer::GetTimeStep() * HOOK_ANGLE_MOVEMENT_SPEED;
+	float fHookAngleChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_ANGLE_MOVEMENT_SPEED;
 	if (Abs(fHookAngleDelta) < fHookAngleChangeThisFrame) {
 		m_fHookAngle = fAngleToTarget;
 		bAngleMovementFinished = true;
@@ -531,7 +532,7 @@ bool CCrane::GoTowardsTarget(float fAngleToTarget, float fDistanceToTarget, floa
 		bAngleMovementFinished = false;
 	}
 	float fHookOffsetDelta = fDistanceToTarget - m_fHookOffset;
-	float fHookOffsetChangeThisFrame = fSpeedMultiplier * CTimer::GetTimeStep() * HOOK_OFFSET_MOVEMENT_SPEED;
+	float fHookOffsetChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_OFFSET_MOVEMENT_SPEED;
 	if (Abs(fHookOffsetDelta) < fHookOffsetChangeThisFrame) {
 		m_fHookOffset = fDistanceToTarget;
 		bOffsetMovementFinished = true;
@@ -543,7 +544,7 @@ bool CCrane::GoTowardsTarget(float fAngleToTarget, float fDistanceToTarget, floa
 		bOffsetMovementFinished = false;
 	}
 	float fHookHeightDelta = fTargetHeight - m_fHookHeight;
-	float fHookHeightChangeThisFrame = fSpeedMultiplier * CTimer::GetTimeStep() * HOOK_HEIGHT_MOVEMENT_SPEED;
+	float fHookHeightChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_HEIGHT_MOVEMENT_SPEED;
 	if (Abs(fHookHeightDelta) < fHookHeightChangeThisFrame) {
 		m_fHookHeight = fTargetHeight;
 		bHeightMovementFinished = true;
@@ -561,7 +562,7 @@ bool CCrane::GoTowardsHeightTarget(float fTargetHeight, float fSpeedMultiplier)
 {
 	bool bHeightMovementFinished;
 	float fHookHeightDelta = fTargetHeight - m_fHookHeight;
-	float fHookHeightChangeThisFrame = fSpeedMultiplier * CTimer::GetTimeStep() * HOOK_HEIGHT_MOVEMENT_SPEED;
+	float fHookHeightChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_HEIGHT_MOVEMENT_SPEED;
 	if (Abs(fHookHeightDelta) < fHookHeightChangeThisFrame) {
 		m_fHookHeight = fTargetHeight;
 		bHeightMovementFinished = true;
@@ -577,7 +578,7 @@ bool CCrane::GoTowardsHeightTarget(float fTargetHeight, float fSpeedMultiplier)
 
 void CCrane::FindParametersForTarget(float X, float Y, float Z, float* pAngle, float* pDistance, float* pHeight)
 {
-	*pAngle = CGeneral::GetATanOfXY(X - m_pCraneEntity->GetPosition().x, Y - m_pCraneEntity->GetPosition().y);
+	*pAngle = General_GetATanOfXY(X - m_pCraneEntity->GetPosition().x, Y - m_pCraneEntity->GetPosition().y);
 	*pDistance = ((CVector2D(X, Y) - (CVector2D)m_pCraneEntity->GetPosition())).Magnitude();
 	*pHeight = Z;
 }
@@ -820,3 +821,5 @@ void CCranes::Load(uint8* buf, uint32 size)
 
 	VALIDATESAVEBUF(size);
 }
+
+//- rouz edit (ChatGPT)

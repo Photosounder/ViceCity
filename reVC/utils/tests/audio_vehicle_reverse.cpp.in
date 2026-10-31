@@ -1,0 +1,139 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@MODEL_IDS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+#define ABS(x) (((x)<0)?(-(x)):(x))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v;unsigned token;operator uint8_t() const {event(token);return (uint8_t)v;}};
+struct FloatValue {float v;unsigned token;operator float() const {event(token);return v;}};
+class CVehicle {public:int32_t model;ByteValue bEngineOn;FloatValue m_fGasPedal;ByteValue m_nCurrentGear;
+    int16_t GetModelIndex() const {
+        // Observe the original model query before any engine or wheel checks
+        event(10);return (int16_t)model;
+    }
+};
+class CAutomobile:public CVehicle {public:ByteValue m_nDriveWheelsOnGround,m_nDriveWheelsOnGroundPrev;float m_fGasPedalAudio;};
+class cTransmission {public:FloatValue fMaxReverseVelocity;};
+struct cAudioManager {
+@FIELDS@
+    bool8 ProcessReverseGear(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;
+static CAutomobile cars[2];static cTransmission transmissions[2];
+static unsigned seedValue,cases,callbacks,modelReads,engineReads,gasReads,gearReads,driveReads,previousReads,limitReads,offsetReads,requestReads;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t AudioVehicleReverse_Process(cAudioManager *,cVehicleParams *);
+extern "C" uint8_t TestVehicleReverseC(cAudioManager *,cVehicleParams *);
+static void value(uint32_t v) {
+    // Hash return values, complete scalar state and ordered query tokens
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe complete initialized records without process-dependent pointer values
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4) {uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Normalize vehicle and transmission identities while observing every owner and game record byte
+    cVehicleParams copy=params;
+    copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    copy.m_pTransmission=(cTransmission *)(uintptr_t)(params.m_pTransmission==&transmissions[0]?1:params.m_pTransmission==&transmissions[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));bytes(transmissions,sizeof(transmissions));
+}
+static void event(unsigned token) {
+    // Change live parameter selection after original captures without modifying unsequenced velocity operands
+    ++callbacks;value(token);observe();
+    switch(token) {
+    case 10: ++modelReads;if(seedValue&1024) params.m_pVehicle=&cars[1];break;
+    case 20: ++engineReads;break;
+    case 30: ++gasReads;break;
+    case 40: ++gearReads;break;
+    case 50: ++driveReads;if(seedValue&2048) params.m_pVehicle=&cars[0];break;
+    case 51: ++previousReads;break;
+    case 60: ++limitReads;if(seedValue&4096) params.m_pVehicle=&cars[1];break;
+    }
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Observe sample selection before changing the live index for the end-offset read
+    ++offsetReads;event(70);value(sample);
+    if(seedValue&512) active->m_sQueueSample.m_nSampleIndex=SFX_REVERSE_GEAR_2;
+    return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the original live sample-index reread
+    ++offsetReads;event(71);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after the airborne gas-audio mutation
+    ++requestReads;event(72);return (seedValue>>4)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection path dependency while reverse requests disable reflections
+    return 0;
+}
+extern "C" {
+@HOST@
+}
+@METHOD@
+static void prepare(unsigned seed) {
+    // Seed range and model gates, reverse selection, drive-wheel states and bounded numeric inputs
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));memset(transmissions,0,sizeof(transmissions));
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_bIsInitialised=(seed>>2)&1;active->m_bIsPaused=(seed>>3)&1;
+    active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i) {active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*800;}
+    const float distances[]={-1.0f,-0.0f,0.0f,35.99f,36.0f,100.0f,899.99f,900.0f,900.01f,INFINITY,NAN};
+    const float gases[]={-1.0f,-0.01f,-0.0f,0.0f,0.01f,1.0f,NAN};
+    const float velocities[]={-1.0f,-0.1f,-0.01f,-0.0f,0.0f,0.01f,0.1f,1.0f};
+    const float limits[]={-0.1f,-1.0f,-10.0f,0.1f,1.0f,10.0f};
+    const float audio[]={-1.0f,-0.1f,-0.0f,0.0f,0.001f,0.1f,1.0f,5.0f};
+    const unsigned gears[]={0,1,5,255};
+    for(unsigned i=0;i<2;++i) {
+        cars[i].model=(seed/7+i)%5==0?MI_CADDY:MI_INFERNUS;
+        cars[i].bEngineOn={uint32_t((seed/11+i)%2),20};cars[i].m_fGasPedal={gases[(seed/13+i)%7],30};cars[i].m_nCurrentGear={gears[(seed/17+i)%4],40};
+        cars[i].m_nDriveWheelsOnGround={uint32_t((seed/19+i)%3),50};cars[i].m_nDriveWheelsOnGroundPrev={uint32_t((seed/23+i)%3),51};cars[i].m_fGasPedalAudio=audio[(seed/29+i)%8];
+        transmissions[i].fMaxReverseVelocity={limits[(seed/31+i)%6],60};
+    }
+    params.m_pVehicle=&cars[0];params.m_pTransmission=&transmissions[0];params.m_VehicleType=0;params.m_nIndex=seed;
+    params.m_fVelocityChange=velocities[(seed/37)%8];params.m_fDistance=distances[(seed/41)%11];params.m_bDistanceCalculated=(seed/451)%4==0?0:(seed/451)%4==1?1:255;
+    active->m_sQueueSample.m_fDistance=(float)(seed%31);active->m_sQueueSample.m_nVolume=77;active->m_sQueueSample.m_nCounter=999;active->m_sQueueSample.m_nFrequency=54321;active->m_sQueueSample.m_vecPos={1,2,3};active->m_sQueueSample.m_nFramesToPlay=17;
+    if(!(params.m_fDistance<900.0f)) params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet instead of opening a Windows crash dialog
+    SetErrorMode(3);
+#endif
+    // Compare repeated reverse requests and preserved in-range return values across both owners
+    for(unsigned seed=0;seed<8192;++seed) {prepare(seed);value(@RUN@);observe();++cases;value(@RUN@);observe();++cases;}
+    // Verify that airborne reverse audio does not dereference a missing transmission
+    for(unsigned seed=0;seed<128;++seed) {
+        prepare(seed);seedValue=0;params.m_fDistance=0.0f;params.m_pVehicle=&cars[0];params.m_pTransmission=NULL;
+        cars[0].model=MI_INFERNUS;cars[0].bEngineOn.v=1;cars[0].m_fGasPedal.v=-1.0f;cars[0].m_nDriveWheelsOnGround.v=0;
+        value(@RUN@);observe();++cases;
+    }
+    // Require both reverse eligibility and grounded/airborne field-read boundaries
+    if(!modelReads || !engineReads || !gasReads || !gearReads || !driveReads || !previousReads || !limitReads) return 2;
+#ifndef GTA_PS2
+    if(!offsetReads) return 3;
+#endif
+#ifdef AUDIO_REFLECTIONS
+    if(!requestReads) return 4;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

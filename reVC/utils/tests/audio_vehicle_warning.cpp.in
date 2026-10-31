@@ -1,0 +1,131 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioSamples.h"
+#include "@AUDIO_MODELS@"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using uint32=uint32_t;using bool8=uint8_t;
+#define TRUE 1
+#define FALSE 0
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@};
+static void event(unsigned token);
+struct ByteValue {uint32_t v,token;operator uint8_t() const {
+    // Observe original engine and drowning field queries
+    event(token);return (uint8_t)v;
+}};
+struct FloatValue {float v;unsigned token;operator float() const {
+#ifndef _MSC_VER
+    // Observe repeated floating reads on Clang and GCC
+    event(token);
+#endif
+    // Keep floating game fields pure in the native MSVC fixture
+    return v;
+}};
+class CVehicle {public:ByteValue bEngineOn,bIsDrowning;FloatValue m_fGasPedal;};
+class CAutomobile:public CVehicle {public:FloatValue m_fVelocityChangeForAudio;};
+struct cAudioManager {
+@FIELDS@
+    bool8 UsesReverseWarning(uint32);bool8 HasAirBrakes(uint32);
+    bool8 ProcessVehicleReverseWarning(cVehicleParams &);bool8 ProcessAirBrakes(cVehicleParams &);
+};
+@MACROS@
+static cAudioManager owners[2],*active;static cVehicleParams params;static CAutomobile cars[2];
+static unsigned seedValue,cases,callbacks,baseReads,offsetReads,requests;
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" void AudioRequests_Submit(cAudioManager *);
+extern "C" uint8_t TestVehicleWarningC(cAudioManager *,cVehicleParams *,unsigned,uint32_t);
+static void value(uint32_t v) {
+    // Hash results and exact callback order reproducibly
+    digest=(digest^v)*1099511628211ULL;
+}
+static void bytes(const void *p,unsigned size) {
+    // Observe initialized records without type punning
+    const unsigned char *data=(const unsigned char *)p;
+    for(unsigned i=0;i<size;i+=4){uint32_t word;memcpy(&word,data+i,4);value(word);}
+}
+static void observe() {
+    // Include complete owner and vehicle storage while normalizing parameter pointers
+    cVehicleParams copy=params;copy.m_pVehicle=(CVehicle *)(uintptr_t)(params.m_pVehicle==&cars[0]?1:params.m_pVehicle==&cars[1]?2:0);
+    bytes(active,sizeof(*active));bytes(&copy,sizeof(copy));bytes(cars,sizeof(cars));
+}
+static void event(unsigned token) {
+    // Change later live parameters after the original vehicle has been captured
+    ++callbacks;value(token);observe();if(token==10&&seedValue&512)params.m_pVehicle=&cars[1];
+}
+extern "C" uint8_t AudioVehicleReverseHost_Engine(const CVehicle *v) {
+    // Read the original captured engine flag
+    return v->bEngineOn;
+}
+extern "C" float AudioVehicleReverseHost_Gas(const CVehicle *v) {
+    // Read the original captured gas pedal
+    return v->m_fGasPedal;
+}
+extern "C" uint8_t AudioVehicleModelHost_Drowning(const CVehicle *v) {
+    // Read the original captured drowning field
+    return v->bIsDrowning;
+}
+extern "C" float AudioPlayerEngineHost_CarVelocity(const CVehicle *v) {
+    // Read each original previous-audio velocity expression from the captured car
+    return ((const CAutomobile *)v)->m_fVelocityChangeForAudio;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *,uint32_t sample) {
+    // Change the random table after volume capture but before displacement and loop setup
+    ++baseReads;event(20);value(sample);if(seedValue&256){active->m_anRandomTable[0]=-99;active->m_anRandomTable[1]=12345;active->m_sQueueSample.m_nSampleIndex=SFX_AIR_BRAKES;}
+    return seedValue%7==0?0:sample*31+22050;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *,uint32_t sample) {
+    // Change the live loop sample after the first backend query
+    ++offsetReads;event(21);value(sample);if(seedValue&128)active->m_sQueueSample.m_nSampleIndex=SFX_REVERSE_WARNING;return sample*3;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *,uint32_t sample) {
+    // Observe the live end-offset argument
+    ++offsetReads;event(22);value(sample);return sample*5+100;
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Observe actual C request insertion after reverse or brake sample setup
+    ++requests;event(23);return seedValue&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Supply the unused reflection dependency
+    return 0;
+}
+@METHODS@
+static void prepare(unsigned seed,unsigned kind) {
+    // Cover exact crossing thresholds, captured vehicles and signed random/frequency inputs
+    seedValue=seed;active=&owners[seed&1];memset(active,0,sizeof(*active));memset(&params,0,sizeof(params));memset(cars,0,sizeof(cars));
+    const float speeds[]={-0.1f,-0.0251f,-0.025f,-0.0249f,-0.0f,0.0f,0.0249f,0.025f,0.0251f,0.1f};const float pedals[]={-1.0f,-0.001f,-0.0f,0.0f,0.001f,1.0f};
+    for(unsigned i=0;i<2;++i){cars[i].bEngineOn={uint32_t((seed/3+i)%3!=0),10};cars[i].bIsDrowning={uint32_t((seed/5+i)%2),11};cars[i].m_fGasPedal={pedals[(seed/7+i)%6],12};cars[i].m_fVelocityChangeForAudio={speeds[(seed/11+i)%10],13};}
+    const float distances[]={-1.0f,0.0f,100.0f,899.0f,900.0f,901.0f,2499.0f,2500.0f,2501.0f,NAN,INFINITY};params.m_pVehicle=&cars[0];params.m_fDistance=distances[(seed/13)%11];params.m_bDistanceCalculated=(seed/17)%3;params.m_fVelocityChange=speeds[(seed/19)%10];
+    active->m_nActiveSamples=8;active->m_sQueueSample.m_fDistance=(seed/23)%(kind==0?51:31);active->m_sQueueSample.m_nEntityIndex=(int32_t)(seed%31)-15;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_nSampleIndex=999;active->m_sQueueSample.m_nFrequency=12345;active->m_sQueueSample.m_nFramesToPlay=17;active->m_sQueueSample.m_vecPos={1,2,3};
+#ifndef GTA_PS2
+    // Seed desktop loop offsets to check their writes
+    active->m_sQueueSample.m_nLoopStart=123;active->m_sQueueSample.m_nLoopEnd=456;
+#endif
+    // Seed the signed random table
+    for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=(int32_t)(seed*(i+1)%10001)-5000;
+    if(!(params.m_fDistance<(kind==0?2500.0f:900.0f)))params.m_pVehicle=NULL;
+}
+int main() {
+#ifdef _WIN32
+    // Keep sanitizer failures quiet
+    SetErrorMode(3);
+#endif
+    // Compare every model predicate including the unsigned sentinel
+    active=&owners[0];for(uint32_t model=0;model<=MAX_CARS;++model){value(@USES@);value(@HAS@);}uint32_t model=0xFFFFFFFF;value(@USES@);value(@HAS@);
+    // Compare repeated complete generators on alternating owners
+    for(unsigned seed=0;seed<4096;++seed)for(unsigned kind=0;kind<2;++kind){prepare(seed,kind);for(unsigned call=0;call<2;++call){value(@RUN@);observe();++cases;}}
+    // Require backend frequency and looping warning paths
+    if(!baseReads)return 2;
+#ifndef GTA_PS2
+    if(!offsetReads)return 3;
+#endif
+    printf("%u cases %u callbacks %llu\n",cases,callbacks,(unsigned long long)digest);
+}
+//- rouz edit (ChatGPT)

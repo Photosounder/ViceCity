@@ -1,0 +1,118 @@
+#include "owners.h"
+#include "entry.h"
+#include <inttypes.h>
+extern "C" void *NativeLinkDefault(void *memory);
+void FrameInitCBnonskin(AnimBlendFrameData*,void*);
+void FrameInitCBskin(AnimBlendFrameData*,void*);
+void FillFrameArrayCBnonskin(AnimBlendFrameData*,void*);
+void FrameFindByBoneCB(AnimBlendFrameData*,void*);
+static uint64_t hashValue=1469598103934665603ULL;
+static unsigned states=0,checks=0;
+static uint32_t randomState=0x21a2b3c4U;
+static CAnimBlendLink staticLinks[3];
+static void require(bool condition)
+{
+    // Report the first failed invariant without opening a native error window
+    ++checks;if(!condition){fprintf(stderr,"Failure at state %u check %u\n",states,checks);exit(73);}
+}
+static void observe(const void *value,size_t size)
+{
+    // Compare initialized observable representations without hashing native addresses
+    const unsigned char *p=(const unsigned char*)value;
+    for(size_t i=0;i<size;++i){hashValue^=p[i];hashValue*=1099511628211ULL;}
+}
+static uint32_t nextBits()
+{
+    // Sequence random payload generation independently of function argument evaluation order
+    randomState=randomState*1664525U+1013904223U;return randomState;
+}
+static void fill(void *memory,size_t size)
+{
+    // Initialize complete storage including native alignment padding
+    unsigned char *p=(unsigned char*)memory;
+    for(size_t i=0;i<size;++i)p[i]=(unsigned char)nextBits();
+}
+static int pointerIndex(CAnimBlendLink *value,CAnimBlendLink *nodes,unsigned count)
+{
+    // Normalize link identities without evaluating unrelated pointer differences
+    if(!value)return -1;
+    for(unsigned i=0;i<count;++i)if(value==&nodes[i])return (int)i;
+    require(false);return -2;
+}
+static void linksResult(CAnimBlendLink *nodes,unsigned count)
+{
+    // Observe every link field after the complete original or C pointer update
+    for(unsigned i=0;i<count;++i){int a=pointerIndex(nodes[i].next,nodes,count),b=pointerIndex(nodes[i].prev,nodes,count);observe(&a,4);observe(&b,4);}
+}
+static void linkGraphs()
+{
+    // Keep trivial default construction and static link storage unchanged
+    alignas(CAnimBlendLink) unsigned char memory[sizeof(CAnimBlendLink)],expected[sizeof(CAnimBlendLink)];memset(memory,0xa5,sizeof(memory));memset(expected,0xa5,sizeof(expected));require(NativeLinkDefault(memory)==memory&&memcmp(memory,expected,sizeof(memory))==0);observe(memory,sizeof(memory));unsigned char zero[sizeof(staticLinks)]={0};require(memcmp(staticLinks,zero,sizeof(zero))==0);observe(staticLinks,sizeof(staticLinks));++states;
+    // Exhaust every three-node next/previous graph, including cycles and all node aliases
+    for(unsigned graph=0;graph<4096;++graph)for(unsigned op=0;op<3;++op)for(unsigned receiver=0;receiver<3;++receiver)for(unsigned other=0;other<(op==1?3U:1U);++other){
+        CAnimBlendLink nodes[3];unsigned encoded=graph;
+        for(unsigned i=0;i<3;++i){unsigned a=encoded&3;encoded>>=2;unsigned b=encoded&3;encoded>>=2;nodes[i].next=a?&nodes[a-1]:NULL;nodes[i].prev=b?&nodes[b-1]:NULL;}
+        Run_Link(op,&nodes[receiver],&nodes[other]);linksResult(nodes,3);++states;
+    }
+    // Exercise ordinary repeated insertion, detachment and reinsertion on larger live lists
+    CAnimBlendLink nodes[17];for(unsigned i=0;i<17;++i)Run_Link(0,&nodes[i],NULL);
+    for(unsigned test=0;test<8192;++test){unsigned index=nextBits()%16+1;Run_Link(2,&nodes[index],NULL);Run_Link(1,&nodes[0],&nodes[index]);require(nodes[0].next==&nodes[index]&&nodes[index].prev==&nodes[0]);linksResult(nodes,17);++states;}
+}
+static void ownerResult(const CAnimBlendClumpData &owner)
+{
+    // Compare scalar state and normalized pointer presence independently of native padding
+    observe(&owner.numFrames,4);bool frames=owner.frames!=NULL,velocity=owner.velocity2d!=NULL,next=owner.link.next!=NULL,prev=owner.link.prev!=NULL;observe(&frames,1);observe(&velocity,1);observe(&next,1);observe(&prev,1);
+}
+static void clumpLifetimesAndSizes()
+{
+    // Check every constructor field while excluding padding unspecified by the original C++ lifetime
+    const int32_t counts[]={0,1,3,16,-1,-17,INT32_MIN,INT32_MAX,0x20000000,0x40000000};
+    for(unsigned test=0;test<2048;++test){
+        alignas(CAnimBlendClumpData) unsigned char memory[sizeof(CAnimBlendClumpData)];fill(memory,sizeof(memory));CAnimBlendClumpData *owner=(CAnimBlendClumpData*)memory;Run_Init(owner);require(owner->numFrames==0&&owner->velocity2d==NULL&&owner->frames==NULL&&owner->link.next==NULL&&owner->link.prev==NULL);ownerResult(*owner);
+        // Observe detachment before free and preserve count conversion and 64-byte alignment arguments
+        observedOwner=owner;eventCount=0;Run_Set(owner,counts[test%10],test&1);require(lastSize==(uint32_t)((size_t)counts[test%10]*sizeof(AnimBlendFrameData))&&lastAlignment==64&&owner->numFrames==counts[test%10]);ownerResult(*owner);require(((uintptr_t)owner->frames&63)==0);
+        Run_Set(owner,counts[(test+3)%10],(test>>1)&1);require(lastSize==(uint32_t)((size_t)counts[(test+3)%10]*sizeof(AnimBlendFrameData)));require(events[2]==2&&events[3]==(uint32_t)counts[test%10]);ownerResult(*owner);
+        CAnimBlendLink neighbor;Run_Link(0,&neighbor,NULL);Run_Link(1,&neighbor,&owner->link);unsigned before=frees;Run_Destroy(owner);require(neighbor.next==NULL&&frees==before+1);observe(events,eventCount*4);observedOwner=NULL;++states;
+    }
+}
+struct WalkState {CAnimBlendClumpData *owner;AnimBlendFrameData *original,*alternate;unsigned mode,calls;int expected;};
+static void walkCallback(AnimBlendFrameData *frame,void *argument)
+{
+    // Record actual frame addresses before callbacks mutate their live container
+    WalkState *state=(WalkState*)argument;require(state->calls<64);int index=(int)(frame-state->owner->frames);require(index==(int)state->calls);observe(&index,4);unsigned generation=allocations;observe(&generation,4);frame->flag^=0x20;frame->nodeID=index+100;observe(&frame->nodeID,4);++state->calls;
+    if(state->calls==1){
+        // Cover count shrink, count growth, direct storage replacement and native reallocation during traversal
+        if(state->mode==1){state->owner->numFrames=1;state->expected=1;}
+        if(state->mode==2){state->owner->numFrames+=2;state->expected+=2;}
+        if(state->mode==3)state->owner->frames=state->alternate;
+        if(state->mode==4){Run_Set(state->owner,state->expected+1,0);++state->expected;}
+        if(state->mode==5){state->owner->numFrames=-1;state->owner->frames=NULL;state->expected=1;}
+    }
+}
+static void liveTraversal()
+{
+    // Retain live count and storage reads across each original callback boundary
+    for(unsigned test=0;test<2048;++test){
+        alignas(CAnimBlendClumpData) unsigned char memory[sizeof(CAnimBlendClumpData)];CAnimBlendClumpData *owner=(CAnimBlendClumpData*)memory;Run_Init(owner);observedOwner=owner;eventCount=0;int count=(int)(test%9);Run_Set(owner,count,0);AnimBlendFrameData alternate[64];memset(alternate,0x5a,sizeof(alternate));WalkState state={owner,owner->frames,alternate,test%6,0,count};Run_Each(owner,walkCallback,&state);require(state.calls==(unsigned)state.expected);observe(&state.calls,4);ownerResult(*owner);
+        // Restore directly borrowed storage before the original owning cleanup boundary
+        if(state.mode==3||state.mode==5)owner->frames=state.original;Run_Destroy(owner);observedOwner=NULL;observe(events,eventCount*4);++states;
+    }
+    // Empty and negative containers do not invoke a null callback or read frame storage
+    alignas(CAnimBlendClumpData) unsigned char memory[sizeof(CAnimBlendClumpData)];CAnimBlendClumpData *owner=(CAnimBlendClumpData*)memory;Run_Init(owner);Run_Each(owner,NULL,NULL);owner->numFrames=-7;Run_Each(owner,NULL,NULL);Run_Destroy(owner);++states;
+}
+static void nativeCallbacksAndPlugin()
+{
+    // Exercise the actual plugin allocation and destruction boundaries with original callback bodies
+    for(unsigned test=0;test<1024;++test){
+        RpClump clump={NULL};RpAnimBlendAllocateData(&clump);CAnimBlendClumpData *owner=clump.data;require(owner&&owner->numFrames==0&&owner->frames==NULL&&owner->link.next==NULL);observedOwner=owner;eventCount=0;int count=(int)(test%8)+1;Run_Set(owner,count,1);RwFrame frames[8];AnimBlendFrameData *lookup[8]={NULL};
+        for(int i=0;i<count;++i){memset(&frames[i],0,sizeof(frames[i]));frames[i].hierarchyId=count-i-1;frames[i].matrix.pos={(float)i,(float)(i+1),(float)(i+2)};owner->frames[i].frame=&frames[i];owner->frames[i].nodeID=i+30;}
+        Run_Each(owner,FrameInitCBnonskin,NULL);for(int i=0;i<count;++i){require(owner->frames[i].flag==0&&memcmp(&owner->frames[i].resetPos,&frames[i].matrix.pos,12)==0);observe(&owner->frames[i].resetPos,12);}
+        Run_Each(owner,FrameInitCBskin,NULL);Run_Each(owner,FillFrameArrayCBnonskin,lookup);for(int i=0;i<count;++i)require(lookup[count-i-1]==&owner->frames[i]);pFrameDataFound=NULL;Run_Each(owner,FrameFindByBoneCB,(void*)(uintptr_t)(30+test%count));require(pFrameDataFound==&owner->frames[test%count]);int found=(int)(pFrameDataFound-owner->frames);observe(&found,4);
+        CAnimBlendLink association;Run_Link(0,&association,NULL);Run_Link(1,&owner->link,&association);require(AnimBlendClumpDestroy(&clump,0,0)==&clump&&clump.data==NULL&&association.prev==NULL&&association.next==NULL);require(events[eventCount-3]==3&&events[eventCount-2]==2);observe(events,eventCount*4);observedOwner=NULL;++states;
+    }
+}
+int main()
+{
+    // Compare both complete C owners including alias graphs, memory policy, live callbacks and native plugin use
+    linkGraphs();clumpLifetimesAndSizes();liveTraversal();nativeCallbacksAndPlugin();require(allocations==frees);printf("states=%u checks=%u hash=%016" PRIx64 "\n",states,checks,hashValue);return 0;
+}

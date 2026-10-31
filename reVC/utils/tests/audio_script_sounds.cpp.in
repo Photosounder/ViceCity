@@ -1,0 +1,175 @@
+//+ rouz edit (ChatGPT)
+@INCLUDES@
+#include "AudioMath.h"
+#include "AudioGeometry.h"
+#include "AudioSamples.h"
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <assert.h>
+#ifdef _WIN32
+extern "C" __declspec(dllimport) unsigned int __stdcall SetErrorMode(unsigned int);
+#endif
+using uint8=uint8_t;using int32=int32_t;
+#define TRUE 1
+#define FALSE 0
+#define nil NULL
+#define SQR(x) ((x)*(x))
+enum {@CONSTANTS@ COLLISION_MAX_DIST=60};
+static void event(unsigned,unsigned);
+struct Mode {uint8_t v;operator uint8_t() const {
+    // Capture the original mode read before later entity changes
+    uint8_t result=v;event(1,result);return result;
+}};
+struct Track {uint32_t v;operator uint32_t() const {
+    // Capture the original stream gate before changing the next live track
+    uint32_t result=v;event(2,result);return result;
+}};
+struct Surface {uint8_t v;operator uint8_t() const {
+    // Capture the original touched surface at the shell-drop decision
+    uint8_t result=v;event(5,result);return result;
+}};
+class CPed {public:Surface m_nSurfaceTouched;};
+class CPlayerPed:public CPed {};
+struct MusicState {Mode m_nMusicMode;Track m_nPlayingTrack;
+void SetMalibuClubTrackPos(uint8_t sound) {
+    // Observe club track updates at the original point before frequency queries
+    event(6,sound);
+}
+void SetStripClubTrackPos(uint8_t sound) {
+    // Observe strip-club updates at their original sample setup boundary
+    event(7,sound);
+}};
+static MusicState MusicManager;
+struct cAudioManager {
+@FIELDS@
+void ProcessScriptObject(int32);
+void ProcessOneShotScriptObject(uint8);
+void ProcessLoopingScriptObject(uint8);
+float Sqrt(float v) const {
+    // Preserve the original guarded square root
+    return v<=0?0:sqrtf(v);
+}
+};
+@MACROS@
+static cAudioManager owners[2],*active;
+static cAudioScriptObject scripts[2];
+static CPlayerPed player;
+static AudioSoundPosition camera;
+static unsigned seedValue,currentId,cases,callbacks,submits,loops,speech;
+static unsigned counters[256],surfaces[256],sounds[256];
+static uint64_t digest=1469598103934665603ULL;
+extern "C" cSampleManager SampleManager;cSampleManager SampleManager;
+extern "C" uint64_t TestAircraftHash(uint64_t,const void *,uint32_t);
+extern "C" void TestScriptSoundsC(cAudioManager *,int32_t,uint8_t);
+extern "C" void TestScriptSoundsRealSubmit(cAudioManager *);
+static void value(uint32_t v) {
+    // Observe all callback arguments and their ordering
+    digest=(digest^v)*1099511628211ULL;
+}
+static void observe() {
+    // Hash every initialized owner field with stable identities for real script pointers
+    static cAudioManager copies[2];memcpy(copies,owners,sizeof(copies));
+    for(unsigned i=0;i<2;++i){void *p=copies[i].m_asAudioEntities[currentId].m_pEntity;copies[i].m_asAudioEntities[currentId].m_pEntity=(void *)(uintptr_t)(p==&scripts[0]?1:p==&scripts[1]?2:0);}
+    // Include both script records, live music gates, player surface and camera position
+    digest=TestAircraftHash(digest,copies,sizeof(copies));digest=TestAircraftHash(digest,scripts,sizeof(scripts));digest=TestAircraftHash(digest,&MusicManager,sizeof(MusicManager));digest=TestAircraftHash(digest,&player,sizeof(player));digest=TestAircraftHash(digest,&camera,sizeof(camera));
+}
+static void event(unsigned token,unsigned arg) {
+    // Observe complete state before callbacks affect subsequent live reads
+    ++callbacks;value(token);value(arg);observe();
+    if(token==1&&(seedValue&1024)){active->m_asAudioEntities[currentId].m_pEntity=&scripts[1];active->m_asAudioEntities[currentId].m_AudioEvents=1;}
+    if(token==2&&(seedValue&2048))MusicManager.m_nPlayingTrack.v=STREAMED_SOUND_MALIBU_AMBIENT;
+    if(token==3&&(seedValue&4096))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==4&&(seedValue&8192)&&(seedValue&2))player.m_nSurfaceTouched.v=SURFACE_WATER;
+    if(token==5)++surfaces[arg];
+    if((token==6||token==7)&&(seedValue&512))active->m_sQueueSample.m_nSampleIndex=SFX_BOMB_BEEP;
+    if(token==8&&(seedValue&256))active->m_sQueueSample.m_vecPos.x=2;
+    if(token==9&&(seedValue&128))active->m_sQueueSample.m_nSampleIndex=SFX_CAR_ON_FIRE;
+    if(token==11&&(seedValue&64))active->m_sQueueSample.m_nFrequency=32000;
+}
+@HOST@
+static CPlayerPed *FindPlayerPed() {
+    // Capture the original nullable player query before callbacks change its surface
+    CPlayerPed *result=(seedValue&4)?NULL:&player;event(4,result?1:0);return result;
+}
+extern "C" CPed *AudioPedOneShotsHost_Player() {
+    // Reuse the exact game query used by the production player adapter
+    return FindPlayerPed();
+}
+extern "C" uint8_t AudioPedOneShotsHost_Surface(const CPed *ped) {
+    // Reuse the production adapter's live touched-surface expression
+    return ped->m_nSurfaceTouched;
+}
+extern "C" uint32_t SampleManager_GetSampleBaseFrequency(cSampleManager *manager,uint32_t sample) {
+    // Observe the original frequency sample before scratch sample changes
+    assert(manager==&SampleManager);event(3,sample);return 8000+sample%10000;
+}
+extern "C" uint32_t SampleManager_GetSampleLoopStartOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the start sample before changing the subsequent end-offset sample
+    assert(manager==&SampleManager);++loops;event(9,sample);return sample%13;
+}
+extern "C" int32_t SampleManager_GetSampleLoopEndOffset(cSampleManager *manager,uint32_t sample) {
+    // Observe the live scratch sample after loop-start callbacks
+    assert(manager==&SampleManager);event(10,sample);return 200+sample%17;
+}
+extern "C" void AudioGeometryHost_CameraPosition(AudioSoundPosition *position) {
+    // Query the camera before the C geometry operation reads live scratch coordinates
+    event(8,0);*position=camera;
+}
+extern "C" void AudioGeometryHost_CameraMatrix(AudioCameraMatrix *matrix) {
+    // Supply the unused translation dependency
+    memset(matrix,0,sizeof(*matrix));
+}
+extern "C" uint8_t AudioRequestsHost_InRoom() {
+    // Exercise actual request insertion and live changes after sound generation
+    event(11,0);return (seedValue>>4)&1;
+}
+extern "C" uint8_t AudioRequestsHost_SlowMotion() {
+    // Observe the real reflection dependency with a defined slow-motion state
+    event(12,0);return 0;
+}
+extern "C" void AudioRequests_Submit(cAudioManager *manager) {
+    // Observe complete emitted fields before real C priority insertion and replacement
+    assert(manager==active);++submits;if(manager->m_sQueueSample.m_nLoopCount==1&&manager->m_sQueueSample.m_nCounter<256)++counters[manager->m_sQueueSample.m_nCounter];
+    event(13,manager->m_sQueueSample.m_nCounter);TestScriptSoundsRealSubmit(manager);event(14,0);
+}
+extern "C" void AudioPedSpeech_Setup(cAudioManager *manager,cPedParams *params,uint16_t sound) {
+    // Observe every defined context field while excluding unspecified automatic padding
+    assert(manager==active);assert(!params->m_pPed);++speech;value(params->m_bDistanceCalculated);digest=TestAircraftHash(digest,&params->m_fDistance,sizeof(params->m_fDistance));event(15,sound);
+}
+@METHODS@
+static void prepare(unsigned seed) {
+    // Initialize both owners and all valid script routing inputs without automatic padding
+    unsigned variant=seed/256;seedValue=variant*257;currentId=(seed>>1)%NUM_AUDIOENTITIES;memset(owners,0,sizeof(owners));memset(scripts,0,sizeof(scripts));memset(&MusicManager,0,sizeof(MusicManager));memset(&player,0,sizeof(player));active=&owners[variant&1];camera={0,0,0};
+    active->m_nActiveSamples=6;active->m_nActiveQueue=(seed>>1)&1;active->m_nRequestedCount[active->m_nActiveQueue]=seed%7;
+    for(unsigned i=0;i<6;++i){active->m_aRequestedOrderList[active->m_nActiveQueue][i]=i;active->m_aRequestedQueue[active->m_nActiveQueue][i].m_nFinalPriority=100+i*900;}
+    // Retain shared random helper state across calls and cover signed table conversions
+    static const int32_t randoms[]={0,1,-1,INT32_MIN,INT32_MAX,173};for(unsigned i=0;i<5;++i)active->m_anRandomTable[i]=randoms[(seed/256+i)%6];
+    active->m_sQueueSample.m_nEntityIndex=seed;active->m_sQueueSample.m_nFrequency=999;active->m_sQueueSample.m_fDistance=-1;active->m_sQueueSample.m_nCounter=777;active->m_sQueueSample.m_MaxDistance=40;
+    // Exercise real reflections only where the original old-frequency initialization is defined
+#if defined(AUDIO_REFLECTIONS) && defined(FIX_BUGS)
+    active->m_bDynamicAcousticModelingStatus=(seed>>3)&1;for(unsigned i=0;i<5;++i)active->m_afReflectionsDistances[i]=10+i*5;
+#endif
+    // Cover each sound byte, strict distance boundaries, unknown IDs and narrow routing conversions
+    static const float positions[]={0,1.199f,1.2f,5.999f,6,6.001f,19.999f,20,20.001f,39.999f,40,40.001f,49.999f,50,50.001f,54.999f,55,55.001f,59.999f,60,60.001f,79.999f,80,80.001f,999.999f,1000,1000.001f,NAN,INFINITY};
+    scripts[0].Posn.x=positions[(seed/256)%29];scripts[1].Posn.x=2;scripts[0].Posn.z=(float)((seed/1024)%3)*50;
+    scripts[0].AudioId=(int16_t)((seed%256)+(int)((seed/256)%4)*256-256);scripts[1].AudioId=SCRIPT_SOUND_NEW_BUILDING_CHURCH;
+    active->m_asAudioEntities[currentId].m_pEntity=(variant&16)?NULL:&scripts[0];active->m_asAudioEntities[currentId].m_AudioEvents=(variant>>2)%4;active->m_asAudioEntities[currentId].m_awAudioEvent[0]=(int16_t)((seed%256)+(int)(variant%4)*256-256);
+    active->m_sQueueSample.m_vecPos.x=scripts[0].Posn.x;active->m_sQueueSample.m_vecPos.z=scripts[0].Posn.z;
+    MusicManager.m_nMusicMode.v=(variant&8)?MUSICMODE_GAME:MUSICMODE_FRONTEND;MusicManager.m_nPlayingTrack.v=variant%3==0?STREAMED_SOUND_MALIBU_AMBIENT:variant%3==1?STREAMED_SOUND_STRIPCLUB_AMBIENT:UINT32_MAX;player.m_nSurfaceTouched.v=(uint8_t)variant;
+}
+int main() {
+    // Keep failures console-only on Windows
+#ifdef _WIN32
+    SetErrorMode(3);
+#endif
+    // Exercise repeated calls with live mutations and a fresh pass retaining every distance boundary
+    for(unsigned seed=0;seed<16384;++seed){prepare(seed);uint8_t sound=(uint8_t)seed;++sounds[sound];@RUN@;observe();++cases;@RUN@;observe();++cases;prepare(seed);seedValue=0;@RUN@;observe();++cases;}
+    // Require actual submissions, both speech cases, shared counter wrapping and every sound byte
+    assert(submits&&speech);for(unsigned i=0;i<256;++i)assert(sounds[i]&&counters[i]);assert(surfaces[SURFACE_WATER]&&surfaces[SURFACE_SAND_BEACH]);
+#ifndef GTA_PS2
+    assert(loops);
+#endif
+    printf("%u %u %u %u %u %llu\n",cases,callbacks,submits,loops,speech,(unsigned long long)digest);return 0;
+}
+//- rouz edit (ChatGPT)

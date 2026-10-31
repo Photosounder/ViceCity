@@ -1,5 +1,9 @@
-class CEntity;
-
+//+ rouz edit (ChatGPT)
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
+#include "config.h"
+#include "Pool.h"
 enum eZoneAttribs
 {
 	ATTRZONE_CAMCLOSEIN		= 1,
@@ -15,51 +19,122 @@ enum eZoneAttribs
 	ATTRZONE_WATERFUDGE		= 0x400,
 };
 
-struct CAttributeZone
+typedef struct CAttributeZone
 {
-	int16 minx;
-	int16 maxx;
-	int16 miny;
-	int16 maxy;
-	int16 minz;
-	int16 maxz;
-	int16 attributes;
-	int16 wantedLevel;
-};
+	int16_t minx;
+	int16_t maxx;
+	int16_t miny;
+	int16_t maxy;
+	int16_t minz;
+	int16_t maxz;
+	int16_t attributes;
+	int16_t wantedLevel;
+} CAttributeZone;
 
-class CCullZones
+typedef struct CullZonesPosition { float x, y, z; } CullZonesPosition;
+#ifdef __cplusplus
+#include "Vector.h"
+class CEntity;
+class CVehicle;
+static inline CullZonesPosition
+CullZonesPosition_FromVector(const CVector &position)
 {
-public:
-	static int32     NumAttributeZones;
-	static CAttributeZone aAttributeZones[NUMATTRIBZONES];
-
-	static int32 CurrentWantedLevelDrop_Player;
-	static int32 CurrentFlags_Camera;
-	static int32 CurrentFlags_Player;
-	static bool bCurrentSubwayIsInvisible;
-	static bool bAtBeachForAudio;
-
-	static void Init(void);
-	static void Update(void);
-	static void UpdateAtBeachForAudio(void);
-	static void ForceCullZoneCoors(CVector coors);
-	static int32 FindAttributesForCoors(CVector coors, int32 *wantedLevel);
-	static CAttributeZone *FindZoneWithStairsAttributeForPlayer(void);
-	static void MarkSubwayAsInvisible(bool visible);
-	static void AddCullZone(CVector const &position,
-		float minx, float maxx,
-		float miny, float maxy,
-		float minz, float maxz,
-		uint16 flag, int16 wantedLevel);
-	static bool CamCloseInForPlayer(void) { return (CurrentFlags_Player & ATTRZONE_CAMCLOSEIN) != 0; }
-	static bool CamStairsForPlayer(void) { return (CurrentFlags_Player & ATTRZONE_STAIRS) != 0; }
-	static bool Cam1stPersonForPlayer(void) { return (CurrentFlags_Player & ATTRZONE_1STPERSON) != 0; }
-	static bool NoPolice(void) { return (CurrentFlags_Player & ATTRZONE_NOPOLICE) != 0; }
-	static bool DoINeedToLoadCollision(void) { return (CurrentFlags_Player & ATTRZONE_DOINEEDCOLLISION) != 0; }
-	static bool PlayerNoRain(void) { return (CurrentFlags_Player & ATTRZONE_NORAIN) != 0; }
-	static bool CamNoRain(void) { return (CurrentFlags_Camera & ATTRZONE_NORAIN) != 0; }
-	static bool PoliceAbandonCars(void) { return (CurrentFlags_Camera & ATTRZONE_POLICEABANDONCARS) != 0; }
-	static bool InRoomForAudio(void) { return (CurrentFlags_Camera & ATTRZONE_ROOMFORAUDIO) != 0; }
-	static bool WaterFudge(void) { return (CurrentFlags_Camera & ATTRZONE_WATERFUDGE) != 0; }
-	static int32 GetWantedLevelDrop(void) { return CurrentWantedLevelDrop_Player; }
-};
+    // Copy the original vector coordinates into the C value argument
+    CullZonesPosition result = { position.x, position.y, position.z };
+    return result;
+}
+extern "C" {
+#else
+typedef struct CEntity CEntity;
+typedef struct CVehicle CVehicle;
+#endif
+extern int32_t CullZones_numAttributeZones;
+extern CAttributeZone CullZones_attributeZones[NUMATTRIBZONES];
+extern int32_t CullZones_playerWantedLevelDrop;
+extern int32_t CullZones_cameraFlags;
+extern int32_t CullZones_playerFlags;
+extern bool CullZones_subwayInvisible;
+extern bool CullZones_atBeachForAudio;
+void CullZones_Init(void);
+void CullZones_Update(void);
+void CullZones_UpdateAtBeachForAudio(void);
+void CullZones_ForceCullZoneCoors(CullZonesPosition coors);
+int32_t CullZones_FindAttributesForCoors(CullZonesPosition coors, int32_t *wantedLevel);
+CAttributeZone *CullZones_FindZoneWithStairsAttributeForPlayer(void);
+void CullZones_MarkSubwayAsInvisible(bool visible);
+void CullZones_AddCullZone(const void *position, float minx, float maxx, float miny, float maxy, float minz, float maxz, uint16_t flag, int16_t wantedLevel);
+bool IsPointWithinArbitraryArea(float px, float py, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
+CullZonesPosition CullZonesHost_GameCamera(void);
+CullZonesPosition CullZonesHost_Player(void);
+float CullZonesHost_CameraX(void);
+float CullZonesHost_CameraY(void);
+CPool * CullZonesHost_BuildingPool(void);
+CPool * CullZonesHost_TreadablePool(void);
+CPool * CullZonesHost_VehiclePool(void);
+CEntity * CullZonesHost_Building(void *slot);
+CEntity * CullZonesHost_Treadable(void *slot);
+CVehicle * CullZonesHost_Vehicle(void *slot);
+bool CullZonesHost_IsSubway(CEntity *entity);
+bool CullZonesHost_IsTrain(CVehicle *vehicle);
+uint8_t CullZonesHost_Track(CVehicle *vehicle);
+void CullZonesHost_SetEntityVisible(CEntity *entity, bool visible);
+void CullZonesHost_SetVehicleVisible(CVehicle *entity, bool visible);
+static inline bool CullZones_CamCloseInForPlayer(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_CAMCLOSEIN) != 0;
+}
+static inline bool CullZones_CamStairsForPlayer(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_STAIRS) != 0;
+}
+static inline bool CullZones_Cam1stPersonForPlayer(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_1STPERSON) != 0;
+}
+static inline bool CullZones_NoPolice(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_NOPOLICE) != 0;
+}
+static inline bool CullZones_DoINeedToLoadCollision(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_DOINEEDCOLLISION) != 0;
+}
+static inline bool CullZones_PlayerNoRain(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_playerFlags & ATTRZONE_NORAIN) != 0;
+}
+static inline bool CullZones_CamNoRain(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_cameraFlags & ATTRZONE_NORAIN) != 0;
+}
+static inline bool CullZones_PoliceAbandonCars(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_cameraFlags & ATTRZONE_POLICEABANDONCARS) != 0;
+}
+static inline bool CullZones_InRoomForAudio(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_cameraFlags & ATTRZONE_ROOMFORAUDIO) != 0;
+}
+static inline bool CullZones_WaterFudge(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return (CullZones_cameraFlags & ATTRZONE_WATERFUDGE) != 0;
+}
+static inline int32_t CullZones_GetWantedLevelDrop(void)
+{
+    // Read the original live zone flags or wanted-level drop
+    return CullZones_playerWantedLevelDrop;
+}
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

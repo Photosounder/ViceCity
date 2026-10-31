@@ -1,3 +1,4 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 //+ rouz edit (ChatGPT)
@@ -6,6 +7,8 @@
 extern "C" {
 #endif
 CPool *CPools_GetAudioScriptObjectPool(void);
+CPool *CPools_GetPtrNodePool(void);
+CPool *CPools_GetEntryInfoNodePool(void);
 #ifdef __cplusplus
 }
 //- rouz edit (ChatGPT)
@@ -75,3 +78,4 @@ public:
 	static void SaveVehiclePool(uint8 *buf, uint32 *size);
 };
 #endif // rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
