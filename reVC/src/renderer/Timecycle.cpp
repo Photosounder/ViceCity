@@ -44,6 +44,6 @@ float TimeCycle_BackendCameraForwardZ(void)
 bool TimeCycle_BackendCutscene(void)
 {
     // Query cutscene playback only after the original force-rain and cull-zone tests
-    return CCutsceneMgr::IsRunning();
+    return Cutscene_IsRunning(); // rouz edit (ChatGPT)
 }
 //- rouz edit (ChatGPT)

@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ZoneCull.h"
 #include "AudioManager.h"
 #include "AudioSamples.h"
 #include "sampman.h"
@@ -40,7 +41,7 @@ void
 AudioVehicleRain_Process(cAudioManager *manager, cVehicleParams *params)
 {
     // Retain weather eligibility, counter updates and request field ordering
-	if (params->m_fDistance < (RAIN_ON_VEHICLE_MAX_DIST * RAIN_ON_VEHICLE_MAX_DIST) && AudioVehicleRainHost_Rain() > 0.01f && (!AudioVehicleRainHost_CameraNoRain() || !AudioVehicleRainHost_PlayerNoRain())) {
+	if (params->m_fDistance < (RAIN_ON_VEHICLE_MAX_DIST * RAIN_ON_VEHICLE_MAX_DIST) && AudioVehicleRainHost_Rain() > 0.01f && (!CullZones_CamNoRain() || !CullZones_PlayerNoRain())) {
 		// Capture the vehicle counters after all original eligibility checks
 		CVehicle *veh = params->m_pVehicle;
 		uint8_t *audioCounter, *sampleCounter;

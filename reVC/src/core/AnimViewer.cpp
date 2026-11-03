@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Font.h"
 #include "Pad.h"
@@ -45,594 +46,386 @@
 #include "Hud.h"
 #include "debugmenu.h"
 
-int CAnimViewer::animTxdSlot = 0;
-CEntity *CAnimViewer::pTarget = nil;
+//+ rouz edit (ChatGPT)
+extern "C" void AnimViewer_HostFlushRequests(void)
+{
+    // Flush the native streaming request list
+    Streaming_FlushRequestList(); // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostRequestAnimation(int block,int flags)
+{
+    // Submit the selected native animation block request
+    Streaming_RequestAnim(block,flags); // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostLoadRequests(bool priority)
+{
+    // Load the selected native streaming requests
+    CStreaming::LoadAllRequestedModels(priority);
+}
+extern "C" void AnimViewer_HostSetSpecialGroup(int modelId,int groupId)
+{
+    // Assign the selected group to the original native pedestrian model
+    ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(modelId)))->m_animGroup=groupId; // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostRequestSpecial(int lineId,const char *name,int flags)
+{
+    // Forward the selected special-character streaming request
+    CStreaming::RequestSpecialChar(lineId,name,flags);
+}
+extern "C" void AnimViewer_HostRemoveTarget(CEntity *entity)
+{
+    // Remove the selected native entity from the world
+    CWorld::Remove(entity);
+}
+extern "C" bool AnimViewer_HostTargetMatches(CEntity *entity,int kind)
+{
+    // Query the selected native entity category
+    if (kind==0) return entity->IsVehicle();
+    if (kind==1) return entity->IsPed();
+    return entity->IsObject();
+}
+extern "C" void AnimViewer_HostDestroyTarget(CEntity *entity)
+{
+    // Invoke the original explicit base-entity destructor
+    entity->~CEntity();
+}
+extern "C" void *AnimViewer_HostTargetSlot(CEntity *entity,int kind)
+{
+    // Convert the selected entity to its original native pool slot type
+    if (kind==0) return (CVehicle*)entity;
+    if (kind==1) return (CPed*)entity;
+    return (CObject*)entity;
+}
+extern "C" bool AnimViewer_HostButton(void *input,int button)
+{
+    // Query the selected native pad button without changing its priority
+    CPad *pad=(CPad*)input;
+    switch (button) {
+    case ANIMVIEWER_SQUARE: return pad->GetSquareJustDown();
+    case ANIMVIEWER_CROSS: return pad->GetCrossJustDown();
+    case ANIMVIEWER_CIRCLE: return pad->GetCircleJustDown();
+    case ANIMVIEWER_UP: return pad->GetDPadUpJustDown();
+    case ANIMVIEWER_DOWN: return pad->GetDPadDownJustDown();
+    case ANIMVIEWER_START: return pad->GetStartJustDown();
+    case ANIMVIEWER_SHOULDER: return pad->GetLeftShoulder1JustDown();
+    case ANIMVIEWER_LEFT: return pad->GetDPadLeftJustDown();
+    case ANIMVIEWER_RIGHT: return pad->GetDPadRightJustDown();
+    default: return !!pad->NewState.Triangle;
+    }
+}
+extern "C" void *AnimViewer_HostTargetClump(CEntity *target)
+{
+    // Borrow the selected native target clump
+    return target->GetClump();
+}
+extern "C" void AnimViewer_HostMessage(const char *message,int duration)
+{
+    // Preserve the original shared Unicode buffer and message call
+    AsciiToUnicode(message,gUString);
+    Messages_AddMessage(gUString,duration,0);
+}
+extern "C" void AnimViewer_HostReloadVehicleColours(void)
+{
+    // Reload the original native vehicle colour table
+    CVehicleModelInfo::LoadVehicleColours();
+}
+extern "C" void AnimViewer_HostAnimateCollision(void)
+{
+    // Animate the original live target collision model
+    ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(AnimViewer_target->GetModelIndex())))->AnimatePedColModelSkinned(AnimViewer_target->GetClump()); // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostProcessWorld(void)
+{
+    // Process the native game world
+    CWorld::Process();
+}
+extern "C" void AnimViewer_HostProcessCamera(void)
+{
+    // Process the native viewer camera
+    TheCamera.Process();
+}
+extern "C" void AnimViewer_HostHideHud(void)
+{
+    // Preserve the original HUD visibility assignment
+    CHud::m_Wants_To_Draw_Hud=false;
+}
+extern "C" bool AnimViewer_HostIsPed(CEntity *entity)
+{
+    // Query the selected native entity type
+    return entity->IsPed();
+}
+extern "C" void AnimViewer_HostUpdateAnimation(CEntity *entity)
+{
+    // Update the selected native pedestrian animation
+    ((CPed*)entity)->UpdateRpHAnim();
+}
+extern "C" void AnimViewer_HostRender(CEntity *entity)
+{
+    // Render the selected native entity
+    entity->Render();
+}
+extern "C" void AnimViewer_HostRenderNonRoad(CEntity *entity)
+{
+    // Pass the selected native entity to the renderer
+    CRenderer::RenderOneNonRoad(entity);
+}
+//- rouz edit (ChatGPT)
 
-void
-CAnimViewer::Render(void) {
-	if (pTarget) {
-		if (pTarget) {
+//+ rouz edit (ChatGPT)
+extern "C" void AnimViewer_HostInitPools(void)
+{
+    // Initialize the native game pools
+    CPools::Initialise();
+}
+extern "C" void AnimViewer_HostInitWorld(void)
+{
+    // Initialize the native camera, paths, collision, world, and handling systems
+    TheCamera.Init();
+    TheCamera.SetRwCamera(Scene.camera);
+    TheCamera.Cams[TheCamera.ActiveCam].Distance=5.0f;
+    ThePaths.Init();
+    ThePaths.AllocatePathFindInfoMem(4500);
+    CCollision::Init();
+    CWorld::Initialise();
+    mod_HandlingManager.Initialise();
+    CTempColModels::Initialise();
+}
+extern "C" void AnimViewer_HostInitModelSystems(void)
+{
+    // Initialize native model, particle, and vehicle-control systems
+    ModelRegistry_Initialise(); // rouz edit (ChatGPT)
+    CParticle::Initialise();
+    CCarCtrl::Init();
+}
+extern "C" void AnimViewer_HostLoadLevels(void)
+{
+    // Load the original image and viewer levels before streaming initialization
+    CdStreamAddImage("MODELS\\GTA3.IMG");
+    CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
+    CFileLoader::LoadLevel("DATA\\ANIMVIEWER.DAT");
+    CStreaming::Init();
+}
+extern "C" void AnimViewer_HostInitRenderer(void)
+{
+    // Load the original player models and initialize the native renderer
+    CStreaming::LoadInitialPeds();
+    CStreaming::RequestSpecialModel(MI_PLAYER,"player",STREAMFLAGS_DONT_REMOVE);
+    CStreaming::LoadAllRequestedModels(false);
+    CRenderer::Init();
+    CVehicleModelInfo::LoadVehicleColours();
 #ifdef FIX_BUGS
-			if(pTarget->IsPed())
-				((CPed*)pTarget)->UpdateRpHAnim();
+    CVehicleModelInfo::LoadEnvironmentMaps();
 #endif
-			pTarget->Render();
-			CRenderer::RenderOneNonRoad(pTarget);
-		}
-	}
 }
-
-void
-CAnimViewer::Initialise(void) {
-
-	// we need messages, messages needs hud, hud needs those
-	// Use the complete C texture dictionary owner with the original live arguments
-	int hudSlot = TxdStore_AddTxdSlot("hud");
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_LoadFile(hudSlot, "MODELS/HUD.TXD");
-	CHud::m_Wants_To_Draw_Hud = false;
-
-	// Use the complete C texture dictionary owner with the original live arguments
-	animTxdSlot = TxdStore_AddTxdSlot("generic");
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_Create(animTxdSlot);
-	// Use the complete C texture dictionary owner with the original live arguments
-	int particleSlot = TxdStore_AddTxdSlot("particle");
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_LoadFile(particleSlot, "MODELS/PARTICLE.TXD");
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_SetCurrentTxd(animTxdSlot);
-	CPools::Initialise();
-	References_Init();
-	TheCamera.Init();
-	TheCamera.SetRwCamera(Scene.camera);
-	TheCamera.Cams[TheCamera.ActiveCam].Distance = 5.0f;
-	ThePaths.Init();
-	ThePaths.AllocatePathFindInfoMem(4500);
-	CCollision::Init();
-	CWorld::Initialise();
-	mod_HandlingManager.Initialise();
-	CTempColModels::Initialise();
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_Initialise();
-	CModelInfo::Initialise();
-	CParticle::Initialise();
-	CCarCtrl::Init();
-	PedStats_Initialise();
-	Messages_Init();
-	CdStreamAddImage("MODELS\\GTA3.IMG");
-	CFileLoader::LoadLevel("DATA\\DEFAULT.DAT");
-	CFileLoader::LoadLevel("DATA\\ANIMVIEWER.DAT");
-	CStreaming::Init();
-	for(int i = 0; i < MODELINFOSIZE; i++)
-		if(CModelInfo::GetModelInfo(i))
-			CModelInfo::GetModelInfo(i)->ConvertAnimFileIndex();
-	CStreaming::LoadInitialPeds();
-	CStreaming::RequestSpecialModel(MI_PLAYER, "player", STREAMFLAGS_DONT_REMOVE);
-	CStreaming::LoadAllRequestedModels(false);
-	CRenderer::Init();
-	CVehicleModelInfo::LoadVehicleColours();
-#ifdef FIX_BUGS
-	CVehicleModelInfo::LoadEnvironmentMaps();
-#endif
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_LoadAnimFiles();
-	CWorld::PlayerInFocus = 0;
-	CWeapon::InitialiseWeapons();
-	CPed::Initialise();
-	Timer_Initialise();
-	Clock_Initialise(60000);
-	TimeCycle_Initialise();
-	CCarCtrl::Init();
-//+ rouz edit (ChatGPT)
-	// Allocate the anim viewer player without invoking C++ new.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CPlayerPed *player = (CPlayerPed*)((CPed*)CPool_New(CPools::GetPedPool()));
-	//- rouz edit (ChatGPT)
-	assert(player);
-	std::allocator<CPlayerPed>().construct(player);
-//- rouz edit (ChatGPT)
-	player->SetPosition(1000.0f, 1000.0f, 1000.0f);
-	CWorld::Players[0].m_pPed = player;
-	Draw_SetFOV(120.0f);
-	Draw_ms_fLODDistance = 500.0f;
-
-	int fd = FileMgr_OpenFile("DATA\\SPECIAL.TXT", "r");
-	char animGroup[32], modelName[32];
-	if (fd) {
-		for (int lineId = 0; lineId < NUM_OF_SPECIAL_CHARS; lineId++) {
-			if (!FileMgr_ReadLine(fd, gString, 255))
-				break;
-
-			sscanf(gString, "%s %s", modelName, animGroup);
-			int groupId;
-			for (groupId = 0; groupId < NUM_ANIM_ASSOC_GROUPS; groupId++) {
-				// Use the complete C animation manager at the original call boundary
-				if (!strcmp(animGroup, AnimManager_GetAnimGroupName((AssocGroupId)groupId)))
-					break;
-			}
-
-			if (groupId != NUM_ANIM_ASSOC_GROUPS)
-				((CPedModelInfo*)CModelInfo::GetModelInfo(MI_SPECIAL01 + lineId))->m_animGroup = groupId;
-
-			CStreaming::RequestSpecialChar(lineId, modelName, STREAMFLAGS_DONT_REMOVE);
-		}
-		FileMgr_CloseFile(fd);
-	} else {
-		// TODO? maybe request some special models here so the thing doesn't crash
-	}
-
-	// From LCS. idk if needed
-	// Use the complete C animation manager at the original call boundary
-	int vanBlock = AnimManager_GetAnimationBlockIndex("van");
-	// Use the complete C animation manager at the original call boundary
-	int bikesBlock = AnimManager_GetAnimationBlockIndex("bikes");
-	// Use the complete C animation manager at the original call boundary
-	int bikevBlock = AnimManager_GetAnimationBlockIndex("bikev");
-	// Use the complete C animation manager at the original call boundary
-	int bikehBlock = AnimManager_GetAnimationBlockIndex("bikeh");
-	// Use the complete C animation manager at the original call boundary
-	int bikedBlock = AnimManager_GetAnimationBlockIndex("biked");
-	CStreaming::FlushRequestList();
-	CStreaming::RequestAnim(vanBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikesBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikevBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikehBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikedBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::LoadAllRequestedModels(false);
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_AddAnimBlockRef(vanBlock);
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_AddAnimBlockRef(bikesBlock);
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_AddAnimBlockRef(bikevBlock);
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_AddAnimBlockRef(bikehBlock);
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_AddAnimBlockRef(bikedBlock);
-}
-
-int
-LastPedModelId(int modelId)
+extern "C" void AnimViewer_HostInitPlayerSystems(void)
 {
-	CBaseModelInfo *model;
-	for(;;){
-		assert(modelId < MODELINFOSIZE);
-		model = CModelInfo::GetModelInfo(modelId);
-		if (model && model->GetModelType() == MITYPE_PED)
-			break;
-		modelId--;
-	}
-	return modelId;
+    // Set the player focus and initialize native weapon and pedestrian systems
+    CWorld::PlayerInFocus=0;
+    CWeapon::InitialiseWeapons();
+    CPed::Initialise();
 }
-
-int
-FirstCarModelId(int modelId)
+extern "C" void AnimViewer_HostInitCarControl(void)
 {
-	CBaseModelInfo *model;
-	for(;;){
-		assert(modelId < MODELINFOSIZE);
-		model = CModelInfo::GetModelInfo(modelId);
-		if (model && model->GetModelType() == MITYPE_VEHICLE)
-			break;
-		modelId++;
-	}
-	return modelId;
+    // Preserve the original native vehicle-control initialization
+    CCarCtrl::Init();
 }
-
-
-int
-NextModelId(int modelId, int wantedChange)
+extern "C" void AnimViewer_HostConstructPlayer(void *player)
 {
-	// Max. 2 trials wasn't here, it's me that added it.
-
-	int tryCount = 2;
-	int ogModelId = modelId;
-
-	while(tryCount != 0) {
-		modelId += wantedChange;
-		if (modelId < 0 || modelId >= MODELINFOSIZE) {
-			tryCount--;
-			wantedChange = -wantedChange;
-		} else if (modelId != 5 && modelId != 6 && modelId != 405) {
-			CBaseModelInfo *model = CModelInfo::GetModelInfo(modelId);
-			if (model)
-			{
-				//int type = model->m_type;
-				return modelId;
-			}
-		}
-	}
-	return ogModelId;
+    // Construct the native player in the selected pedestrian pool slot
+    std::allocator<CPlayerPed>().construct((CPlayerPed*)((CPed*)player));
 }
-
-void
-PlayAnimation(RpClump *clump, AssocGroupId animGroup, AnimationId anim)
+extern "C" void AnimViewer_HostPositionPlayer(void *player,float x,float y,float z)
 {
-	CAnimBlendAssociation *currentAssoc = RpAnimBlendClumpGetAssociation(clump, anim);
-
-//+ rouz edit (ChatGPT)
-	// Destroy the matching partial animation without invoking C++ delete.
-	// Use the complete C association at the original native operation boundary
-	if (currentAssoc && AnimAssociation_IsPartial(currentAssoc)){
-		// Use the complete C association at the original native operation boundary
-		AnimAssociation_Destroy(currentAssoc);
-		free(currentAssoc);
-	}
+    // Position the constructed native player
+    ((CPlayerPed*)((CPed*)player))->SetPosition(x,y,z);
+}
+extern "C" void AnimViewer_HostAssignPlayer(void *player)
+{
+    // Assign the same native player to player zero
+    CWorld::Players[0].m_pPed=(CPlayerPed*)((CPed*)player);
+}
+extern "C" void AnimViewer_HostSetLodDistance(void)
+{
+    // Preserve the viewer draw-distance assignment
+    Draw_ms_fLODDistance=500.0f;
+}
 //- rouz edit (ChatGPT)
 
-	RpAnimBlendClumpSetBlendDeltas(clump, ASSOC_PARTIAL, -8.0f);
-
-	// Use the complete C animation manager at the original call boundary
-	CAnimBlendAssociation *animAssoc = AnimManager_BlendAnimation(clump, animGroup, anim, 8.0f);
-	animAssoc->flags |= ASSOC_DELETEFADEDOUT;
-	// Use the complete C association at the original native operation boundary
-	AnimAssociation_SetCurrentTime(animAssoc,0.0f);
-	// Use the complete C association at the original native operation boundary
-	AnimAssociation_SetRun(animAssoc);
-}
-
-void
-CAnimViewer::Update(void)
-{
-	static int modelId = 0;
-	static int animId = 0;
-	static bool reloadIFP = false;
-
-	AssocGroupId animGroup = ASSOCGRP_STD;
-	int nextModelId = modelId;
-	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(modelId);
-
-	if (modelInfo->GetModelType() == MITYPE_PED) {
-		int animGroup = ((CPedModelInfo*)modelInfo)->m_animGroup;
-
-		if (animId > ANIM_STD_IDLE)
-			animGroup = ASSOCGRP_STD;
-
-		if (reloadIFP) {
-			if (pTarget) {
-				CWorld::Remove(pTarget);
 //+ rouz edit (ChatGPT)
-				// Destroy and release the anim viewer target without invoking C++ delete.
-				if (pTarget->IsVehicle()) {
-					pTarget->~CEntity();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetVehiclePool(), (CVehicle*)pTarget);
-					//- rouz edit (ChatGPT)
-				} else if (pTarget->IsPed()) {
-					pTarget->~CEntity();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetPedPool(), (CPed*)pTarget);
-					//- rouz edit (ChatGPT)
-				} else if (pTarget->IsObject()) {
-					pTarget->~CEntity();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetObjectPool(), (CObject*)pTarget);
-					//- rouz edit (ChatGPT)
-				}
 //- rouz edit (ChatGPT)
-			}
-			pTarget = nil;
-			
-			// These calls were inside of LoadIFP function.
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_Shutdown();
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_Initialise();
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_LoadAnimFiles();
 
-			reloadIFP = false;
-		}
-	} else {
-		animGroup = ASSOCGRP_STD;
-	}
-	CPad::UpdatePads();
-	CPad* pad = CPad::GetPad(0);
+//+ rouz edit (ChatGPT)
+extern "C" void AnimViewer_HostConvertModelAnimation(int modelId)
+{
+    // Requery the selected native model before converting its animation index
+    ((CBaseModelInfo*)ModelRegistry_Get(modelId))->ConvertAnimFileIndex(); // rouz edit (ChatGPT)
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" int AnimViewer_HostPedGroup(void *model)
+{
+    // Read the original pedestrian animation group
+    return ((CPedModelInfo*)model)->m_animGroup;
+}
+extern "C" void *AnimViewer_HostUpdatePads(void)
+{
+    // Update native pads and process the optional debug menu in their original order
+    CPad::UpdatePads();
+    CPad *pad=CPad::GetPad(0);
 #ifdef DEBUGMENU
-	DebugMenuProcess();
+    DebugMenuProcess();
 #endif
-
-	CStreaming::UpdateForAnimViewer();
-	CStreaming::RequestModel(modelId, 0);
-	if (CStreaming::HasModelLoaded(modelId)) {
-
-		if (!pTarget) {
-
-			if (modelInfo->GetModelType() == MITYPE_VEHICLE) {
-
-				CVehicleModelInfo* veh = (CVehicleModelInfo*)modelInfo;
-				if (veh->m_vehicleType == VEHICLE_TYPE_CAR) {
-//+ rouz edit (ChatGPT)
-					// Allocate the anim viewer car without invoking C++ new.
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-					//- rouz edit (ChatGPT)
-					assert(pTarget);
-					std::allocator<CAutomobile>().construct((CAutomobile*)pTarget, modelId, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
-				} else if (veh->m_vehicleType == VEHICLE_TYPE_BOAT) {
-//+ rouz edit (ChatGPT)
-					// Allocate the anim viewer boat without invoking C++ new.
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-					//- rouz edit (ChatGPT)
-					assert(pTarget);
-					std::allocator<CBoat>().construct((CBoat*)pTarget, modelId, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
-				} else if (veh->m_vehicleType == VEHICLE_TYPE_BIKE) {
-//+ rouz edit (ChatGPT)
-					// Allocate the anim viewer bike without invoking C++ new.
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					pTarget = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
-					//- rouz edit (ChatGPT)
-					assert(pTarget);
-					std::allocator<CBike>().construct((CBike*)pTarget, modelId, RANDOM_VEHICLE);
-//- rouz edit (ChatGPT)
-				} else {
-//+ rouz edit (ChatGPT)
-					// Allocate the anim viewer object without invoking C++ new.
-					CObjectPool *objectPool = CPools::GetObjectPool();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					pTarget = ((CObject*)CPool_New(objectPool));
-					//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
-					if (!pTarget) {
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
-						for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
-							// Access raw storage through the C store or pool API
-							CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-						//- rouz edit (ChatGPT)
-							if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-								//+ rouz edit (ChatGPT)
-								// Access raw storage through the C store or pool API
-								int32 handle = CPool_GetIndex(objectPool, existing);
-								//- rouz edit (ChatGPT)
-								CWorld::Remove(existing);
-								existing->~CObject();
-								//+ rouz edit (ChatGPT)
-								// Access raw storage through the C store or pool API
-								CPool_Delete(objectPool, existing);
-								pTarget = ((CObject*)CPool_NewAt(objectPool, handle));
-								//- rouz edit (ChatGPT)
-								break;
-							}
-						}
-					}
-					if (pTarget)
-#endif
-						std::allocator<CObject>().construct((CObject*)pTarget, modelId, true);
-					assert(pTarget);
-//- rouz edit (ChatGPT)
-					if (!modelInfo->GetColModel()) {
-						modelInfo->SetColModel(&CTempColModels::ms_colModelWheel1);
-					}
-				}
-				pTarget->SetStatus(STATUS_ABANDONED);
-			} else if (modelInfo->GetModelType() == MITYPE_PED) {
-//+ rouz edit (ChatGPT)
-				// Allocate the anim viewer ped without invoking C++ new.
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				pTarget = ((CPed*)CPool_New(CPools::GetPedPool()));
-				//- rouz edit (ChatGPT)
-				assert(pTarget);
-				std::allocator<CPed>().construct((CPed*)pTarget, PEDTYPE_CIVMALE);
-//- rouz edit (ChatGPT)
-				pTarget->SetModelIndex(modelId);
-			} else {
-//+ rouz edit (ChatGPT)
-				// Allocate the anim viewer object without invoking C++ new.
-				CObjectPool *objectPool = CPools::GetObjectPool();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				pTarget = ((CObject*)CPool_New(objectPool));
-				//- rouz edit (ChatGPT)
-#ifdef FIX_BUGS
-				if (!pTarget) {
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
-						// Access raw storage through the C store or pool API
-						CObject *existing = ((CObject*)CPool_GetSlot(objectPool, i));
-					//- rouz edit (ChatGPT)
-						if (existing && existing->ObjectCreatedBy == TEMP_OBJECT) {
-							//+ rouz edit (ChatGPT)
-							// Access raw storage through the C store or pool API
-							int32 handle = CPool_GetIndex(objectPool, existing);
-							//- rouz edit (ChatGPT)
-							CWorld::Remove(existing);
-							existing->~CObject();
-							//+ rouz edit (ChatGPT)
-							// Access raw storage through the C store or pool API
-							CPool_Delete(objectPool, existing);
-							pTarget = ((CObject*)CPool_NewAt(objectPool, handle));
-							//- rouz edit (ChatGPT)
-							break;
-						}
-					}
-				}
-				if (pTarget)
-#endif
-					std::allocator<CObject>().construct((CObject*)pTarget, modelId, true);
-				assert(pTarget);
-//- rouz edit (ChatGPT)
-				if (!modelInfo->GetColModel())
-				{
-					modelInfo->SetColModel(&CTempColModels::ms_colModelWheel1);
-				}
-				pTarget->SetStatus(STATUS_ABANDONED);
-			}
-			pTarget->SetPosition(0.0f, 0.0f, 0.0f);
-			CWorld::Add(pTarget);
-			TheCamera.TakeControl(pTarget, CCam::MODE_MODELVIEW, JUMP_CUT, CAMCONTROL_SCRIPT);
-		}
-		if (pTarget->IsVehicle() || pTarget->IsPed() || pTarget->IsObject()) {
-			((CPhysical*)pTarget)->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-		}
-#ifdef FIX_BUGS
-		// so we don't end up in the water
-		pTarget->GetMatrix().GetPosition().z = 10.0f;
-#else
-		pTarget->GetMatrix().GetPosition().z = 0.0f;
-#endif
-
-		if (modelInfo->GetModelType() == MITYPE_PED) {
-			((CPed*)pTarget)->bKindaStayInSamePlace = true;
-
-			// Triangle in mobile
-			if (pad->GetSquareJustDown()) {
-				reloadIFP = true;
-				AsciiToUnicode("IFP reloaded", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-
-			} else if (pad->GetCrossJustDown()) {
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
-				AsciiToUnicode("Animation restarted", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-
-			} else if (pad->GetCircleJustDown()) {
-				PlayAnimation(pTarget->GetClump(), animGroup, ANIM_STD_IDLE);
-				AsciiToUnicode("Idle animation playing", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-
-			} else if (pad->GetDPadUpJustDown()) {
-				animId--;
-				if (animId < 0) {
-					animId = ANIM_STD_NUM - 1;
-				}
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
-
-				sprintf(gString, "Current anim: %d", animId);
-				AsciiToUnicode(gString, gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-
-			} else if (pad->GetDPadDownJustDown()) {
-				animId = (animId == (ANIM_STD_NUM - 1) ? 0 : animId + 1);
-				PlayAnimation(pTarget->GetClump(), animGroup, (AnimationId)animId);
-
-				sprintf(gString, "Current anim: %d", animId);
-				AsciiToUnicode(gString, gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-
-			} else if (pad->GetStartJustDown()) {
-
-			} else if (pad->GetLeftShoulder1JustDown()) {
-				nextModelId = FirstCarModelId(modelId);
-				AsciiToUnicode("Switched to vehicles", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-				// Originally it was GetPad(1)->LeftShoulder2
-			} else if (pad->NewState.Triangle) {
-				((CPedModelInfo *)CModelInfo::GetModelInfo(pTarget->GetModelIndex()))->AnimatePedColModelSkinned(pTarget->GetClump());
-				AsciiToUnicode("Ped Col model will be animated as long as you hold the button", gUString);
-				Messages_AddMessage(gUString, 100, 0);
-			}
-
-			// From LCS
-			// Use the complete C animation manager at the original call boundary
-			if (AnimManager_GetAnimAssocGroups()[animGroup].numAssociations <= animId)
-				animId = 0;
-
-		} else if (modelInfo->GetModelType() == MITYPE_VEHICLE) {
-
-			if (pad->GetLeftShoulder1JustDown()) {
-				nextModelId = LastPedModelId(modelId);
-				AsciiToUnicode("Switched to peds", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-				// Start in mobile
-			} else if (pad->GetSquareJustDown()) {
-				CVehicleModelInfo::LoadVehicleColours();
-				AsciiToUnicode("Carcols.dat reloaded", gUString);
-				Messages_AddMessage(gUString, 1000, 0);
-			}
-		}
-	}
-
-	if (pad->GetDPadLeftJustDown()) {
-		nextModelId = NextModelId(modelId, -1);
-
-		sprintf(gString, "Current model ID: %d", nextModelId);
-		AsciiToUnicode(gString, gUString);
-		Messages_AddMessage(gUString, 1000, 0);
-
-	} else if (pad->GetDPadRightJustDown()) {
-		nextModelId = NextModelId(modelId, 1);
-
-		sprintf(gString, "Current model ID: %d", nextModelId);
-		AsciiToUnicode(gString, gUString);
-		Messages_AddMessage(gUString, 1000, 0);
-	}
-	// There were extra codes here to let us change model id by 50, but xbox CPad struct is different, so I couldn't port.
-
-	if (nextModelId != modelId) {
-		modelId = nextModelId;
-		if (pTarget) {
-			CWorld::Remove(pTarget);
-//+ rouz edit (ChatGPT)
-			// Destroy and release the anim viewer target without invoking C++ delete.
-			if (pTarget->IsVehicle()) {
-				pTarget->~CEntity();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetVehiclePool(), (CVehicle*)pTarget);
-				//- rouz edit (ChatGPT)
-			} else if (pTarget->IsPed()) {
-				pTarget->~CEntity();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetPedPool(), (CPed*)pTarget);
-				//- rouz edit (ChatGPT)
-			} else if (pTarget->IsObject()) {
-				pTarget->~CEntity();
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				CPool_Delete(CPools::GetObjectPool(), (CObject*)pTarget);
-				//- rouz edit (ChatGPT)
-			}
-//- rouz edit (ChatGPT)
-		}
-		pTarget = nil;
-		return;
-	}
-
-	TimeCycle_Update();
-	CWorld::Process();
-	if (pTarget)
-		TheCamera.Process();
+    return pad;
 }
-
-void
-CAnimViewer::Shutdown(void)
+extern "C" void AnimViewer_HostUpdateStreaming(void)
 {
-//+ rouz edit (ChatGPT)
-	if (CWorld::Players[0].m_pPed) {
-		// Destroy and release the anim viewer player without invoking C++ delete.
-		CWorld::Players[0].m_pPed->~CPlayerPed();
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CPool_Delete(CPools::GetPedPool(), CWorld::Players[0].m_pPed);
-		//- rouz edit (ChatGPT)
-	}
+    // Process native streaming for the viewer
+    CStreaming::UpdateForAnimViewer();
+}
+extern "C" void AnimViewer_HostRequestModel(int modelId)
+{
+    // Request the current native model
+    Streaming_RequestModel(modelId,0); // rouz edit (ChatGPT)
+}
+extern "C" bool AnimViewer_HostModelLoaded(int modelId)
+{
+    // Check the current native model streaming status
+    return Streaming_HasModelLoaded(modelId); // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostConstructObject(CEntity *entity,int modelId)
+{
+    // Construct the selected native object in its allocated pool slot
+    std::allocator<CObject>().construct((CObject*)entity,modelId,true);
+}
+extern "C" bool AnimViewer_HostIsTemporaryObject(void *object)
+{
+    // Check the original native object creation category
+    return ((CObject*)object)->ObjectCreatedBy==TEMP_OBJECT;
+}
+extern "C" void AnimViewer_HostDestroyTemporaryObject(void *object)
+{
+    // Remove and destroy the selected native temporary object
+    CObject *existing=(CObject*)object;
+    CWorld::Remove(existing);
+    existing->~CObject();
+}
+extern "C" CEntity *AnimViewer_HostObjectEntity(void *object)
+{
+    // Convert the native object slot to its entity base pointer
+    return (CObject*)object;
+}
+extern "C" int AnimViewer_HostVehicleType(void *model)
+{
+    // Read the live native vehicle-model subtype
+    return ((CVehicleModelInfo*)model)->m_vehicleType;
+}
+extern "C" CEntity *AnimViewer_HostVehicleEntity(void *slot)
+{
+    // Convert the native vehicle slot to its entity base pointer
+    return (CVehicle*)slot;
+}
+extern "C" void AnimViewer_HostConstructCar(CEntity *target,int modelId)
+{
+    // Construct the native automobile in its allocated slot
+    std::allocator<CAutomobile>().construct((CAutomobile*)target,modelId,RANDOM_VEHICLE);
+}
+extern "C" void AnimViewer_HostConstructBoat(CEntity *target,int modelId)
+{
+    // Construct the native boat in its allocated slot
+    std::allocator<CBoat>().construct((CBoat*)target,modelId,RANDOM_VEHICLE);
+}
+extern "C" void AnimViewer_HostConstructBike(CEntity *target,int modelId)
+{
+    // Construct the native bike in its allocated slot
+    std::allocator<CBike>().construct((CBike*)target,modelId,RANDOM_VEHICLE);
+}
+extern "C" void AnimViewer_HostSetFallbackCollision(void *model)
+{
+    // Set the original native fallback collision model
+    ((CBaseModelInfo*)model)->SetColModel(&CTempColModels::ms_colModelWheel1);
+}
+extern "C" void AnimViewer_HostSetAbandoned(CEntity *target)
+{
+    // Mark the live native target as abandoned
+    target->SetStatus(STATUS_ABANDONED);
+}
+extern "C" CEntity *AnimViewer_HostPedEntity(void *slot)
+{
+    // Convert the native pedestrian slot to its entity base pointer
+    return (CPed*)slot;
+}
+extern "C" void AnimViewer_HostConstructPed(CEntity *target)
+{
+    // Construct the original native pedestrian in the allocated slot
+    std::allocator<CPed>().construct((CPed*)target,PEDTYPE_CIVMALE);
+}
+extern "C" void AnimViewer_HostSetTargetModel(CEntity *target,int modelId)
+{
+    // Set the selected native target model after construction
+    target->SetModelIndex(modelId);
+}
+extern "C" void AnimViewer_HostSetTargetPosition(CEntity *target,float x,float y,float z)
+{
+    // Set the selected native target position
+    target->SetPosition(x,y,z);
+}
+extern "C" void AnimViewer_HostAddTarget(CEntity *target)
+{
+    // Add the selected native target to the world
+    CWorld::Add(target);
+}
+extern "C" void AnimViewer_HostCameraTakeTarget(CEntity *target)
+{
+    // Attach the native camera using the original viewer settings
+    TheCamera.TakeControl(target,CCam::MODE_MODELVIEW,JUMP_CUT,CAMCONTROL_SCRIPT);
+}
+extern "C" void AnimViewer_HostClearTargetVelocity(CEntity *entity)
+{
+    // Clear the selected native physical entity velocity
+    ((CPhysical*)entity)->m_vecMoveSpeed=CVector(0.0f,0.0f,0.0f);
+}
+extern "C" void AnimViewer_HostSetTargetHeight(CEntity *entity,float height)
+{
+    // Set the selected native target height
+    entity->GetMatrix().GetPosition().z=height;
+}
+extern "C" void AnimViewer_HostKeepPedInPlace(void)
+{
+    // Retain the original native pedestrian flag assignment
+    ((CPed*)AnimViewer_target)->bKindaStayInSamePlace=true;
+}
 //- rouz edit (ChatGPT)
 
-	CWorld::ShutDown();
-	CModelInfo::ShutDown();
-	// Use the complete C animation manager at the original call boundary
-	AnimManager_Shutdown();
-	Timer_Shutdown();
-	CStreaming::Shutdown();
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_RemoveTxdSlot(animTxdSlot);
+//+ rouz edit (ChatGPT)
+extern "C" void *AnimViewer_HostPlayer(void)
+{
+    // Read the current native player pointer
+    return CWorld::Players[0].m_pPed;
 }
+extern "C" void AnimViewer_HostDestroyPlayer(void *player)
+{
+    // Invoke the original native player destructor
+    ((CPlayerPed*)player)->~CPlayerPed();
+}
+extern "C" void AnimViewer_HostShutdownWorld(void)
+{
+    // Shut down the native world subsystem
+    CWorld::ShutDown();
+}
+extern "C" void AnimViewer_HostShutdownModels(void)
+{
+    // Shut down the native model subsystem
+    ModelRegistry_Shutdown(); // rouz edit (ChatGPT)
+}
+extern "C" void AnimViewer_HostShutdownStreaming(void)
+{
+    // Shut down the native streaming subsystem
+    CStreaming::Shutdown();
+}
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 
 //- rouz edit (ChatGPT)
 

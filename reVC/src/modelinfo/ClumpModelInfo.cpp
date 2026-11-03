@@ -110,23 +110,15 @@ CClumpModelInfo::SetClump(RpClump *clump)
 void
 CClumpModelInfo::SetAnimFile(const char *file)
 {
-	if(strcasecmp(file, "null") == 0)
-		return;
-
-	m_animFileName = (char*)malloc(strlen(file)+1); // rouz edit (ChatGPT)
-	strcpy(m_animFileName, file);
+    // Apply the shared C animation-file policy
+    ModelAnimFile_Set(&m_animFile,file);
 }
 
 void
 CClumpModelInfo::ConvertAnimFileIndex(void)
 {
-	if(m_animFileIndex != -1){
-		// we have a string pointer in that union
-		// Use the complete C animation manager at the original call boundary
-		int32 index = AnimManager_GetAnimationBlockIndex(m_animFileName);
-		free(m_animFileName); // rouz edit (ChatGPT)
-		m_animFileIndex = index;
-	}
+    // Resolve the shared C animation-file state
+    ModelAnimFile_Convert(&m_animFile);
 }
 
 void

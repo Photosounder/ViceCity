@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "CivilianPed.h"
 #include "Phones.h"
@@ -39,7 +40,7 @@ CCivilianPed::CCivilianPed(ePedType pedtype, uint32 mi) : CPed(pedtype)
 #else
 		uint32 randomCarModel = General_GetRandomNumberInRangeInt(MI_LANDSTAL, MI_LANDSTAL + VEHICLEMODELSIZE);
 #endif
-		if (CModelInfo::IsCarModel(randomCarModel) || CModelInfo::IsBikeModel(randomCarModel))
+		if (ModelRegistry_IsCarModel(randomCarModel) || ModelRegistry_IsBikeModel(randomCarModel)) // rouz edit (ChatGPT)
 			m_nStealWishList[i] = randomCarModel;
 		else
 			m_nStealWishList[i] = MI_CHEETAH;
@@ -456,9 +457,9 @@ void CCivilianPed::FindNearbyAttractorsSectorList(CPtrList& list, float& minDist
 		CEntity* pEntity = (CEntity*)pNode->item;
 		if (pEntity->IsObject() && (!pEntity->GetIsStatic() || ((CObject*)pEntity)->bHasBeenDamaged))
 			continue;
-		CBaseModelInfo* pModelInfo = CModelInfo::GetModelInfo(pEntity->GetModelIndex());
-		for (int i = 0; i < pModelInfo->GetNum2dEffects(); i++) {
-			C2dEffect* pEffect = pModelInfo->Get2dEffect(i);
+		CBaseModelInfo* pModelInfo = ((CBaseModelInfo*)ModelRegistry_Get(pEntity->GetModelIndex())); // rouz edit (ChatGPT)
+		for (int i = 0; i < (*ModelRegistry_EffectCount(pModelInfo)); i++) { // rouz edit (ChatGPT)
+			C2dEffect* pEffect = ((C2dEffect*)ModelRegistry_GetEffect(pModelInfo, i)); // rouz edit (ChatGPT)
 			if (pEffect->type != EFFECT_PED_ATTRACTOR)
 				continue;
 			if (!IsAttractedTo(pEffect->pedattr.type))

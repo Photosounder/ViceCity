@@ -343,7 +343,7 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		float fSteerUD = CPad::GetPad(0)->GetSteeringUpDown() / 128.0f;
 		float fGunUD = Abs(CPad::GetPad(0)->GetCarGunUpDown());
 #ifdef FREE_CAM
-		if(!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController))
+		if(!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) // rouz edit (ChatGPT)
 #endif
 		if(fGunUD > 1.0f)
 			fSteerUD = -CPad::GetPad(0)->GetCarGunUpDown() / 128.0f;
@@ -519,13 +519,13 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			if (CPad::GetPad(0)->GetLookLeft())
 				fYaw = -1.0f;
 #ifdef FREE_CAM
-			if (!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController))
+			if (!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) // rouz edit (ChatGPT)
 #endif
 			if(Abs(CPad::GetPad(0)->GetCarGunLeftRight()) > 1.0f)
 				fYaw = CPad::GetPad(0)->GetCarGunLeftRight() / 128.0f;
 		}
 #ifdef FREE_CAM
-		if(!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController))
+		if(!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) // rouz edit (ChatGPT)
 #endif
 		if(Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f)
 			fPitch = -CPad::GetPad(0)->GetCarGunUpDown() / 128.0f;
@@ -722,7 +722,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 		int numCollisions;
 		CColModel *entityCol;
 		if(entity->IsPed())
-			entityCol = ((CPedModelInfo*)CModelInfo::GetModelInfo(entity->GetModelIndex()))->AnimatePedColModelSkinned(entity->GetClump());
+			entityCol = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(entity->GetModelIndex())))->AnimatePedColModelSkinned(entity->GetClump()); // rouz edit (ChatGPT)
 		else
 			entityCol = entity->GetColModel();
 		if(entityCol)
@@ -1895,7 +1895,7 @@ CVehicle::SetDriver(CPed *driver)
 			break;
 
 		case MI_POLICE:
-			CStreaming::RequestModel(MI_SHOTGUN, STREAMFLAGS_DONT_REMOVE);
+			Streaming_RequestModel(MI_SHOTGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 			bFreebies = true;
 			break;
 
@@ -1905,7 +1905,7 @@ CVehicle::SetDriver(CPed *driver)
 
 		case MI_CADDY:
 			if(!(driver->IsPlayer() && ((CPlayerPed*)driver)->DoesPlayerWantNewWeapon(WEAPONTYPE_GOLFCLUB, true)))
-				CStreaming::RequestModel(MI_GOLFCLUB, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_GOLFCLUB, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 			break;
 		}
 	}
@@ -1971,7 +1971,7 @@ CVehicle::RemoveDriver(void)
 #endif
 		SetStatus(STATUS_ABANDONED);
 	if(pDriver == FindPlayerPed()){
-		if(GetModelIndex() == MI_POLICE && CStreaming::HasModelLoaded(MI_SHOTGUN)){
+		if(GetModelIndex() == MI_POLICE && Streaming_HasModelLoaded(MI_SHOTGUN)){ // rouz edit (ChatGPT)
 			if(bFreebies){
 				if(((CPlayerPed*)pDriver)->DoesPlayerWantNewWeapon(WEAPONTYPE_SHOTGUN, true))
 					pDriver->GiveWeapon(WEAPONTYPE_SHOTGUN, 5, true);
@@ -1979,11 +1979,11 @@ CVehicle::RemoveDriver(void)
 					pDriver->GrantAmmo(WEAPONTYPE_SHOTGUN, 5);
 				bFreebies = false;
 			}
-			CStreaming::SetModelIsDeletable(MI_SHOTGUN);
-		}else if(GetModelIndex() == MI_CADDY && CStreaming::HasModelLoaded(MI_GOLFCLUB)){
+			Streaming_SetModelIsDeletable(MI_SHOTGUN); // rouz edit (ChatGPT)
+		}else if(GetModelIndex() == MI_CADDY && Streaming_HasModelLoaded(MI_GOLFCLUB)){ // rouz edit (ChatGPT)
 			if(((CPlayerPed*)pDriver)->DoesPlayerWantNewWeapon(WEAPONTYPE_GOLFCLUB, true))
 				pDriver->GiveWeapon(WEAPONTYPE_GOLFCLUB, 1, true);
-			CStreaming::SetModelIsDeletable(MI_GOLFCLUB);
+			Streaming_SetModelIsDeletable(MI_GOLFCLUB); // rouz edit (ChatGPT)
 		}
 	}
 	pDriver = nil;

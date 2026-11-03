@@ -2,6 +2,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -498,7 +499,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Use the complete C animation manager at the original call boundary
-		CStreaming::RequestAnim(AnimManager_GetAnimationBlockIndex(key), STREAMFLAGS_SCRIPTOWNED);
+		Streaming_RequestAnim(AnimManager_GetAnimationBlockIndex(key), STREAMFLAGS_SCRIPTOWNED); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_HAS_ANIMATION_LOADED:
@@ -516,7 +517,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CTheScripts::ReadTextLabelFromScript(&m_nIp, key);
 		m_nIp += KEY_LENGTH_IN_SCRIPT;
 		// Use the complete C animation manager at the original call boundary
-		CStreaming::RemoveAnim(AnimManager_GetAnimationBlockIndex(key));
+		Streaming_RemoveAnim(AnimManager_GetAnimationBlockIndex(key)); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_IS_CHAR_WAITING_FOR_WORLD_COLLISION:
@@ -663,7 +664,7 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 			key[i] = tolower(key[i]);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPed);
-		UpdateCompareFlag(strcmp(key, CModelInfo::GetModelInfo(pPed->GetModelIndex())->GetModelName()) == 0);
+		UpdateCompareFlag(strcmp(key, ((CBaseModelInfo*)ModelRegistry_Get(pPed->GetModelIndex()))->GetModelName()) == 0); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_SET_PLAYER_CAN_DO_DRIVE_BY:
@@ -1271,7 +1272,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 			pVehicle->AutoPilot.m_nCarMission = MISSION_CRUISE;
 		pVehicle->bEngineOn = true;
 		pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), pPed);
 				StoreParameters(&m_nIp, 1);
@@ -1293,7 +1294,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 			pPed->bRenderPedInCar = false;
 		pPed->SetPosition(pVehicle->GetPosition());
 		pPed->SetOrientation(0.0f, 0.0f, 0.0f);
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 		pVehicle->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pVehicle->GetPosition())));
 		if (ScriptParams[1] >= 0)
 			pVehicle->AddPassenger(pPed, ScriptParams[1]);
@@ -1351,7 +1352,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 	case COMMAND_ADD_EXPLOSION_NO_SOUND:
 	{
 		CollectParameters(&m_nIp, 4);
-		CExplosion::AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, false);
+		Explosion_AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, false);
 		return 0;
 	}
 	case COMMAND_SET_OBJECT_AREA_VISIBLE:
@@ -1490,6 +1491,7 @@ int8 CRunningScript::ProcessCommands1300To1399(int32 command)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

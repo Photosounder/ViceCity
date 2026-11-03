@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
 #include "AnimManager.h"
 #include "ModelIndices.h"
 #include "AnimBlendAssociation_flags.h"
@@ -1531,7 +1532,7 @@ void AnimManager_CreateAnimAssocGroups(void)
 		if(block == NULL || !block->isLoaded || ms_aAnimAssocGroups[i].assocList)
 			continue;
 
-		void *mi = AnimGroup_HostModelAt(ms_aAnimAssocDefinitions[i].modelIndex);
+		void *mi = ModelRegistry_Get(ms_aAnimAssocDefinitions[i].modelIndex);
 		void *clump = AnimGroup_HostCreateInstance(mi);
 		AnimGroup_HostInitClump(clump);
 		CAnimBlendAssocGroup *group = &ms_aAnimAssocGroups[i];

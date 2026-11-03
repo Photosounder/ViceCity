@@ -38,9 +38,6 @@ CWanted * RoadBlocks_BackendWanted(void);
 uint8_t RoadBlocks_BackendDensity(void);
 bool RoadBlocks_BackendModelLoaded(int32_t model);
 void RoadBlocks_BackendRequestModel(int32_t model,int32_t flags);
-CColModel * RoadBlocks_BackendColModel(int32_t model);
-CBaseModelInfo * RoadBlocks_BackendModelInfo(int32_t model);
-CColModel * RoadBlocks_BackendInfoColModel(CBaseModelInfo *info);
 float RoadBlocks_BackendColRadius(CColModel *model);
 float RoadBlocks_BackendColMinZ(CColModel *model);
 float RoadBlocks_BackendVehicleRadius(CVehicle *vehicle);
@@ -54,7 +51,6 @@ void RoadBlocks_BackendConstructObject(CObject *object,int32_t model,bool create
 void RoadBlocks_BackendDestroyCar(CAutomobile *car);
 void RoadBlocks_BackendDestroyObject(CObject *object);
 void RoadBlocks_BackendCopWeapon(CCopPed *cop,int32_t weapon);
-void RoadBlocks_BackendPedZ(RoadBlockVector *point);
 void RoadBlocks_BackendCopPosition(CCopPed *cop,RoadBlockVector point);
 void RoadBlocks_BackendCopOrientation(CCopPed *cop,float x,float y,float z);
 void RoadBlocks_BackendCopIdle(CCopPed *cop);

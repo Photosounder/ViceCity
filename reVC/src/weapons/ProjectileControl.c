@@ -8,6 +8,7 @@ void re3_assert(const char *,const char *,unsigned int,const char *);
 #define assert(expression) (expression)
 #endif
 #include "Projectile_backend.h"
+#include "Explosion_access.h"
 #include "Timer.h"
 #include "General.h"
 #include "ModelIndexData.h"
@@ -344,6 +345,13 @@ ProjectileInfo_RemoveProjectile(ProjectileInfo *info, CProjectile *projectile)
 
 }
 
+static void Projectile_ExplosionAt(CEntity *source,enum eExplosionType type,ProjectileVector position)
+{
+    // Forward the projectile position by value to the explosion subsystem
+    ExplosionPosition point={position.x,position.y,position.z};
+    Explosion_AddAtPosition(source,type,point);
+}
+
 void
 ProjectileInfo_RemoveNotAdd(CEntity *entity, enum eWeaponType weaponType, const ProjectilePosition *position)
 {
@@ -352,13 +360,13 @@ ProjectileInfo_RemoveNotAdd(CEntity *entity, enum eWeaponType weaponType, const 
 	// TODO(Miami): New parameter: 1
 	switch (weaponType) {
 		case WEAPONTYPE_GRENADE:
-			Projectile_BackendExplosion(entity,EXPLOSION_GRENADE,pos);
+			Projectile_ExplosionAt(entity,EXPLOSION_GRENADE,pos);
 			break;
 		case WEAPONTYPE_MOLOTOV:
-			Projectile_BackendExplosion(entity,EXPLOSION_MOLOTOV,pos);
+			Projectile_ExplosionAt(entity,EXPLOSION_MOLOTOV,pos);
 			break;
 		case WEAPONTYPE_ROCKET:
-			Projectile_BackendExplosion(entity,EXPLOSION_ROCKET,pos);
+			Projectile_ExplosionAt(entity,EXPLOSION_ROCKET,pos);
 			break;
 	}
 }
@@ -562,7 +570,7 @@ ProjectileInfo_RemoveDetonatorProjectiles(void)
     // Execute the complete original projectile RemoveDetonatorProjectiles operation
 	for (int i = 0; i < PROJECTILE_ARRAY_SIZE(ProjectileInfo_projectiles); i++) {
 		if (ProjectileInfo_records[i].m_bInUse && ProjectileInfo_records[i].m_eWeaponType == WEAPONTYPE_DETONATOR_GRENADE) {
-			Projectile_BackendExplosion(ProjectileInfo_records[i].m_pSource,EXPLOSION_GRENADE,ProjectileInfo_records[i].m_vecPos); // TODO(Miami): New parameter: 1
+			Projectile_ExplosionAt(ProjectileInfo_records[i].m_pSource,EXPLOSION_GRENADE,ProjectileInfo_records[i].m_vecPos); // TODO(Miami): New parameter: 1
 			ProjectileInfo_records[i].m_bInUse = false;
 			Projectile_BackendRemove(ProjectileInfo_projectiles[i]);
 

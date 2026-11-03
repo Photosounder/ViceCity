@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include <rpmatfx.h>
 
 #include "RwHelper.h"
@@ -185,7 +186,7 @@ CVehicleModelInfo::CVehicleModelInfo(void)
 		m_positions[i].z = 0.0f;
 	}
 	m_numColours = 0;
-	m_animFileIndex = -1;
+	m_animFile.index = -1; // rouz edit (ChatGPT)
 }
 
 void
@@ -261,23 +262,15 @@ CVehicleModelInfo::SetClump(RpClump *clump)
 void
 CVehicleModelInfo::SetAnimFile(const char *file)
 {
-	if(strcasecmp(file, "null") == 0)
-		return;
-
-	m_animFileName = (char*)malloc(strlen(file)+1); // rouz edit (ChatGPT)
-	strcpy(m_animFileName, file);
+    // Apply the shared C animation-file policy
+    ModelAnimFile_Set(&m_animFile,file);
 }
 
 void
 CVehicleModelInfo::ConvertAnimFileIndex(void)
 {
-	if(m_animFileIndex != -1){
-		// we have a string pointer in that union
-		// Use the complete C animation manager at the original call boundary
-		int32 index = AnimManager_GetAnimationBlockIndex(m_animFileName);
-		free(m_animFileName); // rouz edit (ChatGPT)
-		m_animFileIndex = index;
-	}
+    // Resolve the shared C animation-file state
+    ModelAnimFile_Convert(&m_animFile);
 }
 
 RwFrame*
@@ -611,7 +604,7 @@ CVehicleModelInfo::PreprocessHierarchy(void)
 				RwFrameDestroy(assoc.frame);
 			else{
 				RwV3d scale;
-				atomic = (RpAtomic*)CModelInfo::GetModelInfo(m_wheelId)->CreateInstance();
+				atomic = (RpAtomic*)((CBaseModelInfo*)ModelRegistry_Get(m_wheelId))->CreateInstance(); // rouz edit (ChatGPT)
 				RwFrameDestroy(RpAtomicGetFrame(atomic));
 				RpAtomicSetFrame(atomic, assoc.frame);
 				RpClumpAddAtomic(m_clump, atomic);
@@ -636,7 +629,7 @@ CVehicleModelInfo::SetVehicleComponentFlags(RwFrame *frame, uint32 flags)
 #define SETFLAGS(f) RwFrameForAllObjects(frame, SetAtomicFlagCB, (void*)(f))
 
 	if(flags & VEHICLE_FLAG_WINDSCREEN){
-		if(this == CModelInfo::GetModelInfo(MI_RHINO))
+		if(this == ((CBaseModelInfo*)ModelRegistry_Get(MI_RHINO))) // rouz edit (ChatGPT)
 			return;
 		SETFLAGS(ATOMIC_FLAG_WINDSCREEN);
 	}
@@ -905,7 +898,7 @@ CVehicleModelInfo::ChooseVehicleColour(uint8 &col1, uint8 &col2)
 		col2 = m_colours2[m_lastColorVariation];
 		if(m_numColours > 1){
 			CVehicle *veh = FindPlayerVehicle();
-			if(veh && CModelInfo::GetModelInfo(veh->GetModelIndex()) == this &&
+			if(veh && ((CBaseModelInfo*)ModelRegistry_Get(veh->GetModelIndex())) == this && // rouz edit (ChatGPT)
 			   veh->m_currentColour1 == col1 &&
 			   veh->m_currentColour2 == col2){
 				m_lastColorVariation = (m_lastColorVariation+1) % m_numColours;
@@ -1054,7 +1047,7 @@ CVehicleModelInfo::LoadVehicleColours(void)
 				&colors[10], &colors[11],
 				&colors[12], &colors[13],
 				&colors[14], &colors[15]);
-			CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(name, nil);
+			CVehicleModelInfo *mi = (CVehicleModelInfo*)(CBaseModelInfo*)ModelRegistry_Find(name, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 			assert(mi);
 			mi->m_numColours = (n-1)/2;
 			for(i = 0; i < mi->m_numColours; i++){
@@ -1138,7 +1131,7 @@ CVehicleModelInfo::SetEnvironmentMap(void)
 
 	RpClumpForAllAtomics(m_clump, SetEnvironmentMapCB, nil);
 	if(m_wheelId != -1){
-		wheelmi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_wheelId);
+		wheelmi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_wheelId)); // rouz edit (ChatGPT)
 		for(i = 0; i < wheelmi->m_numAtomics; i++)
 			SetEnvironmentMapCB(wheelmi->m_atomics[i], nil);
 	}
@@ -1151,7 +1144,7 @@ CVehicleModelInfo::SetEnvironmentMap(void)
 	// Register standalone wheel model atomics for the same software vehicle effects
 	//+ rouz edit (ChatGPT)
 	if(m_wheelId != -1){
-		wheelmi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_wheelId);
+		wheelmi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_wheelId)); // rouz edit (ChatGPT)
 		for(i = 0; i < wheelmi->m_numAtomics; i++)
 			SoftwarePolygons::Attach(wheelmi->m_atomics[i], false, false, true);
 	}
@@ -1208,7 +1201,7 @@ CVehicleModelInfo::GetMaximumNumberOfPassengersFromNumberOfDoors(int id)
 		n = 1;
 		break;
 	default:
-		n = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(id))->m_numDoors;
+		n = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)))->m_numDoors; // rouz edit (ChatGPT)
 	}
 
 	if(n == 0)

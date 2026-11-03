@@ -1,5 +1,9 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
+#include "ModelRegistry.h"
 #include "Darkel_backend.h"
+#include "SharedText.h"
+#include "FontText.h"
 #include "Timer.h"
 #include "Text.h"
 #include "DMAudio.h"
@@ -65,7 +69,7 @@ uint8_t Darkel_CalcFade(uint32_t time,uint32_t start,uint32_t end)
 void Darkel_DrawMessages(void)
 {
     // Preserve the complete original DrawMessages policy and each ordered external access
-	if (Darkel_BackendPlayback())
+	if (Replay_IsPlayingBack())
 		return;
 
 	switch (Darkel_Status) {
@@ -120,21 +124,21 @@ void Darkel_DrawMessages(void)
 			Darkel_BackendFontStyle(FONT_HEADING);
 			if (Darkel_TimeLimit >= 0) {
 				uint32_t timeLeft = Darkel_TimeLimit - ((*Timer_GetTimeInMilliseconds()) - Darkel_TimeOfFrenzyStart);
-				sprintf(Darkel_BackendString(), "%d:%02d", timeLeft / 60000, timeLeft % 60000 / 1000);
-				Darkel_BackendAsciiToUnicode(Darkel_BackendString(), Darkel_BackendUnicode());
+				sprintf(gString, "%d:%02d", timeLeft / 60000, timeLeft % 60000 / 1000);
+				AsciiToUnicode(gString, gUString);
 				if (timeLeft > 4000 || (*Timer_GetFrameCounter()) & 1) {
 					Darkel_BackendColor(0, 0, 0, 255);
-					Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(109.0f), Darkel_BackendUnicode());
+					Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(109.0f), gUString);
 					Darkel_BackendColor(0, 207, 133, 255);
-					Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(34.0f), SCREEN_SCALE_Y(108.0f), Darkel_BackendUnicode());
+					Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(34.0f), SCREEN_SCALE_Y(108.0f), gUString);
 				}
 			}
-			sprintf(Darkel_BackendString(), "%d", (Darkel_KillsNeeded >= 0 ? Darkel_KillsNeeded : 0));
-			Darkel_BackendAsciiToUnicode(Darkel_BackendString(), Darkel_BackendUnicode());
+			sprintf(gString, "%d", (Darkel_KillsNeeded >= 0 ? Darkel_KillsNeeded : 0));
+			AsciiToUnicode(gString, gUString);
 			Darkel_BackendColor(0, 0, 0, 255);
-			Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(144.0f), Darkel_BackendUnicode());
+			Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(35.0f), SCREEN_SCALE_Y(144.0f), gUString);
 			Darkel_BackendColor(156, 91, 40, 255);
-			Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(34.0f), SCREEN_SCALE_Y(143.0f), Darkel_BackendUnicode());
+			Darkel_BackendPrint(SCREEN_SCALE_FROM_RIGHT(34.0f), SCREEN_SCALE_Y(143.0f), gUString);
 			break;
 		}
 		case KILLFRENZY_PASSED:
@@ -200,7 +204,7 @@ void Darkel_RegisterCarBlownUpByPlayer(CVehicle *vehicle)
 {
     // Preserve the complete original RegisterCarBlownUpByPlayer policy and each ordered external access
 #ifdef FIX_BUGS
-	if (Darkel_BackendPlayback())
+	if (Replay_IsPlayingBack())
 		return;
 #endif
 	if (Darkel_FrenzyOnGoing()) {
@@ -231,7 +235,7 @@ void Darkel_RegisterKillByPlayer(CPed *victim,enum eWeaponType weapon,bool heads
 {
     // Preserve the complete original RegisterKillByPlayer policy and each ordered external access
 #ifdef FIX_BUGS
-	if (Darkel_BackendPlayback())
+	if (Replay_IsPlayingBack())
 		return;
 #endif
 	if (Darkel_FrenzyOnGoing() && (weapon == Darkel_WeaponType
@@ -260,7 +264,7 @@ void Darkel_RegisterKillNotByPlayer(CPed *victim,enum eWeaponType weapontype)
 {
     // Preserve the complete original RegisterKillNotByPlayer policy and each ordered external access
 #ifdef FIX_BUGS
-	if (Darkel_BackendPlayback())
+	if (Replay_IsPlayingBack())
 		return;
 #endif
 	(*Darkel_BackendPeopleKilledByOthers())++;
@@ -327,7 +331,7 @@ void Darkel_StartFrenzy(enum eWeaponType weaponType,int32_t time,uint16_t kill,i
 		Darkel_InterruptedWeaponType = Darkel_BackendWeaponType(Darkel_BackendWeaponAt(player,Darkel_BackendWeaponSlot(player,fixedWeapon)));
 		Darkel_AmmoInterruptedWeapon = Darkel_BackendAmmoTotal(Darkel_BackendWeaponAt(player,Darkel_BackendWeaponSlot(player,fixedWeapon)));
 		if (Darkel_InterruptedWeaponType)
-			Darkel_BackendAddRef(Darkel_BackendModelInfo(WeaponInfo_GetWeaponInfo((enum eWeaponType)Darkel_InterruptedWeaponType)->m_nModelId));
+			Darkel_BackendAddRef(ModelRegistry_Get(WeaponInfo_GetWeaponInfo((enum eWeaponType)Darkel_InterruptedWeaponType)->m_nModelId));
 #if (!defined FIX_BUGS && defined GTA_PS2)
 		Darkel_BackendRemoveWeaponAnims(player,Darkel_InterruptedWeaponSelected, -1000.0f);
 #endif
@@ -349,7 +353,7 @@ void Darkel_Update(void)
 {
     // Preserve the complete original Update policy and each ordered external access
 #ifdef FIX_BUGS
-	if (Darkel_BackendPlayback())
+	if (Replay_IsPlayingBack())
 		return;
 #endif
 
@@ -407,7 +411,7 @@ void Darkel_DealWithWeaponChangeAtEndOfFrenzy(void)
 		fixedWeapon = (enum eWeaponType)Darkel_WeaponType;
 
 	if (fixedWeapon < WEAPONTYPE_TOTALWEAPONS && Darkel_InterruptedWeaponType)
-		Darkel_BackendRemoveRef(Darkel_BackendModelInfo(WeaponInfo_GetWeaponInfo((enum eWeaponType)Darkel_InterruptedWeaponType)->m_nModelId));
+		Darkel_BackendRemoveRef(ModelRegistry_Get(WeaponInfo_GetWeaponInfo((enum eWeaponType)Darkel_InterruptedWeaponType)->m_nModelId));
 
 	if (fixedWeapon < WEAPONTYPE_TOTALWEAPONS) {
 		int slot = WeaponInfo_GetWeaponInfo(fixedWeapon)->m_nWeaponSlot;
@@ -417,7 +421,7 @@ void Darkel_DealWithWeaponChangeAtEndOfFrenzy(void)
 		Darkel_BackendSetAmmoInClip(Darkel_BackendWeaponAt(Darkel_BackendPlayer(),slot),0);
 		Darkel_BackendSetWeaponState(Darkel_BackendWeaponAt(Darkel_BackendPlayer(),slot),WEAPONSTATE_READY);
 		Darkel_BackendRemoveWeaponAnims(Darkel_BackendPlayer(),fixedWeapon, -1000.0f);
-		Darkel_BackendRemoveRef(Darkel_BackendModelInfo(WeaponInfo_GetWeaponInfo(fixedWeapon)->m_nModelId));
+		Darkel_BackendRemoveRef(ModelRegistry_Get(WeaponInfo_GetWeaponInfo(fixedWeapon)->m_nModelId));
 	}
 
 	CPlayerPed* player = Darkel_BackendPlayer();

@@ -1,6 +1,43 @@
 //+ rouz edit (ChatGPT)
 #pragma once
 #include "config.h"
+#include <stdint.h>
+//+ rouz edit (ChatGPT)
+typedef enum eControllerType
+{
+	KEYBOARD = 0,
+	OPTIONAL_EXTRA,
+	MOUSE,
+	JOYSTICK,
+	MAX_CONTROLLERTYPES,
+} eControllerType;
+//- rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+typedef struct InputControllerBinding {
+    int32_t m_Key;
+    int32_t m_ContSetOrder;
+} InputControllerBinding;
+//- rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+typedef enum eContSetOrder
+{
+	SETORDER_NONE = 0,
+	SETORDER_1,
+	SETORDER_2,
+	SETORDER_3,
+	SETORDER_4,
+	MAX_SETORDERS,
+} eContSetOrder;
+//- rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+typedef enum eSimCheckers
+{
+	SIM_X1 = 0, SIM_Y1,	// DPad
+	SIM_X2, SIM_Y2,	    // LeftStick
+
+	MAX_SIMS
+} eSimCheckers;
+//- rouz edit (ChatGPT)
 enum e_ControllerAction
 {
 	PED_FIREWEAPON = 0,

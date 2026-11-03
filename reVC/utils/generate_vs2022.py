@@ -9,14 +9,10 @@ from object_names_migration import project
 
 build = root / 'build'
 build.mkdir(exist_ok=True)
-sdl_include = Path('C:/msys/home/github/quakespasm/Windows/SDL2/include')
-shim = build / 'include/SDL2'
-shim.mkdir(parents=True, exist_ok=True)
-for name in ['SDL.h', 'SDL_audio.h', 'SDL_opengl.h', 'SDL_syswm.h', 'SDL_vulkan.h']:
-    # Expose the installed flat SDK through the SDL2 include layout used by rouziclib
-    header = sdl_include / name
-    assert header.is_file(), header
-    (shim / name).write_text('#include "' + header.as_posix() + '"\n', newline='\n')
+sdl_root = Path('D:/VC_libs')
+for required in [sdl_root / 'include/SDL2/SDL.h', sdl_root / 'lib/SDL2.lib']:
+    if not required.is_file():
+        raise FileNotFoundError(required)
 wrapper = build / 'generate.lua'
 wrapper.write_text('''dofile("@ROOT@/premake5.lua")
 workspace "reVC"
@@ -24,12 +20,10 @@ workspace "reVC"
     toolset "v143"
     filter {}
 project "reVC"
-    includedirs {"C:/msys/home", "C:/msys/home/github/CITAlloc", "@BUILD@/include"}
+    includedirs {"C:/msys/home", "C:/msys/home/github/CITAlloc", "D:/VC_libs/include"}
     links {"SDL2", "winmm", "comdlg32", "ole32", "opengl32"}
     filter "platforms:win-amd64*"
-        libdirs {"C:/msys/home/github/quakespasm/Windows/SDL2/lib64"}
-    filter "platforms:win-x86*"
-        libdirs {"C:/msys/home/github/quakespasm/Windows/SDL2/lib"}
+        libdirs {"D:/VC_libs/lib"}
     filter {}
 '''.replace('@ROOT@', root.as_posix()).replace('@BUILD@', build.as_posix()), newline='\n')
 subprocess.run([str(root / 'premake5.exe'), '--file=' + str(wrapper), 'vs2019',

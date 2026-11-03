@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -59,7 +60,7 @@ CHeli::CHeli(int32 id, uint8 CreatedBy)
 {
 	int i;
 
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	m_vehType = VEHICLE_TYPE_HELI;
 	pHandling = mod_HandlingManager.GetHandlingData((tVehicleType)mi->m_handlingId);
 	SetModelIndex(id);
@@ -480,7 +481,7 @@ CHeli::ProcessControl(void)
 			m_nPoliceShoutTimer = (*Timer_GetTimeInMilliseconds()) + 4500 + (General_GetRandomNumber() & 0xFFF);
 		}
 #ifdef FIX_BUGS
-		if (!CReplay::IsPlayingBack())
+		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 #endif
 		{
 			// Shoot
@@ -755,7 +756,7 @@ CHeli::FindSwatPositionRelativeToHeli(int n)
 bool
 CHeli::SendDownSwat(void)
 {
-	if(m_numSwat == 0 || !CStreaming::HasModelLoaded(MI_SWAT) ||
+	if(m_numSwat == 0 || !Streaming_HasModelLoaded(MI_SWAT) || // rouz edit (ChatGPT)
 	   General_GetRandomNumber() & 0x7F || (GetPosition() - FindPlayerCoors()).Magnitude() > 50.0f)
 		return false;
 
@@ -792,7 +793,7 @@ CHeli::InitHelis(void)
 	for(i = 0; i < NUM_HELIS; i++)
 		pHelis[i] = nil;
 
-	((CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_CHOPPER))->SetColModel(&CTempColModels::ms_colModelPed1);
+	((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_CHOPPER)))->SetColModel(&CTempColModels::ms_colModelPed1); // rouz edit (ChatGPT)
 }
 
 CHeli*
@@ -860,12 +861,12 @@ CHeli::UpdateHelis(void)
 	// Spawn new police helis
 	int numHelisRequired = 
 #ifdef FIX_BUGS
-		CReplay::IsPlayingBack() ? 0 :
+		Replay_IsPlayingBack() ? 0 : // rouz edit (ChatGPT)
 #endif
 		Wanted_NumOfHelisRequired(FindPlayerPed()->m_pWanted);
 	if(CullZones_PlayerNoRain() || CGame::IsInInterior())
 		numHelisRequired = 0;
-	if(CStreaming::HasModelLoaded(MI_CHOPPER) && (*Timer_GetTimeInMilliseconds()) > TestForNewRandomHelisTimer){
+	if(Streaming_HasModelLoaded(MI_CHOPPER) && (*Timer_GetTimeInMilliseconds()) > TestForNewRandomHelisTimer){ // rouz edit (ChatGPT)
 		// Spawn a police heli
 		TestForNewRandomHelisTimer = (*Timer_GetTimeInMilliseconds()) + 15000;
 		if(NumRandomHelis < numHelisRequired){
@@ -883,11 +884,11 @@ CHeli::UpdateHelis(void)
 
 	// Handle script heli
 	if(ScriptHeliOn){
-		if(CStreaming::HasModelLoaded(MI_CHOPPER) && pHelis[HELI_SCRIPT] == nil){
+		if(Streaming_HasModelLoaded(MI_CHOPPER) && pHelis[HELI_SCRIPT] == nil){ // rouz edit (ChatGPT)
 			pHelis[HELI_SCRIPT] = GenerateHeli(false);
 			pHelis[HELI_SCRIPT]->m_heliType = HELI_TYPE_SCRIPT;
 		}else
-			CStreaming::RequestModel(MI_CHOPPER, 0);
+			Streaming_RequestModel(MI_CHOPPER, 0); // rouz edit (ChatGPT)
 	}else{
 		if(pHelis[HELI_SCRIPT])
 			pHelis[HELI_SCRIPT]->m_heliStatus = HELI_STATUS_FLY_AWAY;
@@ -939,7 +940,7 @@ CHeli::UpdateHelis(void)
 					colors[nFrameGen&7], rotSpeed, 0, f, 0);
 			}
 
-			CExplosion::AddExplosion(nil, nil, EXPLOSION_HELI, pos, 0);
+			Explosion_AddExplosion(nil, nil, EXPLOSION_HELI, pos, 0);
 
 			pHelis[i]->SpawnFlyingComponent(HELI_SKID_LEFT);
 			pHelis[i]->SpawnFlyingComponent(HELI_SKID_RIGHT);
@@ -975,7 +976,7 @@ CHeli::UpdateHelis(void)
 				TheCamera.CamShake(0.4f, pHelis[i]->GetPosition().x, pHelis[i]->GetPosition().y, pHelis[i]->GetPosition().z);
 
 				CVector pos = pHelis[i]->GetPosition() - 2.5f*pHelis[i]->GetForward();
-				CExplosion::AddExplosion(nil, nil, EXPLOSION_HELI2, pos, 0);
+				Explosion_AddExplosion(nil, nil, EXPLOSION_HELI2, pos, 0);
 			}else
 				pHelis[i]->m_fAngularSpeed *= 1.03f;
 		}
@@ -1102,5 +1103,6 @@ void CHeli::ActivateHeli(bool activate) { ScriptHeliOn = activate; }
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "AudioManager.h"
@@ -656,19 +657,7 @@ AudioVehicleRainHost_Rain(void)
     return Weather_Rain;
 }
 
-uint8_t
-AudioVehicleRainHost_CameraNoRain(void)
-{
-    // Query the existing camera rain exclusion at its short-circuit point
-    return CullZones_CamNoRain();
-}
 
-uint8_t
-AudioVehicleRainHost_PlayerNoRain(void)
-{
-    // Query the existing player rain exclusion only when the camera excludes rain
-    return CullZones_PlayerNoRain();
-}
 
 void
 AudioVehicleRainHost_Counters(CVehicle *vehicle, uint8_t **audioCounter, uint8_t **sampleCounter)
@@ -817,14 +806,14 @@ void
 AudioVehicleModelHost_Up(CVehicle *vehicle, AudioSoundPosition *up)
 {
     // Copy the original up vector for the alternate C dot-product expression
-    *up = AudioSoundPosition_FromVector(vehicle->GetUp());
+    *up = AudioSoundPosition_FromVector(vehicle->GetUp()); // rouz edit (ChatGPT)
 }
 #else
 float
 AudioVehicleModelHost_UpY(CVehicle *vehicle)
 {
     // Read only the original up-vector Y component on the normal branch
-    return vehicle->GetUp().y;
+    return vehicle->GetUp().y; // rouz edit (ChatGPT)
 }
 #endif
 //- rouz edit (ChatGPT)
@@ -1387,12 +1376,7 @@ AudioPedOneShotsHost_Player(void)
 }
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
-uint8_t
-AudioEnvironmentHost_Replay(void)
-{
-    // Read replay state before deciding whether to process the player mood
-    return CReplay::IsPlayingBack();
-}
+
 
 
 CVehicle *
@@ -1528,38 +1512,6 @@ AudioPedPlaybackHost_DebugPosition(PedCommentPosition *position)
     position->x = commentPosition.x;
     position->y = commentPosition.y;
     position->z = commentPosition.z;
-}
-//- rouz edit (ChatGPT)
-//+ rouz edit (ChatGPT)
-extern "C" uint8_t
-AudioExplosionsHost_MakesSound(uint8_t id)
-{
-    // Query the original explosion sound flag before its active counter
-    return CExplosion::DoesExplosionMakeSound(id);
-}
-extern "C" int8_t
-AudioExplosionsHost_ActiveCounter(uint8_t id)
-{
-    // Retain the original signed active-counter result
-    return CExplosion::GetExplosionActiveCounter(id);
-}
-extern "C" void
-AudioExplosionsHost_ResetCounter(uint8_t id)
-{
-    // Consume the original active counter before type and distance queries
-    CExplosion::ResetExplosionActiveCounter(id);
-}
-extern "C" uint8_t
-AudioExplosionsHost_Type(uint8_t id)
-{
-    // Retain the original byte-sized explosion type result
-    return CExplosion::GetExplosionType(id);
-}
-extern "C" void
-AudioExplosionsHost_Position(uint8_t id, AudioSoundPosition *position)
-{
-    // Copy the same original explosion position into the C sound record
-    *position = AudioSoundPosition_FromVector(*CExplosion::GetExplosionPosition(id));
 }
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
@@ -1768,4 +1720,5 @@ AudioGameSetupHost_FireManager(void)
 }
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

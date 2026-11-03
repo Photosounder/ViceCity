@@ -8,14 +8,7 @@
 
 // based on x-gtasa
 
-enum eControllerType
-{
-	KEYBOARD = 0,
-	OPTIONAL_EXTRA,
-	MOUSE,
-	JOYSTICK,
-	MAX_CONTROLLERTYPES,
-};
+
 
 #include "ControllerActions.h"
 
@@ -30,23 +23,9 @@ enum e_ControllerActionType
 	ACTIONTYPE_NONE,
 };
 
-enum eContSetOrder
-{
-	SETORDER_NONE = 0,
-	SETORDER_1,
-	SETORDER_2,
-	SETORDER_3,
-	SETORDER_4,
-	MAX_SETORDERS,
-};
 
-enum eSimCheckers
-{
-	SIM_X1 = 0, SIM_Y1,	// DPad
-	SIM_X2, SIM_Y2,	    // LeftStick
 
-	MAX_SIMS
-};
+
 
 struct CMouseControllerState;
 struct CControllerState;
@@ -69,17 +48,6 @@ struct GlfwJoyState {
 class CControllerConfigManager
 {
 public:
-	struct tControllerConfigBind
-	{
-		int32      m_Key;
-		int32      m_ContSetOrder;
-
-		tControllerConfigBind()
-		{
-			m_Key = 0;
-			m_ContSetOrder = 0;
-		}
-	};
 
 	bool                  m_bFirstCapture;
 #if defined RW_GL3
@@ -91,7 +59,7 @@ public:
 #endif
 	wchar                 m_aActionNames[MAX_CONTROLLERACTIONS][ACTIONNAME_LENGTH];
 	bool                  m_aButtonStates[MAX_BUTTONS];
-	tControllerConfigBind m_aSettings[MAX_CONTROLLERACTIONS][MAX_CONTROLLERTYPES];
+	InputControllerBinding m_aSettings[MAX_CONTROLLERACTIONS][MAX_CONTROLLERTYPES];
 	bool                  m_aSimCheckers[MAX_SIMS][MAX_CONTROLLERTYPES];
 	bool                  m_bMouseAssociated;
 
@@ -105,7 +73,6 @@ public:
 	
 	int32 GetJoyButtonJustDown();
 	
-	void  SaveSettings(int32 file);
 	void  LoadSettings(int32 file);
 	
 	void  InitDefaultControlConfiguration();
@@ -126,15 +93,9 @@ public:
 	void  AffectControllerStateOn_ButtonUp(int32 button, eControllerType type);
 	void  AffectControllerStateOn_ButtonUp_All_Player_States(int32 button, eControllerType type, CControllerState &state);
 	
-	void  AffectPadFromKeyBoard();
-	void  AffectPadFromMouse();
 	
-	void  ClearSimButtonPressCheckers();
 
-	bool  GetIsKeyboardKeyDown    (RsKeyCodes keycode);
-	bool  GetIsKeyboardKeyJustDown(RsKeyCodes keycode);
-	bool  GetIsMouseButtonDown    (RsKeyCodes keycode);
-	bool  GetIsMouseButtonUp      (RsKeyCodes keycode);
+
 
 
 	void DeleteMatchingCommonControls           (e_ControllerAction action, int32 key, eControllerType type);
@@ -149,27 +110,24 @@ public:
 	bool IsAnyVehicleActionAssignedToMouseKey(int32 key);
 #endif 
 
-	bool GetIsKeyBlank(int32 key, eControllerType type);
 	e_ControllerActionType GetActionType(e_ControllerAction action);
 
-	void ClearSettingsAssociatedWithAction        (e_ControllerAction action, eControllerType type);
 	wchar *GetControllerSettingTextWithOrderNumber(e_ControllerAction action, eContSetOrder setorder);
 	wchar *GetControllerSettingTextKeyBoard       (e_ControllerAction action, eControllerType type);
 	wchar *GetControllerSettingTextMouse          (e_ControllerAction action);
 	wchar *GetControllerSettingTextJoystick       (e_ControllerAction action);
 
-	int32 GetNumOfSettingsForAction(e_ControllerAction action);
 	void  GetWideStringOfCommandKeys(uint16 action, wchar *text, uint16 leight);
-	int32 GetControllerKeyAssociatedWithAction(e_ControllerAction action, eControllerType type);
+
 
 	void  UpdateJoyButtonState(int32 padnumber);
 	
 	bool  GetIsActionAButtonCombo             (e_ControllerAction action);
 	wchar *GetButtonComboText                 (e_ControllerAction action);
-	void  SetControllerKeyAssociatedWithAction(e_ControllerAction action, int32 key, eControllerType type);
-	int32 GetMouseButtonAssociatedWithAction  (e_ControllerAction action);
-	void  SetMouseButtonAssociatedWithAction  (e_ControllerAction action, int32 button);
-	void  ResetSettingOrder                   (e_ControllerAction action);
+
+
+
+
 };
 
 #ifndef RW_GL3

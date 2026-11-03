@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
+#include "RwHelper.h"
 #include "Skidmarks_backend.h"
 #include "Timer.h"
 #include <math.h>
@@ -43,7 +45,7 @@ Skidmarks_Init(void)
 	Skidmarks_BackendTxdPush();
 	slot = Skidmarks_BackendTxdFind("particle");
 	Skidmarks_BackendTxdSet(slot);
-	gpSkidTex = Skidmarks_BackendTextureRead("particleskid", NULL);
+	gpSkidTex = RwHelper_ReadTexture("particleskid", NULL);
 	Skidmarks_BackendTxdPop();
 
 	for(i = 0; i < NUMSKIDMARKS; i++){
@@ -69,7 +71,7 @@ void
 Skidmarks_Shutdown(void)
 {
 	// Destroy then clear the original texture handle
-	Skidmarks_BackendTextureDestroy(gpSkidTex);
+	RwHelper_DestroyTexture(gpSkidTex);
 	gpSkidTex = NULL;
 }
 
@@ -139,7 +141,7 @@ Skidmarks_Render(void)
 	Skidmarks_BackendVertexAlpha(true);
 	Skidmarks_BackendSrcBlend();
 	Skidmarks_BackendDestBlend();
-	Skidmarks_BackendTextureRaster(Skidmarks_BackendRaster(gpSkidTex));
+	RwHelper_SetTextureRaster(RwHelper_TextureRaster(gpSkidTex));
 
 	for(i = 0; i < NUMSKIDMARKS; i++){
 		// Retain the original skidmark traversal and write order
@@ -220,7 +222,7 @@ Skidmarks_RegisterOneType(uintptr_t id, const void *pos, float fwdX, float fwdY,
 	int i;
 	SkidmarksVector2 fwd = {fwdX, fwdY};
 
-	if(Skidmarks_BackendPlayingBack())
+	if(Replay_IsPlayingBack())
 		return;
 
 	// Find a skidmark to continue

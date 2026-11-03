@@ -20,8 +20,6 @@ void Debug_BackendSetWrapx(float wrap);
 void Debug_BackendSetFontStyle(int16_t style);
 void Debug_BackendColor(uint8_t r,uint8_t g,uint8_t b,uint8_t a);
 void Debug_BackendPrintString(float x,float y,uint16_t *text);
-void Debug_BackendAsciiToUnicode(const char *source,uint16_t *target);
-uint16_t * Debug_BackendUnicode(void);
 void Debug_BackendObrsPrintfString(const char *str,int16_t x,int16_t y);
 void Debug_BackendTextureNone(void);
 void Debug_BackendDepthTestOff(void);

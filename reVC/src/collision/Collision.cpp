@@ -131,7 +131,7 @@ GetCollisionInSectorList(CPtrList &list)
 
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
-		level = CModelInfo::GetColModel(e->GetModelIndex())->level;
+		level = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex())))->level; // rouz edit (ChatGPT)
 		if(level != LEVEL_GENERIC)
 			return (eLevelName)level;
 	}

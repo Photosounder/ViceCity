@@ -2,6 +2,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "CollisionVector_native.h"
 
@@ -62,7 +63,7 @@ CBoat::CBoat(int mi, uint8 owner) : CVehicle(owner)
 {
     // Initialize the boom at the former door-constructor boundary
     Door_Init(&m_boom);
-	CVehicleModelInfo *minfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(mi);
+	CVehicleModelInfo *minfo = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(mi)); // rouz edit (ChatGPT)
 	m_vehType = VEHICLE_TYPE_BOAT;
 	m_fAccelerate = 0.0f;
 	m_fBrake = 0.0f;
@@ -200,7 +201,7 @@ CBoat::ProcessControl(void)
 		if(GetModelIndex() == MI_PREDATOR)
 			DoFixedMachineGuns();
 
-		if (!CRecordDataForChase::IsRecording())
+		if (!RecordChase_IsRecording()) // rouz edit (ChatGPT)
 			DoDriveByShootings();
 		break;
 	case STATUS_SIMPLE:
@@ -870,7 +871,7 @@ CBoat::BlowUpCar(CEntity *culprit)
 	bLightsOn = false;
 	ChangeLawEnforcerState(false);
 
-	CExplosion::AddExplosion(this, culprit, EXPLOSION_BOAT, GetPosition(), 0);
+	Explosion_AddExplosion(this, culprit, EXPLOSION_BOAT, GetPosition(), 0);
 	Darkel_RegisterCarBlownUpByPlayer(this);
 	if(m_aBoatNodes[BOAT_MOVING] == nil)
 		return;
@@ -1002,7 +1003,7 @@ CBoat::PreRender(void)
 #ifdef FIX_BUGS
 			static float steeringUpDown = 0.0f;
 #ifdef FREE_CAM
-			if(!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController))
+			if(!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) // rouz edit (ChatGPT)
 #endif
 			steeringUpDown += ((Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f ? (-CPad::GetPad(0)->GetCarGunUpDown()/128.0f) : (-CPad::GetPad(0)->GetSteeringUpDown()/128.0f)) - steeringUpDown) * Min(1.f, (*Timer_GetTimeStep())/5.f);
 #ifdef FREE_CAM
@@ -1143,7 +1144,7 @@ RwImVertexIndex KeepWaterOutIndices[6];
 void
 CBoat::Render()
 {
-	((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->SetVehicleColour(m_currentColour1, m_currentColour2);
+	((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->SetVehicleColour(m_currentColour1, m_currentColour2); // rouz edit (ChatGPT)
 	m_nSetPieceExtendedRangeTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 	if (!CVehicle::bWheelsOnlyCheat)
 		CEntity::Render();
@@ -1549,6 +1550,7 @@ CBoat::Load(uint8*& buf)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

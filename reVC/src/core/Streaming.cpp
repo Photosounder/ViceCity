@@ -9,6 +9,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "General.h"
 #include "Pad.h"
@@ -17,6 +18,7 @@
 #include "Clock.h"
 #include "Renderer.h"
 #include "ModelInfo.h"
+#include "SimpleModelPolicy.h" // rouz edit (ChatGPT)
 #include "TxdStore.h"
 #include "ModelIndices.h"
 #include "Pools.h"
@@ -37,6 +39,9 @@
 #include "CutsceneMgr.h"
 #include "CdStream.h"
 #include "Streaming.h"
+#include "StreamingRequest_backend.h"
+#include "StreamingRemove_backend.h"
+#include "StreamingFlush_backend.h"
 #include "Replay.h"
 #include "main.h"
 #include "ColStore.h"
@@ -48,14 +53,82 @@
 #include "Frontend.h"
 #include "VarConsole.h"
 
+//+ rouz edit (ChatGPT)
+void StreamingFlush_ProcessLoadingChannel(int32_t channel)
+{
+    // Preserve the original native channel processing call
+    CStreaming::ProcessLoadingChannel(channel);
+}
+int StreamingRemove_NoUnstreaming(void)
+{
+    // Read the original live unstreaming preference
+    return rouz.no_unstreaming;
+}
+bool StreamingRemove_TryVehicleFallback(void)
+{
+    // Preserve the original vehicle thresholds and short-circuit order
+    return (Streaming_numVehiclesLoaded > 7 || CGame::currArea != AREA_MAIN_MAP && Streaming_numVehiclesLoaded > 4) && Streaming_RemoveLoadedVehicle();
+}
+void StreamingRemove_RemoveVehicleClass(int32_t id)
+{
+    // Remove the original vehicle class entry after streaming removal
+    CVehicleModelInfo *info = (CVehicleModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(id));
+    if (info->m_vehicleClass != -1)
+        CCarCtrl::RemoveFromLoadedVehicleArray(id, info->m_vehicleClass);
+}
+void StreamingRemove_AddVehicleClass(int32_t id)
+{
+    // Register the original vehicle class and frequency
+    CVehicleModelInfo *info = (CVehicleModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(id));
+    if (info->m_vehicleClass != -1)
+        CCarCtrl::AddToLoadedVehicleArray(id, info->m_vehicleClass, info->m_frequency);
+}
+int StreamingRemove_ModelRefs(int32_t id)
+{
+    // Read the original native model reference count
+    return ((CBaseModelInfo *)ModelRegistry_Get(id))->GetNumRefs();
+}
+void StreamingRemove_DeleteModel(int32_t id)
+{
+    // Preserve the original virtual render-object deletion
+    ((CBaseModelInfo *)ModelRegistry_Get(id))->DeleteRwObject();
+}
+void StreamingRemove_RemoveCol(int32_t id)
+{
+    // Preserve the original collision-store removal
+    CColStore::RemoveCol(id);
+}
+int32_t StreamingDependencies_AnimIndex(void *model)
+{
+    // Preserve the base-model virtual animation-file lookup
+    return ((CBaseModelInfo *)model)->GetAnimFileIndex();
+}
+int16_t StreamingOwnership_TxdSlot(void *model)
+{
+    // Read the original base-model texture slot
+    return ((CBaseModelInfo *)model)->GetTxdSlot();
+}
+int16_t StreamingRequest_TxdSlot(void *model)
+{
+    // Read the texture slot from the captured native model
+    return ((CSimpleModelInfo *)((CBaseModelInfo *)model))->GetTxdSlot();
+}
+int32_t StreamingRequest_AnimIndex(void *model)
+{
+    // Preserve the original virtual animation-file lookup
+    return ((CSimpleModelInfo *)((CBaseModelInfo *)model))->GetAnimFileIndex();
+}
+void StreamingRequest_SetOpaqueIfSimple(void *model)
+{
+    // Preserve the original simple-model test and alpha write
+    CSimpleModelInfo *info = (CSimpleModelInfo *)((CBaseModelInfo *)model);
+    if (info->IsSimple())
+        info->m_alpha = 255;
+}
+//- rouz edit (ChatGPT)
+
 bool CStreaming::ms_disableStreaming;
 bool CStreaming::ms_bLoadingBigModel;
-int32 CStreaming::ms_numModelsRequested;
-CStreamingInfo CStreaming::ms_aInfoForModel[NUMSTREAMINFO];
-CStreamingInfo CStreaming::ms_startLoadedList;
-CStreamingInfo CStreaming::ms_endLoadedList;
-CStreamingInfo CStreaming::ms_startRequestedList;
-CStreamingInfo CStreaming::ms_endRequestedList;
 int32 CStreaming::ms_oldSectorX;
 int32 CStreaming::ms_oldSectorY;
 int32 CStreaming::ms_streamingBufferSize;
@@ -64,24 +137,10 @@ int8 *CStreaming::ms_pStreamingBuffer[2];
 #else
 int8 *CStreaming::ms_pStreamingBuffer[4];
 #endif
-size_t CStreaming::ms_memoryUsed;
-CStreamingChannel CStreaming::ms_channel[2];
-int32 CStreaming::ms_channelError;
-int32 CStreaming::ms_numVehiclesLoaded;
-int32 CStreaming::ms_numPedsLoaded;
-int32 CStreaming::ms_vehiclesLoaded[MAXVEHICLESLOADED];
-int32 CStreaming::ms_lastVehicleDeleted;
-bool CStreaming::ms_bIsPedFromPedGroupLoaded[NUMMODELSPERPEDGROUP];
+int32 CStreaming::ms_channelError; // rouz edit (ChatGPT)
 CDirectory *CStreaming::ms_pExtraObjectsDir;
-int32 CStreaming::ms_numPriorityRequests;
-int32 CStreaming::ms_currentPedGrp;
 int32 CStreaming::ms_currentPedLoading;
 int32 CStreaming::ms_lastCullZone;
-uint16 CStreaming::ms_loadedGangs;
-uint16 CStreaming::ms_loadedGangCars;
-int32 CStreaming::ms_imageOffsets[NUMCDIMAGES];
-int32 CStreaming::ms_lastImageRead;
-int32 CStreaming::ms_imageSize;
 size_t CStreaming::ms_memoryAvailable;
 
 int32 desiredNumVehiclesLoaded = 12;
@@ -107,27 +166,27 @@ CStreaming::Init2(void)
 	int i;
 
 	for(i = 0; i < NUMSTREAMINFO; i++){
-		ms_aInfoForModel[i].m_loadState = STREAMSTATE_NOTLOADED;
-		ms_aInfoForModel[i].m_next = nil;
-		ms_aInfoForModel[i].m_prev = nil;
-		ms_aInfoForModel[i].m_nextID = -1;
-		ms_aInfoForModel[i].m_size = 0;
-		ms_aInfoForModel[i].m_position = 0;
+		Streaming_modelInfo[i].m_loadState = STREAMSTATE_NOTLOADED; // rouz edit (ChatGPT)
+		Streaming_modelInfo[i].m_next = nil; // rouz edit (ChatGPT)
+		Streaming_modelInfo[i].m_prev = nil; // rouz edit (ChatGPT)
+		Streaming_modelInfo[i].m_nextID = -1; // rouz edit (ChatGPT)
+		Streaming_modelInfo[i].m_size = 0; // rouz edit (ChatGPT)
+		Streaming_modelInfo[i].m_position = 0; // rouz edit (ChatGPT)
 	}
 
 	ms_channelError = -1;
 
 	// init lists
 
-	ms_startLoadedList.m_next = &ms_endLoadedList;
-	ms_startLoadedList.m_prev = nil;
-	ms_endLoadedList.m_prev = &ms_startLoadedList;
-	ms_endLoadedList.m_next = nil;
+	Streaming_startLoadedList.m_next = &Streaming_endLoadedList; // rouz edit (ChatGPT)
+	Streaming_startLoadedList.m_prev = nil; // rouz edit (ChatGPT)
+	Streaming_endLoadedList.m_prev = &Streaming_startLoadedList; // rouz edit (ChatGPT)
+	Streaming_endLoadedList.m_next = nil; // rouz edit (ChatGPT)
 
-	ms_startRequestedList.m_next = &ms_endRequestedList;
-	ms_startRequestedList.m_prev = nil;
-	ms_endRequestedList.m_prev = &ms_startRequestedList;
-	ms_endRequestedList.m_next = nil;
+	Streaming_startRequestedList.m_next = &Streaming_endRequestedList; // rouz edit (ChatGPT)
+	Streaming_startRequestedList.m_prev = nil; // rouz edit (ChatGPT)
+	Streaming_endRequestedList.m_prev = &Streaming_startRequestedList; // rouz edit (ChatGPT)
+	Streaming_endRequestedList.m_next = nil; // rouz edit (ChatGPT)
 
 	// init misc
 
@@ -135,27 +194,27 @@ CStreaming::Init2(void)
 	ms_oldSectorY = 0;
 	ms_streamingBufferSize = 0;
 	ms_disableStreaming = false;
-	ms_memoryUsed = 0;
+	Streaming_memoryUsed = 0; // rouz edit (ChatGPT)
 	ms_bLoadingBigModel = false;
 
 	// init channels
 
-	ms_channel[0].state = CHANNELSTATE_IDLE;
-	ms_channel[1].state = CHANNELSTATE_IDLE;
+	Streaming_channel[0].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
+	Streaming_channel[1].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
 	for(i = 0; i < 4; i++){
-		ms_channel[0].streamIds[i] = -1;
-		ms_channel[0].offsets[i] = -1;
-		ms_channel[1].streamIds[i] = -1;
-		ms_channel[1].offsets[i] = -1;
+		Streaming_channel[0].streamIds[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[0].offsets[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[1].offsets[i] = -1; // rouz edit (ChatGPT)
 	}
 
 	// init stream info, mark things that are already loaded
 
 	for(i = 0; i < MODELINFOSIZE; i++){
-		CBaseModelInfo *mi = CModelInfo::GetModelInfo(i);
+		CBaseModelInfo *mi = ((CBaseModelInfo*)ModelRegistry_Get(i)); // rouz edit (ChatGPT)
 		if(mi && mi->GetRwObject()){
-			ms_aInfoForModel[i].m_loadState = STREAMSTATE_LOADED;
-			ms_aInfoForModel[i].m_flags = STREAMFLAGS_DONT_REMOVE;
+			Streaming_modelInfo[i].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
+			Streaming_modelInfo[i].m_flags = STREAMFLAGS_DONT_REMOVE; // rouz edit (ChatGPT)
 			if(mi->IsSimple())
 				((CSimpleModelInfo*)mi)->m_alpha = 255;
 		}
@@ -164,25 +223,25 @@ CStreaming::Init2(void)
 	for(i = 0; i < TXDSTORESIZE; i++)
 		// Use the complete C texture dictionary owner with the original live arguments
 		if(TxdStore_GetSlot(i) && ((RwTexDictionary*)TxdStore_GetSlot(i)->texDict))
-			ms_aInfoForModel[i + STREAM_OFFSET_TXD].m_loadState = STREAMSTATE_LOADED;
+			Streaming_modelInfo[i + STREAM_OFFSET_TXD].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
 
 
 	for(i = 0; i < MAXVEHICLESLOADED; i++)
-		ms_vehiclesLoaded[i] = -1;
-	ms_numVehiclesLoaded = 0;
-	ms_numPedsLoaded = 8;
+		Streaming_vehiclesLoaded[i] = -1; // rouz edit (ChatGPT)
+	Streaming_numVehiclesLoaded = 0; // rouz edit (ChatGPT)
+	Streaming_numPedsLoaded = 8; // rouz edit (ChatGPT)
 
-	for(i = 0; i < ARRAY_SIZE(ms_bIsPedFromPedGroupLoaded); i++)
-		ms_bIsPedFromPedGroupLoaded[i] = false;
+	for(i = 0; i < ARRAY_SIZE(Streaming_pedGroupLoaded); i++) // rouz edit (ChatGPT)
+		Streaming_pedGroupLoaded[i] = false; // rouz edit (ChatGPT)
 
 	// Allocate the extra-object directory without invoking C++ new.
 	ms_pExtraObjectsDir = (CDirectory*)malloc(sizeof(CDirectory));
 	assert(ms_pExtraObjectsDir);
 	Directory_Initialize(ms_pExtraObjectsDir, EXTRADIRSIZE);
-	ms_numPriorityRequests = 0;
-	ms_currentPedGrp = -1;
+	Streaming_numPriorityRequests = 0; // rouz edit (ChatGPT)
+	Streaming_currentPedGroup = -1; // rouz edit (ChatGPT)
 	ms_lastCullZone = -1;		// unused because RemoveModelsNotVisibleFromCullzone is gone
-	ms_loadedGangs = 0;
+	Streaming_loadedGangs = 0; // rouz edit (ChatGPT)
 	ms_currentPedLoading = NUMMODELSPERPEDGROUP;	// unused, whatever it is
 
 	LoadCdDirectory();
@@ -228,8 +287,8 @@ CStreaming::Init2(void)
 	pIslandLODbeachEntity = nil;
 	islandLODmainland = -1;
 	islandLODbeach = -1;
-	CModelInfo::GetModelInfo("IslandLODmainland", &islandLODmainland);
-	CModelInfo::GetModelInfo("IslandLODbeach", &islandLODbeach);
+	(CBaseModelInfo*)ModelRegistry_Find("IslandLODmainland", 0, MODELINFOSIZE-1, &islandLODmainland); // rouz edit (ChatGPT)
+	(CBaseModelInfo*)ModelRegistry_Find("IslandLODbeach", 0, MODELINFOSIZE-1, &islandLODbeach); // rouz edit (ChatGPT)
 
 #ifndef MASTER
 	VarConsole_AddBool(&VarConsole,"Streaming Debug", &gbPrintStats, true); // rouz edit (ChatGPT)
@@ -271,12 +330,12 @@ void
 CStreaming::ReInit(void)
 {
 	int i;
-	CStreaming::FlushRequestList();
+	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
 	CStreaming::DeleteAllRwObjects();
-	CStreaming::RemoveAllUnusedModels();
+	Streaming_RemoveAllUnusedModels(); // rouz edit (ChatGPT)
 	for(i = 0; i < MODELINFOSIZE; i++)
-		if(CModelInfo::GetModelInfo(i) && ms_aInfoForModel[i].m_flags & STREAMFLAGS_SCRIPTOWNED)
-			SetMissionDoesntRequireModel(i);
+		if(((CBaseModelInfo*)ModelRegistry_Get(i)) && Streaming_modelInfo[i].m_flags & STREAMFLAGS_SCRIPTOWNED) // rouz edit (ChatGPT)
+			Streaming_SetMissionDoesntRequireModel(i); // rouz edit (ChatGPT)
 	CStreaming::ms_disableStreaming = false;
 }
 
@@ -329,11 +388,11 @@ CStreaming::Update(void)
 		DeleteFarAwayRwObjects(TheCamera.GetPosition());
 
 	if(!ms_disableStreaming &&
-	   !CCutsceneMgr::IsCutsceneProcessing() &&
-	   ms_numModelsRequested < 5 &&
+	   !Cutscene_IsProcessing() && // rouz edit (ChatGPT)
+	   Streaming_numModelsRequested < 5 && // rouz edit (ChatGPT)
 	   !CRenderer::m_loadingPriority &&
 	   CGame::currArea == AREA_MAIN_MAP &&
-	   !CReplay::IsPlayingBack()){
+	   !Replay_IsPlayingBack()){ // rouz edit (ChatGPT)
 		StreamVehiclesAndPeds();
 		StreamZoneModels(FindPlayerCoors());
 	}
@@ -354,10 +413,10 @@ CStreaming::Update(void)
 	//	PrintRequestList();
 
 	if (rouz.no_unstreaming)
-	for(si = ms_endRequestedList.m_prev; si != &ms_startRequestedList; si = prev){
+	for(si = Streaming_endRequestedList.m_prev; si != &Streaming_startRequestedList; si = prev){ // rouz edit (ChatGPT)
 		prev = si->m_prev;
 		if((si->m_flags & (STREAMFLAGS_KEEP_IN_MEMORY|STREAMFLAGS_PRIORITY)) == 0)
-			RemoveModel(si - ms_aInfoForModel);
+			Streaming_RemoveModel(si - Streaming_modelInfo); // rouz edit (ChatGPT)
 	}
 }
 
@@ -368,13 +427,13 @@ CStreaming::LoadCdDirectory(void)
 	int i;
 
 #ifdef GTA_PC
-	ms_imageOffsets[0] = 0;
-	ms_imageOffsets[1] = -1;
-	ms_imageOffsets[2] = -1;
-	ms_imageOffsets[3] = -1;
-	ms_imageOffsets[4] = -1;
-	ms_imageOffsets[5] = -1;
-	ms_imageSize = GetGTA3ImgSize();
+	Streaming_imageOffsets[0] = 0; // rouz edit (ChatGPT)
+	Streaming_imageOffsets[1] = -1; // rouz edit (ChatGPT)
+	Streaming_imageOffsets[2] = -1; // rouz edit (ChatGPT)
+	Streaming_imageOffsets[3] = -1; // rouz edit (ChatGPT)
+	Streaming_imageOffsets[4] = -1; // rouz edit (ChatGPT)
+	Streaming_imageOffsets[5] = -1; // rouz edit (ChatGPT)
+	Streaming_imageSize = GetGTA3ImgSize(); // rouz edit (ChatGPT)
 	// PS2 uses CFileMgr::GetCdFile on all IMG files to fill the array
 #endif
 
@@ -385,8 +444,8 @@ CStreaming::LoadCdDirectory(void)
 		LoadCdDirectory(dirname, i);
 	}
 
-	ms_lastImageRead = 0;
-	ms_imageSize /= CDSTREAM_SECTOR_SIZE;
+	Streaming_lastImageRead = 0; // rouz edit (ChatGPT)
+	Streaming_imageSize /= CDSTREAM_SECTOR_SIZE; // rouz edit (ChatGPT)
 }
 
 void
@@ -419,7 +478,7 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		*dot = '\0';
 
 		if(strncasecmp(dot+1, "DFF", 3) == 0){
-			if(CModelInfo::GetModelInfo(direntry.name, &modelId)){
+			if((CBaseModelInfo*)ModelRegistry_Find(direntry.name, 0, MODELINFOSIZE-1, &modelId)){ // rouz edit (ChatGPT)
 				bAddToStreaming = true;
 			}else{
 #ifdef FIX_BUGS
@@ -455,14 +514,14 @@ CStreaming::LoadCdDirectory(const char *dirname, int n)
 		}
 
 		if(bAddToStreaming){
-			if(StreamingInfo_GetCdSize(&ms_aInfoForModel[modelId])){
+			if(StreamingInfo_GetCdSize(&Streaming_modelInfo[modelId])){ // rouz edit (ChatGPT)
 				debug("%s.%s appears more than once in %s\n", direntry.name, dot+1, dirname);
 				lastID = -1;
 			}else{
 				direntry.offset |= imgSelector;
-				StreamingInfo_SetCdPosnAndSize(&ms_aInfoForModel[modelId], direntry.offset, direntry.size);
+				StreamingInfo_SetCdPosnAndSize(&Streaming_modelInfo[modelId], direntry.offset, direntry.size); // rouz edit (ChatGPT)
 				if(lastID != -1)
-					ms_aInfoForModel[lastID].m_nextID = modelId;
+					Streaming_modelInfo[lastID].m_nextID = modelId; // rouz edit (ChatGPT)
 				lastID = modelId;
 			}
 		}
@@ -476,7 +535,7 @@ GetObjectName(int streamId)
 {
 	static char objname[32];
 	if(streamId < STREAM_OFFSET_TXD)
-		sprintf(objname, "%s.dff", CModelInfo::GetModelInfo(streamId)->GetModelName());
+		sprintf(objname, "%s.dff", ((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelName()); // rouz edit (ChatGPT)
 	else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL)
 		// Use the complete C texture dictionary owner with the original live arguments
 		sprintf(objname, "%s.txd", TxdStore_GetTxdName(streamId-STREAM_OFFSET_TXD));
@@ -511,19 +570,19 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 
 	startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 
-	cdsize = StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]);
+	cdsize = StreamingInfo_GetCdSize(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
 	mem.start = (uint8*)buf;
 	mem.length = cdsize * CDSTREAM_SECTOR_SIZE;
 	stream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &mem);
 
 	if(streamId < STREAM_OFFSET_TXD){
 		// Model
-		mi = CModelInfo::GetModelInfo(streamId);
+		mi = ((CBaseModelInfo*)ModelRegistry_Get(streamId)); // rouz edit (ChatGPT)
 
 		// Txd and anim have to be loaded
 		int animId = mi->GetAnimFileIndex();
 #ifdef FIX_BUGS
-		if(!HasTxdLoaded(mi->GetTxdSlot()) ||
+		if(!Streaming_HasTxdLoaded(mi->GetTxdSlot()) || // rouz edit (ChatGPT)
 #else
 		// texDict will exist even if only first part has loaded
 		// Use the complete C texture dictionary owner with the original live arguments
@@ -531,8 +590,8 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 #endif
 		   // Use the complete C animation manager at the original call boundary
 		   animId != -1 && !AnimManager_GetAnimationBlockById(animId)->isLoaded){
-			RemoveModel(streamId);
-			ReRequestModel(streamId);
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
+			Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
@@ -554,10 +613,10 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 			// TODO(MIAMI)? complain if file is not pre-instanced. we hardly are interested in that
 		} else if (mi->GetModelType() == MITYPE_VEHICLE) {
 			// load vehicles in two parts
-			CModelInfo::GetModelInfo(streamId)->AddRef();
+			((CBaseModelInfo*)ModelRegistry_Get(streamId))->AddRef(); // rouz edit (ChatGPT)
 			success = CFileLoader::StartLoadClumpFile(stream, streamId);
 			if(success)
-				ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_STARTED;
+				Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_STARTED; // rouz edit (ChatGPT)
 		}else{
 			success = CFileLoader::LoadClumpFile(stream, streamId);
 #ifdef USE_CUSTOM_ALLOCATOR
@@ -569,7 +628,7 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		UpdateMemoryUsed();
 
 		// Txd and anims no longer needed unless we only read part of the file
-		if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
+		if(Streaming_modelInfo[streamId].m_loadState != STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
 			// Use the complete C texture dictionary owner with the original live arguments
 			TxdStore_RemoveRefWithoutDelete(mi->GetTxdSlot());
 #if GTA_VERSION > GTAVC_PS2
@@ -580,17 +639,17 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		}
 
 		if(!success){
-			debug("Failed to load %s\n", CModelInfo::GetModelInfo(streamId)->GetModelName());
-			RemoveModel(streamId);
-			ReRequestModel(streamId);
+			debug("Failed to load %s\n", ((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelName()); // rouz edit (ChatGPT)
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
+			Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
 	}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL){
 		// Txd
-		if((ms_aInfoForModel[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY) == 0 &&
-		   !IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD)){
-			RemoveModel(streamId);
+		if((Streaming_modelInfo[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY) == 0 && // rouz edit (ChatGPT)
+		   !Streaming_IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD)){ // rouz edit (ChatGPT)
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
@@ -600,7 +659,7 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 			// Use the complete C texture dictionary owner with the original live arguments
 			success = TxdStore_StartLoadTxd(streamId - STREAM_OFFSET_TXD, stream);
 			if(success)
-				ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_STARTED;
+				Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_STARTED; // rouz edit (ChatGPT)
 		}else
 		        // Use the complete C texture dictionary owner with the original live arguments
 		        success = TxdStore_LoadStream(streamId - STREAM_OFFSET_TXD, stream);
@@ -610,8 +669,8 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		if(!success){
 			// Use the complete C texture dictionary owner with the original live arguments
 			debug("Failed to load %s.txd\n", TxdStore_GetTxdName(streamId - STREAM_OFFSET_TXD));
-			RemoveModel(streamId);
-			ReRequestModel(streamId);
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
+			Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
@@ -621,16 +680,16 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 		POP_MEMID();
 		if(!success){
 			debug("Failed to load %s.col\n", CColStore::GetColName(streamId - STREAM_OFFSET_COL));
-			RemoveModel(streamId);
-			ReRequestModel(streamId);
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
+			Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
 	}else if(streamId >= STREAM_OFFSET_ANIM){
 		assert(streamId < NUMSTREAMINFO);
-		if((ms_aInfoForModel[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY) == 0 &&
-		   !AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM)){
-			RemoveModel(streamId);
+		if((Streaming_modelInfo[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY) == 0 && // rouz edit (ChatGPT)
+		   !Streaming_AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM)){ // rouz edit (ChatGPT)
+			Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
 			RwStreamClose(stream, &mem);
 			return false;
 		}
@@ -652,28 +711,28 @@ CStreaming::ConvertBufferToObject(int8 *buf, int32 streamId)
 
 			// Set fading for some objects
 			if(mi->IsSimple() && !smi->m_isBigBuilding){
-				if(ms_aInfoForModel[streamId].m_flags & STREAMFLAGS_NOFADE)
+				if(Streaming_modelInfo[streamId].m_flags & STREAMFLAGS_NOFADE) // rouz edit (ChatGPT)
 					smi->m_alpha = 255;
 				else
 					smi->m_alpha = 0;
 			}
 
-			if(CanRemoveModel(streamId))
-				StreamingInfo_AddToList(&ms_aInfoForModel[streamId], &ms_startLoadedList);
+			if(Streaming_CanRemoveModel(streamId)) // rouz edit (ChatGPT)
+				StreamingInfo_AddToList(&Streaming_modelInfo[streamId], &Streaming_startLoadedList); // rouz edit (ChatGPT)
 		}
 	}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL ||
 	         streamId >= STREAM_OFFSET_ANIM){
 		assert(streamId < NUMSTREAMINFO);
 		// Txd and anims
-		if(CanRemoveModel(streamId))
-			StreamingInfo_AddToList(&ms_aInfoForModel[streamId], &ms_startLoadedList);
+		if(Streaming_CanRemoveModel(streamId)) // rouz edit (ChatGPT)
+			StreamingInfo_AddToList(&Streaming_modelInfo[streamId], &Streaming_startLoadedList); // rouz edit (ChatGPT)
 	}
 
 	// Mark objects as loaded
-	if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
-		ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
+	if(Streaming_modelInfo[streamId].m_loadState != STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
+		Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
 #ifndef USE_CUSTOM_ALLOCATOR
-		ms_memoryUsed += StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
+		Streaming_memoryUsed += StreamingInfo_GetCdSize(&Streaming_modelInfo[streamId]) * CDSTREAM_SECTOR_SIZE; // rouz edit (ChatGPT)
 #endif
 	}
 
@@ -696,19 +755,19 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 
 	startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
 
-	if(ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_STARTED){
+	if(Streaming_modelInfo[streamId].m_loadState != STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
 		if(streamId < STREAM_OFFSET_TXD)
-			CModelInfo::GetModelInfo(streamId)->RemoveRef();
+			((CBaseModelInfo*)ModelRegistry_Get(streamId))->RemoveRef(); // rouz edit (ChatGPT)
 		return false;
 	}
 
 	mem.start = (uint8*)buf;
-	mem.length = StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
+	mem.length = StreamingInfo_GetCdSize(&Streaming_modelInfo[streamId]) * CDSTREAM_SECTOR_SIZE; // rouz edit (ChatGPT)
 	stream = RwStreamOpen(rwSTREAMMEMORY, rwSTREAMREAD, &mem);
 
 	if(streamId < STREAM_OFFSET_TXD){
 		// Model
-		mi = CModelInfo::GetModelInfo(streamId);
+		mi = ((CBaseModelInfo*)ModelRegistry_Get(streamId)); // rouz edit (ChatGPT)
 		PUSH_MEMID(MEMID_STREAM_MODELS);
 		// Use the complete C texture dictionary owner with the original live arguments
 		TxdStore_SetCurrentTxd(mi->GetTxdSlot());
@@ -717,7 +776,7 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 #ifdef USE_CUSTOM_ALLOCATOR
 			RpClumpForAllAtomics((RpClump*)mi->GetRwObject(), RegisterAtomicMemPtrsCB, nil);
 #endif
-			success = AddToLoadedVehiclesList(streamId);
+			success = Streaming_AddToLoadedVehiclesList(streamId); // rouz edit (ChatGPT)
 		}
 		POP_MEMID();
 		mi->RemoveRef();
@@ -744,14 +803,14 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 
 	RwStreamClose(stream, &mem);
 
-	ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
+	Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
 #ifndef USE_CUSTOM_ALLOCATOR
-	ms_memoryUsed += StreamingInfo_GetCdSize(&ms_aInfoForModel[streamId]) * CDSTREAM_SECTOR_SIZE;
+	Streaming_memoryUsed += StreamingInfo_GetCdSize(&Streaming_modelInfo[streamId]) * CDSTREAM_SECTOR_SIZE; // rouz edit (ChatGPT)
 #endif
 
 	if(!success){
-		RemoveModel(streamId);
-		ReRequestModel(streamId);
+		Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
+		Streaming_ReRequestModel(streamId); // rouz edit (ChatGPT)
 		UpdateMemoryUsed();
 		return false;
 	}
@@ -764,59 +823,6 @@ CStreaming::FinishLoadingLargeFile(int8 *buf, int32 streamId)
 		debug("%s took %d ms\n", GetObjectName(streamId), timeDiff);
 
 	return true;
-}
-
-void
-CStreaming::RequestModel(int32 id, int32 flags)
-{
-	CSimpleModelInfo *mi;
-
-	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_INQUEUE){
-		// updgrade to priority
-		if(flags & STREAMFLAGS_PRIORITY && !StreamingInfo_IsPriority(&ms_aInfoForModel[id])){
-			ms_numPriorityRequests++;
-			ms_aInfoForModel[id].m_flags |= STREAMFLAGS_PRIORITY;
-		}
-	}else if(ms_aInfoForModel[id].m_loadState != STREAMSTATE_NOTLOADED){
-		flags &= ~STREAMFLAGS_PRIORITY;
-	}
-	ms_aInfoForModel[id].m_flags |= flags;
-
-	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_LOADED){
-		// Already loaded, only check changed flags
-
-		if(ms_aInfoForModel[id].m_flags & STREAMFLAGS_NOFADE && id < STREAM_OFFSET_TXD){
-			mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
-			if(mi->IsSimple())
-				mi->m_alpha = 255;
-		}
-
-		// reinsert into list
-		if(ms_aInfoForModel[id].m_next){
-			StreamingInfo_RemoveFromList(&ms_aInfoForModel[id]);
-			if(CanRemoveModel(id))
-				StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
-		}
-	}else if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_NOTLOADED ||
-	         ms_aInfoForModel[id].m_loadState == STREAMSTATE_LOADED){	// how can this be true again?
-
-		if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_NOTLOADED){
-			if(id < STREAM_OFFSET_TXD){
-				mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
-				RequestTxd(mi->GetTxdSlot(), flags);
-				int anim = mi->GetAnimFileIndex();
-				if(anim != -1)
-					RequestAnim(anim, STREAMFLAGS_DEPENDENCY);
-			}
-			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startRequestedList);
-			ms_numModelsRequested++;
-			if(flags & STREAMFLAGS_PRIORITY)
-				ms_numPriorityRequests++;
-		}
-
-		ms_aInfoForModel[id].m_loadState = STREAMSTATE_INQUEUE;
-		ms_aInfoForModel[id].m_flags = flags;
-	}
 }
 
 #define BIGBUILDINGFLAGS STREAMFLAGS_DONT_REMOVE
@@ -842,7 +848,7 @@ CStreaming::RequestBigBuildings(eLevelName level)
 #endif
 			)
 			if(!b->bStreamBIGBuilding)
-				RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS);
+				Streaming_RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 	}
 	RequestIslands(level);
 }
@@ -868,9 +874,9 @@ CStreaming::RequestBigBuildings(eLevelName level, const CVector &pos)
 		)
 			if(b->bStreamBIGBuilding){
 				if(CRenderer::ShouldModelBeStreamed(b, pos))
-					RequestModel(b->GetModelIndex(), 0);
+					Streaming_RequestModel(b->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			}else
-				RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS);
+				Streaming_RequestModel(b->GetModelIndex(), BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 	}
 	RequestIslands(level);
 }
@@ -939,11 +945,11 @@ CStreaming::RequestIslands(eLevelName level)
 	switch(level){
 	case LEVEL_MAINLAND:
 		if(islandLODbeach != -1)
-			RequestModel(islandLODbeach, BIGBUILDINGFLAGS);
+			Streaming_RequestModel(islandLODbeach, BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 		break;
 	case LEVEL_BEACH:
 		if(islandLODmainland != -1)
-			RequestModel(islandLODmainland, BIGBUILDINGFLAGS);
+			Streaming_RequestModel(islandLODmainland, BIGBUILDINGFLAGS); // rouz edit (ChatGPT)
 		break;
 	default: break;
 	}
@@ -1008,9 +1014,9 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 	uint32 pos, size;
 	int i, n;
 
-	mi = CModelInfo::GetModelInfo(modelId);
+	mi = ((CBaseModelInfo*)ModelRegistry_Get(modelId)); // rouz edit (ChatGPT)
 	if(strncasecmp("CSPlay", modelName, 6) == 0){
-		char *curname = CModelInfo::GetModelInfo(MI_PLAYER)->GetModelName();
+		char *curname = ((CBaseModelInfo*)ModelRegistry_Get(MI_PLAYER))->GetModelName(); // rouz edit (ChatGPT)
 		for(int i = 0; CSnames[i][0]; i++){
 			if(strcasecmp(curname, IGnames[i]) == 0){
 				modelName = CSnames[i];
@@ -1020,7 +1026,7 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 	}
 	if(!General_faststrcmp(mi->GetModelName(), modelName)){
 		// Already have the correct name, just request it
-		RequestModel(modelId, flags);
+		Streaming_RequestModel(modelId, flags); // rouz edit (ChatGPT)
 		return;
 	}
 
@@ -1054,20 +1060,20 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 	mi->SetModelName(modelName);
 
 	// What exactly is going on here?
-	if(CModelInfo::GetModelInfo(oldName, nil)){
+	if((CBaseModelInfo*)ModelRegistry_Find(oldName, 0, MODELINFOSIZE-1, nil)){ // rouz edit (ChatGPT)
 		// Use the complete C texture dictionary owner with the original live arguments
 		txdId = TxdStore_FindTxdSlot(oldName);
 		// Use the complete C texture dictionary owner with the original live arguments
 		if(txdId != -1 && ((RwTexDictionary*)TxdStore_GetSlot(txdId)->texDict)){
 			// Use the complete C texture dictionary owner with the original live arguments
 			TxdStore_AddRef(txdId);
-			RemoveModel(modelId);
+			Streaming_RemoveModel(modelId); // rouz edit (ChatGPT)
 			// Use the complete C texture dictionary owner with the original live arguments
 			TxdStore_RemoveRefWithoutDelete(txdId);
 		}else
-			RemoveModel(modelId);
+			Streaming_RemoveModel(modelId); // rouz edit (ChatGPT)
 	}else
-		RemoveModel(modelId);
+		Streaming_RemoveModel(modelId); // rouz edit (ChatGPT)
 
 	bool found = Directory_FindItem(ms_pExtraObjectsDir, modelName, &pos, &size);
 	assert(found);
@@ -1077,8 +1083,8 @@ CStreaming::RequestSpecialModel(int32 modelId, const char *modelName, int32 flag
 		mi->SetTexDictionary("generic");
 	else
 		mi->SetTexDictionary(modelName);
-	StreamingInfo_SetCdPosnAndSize(&ms_aInfoForModel[modelId], pos, size);
-	RequestModel(modelId, flags);
+	StreamingInfo_SetCdPosnAndSize(&Streaming_modelInfo[modelId], pos, size); // rouz edit (ChatGPT)
+	Streaming_RequestModel(modelId, flags); // rouz edit (ChatGPT)
 }
 
 void
@@ -1087,84 +1093,8 @@ CStreaming::RequestSpecialChar(int32 charId, const char *modelName, int32 flags)
 	RequestSpecialModel(charId + MI_SPECIAL01, modelName, flags);
 }
 
-bool
-CStreaming::HasSpecialCharLoaded(int32 id)
-{
-	return HasModelLoaded(id + MI_SPECIAL01);
-}
 
-void
-CStreaming::SetMissionDoesntRequireSpecialChar(int32 id)
-{
-	return SetMissionDoesntRequireModel(id + MI_SPECIAL01);
-}
 
-void
-CStreaming::DecrementRef(int32 id)
-{
-	ms_numModelsRequested--;
-	if(StreamingInfo_IsPriority(&ms_aInfoForModel[id])){
-		ms_aInfoForModel[id].m_flags &= ~STREAMFLAGS_PRIORITY;
-		ms_numPriorityRequests--;
-	}
-}
-
-void
-CStreaming::RemoveModel(int32 id)
-{
-	int i;
-
-	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_NOTLOADED)
-		return;
-
-	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_LOADED){
-		if(id < STREAM_OFFSET_TXD)
-			CModelInfo::GetModelInfo(id)->DeleteRwObject();
-		else if(id >= STREAM_OFFSET_TXD && id < STREAM_OFFSET_COL)
-			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_RemoveTxd(id - STREAM_OFFSET_TXD);
-		else if(id >= STREAM_OFFSET_COL && id < STREAM_OFFSET_ANIM)
-			CColStore::RemoveCol(id - STREAM_OFFSET_COL);
-		else if(id >= STREAM_OFFSET_ANIM){
-			assert(id < NUMSTREAMINFO);
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
-		}
-		ms_memoryUsed -= StreamingInfo_GetCdSize(&ms_aInfoForModel[id])*CDSTREAM_SECTOR_SIZE;
-	}
-
-	if(ms_aInfoForModel[id].m_next){
-		// Remove from list, model is neither loaded nor requested
-		if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_INQUEUE)
-			DecrementRef(id);
-		StreamingInfo_RemoveFromList(&ms_aInfoForModel[id]);
-	}else if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_READING){
-		for(i = 0; i < 4; i++){
-			if(ms_channel[0].streamIds[i] == id)
-				ms_channel[0].streamIds[i] = -1;
-			if(ms_channel[1].streamIds[i] == id)
-				ms_channel[1].streamIds[i] = -1;
-		}
-	}
-
-	if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_STARTED){
-		if(id < STREAM_OFFSET_TXD)
-			// Use the complete C clump reader with the original live stream state
-			ClumpRead_Cancel();
-		else if(id >= STREAM_OFFSET_TXD && id < STREAM_OFFSET_COL)
-			// Use the complete C texture dictionary owner with the original live arguments
-			TxdStore_RemoveTxd(id - STREAM_OFFSET_TXD);
-		else if(id >= STREAM_OFFSET_COL && id < STREAM_OFFSET_ANIM)
-			CColStore::RemoveCol(id - STREAM_OFFSET_COL);
-		else if(id >= STREAM_OFFSET_ANIM){
-			assert(id < NUMSTREAMINFO);
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_RemoveAnimBlock(id - STREAM_OFFSET_ANIM);
-		}
-	}
-
-	ms_aInfoForModel[id].m_loadState = STREAMSTATE_NOTLOADED;
-}
 
 void
 CStreaming::RemoveUnusedBuildings(eLevelName level)
@@ -1191,11 +1121,11 @@ CStreaming::RemoveBuildings(eLevelName level)
 				// Access raw storage through the C store or pool API
 		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
 				if(e && e->m_level == level){
-			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if (mi->GetNumRefs() == 0)
-					RemoveModel(e->GetModelIndex());
+					Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -1206,11 +1136,11 @@ CStreaming::RemoveBuildings(eLevelName level)
 				// Access raw storage through the C store or pool API
 		e = ((CTreadable*)CPool_GetSlot(CPools::GetTreadablePool(), i));
 				if(e && e->m_level == level){
-			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if (mi->GetNumRefs() == 0)
-					RemoveModel(e->GetModelIndex());
+					Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -1221,11 +1151,11 @@ CStreaming::RemoveBuildings(eLevelName level)
 				// Access raw storage through the C store or pool API
 		e = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
 				if(e && e->m_level == level){
-			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered && ((CObject*)e)->ObjectCreatedBy == GAME_OBJECT){
 				e->DeleteRwObject();
 				if (mi->GetNumRefs() == 0)
-					RemoveModel(e->GetModelIndex());
+					Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -1236,11 +1166,11 @@ CStreaming::RemoveBuildings(eLevelName level)
 				// Access raw storage through the C store or pool API
 		e = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
 				if(e && e->m_level == level){
-			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if (mi->GetNumRefs() == 0)
-					RemoveModel(e->GetModelIndex());
+					Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -1260,7 +1190,7 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
-				RequestModel(e->GetModelIndex(), 0);
+				Streaming_RequestModel(e->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered)
 				e->DeleteRwObject();
 		}
@@ -1274,7 +1204,7 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
-				RequestModel(e->GetModelIndex(), 0);
+				Streaming_RequestModel(e->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered)
 				e->DeleteRwObject();
 		}
@@ -1288,7 +1218,7 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
-				RequestModel(e->GetModelIndex(), 0);
+				Streaming_RequestModel(e->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered)
 				e->DeleteRwObject();
 		}
@@ -1302,7 +1232,7 @@ CStreaming::RemoveBuildingsNotInArea(int32 area)
 				if(e && e->m_rwObject && !IsAreaVisible(area) &&
 		   (!e->bIsBIGBuilding || e->bStreamBIGBuilding)){
 			if(e->bIsBIGBuilding)
-				RequestModel(e->GetModelIndex(), 0);
+				Streaming_RequestModel(e->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered)
 				e->DeleteRwObject();
 		}
@@ -1334,7 +1264,7 @@ DeleteIsland(CEntity *island)
 		debug("Didn't delete island because it was being rendered\n");
 	else{
 		island->DeleteRwObject();
-		CStreaming::RemoveModel(island->GetModelIndex());
+		Streaming_RemoveModel(island->GetModelIndex()); // rouz edit (ChatGPT)
 	}
 }
 
@@ -1384,92 +1314,12 @@ CStreaming::RemoveBigBuildings(eLevelName level)
 				// Access raw storage through the C store or pool API
 		e = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
 				if(e && e->bIsBIGBuilding && e->m_level == level){
-			mi = CModelInfo::GetModelInfo(e->GetModelIndex());
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if(!e->bImBeingRendered){
 				e->DeleteRwObject();
 				if (mi->GetNumRefs() == 0)
-					RemoveModel(e->GetModelIndex());
+					Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
 			}
-		}
-	}
-}
-
-bool
-CStreaming::RemoveLoadedVehicle(void)
-{
-	int i, id;
-
-	for(i = 0; i < MAXVEHICLESLOADED; i++){
-		ms_lastVehicleDeleted++;
-		if(ms_lastVehicleDeleted == MAXVEHICLESLOADED)
-			ms_lastVehicleDeleted = 0;
-		id = ms_vehiclesLoaded[ms_lastVehicleDeleted];
-		if(id != -1 && CanRemoveModel(id) && CModelInfo::GetModelInfo(id)->GetNumRefs() == 0 &&
-		   ms_aInfoForModel[id].m_loadState == STREAMSTATE_LOADED)
-			goto found;
-	}
-	return false;
-found:
-	RemoveModel(ms_vehiclesLoaded[ms_lastVehicleDeleted]);
-	ms_numVehiclesLoaded--;
-	ms_vehiclesLoaded[ms_lastVehicleDeleted] = -1;
-	CVehicleModelInfo* pVehicleInfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
-	if (pVehicleInfo->m_vehicleClass != -1)
-		CCarCtrl::RemoveFromLoadedVehicleArray(id, pVehicleInfo->m_vehicleClass);
-	return true;
-}
-
-bool
-CStreaming::RemoveLeastUsedModel(uint32 excludeMask)
-{
-	CStreamingInfo *si;
-	int streamId;
-
-	for(si = ms_endLoadedList.m_prev; si != &ms_startLoadedList; si = si->m_prev){
-		if(si->m_flags & excludeMask)
-			continue;
-		streamId = si - ms_aInfoForModel;
-		if(streamId < STREAM_OFFSET_TXD){
-			if (CModelInfo::GetModelInfo(streamId)->GetNumRefs() == 0) {
-				RemoveModel(streamId);
-				return true;
-			}
-		}else if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL){
-			// Use the complete C texture dictionary owner with the original live arguments
-			if(TxdStore_GetNumRefs(streamId - STREAM_OFFSET_TXD) == 0 &&
-			   !IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD)){
-				RemoveModel(streamId);
-				return true;
-			}
-		}else if(streamId >= STREAM_OFFSET_ANIM){
-			assert(streamId < NUMSTREAMINFO);
-			// Use the complete C animation manager at the original call boundary
-			if(AnimManager_GetNumRefsToAnimBlock(streamId - STREAM_OFFSET_ANIM) == 0 &&
-			   !AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM)){
-				RemoveModel(streamId);
-				return true;
-			}
-		}
-	}
-	return (ms_numVehiclesLoaded > 7 || CGame::currArea != AREA_MAIN_MAP && ms_numVehiclesLoaded > 4) && RemoveLoadedVehicle();
-}
-
-void
-CStreaming::RemoveAllUnusedModels(void)
-{
-	int i;
-
-	if (rouz.no_unstreaming)
-		return;
-
-	for(i = 0; i < MAXVEHICLESLOADED; i++)
-		RemoveLoadedVehicle();
-
-	for(i = NUM_DEFAULT_MODELS; i < MODELINFOSIZE; i++){
-		if(ms_aInfoForModel[i].m_loadState == STREAMSTATE_LOADED &&
-		    CModelInfo::GetModelInfo(i)->GetNumRefs() == 0) {
-			RemoveModel(i);
-			ms_aInfoForModel[i].m_loadState = STREAMSTATE_NOTLOADED;
 		}
 	}
 }
@@ -1480,212 +1330,28 @@ CStreaming::RemoveUnusedModelsInLoadedList(void)
 	// empty
 }
 
-bool
-CStreaming::RemoveLoadedZoneModel(void)
-{
-	int i;
-
-	if(ms_currentPedGrp == -1)
-		return false;
-
-	for(i = 0; i < NUMMODELSPERPEDGROUP; i++){
-		int mi = CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i];
-		if(mi != -1 && ms_bIsPedFromPedGroupLoaded[i] &&
-		   HasModelLoaded(mi) &&  CanRemoveModel(mi) &&
-		   CModelInfo::GetModelInfo(mi)->GetNumRefs() == 0){
-			RemoveModel(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
-			ms_numPedsLoaded--;
-			ms_bIsPedFromPedGroupLoaded[i] = false;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool
-CStreaming::IsTxdUsedByRequestedModels(int32 txdId)
-{
-	CStreamingInfo *si;
-	int streamId;
-	int i;
-
-	for(si = ms_startRequestedList.m_next; si != &ms_endRequestedList; si = si->m_next){
-		streamId = si - ms_aInfoForModel;
-		if(streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetTxdSlot() == txdId)
-			return true;
-	}
-
-	for(i = 0; i < 4; i++){
-		streamId = ms_channel[0].streamIds[i];
-		if(streamId != -1 && streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetTxdSlot() == txdId)
-			return true;
-		streamId = ms_channel[1].streamIds[i];
-		if(streamId != -1 && streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetTxdSlot() == txdId)
-			return true;
-	}
-
-	return false;
-}
-
-bool
-CStreaming::AreAnimsUsedByRequestedModels(int32 animId)
-{
-	CStreamingInfo *si;
-	int streamId;
-	int i;
-
-	for(si = ms_startRequestedList.m_next; si != &ms_endRequestedList; si = si->m_next){
-		streamId = si - ms_aInfoForModel;
-		if(streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetAnimFileIndex() == animId)
-			return true;
-	}
-
-	for(i = 0; i < 4; i++){
-		streamId = ms_channel[0].streamIds[i];
-		if(streamId != -1 && streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetAnimFileIndex() == animId)
-			return true;
-		streamId = ms_channel[1].streamIds[i];
-		if(streamId != -1 && streamId < STREAM_OFFSET_TXD &&
-		   CModelInfo::GetModelInfo(streamId)->GetAnimFileIndex() == animId)
-			return true;
-	}
-
-	return false;
-}
-
-int32
-CStreaming::GetAvailableVehicleSlot(void)
-{
-	int i;
-	for(i = 0; i < MAXVEHICLESLOADED; i++)
-		if(ms_vehiclesLoaded[i] == -1)
-			return i;
-	return -1;
-}
-
-bool
-CStreaming::AddToLoadedVehiclesList(int32 modelId)
-{
-	int i;
-	int id;
-
-	if(ms_numVehiclesLoaded < desiredNumVehiclesLoaded){
-		// still room for vehicles
-		for(i = 0; i < MAXVEHICLESLOADED; i++){
-			if(ms_vehiclesLoaded[ms_lastVehicleDeleted] == -1)
-				break;
-			ms_lastVehicleDeleted++;
-			if(ms_lastVehicleDeleted == MAXVEHICLESLOADED)
-				ms_lastVehicleDeleted = 0;
-		}
-		assert(ms_vehiclesLoaded[ms_lastVehicleDeleted] == -1);
-		ms_numVehiclesLoaded++;
-	}else{
-		// find vehicle we can remove
-		for(i = 0; i < MAXVEHICLESLOADED; i++){
-			id = ms_vehiclesLoaded[ms_lastVehicleDeleted];
-			if(id != -1 && CanRemoveModel(id) &&
-			   CModelInfo::GetModelInfo(id)->GetNumRefs() == 0)
-				goto found;
-			ms_lastVehicleDeleted++;
-			if(ms_lastVehicleDeleted == MAXVEHICLESLOADED)
-				ms_lastVehicleDeleted = 0;
-		}
-		id = -1;
-found:
-		if(id == -1){
-			// didn't find anything, try a free slot
-			id = GetAvailableVehicleSlot();
-			if(id == -1)
-				return false;	// still no luck
-			ms_lastVehicleDeleted = id;
-			// this is more than we wanted actually
-			ms_numVehiclesLoaded++;
-		}
-		else{
-			RemoveModel(id);
-			CVehicleModelInfo* pVehicleInfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
-			if (pVehicleInfo->m_vehicleClass != -1)
-				CCarCtrl::RemoveFromLoadedVehicleArray(id, pVehicleInfo->m_vehicleClass);
-		}
-	}
-
-	ms_vehiclesLoaded[ms_lastVehicleDeleted++] = modelId;
-	if(ms_lastVehicleDeleted == MAXVEHICLESLOADED)
-		ms_lastVehicleDeleted = 0;
-	CVehicleModelInfo* pVehicleInfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(modelId);
-	if (pVehicleInfo->m_vehicleClass != -1)
-		CCarCtrl::AddToLoadedVehicleArray(modelId, pVehicleInfo->m_vehicleClass, pVehicleInfo->m_frequency);
-	return true;
-}
-
-bool
-CStreaming::IsObjectInCdImage(int32 id)
-{
-	uint32 posn, size;
-	return StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[id], &posn, &size);
-}
-
-void
-CStreaming::SetModelIsDeletable(int32 id)
-{
-	ms_aInfoForModel[id].m_flags &= ~STREAMFLAGS_DONT_REMOVE;
-	if ((id >= STREAM_OFFSET_TXD && id < STREAM_OFFSET_COL || CModelInfo::GetModelInfo(id)->GetModelType() != MITYPE_VEHICLE) &&
-	   (ms_aInfoForModel[id].m_flags & STREAMFLAGS_SCRIPTOWNED) == 0){
-		if(ms_aInfoForModel[id].m_loadState != STREAMSTATE_LOADED)
-			RemoveModel(id);
-		else if(ms_aInfoForModel[id].m_next == nil)
-			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
-	}
-}
-
-void
-CStreaming::SetModelTxdIsDeletable(int32 id)
-{
-	SetModelIsDeletable(CModelInfo::GetModelInfo(id)->GetTxdSlot() + STREAM_OFFSET_TXD);
-}
-
-void
-CStreaming::SetMissionDoesntRequireModel(int32 id)
-{
-	ms_aInfoForModel[id].m_flags &= ~STREAMFLAGS_SCRIPTOWNED;
-	if ((id >= STREAM_OFFSET_TXD || CModelInfo::GetModelInfo(id)->GetModelType() != MITYPE_VEHICLE) &&
-	   (ms_aInfoForModel[id].m_flags & STREAMFLAGS_DONT_REMOVE) == 0){
-		if(ms_aInfoForModel[id].m_loadState != STREAMSTATE_LOADED)
-			RemoveModel(id);
-		else if(ms_aInfoForModel[id].m_next == nil)
-			StreamingInfo_AddToList(&ms_aInfoForModel[id], &ms_startLoadedList);
-	}
-}
-
 void
 CStreaming::LoadInitialPeds(void)
 {
-	RequestModel(MI_COP, STREAMFLAGS_DONT_REMOVE);
-	RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE);
-	RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_COP, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
 void
 CStreaming::LoadInitialWeapons(void)
 {
-	CStreaming::RequestModel(MI_NIGHTSTICK, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_MISSILE, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_NIGHTSTICK, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MISSILE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
 void
 CStreaming::LoadInitialVehicles(void)
 {
-	ms_numVehiclesLoaded = 0;
-	ms_lastVehicleDeleted = 0;
+	Streaming_numVehiclesLoaded = 0; // rouz edit (ChatGPT)
+	Streaming_lastVehicleDeleted = 0; // rouz edit (ChatGPT)
 
-	RequestModel(MI_POLICE, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_POLICE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
 void
@@ -1695,10 +1361,10 @@ CStreaming::StreamVehiclesAndPeds(void)
 	static int timeBeforeNextLoad = 0;
 	static int modelQualityClass = 0;
 
-	if(CRecordDataForGame::IsRecording() ||
-	   CRecordDataForGame::IsPlayingBack()
+	if(RecordGame_IsRecording() || // rouz edit (ChatGPT)
+	   RecordGame_IsPlayingBack() // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
-	   || CReplay::IsPlayingBack()
+	   || Replay_IsPlayingBack() // rouz edit (ChatGPT)
 #endif
 		)
 		return;
@@ -1708,84 +1374,84 @@ CStreaming::StreamVehiclesAndPeds(void)
 		return;
 
 	if(Wanted_AreSwatRequired(FindPlayerPed()->m_pWanted)){
-		RequestModel(MI_ENFORCER, STREAMFLAGS_DONT_REMOVE);
-		RequestModel(MI_SWAT, STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestModel(MI_ENFORCER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+		Streaming_RequestModel(MI_SWAT, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	}else{
-		SetModelIsDeletable(MI_ENFORCER);
-		if(!HasModelLoaded(MI_ENFORCER))
-			SetModelIsDeletable(MI_SWAT);
+		Streaming_SetModelIsDeletable(MI_ENFORCER); // rouz edit (ChatGPT)
+		if(!Streaming_HasModelLoaded(MI_ENFORCER)) // rouz edit (ChatGPT)
+			Streaming_SetModelIsDeletable(MI_SWAT); // rouz edit (ChatGPT)
 	}
 
 	if(Wanted_AreFbiRequired(FindPlayerPed()->m_pWanted)){
-		RequestModel(MI_FBIRANCH, STREAMFLAGS_DONT_REMOVE);
-		RequestModel(MI_FBI, STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestModel(MI_FBIRANCH, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+		Streaming_RequestModel(MI_FBI, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	}else{
-		SetModelIsDeletable(MI_FBIRANCH);
-		if(!HasModelLoaded(MI_FBIRANCH))
-			SetModelIsDeletable(MI_FBI);
+		Streaming_SetModelIsDeletable(MI_FBIRANCH); // rouz edit (ChatGPT)
+		if(!Streaming_HasModelLoaded(MI_FBIRANCH)) // rouz edit (ChatGPT)
+			Streaming_SetModelIsDeletable(MI_FBI); // rouz edit (ChatGPT)
 	}
 
 	if(Wanted_AreArmyRequired(FindPlayerPed()->m_pWanted)){
-		RequestModel(MI_RHINO, STREAMFLAGS_DONT_REMOVE);
-		RequestModel(MI_BARRACKS, STREAMFLAGS_DONT_REMOVE);
-		RequestModel(MI_ARMY, STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestModel(MI_RHINO, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+		Streaming_RequestModel(MI_BARRACKS, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+		Streaming_RequestModel(MI_ARMY, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	}else{
-		SetModelIsDeletable(MI_RHINO);
-		SetModelIsDeletable(MI_BARRACKS);
-		if(!HasModelLoaded(MI_RHINO) && !HasModelLoaded(MI_BARRACKS))
-			SetModelIsDeletable(MI_ARMY);
+		Streaming_SetModelIsDeletable(MI_RHINO); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_BARRACKS); // rouz edit (ChatGPT)
+		if(!Streaming_HasModelLoaded(MI_RHINO) && !Streaming_HasModelLoaded(MI_BARRACKS)) // rouz edit (ChatGPT)
+			Streaming_SetModelIsDeletable(MI_ARMY); // rouz edit (ChatGPT)
 	}
 
 	if(Wanted_NumOfHelisRequired(FindPlayerPed()->m_pWanted) > 0)
-		RequestModel(MI_CHOPPER, STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestModel(MI_CHOPPER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	else
-		SetModelIsDeletable(MI_CHOPPER);
+		Streaming_SetModelIsDeletable(MI_CHOPPER); // rouz edit (ChatGPT)
 
 	if (Wanted_AreMiamiViceRequired(FindPlayerPed()->m_pWanted)) {
-		SetModelIsDeletable(MI_VICE1);
-		SetModelIsDeletable(MI_VICE2);
-		SetModelIsDeletable(MI_VICE3);
-		SetModelIsDeletable(MI_VICE4);
-		SetModelIsDeletable(MI_VICE5);
-		SetModelIsDeletable(MI_VICE6);
-		SetModelIsDeletable(MI_VICE7);
-		SetModelIsDeletable(MI_VICE8);
-		RequestModel(MI_VICECHEE, STREAMFLAGS_DONT_REMOVE);
-		if(CPopulation::NumMiamiViceCops == 0)
+		Streaming_SetModelIsDeletable(MI_VICE1); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE2); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE3); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE4); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE5); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE6); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE7); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE8); // rouz edit (ChatGPT)
+		Streaming_RequestModel(MI_VICECHEE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+		if(Population_numMiamiViceCops == 0) // rouz edit (ChatGPT)
 			switch (CCarCtrl::MiamiViceCycle) {
 			case 0:
-				RequestModel(MI_VICE1, STREAMFLAGS_DONT_REMOVE);
-				RequestModel(MI_VICE2, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_VICE1, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+				Streaming_RequestModel(MI_VICE2, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				break;
 			case 1:
-				RequestModel(MI_VICE3, STREAMFLAGS_DONT_REMOVE);
-				RequestModel(MI_VICE4, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_VICE3, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+				Streaming_RequestModel(MI_VICE4, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				break;
 			case 2:
-				RequestModel(MI_VICE5, STREAMFLAGS_DONT_REMOVE);
-				RequestModel(MI_VICE6, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_VICE5, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+				Streaming_RequestModel(MI_VICE6, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				break;
 			case 3:
-				RequestModel(MI_VICE7, STREAMFLAGS_DONT_REMOVE);
-				RequestModel(MI_VICE8, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_VICE7, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+				Streaming_RequestModel(MI_VICE8, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				break;
 			}
 	}
 	else {
-		SetModelIsDeletable(MI_VICECHEE);
-		SetModelIsDeletable(MI_VICE1);
-		SetModelIsDeletable(MI_VICE2);
-		SetModelIsDeletable(MI_VICE3);
-		SetModelIsDeletable(MI_VICE4);
-		SetModelIsDeletable(MI_VICE5);
-		SetModelIsDeletable(MI_VICE6);
-		SetModelIsDeletable(MI_VICE7);
-		SetModelIsDeletable(MI_VICE8);
+		Streaming_SetModelIsDeletable(MI_VICECHEE); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE1); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE2); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE3); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE4); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE5); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE6); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE7); // rouz edit (ChatGPT)
+		Streaming_SetModelIsDeletable(MI_VICE8); // rouz edit (ChatGPT)
 	}
 
 	if(timeBeforeNextLoad >= 0)
 		timeBeforeNextLoad--;
-	else if(ms_numVehiclesLoaded <= desiredNumVehiclesLoaded){
+	else if(Streaming_numVehiclesLoaded <= desiredNumVehiclesLoaded){ // rouz edit (ChatGPT)
 		CZoneInfo zone;
 		CVector coors = FindPlayerCoors();
 		Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&coors)), &zone);
@@ -1806,8 +1472,8 @@ CStreaming::StreamVehiclesAndPeds(void)
 			}
 		}
 		model = CCarCtrl::ChooseCarModelToLoad(mostRequestedRating);
-		if(!HasModelLoaded(model)){
-			RequestModel(model, STREAMFLAGS_DEPENDENCY);
+		if(!Streaming_HasModelLoaded(model)){ // rouz edit (ChatGPT)
+			Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 			timeBeforeNextLoad = 350;
 		}
 		CCarCtrl::NumRequestsOfCarRating[mostRequestedRating] = 0;
@@ -1824,29 +1490,29 @@ CStreaming::StreamZoneModels(const CVector &pos)
 
 	Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &info);
 
-	if(info.pedGroup != ms_currentPedGrp){
+	if(info.pedGroup != Streaming_currentPedGroup){ // rouz edit (ChatGPT)
 
 		// unload pevious group
-		if(ms_currentPedGrp != -1)
+		if(Streaming_currentPedGroup != -1) // rouz edit (ChatGPT)
 			for(i = 0; i < NUMMODELSPERPEDGROUP; i++){
-				ms_bIsPedFromPedGroupLoaded[i] = false;
-				if(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i] != -1){
-					SetModelIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
-					SetModelTxdIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
+				Streaming_pedGroupLoaded[i] = false; // rouz edit (ChatGPT)
+				if(Population_pedGroups[Streaming_currentPedGroup].models[i] != -1){ // rouz edit (ChatGPT)
+					Streaming_SetModelIsDeletable(Population_pedGroups[Streaming_currentPedGroup].models[i]); // rouz edit (ChatGPT)
+					Streaming_SetModelTxdIsDeletable(Population_pedGroups[Streaming_currentPedGroup].models[i]); // rouz edit (ChatGPT)
 				}
 			}
 
-		ms_currentPedGrp = info.pedGroup;
+		Streaming_currentPedGroup = info.pedGroup; // rouz edit (ChatGPT)
 
 		for(i = 0; i < MAXZONEPEDSLOADED; i++){
 			do
 				j = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
-			while(ms_bIsPedFromPedGroupLoaded[j]);
-			ms_bIsPedFromPedGroupLoaded[j] = true;
-			if(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j] != -1)
-				RequestModel(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j], STREAMFLAGS_DEPENDENCY);
+			while(Streaming_pedGroupLoaded[j]); // rouz edit (ChatGPT)
+			Streaming_pedGroupLoaded[j] = true; // rouz edit (ChatGPT)
+			if(Population_pedGroups[Streaming_currentPedGroup].models[j] != -1) // rouz edit (ChatGPT)
+				Streaming_RequestModel(Population_pedGroups[Streaming_currentPedGroup].models[j], STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		}
-		ms_numPedsLoaded = MAXZONEPEDSLOADED;
+		Streaming_numPedsLoaded = MAXZONEPEDSLOADED; // rouz edit (ChatGPT)
 		timeBeforeNextLoad = 300;
 	}
 
@@ -1857,36 +1523,36 @@ CStreaming::StreamZoneModels(const CVector &pos)
 		int oldMI;
 		// Find a ped to unload
 		for(i = 0; i < NUMMODELSPERPEDGROUP; i++)
-			if(ms_bIsPedFromPedGroupLoaded[i]){
-				oldMI = CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i];
-				if(oldMI != -1 && CModelInfo::GetModelInfo(oldMI)->GetNumRefs() == 0)
+			if(Streaming_pedGroupLoaded[i]){ // rouz edit (ChatGPT)
+				oldMI = Population_pedGroups[Streaming_currentPedGroup].models[i]; // rouz edit (ChatGPT)
+				if(oldMI != -1 && ((CBaseModelInfo*)ModelRegistry_Get(oldMI))->GetNumRefs() == 0) // rouz edit (ChatGPT)
 					break;
 			}
 		// And load a new one
-		if(i != NUMMODELSPERPEDGROUP || ms_numPedsLoaded < MAXZONEPEDSLOADED){
+		if(i != NUMMODELSPERPEDGROUP || Streaming_numPedsLoaded < MAXZONEPEDSLOADED){ // rouz edit (ChatGPT)
 			do
 				j = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
-			while(ms_bIsPedFromPedGroupLoaded[j]);
-			if(ms_numPedsLoaded == MAXZONEPEDSLOADED)
-				ms_bIsPedFromPedGroupLoaded[i] = false;
-			ms_bIsPedFromPedGroupLoaded[j] = true;
-			int newMI = CPopulation::ms_pPedGroups[ms_currentPedGrp].models[j];
+			while(Streaming_pedGroupLoaded[j]); // rouz edit (ChatGPT)
+			if(Streaming_numPedsLoaded == MAXZONEPEDSLOADED) // rouz edit (ChatGPT)
+				Streaming_pedGroupLoaded[i] = false; // rouz edit (ChatGPT)
+			Streaming_pedGroupLoaded[j] = true; // rouz edit (ChatGPT)
+			int newMI = Population_pedGroups[Streaming_currentPedGroup].models[j]; // rouz edit (ChatGPT)
 			if(newMI != oldMI){
-				RequestModel(newMI, STREAMFLAGS_DEPENDENCY);
-				debug("Request Ped %s\n", CModelInfo::GetModelInfo(newMI)->GetModelName());
-				if(ms_numPedsLoaded == MAXZONEPEDSLOADED){
-					SetModelIsDeletable(oldMI);
-					SetModelTxdIsDeletable(oldMI);
-					debug("Remove Ped %s\n", CModelInfo::GetModelInfo(oldMI)->GetModelName());
+				Streaming_RequestModel(newMI, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+				debug("Request Ped %s\n", ((CBaseModelInfo*)ModelRegistry_Get(newMI))->GetModelName()); // rouz edit (ChatGPT)
+				if(Streaming_numPedsLoaded == MAXZONEPEDSLOADED){ // rouz edit (ChatGPT)
+					Streaming_SetModelIsDeletable(oldMI); // rouz edit (ChatGPT)
+					Streaming_SetModelTxdIsDeletable(oldMI); // rouz edit (ChatGPT)
+					debug("Remove Ped %s\n", ((CBaseModelInfo*)ModelRegistry_Get(oldMI))->GetModelName()); // rouz edit (ChatGPT)
 				}else
-					ms_numPedsLoaded++;
+					Streaming_numPedsLoaded++; // rouz edit (ChatGPT)
 				timeBeforeNextLoad = 300;
 			}
 		}
 	}
 
-	RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE);
-	RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 
 	gangsToLoad = 0;
 	gangCarsToLoad = 0;
@@ -1901,85 +1567,45 @@ CStreaming::StreamZoneModels(const CVector &pos)
 		if(info.gangThreshold[i] != info.gangThreshold[i-1])
 			gangCarsToLoad |= 1<<i;
 
-	if(gangsToLoad == ms_loadedGangs && gangCarsToLoad == ms_loadedGangCars)
+	if(gangsToLoad == Streaming_loadedGangs && gangCarsToLoad == Streaming_loadedGangCars) // rouz edit (ChatGPT)
 		return;
 
 	int gangModelsToload = gangsToLoad | gangCarsToLoad;
 
-	if(gangsToLoad != ms_loadedGangs || gangCarsToLoad != ms_loadedGangCars){
+	if(gangsToLoad != Streaming_loadedGangs || gangCarsToLoad != Streaming_loadedGangCars){ // rouz edit (ChatGPT)
 		for(i = 0; i < NUM_GANGS; i++){
 			bit = 1<<i;
 
-			if(gangModelsToload & bit && (ms_loadedGangs & bit) == 0){
-				RequestModel(Gangs_GetGangPedModel1(i), STREAMFLAGS_DEPENDENCY);
-				RequestModel(Gangs_GetGangPedModel2(i), STREAMFLAGS_DEPENDENCY);
-				ms_loadedGangs |= bit;
-			}else if((gangModelsToload & bit) == 0 && ms_loadedGangs & bit){
-				SetModelIsDeletable(Gangs_GetGangPedModel1(i));
-				SetModelIsDeletable(Gangs_GetGangPedModel2(i));
-				SetModelTxdIsDeletable(Gangs_GetGangPedModel1(i));
-				SetModelTxdIsDeletable(Gangs_GetGangPedModel2(i));
-				ms_loadedGangs &= ~bit;
+			if(gangModelsToload & bit && (Streaming_loadedGangs & bit) == 0){ // rouz edit (ChatGPT)
+				Streaming_RequestModel(Gangs_GetGangPedModel1(i), STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+				Streaming_RequestModel(Gangs_GetGangPedModel2(i), STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+				Streaming_loadedGangs |= bit; // rouz edit (ChatGPT)
+			}else if((gangModelsToload & bit) == 0 && Streaming_loadedGangs & bit){ // rouz edit (ChatGPT)
+				Streaming_SetModelIsDeletable(Gangs_GetGangPedModel1(i)); // rouz edit (ChatGPT)
+				Streaming_SetModelIsDeletable(Gangs_GetGangPedModel2(i)); // rouz edit (ChatGPT)
+				Streaming_SetModelTxdIsDeletable(Gangs_GetGangPedModel1(i)); // rouz edit (ChatGPT)
+				Streaming_SetModelTxdIsDeletable(Gangs_GetGangPedModel2(i)); // rouz edit (ChatGPT)
+				Streaming_loadedGangs &= ~bit; // rouz edit (ChatGPT)
 			}
 
 			if(Gangs_GetGangVehicleModel(i) != -1){
-				if((gangCarsToLoad & bit) && (ms_loadedGangCars & bit) == 0){
-					RequestModel(Gangs_GetGangVehicleModel(i), STREAMFLAGS_DEPENDENCY);
-				}else if((gangCarsToLoad & bit) == 0 && ms_loadedGangCars & bit){
-					SetModelIsDeletable(Gangs_GetGangVehicleModel(i));
-					SetModelTxdIsDeletable(Gangs_GetGangVehicleModel(i));
+				if((gangCarsToLoad & bit) && (Streaming_loadedGangCars & bit) == 0){ // rouz edit (ChatGPT)
+					Streaming_RequestModel(Gangs_GetGangVehicleModel(i), STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+				}else if((gangCarsToLoad & bit) == 0 && Streaming_loadedGangCars & bit){ // rouz edit (ChatGPT)
+					Streaming_SetModelIsDeletable(Gangs_GetGangVehicleModel(i)); // rouz edit (ChatGPT)
+					Streaming_SetModelTxdIsDeletable(Gangs_GetGangVehicleModel(i)); // rouz edit (ChatGPT)
 				}
 			}
 		}
-		ms_loadedGangCars = gangCarsToLoad;
+		Streaming_loadedGangCars = gangCarsToLoad; // rouz edit (ChatGPT)
 	}
-}
-
-void
-CStreaming::RemoveCurrentZonesModels(void)
-{
-	int i;
-
-	if (rouz.no_unstreaming)
-		return;
-
-	if (ms_currentPedGrp != -1)
-		for (i = 0; i < NUMMODELSPERPEDGROUP; i++) {
-			ms_bIsPedFromPedGroupLoaded[i] = false;
-			if (CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i] != -1) {
-				SetModelIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
-				SetModelTxdIsDeletable(CPopulation::ms_pPedGroups[ms_currentPedGrp].models[i]);
-			}
-		}
-
-	CStreaming::RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE);
-
-	for (i = 0; i < NUM_GANGS; i++) {
-		if (Gangs_GetGangPedModel1(i) != -1) {
-			SetModelIsDeletable(Gangs_GetGangPedModel1(i));
-			SetModelTxdIsDeletable(Gangs_GetGangPedModel1(i));
-		}
-		if (Gangs_GetGangPedModel2(i) != -1) {
-			SetModelIsDeletable(Gangs_GetGangPedModel2(i));
-			SetModelTxdIsDeletable(Gangs_GetGangPedModel2(i));
-		}
-		if (Gangs_GetGangVehicleModel(i) != -1) {
-			SetModelIsDeletable(Gangs_GetGangVehicleModel(i));
-			SetModelTxdIsDeletable(Gangs_GetGangVehicleModel(i));
-		}
-	}
-
-	ms_currentPedGrp = -1;
-	ms_loadedGangs = 0;
-	ms_loadedGangCars = 0;
 }
 
 void
 CStreaming::LoadBigBuildingsWhenNeeded(void)
 {
 	// Very much like CCollision::Update and CCollision::LoadCollisionWhenINeedIt
-	if(CCutsceneMgr::IsCutsceneProcessing())
+	if(Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 		return;
 
 	if(Zones_currentLevel == LEVEL_GENERIC || 
@@ -2025,120 +1651,6 @@ CStreaming::LoadBigBuildingsWhenNeeded(void)
 
 // Find starting offset of the cdimage we next want to read
 // Not useful at all on PC...
-int32
-CStreaming::GetCdImageOffset(int32 lastPosn)
-{
-	int offset, off;
-	int i, img;
-	int dist, mindist;
-
-	img = -1;
-	mindist = INT32_MAX;
-	offset = ms_imageOffsets[ms_lastImageRead];
-	if(lastPosn <= offset || lastPosn > offset + ms_imageSize){
-		// last read position is not in last image
-		for(i = 0; i < NUMCDIMAGES; i++){
-			off = ms_imageOffsets[i];
-			if(off == -1) continue;
-			if((uint32)lastPosn > (uint32)off)
-				// after start of image, get distance from end
-				// negative if before end!
-				dist = lastPosn - (off + ms_imageSize);
-			else
-				// before image, get offset to start
-				// this will never be negative
-				dist = off - lastPosn;
-			if(dist < mindist){
-				img = i;
-				mindist = dist;
-			}
-		}
-		assert(img >= 0);
-		offset = ms_imageOffsets[img];
-		ms_lastImageRead = img;
-	}
-	return offset;
-}
-
-inline bool
-ModelNotLoaded(int32 modelId)
-{
-	CStreamingInfo *si = &CStreaming::ms_aInfoForModel[modelId];
-	return si->m_loadState != STREAMSTATE_LOADED && si->m_loadState != STREAMSTATE_READING;
-}
-
-inline bool TxdNotLoaded(int32 txdId) { return ModelNotLoaded(txdId + STREAM_OFFSET_TXD); }
-inline bool AnimNotLoaded(int32 animId) { return animId != -1 && ModelNotLoaded(animId + STREAM_OFFSET_ANIM); }
-
-// Find stream id of next requested file in cdimage
-int32
-CStreaming::GetNextFileOnCd(int32 lastPosn, bool priority)
-{
-	CStreamingInfo *si, *next;
-	int streamId;
-	uint32 posn, size;
-	int streamIdFirst, streamIdNext;
-	uint32 posnFirst, posnNext;
-
-	streamIdFirst = -1;
-	streamIdNext = -1;
-	posnFirst = UINT32_MAX;
-	posnNext = UINT32_MAX;
-
-	for(si = ms_startRequestedList.m_next; si != &ms_endRequestedList; si = next){
-		next = si->m_next;
-		streamId = si - ms_aInfoForModel;
-
-		// only priority requests if there are any
-		if(priority && ms_numPriorityRequests != 0 && !StreamingInfo_IsPriority(si))
-			continue;
-
-		// request Txds or anims if necessary
-		if(streamId < STREAM_OFFSET_TXD){
-			int txdId = CModelInfo::GetModelInfo(streamId)->GetTxdSlot();
-			if(TxdNotLoaded(txdId)){
-				ReRequestTxd(txdId);
-				continue;
-			}
-			int animId = CModelInfo::GetModelInfo(streamId)->GetAnimFileIndex();
-			if(AnimNotLoaded(animId)){
-				ReRequestAnim(animId);
-				continue;
-			}
-		}else if(streamId >= STREAM_OFFSET_ANIM && CCutsceneMgr::IsCutsceneProcessing())
-			continue;
-
-		if(StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)){
-			if(posn < posnFirst){
-				// find first requested file in image
-				streamIdFirst = streamId;
-				posnFirst = posn;
-			}
-			if(posn < posnNext && posn >= (uint32)lastPosn){
-				// find first requested file after last read position
-				streamIdNext = streamId;
-				posnNext = posn;
-			}
-		}else{
-			// empty file
-			DecrementRef(streamId);
-			StreamingInfo_RemoveFromList(si);
-			si->m_loadState = STREAMSTATE_LOADED;
-		}
-	}
-
-	// wrap around
-	if(streamIdNext == -1)
-		streamIdNext = streamIdFirst;
-
-	if(streamIdNext == -1 && ms_numPriorityRequests != 0){
-		// try non-priority files
-		ms_numPriorityRequests = 0;
-		streamIdNext = GetNextFileOnCd(lastPosn, false);
-	}
-
-	return streamIdNext;
-}
 
 /*
  * Streaming buffer size is half of the largest file.
@@ -2158,35 +1670,35 @@ CStreaming::RequestModelStream(int32 ch)
 	int haveBigFile, havePed;
 
 	lastPosn = CdStreamGetLastPosn();
-	imgOffset = GetCdImageOffset(lastPosn);
-	streamId = GetNextFileOnCd(lastPosn - imgOffset, true);
+	imgOffset = Streaming_GetCdImageOffset(lastPosn); // rouz edit (ChatGPT)
+	streamId = Streaming_GetNextFileOnCd(lastPosn - imgOffset, true); // rouz edit (ChatGPT)
 
 	// remove Txds and Anims that aren't requested anymore
 	while(streamId != -1){
-		if(ms_aInfoForModel[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY)
+		if(Streaming_modelInfo[streamId].m_flags & STREAMFLAGS_KEEP_IN_MEMORY) // rouz edit (ChatGPT)
 			break;
 		if(streamId >= STREAM_OFFSET_TXD && streamId < STREAM_OFFSET_COL){
-			if(IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD))
+			if(Streaming_IsTxdUsedByRequestedModels(streamId - STREAM_OFFSET_TXD)) // rouz edit (ChatGPT)
 				break;
 		}else if(streamId >= STREAM_OFFSET_ANIM){
 			assert(streamId < NUMSTREAMINFO);
-			if(AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM))
+			if(Streaming_AreAnimsUsedByRequestedModels(streamId - STREAM_OFFSET_ANIM)) // rouz edit (ChatGPT)
 				break;
 		}else
 			break;
-		RemoveModel(streamId);
+		Streaming_RemoveModel(streamId); // rouz edit (ChatGPT)
 		// so try next file
-		StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size);
-		streamId = GetNextFileOnCd(posn + size, true);
+		StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size); // rouz edit (ChatGPT)
+		streamId = Streaming_GetNextFileOnCd(posn + size, true); // rouz edit (ChatGPT)
 	}
 
 	if(streamId == -1)
 		return;
 
-	StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size);
+	StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size); // rouz edit (ChatGPT)
 	if(size > (uint32)ms_streamingBufferSize){
 		// Can only load big models on channel 0, and 1 has to be idle
-		if(ch == 1 || ms_channel[1].state != CHANNELSTATE_IDLE)
+		if(ch == 1 || Streaming_channel[1].state != CHANNELSTATE_IDLE) // rouz edit (ChatGPT)
 			return;
 		ms_bLoadingBigModel = true;
 	}
@@ -2197,20 +1709,20 @@ CStreaming::RequestModelStream(int32 ch)
 	totalSize = 0;
 	for(i = 0; i < 4; i++){
 		// no more files we can read
-		if(streamId == -1 || ms_aInfoForModel[streamId].m_loadState != STREAMSTATE_INQUEUE)
+		if(streamId == -1 || Streaming_modelInfo[streamId].m_loadState != STREAMSTATE_INQUEUE) // rouz edit (ChatGPT)
 			break;
 
 		// also stop at non-priority files
-		StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &unused, &size);
-		if(ms_numPriorityRequests != 0 && !StreamingInfo_IsPriority(&ms_aInfoForModel[streamId]))
+		StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &unused, &size); // rouz edit (ChatGPT)
+		if(Streaming_numPriorityRequests != 0 && !StreamingInfo_IsPriority(&Streaming_modelInfo[streamId])) // rouz edit (ChatGPT)
 			break;
 
 		// Can't load certain combinations of files together
 		if(streamId < STREAM_OFFSET_TXD){
-			if (havePed && CModelInfo::GetModelInfo(streamId)->GetModelType() == MITYPE_PED ||
-			    haveBigFile && CModelInfo::GetModelInfo(streamId)->GetModelType() == MITYPE_VEHICLE ||
-			    TxdNotLoaded(CModelInfo::GetModelInfo(streamId)->GetTxdSlot()) ||
-			    AnimNotLoaded(CModelInfo::GetModelInfo(streamId)->GetAnimFileIndex()))
+			if (havePed && ((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelType() == MITYPE_PED || // rouz edit (ChatGPT)
+			    haveBigFile && ((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelType() == MITYPE_VEHICLE || // rouz edit (ChatGPT)
+			    Streaming_TxdNotLoaded(((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetTxdSlot()) || // rouz edit (ChatGPT)
+			    Streaming_AnimNotLoaded(((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetAnimFileIndex())) // rouz edit (ChatGPT)
 				break;
 		}else{
 			if(haveBigFile && size > 200)
@@ -2218,8 +1730,8 @@ CStreaming::RequestModelStream(int32 ch)
 		}
 
 		// Now add the file
-		ms_channel[ch].streamIds[i] = streamId;
-		ms_channel[ch].offsets[i] = totalSize;
+		Streaming_channel[ch].streamIds[i] = streamId; // rouz edit (ChatGPT)
+		Streaming_channel[ch].offsets[i] = totalSize; // rouz edit (ChatGPT)
 		totalSize += size;
 
 		// To big for buffer, remove again
@@ -2228,33 +1740,33 @@ CStreaming::RequestModelStream(int32 ch)
 			break;
 		}
 		if(streamId < STREAM_OFFSET_TXD){
-			if (CModelInfo::GetModelInfo(streamId)->GetModelType() == MITYPE_PED)
+			if (((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelType() == MITYPE_PED) // rouz edit (ChatGPT)
 				havePed = 1;
-			if (CModelInfo::GetModelInfo(streamId)->GetModelType() == MITYPE_VEHICLE)
+			if (((CBaseModelInfo*)ModelRegistry_Get(streamId))->GetModelType() == MITYPE_VEHICLE) // rouz edit (ChatGPT)
 				haveBigFile = 1;
 		}else{
 			if(size > 200)
 				haveBigFile = 1;
 		}
-		ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_READING;
-		StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
-		DecrementRef(streamId);
+		Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_READING; // rouz edit (ChatGPT)
+		StreamingInfo_RemoveFromList(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
+		Streaming_DecrementRef(streamId); // rouz edit (ChatGPT)
 
-		streamId = ms_aInfoForModel[streamId].m_nextID;
+		streamId = Streaming_modelInfo[streamId].m_nextID; // rouz edit (ChatGPT)
 	}
 
 	// clear remaining slots
 	for(; i < 4; i++)
-		ms_channel[ch].streamIds[i] = -1;
+		Streaming_channel[ch].streamIds[i] = -1; // rouz edit (ChatGPT)
 	// Now read the data
 	assert(!(ms_bLoadingBigModel && ch == 1));	// this would clobber the buffer
 	if(CdStreamRead(ch, ms_pStreamingBuffer[ch], imgOffset+posn, totalSize) == STREAM_NONE)
 		debug("FUCKFUCKFUCK\n");
-	ms_channel[ch].state = CHANNELSTATE_READING;
-	ms_channel[ch].field24 = 0;
-	ms_channel[ch].size = totalSize;
-	ms_channel[ch].position = imgOffset+posn;
-	ms_channel[ch].numTries = 0;
+	Streaming_channel[ch].state = CHANNELSTATE_READING; // rouz edit (ChatGPT)
+	Streaming_channel[ch].field24 = 0; // rouz edit (ChatGPT)
+	Streaming_channel[ch].size = totalSize; // rouz edit (ChatGPT)
+	Streaming_channel[ch].position = imgOffset+posn; // rouz edit (ChatGPT)
+	Streaming_channel[ch].numTries = 0; // rouz edit (ChatGPT)
 }
 
 // Load data previously read from disc
@@ -2269,59 +1781,59 @@ CStreaming::ProcessLoadingChannel(int32 ch)
 		// busy
 		if(status != STREAM_READING && status != STREAM_WAITING){
 			ms_channelError = ch;
-			ms_channel[ch].state = CHANNELSTATE_ERROR;
-			ms_channel[ch].status = status;
+			Streaming_channel[ch].state = CHANNELSTATE_ERROR; // rouz edit (ChatGPT)
+			Streaming_channel[ch].status = status; // rouz edit (ChatGPT)
 		}
 		return false;
 	}
 
-	if(ms_channel[ch].state == CHANNELSTATE_STARTED){
-		ms_channel[ch].state = CHANNELSTATE_IDLE;
-		FinishLoadingLargeFile(&ms_pStreamingBuffer[ch][ms_channel[ch].offsets[0]*CDSTREAM_SECTOR_SIZE],
-			ms_channel[ch].streamIds[0]);
-		ms_channel[ch].streamIds[0] = -1;
+	if(Streaming_channel[ch].state == CHANNELSTATE_STARTED){ // rouz edit (ChatGPT)
+		Streaming_channel[ch].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
+		FinishLoadingLargeFile(&ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[0]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
+			Streaming_channel[ch].streamIds[0]); // rouz edit (ChatGPT)
+		Streaming_channel[ch].streamIds[0] = -1; // rouz edit (ChatGPT)
 	}else{
-		ms_channel[ch].state = CHANNELSTATE_IDLE;
+		Streaming_channel[ch].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
 		for(i = 0; i < 4; i++){
-			id = ms_channel[ch].streamIds[i];
+			id = Streaming_channel[ch].streamIds[i]; // rouz edit (ChatGPT)
 			if(id == -1)
 				continue;
 
-			cdsize = StreamingInfo_GetCdSize(&ms_aInfoForModel[id]);
-			if(id < STREAM_OFFSET_TXD && CModelInfo::GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-			   ms_numVehiclesLoaded >= desiredNumVehiclesLoaded &&
-			   !RemoveLoadedVehicle() &&
-			   (CanRemoveModel(id) || GetAvailableVehicleSlot() == -1)){
+			cdsize = StreamingInfo_GetCdSize(&Streaming_modelInfo[id]); // rouz edit (ChatGPT)
+			if(id < STREAM_OFFSET_TXD && ((CBaseModelInfo*)ModelRegistry_Get(id))->GetModelType() == MITYPE_VEHICLE && // rouz edit (ChatGPT)
+			   Streaming_numVehiclesLoaded >= desiredNumVehiclesLoaded && // rouz edit (ChatGPT)
+			   !Streaming_RemoveLoadedVehicle() && // rouz edit (ChatGPT)
+			   (Streaming_CanRemoveModel(id) || Streaming_GetAvailableVehicleSlot() == -1)){ // rouz edit (ChatGPT)
 				// can't load vehicle
-				RemoveModel(id);
-				if(!CanRemoveModel(id))
-					ReRequestModel(id);
+				Streaming_RemoveModel(id); // rouz edit (ChatGPT)
+				if(!Streaming_CanRemoveModel(id)) // rouz edit (ChatGPT)
+					Streaming_ReRequestModel(id); // rouz edit (ChatGPT)
 				// Use the complete C texture dictionary owner with the original live arguments
-				else if(TxdStore_GetNumRefs(CModelInfo::GetModelInfo(id)->GetTxdSlot()) == 0)
-					RemoveTxd(CModelInfo::GetModelInfo(id)->GetTxdSlot());
+				else if(TxdStore_GetNumRefs(((CBaseModelInfo*)ModelRegistry_Get(id))->GetTxdSlot()) == 0) // rouz edit (ChatGPT)
+					Streaming_RemoveTxd(((CBaseModelInfo*)ModelRegistry_Get(id))->GetTxdSlot()); // rouz edit (ChatGPT)
 			}else{
 				MakeSpaceFor(cdsize * CDSTREAM_SECTOR_SIZE);
-				ConvertBufferToObject(&ms_pStreamingBuffer[ch][ms_channel[ch].offsets[i]*CDSTREAM_SECTOR_SIZE],
+				ConvertBufferToObject(&ms_pStreamingBuffer[ch][Streaming_channel[ch].offsets[i]*CDSTREAM_SECTOR_SIZE], // rouz edit (ChatGPT)
 					id);
-				if(ms_aInfoForModel[id].m_loadState == STREAMSTATE_STARTED){
+				if(Streaming_modelInfo[id].m_loadState == STREAMSTATE_STARTED){ // rouz edit (ChatGPT)
 					// queue for second part
-					ms_channel[ch].state = CHANNELSTATE_STARTED;
-					ms_channel[ch].offsets[0] = ms_channel[ch].offsets[i];
-					ms_channel[ch].streamIds[0] = id;
+					Streaming_channel[ch].state = CHANNELSTATE_STARTED; // rouz edit (ChatGPT)
+					Streaming_channel[ch].offsets[0] = Streaming_channel[ch].offsets[i]; // rouz edit (ChatGPT)
+					Streaming_channel[ch].streamIds[0] = id; // rouz edit (ChatGPT)
 					if(i != 0)
-						ms_channel[ch].streamIds[i] = -1;
+						Streaming_channel[ch].streamIds[i] = -1; // rouz edit (ChatGPT)
 				}else
-					ms_channel[ch].streamIds[i] = -1;
+					Streaming_channel[ch].streamIds[i] = -1; // rouz edit (ChatGPT)
 			}
 		}
 	}
 
-	if(ms_bLoadingBigModel && ms_channel[ch].state != CHANNELSTATE_STARTED){
+	if(ms_bLoadingBigModel && Streaming_channel[ch].state != CHANNELSTATE_STARTED){ // rouz edit (ChatGPT)
 		ms_bLoadingBigModel = false;
 		// reset channel 1 after loading a big model
 		for(i = 0; i < 4; i++)
-			ms_channel[1].streamIds[i] = -1;
-		ms_channel[1].state = CHANNELSTATE_IDLE;
+			Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[1].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
 	}
 
 	return true;
@@ -2334,8 +1846,8 @@ CStreaming::RetryLoadFile(int32 ch)
 
 	CPad::StopPadsShaking();
 
-	if(ms_channel[ch].numTries >= 3){
-		switch(ms_channel[ch].status){
+	if(Streaming_channel[ch].numTries >= 3){ // rouz edit (ChatGPT)
+		switch(Streaming_channel[ch].status){ // rouz edit (ChatGPT)
 		case STREAM_ERROR_NOCD: key = "NOCD"; break;
 		case STREAM_ERROR_OPENCD: key = "OPENCD"; break;
 		case STREAM_ERROR_WRONGCD: key = "WRONGCD"; break;
@@ -2345,14 +1857,14 @@ CStreaming::RetryLoadFile(int32 ch)
 		Timer_SetCodePause(true);
 	}
 
-	switch(ms_channel[ch].state){
+	switch(Streaming_channel[ch].state){ // rouz edit (ChatGPT)
 	case CHANNELSTATE_ERROR:
-		ms_channel[ch].numTries++;
+		Streaming_channel[ch].numTries++; // rouz edit (ChatGPT)
 		if (CdStreamGetStatus(ch) == STREAM_READING || CdStreamGetStatus(ch) == STREAM_WAITING) break;
 	case CHANNELSTATE_IDLE:
-		CdStreamRead(ch, ms_pStreamingBuffer[ch], ms_channel[ch].position, ms_channel[ch].size);
-		ms_channel[ch].state = CHANNELSTATE_READING;
-		ms_channel[ch].field24 = -600;
+		CdStreamRead(ch, ms_pStreamingBuffer[ch], Streaming_channel[ch].position, Streaming_channel[ch].size); // rouz edit (ChatGPT)
+		Streaming_channel[ch].state = CHANNELSTATE_READING; // rouz edit (ChatGPT)
+		Streaming_channel[ch].field24 = -600; // rouz edit (ChatGPT)
 		break;
 	case CHANNELSTATE_READING:
 		if(ProcessLoadingChannel(ch)){
@@ -2373,16 +1885,16 @@ CStreaming::LoadRequestedModels(void)
 		currentChannel = 0;
 
 	// We have data, load
-	if(ms_channel[currentChannel].state == CHANNELSTATE_READING ||
-	   ms_channel[currentChannel].state == CHANNELSTATE_STARTED)
+	if(Streaming_channel[currentChannel].state == CHANNELSTATE_READING || // rouz edit (ChatGPT)
+	   Streaming_channel[currentChannel].state == CHANNELSTATE_STARTED) // rouz edit (ChatGPT)
 		ProcessLoadingChannel(currentChannel);
 
 	if(ms_channelError == -1){
 		// Channel is idle, read more data
-		if(ms_channel[currentChannel].state == CHANNELSTATE_IDLE)
+		if(Streaming_channel[currentChannel].state == CHANNELSTATE_IDLE) // rouz edit (ChatGPT)
 			RequestModelStream(currentChannel);
 		// Switch channel
-		if(ms_channel[currentChannel].state != CHANNELSTATE_STARTED)
+		if(Streaming_channel[currentChannel].state != CHANNELSTATE_STARTED) // rouz edit (ChatGPT)
 			currentChannel = 1 - currentChannel;
 	}
 }
@@ -2404,8 +1916,8 @@ CStreaming::LoadAllRequestedModels(bool priority)
 		return;
 	bInsideLoadAll = true;
 
-	FlushChannels();
-	imgOffset = GetCdImageOffset(CdStreamGetLastPosn());
+	Streaming_FlushChannels(); // rouz edit (ChatGPT)
+	imgOffset = Streaming_GetCdImageOffset(CdStreamGetLastPosn()); // rouz edit (ChatGPT)
 
 	int streamIds[ARRAY_SIZE(ms_pStreamingBuffer)];
 	int streamSizes[ARRAY_SIZE(ms_pStreamingBuffer)];
@@ -2425,14 +1937,14 @@ CStreaming::LoadAllRequestedModels(bool priority)
 				continue;
 			}
 
-			if(ms_endRequestedList.m_prev != &ms_startRequestedList){
-				streamId = GetNextFileOnCd(0, priority);
+			if(Streaming_endRequestedList.m_prev != &Streaming_startRequestedList){ // rouz edit (ChatGPT)
+				streamId = Streaming_GetNextFileOnCd(0, priority); // rouz edit (ChatGPT)
 				if(streamId == -1){
 					streamIds[i] = -1;
 					break;
 				}
 
-				if (StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)) {
+				if (StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size)) { // rouz edit (ChatGPT)
 					streamIds[i] = -1;
 
 					// Big file, needs 2 buffer
@@ -2447,8 +1959,8 @@ CStreaming::LoadAllRequestedModels(bool priority)
 						if (i != 0 && streamIds[i-1] != -1 && streamSizes[i-1] > (uint32)ms_streamingBufferSize)
 							continue;
 					}
-					StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
-					DecrementRef(streamId);
+					StreamingInfo_RemoveFromList(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
+					Streaming_DecrementRef(streamId); // rouz edit (ChatGPT)
 
 					streamIds[i] = streamId;
 					streamSizes[i] = size;
@@ -2466,10 +1978,10 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 					readI = (readI + 1) % ARRAY_SIZE(readOrder);
 				} else {
-					StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
-					DecrementRef(streamId);
+					StreamingInfo_RemoveFromList(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
+					Streaming_DecrementRef(streamId); // rouz edit (ChatGPT)
 
-					ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
+					Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
 					streamIds[i] = -1;
 				}
 			} else {
@@ -2491,15 +2003,15 @@ CStreaming::LoadAllRequestedModels(bool priority)
 		while (CdStreamSync(nextChannel) != STREAM_NONE) {
 			CdStreamRead(nextChannel, ms_pStreamingBuffer[nextChannel], imgOffset+streamPoses[nextChannel], streamSizes[nextChannel]);
 		}
-		ms_aInfoForModel[streamIds[nextChannel]].m_loadState = STREAMSTATE_READING;
+		Streaming_modelInfo[streamIds[nextChannel]].m_loadState = STREAMSTATE_READING; // rouz edit (ChatGPT)
 
 		MakeSpaceFor(streamSizes[nextChannel] * CDSTREAM_SECTOR_SIZE);
 		ConvertBufferToObject(ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
-		if(ms_aInfoForModel[streamIds[nextChannel]].m_loadState == STREAMSTATE_STARTED)
+		if(Streaming_modelInfo[streamIds[nextChannel]].m_loadState == STREAMSTATE_STARTED) // rouz edit (ChatGPT)
 			FinishLoadingLargeFile(ms_pStreamingBuffer[nextChannel], streamIds[nextChannel]);
 
 		if(streamIds[nextChannel] < STREAM_OFFSET_TXD){
-			CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(streamIds[nextChannel]);
+			CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(streamIds[nextChannel])); // rouz edit (ChatGPT)
 			if(mi->IsSimple())
 				mi->m_alpha = 255;
 		}
@@ -2510,10 +2022,10 @@ CStreaming::LoadAllRequestedModels(bool priority)
 
 	ms_bLoadingBigModel = false;
 	for(i = 0; i < 4; i++){
-		ms_channel[1].streamIds[i] = -1;
-		ms_channel[1].offsets[i] = -1;
+		Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[1].offsets[i] = -1; // rouz edit (ChatGPT)
 	}
-	ms_channel[1].state = CHANNELSTATE_IDLE;
+	Streaming_channel[1].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
 	bInsideLoadAll = false;
 }
 #else
@@ -2525,101 +2037,59 @@ CStreaming::LoadAllRequestedModels(bool priority)
 	int i;
 	uint32 posn, size;
 
-	int numRequests = 4*ms_numModelsRequested;
+	int numRequests = 4*Streaming_numModelsRequested; // rouz edit (ChatGPT)
 
 	if(bInsideLoadAll)
 		return;
 	bInsideLoadAll = true;
 
 	if(priority)
-		numRequests = ms_numPriorityRequests;
+		numRequests = Streaming_numPriorityRequests; // rouz edit (ChatGPT)
 
-	FlushChannels();
-	imgOffset = GetCdImageOffset(CdStreamGetLastPosn());
+	Streaming_FlushChannels(); // rouz edit (ChatGPT)
+	imgOffset = Streaming_GetCdImageOffset(CdStreamGetLastPosn()); // rouz edit (ChatGPT)
 
-	while(ms_endRequestedList.m_prev != &ms_startRequestedList && numRequests > 0){
+	while(Streaming_endRequestedList.m_prev != &Streaming_startRequestedList && numRequests > 0){ // rouz edit (ChatGPT)
 		numRequests--;
-		streamId = GetNextFileOnCd(0, priority);
+		streamId = Streaming_GetNextFileOnCd(0, priority); // rouz edit (ChatGPT)
 		if(streamId == -1)
 			break;
 
-		StreamingInfo_RemoveFromList(&ms_aInfoForModel[streamId]);
-		ms_channel[0].streamIds[0] = streamId;
-		DecrementRef(streamId);
+		StreamingInfo_RemoveFromList(&Streaming_modelInfo[streamId]); // rouz edit (ChatGPT)
+		Streaming_channel[0].streamIds[0] = streamId; // rouz edit (ChatGPT)
+		Streaming_DecrementRef(streamId); // rouz edit (ChatGPT)
 
-		if(StreamingInfo_GetCdPosnAndSize(&ms_aInfoForModel[streamId], &posn, &size)){
+		if(StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[streamId], &posn, &size)){ // rouz edit (ChatGPT)
 			do
 				status = CdStreamRead(0, ms_pStreamingBuffer[0], imgOffset+posn, size);
 			while(CdStreamSync(0) || status == STREAM_NONE);
-			ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_READING;
+			Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_READING; // rouz edit (ChatGPT)
 
 			MakeSpaceFor(size * CDSTREAM_SECTOR_SIZE);
 			ConvertBufferToObject(ms_pStreamingBuffer[0], streamId);
-			if(ms_aInfoForModel[streamId].m_loadState == STREAMSTATE_STARTED)
+			if(Streaming_modelInfo[streamId].m_loadState == STREAMSTATE_STARTED) // rouz edit (ChatGPT)
 				FinishLoadingLargeFile(ms_pStreamingBuffer[0], streamId);
 
 			if(streamId < STREAM_OFFSET_TXD){
-				CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(streamId);
+				CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(streamId)); // rouz edit (ChatGPT)
 				if(mi->IsSimple())
 					mi->m_alpha = 255;
 			}
 		}else{
 			// empty
-			ms_aInfoForModel[streamId].m_loadState = STREAMSTATE_LOADED;
+			Streaming_modelInfo[streamId].m_loadState = STREAMSTATE_LOADED; // rouz edit (ChatGPT)
 		}
 	}
 
 	ms_bLoadingBigModel = false;
 	for(i = 0; i < 4; i++){
-		ms_channel[1].streamIds[i] = -1;
-		ms_channel[1].offsets[i] = -1;
+		Streaming_channel[1].streamIds[i] = -1; // rouz edit (ChatGPT)
+		Streaming_channel[1].offsets[i] = -1; // rouz edit (ChatGPT)
 	}
-	ms_channel[1].state = CHANNELSTATE_IDLE;
+	Streaming_channel[1].state = CHANNELSTATE_IDLE; // rouz edit (ChatGPT)
 	bInsideLoadAll = false;
 }
 #endif
-
-void
-CStreaming::FlushChannels(void)
-{
-	if(ms_channel[1].state == CHANNELSTATE_STARTED)
-		ProcessLoadingChannel(1);
-
-	if(ms_channel[0].state == CHANNELSTATE_READING){
-		CdStreamSync(0);
-		ProcessLoadingChannel(0);
-	}
-	if(ms_channel[0].state == CHANNELSTATE_STARTED)
-		ProcessLoadingChannel(0);
-
-	if(ms_channel[1].state == CHANNELSTATE_READING){
-		CdStreamSync(1);
-		ProcessLoadingChannel(1);
-	}
-	if(ms_channel[1].state == CHANNELSTATE_STARTED)
-		ProcessLoadingChannel(1);
-}
-
-void
-CStreaming::FlushRequestList(void)
-{
-	CStreamingInfo *si, *next;
-
-	for(si = ms_startRequestedList.m_next; si != &ms_endRequestedList; si = next){
-		next = si->m_next;
-		RemoveModel(si - ms_aInfoForModel);
-	}
-#ifdef FLUSHABLE_STREAMING
-	if(ms_channel[0].state == CHANNELSTATE_READING) {
-		flushStream[0] = 1;
-	}
-	if(ms_channel[1].state == CHANNELSTATE_READING) {
-		flushStream[1] = 1;
-	}
-#endif
-	FlushChannels();
-}
-
 
 void
 CStreaming::ImGonnaUseStreamingMemory(void)
@@ -2639,7 +2109,7 @@ CStreaming::UpdateMemoryUsed(void)
 {
 #ifdef USE_CUSTOM_ALLOCATOR
 	// Read streaming categories through the complete C heap owner
-	ms_memoryUsed =
+	Streaming_memoryUsed = // rouz edit (ChatGPT)
 		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM) +
 		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_MODELS) +
 		MemoryHeap_GetMemoryUsed(&gMainHeap,MEMID_STREAM_TEXUTRES) +
@@ -2679,7 +2149,7 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 		dy = iy - CWorld::GetSectorIndexY(pos.y);
 		for(ix = ixmin; ix <= ixmax; ix++){
 
-			if(CRenderer::m_loadingPriority && ms_numModelsRequested > 5)
+			if(CRenderer::m_loadingPriority && Streaming_numModelsRequested > 5) // rouz edit (ChatGPT)
 				return;
 
 			dx = ix - CWorld::GetSectorIndexX(pos.x);
@@ -2716,15 +2186,15 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float 
 
 		e->m_scanCode = CWorld::GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
-			CTimeModelInfo *mi = (CTimeModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
-			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff())) {
-				lodDistSq = sq(mi->GetLargestLodDistance());
+			CTimeModelInfo *mi = (CTimeModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
+			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) { // rouz edit (ChatGPT)
+				lodDistSq = sq(SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier)); // rouz edit (ChatGPT)
 				lodDistSq = Min(lodDistSq, sq(STREAM_DIST));
 				pos = CVector2D(e->GetPosition());
 				if(xmin < pos.x && pos.x < xmax &&
 				   ymin < pos.y && pos.y < ymax &&
 				   (CVector2D(x, y) - pos).MagnitudeSqr() < lodDistSq)
-					RequestModel(e->GetModelIndex(), flags);
+					Streaming_RequestModel(e->GetModelIndex(), flags); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -2744,9 +2214,9 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, int32 flags)
 
 		e->m_scanCode = CWorld::GetCurrentScanCode();
 		if(!e->bStreamingDontDelete && IsAreaVisible(e->m_area) && !e->bDontStream && e->bIsVisible){
-			CTimeModelInfo *mi = (CTimeModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
-			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
-				RequestModel(e->GetModelIndex(), flags);
+			CTimeModelInfo *mi = (CTimeModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
+			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) // rouz edit (ChatGPT)
+				Streaming_RequestModel(e->GetModelIndex(), flags); // rouz edit (ChatGPT)
 		}
 	}
 }
@@ -2933,7 +2403,7 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 	if (rouz.no_unstreaming)
 		return;
 
-	if(ms_memoryUsed < mem)
+	if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 		return;
 
 	ix = CWorld::GetSectorIndexX(TheCamera.GetPosition().x);
@@ -2969,8 +2439,8 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		}
 
 		
-		while(RemoveLoadedZoneModel())
-			if(ms_memoryUsed < mem)
+		while(Streaming_RemoveLoadedZoneModel()) // rouz edit (ChatGPT)
+			if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 				return;
 
 		// Now a block that intersects with the camera's frustum
@@ -3034,8 +2504,8 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 			}
 		}
 
-		while(RemoveLoadedZoneModel())
-			if(ms_memoryUsed < mem)
+		while(Streaming_RemoveLoadedZoneModel()) // rouz edit (ChatGPT)
+			if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 				return;
 
 		// Now a block that intersects with the camera's frustum
@@ -3076,7 +2546,7 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 		}
 	}
 
-	while(ms_memoryUsed >= mem && RemoveLeastUsedModel(0));
+	while(Streaming_memoryUsed >= mem && Streaming_RemoveLeastUsedModel(0)); // rouz edit (ChatGPT)
 }
 
 void
@@ -3123,12 +2593,12 @@ CStreaming::DeleteRwObjectsBehindCameraInSectorList(CPtrList &list, size_t mem)
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
 		if(!e->bStreamingDontDelete && !e->bImBeingRendered &&
-		   e->m_rwObject && ms_aInfoForModel[e->GetModelIndex()].m_next &&
+		   e->m_rwObject && Streaming_modelInfo[e->GetModelIndex()].m_next && // rouz edit (ChatGPT)
 		   FindPlayerPed()->m_pCurSurface != e){
 			e->DeleteRwObject();
-			if (CModelInfo::GetModelInfo(e->GetModelIndex())->GetNumRefs() == 0) {
-				RemoveModel(e->GetModelIndex());
-				if(ms_memoryUsed < mem)
+			if (((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex()))->GetNumRefs() == 0) { // rouz edit (ChatGPT)
+				Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
+				if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 					return true;
 			}
 		}
@@ -3145,11 +2615,11 @@ CStreaming::DeleteRwObjectsNotInFrustumInSectorList(CPtrList &list, size_t mem)
 	for(node = list.first; node; node = node->next){
 		e = (CEntity*)node->item;
 		if(!e->bStreamingDontDelete && !e->bImBeingRendered &&
-		   e->m_rwObject && (!e->IsVisible() || e->bOffscreen) && ms_aInfoForModel[e->GetModelIndex()].m_next){
+		   e->m_rwObject && (!e->IsVisible() || e->bOffscreen) && Streaming_modelInfo[e->GetModelIndex()].m_next){ // rouz edit (ChatGPT)
 			e->DeleteRwObject();
-			if (CModelInfo::GetModelInfo(e->GetModelIndex())->GetNumRefs() == 0) {
-				RemoveModel(e->GetModelIndex());
-				if(ms_memoryUsed < mem)
+			if (((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex()))->GetNumRefs() == 0) { // rouz edit (ChatGPT)
+				Streaming_RemoveModel(e->GetModelIndex()); // rouz edit (ChatGPT)
+				if(Streaming_memoryUsed < mem) // rouz edit (ChatGPT)
 					return true;
 			}
 		}
@@ -3172,8 +2642,8 @@ CStreaming::MakeSpaceFor(int32 size)
 	}
 #undef MB
 #endif
-	while(ms_memoryUsed >= ms_memoryAvailable - size)
-		if(!RemoveLeastUsedModel(STREAMFLAGS_20)){
+	while(Streaming_memoryUsed >= ms_memoryAvailable - size) // rouz edit (ChatGPT)
+		if(!Streaming_RemoveLeastUsedModel(STREAMFLAGS_20)){ // rouz edit (ChatGPT)
 			DeleteRwObjectsBehindCamera(ms_memoryAvailable - size);
 			return;
 		}
@@ -3187,10 +2657,10 @@ CStreaming::LoadScene(const CVector &pos)
 
 	level = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
 	debug("Start load scene\n");
-	for(si = ms_endRequestedList.m_prev; si != &ms_startRequestedList; si = prev){
+	for(si = Streaming_endRequestedList.m_prev; si != &Streaming_startRequestedList; si = prev){ // rouz edit (ChatGPT)
 		prev = si->m_prev;
 		if((si->m_flags & (STREAMFLAGS_KEEP_IN_MEMORY|STREAMFLAGS_PRIORITY)) == 0)
-			RemoveModel(si - ms_aInfoForModel);
+			Streaming_RemoveModel(si - Streaming_modelInfo); // rouz edit (ChatGPT)
 	}
 	CRenderer::m_loadingPriority = false;
 	DeleteAllRwObjects();
@@ -3212,14 +2682,14 @@ CStreaming::LoadScene(const CVector &pos)
 			CZoneInfo zone;
 			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &zone);
 			int32 model = CCarCtrl::ChooseCarModelToLoad(CCarCtrl::ChooseCarRating(&zone));
-			CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		}
 	}
 	LoadAllRequestedModels(false);
 	InstanceLoadedModels(pos);
 
 	for(int i = 0; i < NUMSTREAMINFO; i++)
-		ms_aInfoForModel[i].m_flags &= ~STREAMFLAGS_20;
+		Streaming_modelInfo[i].m_flags &= ~STREAMFLAGS_20; // rouz edit (ChatGPT)
 	debug("End load scene\n");
 }
 
@@ -3237,8 +2707,8 @@ CStreaming::MemoryCardSave(uint8 *buf, uint32 *size)
 
 	*size = NUM_DEFAULT_MODELS;
 	for(i = 0; i < NUM_DEFAULT_MODELS; i++)
-		if(ms_aInfoForModel[i].m_loadState == STREAMSTATE_LOADED)
-			buf[i] = ms_aInfoForModel[i].m_flags;
+		if(Streaming_modelInfo[i].m_loadState == STREAMSTATE_LOADED) // rouz edit (ChatGPT)
+			buf[i] = Streaming_modelInfo[i].m_flags; // rouz edit (ChatGPT)
 		else
 			buf[i] = 0xFF;
 }
@@ -3250,22 +2720,22 @@ CStreaming::MemoryCardLoad(uint8 *buf, uint32 size)
 
 	assert(size == NUM_DEFAULT_MODELS);
 	for(i = 0; i < size; i++)
-		if(ms_aInfoForModel[i].m_loadState == STREAMSTATE_LOADED)
+		if(Streaming_modelInfo[i].m_loadState == STREAMSTATE_LOADED) // rouz edit (ChatGPT)
 			if(buf[i] != 0xFF)
-				ms_aInfoForModel[i].m_flags = buf[i];
+				Streaming_modelInfo[i].m_flags = buf[i]; // rouz edit (ChatGPT)
 }
 
 void
 CStreaming::UpdateForAnimViewer(void)
 {
-	if (CStreaming::ms_channelError == -1) {
+	if (CStreaming::ms_channelError == -1) { // rouz edit (ChatGPT)
 		CStreaming::AddModelsToRequestList(CVector(0.0f, 0.0f, 0.0f), 0);
 		CStreaming::LoadRequestedModels();
 		// original modifier was %d
-		sprintf(gString, "Requested %d, memory size %zuK\n", CStreaming::ms_numModelsRequested, 2 * CStreaming::ms_memoryUsed);
+		sprintf(gString, "Requested %d, memory size %zuK\n", Streaming_numModelsRequested, 2 * Streaming_memoryUsed); // rouz edit (ChatGPT)
 	}
 	else {
-		CStreaming::RetryLoadFile(CStreaming::ms_channelError);
+		CStreaming::RetryLoadFile(CStreaming::ms_channelError); // rouz edit (ChatGPT)
 	}
 }
 
@@ -3304,8 +2774,8 @@ CStreaming::PrintStreamingBufferState()
 			if (modelIndex < NUMSTREAMINFO) {
 				int y = 24;
 				for ( ; j < 34 && modelIndex < NUMSTREAMINFO; modelIndex++) {
-					CStreamingInfo *streamingInfo = &ms_aInfoForModel[modelIndex];
-					CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(modelIndex);
+					CStreamingInfo *streamingInfo = &Streaming_modelInfo[modelIndex]; // rouz edit (ChatGPT)
+					CBaseModelInfo *modelInfo = ((CBaseModelInfo*)ModelRegistry_Get(modelIndex)); // rouz edit (ChatGPT)
 					if (streamingInfo->m_loadState != STREAMSTATE_LOADED || !StreamingInfo_GetCdPosnAndSize(streamingInfo, &offset, &size))
 						continue;
 

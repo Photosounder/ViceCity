@@ -1,58 +1,35 @@
+//+ rouz edit (ChatGPT)
 #include "common.h"
-
 #include "Ped.h"
 #include "PedPlacement.h"
+#include "PedPlacement_backend.h"
 #include "World.h"
 
-bool
-CPedPlacement::FindZCoorForPed(CVector* pos)
+bool PedPlacement_BackendVerticalLine(float x,float y,float z,float endZ,float *hitZ)
 {
-	float zForPed;
-	float startZ = pos->z - 100.0f;
-	float foundColZ = -100.0f;
-	float foundColZ2 = -100.0f;
-	CColPoint foundCol;
-	CEntity* foundEnt;
-
-	CVector vec(
-		pos->x,
-		pos->y,
-		pos->z + 1.0f
-	);
-
-	if (CWorld::ProcessVerticalLine(vec, startZ, foundCol, foundEnt, true, false, false, false, true, false, nil))
-		foundColZ = foundCol.point.z;
-
-	// Adjust coords and do a second test
-	vec.x += 0.1f;
-	vec.y += 0.1f;
-
-	if (CWorld::ProcessVerticalLine(vec, startZ, foundCol, foundEnt, true, false, false, false, true, false, nil))
-		foundColZ2 = foundCol.point.z;
-
-	zForPed = Max(foundColZ, foundColZ2);
-
-	if (zForPed > -99.0f) {
-		pos->z = FEET_OFFSET + zForPed;
-		return true;
-	}
-	return false;
+    // Query the native world with the original collision flags
+    CColPoint foundCol;
+    CEntity *foundEnt;
+    CVector point(x,y,z);
+    if (!CWorld::ProcessVerticalLine(point,endZ,foundCol,foundEnt,true,false,false,false,true,false,nil)) return false;
+    *hitZ=foundCol.point.z;
+    return true;
 }
 
-CEntity*
-CPedPlacement::IsPositionClearOfCars(Const CVector *pos)
+int16_t PedPlacement_BackendFindObjects(float x,float y,float z,float radius,int total,void *entities)
 {
-	return CWorld::TestSphereAgainstWorld(*pos, 0.25f, nil, true, true, false, false, false, false);
+    // Query native nearby entities with the original collision flags
+    int16 count;
+    CVector point(x,y,z);
+    CWorld::FindObjectsKindaColliding(point,radius,true,&count,total,(CEntity**)entities,false,true,true,false,false);
+    return count;
 }
 
-bool
-CPedPlacement::IsPositionClearForPed(const CVector& pos, float radius, int total, CEntity** entities)
+void *PedPlacement_BackendSphere(float x,float y,float z,float radius)
 {
-	int16 count;
-	if (radius == -1.0f)
-		radius = 0.75f;
-	if (total == -1)
-		total = 2;
-	CWorld::FindObjectsKindaColliding(pos, radius, true, &count, total, entities, false, true, true, false, false);
-	return count == 0;
+    // Preserve the native sphere query and its original flags
+    CVector point(x,y,z);
+    return CWorld::TestSphereAgainstWorld(point,radius,nil,true,true,false,false,false,false);
 }
+
+//- rouz edit (ChatGPT)

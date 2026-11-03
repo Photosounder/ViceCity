@@ -5,11 +5,6 @@
 #include "Sprite.h"
 #include "Font.h"
 
-void MoneyMessages_BackendAsciiToUnicode(const char *source,uint16_t *target)
-{
-    // Enter the existing converter with the original live source and destination
-    AsciiToUnicode(source,target);
-}
 float MoneyMessages_BackendScreenWidth(void)
 {
     // Read the original live screen width at its use point

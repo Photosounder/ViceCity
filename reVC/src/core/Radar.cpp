@@ -604,13 +604,13 @@ void ClipRadarTileCoords(int32 &x, int32 &y)
 void RequestMapSection(int32 x, int32 y)
 {
 	ClipRadarTileCoords(x, y);
-	CStreaming::RequestTxd(gRadarTxdIds[x + RADAR_NUM_TILES * y], STREAMFLAGS_DONT_REMOVE | STREAMFLAGS_DEPENDENCY);
+	Streaming_RequestTxd(gRadarTxdIds[x + RADAR_NUM_TILES * y], STREAMFLAGS_DONT_REMOVE | STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 }
 
 void RemoveMapSection(int32 x, int32 y)
 {
 	if (x >= 0 && x <= RADAR_NUM_TILES - 1 && y >= 0 && y <= RADAR_NUM_TILES - 1)
-		CStreaming::RemoveTxd(gRadarTxdIds[x + RADAR_NUM_TILES * y]);
+		Streaming_RemoveTxd(gRadarTxdIds[x + RADAR_NUM_TILES * y]); // rouz edit (ChatGPT)
 }
 
 // Transform from section indices to world coordinates
@@ -932,7 +932,7 @@ void CRadar::Draw3dMarkers()
 				//- rouz edit (ChatGPT)
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
-					pos.z += 1.2f * CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 2.5f;
+					pos.z += 1.2f * ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(entity->GetModelIndex())))->boundingBox.max.z + 2.5f; // rouz edit (ChatGPT)
 					// Enter the C 3D-marker controller with the original arguments
 					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 2.5f, CARBLIP_MARKER_COLOR_R, CARBLIP_MARKER_COLOR_G, CARBLIP_MARKER_COLOR_B, CARBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}
@@ -964,7 +964,7 @@ void CRadar::Draw3dMarkers()
 				//- rouz edit (ChatGPT)
 				if (ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[i].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 					CVector pos = entity->GetPosition();
-					pos.z += CModelInfo::GetColModel(entity->GetModelIndex())->boundingBox.max.z + 1.0f + 1.0f;
+					pos.z += ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(entity->GetModelIndex())))->boundingBox.max.z + 1.0f + 1.0f; // rouz edit (ChatGPT)
 					// Enter the C 3D-marker controller with the original arguments
 					Markers3D_PlaceMarkerLegacy(i | (ms_RadarTrace[i].m_BlipIndex << 16), MARKERTYPE_ARROW, pos, 1.0f, OBJECTBLIP_MARKER_COLOR_R, OBJECTBLIP_MARKER_COLOR_G, OBJECTBLIP_MARKER_COLOR_B, OBJECTBLIP_MARKER_COLOR_A, 1024, 0.2f, 5);
 				}

@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "Projectile_backend.h"
 #include "Camera.h"
@@ -207,15 +208,10 @@ CEntity * Projectile_BackendDriver(CEntity *entity)
     // Access the original native operation or canonical field without moving controller decisions
     return ((CVehicle *)entity)->pDriver;
 }
-void Projectile_BackendExplosion(CEntity *source,enum eExplosionType type,ProjectileVector position)
-{
-    // Access the original native operation or canonical field without moving controller decisions
-    CExplosion::AddExplosion(nil,source,type,CVector(position.x,position.y,position.z),0);
-}
 void Projectile_BackendProjectileExplosion(CEntity *source,enum eExplosionType type,CProjectile *projectile)
 {
     // Access the original native operation or canonical field without moving controller decisions
-    CExplosion::AddExplosion(nil,source,type,projectile->GetPosition(),0);
+    Explosion_AddExplosion(nil,source,type,projectile->GetPosition(),0);
 }
 ProjectileVector Projectile_BackendProjectileSpeed(CProjectile *projectile)
 {
@@ -292,4 +288,5 @@ void Projectile_BackendUndefined(void)
     // Access the original native operation or canonical field without moving controller decisions
     Error("Undefined projectile type, AddProjectile, ProjectileInfo.cpp");
 }
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -96,7 +96,7 @@ void Ropes_BackendEnd(void)
 bool Ropes_BackendSwatLoaded(void)
 {
 	// Query the original live SWAT model state
-	return CStreaming::HasModelLoaded(MI_SWAT);
+	return Streaming_HasModelLoaded(MI_SWAT); // rouz edit (ChatGPT)
 }
 CCopPed *Ropes_BackendAddSwat(RopesVector pos)
 {

@@ -284,21 +284,6 @@ float PlaneTrails_BackendRain(void)
     // Preserve the actual typed owner operation and original borrowed-vector lifetime
     return Weather_Rain;
 }
-int32_t PlaneTrails_BackendSkyTopRed(void)
-{
-    // Preserve the actual typed owner operation and original borrowed-vector lifetime
-    return TimeCycle_GetSkyTopRed();
-}
-int32_t PlaneTrails_BackendSkyTopGreen(void)
-{
-    // Preserve the actual typed owner operation and original borrowed-vector lifetime
-    return TimeCycle_GetSkyTopGreen();
-}
-int32_t PlaneTrails_BackendSkyTopBlue(void)
-{
-    // Preserve the actual typed owner operation and original borrowed-vector lifetime
-    return TimeCycle_GetSkyTopBlue();
-}
 //- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
@@ -401,11 +386,6 @@ void PlaneBanners_BackendDestBlend(void)
     // Preserve the actual typed owner operation and original native field access
     RwRenderStateSet(rwRENDERSTATEDESTBLEND,(void *)rwBLENDINVSRCALPHA);
 }
-void PlaneBanners_BackendRaster(void *raster)
-{
-    // Preserve the actual typed owner operation and original native field access
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
-}
 bool PlaneBanners_BackendTransform(int32_t count)
 {
     // Preserve the actual typed owner operation and original native field access
@@ -463,7 +443,7 @@ void * SmokeTrails_BackendPlayerVehicle(void)
 bool SmokeTrails_BackendCutscene(void)
 {
     // Preserve the actual typed owner operation and original native point lifetime
-    return CCutsceneMgr::IsRunning();
+    return Cutscene_IsRunning(); // rouz edit (ChatGPT)
 }
 void * SmokeTrails_BackendClump(void *ped)
 {
@@ -729,16 +709,6 @@ void * ScrollBar_BackendTexture(void)
     // Preserve the actual typed owner operation and original native object lifetime
     return gpCoronaTexture[0];
 }
-void * ScrollBar_BackendRaster(void *texture)
-{
-    // Preserve the actual typed owner operation and original native object lifetime
-    return RwTextureGetRaster((RwTexture *)texture);
-}
-void ScrollBar_BackendSetRaster(void *raster)
-{
-    // Preserve the actual typed owner operation and original native object lifetime
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
-}
 void ScrollBar_BackendZWrite(bool enabled)
 {
     // Preserve the actual typed owner operation and original native object lifetime
@@ -838,11 +808,7 @@ void ScrollBar_BackendSetV(void *vertices,int32_t index,float value)
 
 //+ rouz edit (ChatGPT)
 #include "Escalators_backend.h"
-bool Escalators_BackendReplay(void)
-{
-    // Retain the original typed record operation at its C-selected index
-    return CReplay::IsPlayingBack();
-}
+
 
 
 
@@ -855,7 +821,7 @@ static_assert(ESCALATOR_TEMP_OBJECT==TEMP_OBJECT && ESCALATOR_CONTROLLED_SUB_OBJ
 float Escalator_BackendStepHeight(void)
 {
     // Preserve the actual typed object or matrix operation at its original call point
-    return CModelInfo::GetColModel(MI_ESCALATORSTEP)->boundingBox.max.z;
+    return ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(MI_ESCALATORSTEP)))->boundingBox.max.z; // rouz edit (ChatGPT)
 }
 EscalatorVector Escalator_BackendCameraPosition(void)
 {

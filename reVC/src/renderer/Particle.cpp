@@ -5,6 +5,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h" // rouz edit (ChatGPT)
 
 #include "main.h"
 #include "General.h"
@@ -903,7 +904,7 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 		return nil;
 	}
 
-	if ( !CReplay::IsPlayingBack() )
+	if ( !Replay_IsPlayingBack() ) // rouz edit (ChatGPT)
 		CReplay::RecordParticle(type, vecPos, vecDir, fSize, color);
 	
 	CParticle *pParticle = m_pUnusedListHead;
@@ -2737,34 +2738,34 @@ CEntity::AddSteamsFromGround(CVector *unused)
 	C2dEffect *effect;
 	CVector pos;
 
-	n = CModelInfo::GetModelInfo(GetModelIndex())->GetNum2dEffects();
+	n = (*ModelRegistry_EffectCount(ModelRegistry_Get(GetModelIndex()))); // rouz edit (ChatGPT)
 	for(i = 0; i < n; i++){
-		effect = CModelInfo::GetModelInfo(GetModelIndex())->Get2dEffect(i);
+		effect = ((C2dEffect*)ModelRegistry_GetEffect(ModelRegistry_Get(GetModelIndex()), i)); // rouz edit (ChatGPT)
 		if(effect->type != EFFECT_PARTICLE)
 			continue;
 
-		pos = GetMatrix() * effect->pos;
+		pos = GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 		switch(effect->particle.particleType){
 		case 0:
-			CParticleObject::AddObject(POBJECT_PAVEMENT_STEAM, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_PAVEMENT_STEAM, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		case 1:
-			CParticleObject::AddObject(POBJECT_WALL_STEAM, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_WALL_STEAM, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		case 2:
 			CParticleObject::AddObject(POBJECT_DRY_ICE, pos, effect->particle.scale, false);
 			break;
 		case 3:
-			CParticleObject::AddObject(POBJECT_SMALL_FIRE, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_SMALL_FIRE, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		case 4:
-			CParticleObject::AddObject(POBJECT_DARK_SMOKE, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_DARK_SMOKE, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		case 5:
-			CParticleObject::AddObject(POBJECT_WATER_FOUNTAIN_VERT, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_WATER_FOUNTAIN_VERT, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		case 6:
-			CParticleObject::AddObject(POBJECT_WATER_FOUNTAIN_HORIZ, pos, effect->particle.dir, effect->particle.scale, false);
+			CParticleObject::AddObject(POBJECT_WATER_FOUNTAIN_HORIZ, pos, CollisionVector_ToNative(effect->particle.dir), effect->particle.scale, false); // rouz edit (ChatGPT)
 			break;
 		}
 	}

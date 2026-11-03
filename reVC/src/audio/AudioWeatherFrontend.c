@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ZoneCull.h"
 #include "AudioManager.h"
 #include "AudioSamples.h"
 #include "soundlist.h"
@@ -82,7 +83,7 @@ AudioWeather_Process(cAudioManager *manager, int32_t id)
 		AUDIO_WEATHER_FRONTEND_SET_SOUND_REFLECTION(0);
 		AudioRequests_Submit(manager);
 	}
-	if (AudioVehicleRainHost_Rain() > 0.0f && (!AudioVehicleRainHost_CameraNoRain() || !AudioVehicleRainHost_PlayerNoRain())) {
+	if (AudioVehicleRainHost_Rain() > 0.0f && (!CullZones_CamNoRain() || !CullZones_PlayerNoRain())) {
 		manager->m_sQueueSample.m_nSampleIndex = SFX_RAIN;
 		manager->m_sQueueSample.m_nFrequency = SampleManager_GetSampleBaseFrequency(&SampleManager, SFX_RAIN);
 		manager->m_sQueueSample.m_nVolume = (uint8_t)(25.0f * AudioVehicleRainHost_Rain());

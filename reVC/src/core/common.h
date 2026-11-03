@@ -281,7 +281,7 @@ extern int strcasecmp(const char *str1, const char *str2);
 extern int strncasecmp(const char *str1, const char *str2, size_t len);
 #endif
 
-extern wchar *AllocUnicode(const char*src);
+extern "C" wchar *AllocUnicode(const char *src); // rouz edit (ChatGPT)
 
 #define Clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 

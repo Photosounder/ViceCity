@@ -569,7 +569,7 @@ CCam::GetBoatLook_L_R_HeightOffset(float &Offset)
 {
 	if(CamTargetEntity == nil)
 		return false;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(CamTargetEntity->GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(CamTargetEntity->GetModelIndex())); // rouz edit (ChatGPT)
 	tBoatHandlingData *handling = mod_HandlingManager.GetBoatPointer(mi->m_handlingId);
 	if(handling){
 		Offset = handling->fLook_L_R_BehindCamHeight;
@@ -1362,7 +1362,7 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 	if(ResetStatics){
 		Rotating = false;
 		m_bCollisionChecksOn = true;
-		CPad::GetPad(0)->ClearMouseHistory();
+		Input_ClearMouseHistory(); // rouz edit (ChatGPT)
 		ResetStatics = false;
 	}
 
@@ -1387,8 +1387,8 @@ CCam::Process_FollowPedWithMouse(const CVector &CameraTarget, float TargetOrient
 	}else{
 		// Look around
 		bool UseMouse = false;
-		float MouseX = CPad::GetPad(0)->GetMouseX();
-		float MouseY = CPad::GetPad(0)->GetMouseY();
+		float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+		float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 		float LookLeftRight, LookUpDown;
 		if((MouseX != 0.0f || MouseY != 0.0f) && !CPad::GetPad(0)->ArePlayerControlsDisabled()){
 			UseMouse = true;
@@ -1813,7 +1813,7 @@ CCam::Process_Cam_On_A_String(const CVector &CameraTarget, float TargetOrientati
 		m_fTiltSpeed = 0.0;
 	}
 
-	CBaseModelInfo *mi = CModelInfo::GetModelInfo(CamTargetEntity->GetModelIndex());
+	CBaseModelInfo *mi = ((CBaseModelInfo*)ModelRegistry_Get(CamTargetEntity->GetModelIndex())); // rouz edit (ChatGPT)
 	CVector Dimensions = CollisionVector_ToNative(mi->GetColModel()->boundingBox.max) - CollisionVector_ToNative(mi->GetColModel()->boundingBox.min);
 	CVector TargetCoors = CameraTarget;
 	float BaseDist = Dimensions.Magnitude();
@@ -1970,7 +1970,7 @@ CCam::FixCamWhenObscuredByVehicle(const CVector &TargetCoors)
 
 	float HeightTarget = 0.0f;
 	if(CWorld::ProcessLineOfSight(TargetCoors, Source, colPoint, entity, false, true, false, false, false, false, false)){
-		CBaseModelInfo *mi = CModelInfo::GetModelInfo(entity->GetModelIndex());
+		CBaseModelInfo *mi = ((CBaseModelInfo*)ModelRegistry_Get(entity->GetModelIndex())); // rouz edit (ChatGPT)
 		HeightTarget = mi->GetColModel()->boundingBox.max.z + 1.0f + TargetCoors.z - Source.z;
 		if(HeightTarget < 0.0f)
 			HeightTarget = 0.0f;
@@ -2251,8 +2251,8 @@ CCam::Process_Rocket(const CVector &CameraTarget, float, float, float)
 
 	// Look around
 	bool UseMouse = false;
-	float MouseX = CPad::GetPad(0)->GetMouseX();
-	float MouseY = CPad::GetPad(0)->GetMouseY();
+	float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+	float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 	float LookLeftRight, LookUpDown;
 	if(MouseX != 0.0f || MouseY != 0.0f){
 		UseMouse = true;
@@ -2353,8 +2353,8 @@ CCam::Process_M16_1stPerson(const CVector &CameraTarget, float, float, float)
 
 	// Look around
 	bool UseMouse = false;
-	float MouseX = CPad::GetPad(0)->GetMouseX();
-	float MouseY = CPad::GetPad(0)->GetMouseY();
+	float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+	float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 	float LookLeftRight, LookUpDown;
 	if(MouseX != 0.0f || MouseY != 0.0f){
 		UseMouse = true;
@@ -2649,7 +2649,7 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 			matrix = &((CBike*)CamTargetEntity)->m_leanMatrix;
 		}
 
-		CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(CamTargetEntity->GetModelIndex());
+		CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(CamTargetEntity->GetModelIndex())); // rouz edit (ChatGPT)
 		CVector CamPos = mi->GetFrontSeatPosn();
 
 		// rouz edit
@@ -2705,8 +2705,8 @@ CCam::Process_1stPerson(const CVector &CameraTarget, float TargetOrientation, fl
 
 			// Look around
 			bool UseMouse = false;
-			float MouseX = CPad::GetPad(0)->GetMouseX();
-			float MouseY = CPad::GetPad(0)->GetMouseY();
+			float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+			float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 			float LookLeftRight, LookUpDown;
 			if(MouseX != 0.0f || MouseY != 0.0f){
 				UseMouse = true;
@@ -2838,8 +2838,8 @@ CCam::Process_1rstPersonPedOnPC(const CVector&, float TargetOrientation, float, 
 
 		// Look around
 		bool UseMouse = false;
-		float MouseX = CPad::GetPad(0)->GetMouseX();
-		float MouseY = CPad::GetPad(0)->GetMouseY();
+		float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+		float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 		float LookLeftRight, LookUpDown;
 		if(MouseX != 0.0f || MouseY != 0.0f){
 			UseMouse = true;
@@ -2977,8 +2977,8 @@ CCam::Process_Sniper(const CVector &CameraTarget, float TargetOrientation, float
 
 	// Look around
 	bool UseMouse = false;
-	float MouseX = CPad::GetPad(0)->GetMouseX();
-	float MouseY = CPad::GetPad(0)->GetMouseY();
+	float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+	float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 	float LookLeftRight, LookUpDown;
 	if(MouseX != 0.0f || MouseY != 0.0f){
 		UseMouse = true;
@@ -3007,10 +3007,10 @@ CCam::Process_Sniper(const CVector &CameraTarget, float TargetOrientation, float
 	TargetCoors.z = 3.0f * Sin(Alpha) + Source.z;
 
 	UseMouse = false;
-	int ZoomInButton = ControlsManager.GetMouseButtonAssociatedWithAction(PED_SNIPER_ZOOM_IN);
-	int ZoomOutButton = ControlsManager.GetMouseButtonAssociatedWithAction(PED_SNIPER_ZOOM_OUT);
+	int ZoomInButton = Input_GetMouseButtonAssociatedWithAction(ControlsManager.m_aSettings, PED_SNIPER_ZOOM_IN); // rouz edit (ChatGPT)
+	int ZoomOutButton = Input_GetMouseButtonAssociatedWithAction(ControlsManager.m_aSettings, PED_SNIPER_ZOOM_OUT); // rouz edit (ChatGPT)
 	if(ZoomInButton == rsMOUSEWHEELUPBUTTON || ZoomInButton == rsMOUSEWHEELDOWNBUTTON || ZoomOutButton == rsMOUSEWHEELUPBUTTON || ZoomOutButton == rsMOUSEWHEELDOWNBUTTON){
-		if(CPad::GetPad(0)->GetMouseWheelUp() || CPad::GetPad(0)->GetMouseWheelDown()){
+		if(Input_GetMouseWheelUp() || Input_GetMouseWheelDown()){ // rouz edit (ChatGPT)
 			if(CPad::GetPad(0)->SniperZoomIn()){
 				TargetFOV = FOV - 10.0f;
 				UseMouse = true;
@@ -3947,8 +3947,8 @@ CCam::Process_SpecialFixedForSyphon(const CVector &CameraTarget, float, float, f
 
 #ifdef IMPROVED_CAMERA
 
-#define KEYJUSTDOWN(k) ControlsManager.GetIsKeyboardKeyJustDown((RsKeyCodes)k)
-#define KEYDOWN(k) ControlsManager.GetIsKeyboardKeyDown((RsKeyCodes)k)
+#define KEYJUSTDOWN(k) Input_GetIsKeyboardKeyJustDown((RsKeyCodes)k) // rouz edit (ChatGPT)
+#define KEYDOWN(k) Input_GetIsKeyboardKeyDown((RsKeyCodes)k) // rouz edit (ChatGPT)
 #define CTRLJUSTDOWN(key) \
 	       ((KEYDOWN(rsLCTRL) || KEYDOWN(rsRCTRL)) && KEYJUSTDOWN((RsKeyCodes)key) || \
 	        (KEYJUSTDOWN(rsLCTRL) || KEYJUSTDOWN(rsRCTRL)) && KEYDOWN((RsKeyCodes)key))
@@ -3967,9 +3967,9 @@ CCam::Process_Debug(const CVector&, float, float, float)
 	FOV = DefaultFOV;
 	Alpha += DEGTORAD(CPad::GetPad(1)->GetLeftStickY()) / 50.0f;
 	Beta  += DEGTORAD(CPad::GetPad(1)->GetLeftStickX()*1.5f) / 19.0f;
-	if(CPad::GetPad(0)->GetLeftMouse()){
-		Alpha += DEGTORAD(CPad::GetPad(0)->GetMouseY()/2.0f);
-		Beta += DEGTORAD(CPad::GetPad(0)->GetMouseX()/2.0f);
+	if(Input_GetLeftMouse()){ // rouz edit (ChatGPT)
+		Alpha += DEGTORAD(Input_GetMouseY()/2.0f); // rouz edit (ChatGPT)
+		Beta += DEGTORAD(Input_GetMouseX()/2.0f); // rouz edit (ChatGPT)
 	}
 
 	TargetCoors.x = Source.x + Cos(Alpha) * Sin(Beta) * 7.0f;
@@ -4076,9 +4076,9 @@ CCam::Process_Debug(const CVector&, float, float, float)
 	if(Alpha > DEGTORAD(89.5f)) Alpha = DEGTORAD(89.5f);
 	else if(Alpha < DEGTORAD(-89.5f)) Alpha = DEGTORAD(-89.5f);
 
-	if(CPad::GetPad(1)->GetSquare() || CPad::GetPad(1)->GetLeftMouse())
+	if(CPad::GetPad(1)->GetSquare() || Input_GetLeftMouse()) // rouz edit (ChatGPT)
 		Speed += 0.1f;
-	else if(CPad::GetPad(1)->GetCross() || CPad::GetPad(1)->GetRightMouse())
+	else if(CPad::GetPad(1)->GetCross() || Input_GetRightMouse()) // rouz edit (ChatGPT)
 		Speed -= 0.1f;
 	else
 		Speed = 0.0f;
@@ -4156,9 +4156,9 @@ CCam::Process_Editor(const CVector&, float, float, float)
 	if(Alpha > DEGTORAD(89.5f)) Alpha = DEGTORAD(89.5f);
 	else if(Alpha < DEGTORAD(-89.5f)) Alpha = DEGTORAD(-89.5f);
 
-	if(CPad::GetPad(1)->GetSquare() || CPad::GetPad(1)->GetLeftMouse())
+	if(CPad::GetPad(1)->GetSquare() || Input_GetLeftMouse()) // rouz edit (ChatGPT)
 		Speed += 0.1f;
-	else if(CPad::GetPad(1)->GetCross() || CPad::GetPad(1)->GetRightMouse())
+	else if(CPad::GetPad(1)->GetCross() || Input_GetRightMouse()) // rouz edit (ChatGPT)
 		Speed -= 0.1f;
 	else
 		Speed = 0.0f;
@@ -4218,9 +4218,9 @@ CCam::Process_ModelView(const CVector &CameraTarget, float, float, float)
 	else
 		Distance += CPad::GetPad(0)->GetLeftStickY() * ((Distance - 10.0f)/20.0f + 1.0f) / 1000.0f;
 #ifdef IMPROVED_CAMERA
-	if(CPad::GetPad(0)->GetLeftMouse()){
-		Distance += DEGTORAD(CPad::GetPad(0)->GetMouseY()/2.0f);
-		Angle += DEGTORAD(CPad::GetPad(0)->GetMouseX()/2.0f);
+	if(Input_GetLeftMouse()){ // rouz edit (ChatGPT)
+		Distance += DEGTORAD(Input_GetMouseY()/2.0f); // rouz edit (ChatGPT)
+		Angle += DEGTORAD(Input_GetMouseX()/2.0f); // rouz edit (ChatGPT)
 	}
 #endif
 	if(Distance < 1.5f)
@@ -4714,8 +4714,8 @@ CCam::Process_FollowPed_Rotation(const CVector &CameraTarget, float TargetOrient
 
 	// Look around
 	bool UseMouse = false;
-	float MouseX = CPad::GetPad(0)->GetMouseX();
-	float MouseY = CPad::GetPad(0)->GetMouseY();
+	float MouseX = Input_GetMouseX(); // rouz edit (ChatGPT)
+	float MouseY = Input_GetMouseY(); // rouz edit (ChatGPT)
 	float LookLeftRight, LookUpDown;
 /*
 	if((MouseX != 0.0f || MouseY != 0.0f) && !CPad::GetPad(0)->ArePlayerControlsDisabled()){
@@ -5120,9 +5120,9 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 
 	// In SA this checks for m_bUseMouse3rdPerson so num2 / num8 do not move camera
 	// when Keyboard & Mouse controls are used. To make it work better with III/VC, check for actual pad state instead
-	if (!CPad::IsAffectedByController && !isCar)
+	if (!Input_affectedByController && !isCar) // rouz edit (ChatGPT)
 		stickY = 0.0f;
-	else if (CPad::bInvertLook4Pad)
+	else if (Input_invertPadLook) // rouz edit (ChatGPT)
 		stickY = -stickY;
 
 	float xMovement = Abs(stickX) * (FOV / 80.0f * 5.f / 70.f) * stickX * 0.007f * 0.007f;
@@ -5162,8 +5162,8 @@ CCam::Process_FollowCar_SA(const CVector& CameraTarget, float TargetOrientation,
 
 	// FIX: Disable mouse movement in drive-by, it's buggy. Original SA bug.
 	if (/*bFreeMouseCam &&*/ CCamera::m_bUseMouse3rdPerson && !pad->ArePlayerControlsDisabled() && nextDirectionIsForward) {
-		float mouseY = pad->GetMouseY() * 2.0f;
-		float mouseX = pad->GetMouseX() * -2.0f;
+		float mouseY = Input_GetMouseY() * 2.0f; // rouz edit (ChatGPT)
+		float mouseX = Input_GetMouseX() * -2.0f; // rouz edit (ChatGPT)
 
 		// If you want an ability to toggle free cam while steering with mouse, you can add an OR after DisableMouseSteering.
 		// There was a pad->NewState.m_bVehicleMouseLook in SA, which doesn't exists in III.

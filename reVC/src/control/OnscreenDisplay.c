@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #define _CRT_SECURE_NO_WARNINGS
+#include "ReplayState.h"
 #include "OnscreenTimer.h"
 #include "OnscreenTimer_backend.h"
 #include "Timer.h"
@@ -41,7 +42,7 @@ void
 OnscreenTimer_Process(COnscreenTimer *self)
 {
     // Preserve the complete original Process operation with explicit record storage
-	if(!OnscreenTimer_BackendPlayingBack() && !self->m_bDisabled)
+	if(!Replay_IsPlayingBack() && !self->m_bDisabled)
 		for(uint32_t i = 0; i < NUMONSCREENCLOCKS; i++)
 			OnscreenClock_Process(&self->m_sClocks[i]);
 }

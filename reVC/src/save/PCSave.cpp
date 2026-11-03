@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
+#include "PlatformFiles.h" // rouz edit (ChatGPT)
 #include "crossplatform.h"
 
 #include "FileMgr.h"
@@ -16,7 +17,6 @@
 #include "Date.h"
 #endif
 
-const char* _psGetUserFilesFolder();
 
 C_PcSave PcSaveHelper;
 

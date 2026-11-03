@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
 #include "config.h"
 #include "AnimBlendAssocGroup.h"
 #include "AnimBlendAssocGroup_backend.h"
@@ -49,17 +50,17 @@ void *AnimGroup_FindModel(const char *name)
 	char playername[32];
 
 	if(AnimGroup_HostPrefixCompare(name, "CSplay", 6) == 0 &&
-	   AnimGroup_HostPrefixCompare(AnimGroup_HostModelName(AnimGroup_HostModelAt(MI_PLAYER)), "ig", 2) == 0){
-		strcpy(playername, AnimGroup_HostModelName(AnimGroup_HostModelAt(MI_PLAYER)));
+	   AnimGroup_HostPrefixCompare(ModelRegistry_Name(ModelRegistry_Get(MI_PLAYER)), "ig", 2) == 0){
+		strcpy(playername, ModelRegistry_Name(ModelRegistry_Get(MI_PLAYER)));
 		playername[0] = 'C';
 		playername[1] = 'S';
 		name = playername;
 	}
 
 	for(i = 0; i < MODELINFOSIZE; i++){
-		mi = AnimGroup_HostModelAt(i);
+		mi = ModelRegistry_Get(i);
 		if(mi && AnimGroup_HostModelObject(mi) && AnimGroup_HostObjectIsClump(AnimGroup_HostModelObject(mi)) &&
-		   AnimGroup_CompareIgnoringDigits(AnimGroup_HostModelName(mi), name))
+		   AnimGroup_CompareIgnoringDigits(ModelRegistry_Name(mi), name))
 			return mi;
 	}
 	return NULL;
@@ -168,7 +169,7 @@ void AnimGroup_CreateForModels(CAnimBlendAssocGroup *self,const char *name)
 		CAnimBlendHierarchy *anim = AnimGroup_HostAnimationId(animBlock->firstIndex + i);
 		void *model = AnimGroup_FindModel(anim->name);
 		if(model){
-			AnimGroup_Debug("Associated anim %s with model %s\n", anim->name, AnimGroup_HostModelName(model));
+			AnimGroup_Debug("Associated anim %s with model %s\n", anim->name, ModelRegistry_Name(model));
 			void *clump = AnimGroup_HostCreateInstance(model);
 			AnimGroup_HostInitClump(clump);
 			// Use the complete C association at the original native operation boundary

@@ -370,7 +370,7 @@ void TexRead_HostUpdatePads(void)
 bool TexRead_HostEscape(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    return CPad::GetPad(0)->GetEscapeJustDown()!=0;
+    return Input_GetEscapeJustDown()!=0; // rouz edit (ChatGPT)
 }
 #endif
 #if defined(GTA_PC)
@@ -384,7 +384,7 @@ void TexRead_HostLoadingScreen(void)
 void TexRead_HostFlushRequests(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CStreaming::FlushRequestList();
+    Streaming_FlushRequestList(); // rouz edit (ChatGPT)
 }
 #endif
 #if defined(GTA_PC)
@@ -447,14 +447,14 @@ void TexRead_HostSetFrameLimiter(int8_t value)
 bool TexRead_HostInImage(int32_t id)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    return CStreaming::IsObjectInCdImage(id);
+    return Streaming_IsObjectInCdImage(id); // rouz edit (ChatGPT)
 }
 #endif
 #if defined(GTA_PC)
 void TexRead_HostRequestTxd(int32_t slot,int32_t flags)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CStreaming::RequestTxd(slot,flags);
+    Streaming_RequestTxd(slot,flags); // rouz edit (ChatGPT)
 }
 #endif
 #if defined(GTA_PC)
@@ -468,7 +468,7 @@ void TexRead_HostRequestModelStream(int32_t channel)
 void TexRead_HostFlushChannels(void)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CStreaming::FlushChannels();
+    Streaming_FlushChannels(); // rouz edit (ChatGPT)
 }
 #endif
 #if defined(GTA_PC) && defined(LIBRW)
@@ -510,7 +510,7 @@ void TexRead_HostWriteStream(void *stream,const void *buffer,uint32_t size)
 void TexRead_HostRemoveTxd(int32_t slot)
 {
     // Preserve the original external primitive and its live borrowed arguments
-    CStreaming::RemoveTxd(slot);
+    Streaming_RemoveTxd(slot); // rouz edit (ChatGPT)
 }
 #endif
 //- rouz edit (ChatGPT)

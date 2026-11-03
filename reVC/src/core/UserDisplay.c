@@ -1,7 +1,9 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "User.h"
 #include "User_backend.h"
 #include "Zones.h"
+#include "Text.h"
 #include <stddef.h>
 CPlaceName PlaceName_state;
 CCurrentVehicle CurrentVehicle_state;
@@ -96,7 +98,7 @@ CurrentVehicle_Display(CCurrentVehicle *self)
     // Preserve the complete original Display operation and its ordered live accesses
 	uint16_t *text = NULL;
 	if (self->m_pCurrentVehicle != NULL && self->m_pCurrentVehicle != UserDisplay_BackendShortCutTaxi())
-		text = UserDisplay_BackendText(UserDisplay_BackendGameName(UserDisplay_BackendModelIndex(self->m_pCurrentVehicle)));
+		text = Text_Get(&TheText,UserDisplay_BackendGameName(UserDisplay_BackendModelIndex(self->m_pCurrentVehicle)));
 	UserDisplay_BackendSetVehicleName(text);
 }
 
@@ -115,7 +117,7 @@ UserDisplay_Process(void)
 {
     // Preserve the complete original Process operation and its ordered live accesses
 #ifdef FIX_BUGS
-	if (UserDisplay_BackendPlayingBack())
+	if (Replay_IsPlayingBack())
 		return;
 #endif
 	PlaceName_Process(&PlaceName_state);

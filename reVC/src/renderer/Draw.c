@@ -7,6 +7,7 @@
 #include "Draw.h"
 #include "Draw_constants.h"
 #include "Draw_backend.h"
+#include "CutsceneState.h"
 
 static float Draw_ms_fAspectRatio = DEFAULT_ASPECT_RATIO;
 #ifdef ASPECT_RATIO_SCALE
@@ -114,7 +115,7 @@ Draw_SetFOV(float fov)
 {
 	// Update scaled FOV before the original stored FOV
 #ifdef ASPECT_RATIO_SCALE
-	if (!Draw_BackendCutsceneRunning())
+	if (!Cutscene_IsRunning())
 		Draw_ms_fScaledFOV = Draw_ConvertFOV(fov);
 	else
 		Draw_ms_fScaledFOV = fov;

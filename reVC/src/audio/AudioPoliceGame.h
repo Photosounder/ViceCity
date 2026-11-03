@@ -33,7 +33,6 @@ CPlayerPed *AudioPoliceHost_FindPlayer(void);
 uint8_t AudioPoliceHost_HasWanted(const CPlayerPed *player);
 int32_t AudioPoliceHost_WantedLevel(const CPlayerPed *player);
 #ifdef FIX_BUGS
-uint8_t AudioPoliceHost_IsReplay(void);
 #endif
 int16_t AudioPoliceHost_FindZone(const AudioCrimePosition *position);
 void AudioPoliceHost_GetZone(int16_t id, AudioPoliceZoneView *view);

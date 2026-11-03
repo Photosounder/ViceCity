@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "ShinyTexts_backend.h"
 #include "RenderBuffer_backend.h"
 #include <math.h>
@@ -114,7 +115,7 @@ ShinyTexts_Render(void)
 			if(lastTex != ShinyTexts_BackendWalkTexture()){
 				// Preserve original conditions, shared writes and reflection lifetime
 				ShinyTexts_RenderOutGeometryBuffer();
-				ShinyTexts_BackendSetRaster(ShinyTexts_BackendRaster(ShinyTexts_BackendWalkTexture()));
+				RwHelper_SetTextureRaster(RwHelper_TextureRaster(ShinyTexts_BackendWalkTexture()));
 				lastTex = ShinyTexts_BackendWalkTexture();
 			}
 	quad:
@@ -150,7 +151,7 @@ ShinyTexts_Render(void)
 			if(lastTex != NULL){
 				// Preserve original conditions, shared writes and reflection lifetime
 				ShinyTexts_RenderOutGeometryBuffer();
-				ShinyTexts_BackendSetRaster(NULL);
+				RwHelper_SetTextureRaster(NULL);
 				lastTex = NULL;
 			}
 			goto quad;

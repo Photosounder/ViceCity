@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 #include "Pager.h"
 #include "Pager_backend.h"
+#include "Messages.h"
 #include "Timer.h"
 #include <stddef.h>
 CPager Pager_state;
@@ -27,7 +28,7 @@ Pager_Process(CPager *self)
 		}
 		self->m_messages[i].m_pText = NULL;
 		if (self->m_messages[0].m_pText != NULL)
-			Pager_BackendBrief(
+			Messages_AddToPreviousBriefArray(
 				self->m_messages[0].m_pText,
 				self->m_messages[0].m_nNumber[0],
 				self->m_messages[0].m_nNumber[1],
@@ -60,7 +61,7 @@ Pager_Display(CPager *self)
 	uint16_t *pText = self->m_messages[0].m_pText;
 	uint16_t i = 0;
 	if (pText != NULL) {
-		Pager_BackendInsertNumbers(
+		Messages_InsertNumberInString(
 			pText,
 			self->m_messages[0].m_nNumber[0],
 			self->m_messages[0].m_nNumber[1],
@@ -88,7 +89,7 @@ void
 Pager_AddMessage(CPager *self,uint16_t *str, uint16_t speed, uint16_t priority, uint16_t a5)
 {
     // Preserve the complete original AddMessage operation with explicit queue storage
-	uint16_t size = Pager_BackendLength(str);
+	uint16_t size = Messages_GetWideStringLength(str);
 	for (int32_t i = 0; i < NUMPAGERMESSAGES; i++) {
 		if (self->m_messages[i].m_pText) {
 			if (self->m_messages[i].m_nPriority >= priority)
@@ -113,7 +114,7 @@ Pager_AddMessage(CPager *self,uint16_t *str, uint16_t speed, uint16_t priority, 
 		self->m_messages[i].m_nNumber[5] = -1;
 
 		if (i == 0)
-			Pager_BackendBrief(
+			Messages_AddToPreviousBriefArray(
 				self->m_messages[0].m_pText,
 				self->m_messages[0].m_nNumber[0],
 				self->m_messages[0].m_nNumber[1],
@@ -132,8 +133,8 @@ Pager_AddMessageWithNumber(CPager *self,uint16_t *str, int32_t n1, int32_t n2, i
     // Preserve the complete original AddMessageWithNumber operation with explicit queue storage
 	uint16_t nstr[520];
 
-	Pager_BackendInsertNumbers(str, n1, n2, n3, n4, n5, n6, nstr);
-	uint16_t size = Pager_BackendLength(nstr);
+	Messages_InsertNumberInString(str, n1, n2, n3, n4, n5, n6, nstr);
+	uint16_t size = Messages_GetWideStringLength(nstr);
 	for (int32_t i = 0; i < NUMPAGERMESSAGES; i++) {
 		if (self->m_messages[i].m_pText) {
 			if (self->m_messages[i].m_nPriority >= priority)
@@ -158,7 +159,7 @@ Pager_AddMessageWithNumber(CPager *self,uint16_t *str, int32_t n1, int32_t n2, i
 		self->m_messages[i].m_nNumber[5] = n6;
 
 		if (i == 0)
-			Pager_BackendBrief(
+			Messages_AddToPreviousBriefArray(
 				self->m_messages[0].m_pText,
 				self->m_messages[0].m_nNumber[0],
 				self->m_messages[0].m_nNumber[1],

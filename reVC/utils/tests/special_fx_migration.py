@@ -141,11 +141,6 @@ static MotionBlurStreakVector SpecialFX_Transform(void *matrix,MotionBlurStreakV
     SpecialFXMatrix m=SpecialFX_BackendReadMatrix(matrix);
     MotionBlurStreakVector result={m.rx*v.x+m.fx*v.y+m.ux*v.z+m.px,m.ry*v.x+m.fy*v.y+m.uy*v.z+m.py,m.rz*v.x+m.fz*v.y+m.uz*v.z+m.pz};return result;
 }
-bool TimerHost_SnapshotActive(void)
-{
-    // Read the same live snapshot flag now owned by the C controller
-    return SpecialFX_bSnapShotActive;
-}
 '''
     assert not re.search(r'\b(?:CSpecialFX|CMatrix|CVector|CSprite2d|CFont|CRGBA|CRect|CTimeCycle|RwObject|RwRenderStateSet)\b',re.sub(r'"[^"\n]*"','',body))
     return money.calls('//+ rouz edit (ChatGPT)\n#include "SpecialFX_backend.h"\n#include "BulletTraces.h"\n#include "Timer.h"\n#include "General.h"\n#include "Draw.h"\n#include "Draw_constants.h"\n#include "FontStyles.h"\n#include "WeaponType.h"\n#include <stdio.h>\n#include <stddef.h>\n\n'+scaling(common)+helpers+body.rstrip()+'\n//- rouz edit (ChatGPT)\n')

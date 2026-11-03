@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "PlayerSkin_backend.h"
+#include "SharedText.h"
 #include "FileMgr.h"
 #include "Directory.h"
 #include "Timer.h"
@@ -96,16 +98,16 @@ PlayerSkin_GetSkinTexture(const char *texName)
 
 	PlayerSkin_BackendPushDictionary();
 	PlayerSkin_BackendSetDictionary(PlayerSkin_txdSlot);
-	tex = PlayerSkin_BackendReadTexture(texName);
+	tex = RwHelper_ReadTexture(texName, NULL);
 	PlayerSkin_BackendPopDictionary();
 	if (tex != NULL) return tex;
 
 	if (strcmp(DEFAULT_SKIN_NAME, texName) == 0 || texName[0] == '\0')
-		sprintf(PlayerSkin_BackendString(), "models\\generic\\player.bmp");
+		sprintf(gString, "models\\generic\\player.bmp");
 	else
-		sprintf(PlayerSkin_BackendString(), "skins\\%s.bmp", texName);
+		sprintf(gString, "skins\\%s.bmp", texName);
 
-	void *image = PlayerSkin_BackendReadImage(PlayerSkin_BackendString());
+	void *image = PlayerSkin_BackendReadImage(gString);
 	if (image) {
 		// Preserve the original conditional operation and traversal order
 		PlayerSkin_BackendRasterFormat(image, &width, &height, &depth, &format);

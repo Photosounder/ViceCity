@@ -32,7 +32,6 @@ public:
 	static int LoadPathHeader(const char *line, int &type);
 	static void LoadPedPathNode(const char *line, int id, int node);
 	static void LoadCarPathNode(const char *line, int id, int node, bool waterPath);
-	static void Load2dEffect(const char *line);
 
 	static void LoadScene(const char *filename);
 	static void LoadObjectInstance(const char *line);

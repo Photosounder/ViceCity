@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
 #include "SpecialFX_backend.h"
+#include "SharedText.h"
+#include "FontText.h"
 #include "Markers3D.h"
 #include "BrightLights.h"
 #include "ShinyTexts.h"
@@ -52,11 +54,6 @@ static MotionBlurStreakVector SpecialFX_Transform(void *matrix,MotionBlurStreakV
     // Retain the complete original matrix-vector products and additions in C
     SpecialFXMatrix m=SpecialFX_BackendReadMatrix(matrix);
     MotionBlurStreakVector result={m.rx*v.x+m.fx*v.y+m.ux*v.z+m.px,m.ry*v.x+m.fy*v.y+m.uy*v.z+m.py,m.rz*v.x+m.fz*v.y+m.uz*v.z+m.pz};return result;
-}
-bool TimerHost_SnapshotActive(void)
-{
-    // Read the same live snapshot flag now owned by the C controller
-    return SpecialFX_bSnapShotActive;
 }
 bool SpecialFX_bVideoCam;
 bool SpecialFX_bLiftCam;
@@ -204,9 +201,9 @@ SpecialFX_Render2DFXs(void)
 		SpecialFX_BackendFontPropOn();
 		SpecialFX_BackendFontColor(0, 255, 0, 200);
 		SpecialFX_BackendFontStyle(SPECIAL_FX_FONT_LOCALE(FONT_STANDARD));
-		sprintf(SpecialFX_BackendString(), "%d", (*Timer_GetFrameCounter()) & 0x3F); // mb % 63
-		SpecialFX_BackendAsciiToUnicode(SpecialFX_BackendString(), SpecialFX_BackendUnicode());
-		SpecialFX_BackendPrintString(SCREEN_WIDTH * 8 / 10, SCREEN_HEIGHT * 8 / 10, SpecialFX_BackendUnicode());
+		sprintf(gString, "%d", (*Timer_GetFrameCounter()) & 0x3F); // mb % 63
+		AsciiToUnicode(gString, gUString);
+		SpecialFX_BackendPrintString(SCREEN_WIDTH * 8 / 10, SCREEN_HEIGHT * 8 / 10, gUString);
 		for (int32_t i = 0; i < SCREEN_HEIGHT; i += 4) {
 			// Retain original live reads, short circuits and writes
 			SpecialFX_BackendSrcBlend(true);

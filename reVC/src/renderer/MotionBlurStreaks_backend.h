@@ -4,9 +4,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int32_t MotionBlurStreaks_BackendFogRed(void);
-int32_t MotionBlurStreaks_BackendFogGreen(void);
-int32_t MotionBlurStreaks_BackendFogBlue(void);
 void MotionBlurStreaks_BackendFogColor(uint32_t color);
 void MotionBlurStreaks_BackendSrcBlend(void);
 void MotionBlurStreaks_BackendDestBlend(void);

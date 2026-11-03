@@ -4,7 +4,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-bool Escalators_BackendReplay(void);
 #ifdef __cplusplus
 }
 #endif

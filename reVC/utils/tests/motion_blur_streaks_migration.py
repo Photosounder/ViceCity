@@ -35,9 +35,6 @@ void MotionBlurStreaks_RegisterStreakLegacy(uintptr_t id,uint8_t r,uint8_t g,uin
 //- rouz edit (ChatGPT)
 '''
 READERS=[
-('int32_t','FogRed','void','return CTimeCycle::GetFogRed();','Read the original live red fog component'),
-('int32_t','FogGreen','void','return CTimeCycle::GetFogGreen();','Read the original live green fog component'),
-('int32_t','FogBlue','void','return CTimeCycle::GetFogBlue();','Read the original live blue fog component'),
 ('void','FogColor','uint32_t color','RwRenderStateSet(rwRENDERSTATEFOGCOLOR,(void *)(uintptr_t)color);','Set the original typed packed fog-color state'),
 ('void','SrcBlend','void','RwRenderStateSet(rwRENDERSTATESRCBLEND,(void *)rwBLENDSRCALPHA);','Select the original source blend factor'),
 ('void','DestBlend','void','RwRenderStateSet(rwRENDERSTATEDESTBLEND,(void *)rwBLENDINVSRCALPHA);','Select the original destination blend factor'),
@@ -112,7 +109,7 @@ def kernel(source):
     body=body.replace('aStreaks[i].Update()','MotionBlurStreak_Update(&aStreaks[i])').replace('aStreaks[i].Render()','MotionBlurStreak_Render(&aStreaks[i])')
     old='RwRenderStateSet(rwRENDERSTATEFOGCOLOR,\n\t\t\t\t\t(void*)RWRGBALONG(CTimeCycle::GetFogRed(), CTimeCycle::GetFogGreen(), CTimeCycle::GetFogBlue(), 255));'
     assert old in body
-    body=body.replace(old,'MotionBlurStreaks_BackendFogColor(((uint32_t)255 << 24) | ((uint32_t)MotionBlurStreaks_BackendFogRed() << 16) | ((uint32_t)MotionBlurStreaks_BackendFogGreen() << 8) | (uint32_t)MotionBlurStreaks_BackendFogBlue());')
+    body=body.replace(old,'MotionBlurStreaks_BackendFogColor(((uint32_t)255 << 24) | ((uint32_t)TimeCycle_GetFogRed() << 16) | ((uint32_t)TimeCycle_GetFogGreen() << 8) | (uint32_t)TimeCycle_GetFogBlue());')
     for state,name in [('ZWRITEENABLE','ZWrite'),('VERTEXALPHAENABLE','VertexAlpha'),('FOGENABLE','Fog')]:body=re.sub(r'RwRenderStateSet\(rwRENDERSTATE'+state+r', \(void\s*\*\)(TRUE|FALSE)\)',lambda match:'MotionBlurStreaks_Backend'+name+'('+('true' if match[1]=='TRUE' else 'false')+')',body)
     body=body.replace('RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA)','MotionBlurStreaks_BackendSrcBlend()').replace('RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA)','MotionBlurStreaks_BackendDestBlend()').replace('RwRenderStateSet(rwRENDERSTATETEXTURERASTER, (void*)FALSE)','MotionBlurStreaks_BackendRaster()')
     setup=re.sub(r'\bStreakIndexList\b','StreakIndexList',setup)
@@ -122,7 +119,7 @@ def kernel(source):
     combined=combined.replace('\n{\n','\n{\n\t// Preserve the original ordered sample, pool and shared-geometry operations\n')
     combined=re.sub(r'^(\t+)([^\n]*\{\n)',r'\1\2\1\t// Retain the original short circuits, initialization and write order\n',combined,flags=re.M)
     assert not re.search(r'\b(?:CRegisteredMotionBlurStreak|CMotionBlurStreaks|CVector|RwIm3DVertex|CTimeCycle)\b',combined)
-    return '//+ rouz edit (ChatGPT)\n#include "MotionBlurStreaks_backend.h"\n\n'+combined.rstrip()+'\n//- rouz edit (ChatGPT)\n'
+    return '//+ rouz edit (ChatGPT)\n#include "MotionBlurStreaks_backend.h"\n#include "Timecycle.h"\n\n'+combined.rstrip()+'\n//- rouz edit (ChatGPT)\n'
 
 def project(source):
     # Register complete C11 logic and its new typed C++ backend with unique objects

@@ -1,8 +1,13 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
-class CPedPlacement {
-public:
-	static bool FindZCoorForPed(CVector* pos);
-	static CEntity* IsPositionClearOfCars(Const CVector*);
-	static bool IsPositionClearForPed(const CVector& pos, float radius = -1.0f, int total = -1, CEntity** entities = nil);
-};
+#include <stdbool.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+bool PedPlacement_CFindZ(float x,float y,float *z);
+bool PedPlacement_CIsClear(float x,float y,float z,float radius,int total,void *entities);
+void *PedPlacement_CFindCar(float x,float y,float z);
+#ifdef __cplusplus
+}
+#endif
+//- rouz edit (ChatGPT)

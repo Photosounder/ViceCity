@@ -9,13 +9,13 @@ CBuilding::ReplaceWithNewModel(int32 id)
 {
 	DeleteRwObject();
 
-	if (CModelInfo::GetModelInfo(m_modelIndex)->GetNumRefs() == 0)
-		CStreaming::RemoveModel(m_modelIndex);
+	if (((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->GetNumRefs() == 0) // rouz edit (ChatGPT)
+		Streaming_RemoveModel(m_modelIndex); // rouz edit (ChatGPT)
 	m_modelIndex = id;
 
 	if(bIsBIGBuilding)
 		if(m_level == LEVEL_GENERIC || m_level == CGame::currLevel)
-			CStreaming::RequestModel(id, STREAMFLAGS_DONT_REMOVE);
+			Streaming_RequestModel(id, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 }
 
 bool

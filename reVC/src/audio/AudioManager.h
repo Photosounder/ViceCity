@@ -157,7 +157,6 @@ void AudioPolice_Reset(cAudioManager *manager);
 void AudioPolice_Crackle(cAudioManager *manager);
 void AudioPolice_ServiceChannel(cAudioManager *manager, uint8_t wantedLevel);
 #ifdef FIX_BUGS
-uint32_t AudioPoliceHost_LogicalFramesPassed(void);
 #endif
 #ifdef USE_TIME_SCALE_FOR_AUDIO
 float AudioPoliceHost_TimeScale(void);
@@ -170,9 +169,7 @@ void AudioPolice_ReportCrime(cAudioManager *manager, enum eCrimeType type, const
 void AudioRequests_Submit(cAudioManager *manager);
 #ifdef AUDIO_REFLECTIONS
 void AudioRequests_AddReflections(cAudioManager *manager);
-uint8_t AudioRequestsHost_InRoom(void);
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-uint8_t AudioRequestsHost_SlowMotion(void);
 #endif
 #endif
 #ifdef AUDIO_REFLECTIONS
@@ -187,7 +184,6 @@ void AudioLifecycle_Terminate(cAudioManager *manager);
 void AudioService_Run(cAudioManager *manager);
 void AudioService_ResetLogicTimers(cAudioManager *manager, uint32_t time);
 void AudioServiceHost_ResetMusicTimers(uint32_t time);
-uint8_t AudioServiceHost_UserPaused(void);
 uint8_t AudioServiceHost_IsPed(CPed *ped);
 void AudioServiceHost_PedLastStart(CPed *ped, uint32_t time);
 void AudioServiceHost_PedSoundStart(CPed *ped, uint32_t time);
@@ -201,7 +197,6 @@ void AudioActive_Process(cAudioManager *manager);
 uint8_t AudioActiveHost_CameraSwitched(void);
 void AudioEnvironment_Reverb(cAudioManager *manager);
 void AudioEnvironment_Special(cAudioManager *manager);
-uint8_t AudioEnvironmentHost_Replay(void);
 CVehicle *AudioEnvironmentHost_Remote(void);
 int32_t AudioEnvironmentHost_EntityId(const CPlayerPed *player);
 uint8_t AudioEnvironmentHost_Entering(CPlayerPed *player);
@@ -221,8 +216,6 @@ void AudioCollisionSounds_Looping(cAudioManager *manager, const cAudioCollision 
 uint32_t AudioCollisionSounds_LoopingVolume(cAudioManager *manager, const cAudioCollision *audioCollision);
 void AudioVehicleRain_Process(cAudioManager *manager, cVehicleParams *params);
 float AudioVehicleRainHost_Rain(void);
-uint8_t AudioVehicleRainHost_CameraNoRain(void);
-uint8_t AudioVehicleRainHost_PlayerNoRain(void);
 void AudioVehicleRainHost_Counters(CVehicle *vehicle, uint8_t **audioCounter, uint8_t **sampleCounter);
 uint8_t AudioVehicleRoad_FlatTyre(cAudioManager *manager, cVehicleParams *params);
 uint8_t AudioVehicleRoad_Dry(cAudioManager *manager, cVehicleParams *params);
@@ -499,11 +492,6 @@ uint32_t AudioPedTalk_SpecialCharacter(cAudioManager *manager, CPed *ped, int32_
 void AudioPedPlayback_Debug(cAudioManager *manager, int32_t sound);
 void AudioPedPlaybackHost_DebugPosition(PedCommentPosition *position);
 void AudioExplosions_Process(cAudioManager *manager, int32_t id);
-uint8_t AudioExplosionsHost_MakesSound(uint8_t id);
-int8_t AudioExplosionsHost_ActiveCounter(uint8_t id);
-void AudioExplosionsHost_ResetCounter(uint8_t id);
-uint8_t AudioExplosionsHost_Type(uint8_t id);
-void AudioExplosionsHost_Position(uint8_t id, AudioSoundPosition *position);
 void AudioFires_Process(cAudioManager *manager, int32_t id);
 uint8_t AudioFiresHost_Ongoing(uint8_t id);
 uint8_t AudioFiresHost_AudioSet(uint8_t id);

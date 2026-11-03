@@ -197,7 +197,7 @@ GenericSave(int file)
 #endif
 	WriteDataToBufferPointer(buf, CGame::currArea);
 	WriteDataToBufferPointer(buf, CVehicle::bAllTaxisHaveNitro);
-	WriteDataToBufferPointer(buf, CPad::bInvertLook4Pad);
+	WriteDataToBufferPointer(buf, Input_invertPadLook); // rouz edit (ChatGPT)
 	WriteDataToBufferPointer(buf, TimeCycle_m_ExtraColour);
 	WriteDataToBufferPointer(buf, TimeCycle_m_bExtraColourOn);
 	WriteDataToBufferPointer(buf, TimeCycle_m_ExtraColourInter);
@@ -344,9 +344,9 @@ GenericLoad()
 	ReadDataFromBufferPointer(buf, CGame::currArea);
 	ReadDataFromBufferPointer(buf, CVehicle::bAllTaxisHaveNitro);
 #ifdef LOAD_INI_SETTINGS
-	buf += align4bytes(sizeof(CPad::bInvertLook4Pad));
+	buf += align4bytes(sizeof(Input_invertPadLook)); // rouz edit (ChatGPT)
 #else
-	ReadDataFromBufferPointer(buf, CPad::bInvertLook4Pad);
+	ReadDataFromBufferPointer(buf, Input_invertPadLook); // rouz edit (ChatGPT)
 #endif
 	ReadDataFromBufferPointer(buf, TimeCycle_m_ExtraColour);
 	ReadDataFromBufferPointer(buf, TimeCycle_m_bExtraColourOn);

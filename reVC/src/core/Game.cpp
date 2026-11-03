@@ -12,6 +12,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "platform.h"
 
 #include "Game.h"
@@ -462,7 +463,7 @@ bool CGame::Initialise(const char* datFile)
 	UserDisplay_Init();
 	Messages_Init();
 	Messages_ClearAllMessagesDisplayedByGame();
-	CRecordDataForGame::Init();
+	RecordGame_Init(); // rouz edit (ChatGPT)
 	Restart_Initialise(); // rouz edit (ChatGPT)
 
 	PUSH_MEMID(MEMID_WORLD);
@@ -485,7 +486,7 @@ bool CGame::Initialise(const char* datFile)
 
 	PUSH_MEMID(MEMID_DEF_MODELS);
 	InitModelIndices();
-	CModelInfo::Initialise();
+	ModelRegistry_Initialise(); // rouz edit (ChatGPT)
 	CPickups::Init();
 	CTheCarGenerators::Init();
 
@@ -521,7 +522,7 @@ bool CGame::Initialise(const char* datFile)
 	CStreaming::RequestBigBuildings(LEVEL_GENERIC);
 	CStreaming::LoadAllRequestedModels(false);
 	CStreaming::RemoveIslandsNotUsed(currLevel);
-	printf("Streaming uses %zuK of its memory", CStreaming::ms_memoryUsed / 1024); // original modifier was %d
+	printf("Streaming uses %zuK of its memory", Streaming_memoryUsed / 1024); // original modifier was %d // rouz edit (ChatGPT)
 
 	LoadingScreen("Loading the Game", "Load animations", GetRandomSplashScreen());
 	PUSH_MEMID(MEMID_ANIMATION);
@@ -550,7 +551,7 @@ bool CGame::Initialise(const char* datFile)
 	RoadBlocks_Init();
 
 	LoadingScreen("Loading the Game", "Setup game variables", nil);
-	CPopulation::Initialise();
+	Population_Initialise(); // rouz edit (ChatGPT)
 	CWorld::PlayerInFocus = 0;
 	CCoronas::Init();
 	CShadows::Init();
@@ -601,7 +602,7 @@ bool CGame::Initialise(const char* datFile)
 	CPlane::InitPlanes();
 	// Enter the complete C credits implementation with the original arguments
 	Credits_Init();
-	CRecordDataForChase::Init();
+	RecordChase_Init(); // rouz edit (ChatGPT)
 	CReplay::Init();
 
 	LoadingScreen("Loading the Game", "Start script", nil);
@@ -675,7 +676,7 @@ bool CGame::ShutDown(void)
 	CRenderer::Shutdown();
 	CWorld::ShutDown();
 	DMAudio_DestroyAllGameCreatedEntities();
-	CModelInfo::ShutDown();
+	ModelRegistry_Shutdown(); // rouz edit (ChatGPT)
 	// Use the complete C animation manager at the original call boundary
 	AnimManager_Shutdown();
 	CCutsceneMgr::Shutdown();
@@ -744,7 +745,7 @@ void CGame::ReInitGameObjectVariables(void)
 	ScreenDroplets::Initialise();
 #endif
 	CWeapon::InitialiseWeapons();
-	CPopulation::Initialise();
+	Population_Initialise(); // rouz edit (ChatGPT)
 	
 	for (int i = 0; i < NUMPLAYERS; i++)
 		CWorld::Players[i].Clear();
@@ -924,7 +925,7 @@ void CGame::Process(void)
 #endif
 	CCutsceneMgr::Update();
 
-	if (!CCutsceneMgr::IsCutsceneProcessing() && !Timer_GetIsCodePaused())
+	if (!Cutscene_IsProcessing() && !Timer_GetIsCodePaused()) // rouz edit (ChatGPT)
 		FrontEndMenuManager.Process();
 
 	Zones_Update();
@@ -954,8 +955,8 @@ void CGame::Process(void)
 		// Preserve the original operation through the C sprite interface
 		Sprite2d_InitPerFrame();
 		CFont::InitPerFrame();
-		CRecordDataForGame::SaveOrRetrieveDataForThisFrame();
-		CRecordDataForChase::SaveOrRetrieveDataForThisFrame();
+		RecordGame_SaveOrRetrieveDataForThisFrame(); // rouz edit (ChatGPT)
+		RecordChase_SaveOrRetrieveDataForThisFrame(); // rouz edit (ChatGPT)
 		CPad::DoCheats();
 		Clock_Update();
 		Weather_Update();
@@ -990,16 +991,16 @@ void CGame::Process(void)
 #else
 		if (processTime >= 2) {
 #endif
-			CPopulation::Update(false);
+			Population_Update(false); // rouz edit (ChatGPT)
 		} else {
 			uint32 startTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond();
-			CPopulation::Update(true);
+			Population_Update(true); // rouz edit (ChatGPT)
 			processTime = Timer_GetCurrentTimeInCycles() / Timer_GetCyclesPerMillisecond() - startTime;
 		}
 		CWeapon::UpdateWeapons();
-		if (!CCutsceneMgr::IsRunning())
+		if (!Cutscene_IsRunning()) // rouz edit (ChatGPT)
 			CTheCarGenerators::Process();
-		if (!CReplay::IsPlayingBack())
+		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 			CCranes::UpdateCranes();
 		// Enter the complete C cloud effect with the original arguments
 		Clouds_Update();
@@ -1025,10 +1026,10 @@ void CGame::Process(void)
 		// Enter the C rope algorithm with the original owner expressions
 		Ropes_Update();
 		TimeCycle_Update();
-		if (CReplay::ShouldStandardCameraBeProcessed())
+		if (Replay_ShouldStandardCameraBeProcessed()) // rouz edit (ChatGPT)
 			TheCamera.Process();
 		CullZones_Update();
-		if (!CReplay::IsPlayingBack())
+		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 			CGameLogic::Update();
 		Bridge_Update();
 		CCoronas::DoSunAndMoon();
@@ -1036,7 +1037,7 @@ void CGame::Process(void)
 		CShadows::UpdateStaticShadows();
 		CShadows::UpdatePermanentShadows();
 		gPhoneInfo.Update();
-		if (!CReplay::IsPlayingBack())
+		if (!Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		{
 			PUSH_MEMID(MEMID_CARS);
 			if (processTime < 2)
@@ -1355,7 +1356,7 @@ void CGame::TidyUpMemory(bool moveTextures, bool flushDraw)
 
 	// model info
 	for (int i = 0; i < MODELINFOSIZE; i++) {
-		CBaseModelInfo* mi = CModelInfo::GetModelInfo(i);
+		CBaseModelInfo* mi = ((CBaseModelInfo*)ModelRegistry_Get(i)); // rouz edit (ChatGPT)
 		if (mi == nil)
 			continue;
 		TidyUpModelInfo(mi, false);
@@ -1380,7 +1381,7 @@ void CGame::ProcessTidyUpMemory(void)
 	for (int numCleanedUp = 0; numCleanedUp < 10; numCleanedUp++) {
 		CBaseModelInfo* mi;
 		do {
-			mi = CModelInfo::GetModelInfo(modelIndex);
+			mi = ((CBaseModelInfo*)ModelRegistry_Get(modelIndex)); // rouz edit (ChatGPT)
 			modelIndex++;
 			if (modelIndex >= MODELINFOSIZE)
 				modelIndex = 0;

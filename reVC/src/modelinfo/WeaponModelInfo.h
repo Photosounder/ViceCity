@@ -1,23 +1,19 @@
 #pragma once
+#include "ModelAnimFile.h" // rouz edit (ChatGPT)
 
 #include "SimpleModelInfo.h"
 #include "WeaponType.h"
 
 class CWeaponModelInfo : public CSimpleModelInfo
 {
-	union {
-		int32 m_animFileIndex;
-		char *m_animFileName;
-	};
+	ModelAnimFile m_animFile; // rouz edit (ChatGPT)
 public:
-	CWeaponModelInfo(void) : CSimpleModelInfo(MITYPE_WEAPON) { m_animFileIndex = -1; }
+	CWeaponModelInfo(void) : CSimpleModelInfo(MITYPE_WEAPON) { m_animFile.index = -1; } // rouz edit (ChatGPT)
 
 	virtual void SetAnimFile(const char *file);
 	virtual void ConvertAnimFileIndex(void);
-	virtual int GetAnimFileIndex(void) { return m_animFileIndex; }
+	virtual int GetAnimFileIndex(void) { return m_animFile.index; } // rouz edit (ChatGPT)
 	virtual void SetAtomic(int n, RpAtomic *atomic);
 	
 	void Init(void);
-	void SetWeaponInfo(int32 weaponId);
-	eWeaponType GetWeaponInfo(void);
 };

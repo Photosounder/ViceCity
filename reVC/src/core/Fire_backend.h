@@ -56,8 +56,6 @@ int32_t Fire_BackendPedType(CEntity *entity);
 void Fire_BackendCopEvent(CEntity *entity,CEntity *source);
 void Fire_BackendPedEvent(CEntity *entity,CEntity *source);
 void Fire_BackendVehicleEvent(CEntity *entity,CEntity *source);
-bool Fire_BackendBikeModel(int32_t model);
-bool Fire_BackendCarModel(int32_t model);
 void Fire_BackendFleeOccupants(CEntity *entity);
 #ifdef __cplusplus
 }

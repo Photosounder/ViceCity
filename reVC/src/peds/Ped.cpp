@@ -378,7 +378,7 @@ CPed::CPed(uint32 pedType) : m_pedIK(this)
 	m_pWeaponModel = nil;
 	m_delayedSoundID = -1;
 	m_delayedSoundTimer = 0;
-	CPopulation::UpdatePedCount((ePedType)m_nPedType, false);
+	Population_UpdatePedCount((ePedType)m_nPedType, false); // rouz edit (ChatGPT)
 	m_lastComment = UINT32_MAX;
 }
 
@@ -417,10 +417,10 @@ CPed::~CPed(void)
 
 	ClearWeapons();
 	if (bCarPassenger)
-		CPopulation::ms_nTotalCarPassengerPeds--;
+		Population_nTotalCarPassengerPeds--; // rouz edit (ChatGPT)
 	if (bMiamiViceCop)
-		CPopulation::NumMiamiViceCops--;
-	CPopulation::UpdatePedCount((ePedType)m_nPedType, true);
+		Population_numMiamiViceCops--; // rouz edit (ChatGPT)
+	Population_UpdatePedCount((ePedType)m_nPedType, true); // rouz edit (ChatGPT)
 	DMAudio_DestroyEntity(m_audioEntityId);
 
 	// Because of the nature of ped lists in GTA, it can sometimes be outdated.
@@ -465,7 +465,7 @@ CPed::SetModelIndex(uint32 mi)
 	CEntity::SetModelIndex(mi);
 	RpAnimBlendClumpInit(GetClump());
 	RpAnimBlendClumpFillFrameArray(GetClump(), m_pFrames);
-	CPedModelInfo *modelInfo = (CPedModelInfo *)CModelInfo::GetModelInfo(GetModelIndex());
+	CPedModelInfo *modelInfo = (CPedModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	SetPedStats(modelInfo->m_pedStatType);
 	m_headingRate = m_pedStats->m_headingChangeRate;
 	m_animGroup = (AssocGroupId) modelInfo->m_animGroup;
@@ -1571,7 +1571,7 @@ CPed::WorkOutHeadingForMovingFirstPerson(float offset)
 void
 CPed::UpdatePosition(void)
 {
-	if (CReplay::IsPlayingBack() || !bIsStanding || m_attachedTo)
+	if (Replay_IsPlayingBack() || !bIsStanding || m_attachedTo) // rouz edit (ChatGPT)
 		return;
 
 	CVector2D velocityChange;
@@ -1705,7 +1705,7 @@ CPed::UpdatePosition(void)
 void
 CPed::CalculateNewOrientation(void)
 {
-	if (CReplay::IsPlayingBack() || !IsPedInControl())
+	if (Replay_IsPlayingBack() || !IsPedInControl()) // rouz edit (ChatGPT)
 		return;
 
 	SetHeading(m_fRotationCur);
@@ -2005,7 +2005,7 @@ CPed::ProcessControl(void)
 				case ENTITY_TYPE_BUILDING:
 				case ENTITY_TYPE_OBJECT:
 				{
-					CBaseModelInfo *collidingModel = CModelInfo::GetModelInfo(collidingEnt->GetModelIndex());
+					CBaseModelInfo *collidingModel = ((CBaseModelInfo*)ModelRegistry_Get(collidingEnt->GetModelIndex())); // rouz edit (ChatGPT)
 					CColModel *collidingCol = collidingModel->GetColModel();
 					if (collidingEnt->IsObject() && ((CObject*)collidingEnt)->m_nSpecialCollisionResponseCases != COLLRESPONSE_FENCEPART
 						|| collidingCol->boundingBox.max.x < 3.0f
@@ -2330,7 +2330,7 @@ CPed::ProcessControl(void)
 									Say(SOUND_PED_DAMAGE);
 							}
 
-							CColModel *collidingCol = CModelInfo::GetColModel(collidingVeh->m_modelIndex);
+							CColModel *collidingCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(collidingVeh->m_modelIndex))); // rouz edit (ChatGPT)
 							CVector colMinVec = CollisionVector_ToNative(collidingCol->boundingBox.min);
 							CVector colMaxVec = CollisionVector_ToNative(collidingCol->boundingBox.max);
 
@@ -3029,8 +3029,8 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 		// Keep the previous surface so same-vehicle contact can preserve its local anchor.
 	CPhysical *previousPhysSurface = m_pCurrentPhysSurface;
 	
-	CColModel *ourCol = CModelInfo::GetColModel(GetModelIndex());
-	CColModel *hisCol = CModelInfo::GetColModel(collidingEnt->GetModelIndex());
+	CColModel *ourCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(GetModelIndex()))); // rouz edit (ChatGPT)
+	CColModel *hisCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(collidingEnt->GetModelIndex()))); // rouz edit (ChatGPT)
 
 	if (!bUsesCollision && !bJustCheckCollision)
 		return 0;
@@ -3580,7 +3580,7 @@ void
 CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 {
 	float distLimitForTimer = 8.0f;
-	CColModel *objCol = CModelInfo::GetColModel(obj->GetModelIndex());
+	CColModel *objCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(obj->GetModelIndex()))); // rouz edit (ChatGPT)
 	CVector objColMin = CollisionVector_ToNative(objCol->boundingBox.min);
 	CVector objColMax = CollisionVector_ToNative(objCol->boundingBox.max);
 	CVector objColCenter = (objColMin + objColMax) / 2.0f;
@@ -4700,12 +4700,12 @@ CPed::AddWeaponModel(int id)
 		if (m_pWeaponModel)
 			RemoveWeaponModel(-1);
 
-		m_pWeaponModel = (RpAtomic*)CModelInfo::GetModelInfo(id)->CreateInstance();
-		CModelInfo::GetModelInfo(id)->AddRef();
+		m_pWeaponModel = (RpAtomic*)((CBaseModelInfo*)ModelRegistry_Get(id))->CreateInstance(); // rouz edit (ChatGPT)
+		((CBaseModelInfo*)ModelRegistry_Get(id))->AddRef(); // rouz edit (ChatGPT)
 		m_wepModelID = id;
 
 		if (IsPlayer() && id == MI_MINIGUN)
-			((CPlayerPed*)this)->m_pMinigunTopAtomic = (RpAtomic*)CModelInfo::GetModelInfo(MI_MINIGUN2)->CreateInstance();
+			((CPlayerPed*)this)->m_pMinigunTopAtomic = (RpAtomic*)((CBaseModelInfo*)ModelRegistry_Get(MI_MINIGUN2))->CreateInstance(); // rouz edit (ChatGPT)
 	}
 }
 
@@ -4726,7 +4726,7 @@ CPed::RemoveWeaponModel(int modelId)
 	// modelId is not used!! This function just removes the current weapon.
 	if(m_pWeaponModel){
 		if (modelId == -1
-			|| CVisibilityPlugins::GetAtomicModelInfo(m_pWeaponModel) == CModelInfo::GetModelInfo(modelId)) {
+			|| CVisibilityPlugins::GetAtomicModelInfo(m_pWeaponModel) == ((CBaseModelInfo*)ModelRegistry_Get(modelId))) { // rouz edit (ChatGPT)
 			CVisibilityPlugins::GetAtomicModelInfo(m_pWeaponModel)->RemoveRef();
 			RwFrame* frm = RpAtomicGetFrame(m_pWeaponModel);
 			RpAtomicDestroy(m_pWeaponModel);
@@ -4754,12 +4754,12 @@ CPed::RequestDelayedWeapon()
 		int modelId1 = WeaponInfo_GetWeaponInfo(m_delayedWeapon)->m_nModelId;
 		int modelId2 = WeaponInfo_GetWeaponInfo(m_delayedWeapon)->m_nModel2Id;
 		if (modelId1 != -1)
-			CStreaming::RequestModel(modelId1, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(modelId1, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		if (modelId2 != -1)
-			CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(modelId2, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 
-		if ((modelId1 == -1 || CStreaming::HasModelLoaded(modelId1))
-			&& (modelId2 == -1 || CStreaming::HasModelLoaded(modelId2))) {
+		if ((modelId1 == -1 || Streaming_HasModelLoaded(modelId1)) // rouz edit (ChatGPT)
+			&& (modelId2 == -1 || Streaming_HasModelLoaded(modelId2))) { // rouz edit (ChatGPT)
 			GiveWeapon(m_delayedWeapon, m_delayedWeaponAmmo, 1);
 			m_delayedWeapon = WEAPONTYPE_UNIDENTIFIED;
 		}
@@ -4775,12 +4775,12 @@ CPed::GiveDelayedWeapon(eWeaponType weapon, uint32 ammo)
 		int modelId1 = WeaponInfo_GetWeaponInfo(m_delayedWeapon)->m_nModelId;
 		int modelId2 = WeaponInfo_GetWeaponInfo(m_delayedWeapon)->m_nModel2Id;
 		if (modelId1 != -1)
-			CStreaming::RequestModel(modelId1, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(modelId1, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		if (modelId2 != -1)
-			CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(modelId2, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 
-		if ((modelId1 == -1 || CStreaming::HasModelLoaded(modelId1))
-			&& (modelId2 == -1 || CStreaming::HasModelLoaded(modelId2))) {
+		if ((modelId1 == -1 || Streaming_HasModelLoaded(modelId1)) // rouz edit (ChatGPT)
+			&& (modelId2 == -1 || Streaming_HasModelLoaded(modelId2))) { // rouz edit (ChatGPT)
 			GiveWeapon(m_delayedWeapon, m_delayedWeaponAmmo, true);
 			m_delayedWeapon = WEAPONTYPE_UNIDENTIFIED;
 		}
@@ -5138,7 +5138,7 @@ CPed::PreRender(void)
 	if (Weather_Rain > 0.3f && TheCamera.SoundDistUp > 15.0f) {
 		if ((TheCamera.GetPosition() - GetPosition()).Magnitude() < 25.0f) {
 			bool doSplashUp = true;
-			CColModel *ourCol = CModelInfo::GetColModel(GetModelIndex());
+			CColModel *ourCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(GetModelIndex()))); // rouz edit (ChatGPT)
 			CVector speed = FindPlayerSpeed();
 
 			if (Abs(speed.x) <= 0.05f && Abs(speed.y) <= 0.05f) {
@@ -5590,7 +5590,11 @@ CPed::SetGetUp(void)
 		}
 
 		CVehicle *collidingVeh = (CVehicle*)m_pCollidingEntity;
-		CVehicle *veh = (CVehicle*)CPedPlacement::IsPositionClearOfCars(&GetPosition());
+		//+ rouz edit (ChatGPT)
+		// Query cars around the current position through the C placement interface
+		const CVector *placementPos = &GetPosition();
+		CVehicle *veh = (CVehicle*)PedPlacement_CFindCar(placementPos->x, placementPos->y, placementPos->z);
+		//- rouz edit (ChatGPT)
 		if (veh && veh->m_vehType != VEHICLE_TYPE_BIKE && veh != m_attachedTo ||
 			collidingVeh && collidingVeh->IsVehicle() && collidingVeh->m_vehType != VEHICLE_TYPE_BIKE
 			&& ((uint8)((*Timer_GetFrameCounter()) + m_randomSeed + 5) % 8 ||
@@ -5826,7 +5830,7 @@ CPed::Seek(void)
 					if (!obstacle->IsVehicle() || ((CVehicle*)obstacle)->IsCar()) {
 						distanceToCountItDone = 2.5f;
 					} else {
-						CVehicleModelInfo *vehModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(obstacle->GetModelIndex());
+						CVehicleModelInfo *vehModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(obstacle->GetModelIndex())); // rouz edit (ChatGPT)
 						float yLength = vehModel->GetColModel()->boundingBox.max.y
 										- vehModel->GetColModel()->boundingBox.min.y;
 						distanceToCountItDone = yLength * 0.55f;
@@ -6332,7 +6336,7 @@ CPed::WanderPath(void)
 	ThePaths.FindNextNodeWandering(PATH_PED, GetPosition(), &m_pLastPathNode, &m_pNextPathNode,
 		m_nPathDir, &dirToSet);
 
-	if (((CPedModelInfo*)CModelInfo::GetModelInfo(m_modelIndex))->m_pedStatType == PEDSTAT_SKATER) {
+	if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)))->m_pedStatType == PEDSTAT_SKATER) { // rouz edit (ChatGPT)
 		if (m_pNextPathNode) {
 			CVector unpacked(m_pNextPathNode->GetPosition() / 8.f);
 			if (!CPopulation::IsSkateable(unpacked))
@@ -6366,7 +6370,7 @@ CPed::WanderPath(void)
 					m_pNextPathNode = nil;
 				}
 			}
-			if (((CPedModelInfo*)CModelInfo::GetModelInfo(m_modelIndex))->m_pedStatType == PEDSTAT_SKATER) {
+			if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)))->m_pedStatType == PEDSTAT_SKATER) { // rouz edit (ChatGPT)
 				if (m_pNextPathNode) {
 					CVector unpacked(m_pNextPathNode->GetPosition() / 8.f);
 					if (!CPopulation::IsSkateable(unpacked))
@@ -7591,7 +7595,7 @@ CPed::AnswerMobile(void)
 	if (phoneInAssoc || phoneTalkAssoc || phoneOutAssoc) {
 		if (phoneInAssoc) {
 			if (phoneInAssoc->currentTime >= 0.85f && !m_pWeaponModel) {
-				CBaseModelInfo *phoneModel = CModelInfo::GetModelInfo(MI_MOBILE);
+				CBaseModelInfo *phoneModel = ((CBaseModelInfo*)ModelRegistry_Get(MI_MOBILE)); // rouz edit (ChatGPT)
 				m_pWeaponModel = (RpAtomic*)phoneModel->CreateInstance();
 				phoneModel->AddRef();
 				m_wepModelID = MI_MOBILE;
@@ -7966,7 +7970,7 @@ void
 CPed::SetPedPositionInCar(void)
 {
 	bool notYet = false;
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	if (bChangedSeat) {
@@ -8001,7 +8005,7 @@ CPed::SetPedPositionInCar(void)
 			return;
 		}
 	}
-	CVehicleModelInfo *vehModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(m_pMyVehicle->GetModelIndex());
+	CVehicleModelInfo *vehModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(m_pMyVehicle->GetModelIndex())); // rouz edit (ChatGPT)
 	CMatrix newMat(m_pMyVehicle->GetMatrix());
 	CVector seatPos;
 	if (m_pMyVehicle->pDriver == this) {
@@ -8162,12 +8166,12 @@ CPed::LookForInterestingNodes(void)
 			for (ptrNode = sector->m_lists[ENTITYLIST_VEHICLES].first; ptrNode && !found; ptrNode = ptrNode->next) {
 				CVehicle *veh = (CVehicle*)ptrNode->item;
 				model = veh->GetModelInfo();
-				if (model->GetNum2dEffects() != 0) {
-					for (int e = 0; e < model->GetNum2dEffects(); e++) {
-						effect = model->Get2dEffect(e);
+				if ((*ModelRegistry_EffectCount(model)) != 0) { // rouz edit (ChatGPT)
+					for (int e = 0; e < (*ModelRegistry_EffectCount(model)); e++) { // rouz edit (ChatGPT)
+						effect = ((C2dEffect*)ModelRegistry_GetEffect(model, e)); // rouz edit (ChatGPT)
 						if (effect->type == EFFECT_ATTRACTOR && effect->attractor.probability >= randVal) {
 							objMat = &veh->GetMatrix();
-							CVector effectPos = veh->GetMatrix() * effect->pos;
+							CVector effectPos = veh->GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 							effectDist = effectPos - GetPosition();
 							if (effectDist.MagnitudeSqr() < sq(8.0f)) {
 								found = true;
@@ -8179,13 +8183,13 @@ CPed::LookForInterestingNodes(void)
 			}
 			for (ptrNode = sector->m_lists[ENTITYLIST_OBJECTS].first; ptrNode && !found; ptrNode = ptrNode->next) {
 				CObject *obj = (CObject*)ptrNode->item;
-				model = CModelInfo::GetModelInfo(obj->GetModelIndex());
-				if (model->GetNum2dEffects() != 0) {
-					for (int e = 0; e < model->GetNum2dEffects(); e++) {
-						effect = model->Get2dEffect(e);
+				model = ((CBaseModelInfo*)ModelRegistry_Get(obj->GetModelIndex())); // rouz edit (ChatGPT)
+				if ((*ModelRegistry_EffectCount(model)) != 0) { // rouz edit (ChatGPT)
+					for (int e = 0; e < (*ModelRegistry_EffectCount(model)); e++) { // rouz edit (ChatGPT)
+						effect = ((C2dEffect*)ModelRegistry_GetEffect(model, e)); // rouz edit (ChatGPT)
 						if (effect->type == EFFECT_ATTRACTOR && effect->attractor.probability >= randVal) {
 							objMat = &obj->GetMatrix();
-							CVector effectPos = obj->GetMatrix() * effect->pos;
+							CVector effectPos = obj->GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 							effectDist = effectPos - GetPosition();
 							if (effectDist.MagnitudeSqr() < sq(8.0f)) {
 								found = true;
@@ -8197,13 +8201,13 @@ CPed::LookForInterestingNodes(void)
 			}
 			for (ptrNode = sector->m_lists[ENTITYLIST_BUILDINGS].first; ptrNode && !found; ptrNode = ptrNode->next) {
 				CBuilding *building = (CBuilding*)ptrNode->item;
-				model = CModelInfo::GetModelInfo(building->GetModelIndex());
-				if (model->GetNum2dEffects() != 0) {
-					for (int e = 0; e < model->GetNum2dEffects(); e++) {
-						effect = model->Get2dEffect(e);
+				model = ((CBaseModelInfo*)ModelRegistry_Get(building->GetModelIndex())); // rouz edit (ChatGPT)
+				if ((*ModelRegistry_EffectCount(model)) != 0) { // rouz edit (ChatGPT)
+					for (int e = 0; e < (*ModelRegistry_EffectCount(model)); e++) { // rouz edit (ChatGPT)
+						effect = ((C2dEffect*)ModelRegistry_GetEffect(model, e)); // rouz edit (ChatGPT)
 						if (effect->type == EFFECT_ATTRACTOR && effect->attractor.probability >= randVal) {
 							objMat = &building->GetMatrix();
-							CVector effectPos = building->GetMatrix() * effect->pos;
+							CVector effectPos = building->GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 							effectDist = effectPos - GetPosition();
 							if (effectDist.MagnitudeSqr() < sq(8.0f)) {
 								found = true;
@@ -8215,13 +8219,13 @@ CPed::LookForInterestingNodes(void)
 			}
 			for (ptrNode = sector->m_lists[ENTITYLIST_BUILDINGS_OVERLAP].first; ptrNode && !found; ptrNode = ptrNode->next) {
 				CBuilding *building = (CBuilding*)ptrNode->item;
-				model = CModelInfo::GetModelInfo(building->GetModelIndex());
-				if (model->GetNum2dEffects() != 0) {
-					for (int e = 0; e < model->GetNum2dEffects(); e++) {
-						effect = model->Get2dEffect(e);
+				model = ((CBaseModelInfo*)ModelRegistry_Get(building->GetModelIndex())); // rouz edit (ChatGPT)
+				if ((*ModelRegistry_EffectCount(model)) != 0) { // rouz edit (ChatGPT)
+					for (int e = 0; e < (*ModelRegistry_EffectCount(model)); e++) { // rouz edit (ChatGPT)
+						effect = ((C2dEffect*)ModelRegistry_GetEffect(model, e)); // rouz edit (ChatGPT)
 						if (effect->type == EFFECT_ATTRACTOR && effect->attractor.probability >= randVal) {
 							objMat = &building->GetMatrix();
-							CVector effectPos = building->GetMatrix() * effect->pos;
+							CVector effectPos = building->GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 							effectDist = effectPos - GetPosition();
 							if (effectDist.MagnitudeSqr() < sq(8.0f)) {
 								found = true;
@@ -8237,7 +8241,7 @@ CPed::LookForInterestingNodes(void)
 	if (!found)
 		return false;
 
-	CVector effectFrontLocal = Multiply3x3(*objMat, effect->attractor.dir);
+	CVector effectFrontLocal = Multiply3x3(*objMat, CollisionVector_ToNative(effect->attractor.dir)); // rouz edit (ChatGPT)
 	float angleToFace = General_GetRadianAngleBetweenPoints(effectFrontLocal.x, effectFrontLocal.y, 0.0f, 0.0f);
 	randVal = General_GetRandomNumber() % 256;
 	if (randVal <= m_randomSeed % 256) {
@@ -8247,7 +8251,7 @@ CPed::LookForInterestingNodes(void)
 		return false;
 	}
 
-	CVector2D effectPos = *objMat * effect->pos;
+	CVector2D effectPos = *objMat * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 	switch (effect->attractor.type) {
 		case ATTRACTORTYPE_ICECREAM:
 			SetInvestigateEvent(EVENT_ICECREAM, effectPos, 0.1f, 15000, angleToFace);
@@ -9084,7 +9088,7 @@ CPed::Wait(void)
 
 			PlayRandomAnimationsFromAnimBlock(this, ASSOCGRP_RIOT, ANIM_RIOT_ANGRY, ANIM_RIOT_FUCKYOU - ANIM_RIOT_ANGRY + 1);
 			if (IsPedInControl() && General_GetRandomNumberInRangeFloat(0.f,1.f) < 0.25f
-				&& CPopulation::CanJeerAtStripper(m_modelIndex)) {
+				&& Population_CanJeerAtStripper(m_modelIndex)) { // rouz edit (ChatGPT)
 				for (int i = 0; i < m_numNearPeds; ++i) {
 					CPed *nearPed = m_nearPeds[i];
 					if (nearPed) {
@@ -9482,7 +9486,7 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 		return;
 
 	CVector forward(0.09f * ped->GetForward() + ped->GetPosition());
-	forward.z += CModelInfo::GetColModel(ped->GetModelIndex())->spheres[2].bounds.center.z + 0.35f;
+	forward.z += ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(ped->GetModelIndex())))->spheres[2].bounds.center.z + 0.35f; // rouz edit (ChatGPT)
 
 	CEntity *obstacle = CWorld::TestSphereAgainstWorld(forward, 0.25f, nil, true, true, false, true, false, false);
 	if (!obstacle) {
@@ -9632,7 +9636,7 @@ CPed::CanPedDriveOff(void)
 void
 CPed::SetRadioStation(void)
 {
-	CPedModelInfo* modelInfo = (CPedModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CPedModelInfo* modelInfo = (CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	if (IsPlayer() || !m_pMyVehicle || m_pMyVehicle->pDriver != this)
 		return;
@@ -9956,10 +9960,10 @@ CPed::Load(uint8*& buf)
 		if (bufWeapon.m_eWeaponType != WEAPONTYPE_UNARMED) {
 			int modelId = WeaponInfo_GetWeaponInfo(bufWeapon.m_eWeaponType)->m_nModelId;
 			if (modelId != -1) {
-				CStreaming::RequestModel(modelId, STREAMFLAGS_DEPENDENCY);
+				Streaming_RequestModel(modelId, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 				int modelId2 = WeaponInfo_GetWeaponInfo(bufWeapon.m_eWeaponType)->m_nModel2Id;
 				if (modelId2 != -1)
-					CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+					Streaming_RequestModel(modelId2, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 
 				CStreaming::LoadAllRequestedModels(false);
 			}

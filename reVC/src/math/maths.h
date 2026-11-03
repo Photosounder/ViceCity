@@ -1,19 +1,22 @@
+//+ rouz edit (ChatGPT)
 #pragma once
+#include <math.h>
 
 // wrapper around float versions of functions
 // in gta they are in CMaths but that makes the code rather noisy
 
-inline float Sin(float x) { return sinf(x); }
-inline float Asin(float x) { return asinf(x); }
-inline float Cos(float x) { return cosf(x); }
-inline float Acos(float x) { return acosf(x); }
-inline float Tan(float x) { return tanf(x); }
-inline float Atan(float x) { return atanf(x); }
-inline float Atan2(float y, float x) { return atan2f(y, x); }
-inline float Abs(float x) { return fabsf(x); }
-inline float Sqrt(float x) { return sqrtf(x); }
-inline float RecipSqrt(float x, float y) { return x/Sqrt(y); }
-inline float RecipSqrt(float x) { return RecipSqrt(1.0f, x); }
-inline float Pow(float x, float y) { return powf(x, y); }
-inline float Floor(float x) { return floorf(x); }
-inline float Ceil(float x) { return ceilf(x); }
+static inline float Sin(float x) { return sinf(x); }
+static inline float Asin(float x) { return asinf(x); }
+static inline float Cos(float x) { return cosf(x); }
+static inline float Acos(float x) { return acosf(x); }
+static inline float Tan(float x) { return tanf(x); }
+static inline float Atan(float x) { return atanf(x); }
+static inline float Atan2(float y, float x) { return atan2f(y, x); }
+static inline float Abs(float x) { return fabsf(x); }
+static inline float Sqrt(float x) { return sqrtf(x); }
+static inline float RecipSqrtScaled(float x, float y) { return x/Sqrt(y); }
+static inline float RecipSqrt(float x) { return RecipSqrtScaled(1.0f, x); }
+static inline float Pow(float x, float y) { return powf(x, y); }
+static inline float Floor(float x) { return floorf(x); }
+static inline float Ceil(float x) { return ceilf(x); }
+//- rouz edit (ChatGPT)

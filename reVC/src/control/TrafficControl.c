@@ -1,5 +1,8 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
+#include "2dEffect.h"
 #include "TrafficLights_backend.h"
+#include "Timecycle.h"
 #include "Timer.h"
 #include "General.h"
 #include "Weather.h"
@@ -20,6 +23,27 @@ void re3_assert(const char *,const char *,unsigned int,const char *);
 #define assert(expression) (expression)
 #endif
 bool TrafficLights_bGreenLightsCheat;
+static TrafficLightVector TrafficLights_EffectPosition(TrafficLightModel *model,int32_t index)
+{
+    // Copy the original effect coordinates into the traffic-light vector
+    C2dEffect *effect=ModelRegistry_GetEffect(model,index);
+    TrafficLightVector value={effect->pos.x,effect->pos.y,effect->pos.z};return value;
+}
+static float TrafficLights_EffectX(TrafficLightModel *model,int32_t index)
+{
+    // Read the live effect X coordinate
+    return ((C2dEffect*)ModelRegistry_GetEffect(model,index))->pos.x;
+}
+static float TrafficLights_EffectY(TrafficLightModel *model,int32_t index)
+{
+    // Read the live effect Y coordinate
+    return ((C2dEffect*)ModelRegistry_GetEffect(model,index))->pos.y;
+}
+static float TrafficLights_EffectZ(TrafficLightModel *model,int32_t index)
+{
+    // Read the live effect Z coordinate
+    return ((C2dEffect*)ModelRegistry_GetEffect(model,index))->pos.z;
+}
 static TrafficLightVector TrafficLights_Make(float x,float y,float z)
 {
     // Materialize the original three-component value
@@ -94,18 +118,18 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 
 	int i, m = TrafficLights_BackendModel(ent);
 	if (MI_TRAFFICLIGHTS == m) {
-		TrafficLightModel *mi = TrafficLights_BackendModelInfo(TrafficLights_BackendModel(ent));
-		float x = TrafficLights_BackendEffectX(mi,0);
-		float yMin = TrafficLights_BackendEffectY(mi,0);
-		float yMax = TrafficLights_BackendEffectY(mi,0);
-		float zMin = TrafficLights_BackendEffectZ(mi,0);
-		float zMax = TrafficLights_BackendEffectZ(mi,0);
+		TrafficLightModel *mi = ModelRegistry_Get(TrafficLights_BackendModel(ent));
+		float x = TrafficLights_EffectX(mi,0);
+		float yMin = TrafficLights_EffectY(mi,0);
+		float yMax = TrafficLights_EffectY(mi,0);
+		float zMin = TrafficLights_EffectZ(mi,0);
+		float zMax = TrafficLights_EffectZ(mi,0);
 		for (i = 1; i < 6; i++) {
-			assert(TrafficLights_BackendHasEffect(mi,i));
-			yMin = Min(yMin, TrafficLights_BackendEffectY(mi,i));
-			yMax = Max(yMax, TrafficLights_BackendEffectY(mi,i));
-			zMin = Min(zMin, TrafficLights_BackendEffectZ(mi,i));
-			zMax = Max(zMax, TrafficLights_BackendEffectZ(mi,i));
+			assert(ModelRegistry_GetEffect(mi,i));
+			yMin = Min(yMin, TrafficLights_EffectY(mi,i));
+			yMax = Max(yMax, TrafficLights_EffectY(mi,i));
+			zMin = Min(zMin, TrafficLights_EffectZ(mi,i));
+			zMax = Max(zMax, TrafficLights_EffectZ(mi,i));
 		}
 
 		TrafficLightVector pos1, pos2;
@@ -147,12 +171,12 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 			PointLights_AddLight(POINTLIGHTS_LIGHT_POINT,TrafficLights_PointVector(pos1),TrafficLights_PointVector(TrafficLights_Make(0.0f,0.0f,0.0f)),8.0f,r / 255.0f,g / 255.0f,0 / 255.0f,POINTLIGHTS_FOG_NORMAL,true);
 
 		if (Weather_TrafficLightBrightness > 0.05f)
-			TrafficLights_BackendShadow((uintptr_t)ent,pos1,r * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
+			TrafficLights_BackendShadow((uintptr_t)ent,pos1,r * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
 
 		if (TrafficLights_Dot(TrafficLights_BackendCameraForward(), TrafficLights_BackendForward(ent)) < 0.0f)
-			TrafficLights_BackendCorona((uintptr_t)ent + id,r * TrafficLights_BackendSpriteBrightness() * 0.7f,g * TrafficLights_BackendSpriteBrightness() * 0.7f,0 * TrafficLights_BackendSpriteBrightness() * 0.7f,pos1,1.75f * TrafficLights_BackendSpriteSize());
+			TrafficLights_BackendCorona((uintptr_t)ent + id,r * TimeCycle_GetSpriteBrightness() * 0.7f,g * TimeCycle_GetSpriteBrightness() * 0.7f,0 * TimeCycle_GetSpriteBrightness() * 0.7f,pos1,1.75f * TimeCycle_GetSpriteSize());
 		else
-			TrafficLights_BackendCorona((uintptr_t)ent + id + 3,r * TrafficLights_BackendSpriteBrightness() * 0.7f,g * TrafficLights_BackendSpriteBrightness() * 0.7f,0 * TrafficLights_BackendSpriteBrightness() * 0.7f,pos2,1.75f * TrafficLights_BackendSpriteSize());
+			TrafficLights_BackendCorona((uintptr_t)ent + id + 3,r * TimeCycle_GetSpriteBrightness() * 0.7f,g * TimeCycle_GetSpriteBrightness() * 0.7f,0 * TimeCycle_GetSpriteBrightness() * 0.7f,pos2,1.75f * TimeCycle_GetSpriteSize());
 
 		// Enter the C bright-light algorithm with the original arguments
 		BrightLights_RegisterOne(TrafficLights_BrightVector(pos1),TrafficLights_BrightVector(TrafficLights_BackendUp(ent)),TrafficLights_BrightVector(TrafficLights_BackendRight(ent)),TrafficLights_BrightVector(TrafficLights_Make(0.0f,0.0f,0.0f)),id + BRIGHTLIGHT_TRAFFIC_GREEN,0,0,0);
@@ -160,18 +184,18 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 		BrightLights_RegisterOne(TrafficLights_BrightVector(pos2),TrafficLights_BrightVector(TrafficLights_BackendUp(ent)),TrafficLights_BrightVector(TrafficLights_Negate(TrafficLights_BackendRight(ent))),TrafficLights_BrightVector(TrafficLights_Make(0.0f,0.0f,0.0f)),id + BRIGHTLIGHT_TRAFFIC_GREEN,0,0,0);
 	}
 	else if (MI_TRAFFICLIGHTS_VERTICAL == m) {
-		TrafficLightModel *mi = TrafficLights_BackendModelInfo(TrafficLights_BackendModel(ent));
-		float x = TrafficLights_BackendEffectX(mi,0);
-		float yMin = TrafficLights_BackendEffectY(mi,0);
-		float yMax = TrafficLights_BackendEffectY(mi,0);
-		float zMin = TrafficLights_BackendEffectZ(mi,0);
-		float zMax = TrafficLights_BackendEffectZ(mi,0);
+		TrafficLightModel *mi = ModelRegistry_Get(TrafficLights_BackendModel(ent));
+		float x = TrafficLights_EffectX(mi,0);
+		float yMin = TrafficLights_EffectY(mi,0);
+		float yMax = TrafficLights_EffectY(mi,0);
+		float zMin = TrafficLights_EffectZ(mi,0);
+		float zMax = TrafficLights_EffectZ(mi,0);
 		for (i = 1; i < 6; i++) {
-			assert(TrafficLights_BackendHasEffect(mi,i));
-			yMin = Min(yMin, TrafficLights_BackendEffectY(mi,i));
-			yMax = Max(yMax, TrafficLights_BackendEffectY(mi,i));
-			zMin = Min(zMin, TrafficLights_BackendEffectZ(mi,i));
-			zMax = Max(zMax, TrafficLights_BackendEffectZ(mi,i));
+			assert(ModelRegistry_GetEffect(mi,i));
+			yMin = Min(yMin, TrafficLights_EffectY(mi,i));
+			yMax = Max(yMax, TrafficLights_EffectY(mi,i));
+			zMin = Min(zMin, TrafficLights_EffectZ(mi,i));
+			zMax = Max(zMax, TrafficLights_EffectZ(mi,i));
 		}
 
 		TrafficLightVector pos1;
@@ -181,25 +205,25 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 		case CAR_LIGHTS_GREEN:
 			r = 0;
 			g = 255;
-			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,2));
+			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,2));
 			id = 0;
 			break;
 		case CAR_LIGHTS_YELLOW:
 			r = 255;
 			g = 128;
-			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,1));
+			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,1));
 			id = 1;
 			break;
 		case CAR_LIGHTS_RED:
 			r = 255;
 			g = 0;
-			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,0));
+			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,0));
 			id = 2;
 			break;
 		default:
 			r = 0;
 			g = 0;
-			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,1));
+			pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,1));
 			id = -1;
 			break;
 		}
@@ -212,13 +236,13 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 			PointLights_AddLight(POINTLIGHTS_LIGHT_POINT,TrafficLights_PointVector(pos1),TrafficLights_PointVector(TrafficLights_Make(0.0f,0.0f,0.0f)),8.0f,r / 255.0f,g / 255.0f,0 / 255.0f,POINTLIGHTS_FOG_NORMAL,true);
 
 		if (Weather_TrafficLightBrightness > 0.05f)
-			TrafficLights_BackendShadow((uintptr_t)ent,pos1,r * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
+			TrafficLights_BackendShadow((uintptr_t)ent,pos1,r * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
 
 		if (TrafficLights_Dot(TrafficLights_BackendCameraForward(), TrafficLights_BackendForward(ent)) < 0.0f)
-			TrafficLights_BackendCorona((uintptr_t)ent + id,r * TrafficLights_BackendSpriteBrightness() * 0.7f,g * TrafficLights_BackendSpriteBrightness() * 0.7f,0 * TrafficLights_BackendSpriteBrightness() * 0.7f,pos1,1.75f * TrafficLights_BackendSpriteSize());
+			TrafficLights_BackendCorona((uintptr_t)ent + id,r * TimeCycle_GetSpriteBrightness() * 0.7f,g * TimeCycle_GetSpriteBrightness() * 0.7f,0 * TimeCycle_GetSpriteBrightness() * 0.7f,pos1,1.75f * TimeCycle_GetSpriteSize());
 	}
 	else if (MI_TRAFFICLIGHTS_MIAMI == m || MI_TRAFFICLIGHTS_TWOVERTICAL == m) {
-		TrafficLightModel *mi = TrafficLights_BackendModelInfo(TrafficLights_BackendModel(ent));
+		TrafficLightModel *mi = ModelRegistry_Get(TrafficLights_BackendModel(ent));
 		TrafficLightVector pos1, pos2;
 		uint8_t r, g;
 		int id;
@@ -227,29 +251,29 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 			case CAR_LIGHTS_GREEN:
 				r = 0;
 				g = 255;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,4));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,5));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,4));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,5));
 				id = 0;
 				break;
 			case CAR_LIGHTS_YELLOW:
 				r = 255;
 				g = 128;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,2));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,3));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,2));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,3));
 				id = 1;
 				break;
 			case CAR_LIGHTS_RED:
 				r = 255;
 				g = 0;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,0));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,1));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,0));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,1));
 				id = 2;
 				break;
 			default:
 				r = 0;
 				g = 0;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,2));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,3));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,2));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,3));
 				id = -1;
 				break;
 			}
@@ -259,29 +283,29 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 			case CAR_LIGHTS_GREEN:
 				r = 0;
 				g = 255;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,2));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,5));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,2));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,5));
 				id = 0;
 				break;
 			case CAR_LIGHTS_YELLOW:
 				r = 255;
 				g = 128;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,1));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,4));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,1));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,4));
 				id = 1;
 				break;
 			case CAR_LIGHTS_RED:
 				r = 255;
 				g = 0;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,0));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,3));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,0));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,3));
 				id = 2;
 				break;
 			default:
 				r = 0;
 				g = 0;
-				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,1));
-				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_BackendEffectPosition(mi,4));
+				pos1 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,1));
+				pos2 = TrafficLights_BackendTransform(ent,TrafficLights_EffectPosition(mi,4));
 				id = -1;
 				break;
 			}
@@ -300,13 +324,13 @@ TrafficLights_DisplayActualLight(CEntity *ent)
 			PointLights_AddLight(POINTLIGHTS_LIGHT_POINT,TrafficLights_PointVector(pos),TrafficLights_PointVector(TrafficLights_Make(0.0f,0.0f,0.0f)),8.0f,r / 255.0f,g / 255.0f,0 / 255.0f,POINTLIGHTS_FOG_NORMAL,true);
 
 		if (Weather_TrafficLightBrightness > 0.05f)
-			TrafficLights_BackendShadow((uintptr_t)ent,pos,r * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TrafficLights_BackendGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
+			TrafficLights_BackendShadow((uintptr_t)ent,pos,r * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,g * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f,0 * TimeCycle_GetLightOnGroundBrightness() * Weather_TrafficLightBrightness / 8.0f);
 
 		if (id >= 0) {
 			if (TrafficLights_Dot(TrafficLights_BackendCameraForward(), TrafficLights_BackendForward(ent)) > 0.0f)
-				TrafficLights_BackendCorona((uintptr_t)ent + id,r * TrafficLights_BackendSpriteBrightness() * 0.7f,g * TrafficLights_BackendSpriteBrightness() * 0.7f,0 * TrafficLights_BackendSpriteBrightness() * 0.7f,pos1,1.75f * TrafficLights_BackendSpriteSize());
+				TrafficLights_BackendCorona((uintptr_t)ent + id,r * TimeCycle_GetSpriteBrightness() * 0.7f,g * TimeCycle_GetSpriteBrightness() * 0.7f,0 * TimeCycle_GetSpriteBrightness() * 0.7f,pos1,1.75f * TimeCycle_GetSpriteSize());
 			else
-				TrafficLights_BackendCorona((uintptr_t)ent + id,r * TrafficLights_BackendSpriteBrightness() * 0.7f,g * TrafficLights_BackendSpriteBrightness() * 0.7f,0 * TrafficLights_BackendSpriteBrightness() * 0.7f,pos2,1.75f * TrafficLights_BackendSpriteSize());
+				TrafficLights_BackendCorona((uintptr_t)ent + id,r * TimeCycle_GetSpriteBrightness() * 0.7f,g * TimeCycle_GetSpriteBrightness() * 0.7f,0 * TimeCycle_GetSpriteBrightness() * 0.7f,pos2,1.75f * TimeCycle_GetSpriteSize());
 		}
 	}
 }

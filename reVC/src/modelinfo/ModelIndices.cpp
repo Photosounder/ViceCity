@@ -5,7 +5,7 @@
 ModelIndexModel *ModelIndices_BackendModel(int16_t id)
 {
     // Capture the same actual model entry with the original typed native downcast
-    return (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
+    return (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 }
 bool ModelIndices_BackendBuilding(ModelIndexModel *model)
 {

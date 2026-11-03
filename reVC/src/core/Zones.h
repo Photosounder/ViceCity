@@ -19,7 +19,6 @@ extern "C" {
 #endif
 uint16_t *Zone_GetTranslatedName(CZone *zone);
 ZonesPosition ZonesHost_Player(void);
-uint16_t *ZonesHost_Text(const char *name);
 extern int16_t Zones_findIndex;
 extern uint16_t Zones_audioCount;
 extern int16_t Zones_audioIndices[NUMAUDIOZONES];

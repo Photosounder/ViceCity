@@ -6,16 +6,6 @@
 #include "RpAnimBlend.h"
 #include "RwHelper.h"
 #include "Streaming.h"
-void * AnimGroup_HostModelAt(int32_t id)
-{
-    // Forward only the original manager or native metadata primitive
-    return CModelInfo::GetModelInfo(id);
-}
-const char * AnimGroup_HostModelName(void *model)
-{
-    // Forward only the original manager or native metadata primitive
-    return static_cast<CBaseModelInfo*>(model)->GetModelName();
-}
 void * AnimGroup_HostModelObject(void *model)
 {
     // Forward only the original manager or native metadata primitive
@@ -60,7 +50,7 @@ int AnimGroup_HostPrefixCompare(const char *a,const char *b,size_t count)
 void AnimManager_HostRemoveAnim(int32_t block)
 {
     // Forward only the original native primitive
-    CStreaming::RemoveAnim(block);
+    Streaming_RemoveAnim(block); // rouz edit (ChatGPT)
 }
 void * AnimManager_HostOpenStream(const char *filename)
 {

@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "PlaneTrails_backend.h"
+#include "Timecycle.h"
 #include "Clock.h"
 #include "Timer.h"
 #include "Draw_constants.h"
@@ -165,7 +166,7 @@ PlaneTrails_Render(void)
 	int i;
 	float visibility = Min(1.0f-PlaneTrails_BackendFoggyness(), 1.0f-PlaneTrails_BackendCloudCoverage());
 	visibility = Min(visibility, 1.0f-PlaneTrails_BackendRain());
-	visibility = Min(Max(Max(PlaneTrails_BackendSkyTopRed(), PlaneTrails_BackendSkyTopGreen()), PlaneTrails_BackendSkyTopBlue())/256.0f, visibility);
+	visibility = Min(Max(Max(TimeCycle_GetSkyTopRed(), TimeCycle_GetSkyTopGreen()), TimeCycle_GetSkyTopBlue())/256.0f, visibility);
 	if(visibility > 0.0001f)
 		for(i = 0; i < ARRAY_SIZE(aArray); i++)
 			PlaneTrail_Render(&aArray[i],visibility);

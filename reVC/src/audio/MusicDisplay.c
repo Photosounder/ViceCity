@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "DMAudio.h"
@@ -14,8 +16,8 @@ MusicDisplay_StationName(cMusicManager *manager)
 	static uint16_t *pCurrentStation = NULL;
 	static uint8_t cDisplay = 0;
 
-	if(!MusicDisplayHost_Paused() && !MusicDisplayHost_Widescreen() && MusicRadio_PlayerInCar(manager) &&
-	   !AudioEnvironmentHost_Replay()) {
+	if(!Timer_GetIsPaused() && !MusicDisplayHost_Widescreen() && MusicRadio_PlayerInCar(manager) &&
+	   !Replay_IsPlayingBack()) {
 		CVehicle *vehicle = AudioGame_FindVehicle();
 
 		if (vehicle)
@@ -88,7 +90,7 @@ MusicDisplay_StationName(cMusicManager *manager)
 			else {
 				if (cDisplay == 0) return;
 #ifdef FIX_BUGS
-				cDisplay -= AudioPoliceHost_LogicalFramesPassed();
+				cDisplay -= Timer_GetLogicalFramesPassed();
 #else
 				cDisplay--;
 #endif

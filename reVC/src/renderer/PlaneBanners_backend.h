@@ -22,7 +22,6 @@ void PlaneBanners_BackendFog(bool enabled);
 void PlaneBanners_BackendVertexAlpha(bool enabled);
 void PlaneBanners_BackendSrcBlend(void);
 void PlaneBanners_BackendDestBlend(void);
-void PlaneBanners_BackendRaster(void *raster);
 bool PlaneBanners_BackendTransform(int32_t count);
 void PlaneBanners_BackendRenderIndexed(int32_t count);
 void PlaneBanners_BackendEnd(void);

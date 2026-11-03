@@ -299,7 +299,7 @@ int8 CRunningScript::ProcessCommands1400To1499(int32 command)
 						CTheScripts::LastRandomPedId = ped_handle;
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->bRespondsToThreats = false;
-			++CPopulation::ms_nTotalMissionPeds;
+			++Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 			if (m_bIsMissionScript)
 				CTheScripts::MissionCleanUp.AddEntityToList(ped_handle, CLEANUP_CHAR);
 		}

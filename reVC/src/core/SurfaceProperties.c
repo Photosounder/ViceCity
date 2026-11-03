@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
 #include "SurfaceTable_backend.h"
+#include "WorkBuffer.h"
+#include "Weather.h"
 #include "FileMgr.h"
 #include <stdio.h>
 static float SurfaceTable_AdhesiveLimits[NUMADHESIVEGROUPS][NUMADHESIVEGROUPS];
@@ -13,9 +15,9 @@ SurfaceTable_Initialise(const char *filename)
 	float adhesiveLimit;
 
 	FileMgr_SetDir("");
-	FileMgr_LoadFile(filename, SurfaceTable_BackendWorkBuffer(), SURFACE_TABLE_WORK_BUFFER_SIZE, "r");
+	FileMgr_LoadFile(filename, work_buff, WORK_BUFFER_SIZE, "r");
 
-	line = (char*)SurfaceTable_BackendWorkBuffer();
+	line = (char*)work_buff;
 	for(lineno = 0; lineno < NUMADHESIVEGROUPS; lineno++){
 		// Preserve the original scan, branch and assignment order
 		// skip white space and comments
@@ -115,7 +117,7 @@ SurfaceTable_GetWetMultiplier(uint8_t surfaceType)
 	case SURFACE_CARDBOARDBOX:
 	case SURFACE_TRANSPARENT_STONE:
 	case SURFACE_CONCRETE_BEACH:
-		return 1.0f - SurfaceTable_BackendWetRoads()*0.25f;
+		return 1.0f - Weather_WetRoads*0.25f;
 
 	case SURFACE_GRASS:
 	case SURFACE_CAR:
@@ -136,11 +138,11 @@ SurfaceTable_GetWetMultiplier(uint8_t surfaceType)
 	case SURFACE_NEWS_VENDOR:
 	case SURFACE_WHEELBASE:
 	case SURFACE_METAL_GATE:
-		return 1.0f - SurfaceTable_BackendWetRoads()*0.4f;
+		return 1.0f - Weather_WetRoads*0.4f;
 
 	case SURFACE_SAND:
 	case SURFACE_SAND_BEACH:
-		return 1.0f + SurfaceTable_BackendWetRoads()*0.5f;
+		return 1.0f + Weather_WetRoads*0.5f;
 
 	default:
 		return 1.0f;

@@ -42,20 +42,10 @@ public:
 	virtual void SetAtomic(int n, RpAtomic *atomic);
 
 	void Init(void);
-	void IncreaseAlpha(void);
-	void SetLodDistances(float *dist);
-	float GetLodDistance(int i);
-	float GetNearDistance(void);
-	float GetLargestLodDistance(void);
+	// Alpha fading is handled by SimpleModel_IncreaseAlpha // rouz edit (ChatGPT)
 	RpAtomic *GetAtomicFromDistance(float dist);
-	RpAtomic *GetFirstAtomicFromDistance(float dist);
-	void FindRelatedModel(int32 minID, int32 maxID);
-	void SetupBigBuilding(int32 minID, int32 maxID);
 
-	void SetNumAtomics(int n) { m_numAtomics = n; }
-	CSimpleModelInfo *GetRelatedModel(void){
-		return (CSimpleModelInfo*)m_atomics[2]; }
-	void SetRelatedModel(CSimpleModelInfo *m){
-		m_atomics[2] = (RpAtomic*)m; }
+
+
 };
 //static_assert(sizeof(CSimpleModelInfo) == 0x4C, "CSimpleModelInfo: error");

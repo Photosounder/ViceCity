@@ -157,7 +157,7 @@ CColStore::RemoveCol(int32 slot)
 	int id;
 	GetSlot(slot)->isLoaded = false;
 	for(id = 0; id < MODELINFOSIZE; id++){
-		CBaseModelInfo *mi = CModelInfo::GetModelInfo(id);
+		CBaseModelInfo *mi = ((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 		if(mi){
 			CColModel *col = mi->GetColModel();
 			if(col && col->level == slot)
@@ -173,7 +173,7 @@ CColStore::LoadAllCollision(void)
 	int i;
 	for(i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i))
-			CStreaming::RequestCol(i, 0);
+			Streaming_RequestCol(i, 0); // rouz edit (ChatGPT)
 
 	CStreaming::LoadAllRequestedModels(false);
 }
@@ -184,8 +184,8 @@ CColStore::RemoveAllCollision(void)
 	int i;
 	for(i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i))
-			if(CStreaming::CanRemoveCol(i))
-				CStreaming::RemoveCol(i);
+			if(Streaming_CanRemoveCol(i)) // rouz edit (ChatGPT)
+				Streaming_RemoveCol(i); // rouz edit (ChatGPT)
 }
 
 static bool bLoadAtSecondPosition;
@@ -246,9 +246,9 @@ CColStore::LoadCollision(const CVector2D &pos)
 		}
 
 		if(wantThisOne)
-			CStreaming::RequestCol(i, STREAMFLAGS_PRIORITY);
+			Streaming_RequestCol(i, STREAMFLAGS_PRIORITY); // rouz edit (ChatGPT)
 		else
-			CStreaming::RemoveCol(i);
+			Streaming_RemoveCol(i); // rouz edit (ChatGPT)
 	}
 	bLoadAtSecondPosition = false;
 }
@@ -260,7 +260,7 @@ CColStore::RequestCollision(const CVector2D &pos)
 
 	for(i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -115.0f))
-			CStreaming::RequestCol(i, STREAMFLAGS_PRIORITY);
+			Streaming_RequestCol(i, STREAMFLAGS_PRIORITY); // rouz edit (ChatGPT)
 }
 
 void
@@ -273,8 +273,8 @@ CColStore::EnsureCollisionIsInMemory(const CVector2D &pos)
 
 	for(i = 1; i < COLSTORESIZE; i++)
 		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -110.0f) &&
-		   !CStreaming::HasColLoaded(i)){
-			CStreaming::RequestCol(i, 0);
+		   !Streaming_HasColLoaded(i)){ // rouz edit (ChatGPT)
+			Streaming_RequestCol(i, 0); // rouz edit (ChatGPT)
 			if(TheCamera.GetScreenFadeStatus() == FADE_0)
 				FrontEndMenuManager.MessageScreen("LOADCOL", false);
 			Timer_Suspend();

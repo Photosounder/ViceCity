@@ -11,10 +11,6 @@ void Skidmarks_BackendTxdPush(void);
 int Skidmarks_BackendTxdFind(const char *name);
 void Skidmarks_BackendTxdSet(int slot);
 void Skidmarks_BackendTxdPop(void);
-void *Skidmarks_BackendTextureRead(const char *name, const char *mask);
-void Skidmarks_BackendTextureDestroy(void *texture);
-void *Skidmarks_BackendRaster(void *texture);
-void Skidmarks_BackendTextureRaster(void *raster);
 void Skidmarks_BackendZWrite(bool enabled);
 void Skidmarks_BackendZTest(void);
 void Skidmarks_BackendVertexAlpha(bool enabled);
@@ -30,7 +26,6 @@ void Skidmarks_BackendRenderIndexed(uint16_t *indices, int count);
 void Skidmarks_BackendEnd(void);
 void Skidmarks_BackendPush(const char *name);
 void Skidmarks_BackendPop(void);
-bool Skidmarks_BackendPlayingBack(void);
 #ifdef __cplusplus
 }
 #endif

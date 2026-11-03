@@ -69,7 +69,7 @@ void * PointLights_BackendFrameMatrix(void *frame)
 bool PointLights_BackendCutscene(void)
 {
     // Read the live cutscene eligibility gate
-    return CCutsceneMgr::IsRunning();
+    return Cutscene_IsRunning(); // rouz edit (ChatGPT)
 }
 float PointLights_BackendFogginess(void)
 {

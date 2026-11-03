@@ -5,6 +5,7 @@
 #include <csignal>
 #define WITHWINDOWS
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #if defined DETECT_JOYSTICK_MENU && defined XINPUT
 #include <xinput.h>
 #if !defined(PSAPI_VERSION) || (PSAPI_VERSION > 1)
@@ -385,7 +386,7 @@ void LoadINIControllerSettings()
 		char value[128];
 		if (ReadIniIfExists("Bindings", iniControllerActions[i], value, 128)) {
 			for (int32 j = 0; j < MAX_CONTROLLERTYPES; j++){
-				ControlsManager.ClearSettingsAssociatedWithAction((e_ControllerAction)i, (eControllerType)j);
+				Input_ClearSettingsAssociatedWithAction(ControlsManager.m_aSettings, (e_ControllerAction)i, (eControllerType)j); // rouz edit (ChatGPT)
 			}
 
 			for (char *binding = strtok(value,", "); binding != nil; binding = strtok(nil, ", ")) {
@@ -428,7 +429,7 @@ void LoadINIControllerSettings()
 					}
 				}
 
-				ControlsManager.SetControllerKeyAssociatedWithAction((e_ControllerAction)i, contKey, (eControllerType)contType);
+				Input_SetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, (e_ControllerAction)i, contKey, (eControllerType)contType); // rouz edit (ChatGPT)
 			}
 		}
 	}
@@ -590,9 +591,9 @@ bool LoadINISettings()
 
 	// Fetched in above block, but needs evaluation
 #ifdef PED_CAR_DENSITY_SLIDERS
-	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * IniFile_PedNumberMultiplier;
-	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * IniFile_PedNumberMultiplier;
-	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * IniFile_CarNumberMultiplier;
+	PopulationLimits_MaxPeds = DEFAULT_MAX_NUMBER_OF_PEDS * IniFile_PedNumberMultiplier; // rouz edit (ChatGPT)
+	PopulationLimits_MaxInteriorPeds = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * IniFile_PedNumberMultiplier; // rouz edit (ChatGPT)
+	PopulationLimits_MaxCars = DEFAULT_MAX_NUMBER_OF_CARS * IniFile_CarNumberMultiplier; // rouz edit (ChatGPT)
 #endif
 
 	return true;
@@ -728,12 +729,12 @@ void
 SpawnCar(int id)
 {
 	CVector playerpos;
-	CStreaming::RequestModel(id, 0);
+	Streaming_RequestModel(id, 0); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
-	if(CStreaming::HasModelLoaded(id)){
+	if(Streaming_HasModelLoaded(id)){ // rouz edit (ChatGPT)
 		playerpos = FindPlayerCoors();
 		int node;
-		if(!CModelInfo::IsBoatModel(id)){
+		if(!ModelRegistry_IsBoatModel(id)){ // rouz edit (ChatGPT)
 			node = ThePaths.FindNodeClosestToCoors(playerpos, 0, 100.0f, false, false);
 			if(node < 0)
 				return;
@@ -741,7 +742,7 @@ SpawnCar(int id)
 
 		CVehicle *v;
 //+ rouz edit (ChatGPT)
-		if(CModelInfo::IsBoatModel(id)) {
+		if(ModelRegistry_IsBoatModel(id)) { // rouz edit (ChatGPT)
 			// Allocate the debug-spawned boat without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -749,7 +750,7 @@ SpawnCar(int id)
 			//- rouz edit (ChatGPT)
 			assert(v);
 			std::allocator<CBoat>().construct((CBoat*)v, id, RANDOM_VEHICLE);
-		} else if(CModelInfo::IsBikeModel(id)) {
+		} else if(ModelRegistry_IsBikeModel(id)) { // rouz edit (ChatGPT)
 			// Allocate the debug-spawned bike without invoking C++ new.
 			//+ rouz edit (ChatGPT)
 			// Access raw storage through the C store or pool API
@@ -774,7 +775,7 @@ SpawnCar(int id)
 		if(carCol2)
 			DebugMenuEntrySetAddress(carCol2, &v->m_currentColour2);
 
-		if(CModelInfo::IsBoatModel(id))
+		if(ModelRegistry_IsBoatModel(id)) // rouz edit (ChatGPT)
 			v->SetPosition(TheCamera.GetPosition() + TheCamera.GetForward()*15.0f);
 		else
 			v->SetPosition(ThePaths.m_pathNodes[node].GetPosition());
@@ -1148,7 +1149,7 @@ extern bool gbRenderWorld2;
 #endif
 #endif
 
-		DebugMenuAddVarBool8("Debug", "pad 1 -> pad 2", &CPad::m_bMapPadOneToPadTwo, nil);
+		DebugMenuAddVarBool8("Debug", "pad 1 -> pad 2", &Input_mapPadOneToPadTwo, nil); // rouz edit (ChatGPT)
 #ifdef GTA_SCENE_EDIT
 		DebugMenuAddVarBool8("Debug", "Edit on", &CSceneEdit::m_bEditOn, nil);
 #endif

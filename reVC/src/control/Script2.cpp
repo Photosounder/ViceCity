@@ -1225,7 +1225,7 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 			pPed->bRenderPedInCar = false;
 		pPed->SetPosition(pVehicle->GetPosition());
 		pPed->SetOrientation(0.0f, 0.0f, 0.0f);
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 		CWorld::Add(pPed);
 		if (ScriptParams[3] >= 0)
 			pVehicle->AddPassenger(pPed, ScriptParams[3]);

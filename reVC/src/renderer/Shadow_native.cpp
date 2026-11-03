@@ -12,11 +12,6 @@ void Shadow_HostTextureRaster(void *texture,void *raster)
     // Forward one original SDK operation with its actual typed objects
     RwTextureSetRaster((RwTexture*)texture,(RwRaster*)raster);
 }
-void Shadow_HostTextureDestroy(void *texture)
-{
-    // Forward one original SDK operation with its actual typed objects
-    RwTextureDestroy((RwTexture*)texture);
-}
 void Shadow_HostTextureAddress(void *texture,int32_t mode)
 {
     // Forward one original SDK operation with its actual typed objects

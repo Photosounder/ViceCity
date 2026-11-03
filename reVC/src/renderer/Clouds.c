@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "Clouds_backend.h"
+#include "Timecycle.h"
 #include "Clock.h"
 #include "Timer.h"
 #include "General.h"
@@ -62,11 +64,11 @@ Clouds_Init(void)
     // Preserve the complete original effect operation and live state-write order
 	Clouds_BackendPushTxd();
 	Clouds_BackendSetTxd(Clouds_BackendFindTxd("particle"));
-	gpCloudTex[0] = Clouds_BackendReadTexture("cloud1", NULL);
-	gpCloudTex[1] = Clouds_BackendReadTexture("cloud2", NULL);
-	gpCloudTex[2] = Clouds_BackendReadTexture("cloud3", NULL);
-	gpCloudTex[3] = Clouds_BackendReadTexture("cloudhilit", NULL);
-	gpCloudTex[4] = Clouds_BackendReadTexture("cloudmasked", NULL);
+	gpCloudTex[0] = RwHelper_ReadTexture("cloud1", NULL);
+	gpCloudTex[1] = RwHelper_ReadTexture("cloud2", NULL);
+	gpCloudTex[2] = RwHelper_ReadTexture("cloud3", NULL);
+	gpCloudTex[3] = RwHelper_ReadTexture("cloudhilit", NULL);
+	gpCloudTex[4] = RwHelper_ReadTexture("cloudmasked", NULL);
 	Clouds_BackendPopTxd();
 	Clouds_CloudRotation = 0.0f;
 }
@@ -75,15 +77,15 @@ void
 Clouds_Shutdown(void)
 {
     // Preserve the complete original effect operation and live state-write order
-	Clouds_BackendDestroyTexture(gpCloudTex[0]);
+	RwHelper_DestroyTexture(gpCloudTex[0]);
 	gpCloudTex[0] = NULL;
-	Clouds_BackendDestroyTexture(gpCloudTex[1]);
+	RwHelper_DestroyTexture(gpCloudTex[1]);
 	gpCloudTex[1] = NULL;
-	Clouds_BackendDestroyTexture(gpCloudTex[2]);
+	RwHelper_DestroyTexture(gpCloudTex[2]);
 	gpCloudTex[2] = NULL;
-	Clouds_BackendDestroyTexture(gpCloudTex[3]);
+	RwHelper_DestroyTexture(gpCloudTex[3]);
 	gpCloudTex[3] = NULL;
-	Clouds_BackendDestroyTexture(gpCloudTex[4]);
+	RwHelper_DestroyTexture(gpCloudTex[4]);
 	gpCloudTex[4] = NULL;
 }
 
@@ -173,7 +175,7 @@ Clouds_Render(void)
 		(worldpos=Clouds_Add(campos,pos));
 		if(Clouds_BackendProject(worldpos, &screenpos, &szx, &szy, false)){
 			// Preserve original conditions, arithmetic and owner call ordering
-			Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(2)));
+			RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(2)));
 			szx *= Clouds_BackendMoonSize()*2.0f + 4.0f;
 			szy *= Clouds_BackendMoonSize()*2.0f + 4.0f;
 			Clouds_BackendRenderOneXLUSprite(screenpos.x, screenpos.y, screenpos.z,
@@ -197,7 +199,7 @@ Clouds_Render(void)
 		int brightness = (1.0f - coverage) * starintens;
 
 		// R
-		Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(0)));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(0)));
 		for(i = 0; i < 11; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			CloudsVector pos = { 100.0f, 0.0f, 10.0f };
@@ -215,7 +217,7 @@ Clouds_Render(void)
 		Clouds_BackendFlushSprites();
 
 		// *
-		Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(0)));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(0)));
 		CloudsVector pos = { 100.0f, 0.0f, 10.0f };
 		(worldpos=Clouds_Add(campos,pos));
 		worldpos.y -= 90.0f;
@@ -229,14 +231,14 @@ Clouds_Render(void)
 
 	// Low clouds
 	float lowcloudintensity = 1.0f - Clouds_Max(Clouds_Max(Clouds_BackendFoggyness(), Clouds_BackendCloudCoverage()), Clouds_BackendExtraSunnyness());
-	int r = Clouds_BackendLowCloudsRed() * lowcloudintensity;
-	int g = Clouds_BackendLowCloudsGreen() * lowcloudintensity;
-	int b = Clouds_BackendLowCloudsBlue() * lowcloudintensity;
+	int r = TimeCycle_GetLowCloudsRed() * lowcloudintensity;
+	int g = TimeCycle_GetLowCloudsGreen() * lowcloudintensity;
+	int b = TimeCycle_GetLowCloudsBlue() * lowcloudintensity;
 	for(int cloudtype = 0; cloudtype < 3; cloudtype++){
 		// Preserve original conditions, arithmetic and owner call ordering
 		for(i = cloudtype; i < 12; i += 3){
 			// Preserve original conditions, arithmetic and owner call ordering
-			Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[cloudtype]));
+			RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[cloudtype]));
 			CloudsVector pos = { 800.0f*LowCloudsX[i], 800.0f*LowCloudsY[i], 60.0f*LowCloudsZ[i] };
 			worldpos.x = campos.x + pos.x;
 			worldpos.y = campos.y + pos.y;
@@ -259,7 +261,7 @@ Clouds_Render(void)
 
 		Clouds_BackendSrcBlend(false);
 		Clouds_BackendDestBlend(false);
-		Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[4]));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[4]));
 		for(i = 0; i < 37; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			CloudsVector pos = { 2.0f*CoorsOffsetX[i], 2.0f*CoorsOffsetY[i], 40.0f*CoorsOffsetZ[i] + 40.0f };
@@ -270,12 +272,12 @@ Clouds_Render(void)
 			if(Clouds_BackendProject(worldpos, &screenpos, &szx, &szy, false)){
 				// Preserve original conditions, arithmetic and owner call ordering
 				sundist = sqrtf(Clouds_Square(screenpos.x-Clouds_BackendSunX()) + Clouds_Square(screenpos.y-Clouds_BackendSunY()));
-				int tr = Clouds_BackendFluffyCloudsTopRed();
-				int tg = Clouds_BackendFluffyCloudsTopGreen();
-				int tb = Clouds_BackendFluffyCloudsTopBlue();
-				int br = Clouds_BackendFluffyCloudsBottomRed();
-				int bg = Clouds_BackendFluffyCloudsBottomGreen();
-				int bb = Clouds_BackendFluffyCloudsBottomBlue();
+				int tr = TimeCycle_GetFluffyCloudsTopRed();
+				int tg = TimeCycle_GetFluffyCloudsTopGreen();
+				int tb = TimeCycle_GetFluffyCloudsTopBlue();
+				int br = TimeCycle_GetFluffyCloudsBottomRed();
+				int bg = TimeCycle_GetFluffyCloudsBottomGreen();
+				int bb = TimeCycle_GetFluffyCloudsBottomBlue();
 				int distLimit = (3*Clouds_BackendScreenWidth())/4;
 				if(sundist < distLimit){
 					// Preserve original conditions, arithmetic and owner call ordering
@@ -305,7 +307,7 @@ Clouds_Render(void)
 		// Highlights
 		Clouds_BackendSrcBlend(true);
 		Clouds_BackendDestBlend(true);
-		Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[3]));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[3]));
 
 		for(i = 0; i < 37; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
@@ -330,7 +332,7 @@ Clouds_Render(void)
 	// Rainbow
 	if(Clouds_BackendRainbow() != 0.0f){
 		// Preserve original conditions, arithmetic and owner call ordering
-		Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(0)));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(0)));
 		for(i = 0; i < 6; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			CloudsVector pos = { i*1.5f, 100.0f, 5.0f };
@@ -446,7 +448,7 @@ Clouds_RenderForEnvMap(void *camera)
 			float depth = Clouds_Dot(Clouds_Subtract(moonPosition,cameraPos), cameraForward);
 			if(depth > nearClip && depth < farClip){
 				// Preserve original conditions, arithmetic and owner call ordering
-				Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(2)));
+				RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(2)));
 				CloudsColor moonColor=Clouds_Color(brightness, brightness, brightness, 255);
 				float moonSize = Clouds_BackendMoonSize()*2.0f + 4.0f;
 				StoreEnvMapCloudQuad(&moonPosition,&cameraRight,&cameraUp, moonSize, moonSize, 0.0f,&moonColor,&moonColor);
@@ -467,7 +469,7 @@ Clouds_RenderForEnvMap(void *camera)
 	starIntensity *= 1.0f-Clouds_Max(Clouds_BackendFoggyness(), Clouds_BackendCloudCoverage());
 	if(starIntensity > 0 && Clouds_BackendCoronaTexture(0)){
 		// Preserve original conditions, arithmetic and owner call ordering
-		Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(0)));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(0)));
 		for(int i = 0; i < 11; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			int star = i%9;
@@ -502,14 +504,14 @@ Clouds_RenderForEnvMap(void *camera)
 	float lowCloudIntensity = 1.0f-Clouds_Max(Clouds_Max(Clouds_BackendFoggyness(), Clouds_BackendCloudCoverage()), Clouds_BackendExtraSunnyness());
 	if(lowCloudIntensity > 0.0f){
 		// Preserve original conditions, arithmetic and owner call ordering
-		int red = Clouds_BackendLowCloudsRed()*lowCloudIntensity;
-		int green = Clouds_BackendLowCloudsGreen()*lowCloudIntensity;
-		int blue = Clouds_BackendLowCloudsBlue()*lowCloudIntensity;
+		int red = TimeCycle_GetLowCloudsRed()*lowCloudIntensity;
+		int green = TimeCycle_GetLowCloudsGreen()*lowCloudIntensity;
+		int blue = TimeCycle_GetLowCloudsBlue()*lowCloudIntensity;
 		for(int cloudType = 0; cloudType < 3; cloudType++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			if(gpCloudTex[cloudType] == NULL)
 				continue;
-			Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[cloudType]));
+			RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[cloudType]));
 			for(int i = cloudType; i < 12; i += 3){
 				// Preserve original conditions, arithmetic and owner call ordering
 				CloudsVector cloudPosition={cameraPos.x + 800.0f*LowCloudsX[i],
@@ -531,14 +533,14 @@ Clouds_RenderForEnvMap(void *camera)
 		// Preserve original conditions, arithmetic and owner call ordering
 		Clouds_BackendSrcBlend(false);
 		Clouds_BackendDestBlend(false);
-		Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[4]));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[4]));
 		float rotationSine = sinf(Clouds_CloudRotation);
 		float rotationCosine = cosf(Clouds_CloudRotation);
 		float spriteRotation = (uint16_t)Clouds_IndividualRotation/65336.0f*TWOPI;
-		CloudsColor cloudTop=Clouds_Color(Clouds_BackendFluffyCloudsTopRed(), Clouds_BackendFluffyCloudsTopGreen(),
-			Clouds_BackendFluffyCloudsTopBlue(), fluffyAlpha);
-		CloudsColor cloudBottom=Clouds_Color(Clouds_BackendFluffyCloudsBottomRed(), Clouds_BackendFluffyCloudsBottomGreen(),
-			Clouds_BackendFluffyCloudsBottomBlue(), fluffyAlpha);
+		CloudsColor cloudTop=Clouds_Color(TimeCycle_GetFluffyCloudsTopRed(), TimeCycle_GetFluffyCloudsTopGreen(),
+			TimeCycle_GetFluffyCloudsTopBlue(), fluffyAlpha);
+		CloudsColor cloudBottom=Clouds_Color(TimeCycle_GetFluffyCloudsBottomRed(), TimeCycle_GetFluffyCloudsBottomGreen(),
+			TimeCycle_GetFluffyCloudsBottomBlue(), fluffyAlpha);
 		for(int i = 0; i < 37; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			float x = 2.0f*CoorsOffsetX[i];
@@ -564,7 +566,7 @@ Clouds_RenderForEnvMap(void *camera)
 		// Preserve original conditions, arithmetic and owner call ordering
 		Clouds_BackendSrcBlend(true);
 		Clouds_BackendDestBlend(true);
-		Clouds_BackendSetRaster( Clouds_BackendRaster(gpCloudTex[3]));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpCloudTex[3]));
 		float sunScreenX = Clouds_Dot(sunDirection, cameraRight)/sunDepth;
 		float sunScreenY = Clouds_Dot(sunDirection, cameraUp)/sunDepth;
 		float highlightLimit = 0.55f;
@@ -605,7 +607,7 @@ Clouds_RenderForEnvMap(void *camera)
 		// Preserve original conditions, arithmetic and owner call ordering
 		Clouds_BackendSrcBlend(true);
 		Clouds_BackendDestBlend(true);
-		Clouds_BackendSetRaster( Clouds_BackendRaster(Clouds_BackendCoronaTexture(0)));
+		RwHelper_SetTextureRaster( RwHelper_TextureRaster(Clouds_BackendCoronaTexture(0)));
 		for(int i = 0; i < 6; i++){
 			// Preserve original conditions, arithmetic and owner call ordering
 			CloudsVector rainbowPosition = Clouds_Add(Clouds_Add(Clouds_Add(cameraPos,Clouds_Scale(cameraForward,190.0f)),Clouds_Scale(cameraUp,35.0f)),Clouds_Scale(cameraRight,i*1.5f-3.75f));
@@ -625,7 +627,7 @@ Clouds_RenderForEnvMap(void *camera)
 	Clouds_BackendFog(false);
 	Clouds_BackendSrcBlend(false);
 	Clouds_BackendDestBlend(false);
-	Clouds_BackendSetRaster( NULL);
+	RwHelper_SetTextureRaster( NULL);
 	Clouds_BackendCull(false);
 	Clouds_BackendPop();
 }
@@ -972,9 +974,9 @@ Clouds_RenderHorizon(void)
 	// rouz edit (ChatGPT)
 	DrawHorizonBand(Clouds_ms_horizonZ, 0.0f, SMALLSTRIPHEIGHT, CLOUDS_COLOR_TOP, CLOUDS_COLOR_BOTTOM);
 
-	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).r) = 128.0f*Clouds_BackendAmbientRed();
-	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).g) = 128.0f*Clouds_BackendAmbientGreen();
-	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).b) = 128.0f*Clouds_BackendAmbientBlue();
+	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).r) = 128.0f*TimeCycle_GetAmbientRed();
+	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).g) = 128.0f*TimeCycle_GetAmbientGreen();
+	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).b) = 128.0f*TimeCycle_GetAmbientBlue();
 	(*Clouds_BackendColorFields(CLOUDS_COLOR_BACKGROUND).a) = 255;
 
 	float horzstrip = SCREEN_STRETCH_Y(HORIZSTRIPHEIGHT);

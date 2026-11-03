@@ -4,10 +4,11 @@ canonical C-owned Pager_state. The CPager methods and CUserDisplay::Pager static
 member are removed. All five consumers use the C instance/API. The queue continues
 to borrow the original writable UTF-16 source pointers, including interior aliases.
 
-PagerQueue.c contains each complete original algorithm. Pager.cpp contains eight
-typed native boundaries: four lazy camera/HUD/message-channel reads, native UTF-16
-length/number expansion, previous-brief history insertion and the synchronous HUD
-message copy. Timing uses the existing C Timer API directly. All queue decisions,
+PagerQueue.c contains each complete original algorithm. Pager.cpp contains five
+typed native boundaries: four lazy camera/HUD/message-channel reads and the
+synchronous HUD message copy. The pager uses the C message API directly for
+UTF-16 length, number expansion and previous-brief insertion, and uses the C
+Timer API directly. All queue decisions,
 priority scans, record shifts, local buffers, scroll slicing and field writes are
 in C. The unique C source basename avoids object collisions. Visual Studio
 registers the source as C11, and existing CMake/Premake globs include it.

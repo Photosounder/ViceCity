@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "AudioManager.h"
 #include "AudioScriptObject.h"
 #include "Pools.h"
@@ -9,7 +10,7 @@ AudioEffects_Service(cAudioManager *manager)
 {
 	// Preserve the original service order and live owner state reads
 #ifdef FIX_BUGS
-	if(AudioPoliceHost_LogicalFramesPassed() != 0)
+	if(Timer_GetLogicalFramesPassed() != 0)
 #endif
 	manager->m_bReduceReleasingPriority = (manager->m_FrameCounter++ % 5) == 0;
 	if (manager->m_bIsPaused && !manager->m_bWasPaused) {

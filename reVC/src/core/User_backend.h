@@ -16,9 +16,7 @@ CVehicle *UserDisplay_BackendVehicle(void);
 CVehicle *UserDisplay_BackendShortCutTaxi(void);
 int16_t UserDisplay_BackendModelIndex(const CVehicle *vehicle);
 char *UserDisplay_BackendGameName(int16_t model);
-uint16_t *UserDisplay_BackendText(const char *name);
 void UserDisplay_BackendSetVehicleName(uint16_t *name);
-bool UserDisplay_BackendPlayingBack(void);
 #ifdef __cplusplus
 }
 #endif

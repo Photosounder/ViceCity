@@ -20,11 +20,6 @@ bool Messages_BackendJapanese(void)
     return false;
 #endif
 }
-void Messages_BackendAsciiToUnicode(const char *source,uint16_t *output)
-{
-    // Convert the original bounded numeric temporary with the native UTF-16 primitive
-    AsciiToUnicode(source,output);
-}
 MessagesActionNames *Messages_BackendActionNames(void)
 {
     // Borrow the full actual mutable action-name array without assuming a controller layout

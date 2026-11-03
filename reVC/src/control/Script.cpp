@@ -5,6 +5,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Script.h"
 #include "ScriptCommands.h"
@@ -398,8 +399,8 @@ void CMissionCleanup::CheckIfCollisionHasLoadedForMissionObjects()
 
 void CMissionCleanup::Process()
 {
-	CPopulation::m_AllRandomPedsThisType = -1;
-	CPopulation::PedDensityMultiplier = 1.0f;
+	Population_allRandomPedsType = -1; // rouz edit (ChatGPT)
+	Population_pedDensityMultiplier = 1.0f; // rouz edit (ChatGPT)
 	CCarCtrl::CarDensityMultiplier = 1.0f;
 	CPed::nThreatReactionRangeMultiplier = 1;
 	CPed::nEnterCarRangeMultiplier = 1;
@@ -416,9 +417,9 @@ void CMissionCleanup::Process()
 		DMAudio_ClearMissionAudio(i);
 	Weather_ReleaseWeather();
 	for (int i = 0; i < NUM_OF_SPECIAL_CHARS; i++)
-		CStreaming::SetMissionDoesntRequireSpecialChar(i);
+		Streaming_SetMissionDoesntRequireSpecialChar(i); // rouz edit (ChatGPT)
 	for (int i = 0; i < NUM_OF_CUTSCENE_OBJECTS; i++)
-		CStreaming::SetMissionDoesntRequireModel(MI_CUTOBJ01 + i);
+		Streaming_SetMissionDoesntRequireModel(MI_CUTOBJ01 + i); // rouz edit (ChatGPT)
 	CStreaming::ms_disableStreaming = false;
 	CHud::m_ItemToFlash = -1;
 	CHud::SetHelpMessage(nil, false);
@@ -784,9 +785,9 @@ void CTheScripts::Init()
 #ifdef USE_DEBUG_SCRIPT_LOADER
 	// glfwGetKey doesn't work because of CGame::Initialise is blocking
 	CPad::UpdatePads();
-	if(CPad::GetPad(0)->GetChar('G')) ScriptToLoad = 0;
-	if(CPad::GetPad(0)->GetChar('R')) ScriptToLoad = 1;
-	if(CPad::GetPad(0)->GetChar('D')) ScriptToLoad = 2;
+	if(Input_GetChar('G')) ScriptToLoad = 0; // rouz edit (ChatGPT)
+	if(Input_GetChar('R')) ScriptToLoad = 1; // rouz edit (ChatGPT)
+	if(Input_GetChar('D')) ScriptToLoad = 2; // rouz edit (ChatGPT)
 
 	int mainf = OpenScript();
 #else
@@ -908,7 +909,7 @@ CRunningScript* CTheScripts::StartNewScript(uint32 ip)
 
 void CTheScripts::Process()
 {
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 	CommandsExecuted = 0;
 	ScriptsUpdated = 0;
@@ -1651,7 +1652,7 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		int32 index = ScriptParams[0];
 		script_assert(index < NUMPLAYERS);
 		printf("&&&&&&&&&&&&&Creating player: %d\n", index);
-		if (!CStreaming::HasModelLoaded(MI_PLAYER)) {
+		if (!Streaming_HasModelLoaded(MI_PLAYER)) { // rouz edit (ChatGPT)
 			CStreaming::RequestSpecialModel(MI_PLAYER, "player", STREAMFLAGS_DONT_REMOVE | STREAMFLAGS_DEPENDENCY);
 			CStreaming::LoadAllRequestedModels(false);
 		}
@@ -2192,7 +2193,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 			ped->bIsStaticWaitingForCollision = true;
 		CWorld::Add(ped);
 		ped->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), ped);
 				StoreParameters(&m_nIp, 1);
@@ -2384,7 +2385,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	{
 		CollectParameters(&m_nIp, 4);
 		int32 handle;
-		if (CModelInfo::IsBoatModel(ScriptParams[0])) {
+		if (ModelRegistry_IsBoatModel(ScriptParams[0])) { // rouz edit (ChatGPT)
 			// Allocate the scripted boat without invoking C++ new.
 						// Access raw storage through the C store or pool API
 			CBoat* boat = (CBoat*)((CVehicle*)CPool_New(CPools::GetVehiclePool()));
@@ -2410,7 +2411,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		else {
 			CVehicle* car;
 
-			if (!CModelInfo::IsBikeModel(ScriptParams[0])) {
+			if (!ModelRegistry_IsBikeModel(ScriptParams[0])) { // rouz edit (ChatGPT)
 				// Allocate the scripted car without invoking C++ new.
 								// Access raw storage through the C store or pool API
 				car = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
@@ -3057,7 +3058,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		pObj->SetOrientation(0.0f, 0.0f, 0.0f);
 		pObj->GetMatrix().UpdateRW();
 		pObj->UpdateRwFrame();
-		CBaseModelInfo* pModelInfo = CModelInfo::GetModelInfo(mi);
+		CBaseModelInfo* pModelInfo = ((CBaseModelInfo*)ModelRegistry_Get(mi)); // rouz edit (ChatGPT)
 		if (pModelInfo->IsBuilding() && ((CSimpleModelInfo*)pModelInfo)->m_isBigBuilding)
 			pObj->SetupBigBuilding();
 		CTheScripts::ClearSpaceForMissionEntity(pos, pObj);
@@ -3226,7 +3227,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 	}
 #ifdef SUPPORT_GINPUT_SCRIPT
 	case COMMAND_HAS_PAD_IN_HANDS:
-		UpdateCompareFlag(CPad::GetPad(0)->IsAffectedByController);
+		UpdateCompareFlag(Input_affectedByController); // rouz edit (ChatGPT)
 		return 0;
 #else
 	//case COMMAND_ORDER_CHAR_TO_BACKDOOR:
@@ -3308,7 +3309,7 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 		pPed->SetPosition(pVehicle->GetPosition());
 		pPed->SetOrientation(0.0f, 0.0f, 0.0f);
 		pPed->SetPedState(PED_DRIVING);
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 		script_assert(!pVehicle->pDriver);
 		pVehicle->pDriver = pPed;
 		pVehicle->pDriver->RegisterReference((CEntity**)&pVehicle->pDriver);

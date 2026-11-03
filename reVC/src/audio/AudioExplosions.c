@@ -3,7 +3,7 @@
 #include "AudioSamples.h"
 #include "AudioGeometry.h"
 #include "sampman.h"
-#include "../weapons/ExplosionTypes.h"
+#include "../weapons/Explosion_access.h"
 #include <math.h>
 
 enum {
@@ -47,10 +47,10 @@ AudioExplosions_Process(cAudioManager *manager, int32_t id)
 	float distSquared;
 
 	for (uint8_t i = 0; i < NUM_EXPLOSIONS; i++) {
-		if (AudioExplosionsHost_MakesSound(i) && AudioExplosionsHost_ActiveCounter(i) == 1) {
-			AudioExplosionsHost_ResetCounter(i);
+		if (Explosion_DoesExplosionMakeSound(i) && Explosion_GetExplosionActiveCounter(i) == 1) {
+			Explosion_ResetExplosionActiveCounter(i);
 			// Select the original sample, frequency and reflection settings for this type
-			type = AudioExplosionsHost_Type(i);
+			type = Explosion_GetExplosionType(i);
 			switch (type) {
 			case EXPLOSION_GRENADE:
 			case EXPLOSION_ROCKET:
@@ -93,8 +93,11 @@ AudioExplosions_Process(cAudioManager *manager, int32_t id)
 #endif
 				break;
 			}
-			// Copy the game position into the C sound record
-			AudioExplosionsHost_Position(i, &manager->m_sQueueSample.m_vecPos);
+			// Copy the live explosion position into the C sound record
+			ExplosionPosition position=Explosion_GetExplosionPosition(i);
+			manager->m_sQueueSample.m_vecPos.x=position.x;
+			manager->m_sQueueSample.m_vecPos.y=position.y;
+			manager->m_sQueueSample.m_vecPos.z=position.z;
 			distSquared = AudioGeometry_DistanceSquared(&manager->m_sQueueSample.m_vecPos);
 			// Submit only an audible sound inside the original strict distance boundary
 			if (distSquared < (manager->m_sQueueSample.m_MaxDistance * manager->m_sQueueSample.m_MaxDistance)) {

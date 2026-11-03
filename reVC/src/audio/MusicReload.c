@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "MusicSavedData.h"
 
@@ -58,7 +59,7 @@ MusicReload_ResetMusicAfterReload(cMusicManager *manager)
 				trackPos %= manager->m_aTracks[i].m_nLength;
 			}
 			manager->m_aTracks[i].m_nPosition = trackPos;
-			manager->m_aTracks[i].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+			manager->m_aTracks[i].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 		}
 	}
 }

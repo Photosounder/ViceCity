@@ -96,19 +96,7 @@ cAudioManager::~cAudioManager()
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #ifdef AUDIO_REFLECTIONS
-uint8_t
-AudioRequestsHost_InRoom(void)
-{
-    // Read the existing camera room flag at the original sound eligibility check
-    return CullZones_InRoomForAudio();
-}
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-uint8_t
-AudioRequestsHost_SlowMotion(void)
-{
-    // Read slow motion at each original reflection frequency and delay decision
-    return Timer_GetIsSlowMotionActive();
-}
 #endif
 #endif
 //- rouz edit (ChatGPT)
@@ -157,12 +145,6 @@ AudioServiceHost_ResetMusicTimers(uint32_t time)
     MusicState_ResetTimers(&MusicManager, time);
 }
 
-uint8_t
-AudioServiceHost_UserPaused(void)
-{
-    // Query the existing user pause flag after retaining the previous pause state
-    return Timer_GetIsUserPaused();
-}
 
 
 //- rouz edit (ChatGPT)

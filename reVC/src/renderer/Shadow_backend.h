@@ -12,7 +12,6 @@ extern "C" {
 void re3_assert(const char*,const char*,unsigned int,const char*);
 void * Shadow_HostTextureCreate(void *raster);
 void Shadow_HostTextureRaster(void *texture,void *raster);
-void Shadow_HostTextureDestroy(void *texture);
 void Shadow_HostTextureAddress(void *texture,int32_t mode);
 void Shadow_HostTextureFilter(void *texture,int32_t mode);
 void Shadow_HostProjection(void *camera,int32_t mode);

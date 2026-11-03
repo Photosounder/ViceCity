@@ -11,10 +11,4 @@ ZonesHost_Player(void)
     return ZonesPosition_FromVector(FindPlayerCoors());
 }
 
-extern "C" uint16_t *
-ZonesHost_Text(const char *name)
-{
-    // Look up the original eight-byte zone label through the existing text owner
-    return Text_Get(&TheText,name);
-}
 //- rouz edit (ChatGPT)

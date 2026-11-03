@@ -7,6 +7,7 @@
 #include "2dEffect.h"
 #include "BaseModelInfo.h"
 #include "ModelInfo.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "ColModel.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 
@@ -27,8 +28,8 @@ CBaseModelInfo::Shutdown(void)
 {
 	DeleteCollisionModel();
 	DeleteRwObject();
-	m_2dEffectsID = -1;
-	m_num2dEffects = 0;
+	// Reset the model effect range through the C policy
+	ModelRegistry_ResetEffects(this);
 	m_txdSlot = -1;
 	m_objectId = -1;
 }
@@ -92,37 +93,17 @@ CBaseModelInfo::RemoveTexDictionaryRef(void)
 	TxdStore_RemoveRef(m_txdSlot);
 }
 
-void
-CBaseModelInfo::Init2dEffects(void)
+int16_t *ModelRegistry_EffectId(void *model)
 {
-	m_2dEffectsID = -1;
-	m_num2dEffects = 0;
+    // Borrow the original model effect identifier
+    return &((CBaseModelInfo*)model)->m_2dEffectsID;
 }
 
-void
-CBaseModelInfo::Add2dEffect(C2dEffect *fx)
+uint8_t *ModelRegistry_EffectCount(void *model)
 {
-	if(m_2dEffectsID >= 0)
-		m_num2dEffects++;
-	else{
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		m_2dEffectsID = CStore_GetIndex(CModelInfo::Get2dEffectStore(), fx);
-		//- rouz edit (ChatGPT)
-		m_num2dEffects = 1;
-	}
+    // Borrow the original model effect count
+    return &((CBaseModelInfo*)model)->m_num2dEffects;
 }
 
-C2dEffect*
-CBaseModelInfo::Get2dEffect(int n)
-{
-	if(m_2dEffectsID >= 0)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		return (C2dEffect*)CStore_GetItem(CModelInfo::Get2dEffectStore(), m_2dEffectsID+n);
-		//- rouz edit (ChatGPT)
-	else
-		return nil;
-}
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

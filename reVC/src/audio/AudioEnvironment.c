@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "AudioManager.h"
 #include "sampman.h"
 
@@ -41,7 +42,7 @@ AudioEnvironment_Special(cAudioManager *manager)
 			SampleManager_SetMusicFadeVolume(&SampleManager, MAX_VOLUME);
 		}
 	} else {
-		if (!AudioEnvironmentHost_Replay())
+		if (!Replay_IsPlayingBack())
 			AudioPedSpeech_Mood(manager);
 		remoteVehicle = AudioEnvironmentHost_Remote();
 		playerPed = AudioPoliceHost_FindPlayer();

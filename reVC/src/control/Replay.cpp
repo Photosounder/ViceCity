@@ -4,6 +4,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "CollisionVector_native.h"
 #ifdef GTA_REPLAY
@@ -60,7 +61,6 @@
 #include "Fluff.h"
 #include "WaterCreatures.h"
 
-uint8 CReplay::Mode;
 CAddressInReplayBuffer CReplay::Record;
 CAddressInReplayBuffer CReplay::Playback;
 CPoolSnapshot CReplay::VehiclePoolSnapshot;
@@ -78,10 +78,8 @@ uint8 *CReplay::pPickups;
 uint8 *CReplay::pReferences;
 uint8 CReplay::BufferStatus[NUM_REPLAYBUFFERS];
 uint8 CReplay::Buffers[NUM_REPLAYBUFFERS][REPLAYBUFFERSIZE];
-bool CReplay::bPlayingBackFromFile;
 bool CReplay::bReplayEnabled = true;
 uint32 CReplay::SlowMotion;
-uint32 CReplay::FramesActiveLookAroundCam;
 bool CReplay::bDoLoadSceneWhenDone;
 CPtrNode* CReplay::WorldPtrList;
 CPtrNode* CReplay::BigBuildingPtrList;
@@ -105,17 +103,12 @@ float CReplay::CameraFixedY;
 float CReplay::CameraFixedZ;
 int32 CReplay::OldRadioStation;
 int8 CReplay::CameraMode;
-bool CReplay::bAllowLookAroundCam;
 float CReplay::LoadSceneX;
 float CReplay::LoadSceneY;
 float CReplay::LoadSceneZ;
 float CReplay::CameraFocusX;
 float CReplay::CameraFocusY;
 float CReplay::CameraFocusZ;
-bool CReplay::bPlayerInRCBuggy;
-float CReplay::fDistanceLookAroundCam;
-float CReplay::fBetaAngleLookAroundCam;
-float CReplay::fAlphaAngleLookAroundCam;
 int CReplay::ms_nNumCivMale_Stored;
 int CReplay::ms_nNumCivFemale_Stored;
 int CReplay::ms_nNumCop_Stored;
@@ -231,7 +224,7 @@ void CReplay::Init(void)
 	pPedAnims = nil;
 	pPickups = nil;
 	pReferences = nil;
-	Mode = MODE_RECORD;
+	Replay_mode = MODE_RECORD; // rouz edit (ChatGPT)
 	Playback.m_nOffset = 0;
 	Playback.m_pBase = nil;
 	Playback.m_bSlot = 0;
@@ -244,10 +237,10 @@ void CReplay::Init(void)
 	Record.m_pBase = Buffers[0];
 	BufferStatus[0] = REPLAYBUFFER_RECORD;
 	Buffers[0][Record.m_nOffset] = REPLAYPACKET_END;
-	bPlayingBackFromFile = false;
+	Replay_playingBackFromFile = false; // rouz edit (ChatGPT)
 	bReplayEnabled = true;
 	SlowMotion = 1;
-	FramesActiveLookAroundCam = 0;
+	Replay_framesActiveLookAroundCam = 0; // rouz edit (ChatGPT)
 	bDoLoadSceneWhenDone = false;
 	MarkEverythingAsNew();
 }
@@ -266,11 +259,11 @@ void PlayReplayFromHD(void);
 void CReplay::Update(void)
 {
 	// Enter the C scripted-path operation at the original call point
-	if (CCutsceneMgr::IsCutsceneProcessing() || CPad::GetPad(0)->ArePlayerControlsDisabled() || ScriptPaths_IsOneActive() || FrontEndMenuManager.GetIsMenuActive()) {
+	if (Cutscene_IsProcessing() || CPad::GetPad(0)->ArePlayerControlsDisabled() || ScriptPaths_IsOneActive() || FrontEndMenuManager.GetIsMenuActive()) { // rouz edit (ChatGPT)
 		Init();
 		return;
 	}
-	switch (Mode){
+	switch (Replay_mode){ // rouz edit (ChatGPT)
 	case MODE_RECORD:
 		RecordThisFrame();
 		break;
@@ -280,19 +273,19 @@ void CReplay::Update(void)
 	}
 	if (Draw_FadeValue || !bReplayEnabled)
 		return;
-	if (Mode == MODE_PLAYBACK){
-		if (CPad::GetPad(0)->GetFJustDown(0))
+	if (Replay_mode == MODE_PLAYBACK){ // rouz edit (ChatGPT)
+		if (Input_GetFJustDown(0)) // rouz edit (ChatGPT)
 			FinishPlayback();
 	}
-	else if (Mode == MODE_RECORD){
-		if (CPad::GetPad(0)->GetFJustDown(0))
+	else if (Replay_mode == MODE_RECORD){ // rouz edit (ChatGPT)
+		if (Input_GetFJustDown(0)) // rouz edit (ChatGPT)
 			TriggerPlayback(REPLAYCAMMODE_ASSTORED, 0.0f, 0.0f, 0.0f, false);
-		if (CPad::GetPad(0)->GetFJustDown(1))
+		if (Input_GetFJustDown(1)) // rouz edit (ChatGPT)
 			SaveReplayToHD();
-		if (CPad::GetPad(0)->GetFJustDown(2))
+		if (Input_GetFJustDown(2)) // rouz edit (ChatGPT)
 			PlayReplayFromHD();
 #ifdef USE_BETA_REPLAY_MODE
-		if (CPad::GetPad(0)->GetFJustDown(3))
+		if (Input_GetFJustDown(3)) // rouz edit (ChatGPT)
 			TriggerPlaybackLastCoupleOfSeconds(5000, REPLAYCAMMODE_TOPDOWN, 0.0f, 0.0f, 0.0f, 4);
 #endif
 	}
@@ -600,15 +593,15 @@ void CReplay::ProcessPedUpdate(CPed *ped, float interpolation, CAddressInReplayB
 			((CPlayerPed*)ped)->ReApplyMoveAnims();
 	}
 	ped->bIsVisible = pp->is_visible;
-	if (FramesActiveLookAroundCam && ped->m_nPedType == PEDTYPE_PLAYER1)
+	if (Replay_framesActiveLookAroundCam && ped->m_nPedType == PEDTYPE_PLAYER1) // rouz edit (ChatGPT)
 		ped->bIsVisible = true;
 	RetrievePedAnimation(ped, &pp->anim_state);
 	ped->RemoveWeaponModel(-1);
 	if (pp->weapon_model != (uint16)-1) {
-		if (CStreaming::HasModelLoaded(pp->weapon_model))
+		if (Streaming_HasModelLoaded(pp->weapon_model)) // rouz edit (ChatGPT)
 			ped->AddWeaponModel(pp->weapon_model);
 		else
-			CStreaming::RequestModel(pp->weapon_model, 0);
+			Streaming_RequestModel(pp->weapon_model, 0); // rouz edit (ChatGPT)
 	}
 	CWorld::Remove(ped);
 	CWorld::Add(ped);
@@ -757,7 +750,7 @@ void CReplay::PlaybackThisFrame(void)
 	FrameSloMo = (FrameSloMo + 1) % SlowMotion;
 	if (FrameSloMo == 0)
 		Playback = buf;
-	ProcessLookAroundCam();
+	Replay_ProcessLookAroundCam(); // rouz edit (ChatGPT)
 	DMAudio_SetEffectsFadeVol(0);
 	DMAudio_SetMusicFadeVol(0);
 }
@@ -766,13 +759,13 @@ void CReplay::PlaybackThisFrame(void)
 // most likely they were optimized out for being unused
 void CReplay::TriggerPlaybackLastCoupleOfSeconds(uint32 start, uint8 cam_mode, float cam_x, float cam_y, float cam_z, uint32 slomo)
 {
-	if (Mode != MODE_RECORD)
+	if (Replay_mode != MODE_RECORD) // rouz edit (ChatGPT)
 		return;
 	TriggerPlayback(cam_mode, cam_x, cam_y, cam_z, true);
 	SlowMotion = slomo;
-	bAllowLookAroundCam = false;
+	Replay_allowLookAroundCam = false; // rouz edit (ChatGPT)
 	if (!FastForwardToTime((*Timer_GetTimeInMilliseconds()) - start))
-		Mode = MODE_RECORD;
+		Replay_mode = MODE_RECORD; // rouz edit (ChatGPT)
 }
 
 bool CReplay::FastForwardToTime(uint32 start)
@@ -1020,8 +1013,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 						CVehicle* new_v;
 			if (!v) {
 				int mi = vp->mi;
-				if (CStreaming::ms_aInfoForModel[mi].m_loadState != 1) {
-					CStreaming::RequestModel(mi, 0);
+				if (Streaming_modelInfo[mi].m_loadState != 1) { // rouz edit (ChatGPT)
+					Streaming_RequestModel(mi, 0); // rouz edit (ChatGPT)
 				}
 				else {
 					switch (vp->vehicle_type) {
@@ -1101,8 +1094,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 						CVehicle* new_v;
 			if (!v) {
 				int mi = vp->mi;
-				if (CStreaming::ms_aInfoForModel[mi].m_loadState != 1) {
-					CStreaming::RequestModel(mi, 0);
+				if (Streaming_modelInfo[mi].m_loadState != 1) { // rouz edit (ChatGPT)
+					Streaming_RequestModel(mi, 0); // rouz edit (ChatGPT)
 				}
 				else {
 					// Allocate the replay bike in its saved slot without invoking C++ new.
@@ -1127,8 +1120,8 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			tPedHeaderPacket* ph = (tPedHeaderPacket*)&ptr[offset];
 						// Access raw storage through the C store or pool API
 			if (!((CPed*)CPool_GetSlot(CPools::GetPedPool(), ph->index))) {
-							if (!CStreaming::HasModelLoaded(ph->mi) || (ph->mi >= MI_SPECIAL01 && ph->mi < MI_LAST_PED)) {
-					CStreaming::RequestModel(ph->mi, 0);
+							if (!Streaming_HasModelLoaded(ph->mi) || (ph->mi >= MI_SPECIAL01 && ph->mi < MI_LAST_PED)) { // rouz edit (ChatGPT)
+					Streaming_RequestModel(ph->mi, 0); // rouz edit (ChatGPT)
 				}
 				else {
 					CPed* new_p;
@@ -1187,7 +1180,7 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 			CameraFocusX = split * CameraFocusX + interpolation * pg->player_pos.x;
 			CameraFocusY = split * CameraFocusY + interpolation * pg->player_pos.y;
 			CameraFocusZ = split * CameraFocusZ + interpolation * pg->player_pos.z;
-			bPlayerInRCBuggy = pg->in_rcvehicle;
+			Replay_playerInRCBuggy = pg->in_rcvehicle; // rouz edit (ChatGPT)
 			buffer->m_nOffset += sizeof(tGeneralPacket);
 			break;
 		}
@@ -1296,11 +1289,11 @@ bool CReplay::PlayBackThisFrameInterpolation(CAddressInReplayBuffer *buffer, flo
 
 void CReplay::FinishPlayback(void)
 {
-	if (Mode != MODE_PLAYBACK)
+	if (Replay_mode != MODE_PLAYBACK) // rouz edit (ChatGPT)
 		return;
 	EmptyAllPools();
 	RestoreStuffFromMem();
-	Mode = MODE_RECORD;
+	Replay_mode = MODE_RECORD; // rouz edit (ChatGPT)
 	if (bDoLoadSceneWhenDone){
 		CVector v_ls(LoadSceneX, LoadSceneY, LoadSceneZ);
 		CGame::currLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&v_ls)));
@@ -1308,7 +1301,7 @@ void CReplay::FinishPlayback(void)
 		CStreaming::LoadScene(v_ls);
 	}
 	bDoLoadSceneWhenDone = false;
-	if (bPlayingBackFromFile){
+	if (Replay_playingBackFromFile){ // rouz edit (ChatGPT)
 		Init();
 		MarkEverythingAsNew();
 	}
@@ -1318,7 +1311,7 @@ void CReplay::FinishPlayback(void)
 
 void CReplay::EmptyReplayBuffer(void)
 {
-	if (Mode == MODE_PLAYBACK)
+	if (Replay_mode == MODE_PLAYBACK) // rouz edit (ChatGPT)
 		return;
 	Record.m_nOffset = 0;
 	for (int i = 0; i < NUM_REPLAYBUFFERS; i++){
@@ -1379,16 +1372,16 @@ extern WeaponEffects gCrossHair;
 
 void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float cam_z, bool load_scene)
 {
-	if (Mode != MODE_RECORD)
+	if (Replay_mode != MODE_RECORD) // rouz edit (ChatGPT)
 		return;
 	CameraFixedX = cam_x;
 	CameraFixedY = cam_y;
 	CameraFixedZ = cam_z;
-	Mode = MODE_PLAYBACK;
-	FramesActiveLookAroundCam = 0;
+	Replay_mode = MODE_PLAYBACK; // rouz edit (ChatGPT)
+	Replay_framesActiveLookAroundCam = 0; // rouz edit (ChatGPT)
 	CameraMode = cam_mode;
-	bAllowLookAroundCam = true;
-	bPlayingBackFromFile = false;
+	Replay_allowLookAroundCam = true; // rouz edit (ChatGPT)
+	Replay_playingBackFromFile = false; // rouz edit (ChatGPT)
 	OldRadioStation = DMAudio_GetRadioInCar();
 	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio_SetEffectsFadeVol(0);
@@ -1430,7 +1423,7 @@ void CReplay::TriggerPlayback(uint8 cam_mode, float cam_x, float cam_y, float ca
 	if (cam_mode == REPLAYCAMMODE_ASSTORED)
 		TheCamera.CarZoomIndicator = CAM_ZOOM_CINEMATIC;
 	gCrossHair.m_bActive = false;
-	CExplosion::ClearAllExplosions();
+	Explosion_ClearAllExplosions();
 	// Enter the C plane-banner algorithm with the original input capture
 	PlaneBanners_Init();
 #ifndef FIX_BUGS // this doesn't do anything useful and accesses destroyed player ped
@@ -1492,24 +1485,24 @@ void CReplay::StoreStuffInMem(void)
 	TimeStepNonClipped = (*Timer_GetTimeStepNonClipped());
 	TimeStep = (*Timer_GetTimeStep());
 	TimeScale = (*Timer_GetTimeScale());
-	ms_nNumCivMale_Stored = CPopulation::ms_nNumCivMale;
-	ms_nNumCivFemale_Stored = CPopulation::ms_nNumCivFemale;
-	ms_nNumCop_Stored = CPopulation::ms_nNumCop;
-	ms_nNumEmergency_Stored = CPopulation::ms_nNumEmergency;
-	ms_nNumGang1_Stored = CPopulation::ms_nNumGang1;
-	ms_nNumGang2_Stored = CPopulation::ms_nNumGang2;
-	ms_nNumGang3_Stored = CPopulation::ms_nNumGang3;
-	ms_nNumGang4_Stored = CPopulation::ms_nNumGang4;
-	ms_nNumGang5_Stored = CPopulation::ms_nNumGang5;
-	ms_nNumGang6_Stored = CPopulation::ms_nNumGang6;
-	ms_nNumGang7_Stored = CPopulation::ms_nNumGang7;
-	ms_nNumGang8_Stored = CPopulation::ms_nNumGang8;
-	ms_nNumGang9_Stored = CPopulation::ms_nNumGang9;
-	ms_nNumDummy_Stored = CPopulation::ms_nNumDummy;
-	ms_nTotalCivPeds_Stored = CPopulation::ms_nTotalCivPeds;
-	ms_nTotalGangPeds_Stored = CPopulation::ms_nTotalGangPeds;
-	ms_nTotalPeds_Stored = CPopulation::ms_nTotalPeds;
-	ms_nTotalMissionPeds_Stored = CPopulation::ms_nTotalMissionPeds;
+	ms_nNumCivMale_Stored = Population_nNumCivMale; // rouz edit (ChatGPT)
+	ms_nNumCivFemale_Stored = Population_nNumCivFemale; // rouz edit (ChatGPT)
+	ms_nNumCop_Stored = Population_nNumCop; // rouz edit (ChatGPT)
+	ms_nNumEmergency_Stored = Population_nNumEmergency; // rouz edit (ChatGPT)
+	ms_nNumGang1_Stored = Population_nNumGang1; // rouz edit (ChatGPT)
+	ms_nNumGang2_Stored = Population_nNumGang2; // rouz edit (ChatGPT)
+	ms_nNumGang3_Stored = Population_nNumGang3; // rouz edit (ChatGPT)
+	ms_nNumGang4_Stored = Population_nNumGang4; // rouz edit (ChatGPT)
+	ms_nNumGang5_Stored = Population_nNumGang5; // rouz edit (ChatGPT)
+	ms_nNumGang6_Stored = Population_nNumGang6; // rouz edit (ChatGPT)
+	ms_nNumGang7_Stored = Population_nNumGang7; // rouz edit (ChatGPT)
+	ms_nNumGang8_Stored = Population_nNumGang8; // rouz edit (ChatGPT)
+	ms_nNumGang9_Stored = Population_nNumGang9; // rouz edit (ChatGPT)
+	ms_nNumDummy_Stored = Population_nNumDummy; // rouz edit (ChatGPT)
+	ms_nTotalCivPeds_Stored = Population_nTotalCivPeds; // rouz edit (ChatGPT)
+	ms_nTotalGangPeds_Stored = Population_nTotalGangPeds; // rouz edit (ChatGPT)
+	ms_nTotalPeds_Stored = Population_nTotalPeds; // rouz edit (ChatGPT)
+	ms_nTotalMissionPeds_Stored = Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 	int size = CPool_GetSize(CPools::GetPedPool());
 		pPedAnims = (CStoredDetailedAnimationState*)malloc(sizeof(CStoredDetailedAnimationState)*size); // rouz edit (ChatGPT)
@@ -1582,7 +1575,7 @@ void CReplay::RestoreStuffFromMem(void)
 				if (!ped)
 			continue;
 		int mi = ped->GetModelIndex();
-		CStreaming::RequestModel(mi, 0);
+		Streaming_RequestModel(mi, 0); // rouz edit (ChatGPT)
 		CStreaming::LoadAllRequestedModels(false);
 		ped->m_rwObject = nil;
 		ped->m_modelIndex = -1;
@@ -1590,14 +1583,14 @@ void CReplay::RestoreStuffFromMem(void)
 		ped->m_pVehicleAnim = nil;
 		ped->m_audioEntityId = DMAudio_CreateEntity(AUDIOTYPE_PHYSICAL, ped);
 		DMAudio_SetEntityStatus(ped->m_audioEntityId, TRUE);
-		CPopulation::UpdatePedCount((ePedType)ped->m_nPedType, false);
+		Population_UpdatePedCount((ePedType)ped->m_nPedType, false); // rouz edit (ChatGPT)
 		for (int j = 0; j < TOTAL_WEAPON_SLOTS; j++) {
 			int mi1 = WeaponInfo_GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModelId;
 			if (mi1 != -1)
-				CStreaming::RequestModel(mi1, STREAMFLAGS_DEPENDENCY);
+				Streaming_RequestModel(mi1, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 			int mi2 = WeaponInfo_GetWeaponInfo(ped->m_weapons[j].m_eWeaponType)->m_nModel2Id;
 			if (mi2 != -1)
-				CStreaming::RequestModel(mi2, STREAMFLAGS_DEPENDENCY);
+				Streaming_RequestModel(mi2, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 			CStreaming::LoadAllRequestedModels(false);
 			ped->m_weapons[j].Initialise(ped->m_weapons[j].m_eWeaponType, ped->m_weapons[j].m_nAmmoTotal);
 		}
@@ -1622,7 +1615,7 @@ void CReplay::RestoreStuffFromMem(void)
 				if (!vehicle)
 			continue;
 		int mi = vehicle->GetModelIndex();
-		CStreaming::RequestModel(mi, 0);
+		Streaming_RequestModel(mi, 0); // rouz edit (ChatGPT)
 		CStreaming::LoadAllRequestedModels(false);
 		vehicle->m_rwObject = nil;
 		vehicle->m_modelIndex = -1;
@@ -1671,7 +1664,7 @@ void CReplay::RestoreStuffFromMem(void)
 		DMAudio_SetEntityStatus(vehicle->m_audioEntityId, TRUE);
 		CCarCtrl::UpdateCarCount(vehicle, false);
 		if ((mi == MI_AIRTRAIN || mi == MI_DEADDODO) && vehicle->m_rwObject){
-			CVehicleModelInfo* info = (CVehicleModelInfo*)CModelInfo::GetModelInfo(mi);
+			CVehicleModelInfo* info = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(mi)); // rouz edit (ChatGPT)
 			if (RwObjectGetType(vehicle->m_rwObject) == rpATOMIC){
 				vehicle->GetMatrix().Detach();
 				if (vehicle->m_rwObject){
@@ -1686,7 +1679,7 @@ void CReplay::RestoreStuffFromMem(void)
 				vehicle->DeleteRwObject();
 				int model_id = info->m_wheelId;
 				if (model_id != -1){
-					if ((vehicle->m_rwObject = CModelInfo::GetModelInfo(model_id)->CreateInstance())){
+					if ((vehicle->m_rwObject = ((CBaseModelInfo*)ModelRegistry_Get(model_id))->CreateInstance())){ // rouz edit (ChatGPT)
 						vehicle->GetMatrix().AttachRW(RwFrameGetMatrix(RpClumpGetFrame((RpClump*)vehicle->m_rwObject)), false);
 					}
 				}
@@ -1734,24 +1727,24 @@ void CReplay::RestoreStuffFromMem(void)
 	Weather_NewWeatherType = NewWeatherType;
 	Weather_InterpolationValue = WeatherInterpolationValue;
 	CGame::currArea = CurrArea;
-	CPopulation::ms_nNumCivMale = ms_nNumCivMale_Stored;
-	CPopulation::ms_nNumCivFemale = ms_nNumCivFemale_Stored;
-	CPopulation::ms_nNumCop = ms_nNumCop_Stored;
-	CPopulation::ms_nNumEmergency = ms_nNumEmergency_Stored;
-	CPopulation::ms_nNumGang1 = ms_nNumGang1_Stored;
-	CPopulation::ms_nNumGang2 = ms_nNumGang2_Stored;
-	CPopulation::ms_nNumGang3 = ms_nNumGang3_Stored;
-	CPopulation::ms_nNumGang4 = ms_nNumGang4_Stored;
-	CPopulation::ms_nNumGang5 = ms_nNumGang5_Stored;
-	CPopulation::ms_nNumGang6 = ms_nNumGang6_Stored;
-	CPopulation::ms_nNumGang7 = ms_nNumGang7_Stored;
-	CPopulation::ms_nNumGang8 = ms_nNumGang8_Stored;
-	CPopulation::ms_nNumGang9 = ms_nNumGang9_Stored;
-	CPopulation::ms_nNumDummy = ms_nNumDummy_Stored;
-	CPopulation::ms_nTotalCivPeds = ms_nTotalCivPeds_Stored;
-	CPopulation::ms_nTotalGangPeds = ms_nTotalGangPeds_Stored;
-	CPopulation::ms_nTotalPeds = ms_nTotalPeds_Stored;
-	CPopulation::ms_nTotalMissionPeds = ms_nTotalMissionPeds_Stored;
+	Population_nNumCivMale = ms_nNumCivMale_Stored; // rouz edit (ChatGPT)
+	Population_nNumCivFemale = ms_nNumCivFemale_Stored; // rouz edit (ChatGPT)
+	Population_nNumCop = ms_nNumCop_Stored; // rouz edit (ChatGPT)
+	Population_nNumEmergency = ms_nNumEmergency_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang1 = ms_nNumGang1_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang2 = ms_nNumGang2_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang3 = ms_nNumGang3_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang4 = ms_nNumGang4_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang5 = ms_nNumGang5_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang6 = ms_nNumGang6_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang7 = ms_nNumGang7_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang8 = ms_nNumGang8_Stored; // rouz edit (ChatGPT)
+	Population_nNumGang9 = ms_nNumGang9_Stored; // rouz edit (ChatGPT)
+	Population_nNumDummy = ms_nNumDummy_Stored; // rouz edit (ChatGPT)
+	Population_nTotalCivPeds = ms_nTotalCivPeds_Stored; // rouz edit (ChatGPT)
+	Population_nTotalGangPeds = ms_nTotalGangPeds_Stored; // rouz edit (ChatGPT)
+	Population_nTotalPeds = ms_nTotalPeds_Stored; // rouz edit (ChatGPT)
+	Population_nTotalMissionPeds = ms_nTotalMissionPeds_Stored; // rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
 	for (int i = 0; i < CPool_GetSize(CPools::GetPedPool()); i++) {
 		// Access raw storage through the C store or pool API
@@ -1777,7 +1770,7 @@ void CReplay::RestoreStuffFromMem(void)
 	paProjectiles = nil;
 	// Enter the C scripted-path operation at the original call point
 	ScriptPaths_Load_ForReplay();
-	CExplosion::ClearAllExplosions();
+	Explosion_ClearAllExplosions();
 	DMAudio_ChangeMusicMode(MUSICMODE_FRONTEND);
 	DMAudio_SetRadioInCar(OldRadioStation);
 	DMAudio_ChangeMusicMode(MUSICMODE_GAME);
@@ -1924,8 +1917,8 @@ void CReplay::PlayReplayFromHD(void)
 	FileMgr_CloseFile(fr);
 	FileMgr_SetDir("");
 	TriggerPlayback(REPLAYCAMMODE_ASSTORED, 0.0f, 0.0f, 0.0f, false);
-	bPlayingBackFromFile = true;
-	bAllowLookAroundCam = true;
+	Replay_playingBackFromFile = true; // rouz edit (ChatGPT)
+	Replay_allowLookAroundCam = true; // rouz edit (ChatGPT)
 	StreamAllNecessaryCarsAndPeds();
 }
 
@@ -1937,13 +1930,13 @@ void CReplay::StreamAllNecessaryCarsAndPeds(void)
 		for (size_t offset = 0; Buffers[slot][offset] != REPLAYPACKET_END; offset += FindSizeOfPacket(Buffers[slot][offset])) {
 			switch (Buffers[slot][offset]) {
 			case REPLAYPACKET_VEHICLE:
-				CStreaming::RequestModel(((tVehicleUpdatePacket*)&Buffers[slot][offset])->mi, 0);
+				Streaming_RequestModel(((tVehicleUpdatePacket*)&Buffers[slot][offset])->mi, 0); // rouz edit (ChatGPT)
 				break;
 			case REPLAYPACKET_BIKE:
-				CStreaming::RequestModel(((tBikeUpdatePacket*)&Buffers[slot][offset])->mi, 0);
+				Streaming_RequestModel(((tBikeUpdatePacket*)&Buffers[slot][offset])->mi, 0); // rouz edit (ChatGPT)
 				break;
 			case REPLAYPACKET_PED_HEADER:
-				CStreaming::RequestModel(((tPedHeaderPacket*)&Buffers[slot][offset])->mi, 0);
+				Streaming_RequestModel(((tPedHeaderPacket*)&Buffers[slot][offset])->mi, 0); // rouz edit (ChatGPT)
 				break;
 			default:
 				break;
@@ -1968,40 +1961,29 @@ void CReplay::FindFirstFocusCoordinate(CVector *coord)
 	}
 }
 
-bool CReplay::ShouldStandardCameraBeProcessed(void)
+//+ rouz edit (ChatGPT)
+bool ReplayHost_HasPlayerVehicle(void)
 {
-	if (Mode != MODE_PLAYBACK)
-		return true;
-	if (FramesActiveLookAroundCam || bPlayerInRCBuggy)
-		return false;
-	return FindPlayerVehicle() != nil;
+    // Query the original player vehicle at the camera decision point
+    return FindPlayerVehicle() != nil;
 }
+//- rouz edit (ChatGPT)
 
-void CReplay::ProcessLookAroundCam(void)
+//+ rouz edit (ChatGPT)
+void ReplayHost_ApplyLookAround(void)
 {
-	if (!bAllowLookAroundCam)
-		return;
-	float x_moved = CPad::NewMouseControllerState.x / 200.0f;
-	float y_moved = CPad::NewMouseControllerState.y / 200.0f;
-	if (x_moved > 0.01f || y_moved > 0.01f) {
-		if (FramesActiveLookAroundCam == 0)
-			fDistanceLookAroundCam = 9.0f;
-		FramesActiveLookAroundCam = 60;
-	}
-	if (bPlayerInRCBuggy)
-		FramesActiveLookAroundCam = 0;
-	if (!FramesActiveLookAroundCam)
-		return;
-	--FramesActiveLookAroundCam;
-	fBetaAngleLookAroundCam += x_moved;
-	if (CPad::NewMouseControllerState.LMB && CPad::NewMouseControllerState.RMB)
-		fDistanceLookAroundCam = Max(3.0f, Min(15.0f, fDistanceLookAroundCam + 2.0f * y_moved));
-	else
-		fAlphaAngleLookAroundCam = Max(0.1f, Min(1.5f, fAlphaAngleLookAroundCam + y_moved));
+    // Apply the camera geometry using the native collision and render types
+    CReplay::ApplyLookAroundCam();
+}
+//- rouz edit (ChatGPT)
+
+void CReplay::ApplyLookAroundCam(void)
+{
+    // Apply the original camera geometry after C updates its scalar state
 	CVector camera_pt(
-		fDistanceLookAroundCam * Sin(fBetaAngleLookAroundCam) * Cos(fAlphaAngleLookAroundCam),
-		fDistanceLookAroundCam * Cos(fBetaAngleLookAroundCam) * Cos(fAlphaAngleLookAroundCam),
-		fDistanceLookAroundCam * Sin(fAlphaAngleLookAroundCam)
+		Replay_distanceLookAroundCam * Sin(Replay_betaAngleLookAroundCam) * Cos(Replay_alphaAngleLookAroundCam), // rouz edit (ChatGPT)
+		Replay_distanceLookAroundCam * Cos(Replay_betaAngleLookAroundCam) * Cos(Replay_alphaAngleLookAroundCam), // rouz edit (ChatGPT)
+		Replay_distanceLookAroundCam * Sin(Replay_alphaAngleLookAroundCam) // rouz edit (ChatGPT)
 	);
 	CVector focus = CVector(CameraFocusX, CameraFocusY, CameraFocusZ);
 	camera_pt += focus;
@@ -2057,7 +2039,7 @@ size_t CReplay::FindSizeOfPacket(uint8 type)
 void CReplay::Display()
 {
 	static int TimeCount = 0;
-	if (Mode == MODE_RECORD)
+	if (Replay_mode == MODE_RECORD) // rouz edit (ChatGPT)
 		return;
 	TimeCount = (TimeCount + 1) % UINT16_MAX;
 	if ((TimeCount & 0x20) == 0)
@@ -2075,7 +2057,7 @@ void CReplay::Display()
 	CFont::SetPropOn();
 	CFont::SetColor(CRGBA(255, 255, 200, 200));
 	CFont::SetFontStyle(FONT_STANDARD);
-	if (Mode == MODE_PLAYBACK)
+	if (Replay_mode == MODE_PLAYBACK) // rouz edit (ChatGPT)
 		CFont::PrintString(SCREEN_WIDTH/15, SCREEN_HEIGHT/10, Text_Get(&TheText,"REPLAY"));
 }
 #endif
@@ -2084,6 +2066,7 @@ void CReplay::Display()
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

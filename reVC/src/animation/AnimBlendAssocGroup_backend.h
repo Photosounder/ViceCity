@@ -8,8 +8,6 @@ extern "C" {
 CAnimBlock *AnimGroup_HostBlock(const char *name);
 CAnimBlendHierarchy *AnimGroup_HostAnimationId(int32_t id);
 CAnimBlendHierarchy *AnimGroup_HostAnimationName(const char *name,CAnimBlock *block);
-void *AnimGroup_HostModelAt(int32_t id);
-const char *AnimGroup_HostModelName(void *model);
 void *AnimGroup_HostModelObject(void *model);
 bool AnimGroup_HostObjectIsClump(void *object);
 void *AnimGroup_HostCreateInstance(void *model);

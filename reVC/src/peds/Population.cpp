@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Game.h"
 #include "General.h"
@@ -38,76 +39,21 @@
 #define PED_REMOVE_DIST			(MIN_CREATION_DIST + CREATION_RANGE + 1.0f)
 #define PED_REMOVE_DIST_SPECIAL	(MIN_CREATION_DIST + CREATION_RANGE + 15.0f) // for peds with bCullExtraFarAway flag
 
-PedGroup CPopulation::ms_pPedGroups[NUMPEDGROUPS];
-bool CPopulation::ms_bGivePedsWeapons;
-int32 CPopulation::m_AllRandomPedsThisType = -1;
-float CPopulation::PedDensityMultiplier = 1.0f;
-uint32 CPopulation::ms_nTotalMissionPeds;
-int32 CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS;
-int32 CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR;
-uint32 CPopulation::ms_nNumCivMale;
-uint32 CPopulation::ms_nNumCivFemale;
-uint32 CPopulation::ms_nNumCop;
-bool CPopulation::bZoneChangeHasHappened;
-uint32 CPopulation::ms_nNumEmergency;
-int8 CPopulation::m_CountDownToPedsAtStart;
-uint32 CPopulation::ms_nNumGang1;
-uint32 CPopulation::ms_nNumGang2;
-uint32 CPopulation::ms_nTotalPeds;
-uint32 CPopulation::ms_nNumGang3;
-uint32 CPopulation::ms_nTotalGangPeds;
-uint32 CPopulation::ms_nNumGang4;
-uint32 CPopulation::ms_nTotalCivPeds;
-uint32 CPopulation::ms_nNumGang5;
-uint32 CPopulation::ms_nNumDummy;
-uint32 CPopulation::ms_nNumGang6;
-uint32 CPopulation::ms_nNumGang9;
-uint32 CPopulation::ms_nNumGang7;
-uint32 CPopulation::ms_nNumGang8;
 
-uint32 CPopulation::ms_nTotalCarPassengerPeds;
-uint32 CPopulation::NumMiamiViceCops;
 
-uint32 gLastSelectedCivilianIndex;
 CEntity *gSunbatheObstacles[2];
 CEntity *gCoupleObstacles[3];
 
-void
-CPopulation::Initialise()
+//+ rouz edit (ChatGPT)
+void PopulationCounts_InitialiseLog(bool starting)
 {
-	debug("Initialising CPopulation...\n");
-
-	ms_nNumCivMale = 0;
-	ms_nNumCivFemale = 0;
-	ms_nNumCop = 0;
-	ms_nNumEmergency = 0;
-	ms_nNumGang1 = 0;
-	ms_nNumGang2 = 0;
-	ms_nNumGang3 = 0;
-	ms_nNumGang4 = 0;
-	ms_nNumGang5 = 0;
-	ms_nNumGang6 = 0;
-	ms_nNumGang7 = 0;
-	ms_nNumGang8 = 0;
-	ms_nNumGang9 = 0;
-	ms_nNumDummy = 0;
-
-	ms_nTotalCarPassengerPeds = 0;
-	ms_nTotalCivPeds = 0;
-	ms_nTotalGangPeds = 0;
-	ms_nTotalPeds = 0;
-	ms_nTotalMissionPeds = 0;
-	m_CountDownToPedsAtStart = 2;
-	bZoneChangeHasHappened = false; // III leftover
-
-	m_AllRandomPedsThisType = -1;
-	PedDensityMultiplier = 1.0f;
-	
-
-	LoadPedGroups();
-
-	debug("CPopulation ready\n");
+    // Preserve the original platform-specific initialization messages
+    if (starting)
+        debug("Initialising CPopulation...\n");
+    else
+        debug("CPopulation ready\n");
 }
+//- rouz edit (ChatGPT)
 
 void
 CPopulation::RemovePed(CPed *ent)
@@ -123,308 +69,74 @@ CPopulation::RemovePed(CPed *ent)
 //- rouz edit (ChatGPT)
 }
 
-int32
-CPopulation::ChooseCivilianOccupation(int32 group)
-{
-	if (Weather_Rain > 0.1f) {
-		int32 lastModel;
-		for (int i = 0; i < 8; i++) {
-			gLastSelectedCivilianIndex = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
-			lastModel = ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
-
-			if (!CPopulation::IsSunbather(lastModel))
-				break;
-		}
-		return lastModel;
-
-	} else {
-		gLastSelectedCivilianIndex = General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP);
-		return ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
-	}
-}
-
-int32
-CPopulation::ChooseNextCivilianOccupation(int32 group)
-{
-	if (Weather_Rain > 0.1f) {
-		int32 lastModel;
-		for (int i = 0; i < NUMMODELSPERPEDGROUP; i++) {
-			++gLastSelectedCivilianIndex;
-			if (gLastSelectedCivilianIndex >= NUMMODELSPERPEDGROUP)
-				gLastSelectedCivilianIndex = 0;
-			lastModel = ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
-
-			if (!CPopulation::IsSunbather(ms_pPedGroups[group].models[gLastSelectedCivilianIndex]))
-				break;
-		}
-		return lastModel;
-
-	} else {
-		++gLastSelectedCivilianIndex;
-		if (gLastSelectedCivilianIndex >= NUMMODELSPERPEDGROUP)
-			gLastSelectedCivilianIndex = 0;
-		return ms_pPedGroups[group].models[gLastSelectedCivilianIndex];
-	}
-}
-
 // returns eCopType
-int32
-CPopulation::ChoosePolicePedOccupation()
+
+
+//+ rouz edit (ChatGPT)
+void PopulationCounts_UnknownPedType(void)
 {
-	General_GetRandomNumber();
-	return COP_STREET;
+    // Retain the original platform-specific error reporting
+    Error("Unknown ped type, UpdatePedCount, Population.cpp");
 }
-
-void
-CPopulation::LoadPedGroups()
+bool PopulationGroups_IsCivilianMale(int32_t model)
 {
-	int fd;
-	char line[1024];
-	int nextPedGroup = 0;
-	// char unused[16]; // non-existence of that in mobile kinda verifies that
-	char modelName[256];
-
-	FileMgr_ChangeDir("\\DATA\\");
-	fd = FileMgr_OpenFile("PEDGRP.DAT", "r");
-	FileMgr_ChangeDir("\\");
-	while (FileMgr_ReadLine(fd, line, sizeof(line))) {
-		int end;
-		// find end of line
-		for (end = 0; ; end++) {
-			if (line[end] == '\n')
-				break;
-			if (line[end] == ',' || line[end] == '\r')
-				line[end] = ' ';
-		}
-		line[end] = '\0';
-		int cursor = 0;
-		int i;
-		for (i = 0; i < NUMMODELSPERPEDGROUP; i++) {
-			while (line[cursor] <= ' ' && line[cursor] != '\0')
-				++cursor;
-
-			if (line[cursor] == '#')
-				break;
-
-			// find next whitespace
-			int nextWhitespace;
-			for (nextWhitespace = cursor; line[nextWhitespace] > ' '; ++nextWhitespace)
-				;
-
-			if (cursor == nextWhitespace)
-				break;
-			
-			// read until next whitespace
-			strncpy(modelName, &line[cursor], nextWhitespace - cursor);
-			modelName[nextWhitespace - cursor] = '\0';
-			CModelInfo::GetModelInfo(modelName, &ms_pPedGroups[nextPedGroup].models[i]);
-			cursor = nextWhitespace;
-		}
-		if (i == NUMMODELSPERPEDGROUP)
-			nextPedGroup++;
-	}
-	FileMgr_CloseFile(fd);
+    // Read the original native pedestrian type after male classification
+    return ((CPedModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(model)))->m_pedType == PEDTYPE_CIVMALE;
 }
-
-void
-CPopulation::UpdatePedCount(ePedType pedType, bool decrease)
+bool PopulationGroups_FemaleMatches(int32_t man, int32_t woman)
 {
-	if (decrease) {
-		switch (pedType) {
-			case PEDTYPE_PLAYER1:
-			case PEDTYPE_PLAYER2:
-			case PEDTYPE_PLAYER3:
-			case PEDTYPE_PLAYER4:
-			case PEDTYPE_UNUSED1:
-			case PEDTYPE_SPECIAL:
-				return;
-			case PEDTYPE_CIVMALE:
-				--ms_nNumCivMale;
-				break;
-			case PEDTYPE_CIVFEMALE:
-				--ms_nNumCivFemale;
-				break;
-			case PEDTYPE_COP:
-				--ms_nNumCop;
-				break;
-			case PEDTYPE_GANG1:
-				--ms_nNumGang1;
-				break;
-			case PEDTYPE_GANG2:
-				--ms_nNumGang2;
-				break;
-			case PEDTYPE_GANG3:
-				--ms_nNumGang3;
-				break;
-			case PEDTYPE_GANG4:
-				--ms_nNumGang4;
-				break;
-			case PEDTYPE_GANG5:
-				--ms_nNumGang5;
-				break;
-			case PEDTYPE_GANG6:
-				--ms_nNumGang6;
-				break;
-			case PEDTYPE_GANG7:
-				--ms_nNumGang7;
-				break;
-			case PEDTYPE_GANG8:
-				--ms_nNumGang8;
-				break;
-			case PEDTYPE_GANG9:
-				--ms_nNumGang9;
-				break;
-			case PEDTYPE_EMERGENCY:
-			case PEDTYPE_FIREMAN:
-				--ms_nNumEmergency;
-				break;
-			case PEDTYPE_CRIMINAL:
-				--ms_nNumCivMale;
-				break;
-			case PEDTYPE_PROSTITUTE:
-				--ms_nNumCivFemale;
-				break;
-			case PEDTYPE_UNUSED2:
-				--ms_nNumDummy;
-				break;
-			default:
-				Error("Unknown ped type, UpdatePedCount, Population.cpp");
-				break;
-		}
-	} else {
-		switch (pedType) {
-			case PEDTYPE_PLAYER1:
-			case PEDTYPE_PLAYER2:
-			case PEDTYPE_PLAYER3:
-			case PEDTYPE_PLAYER4:
-			case PEDTYPE_UNUSED1:
-			case PEDTYPE_SPECIAL:
-				return;
-			case PEDTYPE_CIVMALE:
-				++ms_nNumCivMale;
-				break;
-			case PEDTYPE_CIVFEMALE:
-				++ms_nNumCivFemale;
-				break;
-			case PEDTYPE_COP:
-				++ms_nNumCop;
-				break;
-			case PEDTYPE_GANG1:
-				++ms_nNumGang1;
-				break;
-			case PEDTYPE_GANG2:
-				++ms_nNumGang2;
-				break;
-			case PEDTYPE_GANG3:
-				++ms_nNumGang3;
-				break;
-			case PEDTYPE_GANG4:
-				++ms_nNumGang4;
-				break;
-			case PEDTYPE_GANG5:
-				++ms_nNumGang5;
-				break;
-			case PEDTYPE_GANG6:
-				++ms_nNumGang6;
-				break;
-			case PEDTYPE_GANG7:
-				++ms_nNumGang7;
-				break;
-			case PEDTYPE_GANG8:
-				++ms_nNumGang8;
-				break;
-			case PEDTYPE_GANG9:
-				++ms_nNumGang9;
-				break;
-			case PEDTYPE_EMERGENCY:
-			case PEDTYPE_FIREMAN:
-				++ms_nNumEmergency;
-				break;
-			case PEDTYPE_CRIMINAL:
-				++ms_nNumCivMale;
-				break;
-			case PEDTYPE_PROSTITUTE:
-				++ms_nNumCivFemale;
-				break;
-			case PEDTYPE_UNUSED2:
-				++ms_nNumDummy;
-				break;
-			default:
-				Error("Unknown ped type, UpdatePedCount, Population.cpp");
-				break;
-		}
-	}
+    // Preserve the original model lookup and field access order
+    CPedModelInfo *womanInfo = (CPedModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(woman));
+    if (womanInfo->m_pedType == PEDTYPE_CIVFEMALE) {
+        // Compare animation and skater status only after both lookups
+        CPedModelInfo *manInfo = (CPedModelInfo *)((CBaseModelInfo *)ModelRegistry_Get(man));
+        if (manInfo && womanInfo && manInfo->m_animGroup == womanInfo->m_animGroup) {
+            // Keep the two original skater comparisons
+            if (manInfo->m_pedStatType != PEDSTAT_SKATER && womanInfo->m_pedStatType != PEDSTAT_SKATER)
+                return true;
+            if (manInfo->m_pedStatType == PEDSTAT_SKATER && womanInfo->m_pedStatType == PEDSTAT_SKATER)
+                return true;
+        }
+    }
+    return false;
 }
+//- rouz edit (ChatGPT)
 
-int
-CPopulation::ChooseGangOccupation(int gangId)
-{
-	return Gangs_ChooseGangPedModel(gangId);
-}
+
 
 void
 CPopulation::DealWithZoneChange(eLevelName oldLevel, eLevelName newLevel, bool forceIndustrialZone)
 {
 }
 
-void
-CPopulation::Update(bool addPeds)
+//+ rouz edit (ChatGPT)
+void PopulationHost_Manage(void)
 {
-	if (!CReplay::IsPlayingBack()) {
-		ManagePopulation();
-		RemovePedsIfThePoolGetsFull();
-		MoveCarsAndPedsOutOfAbandonedZones();
-		if (m_CountDownToPedsAtStart != 0) {
-			if (--m_CountDownToPedsAtStart == 0)
-				GeneratePedsAtStartOfGame();
-		} else {
-			ms_nTotalCivPeds = ms_nNumCivFemale + ms_nNumCivMale;
-			ms_nTotalGangPeds = ms_nNumGang9 + ms_nNumGang8 + ms_nNumGang7
-				+ ms_nNumGang6 + ms_nNumGang5 + ms_nNumGang4 + ms_nNumGang3
-				+ ms_nNumGang2 + ms_nNumGang1;
-			ms_nTotalPeds = ms_nNumDummy + ms_nNumEmergency + ms_nNumCop
-				+ ms_nTotalGangPeds + ms_nNumCivFemale + ms_nNumCivMale;
-			ms_nTotalPeds -= ms_nTotalCarPassengerPeds;
-			if (!CCutsceneMgr::IsRunning() && addPeds) {
-				float pcdm = PedCreationDistMultiplier();
-				AddToPopulation(pcdm * (MIN_CREATION_DIST * TheCamera.GenerationDistMultiplier),
-					pcdm * ((MIN_CREATION_DIST + CREATION_RANGE) * TheCamera.GenerationDistMultiplier),
-					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT - CREATION_RANGE,
-					pcdm * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT);
-			}
-		}
-	}
+    // Run the original population maintenance sequence
+    CPopulation::ManagePopulation();
+    CPopulation::RemovePedsIfThePoolGetsFull();
+    CPopulation::MoveCarsAndPedsOutOfAbandonedZones();
 }
-
-void
-CPopulation::GeneratePedsAtStartOfGame()
+bool PopulationHost_PlayerVehicleSpeed(float *speed)
 {
-	for (int i = 0; i < 100; i++) {
-		ms_nTotalCivPeds = ms_nNumCivFemale + ms_nNumCivMale;
-		ms_nTotalGangPeds = ms_nNumGang9 + ms_nNumGang8 + ms_nNumGang7
-			+ ms_nNumGang6 + ms_nNumGang5 + ms_nNumGang4
-			+ ms_nNumGang3 + ms_nNumGang2 + ms_nNumGang1;
-		ms_nTotalPeds = ms_nNumDummy + ms_nNumEmergency + ms_nNumCop
-			+ ms_nTotalGangPeds + ms_nNumCivFemale + ms_nNumCivMale;
-		ms_nTotalPeds -= ms_nTotalCarPassengerPeds;
-
-		// Min dist is 10.0f only for start of the game (naturally)
-		AddToPopulation(10.0f, PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE),
-			10.0f, PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE));
-	}
+    // Read the original player vehicle and its two-dimensional speed
+    CVehicle *vehicle = FindPlayerVehicle();
+    if (!vehicle)
+        return false;
+    *speed = vehicle->m_vecMoveSpeed.Magnitude2D();
+    return true;
 }
-
-// More speed = wider area to spawn peds
-float
-CPopulation::PedCreationDistMultiplier()
+float PopulationHost_CameraGenerationMultiplier(void)
 {
-	CVehicle *veh = FindPlayerVehicle();
-	if (!veh)
-		return 1.0f;
-
-	float vehSpeed = veh->m_vecMoveSpeed.Magnitude2D();
-	return Clamp(vehSpeed - 0.1f + 1.0f, 1.0f, 1.5f);
+    // Read the live camera generation distance multiplier
+    return TheCamera.GenerationDistMultiplier;
 }
+void PopulationHost_AddToPopulation(float minDist, float maxDist, float minOffscreen, float maxOffscreen)
+{
+    // Forward the original four spawn distances
+    CPopulation::AddToPopulation(minDist, maxDist, minOffscreen, maxOffscreen);
+}
+//- rouz edit (ChatGPT)
 
 CPed*
 CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, int32 modifier)
@@ -445,7 +157,7 @@ CPopulation::AddPed(ePedType pedType, uint32 miOrCopType, CVector const &coors, 
 			ped->SetPosition(coors);
 			ped->SetOrientation(0.0f, 0.0f, 0.0f);
 			CWorld::Add(ped);
-			if (ms_bGivePedsWeapons) {
+			if (Population_givePedsWeapons) { // rouz edit (ChatGPT)
 				eWeaponType weapon;
 
 				switch (General_GetRandomNumber() & 3) {
@@ -598,15 +310,15 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			forceAddingCop = true;
 
 		uint32 maxCops = CGame::IsInInterior() ? wantedInfo->m_MaxCops * 1.6f : wantedInfo->m_MaxCops;
-		if ((ms_nNumCop < maxCops || forceAddingCop) &&
+		if ((Population_nNumCop < maxCops || forceAddingCop) && // rouz edit (ChatGPT)
 			(!playerInfo->m_pPed->bInVehicle &&
 				(CCarCtrl::NumLawEnforcerCars >= wantedInfo->m_MaximumLawEnforcerVehicles
 				|| CCarCtrl::NumRandomCars >= playerInfo->m_nTrafficMultiplier * CCarCtrl::CarDensityMultiplier
 				|| CCarCtrl::NumFiretrucksOnDuty + CCarCtrl::NumAmbulancesOnDuty + CCarCtrl::NumParkedCars
-				+ CCarCtrl::NumMissionCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumRandomCars >= CCarCtrl::MaxNumberOfCarsInUse) || forceAddingCop)) {
+				+ CCarCtrl::NumMissionCars + CCarCtrl::NumLawEnforcerCars + CCarCtrl::NumRandomCars >= PopulationLimits_MaxCars) || forceAddingCop)) { // rouz edit (ChatGPT)
 			addCop = true;
-			minDist = PedCreationDistMultiplier() * MIN_CREATION_DIST;
-			maxDist = PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE);
+			minDist = Population_PedCreationDistMultiplier() * MIN_CREATION_DIST; // rouz edit (ChatGPT)
+			maxDist = Population_PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE); // rouz edit (ChatGPT)
 		}
 	}
 	float missionAndWeatherMult = -0.8f * Sqrt(Weather_Rain) + 1.0f;
@@ -619,18 +331,18 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 	}
 	if (Darkel_FrenzyOnGoing())
 		missionAndWeatherMult = 1.0f;
-	int selectedMaxPeds = CGame::IsInInterior() ? CPopulation::MaxNumberOfPedsInUseInterior : CPopulation::MaxNumberOfPedsInUse;
+	int selectedMaxPeds = CGame::IsInInterior() ? PopulationLimits_MaxInteriorPeds : PopulationLimits_MaxPeds; // rouz edit (ChatGPT)
 
 	// Yeah, float
-	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * PedDensityMultiplier
+	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * Population_pedDensityMultiplier // rouz edit (ChatGPT)
 		* (Darkel_FrenzyOnGoing() ? 1.f : IniFile_PedNumberMultiplier) * missionAndWeatherMult;
 	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
 
-	if (ms_nTotalPeds - rouz.driver_ped_count < rouz.ped_mul * maxPossiblePedsForArea || addCop) {
+	if (Population_nTotalPeds - rouz.driver_ped_count < rouz.ped_mul * maxPossiblePedsForArea || addCop) { // rouz edit (ChatGPT)
 		int decisionThreshold = General_GetRandomNumberInRangeInt(0, 1000);
 		if (decisionThreshold < zoneInfo.copPedThreshold || addCop) {
 			pedTypeToAdd = PEDTYPE_COP;
-			modelToAdd = ChoosePolicePedOccupation();
+			modelToAdd = Population_ChoosePolicePedOccupation(); // rouz edit (ChatGPT)
 		} else {
 			int i = 0;
 			for (i = 0; i < NUM_GANGS; i++) {
@@ -641,39 +353,39 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 
 			if (i == NUM_GANGS) {
 				if (General_GetRandomNumberInRangeFloat(0.0f, 1.0f) <= 0.95f) {
-					modelToAdd = ChooseCivilianOccupation(zoneInfo.pedGroup);
+					modelToAdd = Population_ChooseCivilianOccupation(zoneInfo.pedGroup); // rouz edit (ChatGPT)
 
 					if (modelToAdd == -1)
 						return;
-					pedTypeToAdd = ((CPedModelInfo*)CModelInfo::GetModelInfo(modelToAdd))->m_pedType;
+					pedTypeToAdd = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(modelToAdd)))->m_pedType; // rouz edit (ChatGPT)
 
 				} else {
-					ChooseCivilianCoupleOccupations(zoneInfo.pedGroup, man, woman);
+					Population_ChooseCivilianCoupleOccupations(zoneInfo.pedGroup, &man, &woman); // rouz edit (ChatGPT)
 					if (man == -1 || woman == -1)
 						return;
-					pedTypeToAdd = ((CPedModelInfo*)CModelInfo::GetModelInfo(woman))->m_pedType;
+					pedTypeToAdd = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(woman)))->m_pedType; // rouz edit (ChatGPT)
 				}
 			} else {
 				pedTypeToAdd = PEDTYPE_GANG1 + i;
 
-				if (IsSecurityGuard((ePedType)pedTypeToAdd)) {
+				if (Population_IsSecurityGuard((ePedType)pedTypeToAdd)) { // rouz edit (ChatGPT)
 					isSecurityGuard = true;
-					modelToAdd = ChooseGangOccupation(pedTypeToAdd - PEDTYPE_GANG1);
+					modelToAdd = Population_ChooseGangOccupation(pedTypeToAdd - PEDTYPE_GANG1); // rouz edit (ChatGPT)
 
 					if (modelToAdd == -1)
 						return;
-					pedTypeToAdd = ((CPedModelInfo*)CModelInfo::GetModelInfo(modelToAdd))->m_pedType;
+					pedTypeToAdd = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(modelToAdd)))->m_pedType; // rouz edit (ChatGPT)
 
 				}
 			}
 		}
-		if (!addCop && m_AllRandomPedsThisType > PEDTYPE_PLAYER1)
-			pedTypeToAdd = m_AllRandomPedsThisType;
+		if (!addCop && Population_allRandomPedsType > PEDTYPE_PLAYER1) // rouz edit (ChatGPT)
+			pedTypeToAdd = Population_allRandomPedsType; // rouz edit (ChatGPT)
 
 		if (pedTypeToAdd >= PEDTYPE_GANG1 && pedTypeToAdd <= PEDTYPE_GANG9 && !isSecurityGuard) {
 			minDist += 30.0f;
 			maxDist += 30.0f;
-			pedAmount = ComputeRandomisedGangSize();
+			pedAmount = Population_ComputeRandomisedGangSize(); // rouz edit (ChatGPT)
 		} else
 			pedAmount = 1;
 
@@ -714,23 +426,23 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			if (pedTypeToAdd == PEDTYPE_COP) {
 				// Unused code, ChoosePolicePedOccupation returns COP_STREET. Spawning FBI/SWAT/Army done in somewhere else.
 				if (modelToAdd == COP_STREET) {
-					if (!CStreaming::HasModelLoaded(MI_COP))
+					if (!Streaming_HasModelLoaded(MI_COP)) // rouz edit (ChatGPT)
 						return;
 
 				} else if (modelToAdd == COP_FBI) {
-					if (!CStreaming::HasModelLoaded(MI_COP) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId))
+					if (!Streaming_HasModelLoaded(MI_COP) || !Streaming_HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId)) // rouz edit (ChatGPT)
 						return;
 
 				} else if (modelToAdd == COP_SWAT) {
-					if (!CStreaming::HasModelLoaded(MI_SWAT) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_UZI)->m_nModelId))
+					if (!Streaming_HasModelLoaded(MI_SWAT) || !Streaming_HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_UZI)->m_nModelId)) // rouz edit (ChatGPT)
 						return;
 
 				} else if (modelToAdd == COP_ARMY) {
-					if (!CStreaming::HasModelLoaded(MI_ARMY) ||
-						!CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId) || !CStreaming::HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_GRENADE)->m_nModelId))
+					if (!Streaming_HasModelLoaded(MI_ARMY) || // rouz edit (ChatGPT)
+						!Streaming_HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_MP5)->m_nModelId) || !Streaming_HasModelLoaded(WeaponInfo_GetWeaponInfo(WEAPONTYPE_GRENADE)->m_nModelId)) // rouz edit (ChatGPT)
 						return;
 				}
-			} else if (!CStreaming::HasModelLoaded(modelToAdd)) {
+			} else if (!Streaming_HasModelLoaded(modelToAdd)) { // rouz edit (ChatGPT)
 				return;
 			}
 			generatedCoors.z += 0.7f;
@@ -753,7 +465,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 					generatedCoors.y = yOffset + gangLeader->GetPosition().y;
 				}
 			}
-			if (!CPedPlacement::IsPositionClearForPed(generatedCoors))
+			if (!PedPlacement_CIsClear(generatedCoors.x, generatedCoors.y, generatedCoors.z, -1.0f, -1, nil)) // rouz edit (ChatGPT)
 				break;
 
 			// Why no love for last gang member?!
@@ -767,12 +479,12 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			}
 			bool surfaceAndDistIsOk = true;
 			if (TheCamera.IsSphereVisible(generatedCoors, 2.0f)) {
-				if (PedCreationDistMultiplier() * MIN_CREATION_DIST > (generatedCoors - playerCentreOfWorld).Magnitude2D())
+				if (Population_PedCreationDistMultiplier() * MIN_CREATION_DIST > (generatedCoors - playerCentreOfWorld).Magnitude2D()) // rouz edit (ChatGPT)
 					surfaceAndDistIsOk = false;
 			}
 
 			// Place skaters if only they're on tarmac.
-			if (((CPedModelInfo*)CModelInfo::GetModelInfo(modelToAdd))->m_pedStatType == PEDSTAT_SKATER) {
+			if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(modelToAdd)))->m_pedStatType == PEDSTAT_SKATER) { // rouz edit (ChatGPT)
 				CEntity* foundEnt = nil;
 				CColPoint foundCol;
 				CWorld::ProcessVerticalLine(generatedCoors + CVector(0.f, 0.f, 2.f), generatedCoors.z - 2.0f, foundCol, foundEnt, true, false, false, false, false, false, nil);
@@ -793,7 +505,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 				((CCopPed*)newPed)->m_bThrowsSpikeTrap = true;
 
 			bool gonnaSunbathe = false;
-			if (CPopulation::IsSunbather(modelToAdd)) {
+			if (Population_IsSunbather(modelToAdd)) { // rouz edit (ChatGPT)
 				CEntity* foundEnt = nil;
 				CColPoint foundCol;
 				CWorld::ProcessVerticalLine(generatedCoors + CVector(0.f, 0.f, 2.f), generatedCoors.z - 2.0f, foundCol, foundEnt, true, false, false, false, false, false, nil);
@@ -801,7 +513,7 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 					if ((foundCol.surfaceB == SURFACE_CONCRETE_BEACH || foundCol.surfaceB == SURFACE_SAND)
 						&& Clock_GetHours() >= 10 && Clock_GetHours() <= 18 && 0.0f == Weather_Rain) {
 						gonnaSunbathe = true;
-						if (CPedPlacement::IsPositionClearForPed(generatedCoors, 3.0f, ARRAY_SIZE(gSunbatheObstacles), gSunbatheObstacles)) {
+						if (PedPlacement_CIsClear(generatedCoors.x, generatedCoors.y, generatedCoors.z, 3.0f, ARRAY_SIZE(gSunbatheObstacles), gSunbatheObstacles)) { // rouz edit (ChatGPT)
 							for (int j = 0; j < ARRAY_SIZE(gSunbatheObstacles); j++) {
 								if (gSunbatheObstacles[j] && gSunbatheObstacles[j] != newPed)
 									gonnaSunbathe = false;
@@ -921,33 +633,33 @@ CPopulation::AddPedInCar(CVehicle* car, bool isDriver)
 
 			if (gangOfPed < NUM_GANGS) {
 				pedType = gangOfPed + PEDTYPE_GANG1;
-				preferredModel = ChooseGangOccupation(gangOfPed);
+				preferredModel = Population_ChooseGangOccupation(gangOfPed); // rouz edit (ChatGPT)
 			} else if (gangOfPed == NUM_GANGS) {
-			    CVehicleModelInfo *carModel = ((CVehicleModelInfo *)CModelInfo::GetModelInfo(car->GetModelIndex()));
-				preferredModel = ChooseCivilianOccupation(zoneInfo.pedGroup);
+			    CVehicleModelInfo *carModel = ((CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(car->GetModelIndex()))); // rouz edit (ChatGPT)
+				preferredModel = Population_ChooseCivilianOccupation(zoneInfo.pedGroup); // rouz edit (ChatGPT)
 				int i = 15;
 				for(; i >= 0; i--) {
-					CPedModelInfo* pedModel = (CPedModelInfo*)CModelInfo::GetModelInfo(preferredModel);
+					CPedModelInfo* pedModel = (CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(preferredModel)); // rouz edit (ChatGPT)
 
 					if (pedModel->GetRwObject()) {
 						if (!car->IsPassenger(preferredModel) && !car->IsDriver(preferredModel)) {
-							if (((CPedModelInfo*)CModelInfo::GetModelInfo(preferredModel))->m_carsCanDrive & (1 << carModel->m_vehicleClass))
+							if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(preferredModel)))->m_carsCanDrive & (1 << carModel->m_vehicleClass)) // rouz edit (ChatGPT)
 								break;
 						}
 					}
 
-					preferredModel = ChooseNextCivilianOccupation(zoneInfo.pedGroup);
+					preferredModel = Population_ChooseNextCivilianOccupation(zoneInfo.pedGroup); // rouz edit (ChatGPT)
 				}
 				if (i == -1)
 					preferredModel = defaultModel;
 
-				pedType = ((CPedModelInfo*)CModelInfo::GetModelInfo(preferredModel))->m_pedType;
+				pedType = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(preferredModel)))->m_pedType; // rouz edit (ChatGPT)
 			}
 			break;
 	}
-	if (!imSureThatModelIsLoaded && !((CPedModelInfo*)CModelInfo::GetModelInfo(preferredModel))->GetRwObject()) {
+	if (!imSureThatModelIsLoaded && !((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(preferredModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 		preferredModel = defaultModel;
-		pedType = ((CPedModelInfo*)CModelInfo::GetModelInfo(defaultModel))->m_pedType;
+		pedType = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(defaultModel)))->m_pedType; // rouz edit (ChatGPT)
 	}
 
 	CPed *newPed = CPopulation::AddPed((ePedType)pedType, preferredModel, car->GetPosition(), miamiViceIndex);
@@ -1040,7 +752,7 @@ CPopulation::ConvertToRealObject(CDummyObject *dummy)
 //- rouz edit (ChatGPT)
 	CWorld::Add(obj);
 
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(obj->GetModelIndex());
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(obj->GetModelIndex())); // rouz edit (ChatGPT)
 	if (IsGlass(obj->GetModelIndex()) && !mi->m_isArtistGlass) {
 		obj->bIsVisible = false;
 	} else if (obj->GetModelIndex() == MI_BUOY) {
@@ -1068,7 +780,7 @@ CPopulation::ConvertToDummyObject(CObject *obj)
 	dummy->GetMatrix().UpdateRW();
 	dummy->UpdateRwFrame();
 
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(obj->GetModelIndex());
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(obj->GetModelIndex())); // rouz edit (ChatGPT)
 	if (IsGlass(obj->GetModelIndex()) && !mi->m_isArtistGlass)
 		dummy->bIsVisible = false;
 
@@ -1258,12 +970,12 @@ CPopulation::ManagePopulation(void)
 			else if (ped->bDeadPedInFrontOfCar && ped->m_vehicleInAccident)
 				dist = 0.0f;
 
-			if (PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier) < dist ||
-				(!ped->bCullExtraFarAway && PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier < dist)) {
+			if (Population_PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier) < dist || // rouz edit (ChatGPT)
+				(!ped->bCullExtraFarAway && Population_PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier < dist)) { // rouz edit (ChatGPT)
 				pedIsFarAway = true;
 			}
 #ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
-			else if (PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) {
+			else if (Population_PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) { // rouz edit (ChatGPT)
 				if ((*Timer_GetTimeInMilliseconds()) > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
 					if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
 						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
@@ -1319,7 +1031,7 @@ CPopulation::ManagePopulation(void)
 CPed* 
 CPopulation::AddDeadPedInFrontOfCar(const CVector& pos, CVehicle* pCulprit)
 {
-	if (TheCamera.IsSphereVisible(pos, 2.0f) && MIN_CREATION_DIST * PedCreationDistMultiplier() > (pos - FindPlayerPed()->GetPosition()).Magnitude2D()) {
+	if (TheCamera.IsSphereVisible(pos, 2.0f) && MIN_CREATION_DIST * Population_PedCreationDistMultiplier() > (pos - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
 			return nil;
 	}
 
@@ -1328,7 +1040,7 @@ CPopulation::AddDeadPedInFrontOfCar(const CVector& pos, CVehicle* pCulprit)
 	if (!found)
 		return nil;
 	z = Max(z, pos.z);
-	if (!CModelInfo::GetModelInfo(MI_MALE01)->GetRwObject())
+	if (!((CBaseModelInfo*)ModelRegistry_Get(MI_MALE01))->GetRwObject()) // rouz edit (ChatGPT)
 		return nil;
 	CPed* pPed = CPopulation::AddPed(PEDTYPE_CIVMALE, MI_MALE01, pos);
 	pPed->SetDie();
@@ -1337,7 +1049,7 @@ CPopulation::AddDeadPedInFrontOfCar(const CVector& pos, CVehicle* pCulprit)
 	pPed->m_vehicleInAccident = pCulprit;
 	pCulprit->RegisterReference((CEntity**)&pPed->m_vehicleInAccident);
 	CEntity* pEntities[3] = { 0 };
-	if (!CPedPlacement::IsPositionClearForPed(pos, 2.0f, 3, pEntities)) {
+	if (!PedPlacement_CIsClear(pos.x, pos.y, pos.z, 2.0f, 3, pEntities)) { // rouz edit (ChatGPT)
 		for (int i = 0; i < 3; i++) {
 			if (pEntities[i] && pEntities[i] != pCulprit && pEntities[i] != pPed) {
 				RemovePed(pPed);
@@ -1366,11 +1078,7 @@ CPopulation::IsSkateable(CVector const& pos)
 	return foundCol.surfaceB == SURFACE_TARMAC || foundCol.surfaceB == SURFACE_PAVEMENT;
 }
 
-bool
-CPopulation::CanJeerAtStripper(int32 model)
-{
-	return model == MI_WMOBE || model == MI_WMYBE || model == MI_WMOST || model == MI_BMYBB;
-}
+
 
 void
 CPopulation::RemovePedsIfThePoolGetsFull(void)
@@ -1406,188 +1114,21 @@ CPopulation::RemovePedsIfThePoolGetsFull(void)
 	}
 }
 
-bool
-CPopulation::IsMale(int32 model)
-{
-	switch (model) {
-		case MI_HMYST:
-		case MI_HMOST:
-		case MI_HMYRI:
-		case MI_HMORI:
-		case MI_HMYBE:
-		case MI_HMOBE:
-		case MI_HMOTR:
-		case MI_HMYAP:
-		case MI_HMOCA:
-		case MI_BMODK:
-		case MI_BMYKR:
-		case MI_BMYST:
-		case MI_BMOST:
-		case MI_BMYRI:
-		case MI_BMYBE:
-		case MI_BMOBE:
-		case MI_BMYBU:
-		case MI_BMOTR:
-		case MI_BMYPI:
-		case MI_BMYBB:
-		case MI_WMYCR:
-		case MI_WMYST:
-		case MI_WMOST:
-		case MI_WMYRI:
-		case MI_WMORI:
-		case MI_WMYBE:
-		case MI_WMOBE:
-		case MI_WMYCW:
-		case MI_WMYGO:
-		case MI_WMOGO:
-		case MI_WMYLG:
-		case MI_WMYBU:
-		case MI_WMOBU:
-		case MI_WMOTR:
-		case MI_WMYPI:
-		case MI_WMOCA:
-		case MI_WMYJG:
-		case MI_WMYSK:
 
-		// BUG? Why no JMOTO?
-			return true;
-		default:
-			return false;
-	}
-}
 
-bool
-CPopulation::IsFemale(int32 model)
-{
-	switch (model) {
-		case MI_HFYST:
-		case MI_HFOST:
-		case MI_HFYRI:
-		case MI_HFORI:
-		case MI_HFYBE:
-		case MI_HFOBE:
-		case MI_HFYBU:
-		case MI_HFYMD:
-		case MI_HFYCG:
-		case MI_HFYPR:
-		case MI_HFOTR:
-		case MI_BFYST:
-		case MI_BFOST:
-		case MI_BFYRI:
-		case MI_BFORI:
-		case MI_BFYBE:
-		case MI_BFOBE:
-		case MI_BFYPR:
-		case MI_BFOTR:
-		case MI_WFYST:
-		case MI_WFOST:
-		case MI_WFYRI:
-		case MI_WFORI:
-		case MI_WFYBE:
-		case MI_WFOBE:
-		case MI_WFOGO:
-		case MI_WFYLG:
-		case MI_WFYBU:
-		case MI_WFYPR:
-		case MI_WFOTR:
-		case MI_WFYJG:
-		case MI_WFYSK:
-		case MI_WFYSH:
-		case MI_WFOSH:
-		case MI_JFOTO:
-			return true;
-		default:
-			return false;
-	}
-}
 
-bool
-CPopulation::IsSunbather(int32 model)
-{
-	switch (model) {
-		case MI_HFYBE:
-		case MI_HFOBE:
-		case MI_HMYBE:
-		case MI_HMOBE:
-		case MI_BFYBE:
-		case MI_BMYBE:
-		case MI_BFOBE:
-		case MI_BMOBE:
-		case MI_WFYBE:
-		case MI_WMYBE:
-		case MI_WFOBE:
-		case MI_WMOBE:
-			return true;
-		default:
-			return false;
-	}
-}
 
-int32
-CPopulation::ComputeRandomisedGangSize(void)
-{
-	return General_GetRandomNumberInRangeInt(3, 6);
-}
 
-bool
-CPopulation::CanSolicitPlayerInCar(int32 model)
-{
-	return model == MI_HFYPR || model == MI_BFYPR || model == MI_WFYPR;
-}
 
-bool
-CPopulation::CanSolicitPlayerOnFoot(int32 model)
-{
-	return model == MI_HFYMD || model == MI_HFYCG || model == MI_BFOTR || model == MI_BMOTR || model == MI_WFOTR || model == MI_WMOTR;
-}
 
-bool
-CPopulation::IsSecurityGuard(ePedType pedType)
-{
-	return pedType == PEDTYPE_GANG5;
-}
 
-void
-CPopulation::ChooseCivilianCoupleOccupations(int32 group, int32& man, int32& woman)
-{
-	man = -1;
-	woman = -1;
-	
-	for (int i = 0; i < 8; i++) {
-		if (man > -1)
-			break;
 
-		int32 model = ms_pPedGroups[group].models[General_GetRandomNumberInRangeInt(0, NUMMODELSPERPEDGROUP)];
-		if (man == -1 && IsMale(model) && ((CPedModelInfo*)CModelInfo::GetModelInfo(model))->m_pedType == PEDTYPE_CIVMALE) {
-			man = model;
-		}
-	}
 
-	if (man != -1) {
-		int32 model;
-		for (int i = 0; i < NUMMODELSPERPEDGROUP; i++) {
-			model = ms_pPedGroups[group].models[i];
-			if (IsFemale(model)) {
-				CPedModelInfo* womanModelInfo = (CPedModelInfo*)CModelInfo::GetModelInfo(model);
-				if (womanModelInfo->m_pedType == PEDTYPE_CIVFEMALE) {
-					CPedModelInfo* manModelInfo = (CPedModelInfo*)CModelInfo::GetModelInfo(man);
 
-					// If both are skater or not, finalize the decision
-					if (manModelInfo && womanModelInfo) {
-						if (manModelInfo->m_animGroup == womanModelInfo->m_animGroup) {
-							if (manModelInfo->m_pedStatType != PEDSTAT_SKATER && womanModelInfo->m_pedStatType != PEDSTAT_SKATER)
-								break;
 
-							if (manModelInfo->m_pedStatType == PEDSTAT_SKATER && womanModelInfo->m_pedStatType == PEDSTAT_SKATER)
-								break;
-						}
-					}
-				}
-			}
-		}
-		woman = model;
-	}
-}
+
+
+
 
 void
 CPopulation::PlaceGangMembers(ePedType pedType, int pedAmount, CVector const& coors)
@@ -1604,14 +1145,14 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 {
 	CPed *createdPeds[5];
 
-	if (!TheCamera.IsSphereVisible(coors, 3.0f) || MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
-		if (CPedPlacement::IsPositionClearForPed(coors, 3.0f, -1, nil)) {
+	if (!TheCamera.IsSphereVisible(coors, 3.0f) || MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
+		if (PedPlacement_CIsClear(coors.x, coors.y, coors.z, 3.0f, -1, nil)) { // rouz edit (ChatGPT)
 			bool leaderFoundGround;
 			float leaderGroundZ = CWorld::FindGroundZFor3DCoord(coors.x, coors.y, coors.z, &leaderFoundGround) + 1.0f;
 			if (leaderFoundGround) {
 				float finalZ = coors.z > leaderGroundZ ? coors.z : leaderGroundZ;
-				int leaderModel = ChooseGangOccupation(pedType - PEDTYPE_GANG1);
-				if (((CPedModelInfo*)CModelInfo::GetModelInfo(leaderModel))->GetRwObject()) {
+				int leaderModel = Population_ChooseGangOccupation(pedType - PEDTYPE_GANG1); // rouz edit (ChatGPT)
+				if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(leaderModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 					CPed *leader = AddPed(pedType, leaderModel, CVector(coors.x, coors.y, finalZ));
 					if (leader) {
 						leader->SetObjective(OBJECTIVE_NONE);
@@ -1623,8 +1164,8 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 						int pedIdx = 1;
 						createdPeds[0] = leader;
 						for (int i = 1; i < pedAmount; ++i) {
-							int memberModel = ChooseGangOccupation(pedType - PEDTYPE_GANG1);
-							if (!((CPedModelInfo*)CModelInfo::GetModelInfo(memberModel))->GetRwObject())
+							int memberModel = Population_ChooseGangOccupation(pedType - PEDTYPE_GANG1); // rouz edit (ChatGPT)
+							if (!((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(memberModel)))->GetRwObject()) // rouz edit (ChatGPT)
 								continue;
 
 							CPed* memberPed = AddPed(pedType, memberModel, CVector(coors.x, coors.y, finalZ));
@@ -1683,9 +1224,9 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 	float circleR = Sqrt(0.5f / (1.0f - Cos(circleSector)));
 
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
-		MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
+		MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
 
-		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, nil)) {
+		if (PedPlacement_CIsClear(coors.x, coors.y, coors.z, circleR, -1, nil)) { // rouz edit (ChatGPT)
 			int pedIdx = 0;
 			CVector leaderPos;
 #ifdef FIX_BUGS
@@ -1707,10 +1248,10 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 					if (createLeader)
 						leaderPos = finalPos;
 
-					int gangModel = ChooseGangOccupation(pedType - PEDTYPE_GANG1);
-					if (((CPedModelInfo*)CModelInfo::GetModelInfo(gangModel))->GetRwObject()) {
+					int gangModel = Population_ChooseGangOccupation(pedType - PEDTYPE_GANG1); // rouz edit (ChatGPT)
+					if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(gangModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 						CEntity* obstacles[6] = { nil, nil, nil, nil, nil, nil };
-						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetColModel(gangModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+						PedPlacement_CIsClear(finalPos.x, finalPos.y, finalPos.z, ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(gangModel)))->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles); // rouz edit (ChatGPT)
 						bool foundObstacle = false;
 						for (int m = 0; m < ARRAY_SIZE(obstacles); m++) {
 							CEntity* obstacle = obstacles[m];
@@ -1793,14 +1334,14 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 	if (manType != PEDTYPE_CIVMALE || womanType != PEDTYPE_CIVFEMALE)
 		return;
 
-	if (!TheCamera.IsSphereVisible(coors, 1.5f) || MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
-		if (CPedPlacement::IsPositionClearForPed(coors, CModelInfo::GetColModel(manModel)->boundingSphere.radius, -1, nil)) {
+	if (!TheCamera.IsSphereVisible(coors, 1.5f) || MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
+		if (PedPlacement_CIsClear(coors.x, coors.y, coors.z, ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(manModel)))->boundingSphere.radius, -1, nil)) { // rouz edit (ChatGPT)
 			bool manFoundGround;
 			float manGroundZ = CWorld::FindGroundZFor3DCoord(coors.x, coors.y, coors.z, &manFoundGround) + 1.0f;
 			if (manFoundGround) {
 				CVector correctedManPos = coors;
 				correctedManPos.z = Max(coors.z, manGroundZ);
-				if (((CPedModelInfo*)CModelInfo::GetModelInfo(manModel))->GetRwObject()) {
+				if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(manModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 					CPed *man = AddPed(PEDTYPE_CIVMALE, manModel, correctedManPos);
 					if (man) {
 						man->SetObjective(OBJECTIVE_NONE);
@@ -1808,7 +1349,7 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 						man->bIsLeader = true;
 						CVisibilityPlugins::SetClumpAlpha(man->GetClump(), 0);
 
-						if (((CPedModelInfo*)CModelInfo::GetModelInfo(womanModel))->GetRwObject()) {
+						if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(womanModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 							CPed* woman = AddPed(PEDTYPE_CIVFEMALE, womanModel, correctedManPos); // will set the correct position later
 							if (woman) {
 								woman->SetObjective(OBJECTIVE_FOLLOW_CHAR_IN_FORMATION, man);
@@ -1828,7 +1369,7 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 									CEntity* obstacles[3];
 									memcpy(obstacles, gCoupleObstacles, sizeof(gCoupleObstacles));
 
-									CPedPlacement::IsPositionClearForPed(womanPos, CModelInfo::GetColModel(womanModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+									PedPlacement_CIsClear(womanPos.x, womanPos.y, womanPos.z, ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(womanModel)))->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles); // rouz edit (ChatGPT)
 									for (int i = 0; i < ARRAY_SIZE(obstacles); i++) {
 										CEntity *obstacle = obstacles[i];
 										if (obstacle) {
@@ -1874,9 +1415,9 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 	float circleR = Sqrt(0.5f / (1.0f - Cos(circleSector)));
 
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
-		MIN_CREATION_DIST * PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) {
+		MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
 
-		if (CPedPlacement::IsPositionClearForPed(coors, circleR, -1, nil)) {
+		if (PedPlacement_CIsClear(coors.x, coors.y, coors.z, circleR, -1, nil)) { // rouz edit (ChatGPT)
 			int pedIdx = 0;
 			CVector leaderPos;
 #ifdef FIX_BUGS
@@ -1899,12 +1440,12 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 					if (createLeader)
 						leaderPos = finalPos;
 
-					int pedModel = ChooseCivilianOccupation(group);
-					CPedModelInfo *pedModelInfo = (CPedModelInfo*)CModelInfo::GetModelInfo(pedModel);
+					int pedModel = Population_ChooseCivilianOccupation(group); // rouz edit (ChatGPT)
+					CPedModelInfo *pedModelInfo = (CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(pedModel)); // rouz edit (ChatGPT)
 
 					if (pedModelInfo->GetRwObject()) {
 						CEntity* obstacles[6] = { nil, nil, nil, nil, nil, nil };
-						CPedPlacement::IsPositionClearForPed(finalPos, CModelInfo::GetColModel(pedModel)->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles);
+						PedPlacement_CIsClear(finalPos.x, finalPos.y, finalPos.z, ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(pedModel)))->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles); // rouz edit (ChatGPT)
 						bool foundObstacle = false;
 						for (int m = 0; m < ARRAY_SIZE(obstacles); m++) {
 							CEntity* obstacle = obstacles[m];

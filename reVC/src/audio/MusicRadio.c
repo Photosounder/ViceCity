@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "DMAudio.h"
@@ -37,7 +38,7 @@ MusicRadio_GetRadioInCar(cMusicManager *manager)
 		CVehicle* veh = AudioGame_FindVehicle();
 		if (veh != NULL) {
 			if (MusicRadio_UsesPoliceRadio(veh) || MusicRadio_UsesTaxiRadio(veh)) {
-				if (manager->m_nRadioInCar == NO_TRACK || (AudioEnvironmentHost_Replay() && !AudioManager.m_bIsPaused))
+				if (manager->m_nRadioInCar == NO_TRACK || (Replay_IsPlayingBack() && !AudioManager.m_bIsPaused))
 					return STREAMED_SOUND_RADIO_POLICE;
 				return manager->m_nRadioInCar;
 			}
@@ -45,7 +46,7 @@ MusicRadio_GetRadioInCar(cMusicManager *manager)
 		}
 	}
 
-	if (manager->m_nRadioInCar == NO_TRACK || (AudioEnvironmentHost_Replay() && !AudioManager.m_bIsPaused))
+	if (manager->m_nRadioInCar == NO_TRACK || (Replay_IsPlayingBack() && !AudioManager.m_bIsPaused))
 		return RADIO_OFF;
 	return manager->m_nRadioInCar;
 }

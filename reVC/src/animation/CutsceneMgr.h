@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 #pragma once
 #include "CutsceneObject.h"
+#include "CutsceneState.h" // rouz edit (ChatGPT)
 
 #define CUTSCENENAMESIZE 8
 
@@ -10,7 +11,6 @@ class CCutsceneHead;
 
 class CCutsceneMgr
 {
-	static bool ms_running;
 	static CCutsceneObject *ms_pCutsceneObjects[NUMCUTSCENEOBJECTS];
 	
 	static int32 ms_numCutsceneObjs;
@@ -23,16 +23,12 @@ class CCutsceneMgr
 	static CVector ms_cutsceneOffset;
 	static float ms_cutsceneTimer;
 	static bool ms_wasCutsceneSkipped;
-	static bool ms_cutsceneProcessing;
 	static bool ms_useCutsceneShadows;
 public:
 	static CDirectory *ms_pCutsceneDir;
 	static uint32 ms_cutsceneLoadStatus;
 
-	static void StartCutsceneProcessing() { ms_cutsceneProcessing = true; }
-	static bool IsRunning(void) { return ms_running; }
 	static bool HasLoaded(void) { return ms_loaded; }
-	static bool IsCutsceneProcessing(void) { return ms_cutsceneProcessing; }
 	static bool WasCutsceneSkipped(void) { return ms_wasCutsceneSkipped; }
 	static bool UseLodMultiplier(void) { return ms_useLodMultiplier; }
 	static CCutsceneObject* GetCutsceneObject(int id) { return ms_pCutsceneObjects[id]; }

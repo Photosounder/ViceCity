@@ -1395,7 +1395,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 						Aobj->m_pCollidingEntity = nil;
 				}else if(Aobj->m_pCollidingEntity != B){
 					CMatrix inv;
-					CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
+					CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(A->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 					size = A->GetMatrix() * size;
 					if(size.z < B->GetPosition().z ||
 					   (Invert(B->GetMatrix(), inv) * size).z < 0.0f){
@@ -1413,7 +1413,7 @@ CPhysical::ProcessShiftSectorList(CPtrList *lists)
 						Bobj->m_pCollidingEntity = nil;
 				}else if(Bobj->m_pCollidingEntity != A){
 					CMatrix inv;
-					CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
+					CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(B->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 					size = B->GetMatrix() * size;
 					if(size.z < A->GetPosition().z ||
 					   (Invert(A->GetMatrix(), inv) * size).z < 0.0f)
@@ -1737,7 +1737,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						skipCollision = true;
 					else if(Aobj->m_nCollisionDamageEffect < DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
+						CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(A->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 						size = A->GetMatrix() * size;
 						if(size.z < B->GetPosition().z ||
 						   (Invert(B->GetMatrix(), inv) * size).z < 0.0f){
@@ -1756,7 +1756,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						skipCollision = true;
 					else if(Bobj->m_nCollisionDamageEffect < DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
+						CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(B->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 						size = B->GetMatrix() * size;
 						if(size.z < A->GetPosition().z ||
 						   (Invert(A->GetMatrix(), inv) * size).z < 0.0f){
@@ -2059,7 +2059,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 						Bobj->ObjectDamage(maxImpulseB);
 					else if(Bobj->m_nCollisionDamageEffect >= DAMAGE_EFFECT_SMASH_COMPLETELY){
 						CMatrix inv;
-						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(B->GetModelIndex())->boundingBox));
+						CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(B->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 						size = B->GetMatrix() * size;
 						if(size.z < A->GetPosition().z ||
 						   (Invert(A->GetMatrix(), inv) * size).z < 0.0f)
@@ -2074,7 +2074,7 @@ CPhysical::ProcessCollisionSectorList(CPtrList *lists)
 					else if(Bobj->m_nCollisionDamageEffect >= DAMAGE_EFFECT_SMASH_COMPLETELY){
 #endif
 						CMatrix inv;
-						CVector size = CollisionVector_ToNative(Box_GetSize(&CModelInfo::GetColModel(A->GetModelIndex())->boundingBox));
+						CVector size = CollisionVector_ToNative(Box_GetSize(&((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(A->GetModelIndex())))->boundingBox)); // rouz edit (ChatGPT)
 						size = A->GetMatrix() * size;
 						if(size.z < B->GetPosition().z ||
 						   (Invert(B->GetMatrix(), inv) * size).z < 0.0f)

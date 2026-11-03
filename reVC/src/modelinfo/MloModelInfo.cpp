@@ -15,7 +15,7 @@ CMloModelInfo::ConstructClump()
 	for (int i = firstInstance; i < lastInstance; i++) {
 		int modelId = CModelInfo::GetMloInstanceStore().store[i].m_modelIndex;
 		RwMatrix *attMat = CModelInfo::GetMloInstanceStore().store[i].GetMatrix().m_attachment;
-		CSimpleModelInfo *minfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(modelId);
+		CSimpleModelInfo *minfo = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(modelId)); // rouz edit (ChatGPT)
 
 		if (minfo->m_atomics[0] != nil) {
 			RpAtomic *newAtomic = RpAtomicClone(minfo->m_atomics[0]);

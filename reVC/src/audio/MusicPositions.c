@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "DMAudio.h"
 
@@ -9,7 +10,7 @@ MusicPositions_RecordRadioStats(cMusicManager *manager)
 {
 	// Preserve original timer reads, arithmetic and live owner state
 	if (manager->m_nPlayingTrack < NUM_RADIOS) {
-		double time /*Rusty*/ = MusicInitHost_PauseTime();
+		double time /*Rusty*/ = Timer_GetTimeInMillisecondsPauseMode();
 		if (time > manager->m_nLastTrackServiceTime)
 			manager->aListenTimeArray[manager->m_nPlayingTrack] += time - manager->m_nLastTrackServiceTime;
 	}
@@ -22,10 +23,10 @@ MusicPositions_GetTrackStartPos(cMusicManager *manager, uint32_t track)
 	if (!MusicState_IsInitialised(manager)) return 0;
 
 	uint32_t pos = manager->m_aTracks[track].m_nPosition;
-	if (MusicInitHost_PauseTime() > manager->m_aTracks[track].m_nLastPosCheckTimer)
-		pos += MUSIC_POSITION_MIN(MusicInitHost_PauseTime() - manager->m_aTracks[track].m_nLastPosCheckTimer, 270000);
+	if (Timer_GetTimeInMillisecondsPauseMode() > manager->m_aTracks[track].m_nLastPosCheckTimer)
+		pos += MUSIC_POSITION_MIN(Timer_GetTimeInMillisecondsPauseMode() - manager->m_aTracks[track].m_nLastPosCheckTimer, 270000);
 	else
-		manager->m_aTracks[track].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+		manager->m_aTracks[track].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 
 	if (pos > manager->m_aTracks[track].m_nLength)
 		pos %= manager->m_aTracks[track].m_nLength;

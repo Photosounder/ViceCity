@@ -20,7 +20,6 @@ READERS=[
 ('bool','CapturingWorldEffects','void','#ifdef REVC_SOFTWARE_POLYGONS\n    return SoftwarePolygons::CapturingWorldEffects();\n#else\n    return false;\n#endif'),
 ('void','DrawBackgroundQuad','float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,int32_t top,int32_t bottom','CSprite2d::DrawAnyRect(x1,y1,x2,y2,x3,y3,x4,y4,BackgroundColors[top],BackgroundColors[top],BackgroundColors[bottom],BackgroundColors[bottom]);'),
 ('void','DrawBackgroundRect','float left,float top,float right,float bottom,int32_t lower,int32_t upper','CSprite2d::DrawRect(CRect(left,top,right,bottom),BackgroundColors[lower],BackgroundColors[lower],BackgroundColors[upper],BackgroundColors[upper]);')]
-for name in ['Red','Green','Blue']:READERS.append(('float','Ambient'+name,'void','return CTimeCycle::GetAmbient'+name+'();'))
 DECLARATIONS=TYPES+''.join(result+' Clouds_Backend'+name+'('+args+');\n' for result,name,args,body in READERS)
 HOST='''//+ rouz edit (ChatGPT)
 static CRGBA BackgroundColors[3];
@@ -109,7 +108,7 @@ def kernel(source,original):
     body=body.replace('CRect r(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);','float rectRight=SCREEN_WIDTH;float rectBottom=SCREEN_HEIGHT;').replace('CSprite2d::DrawRect(r, CLOUDS_COLOR_BOTTOM, CLOUDS_COLOR_BOTTOM, CLOUDS_COLOR_TOP, CLOUDS_COLOR_TOP)','Clouds_BackendDrawBackgroundRect(0.f,0.f,rectRight,rectBottom,CLOUDS_COLOR_BOTTOM,CLOUDS_COLOR_TOP)')
     body=body.replace('CClouds::RenderBackground(','Clouds_RenderBackground(').replace('CClouds::RenderHorizon(','Clouds_RenderHorizon(')
     body=body.replace('gbShowCollisionPolys','Clouds_BackendCollisionPolys()').replace('SoftwarePolygons::CapturingWorldEffects()','Clouds_BackendCapturingWorldEffects()')
-    for name in ['Red','Green','Blue']:body=body.replace('CTimeCycle::GetAmbient'+name+'()','Clouds_BackendAmbient'+name+'()')
+    for name in ['Red','Green','Blue']:body=body.replace('CTimeCycle::GetAmbient'+name+'()','TimeCycle_GetAmbient'+name+'()')
     for old,new in [('Sin','sinf'),('Cos','cosf'),('Atan2','atan2f'),('Sqrt','sqrtf'),('Abs','fabsf'),('SQR','Clouds_Square'),('Max','Clouds_Max'),('Clamp','Clouds_Clamp')]:body=body.replace(old+'(',new+'(')
     for old,new in [('uint8','uint8_t'),('int16','int16_t')]:body=re.sub(r'\b'+old+r'\b',new,body)
     for state,name in [('SRCBLEND','SrcBlend'),('DESTBLEND','DestBlend')]:body=re.sub(r'RwRenderStateSet\(rwRENDERSTATE'+state+r', \(void\*\)rwBLEND\w+\)',r'Clouds_Backend'+name+'(false)',body)

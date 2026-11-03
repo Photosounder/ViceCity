@@ -1,8 +1,7 @@
 SpecialFX.c replaces the complete CSpecialFX controller class: all six methods,
 its associated LookForBat callback, three boolean flags and signed snapshot-frame
-counter. All project callers use the C API. TimerHost_SnapshotActive now reads
-the same live flag from its C owner; the timer algorithm and public host symbol
-stay unchanged. FontStyles.h shares the exact original font enum, including its
+counter. All project callers use the C API. The timer reads the live snapshot
+flag directly from its C owner at the original short-circuit point. FontStyles.h shares the exact original font enum, including its
 language guard and MAX_FONTS value, between the C controller and C++ font owner.
 
 All effect initialization, UV setup, texture acquisition, state resets, update,

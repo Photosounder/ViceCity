@@ -106,17 +106,7 @@ void Debug_BackendPrintString(float x,float y,uint16_t *text)
     CFont::PrintString(x,y,text);
 }
 
-void Debug_BackendAsciiToUnicode(const char *source,uint16_t *target)
-{
-    // Access the original native primitive at its original C policy access point
-    AsciiToUnicode(source,target);
-}
 
-uint16_t * Debug_BackendUnicode(void)
-{
-    // Access the original native primitive at its original C policy access point
-    return gUString;
-}
 
 void Debug_BackendObrsPrintfString(const char *str,int16_t x,int16_t y)
 {

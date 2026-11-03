@@ -62,7 +62,6 @@ CVehicle *UserDisplay_BackendVehicle(void);
 CVehicle *UserDisplay_BackendShortCutTaxi(void);
 int16_t UserDisplay_BackendModelIndex(const CVehicle *vehicle);
 char *UserDisplay_BackendGameName(int16_t model);
-uint16_t *UserDisplay_BackendText(const char *name);
 void UserDisplay_BackendSetVehicleName(uint16_t *name);
 bool UserDisplay_BackendPlayingBack(void);
 #ifdef __cplusplus
@@ -127,11 +126,6 @@ char *UserDisplay_BackendGameName(int16_t model)
     // Resolve the original typed model record and borrow its existing game-name array
     return ((CVehicleModelInfo*)CModelInfo::GetModelInfo(model))->m_gameName;
 }
-uint16_t *UserDisplay_BackendText(const char *name)
-{
-    // Perform the original native text lookup after the C display controller selects a model
-    return TheText.Get(name);
-}
 void UserDisplay_BackendSetVehicleName(uint16_t *name)
 {
     // Publish the original borrowed UTF-16 vehicle name through the native HUD owner
@@ -155,7 +149,7 @@ def kernel(source):
         for field in FIELDS.get(owner,[]):text=re.sub(r'(?<![\w.>])'+field+r'\b','self->'+field,text)
         if owner!='CUserDisplay':text=re.sub(r'(?<![\w])Display\(\)',prefix+'_Display(self)',text)
         text=text.replace('CVector pos = CWorld::Players[CWorld::PlayerInFocus].GetPos();','ZonesPosition pos = UserDisplay_BackendPlayerPosition();').replace('ZonesPosition_FromVector(*(&pos))','pos')
-        for old,new in [('CHud::SetZoneName','UserDisplay_BackendSetZoneName'),('CHud::m_pLastZoneName','(*UserDisplay_BackendLastZoneName())'),('CHud::m_ZoneState','(*UserDisplay_BackendZoneState())'),('CWorld::Players[CWorld::PlayerInFocus].m_pPed->InVehicle()','UserDisplay_BackendInVehicle()'),('CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle','UserDisplay_BackendVehicle()'),('CGameLogic::pShortCutTaxi','UserDisplay_BackendShortCutTaxi()'),('((CVehicleModelInfo*)CModelInfo::GetModelInfo(self->m_pCurrentVehicle->GetModelIndex()))->m_gameName','UserDisplay_BackendGameName(UserDisplay_BackendModelIndex(self->m_pCurrentVehicle))'),('TheText.Get','UserDisplay_BackendText'),('CHud::SetVehicleName','UserDisplay_BackendSetVehicleName'),('CReplay::IsPlayingBack()','UserDisplay_BackendPlayingBack()')]:text=text.replace(old,new)
+        for old,new in [('CHud::SetZoneName','UserDisplay_BackendSetZoneName'),('CHud::m_pLastZoneName','(*UserDisplay_BackendLastZoneName())'),('CHud::m_ZoneState','(*UserDisplay_BackendZoneState())'),('CWorld::Players[CWorld::PlayerInFocus].m_pPed->InVehicle()','UserDisplay_BackendInVehicle()'),('CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pMyVehicle','UserDisplay_BackendVehicle()'),('CGameLogic::pShortCutTaxi','UserDisplay_BackendShortCutTaxi()'),('((CVehicleModelInfo*)CModelInfo::GetModelInfo(self->m_pCurrentVehicle->GetModelIndex()))->m_gameName','UserDisplay_BackendGameName(UserDisplay_BackendModelIndex(self->m_pCurrentVehicle))'),('TheText.Get(', 'Text_Get(&TheText,'),('CHud::SetVehicleName','UserDisplay_BackendSetVehicleName'),('CReplay::IsPlayingBack()','UserDisplay_BackendPlayingBack()')]:text=text.replace(old,new)
         for category in ['PlaceName','CurrentVehicle']:
             for method in ['Init','Process']:text=text.replace(category+'.'+method+'()',category+'_'+method+'(&'+category+'_state)')
         for old,new in [('wchar','uint16_t'),('int16','int16_t'),('nil','NULL')]:text=re.sub(r'\b'+old+r'\b',new,text)
@@ -164,6 +158,7 @@ def kernel(source):
 #include "User.h"
 #include "User_backend.h"
 #include "Zones.h"
+#include "Text.h"
 #include <stddef.h>
 CPlaceName PlaceName_state;
 CCurrentVehicle CurrentVehicle_state;

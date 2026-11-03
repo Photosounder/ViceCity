@@ -5,12 +5,18 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h" // rouz edit (ChatGPT)
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "ColSphere_native.h"
 #include "main.h"
 
 #include "General.h"
 #include "Quaternion.h"
 #include "ModelInfo.h"
+#include "SimpleModelPolicy.h" // rouz edit (ChatGPT)
+#include "Camera.h" // rouz edit (ChatGPT)
+#include "Renderer.h" // rouz edit (ChatGPT)
+#include "TimeModel_backend.h" // rouz edit (ChatGPT)
 #include "ModelIndices.h"
 #include "TempColModels.h"
 #include "VisibilityPlugins.h"
@@ -111,8 +117,8 @@ CFileLoader::LoadLevel(const char *filename)
 				CColStore::LoadAllCollision();
 				POP_MEMID();
 				for(int i = 0; i < MODELINFOSIZE; i++)
-					if(CModelInfo::GetModelInfo(i))
-						CModelInfo::GetModelInfo(i)->ConvertAnimFileIndex();
+					if(((CBaseModelInfo*)ModelRegistry_Get(i))) // rouz edit (ChatGPT)
+						((CBaseModelInfo*)ModelRegistry_Get(i))->ConvertAnimFileIndex(); // rouz edit (ChatGPT)
 				objectsLoaded = true;
 			}
 			PUSH_MEMID(MEMID_WORLD);
@@ -201,7 +207,7 @@ CFileLoader::LoadCollisionFile(const char *filename, uint8 colSlot)
 		FileMgr_Read(fd, (char*)work_buff, header.size);
 		memcpy(modelname, work_buff, 24);
 
-		mi = CModelInfo::GetModelInfo(modelname, nil);
+		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 		if(mi){
 			if(mi->GetColModel() && mi->DoesOwnColModel()){
 				LoadCollisionModel(work_buff+24, *mi->GetColModel(), modelname);
@@ -252,7 +258,7 @@ CFileLoader::LoadCollisionFileFirstTime(uint8 *buffer, uint32 size, uint8 colSlo
 		if(modelsize > 15*1024)
 			debug("colmodel %s is huge, size %d\n", modelname, modelsize);
 
-		mi = CModelInfo::GetModelInfo(modelname, &modelIndex);
+		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, 0, MODELINFOSIZE-1, &modelIndex); // rouz edit (ChatGPT)
 		if(mi){
 			CColStore::IncludeModelIndex(colSlot, modelIndex);
 //+ rouz edit (ChatGPT)
@@ -295,7 +301,7 @@ CFileLoader::LoadCollisionFile(uint8 *buffer, uint32 size, uint8 colSlot)
 		if(modelsize > 15*1024)
 			debug("colmodel %s is huge, size %d\n", modelname, modelsize);
 
-		mi = CModelInfo::GetModelInfo(modelname, CColStore::GetSlot(colSlot)->minIndex, CColStore::GetSlot(colSlot)->maxIndex);
+		mi = (CBaseModelInfo*)ModelRegistry_Find(modelname, CColStore::GetSlot(colSlot)->minIndex, CColStore::GetSlot(colSlot)->maxIndex, nil); // rouz edit (ChatGPT)
 		if(mi){
 			if(mi->GetColModel()){
 				LoadCollisionModel(work_buff, *mi->GetColModel(), modelname);
@@ -442,7 +448,7 @@ CFileLoader::FindRelatedModelInfoCB(RpAtomic *atomic, void *data)
 
 	nodename = GetFrameNodeName(RpAtomicGetFrame(atomic));
 	GetNameAndLOD(nodename, name, &n);
-	mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(name, nil);
+	mi = (CSimpleModelInfo*)(CBaseModelInfo*)ModelRegistry_Find(name, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 	if(mi){
 		assert(mi->IsSimple());
 		CVisibilityPlugins::SetAtomicRenderCallback(atomic, nil);
@@ -502,7 +508,7 @@ CFileLoader::LoadClumpFile(const char *filename)
 		if(clump){
 			nodename = GetFrameNodeName(RpClumpGetFrame(clump));
 			GetNameAndLOD(nodename, name, &n);
-			mi = (CClumpModelInfo*)CModelInfo::GetModelInfo(name, nil);
+			mi = (CClumpModelInfo*)(CBaseModelInfo*)ModelRegistry_Find(name, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 			if(mi){
 				InitClump(clump);
 				assert(mi->IsClump());
@@ -526,7 +532,7 @@ CFileLoader::LoadClumpFile(RwStream *stream, uint32 id)
 	if(clump == nil)
 		return false;
 	InitClump(clump);
-	mi = (CClumpModelInfo*)CModelInfo::GetModelInfo(id);
+	mi = (CClumpModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	mi->SetClump(clump);
 	return true;
 }
@@ -535,7 +541,7 @@ bool
 CFileLoader::StartLoadClumpFile(RwStream *stream, uint32 id)
 {
 	if(RwStreamFindChunk(stream, rwID_CLUMP, nil, nil)){
-		printf("Start loading %s\n", CModelInfo::GetModelInfo(id)->GetModelName());
+		printf("Start loading %s\n", ((CBaseModelInfo*)ModelRegistry_Get(id))->GetModelName()); // rouz edit (ChatGPT)
 		// Use the complete C clump reader with the original live stream state
 		return ClumpRead_Start(stream);
 	}else{
@@ -550,13 +556,13 @@ CFileLoader::FinishLoadClumpFile(RwStream *stream, uint32 id)
 	RpClump *clump;
 	CClumpModelInfo *mi;
 
-	printf("Finish loading %s\n", CModelInfo::GetModelInfo(id)->GetModelName());
+	printf("Finish loading %s\n", ((CBaseModelInfo*)ModelRegistry_Get(id))->GetModelName()); // rouz edit (ChatGPT)
 	// Use the complete C clump reader with the original live stream state
 	clump = ((RpClump*)ClumpRead_Finish(stream));
 
 	if(clump){
 		InitClump(clump);
-		mi = (CClumpModelInfo*)CModelInfo::GetModelInfo(id);
+		mi = (CClumpModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 		mi->SetClump(clump);
 		return true;
 	}else{
@@ -577,7 +583,7 @@ CFileLoader::LoadAtomicFile(RwStream *stream, uint32 id)
 		if(clump == nil)
 			return false;
 		InitClump(clump);
-		gpRelatedModelInfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
+		gpRelatedModelInfo = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 		RpClumpForAllAtomics(clump, SetRelatedModelInfoCB, clump);
 		RpClumpDestroy(clump);
 	}
@@ -719,16 +725,16 @@ CFileLoader::LoadObjectTypes(const char *filename)
 			}
 			break;
 		case TWODFX:
-			Load2dEffect(line);
+			Effect2d_Load(line); // rouz edit (ChatGPT)
 			break;
 		}
 	}
 	FileMgr_CloseFile(fd);
 
 	for(id = minID; id <= maxID; id++){
-		CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
+		CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 		if(mi && mi->IsBuilding())
-			mi->SetupBigBuilding(minID, maxID);
+			SimpleModel_SetupBigBuilding((CBaseModelInfo*)mi, mi->m_lodDistances[0], LOD_DISTANCE, minID, maxID); // rouz edit (ChatGPT)
 	}
 }
 
@@ -783,10 +789,10 @@ CFileLoader::LoadObject(const char *line)
 		break;
 	}
 
-	mi = CModelInfo::AddSimpleModel(id);
+	mi = (CSimpleModelInfo*)ModelRegistry_AddSimple(id);
 	mi->SetModelName(model);
-	mi->SetNumAtomics(numObjs);
-	mi->SetLodDistances(dist);
+	mi->m_numAtomics = numObjs; // rouz edit (ChatGPT)
+	SimpleModel_SetDistances(mi->m_lodDistances, dist, rouz.lod_dist_scale); // rouz edit (ChatGPT)
 	SetModelInfoFlags(mi, flags);
 	mi->m_firstDamaged = damaged;
 	mi->SetTexDictionary(txd);
@@ -831,17 +837,19 @@ CFileLoader::LoadTimeObject(const char *line)
 		break;
 	}
 
-	mi = CModelInfo::AddTimeModel(id);
+	mi = (CTimeModelInfo*)ModelRegistry_AddTime(id);
 	mi->SetModelName(model);
-	mi->SetNumAtomics(numObjs);
-	mi->SetLodDistances(dist);
+	mi->m_numAtomics = numObjs; // rouz edit (ChatGPT)
+	SimpleModel_SetDistances(mi->m_lodDistances, dist, rouz.lod_dist_scale); // rouz edit (ChatGPT)
 	SetModelInfoFlags(mi, flags);
 	mi->m_firstDamaged = damaged;
-	mi->SetTimes(timeOn, timeOff);
+	// Set the original time interval on the model
+	mi->m_timeData.timeOn = timeOn; // rouz edit (ChatGPT)
+	mi->m_timeData.timeOff = timeOff; // rouz edit (ChatGPT)
 	mi->SetTexDictionary(txd);
-	other = mi->FindOtherTimeModel();
+	other = (CTimeModelInfo*)(CBaseModelInfo*)TimeModel_LinkOther((CBaseModelInfo*)mi, MAX_MODEL_NAME); // rouz edit (ChatGPT)
 	if(other)
-		other->SetOtherTimeModel(id);
+		other->m_timeData.otherTimeModelID = id; // rouz edit (ChatGPT)
 	MatchModelString(model, id);
 
 	return id;
@@ -857,9 +865,9 @@ CFileLoader::LoadWeaponObject(const char *line)
 
 	sscanf(line, "%d %s %s %s %d %f", &id, model, txd, animFile, &numObjs, &dist);
 
-	mi = CModelInfo::AddWeaponModel(id);
+	mi = (CWeaponModelInfo*)ModelRegistry_AddWeapon(id);
 	mi->SetModelName(model);
-	mi->SetNumAtomics(1);
+	mi->m_numAtomics = 1; // rouz edit (ChatGPT)
 	mi->m_lodDistances[0] = dist;
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
@@ -876,7 +884,7 @@ CFileLoader::LoadClumpObject(const char *line)
 	CClumpModelInfo *mi;
 
 	if(sscanf(line, "%d %s %s", &id, model, txd) == 3){
-		mi = CModelInfo::AddClumpModel(id);
+		mi = (CClumpModelInfo*)ModelRegistry_AddClump(id);
 		mi->SetModelName(model);
 		mi->SetTexDictionary(txd);
 		mi->SetColModel(&CTempColModels::ms_colModelBBox);
@@ -900,7 +908,7 @@ CFileLoader::LoadVehicleObject(const char *line)
 		type, handlingId, gamename, animFile, vehclass,
 		&frequency, &level, &comprules, &misc, &wheelScale);
 
-	mi = CModelInfo::AddVehicleModel(id);
+	mi = (CVehicleModelInfo*)ModelRegistry_AddVehicle(id);
 	mi->SetModelName(model);
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
@@ -979,7 +987,7 @@ CFileLoader::LoadPedObject(const char *line)
 	          pedType, pedStats, animGroup, &carsCanDrive,
 		  animFile, &radio1, &radio2);
 
-	mi = CModelInfo::AddPedModel(id);
+	mi = (CPedModelInfo*)ModelRegistry_AddPed(id);
 	mi->SetModelName(model);
 	mi->SetTexDictionary(txd);
 	mi->SetAnimFile(animFile);
@@ -1046,108 +1054,6 @@ CFileLoader::LoadCarPathNode(const char *line, int id, int node, bool waterPath)
 }
 
 
-void
-CFileLoader::Load2dEffect(const char *line)
-{
-	int id, r, g, b, a, type, ptype;
-	float x, y, z;
-	char corona[32], shadow[32];
-	int shadowIntens, lightType, roadReflection, flare, flags, probability;
-	CBaseModelInfo *mi;
-	C2dEffect *effect;
-	char *p;
-
-	sscanf(line, "%d %f %f %f %d %d %d %d %d", &id, &x, &y, &z, &r, &g, &b, &a, &type);
-
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_PushCurrentTxd();
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_SetCurrentTxd(TxdStore_FindTxdSlot("particle"));
-
-	mi = CModelInfo::GetModelInfo(id);
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	effect = (C2dEffect*)CStore_Alloc(CModelInfo::Get2dEffectStore());
-	//- rouz edit (ChatGPT)
-	mi->Add2dEffect(effect);
-	effect->pos = CVector(x, y, z);
-	effect->col = CRGBA(r, g, b, a);
-	effect->type = type;
-
-	switch(effect->type){
-	case EFFECT_LIGHT:
-		while(*line++ != '"');
-		p = corona;
-		while(*line != '"') *p++ = *line++;
-		*p = '\0';
-		line++;
-
-		while(*line++ != '"');
-		p = shadow;
-		while(*line != '"') *p++ = *line++;
-		*p = '\0';
-		line++;
-
-		sscanf(line, "%f %f %f %f %d %d %d %d %d",
-			&effect->light.dist,
-			&effect->light.range,
-			&effect->light.size,
-			&effect->light.shadowSize,
-			&shadowIntens, &lightType, &roadReflection, &flare, &flags);
-		effect->light.corona = RwTextureRead(corona, nil);
-		effect->light.shadow = RwTextureRead(shadow, nil);
-		effect->light.shadowIntensity = shadowIntens;
-		effect->light.lightType = lightType;
-		effect->light.roadReflection = roadReflection;
-		effect->light.flareType = flare;
-
-		if(flags & LIGHTFLAG_FOG_ALWAYS)
-			flags &= ~LIGHTFLAG_FOG_NORMAL;
-		effect->light.flags = flags;
-		break;
-
-	case EFFECT_PARTICLE:
-		sscanf(line, "%d %f %f %f %d %d %d %d %d %d %f %f %f %f",
-			&id, &x, &y, &z, &r, &g, &b, &a, &type,
-			&effect->particle.particleType,
-			&effect->particle.dir.x,
-			&effect->particle.dir.y,
-			&effect->particle.dir.z,
-			&effect->particle.scale);
-		break;
-
-	case EFFECT_ATTRACTOR:
-		sscanf(line, "%d %f %f %f %d %d %d %d %d %d %f %f %f %d",
-			&id, &x, &y, &z, &r, &g, &b, &a, &type,
-			&flags,
-			&effect->attractor.dir.x,
-			&effect->attractor.dir.y,
-			&effect->attractor.dir.z,
-			&probability);
-		effect->attractor.type = flags;
-#ifdef FIX_BUGS
-		effect->attractor.probability = Clamp(probability, 0, 255);
-#else
-		effect->attractor.probability = probability;
-#endif
-		break;
-	case EFFECT_PED_ATTRACTOR:
-		sscanf(line, "%d %f %f %f %d %d %d %d %d %d %f %f %f %f %f %f",
-			&id, &x, &y, &z, &r, &g, &b, &a, &type,
-			&ptype,
-			&effect->pedattr.queueDir.x,
-			&effect->pedattr.queueDir.y,
-			&effect->pedattr.queueDir.z,
-			&effect->pedattr.useDir.x,
-			&effect->pedattr.useDir.y,
-			&effect->pedattr.useDir.z);
-		effect->pedattr.type = ptype;
-		break;
-	}
-
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_PopCurrentTxd();
-}
 
 void
 CFileLoader::LoadScene(const char *filename)
@@ -1251,12 +1157,12 @@ CFileLoader::LoadObjectInstance(const char *line)
 		area = 0;
 	}
 
-	mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(id);
+	mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	if(mi == nil)
 		return;
 	assert(mi->IsSimple());
 
-	if(!CStreaming::IsObjectInCdImage(id))
+	if(!Streaming_IsObjectInCdImage(id)) // rouz edit (ChatGPT)
 		debug("Not in cdimage %s\n", mi->GetModelName());
 
 	angle = -RADTODEG(2.0f * Acos(angle));
@@ -1298,7 +1204,7 @@ CFileLoader::LoadObjectInstance(const char *line)
 			if(mi->m_isSubway)
 				entity->bIsSubway = true;
 		}
-		if(mi->GetLargestLodDistance() < 2.0f)
+		if(SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) < 2.0f) // rouz edit (ChatGPT)
 			entity->bIsVisible = false;
 		CWorld::Add(entity);
 
@@ -1453,7 +1359,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 	};
 	char *line;
 	int section = NONE;
-	CModelInfo::ReInit2dEffects();
+	ModelRegistry_ReInit2dEffects(); // rouz edit (ChatGPT)
 	debug("Reloading object types from %s...\n", filename);
 
 	FileMgr_ChangeDir("\\DATA\\MAPS\\");
@@ -1477,7 +1383,7 @@ CFileLoader::ReloadObjectTypes(const char *filename)
 					ReloadObject(line);
 					break;
 				case TWODFX:
-					Load2dEffect(line);
+					Effect2d_Load(line); // rouz edit (ChatGPT)
 					break;
 				default:
 					break;
@@ -1514,13 +1420,13 @@ CFileLoader::ReloadObject(const char *line)
 		break;
 	}
 
-	mi = (CSimpleModelInfo*) CModelInfo::GetModelInfo(id);
+	mi = (CSimpleModelInfo*) ((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	if (
 #ifdef FIX_BUGS
 		mi &&
 #endif
 	    mi->GetModelType() == MITYPE_SIMPLE && !strcmp(mi->GetModelName(), model) && mi->m_numAtomics == numObjs) {
-		mi->SetLodDistances(dist);
+		SimpleModel_SetDistances(mi->m_lodDistances, dist, rouz.lod_dist_scale); // rouz edit (ChatGPT)
 		SetModelInfoFlags(mi, flags);
 	} else {
 		printf("Can't reload %s\n", model);

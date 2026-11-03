@@ -515,8 +515,8 @@ bool CEntity::IsEntityOccluded(void) {
 			}
 
 			if (COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) {
-				CVector min = m_matrix * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingBox.min);
-				CVector max = m_matrix * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingBox.max);
+				CVector min = m_matrix * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.min); // rouz edit (ChatGPT)
+				CVector max = m_matrix * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.max); // rouz edit (ChatGPT)
 
 				if (CalcScreenCoors(min, &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;
 				if (CalcScreenCoors(CVector(max.x, max.y, min.z), &coors) && !COcclusion::aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, 0.0f)) continue;

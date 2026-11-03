@@ -89,7 +89,7 @@ void
 CGameLogic::SortOutStreamingAndMemory(const CVector &pos)
 {
 	Timer_Stop();
-	CStreaming::FlushRequestList();
+	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
 	CStreaming::DeleteRwObjectsAfterDeath(pos);
 	CStreaming::RemoveUnusedModelsInLoadedList();
 	CGame::DrasticTidyUpMemory(true);
@@ -115,7 +115,7 @@ CGameLogic::Update()
 	}
 #endif
 
-	if (CCutsceneMgr::IsCutsceneProcessing()) return;
+	if (Cutscene_IsProcessing()) return; // rouz edit (ChatGPT)
 
 	UpdateShortCut();
 	CPlayerInfo &pPlayerInfo = CWorld::Players[CWorld::PlayerInFocus];
@@ -183,7 +183,7 @@ CGameLogic::Update()
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
-			CPopulation::m_CountDownToPedsAtStart = 10;
+			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			if (Restart_bFadeInAfterNextDeath) {  // rouz edit (ChatGPT)
@@ -293,7 +293,7 @@ CGameLogic::Update()
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
-			CPopulation::m_CountDownToPedsAtStart = 10;
+			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			if (Restart_bFadeInAfterNextArrest) { // rouz edit (ChatGPT)
@@ -345,7 +345,7 @@ CGameLogic::Update()
 			TheCamera.SetMotionBlur(0, 0, 0, 0, MOTION_BLUR_NONE);
 			CPad::GetPad(0)->StopShaking(0);
 			References_RemoveReferencesToPlayer();
-			CPopulation::m_CountDownToPedsAtStart = 10;
+			Population_countDownToPedsAtStart = 10; // rouz edit (ChatGPT)
 			CCarCtrl::CountDownToCarsAtStart = 10;
 			CPad::GetPad(CWorld::PlayerInFocus)->DisablePlayerControls = PLAYERCONTROL_ENABLED;
 			TheCamera.SetFadeColour(0, 0, 0);
@@ -434,7 +434,7 @@ CGameLogic::SetUpShortCut(CVector vStartPos, float fStartAngle, CVector vEndPos,
 	ShortCutStartOrientation = fStartAngle;
 	ShortCutDestination = vEndPos;
 	ShortCutDestinationOrientation = fEndAngle;
-	CStreaming::RequestModel(MI_KAUFMAN, 0);
+	Streaming_RequestModel(MI_KAUFMAN, 0); // rouz edit (ChatGPT)
 }
 
 void
@@ -466,8 +466,8 @@ CGameLogic::UpdateShortCut()
 {
 	switch (ShortCutState) {
 	case SHORTCUT_INIT:
-		if (!CStreaming::HasModelLoaded(MI_KAUFMAN)) {
-			CStreaming::RequestModel(MI_KAUFMAN, 0);
+		if (!Streaming_HasModelLoaded(MI_KAUFMAN)) { // rouz edit (ChatGPT)
+			Streaming_RequestModel(MI_KAUFMAN, 0); // rouz edit (ChatGPT)
 			return;
 		}
 		// Allocate the shortcut taxi without invoking C++ new.

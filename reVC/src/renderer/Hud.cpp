@@ -251,7 +251,7 @@ void CHud::Draw()
 	if (CPad::GetPad(1)->GetStartJustDown())
 		m_Wants_To_Draw_Hud = !m_Wants_To_Draw_Hud;
 
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	if (m_Wants_To_Draw_Hud && !TheCamera.m_WideScreenOn) {
@@ -548,7 +548,7 @@ void CHud::Draw()
 							0.015f, 1.0f,
 							1.0f, 1.0f);
 				} else {
-					CBaseModelInfo *weaponModel = CModelInfo::GetModelInfo(weaponInfo->m_nModelId);
+					CBaseModelInfo *weaponModel = ((CBaseModelInfo*)ModelRegistry_Get(weaponInfo->m_nModelId)); // rouz edit (ChatGPT)
 					// Use the complete C texture dictionary owner with the original live arguments
 					RwTexDictionary *weaponTxd = ((RwTexDictionary*)TxdStore_GetSlot(weaponModel->GetTxdSlot())->texDict);
 					if (weaponTxd) {
@@ -1281,7 +1281,7 @@ void CHud::Draw()
 			if (TheCamera.m_WideScreenOn) {
 				onceItWasWidescreen = true;
 				
-				if (FrontEndMenuManager.m_PrefsShowSubtitles || !CCutsceneMgr::IsRunning()) {
+				if (FrontEndMenuManager.m_PrefsShowSubtitles || !Cutscene_IsRunning()) { // rouz edit (ChatGPT)
 					CFont::SetCentreSize(SCREEN_WIDTH - SCREEN_SCALE_X(60.0f));
 					CFont::SetScale(SCREEN_SCALE_X(0.58f), SCREEN_SCALE_Y(1.2f));
 					CFont::PrintString(SCREEN_WIDTH / 2.f, SCREEN_SCALE_FROM_BOTTOM(80.0f), m_Message);
@@ -1524,7 +1524,7 @@ void CHud::DrawAfterFade()
 	RwRenderStateSet(rwRENDERSTATETEXTUREADDRESS, (void*)rwTEXTUREADDRESSCLAMP);
 	RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)FALSE);
 
-	if (Timer_GetIsUserPaused() || CReplay::IsPlayingBack())
+	if (Timer_GetIsUserPaused() || Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	for (int i = 0; i < ARRAY_SIZE(CTheScripts::IntroTextLines); i++) {
@@ -1990,7 +1990,7 @@ void CHud::SetBigMessage(wchar *message, uint16 style)
 
 void CHud::SetHelpMessage(wchar *message, bool quick, bool displayForever)
 {
-	if (!CReplay::IsPlayingBack()) {
+	if (!Replay_IsPlayingBack()) { // rouz edit (ChatGPT)
 		for (int i = 0; i < HELP_MSG_LENGTH; i++) {
 			m_HelpMessage[i] = 0;
 		}

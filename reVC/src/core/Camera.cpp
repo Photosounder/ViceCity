@@ -87,8 +87,8 @@ float CCamera::m_f3rdPersonCHairMultX;
 float CCamera::m_f3rdPersonCHairMultY;
 
 #ifdef IMPROVED_CAMERA
-#define KEYJUSTDOWN(k) ControlsManager.GetIsKeyboardKeyJustDown((RsKeyCodes)k)
-#define KEYDOWN(k) ControlsManager.GetIsKeyboardKeyDown((RsKeyCodes)k)
+#define KEYJUSTDOWN(k) Input_GetIsKeyboardKeyJustDown((RsKeyCodes)k) // rouz edit (ChatGPT)
+#define KEYDOWN(k) Input_GetIsKeyboardKeyDown((RsKeyCodes)k) // rouz edit (ChatGPT)
 #define CTRLJUSTDOWN(key) \
 	       ((KEYDOWN(rsLCTRL) || KEYDOWN(rsRCTRL)) && KEYJUSTDOWN((RsKeyCodes)key) || \
 	        (KEYJUSTDOWN(rsLCTRL) || KEYJUSTDOWN(rsRCTRL)) && KEYDOWN((RsKeyCodes)key))
@@ -295,7 +295,7 @@ CCamera::Process(void)
 		if(WorldViewerBeingUsed)
 			InitialiseCameraForDebugMode();
 		else
-			CPad::m_bMapPadOneToPadTwo = false;
+			Input_mapPadOneToPadTwo = false; // rouz edit (ChatGPT)
 	}
 #endif
 
@@ -620,7 +620,7 @@ CCamera::Process(void)
 		DistanceToWater = CWaterLevel::CalcDistanceToWater(GetPosition().x, GetPosition().y);
 
 	// LOD dist
-	if(!CCutsceneMgr::IsRunning() || CCutsceneMgr::UseLodMultiplier()){
+	if(!Cutscene_IsRunning() || CCutsceneMgr::UseLodMultiplier()){ // rouz edit (ChatGPT)
 		LODDistMultiplier = 70.0f/Draw_GetFOV();
 
 		if(GetPosition().z > 55.0f && FindPlayerVehicle() && FindPlayerVehicle()->pHandling->Flags & (HANDLING_IS_HELI|HANDLING_IS_PLANE) ||
@@ -742,7 +742,7 @@ CCamera::CamControl(void)
 					boatTarget = true;
 
 				// Change user selected mode
-				if(CPad::GetPad(0)->CycleCameraModeUpJustDown() && !CReplay::IsPlayingBack() &&
+				if(CPad::GetPad(0)->CycleCameraModeUpJustDown() && !Replay_IsPlayingBack() && // rouz edit (ChatGPT)
 				   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 				   !m_WideScreenOn){
 					CarZoomIndicator--;
@@ -750,7 +750,7 @@ CCamera::CamControl(void)
 					if(CarZoomIndicator == CAM_ZOOM_TOPDOWN)
 						CarZoomIndicator--;
 				}
-				if(CPad::GetPad(0)->CycleCameraModeDownJustDown() && !CReplay::IsPlayingBack() &&
+				if(CPad::GetPad(0)->CycleCameraModeDownJustDown() && !Replay_IsPlayingBack() && // rouz edit (ChatGPT)
 				   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 				   !m_WideScreenOn){
 					CarZoomIndicator++;
@@ -988,7 +988,7 @@ CCamera::CamControl(void)
 		// Ped target
 		else if(pTargetEntity->IsPed()){
 			// Change user selected mode
-			if(CPad::GetPad(0)->CycleCameraModeUpJustDown() && !CReplay::IsPlayingBack() &&
+			if(CPad::GetPad(0)->CycleCameraModeUpJustDown() && !Replay_IsPlayingBack() && // rouz edit (ChatGPT)
 			   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 			   !m_WideScreenOn && !m_bFailedCullZoneTestPreviously && !m_bFirstPersonBeingUsed){
 				if(FrontEndMenuManager.m_ControlMethod == CONTROL_STANDARD){
@@ -999,7 +999,7 @@ CCamera::CamControl(void)
 				}else
 					PedZoomIndicator--;
 			}
-			if(CPad::GetPad(0)->CycleCameraModeDownJustDown() && !CReplay::IsPlayingBack() &&
+			if(CPad::GetPad(0)->CycleCameraModeDownJustDown() && !Replay_IsPlayingBack() && // rouz edit (ChatGPT)
 			   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 			   !m_WideScreenOn && !m_bFailedCullZoneTestPreviously && !m_bFirstPersonBeingUsed){
 				if(FrontEndMenuManager.m_ControlMethod == CONTROL_STANDARD){
@@ -1769,7 +1769,7 @@ CCamera::CamControl(void)
 	if(PrevMode != Cams[ActiveCam].Mode || switchedFromObbe ||
 	   Cams[ActiveCam].Mode == CCam::MODE_FOLLOWPED || Cams[ActiveCam].Mode == CCam::MODE_CAM_ON_A_STRING)
 		if(CPad::GetPad(0)->CycleCameraModeJustDown() &&
-		   !CReplay::IsPlayingBack() &&
+		   !Replay_IsPlayingBack() && // rouz edit (ChatGPT)
 		   (m_bLookingAtPlayer || WhoIsInControlOfTheCamera == CAMCONTROL_OBBE) &&
 		   !m_WideScreenOn &&
 		   (WhoIsInControlOfTheCamera != CAMCONTROL_OBBE || bSwitchedToObbeCam))
@@ -2962,7 +2962,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_COPCAR:
 #ifdef FIX_BUGS
-		if (CReplay::IsPlayingBack())
+		if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 			return false;
 #endif
 		if(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) < 1)
@@ -2992,7 +2992,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return false;
 	case OBBE_COPCAR_WHEEL:
 #ifdef FIX_BUGS
-		if (CReplay::IsPlayingBack())
+		if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 			return false;
 #endif
 		if(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) < 1)

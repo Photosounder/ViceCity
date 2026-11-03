@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Automobile.h"
@@ -181,7 +182,7 @@ void
 CPlayerInfo::Process(void)
 {
 #ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 #endif
 	// Unused taxi feature. Gives you a dollar for every second with a passenger. Can be toggled via 0x29A opcode.
@@ -733,7 +734,7 @@ CVector
 FindPlayerCoors(void)
 {
 #ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return TheCamera.GetPosition();
 #endif
 	CPlayerPed *ped = FindPlayerPed();
@@ -756,7 +757,7 @@ FindPlayerSpeed(void)
 {
 #ifdef FIX_BUGS
 	static CVector vecTmpVector(0.0f, 0.0f, 0.0f);
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return vecTmpVector;
 #endif
 	CPlayerPed *ped = FindPlayerPed();
@@ -803,7 +804,7 @@ const CVector &
 FindPlayerCentreOfWorld(int32 player)
 {
 #ifdef FIX_BUGS
-	if(CReplay::IsPlayingBack()) return TheCamera.GetPosition();
+	if(Replay_IsPlayingBack()) return TheCamera.GetPosition(); // rouz edit (ChatGPT)
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
 	if(CWorld::Players[player].m_pRemoteVehicle) return CWorld::Players[player].m_pRemoteVehicle->GetPosition();
@@ -815,7 +816,7 @@ const CVector &
 FindPlayerCentreOfWorld_NoSniperShift(void)
 {
 #ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack()) return TheCamera.GetPosition();
+	if (Replay_IsPlayingBack()) return TheCamera.GetPosition(); // rouz edit (ChatGPT)
 #endif
 	if(CCarCtrl::bCarsGeneratedAroundCamera) return TheCamera.GetPosition();
 	if(CWorld::Players[CWorld::PlayerInFocus].m_pRemoteVehicle)
@@ -909,7 +910,10 @@ CPlayerInfo::MakePlayerSafe(bool toggle)
 		((CPlayerPed*)m_pPed)->ClearAdrenaline();
 		CancelPlayerEnteringCars(nil);
 		FireManager_ExtinguishPoint(&gFireManager,Fire_VectorFromNative(GetPos()), 4000.0f);
-		CExplosion::RemoveAllExplosionsInArea(GetPos(), 4000.0f);
+		// Evaluate the original position once before passing its C value
+		const CVector explosionNativePosition = GetPos();
+		ExplosionPosition explosionPosition = {explosionNativePosition.x,explosionNativePosition.y,explosionNativePosition.z};
+		Explosion_RemoveAllExplosionsInArea(explosionPosition, 4000.0f);
 		ProjectileInfo_RemoveAllProjectiles();
 		CWorld::SetAllCarsCanBeDamaged(false);
 		CWorld::ExtinguishAllCarFiresInArea(GetPos(), 4000.0f);
@@ -967,4 +971,5 @@ CPlayerInfo::DeletePlayerSkin()
 }
 #endif
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "Escalators_backend.h"
 int32_t Escalators_Num;
 void
@@ -88,7 +89,7 @@ Escalators_Init(void) {
 void
 Escalators_Update(void) {
     // Preserve all original registration, replay and shutdown write ordering
-	if (Escalators_BackendReplay())
+	if (Replay_IsPlayingBack())
 		return;
 
 	for (int i = 0; i < NUM_ESCALATORS; i++) {

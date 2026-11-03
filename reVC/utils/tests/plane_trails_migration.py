@@ -47,7 +47,6 @@ READERS=[
 ('void','RegisterCorona','uint32_t id,void *position','CCoronas::RegisterCorona(id,255,0,0,255,*(CVector *)position,5.0f,2000.0f,CCoronas::TYPE_NORMAL,CCoronas::FLARE_NONE,CCoronas::REFLECTION_OFF,CCoronas::LOSCHECK_OFF,CCoronas::STREAK_OFF,0.0f);'),
 ('void','UpdateCorona','uint32_t id,void *position','CCoronas::UpdateCoronaCoors(id,*(CVector *)position,2000.0f,0.0f);')]
 for name in ['Foggyness','CloudCoverage','Rain']:READERS.append(('float',name,'void','return CWeather::'+name+';'))
-for name in ['Red','Green','Blue']:READERS.append(('int32_t','SkyTop'+name,'void','return CTimeCycle::GetSkyTop'+name+'();'))
 BACKEND_HEADER='''//+ rouz edit (ChatGPT)
 #pragma once
 #include "PlaneTrails.h"
@@ -108,13 +107,14 @@ def kernel(source):
     for state,value,name in [('VERTEXALPHAENABLE','TRUE','VertexAlpha'),('SRCBLEND','rwBLENDSRCALPHA','SrcBlend'),('DESTBLEND','rwBLENDINVSRCALPHA','DestBlend')]:body=body.replace('RwRenderStateSet(rwRENDERSTATE'+state+', (void*)'+value+')','PlaneTrails_Backend'+name+'()')
     body=body.replace('RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nil)','PlaneTrails_BackendRasterNull()').replace('RwIm3DTransform(TempBufferRenderVertices, numVerts, nil, rwIM3D_VERTEXXYZ|rwIM3D_VERTEXRGBA)','PlaneTrails_BackendTransform(numVerts)').replace('RwIm3DRenderIndexedPrimitive(rwPRIMTYPELINELIST, TrailIndices,','PlaneTrails_BackendRenderIndexed(TrailIndices,').replace('RwIm3DEnd()','PlaneTrails_BackendEnd()')
     for name in ['Foggyness','CloudCoverage','Rain']:body=body.replace('CWeather::'+name,'PlaneTrails_Backend'+name+'()')
-    for name in ['Red','Green','Blue']:body=body.replace('CTimeCycle::GetSkyTop'+name+'()','PlaneTrails_BackendSkyTop'+name+'()')
+    for name in ['Red','Green','Blue']:body=body.replace('CTimeCycle::GetSkyTop'+name+'()','TimeCycle_GetSkyTop'+name+'()')
     body=body.replace('Sin(','sinf(').replace('Cos(','cosf(');body=re.sub(r'\bint32\b','int32_t',body);body=re.sub(r'\buint32\b','uint32_t',body)
     body=body.replace('\n{\n','\n{\n    // Preserve all original live reads, timestamp decisions and state-write ordering\n')
     body=re.sub(r'^(\t+)([^\n]*\{\n)',r'\1\2\1\t// Preserve the original branch and traversal order\n',body,flags=re.M)
     assert not re.search(r'\b(?:CVector|CPlaneTrail|CPlaneTrails|CCoronas|CWeather|CTimeCycle|TempBufferRenderVertices|CustomPipes)\b',body)
     prefix='''//+ rouz edit (ChatGPT)
 #include "PlaneTrails_backend.h"
+#include "Timecycle.h"
 #include "Clock.h"
 #include "Timer.h"
 #include "Draw_constants.h"

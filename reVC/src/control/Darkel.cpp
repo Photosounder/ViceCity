@@ -10,11 +10,7 @@
 #include "GameLogic.h"
 #include "Stats.h"
 #include "Font.h"
-bool Darkel_BackendPlayback(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return CReplay::IsPlayingBack();
-}
+
 
 void Darkel_BackendJustifyOff(void)
 {
@@ -82,23 +78,8 @@ void Darkel_BackendRightJustifyOn(void)
     CFont::SetRightJustifyOn();
 }
 
-char * Darkel_BackendString(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return gString;
-}
 
-uint16_t * Darkel_BackendUnicode(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return gUString;
-}
 
-void Darkel_BackendAsciiToUnicode(const char *source,uint16_t *target)
-{
-    // Access the original typed native primitive at its original C policy access point
-    AsciiToUnicode(source,target);
-}
 
 int32_t Darkel_BackendVehicleModel(CVehicle *vehicle)
 {
@@ -181,7 +162,7 @@ int32_t * Darkel_BackendPeopleKilledByOthers(void)
 int32_t * Darkel_BackendRandomPedType(void)
 {
     // Access the original typed native primitive at its original C policy access point
-    return &CPopulation::m_AllRandomPedsThisType;
+    return &Population_allRandomPedsType; // rouz edit (ChatGPT)
 }
 
 void Darkel_BackendClearShortCut(void)
@@ -290,12 +271,6 @@ void Darkel_BackendClearTarget(CPlayerPed *player)
 {
     // Access the original typed native primitive at its original C policy access point
     player->ClearWeaponTarget();
-}
-
-CBaseModelInfo * Darkel_BackendModelInfo(int32_t model)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return CModelInfo::GetModelInfo(model);
 }
 
 void Darkel_BackendAddRef(CBaseModelInfo *model)

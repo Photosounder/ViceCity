@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "Rubbish_backend.h"
 #include "Timer.h"
 #include "General.h"
@@ -111,7 +112,7 @@ Rubbish_Render(void)
 	for(type = 0; type < 4; type++){
 		// Retain the original sheet traversal and update order
 		if(type < 3 || Rubbish_BackendPamphlet())
-			Rubbish_BackendTextureRaster(Rubbish_BackendRaster(gpRubbishTexture[type]));
+			RwHelper_SetTextureRaster(RwHelper_TextureRaster(gpRubbishTexture[type]));
 
 		(*indicesStored) = 0;
 		(*verticesStored) = 0;
@@ -480,10 +481,10 @@ Rubbish_Init(void)
 	Rubbish_BackendTxdPush();
 	int slot = Rubbish_BackendTxdFind("particle");
 	Rubbish_BackendTxdSet(slot);
-	gpRubbishTexture[0] = Rubbish_BackendTextureRead("gameleaf01_64", NULL);
-	gpRubbishTexture[1] = Rubbish_BackendTextureRead("gameleaf02_64", NULL);
-	gpRubbishTexture[2] = Rubbish_BackendTextureRead("newspaper01_64", NULL);
-	gpRubbishTexture[3] = Rubbish_BackendTextureRead("newspaper02_64", NULL);
+	gpRubbishTexture[0] = RwHelper_ReadTexture("gameleaf01_64", NULL);
+	gpRubbishTexture[1] = RwHelper_ReadTexture("gameleaf02_64", NULL);
+	gpRubbishTexture[2] = RwHelper_ReadTexture("newspaper01_64", NULL);
+	gpRubbishTexture[3] = RwHelper_ReadTexture("newspaper02_64", NULL);
 	Rubbish_BackendTxdPop();
 	RubbishVisibility = 255;
 	bRubbishInvisible = false;
@@ -493,13 +494,13 @@ void
 Rubbish_Shutdown(void)
 {
 	// Destroy and clear each original texture in order
-	Rubbish_BackendTextureDestroy(gpRubbishTexture[0]);
+	RwHelper_DestroyTexture(gpRubbishTexture[0]);
 	gpRubbishTexture[0] = NULL;
-	Rubbish_BackendTextureDestroy(gpRubbishTexture[1]);
+	RwHelper_DestroyTexture(gpRubbishTexture[1]);
 	gpRubbishTexture[1] = NULL;
-	Rubbish_BackendTextureDestroy(gpRubbishTexture[2]);
+	RwHelper_DestroyTexture(gpRubbishTexture[2]);
 	gpRubbishTexture[2] = NULL;
-	Rubbish_BackendTextureDestroy(gpRubbishTexture[3]);
+	RwHelper_DestroyTexture(gpRubbishTexture[3]);
 	gpRubbishTexture[3] = NULL;
 }
 //- rouz edit (ChatGPT)

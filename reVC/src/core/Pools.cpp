@@ -298,7 +298,7 @@ INITSAVEBUF
 		ReadSaveBuf(&type, &buf, sizeof(type));
 		ReadSaveBuf(&model, &buf, sizeof(model));
 		//- rouz edit (ChatGPT)
-		CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY);
+		Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		CStreaming::LoadAllRequestedModels(false);
 		//+ rouz edit (ChatGPT)
 		// Transfer save data through the C buffer API with explicit sizes
@@ -363,7 +363,7 @@ INITSAVEBUF
 			// Transfer save data through the C buffer API with explicit sizes
 			SkipSaveBuf(&buf, sizeof(CAutomobile));
 			//- rouz edit (ChatGPT)
-			CStreaming::RequestModel(model, 0); // is it needed?
+			Streaming_RequestModel(model, 0); // is it needed? // rouz edit (ChatGPT)
 			CStreaming::LoadAllRequestedModels(false);
 //+ rouz edit (ChatGPT)
 			// Restore the automobile into its saved vehicle-pool slot.
@@ -849,7 +849,7 @@ INITSAVEBUF
 #endif
 			CopyToBuf(buf, Wanted_MaximumWantedLevel);
 			CopyToBuf(buf, Wanted_nMaximumWantedLevel);
-			memcpy(buf, CModelInfo::GetModelInfo(pPed->GetModelIndex())->GetModelName(), MAX_MODEL_NAME);
+			memcpy(buf, ((CBaseModelInfo*)ModelRegistry_Get(pPed->GetModelIndex()))->GetModelName(), MAX_MODEL_NAME); // rouz edit (ChatGPT)
 			//+ rouz edit (ChatGPT)
 			// Transfer save data through the C buffer API with explicit sizes
 			SkipSaveBuf(&buf, MAX_MODEL_NAME);
@@ -954,10 +954,10 @@ INITSAVEBUF
 			if (pBufferPlayer->HasWeaponSlot(i)) {
 				int modelId = WeaponInfo_GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModelId;
 				if (modelId != -1) {
-					CStreaming::RequestModel(modelId, STREAMFLAGS_DEPENDENCY);
+					Streaming_RequestModel(modelId, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 					int modelId2 = WeaponInfo_GetWeaponInfo(pBufferPlayer->GetWeapon(i).m_eWeaponType)->m_nModel2Id;
 					if (modelId2 != -1)
-						CStreaming::RequestModel(modelId2, STREAMFLAGS_DEPENDENCY);
+						Streaming_RequestModel(modelId2, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 
 					CStreaming::LoadAllRequestedModels(false);
 				}
@@ -980,6 +980,21 @@ VALIDATESAVEBUF(size)
 #undef CopyToBuf
 //- rouz edit (ChatGPT)
 
+CPool *CPools_GetPedPool(void)
+{
+    // Expose the native pedestrian pool to C callers
+    return CPools::GetPedPool();
+}
+CPool *CPools_GetVehiclePool(void)
+{
+    // Expose the native vehicle pool to C callers
+    return CPools::GetVehiclePool();
+}
+CPool *CPools_GetObjectPool(void)
+{
+    // Expose the native object pool to C callers
+    return CPools::GetObjectPool();
+}
 CPool *CPools_GetPtrNodePool(void)
 {
     // Expose the existing pointer-node pool to the C list owner

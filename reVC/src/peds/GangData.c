@@ -1,6 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "Gangs.h"
-#include "Gangs_backend.h"
+#include "StreamingData.h"
 #include "General.h"
 #include "ModelIndexData.h"
 #include "WeaponType.h"
@@ -57,7 +57,7 @@ bool Gangs_HaveGangModelsLoaded(int16_t gang)
 {
     // Query the second live model only when the first streaming query succeeds
 	GangInfo* pGangInfo = Gangs_GetGangInfo(gang);
-	return Gangs_BackendHasModelLoaded(pGangInfo->m_nPedModel1MI) && Gangs_BackendHasModelLoaded(pGangInfo->m_nPedModel2MI);
+	return Streaming_HasModelLoaded(pGangInfo->m_nPedModel1MI) && Streaming_HasModelLoaded(pGangInfo->m_nPedModel2MI);
 }
 
 void Gangs_SetGangPedModels(int16_t gang, int32_t mi1, int32_t mi2)

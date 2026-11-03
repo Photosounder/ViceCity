@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
 #include "RoadBlocks_backend.h"
+#include "PedPlacement.h" // rouz edit (ChatGPT)
 #include "General.h"
 #include "Timer.h"
 #include <math.h>
@@ -118,7 +120,7 @@ RoadBlocks_GenerateRoadBlockCopsForCar(CVehicle* pVehicle, int32_t roadBlockType
 	CEntity* pEntityToAttack = RoadBlocks_BackendVehicleEntity(RoadBlocks_BackendPlayerVehicle());
 	if (!pEntityToAttack)
 		pEntityToAttack = RoadBlocks_BackendPlayerEntity();
-	CColModel* pPoliceColModel = RoadBlocks_BackendColModel(MI_POLICE);
+	CColModel* pPoliceColModel = ModelRegistry_Collision(ModelRegistry_Get(MI_POLICE));
 	float fRadius = RoadBlocks_BackendVehicleRadius(pVehicle) / RoadBlocks_BackendColRadius(pPoliceColModel);
 	for (int32_t i = 0; i < 2; i++) {
 		const int32_t roadBlockIndex = i + 2 * roadBlockType;
@@ -153,7 +155,7 @@ RoadBlocks_GenerateRoadBlockCopsForCar(CVehicle* pVehicle, int32_t roadBlockType
 //- rouz edit (ChatGPT)
 		if (copType == ROADBLOCKS_COP_STREET)
 			RoadBlocks_BackendCopWeapon(pCopPed,WEAPONTYPE_COLT45);
-		RoadBlocks_BackendPedZ(&posForZ);
+		PedPlacement_CFindZ(posForZ.x,posForZ.y,&posForZ.z); // rouz edit (ChatGPT)
 		RoadBlocks_BackendCopPosition(pCopPed,posForZ);
 		RoadBlocks_BackendCopOrientation(pCopPed,0.0f,0.0f,-HALFPI);
 		RoadBlocks_BackendCopDisabled(pCopPed,true);
@@ -291,7 +293,7 @@ RoadBlocks_CreateRoadBlockBetween2Points(RoadBlockVector point1, RoadBlockVector
 		vehicleId = MI_ENFORCER;
 	if (!RoadBlocks_BackendModelLoaded(vehicleId))
 		vehicleId = MI_POLICE;
-	CColModel *pVehicleColModel = RoadBlocks_BackendColModel(vehicleId);
+	CColModel *pVehicleColModel = ModelRegistry_Collision(ModelRegistry_Get(vehicleId));
 	float fModelRadius = 2.0f * RoadBlocks_BackendColRadius(pVehicleColModel) + 0.25f;
 	int16_t numRoadblockVehicles = Min(6, (int16_t)(distBetween / fModelRadius));
 	for (int16_t i = 0; i < numRoadblockVehicles; i++) {
@@ -305,7 +307,7 @@ RoadBlocks_CreateRoadBlockBetween2Points(RoadBlockVector point1, RoadBlockVector
 			RoadBlocks_BackendMatrixRotateZ(tmp,((General_GetRandomNumber() & 0xFF) - 128.0f) * 0.003f + 3.1416f);
 		RoadBlocks_BackendMatrixTranslateOnly(tmp,rb_add(rb_left(offset,forward),pos));
 		(*RoadBlocks_BackendMatrixZ(tmp)) += 0.6f;
-		float fModelRadius = RoadBlocks_BackendColRadius(RoadBlocks_BackendColModel(vehicleId)) - 0.25f;
+		float fModelRadius = RoadBlocks_BackendColRadius(ModelRegistry_Collision(ModelRegistry_Get(vehicleId))) - 0.25f;
 		int16_t colliding = 0;
 		RoadBlocks_BackendColliding(RoadBlocks_BackendMatrixPosition(tmp),fModelRadius,&colliding);
 		if (!colliding) {
@@ -373,9 +375,9 @@ RoadBlocks_CreateRoadBlockBetween2Points(RoadBlockVector point1, RoadBlockVector
 		if (!found)
 			continue;
 		int16_t colliding = 0;
-		CBaseModelInfo* pMI = RoadBlocks_BackendModelInfo(MI_ROADWORKBARRIER1);
-		(*RoadBlocks_BackendMatrixZ(tmp)) -= RoadBlocks_BackendColMinZ(RoadBlocks_BackendInfoColModel(pMI));
-		RoadBlocks_BackendColliding(RoadBlocks_BackendMatrixPosition(tmp),RoadBlocks_BackendColRadius(RoadBlocks_BackendInfoColModel(pMI)),&colliding);
+		CBaseModelInfo* pMI = ModelRegistry_Get(MI_ROADWORKBARRIER1);
+		(*RoadBlocks_BackendMatrixZ(tmp)) -= RoadBlocks_BackendColMinZ(ModelRegistry_Collision(pMI));
+		RoadBlocks_BackendColliding(RoadBlocks_BackendMatrixPosition(tmp),RoadBlocks_BackendColRadius(ModelRegistry_Collision(pMI)),&colliding);
 		if (colliding == 0) {
 //+ rouz edit (ChatGPT)
 			// Allocate the roadblock barrier without invoking C++ new.

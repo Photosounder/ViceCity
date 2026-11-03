@@ -9,6 +9,9 @@ extern "C" {
 CPool *CPools_GetAudioScriptObjectPool(void);
 CPool *CPools_GetPtrNodePool(void);
 CPool *CPools_GetEntryInfoNodePool(void);
+CPool *CPools_GetPedPool(void); // rouz edit (ChatGPT)
+CPool *CPools_GetVehiclePool(void); // rouz edit (ChatGPT)
+CPool *CPools_GetObjectPool(void); // rouz edit (ChatGPT)
 #ifdef __cplusplus
 }
 //- rouz edit (ChatGPT)

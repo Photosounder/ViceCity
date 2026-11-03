@@ -700,3 +700,35 @@ RpAtomic *ConvertPlatformAtomic(RpAtomic *atomic,void *data)
 }
 #endif
 //- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" void RwHelper_DestroyTexture(void *texture)
+{
+    // Destroy the original RenderWare texture
+    RwTextureDestroy((RwTexture*)texture);
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" void *RwHelper_ReadTexture(const char *name,const char *mask)
+{
+    // Read the original RenderWare texture with its supplied mask
+    return RwTextureRead(name,mask);
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" void *RwHelper_TextureRaster(void *texture)
+{
+    // Return the raster from the supplied native texture
+    return RwTextureGetRaster((RwTexture*)texture);
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" void RwHelper_SetTextureRaster(void *raster)
+{
+    // Select the supplied raster in the original render state
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
+}
+//- rouz edit (ChatGPT)

@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 #define WITHDINPUT
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "crossplatform.h"
 #include "platform.h"
 #ifdef XINPUT
@@ -65,33 +66,18 @@ u_long128 pad2_dma_buf[scePadDmaBufferMax] __attribute__((aligned(64)));
 
 
 
-bool CPad::bDisplayNoControllerMessage;
-bool CPad::bObsoleteControllerMessage;
-bool CPad::bOldDisplayNoControllerMessage;
-bool CPad::m_bMapPadOneToPadTwo;
-bool CPad::m_bDebugCamPCOn;
-bool CPad::bHasPlayerCheated;
-bool CPad::bInvertLook4Pad;
 #ifdef GTA_PS2
 unsigned char act_direct[6];
 unsigned char act_align[6];
 #endif
 
-CKeyboardState CPad::OldKeyState;
-CKeyboardState CPad::NewKeyState;
-CKeyboardState CPad::TempKeyState;
 
-char CPad::KeyBoardCheatString[30];
 
-CMouseControllerState CPad::OldMouseControllerState;
-static const int OldMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::OldMouseControllerState),0);
-CMouseControllerState CPad::NewMouseControllerState;
-static const int NewMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::NewMouseControllerState),0);
-CMouseControllerState CPad::PCTempMouseControllerState;
-static const int PCTempMouseControllerStateInitialized=(MouseControllerState_Init(&CPad::PCTempMouseControllerState),0);
+static const int OldMouseControllerStateInitialized=(MouseControllerState_Init(&Input_oldMouseState),0); // rouz edit (ChatGPT)
+static const int NewMouseControllerStateInitialized=(MouseControllerState_Init(&Input_newMouseState),0); // rouz edit (ChatGPT)
+static const int PCTempMouseControllerStateInitialized=(MouseControllerState_Init(&Input_tempMouseState),0); // rouz edit (ChatGPT)
 
 #ifdef DETECT_PAD_INPUT_SWITCH
-bool CPad::IsAffectedByController = false;
 #endif
 
 _TODO("gbFastTime");
@@ -105,10 +91,10 @@ void SpecialCarCheats()
 {
 	if ( !CVehicle::bCheat9 )
 	{
-		((CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_INFERNUS))->m_wheelScale *= 1.3f;
-		((CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_CHEETAH))->m_wheelScale *= 1.3f;
-		((CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_PHEONIX))->m_wheelScale *= 1.3f;
-		((CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_DELUXO))->m_wheelScale *= 1.3f;
+		((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_INFERNUS)))->m_wheelScale *= 1.3f; // rouz edit (ChatGPT)
+		((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_CHEETAH)))->m_wheelScale *= 1.3f; // rouz edit (ChatGPT)
+		((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_PHEONIX)))->m_wheelScale *= 1.3f; // rouz edit (ChatGPT)
+		((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_DELUXO)))->m_wheelScale *= 1.3f; // rouz edit (ChatGPT)
 		mod_HandlingManager.GetHandlingData(HANDLING_LANDSTAL)->Transmission.fEngineAcceleration *= 2.0f;
 		mod_HandlingManager.GetHandlingData(HANDLING_PATRIOT)->Transmission.fEngineAcceleration *= 2.0f;
 		mod_HandlingManager.GetHandlingData(HANDLING_BOBCAT)->Transmission.fEngineAcceleration *= 2.0f;
@@ -146,7 +132,7 @@ void SpecialCarCheats()
 		mod_HandlingManager.GetHandlingData(HANDLING_DELUXO)->fTurnMass *= 4.0f;
 		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CVehicle::bCheat9 = true;
-		CPad::bHasPlayerCheated = true;
+		Input_playerHasCheated = true; // rouz edit (ChatGPT)
 	}
 }
 
@@ -173,15 +159,15 @@ void WeaponCheat1()
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
-	CStreaming::RequestModel(MI_BRASS_KNUCKLES, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_BASEBALL_BAT, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_MOLOTOV, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_COLT45, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_SHOTGUN, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_TEC9, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_RUGER, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_SNIPERRIFLE, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_FLAMETHROWER, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_BRASS_KNUCKLES, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_BASEBALL_BAT, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MOLOTOV, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_COLT45, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_SHOTGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_TEC9, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_RUGER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_SNIPERRIFLE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_FLAMETHROWER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_BRASSKNUCKLE, 1);
@@ -194,15 +180,15 @@ void WeaponCheat1()
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_SNIPERRIFLE, 25);
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_FLAMETHROWER, 200);
 
-	CStreaming::SetModelIsDeletable(MI_BRASS_KNUCKLES);
-	CStreaming::SetModelIsDeletable(MI_BASEBALL_BAT);
-	CStreaming::SetModelIsDeletable(MI_MOLOTOV);
-	CStreaming::SetModelIsDeletable(MI_COLT45);
-	CStreaming::SetModelIsDeletable(MI_SHOTGUN);
-	CStreaming::SetModelIsDeletable(MI_TEC9);
-	CStreaming::SetModelIsDeletable(MI_RUGER);
-	CStreaming::SetModelIsDeletable(MI_SNIPERRIFLE);
-	CStreaming::SetModelIsDeletable(MI_FLAMETHROWER);
+	Streaming_SetModelIsDeletable(MI_BRASS_KNUCKLES); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_BASEBALL_BAT); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MOLOTOV); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_COLT45); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_SHOTGUN); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_TEC9); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_RUGER); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_SNIPERRIFLE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_FLAMETHROWER); // rouz edit (ChatGPT)
 #ifdef MOBILE_IMPROVEMENTS
 	if (FindPlayerVehicle()) {
 		FindPlayerPed()->RemoveWeaponWhenEnteringVehicle();
@@ -214,15 +200,15 @@ void WeaponCheat2()
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
-	CStreaming::RequestModel(MI_KATANA, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_PYTHON, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_STUBBY_SHOTGUN, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_SILENCEDINGRAM, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_M4, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_ROCKETLAUNCHER, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_KATANA, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_PYTHON, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_STUBBY_SHOTGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_SILENCEDINGRAM, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_M4, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_ROCKETLAUNCHER, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 
 #ifdef FIX_BUGS
@@ -238,15 +224,15 @@ void WeaponCheat2()
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_LASERSCOPE, 21);
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_ROCKETLAUNCHER, 5);
 
-	CStreaming::SetModelIsDeletable(MI_KATANA);
-	CStreaming::SetModelIsDeletable(MI_GRENADE);
-	CStreaming::SetModelIsDeletable(MI_BOMB);
-	CStreaming::SetModelIsDeletable(MI_PYTHON);
-	CStreaming::SetModelIsDeletable(MI_STUBBY_SHOTGUN);
-	CStreaming::SetModelIsDeletable(MI_SILENCEDINGRAM);
-	CStreaming::SetModelIsDeletable(MI_M4);
-	CStreaming::SetModelIsDeletable(MI_LASERSCOPE);
-	CStreaming::SetModelIsDeletable(MI_ROCKETLAUNCHER);
+	Streaming_SetModelIsDeletable(MI_KATANA); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_GRENADE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_BOMB); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_PYTHON); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_STUBBY_SHOTGUN); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_SILENCEDINGRAM); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_M4); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_LASERSCOPE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_ROCKETLAUNCHER); // rouz edit (ChatGPT)
 #ifdef MOBILE_IMPROVEMENTS
 	if (FindPlayerVehicle()) {
 		FindPlayerPed()->RemoveWeaponWhenEnteringVehicle();
@@ -258,15 +244,15 @@ void WeaponCheat3()
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT2"), true);
 
-	CStreaming::RequestModel(MI_CHAINSAW, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_PYTHON, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_SPAS12_SHOTGUN, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_MP5, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_M4, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_MINIGUN, STREAMFLAGS_DONT_REMOVE);
-	CStreaming::RequestModel(MI_MINIGUN2, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(MI_CHAINSAW, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_GRENADE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_PYTHON, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_SPAS12_SHOTGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MP5, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_M4, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_LASERSCOPE, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MINIGUN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+	Streaming_RequestModel(MI_MINIGUN2, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 
 #ifdef FIX_BUGS
@@ -282,15 +268,15 @@ void WeaponCheat3()
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_LASERSCOPE, 21);
 	FindPlayerPed()->GiveWeapon(WEAPONTYPE_MINIGUN, 500);
 
-	CStreaming::SetModelIsDeletable(MI_CHAINSAW);
-	CStreaming::SetModelIsDeletable(MI_GRENADE);
-	CStreaming::SetModelIsDeletable(MI_PYTHON);
-	CStreaming::SetModelIsDeletable(MI_SPAS12_SHOTGUN);
-	CStreaming::SetModelIsDeletable(MI_MP5);
-	CStreaming::SetModelIsDeletable(MI_M4);
-	CStreaming::SetModelIsDeletable(MI_LASERSCOPE);
-	CStreaming::SetModelIsDeletable(MI_MINIGUN);
-	CStreaming::SetModelIsDeletable(MI_MINIGUN2);
+	Streaming_SetModelIsDeletable(MI_CHAINSAW); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_GRENADE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_PYTHON); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_SPAS12_SHOTGUN); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MP5); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_M4); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_LASERSCOPE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MINIGUN); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MINIGUN2); // rouz edit (ChatGPT)
 
 #ifdef MOBILE_IMPROVEMENTS
 	if (FindPlayerVehicle()) {
@@ -321,14 +307,14 @@ void HealthCheat()
 void VehicleCheat(int model)
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	CStreaming::RequestModel(model, STREAMFLAGS_DONT_REMOVE);
+	Streaming_RequestModel(model, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
-	if (CStreaming::ms_aInfoForModel[model].m_loadState == STREAMSTATE_LOADED) {
+	if (Streaming_modelInfo[model].m_loadState == STREAMSTATE_LOADED) { // rouz edit (ChatGPT)
 		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 
-		if (!(CStreaming::ms_aInfoForModel[model].m_loadState & STREAMFLAGS_DONT_REMOVE)) {
-			CStreaming::SetModelIsDeletable(model);
-			CStreaming::SetModelTxdIsDeletable(model);
+		if (!(Streaming_modelInfo[model].m_loadState & STREAMFLAGS_DONT_REMOVE)) { // rouz edit (ChatGPT)
+			Streaming_SetModelIsDeletable(model); // rouz edit (ChatGPT)
+			Streaming_SetModelTxdIsDeletable(model); // rouz edit (ChatGPT)
 		}
 
 		int32 node = ThePaths.FindNodeClosestToCoors(FindPlayerCoors(), PATH_CAR, 100.0f);
@@ -367,7 +353,7 @@ void VehicleCheat(int model)
 		}
 	}
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 
@@ -393,7 +379,7 @@ void ChangePlayerCheat()
 	// I don't know wtf is going on in here...
 	int modelId, anotherModelId;
 
-	if (FindPlayerPed()->IsPedInControl() && CModelInfo::GetModelInfo("player", nil)) {
+	if (FindPlayerPed()->IsPedInControl() && (CBaseModelInfo*)ModelRegistry_Find("player", 0, MODELINFOSIZE-1, nil)) { // rouz edit (ChatGPT)
 		CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 		CPlayerPed *ped = FindPlayerPed();
 		AssocGroupId AnimGrp = ped->m_animGroup;
@@ -402,19 +388,19 @@ void ChangePlayerCheat()
 			do {
 				modelId = General_GetRandomNumberInRangeInt(0, MI_PGA);
 				anotherModelId = modelId+1;
-			} while (!CModelInfo::GetModelInfo(anotherModelId));
+			} while (!((CBaseModelInfo*)ModelRegistry_Get(anotherModelId))); // rouz edit (ChatGPT)
 		} while (anotherModelId >= MI_SPECIAL01 && anotherModelId <= MI_SPECIAL04 || modelId == MI_TAXI_D);
 
-		uint8 flags = CStreaming::ms_aInfoForModel[anotherModelId].m_flags;
+		uint8 flags = Streaming_modelInfo[anotherModelId].m_flags; // rouz edit (ChatGPT)
 		ped->DeleteRwObject();
-		CStreaming::RequestModel(anotherModelId, STREAMFLAGS_DEPENDENCY| STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestModel(anotherModelId, STREAMFLAGS_DEPENDENCY| STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 		CStreaming::LoadAllRequestedModels(false);
 		ped->m_modelIndex = -1;
 		ped->SetModelIndex(anotherModelId);
 		ped->m_animGroup = AnimGrp;
 		if (modelId != -1) {
 			if (!(flags & STREAMFLAGS_DONT_REMOVE))
-				CStreaming::SetModelIsDeletable(anotherModelId);
+				Streaming_SetModelIsDeletable(anotherModelId); // rouz edit (ChatGPT)
 		}
 	}
 }
@@ -437,7 +423,7 @@ void MayhemCheat()
 			PED_FLAG_GANG6 | PED_FLAG_GANG7 | PED_FLAG_GANG8 | PED_FLAG_GANG9 |
 			PED_FLAG_EMERGENCY | PED_FLAG_PROSTITUTE | PED_FLAG_CRIMINAL | PED_FLAG_SPECIAL );
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void EverybodyAttacksPlayerCheat()
@@ -447,15 +433,15 @@ void EverybodyAttacksPlayerCheat()
 		PedType_AddThreat(i, PED_FLAG_PLAYER1);
 
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void WeaponsForAllCheat()
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	CPopulation::ms_bGivePedsWeapons = !CPopulation::ms_bGivePedsWeapons;
+	Population_givePedsWeapons = !Population_givePedsWeapons; // rouz edit (ChatGPT)
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void FastTimeCheat()
@@ -549,7 +535,7 @@ void OnlyRenderWheelsCheat()
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bWheelsOnlyCheat = !CVehicle::bWheelsOnlyCheat;
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void ChittyChittyBangBangCheat()
@@ -561,7 +547,7 @@ void ChittyChittyBangBangCheat()
 #endif
 	CVehicle::bAllDodosCheat = !CVehicle::bAllDodosCheat;
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void StrongGripCheat()
@@ -569,14 +555,14 @@ void StrongGripCheat()
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat3 = !CVehicle::bCheat3;
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void FannyMagnetCheat()
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CPed::bFannyMagnetCheat = !CPed::bFannyMagnetCheat;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void BlackCarsCheat()
@@ -622,7 +608,7 @@ void BackToTheFuture(void)
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bHoverCheat = !CVehicle::bHoverCheat;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void SuicideCheat(void) {
@@ -632,15 +618,15 @@ void SuicideCheat(void) {
 
 void DoChicksWithGunsCheat(void) {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
-	CStreaming::SetModelIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER));
-	CStreaming::SetModelIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER));
-	CStreaming::SetModelTxdIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER));
-	CStreaming::SetModelTxdIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER));
-	CStreaming::RemoveCurrentZonesModels();
+	Streaming_SetModelIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER)); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER)); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(Gangs_GetGangPedModel1(GANG_PLAYER)); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(Gangs_GetGangPedModel2(GANG_PLAYER)); // rouz edit (ChatGPT)
+	Streaming_RemoveCurrentZonesModels(); // rouz edit (ChatGPT)
 	Gangs_SetGangPedModels(GANG_PLAYER, MI_HFYBE, MI_WFYBE);
 	Gangs_SetGangWeapons(GANG_PLAYER, WEAPONTYPE_M4, WEAPONTYPE_M4);
 	Stats_CheatedCount += 1000;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -703,7 +689,7 @@ void FlyingFishCheat(void)
 {
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT1"), true);
 	CVehicle::bCheat8 = !CVehicle::bCheat8;
-	CPad::bHasPlayerCheated = true;
+	Input_playerHasCheated = true; // rouz edit (ChatGPT)
 }
 
 void DoShowChaseStatCheat(void) {
@@ -729,11 +715,11 @@ void CPad::Initialise(void)
 		CPad::GetPad(i)->Mode = 0;
 	}
 
-	bObsoleteControllerMessage	   = false;
-	bOldDisplayNoControllerMessage = false;
-	bDisplayNoControllerMessage	   = false;
-	m_bMapPadOneToPadTwo = false;
-	m_bDebugCamPCOn = false;
+	Input_obsoleteControllerMessage	   = false; // rouz edit (ChatGPT)
+	Input_oldDisplayNoControllerMessage = false; // rouz edit (ChatGPT)
+	Input_displayNoControllerMessage	   = false; // rouz edit (ChatGPT)
+	Input_mapPadOneToPadTwo = false; // rouz edit (ChatGPT)
+	Input_debugCameraOn = false; // rouz edit (ChatGPT)
 }
 #endif
 
@@ -746,13 +732,11 @@ void CPad::Clear(bool bResetPlayerControls)
 	ControllerState_Clear(&PCTempJoyState);
 	ControllerState_Clear(&PCTempMouseState);
 
-	KeyboardState_Clear(&NewKeyState);
-	KeyboardState_Clear(&OldKeyState);
-	KeyboardState_Clear(&TempKeyState);
+	Input_ClearKeyboardHistory(); // rouz edit (ChatGPT)
 
-	MouseControllerState_Clear(&NewMouseControllerState);
-	MouseControllerState_Clear(&OldMouseControllerState);
-	MouseControllerState_Clear(&PCTempMouseControllerState);
+	MouseControllerState_Clear(&Input_newMouseState); // rouz edit (ChatGPT)
+	MouseControllerState_Clear(&Input_oldMouseState); // rouz edit (ChatGPT)
+	MouseControllerState_Clear(&Input_tempMouseState); // rouz edit (ChatGPT)
 
 	Phase = 0;
 	ShakeFreq = 0;
@@ -782,28 +766,6 @@ void CPad::Clear(bool bResetPlayerControls)
 	AverageEntries = 0;
 }
 
-uint32 CPad::InputHowLongAgo()
-{
-	return (*Timer_GetTimeInMilliseconds()) - LastTimeTouched;
-}
-
-void CPad::ClearMouseHistory()
-{
-	MouseControllerState_Clear(&PCTempMouseControllerState);
-	MouseControllerState_Clear(&NewMouseControllerState);
-	MouseControllerState_Clear(&OldMouseControllerState);
-}
-
-// unused
-void CPad::ClearKeyBoardHistory()
-{
-	KeyboardState_Clear(&NewKeyState);
-	KeyboardState_Clear(&OldKeyState);
-	KeyboardState_Clear(&TempKeyState);
-}
-
-
-
 void CPad::UpdateMouse()
 {
 #if defined RW_D3D9 || defined RWLIBS
@@ -816,34 +778,8 @@ void CPad::UpdateMouse()
 
 		if ( PSGLOBAL(mouse) != nil && SUCCEEDED(_InputGetMouseState(&state)) )
 		{
-			int32 signX = 1;
-			int32 signy = 1;
-
-			if ( !FrontEndMenuManager.m_bMenuActive )
-			{
-				if ( MousePointerStateHelper.bInvertVertically )
-					signy = -1;
-				if ( MousePointerStateHelper.bInvertHorizontally )
-					signX = -1;
-			}
-
-			MouseControllerState_Clear(&PCTempMouseControllerState);
-
-			PCTempMouseControllerState.x = (float)(signX * state.lX);
-			PCTempMouseControllerState.y = (float)(signy * state.lY);
-			PCTempMouseControllerState.LMB = state.rgbButtons[0] & 128;
-			PCTempMouseControllerState.RMB = state.rgbButtons[1] & 128;
-			PCTempMouseControllerState.MMB = state.rgbButtons[2] & 128;
-			PCTempMouseControllerState.MXB1 = state.rgbButtons[3] & 128;
-			PCTempMouseControllerState.MXB2 = state.rgbButtons[4] & 128;
-
-			if ( state.lZ > 0 )
-				PCTempMouseControllerState.WHEELUP = 1;
-			else if ( state.lZ < 0 )
-				PCTempMouseControllerState.WHEELDN = 1;
-
-			OldMouseControllerState = NewMouseControllerState;
-			NewMouseControllerState = PCTempMouseControllerState;
+			Input_ApplyDirectMouseSample(state.lX, state.lY, state.lZ, state.rgbButtons,
+				FrontEndMenuManager.m_bMenuActive); // rouz edit (ChatGPT)
 		}
 	}
 #else
@@ -854,102 +790,23 @@ void CPad::UpdateMouse()
 		if (xpos == 0.f)
 			return;
 
-		int32 signX = 1;
-		int32 signy = 1;
+		Input_BeginGlfwMouseSample(xpos, ypos, PSGLOBAL(lastMousePos.x), PSGLOBAL(lastMousePos.y),
+			FrontEndMenuManager.m_bMenuActive); // rouz edit (ChatGPT)
+		Input_tempMouseState.LMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_LEFT); // rouz edit (ChatGPT)
+		Input_tempMouseState.RMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_RIGHT); // rouz edit (ChatGPT)
+		Input_tempMouseState.MMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_MIDDLE); // rouz edit (ChatGPT)
+		Input_tempMouseState.MXB1 = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_4); // rouz edit (ChatGPT)
+		Input_tempMouseState.MXB2 = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_5); // rouz edit (ChatGPT)
 
-		if (!FrontEndMenuManager.m_bMenuActive)
-		{
-			if (MousePointerStateHelper.bInvertVertically)
-				signy = -1;
-			if (MousePointerStateHelper.bInvertHorizontally)
-				signX = -1;
-		}
-
-		MouseControllerState_Clear(&PCTempMouseControllerState);
-
-		PCTempMouseControllerState.x = (float)(signX * (xpos - PSGLOBAL(lastMousePos.x)));
-		PCTempMouseControllerState.y = (float)(signy * (ypos - PSGLOBAL(lastMousePos.y)));
-		PCTempMouseControllerState.LMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_LEFT);
-		PCTempMouseControllerState.RMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_RIGHT);
-		PCTempMouseControllerState.MMB = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_MIDDLE);
-		PCTempMouseControllerState.MXB1 = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_4);
-		PCTempMouseControllerState.MXB2 = glfwGetMouseButton(PSGLOBAL(window), GLFW_MOUSE_BUTTON_5);
-
-		if (PSGLOBAL(mouseWheel) > 0)
-			PCTempMouseControllerState.WHEELUP = 1;
-		else if (PSGLOBAL(mouseWheel) < 0)
-			PCTempMouseControllerState.WHEELDN = 1;
+		Input_SetMouseWheel(PSGLOBAL(mouseWheel)); // rouz edit (ChatGPT)
 
 		PSGLOBAL(lastMousePos.x) = xpos;
 		PSGLOBAL(lastMousePos.y) = ypos;
 		PSGLOBAL(mouseWheel) = 0.0f;
 
-		OldMouseControllerState = NewMouseControllerState;
-		NewMouseControllerState = PCTempMouseControllerState;
+		Input_AdvanceMouseHistory(); // rouz edit (ChatGPT)
 	}
 #endif
-}
-
-CControllerState CPad::ReconcileTwoControllersInput(CControllerState const &State1, CControllerState const &State2)
-{
-	static CControllerState ReconState;
-
-	ControllerState_Clear(&ReconState);
-
-#define _RECONCILE_BUTTON(button) \
-	{ if ( State1.button || State2.button ) ReconState.button = 255; }
-
-#define _RECONCILE_AXIS_POSITIVE(axis) \
-	{ if ( State1.axis >= 0 && State2.axis >= 0 ) ReconState.axis = Max(State1.axis, State2.axis); }
-
-#define _RECONCILE_AXIS_NEGATIVE(axis) \
-	{ if ( State1.axis <= 0 && State2.axis <= 0 ) ReconState.axis = Min(State1.axis, State2.axis); }
-
-#define _RECONCILE_AXIS(axis) \
-	{ _RECONCILE_AXIS_POSITIVE(axis); _RECONCILE_AXIS_NEGATIVE(axis); }
-
-#define _FIX_AXIS_DIR(axis) \
-	{ if ( State1.axis > 0 && State2.axis < 0 || State1.axis < 0 && State2.axis > 0 ) ReconState.axis = 0; }
-
-#define _FIX_RECON_DIR(pos, neg, axis) \
-	{ if ( (ReconState.pos || ReconState.axis < 0) && (ReconState.neg || ReconState.axis > 0) ) { ReconState.pos = 0; ReconState.neg = 0; ReconState.axis = 0; } }
-
-	_RECONCILE_BUTTON(LeftShoulder1);
-	_RECONCILE_BUTTON(LeftShoulder2);
-	_RECONCILE_BUTTON(RightShoulder1);
-	_RECONCILE_BUTTON(RightShoulder2);
-	_RECONCILE_BUTTON(Start);
-	_RECONCILE_BUTTON(Select);
-	_RECONCILE_BUTTON(Square);
-	_RECONCILE_BUTTON(Triangle);
-	_RECONCILE_BUTTON(Cross);
-	_RECONCILE_BUTTON(Circle);
-	_RECONCILE_BUTTON(LeftShock);
-	_RECONCILE_BUTTON(RightShock);
-	_RECONCILE_BUTTON(NetworkTalk);
-	_RECONCILE_AXIS(LeftStickX);
-	_RECONCILE_AXIS(LeftStickY);
-	_FIX_AXIS_DIR(LeftStickX);
-	_FIX_AXIS_DIR(LeftStickY);
-	_RECONCILE_AXIS(RightStickX);
-	_RECONCILE_AXIS(RightStickY);
-	_FIX_AXIS_DIR(RightStickX);
-	_FIX_AXIS_DIR(RightStickY);
-	_RECONCILE_BUTTON(DPadUp);
-	_RECONCILE_BUTTON(DPadDown);
-	_RECONCILE_BUTTON(DPadLeft);
-	_RECONCILE_BUTTON(DPadRight);
-	_FIX_RECON_DIR(DPadUp, DPadDown, LeftStickY);
-	_FIX_RECON_DIR(DPadLeft, DPadRight, LeftStickX);
-
-	return ReconState;
-
-#undef _RECONCILE_BUTTON
-#undef _RECONCILE_AXIS_POSITIVE
-#undef _RECONCILE_AXIS_NEGATIVE
-#undef _RECONCILE_AXIS
-#undef _FIX_AXIS_DIR
-#undef _FIX_RECON_DIR
 }
 
 void CPad::StartShake(int16 nDur, uint8 nFreq)
@@ -957,21 +814,10 @@ void CPad::StartShake(int16 nDur, uint8 nFreq)
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( CCutsceneMgr::IsRunning() || CGame::playingIntro )
+	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
 		return;
 
-	if ( nFreq == 0 )
-	{
-		ShakeDur = 0;
-		ShakeFreq = 0;
-		return;
-	}
-
-	if ( nDur > ShakeDur )
-	{
-		ShakeDur = nDur;
-		ShakeFreq = nFreq;
-	}
+	Input_StartShake(&ShakeDur, &ShakeFreq, nDur, nFreq); // rouz edit (ChatGPT)
 }
 
 void CPad::StartShake_Distance(int16 nDur, uint8 nFreq, float fX, float fY, float fZ)
@@ -979,26 +825,13 @@ void CPad::StartShake_Distance(int16 nDur, uint8 nFreq, float fX, float fY, floa
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( CCutsceneMgr::IsRunning() || CGame::playingIntro )
+	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
 		return;
 
 	float fDist = ( TheCamera.GetPosition() - CVector(fX, fY, fZ) ).Magnitude();
 
 	if ( fDist < 70.0f )
-	{
-		if ( nFreq == 0 )
-		{
-			ShakeDur = 0;
-			ShakeFreq = 0;
-			return;
-		}
-
-		if ( nDur > ShakeDur )
-		{
-			ShakeDur = nDur;
-			ShakeFreq = nFreq;
-		}
-	}
+		Input_StartShake(&ShakeDur, &ShakeFreq, nDur, nFreq); // rouz edit (ChatGPT)
 }
 
 void CPad::StartShake_Train(float fX, float fY)
@@ -1006,7 +839,7 @@ void CPad::StartShake_Train(float fX, float fY)
 	if ( !FrontEndMenuManager.m_PrefsUseVibration )
 		return;
 
-	if ( CCutsceneMgr::IsRunning() || CGame::playingIntro )
+	if ( Cutscene_IsRunning() || CGame::playingIntro ) // rouz edit (ChatGPT)
 		return;
 
 	if (FindPlayerVehicle() != nil && FindPlayerVehicle()->IsTrain() )
@@ -1014,16 +847,7 @@ void CPad::StartShake_Train(float fX, float fY)
 
 	float fDist = ( TheCamera.GetPosition() - CVector(fX, fY, 0.0f) ).Magnitude2D();
 
-	if ( fDist < 70.0f )
-	{
-		int32 freq = (int32)((70.0f - fDist) * 70.0f / 70.0f + 30.0f);
-
-		if ( ShakeDur < 100 )
-		{
-			ShakeDur = 100;
-			ShakeFreq = freq;
-		}
-	}
+	Input_StartTrainShake(&ShakeDur, &ShakeFreq, fDist); // rouz edit (ChatGPT)
 }
 
 #ifdef GTA_PS2_STUFF
@@ -1180,303 +1004,303 @@ void CPad::AddToPCCheatString(char c)
 
 	if (c != '+')	// rouz edit so that + can repeat the previous cheat
 	{
-		for (int32 i = ARRAY_SIZE(KeyBoardCheatString) - 2; i >= 0; i--)
-			KeyBoardCheatString[i + 1] = KeyBoardCheatString[i];
+		for (int32 i = ARRAY_SIZE(Input_keyboardCheatString) - 2; i >= 0; i--) // rouz edit (ChatGPT)
+			Input_keyboardCheatString[i + 1] = Input_keyboardCheatString[i]; // rouz edit (ChatGPT)
 
-		KeyBoardCheatString[0] = c;
+		Input_keyboardCheatString[0] = c; // rouz edit (ChatGPT)
 	}
 
-#define _CHEATCMP(str) strncmp(str, KeyBoardCheatString, sizeof(str)-1)
+#define _CHEATCMP(str) strncmp(str, Input_keyboardCheatString, sizeof(str)-1) // rouz edit (ChatGPT)
 
 	// "THUGSTOOLS"
-	if (!Cheat_strncmp(KeyBoardCheatString, "VQVPanJ\\I_")) {
-		KeyBoardCheatString[0] = ' ';
+	if (!Cheat_strncmp(Input_keyboardCheatString, "VQVPanJ\\I_")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WeaponCheat1();
 	}
 	// "PROFESSIONALTOOLS"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VQVPagDUPT`[Lf\\Xl")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VQVPagDUPT`[Lf\\Xl")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WeaponCheat2();
 	}
 	// "NUTTERTOOLS"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VQVPamH[U`[")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VQVPamH[U`[")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WeaponCheat3();
 	}
 	// "PRECIOUSPROTECTION"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "QTPUP`WVS[`]ViPKnc")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "QTPUP`WVS[`]ViPKnc")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ArmourCheat();
 	}
 	// "ASPIRINE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HSPSVkVH")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HSPSVkVH")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		HealthCheat();
 	}
 	// "YOUWONTTAKEMEALIVE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "H[PMN`PLLLa\\Uod[kl")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "H[PMN`PLLLa\\Uod[kl")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WantedLevelUpCheat();
 	}
 	// "LEAVEMEALONE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HSVMN`PLWLRT")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HSVMN`PLWLRT")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WantedLevelDownCheat();
 	}
 	// "APLEASANTDAY"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\FKU[\\VHFW]I")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\FKU[\\VHFW]I")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		SunnyWeatherCheat();
 	}
 	// "ALOVELYDAY"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\FKZY`YVML")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\FKZY`YVML")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ExtraSunnyWeatherCheat();
 	}
 	// "ABITDRIEG"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JJPSQoLIB")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JJPSQoLIB")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		CloudyWeatherCheat();
 	}
 	// "CATSANDDOGS"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VLVEQiDZULP")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VLVEQiDZULP")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		RainyWeatherCheat();
 	}
 	// "CANTSEEATHING"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSPIa\\HLT_[IJ")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSPIa\\HLT_[IJ")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		FoggyWeatherCheat();
 	}
 	// "PANZER"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UJaONk")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UJaONk")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_RHINO);
 	}
 	// "LIFEISPASSINGMEBY"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\GLNTiLZTL][PeSOh")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\GLNTiLZTL][PeSOh")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		FastWeatherCheat();
 	}
 	// "BIGBANG"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSHCTdE")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSHCTdE")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		BlowUpCarsCheat();
 	}
 	// "STILLLIKEDRESSINGUP"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "SZNOVnVLSORSPlYReg]")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "SZNOVnVLSORSPlYReg]")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerCheat();
 	}
 	// "FIGHTFIGHTFIGHT"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WMNJSoKNJQaPNiS")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WMNJSoKNJQaPNiS")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		MayhemCheat();
 	}
 	// "NOBODYLIKESME"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HRZFXdO`EZOWU")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HRZFXdO`EZOWU")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		EverybodyAttacksPlayerCheat();
 	}
 	// "OURGODGIVENRIGHTTOBEARARMS"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VRYB_\\HIP_aPNi_TaiSJGTNSbj")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VRYB_\\HIP_aPNi_TaiSJGTNSbj")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		WeaponsForAllCheat();
 	}
 	// "ONSPEED"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "GJLQ`iR")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "GJLQ`iR")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		FastTimeCheat();
 	}
 	// "BOOOOOORING"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSPS\\jRVPZO")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSPS\\jRVPZO")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		SlowTimeCheat();
 	}
 	// "WHEELSAREALLINEED"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "GJLOVgOHF]N[SeRNs")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "GJLOVgOHF]N[SeRNs")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		OnlyRenderWheelsCheat();
 	}
 	//COMEFLYWITHME
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HROUVr\\SGPZWJ")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HROUVr\\SGPZWJ")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChittyChittyBangBangCheat();
 	}
 	// "GRIPISEVERYTHING"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSPIatULWP`QWi_M")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSPIatULWP`QWi_M")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		StrongGripCheat();
 	}
 	// "CHASESTAT"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WF[TRnDOD")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WF[TRnDOD")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		DoShowChaseStatCheat();
 	}
 	// "CHICKSWITHGUNS"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VS\\HUoL^TVPQOc")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VS\\HUoL^TVPQOc")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		DoChicksWithGunsCheat();
 	}
 	// "ICANTTAKEITANYMORE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HWVNfiD[JPXI[t[G_\\")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HWVNfiD[JPXI[t[G_\\")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		SuicideCheat();
 	}
 	// "GREENLIGHT"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WMNJYiHLSR")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WMNJYiHLSR")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		TrafficLightsCheat();
 	}
 	// "MIAMITRAFFIC"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "FNMGNmWPNLVU")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "FNMGNmWPNLVU")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		MadCarsCheat();
 	}
 	// "AHAIRDRESSERSCAR"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UFJT_`VZF]QZPaUG")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UFJT_`VZF]QZPaUG")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		PinkCarsCheat();
 	}
 	// "IWANTITPAINTEDBLACK"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "NHHMO_H[OTNX[iaT]jS")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "NHHMO_H[OTNX[iaT]jS")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		BlackCarsCheat();
 	}
 	// "TRAVELINSTYLE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HQ`U`iLSFaNZ[")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HQ`U`iLSFaNZ[")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_BLOODRA);
 	}
 	// "THELASTRIDE"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HIPSanDSFSa")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HIPSanDSFSa")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_ROMERO);
 	}
 	// "ROCKANDROLLCAR"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UFJMYjUKOLXKVr")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UFJMYjUKOLXKVr")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_LOVEFIST);
 	}
 	// "RUBBISHCAR"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UFJI`dEIV]")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UFJI`dEIV]")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_TRASH);
 	}
 	// "GETTHEREQUICKLY"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\QRDVpTLSPU\\[eT")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\QRDVpTLSPU\\[eT")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_BLOODRB);
 	}
 	// "GETTHEREFAST"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WXHGRmHOU_RO")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WXHGRmHOU_RO")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_SABRETUR);
 	}
 	// "BETTERTHANWALKING"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSPLY\\ZUBSaZLtaK^")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSPLY\\ZUBSaZLtaK^")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_CADDY);
 	}
 	// "GETTHEREFASTINDEED"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "GJLE[dWZBQfZLvRXa[^WHL")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "GJLE[dWZBQfZLvRXa[^WHL")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_HOTRINA);
 	}
 	// "GETTHEREAMAZINGLYFAST"
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WXHGfgJUJeNUHe_Kdg^HJ")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WXHGfgJUJeNUHe_Kdg^HJ")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		VehicleCheat(MI_HOTRINB);
 	}
 	// LOOKLIKELANCE
-	else if (!Cheat_strncmp(KeyBoardCheatString, "HHUBY`NPMV\\WS")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "HHUBY`NPMV\\WS")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igbuddy");
 	}
 	// IWANTBIGTITS
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VYPUTdE[OLdQ")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VYPUTdE[OLdQ")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igcandy");
 	}
 	// MYSONISALAWYER
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UJ`XNgDZJY\\[`m")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UJ`XNgDZJY\\[`m")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igken");
 	}
 	// ILOOKLIKEHILARY
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\WHMVcHRJWXWVlV")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\WHMVcHRJWXWVlV")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("ighlary");
 	}
 	// ROCKANDROLLMAN
-	else if (!Cheat_strncmp(KeyBoardCheatString, "QFTMYjUKOLXKVr")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "QFTMYjUKOLXKVr")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igjezz");
 	}
 	// ONEARMEDBANDIT
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WNKON]GLN]NMUo")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WNKON]GLN]NMUo")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igphil");
 	}
 	// IDONTHAVETHEMONEYSONNY
-	else if (!Cheat_strncmp(KeyBoardCheatString, "\\SUP`tHUPXRP[ecGdgXRGN")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "\\SUP`tHUPXRP[ecGdgXRGN")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igsonny");
 	}
 	// FOXYLITTLETHING
-	else if (!Cheat_strncmp(KeyBoardCheatString, "JSPIa`O[UTYa_oS")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "JSPIa`O[UTYa_oS")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igmerc");
 	}
 	// WELOVEOURDICK
-	else if (!Cheat_strncmp(KeyBoardCheatString, "NHPE_pRLWZYM^")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "NHPE_pRLWZYM^")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igdick");
 	}
 	// CHEATSHAVEBEENCRACKED
-	else if (!Cheat_strncmp(KeyBoardCheatString, "GJRDNmFUFPOM]aUYpTOKF")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "GJRDNmFUFPOM]aUYpTOKF")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		ChangePlayerModel("igdiaz");
 	}
 	// DEEPFRIEDMARSBARS
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VWHC`mDTEPVZMpRK")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VWHC`mDTEPVZMpRK")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		gfTommyFatness = 0.26f;
 	}
 	// PROGRAMMER
-	else if (!Cheat_strncmp(KeyBoardCheatString, "UJTNNmJVS[")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "UJTNNmJVS[")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		gfTommyFatness = -0.3f;
 	}
 	// SEAWAYS
-	else if (!Cheat_strncmp(KeyBoardCheatString, "V^HXN`V")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "V^HXN`V")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		BackToTheFuture();
 	}
 	// LOADSOFLITTLETHINGS
-	else if (!Cheat_strncmp(KeyBoardCheatString, "VLUJUoHSU_VTMo`J]bV")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "VLUJUoHSU_VTMo`J]bV")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		SpecialCarCheats();
 	}
 	// HOPINGIRL
-	else if (!Cheat_strncmp(KeyBoardCheatString, "OWPH[dSVI")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "OWPH[dSVI")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		PickUpChicksCheat();
 	}
 	//CERTAINDEATH
-	else if (!Cheat_strncmp(KeyBoardCheatString, "KYHFQiLHU]RK")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "KYHFQiLHU]RK")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		// Use the C smoke-trail state or algorithm at the original call point
 		SmokeTrails_CigOn = !SmokeTrails_CigOn;
 	}
 	//AIRSHIP
-	else if (!Cheat_strncmp(KeyBoardCheatString, "SNOT_dD")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "SNOT_dD")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		FlyingFishCheat();
 	}
 	//FANNYMAGNET
-	else if (!Cheat_strncmp(KeyBoardCheatString, "WJUHNh\\UOLS")) {
-		KeyBoardCheatString[0] = ' ';
+	else if (!Cheat_strncmp(Input_keyboardCheatString, "WJUHNh\\UOLS")) { // rouz edit (ChatGPT)
+		Input_keyboardCheatString[0] = ' '; // rouz edit (ChatGPT)
 		FannyMagnetCheat();
 	}
 
@@ -1592,7 +1416,7 @@ void CPad::AddToPCCheatString(char c)
 				PedStats_records[i]->m_flags &= ~STAT_GUN_PANIC;
 			}
 
-		CPopulation::ms_bGivePedsWeapons = rouz.peds_attack_cops;
+		Population_givePedsWeapons = rouz.peds_attack_cops; // rouz edit (ChatGPT)
 	}
 
 
@@ -1944,16 +1768,16 @@ void CPad::AddToPCCheatString(char c)
 
 	// rouz set wanted level
 	// "G51_"
-	if (strncmp("15G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
-		Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,KeyBoardCheatString[0]-'0');
+	if (strncmp("15G", &Input_keyboardCheatString[1], 3)==0 && Input_keyboardCheatString[0] >= '0' && Input_keyboardCheatString[0] <= '6') // rouz edit (ChatGPT)
+		Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,Input_keyboardCheatString[0]-'0'); // rouz edit (ChatGPT)
 
 	// rouz set max wanted level
 	// "G52_"
-	if (strncmp("25G", &KeyBoardCheatString[1], 3)==0 && KeyBoardCheatString[0] >= '0' && KeyBoardCheatString[0] <= '6')
+	if (strncmp("25G", &Input_keyboardCheatString[1], 3)==0 && Input_keyboardCheatString[0] >= '0' && Input_keyboardCheatString[0] <= '6') // rouz edit (ChatGPT)
 	{
-		((void)(FindPlayerPed()->m_pWanted),Wanted_SetMaximumWantedLevel(KeyBoardCheatString[0]-'0'));
+		((void)(FindPlayerPed()->m_pWanted),Wanted_SetMaximumWantedLevel(Input_keyboardCheatString[0]-'0')); // rouz edit (ChatGPT)
 		Wanted_UpdateWantedLevel(FindPlayerPed()->m_pWanted);
-		swprintf(msg, L"Max wanted level %d", KeyBoardCheatString[0]-'0');
+		swprintf(msg, L"Max wanted level %d", Input_keyboardCheatString[0]-'0'); // rouz edit (ChatGPT)
 		CHud::SetHelpMessage((wchar *) msg, true);
 	}
 
@@ -2144,34 +1968,33 @@ void CPad::UpdatePads(void)
 
 	GetPad(0)->UpdateMouse();
 #ifdef XINPUT
-	GetPad(0)->AffectFromXinput(m_bMapPadOneToPadTwo ? 1 : 0);
-	GetPad(1)->AffectFromXinput(m_bMapPadOneToPadTwo ? 0 : 1);
+	GetPad(0)->AffectFromXinput(Input_mapPadOneToPadTwo ? 1 : 0); // rouz edit (ChatGPT)
+	GetPad(1)->AffectFromXinput(Input_mapPadOneToPadTwo ? 0 : 1); // rouz edit (ChatGPT)
 #else
 	CapturePad(0);
 #endif
 
 	// Improve keyboard input latency part 1
 #ifdef FIX_BUGS
-	OldKeyState = NewKeyState;
-	NewKeyState = TempKeyState;
+	Input_AdvanceKeyboardHistory(); // rouz edit (ChatGPT)
 #endif
 
 #ifdef DETECT_PAD_INPUT_SWITCH
 	if (ControllerState_CheckForInput(&GetPad(0)->PCTempJoyState))
-		IsAffectedByController = true;
+		Input_affectedByController = true; // rouz edit (ChatGPT)
 	else {
 #endif
-		ControlsManager.ClearSimButtonPressCheckers();
-		ControlsManager.AffectPadFromKeyBoard();
-		ControlsManager.AffectPadFromMouse();
+		Input_ClearSimButtonPressCheckers(ControlsManager.m_aSimCheckers); // rouz edit (ChatGPT)
+		Input_AffectPadFromKeyboard(ControlsManager.m_aSettings); // rouz edit (ChatGPT)
+		Input_AffectPadFromMouse(ControlsManager.m_aSettings); // rouz edit (ChatGPT)
 
 #ifdef DETECT_PAD_INPUT_SWITCH
 	}
-	if (IsAffectedByController && (ControllerState_CheckForInput(&GetPad(0)->PCTempKeyState) || ControllerState_CheckForInput(&GetPad(0)->PCTempMouseState)))
-		IsAffectedByController = false;
+	if (Input_affectedByController && (ControllerState_CheckForInput(&GetPad(0)->PCTempKeyState) || ControllerState_CheckForInput(&GetPad(0)->PCTempMouseState))) // rouz edit (ChatGPT)
+		Input_affectedByController = false; // rouz edit (ChatGPT)
 #endif
 
-	if ( CReplay::IsPlayingBackFromFile() && !FrontEndMenuManager.m_bMenuActive )
+	if ( Replay_IsPlayingBackFromFile() && !FrontEndMenuManager.m_bMenuActive ) // rouz edit (ChatGPT)
 		bUpdate = false;
 
 	if ( bUpdate )
@@ -2186,8 +2009,7 @@ void CPad::UpdatePads(void)
 
 	// Improve keyboard input latency part 2
 #ifndef FIX_BUGS
-	OldKeyState = NewKeyState;
-	NewKeyState = TempKeyState;
+	Input_AdvanceKeyboardHistory(); // rouz edit (ChatGPT)
 #endif
 }
 
@@ -2201,7 +2023,7 @@ void CPad::Update(int16 pad)
 	OldState = NewState;
 
 #ifdef GTA_PS2
-	bObsoleteControllerMessage = false;
+	Input_obsoleteControllerMessage = false; // rouz edit (ChatGPT)
 
 	//int iPressureBtn;
 	int id;
@@ -2376,7 +2198,7 @@ void CPad::Update(int16 pad)
 
 				if ( (rterm_id>>4) == 7 ) // DUALSHOCK
 				{
-					if (!CRecordDataForGame::IsPlayingBack() && !CRecordDataForChase::ShouldThisPadBeLeftAlone(pad))
+					if (!RecordGame_IsPlayingBack() && !RecordChase_ShouldThisPadBeLeftAlone(pad)) // rouz edit (ChatGPT)
 					{
 						tpad = paddata;
 
@@ -2416,7 +2238,7 @@ void CPad::Update(int16 pad)
 				else if ( (rterm_id>>4) == 4 ) // Controller (digital)
 				{
 					if ( pad == 0 )
-						bObsoleteControllerMessage = true;
+						Input_obsoleteControllerMessage = true; // rouz edit (ChatGPT)
 					ControllerState_Clear(&NewState);
 				}
 
@@ -2438,14 +2260,14 @@ void CPad::Update(int16 pad)
 
 	if ( pad == 0 )
 	{
-		bOldDisplayNoControllerMessage = bDisplayNoControllerMessage;
+		Input_oldDisplayNoControllerMessage = Input_displayNoControllerMessage; // rouz edit (ChatGPT)
 		if ( state == scePadStateDiscon )
 		{
-			bDisplayNoControllerMessage = true;
+			Input_displayNoControllerMessage = true; // rouz edit (ChatGPT)
 			Phase = 0;
 		}
 		else
-			bDisplayNoControllerMessage = false;
+			Input_displayNoControllerMessage = false; // rouz edit (ChatGPT)
 	}
 
 	if ( ++iCurrHornHistory >= HORNHISTORY_SIZE )
@@ -2453,16 +2275,16 @@ void CPad::Update(int16 pad)
 
 	bHornHistory[iCurrHornHistory] = GetHorn();
 
-	if ( !bDisplayNoControllerMessage )
+	if ( !Input_displayNoControllerMessage ) // rouz edit (ChatGPT)
 		CGame::bDemoMode = false;
 #endif
 
 #if (defined GTA_PS2 || defined FIX_BUGS)
-	if (!CRecordDataForGame::IsPlayingBack() && !CRecordDataForChase::ShouldThisPadBeLeftAlone(pad))
+	if (!RecordGame_IsPlayingBack() && !RecordChase_ShouldThisPadBeLeftAlone(pad)) // rouz edit (ChatGPT)
 #endif
 	{
-		NewState = ReconcileTwoControllersInput(PCTempKeyState, PCTempJoyState);
-		NewState = ReconcileTwoControllersInput(PCTempMouseState, NewState);
+		NewState = Input_ReconcileControllers(&PCTempKeyState, &PCTempJoyState); // rouz edit (ChatGPT)
+		NewState = Input_ReconcileControllers(&PCTempMouseState, &NewState); // rouz edit (ChatGPT)
 	}
 
 	ControllerState_Clear(&PCTempJoyState);
@@ -2483,7 +2305,7 @@ void CPad::Update(int16 pad)
 		SteeringLeftRightBuffer[i + 1] = SteeringLeftRightBuffer[i];
 	}
 
-	if ( !bDisplayNoControllerMessage )
+	if ( !Input_displayNoControllerMessage ) // rouz edit (ChatGPT)
 		CGame::bDemoMode = false;
 
 	if ( JustOutOfFrontend != 0 )
@@ -2493,7 +2315,7 @@ void CPad::Update(int16 pad)
 void CPad::DoCheats(void)
 {
 #ifdef DETECT_PAD_INPUT_SWITCH
-	if (IsAffectedByController)
+	if (Input_affectedByController) // rouz edit (ChatGPT)
 #endif
 		GetPad(0)->DoCheats(0);
 }
@@ -2567,7 +2389,7 @@ CPad *CPad::GetPad(int32 pad)
 	return &Pads[pad];
 }
 #ifdef DETECT_PAD_INPUT_SWITCH
-#define CURMODE (IsAffectedByController ? Mode : 0)
+#define CURMODE (Input_affectedByController ? Mode : 0) // rouz edit (ChatGPT)
 #else
 #define CURMODE (Mode)
 #endif
@@ -3747,7 +3569,7 @@ int16 CPad::SniperModeLookUpDown(void)
 #ifdef FIX_BUGS
 	axis = -axis;
 #endif
-	if (CPad::bInvertLook4Pad) {
+	if (Input_invertPadLook) { // rouz edit (ChatGPT)
 		axis = -axis;
 		dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 	} else {
@@ -3785,7 +3607,7 @@ int16 CPad::LookAroundUpDown(void)
 #ifdef FIX_BUGS
 	axis = -axis;
 #endif
-	if (CPad::bInvertLook4Pad)
+	if (Input_invertPadLook) // rouz edit (ChatGPT)
 		axis = -axis;
 
 	if ( Abs(axis) > 85 && !GetLookBehindForPed() )
@@ -3810,7 +3632,7 @@ void CPad::PrintErrorMessage(void)
 	if (TheCamera.m_WideScreenOn)
 		return;
 
-	if ( bDisplayNoControllerMessage && !CGame::playingIntro && !FrontEndMenuManager.m_bMenuActive )
+	if ( Input_displayNoControllerMessage && !CGame::playingIntro && !FrontEndMenuManager.m_bMenuActive ) // rouz edit (ChatGPT)
 	{
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
@@ -3839,7 +3661,7 @@ void CPad::PrintErrorMessage(void)
 			Text_Get(&TheText,"NOCONT") // Please reconnect an analog controller (DUALSHOCK@) or analog controller (DUALSHOCK@2). to controller port 1 to continue
 		);
 	}
-	else if ( bObsoleteControllerMessage )
+	else if ( Input_obsoleteControllerMessage ) // rouz edit (ChatGPT)
 	{
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
@@ -3883,7 +3705,7 @@ void CPad::ResetCheats(void)
 	Weather_ReleaseWeather();
 
 	gbFastTime = false;
-	CPopulation::ms_bGivePedsWeapons = false;
+	Population_givePedsWeapons = false; // rouz edit (ChatGPT)
 	Timer_SetTimeScale(1.0f);
 
 	CVehicle::bWheelsOnlyCheat = false;
@@ -3918,13 +3740,13 @@ char *CPad::EditString(char *pStr, int32 nSize)
 	// letters
 	for ( int32 i = 0; i < ('Z' - 'A' + 1); i++ )
 	{
-		if ( GetPad(0)->GetCharJustDown(i + 'A') && pos < nSize - 1 )
+		if ( Input_GetCharJustDown(i + 'A') && pos < nSize - 1 ) // rouz edit (ChatGPT)
 		{
 			pStr[pos++] = i + 'A';
 			pStr[pos] = '\0';
 		}
 
-		if ( GetPad(0)->GetCharJustDown(i + 'a') && pos < nSize - 1 )
+		if ( Input_GetCharJustDown(i + 'a') && pos < nSize - 1 ) // rouz edit (ChatGPT)
 		{
 			pStr[pos++] = i + 'a';
 			pStr[pos] = '\0';
@@ -3934,7 +3756,7 @@ char *CPad::EditString(char *pStr, int32 nSize)
 	// numbers
 	for ( int32 i = 0; i < ('9' - '0' + 1); i++ )
 	{
-		if ( GetPad(0)->GetCharJustDown(i + '0') && pos < nSize - 1 )
+		if ( Input_GetCharJustDown(i + '0') && pos < nSize - 1 ) // rouz edit (ChatGPT)
 		{
 			pStr[pos++] = i + '0';
 			pStr[pos] = '\0';
@@ -3942,7 +3764,7 @@ char *CPad::EditString(char *pStr, int32 nSize)
 	}
 
 	// space
-	if ( GetPad(0)->GetCharJustDown(' ') && pos < nSize - 1 )
+	if ( Input_GetCharJustDown(' ') && pos < nSize - 1 ) // rouz edit (ChatGPT)
 	{
 		pStr[pos++] = ' ';
 		pStr[pos] = '\0';
@@ -3950,14 +3772,14 @@ char *CPad::EditString(char *pStr, int32 nSize)
 
 
 	// del
-	if ( GetPad(0)->GetDeleteJustDown() || GetPad(0)->GetBackspaceJustDown() )
+	if ( Input_GetDeleteJustDown() || Input_GetBackspaceJustDown() ) // rouz edit (ChatGPT)
 	{
 		if ( pos > 0 )
 			pStr[pos - 1] = '\0';
 	}
 
 	// extenter/up/down
-	if ( GetPad(0)->GetReturnJustDown() || GetPad(0)->GetUpJustDown() || GetPad(0)->GetDownJustDown() )
+	if ( Input_GetReturnJustDown() || Input_GetUpJustDown() || Input_GetDownJustDown() ) // rouz edit (ChatGPT)
 		return nil;
 
 	return pStr;
@@ -3969,146 +3791,146 @@ int32 *CPad::EditCodesForControls(int32 *pRsKeys, int32 nSize)
 
 	for ( int32 i = 0; i < 255; i++ )
 	{
-		if ( GetPad(0)->GetCharJustDown(i) )
+		if ( Input_GetCharJustDown(i) ) // rouz edit (ChatGPT)
 			*pRsKeys = i;
 	}
 
 	for ( int32 i = 0; i < 12; i++ )
 	{
-		if ( GetPad(0)->GetFJustDown(i) )
+		if ( Input_GetFJustDown(i) ) // rouz edit (ChatGPT)
 			*pRsKeys = i + rsF1;
 	}
 
-	if ( GetPad(0)->GetEscapeJustDown() )
+	if ( Input_GetEscapeJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsESC;
 
-	if ( GetPad(0)->GetInsertJustDown() )
+	if ( Input_GetInsertJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsINS;
 
-	if ( GetPad(0)->GetDeleteJustDown() )
+	if ( Input_GetDeleteJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsDEL;
 
-	if ( GetPad(0)->GetHomeJustDown() )
+	if ( Input_GetHomeJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsHOME;
 
-	if ( GetPad(0)->GetEndJustDown() )
+	if ( Input_GetEndJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsEND;
 
-	if ( GetPad(0)->GetPageUpJustDown() )
+	if ( Input_GetPageUpJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPGUP;
 
-	if ( GetPad(0)->GetPageDownJustDown() )
+	if ( Input_GetPageDownJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPGDN;
 
-	if ( GetPad(0)->GetUpJustDown() )
+	if ( Input_GetUpJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsUP;
 
-	if ( GetPad(0)->GetDownJustDown() )
+	if ( Input_GetDownJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsDOWN;
 
-	if ( GetPad(0)->GetLeftJustDown() )
+	if ( Input_GetLeftJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsLEFT;
 
-	if ( GetPad(0)->GetRightJustDown() )
+	if ( Input_GetRightJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsRIGHT;
 
-	if ( GetPad(0)->GetScrollLockJustDown() )
+	if ( Input_GetScrollLockJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsSCROLL;
 
-	if ( GetPad(0)->GetPauseJustDown() )
+	if ( Input_GetPauseJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPAUSE;
 
-	if ( GetPad(0)->GetNumLockJustDown() )
+	if ( Input_GetNumLockJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsNUMLOCK;
 
-	if ( GetPad(0)->GetDivideJustDown() )
+	if ( Input_GetDivideJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsDIVIDE;
 
-	if ( GetPad(0)->GetTimesJustDown() )
+	if ( Input_GetTimesJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsTIMES;
 
-	if ( GetPad(0)->GetMinusJustDown() )
+	if ( Input_GetMinusJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsMINUS;
 
-	if ( GetPad(0)->GetPlusJustDown() )
+	if ( Input_GetPlusJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPLUS;
 
-	if ( GetPad(0)->GetPadEnterJustDown() )
+	if ( Input_GetPadEnterJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADENTER;
 
-	if ( GetPad(0)->GetPadDelJustDown() )
+	if ( Input_GetPadDelJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADDEL;
 
-	if ( GetPad(0)->GetPad1JustDown() )
+	if ( Input_GetPad1JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADEND;
 
-	if ( GetPad(0)->GetPad2JustDown() )
+	if ( Input_GetPad2JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADDOWN;
 
-	if ( GetPad(0)->GetPad3JustDown() )
+	if ( Input_GetPad3JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADPGDN;
 
-	if ( GetPad(0)->GetPad4JustDown() )
+	if ( Input_GetPad4JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADLEFT;
 
-	if ( GetPad(0)->GetPad5JustDown() )
+	if ( Input_GetPad5JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPAD5;
 
-	if ( GetPad(0)->GetPad6JustDown() )
+	if ( Input_GetPad6JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADRIGHT;
 
-	if ( GetPad(0)->GetPad7JustDown() )
+	if ( Input_GetPad7JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADHOME;
 
-	if ( GetPad(0)->GetPad8JustDown() )
+	if ( Input_GetPad8JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADUP;
 
-	if ( GetPad(0)->GetPad9JustDown() )
+	if ( Input_GetPad9JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADPGUP;
 
-	if ( GetPad(0)->GetPad0JustDown() )
+	if ( Input_GetPad0JustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsPADINS;
 
-	if ( GetPad(0)->GetBackspaceJustDown() )
+	if ( Input_GetBackspaceJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsBACKSP;
 
-	if ( GetPad(0)->GetTabJustDown() )
+	if ( Input_GetTabJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsTAB;
 
-	if ( GetPad(0)->GetCapsLockJustDown() )
+	if ( Input_GetCapsLockJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsCAPSLK;
 
-	if ( GetPad(0)->GetReturnJustDown() )
+	if ( Input_GetReturnJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsENTER;
 
-	if ( GetPad(0)->GetLeftShiftJustDown() )
+	if ( Input_GetLeftShiftJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsLSHIFT;
 
-	if ( GetPad(0)->GetShiftJustDown() )
+	if ( Input_GetShiftJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsSHIFT;
 
-	if ( GetPad(0)->GetRightShiftJustDown() )
+	if ( Input_GetRightShiftJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsRSHIFT;
 
-	if ( GetPad(0)->GetLeftCtrlJustDown() )
+	if ( Input_GetLeftCtrlJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsLCTRL;
 
-	if ( GetPad(0)->GetRightCtrlJustDown() )
+	if ( Input_GetRightCtrlJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsRCTRL;
 
-	if ( GetPad(0)->GetLeftAltJustDown() )
+	if ( Input_GetLeftAltJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsLALT;
 
-	if ( GetPad(0)->GetRightAltJustDown() )
+	if ( Input_GetRightAltJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsRALT;
 
-	if ( GetPad(0)->GetLeftWinJustDown() )
+	if ( Input_GetLeftWinJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsLWIN;
 
-	if ( GetPad(0)->GetRightWinJustDown() )
+	if ( Input_GetRightWinJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsRWIN;
 
-	if ( GetPad(0)->GetAppsJustDown() )
+	if ( Input_GetAppsJustDown() ) // rouz edit (ChatGPT)
 		*pRsKeys = rsAPPS;
 
 	return pRsKeys;
@@ -4117,9 +3939,9 @@ int32 *CPad::EditCodesForControls(int32 *pRsKeys, int32 nSize)
 void CPad::FixPadsAfterSave(void)
 {
 	UpdatePads();
-	if ( bObsoleteControllerMessage )
+	if ( Input_obsoleteControllerMessage ) // rouz edit (ChatGPT)
 	{
-		bObsoleteControllerMessage = false;
+		Input_obsoleteControllerMessage = false; // rouz edit (ChatGPT)
 		GetPad(0)->Phase = 0;
 	}
 }

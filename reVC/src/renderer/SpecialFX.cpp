@@ -105,21 +105,6 @@ float SpecialFX_BackendScreenHeight(void)
     // Read the original live screen-height macro
     return SCREEN_HEIGHT;
 }
-char * SpecialFX_BackendString(void)
-{
-    // Borrow the actual shared ASCII buffer
-    return gString;
-}
-uint16_t * SpecialFX_BackendUnicode(void)
-{
-    // Borrow the actual shared game Unicode buffer
-    return gUString;
-}
-void SpecialFX_BackendAsciiToUnicode(const char *source,uint16_t *target)
-{
-    // Enter the original typed game text converter
-    AsciiToUnicode(source,target);
-}
 void SpecialFX_BackendFontScale(float x,float y)
 {
     // Set the original font scale with C-computed values

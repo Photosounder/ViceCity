@@ -2,6 +2,7 @@
 //+ rouz edit (ChatGPT)
 
 #include "Pool.h"
+#include "ReplayState.h" // rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 
 #include "Pools.h"
@@ -278,7 +279,6 @@ class CReplay
 	VALIDATE_SIZE(tMiscPacket, 16);
 
 private:
-	static uint8 Mode;
 	static CAddressInReplayBuffer Record;
 	static CAddressInReplayBuffer Playback;
 	//+ rouz edit (ChatGPT)
@@ -298,10 +298,8 @@ private:
 	static uint8* pReferences;
 	static uint8 BufferStatus[NUM_REPLAYBUFFERS];
 	static uint8 Buffers[NUM_REPLAYBUFFERS][REPLAYBUFFERSIZE];
-	static bool bPlayingBackFromFile;
 	static bool bReplayEnabled;
 	static uint32 SlowMotion;
-	static uint32 FramesActiveLookAroundCam;
 	static bool bDoLoadSceneWhenDone;
 	static CPtrNode* WorldPtrList;
 	static CPtrNode* BigBuildingPtrList;
@@ -325,17 +323,12 @@ private:
 	static float CameraFixedZ;
 	static int32 OldRadioStation;
 	static int8 CameraMode;
-	static bool bAllowLookAroundCam;
 	static float LoadSceneX;
 	static float LoadSceneY;
 	static float LoadSceneZ;
 	static float CameraFocusX;
 	static float CameraFocusY;
 	static float CameraFocusZ;
-	static bool bPlayerInRCBuggy;
-	static float fDistanceLookAroundCam;
-	static float fAlphaAngleLookAroundCam;
-	static float fBetaAngleLookAroundCam;
 	static int ms_nNumCivMale_Stored;
 	static int ms_nNumCivFemale_Stored;
 	static int ms_nNumCop_Stored;
@@ -366,6 +359,7 @@ private:
 #endif
 
 public:
+	static void ApplyLookAroundCam(void); // rouz edit (ChatGPT)
 	static void Init(void) REPLAY_STUB;
 	static void DisableReplays(void) REPLAY_STUB;
 	static void EnableReplays(void) REPLAY_STUB;
@@ -378,13 +372,7 @@ public:
 	static void RecordParticle(tParticleType type, CVector const& vecPos, CVector const& vecDir, float fSize, RwRGBA const& color) REPLAY_STUB;
 
 #ifndef GTA_REPLAY
-	static bool ShouldStandardCameraBeProcessed(void) { return true; }
-	static bool IsPlayingBack() { return false; }
-	static bool IsPlayingBackFromFile() { return false; }
 #else
-	static bool ShouldStandardCameraBeProcessed(void);
-	static bool IsPlayingBack() { return Mode == MODE_PLAYBACK; }
-	static bool IsPlayingBackFromFile() { return bPlayingBackFromFile; }
 private:
 	static void RecordThisFrame(void);
 	static void StorePedUpdate(CPed *ped, int id);
@@ -410,7 +398,6 @@ private:
 	static void SaveReplayToHD(void);
 	static void PlayReplayFromHD(void); // out of class in III PC and later because of SecuROM
 	static void FindFirstFocusCoordinate(CVector *coord);
-	static void ProcessLookAroundCam(void);
 	static size_t FindSizeOfPacket(uint8);
 	static void GoToNextBlock(void);
 #endif

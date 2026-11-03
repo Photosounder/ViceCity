@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "BulletTraces_backend.h"
 #include "Timer.h"
 #include "DMAudio.h"
@@ -85,7 +86,7 @@ void BulletTraces_InitTexture(void)
 	BulletTraces_BackendPushTxd();
 	BulletTraces_BackendSetTxd(BulletTraces_BackendFindTxd("particle"));
 	if(gpSmokeTrailTexture == NULL)
-		gpSmokeTrailTexture = BulletTraces_BackendReadTexture("smoketrail");
+		gpSmokeTrailTexture = RwHelper_ReadTexture("smoketrail", NULL);
 	BulletTraces_BackendPopTxd();
 }
 void BulletTraces_ShutdownTexture(void)
@@ -93,7 +94,7 @@ void BulletTraces_ShutdownTexture(void)
 	// Preserve the complete original trace, clipping and shared-geometry operation order
 	if (gpSmokeTrailTexture) {
 		// Retain original eligibility, arithmetic and write order
-		BulletTraces_BackendDestroyTexture(gpSmokeTrailTexture);
+		RwHelper_DestroyTexture(gpSmokeTrailTexture);
 		gpSmokeTrailTexture = NULL;
 	}
 }
@@ -261,7 +262,7 @@ void BulletTraces_Render(void)
 		BulletTraces_BackendZWrite(false);
 		BulletTraces_BackendSrcBlend();
 		BulletTraces_BackendDestBlend();
-		BulletTraces_BackendSetRaster(BulletTraces_BackendRaster(gpSmokeTrailTexture));
+		RwHelper_SetTextureRaster(RwHelper_TextureRaster(gpSmokeTrailTexture));
 
 		float timeAlive = (*Timer_GetTimeInMilliseconds()) - BulletTraces_aTraces[i].m_nCreationTime;
 

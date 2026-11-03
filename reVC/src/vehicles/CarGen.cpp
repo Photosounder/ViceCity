@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "CarGen.h"
 
@@ -59,12 +60,12 @@ void CCarGenerator::DoInternalProcessing()
 			m_nTimer += 4;
 			return;
 		}
-		CStreaming::RequestModel(m_nModelIndex, STREAMFLAGS_DEPENDENCY);
+		Streaming_RequestModel(m_nModelIndex, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 		mi = m_nModelIndex;
 	}
 	else {
 		mi = -m_nModelIndex;
-		if (m_nModelIndex == -1 || !CStreaming::HasModelLoaded(mi)) {
+		if (m_nModelIndex == -1 || !Streaming_HasModelLoaded(mi)) { // rouz edit (ChatGPT)
 			CZoneInfo pZone;
 			CVector pos = FindPlayerCoors();
 			Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&pos)), &pZone);
@@ -80,12 +81,12 @@ void CCarGenerator::DoInternalProcessing()
 			return;
 		}
 	}
-	if (!CStreaming::HasModelLoaded(mi))
+	if (!Streaming_HasModelLoaded(mi)) // rouz edit (ChatGPT)
 		return;
 	CVehicle* pVehicle;
 
 	CVector pos;
-	if (CModelInfo::IsBoatModel(mi)){
+	if (ModelRegistry_IsBoatModel(mi)){ // rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 		// Allocate the parked boat from the vehicle pool without invoking C++ new.
 		//+ rouz edit (ChatGPT)
@@ -118,7 +119,7 @@ void CCarGenerator::DoInternalProcessing()
 			debug("CCarGenerator::DoInternalProcessing - can't find ground z for new car x = %f y = %f \n", m_vecPos.x, m_vecPos.y);
 			return;
 		}
-		if (((CVehicleModelInfo*)CModelInfo::GetModelInfo(mi))->m_vehicleType == VEHICLE_TYPE_BIKE) {
+		if (((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(mi)))->m_vehicleType == VEHICLE_TYPE_BIKE) { // rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 			// Allocate the parked bike from the vehicle pool without invoking C++ new.
 			//+ rouz edit (ChatGPT)
@@ -233,7 +234,7 @@ bool CCarGenerator::CheckForBlockage(int32 mi)
 {
 	int16 entities;
 	CEntity* pEntities[8];
-	CColModel* pColModel = CModelInfo::GetColModel(mi);
+	CColModel* pColModel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(mi))); // rouz edit (ChatGPT)
 	CWorld::FindObjectsKindaColliding(CVector(m_vecPos), pColModel->boundingSphere.radius, 1, &entities, 8, pEntities, false, true, true, false, false);
 	for (int i = 0; i < entities; i++) {
 		if (m_vecPos.z + pColModel->boundingBox.min.z < pEntities[i]->GetPosition().z + pEntities[i]->GetColModel()->boundingBox.max.z + 1.0f &&
@@ -251,7 +252,7 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 	float distance = direction.Magnitude();
 	float farclip = 110.0f * TheCamera.GenerationDistMultiplier;
 	float nearclip = farclip - 20.0f;
-	bool canBeRemoved = (m_nModelIndex > 0 && CModelInfo::IsBoatModel(m_nModelIndex) && 165.0f * TheCamera.GenerationDistMultiplier > distance &&
+	bool canBeRemoved = (m_nModelIndex > 0 && ModelRegistry_IsBoatModel(m_nModelIndex) && 165.0f * TheCamera.GenerationDistMultiplier > distance && // rouz edit (ChatGPT)
 		TheCamera.IsSphereVisible(m_vecPos, 0.0f) && !COcclusion::IsPositionOccluded(m_vecPos, 0.0f)); 
 	if (distance >= farclip && !canBeRemoved){
 		if (m_bIsBlocking)
@@ -269,7 +270,7 @@ bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 
 void CTheCarGenerators::Process()
 {
-	if (FindPlayerTrain() || CCutsceneMgr::IsCutsceneProcessing())
+	if (FindPlayerTrain() || Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 		return;
 	if (++CTheCarGenerators::ProcessCounter == 4)
 		CTheCarGenerators::ProcessCounter = 0;

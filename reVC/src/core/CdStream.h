@@ -2,6 +2,7 @@
 #pragma once
 
 #include "CdStream_constants.h"
+#include "CdStreamSync.h"
 
 #define _GET_INDEX(a) (a >> 24)
 #define _GET_OFFSET(a)  (a & 0xFFFFFF)
@@ -35,7 +36,6 @@ void CdStreamShutdown(void);
 int32 CdStreamRead(int32 channel, void *buffer, uint32 offset, uint32 size);
 int32 CdStreamGetStatus(int32 channel);
 int32 CdStreamGetLastPosn(void);
-int32 CdStreamSync(int32 channel);
 void AddToQueue(Queue *queue, int32 item);
 int32 GetFirstInQueue(Queue *queue);
 void RemoveFirstInQueue(Queue *queue);
@@ -44,7 +44,4 @@ char *CdStreamGetImageName(int32 cd);
 void CdStreamRemoveImages(void);
 int32 CdStreamGetNumImages(void);
 
-#ifdef FLUSHABLE_STREAMING
-extern bool flushStream[MAX_CDCHANNELS];
-#endif
 //- rouz edit (ChatGPT)

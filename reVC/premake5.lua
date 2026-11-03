@@ -284,9 +284,9 @@ project "reVC"
 	files { addSrcFiles("src/weapons") }
 	files { addSrcFiles("src/extras") }
 	if(not _OPTIONS["no-git-hash"]) then
-		files { "src/extras/GitSHA1.cpp" } -- this won't be in repo in first build
+		files { "src/extras/GitSHA1.c" } -- this won't be in repo in first build
 	else
-		removefiles { "src/extras/GitSHA1.cpp" } -- but it will be everytime after
+		removefiles { "src/extras/GitSHA1.c" } -- but it will be everytime after
 	end
 
 	includedirs { "src" }
@@ -364,12 +364,12 @@ project "reVC"
 			staticruntime "on"
 		end
 		if(not _OPTIONS["no-git-hash"]) then
-			prebuildcommands { '"%{prj.location}..\\printHash.bat" "%{prj.location}..\\src\\extras\\GitSHA1.cpp"' }
+			prebuildcommands { '"%{prj.location}..\\printHash.bat" "%{prj.location}..\\src\\extras\\GitSHA1.c"' }
 		end
 
 	filter "platforms:not win*"
 		if(not _OPTIONS["no-git-hash"]) then
-			prebuildcommands { '"%{prj.location}/../printHash.sh" "%{prj.location}/../src/extras/GitSHA1.cpp"' }
+			prebuildcommands { '"%{prj.location}/../printHash.sh" "%{prj.location}/../src/extras/GitSHA1.c"' }
 		end
 
 	filter "platforms:win*glfw*"

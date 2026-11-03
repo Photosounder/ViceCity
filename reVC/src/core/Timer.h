@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+#include "RsTimer.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -231,15 +232,7 @@ Timer_GetLogicalFramesPassed(void)
 }
 
 #endif
-#ifdef _WIN32
-typedef uint32_t TimerPlatformTime;
-#else
-typedef double TimerPlatformTime;
-#endif
-TimerPlatformTime TimerHost_PlatformTime(void);
-bool TimerHost_SnapshotActive(void);
-bool TimerHost_PlayingBack(void);
-bool TimerHost_ChaseRecording(void);
+typedef RsTimerValue TimerPlatformTime;
 #ifdef __cplusplus
 }
 #endif

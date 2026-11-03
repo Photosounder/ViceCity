@@ -30,11 +30,7 @@ static_assert(int(WEATHER_rwFOGTYPELINEAR)==int(rwFOGTYPELINEAR),"Original nativ
 static_assert(int(WEATHER_rwBLENDONE)==int(rwBLENDONE),"Original native render constant");
 static_assert(int(WEATHER_rwBLENDSRCALPHA)==int(rwBLENDSRCALPHA),"Original native render constant");
 static_assert(int(WEATHER_rwBLENDINVSRCALPHA)==int(rwBLENDINVSRCALPHA),"Original native render constant");
-bool Weather_BackendPlayback(void)
-{
-    // Access the original typed native operation without moving its weather decisions
-    return CReplay::IsPlayingBack();
-}
+
 bool Weather_BackendNoHurricanes(void)
 {
     // Access the original typed native operation without moving its weather decisions
@@ -63,7 +59,7 @@ bool Weather_BackendInterior(void)
 bool Weather_BackendCutscene(void)
 {
     // Access the original typed native operation without moving its weather decisions
-    return CCutsceneMgr::IsRunning();
+    return Cutscene_IsRunning(); // rouz edit (ChatGPT)
 }
 bool Weather_BackendPlayerExists(void)
 {
@@ -189,11 +185,6 @@ bool Weather_BackendVerticalLine(WeatherVector value,float *height)
         *height=point.point.z;
     }
     return hit;
-}
-int32_t Weather_BackendFogReduction(void)
-{
-    // Access the original typed native operation without moving its weather decisions
-    return TimeCycle_GetFogReduction();
 }
 bool Weather_BackendEnvMap(void)
 {

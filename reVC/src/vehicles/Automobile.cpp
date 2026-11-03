@@ -4,6 +4,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "ColSphere_native.h"
 #include "CollisionVector_native.h"
@@ -90,7 +91,7 @@ CAutomobile::CAutomobile(int32 id, uint8 CreatedBy)
 
 	m_vehType = VEHICLE_TYPE_CAR;
 
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	m_fFireBlowUpTimer = 0.0f;
 	m_doingBurnout = 0;
 	bTaxiLight = m_sAllTaxiLights;
@@ -304,7 +305,7 @@ CAutomobile::ProcessControl(void)
 
 	bool carHasNitro = bAllTaxisHaveNitro && GetStatus() == STATUS_PLAYER && IsTaxi();
 
-	if(CReplay::IsPlayingBack())
+	if(Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	// Heli wind
@@ -433,7 +434,7 @@ CAutomobile::ProcessControl(void)
 
 			PruneReferences();
 
-			if(GetStatus() == STATUS_PLAYER && !CRecordDataForChase::IsRecording())
+			if(GetStatus() == STATUS_PLAYER && !RecordChase_IsRecording()) // rouz edit (ChatGPT)
 				DoDriveByShootings();
 
 			// Tweak center on mass when driving on two wheels
@@ -563,14 +564,14 @@ CAutomobile::ProcessControl(void)
 
 			// Set yield
 			float yield = 0.f;
-			if (CPad::GetPad(0)->GetCharJustDown('B'))
+			if (Input_GetCharJustDown('B')) // rouz edit (ChatGPT)
 				yield = 1.f;
 
 			if (yield > 0.f)
 			{
 				DMAudio_PlayFrontEndSound(SOUND_WEAPON_SNIPER_SHOT_NO_ZOOM, 1.f);
 				BlowUpCar(nil);
-				CExplosion::AddExplosion(this, nil, EXPLOSION_HELI2, GetPosition(), 0);
+				Explosion_AddExplosion(this, nil, EXPLOSION_HELI2, GetPosition(), 0);
 				rouz.remote_bomb = 0;
 				rouz.bomb_veh = NULL;
 			}
@@ -581,16 +582,16 @@ CAutomobile::ProcessControl(void)
 		{
 			bIsHandbrakeOn = false;
 
-			m_fGasPedal = 1.f * ((float) CPad::GetPad(0)->GetChar('I') - (float) CPad::GetPad(0)->GetChar('K'));
-			m_fBrakePedal = 1.f * (float) CPad::GetPad(0)->GetChar('K');
-			m_fSteerAngle = 30.f*PI/180.f * ((float) CPad::GetPad(0)->GetChar('J') - (float) CPad::GetPad(0)->GetChar('L'));
+			m_fGasPedal = 1.f * ((float) Input_GetChar('I') - (float) Input_GetChar('K')); // rouz edit (ChatGPT)
+			m_fBrakePedal = 1.f * (float) Input_GetChar('K'); // rouz edit (ChatGPT)
+			m_fSteerAngle = 30.f*PI/180.f * ((float) Input_GetChar('J') - (float) Input_GetChar('L')); // rouz edit (ChatGPT)
 
 			if (DotProduct(m_vecMoveSpeed, GetForward()) <= 0.f)
 				m_fBrakePedal = 0.f;
 
 			static CVector player_offset;
 			static int player_offset_set=0;
-			/*if (CPad::GetPad(0)->GetChar('P'))
+			/*if (Input_GetChar('P')) // rouz edit (ChatGPT)
 			{
 				if (player_offset_set==0)
 				{
@@ -1525,7 +1526,7 @@ CAutomobile::ProcessControl(void)
 #ifndef FREE_CAM
 						CPad::GetPad(0)->GetCarGunUpDown() > 1.0f ||
 #else
-						((!CCamera::bFreeCam || (CCamera::bFreeCam && !CPad::IsAffectedByController)) && CPad::GetPad(0)->GetCarGunUpDown() > 1.0f) ||
+						((!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) && CPad::GetPad(0)->GetCarGunUpDown() > 1.0f) || // rouz edit (ChatGPT)
 #endif
 						Abs(m_vecMoveSpeed.x) > 0.02f ||
 						Abs(m_vecMoveSpeed.y) > 0.02f ||
@@ -1619,7 +1620,7 @@ CAutomobile::ProcessControl(void)
 	// A similar calculation of damagePos is done elsewhere for smoke
 
 	uint8 engineStatus = Damage_GetEngineStatus(&Damage);
-	CVector damagePos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->m_positions[CAR_POS_HEADLIGHTS];
+	CVector damagePos = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->m_positions[CAR_POS_HEADLIGHTS]; // rouz edit (ChatGPT)
 
 	switch(Damage_GetDoorStatus(&Damage, DOOR_BONNET)){
 	case DOOR_STATUS_OK:
@@ -1805,7 +1806,7 @@ CAutomobile::ProcessControl(void)
 		if(CWorld::TestSphereAgainstWorld(GetPosition(), 10.0f, this, true, false, false, false, false, false) ||
 		   GetPosition().z < 6.0f)
 			if(!bRenderScorched){	// we already know this is true...
-				CExplosion::AddExplosion(this, nil, EXPLOSION_CAR, GetPosition(), 0);
+				Explosion_AddExplosion(this, nil, EXPLOSION_CAR, GetPosition(), 0);
 				bRenderScorched = true;
 			}
 	}
@@ -1832,7 +1833,7 @@ void
 CAutomobile::PreRender(void)
 {
 	int i, j, n;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	if(GetModelIndex() == MI_RHINO && m_aCarNodes[CAR_WINDSCREEN]){
 		// Rotate Rhino turret
@@ -3080,7 +3081,7 @@ CAutomobile::PreRender(void)
 void
 CAutomobile::Render(void)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	mi->SetVehicleColour(m_currentColour1, m_currentColour2);
 
@@ -3224,8 +3225,8 @@ CAutomobile::ProcessControlInputs(uint8 pad)
 
 	// Steer left/right
 	if(CCamera::m_bUseMouse3rdPerson && !CVehicle::m_bDisableMouseSteering){
-		if(CPad::GetPad(pad)->GetMouseX() != 0.0f){
-			m_fSteerInput += fMouseSteerSens*CPad::GetPad(pad)->GetMouseX();
+		if(Input_GetMouseX() != 0.0f){ // rouz edit (ChatGPT)
+			m_fSteerInput += fMouseSteerSens*Input_GetMouseX(); // rouz edit (ChatGPT)
 			nLastControlInput = 2;
 			if(Abs(m_fSteerInput) < fMouseCentreRange)
 				m_fSteerInput *= Pow(fMouseCentreMult, (*Timer_GetTimeStep()));
@@ -3471,7 +3472,7 @@ CAutomobile::TankControl(void)
 		if(entity)
 			point2 = CollisionVector_ToNative(colpoint.point) - 0.04f*(CollisionVector_ToNative(colpoint.point) - point1);
 
-		CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_TANK_GRENADE, point2, 0);
+		Explosion_AddExplosion(nil, FindPlayerPed(), EXPLOSION_TANK_GRENADE, point2, 0);
 
 		// Add particles on the way to the explosion;
 		float shotDist = (point2 - point1).Magnitude();
@@ -3520,7 +3521,7 @@ CAutomobile::HydraulicControl(void)
 {
 	int i;
 	float wheelPositions[4];
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *normalColModel = mi->GetColModel();
 	float wheelRadius = 0.5f*mi->m_wheelScale;
 	CPlayerInfo *playerInfo = &CWorld::Players[CWorld::PlayerInFocus];
@@ -4141,7 +4142,7 @@ CAutomobile::RcbanditCheck1CarWheels(CPtrList &list)
 
 			if(Abs(this->GetPosition().x - car->GetPosition().x) < 10.0f &&
 			   Abs(this->GetPosition().y - car->GetPosition().y) < 10.0f){
-				mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(car->GetModelIndex());
+				mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(car->GetModelIndex())); // rouz edit (ChatGPT)
 
 				for(i = 0; i < 4; i++){
 					if(car->m_aSuspensionSpringRatioPrev[i] < 1.0f || car->GetStatus() == STATUS_SIMPLE){
@@ -4502,7 +4503,7 @@ CAutomobile::AddDamagedVehicleParticles(void)
 		return;
 
 	CVector direction = fSpeedMult[5]*m_vecMoveSpeed;
-	CVector damagePos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->m_positions[CAR_POS_HEADLIGHTS];
+	CVector damagePos = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->m_positions[CAR_POS_HEADLIGHTS]; // rouz edit (ChatGPT)
 
 	switch(Damage_GetDoorStatus(&Damage, DOOR_BONNET)){
 	case DOOR_STATUS_OK:
@@ -4977,15 +4978,15 @@ CAutomobile::BlowUpCar(CEntity *culprit)
 	FireManager_StartFireOn(&gFireManager,this, culprit, 0.8f, true);
 	Darkel_RegisterCarBlownUpByPlayer(this);
 	if(GetModelIndex() == MI_RCBANDIT)
-		CExplosion::AddExplosion(this, culprit, EXPLOSION_CAR_QUICK, GetPosition(), 0);
+		Explosion_AddExplosion(this, culprit, EXPLOSION_CAR_QUICK, GetPosition(), 0);
 	else
-		CExplosion::AddExplosion(this, culprit, EXPLOSION_CAR, GetPosition(), 0);
+		Explosion_AddExplosion(this, culprit, EXPLOSION_CAR, GetPosition(), 0);
 }
 
 bool
 CAutomobile::SetUpWheelColModel(CColModel *colModel)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *vehColModel = mi->GetColModel();
 
 	if(GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI ||
@@ -5080,7 +5081,7 @@ CAutomobile::IsRoomForPedToLeaveCar(uint32 component, CVector *doorOffset)
 	CColPoint colpoint;
 	CEntity *ent;
 	colpoint.point = CollisionVector_FromNative(CVector(0.0f, 0.0f, 0.0f));
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	CVector seatPos;
 	switch(component){
@@ -5195,7 +5196,7 @@ CAutomobile::SetupSuspensionLines(void)
 {
 	int i;
 	CVector posn;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *colModel = mi->GetColModel();
 
 	// Each suspension line starts at the uppermost wheel position
@@ -5818,7 +5819,7 @@ CAutomobile::SetBumperDamage(int32 component, ePanels panel, bool noFlyingCompon
 	int status = Damage_GetPanelStatus(&Damage, panel);
 	if(m_aCarNodes[component] == nil){
 		printf("Trying to damage component %d of %s\n",
-			component, CModelInfo::GetModelInfo(GetModelIndex())->GetModelName());
+			component, ((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 		return;
 	}
 	if(status == PANEL_STATUS_SMASHED1){
@@ -5838,7 +5839,7 @@ CAutomobile::SetDoorDamage(int32 component, eDoors door, bool noFlyingComponents
 	int status = Damage_GetDoorStatus(&Damage, door);
 	if(m_aCarNodes[component] == nil){
 		printf("Trying to damage component %d of %s\n",
-			component, CModelInfo::GetModelInfo(GetModelIndex())->GetModelName());
+			component, ((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 		return;
 	}
 
@@ -6003,7 +6004,7 @@ CAutomobile::PopBootUsingPhysics(void)
 void
 CAutomobile::CloseAllDoors(void)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	if(!IsDoorMissing(DOOR_FRONT_LEFT))
 		OpenDoor(CAR_DOOR_LF, DOOR_FRONT_LEFT, 0.0f);
 	if(mi->m_numDoors > 1){
@@ -6087,6 +6088,7 @@ CAutomobile::Load(uint8*& buf)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

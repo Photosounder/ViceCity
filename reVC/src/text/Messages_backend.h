@@ -9,7 +9,6 @@ extern "C" {
 #endif
 void Messages_BackendDefinedState(void);
 bool Messages_BackendJapanese(void);
-void Messages_BackendAsciiToUnicode(const char *source,uint16_t *output);
 MessagesActionNames *Messages_BackendActionNames(void);
 void Messages_BackendCommandKeys(uint16_t action,uint16_t *output,uint16_t length);
 void Messages_BackendSetBigMessage(uint16_t *message,uint16_t style);

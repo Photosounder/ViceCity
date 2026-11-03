@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "Quaternion_native.h"
 #include "ColSphere_native.h"
@@ -77,7 +78,7 @@ CBike::CBike(int32 id, uint8 CreatedBy)
  : CVehicle(CreatedBy)
 {
 	int i;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	switch(id){
 	case MI_ANGEL:
 	case MI_FREEWAY:
@@ -227,7 +228,7 @@ CBike::ProcessControl(void)
 	bool bStuckInSand = false;
 	float brake = 0.0f;
 	CColModel *colModel = GetColModel();
-	float wheelScale = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->m_wheelScale;
+	float wheelScale = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->m_wheelScale; // rouz edit (ChatGPT)
 	bWarnedPeds = false;
 	bLeanMatrixClean = false;
 	m_doingBurnout = 0;
@@ -238,7 +239,7 @@ CBike::ProcessControl(void)
 	for(i=0; i < 2; i++)
 		m_aWheelRotation[i] = rangewrap(m_aWheelRotation[i], 0., TWOPI);
 
-	if(CReplay::IsPlayingBack())
+	if(Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	ProcessCarAlarm();
@@ -300,7 +301,7 @@ CBike::ProcessControl(void)
 
 			PruneReferences();
 
-			if(GetStatus() == STATUS_PLAYER && !CRecordDataForChase::IsRecording())
+			if(GetStatus() == STATUS_PLAYER && !RecordChase_IsRecording()) // rouz edit (ChatGPT)
 				DoDriveByShootings();
 
 			if(m_aSuspensionSpringRatio[0] < 1.0f && SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[0].surfaceB) == ADHESIVE_SAND || // rouz edit (ChatGPT)
@@ -392,9 +393,9 @@ CBike::ProcessControl(void)
 		{
 			bIsHandbrakeOn = false;
 
-			m_fGasPedal = 1.f * ((float) CPad::GetPad(0)->GetChar('I') - (float) CPad::GetPad(0)->GetChar('K'));
-			m_fBrakePedal = 1.f * (float) CPad::GetPad(0)->GetChar('K');
-			m_fSteerAngle = 30.f*PI/180.f * ((float) CPad::GetPad(0)->GetChar('J') - (float) CPad::GetPad(0)->GetChar('L'));
+			m_fGasPedal = 1.f * ((float) Input_GetChar('I') - (float) Input_GetChar('K')); // rouz edit (ChatGPT)
+			m_fBrakePedal = 1.f * (float) Input_GetChar('K'); // rouz edit (ChatGPT)
+			m_fSteerAngle = 30.f*PI/180.f * ((float) Input_GetChar('J') - (float) Input_GetChar('L')); // rouz edit (ChatGPT)
 
 			// Handle reverse
 			float fwd_speed = DotProduct(m_vecMoveSpeed, GetForward());
@@ -1159,7 +1160,7 @@ CBike::ProcessControl(void)
 			damagePos = CVector(0.0f, 1.2f, -0.4f);
 			fireDir = CVector(0.0f, 0.0f, General_GetRandomNumberInRangeFloat(0.01125f, 0.09f));
 		}else{
-			damagePos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->m_positions[CAR_POS_BACKSEAT];
+			damagePos = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->m_positions[CAR_POS_BACKSEAT]; // rouz edit (ChatGPT)
 			damagePos.z -= 0.3f;
 			fireDir = General_GetRandomNumberInRangeFloat(0.02025f, 0.09f) * GetRight();
 			fireDir -= General_GetRandomNumberInRangeFloat(0.02025f, 0.18f) * GetForward();
@@ -1335,7 +1336,7 @@ void
 CBike::PreRender(void)
 {
 	int i;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	// Wheel particles
 
@@ -1795,7 +1796,7 @@ CBike::PreRender(void)
 void
 CBike::Render(void)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	m_nSetPieceExtendedRangeTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 	mi->SetVehicleColour(m_currentColour1, m_currentColour2);
@@ -1885,8 +1886,8 @@ CBike::ProcessControlInputs(uint8 pad)
 	// Steer left/right
 #ifdef FIX_BUGS
 	if(CCamera::m_bUseMouse3rdPerson && !CVehicle::m_bDisableMouseSteering){
-		if(CPad::GetPad(pad)->GetMouseX() != 0.0f){
-			m_fSteerInput += fMouseSteerSens*CPad::GetPad(pad)->GetMouseX();
+		if(Input_GetMouseX() != 0.0f){ // rouz edit (ChatGPT)
+			m_fSteerInput += fMouseSteerSens*Input_GetMouseX(); // rouz edit (ChatGPT)
 			nLastControlInput = 2;
 			if(Abs(m_fSteerInput) < fMouseCentreRange)
 				m_fSteerInput *= Pow(fMouseCentreMult, (*Timer_GetTimeStep()));
@@ -1908,7 +1909,7 @@ CBike::ProcessControlInputs(uint8 pad)
 	// Lean forward/backward
 	float updown;
 #ifdef FREE_CAM
-	if (CCamera::bFreeCam) updown = CPad::IsAffectedByController ? -CPad::GetPad(pad)->GetSteeringUpDown()/128.0f : CPad::GetPad(pad)->GetCarGunUpDown()/128.0f;
+	if (CCamera::bFreeCam) updown = Input_affectedByController ? -CPad::GetPad(pad)->GetSteeringUpDown()/128.0f : CPad::GetPad(pad)->GetCarGunUpDown()/128.0f; // rouz edit (ChatGPT)
 	else
 #endif
 	updown = -CPad::GetPad(pad)->GetSteeringUpDown()/128.0f + CPad::GetPad(pad)->GetCarGunUpDown()/128.0f;
@@ -2274,7 +2275,7 @@ CBike::AddDamagedVehicleParticles(void)
 		return;
 
 	CVector direction = 0.5f*m_vecMoveSpeed;
-	CVector damagePos = ((CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex()))->GetFrontSeatPosn();
+	CVector damagePos = ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())))->GetFrontSeatPosn(); // rouz edit (ChatGPT)
 
 	damagePos.z -= 0.4f;
 	damagePos = GetMatrix()*damagePos;
@@ -2480,7 +2481,7 @@ CBike::BlowUpCar(CEntity *culprit)
 	bLightsOn = false;
 	ChangeLawEnforcerState(false);
 
-	CExplosion::AddExplosion(this, culprit, EXPLOSION_CAR, GetPosition(), 0);
+	Explosion_AddExplosion(this, culprit, EXPLOSION_CAR, GetPosition(), 0);
 	Darkel_RegisterCarBlownUpByPlayer(this);
 }
 
@@ -2488,7 +2489,7 @@ bool
 CBike::SetUpWheelColModel(CColModel *colModel)
 {
 	RwMatrix *mat = RwMatrixCreate();
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *vehColModel = mi->GetColModel();
 
 	colModel->boundingSphere = vehColModel->boundingSphere;
@@ -2580,7 +2581,7 @@ CBike::IsRoomForPedToLeaveCar(uint32 component, CVector *doorOffset)
 	CColPoint colpoint;
 	CEntity *ent;
 	colpoint.point = CollisionVector_FromNative(CVector(0.0f, 0.0f, 0.0f));
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	CVector seatPos = mi->GetFrontSeatPosn();
 	if(component == CAR_DOOR_RR || component == CAR_DOOR_LR)
@@ -2892,7 +2893,7 @@ CBike::SetupSuspensionLines(void)
 	CVector posn;
 	float suspOffset = 0.0f;
 	RwFrame *node = nil;
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	CColModel *colModel = mi->GetColModel();
 	RwMatrix *mat = RwMatrixCreate();
 
@@ -3059,6 +3060,7 @@ CBike::Load(uint8*& buf)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

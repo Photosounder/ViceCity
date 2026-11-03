@@ -100,16 +100,6 @@ void * BulletTraces_BackendFrameMatrix(void *frame)
     // Enter each original repeated frame-matrix query
     return RwFrameGetMatrix((RwFrame *)frame);
 }
-void * BulletTraces_BackendRaster(void *texture)
-{
-    // Read the actual smoke-trail raster through its texture owner
-    return RwTextureGetRaster((RwTexture *)texture);
-}
-void BulletTraces_BackendSetRaster(void *raster)
-{
-    // Set the original typed texture-raster state
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
-}
 void BulletTraces_BackendZWrite(bool value)
 {
     // Set the original typed depth-write state
@@ -143,17 +133,6 @@ void BulletTraces_BackendEnd(void)
 
 
 
-void * BulletTraces_BackendReadTexture(const char *name)
-{
-    // Read the original named smoke texture with its null mask
-    return RwTextureRead(name,0);
-}
-
-void BulletTraces_BackendDestroyTexture(void *texture)
-{
-    // Destroy the original typed texture before C clears its published handle
-    RwTextureDestroy((RwTexture *)texture);
-}
 BulletTraceVector BulletTraces_BackendMatrixPosition(void *matrix)
 {
     // Read actual matrix pos components

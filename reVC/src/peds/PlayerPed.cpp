@@ -1744,8 +1744,8 @@ CPlayerPed::FindNewAttackPoints(void)
 		dirTowardsUs.Normalise();
 		dirTowardsUs *= 2.0f;
 		attackerPos = entAttackPoint - dirTowardsUs; // to make cop farther from us
-		CPedPlacement::FindZCoorForPed(&attackerPos);
-		if (CPedPlacement::IsPositionClearForPed(attackerPos))
+		PedPlacement_CFindZ(attackerPos.x, attackerPos.y, &attackerPos.z); // rouz edit (ChatGPT)
+		if (PedPlacement_CIsClear(attackerPos.x, attackerPos.y, attackerPos.z, -1.0f, -1, nil)) // rouz edit (ChatGPT)
 			m_vecSafePos[i] = attackerPos;
 	}
 }
@@ -1882,7 +1882,7 @@ CPlayerPed::ProcessControl(void)
 		return;
 	}
 	if (m_nPedState == PED_DRIVING && m_objective != OBJECTIVE_LEAVE_CAR) {
-		if (!CReplay::IsPlayingBack() || m_pMyVehicle) {
+		if (!Replay_IsPlayingBack() || m_pMyVehicle) { // rouz edit (ChatGPT)
 			if (m_pMyVehicle->IsCar() && Damage_GetDoorStatus(&((CAutomobile*)m_pMyVehicle)->Damage, DOOR_FRONT_LEFT) == DOOR_STATUS_SWINGING) {
 				CAnimBlendAssociation *rollDoorAssoc = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_CAR_CLOSE_DOOR_ROLLING_LHS);
 
@@ -2148,7 +2148,7 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 	bool hasIdleAnim = false;
 	// Use the complete C animation manager at the original call boundary
 	CAnimBlock *idleAnimBlock = AnimManager_GetAnimationBlockById(idleAnimBlockIndex);
-	uint32 sinceLastInput = padUsed->InputHowLongAgo();
+	uint32 sinceLastInput = Input_TimeSinceLastInput(padUsed->LastTimeTouched); // rouz edit (ChatGPT)
 	if (sinceLastInput <= 30000) {
 		if (idleAnimBlock->isLoaded) {
 			for (assoc = RpAnimBlendClumpGetFirstAssociation(GetClump()); assoc; assoc = RpAnimBlendGetNextAssociation(assoc)) {
@@ -2158,12 +2158,12 @@ CPlayerPed::PlayIdleAnimations(CPad *padUsed)
 				}
 			}
 			if (!hasIdleAnim)
-				CStreaming::RemoveAnim(idleAnimBlockIndex);
+				Streaming_RemoveAnim(idleAnimBlockIndex); // rouz edit (ChatGPT)
 		} else {
 			lastTime = 0;
 		}
 	} else {
-		CStreaming::RequestAnim(idleAnimBlockIndex, STREAMFLAGS_DONT_REMOVE);
+		Streaming_RequestAnim(idleAnimBlockIndex, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 		if (idleAnimBlock->isLoaded) {
 			for(CAnimBlendAssociation *assoc = RpAnimBlendClumpGetFirstAssociation(GetClump()); assoc; assoc = RpAnimBlendGetNextAssociation(assoc)) {
 				int firstIdle = idleAnimBlock->firstIndex;
@@ -2201,7 +2201,7 @@ CPlayerPed::SetNearbyPedsToInteractWithPlayer(void)
 		CPed *nearPed = m_nearPeds[i];
 		if (nearPed && nearPed->m_objectiveTimer < (*Timer_GetTimeInMilliseconds()) && !CTheScripts::IsPlayerOnAMission()) {
 			int mi = nearPed->GetModelIndex();
-			if (CPopulation::CanSolicitPlayerOnFoot(mi)) {
+			if (Population_CanSolicitPlayerOnFoot(mi)) { // rouz edit (ChatGPT)
 				CVector distToMe = nearPed->GetPosition() - GetPosition();
 				CVector dirToMe = GetPosition() - nearPed->GetPosition();
 				dirToMe.Normalise();
@@ -2211,7 +2211,7 @@ CPlayerPed::SetNearbyPedsToInteractWithPlayer(void)
 					nearPed->m_objectiveTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
 					nearPed->Say(SOUND_PED_SOLICIT);
 				}
-			} else if (CPopulation::CanSolicitPlayerInCar(mi)) {
+			} else if (Population_CanSolicitPlayerInCar(mi)) { // rouz edit (ChatGPT)
 				if (InVehicle() && m_pMyVehicle->IsVehicleNormal()) {
 					if (m_pMyVehicle->IsCar()) {
 						CVector distToVeh = nearPed->GetPosition() - m_pMyVehicle->GetPosition();

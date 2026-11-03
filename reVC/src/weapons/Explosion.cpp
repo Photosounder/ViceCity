@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Automobile.h"
@@ -10,6 +11,8 @@
 #include "Entity.h"
 #include "EventList.h"
 #include "Explosion.h"
+#include "Explosion_backend.h"
+#include "CollisionVector_native.h"
 #include "General.h"
 #include "Fire.h"
 #include "Pad.h"
@@ -21,501 +24,263 @@
 #include "WaterLevel.h"
 #include "World.h"
 
-CExplosion gaExplosion[NUM_EXPLOSIONS];
+// Keep actual native vector objects for calls that borrow explosion positions
+static CVector gaExplosionPositions[NUM_EXPLOSIONS];
 
-// these two were not initialised in original code, I'm really not sure what were they meant to be
-RwRGBA colMedExpl = { 0, 0, 0, 0 };
-RwRGBA colUpdate = { 0, 0, 0, 0 };
-
-const RwRGBA colAddExplosion = { 160, 160, 160, 255 };
-const RwRGBA colGrenade = { 96, 96, 96, 255 };
-
-int AudioHandle = AEHANDLE_NONE;
-
-void
-CExplosion::Initialise()
+//+ rouz edit (ChatGPT)
+extern "C" ExplosionMutablePosition Explosion_HostMutablePosition(uint32_t index)
 {
-	debug("Initialising CExplosion...\n");
-	ClearAllExplosions();
-	AudioHandle = DMAudio_CreateEntity(AUDIOTYPE_EXPLOSION, (void*)1);
-	if (AudioHandle >= 0)
-		DMAudio_SetEntityStatus(AudioHandle, TRUE);
-	debug("CExplosion ready\n");
+    // Borrow writable components of the actual native position object
+    ExplosionMutablePosition position={&gaExplosionPositions[index].x,&gaExplosionPositions[index].y,&gaExplosionPositions[index].z};
+    return position;
 }
-
-void
-CExplosion::ClearAllExplosions()
+extern "C" const CVector *Explosion_HostNativePosition(uint32_t index)
 {
-	for (int i = 0; i < ARRAY_SIZE(gaExplosion); i++) {
-		gaExplosion[i].m_ExplosionType = EXPLOSION_GRENADE;
-		gaExplosion[i].m_vecPosition = CVector(0.0f, 0.0f, 0.0f);
-		gaExplosion[i].m_fRadius = 1.0f;
-		gaExplosion[i].m_fPropagationRate = 0.0f;
-		gaExplosion[i].m_fZshift = 0.0f;
-		gaExplosion[i].m_pCreatorEntity = nil;
-		gaExplosion[i].m_pVictimEntity = nil;
-		gaExplosion[i].m_fStopTime = 0.0f;
-		gaExplosion[i].m_nIteration = 0;
-		gaExplosion[i].m_fStartTime = 0.0f;
-		gaExplosion[i].m_bIsBoat = false;
-		gaExplosion[i].m_bMakeSound = true;
-	}
+    // Return the actual native vector object used by world collision processing
+    return &gaExplosionPositions[index];
 }
-
-void
-CExplosion::Shutdown()
+extern "C" void Explosion_HostFlashCorona(uint32_t index,uint32_t offset,uint8_t red,uint8_t green,uint8_t blue,float size,float drawDistance,uint32_t textureIndex,bool star,bool reflection)
 {
-	debug("Shutting down CExplosion...\n");
-	if (AudioHandle >= 0) {
-		DMAudio_DestroyEntity(AudioHandle);
-		AudioHandle = AEHANDLE_NONE;
-	}
-	debug("CExplosion shut down\n");
+    // Forward the selected corona using the actual live native position and original record identity
+    ExplosionRecord &explosion=gaExplosion[index];
+    CCoronas::RegisterCorona((uintptr)&explosion+offset,red,green,blue,255,gaExplosionPositions[index],size,drawDistance,gpCoronaTexture[textureIndex],star ? CCoronas::TYPE_STAR : CCoronas::TYPE_NORMAL,reflection ? CCoronas::REFLECTION_ON : CCoronas::REFLECTION_OFF,CCoronas::LOSCHECK_OFF,CCoronas::STREAK_OFF,0.0f);
 }
-
-int8
-CExplosion::GetExplosionActiveCounter(uint8 id)
+extern "C" void Explosion_HostTriggerWorld(const CVector *position,float radius,float power,CEntity *creator,bool processBombTimer)
 {
-	return gaExplosion[id].m_nActiveCounter;
+    // Pass the actual original native vector object without creating a snapshot
+    CWorld::TriggerExplosion(*position,radius,power,creator,processBombTimer);
 }
-
-void
-CExplosion::ResetExplosionActiveCounter(uint8 id)
+extern "C" void Explosion_HostCameraShake(float strength,float x,float y,float z)
 {
-	gaExplosion[id].m_nActiveCounter = 0;
+    // Forward the original camera call with C-selected arguments
+    TheCamera.CamShake(strength,x,y,z);
 }
-
-uint8
-CExplosion::GetExplosionType(uint8 id)
+extern "C" void Explosion_HostPadShake(int16_t duration,uint8_t intensity,float x,float y,float z)
 {
-	return gaExplosion[id].m_ExplosionType;
+    // Resolve the original pad at the original controller-call boundary
+    CPad::GetPad(0)->StartShake_Distance(duration,intensity,x,y,z);
 }
-
-bool
-CExplosion::DoesExplosionMakeSound(uint8 id)
-{ 
-	return gaExplosion[id].m_bMakeSound; 
-};
-
-CVector *
-CExplosion::GetExplosionPosition(uint8 id)
+extern "C" void Explosion_HostRegisterReference(CEntity *entity,CEntity **slot)
 {
-	return &gaExplosion[id].m_vecPosition;
+    // Register the actual native entity reference at its original assignment boundary
+    entity->RegisterReference(slot);
 }
-
-bool
-#ifdef SIMPLER_MISSIONS
-CExplosion::AddExplosion(CEntity* explodingEntity, CEntity* culprit, eExplosionType type, const CVector& pos, uint32 lifetime, bool makeSound, float radius)
-#else
-CExplosion::AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionType type, const CVector &pos, uint32 lifetime, bool makeSound)
-#endif
+extern "C" void Explosion_HostDebug(const char *message)
 {
-	CVector pPosn;
-	CVector posGround;
-
-	RwRGBA colorMedium = colMedExpl;
-	RwRGBA color = colAddExplosion;
-	RwRGBA colorGrenade = colGrenade;
-	bool bDontExplode = false;
-	pPosn = pos;
-	pPosn.z += 5.0f;
-#ifdef FIX_BUGS
-	CShadows::AddPermanentShadow(SHADOWTEX_CAR, gpShadowHeliTex, &pPosn, 8.0f, 0.0f, 0.0f, -8.0f, 200, 0, 0, 0, 10.0f, 30000, 1.0f);
-#else
-	// last two arguments are swapped resulting in no shadow
-	CShadows::AddPermanentShadow(SHADOWTEX_CAR, gpShadowHeliTex, &pPosn, 8.0f, 0.0f, 0.0f, -8.0f, 200, 0, 0, 0, 10.0f, 1, 30000.0f);
-#endif
-
-	int n = 0;
-#ifdef FIX_BUGS
-	while (n < ARRAY_SIZE(gaExplosion) && gaExplosion[n].m_nIteration != 0)
-#else
-	// array overrun is UB
-	while (gaExplosion[n].m_nIteration != 0 && n < ARRAY_SIZE(gaExplosion))
-#endif
-		n++;
-	if (n == ARRAY_SIZE(gaExplosion))
-		return false;
-
-	CExplosion &explosion = gaExplosion[n];
-	explosion.m_ExplosionType = type;
-	explosion.m_vecPosition = pos;
-	explosion.m_fRadius = 1.0f;
-	explosion.m_fZshift = 0.0f;
-	explosion.m_pCreatorEntity = culprit;
-	if (culprit != nil)
-		culprit->RegisterReference(&explosion.m_pCreatorEntity);
-	explosion.m_pVictimEntity = explodingEntity;
-	if (explodingEntity != nil)
-		explodingEntity->RegisterReference(&explosion.m_pVictimEntity);
-	explosion.m_nIteration = 1;
-	explosion.m_nActiveCounter = 1;
-	explosion.m_bIsBoat = false;
-	explosion.m_bMakeSound = makeSound;
-	explosion.m_nParticlesExpireTime = lifetime != 0 ? (*Timer_GetTimeInMilliseconds()) + lifetime : 0;
-	switch (type)
-	{
-	case EXPLOSION_GRENADE:
-#ifdef SIMPLER_MISSIONS
-		explosion.m_fRadius = (radius == -1.0f ? 9.0f : radius);
-#else
-		explosion.m_fRadius = 9.0f;
-#endif
-		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		posGround = pos;
-		posGround.z = CWorld::FindGroundZFor3DCoord(posGround.x, posGround.y, posGround.z + 3.0f, nil);
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
-		if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f) {
-			uint8 tmp = General_GetRandomNumberInRangeInt(0, 64) - 64;
-			colorGrenade.green += tmp;
-			colorGrenade.blue += tmp;
-			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nil, 4.5f, colorGrenade);
-		}
-		break;
-	case EXPLOSION_MOLOTOV:
-	{
-		explosion.m_fRadius = 6.0f;
-		explosion.m_fPower = 0.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 3000;
-		explosion.m_fPropagationRate = 0.5f;
-		posGround = pos;
-		bool found;
-		float tmp = CWorld::FindGroundZFor3DCoord(posGround.x, posGround.y, posGround.z + 3.0f, &found);
-		if (found)
-			posGround.z = tmp;
-
-		float waterLevel;
-		if (CWaterLevel::GetWaterLevelNoWaves(posGround.x, posGround.y, posGround.z, &waterLevel)
-			&& posGround.z < waterLevel && waterLevel - 6.0f < posGround.z) { // some subway/tunnels check?
-			bDontExplode = true;
-		} else if (found) {
-			FireManager_StartFireAt(&gFireManager,Fire_VectorFromNative(posGround), 1.8f, false);
-		}
-		break;
-	}
-	case EXPLOSION_ROCKET:
-		explosion.m_fRadius = 10.0f;
-		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),250);
-		if (Distance(explosion.m_vecPosition, TheCamera.GetPosition()) < 40.0f)
-			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), nil, 5.5f, color);
-		break;
-	case EXPLOSION_CAR:
-	case EXPLOSION_CAR_QUICK:
-	case EXPLOSION_BOAT:
-		explosion.m_fRadius = 9.0f;
-		explosion.m_fPower = 300.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 4250;
-		explosion.m_fPropagationRate = 0.5f;
-		explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds());
-		if (explosion.m_pVictimEntity != nil) {
-			if (explosion.m_pVictimEntity->IsVehicle() && ((CVehicle*)explosion.m_pVictimEntity)->IsBoat())
-				explosion.m_bIsBoat = true;
-			Events_RegisterEntity(EVENT_EXPLOSION,EVENT_ENTITY_VEHICLE,explosion.m_pVictimEntity,nil,1000);
-		} else {
-			Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),1000);
-		}
-
-		if (explosion.m_pVictimEntity != nil && !explosion.m_bIsBoat) {
-			CVehicle *veh = (CVehicle*)explosion.m_pVictimEntity;
-			CVector componentPos;
-
-			if (veh->IsBike()) {
-				veh->GetComponentWorldPosition(BIKE_FORKS_REAR, componentPos);
-			} else if (veh->IsComponentPresent(CAR_BUMP_REAR) && veh->IsComponentPresent(CAR_WHEEL_LB)) { //mb it's another enum
-				CVector tmpVec;
-				veh->GetComponentWorldPosition(CAR_BUMP_REAR, componentPos);
-				veh->GetComponentWorldPosition(CAR_WHEEL_LB, tmpVec);
-				componentPos += tmpVec;
-				componentPos /= 2.0f;
-			} else if (veh->IsComponentPresent(CAR_BOOT)) {
-				veh->GetComponentWorldPosition(CAR_BOOT, componentPos);
-			}
-			if (componentPos.x != 0.0f) {
-				int rn = (General_GetRandomNumber() & 1) + 1;
-				for (int i = 0; i < rn; i++)
-					CParticle::AddJetExplosion(componentPos, (General_GetRandomNumber() & 7) / 7.0f  + 1.5f, 0.5f);
-			}
-		}
-		break;
-	case EXPLOSION_HELI:
-	case EXPLOSION_HELI2:
-		if (type == EXPLOSION_HELI2) {
-			explosion.m_fRadius = 12.0f;
-			explosion.m_fPower = 500.0f;
-		} else {
-			explosion.m_fRadius = 6.0f;
-			explosion.m_fPower = 300.0f;
-		}
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds());
-		for (int i = 0; i < 10; i++) {
-			CVector randpos;
-
-			randpos.x = General_GetRandomNumber();
-			randpos.y = General_GetRandomNumber();
-			randpos.z = General_GetRandomNumber();
-			randpos -= CVector(128, 128, 128);
-			randpos /= 20.0f;
-			randpos += pos;
-
-			CParticle::AddParticle(PARTICLE_EXPLOSION_MFAST, randpos, CVector(0.0f, 0.0f, 0.0f), nil, 2.5f, color);
-
-			randpos.x = General_GetRandomNumber();
-			randpos.y = General_GetRandomNumber();
-			randpos.z = General_GetRandomNumber();
-			randpos -= CVector(128, 128, 128);
-			randpos /= 20.0f;
-			randpos += pos;
-
-			CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST, randpos, CVector(0.0f, 0.0f, 0.0f), nil, 5.0f, color);
-
-			randpos.x = General_GetRandomNumber();
-			randpos.y = General_GetRandomNumber();
-			randpos.z = General_GetRandomNumber();
-			randpos -= CVector(128, 128, 128);
-			randpos /= 20.0f;
-			randpos += pos;
-
-			CParticle::AddJetExplosion(randpos, 1.4f, 3.0f);
-		}
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(pos),1000);
-		break;
-	case EXPLOSION_MINE:
-		explosion.m_fRadius = 10.0f;
-		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		posGround = pos;
-		//posGround.z = 
-			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
-		break;
-	case EXPLOSION_BARREL:
-		explosion.m_fRadius = 7.0f;
-		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		for (int i = 0; i < 6; i++) {
-			CVector randpos;
-			randpos.x = General_GetRandomNumber();
-			randpos.y = General_GetRandomNumber();
-			randpos.z = General_GetRandomNumber();
-			randpos -= CVector(128, 128, 128);
-			randpos.x /= 50.0f;
-			randpos.y /= 50.0f;
-			randpos.z /= 25.0f;
-			randpos += pos;
-			CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, randpos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, colorMedium);
-		}
-		posGround = pos;
-		//posGround.z = 
-			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
-		break;
-	case EXPLOSION_TANK_GRENADE:
-		explosion.m_fRadius = 10.0f;
-		explosion.m_fPower = 150.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		posGround = pos;
-		//posGround.z = 
-			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
-		break;
-	case EXPLOSION_HELI_BOMB:
-		explosion.m_fRadius = 8.0f;
-		explosion.m_fPower = 50.0f;
-		explosion.m_fStopTime = lifetime + (*Timer_GetTimeInMilliseconds()) + 750;
-		explosion.m_fPropagationRate = 0.5f;
-		posGround = pos;
-		//posGround.z = 
-			CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z + 4.0f, nil); // BUG? result is unused
-		Events_RegisterPosition(EVENT_EXPLOSION,Events_VectorFromNative(posGround),250);
-		break;
-	default:
-		debug("Undefined explosion type, AddExplosion, Explosion.cpp");
-		break;
-	}
-
-	if (bDontExplode) {
-		explosion.m_nIteration = 0;
-		return false;
-	}
-
-	if (explosion.m_fPower != 0.0f && explosion.m_nParticlesExpireTime == 0)
-		CWorld::TriggerExplosion(pos, explosion.m_fRadius, explosion.m_fPower, culprit, (type == EXPLOSION_ROCKET || type == EXPLOSION_CAR_QUICK || type == EXPLOSION_MINE || type == EXPLOSION_BARREL || type == EXPLOSION_TANK_GRENADE || type == EXPLOSION_HELI_BOMB));
-
-	if (type == EXPLOSION_MOLOTOV) {
-		TheCamera.CamShake(0.2f, pos.x, pos.y, pos.z);
-	} else {
-		TheCamera.CamShake(0.6f, pos.x, pos.y, pos.z);
-		CPad::GetPad(0)->StartShake_Distance(300, 128, pos.x, pos.y, pos.z);
-	}
-	return true;
-}
-
-void
-CExplosion::Update()
-{
-	RwRGBA color = colUpdate;
-	for (int i = 0; i < ARRAY_SIZE(gaExplosion); i++) {
-		CExplosion &explosion = gaExplosion[i];
-		if (explosion.m_nIteration == 0) continue;
-
-		if (explosion.m_nParticlesExpireTime != 0) {
-			if ((*Timer_GetTimeInMilliseconds()) > explosion.m_nParticlesExpireTime) {
-				explosion.m_nParticlesExpireTime = 0;
-				if (explosion.m_fPower != 0.0f)
-					CWorld::TriggerExplosion(explosion.m_vecPosition, explosion.m_fRadius, explosion.m_fPower, explosion.m_pCreatorEntity, (explosion.m_ExplosionType == EXPLOSION_ROCKET || explosion.m_ExplosionType == EXPLOSION_CAR_QUICK || explosion.m_ExplosionType == EXPLOSION_MINE || explosion.m_ExplosionType == EXPLOSION_BARREL || explosion.m_ExplosionType == EXPLOSION_TANK_GRENADE || explosion.m_ExplosionType == EXPLOSION_HELI_BOMB));
-			}
-		} else {
-			explosion.m_fRadius += explosion.m_fPropagationRate * (*Timer_GetTimeStep());
-			int32 someTime = explosion.m_fStopTime - (*Timer_GetTimeInMilliseconds());
-			switch (explosion.m_ExplosionType)
-			{
-			case EXPLOSION_GRENADE:
-			case EXPLOSION_ROCKET:
-			case EXPLOSION_HELI:
-			case EXPLOSION_HELI2:
-			case EXPLOSION_MINE:
-			case EXPLOSION_BARREL:
-				if ((*Timer_GetFrameCounter()) & 1) {
-					// Enter the C point-light algorithm with the original owner expressions
-					PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 20.0f, 1.0f, 1.0f, 0.5f, POINTLIGHTS_FOG_NONE, true);
-					CCoronas::RegisterCorona((uintptr)&explosion, 255, 255, 200, 255, explosion.m_vecPosition, 8.0f, 120.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-				} else
-					CCoronas::RegisterCorona((uintptr)&explosion, 128, 128, 100, 255, explosion.m_vecPosition, 8.0f, 120.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-				CCoronas::RegisterCorona((uintptr)&explosion + 1, 30, 30, 25, 255, explosion.m_vecPosition, explosion.m_fRadius, 120.0f, gpCoronaTexture[7], CCoronas::TYPE_STAR, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-				break;
-			case EXPLOSION_MOLOTOV:
-				CWorld::SetPedsOnFire(explosion.m_vecPosition.x, explosion.m_vecPosition.y, explosion.m_vecPosition.z, 6.0f, explosion.m_pCreatorEntity);
-				CWorld::SetCarsOnFire(explosion.m_vecPosition.x, explosion.m_vecPosition.y, explosion.m_vecPosition.z, 6.0f, explosion.m_pCreatorEntity);
-				if (explosion.m_nIteration < 10) {
-					if (explosion.m_nIteration == 1) {
-						CVector point1 = explosion.m_vecPosition;
-						point1.z += 5.0f;
-						CColPoint colPoint;
-						CEntity *pEntity;
-						if (CWorld::ProcessVerticalLine(point1, -1000.0f, colPoint, pEntity, true, false, false, false, true, false, nil))
-							explosion.m_fZshift = colPoint.point.z;
-						else
-							explosion.m_fZshift = explosion.m_vecPosition.z;
-					}
-					float ff = ((float)explosion.m_nIteration * 0.55f);
-					for (int i = 0; i < 5 * ff; i++) {
-						float angle = General_GetRandomNumber() / 256.0f * 6.28f;
-
-						CVector pos = explosion.m_vecPosition;
-						pos.x += ff * Sin(angle);
-						pos.y += ff * Cos(angle);
-						pos.z = explosion.m_fZshift + 0.5f;
-						CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, General_GetRandomNumberInRangeFloat(-3.0f, 3.0f), General_GetRandomNumberInRangeFloat(-180.0f, 180.0f));
-					}
-				}
-				break;
-			case EXPLOSION_CAR:
-			case EXPLOSION_CAR_QUICK:
-			case EXPLOSION_BOAT:
-				if (someTime >= 3500) {
-					if (explosion.m_pVictimEntity != nil) {
-						if ((General_GetRandomNumber() & 0xF) == 0 && !explosion.m_bIsBoat) {
-							CVehicle *veh = (CVehicle*)explosion.m_pVictimEntity;
-							uint8 component = CAR_WING_LR;
-
-							// miami leftover
-							if (veh->IsBike())
-								component = BIKE_FORKS_REAR;
-
-							if (veh->IsComponentPresent(component)) {
-								CVector componentPos;
-								veh->GetComponentWorldPosition(component, componentPos);
-								CParticle::AddJetExplosion(componentPos, 0.5f, 0.0f);
-							}
-						}
-						if ((*Timer_GetTimeInMilliseconds()) > explosion.m_fStartTime) {
-							explosion.m_fStartTime = (*Timer_GetTimeInMilliseconds()) + 125 + (General_GetRandomNumber() & 0x7F);
-							CVector pos = explosion.m_pVictimEntity->GetPosition();
-							for (int i = 0; i < (General_GetRandomNumber() & 1) + 1; i++)
-								CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM, pos, CVector(0.0f, 0.0f, 0.0f), nil, 3.5f, color);
-						}
-					}
-					if ((*Timer_GetFrameCounter()) & 1) {
-						// Enter the C point-light algorithm with the original owner expressions
-						PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, explosion.m_vecPosition, CVector(0.0f, 0.0f, 0.0f), 15.0f, 1.0f, 0.0f, 0.0f, POINTLIGHTS_FOG_NONE, true);
-						CCoronas::RegisterCorona((uintptr)&explosion, 200, 100, 0, 255, explosion.m_vecPosition, 6.0f, 80.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-					} else
-						CCoronas::RegisterCorona((uintptr)&explosion, 128, 0, 0, 255, explosion.m_vecPosition, 8.0f, 80.0f, gpCoronaTexture[0], CCoronas::TYPE_NORMAL, CCoronas::REFLECTION_ON, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-
-					CCoronas::RegisterCorona((uintptr)&explosion + 1, 30, 15, 0, 255, explosion.m_vecPosition, explosion.m_fRadius, 80.0f, gpCoronaTexture[7], CCoronas::TYPE_STAR, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
-				} else if (explosion.m_nIteration & 1) {
-					if (explosion.m_pVictimEntity != nil)
-						CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, explosion.m_pVictimEntity->GetPosition(), CVector(0.0f, 0.0f, 0.0f), nil, General_GetRandomNumberInRangeFloat(0.5f, 0.8f), color);
-					CVector pos = explosion.m_vecPosition;
-					pos.z += 1.0f;
-					CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, pos, CVector(0.0f, 0.0f, 0.11f), nil, General_GetRandomNumberInRangeFloat(0.5f, 2.0f), color);
-				}
-				break;
-			case EXPLOSION_TANK_GRENADE:
-			case EXPLOSION_HELI_BOMB:
-				if (explosion.m_nIteration < 5) {
-					float ff = ((float)explosion.m_nIteration * 0.65f);
-					for (int i = 0; i < 10 * ff; i++) {
-						uint8 x = General_GetRandomNumber(), y = General_GetRandomNumber(), z = General_GetRandomNumber();
-						CVector pos(x - 128, y - 128, (z % 128) + 1);
-
-						pos.Normalise();
-						pos *= (explosion.m_nIteration + 1) * ff / 5.0f;
-						pos += explosion.m_vecPosition;
-						pos.z += 0.5f;
-						CParticle::AddParticle(PARTICLE_EXPLOSION_LARGE, pos, CVector(0.0f, 0.0f, 0.0f), nil, 0.0f, color, General_GetRandomNumberInRangeFloat(-3.0f, 3.0f), General_GetRandomNumberInRangeFloat(-180.0f, 180.0f));
-					}
-				}
-				break;
-			default:
-				break;
-			}
-			if (someTime > 0)
-				explosion.m_nIteration++;
-			else
-				explosion.m_nIteration = 0;
-		}
-	}
-}
-
-bool
-CExplosion::TestForExplosionInArea(eExplosionType type, float x1, float x2, float y1, float y2, float z1, float z2)
-{
-	for (int i = 0; i < ARRAY_SIZE(gaExplosion); i++) {
-		if (gaExplosion[i].m_nIteration != 0) {
-			if (type == gaExplosion[i].m_ExplosionType) {
-				if (gaExplosion[i].m_vecPosition.x >= x1 && gaExplosion[i].m_vecPosition.x <= x2) {
-					if (gaExplosion[i].m_vecPosition.y >= y1 && gaExplosion[i].m_vecPosition.y <= y2) {
-						if (gaExplosion[i].m_vecPosition.z >= z1 && gaExplosion[i].m_vecPosition.z <= z2)
-							return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
-
-void
-CExplosion::RemoveAllExplosionsInArea(CVector pos, float radius)
-{
-	for (int i = 0; i < ARRAY_SIZE(gaExplosion); i++) {
-		if (gaExplosion[i].m_nIteration != 0) {
-			if ((pos - gaExplosion[i].m_vecPosition).MagnitudeSqr() < SQR(radius))
-				gaExplosion[i].m_nIteration = 0;
-		}
-	}
+    // Preserve the native diagnostic output at the original call boundary
+    debug("%s",message);
 }
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+extern "C" CollisionPointRef Explosion_HostCameraPosition(void)
+{
+    // Borrow the actual native camera position components
+    return COLLISION_POINT_REF(TheCamera.GetPosition());
+}
+extern "C" void Explosion_HostGrenadeParticle(uint32_t index,const ExplosionColor *color)
+{
+    // Create the native grenade particle from the C color snapshot
+    RwRGBA nativeColor={color->red,color->green,color->blue,color->alpha};
+    CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST,gaExplosionPositions[index],CVector(0.0f,0.0f,0.0f),nil,4.5f,nativeColor);
+}
+extern "C" void Explosion_HostRocketParticle(uint32_t index,const ExplosionColor *nativeColor)
+{
+    // Create the native rocket particle with the shared color snapshot
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST,gaExplosionPositions[index],CVector(0.0f,0.0f,0.0f),nil,5.5f,color);
+}
+extern "C" bool Explosion_HostIsVehicle(CEntity *entity)
+{
+    // Check the native entity type before accessing vehicle behavior
+    return entity->IsVehicle();
+}
+extern "C" bool Explosion_HostIsBoat(CEntity *entity)
+{
+    // Check whether the selected native vehicle is a boat
+    return ((CVehicle*)entity)->IsBoat();
+}
+extern "C" void Explosion_HostCreationVehicleComponents(uint32_t index)
+{
+    // Retain the original uninitialized native vector and selected victim object
+    CVector position;
+    Explosion_CreateVehicleComponents(gaExplosion[index].m_pVictimEntity,&position);
+}
+extern "C" bool Explosion_HostVehicleHasPart(CEntity *victim,enum ExplosionVehiclePart part)
+{
+    // Map the C-selected car component to the original native identifier
+    int component=part==EXPLOSION_PART_BUMPER ? CAR_BUMP_REAR : part==EXPLOSION_PART_WHEEL ? CAR_WHEEL_LB : CAR_BOOT;
+    return ((CVehicle*)victim)->IsComponentPresent(component);
+}
+extern "C" void Explosion_HostVehicleComponentPosition(CEntity *victim,enum ExplosionVehiclePart part,CVector *position)
+{
+    // Resolve the selected bike fork or car boot into the actual native vector
+    ((CVehicle*)victim)->GetComponentWorldPosition(part==EXPLOSION_PART_BIKE_FORK ? BIKE_FORKS_REAR : CAR_BOOT,*position);
+}
+extern "C" void Explosion_HostVehicleAveragePosition(CEntity *victim,CVector *position)
+{
+    // Retain the original native bumper and wheel averaging sequence
+    CVector other;
+    CVehicle *vehicle=(CVehicle*)victim;
+    vehicle->GetComponentWorldPosition(CAR_BUMP_REAR,*position);
+    vehicle->GetComponentWorldPosition(CAR_WHEEL_LB,other);
+    *position+=other;
+    *position/=2.0f;
+}
+extern "C" float Explosion_HostVectorX(const CVector *position)
+{
+    // Read the original native vector component
+    return position->x;
+}
+extern "C" void Explosion_HostCreationJet(const CVector *position,float size)
+{
+    // Emit a native jet using the original component position object
+    CParticle::AddJetExplosion(*position,size,0.5f);
+}
+extern "C" void Explosion_HostHeliParticle(CollisionVector3 position,const ExplosionColor *nativeColor,uint32_t kind)
+{
+    // Create the selected native helicopter effect at the C-calculated position
+    CVector point(position.x,position.y,position.z);
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    if (kind==0)
+        CParticle::AddParticle(PARTICLE_EXPLOSION_MFAST,point,CVector(0.0f,0.0f,0.0f),nil,2.5f,color);
+    else if (kind==1)
+        CParticle::AddParticle(PARTICLE_EXPLOSION_LFAST,point,CVector(0.0f,0.0f,0.0f),nil,5.0f,color);
+    else
+        CParticle::AddJetExplosion(point,1.4f,3.0f);
+}
+extern "C" void Explosion_HostBarrelParticle(CollisionVector3 position,const ExplosionColor *nativeColor)
+{
+    // Create the native barrel particle at the C-calculated position
+    CVector point(position.x,position.y,position.z);
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM,point,CVector(0.0f,0.0f,0.0f),nil,0.0f,color);
+}
+extern "C" float Explosion_HostGroundZ(float x,float y,float z,bool *found)
+{
+    // Query the original native ground collision routine
+    return CWorld::FindGroundZFor3DCoord(x,y,z,found);
+}
+extern "C" bool Explosion_HostWaterLevel(float x,float y,float z,float *level)
+{
+    // Query the original native water level without waves
+    return CWaterLevel::GetWaterLevelNoWaves(x,y,z,level);
+}
+extern "C" void Explosion_HostCreationShadow(CollisionVector3 shadowPosition)
+{
+    // Construct the native shadow position and preserve the original shadow arguments
+    CVector position(shadowPosition.x,shadowPosition.y,shadowPosition.z);
+#ifdef FIX_BUGS
+    CShadows::AddPermanentShadow(SHADOWTEX_CAR,gpShadowHeliTex,&position,8.0f,0.0f,0.0f,-8.0f,200,0,0,0,10.0f,30000,1.0f);
+#else
+    CShadows::AddPermanentShadow(SHADOWTEX_CAR,gpShadowHeliTex,&position,8.0f,0.0f,0.0f,-8.0f,200,0,0,0,10.0f,1,30000.0f);
+#endif
+}
+//- rouz edit (ChatGPT)
+
+bool
+#ifdef SIMPLER_MISSIONS
+Explosion_AddExplosion(CEntity* explodingEntity, CEntity* culprit, eExplosionType type, const CVector& pos, uint32 lifetime, bool makeSound, float radius)
+#else
+Explosion_AddExplosion(CEntity *explodingEntity, CEntity *culprit, eExplosionType type, const CVector &pos, uint32 lifetime, bool makeSound)
+#endif
+{
+#ifdef SIMPLER_MISSIONS
+    float explosionOverrideRadius=radius;
+#else
+    float explosionOverrideRadius=-1.0f;
+#endif
+    // Run creation in C with the actual native position
+    return Explosion_AddNative(explodingEntity,culprit,type,&pos,COLLISION_POINT_REF(pos),lifetime,makeSound,explosionOverrideRadius);
+}
+
+extern "C" void Explosion_AddAtPosition(CEntity *source,enum eExplosionType type,ExplosionPosition position)
+{
+    // Construct the original temporary native vector for by-value C callers
+    Explosion_AddExplosion(nil,source,type,CVector(position.x,position.y,position.z),0);
+}
+extern "C" void Explosion_HostSetPedsOnFire(float x,float y,float z,CEntity *creator)
+{
+    // Apply the pedestrian fire effect at the selected live position
+    CWorld::SetPedsOnFire(x,y,z,6.0f,creator);
+}
+extern "C" void Explosion_HostSetCarsOnFire(float x,float y,float z,CEntity *creator)
+{
+    // Apply the vehicle fire effect at the selected live position
+    CWorld::SetCarsOnFire(x,y,z,6.0f,creator);
+}
+extern "C" bool Explosion_HostMolotovGround(CollisionVector3 start,float *groundZ)
+{
+    // Perform the original native vertical collision query
+    CVector point(start.x,start.y,start.z);
+    CColPoint colPoint;
+    CEntity *entity;
+    if (!CWorld::ProcessVerticalLine(point,-1000.0f,colPoint,entity,true,false,false,false,true,false,nil))
+        return false;
+    *groundZ=colPoint.point.z;
+    return true;
+}
+extern "C" void Explosion_HostMolotovParticle(CollisionVector3 position,const ExplosionColor *nativeColor)
+{
+    // Preserve the native particle call and its original random rotation draws
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CVector point(position.x,position.y,position.z);
+    CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM,point,CVector(0.0f,0.0f,0.0f),nil,0.0f,color,General_GetRandomNumberInRangeFloat(-3.0f,3.0f),General_GetRandomNumberInRangeFloat(-180.0f,180.0f));
+}
+extern "C" bool Explosion_HostVehicleIsBike(CEntity *victim)
+{
+    // Classify the selected native vehicle
+    return ((CVehicle*)victim)->IsBike();
+}
+extern "C" bool Explosion_HostVehicleHasJetComponent(CEntity *victim,bool bike)
+{
+    // Check the selected native rear component
+    return ((CVehicle*)victim)->IsComponentPresent(bike ? BIKE_FORKS_REAR : CAR_WING_LR);
+}
+extern "C" void Explosion_HostVehicleJetComponent(CEntity *victim,bool bike)
+{
+    // Resolve the selected component position and emit the native jet effect
+    CVehicle *vehicle=(CVehicle*)victim;
+    CVector position;
+    vehicle->GetComponentWorldPosition(bike ? BIKE_FORKS_REAR : CAR_WING_LR,position);
+    CParticle::AddJetExplosion(position,0.5f,0.0f);
+}
+extern "C" CollisionPointRef Explosion_HostVictimPosition(CEntity *victim)
+{
+    // Borrow the selected native victim position for the C snapshot
+    return COLLISION_POINT_REF(victim->GetPosition());
+}
+extern "C" void Explosion_HostVehicleBurstParticle(CollisionVector3 position,const ExplosionColor *nativeColor)
+{
+    // Emit one native particle at the original position snapshot
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CVector point(position.x,position.y,position.z);
+    CParticle::AddParticle(PARTICLE_EXPLOSION_MEDIUM,point,CVector(0.0f,0.0f,0.0f),nil,3.5f,color);
+}
+extern "C" void Explosion_HostVehicleVictimSmoke(uint32_t index,const ExplosionColor *nativeColor)
+{
+    // Emit smoke at the live victim using the original random size
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2,gaExplosion[index].m_pVictimEntity->GetPosition(),CVector(0.0f,0.0f,0.0f),nil,General_GetRandomNumberInRangeFloat(0.5f,0.8f),color);
+}
+extern "C" void Explosion_HostVehicleSmoke(CollisionVector3 position,float size,const ExplosionColor *nativeColor)
+{
+    // Emit native smoke at the selected snapshot and size
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CVector point(position.x,position.y,position.z);
+    CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2,point,CVector(0.0f,0.0f,0.11f),nil,size,color);
+}
+extern "C" void Explosion_HostBombParticle(CollisionVector3 position,const ExplosionColor *nativeColor)
+{
+    // Preserve the native particle call and original random rotation draws
+    RwRGBA color={nativeColor->red,nativeColor->green,nativeColor->blue,nativeColor->alpha};
+    CVector point(position.x,position.y,position.z);
+    CParticle::AddParticle(PARTICLE_EXPLOSION_LARGE,point,CVector(0.0f,0.0f,0.0f),nil,0.0f,color,General_GetRandomNumberInRangeFloat(-3.0f,3.0f),General_GetRandomNumberInRangeFloat(-180.0f,180.0f));
+}
+
+//- rouz edit (ChatGPT)
+
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

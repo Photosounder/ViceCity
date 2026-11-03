@@ -61,16 +61,6 @@ void * ShinyTexts_BackendWalkTexture(void)
     // Read the current walk texture at every original use
     return gpWalkDontTex;
 }
-void * ShinyTexts_BackendRaster(void *texture)
-{
-    // Enter the original typed texture-to-raster operation
-    return RwTextureGetRaster((RwTexture *)texture);
-}
-void ShinyTexts_BackendSetRaster(void *raster)
-{
-    // Preserve the original texture-raster state change
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
-}
 void ShinyTexts_BackendLittleTest(void)
 {
     // Retain the original shared-buffer hook before transformation

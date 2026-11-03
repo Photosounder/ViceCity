@@ -1,4 +1,5 @@
 #include "common.h"
+#include "CollisionVector_native.h" // rouz edit (ChatGPT)
 #include "PedAttractor.h"
 
 #include "General.h"
@@ -38,32 +39,32 @@ CPedAttractorManager* GetPedAttractorManager()
 
 CVehicleToEffect::CVehicleToEffect(CVehicle* pVehicle) : m_pVehicle(pVehicle)
 {
-	m_effects[1].col = CRGBA(0, 0, 0, 0);
+	m_effects[1].col = Effect2dColor{0, 0, 0, 0}; // rouz edit (ChatGPT)
 	m_effects[1].type = EFFECT_PED_ATTRACTOR;
-	m_effects[1].pos = CVector(2.0f, 1.0f, 0.0f);
-	m_effects[1].pedattr.useDir = CVector(-1.0f, 0.0f, 0.0f);
-	m_effects[1].pedattr.queueDir = CVector(-1.0f, 0.0f, 0.0f);
+	m_effects[1].pos = CollisionVector_FromNative(CVector(2.0f, 1.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[1].pedattr.useDir = CollisionVector_FromNative(CVector(-1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[1].pedattr.queueDir = CollisionVector_FromNative(CVector(-1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
 	m_effects[1].pedattr.type = ATTRACTOR_ICECREAM;
 
-	m_effects[3].col = CRGBA(0, 0, 0, 0);
+	m_effects[3].col = Effect2dColor{0, 0, 0, 0}; // rouz edit (ChatGPT)
 	m_effects[3].type = EFFECT_PED_ATTRACTOR;
-	m_effects[3].pos = CVector(2.0f, -0.5f, 0.0f);
-	m_effects[3].pedattr.useDir = CVector(-1.0f, 0.0f, 0.0f);
-	m_effects[3].pedattr.queueDir = CVector(-1.0f, 0.0f, 0.0f);
+	m_effects[3].pos = CollisionVector_FromNative(CVector(2.0f, -0.5f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[3].pedattr.useDir = CollisionVector_FromNative(CVector(-1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[3].pedattr.queueDir = CollisionVector_FromNative(CVector(-1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
 	m_effects[3].pedattr.type = ATTRACTOR_ICECREAM;
 
-	m_effects[0].col = CRGBA(0, 0, 0, 0);
+	m_effects[0].col = Effect2dColor{0, 0, 0, 0}; // rouz edit (ChatGPT)
 	m_effects[0].type = EFFECT_PED_ATTRACTOR;
-	m_effects[0].pos = CVector(-2.0f, 1.0f, 0.0f);
-	m_effects[0].pedattr.useDir = CVector(1.0f, 0.0f, 0.0f);
-	m_effects[0].pedattr.queueDir = CVector(1.0f, 0.0f, 0.0f);
+	m_effects[0].pos = CollisionVector_FromNative(CVector(-2.0f, 1.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[0].pedattr.useDir = CollisionVector_FromNative(CVector(1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[0].pedattr.queueDir = CollisionVector_FromNative(CVector(1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
 	m_effects[0].pedattr.type = ATTRACTOR_ICECREAM;
 
-	m_effects[2].col = CRGBA(0, 0, 0, 0);
+	m_effects[2].col = Effect2dColor{0, 0, 0, 0}; // rouz edit (ChatGPT)
 	m_effects[2].type = EFFECT_PED_ATTRACTOR;
-	m_effects[2].pos = CVector(-2.0f, -0.5f, 0.0f);
-	m_effects[2].pedattr.useDir = CVector(1.0f, 0.0f, 0.0f);
-	m_effects[2].pedattr.queueDir = CVector(1.0f, 0.0f, 0.0f);
+	m_effects[2].pos = CollisionVector_FromNative(CVector(-2.0f, -0.5f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[2].pedattr.useDir = CollisionVector_FromNative(CVector(1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
+	m_effects[2].pedattr.queueDir = CollisionVector_FromNative(CVector(1.0f, 0.0f, 0.0f)); // rouz edit (ChatGPT)
 	m_effects[2].pedattr.type = ATTRACTOR_ICECREAM;
 }
 
@@ -633,17 +634,17 @@ bool CPedAttractorManager::IsPedRegisteredWithEffect(CPed* pPed)
 
 void CPedAttractorManager::ComputeEffectPos(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = matrix.GetPosition() + Multiply3x3(matrix, pEffect->pos);
+	pos = matrix.GetPosition() + Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pos)); // rouz edit (ChatGPT)
 }
 
 void CPedAttractorManager::ComputeEffectQueueDir(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = Multiply3x3(matrix, pEffect->pedattr.queueDir);
+	pos = Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pedattr.queueDir)); // rouz edit (ChatGPT)
 }
 
 void CPedAttractorManager::ComputeEffectUseDir(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = Multiply3x3(matrix, pEffect->pedattr.useDir);
+	pos = Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pedattr.useDir)); // rouz edit (ChatGPT)
 }
 
 CPedAttractor* CPedAttractorManager::RegisterPed(CPed* pPed, C2dEffect* pEffect, const CMatrix& matrix, std::vector<CPedAttractor*>& vecAttractors)

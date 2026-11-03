@@ -27,8 +27,6 @@ void PlayerSkin_BackendRemoveSlot(int32_t slot);
 void PlayerSkin_BackendPushDictionary(void);
 void PlayerSkin_BackendSetDictionary(int32_t slot);
 void PlayerSkin_BackendPopDictionary(void);
-PlayerSkinTexture * PlayerSkin_BackendReadTexture(const char *name);
-char * PlayerSkin_BackendString(void);
 void * PlayerSkin_BackendReadImage(const char *path);
 void PlayerSkin_BackendRasterFormat(void *image,int32_t *width,int32_t *height,int32_t *depth,int32_t *format);
 void * PlayerSkin_BackendCreateRaster(int32_t width,int32_t height,int32_t depth,int32_t format);

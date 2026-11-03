@@ -3270,7 +3270,7 @@ CWaterLevel::RenderShipsOnHorizon()
 void
 CWaterLevel::HandleSeaLifeForms()
 {
-	if ( CReplay::IsPlayingBack() )
+	if ( Replay_IsPlayingBack() ) // rouz edit (ChatGPT)
 		return;
 	
 	CVector cur_pos = FindPlayerPed()->GetPosition();

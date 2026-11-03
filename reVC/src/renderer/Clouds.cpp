@@ -46,21 +46,6 @@
 
 
 
-void * Clouds_BackendReadTexture(const char *name,const char *mask)
-{
-    // Retain the original typed owner operation at its original C call point
-    return RwTextureRead(name,mask);
-}
-void Clouds_BackendDestroyTexture(void *texture)
-{
-    // Retain the original typed owner operation at its original C call point
-    RwTextureDestroy((RwTexture *)texture);
-}
-void * Clouds_BackendRaster(void *texture)
-{
-    // Retain the original typed owner operation at its original C call point
-    return RwTextureGetRaster((RwTexture *)texture);
-}
 float Clouds_BackendOrientation(void)
 {
     // Retain the original typed owner operation at its original C call point
@@ -109,11 +94,6 @@ void * Clouds_BackendCoronaTexture(int32_t index)
 
 
 
-void Clouds_BackendSetRaster(void *raster)
-{
-    // Retain the original typed owner operation at its original C call point
-    RwRenderStateSet(rwRENDERSTATETEXTURERASTER,raster);
-}
 void Clouds_BackendPush(const char *name)
 {
     // Retain the original typed owner operation at its original C call point
@@ -148,51 +128,6 @@ float Clouds_BackendRainbow(void)
 {
     // Retain the original typed owner operation at its original C call point
     return Weather_Rainbow;
-}
-int32_t Clouds_BackendLowCloudsRed(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetLowCloudsRed();
-}
-int32_t Clouds_BackendLowCloudsGreen(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetLowCloudsGreen();
-}
-int32_t Clouds_BackendLowCloudsBlue(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetLowCloudsBlue();
-}
-int32_t Clouds_BackendFluffyCloudsTopRed(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsTopRed();
-}
-int32_t Clouds_BackendFluffyCloudsTopGreen(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsTopGreen();
-}
-int32_t Clouds_BackendFluffyCloudsTopBlue(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsTopBlue();
-}
-int32_t Clouds_BackendFluffyCloudsBottomRed(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsBottomRed();
-}
-int32_t Clouds_BackendFluffyCloudsBottomGreen(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsBottomGreen();
-}
-int32_t Clouds_BackendFluffyCloudsBottomBlue(void)
-{
-    // Retain the original typed owner operation at its original C call point
-    return TimeCycle_GetFluffyCloudsBottomBlue();
 }
 void Clouds_BackendZWrite(bool enabled)
 {
@@ -364,21 +299,6 @@ void Clouds_BackendDrawBackgroundRect(float left,float top,float right,float bot
     // Retain actual native reference objects through the complete synchronous C operation
     Sprite2d_DrawFourColourRect(&r,Sprite_ColourRef(&c0.r,&c0.g,&c0.b,&c0.a),Sprite_ColourRef(&c1.r,&c1.g,&c1.b,&c1.a),Sprite_ColourRef(&c2.r,&c2.g,&c2.b,&c2.a),Sprite_ColourRef(&c3.r,&c3.g,&c3.b,&c3.a));
 })(Rect_Make(left,top,right,bottom),BackgroundColors[lower],BackgroundColors[lower],BackgroundColors[upper],BackgroundColors[upper]);
-}
-float Clouds_BackendAmbientRed(void)
-{
-    // Preserve the original actual owner fields, references and typed drawing operation
-    return TimeCycle_GetAmbientRed();
-}
-float Clouds_BackendAmbientGreen(void)
-{
-    // Preserve the original actual owner fields, references and typed drawing operation
-    return TimeCycle_GetAmbientGreen();
-}
-float Clouds_BackendAmbientBlue(void)
-{
-    // Preserve the original actual owner fields, references and typed drawing operation
-    return TimeCycle_GetAmbientBlue();
 }
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

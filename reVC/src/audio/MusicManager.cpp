@@ -38,12 +38,6 @@ cMusicManager::cMusicManager()
 
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
-extern "C" uint32_t
-MusicInitHost_PauseTime(void)
-{
-    // Read the original pause-mode timer after each streamed-file length and position update
-    return Timer_GetTimeInMillisecondsPauseMode();
-}
 //- rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 extern "C" int32_t
@@ -106,12 +100,6 @@ MusicRadioHost_HasMetDebbie(void)
 //- rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
-extern "C" uint8_t
-MusicStreamHost_SlowMotion(void)
-{
-    // Read the original slow motion gate without the reflection subsystem's build guards
-    return Timer_GetIsSlowMotionActive();
-}
 extern "C" CEntity *
 MusicStreamHost_Target(void)
 {
@@ -132,7 +120,7 @@ extern "C" uint8_t
 MusicServiceHost_F9(void)
 {
     // Query the original keyboard key after the MP3 and station gates
-    return ControlsManager.GetIsKeyboardKeyJustDown(rsF9);
+    return Input_GetIsKeyboardKeyJustDown(rsF9); // rouz edit (ChatGPT)
 }
 #endif
 extern "C" uint8_t
@@ -152,19 +140,19 @@ extern "C" uint8_t
 MusicServiceHost_WheelDown(void)
 {
     // Retain the original repeated pad lookup before the downward wheel query
-    return CPad::GetPad(0)->GetMouseWheelDownJustDown();
+    return Input_GetMouseWheelDownJustDown(); // rouz edit (ChatGPT)
 }
 extern "C" uint8_t
 MusicServiceHost_WheelUp(void)
 {
     // Retain the original repeated pad lookup before the upward wheel query
-    return CPad::GetPad(0)->GetMouseWheelUpJustDown();
+    return Input_GetMouseWheelUpJustDown(); // rouz edit (ChatGPT)
 }
 extern "C" int32_t
 MusicServiceHost_NextMouseKey(void)
 {
     // Read the original radio-station mouse binding without normalizing its key code
-    return ControlsManager.GetControllerKeyAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION, MOUSE);
+    return Input_GetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, VEHICLE_CHANGE_RADIO_STATION, MOUSE); // rouz edit (ChatGPT)
 }
 extern "C" uint8_t
 MusicServiceHost_MouseAssigned(int32_t key)
@@ -177,12 +165,6 @@ MusicServiceHost_MouseAssigned(int32_t key)
 
 //+ rouz edit (ChatGPT)
 extern wchar WideErrorString[];
-extern "C" uint8_t
-MusicDisplayHost_Paused(void)
-{
-    // Read the original display input at its existing access point
-    return Timer_GetIsPaused();
-}
 extern "C" uint8_t
 MusicDisplayHost_Widescreen(void)
 {

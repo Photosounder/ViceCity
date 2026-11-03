@@ -31,13 +31,7 @@ uint8_t Clock_GetMinutes(void);
 int16_t Clock_GetSeconds(void);
 uint8_t *Clock_GetHoursRef(void);
 uint8_t *Clock_GetMinutesRef(void);
-uint32_t ClockHost_Time(void);
 bool ClockHost_RightShoulder(void);
-int32_t *ClockHost_DaysPassed(void);
-#ifndef MASTER
-void ClockHost_RegisterHour(uint8_t *hour);
-void ClockHost_RegisterFreeze(bool *freeze);
-#endif
 #ifdef __cplusplus
 }
 #endif

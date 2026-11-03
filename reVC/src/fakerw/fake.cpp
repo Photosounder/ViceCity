@@ -518,7 +518,7 @@ RwStream *RwStreamOpen(RwStreamType type, RwStreamAccessType accessType, const v
 		file = rwNewT(StreamFile, 1, 0);
 		memcpy(file, &fakefile, sizeof(StreamFile));
 #ifndef _WIN32
-		char *r = casepath((char*)pData);
+		char *r = casepath((char*)pData, true); // rouz edit (ChatGPT)
 		if (r) {
 			if (file->open((char*)r, mode)) {
 				free(r);
@@ -1197,7 +1197,7 @@ RwImage *
 RtBMPImageWrite(RwImage *image, const RwChar *imageName)
 {
 #ifndef _WIN32
-	char *r = casepath(imageName);
+	char *r = casepath(imageName, true); // rouz edit (ChatGPT)
 	if (r) {
 		rw::writeBMP(image, r);
 		free(r);
@@ -1215,7 +1215,7 @@ RtBMPImageRead(const RwChar *imageName)
 {
 #ifndef _WIN32
 	RwImage *image;
-	char *r = casepath(imageName);
+	char *r = casepath(imageName, true); // rouz edit (ChatGPT)
 	if (r) {
 		image = rw::readBMP(r);
 		free(r);
@@ -1234,7 +1234,7 @@ RwImage *
 RtPNGImageWrite(RwImage *image, const RwChar *imageName)
 {
 #ifndef _WIN32
-	char *r = casepath(imageName);
+	char *r = casepath(imageName, true); // rouz edit (ChatGPT)
 	if (r) {
 		rw::writePNG(image, r);
 		free(r);
@@ -1252,7 +1252,7 @@ RtPNGImageRead(const RwChar *imageName)
 {
 #ifndef _WIN32
 	RwImage *image;
-	char *r = casepath(imageName);
+	char *r = casepath(imageName, true); // rouz edit (ChatGPT)
 	if (r) {
 		image = rw::readPNG(r);
 		free(r);

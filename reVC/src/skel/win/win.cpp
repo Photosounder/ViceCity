@@ -45,6 +45,7 @@
 #define WITHD3D
 #define WITHDINPUT
 #include "common.h"
+#include "PlatformFiles.h" // rouz edit (ChatGPT)
 #if (defined(_MSC_VER))
 #include <tchar.h>
 #endif /* (defined(_MSC_VER)) */
@@ -2350,7 +2351,7 @@ WinMain(HINSTANCE instance,
 	if (gbModelViewer) {
 		// This is TheModelViewer in LCS
 		LoadingScreen("Loading the ModelViewer", NULL, GetRandomSplashScreen());
-		CAnimViewer::Initialise();
+		AnimViewer_Initialise(); // rouz edit (ChatGPT)
 		Timer_Update();
 #ifndef PS2_MENU
 		FrontEndMenuManager.m_bGameNotLoaded = false;
@@ -2439,15 +2440,15 @@ WinMain(HINSTANCE instance,
 							++gGameState;
 						else if ( ControllerState_CheckForInput(&CPad::GetPad(0)->NewState) )
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetLeftMouseJustDown() )
+						else if ( Input_GetLeftMouseJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetEnterJustDown() )
+						else if ( Input_GetEnterJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetCharJustDown(' ') )
+						else if ( Input_GetCharJustDown(' ') ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetAltJustDown() )
+						else if ( Input_GetAltJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetTabJustDown() )
+						else if ( Input_GetTabJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
 
 						break;
@@ -2481,15 +2482,15 @@ WinMain(HINSTANCE instance,
 							++gGameState;
 						else if ( ControllerState_CheckForInput(&CPad::GetPad(0)->NewState) )
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetLeftMouseJustDown() )
+						else if ( Input_GetLeftMouseJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetEnterJustDown() )
+						else if ( Input_GetEnterJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetCharJustDown(' ') )
+						else if ( Input_GetCharJustDown(' ') ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetAltJustDown() )
+						else if ( Input_GetAltJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
-						else if ( CPad::GetPad(0)->GetTabJustDown() )
+						else if ( Input_GetTabJustDown() ) // rouz edit (ChatGPT)
 							++gGameState;
 
 						break;
@@ -2705,7 +2706,7 @@ WinMain(HINSTANCE instance,
 		{
 #ifndef MASTER
 			if ( gbModelViewer )
-				CAnimViewer::Shutdown();
+				AnimViewer_Shutdown(); // rouz edit (ChatGPT)
 			else
 #endif
 			if ( gGameState == GS_PLAYING_GAME )
@@ -2733,7 +2734,7 @@ WinMain(HINSTANCE instance,
 
 #ifndef MASTER
 	if ( gbModelViewer )
-		CAnimViewer::Shutdown();
+		AnimViewer_Shutdown(); // rouz edit (ChatGPT)
 	else
 #endif
 	if ( gGameState == GS_PLAYING_GAME )
@@ -2912,7 +2913,7 @@ HRESULT CapturePad(RwInt32 padID)
 	}
 	
 	{
-		if (CPad::m_bMapPadOneToPadTwo)
+		if (Input_mapPadOneToPadTwo) // rouz edit (ChatGPT)
 			bs.padID = 1;
 		
 		RsPadEventHandler(rsPADBUTTONUP,   (void *)&bs);
@@ -2920,7 +2921,7 @@ HRESULT CapturePad(RwInt32 padID)
 	}
 	
 	{
-		if (CPad::m_bMapPadOneToPadTwo)
+		if (Input_mapPadOneToPadTwo) // rouz edit (ChatGPT)
 			bs.padID = 1;
 		
 		CPad *pad = CPad::GetPad(bs.padID);

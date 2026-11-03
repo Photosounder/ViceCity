@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -166,10 +167,10 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		CollectParameters(&m_nIp, 4);
 #ifdef SIMPLER_MISSIONS
 		if (!General_faststricmp(m_abScriptName, "hait2"))
-			CExplosion::AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, true, 11.25f);
+			Explosion_AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, true, 11.25f);
 		else
 #endif
-			CExplosion::AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, true);
+			Explosion_AddExplosion(nil, nil, (eExplosionType)ScriptParams[3], *(CVector*)&ScriptParams[0], 0, true);
 		return 0;
 
 	case COMMAND_IS_CAR_UPRIGHT:
@@ -765,7 +766,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 	case COMMAND_HAS_SPECIAL_CHARACTER_LOADED:
 	{
 		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(CStreaming::HasSpecialCharLoaded(ScriptParams[0] - 1));
+		UpdateCompareFlag(Streaming_HasSpecialCharLoaded(ScriptParams[0] - 1)); // rouz edit (ChatGPT)
 		return 0;
 	}
 	/*
@@ -864,7 +865,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		int model = ScriptParams[0];
 		if (model < 0)
 			model = CTheScripts::UsedObjectArray[-model].index;
-		CStreaming::RequestModel(model, STREAMFLAGS_DEPENDENCY | STREAMFLAGS_NOFADE | STREAMFLAGS_SCRIPTOWNED);
+		Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY | STREAMFLAGS_NOFADE | STREAMFLAGS_SCRIPTOWNED); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_HAS_MODEL_LOADED:
@@ -873,7 +874,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		int model = ScriptParams[0];
 		if (model < 0)
 			model = CTheScripts::UsedObjectArray[-model].index;
-		UpdateCompareFlag(CStreaming::HasModelLoaded(model));
+		UpdateCompareFlag(Streaming_HasModelLoaded(model)); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_MARK_MODEL_AS_NO_LONGER_NEEDED:
@@ -882,7 +883,7 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		int model = ScriptParams[0];
 		if (model < 0)
 			model = CTheScripts::UsedObjectArray[-model].index;
-		CStreaming::SetMissionDoesntRequireModel(model);
+		Streaming_SetMissionDoesntRequireModel(model); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_GRAB_PHONE:
@@ -1344,7 +1345,7 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 #if defined(GTA_PC) && !defined(DETECT_PAD_INPUT_SWITCH)
 		ScriptParams[0] = 0;
 #else
-		ScriptParams[0] = CPad::IsAffectedByController ? CPad::GetPad(0)->Mode : 0;
+		ScriptParams[0] = Input_affectedByController ? CPad::GetPad(0)->Mode : 0; // rouz edit (ChatGPT)
 #endif
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -1380,7 +1381,7 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 	*/
 	case COMMAND_UNLOAD_SPECIAL_CHARACTER:
 		CollectParameters(&m_nIp, 1);
-		CStreaming::SetMissionDoesntRequireSpecialChar(ScriptParams[0] - 1);
+		Streaming_SetMissionDoesntRequireSpecialChar(ScriptParams[0] - 1); // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_RESET_NUM_OF_MODELS_KILLED_BY_PLAYER:
 		Darkel_ResetModelsKilledByPlayer();
@@ -1455,7 +1456,7 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		pObj->SetOrientation(0.0f, 0.0f, 0.0f);
 		pObj->GetMatrix().UpdateRW();
 		pObj->UpdateRwFrame();
-		CBaseModelInfo* pModelInfo = CModelInfo::GetModelInfo(mi);
+		CBaseModelInfo* pModelInfo = ((CBaseModelInfo*)ModelRegistry_Get(mi)); // rouz edit (ChatGPT)
 		if (pModelInfo->IsBuilding() && ((CSimpleModelInfo*)pModelInfo)->m_isBigBuilding)
 			pObj->SetupBigBuilding();
 		CTheScripts::ClearSpaceForMissionEntity(pos, pObj);
@@ -2095,7 +2096,7 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 			CTheScripts::LastRandomPedId = ped_handle;
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->bRespondsToThreats = false;
-			++CPopulation::ms_nTotalMissionPeds;
+			++Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 			if (m_bIsMissionScript)
 				CTheScripts::MissionCleanUp.AddEntityToList(ped_handle, CLEANUP_CHAR);
 		}
@@ -2162,7 +2163,7 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 			CTheScripts::LastRandomPedId = ped_handle;
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->bRespondsToThreats = false;
-			++CPopulation::ms_nTotalMissionPeds;
+			++Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 			if (m_bIsMissionScript)
 				CTheScripts::MissionCleanUp.AddEntityToList(ped_handle, CLEANUP_CHAR);
 		}
@@ -2736,4 +2737,5 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

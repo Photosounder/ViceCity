@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
+#include "Timer.h"
 #include "AudioManager.h"
 #include "AudioPoliceGame.h"
 #include "DMAudio.h"
@@ -17,7 +19,7 @@ AudioPolice_Service(cAudioManager *manager)
 	if(!manager->m_bIsPaused) {
 		uint8_t crimeReport = AudioPolice_SetupCrimeReport(manager);
 #ifdef FIX_BUGS // Crash at 0x5fe6ef
-		if(AudioPoliceHost_IsReplay() || !AudioPoliceHost_FindPlayer() || !AudioPoliceHost_HasWanted(AudioPoliceHost_FindPlayer()))
+		if(Replay_IsPlayingBack() || !AudioPoliceHost_FindPlayer() || !AudioPoliceHost_HasWanted(AudioPoliceHost_FindPlayer()))
 			return;
 #endif
 		CPlayerPed *playerPed = AudioPoliceHost_FindPlayer();
@@ -27,7 +29,7 @@ AudioPolice_Service(cAudioManager *manager)
 				if (wantedLevel != 0) {
 					if (nLastSeen != 0)
 #ifdef FIX_BUGS
-						nLastSeen -= AudioPoliceHost_LogicalFramesPassed();
+						nLastSeen -= Timer_GetLogicalFramesPassed();
 #else
 						nLastSeen--;
 #endif

@@ -24,13 +24,6 @@ HOST='''//+ rouz edit (ChatGPT)
 
 _TODO("gbFastTime");
 
-extern "C" uint32_t
-ClockHost_Time(void)
-{
-    // Read the live game timer at each original clock access
-    return CTimer::GetTimeInMilliseconds();
-}
-
 extern "C" bool
 ClockHost_RightShoulder(void)
 {
@@ -38,28 +31,6 @@ ClockHost_RightShoulder(void)
     return CPad::GetPad(1)->GetRightShoulder1();
 }
 
-extern "C" int32_t *
-ClockHost_DaysPassed(void)
-{
-    // Expose the existing signed statistics counter for the original C increment
-    return &CStats::DaysPassed;
-}
-
-#ifndef MASTER
-extern "C" void
-ClockHost_RegisterHour(uint8_t *hour)
-{
-    // Register the original live hour byte with unchanged console bounds
-    VarConsole.Add("Time (hour of day)", hour, 1, 0, 23, true);
-}
-
-extern "C" void
-ClockHost_RegisterFreeze(bool *freeze)
-{
-    // Register the original boolean freeze flag without changing its console entry type
-    VarConsole.Add("Freeze time", freeze, true);
-}
-#endif
 //- rouz edit (ChatGPT)
 '''
 
@@ -77,10 +48,10 @@ def body(source):
     # Retain complete original control flow, repeated timer reads and integer promotion/narrowing
     source=source[source.index('{'):]
     for name,(_,target) in FIELDS.items():source=re.sub(r'\b'+name+r'\b',target,source)
-    source=source.replace('CTimer::GetTimeInMilliseconds()', 'ClockHost_Time()').replace('CPad::GetPad(1)->GetRightShoulder1()', 'ClockHost_RightShoulder()')
-    source=source.replace('CStats::DaysPassed++','(*ClockHost_DaysPassed())++')
-    source=source.replace('VarConsole.Add("Time (hour of day)", &Clock_hours, 1, 0, 23, true)', 'ClockHost_RegisterHour(&Clock_hours)')
-    source=source.replace('VarConsole.Add("Freeze time", &gbFreezeTime, true)', 'ClockHost_RegisterFreeze(&gbFreezeTime)')
+    source=source.replace('CTimer::GetTimeInMilliseconds()', '(*Timer_GetTimeInMilliseconds())').replace('CPad::GetPad(1)->GetRightShoulder1()', 'ClockHost_RightShoulder()')
+    source=source.replace('CStats::DaysPassed++','Stats_DaysPassed++')
+    source=source.replace('VarConsole.Add("Time (hour of day)", &Clock_hours, 1, 0, 23, true)', 'VarConsole_AddUInt8(&VarConsole,"Time (hour of day)", &Clock_hours, 1, 0, 23, true)')
+    source=source.replace('VarConsole.Add("Freeze time", &gbFreezeTime, true)', 'VarConsole_AddBool(&VarConsole,"Freeze time", &gbFreezeTime, true)')
     source=source.replace('debug("', 're3_debug("[DBG]: ')
     source=source.replace('int32 ', 'int32_t ')
     return source
@@ -112,13 +83,7 @@ uint8_t Clock_GetMinutes(void);
 int16_t Clock_GetSeconds(void);
 uint8_t *Clock_GetHoursRef(void);
 uint8_t *Clock_GetMinutesRef(void);
-uint32_t ClockHost_Time(void);
 bool ClockHost_RightShoulder(void);
-int32_t *ClockHost_DaysPassed(void);
-#ifndef MASTER
-void ClockHost_RegisterHour(uint8_t *hour);
-void ClockHost_RegisterFreeze(bool *freeze);
-#endif
 #ifdef __cplusplus
 }
 #endif
@@ -127,7 +92,7 @@ void ClockHost_RegisterFreeze(bool *freeze);
 
 def kernel(source):
     # Own the original zero-initialized clock globals and all former class operations in C11
-    result='//+ rouz edit (ChatGPT)\n#include "Clock.h"\n\nvoid re3_debug(const char *format, ...);\n\n'
+    result='//+ rouz edit (ChatGPT)\n#include "Clock.h"\n#include "Timer.h"\n#include "Stats.h"\n#include "VarConsole.h"\n\nvoid re3_debug(const char *format, ...);\n\n'
     result+=''.join(kind+' '+target+';\n' for kind,target in FIELDS.values())
     result+='bool gbFastTime;\n#ifndef MASTER\nbool gbFreezeTime;\n#endif\n\n'
     for name in METHODS:

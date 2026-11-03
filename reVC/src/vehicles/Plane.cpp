@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "main.h"
 
@@ -116,7 +117,7 @@ CPlane *pDropOffCesna;
 CPlane::CPlane(int32 id, uint8 CreatedBy)
  : CVehicle(CreatedBy)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	m_vehType = VEHICLE_TYPE_PLANE;
 	pHandling = mod_HandlingManager.GetHandlingData((tVehicleType)mi->m_handlingId);
 	SetModelIndex(id);
@@ -192,7 +193,7 @@ CPlane::ProcessControl(void)
 	int i;
 	CVector pos;
 
-	if(CReplay::IsPlayingBack())
+	if(Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 		bHasContacted = false;
@@ -226,7 +227,7 @@ CPlane::ProcessControl(void)
 				static int nFrameGen;
 				CRGBA colors[8];
 
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
+				Explosion_AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
 
 				colors[0] = CRGBA(0, 0, 0, 255);
 				colors[1] = CRGBA(224, 230, 238, 255);
@@ -263,7 +264,7 @@ CPlane::ProcessControl(void)
 					pos.y = 40 - frm;
 					pos = GetMatrix() * pos;
 				}
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
+				Explosion_AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
 			}
 			if(frm == 60)
 				bRenderScorched = true;
@@ -280,7 +281,7 @@ CPlane::ProcessControl(void)
 				static int nFrameGen;
 				CRGBA colors[8];
 
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
+				Explosion_AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, GetMatrix() * CVector(0.0f, 0.0f, 0.0f), 0);
 
 				colors[0] = CRGBA(0, 0, 0, 255);
 				colors[1] = CRGBA(224, 230, 238, 255);
@@ -317,7 +318,7 @@ CPlane::ProcessControl(void)
 					pos.y = (40 - frm)*0.3f;
 					pos = GetMatrix() * pos;
 				}
-				CExplosion::AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
+				Explosion_AddExplosion(nil, FindPlayerPed(), EXPLOSION_HELI, pos, 0);
 			}
 			if(frm == 30)
 				bRenderScorched = true;
@@ -639,20 +640,20 @@ CPlane::ProcessControl(void)
 	RemoveAndAdd(); // rouz edit (ChatGPT)
 
 	// Handle streaming and such
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 	if(m_isFarAway){
 		// Switch to LOD model
 		if(m_rwObject && RwObjectGetType(m_rwObject) == rpCLUMP){
 			DeleteRwObject();
 			if(mi->m_planeLodId != -1){
 				PUSH_MEMID(MEMID_WORLD);
-				m_rwObject = CModelInfo::GetModelInfo(mi->m_planeLodId)->CreateInstance();
+				m_rwObject = ((CBaseModelInfo*)ModelRegistry_Get(mi->m_planeLodId))->CreateInstance(); // rouz edit (ChatGPT)
 				POP_MEMID();
 				if(m_rwObject)
 					GetMatrix().AttachRW(RwFrameGetMatrix(RpAtomicGetFrame((RpAtomic*)m_rwObject)));
 			}
 		}
-	}else if(CStreaming::HasModelLoaded(GetModelIndex())){
+	}else if(Streaming_HasModelLoaded(GetModelIndex())){ // rouz edit (ChatGPT)
 		if(m_rwObject && RwObjectGetType(m_rwObject) == rpATOMIC){
 			// Get rid of LOD model
 			GetMatrix().Detach();
@@ -672,7 +673,7 @@ CPlane::ProcessControl(void)
 			SetModelIndex(id);
 		}
 	}else{
-		CStreaming::RequestModel(GetModelIndex(), STREAMFLAGS_DEPENDENCY);
+		Streaming_RequestModel(GetModelIndex(), STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 	}
 }
 
@@ -700,7 +701,7 @@ CPlane::ProcessCollision(void)
 void
 CPlane::PreRender(void)
 {
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	CVector lookVector = GetPosition() - TheCamera.GetPosition();
 	float camDist = lookVector.Magnitude();
@@ -780,7 +781,7 @@ CPlane::PreRender(void)
 void
 CPlane::Render(void)
 {
-	if(!CCutsceneMgr::IsRunning())
+	if(!Cutscene_IsRunning()) // rouz edit (ChatGPT)
 		CEntity::Render();
 }
 
@@ -886,7 +887,7 @@ CPlane::InitPlanes(void)
 	}
 
 	CStreaming::LoadAllRequestedModels(false);
-	CStreaming::RequestModel(MI_AIRTRAIN, 0);
+	Streaming_RequestModel(MI_AIRTRAIN, 0); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 
 	// NB: 3 hardcoded also in CPlaneTrails
@@ -966,7 +967,7 @@ CPlane::UpdatePlanes(void)
 	uint32 time;
 	float t, deltaT;
 
-	if(CReplay::IsPlayingBack())
+	if(Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	// Jumbo jets
@@ -1029,7 +1030,7 @@ CPlane::UpdatePlanes(void)
 
 	if((*Timer_GetTimeInMilliseconds()) - LastTimeNotInPlane > 10000){
 		if(!bCesnasActivated){
-			if(CStreaming::HasModelLoaded(MI_DEADDODO)){
+			if(Streaming_HasModelLoaded(MI_DEADDODO)){ // rouz edit (ChatGPT)
 				for(i = 0; i < 5; i++){
 					// Allocate the temporary cesna from the vehicle pool without invoking C++ new.
 										// Access raw storage through the C store or pool API
@@ -1046,11 +1047,11 @@ CPlane::UpdatePlanes(void)
 				}
 				bCesnasActivated = true;
 			}else
-				CStreaming::RequestModel(MI_DEADDODO, 0);
+				Streaming_RequestModel(MI_DEADDODO, 0); // rouz edit (ChatGPT)
 		}
 
 		if(!bHelisActivated){
-			if(CStreaming::HasModelLoaded(MI_CHOPPER)){
+			if(Streaming_HasModelLoaded(MI_CHOPPER)){ // rouz edit (ChatGPT)
 				for(i = 0; i < 4; i++){
 					// Allocate the temporary chopper from the vehicle pool without invoking C++ new.
 										// Access raw storage through the C store or pool API
@@ -1067,7 +1068,7 @@ CPlane::UpdatePlanes(void)
 				}
 				bHelisActivated = true;
 			}else
-				CStreaming::RequestModel(MI_CHOPPER, 0);
+				Streaming_RequestModel(MI_CHOPPER, 0); // rouz edit (ChatGPT)
 		}
 	}else if((*Timer_GetTimeInMilliseconds()) - LastTimeInPlane > 10000)
 		RemoveTemporaryPlanes();
@@ -1205,4 +1206,5 @@ CPlane::Save(void)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

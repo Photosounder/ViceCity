@@ -4,6 +4,8 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "CollisionVector_native.h"
 #include "ColSphere_native.h"
@@ -106,9 +108,10 @@ CWeapon::InitialiseWeapons(void)
 	WeaponInfo_Initialise();
 	// Enter the complete C shot operation
 	ShotInfo_Initialise();
-	CExplosion::Initialise();
+	Explosion_Initialise();
 	ProjectileInfo_Initialise();
-	CBulletInfo::Initialise();
+	// Call the standalone bullet operation
+	BulletInfo_Initialise();
 	bPhotographHasBeenTaken = false;
 }
 
@@ -118,9 +121,10 @@ CWeapon::ShutdownWeapons(void)
 	WeaponInfo_Shutdown();
 	// Enter the complete C shot operation
 	ShotInfo_Shutdown();
-	CExplosion::Shutdown();
+	Explosion_Shutdown();
 	ProjectileInfo_Shutdown();
-	CBulletInfo::Shutdown();
+	// Call the standalone bullet operation
+	BulletInfo_Shutdown();
 }
 
 void
@@ -128,9 +132,10 @@ CWeapon::UpdateWeapons(void)
 {
 	// Enter the complete C shot operation
 	ShotInfo_Update();
-	CExplosion::Update();
+	Explosion_Update();
 	ProjectileInfo_Update();
-	CBulletInfo::Update();
+	// Call the standalone bullet operation
+	BulletInfo_Update();
 }
 
 
@@ -147,9 +152,9 @@ CWeapon::Initialise(eWeaponType type, int32 ammo)
 	int32 model2Id = WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_nModel2Id;
 	
 	if ( modelId != -1 )
-		CModelInfo::GetModelInfo(modelId)->AddRef();
+		((CBaseModelInfo*)ModelRegistry_Get(modelId))->AddRef(); // rouz edit (ChatGPT)
 	if ( model2Id != -1 )
-		CModelInfo::GetModelInfo(model2Id)->AddRef();
+		((CBaseModelInfo*)ModelRegistry_Get(model2Id))->AddRef(); // rouz edit (ChatGPT)
 }
 
 void
@@ -157,11 +162,11 @@ CWeapon::Shutdown()
 {
 	int32 modelId = WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_nModelId;
 	if (modelId != -1)
-		CModelInfo::GetModelInfo(modelId)->RemoveRef();
+		((CBaseModelInfo*)ModelRegistry_Get(modelId))->RemoveRef(); // rouz edit (ChatGPT)
 
 	int32 model2Id = WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_nModel2Id;
 	if (model2Id != -1)
-		CModelInfo::GetModelInfo(model2Id)->RemoveRef();
+		((CBaseModelInfo*)ModelRegistry_Get(model2Id))->RemoveRef(); // rouz edit (ChatGPT)
 
 	m_eWeaponType = WEAPONTYPE_UNARMED;
 	m_eWeaponState = WEAPONSTATE_READY;
@@ -557,7 +562,7 @@ CWeapon::FireMelee(CEntity *shooter, CVector &fireSource)
 						|| victimPed->m_nWaitState == WAITSTATE_SUN_BATHE_IDLE)
 					{
 						useLocalPos = true;
-						victimPedCol = ((CPedModelInfo*)CModelInfo::GetModelInfo(victimPed->GetModelIndex()))->AnimatePedColModelSkinnedWorld(victimPed->GetClump());
+						victimPedCol = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(victimPed->GetModelIndex())))->AnimatePedColModelSkinnedWorld(victimPed->GetClump()); // rouz edit (ChatGPT)
 					} else if (victimPed->DyingOrDead()) {
 						victimPedCol = &CTempColModels::ms_colModelPedGroundHit;
 					}
@@ -647,7 +652,7 @@ CWeapon::FireMelee(CEntity *shooter, CVector &fireSource)
 
 							if ( CGame::nastyGame && victimPed->GetIsOnScreen() )
 							{
-								CVector dir = collisionDist * RecipSqrt(1.0f, 10.0f*collisionDist.MagnitudeSqr());
+								CVector dir = collisionDist * RecipSqrtScaled(1.0f, 10.0f*collisionDist.MagnitudeSqr()); // rouz edit (ChatGPT)
 
 								CParticle::AddParticle(PARTICLE_BLOOD, bloodPos, dir);
 								CParticle::AddParticle(PARTICLE_BLOOD, bloodPos, dir);
@@ -2378,7 +2383,11 @@ CWeapon::FireSniper(CEntity *shooter)
 	if (sniperPirateCheck) return true;
 #endif
 
-	CBulletInfo::AddBullet(shooter, m_eWeaponType, source, dir);
+	// Call the standalone bullet operation
+	// Copy the existing by-value vector arguments into C-style records
+	BulletInfoVector bulletSource = { source.x, source.y, source.z };
+	BulletInfoVector bulletDirection = { dir.x, dir.y, dir.z };
+	BulletInfo_AddBullet(shooter, m_eWeaponType, bulletSource, bulletDirection);
 
 	if ( shooter == FindPlayerPed() )
 	{
@@ -3335,7 +3344,7 @@ CWeapon::BlowUpExplosiveThings(CEntity *thing)
 		{
 			object->bHasBeenDamaged = true;
 
-			CExplosion::AddExplosion(object, FindPlayerPed(), EXPLOSION_BARREL, object->GetPosition()+CVector(0.0f,0.0f,0.5f), 100);
+			Explosion_AddExplosion(object, FindPlayerPed(), EXPLOSION_BARREL, object->GetPosition()+CVector(0.0f,0.0f,0.5f), 100);
 
 			if ( MI_EXPLODINGBARREL == mi )
 				object->m_vecMoveSpeed.z += 0.55f;
@@ -3508,6 +3517,8 @@ CWeapon::Load(uint8*& buf)
 #endif
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

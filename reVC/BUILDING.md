@@ -10,8 +10,10 @@
 The `build` directory contains generated files. If it is removed, rerun
 `premake-vs2022.cmd`. Regenerate after source files are added or renamed.
 The generator sets C11 compilation for C files and distinct object filenames
-where C and C++ files share a name. It uses the existing local rouziclib,
-CITAlloc, and SDL2 SDK installations under `C:/msys/home`.
+where C and C++ files share a name. It uses local rouziclib and CITAlloc installations under `C:/msys/home` and
+the 64-bit SDL2 SDK in `D:/VC_libs` (`include` and `lib`). A 32-bit build
+requires a separate matching 32-bit SDL2 SDK. Regenerating the solution
+overwrites manual changes to generated project files, including output paths.
 
 From a shell with MSBuild available, the equivalent Debug build is:
 

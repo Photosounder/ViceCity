@@ -82,7 +82,7 @@ public:
 	void SetType(uint8 type) { m_type = type; }
 	uint8 GetStatus() const { return m_status; }
 	void SetStatus(uint8 status) { m_status = status; }
-	CColModel *GetColModel(void) { return CModelInfo::GetModelInfo(m_modelIndex)->GetColModel(); }
+	CColModel *GetColModel(void) { return ((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->GetColModel(); } // rouz edit (ChatGPT)
 	bool GetIsStatic(void) const { return bIsStatic || bIsStaticWaitingForCollision; }
 	void SetIsStatic(bool state) { bIsStatic = state; }
 #ifdef COMPATIBLE_SAVES

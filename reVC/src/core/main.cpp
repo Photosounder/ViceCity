@@ -98,11 +98,6 @@
 
 GlobalScene Scene;
 
-uint8 work_buff[55000];
-char gString[256];
-char gString2[512];
-wchar gUString[256];
-wchar gUString2[256];
 
 float FramesPerSecond = 30.0f;
 
@@ -426,7 +421,7 @@ DoRWStuffEndOfFrame(void)
 		}
 	}
 #else
-	if (CPad::GetPad(1)->GetLeftShockJustDown() || CPad::GetPad(0)->GetFJustDown(11)) {
+	if (CPad::GetPad(1)->GetLeftShockJustDown() || Input_GetFJustDown(11)) { // rouz edit (ChatGPT)
 		sprintf(s, "screen_%011lld.png", time(nil));
 		RwGrabScreen(Scene.camera, s);
 	}
@@ -1318,7 +1313,7 @@ DisplayGameDebugText()
 	// custom
 	if (bDisplayCheatStr)
 	{
-		sprintf(str, "%s", CPad::KeyBoardCheatString);
+		sprintf(str, "%s", Input_keyboardCheatString); // rouz edit (ChatGPT)
 		AsciiToUnicode(str, ustr);
 
 		CFont::SetPropOn();
@@ -2017,7 +2012,7 @@ Idle(void *arg)
 	DMAudio_Service();
 	tbEndTimer("DMAudio.Service");
 
-	if(CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing()){
+	if(CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()){ // rouz edit (ChatGPT)
 		WANT_TO_LOAD = false;
 		FrontEndMenuManager.m_bWantToRestart = true;
 		return;
@@ -2329,7 +2324,7 @@ TheModelViewer(void)
 	// 2- VC Mobile code run it like main function(as opposed to III and LCS), so it has it's own loop inside it, but our func. already called in a loop.
 
 	Draw_CalculateAspectRatio(); // X
-	CAnimViewer::Update();
+	AnimViewer_Update(); // rouz edit (ChatGPT)
 	// Use the complete C lighting owner and its borrowed SDK handles
 	Lights_SetLightsWithTimeOfDayColour(Scene.world);
 	CRenderer::ConstructRenderList();
@@ -2360,7 +2355,7 @@ TheModelViewer(void)
 	CFont::InitPerFrame(); // X
 	DefinedState();
 	CVisibilityPlugins::InitAlphaEntityList();
-	CAnimViewer::Render();
+	AnimViewer_Render(); // rouz edit (ChatGPT)
 	Render2dStuff(); // X
 	DoRWStuffEndOfFrame();
 	Timer_Update();
@@ -2433,7 +2428,7 @@ void TheGame(void)
 
 			DMAudio_Service();
 
-			if (CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !CCutsceneMgr::IsCutsceneProcessing())
+			if (CGame::bDemoMode && (*Timer_GetTimeInMilliseconds()) > (3*60 + 30)*1000 && !Cutscene_IsProcessing()) // rouz edit (ChatGPT)
 			{
 				WANT_TO_LOAD = false;
 				FrontEndMenuManager.m_bWantToRestart = true;
@@ -3100,7 +3095,7 @@ void revc_pos_track()
 						if (building)
 			{
 				pos = CVector_to_xyz(building->GetPosition());
-				CColModel *model = CModelInfo::GetColModel(building->m_modelIndex);
+				CColModel *model = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(building->m_modelIndex))); // rouz edit (ChatGPT)
 				/*if (model)
 				{
 					if (model->numTriangles > 0 && model->boundingBox.max.z - model->boundingBox.min.z < 1.)
@@ -3999,7 +3994,7 @@ int rouz_acceleration_cheats(void *ptr)
 
 		// Car pitch
 		if (((CVehicle *) p)->IsCar() || ((CVehicle *) p)->IsBoat())
-			p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetRight() * ((float) -rouz.pitch + (float) CPad::GetPad(0)->GetCarGunUpDown()/128.f + (float) CPad::GetPad(0)->GetChar('P')-(float) CPad::GetPad(0)->GetChar(';')) * -0.0006f * (1.f + 4.f*(((CAutomobile *) p)->m_nWheelsOnGround==4));
+			p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetRight() * ((float) -rouz.pitch + (float) CPad::GetPad(0)->GetCarGunUpDown()/128.f + (float) Input_GetChar('P')-(float) Input_GetChar(';')) * -0.0006f * (1.f + 4.f*(((CAutomobile *) p)->m_nWheelsOnGround==4)); // rouz edit (ChatGPT)
 
 		if (tas > 0.01f)
 		{
@@ -4056,7 +4051,7 @@ int rouz_acceleration_cheats(void *ptr)
 			else
 			{
 				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * -p->GetForward() * ((CVehicle *) p)->m_fSteerAngle * 0.0018f;	// bank
-				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetUp() * (sqf(ias)+0.08f + 0.16f*erff(ias*10.f)*(float)p->bIsInWater) * ((float) CPad::GetPad(0)->GetCarGunLeftRight()/128.f + (float) CPad::GetPad(0)->GetChar('O')-(float) CPad::GetPad(0)->GetChar('U') + rouz.yaw) * -0.002f;	// rudder
+				p->m_vecTurnSpeed += (*Timer_GetTimeStep()) * p->GetUp() * (sqf(ias)+0.08f + 0.16f*erff(ias*10.f)*(float)p->bIsInWater) * ((float) CPad::GetPad(0)->GetCarGunLeftRight()/128.f + (float) Input_GetChar('O')-(float) Input_GetChar('U') + rouz.yaw) * -0.002f;	// rudder // rouz edit (ChatGPT)
 			}
 			// GetRight -> point nose up (+) or down (-)
 			// -GetForward -> banking
@@ -4071,14 +4066,14 @@ int rouz_acceleration_cheats(void *ptr)
 		static double jump_pending_time=0., two_wheel_time=0.;
 		int wheels_on_ground = 0, wheel_count = 0;
 
-		update_kb_flag(&jump_key, CPad::GetPad(0)->GetPad5());
-		update_kb_flag(&flip_key, CPad::GetPad(0)->GetPad4());
-		update_kb_flag(&grab_key, CPad::GetPad(0)->GetPad6());
-		update_kb_flag(&thrust_key, CPad::GetPad(0)->GetPad0());
-		update_kb_flag(&left_key, CPad::GetPad(0)->GetChar('A'));
-		update_kb_flag(&up_key, CPad::GetPad(0)->GetChar('W'));
-		update_kb_flag(&down_key, CPad::GetPad(0)->GetChar('S'));
-		update_kb_flag(&right_key, CPad::GetPad(0)->GetChar('D'));
+		update_kb_flag(&jump_key, Input_GetPad5()); // rouz edit (ChatGPT)
+		update_kb_flag(&flip_key, Input_GetPad4()); // rouz edit (ChatGPT)
+		update_kb_flag(&grab_key, Input_GetPad6()); // rouz edit (ChatGPT)
+		update_kb_flag(&thrust_key, Input_GetPad0()); // rouz edit (ChatGPT)
+		update_kb_flag(&left_key, Input_GetChar('A')); // rouz edit (ChatGPT)
+		update_kb_flag(&up_key, Input_GetChar('W')); // rouz edit (ChatGPT)
+		update_kb_flag(&down_key, Input_GetChar('S')); // rouz edit (ChatGPT)
+		update_kb_flag(&right_key, Input_GetChar('D')); // rouz edit (ChatGPT)
 
 		// Wheels on ground
 		if (((CVehicle *) p)->IsCar())

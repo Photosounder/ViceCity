@@ -9,7 +9,6 @@ extern "C" {
 #else
 typedef struct CPlayerPed CPlayerPed;typedef struct CWeapon CWeapon;typedef struct CBaseModelInfo CBaseModelInfo;
 #endif
-bool Darkel_BackendPlayback(void);
 void Darkel_BackendJustifyOff(void);
 void Darkel_BackendBackgroundOff(void);
 void Darkel_BackendCentreSize(float size);
@@ -21,9 +20,6 @@ void Darkel_BackendFontStyle(int16_t style);
 void Darkel_BackendPrint(float x,float y,uint16_t *text);
 void Darkel_BackendCentreOff(void);
 void Darkel_BackendRightJustifyOn(void);
-char * Darkel_BackendString(void);
-uint16_t * Darkel_BackendUnicode(void);
-void Darkel_BackendAsciiToUnicode(const char *source,uint16_t *target);
 int32_t Darkel_BackendVehicleModel(CVehicle *vehicle);
 int32_t Darkel_BackendVehicleAppearance(CVehicle *vehicle);
 int32_t Darkel_BackendPedModel(CPed *ped);
@@ -56,7 +52,6 @@ uint8_t Darkel_BackendCurrentSlotIndex(CPlayerPed *player);
 void Darkel_BackendMakeChanges(CPlayerPed *player,int32_t slot);
 void Darkel_BackendSetAmmo(CPlayerPed *player,enum eWeaponType type,uint32_t ammo);
 void Darkel_BackendClearTarget(CPlayerPed *player);
-CBaseModelInfo * Darkel_BackendModelInfo(int32_t model);
 void Darkel_BackendAddRef(CBaseModelInfo *model);
 void Darkel_BackendRemoveRef(CBaseModelInfo *model);
 void Darkel_BackendRemoveModel(CPlayerPed *player,int32_t model);

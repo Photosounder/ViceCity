@@ -1,5 +1,8 @@
 //+ rouz edit (ChatGPT)
+#include "InputState.h"
 #include "Stats_backend.h"
+#include "SharedText.h"
+#include "FontText.h"
 #include "Text.h"
 #include "TextLanguages.h"
 #include "DMAudio.h"
@@ -405,7 +408,7 @@ int32_t Stats_FindCriminalRatingNumber(void)
 		+ Stats_CriminalsCaught + Stats_LivesSavedWithAmbulance
 		+ 30 * Stats_HelisDestroyed + Stats_TotalLegitimateKills - 3 * Stats_TimesArrested - 3 * Stats_TimesDied
 		+ Stats_BackendMoney() / 5000;
-	if (Stats_BackendHasCheated() || Stats_CheatedCount > 0) {
+	if (Input_playerHasCheated || Stats_CheatedCount > 0) {
 		rating -= Stats_CheatedCount;
 		if (rating <= -10000)
 			rating = -10000;
@@ -825,12 +828,12 @@ void Stats_BuildStatLine(const char *text, void *stat, int displayType, void *st
 	if (!text)
 		return;
 
-	Stats_BackendString2()[0] = '\0';
+	gString2[0] = '\0';
 	if (isTime == 1) {
 		if (*((int*)stat2) >= 10)
-			sprintf(Stats_BackendString2(), " %d:%d", STAT_D, STAT2_D);
+			sprintf(gString2, " %d:%d", STAT_D, STAT2_D);
 		else
-			sprintf(Stats_BackendString2(), " %d:0%d", STAT_D, STAT2_D);
+			sprintf(gString2, " %d:0%d", STAT_D, STAT2_D);
 
 	} else if (stat2) {
 #ifdef MORE_LANGUAGES
@@ -838,16 +841,16 @@ void Stats_BuildStatLine(const char *text, void *stat, int displayType, void *st
 			switch (displayType) {
 				case 0:
 				case 4:
-				sprintf(Stats_BackendString2(), "  %d/%d", STAT_D, STAT2_D);
+				sprintf(gString2, "  %d/%d", STAT_D, STAT2_D);
 				break;
 				case 1:
-				sprintf(Stats_BackendString2(), "  %.2f/%.2f", STAT_F, STAT2_F);
+				sprintf(gString2, "  %.2f/%.2f", STAT_F, STAT2_F);
 				break;
 				case 2:
-				sprintf(Stats_BackendString2(), "  %d%%/%d%%", STAT_D, STAT2_D);
+				sprintf(gString2, "  %d%%/%d%%", STAT_D, STAT2_D);
 				break;
 				case 3:
-				sprintf(Stats_BackendString2(), "  $%.2f/$%.2f", STAT_F, STAT2_F);
+				sprintf(gString2, "  $%.2f/$%.2f", STAT_F, STAT2_F);
 				break;
 				default:
 				break;
@@ -857,19 +860,19 @@ void Stats_BuildStatLine(const char *text, void *stat, int displayType, void *st
 		{
 			switch (displayType) {
 				case 0:
-				sprintf(Stats_BackendString2(), "  %d %s %d", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
+				sprintf(gString2, "  %d %s %d", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
 				break;
 				case 1:
-				sprintf(Stats_BackendString2(), "  %.2f %s %.2f", STAT_F, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_F);
+				sprintf(gString2, "  %.2f %s %.2f", STAT_F, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_F);
 				break;
 				case 2:
-				sprintf(Stats_BackendString2(), "  %d%% %s %d%%", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
+				sprintf(gString2, "  %d%% %s %d%%", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
 				break;
 				case 3:
-				sprintf(Stats_BackendString2(), "  $%.2f %s $%.2f", STAT_F, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_F);
+				sprintf(gString2, "  $%.2f %s $%.2f", STAT_F, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_F);
 				break;
 				case 4:
-				sprintf(Stats_BackendString2(), "  %d_ %s %d_", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
+				sprintf(gString2, "  %d_ %s %d_", STAT_D, UnicodeToAscii(Text_Get(&TheText,"FEST_OO")), STAT2_D);
 				break;
 				default:
 				break;
@@ -878,32 +881,32 @@ void Stats_BuildStatLine(const char *text, void *stat, int displayType, void *st
 	} else if (stat) {
 		switch (displayType) {
 			case 0:
-			sprintf(Stats_BackendString2(), "%d", STAT_D);
+			sprintf(gString2, "%d", STAT_D);
 			break;
 			case 1:
-			sprintf(Stats_BackendString2(), "%.2f", STAT_F);
+			sprintf(gString2, "%.2f", STAT_F);
 			break;
 			case 2:
-			sprintf(Stats_BackendString2(), "%d%%", STAT_D);
+			sprintf(gString2, "%d%%", STAT_D);
 			break;
 			case 3:
-			sprintf(Stats_BackendString2(), "$%.2f", STAT_F);
+			sprintf(gString2, "$%.2f", STAT_F);
 			break;
 			case 4:
 #ifdef MORE_LANGUAGES
 			if (Stats_BackendJapanese())
-				sprintf(Stats_BackendString2(), "%d", STAT_D);
+				sprintf(gString2, "%d", STAT_D);
 			else
 #endif
-				sprintf(Stats_BackendString2(), "%d_", STAT_D);
+				sprintf(gString2, "%d_", STAT_D);
 			break;
 			default:
 			break;
 		}
 	}
-	Stats_BackendUnicodeStrcpy(Stats_BackendUnicode(), Text_Get(&TheText,text));
-	Stats_BackendFilter(Stats_BackendUnicode());
-	Stats_BackendAsciiToUnicode(Stats_BackendString2(), Stats_BackendUnicode2());
+	UnicodeStrcpy(gUString, Text_Get(&TheText,text));
+	Stats_BackendFilter(gUString);
+	AsciiToUnicode(gString2, gUString2);
 #undef STAT_D
 #undef STAT_F
 #undef STAT2_D
@@ -944,8 +947,8 @@ int Stats_ConstructStatLine(int rowIdx)
 #define TEXT_ON_RIGHT(text) \
 	do { \
 		if(counter == rowIdx){ \
-			Stats_BackendUnicode()[0] = '\0'; \
-			Stats_BackendUnicodeStrcpy(Stats_BackendUnicode2(), text); \
+			gUString[0] = '\0'; \
+			UnicodeStrcpy(gUString2, text); \
 			return 0; \
 		} counter++; \
 	} while(0)

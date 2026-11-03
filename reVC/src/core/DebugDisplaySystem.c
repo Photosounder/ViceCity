@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
 #include "Debug_backend.h"
+#include "SharedText.h"
+#include "FontText.h"
 #include "Lines.h"
 #include "FontStyles.h"
 #include <string.h>
@@ -81,11 +83,11 @@ Debug_DebugDisplayTextBuffer(void)
 					return;
 				}
 			}
-			Debug_BackendAsciiToUnicode(line, Debug_BackendUnicode());
+			AsciiToUnicode(line, gUString);
 			Debug_BackendColor(0, 0, 0, 255);
-			Debug_BackendPrintString(DEBUG_X_POS, y-1, Debug_BackendUnicode());
+			Debug_BackendPrintString(DEBUG_X_POS, y-1, gUString);
 			Debug_BackendColor(255, 128, 128, 255);
-			Debug_BackendPrintString(DEBUG_X_POS+1, y, Debug_BackendUnicode());
+			Debug_BackendPrintString(DEBUG_X_POS+1, y, gUString);
 			y += DEBUG_LINE_HEIGHT;
 		} while (i != Debug_MAX_LINES);
 		Debug_BackendDrawFonts();
@@ -119,11 +121,11 @@ Debug_DisplayScreenStrings(void)
 
 	for(i = 0; i < Debug_ms_nScreenStrs; i++){
 /*
-		Debug_BackendAsciiToUnicode(Debug_ms_aScreenStrs[i].str, Debug_BackendUnicode());
+		AsciiToUnicode(Debug_ms_aScreenStrs[i].str, gUString);
 		Debug_BackendColor(0, 0, 0, 255);
-		Debug_BackendPrintString(Debug_ms_aScreenStrs[i].x, Debug_ms_aScreenStrs[i].y, Debug_BackendUnicode());
+		Debug_BackendPrintString(Debug_ms_aScreenStrs[i].x, Debug_ms_aScreenStrs[i].y, gUString);
 		Debug_BackendColor(255, 255, 255, 255);
-		Debug_BackendPrintString(Debug_ms_aScreenStrs[i].x+1, Debug_ms_aScreenStrs[i].y+1, Debug_BackendUnicode());
+		Debug_BackendPrintString(Debug_ms_aScreenStrs[i].x+1, Debug_ms_aScreenStrs[i].y+1, gUString);
 */
 		Debug_BackendObrsPrintfString(Debug_ms_aScreenStrs[i].str, Debug_ms_aScreenStrs[i].x, Debug_ms_aScreenStrs[i].y);
 	}

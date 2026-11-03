@@ -513,7 +513,7 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 		float fDistToCamSqr = (CarPos - shadowCameraPosition).MagnitudeSqr2D();
 		//- rouz edit (ChatGPT)
 
-		if ( CCutsceneMgr::IsRunning() )
+		if ( Cutscene_IsRunning() ) // rouz edit (ChatGPT)
 			fDistToCamSqr /= SQR(TheCamera.LODDistMultiplier) * 4.0f;
 
 		float fDrawDistance;
@@ -750,7 +750,7 @@ CShadows::StoreCarLightShadow(CVehicle *pCar, int32 nID, RwTexture *pTexture, CV
 
 	bool bSpecialCam =     TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOPDOWN
 						|| TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED
-						|| CCutsceneMgr::IsRunning();
+						|| Cutscene_IsRunning(); // rouz edit (ChatGPT)
 
 	float fDrawDistance = 27.0f;
 
@@ -2481,7 +2481,7 @@ void
 CShadows::RenderExtraPlayerShadows(void)
 {
 #ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 #endif
 	if ( TimeCycle_GetLightShadowStrength() != 0 )

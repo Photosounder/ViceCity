@@ -152,31 +152,13 @@ uint8_t RoadBlocks_BackendDensity(void)
 bool RoadBlocks_BackendModelLoaded(int32_t model)
 {
     // Access the original typed primitive at its original C policy access point
-    return CStreaming::HasModelLoaded(model);
+    return Streaming_HasModelLoaded(model); // rouz edit (ChatGPT)
 }
 
 void RoadBlocks_BackendRequestModel(int32_t model,int32_t flags)
 {
     // Access the original typed primitive at its original C policy access point
-    CStreaming::RequestModel(model,flags);
-}
-
-CColModel * RoadBlocks_BackendColModel(int32_t model)
-{
-    // Access the original typed primitive at its original C policy access point
-    return CModelInfo::GetColModel(model);
-}
-
-CBaseModelInfo * RoadBlocks_BackendModelInfo(int32_t model)
-{
-    // Access the original typed primitive at its original C policy access point
-    return CModelInfo::GetModelInfo(model);
-}
-
-CColModel * RoadBlocks_BackendInfoColModel(CBaseModelInfo *info)
-{
-    // Access the original typed primitive at its original C policy access point
-    return info->GetColModel();
+    Streaming_RequestModel(model,flags); // rouz edit (ChatGPT)
 }
 
 float RoadBlocks_BackendColRadius(CColModel *model)
@@ -255,12 +237,6 @@ void RoadBlocks_BackendCopWeapon(CCopPed *cop,int32_t weapon)
 {
     // Access the original typed primitive at its original C policy access point
     cop->SetCurrentWeapon((eWeaponType)weapon);
-}
-
-void RoadBlocks_BackendPedZ(RoadBlockVector *point)
-{
-    // Access the original typed primitive at its original C policy access point
-    CVector native(point->x,point->y,point->z);CPedPlacement::FindZCoorForPed(&native);*point=RoadBlocks_FromVector(native);
 }
 
 void RoadBlocks_BackendCopPosition(CCopPed *cop,RoadBlockVector point)
@@ -512,7 +488,7 @@ bool RoadBlocks_BackendCarUsesSiren(CAutomobile *car)
 float RoadBlocks_BackendCarUpZ(CAutomobile *car)
 {
     // Access the original typed primitive at its original C policy access point
-    return car->GetUp().z;
+    return car->GetUp().z; // rouz edit (ChatGPT)
 }
 
 int8_t RoadBlocks_BackendObjectCreated(CObject *object)
@@ -524,7 +500,7 @@ int8_t RoadBlocks_BackendObjectCreated(CObject *object)
 RoadBlockVector RoadBlocks_BackendCarRight(CAutomobile *car)
 {
     // Access the original typed primitive at its original C policy access point
-    return RoadBlocks_FromVector(car->GetRight());
+    return RoadBlocks_FromVector(car->GetRight()); // rouz edit (ChatGPT)
 }
 
 RoadBlockVector RoadBlocks_BackendCarPosition(CAutomobile *car)
@@ -596,7 +572,7 @@ void RoadBlocks_BackendMatrixRotateZ(CMatrix *matrix,float angle)
 void RoadBlocks_BackendMatrixRight(CMatrix *matrix,RoadBlockVector point)
 {
     // Access the original typed primitive at its original C policy access point
-    matrix->GetRight()=CVector(point.x,point.y,point.z);
+    matrix->GetRight()=CVector(point.x,point.y,point.z); // rouz edit (ChatGPT)
 }
 
 void RoadBlocks_BackendMatrixForward(CMatrix *matrix,RoadBlockVector point)
@@ -608,7 +584,7 @@ void RoadBlocks_BackendMatrixForward(CMatrix *matrix,RoadBlockVector point)
 void RoadBlocks_BackendMatrixUp(CMatrix *matrix,RoadBlockVector point)
 {
     // Access the original typed primitive at its original C policy access point
-    matrix->GetUp()=CVector(point.x,point.y,point.z);
+    matrix->GetUp()=CVector(point.x,point.y,point.z); // rouz edit (ChatGPT)
 }
 
 RoadBlockVector RoadBlocks_BackendMatrixPosition(CMatrix *matrix)

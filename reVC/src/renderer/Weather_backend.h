@@ -9,7 +9,6 @@ extern "C" {
 typedef struct CVehicle CVehicle;typedef struct CEntity CEntity;
 #endif
 enum {WEATHER_TRIG_TABLE_SIZE=1024,WEATHER_rwRENDERSTATETEXTURERASTER=1,WEATHER_rwRENDERSTATEZTESTENABLE=6,WEATHER_rwRENDERSTATEZWRITEENABLE=8,WEATHER_rwRENDERSTATESRCBLEND=10,WEATHER_rwRENDERSTATEDESTBLEND=11,WEATHER_rwRENDERSTATEVERTEXALPHAENABLE=12,WEATHER_rwRENDERSTATEFOGENABLE=14,WEATHER_rwRENDERSTATEFOGTYPE=16,WEATHER_rwFOGTYPELINEAR=1,WEATHER_rwBLENDONE=2,WEATHER_rwBLENDSRCALPHA=5,WEATHER_rwBLENDINVSRCALPHA=6};
-bool Weather_BackendPlayback(void);
 bool Weather_BackendNoHurricanes(void);
 bool Weather_BackendShockDown(void);
 void Weather_BackendShake(int16_t duration,uint8_t frequency);
@@ -40,7 +39,6 @@ void Weather_BackendParticleSimple(enum tParticleType type,WeatherVector positio
 void Weather_BackendParticleColor(enum tParticleType type,WeatherVector position,WeatherVector direction,float size,WeatherColor value);
 void Weather_BackendParticleDrop(enum tParticleType type,WeatherVector position,WeatherVector direction,float size,int32_t rotationSpeed,int32_t rotation,int32_t frame,int32_t lifespan);
 bool Weather_BackendVerticalLine(WeatherVector value,float *height);
-int32_t Weather_BackendFogReduction(void);
 bool Weather_BackendEnvMap(void);
 void * Weather_BackendEnvCamera(void);
 void * Weather_BackendCameraFrame(void *camera);

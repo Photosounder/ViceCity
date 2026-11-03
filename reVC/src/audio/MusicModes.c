@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "DMAudio.h"
@@ -32,7 +33,7 @@ MusicModes_ChangeMusicMode(cMusicManager *manager, uint8_t mode)
 		// rewind those streams we weren't listening right now
 		for( uint32_t i = STREAMED_SOUND_RADIO_WILD; i < STREAMED_SOUND_CUTSCENE_ASS_1; i++ ) {
 			manager->m_aTracks[i].m_nPosition = MusicPositions_GetTrackStartPos(manager, i);
-			manager->m_aTracks[i].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+			manager->m_aTracks[i].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 		}
 #endif
 
@@ -44,7 +45,7 @@ MusicModes_ChangeMusicMode(cMusicManager *manager, uint8_t mode)
 			if (manager->m_nPlayingTrack != NO_TRACK) {
 				MusicPositions_RecordRadioStats(manager);
 				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
-				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 			}
 		}
 		SampleManager_StopStreamedFile(&SampleManager, 0);
@@ -76,7 +77,7 @@ MusicModes_ServiceFrontEndMode(cMusicManager *manager)
 #ifdef PAUSE_RADIO_IN_FRONTEND
 	// pause radio
 	for (uint32_t i = STREAMED_SOUND_RADIO_WILD; i < STREAMED_SOUND_CUTSCENE_ASS_1; i++)
-		manager->m_aTracks[i].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+		manager->m_aTracks[i].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 #endif
 
 	if (manager->m_bAnnouncementInProgress) {
@@ -130,14 +131,14 @@ MusicModes_ServiceFrontEndMode(cMusicManager *manager)
 					manager->m_nMaxVolume = 100;
 					SampleManager_SetStreamedVolumeAndPan(&SampleManager, manager->m_nCurrentVolume, 63, 0, 0);
 					if (manager->m_nNextTrack < STREAMED_SOUND_CITY_AMBIENT)
-						manager->m_nLastTrackServiceTime = MusicInitHost_PauseTime();
+						manager->m_nLastTrackServiceTime = Timer_GetTimeInMillisecondsPauseMode();
 					manager->m_bVerifyNextTrackStartedToPlay = 1;
 				}
 			}
 		} else {
 			if (manager->m_nPlayingTrack != NO_TRACK && !bRadioStatsRecorded) {
 				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
-				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+				MUSIC_MODES_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 				MusicPositions_RecordRadioStats(manager);
 				bRadioStatsRecorded = 1;
 			}

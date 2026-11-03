@@ -1,27 +1,20 @@
 #pragma once
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 struct CColModel;
 
 #define MAX_MODEL_NAME (21)
 
-enum ModelInfoType
-{
-	MITYPE_NA,
-	MITYPE_SIMPLE,
-	MITYPE_MLO,	// unused but still in enum
-	MITYPE_TIME,
-	MITYPE_WEAPON,
-	MITYPE_CLUMP,
-	MITYPE_VEHICLE,
-	MITYPE_PED,
-	MITYPE_XTRACOMPS,	// unused but still in enum
-	MITYPE_HAND	// xbox and mobile
-};
+#include "ModelInfoType.h" // rouz edit (ChatGPT)
 
-class C2dEffect;
+struct C2dEffect; // rouz edit (ChatGPT)
 
 class CBaseModelInfo
 {
+    //+ rouz edit (ChatGPT)
+    friend int16_t *ModelRegistry_EffectId(void *model);
+    friend uint8_t *ModelRegistry_EffectCount(void *model);
+    //- rouz edit (ChatGPT)
 protected:
 	char         m_name[MAX_MODEL_NAME];
 	uint8        m_type;
@@ -66,9 +59,5 @@ public:
 	void SetTexDictionary(const char *name);
 	void AddTexDictionaryRef(void);
 	void RemoveTexDictionaryRef(void);
-	void Init2dEffects(void);
-	void Add2dEffect(C2dEffect *fx);
-	C2dEffect *Get2dEffect(int n);
-	uint8 GetNum2dEffects() const { return m_num2dEffects; }
 	uint16 GetNumRefs() const { return m_refCount; }
 };

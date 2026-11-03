@@ -8,6 +8,7 @@
 #include "main.h"
 #include "Lights.h"
 #include "ModelInfo.h"
+#include "SimpleModelPolicy.h" // rouz edit (ChatGPT)
 #include "Treadable.h"
 #include "Ped.h"
 #include "Pools.h" // rouz edit (ChatGPT)
@@ -175,11 +176,11 @@ CRenderer::RenderOneRoad(CEntity *e)
 #endif
 #ifndef MASTER
 	if(gbShowCollisionPolys || gbShowCollisionPolysReflections || gbShowCollisionPolysNoShadows)
-		CCollision::DrawColModel_Coloured(e->GetMatrix(), *CModelInfo::GetColModel(e->GetModelIndex()), e->GetModelIndex());
+		CCollision::DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
 	else
 #endif
 	{
-		PUSH_RENDERGROUP(CModelInfo::GetModelInfo(e->GetModelIndex())->GetModelName());
+		PUSH_RENDERGROUP(((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 
 		e->Render();
 
@@ -209,7 +210,7 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 #ifndef MASTER
 	if(gbShowCollisionPolys || gbShowCollisionPolysReflections || gbShowCollisionPolysNoShadows){
 		if(!e->IsVehicle()){
-			CCollision::DrawColModel_Coloured(e->GetMatrix(), *CModelInfo::GetColModel(e->GetModelIndex()), e->GetModelIndex());
+			CCollision::DrawColModel_Coloured(e->GetMatrix(), *((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))), e->GetModelIndex()); // rouz edit (ChatGPT)
 			return;
 		}
 	}else
@@ -274,7 +275,7 @@ CRenderer::RenderOneNonRoad(CEntity *e)
 	//- rouz edit (ChatGPT)
 #endif
 
-	PUSH_RENDERGROUP(CModelInfo::GetModelInfo(e->GetModelIndex())->GetModelName());
+	PUSH_RENDERGROUP(((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 
 	resetLights = e->SetupLighting();
 
@@ -340,7 +341,7 @@ CRenderer::RenderFirstPersonVehicle(void)
 	RwRenderStateSet(rwRENDERSTATEFOGENABLE, (void*)FALSE);
 }
 
-inline bool IsRoad(CEntity *e) { return e->IsBuilding() && ((CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex()))->m_wetRoadReflection; }
+inline bool IsRoad(CEntity *e) { return e->IsBuilding() && ((CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())))->m_wetRoadReflection; } // rouz edit (ChatGPT)
 
 //+ rouz edit (ChatGPT)
 #define HIGH_ALTITUDE_STATIC_MAP_RENDER_Z 40.0f
@@ -367,7 +368,7 @@ IsLowStaticMapEntity(CEntity *e)
 	if(!(e->IsBuilding() || e->IsObject() || e->IsDummy()) || e->bIsBIGBuilding)
 		return false;
 
-	CColModel *col = CModelInfo::GetColModel(e->GetModelIndex());
+	CColModel *col = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 	return col && e->GetPosition().z + col->boundingBox.max.z <= HIGH_ALTITUDE_STATIC_MAP_RENDER_Z;
 }
 
@@ -377,7 +378,7 @@ IsHighAltitudeStaticMapEntity(CEntity *e)
 	if(!(e->IsBuilding() || e->IsObject() || e->IsDummy()) || e->bIsBIGBuilding)
 		return false;
 
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 	if(mi->m_drawLast || mi->m_additive || mi->m_noZwrite || e->bDrawLast)
 		return false;
 
@@ -394,7 +395,7 @@ static float
 GetHighAltitudeLodDistance(CEntity *e, CSimpleModelInfo *mi, float dist)
 {
 	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(e)){
-		float largestLodDist = mi->GetLargestLodDistance();
+		float largestLodDist = SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 		if(dist > largestLodDist)
 			return Max(0.0f, largestLodDist - 0.1f);
 	}
@@ -408,7 +409,7 @@ MarkHighAltitudeStaticMapInstance(CEntity *e)
 	   gNumHighAltitudeStaticMapInstances >= NUMVISIBLEENTITIES)
 		return;
 
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(e->GetModelIndex());
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 	for(int32 i = 0; i < gNumHighAltitudeStaticMapInstances; i++)
 		if(gaHighAltitudeStaticMapInstances[i].modelInfo == mi &&
 		   (gaHighAltitudeStaticMapInstances[i].position - e->GetPosition()).MagnitudeSqr() < 1.0f)
@@ -831,7 +832,7 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 
 	assert(RwObjectGetType(ent->m_rwObject) == rpATOMIC);
 	RpAtomic *atomic = (RpAtomic*)ent->m_rwObject;
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(ent->GetModelIndex());
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(ent->GetModelIndex())); // rouz edit (ChatGPT)
 	// Select the world blend pass from the building model flags
 	//+ rouz edit (ChatGPT)
 	int pass = PASS_BLEND;
@@ -848,7 +849,7 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 	RpGeometry *originalGeometry = nil;
 	if(ent->bDistanceFade){
 		RpAtomic *lodAtomic = mi->GetAtomicFromDistance(camdist-FADE_DISTANCE);
-		float fadeFactor = (mi->GetLargestLodDistance()-(camdist-FADE_DISTANCE))/FADE_DISTANCE;
+		float fadeFactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier)-(camdist-FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
 		fadeFactor = Clamp(fadeFactor, 0.0f, 1.0f);
 		alpha = (uint32)(mi->m_alpha*fadeFactor);
 		if(alpha < 255 && lodAtomic){
@@ -894,7 +895,7 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 		uint32 alpha;
 
 		lodatm = mi->GetAtomicFromDistance(camdist - FADE_DISTANCE);
-		fadefactor = (mi->GetLargestLodDistance() - (camdist - FADE_DISTANCE))/FADE_DISTANCE;
+		fadefactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) - (camdist - FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
 		if(fadefactor > 1.0f)
 			fadefactor = 1.0f;
 		alpha = mi->m_alpha * fadefactor;
@@ -937,14 +938,14 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 		if(!IsAreaVisible(entity->m_area))
 			continue;
 
-		CSimpleModelInfo *modelInfo = (CSimpleModelInfo*)CModelInfo::GetModelInfo(entity->GetModelIndex());
+		CSimpleModelInfo *modelInfo = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(entity->GetModelIndex())); // rouz edit (ChatGPT)
 		if(!modelInfo)
 			continue;
 		if(modelInfo->GetModelType() == MITYPE_TIME){
 			CTimeModelInfo *timeInfo = (CTimeModelInfo*)modelInfo;
-			if(!Clock_GetIsTimeInRange(timeInfo->GetTimeOn(), timeInfo->GetTimeOff())){
-				int32 otherModel = timeInfo->GetOtherTimeModel();
-				if(otherModel == -1 || CModelInfo::GetModelInfo(otherModel)->GetRwObject())
+			if(!Clock_GetIsTimeInRange(timeInfo->m_timeData.timeOn, timeInfo->m_timeData.timeOff)){ // rouz edit (ChatGPT)
+				int32 otherModel = timeInfo->m_timeData.otherTimeModelID; // rouz edit (ChatGPT)
+				if(otherModel == -1 || ((CBaseModelInfo*)ModelRegistry_Get(otherModel))->GetRwObject()) // rouz edit (ChatGPT)
 					continue;
 			}
 		}
@@ -954,24 +955,24 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 		if((pass == 0) != roadsPass)
 			continue;
 		if(entity->bIsBIGBuilding){
-			CSimpleModelInfo *nonLOD = modelInfo->GetRelatedModel();
+			CSimpleModelInfo *nonLOD = (CSimpleModelInfo*)modelInfo->m_atomics[2]; // rouz edit (ChatGPT)
 			if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, entity->GetPosition()))
 				continue;
-			if(distance < modelInfo->GetNearDistance() && distance < LOD_DISTANCE){
+			if(distance < (modelInfo->m_lodDistances[2] * TheCamera.LODDistMultiplier) && distance < LOD_DISTANCE){ // rouz edit (ChatGPT)
 				if(nonLOD == nil || (nonLOD->GetRwObject() && nonLOD->m_alpha == 255))
 					continue;
 				if(nonLOD->GetModelType() == MITYPE_TIME){
 					CTimeModelInfo *timeNonLOD = (CTimeModelInfo*)nonLOD;
-					int32 otherModel = timeNonLOD->GetOtherTimeModel();
-					if(otherModel != -1 && CModelInfo::GetModelInfo(otherModel)->GetRwObject())
+					int32 otherModel = timeNonLOD->m_timeData.otherTimeModelID; // rouz edit (ChatGPT)
+					if(otherModel != -1 && ((CBaseModelInfo*)ModelRegistry_Get(otherModel))->GetRwObject()) // rouz edit (ChatGPT)
 						continue;
 				}
 			}
 		}
 
-		RpAtomic *drawAtomic = modelInfo->GetFirstAtomicFromDistance(distance);
+		RpAtomic *drawAtomic = (SimpleModel_FirstAtomicIndex(modelInfo->m_lodDistances, distance, TheCamera.LODDistMultiplier) < 0 ? nil : modelInfo->m_atomics[0]); // rouz edit (ChatGPT)
 		if(!drawAtomic && !modelInfo->m_noFade)
-			drawAtomic = modelInfo->GetFirstAtomicFromDistance(distance - FADE_DISTANCE);
+			drawAtomic = (SimpleModel_FirstAtomicIndex(modelInfo->m_lodDistances, distance - FADE_DISTANCE, TheCamera.LODDistMultiplier) < 0 ? nil : modelInfo->m_atomics[0]); // rouz edit (ChatGPT)
 		if(!drawAtomic)
 			continue;
 		RpAtomic *atomic = (RpAtomic*)entity->m_rwObject;
@@ -1211,7 +1212,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 	//- rouz edit (ChatGPT)
 	// Preserve CPlane::Render hiding planes during cutscenes
 	//+ rouz edit (ChatGPT)
-	if(vehicle->IsPlane() && CCutsceneMgr::IsRunning())
+	if(vehicle->IsPlane() && Cutscene_IsRunning()) // rouz edit (ChatGPT)
 		return;
 	//- rouz edit (ChatGPT)
 	// Preserve the caller's culling state while drawing both sides of vehicle meshes
@@ -1231,7 +1232,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 		//- rouz edit (ChatGPT)
 		// Apply the current paint colors before rasterizing the distant body
 		//+ rouz edit (ChatGPT)
-		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(vehicle->GetModelIndex());
+		CBaseModelInfo *modelInfo = ((CBaseModelInfo*)ModelRegistry_Get(vehicle->GetModelIndex())); // rouz edit (ChatGPT)
 		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
 			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
 		}
@@ -1323,7 +1324,7 @@ static void RenderSoftwareVehicle(CVehicle *vehicle)
 	//- rouz edit (ChatGPT)
 	// Apply the current paint colors before rasterizing shared vehicle materials
 	//+ rouz edit (ChatGPT)
-	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(vehicle->GetModelIndex());
+	CBaseModelInfo *modelInfo = ((CBaseModelInfo*)ModelRegistry_Get(vehicle->GetModelIndex())); // rouz edit (ChatGPT)
 	if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE){
 		((CVehicleModelInfo*)modelInfo)->SetVehicleColour(vehicle->m_currentColour1, vehicle->m_currentColour2);
 	}
@@ -1549,7 +1550,7 @@ static void RenderSoftwareReflectionObject(CObject *object)
 		return;
 	// Preserve temporary vehicle paint without running object gameplay effects
 	if(object->m_nRefModelIndex != -1 && object->ObjectCreatedBy == TEMP_OBJECT && object->bUseVehicleColours){
-		CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(object->m_nRefModelIndex);
+		CBaseModelInfo *modelInfo = ((CBaseModelInfo*)ModelRegistry_Get(object->m_nRefModelIndex)); // rouz edit (ChatGPT)
 		if(modelInfo && modelInfo->GetModelType() == MITYPE_VEHICLE)
 			((CVehicleModelInfo*)modelInfo)->SetVehicleColour(object->m_colour1, object->m_colour2);
 	}
@@ -1936,17 +1937,17 @@ enum Visbility
 };
 
 // Time Objects can be time culled if
-//   other == -1 || CModelInfo::GetModelInfo(other)->GetRwObject()
+//   other == -1 || ((CBaseModelInfo*)ModelRegistry_Get(other))->GetRwObject() // rouz edit (ChatGPT)
 // i.e. we have to draw even at the wrong time if
-//   other != -1 && CModelInfo::GetModelInfo(other)->GetRwObject() == nil
+//   other != -1 && ((CBaseModelInfo*)ModelRegistry_Get(other))->GetRwObject() == nil // rouz edit (ChatGPT)
 
-#define OTHERUNAVAILABLE (other != -1 && CModelInfo::GetModelInfo(other)->GetRwObject() == nil)
+#define OTHERUNAVAILABLE (other != -1 && ((CBaseModelInfo*)ModelRegistry_Get(other))->GetRwObject() == nil) // rouz edit (ChatGPT)
 #define CANTIMECULL (!OTHERUNAVAILABLE)
 
 int32
 CRenderer::SetupEntityVisibility(CEntity *ent)
 {
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(ent->m_modelIndex);
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(ent->m_modelIndex)); // rouz edit (ChatGPT)
 	CTimeModelInfo *ti;
 	int32 other;
 	float dist;
@@ -1954,8 +1955,8 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	bool request = true;
 	if(mi->GetModelType() == MITYPE_TIME){
  		ti = (CTimeModelInfo*)mi;
-		other = ti->GetOtherTimeModel();
-		if(Clock_GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
+		other = ti->m_timeData.otherTimeModelID; // rouz edit (ChatGPT)
+		if(Clock_GetIsTimeInRange(ti->m_timeData.timeOn, ti->m_timeData.timeOff)){ // rouz edit (ChatGPT)
 			// don't fade in, or between time objects
 			if(CANTIMECULL)
 				ti->m_alpha = 255;
@@ -2040,8 +2041,8 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	// before fading normally once below LOD_DISTANCE.
 	// aha! this must be a workaround for the fact that we're not taking
 	// the LOD multiplier into account here anywhere
-	if(LOD_DISTANCE < dist && dist < mi->GetLargestLodDistance() + FADE_DISTANCE)
-		dist += mi->GetLargestLodDistance() - LOD_DISTANCE;
+	if(LOD_DISTANCE < dist && dist < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) + FADE_DISTANCE) // rouz edit (ChatGPT)
+		dist += SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) - LOD_DISTANCE; // rouz edit (ChatGPT)
 #endif
 
 	if(ent->IsObject() && ent->bRenderDamaged)
@@ -2062,7 +2063,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 		// that of an atomic for another draw distance.
 		if(RpAtomicGetGeometry(a) != RpAtomicGetGeometry(rwobj))
 			RpAtomicSetGeometry(rwobj, RpAtomicGetGeometry(a), rpATOMICSAMEBOUNDINGSPHERE); // originally 5 (mistake?)
-		mi->IncreaseAlpha();
+		SimpleModel_IncreaseAlpha(&mi->m_alpha); // rouz edit (ChatGPT)
 		if(ent->m_rwObject == nil || !ent->bIsVisible)
 			return VIS_INVISIBLE;
 
@@ -2093,7 +2094,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(mi->m_noFade){
 		mi->m_isDamaged = false;
 		// request model
-		if(lodDist - STREAM_DISTANCE < mi->GetLargestLodDistance() && request) // rouz edit (ChatGPT)
+		if(lodDist - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
@@ -2104,7 +2105,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	mi->m_isDamaged = false;
 	if(a == nil){
 		// request model
-		if(lodDist - FADE_DISTANCE - STREAM_DISTANCE < mi->GetLargestLodDistance() && request) // rouz edit (ChatGPT)
+		if(lodDist - FADE_DISTANCE - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
@@ -2115,7 +2116,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	RpAtomic *rwobj = (RpAtomic*)ent->m_rwObject;
 	if(RpAtomicGetGeometry(a) != RpAtomicGetGeometry(rwobj))
 		RpAtomicSetGeometry(rwobj, RpAtomicGetGeometry(a), rpATOMICSAMEBOUNDINGSPHERE); // originally 5 (mistake?)
-	mi->IncreaseAlpha();
+	SimpleModel_IncreaseAlpha(&mi->m_alpha); // rouz edit (ChatGPT)
 	if(ent->m_rwObject == nil || !ent->bIsVisible)
 		return VIS_INVISIBLE;
 
@@ -2134,7 +2135,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 int32
 CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 {
-	CSimpleModelInfo *mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(ent->m_modelIndex);
+	CSimpleModelInfo *mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(ent->m_modelIndex)); // rouz edit (ChatGPT)
 	CTimeModelInfo *ti;
 	int32 other;
 
@@ -2144,8 +2145,8 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	bool request = true;
 	if(mi->GetModelType() == MITYPE_TIME){
 		ti = (CTimeModelInfo*)mi;
-		other = ti->GetOtherTimeModel();
-		if(Clock_GetIsTimeInRange(ti->GetTimeOn(), ti->GetTimeOff())){
+		other = ti->m_timeData.otherTimeModelID; // rouz edit (ChatGPT)
+		if(Clock_GetIsTimeInRange(ti->m_timeData.timeOn, ti->m_timeData.timeOff)){ // rouz edit (ChatGPT)
 			// don't fade in, or between time objects
 			if(CANTIMECULL)
 				ti->m_alpha = 255;
@@ -2163,7 +2164,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		return ent->IsVisible() ? VIS_VISIBLE : VIS_INVISIBLE;
 
 	float dist = (ms_vecCameraPosition-ent->GetPosition()).Magnitude();
-	CSimpleModelInfo *nonLOD = mi->GetRelatedModel();
+	CSimpleModelInfo *nonLOD = (CSimpleModelInfo*)mi->m_atomics[2]; // rouz edit (ChatGPT)
 
 	// rouz edit (ChatGPT)
 	if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, ent->GetPosition()))
@@ -2172,7 +2173,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	// Find out whether to draw below near distance.
 	// This is only the case if there is a non-LOD which is either not
 	// loaded or not completely faded in yet.
-	if(dist < mi->GetNearDistance() && dist < LOD_DISTANCE){
+	if(dist < (mi->m_lodDistances[2] * TheCamera.LODDistMultiplier) && dist < LOD_DISTANCE){ // rouz edit (ChatGPT)
 		// No non-LOD or non-LOD is completely visible.
 		if(nonLOD == nil ||
 		   nonLOD->GetRwObject() && nonLOD->m_alpha == 255)
@@ -2182,13 +2183,13 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		// non-LOD than the right LOD.
 		if(nonLOD->GetModelType() == MITYPE_TIME){
 			ti = (CTimeModelInfo*)nonLOD;
-			other = ti->GetOtherTimeModel();
-			if(other != -1 && CModelInfo::GetModelInfo(other)->GetRwObject())
+			other = ti->m_timeData.otherTimeModelID; // rouz edit (ChatGPT)
+			if(other != -1 && ((CBaseModelInfo*)ModelRegistry_Get(other))->GetRwObject()) // rouz edit (ChatGPT)
 				return VIS_INVISIBLE;
 		}
 	}
 
-	RpAtomic *a = mi->GetFirstAtomicFromDistance(dist);
+	RpAtomic *a = (SimpleModel_FirstAtomicIndex(mi->m_lodDistances, dist, TheCamera.LODDistMultiplier) < 0 ? nil : mi->m_atomics[0]); // rouz edit (ChatGPT)
 	if(a){
 		if(ent->m_rwObject == nil)
 			ent->CreateRwObject();
@@ -2199,7 +2200,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 		// that of an atomic for another draw distance.
 		if(RpAtomicGetGeometry(a) != RpAtomicGetGeometry(rwobj))
 			RpAtomicSetGeometry(rwobj, RpAtomicGetGeometry(a), rpATOMICSAMEBOUNDINGSPHERE); // originally 5 (mistake?)
-		mi->IncreaseAlpha();
+		SimpleModel_IncreaseAlpha(&mi->m_alpha); // rouz edit (ChatGPT)
 		if(!ent->IsVisible() || !ent->GetIsOnScreenComplex() || ent->IsEntityOccluded()){
 			mi->m_alpha = 255;
 			return VIS_INVISIBLE;
@@ -2226,9 +2227,9 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 
 
 	// get faded atomic
-	a = mi->GetFirstAtomicFromDistance(dist - FADE_DISTANCE);
+	a = (SimpleModel_FirstAtomicIndex(mi->m_lodDistances, dist - FADE_DISTANCE, TheCamera.LODDistMultiplier) < 0 ? nil : mi->m_atomics[0]); // rouz edit (ChatGPT)
 	if(a == nil){
-		if(ent->bStreamBIGBuilding && dist-STREAM_DISTANCE < mi->GetLodDistance(0) && request){
+		if(ent->bStreamBIGBuilding && dist-STREAM_DISTANCE < (mi->m_lodDistances[0] * TheCamera.LODDistMultiplier) && request){ // rouz edit (ChatGPT)
 			return ent->GetIsOnScreen() ? VIS_STREAMME : VIS_INVISIBLE;
 		}else{
 			ent->DeleteRwObject();
@@ -2243,7 +2244,7 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	RpAtomic *rwobj = (RpAtomic*)ent->m_rwObject;
 	if(RpAtomicGetGeometry(a) != RpAtomicGetGeometry(rwobj))
 		RpAtomicSetGeometry(rwobj, RpAtomicGetGeometry(a), rpATOMICSAMEBOUNDINGSPHERE); // originally 5 (mistake?)
-	mi->IncreaseAlpha();
+	SimpleModel_IncreaseAlpha(&mi->m_alpha); // rouz edit (ChatGPT)
 	if(!ent->IsVisible() || !ent->GetIsOnScreenComplex() || ent->IsEntityOccluded()){
 		mi->m_alpha = 255;
 		return VIS_INVISIBLE;
@@ -2824,7 +2825,7 @@ CRenderer::ScanBigBuildingList(CPtrList &list)
 			break;
 		case VIS_STREAMME:
 			if(!CStreaming::ms_disableStreaming)
-				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			break;
 		}
 	}
@@ -2861,7 +2862,7 @@ CRenderer::ScanFarAwayVehicles(void)
 			break;
 		case VIS_STREAMME:
 			if(!CStreaming::ms_disableStreaming)
-				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			break;
 		}
 	}
@@ -2905,8 +2906,8 @@ CRenderer::ScanSectorList(CPtrList *lists)
 				break;
 			case VIS_STREAMME:
 				if(!CStreaming::ms_disableStreaming)
-					if(!m_loadingPriority || CStreaming::ms_numModelsRequested < 10)
-						CStreaming::RequestModel(ent->GetModelIndex(), 0);
+					if(!m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
+						Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 				break;
 			}
 		}
@@ -2950,8 +2951,8 @@ CRenderer::ScanSectorList_Priority(CPtrList *lists)
 				break;
 			case VIS_STREAMME:
 				if(!CStreaming::ms_disableStreaming){
-					CStreaming::RequestModel(ent->GetModelIndex(), 0);
-					if(CStreaming::ms_aInfoForModel[ent->GetModelIndex()].m_loadState != STREAMSTATE_LOADED)
+					Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
+					if(Streaming_modelInfo[ent->GetModelIndex()].m_loadState != STREAMSTATE_LOADED) // rouz edit (ChatGPT)
 						m_loadingPriority = true;
 				}
 				break;
@@ -3010,8 +3011,8 @@ CRenderer::ScanSectorList_FarStaticMapEntities(CPtrList *lists)
 				break;
 			case VIS_STREAMME:
 				if(!CStreaming::ms_disableStreaming)
-					if(!m_loadingPriority || CStreaming::ms_numModelsRequested < 10)
-						CStreaming::RequestModel(ent->GetModelIndex(), 0);
+					if(!m_loadingPriority || Streaming_numModelsRequested < 10) // rouz edit (ChatGPT)
+						Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 				break;
 			}
 			gbUseHighAltitudeStaticMapDistance = false;
@@ -3073,7 +3074,7 @@ CRenderer::ScanSectorList_RequestModels(CPtrList *lists)
 				continue;	// already seen
 			ent->m_scanCode = CWorld::GetCurrentScanCode();
 			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
-				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 		}
 	}
 }
@@ -3101,7 +3102,7 @@ CRenderer::ScanFarAwayVehicleModels(void)
 
 		ent->m_scanCode = CWorld::GetCurrentScanCode();
 		if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
-			CStreaming::RequestModel(ent->GetModelIndex(), 0);
+			Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 	}
 }
 //- rouz edit (ChatGPT)
@@ -3135,7 +3136,7 @@ CRenderer::ScanSectorList_RequestFarStaticMapEntityModels(CPtrList *lists)
 
 			gbUseHighAltitudeStaticMapDistance = true;
 			if(ShouldModelBeStreamed(ent, ms_vecCameraPosition))
-				CStreaming::RequestModel(ent->GetModelIndex(), 0);
+				Streaming_RequestModel(ent->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			gbUseHighAltitudeStaticMapDistance = false;
 		}
 	}
@@ -3175,9 +3176,9 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 {
 	if(!IsAreaVisible(ent->m_area))
 		return false;
-	CTimeModelInfo *mi = (CTimeModelInfo *)CModelInfo::GetModelInfo(ent->GetModelIndex());
+	CTimeModelInfo *mi = (CTimeModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(ent->GetModelIndex())); // rouz edit (ChatGPT)
 	if(mi->GetModelType() == MITYPE_TIME)
-		if(!Clock_GetIsTimeInRange(mi->GetTimeOn(), mi->GetTimeOff()))
+		if(!Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) // rouz edit (ChatGPT)
 			return false;
 	float dist = (ent->GetPosition() - campos).Magnitude();
 
@@ -3186,9 +3187,9 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 		return true;
 
 	if(mi->m_noFade)
-		return dist - STREAM_DISTANCE < mi->GetLargestLodDistance();
+		return dist - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 	else
-		return dist - FADE_DISTANCE - STREAM_DISTANCE < mi->GetLargestLodDistance();
+		return dist - FADE_DISTANCE - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 }
 
 void

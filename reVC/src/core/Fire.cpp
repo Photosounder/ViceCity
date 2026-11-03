@@ -138,7 +138,7 @@ int32_t Fire_BackendModel(CEntity *entity)
 FireVector Fire_BackendHeadlights(int32_t model)
 {
     // Enter the original typed native operation or canonical field at the C decision point
-    return Fire_VectorFromNative(((CVehicleModelInfo *)CModelInfo::GetModelInfo(model))->m_positions[CAR_POS_HEADLIGHTS]);
+    return Fire_VectorFromNative(((CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(model)))->m_positions[CAR_POS_HEADLIGHTS]); // rouz edit (ChatGPT)
 }
 FireVector Fire_BackendTransform(CEntity *entity,FireVector position)
 {
@@ -279,16 +279,6 @@ void Fire_BackendVehicleEvent(CEntity *entity,CEntity *source)
 {
     // Enter the original typed native operation or canonical field at the C decision point
     Events_RegisterEntity(EVENT_CAR_SET_ON_FIRE,EVENT_ENTITY_VEHICLE,entity,(CPed *)source,10000);
-}
-bool Fire_BackendBikeModel(int32_t model)
-{
-    // Enter the original typed native operation or canonical field at the C decision point
-    return CModelInfo::IsBikeModel(model);
-}
-bool Fire_BackendCarModel(int32_t model)
-{
-    // Enter the original typed native operation or canonical field at the C decision point
-    return CModelInfo::IsCarModel(model);
 }
 void Fire_BackendFleeOccupants(CEntity *entity)
 {

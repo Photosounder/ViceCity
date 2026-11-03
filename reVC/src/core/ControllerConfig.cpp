@@ -20,7 +20,7 @@
 
 CControllerConfigManager ControlsManager;
 
-CControllerConfigManager::CControllerConfigManager()
+CControllerConfigManager::CControllerConfigManager() : m_aSettings{} // rouz edit (ChatGPT)
 {
 	m_bFirstCapture    = false;
 	m_bMouseAssociated = false;
@@ -35,13 +35,7 @@ void CControllerConfigManager::MakeControllerActionsBlank()
 #ifdef LOAD_INI_SETTINGS
 	ms_padButtonsInited = 0;
 #endif
-	for (int32 i = 0; i < MAX_CONTROLLERTYPES; i++)
-	{
-		for (int32 j = 0; j < MAX_CONTROLLERACTIONS; j++)
-		{
-			ClearSettingsAssociatedWithAction((e_ControllerAction)j, (eControllerType)i);
-		}
-	}
+	Input_BlankControllerActions(m_aSettings); // rouz edit (ChatGPT)
 }
 
 #ifdef RW_GL3
@@ -88,45 +82,25 @@ int MapIdToButtonId(int mapId) {
 
 int32 CControllerConfigManager::GetJoyButtonJustDown()
 {
+    // Preserve platform-specific state selection and original scan bounds
 #ifdef __DINPUT_INCLUDED__
 #ifdef FIX_BUGS
-	for (int32 i = 0; i < MAX_BUTTONS; i++)
+    return Input_FindNewDirectButton(m_NewState.rgbButtons, m_OldState.rgbButtons, MAX_BUTTONS);
 #else
-	for (int32 i = 0; i < JOY_BUTTONS; i++)
+    return Input_FindNewDirectButton(m_NewState.rgbButtons, m_OldState.rgbButtons, JOY_BUTTONS);
 #endif
-	{
-		if (m_NewState.rgbButtons[i] & 0x80 && !(m_OldState.rgbButtons[i] & 0x80))
-			return i + 1;
-	}
 #elif defined RW_GL3
-	if (m_NewState.isGamepad) {
-		for (int32 i = 0; i < MAX_BUTTONS; i++) {
-			if (m_NewState.mappedButtons[i] && !(m_OldState.mappedButtons[i]))
-				return MapIdToButtonId(i);
-		}
-	} else {
-		for (int32 i = 0; i < Min(m_NewState.numButtons, MAX_BUTTONS); i++) {
-			if (m_NewState.buttons[i] && !(m_OldState.buttons[i]))
-				return i + 1;
-		}
-	}
+    if (m_NewState.isGamepad) {
+        // Map the first newly pressed gamepad entry, including a zero mapping
+        int32 index = Input_FindNewMappedButton(m_NewState.mappedButtons, m_OldState.mappedButtons, MAX_BUTTONS);
+        return index < 0 ? 0 : MapIdToButtonId(index);
+    }
+    return Input_FindNewRawButton(m_NewState.buttons, m_OldState.buttons,
+        m_NewState.numButtons, MAX_BUTTONS);
+#else
+    return 0;
 #endif
-	return 0;
-}
-
-void CControllerConfigManager::SaveSettings(int32 file)
-{
-	if (file)
-	{
-		for (int32 i = 0; i < MAX_CONTROLLERTYPES; i++)
-		{
-			for (int32 j = 0; j < MAX_CONTROLLERACTIONS; j++)
-			{
-				FileMgr_Write(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
-			}
-		}
-	}
-}
+} // rouz edit (ChatGPT)
 
 void CControllerConfigManager::LoadSettings(int32 file)
 {
@@ -156,140 +130,133 @@ void CControllerConfigManager::LoadSettings(int32 file)
 		skipVehicleFireWeapon = nVersion < 4;
 		// Set the default settings of VEHICLE_FIREWEAPON
 		if (skipVehicleFireWeapon) {
-			SetControllerKeyAssociatedWithAction(VEHICLE_FIREWEAPON, rsPADINS, KEYBOARD);
-			SetControllerKeyAssociatedWithAction(VEHICLE_FIREWEAPON, rsLCTRL, OPTIONAL_EXTRA);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON, rsPADINS, KEYBOARD); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON, rsLCTRL, OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 			if (m_bMouseAssociated)
-				SetMouseButtonAssociatedWithAction(VEHICLE_FIREWEAPON, 1);
+				Input_SetMouseButtonAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON, 1); // rouz edit (ChatGPT)
 		}
 #endif
 
-		for (int32 i = 0; i < MAX_CONTROLLERTYPES; i++)
-		{
-			for (int32 j = 0; j < MAX_CONTROLLERACTIONS; j++)
-			{
 #ifdef BIND_VEHICLE_FIREWEAPON
-				// Skip file read
-				if (skipVehicleFireWeapon && j == VEHICLE_FIREWEAPON)
-					continue;
+        Input_ReadControllerBindings(file, ControlsManager.m_aSettings, skipVehicleFireWeapon); // rouz edit (ChatGPT)
+#else
+        Input_ReadControllerBindings(file, ControlsManager.m_aSettings, false); // rouz edit (ChatGPT)
 #endif
-				FileMgr_Read(file, (char *)&ControlsManager.m_aSettings[j][i], sizeof(tControllerConfigBind));
-			}
-		}
 	}
 }
 
 void CControllerConfigManager::InitDefaultControlConfiguration()
 {
-	SetControllerKeyAssociatedWithAction    (VEHICLE_LOOKLEFT,                    rsPADEND,   KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_LOOKLEFT,                    'Q',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKLEFT,                    rsPADEND,   KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKLEFT,                    'Q',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 										    						              
-	SetControllerKeyAssociatedWithAction    (VEHICLE_LOOKRIGHT,                   rsPADDOWN,  KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_LOOKRIGHT,                   'E',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKRIGHT,                   rsPADDOWN,  KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKRIGHT,                   'E',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																              
 	if ( _dwOperatingSystemVersion == OS_WIN98 )											              
-		SetControllerKeyAssociatedWithAction(VEHICLE_HORN,                        rsSHIFT,    OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?											              
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN,                        rsSHIFT,    OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?											               // rouz edit (ChatGPT)
 	else		
 	{
-		SetControllerKeyAssociatedWithAction(VEHICLE_HORN,                        rsLSHIFT,   OPTIONAL_EXTRA);
-		SetControllerKeyAssociatedWithAction(VEHICLE_HORN,                        rsRSHIFT,   KEYBOARD);
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN,                        rsLSHIFT,   OPTIONAL_EXTRA); // rouz edit (ChatGPT)
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN,                        rsRSHIFT,   KEYBOARD); // rouz edit (ChatGPT)
 	}													              
 																	              
-	SetControllerKeyAssociatedWithAction    (VEHICLE_HANDBRAKE,                   rsRCTRL,    KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_HANDBRAKE,                   ' ',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE,                   rsRCTRL,    KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE,                   ' ',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 															                      
-	SetControllerKeyAssociatedWithAction    (VEHICLE_ENTER_EXIT,                  rsENTER,    KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_ENTER_EXIT,                  'F',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ENTER_EXIT,                  rsENTER,    KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ENTER_EXIT,                  'F',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 										    					                  
-	SetControllerKeyAssociatedWithAction    (VEHICLE_ACCELERATE,                  rsUP,       KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_ACCELERATE,                  'W',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ACCELERATE,                  rsUP,       KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ACCELERATE,                  'W',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (VEHICLE_CHANGE_RADIO_STATION,        rsINS,      KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_CHANGE_RADIO_STATION,        'R',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION,        rsINS,      KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION,        'R',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (VEHICLE_BRAKE,                       rsDOWN,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_BRAKE,                       'S',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_BRAKE,                       rsDOWN,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_BRAKE,                       'S',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (TOGGLE_SUBMISSIONS,                  rsPLUS,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (TOGGLE_SUBMISSIONS,                  rsCAPSLK,   OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, TOGGLE_SUBMISSIONS,                  rsPLUS,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, TOGGLE_SUBMISSIONS,                  rsCAPSLK,   OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (GO_LEFT,                             rsLEFT,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (GO_LEFT,                             'A',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_LEFT,                             rsLEFT,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_LEFT,                             'A',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (GO_RIGHT,                            rsRIGHT,    KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (GO_RIGHT,                            'D',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_RIGHT,                            rsRIGHT,    KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_RIGHT,                            'D',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (GO_FORWARD,                          rsUP,       KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (GO_FORWARD,                          'W',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_FORWARD,                          rsUP,       KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_FORWARD,                          'W',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (GO_BACK,                             rsDOWN,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (GO_BACK,                             'S',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_BACK,                             rsDOWN,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_BACK,                             'S',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (NETWORK_TALK,                        'T',        KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, NETWORK_TALK,                        'T',        KEYBOARD); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (PED_LOOKBEHIND,                      rsPADEND,   KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (PED_LOOKBEHIND,                      rsCAPSLK,   OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOOKBEHIND,                      rsPADEND,   KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOOKBEHIND,                      rsCAPSLK,   OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_DUCK,                            'C',        KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_DUCK,                            'C',        KEYBOARD); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (PED_FIREWEAPON,                      rsPADINS,   KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (PED_FIREWEAPON,                      rsLCTRL,    OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON,                      rsPADINS,   KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON,                      rsLCTRL,    OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 #ifdef BIND_VEHICLE_FIREWEAPON
-	SetControllerKeyAssociatedWithAction    (VEHICLE_FIREWEAPON,                  rsPADINS,   KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (VEHICLE_FIREWEAPON,                  rsLCTRL,    OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON,                  rsPADINS,   KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON,                  rsLCTRL,    OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 #endif
-	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_LEFT,               rsPADDEL,   KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_LEFT,               rsPADDEL,   KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_CYCLE_WEAPON_RIGHT,              rsPADENTER, OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_RIGHT,              rsPADENTER, OPTIONAL_EXTRA); // BUG: must be KEYBOARD ? // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (PED_LOCK_TARGET,                     rsDEL,      KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOCK_TARGET,                     rsDEL,      KEYBOARD); // rouz edit (ChatGPT)
 																		          
-	SetControllerKeyAssociatedWithAction    (PED_JUMPING,                         rsRCTRL,    KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (PED_JUMPING,                         ' ',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_JUMPING,                         rsRCTRL,    KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_JUMPING,                         ' ',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_ANSWER_PHONE,                    rsTAB,      KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_ANSWER_PHONE,                    rsTAB,      KEYBOARD); // rouz edit (ChatGPT)
 																              
 	if ( _dwOperatingSystemVersion == OS_WIN98 )											              
-		SetControllerKeyAssociatedWithAction(PED_SPRINT,                          rsSHIFT,    OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?											              
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                          rsSHIFT,    OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?											               // rouz edit (ChatGPT)
 	else		
 	{
-		SetControllerKeyAssociatedWithAction(PED_SPRINT,                          rsLSHIFT,   OPTIONAL_EXTRA);
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                          rsLSHIFT,   OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 #ifndef FIX_BUGS
-		SetControllerKeyAssociatedWithAction(PED_SPRINT,                          rsRSHIFT,   OPTIONAL_EXTRA); // BUG: must be KEYBOARD
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                          rsRSHIFT,   OPTIONAL_EXTRA); // BUG: must be KEYBOARD // rouz edit (ChatGPT)
 #else
-		SetControllerKeyAssociatedWithAction(PED_SPRINT,                          rsRSHIFT,   KEYBOARD);
+		Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                          rsRSHIFT,   KEYBOARD); // rouz edit (ChatGPT)
 #endif
 	}
 
-	SetControllerKeyAssociatedWithAction    (PED_CYCLE_TARGET_LEFT,               '[',        KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_TARGET_LEFT,               '[',        KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_CYCLE_TARGET_RIGHT,              ']',        OPTIONAL_EXTRA); // BUG: must be KEYBOARD ?
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_TARGET_RIGHT,              ']',        OPTIONAL_EXTRA); // BUG: must be KEYBOARD ? // rouz edit (ChatGPT)
 																			      
-	SetControllerKeyAssociatedWithAction    (PED_CENTER_CAMERA_BEHIND_PLAYER,     '#',        KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CENTER_CAMERA_BEHIND_PLAYER,     '#',        KEYBOARD); // rouz edit (ChatGPT)
 	
-	SetControllerKeyAssociatedWithAction    (PED_SNIPER_ZOOM_IN,                  rsPGUP,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (PED_SNIPER_ZOOM_IN,                  'Z',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN,                  rsPGUP,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN,                  'Z',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (PED_SNIPER_ZOOM_OUT,                 rsPGDN,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (PED_SNIPER_ZOOM_OUT,                 'X',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT,                 rsPGDN,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT,                 'X',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (PED_1RST_PERSON_LOOK_LEFT,           rsPADLEFT,  KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_LEFT,           rsPADLEFT,  KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_1RST_PERSON_LOOK_RIGHT,          rsPADRIGHT, KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_RIGHT,          rsPADRIGHT, KEYBOARD); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (PED_1RST_PERSON_LOOK_UP,             rsPADUP,    KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_UP,             rsPADUP,    KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (PED_1RST_PERSON_LOOK_DOWN,           rsPAD5,     KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_DOWN,           rsPAD5,     KEYBOARD); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (VEHICLE_TURRETLEFT,                  rsPADLEFT,  KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETLEFT,                  rsPADLEFT,  KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (VEHICLE_TURRETRIGHT,                 rsPAD5,     KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETRIGHT,                 rsPAD5,     KEYBOARD); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (VEHICLE_TURRETUP,                    rsPADPGUP,  KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETUP,                    rsPADPGUP,  KEYBOARD); // rouz edit (ChatGPT)
 
-	SetControllerKeyAssociatedWithAction    (VEHICLE_TURRETDOWN,                  rsPADRIGHT, KEYBOARD);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETDOWN,                  rsPADRIGHT, KEYBOARD); // rouz edit (ChatGPT)
 										    
-	SetControllerKeyAssociatedWithAction    (CAMERA_CHANGE_VIEW_ALL_SITUATIONS,   rsHOME,     KEYBOARD);
-	SetControllerKeyAssociatedWithAction    (CAMERA_CHANGE_VIEW_ALL_SITUATIONS,   'V',        OPTIONAL_EXTRA);
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, CAMERA_CHANGE_VIEW_ALL_SITUATIONS,   rsHOME,     KEYBOARD); // rouz edit (ChatGPT)
+	Input_SetControllerKeyAssociatedWithAction(m_aSettings, CAMERA_CHANGE_VIEW_ALL_SITUATIONS,   'V',        OPTIONAL_EXTRA); // rouz edit (ChatGPT)
 
 	for (int32 i = 0; i < MAX_SIMS; i++)
 	{
@@ -305,37 +272,37 @@ void CControllerConfigManager::InitDefaultControlConfigMouse(CMouseControllerSta
 	if (availableButtons.LMB)
 	{
 		m_bMouseAssociated = true;
-		SetMouseButtonAssociatedWithAction(PED_FIREWEAPON,               1);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_FIREWEAPON,               1); // rouz edit (ChatGPT)
 #ifdef BIND_VEHICLE_FIREWEAPON	
-		SetMouseButtonAssociatedWithAction(VEHICLE_FIREWEAPON,           1);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON,           1); // rouz edit (ChatGPT)
 #endif
 	}
 
 	if (availableButtons.RMB)
 	{
-		SetMouseButtonAssociatedWithAction(PED_LOCK_TARGET,              3);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_LOCK_TARGET,              3); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(VEHICLE_HANDBRAKE,            3);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE,            3); // rouz edit (ChatGPT)
 	}
 
 	if (availableButtons.MMB)
 	{
-		SetMouseButtonAssociatedWithAction(VEHICLE_LOOKBEHIND,           2);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, VEHICLE_LOOKBEHIND,           2); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(PED_LOOKBEHIND,               2);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_LOOKBEHIND,               2); // rouz edit (ChatGPT)
 	}
 
 	if (availableButtons.WHEELUP || availableButtons.WHEELDN)
 	{
-		SetMouseButtonAssociatedWithAction(PED_CYCLE_WEAPON_LEFT,        4);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_LEFT,        4); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(PED_CYCLE_WEAPON_RIGHT,       5);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_RIGHT,       5); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION, 4);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION, 4); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(PED_SNIPER_ZOOM_IN, 4);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN, 4); // rouz edit (ChatGPT)
 
-		SetMouseButtonAssociatedWithAction(PED_SNIPER_ZOOM_OUT, 5);
+		Input_SetMouseButtonAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT, 5); // rouz edit (ChatGPT)
 	}
 }
 
@@ -385,50 +352,50 @@ void CControllerConfigManager::InitDefaultControlConfigJoyPad(uint32 buttons)
 		switch (btn)
 		{
 		IF_BTN_IN_RANGE(16)
-			SetControllerKeyAssociatedWithAction(GO_LEFT,                           16, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_LEFT,                           16, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(15)											                        
-			SetControllerKeyAssociatedWithAction(GO_BACK,                           15, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_BACK,                           15, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(14)											                        
-			SetControllerKeyAssociatedWithAction(GO_RIGHT,                          14, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_RIGHT,                          14, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(13)											                        
-			SetControllerKeyAssociatedWithAction(GO_FORWARD,                        13, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_FORWARD,                        13, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(12)													                
 		IF_BTN_IN_RANGE(11)													                
-			SetControllerKeyAssociatedWithAction(PED_LOOKBEHIND,                    11, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(TOGGLE_SUBMISSIONS,                11, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOOKBEHIND,                    11, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, TOGGLE_SUBMISSIONS,                11, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(10)
-			SetControllerKeyAssociatedWithAction(VEHICLE_HORN,                      10, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_DUCK,                          10, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN,                      10, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_DUCK,                          10, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(9)
-			SetControllerKeyAssociatedWithAction(CAMERA_CHANGE_VIEW_ALL_SITUATIONS,  9, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, CAMERA_CHANGE_VIEW_ALL_SITUATIONS,  9, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(8)
-			SetControllerKeyAssociatedWithAction(VEHICLE_HANDBRAKE,                  8, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_LOCK_TARGET,                    8, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE,                  8, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOCK_TARGET,                    8, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(7)
-			SetControllerKeyAssociatedWithAction(PED_ANSWER_PHONE,                   7, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION,       7, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_ANSWER_PHONE,                   7, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION,       7, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(6)
-			SetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_RIGHT,             6, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_LOOKRIGHT,                  6, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_RIGHT,             6, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKRIGHT,                  6, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(5)
-			SetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_LEFT,              5, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_LOOKLEFT,                   5, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_LEFT,              5, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKLEFT,                   5, JOYSTICK); // rouz edit (ChatGPT)
 		/*******************************************************************************************/
 		IF_BTN_IN_RANGE(4)
-			SetControllerKeyAssociatedWithAction(VEHICLE_BRAKE,                      4, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_JUMPING,                        4, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_IN,                 4, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_BRAKE,                      4, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_JUMPING,                        4, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN,                 4, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(3)
-			SetControllerKeyAssociatedWithAction(VEHICLE_ACCELERATE,                 3, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SPRINT,                         3, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_OUT,                3, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ACCELERATE,                 3, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                         3, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT,                3, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(2)
-			SetControllerKeyAssociatedWithAction(PED_FIREWEAPON,                     2, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON,                     2, JOYSTICK); // rouz edit (ChatGPT)
 #ifdef BIND_VEHICLE_FIREWEAPON	
-			SetControllerKeyAssociatedWithAction(VEHICLE_FIREWEAPON,                 2, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON,                 2, JOYSTICK); // rouz edit (ChatGPT)
 #endif
 		IF_BTN_IN_RANGE(1)
-			SetControllerKeyAssociatedWithAction(VEHICLE_ENTER_EXIT,                 1, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ENTER_EXIT,                 1, JOYSTICK); // rouz edit (ChatGPT)
 		/*******************************************************************************************/
 		}
 	}
@@ -437,49 +404,49 @@ void CControllerConfigManager::InitDefaultControlConfigJoyPad(uint32 buttons)
 		switch (btn)
 		{
 		IF_BTN_IN_RANGE(16)
-			SetControllerKeyAssociatedWithAction(GO_LEFT,                           16, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_LEFT,                           16, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(15)
-			SetControllerKeyAssociatedWithAction(GO_BACK,                           15, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_BACK,                           15, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(14)
-			SetControllerKeyAssociatedWithAction(GO_RIGHT,                          14, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_RIGHT,                          14, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(13)
-			SetControllerKeyAssociatedWithAction(GO_FORWARD,                        13, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, GO_FORWARD,                        13, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(12)
 		IF_BTN_IN_RANGE(11)
-			SetControllerKeyAssociatedWithAction(PED_LOOKBEHIND,                    11, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(TOGGLE_SUBMISSIONS,                11, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOOKBEHIND,                    11, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, TOGGLE_SUBMISSIONS,                11, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(10)
-			SetControllerKeyAssociatedWithAction(VEHICLE_HORN,                      10, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_DUCK,                          10, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN,                      10, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_DUCK,                          10, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(9)
-			SetControllerKeyAssociatedWithAction(CAMERA_CHANGE_VIEW_ALL_SITUATIONS,  9, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, CAMERA_CHANGE_VIEW_ALL_SITUATIONS,  9, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(8)
-			SetControllerKeyAssociatedWithAction(VEHICLE_HANDBRAKE,                  8, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_LOCK_TARGET,                    8, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE,                  8, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_LOCK_TARGET,                    8, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(7)
-			SetControllerKeyAssociatedWithAction(PED_ANSWER_PHONE,                   7, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION,       7, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_ANSWER_PHONE,                   7, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION,       7, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(6)
-			SetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_RIGHT,             6, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_LOOKRIGHT,                  6, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_RIGHT,             6, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKRIGHT,                  6, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(5)
-			SetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_LEFT,              5, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(VEHICLE_LOOKLEFT,                   5, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_LEFT,              5, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKLEFT,                   5, JOYSTICK); // rouz edit (ChatGPT)
 		/*******************************************************************************************/
 		IF_BTN_IN_RANGE(4)
-			SetControllerKeyAssociatedWithAction(VEHICLE_ENTER_EXIT,                 4, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ENTER_EXIT,                 4, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(3)
-			SetControllerKeyAssociatedWithAction(VEHICLE_BRAKE,                      3, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_JUMPING,                        3, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_IN,                 3, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_BRAKE,                      3, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_JUMPING,                        3, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN,                 3, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(2)
-			SetControllerKeyAssociatedWithAction(VEHICLE_ACCELERATE,                 2, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SPRINT,                         2, JOYSTICK);
-			SetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_OUT,                2, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ACCELERATE,                 2, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT,                         2, JOYSTICK); // rouz edit (ChatGPT)
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT,                2, JOYSTICK); // rouz edit (ChatGPT)
 		IF_BTN_IN_RANGE(1)
-			SetControllerKeyAssociatedWithAction(PED_FIREWEAPON,                     1, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON,                     1, JOYSTICK); // rouz edit (ChatGPT)
 #ifdef BIND_VEHICLE_FIREWEAPON
-			SetControllerKeyAssociatedWithAction(VEHICLE_FIREWEAPON,                 1, JOYSTICK);
+			Input_SetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON,                 1, JOYSTICK); // rouz edit (ChatGPT)
 #endif
 		/*******************************************************************************************/
 		}
@@ -727,33 +694,33 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown(int32 button, 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 button, eControllerType type, CControllerState &state)
 {
 #ifdef BIND_VEHICLE_FIREWEAPON
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_FIREWEAPON, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_FIREWEAPON, type)) // rouz edit (ChatGPT)
 		state.Circle = 255;
 #endif
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_LOOKBEHIND, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKBEHIND, type)) // rouz edit (ChatGPT)
 	{
 		state.LeftShoulder2 = 255;
 		state.RightShoulder2 = 255;
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_LOOKLEFT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKLEFT, type)) // rouz edit (ChatGPT)
 		state.LeftShoulder2 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_LOOKRIGHT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_LOOKRIGHT, type)) // rouz edit (ChatGPT)
 		state.RightShoulder2 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_HORN, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HORN, type)) // rouz edit (ChatGPT)
 		state.LeftShock = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_HANDBRAKE, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_HANDBRAKE, type)) // rouz edit (ChatGPT)
 		state.RightShoulder1 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_ACCELERATE, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ACCELERATE, type)) // rouz edit (ChatGPT)
 		state.Cross = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_CHANGE_RADIO_STATION, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_CHANGE_RADIO_STATION, type)) // rouz edit (ChatGPT)
 		state.LeftShoulder1 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_BRAKE, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_BRAKE, type)) // rouz edit (ChatGPT)
 		state.Square = 255;
-	if (button == GetControllerKeyAssociatedWithAction(TOGGLE_SUBMISSIONS, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, TOGGLE_SUBMISSIONS, type)) // rouz edit (ChatGPT)
 		state.RightShock = 255;
 	
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_TURRETLEFT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETLEFT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.RightStickX == 128 || m_aSimCheckers[SIM_X2][type])
 		{
@@ -766,7 +733,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 		}
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_TURRETRIGHT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETRIGHT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.RightStickX == -128 || m_aSimCheckers[SIM_X2][type])
 		{
@@ -789,7 +756,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 	}
 
 	
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_TURRETUP, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETUP, type)) // rouz edit (ChatGPT)
 	{
 		if (isDodo == true)
 		{
@@ -813,7 +780,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 		}
 	}
 	
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_TURRETDOWN, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_TURRETDOWN, type)) // rouz edit (ChatGPT)
 	{
 		if (isDodo == true)
 		{
@@ -838,38 +805,38 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_Driving(int32 
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstPersonOnly(int32 button, eControllerType type, CControllerState &state)
 {
-	if (button == GetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_IN, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_IN, type)) // rouz edit (ChatGPT)
 		state.Square = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_SNIPER_ZOOM_OUT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_SNIPER_ZOOM_OUT, type)) // rouz edit (ChatGPT)
 		state.Cross = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_DUCK, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_DUCK, type)) // rouz edit (ChatGPT)
 		state.LeftShock = 255;
 }
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_ThirdPersonOnly(int32 button, eControllerType type, CControllerState &state)
 {
-	if (button == GetControllerKeyAssociatedWithAction(PED_LOOKBEHIND, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_LOOKBEHIND, type)) // rouz edit (ChatGPT)
 		state.RightShock = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_JUMPING, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_JUMPING, type)) // rouz edit (ChatGPT)
 		state.Square = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_ANSWER_PHONE, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_ANSWER_PHONE, type)) // rouz edit (ChatGPT)
 		state.LeftShoulder1 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_LEFT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_LEFT, type)) // rouz edit (ChatGPT)
 		state.LeftShoulder2 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_WEAPON_RIGHT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_WEAPON_RIGHT, type)) // rouz edit (ChatGPT)
 		state.RightShoulder2 = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_SPRINT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_SPRINT, type)) // rouz edit (ChatGPT)
 		state.Cross = 255;
-	if (button == GetControllerKeyAssociatedWithAction(PED_DUCK, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_DUCK, type)) // rouz edit (ChatGPT)
 		state.LeftShock = 255;
 	
 	if (FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC)
 	{
-		if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_TARGET_LEFT, type))
+		if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_TARGET_LEFT, type)) // rouz edit (ChatGPT)
 			state.LeftShoulder2 = 255;
-		if (button == GetControllerKeyAssociatedWithAction(PED_CYCLE_TARGET_RIGHT, type))
+		if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_CYCLE_TARGET_RIGHT, type)) // rouz edit (ChatGPT)
 			state.RightShoulder2 = 255;
-		if (button == GetControllerKeyAssociatedWithAction(PED_CENTER_CAMERA_BEHIND_PLAYER, type))
+		if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_CENTER_CAMERA_BEHIND_PLAYER, type)) // rouz edit (ChatGPT)
 			state.LeftShoulder1 = 255;
 	}
 }
@@ -879,13 +846,13 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 	CPad *pad = CPad::GetPad(PAD1);
 
 #ifdef BIND_VEHICLE_FIREWEAPON
-	if (button == GetControllerKeyAssociatedWithAction(PED_FIREWEAPON, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON, type)) // rouz edit (ChatGPT)
 		state.Circle = 255;
 #endif
-	if (button == GetControllerKeyAssociatedWithAction(PED_LOCK_TARGET, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_LOCK_TARGET, type)) // rouz edit (ChatGPT)
 		state.RightShoulder1 = 255;
 
-	if (button == GetControllerKeyAssociatedWithAction(GO_FORWARD, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, GO_FORWARD, type)) // rouz edit (ChatGPT)
 	{
 		if (state.DPadDown || m_aSimCheckers[SIM_Y1][type])
 		{
@@ -897,7 +864,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 			state.DPadUp = 255;
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(GO_BACK, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, GO_BACK, type)) // rouz edit (ChatGPT)
 	{
 		if (state.DPadUp || m_aSimCheckers[SIM_Y1][type])
 		{
@@ -909,7 +876,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 			state.DPadDown = 255;
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(PED_1RST_PERSON_LOOK_LEFT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_LEFT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.RightStickX == 128 || m_aSimCheckers[SIM_X2][type])
 		{
@@ -922,7 +889,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 		}
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(PED_1RST_PERSON_LOOK_RIGHT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_RIGHT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.RightStickX == -128 || m_aSimCheckers[SIM_X2][type])
 		{
@@ -935,7 +902,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 
 	if (FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC)
 	{
-		if (button == GetControllerKeyAssociatedWithAction(PED_1RST_PERSON_LOOK_UP, type))
+		if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_UP, type)) // rouz edit (ChatGPT)
 		{
 			if (state.RightStickY == -128 || m_aSimCheckers[SIM_Y2][type])
 			{
@@ -946,7 +913,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 				state.RightStickY = 128;
 		}
 
-		if (button == GetControllerKeyAssociatedWithAction(PED_1RST_PERSON_LOOK_DOWN, type))
+		if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_1RST_PERSON_LOOK_DOWN, type)) // rouz edit (ChatGPT)
 		{
 			if (state.RightStickY == 128 || m_aSimCheckers[SIM_Y2][type])
 			{
@@ -961,15 +928,15 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_FirstAndThirdP
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int32 button, eControllerType type, CControllerState &state)
 {
-	if (button == GetControllerKeyAssociatedWithAction(CAMERA_CHANGE_VIEW_ALL_SITUATIONS, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, CAMERA_CHANGE_VIEW_ALL_SITUATIONS, type)) // rouz edit (ChatGPT)
 		state.Select = 255;
 
 #ifndef BIND_VEHICLE_FIREWEAPON
-	if (button == GetControllerKeyAssociatedWithAction(PED_FIREWEAPON, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, PED_FIREWEAPON, type)) // rouz edit (ChatGPT)
 		state.Circle = 255;
 #endif
 
-	if (button == GetControllerKeyAssociatedWithAction(GO_LEFT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, GO_LEFT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.DPadRight || m_aSimCheckers[SIM_X1][type])
 		{
@@ -981,7 +948,7 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int3
 			state.DPadLeft = 255;
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(GO_RIGHT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, GO_RIGHT, type)) // rouz edit (ChatGPT)
 	{
 		if (state.DPadLeft || m_aSimCheckers[SIM_X1][type])
 		{
@@ -993,13 +960,13 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonDown_AllStates(int3
 			state.DPadRight = 255;
 	}
 
-	if (button == GetControllerKeyAssociatedWithAction(NETWORK_TALK, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, NETWORK_TALK, type)) // rouz edit (ChatGPT)
 		state.NetworkTalk = 255;
 }
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonDown_VehicleAndThirdPersonOnly(int32 button, eControllerType type, CControllerState &state)
 {
-	if (button == GetControllerKeyAssociatedWithAction(VEHICLE_ENTER_EXIT, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, VEHICLE_ENTER_EXIT, type)) // rouz edit (ChatGPT)
 		state.Triangle = 255;
 }
 
@@ -1148,548 +1115,51 @@ void CControllerConfigManager::AffectControllerStateOn_ButtonUp(int32 button, eC
 
 void CControllerConfigManager::AffectControllerStateOn_ButtonUp_All_Player_States(int32 button, eControllerType type, CControllerState &state)
 {
-	if (button == GetControllerKeyAssociatedWithAction(NETWORK_TALK, type))
+	if (button == Input_GetControllerKeyAssociatedWithAction(m_aSettings, NETWORK_TALK, type)) // rouz edit (ChatGPT)
 		state.NetworkTalk = 0;
 }
 
-void CControllerConfigManager::AffectPadFromKeyBoard()
+//+ rouz edit (ChatGPT)
+void InputConfig_TranslateShift(void)
 {
-	RsKeyCodes kc;
-	_InputTranslateShiftKeyUpDown(&kc);
-
-	bool processdown = false;
-	if (!CPad::m_bMapPadOneToPadTwo && !FrontEndMenuManager.GetIsMenuActive())
-		processdown = true;
-	
-	for (int32 i = 0; i < MAX_CONTROLLERACTIONS; i++)
-	{
-		int32 key = GetControllerKeyAssociatedWithAction((e_ControllerAction)i, KEYBOARD);
-		if (GetIsKeyboardKeyDown((RsKeyCodes)key) && processdown)
-			AffectControllerStateOn_ButtonDown(key, KEYBOARD);
-
-		int32 extrakey = GetControllerKeyAssociatedWithAction((e_ControllerAction)i, OPTIONAL_EXTRA);
-		if (GetIsKeyboardKeyDown((RsKeyCodes)extrakey) && processdown)
-			AffectControllerStateOn_ButtonDown(extrakey, OPTIONAL_EXTRA);
-
-		if (!GetIsKeyboardKeyDown((RsKeyCodes)key))
-			AffectControllerStateOn_ButtonUp(key, KEYBOARD);
-		else if ( !GetIsKeyboardKeyDown((RsKeyCodes)extrakey))
-			AffectControllerStateOn_ButtonUp(key, OPTIONAL_EXTRA);
-	}
+    // Preserve the original shift translation call
+    RsKeyCodes code;
+    _InputTranslateShiftKeyUpDown(&code);
 }
-
-void CControllerConfigManager::AffectPadFromMouse()
+bool InputConfig_MenuActive(void)
 {
-	bool processdown = false;
-	if (!CPad::m_bMapPadOneToPadTwo && !FrontEndMenuManager.GetIsMenuActive())
-		processdown = true;
-	
-	for (int32 i = 0; i < MAX_CONTROLLERACTIONS; i++)
-	{
-		int32 button = GetControllerKeyAssociatedWithAction((e_ControllerAction)i, MOUSE);
-		if (GetIsMouseButtonDown((RsKeyCodes)button) && processdown)
-			AffectControllerStateOn_ButtonDown(button, MOUSE);
-		if (GetIsMouseButtonUp((RsKeyCodes)button))
-			AffectControllerStateOn_ButtonUp(button, MOUSE);
-	}
+    // Query the original menu state at the same decision point
+    return FrontEndMenuManager.GetIsMenuActive();
 }
-
-void CControllerConfigManager::ClearSimButtonPressCheckers()
+void InputConfig_ButtonDown(int32_t key, int32_t type)
 {
-	for (int32 i = 0; i < MAX_SIMS; i++)
-	{
-		m_aSimCheckers[i][KEYBOARD]       = false;
-		m_aSimCheckers[i][OPTIONAL_EXTRA] = false;
-		m_aSimCheckers[i][MOUSE]          = false;
-		m_aSimCheckers[i][JOYSTICK]       = false;
-	}
+    // Dispatch the original controller button-down operation
+    ControlsManager.AffectControllerStateOn_ButtonDown(key, (eControllerType)type);
 }
-
-bool CControllerConfigManager::GetIsKeyboardKeyDown(RsKeyCodes keycode)
+void InputConfig_ButtonUp(int32_t key, int32_t type)
 {
-	if (keycode < 255)
-	{
-		if (CPad::GetPad(PAD1)->GetChar(keycode))
-			return true;
-	}
-
-	for (int32 i = 0; i < 12; i++)
-	{
-		if (i + rsF1 == keycode)
-		{
-			if (CPad::GetPad(PAD1)->GetF(i))
-				return true;
-		}
-	}
-
-	switch (keycode)
-	{
-	case rsESC:
-		if (CPad::GetPad(PAD1)->GetEscape())
-			return true;
-		break;
-	case rsINS:
-		if (CPad::GetPad(PAD1)->GetInsert())
-			return true;
-		break;
-	case rsDEL:
-		if (CPad::GetPad(PAD1)->GetDelete())
-			return true;
-		break;
-	case rsHOME:
-		if (CPad::GetPad(PAD1)->GetHome())
-			return true;
-		break;
-	case rsEND:
-		if (CPad::GetPad(PAD1)->GetEnd())
-			return true;
-		break;
-	case rsPGUP:
-		if (CPad::GetPad(PAD1)->GetPageUp())
-			return true;
-		break;
-	case rsPGDN:
-		if (CPad::GetPad(PAD1)->GetPageDown())
-			return true;
-		break;
-	case rsUP:
-		if (CPad::GetPad(PAD1)->GetUp())
-			return true;
-		break;
-	case rsDOWN:
-		if (CPad::GetPad(PAD1)->GetDown())
-			return true;
-		break;
-	case rsLEFT:
-		if (CPad::GetPad(PAD1)->GetLeft())
-			return true;
-		break;
-	case rsRIGHT:
-		if (CPad::GetPad(PAD1)->GetRight())
-			return true;
-		break;
-	case rsSCROLL:
-		if (CPad::GetPad(PAD1)->GetScrollLock())
-			return true;
-		break;
-	case rsPAUSE:
-		if (CPad::GetPad(PAD1)->GetPause())
-			return true;
-		break;
-	case rsNUMLOCK:
-		if (CPad::GetPad(PAD1)->GetNumLock())
-			return true;
-		break;
-	case rsDIVIDE:
-		if (CPad::GetPad(PAD1)->GetDivide())
-			return true;
-		break;
-	case rsTIMES:
-		if (CPad::GetPad(PAD1)->GetTimes())
-			return true;
-		break;
-	case rsMINUS:
-		if (CPad::GetPad(PAD1)->GetMinus())
-			return true;
-		break;
-	case rsPLUS:
-		if (CPad::GetPad(PAD1)->GetPlus())
-			return true;
-		break;
-	case rsPADENTER:
-		if (CPad::GetPad(PAD1)->GetPadEnter())
-			return true;
-		break;
-	case rsPADDEL:
-		if (CPad::GetPad(PAD1)->GetPadDel())
-			return true;
-		break;
-	case rsPADEND:
-		if (CPad::GetPad(PAD1)->GetPad1())
-			return true;
-		break;
-	case rsPADDOWN:
-		if (CPad::GetPad(PAD1)->GetPad2())
-			return true;
-		break;
-	case rsPADPGDN:
-		if (CPad::GetPad(PAD1)->GetPad3())
-			return true;
-		break;
-	case rsPADLEFT:
-		if (CPad::GetPad(PAD1)->GetPad4())
-			return true;
-		break;
-	case rsPAD5:
-		if (CPad::GetPad(PAD1)->GetPad5())
-			return true;
-		break;
-	case rsPADRIGHT:
-		if (CPad::GetPad(PAD1)->GetPad6())
-			return true;
-		break;
-	case rsPADHOME:
-		if (CPad::GetPad(PAD1)->GetPad7())
-			return true;
-		break;
-	case rsPADUP:
-		if (CPad::GetPad(PAD1)->GetPad8())
-			return true;
-		break;
-	case rsPADPGUP:
-		if (CPad::GetPad(PAD1)->GetPad9())
-			return true;
-		break;
-	case rsPADINS:
-		if (CPad::GetPad(PAD1)->GetPad0())
-			return true;
-		break;
-	case rsBACKSP:
-		if (CPad::GetPad(PAD1)->GetBackspace())
-			return true;
-		break;
-	case rsTAB:
-		if (CPad::GetPad(PAD1)->GetTab())
-			return true;
-		break;
-	case rsCAPSLK:
-		if (CPad::GetPad(PAD1)->GetCapsLock())
-			return true;
-		break;
-	case rsENTER:
-		if (CPad::GetPad(PAD1)->GetEnter())
-			return true;
-		break;
-	case rsLSHIFT:
-		if (CPad::GetPad(PAD1)->GetLeftShift())
-			return true;
-		break;
-	case rsSHIFT:
-		if (CPad::GetPad(PAD1)->GetShift())
-			return true;
-		break;
-	case rsRSHIFT:
-		if (CPad::GetPad(PAD1)->GetRightShift())
-			return true;
-		break;
-	case rsLCTRL:
-		if (CPad::GetPad(PAD1)->GetLeftCtrl())
-			return true;
-		break;
-	case rsRCTRL:
-		if (CPad::GetPad(PAD1)->GetRightCtrl())
-			return true;
-		break;
-	case rsLALT:
-		if (CPad::GetPad(PAD1)->GetLeftAlt())
-			return true;
-		break;
-	case rsRALT:
-		if (CPad::GetPad(PAD1)->GetRightAlt())
-			return true;
-		break;
-	case rsLWIN:
-		if (CPad::GetPad(PAD1)->GetLeftWin())
-			return true;
-		break;
-	case rsRWIN:
-		if (CPad::GetPad(PAD1)->GetRightWin())
-			return true;
-		break;
-	case rsAPPS:
-		if (CPad::GetPad(PAD1)->GetApps())
-			return true;
-		break;
-	default: break;
-	}
-
-	return false;
+    // Dispatch the original controller button-up operation
+    ControlsManager.AffectControllerStateOn_ButtonUp(key, (eControllerType)type);
 }
+//- rouz edit (ChatGPT)
 
-bool CControllerConfigManager::GetIsKeyboardKeyJustDown(RsKeyCodes keycode)
-{
-	if (keycode < 255)
-	{
-		if (CPad::GetPad(PAD1)->GetCharJustDown(keycode))
-			return true;
-	}
 
-	for (int32 i = 0; i < 12; i++)
-	{
-		if (i + rsF1 == keycode)
-		{
-			if (CPad::GetPad(PAD1)->GetFJustDown(i))
-				return true;
-		}
-	}
 
-	switch (keycode)
-	{
-	case rsESC:
-		if (CPad::GetPad(PAD1)->GetEscapeJustDown())
-			return true;
-		break;
-	case rsINS:
-		if (CPad::GetPad(PAD1)->GetInsertJustDown())
-			return true;
-		break;
-	case rsDEL:
-		if (CPad::GetPad(PAD1)->GetDeleteJustDown())
-			return true;
-		break;
-	case rsHOME:
-		if (CPad::GetPad(PAD1)->GetHomeJustDown())
-			return true;
-		break;
-	case rsEND:
-		if (CPad::GetPad(PAD1)->GetEndJustDown())
-			return true;
-		break;
-	case rsPGUP:
-		if (CPad::GetPad(PAD1)->GetPageUpJustDown())
-			return true;
-		break;
-	case rsPGDN:
-		if (CPad::GetPad(PAD1)->GetPageDownJustDown())
-			return true;
-		break;
-	case rsUP:
-		if (CPad::GetPad(PAD1)->GetUpJustDown())
-			return true;
-		break;
-	case rsDOWN:
-		if (CPad::GetPad(PAD1)->GetDownJustDown())
-			return true;
-		break;
-	case rsLEFT:
-		if (CPad::GetPad(PAD1)->GetLeftJustDown())
-			return true;
-		break;
-	case rsRIGHT:
-		if (CPad::GetPad(PAD1)->GetRightJustDown())
-			return true;
-		break;
-	case rsSCROLL:
-		if (CPad::GetPad(PAD1)->GetScrollLockJustDown())
-			return true;
-		break;
-	case rsPAUSE:
-		if (CPad::GetPad(PAD1)->GetPauseJustDown())
-			return true;
-		break;
-	case rsNUMLOCK:
-		if (CPad::GetPad(PAD1)->GetNumLockJustDown())
-			return true;
-		break;
-	case rsDIVIDE:
-		if (CPad::GetPad(PAD1)->GetDivideJustDown())
-			return true;
-		break;
-	case rsTIMES:
-		if (CPad::GetPad(PAD1)->GetTimesJustDown())
-			return true;
-		break;
-	case rsMINUS:
-		if (CPad::GetPad(PAD1)->GetMinusJustDown())
-			return true;
-		break;
-	case rsPLUS:
-		if (CPad::GetPad(PAD1)->GetPlusJustDown())
-			return true;
-		break;
-	case rsPADENTER:
-		if (CPad::GetPad(PAD1)->GetPadEnterJustDown())
-			return true;
-		break;
-	case rsPADDEL:
-		if (CPad::GetPad(PAD1)->GetPadDelJustDown())
-			return true;
-		break;
-	case rsPADEND:
-		if (CPad::GetPad(PAD1)->GetPad1JustDown())
-			return true;
-		break;
-	case rsPADDOWN:
-		if (CPad::GetPad(PAD1)->GetPad2JustDown())
-			return true;
-		break;
-	case rsPADPGDN:
-		if (CPad::GetPad(PAD1)->GetPad3JustDown())
-			return true;
-		break;
-	case rsPADLEFT:
-		if (CPad::GetPad(PAD1)->GetPad4JustDown())
-			return true;
-		break;
-	case rsPAD5:
-		if (CPad::GetPad(PAD1)->GetPad5JustDown())
-			return true;
-		break;
-	case rsPADRIGHT:
-		if (CPad::GetPad(PAD1)->GetPad6JustDown())
-			return true;
-		break;
-	case rsPADHOME:
-		if (CPad::GetPad(PAD1)->GetPad7JustDown())
-			return true;
-		break;
-	case rsPADUP:
-		if (CPad::GetPad(PAD1)->GetPad8JustDown())
-			return true;
-		break;
-	case rsPADPGUP:
-		if (CPad::GetPad(PAD1)->GetPad9JustDown())
-			return true;
-		break;
-	case rsPADINS:
-		if (CPad::GetPad(PAD1)->GetPad0JustDown())
-			return true;
-		break;
-	case rsBACKSP:
-		if (CPad::GetPad(PAD1)->GetBackspaceJustDown())
-			return true;
-		break;
-	case rsTAB:
-		if (CPad::GetPad(PAD1)->GetTabJustDown())
-			return true;
-		break;
-	case rsCAPSLK:
-		if (CPad::GetPad(PAD1)->GetCapsLockJustDown())
-			return true;
-		break;
-	case rsENTER:
-		if (CPad::GetPad(PAD1)->GetReturnJustDown())
-			return true;
-		break;
-	case rsLSHIFT:
-		if (CPad::GetPad(PAD1)->GetLeftShiftJustDown())
-			return true;
-		break;
-	case rsSHIFT:
-		if (CPad::GetPad(PAD1)->GetShiftJustDown())
-			return true;
-		break;
-	case rsRSHIFT:
-		if (CPad::GetPad(PAD1)->GetRightShiftJustDown())
-			return true;
-		break;
-	case rsLCTRL:
-		if (CPad::GetPad(PAD1)->GetLeftCtrlJustDown())
-			return true;
-		break;
-	case rsRCTRL:
-		if (CPad::GetPad(PAD1)->GetRightCtrlJustDown())
-			return true;
-		break;
-	case rsLALT:
-		if (CPad::GetPad(PAD1)->GetLeftAltJustDown())
-			return true;
-		break;
-	case rsRALT:
-		if (CPad::GetPad(PAD1)->GetRightAltJustDown())
-			return true;
-		break;
-	case rsLWIN:
-		if (CPad::GetPad(PAD1)->GetLeftWinJustDown())
-			return true;
-		break;
-	case rsRWIN:
-		if (CPad::GetPad(PAD1)->GetRightWinJustDown())
-			return true;
-		break;
-	case rsAPPS:
-		if (CPad::GetPad(PAD1)->GetAppsJustDown())
-			return true;
-		break;
-	default: break;
-	}
 
-	return false;
-}
 
-bool CControllerConfigManager::GetIsMouseButtonDown(RsKeyCodes keycode)
-{
-	switch (keycode)
-	{
-	case rsMOUSELEFTBUTTON:
-		if (CPad::GetPad(PAD1)->GetLeftMouse())
-			return true;
-		break;
-	case rsMOUSMIDDLEBUTTON:
-		if (CPad::GetPad(PAD1)->GetMiddleMouse())
-			return true;
-		break;
-	case rsMOUSERIGHTBUTTON:
-		if (CPad::GetPad(PAD1)->GetRightMouse())
-			return true;
-		break;
-	case rsMOUSEWHEELUPBUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseWheelUp())
-			return true;
-		break;
-	case rsMOUSEWHEELDOWNBUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseWheelDown())
-			return true;
-		break;
-	case rsMOUSEX1BUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseX1())
-			return true;
-		break;
-	case rsMOUSEX2BUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseX2())
-			return true;
-		break;
-	default: break;
-	}
 
-	return false;
-}
 
-bool CControllerConfigManager::GetIsMouseButtonUp(RsKeyCodes keycode)
-{
-	switch (keycode)
-	{
-	case rsMOUSELEFTBUTTON:
-		if (CPad::GetPad(PAD1)->GetLeftMouseUp())
-			return true;
-		break;
-	case rsMOUSMIDDLEBUTTON:
-		if (CPad::GetPad(PAD1)->GetMiddleMouseUp())
-			return true;
-		break;
-	case rsMOUSERIGHTBUTTON:
-		if (CPad::GetPad(PAD1)->GetRightMouseUp())
-			return true;
-		break;
-	case rsMOUSEWHEELUPBUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseWheelUpUp())
-			return true;
-		break;
-	case rsMOUSEWHEELDOWNBUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseWheelDownUp())
-			return true;
-		break;
-	case rsMOUSEX1BUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseX1Up())
-			return true;
-		break;
-	case rsMOUSEX2BUTTON:
-		if (CPad::GetPad(PAD1)->GetMouseX2Up())
-			return true;
-		break;
-	default: break;
-	}
 
-	return false;
-}
+
+
 
 #define CLEAR_ACTION_IF_NEEDED(action) \
-if (key == GetControllerKeyAssociatedWithAction(action, type))\
-	ClearSettingsAssociatedWithAction(action, type);
+if (key == Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type))\
+	Input_ClearSettingsAssociatedWithAction(m_aSettings, action, type); // rouz edit (ChatGPT)
 
 void CControllerConfigManager::DeleteMatchingCommonControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 #ifndef BIND_VEHICLE_FIREWEAPON
 		CLEAR_ACTION_IF_NEEDED(PED_FIREWEAPON);
@@ -1707,7 +1177,7 @@ void CControllerConfigManager::DeleteMatchingCommonControls(e_ControllerAction a
 
 void CControllerConfigManager::DeleteMatching3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 		CLEAR_ACTION_IF_NEEDED(PED_CYCLE_WEAPON_LEFT);
 		CLEAR_ACTION_IF_NEEDED(PED_CYCLE_WEAPON_RIGHT);
@@ -1728,7 +1198,7 @@ void CControllerConfigManager::DeleteMatching3rdPersonControls(e_ControllerActio
 
 void CControllerConfigManager::DeleteMatching1rst3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 #ifdef BIND_VEHICLE_FIREWEAPON
 		CLEAR_ACTION_IF_NEEDED(PED_FIREWEAPON);
@@ -1749,7 +1219,7 @@ void CControllerConfigManager::DeleteMatching1rst3rdPersonControls(e_ControllerA
 
 void CControllerConfigManager::DeleteMatchingVehicleControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 #ifdef BIND_VEHICLE_FIREWEAPON
 		CLEAR_ACTION_IF_NEEDED(VEHICLE_FIREWEAPON);
@@ -1772,7 +1242,7 @@ void CControllerConfigManager::DeleteMatchingVehicleControls(e_ControllerAction 
 
 void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 		CLEAR_ACTION_IF_NEEDED(VEHICLE_ENTER_EXIT);
 	}
@@ -1780,7 +1250,7 @@ void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(e_Control
 
 void CControllerConfigManager::DeleteMatching1rstPersonControls(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 		CLEAR_ACTION_IF_NEEDED(PED_SNIPER_ZOOM_IN);
 		CLEAR_ACTION_IF_NEEDED(PED_SNIPER_ZOOM_OUT);
@@ -1791,13 +1261,13 @@ void CControllerConfigManager::DeleteMatching1rstPersonControls(e_ControllerActi
 
 #ifdef RADIO_SCROLL_TO_PREV_STATION
 #define CHECK_ACTION(action) \
-if (key == GetControllerKeyAssociatedWithAction(action, type))\
+if (key == Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type))\
 	return true;
 
 bool CControllerConfigManager::IsAnyVehicleActionAssignedToMouseKey(int32 key)
 {
 	const eControllerType type = MOUSE;
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 #ifdef BIND_VEHICLE_FIREWEAPON
 		CHECK_ACTION(VEHICLE_FIREWEAPON);
@@ -1836,7 +1306,7 @@ bool CControllerConfigManager::IsAnyVehicleActionAssignedToMouseKey(int32 key)
 
 void CControllerConfigManager::DeleteMatchingActionInitiators(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!GetIsKeyBlank(key, type))
+	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
 	{
 		switch (GetActionType(action))
 		{
@@ -1882,30 +1352,7 @@ void CControllerConfigManager::DeleteMatchingActionInitiators(e_ControllerAction
 	}
 }
 
-bool CControllerConfigManager::GetIsKeyBlank(int32 key, eControllerType type)
-{
-	switch (type)
-	{
-	case KEYBOARD:
-	case OPTIONAL_EXTRA:
-		if (key != rsNULL)
-			return false;
-		break;
 
-	case JOYSTICK:
-		if (key != 0)
-			return false;
-		break;
-
-	case MOUSE:
-		if (key != 0)
-			return false;
-		break;
-	default: break;
-	}
-
-	return true;
-}
 
 e_ControllerActionType CControllerConfigManager::GetActionType(e_ControllerAction action)
 {
@@ -1984,31 +1431,7 @@ e_ControllerActionType CControllerConfigManager::GetActionType(e_ControllerActio
 	return ACTIONTYPE_NONE;
 }
 
-void CControllerConfigManager::ClearSettingsAssociatedWithAction(e_ControllerAction action, eControllerType type)
-{
-	switch (type)
-	{
-	case KEYBOARD:
-		m_aSettings[action][type].m_Key = rsNULL;
-		m_aSettings[action][type].m_ContSetOrder = SETORDER_NONE;
-		break;
-	case OPTIONAL_EXTRA:
-		m_aSettings[action][type].m_Key = rsNULL;
-		m_aSettings[action][type].m_ContSetOrder = SETORDER_NONE;
-		break;
-	case MOUSE:
-		m_aSettings[action][type].m_Key = 0;
-		m_aSettings[action][type].m_ContSetOrder = SETORDER_NONE;
-		break;
-	case JOYSTICK:
-		m_aSettings[action][type].m_Key = 0;
-		m_aSettings[action][type].m_ContSetOrder = SETORDER_NONE;
-		break;
-	default: break;
-	}
 
-	ResetSettingOrder(action);
-}
 
 wchar *CControllerConfigManager::GetControllerSettingTextWithOrderNumber(e_ControllerAction action, eContSetOrder setorder)
 {
@@ -2041,12 +1464,12 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 	for (int32 i = 0; i < ARRAY_SIZE(ActionText); i++)
 		ActionText[i] = '\0';
 
-	if (GetControllerKeyAssociatedWithAction(action, type) != rsNULL)
+	if (Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type) != rsNULL) // rouz edit (ChatGPT)
 	{
-		if (   GetControllerKeyAssociatedWithAction(action, type) >= 0
-			&& GetControllerKeyAssociatedWithAction(action, type) <= 255)
+		if (   Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type) >= 0 // rouz edit (ChatGPT)
+			&& Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type) <= 255) // rouz edit (ChatGPT)
 		{
-			char c = GetControllerKeyAssociatedWithAction(action, type);
+			char c = Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type); // rouz edit (ChatGPT)
 			if (c == ' ')
 				return Text_Get(&TheText,"FEC_SPC"); // "SPC"
 			else
@@ -2060,7 +1483,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 		}
 		else
 		{
-			switch (GetControllerKeyAssociatedWithAction(action, type))
+			switch (Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type)) // rouz edit (ChatGPT)
 			{
 				case rsF1:
 				case rsF2:
@@ -2076,7 +1499,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextKeyBoard(e_ControllerAc
 				case rsF12:
 				{
 					Messages_InsertNumberInString(Text_Get(&TheText,"FEC_FNC"), // "F~1~"
-						GetControllerKeyAssociatedWithAction(action, type) - rsESC,
+						Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type) - rsESC, // rouz edit (ChatGPT)
 						-1, -1, -1, -1, -1,
 						NewStringWithNumber);
 					return NewStringWithNumber;
@@ -2422,17 +1845,7 @@ wchar *CControllerConfigManager::GetControllerSettingTextJoystick(e_ControllerAc
 	return NewStringWithNumber;
 }
 
-int32 CControllerConfigManager::GetNumOfSettingsForAction(e_ControllerAction action)
-{
-	int32 num = 0;
 
-	if (m_aSettings[action][KEYBOARD].m_Key       != rsNULL) num++;
-	if (m_aSettings[action][OPTIONAL_EXTRA].m_Key != rsNULL) num++;
-	if (m_aSettings[action][MOUSE].m_Key          != 0)      num++;
-	if (m_aSettings[action][JOYSTICK].m_Key       != 0)      num++;
-
-	return num;
-}
 
 #ifdef BIND_VEHICLE_FIREWEAPON
 #define VFB(b) b,
@@ -2693,7 +2106,7 @@ const char *NintendoSwitchButtons[][MAX_CONTROLLERACTIONS] =
 void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *text, uint16 leight)
 {
 #ifdef DETECT_PAD_INPUT_SWITCH
-	if (CPad::GetPad(0)->IsAffectedByController) {
+	if (Input_affectedByController) { // rouz edit (ChatGPT)
 		wchar wstr[16];
 
 		const char* (*Buttons)[MAX_CONTROLLERACTIONS];
@@ -2742,7 +2155,7 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 	}
 #endif
 
-	int32 nums = GetNumOfSettingsForAction((e_ControllerAction)action);
+	int32 nums = Input_GetNumOfSettingsForAction(m_aSettings, (e_ControllerAction)action); // rouz edit (ChatGPT)
 
 	int32 sets = 0;
 
@@ -2785,39 +2198,31 @@ void CControllerConfigManager::GetWideStringOfCommandKeys(uint16 action, wchar *
 	}
 }
 
-int32 CControllerConfigManager::GetControllerKeyAssociatedWithAction(e_ControllerAction action, eControllerType type)
-{
-	return m_aSettings[action][type].m_Key;
-}
 
+
+//+ rouz edit (ChatGPT)
+#ifdef RW_GL3
+static int32_t InputController_MapButton(int32_t index)
+{
+    // Retain the original GLFW-to-game button mapping
+    return MapIdToButtonId(index);
+}
+#endif
 void CControllerConfigManager::UpdateJoyButtonState(int32 padnumber)
 {
-	for (int32 i = 0; i < MAX_BUTTONS; i++)
-		m_aButtonStates[i] = false;
-
+    // Preserve the original reset and platform-specific source selection
+    Input_ResetJoyButtons(m_aButtonStates, MAX_BUTTONS);
 #ifdef __DINPUT_INCLUDED__
-	for (int32 i = 0; i < MAX_BUTTONS; i++)
-	{
-		if (m_NewState.rgbButtons[i] & 0x80)
-			m_aButtonStates[i] = true;
-		else
-			m_aButtonStates[i] = false;
-	}
+    Input_ReadDirectJoyButtons(m_aButtonStates, m_NewState.rgbButtons, MAX_BUTTONS);
 #elif defined RW_GL3
-	if (m_NewState.isGamepad) {
-		for (int32 i = 0; i < MAX_BUTTONS; i++) {
-			if (i == GLFW_GAMEPAD_BUTTON_GUIDE)
-				continue;
-
-			m_aButtonStates[MapIdToButtonId(i)-1] = m_NewState.mappedButtons[i];
-		}
-	} else {
-		for (int32 i = 0; i < Min(m_NewState.numButtons, MAX_BUTTONS); i++) {
-			m_aButtonStates[i] = m_NewState.buttons[i];
-		}
-	}
+    if (m_NewState.isGamepad)
+        Input_ReadMappedJoyButtons(m_aButtonStates, m_NewState.mappedButtons, MAX_BUTTONS,
+            GLFW_GAMEPAD_BUTTON_GUIDE, InputController_MapButton);
+    else
+        Input_ReadRawJoyButtons(m_aButtonStates, m_NewState.buttons, m_NewState.numButtons, MAX_BUTTONS);
 #endif
 }
+//- rouz edit (ChatGPT)
 
 bool CControllerConfigManager::GetIsActionAButtonCombo(e_ControllerAction action)
 {
@@ -2855,66 +2260,11 @@ wchar *CControllerConfigManager::GetButtonComboText(e_ControllerAction action)
 	return NULL;
 }
 
-void CControllerConfigManager::SetControllerKeyAssociatedWithAction(e_ControllerAction action, int32 key, eControllerType type)
-{
-	ResetSettingOrder(action);
-	int numOfSettings = GetNumOfSettingsForAction(action);
-	
-	m_aSettings[action][type].m_Key = key;
-	m_aSettings[action][type].m_ContSetOrder = numOfSettings + 1;
-}
 
-int32 CControllerConfigManager::GetMouseButtonAssociatedWithAction(e_ControllerAction action)
-{
-	return m_aSettings[action][MOUSE].m_Key;
-}
 
-void CControllerConfigManager::SetMouseButtonAssociatedWithAction(e_ControllerAction action, int32 button)
-{
-	int numOfSettings = GetNumOfSettingsForAction(action);
-	
-	m_aSettings[action][MOUSE].m_Key = button;
-	m_aSettings[action][MOUSE].m_ContSetOrder = numOfSettings + 1;
-}
 
-void CControllerConfigManager::ResetSettingOrder(e_ControllerAction action)
-{
-	int32 conttype = KEYBOARD;
 
-	for (int32 i = SETORDER_1; i < MAX_SETORDERS; i++)
-	{
-		bool isexist = false;
-		for (int32 j = 0; j < MAX_CONTROLLERTYPES; j++)
-		{
-			if (m_aSettings[action][j].m_ContSetOrder == i)
-				isexist = true;
-		}
 
-		bool init = false;
 
-		if (!isexist)
-		{
-			for (int32 k = 0; k < MAX_CONTROLLERTYPES; k++)
-			{
-				int32 setorder = m_aSettings[action][k].m_ContSetOrder;
-				if (setorder > i && setorder != 0)
-				{
-					if (init)
-					{
-						if (setorder < m_aSettings[action][conttype].m_ContSetOrder)
-							conttype = k;
-					}
-					else
-					{
-						init = true;
-						conttype = k;
-					}
-				}
-			}
 
-			if (init)
-				m_aSettings[action][conttype].m_ContSetOrder = i;
-		}
-	}
-}
 //- rouz edit (ChatGPT)

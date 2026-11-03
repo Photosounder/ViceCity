@@ -3,7 +3,9 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "CollisionVector_native.h"
 
 #include "Script.h"
@@ -637,7 +639,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 				pPed->bRespondsToThreats = true;
 				pPed->bScriptObjectiveCompleted = false;
 				pPed->ClearLeader();
-				--CPopulation::ms_nTotalMissionPeds;
+				--Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 				pPed->bFadeOut = true;
 				CWorld::RemoveReferencesToDeletedObject(pPed);
 			}
@@ -688,11 +690,11 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CollectParameters(&m_nIp, 1);
 		Timer_Suspend();
 		CStreaming::DeleteAllRwObjects();
-		CRecordDataForChase::StartChaseScene(*(float*)&ScriptParams[0]);
+		RecordChase_StartChaseScene(*(float*)&ScriptParams[0]); // rouz edit (ChatGPT)
 		Timer_Resume();
 		return 0;
 	case COMMAND_STOP_CHASE_SCENE:
-		CRecordDataForChase::CleanUpChaseScene();
+		RecordChase_CleanUpChaseScene(); // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_IS_EXPLOSION_IN_AREA:
 	{
@@ -715,7 +717,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			infZ = *(float*)&ScriptParams[6];
 			supZ = *(float*)&ScriptParams[3];
 		}
-		UpdateCompareFlag(CExplosion::TestForExplosionInArea((eExplosionType)ScriptParams[0],
+		// Call the standalone explosion area check
+		UpdateCompareFlag(Explosion_TestForExplosionInArea((eExplosionType)ScriptParams[0],
 			infX, supX, infY, supY, infZ, supZ));
 		return 0;
 	}
@@ -728,7 +731,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		if (zone_id != -1)
 			m_nIp += KEY_LENGTH_IN_SCRIPT;
 		CZone* pZone = Zones_GetNavigationZone(zone_id);
-		UpdateCompareFlag(CExplosion::TestForExplosionInArea((eExplosionType)ScriptParams[0],
+		// Call the standalone explosion area check
+		UpdateCompareFlag(Explosion_TestForExplosionInArea((eExplosionType)ScriptParams[0],
 			pZone->minx, pZone->maxx, pZone->miny, pZone->maxy, pZone->minz, pZone->maxz));
 		return 0;
 	}
@@ -1078,14 +1082,14 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		ePedType pedtype = PEDTYPE_COP;
 		int attempt = 0;
 		while (pedtype != PEDTYPE_CIVMALE && pedtype != PEDTYPE_CIVFEMALE && attempt < 5) {
-			mi = CPopulation::ChooseCivilianOccupation(zoneinfo.pedGroup);
-			if (CModelInfo::GetModelInfo(mi)->GetRwObject())
-				pedtype = ((CPedModelInfo*)(CModelInfo::GetModelInfo(mi)))->m_pedType;
+			mi = Population_ChooseCivilianOccupation(zoneinfo.pedGroup); // rouz edit (ChatGPT)
+			if (((CBaseModelInfo*)ModelRegistry_Get(mi))->GetRwObject()) // rouz edit (ChatGPT)
+				pedtype = ((CPedModelInfo*)(((CBaseModelInfo*)ModelRegistry_Get(mi))))->m_pedType; // rouz edit (ChatGPT)
 			attempt++;
 		}
-		if (!CModelInfo::GetModelInfo(mi)->GetRwObject()) {
+		if (!((CBaseModelInfo*)ModelRegistry_Get(mi))->GetRwObject()) { // rouz edit (ChatGPT)
 			mi = MI_MALE01;
-			pedtype = ((CPedModelInfo*)(CModelInfo::GetModelInfo(mi)))->m_pedType;
+			pedtype = ((CPedModelInfo*)(((CBaseModelInfo*)ModelRegistry_Get(mi))))->m_pedType; // rouz edit (ChatGPT)
 		}
 		// Allocate the scripted ambient ped without invoking C++ new.
 				// Access raw storage through the C store or pool API
@@ -1107,7 +1111,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			ped->bIsStaticWaitingForCollision = true;
 		CWorld::Add(ped);
 		ped->m_nZoneLevel = Zones_GetLevelFromPosition(ZonesPosition_FromVector(*(&pos)));
-		CPopulation::ms_nTotalMissionPeds++;
+		Population_nTotalMissionPeds++; // rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetPedPool(), ped);
 				StoreParameters(&m_nIp, 1);
@@ -1202,7 +1206,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			infZ = *(float*)&ScriptParams[5];
 			supZ = *(float*)&ScriptParams[2];
 		}
-		UpdateCompareFlag(CBulletInfo::TestForSniperBullet(infX, supX, infY, supY, infZ, supZ));
+		// Call the standalone bullet operation
+		UpdateCompareFlag(BulletInfo_TestForSniperBullet(infX, supX, infY, supY, infZ, supZ));
 		return 0;
 	}
 	/*
@@ -1900,10 +1905,10 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		for (attempts = 0; attempts < MAXVEHICLESLOADED; attempts++) {
 			if (model != -1)
 				break;
-			model = CStreaming::ms_vehiclesLoaded[index];
+			model = Streaming_vehiclesLoaded[index]; // rouz edit (ChatGPT)
 			if (model == -1)
 				continue;
-			if (CModelInfo::IsCarModel(model) || CModelInfo::IsBikeModel(model)) {
+			if (ModelRegistry_IsCarModel(model) || ModelRegistry_IsBikeModel(model)) { // rouz edit (ChatGPT)
 				switch (model) {
 				case MI_LANDSTAL:
 				case MI_LINERUN:
@@ -2016,7 +2021,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 				case MI_GREENWOO:
 					break;
 				default:
-					printf("CREATE_RANDOM_CAR_FOR_CAR_PARK - Unknown car model %d\n", CStreaming::ms_vehiclesLoaded[index]);
+					printf("CREATE_RANDOM_CAR_FOR_CAR_PARK - Unknown car model %d\n", Streaming_vehiclesLoaded[index]); // rouz edit (ChatGPT)
 					model = -1;
 					break;
 				}
@@ -2029,7 +2034,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		if (model == -1)
 			return 0;
 		CVehicle* car;
-		if (CModelInfo::IsBikeModel(model)) {
+		if (ModelRegistry_IsBikeModel(model)) { // rouz edit (ChatGPT)
 			// Allocate the car-park bike without invoking C++ new.
 						// Access raw storage through the C store or pool API
 			car = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
@@ -2246,11 +2251,11 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 	*/
 	case COMMAND_SET_PED_DENSITY_MULTIPLIER:
 		CollectParameters(&m_nIp, 1);
-		CPopulation::PedDensityMultiplier = *(float*)&ScriptParams[0];
+		Population_pedDensityMultiplier = *(float*)&ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_FORCE_RANDOM_PED_TYPE:
 		CollectParameters(&m_nIp, 1);
-		CPopulation::m_AllRandomPedsThisType = ScriptParams[0];
+		Population_allRandomPedsType = ScriptParams[0]; // rouz edit (ChatGPT)
 		return 0;
 	/*
 	case COMMAND_SET_TEXT_DRAW_BEFORE_FADE:
@@ -2450,6 +2455,7 @@ void CTheScripts::UndoEntityInvisibilitySettings()
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

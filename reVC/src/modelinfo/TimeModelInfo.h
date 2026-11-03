@@ -1,20 +1,19 @@
+//+ rouz edit (ChatGPT)
 #pragma once
 
 #include "SimpleModelInfo.h"
+#include "TimeModelData.h"
 
 class CTimeModelInfo : public CSimpleModelInfo
 {
-	int32 m_timeOn;
-	int32 m_timeOff;
-	int32 m_otherTimeModelID;
 public:
-	CTimeModelInfo(void) : CSimpleModelInfo(MITYPE_TIME) { m_otherTimeModelID = -1; }
+	TimeModelData m_timeData;
+public:
+	CTimeModelInfo(void) : CSimpleModelInfo(MITYPE_TIME) {
+		// Initialize time-specific state once when the native object is constructed
+		TimeModelData_Init(&m_timeData);
+	}
 
-	int32 GetTimeOn(void) { return m_timeOn; }
-	int32 GetTimeOff(void) { return m_timeOff; }
-	void SetTimes(int32 on, int32 off) { m_timeOn = on; m_timeOff = off; }
-	int32 GetOtherTimeModel(void) { return m_otherTimeModelID; }
-	void SetOtherTimeModel(int32 other) { m_otherTimeModelID = other; }
-	CTimeModelInfo *FindOtherTimeModel(void);
 };
 //static_assert(sizeof(CTimeModelInfo) == 0x58, "CTimeModelInfo: error");
+//- rouz edit (ChatGPT)

@@ -173,7 +173,7 @@ void CGarages::Shutdown(void)
 void CGarages::Update(void)
 {
 	static uint32 GarageToBeTidied = 0;
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 #ifdef SECUROM
 	extern uint8 gameProcessPirateCheck;
@@ -581,11 +581,11 @@ void CGarage::Update()
 			}
 			UpdateDoorsHeight();
 			if (m_eGarageType == GARAGE_BOMBSHOP3)
-				CStreaming::RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE);
+				Streaming_RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 			break;
 		case GS_FULLYCLOSED:
 			if ((*Timer_GetTimeInMilliseconds()) > m_nTimeToStartAction) {
-				if (m_eGarageType != GARAGE_BOMBSHOP3 || CStreaming::HasModelLoaded(MI_BOMB)) {
+				if (m_eGarageType != GARAGE_BOMBSHOP3 || Streaming_HasModelLoaded(MI_BOMB)) { // rouz edit (ChatGPT)
 					switch (m_eGarageType) {
 					case GARAGE_BOMBSHOP1: DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB1_SET, 1); break;
 					case GARAGE_BOMBSHOP2: DMAudio_PlayFrontEndSound(SOUND_GARAGE_BOMB2_SET, 1); break;
@@ -607,7 +607,7 @@ void CGarage::Update()
 						Stats_KgsOfExplosivesUsed += KGS_OF_EXPLOSIVES_IN_BOMB;
 					}
 #ifdef DETECT_PAD_INPUT_SWITCH
-					int16 Mode = CPad::IsAffectedByController ? CPad::GetPad(0)->Mode : 0;
+					int16 Mode = Input_affectedByController ? CPad::GetPad(0)->Mode : 0; // rouz edit (ChatGPT)
 #else
 					int16 Mode = CPad::GetPad(0)->Mode;
 #endif
@@ -644,7 +644,7 @@ void CGarage::Update()
 					FindPlayerPed()->m_pWanted->m_bIgnoredByCops = false;
 				}
 				else {
-					CStreaming::RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE);
+					Streaming_RequestModel(MI_BOMB, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 				}
 			}
 			break;
@@ -1504,8 +1504,8 @@ void CGarage::BuildRotatedDoorMatrix(CEntity * pDoor, float fPosition)
 {
 	float fAngle = -fPosition * HALFPI;
 	CVector up(-Sin(fAngle) * pDoor->GetForward().y, Sin(fAngle) * pDoor->GetForward().x, Cos(fAngle));
-	pDoor->GetRight() = CrossProduct(up, pDoor->GetForward());
-	pDoor->GetUp() = up;
+	pDoor->GetRight() = CrossProduct(up, pDoor->GetForward()); // rouz edit (ChatGPT)
+	pDoor->GetUp() = up; // rouz edit (ChatGPT)
 }
 
 void CGarage::UpdateCrusherAngle()
@@ -1954,7 +1954,7 @@ void CGarages::GivePlayerDetonator()
 
 float CGarages::FindDoorHeightForMI(int32 mi)
 {
-	return CModelInfo::GetColModel(mi)->boundingBox.max.z - CModelInfo::GetColModel(mi)->boundingBox.min.z - 0.1f;
+	return ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(mi)))->boundingBox.max.z - ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(mi)))->boundingBox.min.z - 0.1f; // rouz edit (ChatGPT)
 }
 
 void CGarage::TidyUpGarage()
@@ -1970,7 +1970,7 @@ void CGarage::TidyUpGarage()
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
 				if (pVehicle && (pVehicle->IsCar() || pVehicle->IsBike())) {
 			if (IsPointInsideGarage(pVehicle->GetPosition())) {
-				if (pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->GetUp().z < 0.5f) {
+				if (pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->GetUp().z < 0.5f) { // rouz edit (ChatGPT)
 					CWorld::Remove(pVehicle);
 					// Destroy and release the garage vehicle without invoking C++ delete.
 					pVehicle->~CVehicle();
@@ -2671,19 +2671,19 @@ int8_t StoredCar_BackendBombType(CVehicle *vehicle)
 void StoredCar_BackendRequestModel(int32_t model, int32_t flags)
 {
     // Access the remaining native owner through its original operation
-    CStreaming::RequestModel(model, flags);
+    Streaming_RequestModel(model, flags); // rouz edit (ChatGPT)
 }
 
 bool StoredCar_BackendHasModelLoaded(int32_t model)
 {
     // Access the remaining native owner through its original operation
-    return CStreaming::HasModelLoaded(model);
+    return Streaming_HasModelLoaded(model); // rouz edit (ChatGPT)
 }
 
 CVehicleModelInfo * StoredCar_BackendModelInfo(int32_t model)
 {
     // Access the remaining native owner through its original operation
-    return (CVehicleModelInfo*)CModelInfo::GetModelInfo(model);
+    return (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(model)); // rouz edit (ChatGPT)
 }
 
 int8_t StoredCar_BackendNumComponents(CVehicleModelInfo *info)
@@ -2696,18 +2696,6 @@ void StoredCar_BackendSetComponents(int8_t first, int8_t second)
 {
     // Access the remaining native owner through its original operation
     CVehicleModelInfo::SetComponentsToUse(first, second);
-}
-
-bool StoredCar_BackendIsBoatModel(int32_t model)
-{
-    // Access the remaining native owner through its original operation
-    return CModelInfo::IsBoatModel(model);
-}
-
-bool StoredCar_BackendIsBikeModel(int32_t model)
-{
-    // Access the remaining native owner through its original operation
-    return CModelInfo::IsBikeModel(model);
 }
 
 CVehicle * StoredCar_BackendAllocateVehicle(void)
@@ -2755,13 +2743,13 @@ void StoredCar_BackendSetForward(CVehicle *vehicle, StoredCarVector value)
 void StoredCar_BackendSetRight(CVehicle *vehicle, StoredCarVector value)
 {
     // Access the remaining native owner through its original operation
-    vehicle->GetRight() = CVector(value.x, value.y, value.z);
+    vehicle->GetRight() = CVector(value.x, value.y, value.z); // rouz edit (ChatGPT)
 }
 
 void StoredCar_BackendSetUp(CVehicle *vehicle, StoredCarVector value)
 {
     // Access the remaining native owner through its original operation
-    vehicle->GetUp() = CVector(value.x, value.y, value.z);
+    vehicle->GetUp() = CVector(value.x, value.y, value.z); // rouz edit (ChatGPT)
 }
 
 void StoredCar_BackendSetStatus(CVehicle *vehicle, int32_t status)

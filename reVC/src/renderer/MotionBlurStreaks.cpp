@@ -4,21 +4,6 @@
 #include "Timecycle.h"
 #include "MotionBlurStreaks_backend.h"
 static RwIm3DVertex StreakVertices[4];
-int32_t MotionBlurStreaks_BackendFogRed(void)
-{
-    // Read the original live red fog component
-    return TimeCycle_GetFogRed();
-}
-int32_t MotionBlurStreaks_BackendFogGreen(void)
-{
-    // Read the original live green fog component
-    return TimeCycle_GetFogGreen();
-}
-int32_t MotionBlurStreaks_BackendFogBlue(void)
-{
-    // Read the original live blue fog component
-    return TimeCycle_GetFogBlue();
-}
 void MotionBlurStreaks_BackendFogColor(uint32_t color)
 {
     // Set the original typed packed fog-color state

@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "AudioManager.h"
 #include "sampman.h"
 
@@ -67,7 +68,7 @@ AudioPolice_ServiceChannel(cAudioManager *manager, uint8_t wantedLevel)
 		if (manager->m_sPoliceRadioQueue.m_nSamplesInQueue == 0) bChannelOpen = 0;
 		if (cWait) {
 #ifdef FIX_BUGS
-			cWait -= AudioPoliceHost_LogicalFramesPassed();
+			cWait -= Timer_GetLogicalFramesPassed();
 #else
 			--cWait;
 #endif

@@ -4,6 +4,7 @@
 //+ rouz edit (ChatGPT)
 #define WITHWINDOWS
 #include "common.h"
+#include "PlatformFiles.h" // rouz edit (ChatGPT)
 #ifdef PS2_MENU
 #include "crossplatform.h"
 #include "MemoryCard.h"
@@ -158,7 +159,6 @@ char CardCurDir[MAX_CARDS][260] = { "", "" };
 char PCCardsPath[260];
 char PCCardDir[MAX_CARDS][12] = { "memcard1", "memcard2" };
 
-const char* _psGetUserFilesFolder();
 void _psCreateFolder(LPCSTR path);
 
 void
@@ -3028,7 +3028,7 @@ CMemoryCard::SaveSlot(int32 slotID)
 	}
 	
 	Timer_Stop();
-	CStreaming::FlushRequestList();
+	Streaming_FlushRequestList(); // rouz edit (ChatGPT)
 	CStreaming::DeleteRwObjectsAfterDeath(FindPlayerPed()->GetPosition());
 	CStreaming::RemoveUnusedModelsInLoadedList();
 	CGame::DrasticTidyUpMemory(false);

@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
-#include "ParticleMgr_backend.h"
+#include "ParticleMgr.h"
+#include "WorkBuffer.h"
 #include "FileMgr.h"
 #include "config.h"
 #include <stddef.h>
@@ -81,13 +82,13 @@ void ParticleMgr_LoadParticleData(void)
 	// Preserve the original parser branch and token traversal
     // Read the original shared buffer and preserve every token conversion and retained field
 	FileMgr_SetDir("DATA");
-	FileMgr_LoadFile(ParticleFilename, ParticleMgr_BackendWorkBuffer(), PARTICLE_MGR_WORK_BUFFER_SIZE, "r");
+	FileMgr_LoadFile(ParticleFilename, work_buff, WORK_BUFFER_SIZE, "r");
 	FileMgr_SetDir("");
 	
 	tParticleSystemData *entry = NULL;
 	int32_t type = PARTICLE_FIRST;
 	
-	char *lineStart = (char *)ParticleMgr_BackendWorkBuffer();
+	char *lineStart = (char *)work_buff;
 	char *lineEnd = lineStart + 1;
 	
 	char line[500];

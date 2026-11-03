@@ -18,8 +18,12 @@ endfunction()
 
 header_directories(${PROJECT}_INCLUDES)
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/extras/GitSHA1.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/extras/GitSHA1.cpp" @ONLY)
-list(APPEND ${PROJECT}_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/extras/GitSHA1.cpp")
+# //+ rouz edit (ChatGPT)
+# Exclude the Premake-generated copy when building the configured CMake version
+list(REMOVE_ITEM ${PROJECT}_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/extras/GitSHA1.c")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/extras/GitSHA1.c.in" "${CMAKE_CURRENT_BINARY_DIR}/extras/GitSHA1.c" @ONLY)
+list(APPEND ${PROJECT}_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/extras/GitSHA1.c")
+# //- rouz edit (ChatGPT)
 
 add_executable(${EXECUTABLE} WIN32
     ${${PROJECT}_SOURCES}

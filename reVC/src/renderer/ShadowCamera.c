@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "ShadowCamera.h"
 #include "Shadow_backend.h"
 #include <string.h>
@@ -76,7 +77,7 @@ void ShadowCamera_Destroy(ShadowCamera *self)
 		if ( self->m_pTexture )
 		{
 			Shadow_HostTextureRaster(self->m_pTexture, nil);
-			Shadow_HostTextureDestroy(self->m_pTexture);
+			RwHelper_DestroyTexture(self->m_pTexture);
 			self->m_pTexture = nil;
 		}
 		

@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "Sprite2d.h"
 #include "Sprite2d_backend.h"
 #include "RenderBuffer.h"
@@ -62,7 +63,7 @@ void Sprite2d_Delete(Sprite2d *self)
     // Execute the complete original 2D sprite algorithm with canonical C instance and private state
 
 	if(self->m_pTexture){
-		Shadow_HostTextureDestroy(self->m_pTexture);
+		RwHelper_DestroyTexture(self->m_pTexture);
 		self->m_pTexture = nil;
 	}
 
@@ -73,7 +74,7 @@ void Sprite2d_SetTexture(Sprite2d *self,const char *name)
 
 	Sprite2d_Delete(self);
 	if(name)
-		self->m_pTexture = Sprite2d_HostTextureRead(name, nil);
+		self->m_pTexture = RwHelper_ReadTexture(name, nil);
 
 }
 void Sprite2d_SetTextureMasked(Sprite2d *self,const char *name, const char *mask)
@@ -82,7 +83,7 @@ void Sprite2d_SetTextureMasked(Sprite2d *self,const char *name, const char *mask
 
 	Sprite2d_Delete(self);
 	if(name)
-		self->m_pTexture = Sprite2d_HostTextureRead(name, mask);
+		self->m_pTexture = RwHelper_ReadTexture(name, mask);
 
 }
 void Sprite2d_SetAddressing(Sprite2d *self,int32_t addr)
@@ -98,7 +99,7 @@ void Sprite2d_SetRenderState(Sprite2d *self)
     // Execute the complete original 2D sprite algorithm with canonical C instance and private state
 
 	if(self->m_pTexture)
-		RwHelper_HostRenderState(Sprite2d_HostConstant(SPRITE2D_CONST_rwRENDERSTATETEXTURERASTER), Sprite2d_HostTextureRaster(self->m_pTexture));
+		RwHelper_HostRenderState(Sprite2d_HostConstant(SPRITE2D_CONST_rwRENDERSTATETEXTURERASTER), RwHelper_TextureRaster(self->m_pTexture));
 	else
 		RwHelper_HostRenderState(Sprite2d_HostConstant(SPRITE2D_CONST_rwRENDERSTATETEXTURERASTER), nil);
 

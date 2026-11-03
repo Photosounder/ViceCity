@@ -201,7 +201,7 @@ void CCranes::UpdateCranes(void)
 
 void CCrane::Update(void)
 {
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 	if (((m_nCraneStatus == ACTIVATED || m_nCraneStatus == DEACTIVATED) &&
 		Abs(TheCamera.GetGameCamPosition().x - m_pCraneEntity->GetPosition().x) < CRANE_MOVEMENT_PROCESSING_RADIUS &&

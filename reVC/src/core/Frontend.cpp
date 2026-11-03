@@ -668,8 +668,8 @@ CMenuManager::CheckCodesForControls(int typeOfControl)
 		} else if (*pControlEdit != rsF1 && *pControlEdit != rsF2 && *pControlEdit != rsF3 && *pControlEdit != rsF9 &&
 			*pControlEdit != rsLWIN && *pControlEdit != rsRWIN && *pControlEdit != rsRALT) {
 			typeToSave = KEYBOARD;
-			if (ControlsManager.GetControllerKeyAssociatedWithAction(action, KEYBOARD) != rsNULL &&
-				*pControlEdit != ControlsManager.GetControllerKeyAssociatedWithAction(action, KEYBOARD)) {
+			if (Input_GetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, action, KEYBOARD) != rsNULL && // rouz edit (ChatGPT)
+				*pControlEdit != Input_GetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, action, KEYBOARD)) { // rouz edit (ChatGPT)
 				typeToSave = OPTIONAL_EXTRA;
 			}
 		} else {
@@ -686,7 +686,7 @@ CMenuManager::CheckCodesForControls(int typeOfControl)
 #ifdef FIX_BUGS
 	if(!escPressed && !invalidKey)
 #endif
-		ControlsManager.ClearSettingsAssociatedWithAction(action, typeToSave);
+		Input_ClearSettingsAssociatedWithAction(ControlsManager.m_aSettings, action, typeToSave); // rouz edit (ChatGPT)
 
 	if (!DisplayComboButtonErrMsg && !escPressed && !invalidKey) {
 		if (typeOfControl == KEYBOARD) {
@@ -699,11 +699,11 @@ CMenuManager::CheckCodesForControls(int typeOfControl)
 		}
 
 		if (typeOfControl == KEYBOARD) {
-			ControlsManager.SetControllerKeyAssociatedWithAction(action, *pControlEdit, typeToSave);
+			Input_SetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, action, *pControlEdit, typeToSave); // rouz edit (ChatGPT)
 		} else if (typeOfControl == MOUSE) {
-			ControlsManager.SetControllerKeyAssociatedWithAction(action, MouseButtonJustClicked, typeToSave);
+			Input_SetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, action, MouseButtonJustClicked, typeToSave); // rouz edit (ChatGPT)
 		} else if (typeOfControl == JOYSTICK) {
-			ControlsManager.SetControllerKeyAssociatedWithAction(action, JoyButtonJustClicked, typeToSave);
+			Input_SetControllerKeyAssociatedWithAction(ControlsManager.m_aSettings, action, JoyButtonJustClicked, typeToSave); // rouz edit (ChatGPT)
 		}
 		pControlEdit = nil;
 		m_bWaitingForNewKeyBind = false;
@@ -3410,7 +3410,7 @@ CMenuManager::SaveSettings()
 	int fileHandle = FileMgr_OpenFile("gta_vc.set", "w+");
 	if (fileHandle) {
 		FileMgr_Write(fileHandle, (char*)&SomeVersion, sizeof(SomeVersion));
-		ControlsManager.SaveSettings(fileHandle);
+		Input_WriteControllerBindings(fileHandle, ControlsManager.m_aSettings); // rouz edit (ChatGPT)
 #ifdef IMPROVED_VIDEOMODE
 		FileMgr_Write(fileHandle, (char*)&m_nPrefsWidth, sizeof(m_nPrefsWidth));
 		FileMgr_Write(fileHandle, (char*)&m_nPrefsHeight, sizeof(m_nPrefsHeight));
@@ -3734,12 +3734,12 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 			// FIX: All those macros were hardcoded values originally.
 
 #ifndef MAP_ENHANCEMENTS
-			if (CPad::GetPad(0)->GetMouseWheelUpJustDown() || CPad::GetPad(0)->GetMouseWheelUpJustUp() || CPad::GetPad(0)->GetPageUp() || CPad::GetPad(0)->GetRightShoulder1()) {
+			if (Input_GetMouseWheelUpJustDown() || Input_GetMouseWheelUpJustUp() || Input_GetPageUp() || CPad::GetPad(0)->GetRightShoulder1()) { // rouz edit (ChatGPT)
 				if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 					m_fMapSize = Min(MENU_Y(1000.0f), m_fMapSize + MENU_Y(15.f));
 				}
 			}
-			if (CPad::GetPad(0)->GetMouseWheelDownJustDown() || CPad::GetPad(0)->GetMouseWheelDownJustUp() || CPad::GetPad(0)->GetPageDown() || CPad::GetPad(0)->GetRightShoulder2()) {
+			if (Input_GetMouseWheelDownJustDown() || Input_GetMouseWheelDownJustUp() || Input_GetPageDown() || CPad::GetPad(0)->GetRightShoulder2()) { // rouz edit (ChatGPT)
 				if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 					if (m_fMapSize > MENU_Y(MAP_MIN_SIZE)) {
 						if (m_fMapCenterY > SCREEN_HEIGHT/2)
@@ -3765,7 +3765,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 #else
 			// Adding marker
 			if (m_nMenuFadeAlpha == 255) {
-				if (CPad::GetPad(0)->GetRightMouseJustDown() || CPad::GetPad(0)->GetCrossJustDown()) {
+				if (Input_GetRightMouseJustDown() || CPad::GetPad(0)->GetCrossJustDown()) { // rouz edit (ChatGPT)
 					if (mapCrosshair.y > m_fMapCenterY - m_fMapSize && mapCrosshair.y < m_fMapCenterY + m_fMapSize &&
 						mapCrosshair.x > m_fMapCenterX - m_fMapSize && mapCrosshair.x < m_fMapCenterX + m_fMapSize) {
 
@@ -3779,21 +3779,21 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 				}
 			}
 
-			if (CPad::GetPad(0)->GetMouseWheelDown() || CPad::GetPad(0)->GetPageDown() || CPad::GetPad(0)->GetRightShoulder2()) {
-				if (CPad::GetPad(0)->GetMouseWheelDown() && m_fMapSize > MENU_X(MAP_SIZE_TO_ALLOW_X_MOVE))
+			if (Input_GetMouseWheelDown() || Input_GetPageDown() || CPad::GetPad(0)->GetRightShoulder2()) { // rouz edit (ChatGPT)
+				if (Input_GetMouseWheelDown() && m_fMapSize > MENU_X(MAP_SIZE_TO_ALLOW_X_MOVE)) // rouz edit (ChatGPT)
 					ZOOM(mapCrosshair.x, mapCrosshair.y, false);
 				else
 					ZOOM(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, false);
 
-			} else if (CPad::GetPad(0)->GetMouseWheelUp() || CPad::GetPad(0)->GetPageUp() || CPad::GetPad(0)->GetRightShoulder1()) {
-				if (CPad::GetPad(0)->GetMouseWheelUp())
+			} else if (Input_GetMouseWheelUp() || Input_GetPageUp() || CPad::GetPad(0)->GetRightShoulder1()) { // rouz edit (ChatGPT)
+				if (Input_GetMouseWheelUp()) // rouz edit (ChatGPT)
 					ZOOM(mapCrosshair.x, mapCrosshair.y, true);
 				else
 					ZOOM(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, true);
 			}
 			
 			static bool justResetPointer = false;
-			if (CPad::GetPad(0)->GetLeftMouse()) {
+			if (Input_GetLeftMouse()) { // rouz edit (ChatGPT)
 				if (!justResetPointer) {
 					m_fMapCenterX += m_nMousePosX - m_nMouseOldPosX;
 					m_fMapCenterY += m_nMousePosY - m_nMouseOldPosY;
@@ -3809,7 +3809,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 			{
 				// This is else block of GetLeftMouse() if MAP_ENHANCEMENTS defined, so all of GetLeftMouse() conditions below being rendered useless. 
 
-				if (CPad::GetPad(0)->GetLeftMouse() && m_nMousePosY < m_nMouseOldPosY || CPad::GetPad(0)->GetUp() ||
+				if (Input_GetLeftMouse() && m_nMousePosY < m_nMouseOldPosY || Input_GetUp() || // rouz edit (ChatGPT)
 					CPad::GetPad(0)->GetDPadUp() || CPad::GetPad(0)->GetAnalogueUpDown() < 0) {
 					if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 						if ((m_fMapSize - MENU_Y(MAP_MIN_SIZE)) + SCREEN_HEIGHT/2 > m_fMapCenterY)
@@ -3818,7 +3818,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 					}				
 				}
 
-				if (CPad::GetPad(0)->GetLeftMouse() && m_nMousePosY > m_nMouseOldPosY || CPad::GetPad(0)->GetDown() ||
+				if (Input_GetLeftMouse() && m_nMousePosY > m_nMouseOldPosY || Input_GetDown() || // rouz edit (ChatGPT)
 					CPad::GetPad(0)->GetDPadDown() || CPad::GetPad(0)->GetAnalogueUpDown() > 0) {
 					if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 						if (SCREEN_HEIGHT/2 - (m_fMapSize - MENU_Y(MAP_MIN_SIZE)) < m_fMapCenterY)
@@ -3827,7 +3827,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 					}				
 				}
 
-				if (CPad::GetPad(0)->GetLeftMouse() && m_nMousePosX < m_nMouseOldPosX || CPad::GetPad(0)->GetLeft() ||
+				if (Input_GetLeftMouse() && m_nMousePosX < m_nMouseOldPosX || Input_GetLeft() || // rouz edit (ChatGPT)
 					CPad::GetPad(0)->GetDPadLeft() || CPad::GetPad(0)->GetAnalogueLeftRight() < 0) {
 					if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 						if (m_fMapSize > MENU_X(MAP_SIZE_TO_ALLOW_X_MOVE) && m_fMapSize - MENU_X(MAP_MIN_SIZE) + SCREEN_WIDTH/2 > m_fMapCenterX)
@@ -3836,7 +3836,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 					}				
 				}
 
-				if (CPad::GetPad(0)->GetLeftMouseJustUp()) {
+				if (Input_GetLeftMouseJustUp()) { // rouz edit (ChatGPT)
 					// The coordinates in aScreens->MENUPAGE_MAP.
 					if (m_nMousePosX > MENU_X_LEFT_ALIGNED(60.0f) && m_nMousePosX < MENU_X_LEFT_ALIGNED(140.0f)) {
 						if (m_nMousePosY > MENU_Y(375.0f) && m_nMousePosY < MENU_Y(400.0f)) {
@@ -3846,7 +3846,7 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 					}
 				}
 
-				if (CPad::GetPad(0)->GetLeftMouse() && m_nMousePosX > m_nMouseOldPosX || CPad::GetPad(0)->GetRight() ||
+				if (Input_GetLeftMouse() && m_nMousePosX > m_nMouseOldPosX || Input_GetRight() || // rouz edit (ChatGPT)
 					CPad::GetPad(0)->GetDPadRight() || CPad::GetPad(0)->GetAnalogueLeftRight() > 0) {
 					if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
 						if (m_fMapSize > MENU_X(MAP_SIZE_TO_ALLOW_X_MOVE) && SCREEN_WIDTH/2 - (m_fMapSize - MENU_X(MAP_MIN_SIZE)) < m_fMapCenterX)
@@ -3861,11 +3861,11 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 				lastMapTick = Timer_GetTimeInMillisecondsPauseMode();
 
 #ifndef MAP_ENHANCEMENTS
-			if (CPad::GetPad(0)->GetLeftMouseJustUp())
+			if (Input_GetLeftMouseJustUp()) // rouz edit (ChatGPT)
 				CentreMousePointer();
 #endif
 
-			if (CPad::GetPad(0)->GetLeftMouse()) {
+			if (Input_GetLeftMouse()) { // rouz edit (ChatGPT)
 				if (m_nMousePosX < SCREEN_STRETCH_X(20.0f) || m_nMousePosX > SCREEN_STRETCH_X(620.0f) || m_nMousePosY < SCREEN_STRETCH_Y(20.0f) || m_nMousePosY > SCREEN_STRETCH_Y(428.0f)) {
 #ifdef MAP_ENHANCEMENTS
 					justResetPointer = true;
@@ -3873,18 +3873,18 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 					CentreMousePointer();
 				}
 			}
-			if (!CPad::GetPad(0)->GetLeftMouse() && !m_bShowMouse && (m_nMouseOldPosX != m_nMousePosX || m_nMouseOldPosY != m_nMousePosY)) {
+			if (!Input_GetLeftMouse() && !m_bShowMouse && (m_nMouseOldPosX != m_nMousePosX || m_nMouseOldPosY != m_nMousePosY)) { // rouz edit (ChatGPT)
 				m_bShowMouse = true;
 			}
 
 			static bool pressedL = false;
 
-			if (!CPad::GetPad(0)->GetChar('L') && !CPad::GetPad(0)->GetChar('l')) {
+			if (!Input_GetChar('L') && !Input_GetChar('l')) { // rouz edit (ChatGPT)
 				pressedL = false;
 			}
 
 			if (!pressedL) {
-				if (CPad::GetPad(0)->GetChar('L') || CPad::GetPad(0)->GetChar('l')) {
+				if (Input_GetChar('L') || Input_GetChar('l')) { // rouz edit (ChatGPT)
 					m_PrefsShowLegends = !m_PrefsShowLegends;
 					pressedL = true;
 				}
@@ -3902,31 +3902,31 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 			break;
 		case MENUPAGE_STATS:
 		{
-			if (CPad::GetPad(0)->GetMouseWheelUpJustDown() || CPad::GetPad(0)->GetMouseWheelUpJustUp() || CPad::GetPad(0)->GetUp() ||
+			if (Input_GetMouseWheelUpJustDown() || Input_GetMouseWheelUpJustUp() || Input_GetUp() || // rouz edit (ChatGPT)
 				CPad::GetPad(0)->GetDPadUp() || CPad::GetPad(0)->GetAnalogueUpDown() < 0) {
 
 				m_StatsScrollSpeed = 20.0f;
 				m_StatsScrollDirection = 0;
 
-			} else if (CPad::GetPad(0)->GetMouseWheelDownJustDown() || CPad::GetPad(0)->GetMouseWheelDownJustUp() || CPad::GetPad(0)->GetDown() ||
+			} else if (Input_GetMouseWheelDownJustDown() || Input_GetMouseWheelDownJustUp() || Input_GetDown() || // rouz edit (ChatGPT)
 				CPad::GetPad(0)->GetDPadDown() || CPad::GetPad(0)->GetAnalogueUpDown() > 0) {
 				
 				m_StatsScrollSpeed = 20.0f;
 				m_StatsScrollDirection = 1;
 
-			} else if (CPad::GetPad(0)->GetChar(' ')) {
+			} else if (Input_GetChar(' ')) { // rouz edit (ChatGPT)
 				m_StatsScrollSpeed = 0.0f;
 			} else
 				m_StatsScrollSpeed = 150.0f;
 
 			static bool pressedS = false;
 
-			if (!CPad::GetPad(0)->GetChar('S') && !CPad::GetPad(0)->GetChar('s')) {
+			if (!Input_GetChar('S') && !Input_GetChar('s')) { // rouz edit (ChatGPT)
 				pressedS = false;
 			}
 
 			if (!pressedS) {
-				if (CPad::GetPad(0)->GetChar('S') || CPad::GetPad(0)->GetChar('s')) {
+				if (Input_GetChar('S') || Input_GetChar('s')) { // rouz edit (ChatGPT)
 					ExportStats();
 					m_nHelperTextMsgId = 4;
 					m_nHelperTextAlpha = 300;
@@ -3944,7 +3944,14 @@ CMenuManager::ExportStats()
 {
 	char date[10];
 	FileMgr_SetDirMyDocuments();
+	//+ rouz edit (ChatGPT)
+	// Select the original compiler-specific local date formatter
+#if !defined(_MSC_VER) && !defined(__CWCC__)
+	Platform_StrDate(date);
+#else
 	_strdate(date);
+#endif
+	//- rouz edit (ChatGPT)
 	wchar *lastMission = Text_Get(&TheText,Stats_LastMissionPassedName[0] == '\0' ? "ITBEG" : Stats_LastMissionPassedName);
 	FILE *txtFile = fopen("stats.txt", "w");
 
@@ -4333,11 +4340,11 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 			m_nSelectedListRow = m_nTotalListRow - 1;
 	}
 
-	if (CPad::GetPad(0)->GetEnterJustDown() || CPad::GetPad(0)->GetCrossJustDown()) {
+	if (Input_GetEnterJustDown() || CPad::GetPad(0)->GetCrossJustDown()) { // rouz edit (ChatGPT)
 		m_bShowMouse = 0;
 		optionSelected = true;
 	}
-	if (CPad::GetPad(0)->GetBackspaceJustDown() && m_nCurrScreen == MENUPAGE_KEYBOARD_CONTROLS && !field_159) {
+	if (Input_GetBackspaceJustDown() && m_nCurrScreen == MENUPAGE_KEYBOARD_CONTROLS && !field_159) { // rouz edit (ChatGPT)
 		if (m_nCurrExLayer == HOVEROPTION_LIST) {
 			m_nHoverOption = HOVEROPTION_NOT_HOVERING;
 			m_bWaitingForNewKeyBind = true;
@@ -4360,7 +4367,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		lastTimeClickedScrollButton = Timer_GetTimeInMillisecondsPauseMode();
 	}
 
-	if (CPad::GetPad(0)->GetTabJustDown()) {
+	if (Input_GetTabJustDown()) { // rouz edit (ChatGPT)
 		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 		m_bShowMouse = false;
 		switch (m_nCurrExLayer) {
@@ -4383,10 +4390,10 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 	}
 
 	bool pressed = false;
-	if (CPad::GetPad(0)->GetUp() || CPad::GetPad(0)->GetAnaloguePadUp() || CPad::GetPad(0)->GetDPadUpJustDown()) {
+	if (Input_GetUp() || CPad::GetPad(0)->GetAnaloguePadUp() || CPad::GetPad(0)->GetDPadUpJustDown()) { // rouz edit (ChatGPT)
 		m_bShowMouse = false;
 		pressed = true;
-	} else if (CPad::GetPad(0)->GetMouseWheelUpJustUp()) {
+	} else if (Input_GetMouseWheelUpJustUp()) { // rouz edit (ChatGPT)
 		m_bShowMouse = true;
 		pressed = true;
 	}
@@ -4405,10 +4412,10 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 	}
 
 	pressed = false;
-	if (CPad::GetPad(0)->GetDown() || CPad::GetPad(0)->GetAnaloguePadDown() || CPad::GetPad(0)->GetDPadDownJustDown()) {
+	if (Input_GetDown() || CPad::GetPad(0)->GetAnaloguePadDown() || CPad::GetPad(0)->GetDPadDownJustDown()) { // rouz edit (ChatGPT)
 		m_bShowMouse = false;
 		pressed = true;
-	} else if (CPad::GetPad(0)->GetMouseWheelDownJustDown()) {
+	} else if (Input_GetMouseWheelDownJustDown()) { // rouz edit (ChatGPT)
 		m_bShowMouse = true;
 		pressed = true;
 	}
@@ -4427,7 +4434,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 	}
 
 	if (m_nCurrScreen != MENUPAGE_KEYBOARD_CONTROLS) {
-		if (!CPad::GetPad(0)->GetPageUp()) {
+		if (!Input_GetPageUp()) { // rouz edit (ChatGPT)
 			m_bPressedPgUpOnList = false;
 		} else {
 			m_nCurrExLayer = HOVEROPTION_LIST;
@@ -4439,7 +4446,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 				PageUpList(false);
 			}
 		}
-		if (!CPad::GetPad(0)->GetPageDown()) {
+		if (!Input_GetPageDown()) { // rouz edit (ChatGPT)
 			m_bPressedPgDnOnList = false;
 		} else {
 			m_nCurrExLayer = HOVEROPTION_LIST;
@@ -4451,7 +4458,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 				PageDownList(false);
 			}
 		}
-		if (CPad::GetPad(0)->GetHome()) {
+		if (Input_GetHome()) { // rouz edit (ChatGPT)
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
 			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
@@ -4461,7 +4468,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 			m_nSelectedListRow = 0;
 			m_nScrollbarTopMargin = (SCROLLBAR_MAX_HEIGHT / m_nTotalListRow) * m_nFirstVisibleRowOnList;
 		}
-		if (CPad::GetPad(0)->GetEnd()) {
+		if (Input_GetEnd()) { // rouz edit (ChatGPT)
 			m_nCurrExLayer = HOVEROPTION_LIST;
 			m_bShowMouse = false;
 			DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
@@ -4473,12 +4480,12 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		}
 	}
 
-	if (CPad::GetPad(0)->GetEscapeJustDown() || CPad::GetPad(0)->GetBackJustDown()) {
+	if (Input_GetEscapeJustDown() || CPad::GetPad(0)->GetBackJustDown()) { // rouz edit (ChatGPT)
 		m_bShowMouse = false;
 		goBack = true;
 	}
 
-	if (CPad::GetPad(0)->GetLeftMouseJustDown()) {
+	if (Input_GetLeftMouseJustDown()) { // rouz edit (ChatGPT)
 		switch (m_nHoverOption) {
 		case HOVEROPTION_BACK:
 			goBack = true;
@@ -4499,7 +4506,7 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		}
 	}
 
-	if (CPad::GetPad(0)->GetLeftMouseJustDown()) {
+	if (Input_GetLeftMouseJustDown()) { // rouz edit (ChatGPT)
 		switch (m_nHoverOption) {
 		case HOVEROPTION_OVER_SCROLL_UP:
 			m_nHoverOption = HOVEROPTION_CLICKED_SCROLL_UP;
@@ -4510,12 +4517,12 @@ CMenuManager::ProcessList(bool &optionSelected, bool &goBack)
 		case HOVEROPTION_LIST:
 			m_nHoverOption = HOVEROPTION_SKIN;
 		}
-	} else if ((CPad::GetPad(0)->GetLeftMouseJustUp())
+	} else if ((Input_GetLeftMouseJustUp()) // rouz edit (ChatGPT)
 		&& ((m_nHoverOption == HOVEROPTION_CLICKED_SCROLL_UP || (m_nHoverOption == HOVEROPTION_CLICKED_SCROLL_DOWN)))) {
 		m_nHoverOption = HOVEROPTION_NOT_HOVERING;
 	}
 
-	if (!CPad::GetPad(0)->GetLeftMouse()) {
+	if (!Input_GetLeftMouse()) { // rouz edit (ChatGPT)
 		holdingScrollBar = false;
 	} else {
 		if ((m_nHoverOption == HOVEROPTION_HOLDING_SCROLLBAR) || holdingScrollBar) {
@@ -4633,31 +4640,31 @@ CMenuManager::UserInput(void)
 		AdditionalOptionInput(goBack);
 
 		if (m_AllowNavigation &&
-			(CPad::GetPad(0)->GetDownJustDown() || CPad::GetPad(0)->GetAnaloguePadDown() || CPad::GetPad(0)->GetDPadDownJustDown())) {
+			(Input_GetDownJustDown() || CPad::GetPad(0)->GetAnaloguePadDown() || CPad::GetPad(0)->GetDPadDownJustDown())) { // rouz edit (ChatGPT)
 			m_bShowMouse = false;
 			goDown = true;
 			m_nOptionHighlightTransitionBlend = 0;
 
 		} else if (m_AllowNavigation &&
-			(CPad::GetPad(0)->GetUpJustDown() || CPad::GetPad(0)->GetAnaloguePadUp() || CPad::GetPad(0)->GetDPadUpJustDown())) {
+			(Input_GetUpJustDown() || CPad::GetPad(0)->GetAnaloguePadUp() || CPad::GetPad(0)->GetDPadUpJustDown())) { // rouz edit (ChatGPT)
 			m_bShowMouse = false;
 			goUp = true;
 			m_nOptionHighlightTransitionBlend = 0;
 		}
 
 		if ((m_nCurrOption == 0) && (m_nCurrScreen == MENUPAGE_PAUSE_MENU)) {
-			if (CPad::GetPad(0)->GetEnterJustUp() || CPad::GetPad(0)->GetCrossJustUp()) {
+			if (Input_GetEnterJustUp() || CPad::GetPad(0)->GetCrossJustUp()) { // rouz edit (ChatGPT)
 				m_bShowMouse = false;
 				optionSelected = true;
 			}
 		} else {
-			if (CPad::GetPad(0)->GetEnterJustDown() || CPad::GetPad(0)->GetCrossJustDown()) {
+			if (Input_GetEnterJustDown() || CPad::GetPad(0)->GetCrossJustDown()) { // rouz edit (ChatGPT)
 				m_bShowMouse = false;
 				optionSelected = true;
 			}
 		}
 
-		if (CPad::GetPad(0)->GetLeftMouseJustUp() && m_nCurrScreen != MENUPAGE_MAP) {
+		if (Input_GetLeftMouseJustUp() && m_nCurrScreen != MENUPAGE_MAP) { // rouz edit (ChatGPT)
 			if (m_nHoverOption == HOVEROPTION_RANDOM_ITEM)
 				optionSelected = true;
 			else if (m_nHoverOption == HOVEROPTION_NEXT_RADIO)
@@ -4666,7 +4673,7 @@ CMenuManager::UserInput(void)
 				ChangeRadioStation(-1);
 		}
 
-		if (CPad::GetPad(0)->GetLeftMouse()) {
+		if (Input_GetLeftMouse()) { // rouz edit (ChatGPT)
 			switch (m_nHoverOption) {
 			case HOVEROPTION_INCREASE_BRIGHTNESS:
 			case HOVEROPTION_INCREASE_MP3BOOST:
@@ -4712,12 +4719,12 @@ CMenuManager::UserInput(void)
 		}
 		
 		// Prevent sound on scroll. Mouse wheel is now belongs to us!
-		if (!(m_nTotalListRow > MAX_VISIBLE_OPTION && (CPad::GetPad(0)->GetMouseWheelUpJustDown() || CPad::GetPad(0)->GetMouseWheelDownJustDown())))
+		if (!(m_nTotalListRow > MAX_VISIBLE_OPTION && (Input_GetMouseWheelUpJustDown() || Input_GetMouseWheelDownJustDown()))) // rouz edit (ChatGPT)
 #endif
-		if (CPad::GetPad(0)->GetLeftMouseJustUp() || CPad::GetPad(0)->GetLeftJustUp() || CPad::GetPad(0)->GetRightJustUp()
+		if (Input_GetLeftMouseJustUp() || Input_GetLeftJustUp() || Input_GetRightJustUp() // rouz edit (ChatGPT)
 			|| CPad::GetPad(0)->GetDPadLeftJustUp() || CPad::GetPad(0)->GetDPadRightJustUp()
 			|| CPad::GetPad(0)->GetAnaloguePadLeftJustUp() || CPad::GetPad(0)->GetAnaloguePadRightJustUp()
-			|| CPad::GetPad(0)->GetMouseWheelUpJustDown() || CPad::GetPad(0)->GetMouseWheelDownJustDown()) {
+			|| Input_GetMouseWheelUpJustDown() || Input_GetMouseWheelDownJustDown()) { // rouz edit (ChatGPT)
 			int option = aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action;
 			if (option == MENUACTION_BRIGHTNESS
 #ifdef CUSTOM_FRONTEND_OPTIONS
@@ -4731,7 +4738,7 @@ CMenuManager::UserInput(void)
 				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_ENTER_OR_ADJUST, 0);
 
 		}
-		if (CPad::GetPad(0)->GetBackJustDown() || CPad::GetPad(0)->GetEscapeJustDown()) {
+		if (CPad::GetPad(0)->GetBackJustDown() || Input_GetEscapeJustDown()) { // rouz edit (ChatGPT)
 			if (m_nCurrScreen != MENUPAGE_START_MENU && m_nCurrScreen != MENUPAGE_PAUSE_MENU && m_nCurrScreen != MENUPAGE_CHOOSE_SAVE_SLOT
 				&& m_nCurrScreen != MENUPAGE_SAVE_CHEAT_WARNING && m_nCurrScreen != MENUPAGE_SAVING_IN_PROGRESS
 				&& m_nCurrScreen != MENUPAGE_DELETING_IN_PROGRESS && m_nCurrScreen != MENUPAGE_OUTRO
@@ -4755,7 +4762,7 @@ CMenuManager::UserInput(void)
 	}
 
 	int curAction = aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action;
-	if (CPad::GetPad(0)->GetLeft() || CPad::GetPad(0)->GetPedWalkLeftRight() < 0 || CPad::GetPad(0)->GetDPadLeft()) {
+	if (Input_GetLeft() || CPad::GetPad(0)->GetPedWalkLeftRight() < 0 || CPad::GetPad(0)->GetDPadLeft()) { // rouz edit (ChatGPT)
 		static uint32 lastSliderDecrease = 0;
 		if (Timer_GetTimeInMillisecondsPauseMode() - lastSliderDecrease > 150) {
 			if (curAction == MENUACTION_BRIGHTNESS || curAction == MENUACTION_MUSICVOLUME ||
@@ -4770,7 +4777,7 @@ CMenuManager::UserInput(void)
 
 			lastSliderDecrease = Timer_GetTimeInMillisecondsPauseMode();
 		}
-	} else if (CPad::GetPad(0)->GetRight() || CPad::GetPad(0)->GetPedWalkLeftRight() > 0 || CPad::GetPad(0)->GetDPadRight()) {
+	} else if (Input_GetRight() || CPad::GetPad(0)->GetPedWalkLeftRight() > 0 || CPad::GetPad(0)->GetDPadRight()) { // rouz edit (ChatGPT)
 		static uint32 lastSliderIncrease = 0;
 		if (Timer_GetTimeInMillisecondsPauseMode() - lastSliderIncrease > 150) {
 			if (curAction == MENUACTION_BRIGHTNESS || curAction == MENUACTION_MUSICVOLUME ||
@@ -4790,22 +4797,22 @@ CMenuManager::UserInput(void)
 	if (!SCREEN_HAS_AUTO_SCROLLBAR)
 #endif
 	{
-		if (CPad::GetPad(0)->GetMouseWheelUpJustDown()) {
+		if (Input_GetMouseWheelUpJustDown()) { // rouz edit (ChatGPT)
 			changeValueBy = 1;
-		} else if (CPad::GetPad(0)->GetMouseWheelDownJustDown()) {
+		} else if (Input_GetMouseWheelDownJustDown()) { // rouz edit (ChatGPT)
 			changeValueBy = -1;
 		}
 	}
 	
 	if (m_AllowNavigation) {
-		if (CPad::GetPad(0)->GetRightJustDown() || CPad::GetPad(0)->GetAnaloguePadRight() || CPad::GetPad(0)->GetDPadRightJustDown()) {
+		if (Input_GetRightJustDown() || CPad::GetPad(0)->GetAnaloguePadRight() || CPad::GetPad(0)->GetDPadRightJustDown()) { // rouz edit (ChatGPT)
 			m_bShowMouse = false;
 			changeValueBy = 1;
 		}
 	}
 
 	if (m_AllowNavigation) {
-		if (CPad::GetPad(0)->GetLeftJustDown() || CPad::GetPad(0)->GetAnaloguePadLeft() || CPad::GetPad(0)->GetDPadLeftJustDown()) {
+		if (Input_GetLeftJustDown() || CPad::GetPad(0)->GetAnaloguePadLeft() || CPad::GetPad(0)->GetDPadLeftJustDown()) { // rouz edit (ChatGPT)
 			m_bShowMouse = false;
 			changeValueBy = -1;
 		}
@@ -4865,19 +4872,19 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 			JoyButtonJustClicked = false;
 			MouseButtonJustClicked = false;
 
-			if (CPad::GetPad(0)->GetLeftMouseJustDown())
+			if (Input_GetLeftMouseJustDown()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSELEFTBUTTON;
-			else if (CPad::GetPad(0)->GetRightMouseJustUp())
+			else if (Input_GetRightMouseJustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSERIGHTBUTTON;
-			else if (CPad::GetPad(0)->GetMiddleMouseJustUp())
+			else if (Input_GetMiddleMouseJustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSMIDDLEBUTTON;
-			else if (CPad::GetPad(0)->GetMouseWheelUpJustUp())
+			else if (Input_GetMouseWheelUpJustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSEWHEELUPBUTTON;
-			else if (CPad::GetPad(0)->GetMouseWheelDownJustUp())
+			else if (Input_GetMouseWheelDownJustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSEWHEELDOWNBUTTON;
-			else if (CPad::GetPad(0)->GetMouseX1JustUp())
+			else if (Input_GetMouseX1JustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSEX1BUTTON;
-			else if (CPad::GetPad(0)->GetMouseX2JustUp())
+			else if (Input_GetMouseX2JustUp()) // rouz edit (ChatGPT)
 				MouseButtonJustClicked = rsMOUSEX2BUTTON;
 
 			JoyButtonJustClicked = ControlsManager.GetJoyButtonJustDown();
@@ -4902,7 +4909,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 				field_159 = true;
 			} else {
 				for (int i = 0; i < 4; i++)
-					ControlsManager.ClearSettingsAssociatedWithAction((e_ControllerAction)m_CurrCntrlAction, (eControllerType)i);
+					Input_ClearSettingsAssociatedWithAction(ControlsManager.m_aSettings, (e_ControllerAction)m_CurrCntrlAction, (eControllerType)i); // rouz edit (ChatGPT)
 				m_bKeyIsOK = false;
 				m_bKeyChangeNotProcessed = false;
 			}
@@ -4914,7 +4921,7 @@ CMenuManager::ProcessUserInput(uint8 goDown, uint8 goUp, uint8 optionSelected, u
 
 #ifdef USE_DEBUG_SCRIPT_LOADER
 	if (m_nCurrScreen == MENUPAGE_START_MENU || m_nCurrScreen == MENUPAGE_NEW_GAME || m_nCurrScreen == MENUPAGE_NEW_GAME_RELOAD) {
-		if (CPad::GetPad(0)->GetChar('R')) {
+		if (Input_GetChar('R')) { // rouz edit (ChatGPT)
 			CTheScripts::ScriptToLoad = 1;
 			DoSettingsBeforeStartingAGame();
 			return;
@@ -5497,7 +5504,7 @@ CMenuManager::ProcessOnOffMenuOptions()
 		break;
 #endif
 	case MENUACTION_INVERTPADY:
-		CPad::bInvertLook4Pad = !CPad::bInvertLook4Pad;
+		Input_invertPadLook = !Input_invertPadLook; // rouz edit (ChatGPT)
 		SaveSettings(); // FIX: Why don't SaveSettings? Because of it's an hidden option? :(
 		break;
 	case MENUACTION_CTRLDISPLAY:
@@ -5867,7 +5874,7 @@ CMenuManager::SwitchMenuOnAndOff()
 	if (!TheCamera.m_WideScreenOn) {
 
 		// Reminder: You need REGISTER_START_BUTTON defined to make it work.
-		if ((CPad::GetPad(0)->GetStartJustDown() || CPad::GetPad(0)->GetEscapeJustDown())
+		if ((CPad::GetPad(0)->GetStartJustDown() || Input_GetEscapeJustDown()) // rouz edit (ChatGPT)
 			&& (!m_bMenuActive || m_nCurrScreen == MENUPAGE_PAUSE_MENU || m_nCurrScreen == MENUPAGE_CHOOSE_SAVE_SLOT || m_nCurrScreen == MENUPAGE_SAVE_CHEAT_WARNING)
 			|| m_bShutDownFrontEndRequested || m_bStartUpFrontEndRequested
 #ifdef REGISTER_START_BUTTON
@@ -5978,7 +5985,7 @@ CMenuManager::SwitchMenuOnAndOff()
 		Initialise();
 		LoadAllTextures();
 
-		if (CPad::bHasPlayerCheated) {
+		if (Input_playerHasCheated) { // rouz edit (ChatGPT)
 			m_nCurrScreen = MENUPAGE_SAVE_CHEAT_WARNING;
 			m_nCurrOption = 0;
 		} else {
@@ -6063,7 +6070,7 @@ CMenuManager::WaitForUserCD()
 	CPad::UpdatePads();
 	MessageScreen("NO_PCCD", true);
 
-	if (CPad::GetPad(0)->GetEscapeJustDown()) {
+	if (Input_GetEscapeJustDown()) { // rouz edit (ChatGPT)
 		m_bQuitGameNoCD = true;
 		RsEventHandler(rsQUITAPP, nil);
 	}

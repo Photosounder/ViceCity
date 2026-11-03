@@ -2,6 +2,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Script.h"
 #include "ScriptCommands.h"
@@ -134,7 +135,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		CPlayerInfo* pPlayerInfo = &CWorld::Players[ScriptParams[0]];
 		CPad::GetPad(ScriptParams[0])->SetDisablePlayerControls(PLAYERCONTROL_CUTSCENE);
 		pPlayerInfo->MakePlayerSafe(true);
-		CCutsceneMgr::StartCutsceneProcessing();
+		Cutscene_StartProcessing(); // rouz edit (ChatGPT)
 		return 0;
 	}
 	case COMMAND_USE_TEXT_COMMANDS:
@@ -313,7 +314,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	/*
 	case COMMAND_REMOVE_CAR_FROM_CHASE:
 		CollectParameters(&m_nIp, 1);
-		CRecordDataForChase::RemoveCarFromChase(ScriptParams[0]);
+		RecordChase_RemoveCarFromChase(ScriptParams[0]); // rouz edit (ChatGPT)
 		return 0;
 	*/
 	case COMMAND_IS_FRENCH_GAME:
@@ -739,7 +740,7 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 	case COMMAND_GET_CHASE_CAR:
 	{
 		CollectParameters(&m_nIp, 1);
-		CVehicle* pVehicle = CRecordDataForChase::TurnChaseCarIntoScriptCar(ScriptParams[0]);
+		CVehicle* pVehicle = RecordChase_TurnChaseCarIntoScriptCar(ScriptParams[0]); // rouz edit (ChatGPT)
 				// Access raw storage through the C store or pool API
 		ScriptParams[0] = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
 				StoreParameters(&m_nIp, 1);
@@ -771,13 +772,13 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		CollectParameters(&m_nIp, 1);
 		if (ScriptParams[0]) {
 			CGame::playingIntro = true;
-			CStreaming::RemoveCurrentZonesModels();
+			Streaming_RemoveCurrentZonesModels(); // rouz edit (ChatGPT)
 		} else {
 			CGame::playingIntro = false;
 			DMAudio_ChangeMusicMode(MUSICMODE_GAME);
 			int mi;
-			CModelInfo::GetModelInfo("bridgefukb", &mi);
-			CStreaming::RequestModel(mi, STREAMFLAGS_DEPENDENCY);
+			(CBaseModelInfo*)ModelRegistry_Find("bridgefukb", 0, MODELINFOSIZE-1, &mi); // rouz edit (ChatGPT)
+			Streaming_RequestModel(mi, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 			CStreaming::LoadAllRequestedModels(false);
 		}
 		return 0;
@@ -1348,7 +1349,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 						CTheScripts::LastRandomPedId = ped_handle;
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->bRespondsToThreats = false;
-			++CPopulation::ms_nTotalMissionPeds;
+			++Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 			if (m_bIsMissionScript)
 				CTheScripts::MissionCleanUp.AddEntityToList(ped_handle, CLEANUP_CHAR);
 		}
@@ -1400,7 +1401,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 						CTheScripts::LastRandomPedId = ped_handle;
 			pPed->CharCreatedBy = MISSION_CHAR;
 			pPed->bRespondsToThreats = false;
-			++CPopulation::ms_nTotalMissionPeds;
+			++Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 			if (m_bIsMissionScript)
 				CTheScripts::MissionCleanUp.AddEntityToList(ped_handle, CLEANUP_CHAR);
 		}
@@ -1617,7 +1618,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 	//case COMMAND_IS_REPLAY_PLAYING:
 	case COMMAND_IS_MODEL_AVAILABLE:
 		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(CModelInfo::GetModelInfo(ScriptParams[0]) != nil);
+		UpdateCompareFlag(((CBaseModelInfo*)ModelRegistry_Get(ScriptParams[0])) != nil); // rouz edit (ChatGPT)
 		return 0;
 	case COMMAND_SHUT_CHAR_UP:
 		CollectParameters(&m_nIp, 2);

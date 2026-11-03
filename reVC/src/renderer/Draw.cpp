@@ -25,11 +25,6 @@ float Draw_BackendScreenHeight(void)
 	// Retain the original platform-dependent screen height and float conversion
 	return SCREEN_HEIGHT;
 }
-bool Draw_BackendCutsceneRunning(void)
-{
-	// Query the original cutscene owner's running state
-	return CCutsceneMgr::IsRunning();
-}
 float Draw_BackendFovMultiplier(void)
 {
 	// Read the original live float FOV multiplier

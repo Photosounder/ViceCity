@@ -433,7 +433,7 @@ void CCarAI::UpdateCarAI(CVehicle* pVehicle)
 				pVehicle->AutoPilot.m_nCarMission = MISSION_BLOCKPLAYER_FARAWAY;
 		}
 	}
-	if (pVehicle->GetUp().z < -0.7f){
+	if (pVehicle->GetUp().z < -0.7f){ // rouz edit (ChatGPT)
 		pVehicle->AutoPilot.m_nTempAction = TEMPACT_WAIT;
 		pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 1000;
 	}
@@ -559,7 +559,7 @@ void CCarAI::AddPoliceCarOccupants(CVehicle* pVehicle)
 	{
 		pVehicle->SetUpDriver()->bMiamiViceCop = true;
 		pVehicle->SetupPassenger(0)->bMiamiViceCop = true;
-		CPopulation::NumMiamiViceCops += 2;
+		Population_numMiamiViceCops += 2; // rouz edit (ChatGPT)
 		CCarCtrl::MiamiViceCycle = (CCarCtrl::MiamiViceCycle + 1) % 4;
 		CCarCtrl::LastTimeMiamiViceGenerated = (*Timer_GetTimeInMilliseconds());
 		return;

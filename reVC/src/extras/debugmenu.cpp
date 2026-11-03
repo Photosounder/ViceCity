@@ -329,8 +329,8 @@ MenuEntry *mouseOverEntry;
 MenuEntry scrollUpEntry("SCROLLUP"), scrollDownEntry("SCROLLDOWN");	// dummies
 
 
-#define KEYJUSTDOWN(k) ControlsManager.GetIsKeyboardKeyJustDown((RsKeyCodes)k)
-#define KEYDOWN(k) ControlsManager.GetIsKeyboardKeyDown((RsKeyCodes)k)
+#define KEYJUSTDOWN(k) Input_GetIsKeyboardKeyJustDown((RsKeyCodes)k) // rouz edit (ChatGPT)
+#define KEYDOWN(k) Input_GetIsKeyboardKeyDown((RsKeyCodes)k) // rouz edit (ChatGPT)
 #define CTRLJUSTDOWN(key) \
 	       ((KEYDOWN(rsLCTRL) || KEYDOWN(rsRCTRL)) && KEYJUSTDOWN((RsKeyCodes)key) || \
 	        (KEYJUSTDOWN(rsLCTRL) || KEYJUSTDOWN(rsRCTRL)) && KEYDOWN((RsKeyCodes)key))
@@ -978,12 +978,12 @@ processInput(void)
 	if(upjustdown)
 		activeMenu->changeSelection(activeMenu->selection - (shift ? 5 : 1));
 
-	if(CPad::NewMouseControllerState.WHEELUP){
+	if(Input_newMouseState.WHEELUP){ // rouz edit (ChatGPT)
 		if(mouseOverMenu)
 			activeMenu = mouseOverMenu;
 		activeMenu->scroll(shift ? -5 : -1);
 	}
-	if(CPad::NewMouseControllerState.WHEELDN){
+	if(Input_newMouseState.WHEELDN){ // rouz edit (ChatGPT)
 		if(mouseOverMenu)
 			activeMenu = mouseOverMenu;
 		activeMenu->scroll(shift ? 5 : 1);
@@ -1032,24 +1032,24 @@ updateMouse(void)
 	if(MousePointerStateHelper.bInvertHorizontally) dirX = -1;
 	if(MousePointerStateHelper.bInvertVertically) dirY = -1;
 
-	mouseX += pad->NewMouseControllerState.x*dirX;
-	mouseY += pad->NewMouseControllerState.y*dirY;
+	mouseX += Input_newMouseState.x*dirX; // rouz edit (ChatGPT)
+	mouseY += Input_newMouseState.y*dirY; // rouz edit (ChatGPT)
 
 	if(mouseX < 0.0f) mouseX = 0.0f;
 	if(mouseY < 0.0f) mouseY = 0.0f;
 	if(mouseX >= screenWidth) mouseX = screenWidth;
 	if(mouseY >= screenHeight) mouseY = screenHeight;
 
-	button1justdown = pad->NewMouseControllerState.LMB && !pad->OldMouseControllerState.LMB;
-	button2justdown = pad->NewMouseControllerState.MMB && !pad->OldMouseControllerState.MMB;
-	button3justdown = pad->NewMouseControllerState.RMB && !pad->OldMouseControllerState.RMB;
-	buttondown[0] = pad->NewMouseControllerState.LMB;
-	buttondown[1] = pad->NewMouseControllerState.MMB;
-	buttondown[2] = pad->NewMouseControllerState.RMB;
+	button1justdown = Input_newMouseState.LMB && !Input_oldMouseState.LMB; // rouz edit (ChatGPT)
+	button2justdown = Input_newMouseState.MMB && !Input_oldMouseState.MMB; // rouz edit (ChatGPT)
+	button3justdown = Input_newMouseState.RMB && !Input_oldMouseState.RMB; // rouz edit (ChatGPT)
+	buttondown[0] = Input_newMouseState.LMB; // rouz edit (ChatGPT)
+	buttondown[1] = Input_newMouseState.MMB; // rouz edit (ChatGPT)
+	buttondown[2] = Input_newMouseState.RMB; // rouz edit (ChatGPT)
 
 	// Zero the mouse position so the camera won't move
-	pad->NewMouseControllerState.x = 0.0f;
-	pad->NewMouseControllerState.y = 0.0f;
+	Input_newMouseState.x = 0.0f; // rouz edit (ChatGPT)
+	Input_newMouseState.y = 0.0f; // rouz edit (ChatGPT)
 }
 
 void

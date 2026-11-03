@@ -1,13 +1,18 @@
+//+ rouz edit (ChatGPT)
 #pragma once
-
 #ifdef TIMEBARS
-void tbInit();
-void tbStartTimer(int32, Const char*);
-void tbEndTimer(Const char*);
-void tbDisplay();
+#include "timebars_state.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+void tbDisplay(void);
+#ifdef __cplusplus
+}
+#endif
 #else
 #define tbInit()
 #define tbStartTimer(a, b)
 #define tbEndTimer(a)
 #define tbDisplay()
 #endif
+//- rouz edit (ChatGPT)

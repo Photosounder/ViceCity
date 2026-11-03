@@ -12,6 +12,7 @@
 #define strcasecmp _stricmp
 #else
 #include <strings.h>
+#include "CasePath.h"
 #endif
 #include "AudioStreamHost.h"
 
@@ -417,7 +418,7 @@ bool CStream_Open(CStream *stream, const char* filename, uint32 overrideSampleRa
 
 // Be case-insensitive on linux (from https://github.com/OneSadCookie/fcaseopen/)
 #if !defined(_WIN32)
-	char *real = AudioStream_CasePath(filename);
+	char *real = casepath(filename, true);
 	if (real) {
 		strcpy(stream->m_aFilename, real);
 		free(real);

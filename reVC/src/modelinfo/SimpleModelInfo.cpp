@@ -5,6 +5,8 @@
 #include "Camera.h"
 #include "Renderer.h"
 #include "ModelInfo.h"
+#include "SimpleModelPolicy.h"
+#include "SimpleModel_backend.h"
 #include "AnimManager.h"
 #include "custompipes.h"
 //+ rouz edit (ChatGPT)
@@ -112,102 +114,64 @@ CSimpleModelInfo::SetAtomic(int n, RpAtomic *atomic)
 #endif
 }
 
-void
-CSimpleModelInfo::SetLodDistances(float *dist)
-{
-	// rouz edit, distances can be multiplied
-	m_lodDistances[0] = dist[0]*rouz.lod_dist_scale;
-	m_lodDistances[1] = dist[1]*rouz.lod_dist_scale;
-	m_lodDistances[2] = dist[2]*rouz.lod_dist_scale;
-}
-
-void
-CSimpleModelInfo::IncreaseAlpha(void)
-{
-	if(m_alpha >= 0xEF)
-		m_alpha = 0xFF;
-	else
-		m_alpha += 0x10;
-}
-
-float
-CSimpleModelInfo::GetLodDistance(int i)
-{
-	return m_lodDistances[i] * TheCamera.LODDistMultiplier;
-}
-
-float
-CSimpleModelInfo::GetNearDistance(void)
-{
-	return m_lodDistances[2] * TheCamera.LODDistMultiplier;
-}
-
-float
-CSimpleModelInfo::GetLargestLodDistance(void)
-{
-	float d;
-	if(m_firstDamaged == 0 || m_isDamaged)
-		d = m_lodDistances[m_numAtomics-1];
-	else
-		d = m_lodDistances[m_firstDamaged-1];
-	return d * TheCamera.LODDistMultiplier;
-}
-
 RpAtomic*
 CSimpleModelInfo::GetAtomicFromDistance(float dist)
 {
-	int i;
-	i = 0;
-	if(m_isDamaged)
-		i = m_firstDamaged;
-	for(; i < m_numAtomics; i++)
-		if(dist < m_lodDistances[i] * TheCamera.LODDistMultiplier)
-			return m_atomics[i];
-	return nil;
+    // Resolve the selected native atomic after the C level-of-detail search
+    int index=SimpleModel_AtomicIndex(m_lodDistances,m_numAtomics,m_firstDamaged,m_isDamaged,dist,TheCamera.LODDistMultiplier);
+    return index<0 ? nil : m_atomics[index];
 }
 
-RpAtomic*
-CSimpleModelInfo::GetFirstAtomicFromDistance(float dist)
+void SimpleModel_BackendRequireSimple(void *model)
 {
-	if(dist < m_lodDistances[0] * TheCamera.LODDistMultiplier)
-		return m_atomics[0];
-	return nil;
+    // Preserve the native assertion on the selected related model
+    assert(((CBaseModelInfo*)model)->IsSimple());
 }
 
-void
-CSimpleModelInfo::FindRelatedModel(int32 minID, int32 maxID)
+void SimpleModel_BackendSetRelated(void *model,void *related)
 {
-	int i;
-	CBaseModelInfo *mi;
-	for(i = minID; i <= maxID; i++){
-		mi = CModelInfo::GetModelInfo(i);
-		if(mi && mi != this &&
-		   !General_faststrcmp(GetModelName()+3, mi->GetModelName()+3)){
-			assert(mi->IsSimple());
-			this->SetRelatedModel((CSimpleModelInfo*)mi);
-			return;
-		}
-	}
+    // Store the selected related model through the original native operation
+    ((CSimpleModelInfo*)((CBaseModelInfo*)model))->m_atomics[2]=(RpAtomic*)((CSimpleModelInfo*)((CBaseModelInfo*)related));
 }
 
-#define NEAR_DRAW_DIST 0.0f	// 100.0f in liberty city
-
-void
-CSimpleModelInfo::SetupBigBuilding(int32 minID, int32 maxID)
+void *SimpleModel_BackendRelated(void *model)
 {
-	CSimpleModelInfo *related;
-	if(m_lodDistances[0] > LOD_DISTANCE && GetRelatedModel() == nil){
-		m_isBigBuilding = 1;
-		FindRelatedModel(minID, maxID);
-		related = GetRelatedModel();
-		if(related){
-			m_lodDistances[2] = related->GetLargestLodDistance()/TheCamera.LODDistMultiplier;
-			if(m_drawLast){
-				m_drawLast = false;
-				debug("%s was draw last\n", GetModelName());
-			}
-		}else
-			m_lodDistances[2] = NEAR_DRAW_DIST;
-	}
+    // Return the existing related model using the common base pointer
+    CSimpleModelInfo *related=(CSimpleModelInfo*)((CSimpleModelInfo*)((CBaseModelInfo*)model))->m_atomics[2];
+    return (CBaseModelInfo*)related;
 }
+
+void SimpleModel_BackendMarkBig(void *model)
+{
+    // Set the native big-building flag
+    ((CSimpleModelInfo*)((CBaseModelInfo*)model))->m_isBigBuilding=1;
+}
+
+float SimpleModel_BackendRelatedNearDistance(void *related)
+{
+    // Preserve the original scaled distance and camera division
+    CSimpleModelInfo *simple=(CSimpleModelInfo*)((CBaseModelInfo*)related);
+    return SimpleModel_LargestDistance(simple->m_lodDistances,simple->m_numAtomics,simple->m_firstDamaged,simple->m_isDamaged,TheCamera.LODDistMultiplier)/TheCamera.LODDistMultiplier;
+}
+
+void SimpleModel_BackendSetNearDistance(void *model,float distance)
+{
+    // Store the near distance in the original model
+    ((CSimpleModelInfo*)((CBaseModelInfo*)model))->m_lodDistances[2]=distance;
+}
+
+int SimpleModel_BackendDrawLast(void *model)
+{
+    // Read the original draw-last flag after assigning the near distance
+    return ((CSimpleModelInfo*)((CBaseModelInfo*)model))->m_drawLast;
+}
+
+void SimpleModel_BackendClearDrawLast(void *model)
+{
+    // Clear the flag and retain its native debug message
+    CSimpleModelInfo *simple=(CSimpleModelInfo*)((CBaseModelInfo*)model);
+    simple->m_drawLast=false;
+    debug("%s was draw last\n",simple->GetModelName());
+}
+
 //- rouz edit (ChatGPT)

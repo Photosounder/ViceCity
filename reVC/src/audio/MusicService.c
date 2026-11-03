@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "DMAudio.h"
@@ -73,7 +74,7 @@ MusicService_Run(cMusicManager *manager)
 				{
 					MusicPositions_RecordRadioStats(manager);
 					MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nPlayingTrack, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
-					MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nPlayingTrack, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+					MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nPlayingTrack, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 					bRadioStatsRecorded = 1;
 				}
 				SampleManager_StopStreamedFile(&SampleManager, 0);
@@ -206,7 +207,7 @@ MusicService_GameMode(cMusicManager *manager)
 				}
 				if(manager->m_nRadioPosition != -1) {
 					manager->m_aTracks[manager->m_nFrontendTrack].m_nPosition = manager->m_nRadioPosition;
-					MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nFrontendTrack, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+					MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nFrontendTrack, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 				}
 				manager->m_bRadioSetByScript = 0;
 				return;
@@ -322,7 +323,7 @@ MusicService_GameMode(cMusicManager *manager)
 
 		if (manager->m_nRadioPosition != -1) {
 			manager->m_aTracks[manager->m_nFrontendTrack].m_nPosition = manager->m_nRadioPosition;
-			MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nFrontendTrack, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+			MUSIC_SERVICE_STORE_TRACK_VALUE(manager, m_nFrontendTrack, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 		}
 
 		gRetuneCounter = 0;

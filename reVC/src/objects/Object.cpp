@@ -93,7 +93,7 @@ CObject::~CObject(void)
 	//- rouz edit (ChatGPT)
 
 	if (m_nRefModelIndex != -1)
-		CModelInfo::GetModelInfo(m_nRefModelIndex)->RemoveRef();
+		((CBaseModelInfo*)ModelRegistry_Get(m_nRefModelIndex))->RemoveRef(); // rouz edit (ChatGPT)
 
 	if (ObjectCreatedBy == TEMP_OBJECT && nNoTempObjects != 0)
 		nNoTempObjects--;
@@ -215,7 +215,7 @@ CObject::Render(void)
 		return;
 
 	if (m_nRefModelIndex != -1 && ObjectCreatedBy == TEMP_OBJECT && bUseVehicleColours) {
-		CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(m_nRefModelIndex);
+		CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_nRefModelIndex)); // rouz edit (ChatGPT)
 		assert(mi->GetModelType() == MITYPE_VEHICLE);
 		mi->SetVehicleColour(m_colour1, m_colour2);
 	}
@@ -777,7 +777,7 @@ void
 CObject::RefModelInfo(int32 modelId)
 {
 	m_nRefModelIndex = modelId;
-	CModelInfo::GetModelInfo(modelId)->AddRef();
+	((CBaseModelInfo*)ModelRegistry_Get(modelId))->AddRef(); // rouz edit (ChatGPT)
 }
 
 void
@@ -813,7 +813,7 @@ CObject::Init(void)
 	if (GetModelIndex() == MI_BUOY)
 		bTouchingWater = true;
 
-	if (CModelInfo::GetModelInfo(GetModelIndex())->GetModelType() == MITYPE_WEAPON)
+	if (((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex()))->GetModelType() == MITYPE_WEAPON) // rouz edit (ChatGPT)
 		bIsWeapon = true;
 	bIsStreetLight = IsLightObject(GetModelIndex());
 

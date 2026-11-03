@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "KeyFrames_native.h"
 #include "CollisionVector_native.h"
 
@@ -977,7 +978,7 @@ CPed::ProcessObjective(void)
 										int chosenModel = CCarCtrl::ChooseModel(&zoneInfo, &chosenCarClass);
 										CVehicle *newVeh = nil;
 										if (chosenModel != -1) {
-											if (CModelInfo::IsBikeModel(chosenModel)) {
+											if (ModelRegistry_IsBikeModel(chosenModel)) { // rouz edit (ChatGPT)
 												// Allocate the hijack target bike without invoking C++ new.
 																								// Access raw storage through the C store or pool API
 												newVeh = ((CVehicle*)CPool_New(CPools::GetVehiclePool()));
@@ -3282,7 +3283,7 @@ CPed::PedAnimStepOutCarCB(CAnimBlendAssociation* animAssoc, void* arg)
 		return;
 	}
 	CVector posForZ = ped->GetPosition();
-	CPedPlacement::FindZCoorForPed(&posForZ);
+	PedPlacement_CFindZ(posForZ.x, posForZ.y, &posForZ.z); // rouz edit (ChatGPT)
 	if (ped->GetPosition().z - 0.5f > posForZ.z) {
 		PedSetOutCarCB(nil, ped);
 		return;
@@ -3416,7 +3417,7 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 	float adjustedTimeStep;
 	CVector autoZPos;
 
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	if (!bChangedSeat && phase != LINE_UP_TO_CAR_2) {
@@ -3449,7 +3450,7 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 	if (phase == LINE_UP_TO_CAR_FALL) {
 		SetPedPositionInCar();
 		autoZPos = GetPosition();
-		CPedPlacement::FindZCoorForPed(&autoZPos);
+		PedPlacement_CFindZ(autoZPos.x, autoZPos.y, &autoZPos.z); // rouz edit (ChatGPT)
 		if (m_pVehicleAnim && (m_pVehicleAnim->animId == ANIM_STD_ROLLOUT_LHS || m_pVehicleAnim->animId == ANIM_STD_ROLLOUT_RHS)
 			&& autoZPos.z > GetPosition().z) {
 			m_matrix.GetPosition().z = autoZPos.z;
@@ -3622,7 +3623,7 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 		if (veh->m_vehType == VEHICLE_TYPE_BOAT && veh->IsUpsideDown())
 			autoZPos.z += 1.0f;
 	} else {
-		CPedPlacement::FindZCoorForPed(&autoZPos);
+		PedPlacement_CFindZ(autoZPos.x, autoZPos.y, &autoZPos.z); // rouz edit (ChatGPT)
 	}
 
 	if (phase == LINE_UP_TO_CAR_END || phase == LINE_UP_TO_CAR_2) {
@@ -4925,7 +4926,7 @@ CPed::GetNearestPassengerDoor(CVehicle *veh, CVector &posToOpen)
 	CVector rfPos, lrPos, rrPos;
 	bool canEnter = false;
 
-	CVehicleModelInfo *vehModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(veh->GetModelIndex());
+	CVehicleModelInfo *vehModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(veh->GetModelIndex())); // rouz edit (ChatGPT)
 
 	switch (veh->GetModelIndex()) {
 		case MI_BUS:
@@ -5019,7 +5020,7 @@ void CPed::PedSetGetInCarPositionCB(CAnimBlendAssociation* assoc, void* arg)
 	CVehicle* pVehicle = pPed->m_pMyVehicle;
 	const CVector& offset = (pVehicle->bIsVan && (pPed->m_vehDoor == CAR_DOOR_RR || pPed->m_vehDoor == CAR_DOOR_LR)) ? vecPedVanRearDoorAnimOffset : vecPedCarDoorAnimOffset;
 	CVector position = Multiply3x3(mat, offset) + pPed->GetPosition();
-	CPedPlacement::FindZCoorForPed(&position);
+	PedPlacement_CFindZ(position.x, position.y, &position.z); // rouz edit (ChatGPT)
 	pPed->SetMoveSpeed(0.0f, 0.0f, 0.0f);
 	pPed->SetPosition(position);
 }
@@ -5039,11 +5040,11 @@ CPed::SetAnimOffsetForEnterOrExitVehicle(void)
 	int bikehBlock = AnimManager_GetAnimationBlockIndex("bikeh");
 	// Use the complete C animation manager at the original call boundary
 	int bikedBlock = AnimManager_GetAnimationBlockIndex("biked");
-	CStreaming::RequestAnim(vanBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikesBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikevBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikehBlock, STREAMFLAGS_DEPENDENCY);
-	CStreaming::RequestAnim(bikedBlock, STREAMFLAGS_DEPENDENCY);
+	Streaming_RequestAnim(vanBlock, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+	Streaming_RequestAnim(bikesBlock, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+	Streaming_RequestAnim(bikevBlock, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+	Streaming_RequestAnim(bikehBlock, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+	Streaming_RequestAnim(bikedBlock, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 	// Use the complete C animation manager at the original call boundary
 	AnimManager_AddAnimBlockRef(vanBlock);
@@ -5273,7 +5274,7 @@ CPed::PedSetQuickDraggedOutCarPositionCB(CAnimBlendAssociation *animAssoc, void 
 		draggedOutOffset.x = -draggedOutOffset.x;
 
 	finalPos = Multiply3x3(pedMat, draggedOutOffset) + ped->GetPosition();
-	CPedPlacement::FindZCoorForPed(&finalPos);
+	PedPlacement_CFindZ(finalPos.x, finalPos.y, &finalPos.z); // rouz edit (ChatGPT)
 	ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	ped->SetPosition(finalPos);
 
@@ -5377,7 +5378,7 @@ CPed::PedSetDraggedOutCarPositionCB(CAnimBlendAssociation* animAssoc, void* arg)
 
 	CVector posAfterBeingDragged = Multiply3x3(pedMat, draggedOutOffset);
 	posAfterBeingDragged += ped->GetPosition();
-	CPedPlacement::FindZCoorForPed(&posAfterBeingDragged);
+	PedPlacement_CFindZ(posAfterBeingDragged.x, posAfterBeingDragged.y, &posAfterBeingDragged.z); // rouz edit (ChatGPT)
 	ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	ped->SetPosition(posAfterBeingDragged);
 
@@ -5445,7 +5446,7 @@ CPed::GetNearestTrainDoor(CVehicle *train, CVector &doorPos)
 	GetNearestTrainPedPosition(train, doorPos);
 /*
 	// Not used.
-	CVehicleModelInfo* trainModel = (CVehicleModelInfo*)CModelInfo::GetModelInfo(train->m_modelIndex);
+	CVehicleModelInfo* trainModel = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(train->m_modelIndex)); // rouz edit (ChatGPT)
 	CMatrix trainMat = CMatrix(train->GetMatrix());
 
 	doorPos = trainModel->m_positions[m_vehDoor];
@@ -5460,7 +5461,7 @@ uint8
 CPed::GetNearestTrainPedPosition(CVehicle *train, CVector &enterPos)
 {
 	CVector enterStepOffset;
-	CVehicleModelInfo *trainModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(train->GetModelIndex());
+	CVehicleModelInfo *trainModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(train->GetModelIndex())); // rouz edit (ChatGPT)
 	CMatrix trainMat = CMatrix(train->GetMatrix());
 	CVector leftEntryPos, rightEntryPos, midEntryPos;
 	float distLeftEntry, distRightEntry, distMidEntry;
@@ -5575,7 +5576,7 @@ void
 CPed::LineUpPedWithTrain(void)
 {
 	CVector lineUpPos;
-	CVehicleModelInfo *trainModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(m_pMyVehicle->GetModelIndex());
+	CVehicleModelInfo *trainModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(m_pMyVehicle->GetModelIndex())); // rouz edit (ChatGPT)
 	CVector enterOffset(1.5f, 0.0f, -0.2f);
 
 	m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
@@ -5660,7 +5661,7 @@ CPed::PedSetOutTrainCB(CAnimBlendAssociation *animAssoc, void *arg)
 	ped->m_fRotationDest = ped->m_fRotationCur;
 	CVector posAfterExit = Multiply3x3(pedMat, vecPedTrainDoorAnimOffset);
 	posAfterExit += ped->GetPosition();
-	CPedPlacement::FindZCoorForPed(&posAfterExit);
+	PedPlacement_CFindZ(posAfterExit.x, posAfterExit.y, &posAfterExit.z); // rouz edit (ChatGPT)
 	ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 	ped->SetPosition(posAfterExit);
 	ped->SetHeading(ped->m_fRotationCur);
@@ -5995,7 +5996,7 @@ CPed::GetPositionToOpenCarDoor(CVehicle *veh, uint32 component, float offset)
 	CMatrix vehMat(veh->GetMatrix());
 
 	if (veh->IsBike()) {
-		CVehicleModelInfo* vehModel = (CVehicleModelInfo*)CModelInfo::GetModelInfo(veh->GetModelIndex());
+		CVehicleModelInfo* vehModel = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(veh->GetModelIndex())); // rouz edit (ChatGPT)
 		CVector vehDoorOffset;
 		CBike* bike = (CBike*)veh;
 		doorPos = vehModel->GetFrontSeatPosn();
@@ -6048,7 +6049,7 @@ CPed::GetLocalPositionToOpenCarDoor(CVehicle *veh, uint32 component, float seatP
 	CVector vehDoorOffset;
 	float seatOffset;
 
-	vehModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(veh->GetModelIndex());
+	vehModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(veh->GetModelIndex())); // rouz edit (ChatGPT)
 
 	if (veh->IsBike()) {
 		CBike *bike = (CBike*)veh;
@@ -6531,7 +6532,7 @@ CPed::PositionPedOutOfCollision(void)
 	if (foundNode < 0)
 		return false;
 	newPos = ThePaths.m_pathNodes[foundNode].GetPosition();
-	CPedPlacement::FindZCoorForPed(&newPos);
+	PedPlacement_CFindZ(newPos.x, newPos.y, &newPos.z); // rouz edit (ChatGPT)
 	GetMatrix().SetTranslate(newPos);
 	SetHeading(m_pMyVehicle->GetForward().Heading());
 	return true;
@@ -6557,7 +6558,7 @@ CPed::PositionAnyPedOutOfCollision(void)
 		potentialPos.x = GetPosition().x - 3.5f;
 
 		for (int xTry = 0; xTry < 15; xTry++) {
-			CPedPlacement::FindZCoorForPed(&potentialPos);
+			PedPlacement_CFindZ(potentialPos.x, potentialPos.y, &potentialPos.z); // rouz edit (ChatGPT)
 			if (!CWorld::TestSphereAgainstWorld(potentialPos, 0.6f, this, true, false, false, true, false, false)) {
 				float potentialChangeSqr = (potentialPos - GetPosition()).MagnitudeSqr();
 				veh = (CVehicle*)CWorld::TestSphereAgainstWorld(potentialPos, 0.6f, this, false, true, false, false, false, false);
@@ -6609,7 +6610,7 @@ CPed::WarpPedToNearLeaderOffScreen(void)
 	for (int i = 0; i < tryCount; ++i) {
 		appropriatePos += halfNormalizedDist;
 		CVector zCorrectedPos = appropriatePos;
-		CPedPlacement::FindZCoorForPed(&zCorrectedPos);
+		PedPlacement_CFindZ(zCorrectedPos.x, zCorrectedPos.y, &zCorrectedPos.z); // rouz edit (ChatGPT)
 
 		if (Abs(zCorrectedPos.z - warpToPos.z) < 3.0f || Abs(zCorrectedPos.z - appropriatePos.z) < 3.0f) {
 			appropriatePos.z = zCorrectedPos.z;
@@ -6642,7 +6643,7 @@ CPed::WarpPedToNearEntityOffScreen(CEntity *warpTo)
 	for (int i = 0; i < tryCount; ++i) {
 		appropriatePos += halfNormalizedDist;
 		CVector zCorrectedPos = appropriatePos;
-		CPedPlacement::FindZCoorForPed(&zCorrectedPos);
+		PedPlacement_CFindZ(zCorrectedPos.x, zCorrectedPos.y, &zCorrectedPos.z); // rouz edit (ChatGPT)
 
 		if (Abs(zCorrectedPos.z - warpToPos.z) < 3.0f || Abs(zCorrectedPos.z - appropriatePos.z) < 3.0f) {
 			appropriatePos.z = zCorrectedPos.z;

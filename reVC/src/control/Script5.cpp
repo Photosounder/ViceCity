@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 
 #include "Script.h"
@@ -852,7 +853,8 @@ void CRunningScript::LocateSniperBulletCommand(int32 command, uint32* pIp)
 		dY = *(float*)&ScriptParams[3];
 		debug = ScriptParams[4];
 	}
-	result = CBulletInfo::TestForSniperBullet(X - dX, X + dX, Y - dY, Y + dY, b3D ? Z - dZ : -1000.0f, b3D ? Z + dZ : 1000.0f);
+	// Call the standalone bullet operation
+	result = BulletInfo_TestForSniperBullet(X - dX, X + dX, Y - dY, Y + dY, b3D ? Z - dZ : -1000.0f, b3D ? Z + dZ : 1000.0f);
 	UpdateCompareFlag(result);
 	if (debug)
 		CTheScripts::HighlightImportantArea((uintptr)this + m_nIp, X - dX, Y - dY, X + dX, Y + dY, b3D ? Z : MAP_Z_LOW_LIMIT);
@@ -2941,7 +2943,7 @@ void CTheScripts::RemoveThisPed(CPed* pPed)
 		//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 		if (bWasMissionPed)
-			--CPopulation::ms_nTotalMissionPeds;
+			--Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 	}
 }
 
@@ -2987,7 +2989,7 @@ void CTheScripts::CleanUpThisPed(CPed* pPed)
 		pPed->SetPedState(state);
 		pPed->SetMoveState(ms);
 	}
-	--CPopulation::ms_nTotalMissionPeds;
+	--Population_nTotalMissionPeds; // rouz edit (ChatGPT)
 }
 
 void CTheScripts::CleanUpThisVehicle(CVehicle* pVehicle)
@@ -3036,7 +3038,7 @@ void CTheScripts::UpdateObjectIndices()
 	for (int i = 1; i < NumberOfUsedObjects; i++) {
 		bool found = false;
 		for (int j = 0; j < MODELINFOSIZE && !found; j++) {
-			CBaseModelInfo* pModel = CModelInfo::GetModelInfo(j);
+			CBaseModelInfo* pModel = ((CBaseModelInfo*)ModelRegistry_Get(j)); // rouz edit (ChatGPT)
 			if (!pModel)
 				continue;
 			strcpy(name, pModel->GetModelName());
@@ -3073,4 +3075,5 @@ void CTheScripts::ReadMultiScriptFileOffsetsFromScript()
 	}
 }
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

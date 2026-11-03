@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "main.h"
 #include "ModelInfo.h"
@@ -111,7 +112,7 @@ CObjectData::Initialise(const char *filename)
 		ms_aObjectInfo[id].m_nSpecialCollisionResponseCases = responseCase;
 		ms_aObjectInfo[id].m_bCameraToAvoidThisObject = camAvoid;
 
-		mi = CModelInfo::GetModelInfo(name, nil);
+		mi = (CBaseModelInfo*)ModelRegistry_Find(name, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
 		if (mi) {
 			if (ms_aObjectInfo[0].m_fMass != ms_aObjectInfo[id].m_fMass
 				|| ms_aObjectInfo[0].m_fCollisionDamageMultiplier != ms_aObjectInfo[id].m_fCollisionDamageMultiplier
@@ -138,10 +139,10 @@ CObjectData::SetObjectData(int32 modelId, CObject &object)
 {
 	CObjectInfo *objinfo;
 
-	if(CModelInfo::GetModelInfo(modelId)->GetObjectID() == -1)
+	if(((CBaseModelInfo*)ModelRegistry_Get(modelId))->GetObjectID() == -1) // rouz edit (ChatGPT)
 		return;
 
-	objinfo = &ms_aObjectInfo[CModelInfo::GetModelInfo(modelId)->GetObjectID()];
+	objinfo = &ms_aObjectInfo[((CBaseModelInfo*)ModelRegistry_Get(modelId))->GetObjectID()]; // rouz edit (ChatGPT)
 
 	object.m_fMass = objinfo->m_fMass;
 	object.m_fTurnMass = objinfo->m_fTurnMass;

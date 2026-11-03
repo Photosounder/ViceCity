@@ -110,7 +110,7 @@
 #endif	
 
 #ifdef INVERT_LOOK_FOR_PAD
-	#define INVERT_PAD_SELECTOR MENUACTION_CFO_SELECT, "FEC_ILU", { CFO_NEW(CCFOSelect, (int8*)&CPad::bInvertLook4Pad, "Controller", "InvertPad", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT,
+	#define INVERT_PAD_SELECTOR MENUACTION_CFO_SELECT, "FEC_ILU", { CFO_NEW(CCFOSelect, (int8*)&Input_invertPadLook, "Controller", "InvertPad", off_on, 2, false) }, 0, 0, MENUALIGN_LEFT, // rouz edit (ChatGPT)
 #else
 	#define INVERT_PAD_SELECTOR
 #endif
@@ -219,12 +219,12 @@ void IslandLoadingAfterChange(int8 before, int8 after) {
 
 #ifdef PED_CAR_DENSITY_SLIDERS
 void PedDensityChange(float before, float after) {
-	CPopulation::MaxNumberOfPedsInUse = DEFAULT_MAX_NUMBER_OF_PEDS * after;
-	CPopulation::MaxNumberOfPedsInUseInterior = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * after;
+	PopulationLimits_MaxPeds = DEFAULT_MAX_NUMBER_OF_PEDS * after; // rouz edit (ChatGPT)
+	PopulationLimits_MaxInteriorPeds = DEFAULT_MAX_NUMBER_OF_PEDS_INTERIOR * after; // rouz edit (ChatGPT)
 }
 
 void CarDensityChange(float before, float after) {
-	CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS * after;
+	PopulationLimits_MaxCars = DEFAULT_MAX_NUMBER_OF_CARS * after; // rouz edit (ChatGPT)
 }
 #endif
 

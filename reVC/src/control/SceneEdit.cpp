@@ -84,7 +84,7 @@ static int32 NextValidModelId(int32 mi, int32 step)
 			step = -step;
 			continue;
 		}
-		CBaseModelInfo* pInfo = CModelInfo::GetModelInfo(i);
+		CBaseModelInfo* pInfo = ((CBaseModelInfo*)ModelRegistry_Get(i)); // rouz edit (ChatGPT)
 		CVehicleModelInfo* pVehicleInfo = (CVehicleModelInfo*)pInfo;
 		if (!pInfo)
 			continue;
@@ -385,8 +385,8 @@ void CSceneEdit::ProcessCommand(void)
 		if (m_nActor == -1) {
 			if (m_nNumActors == NUM_ACTORS_IN_MOVIE)
 				break;
-			if (!CStreaming::HasModelLoaded(m_nPedmodelId)) {
-				CStreaming::RequestModel(m_nPedmodelId, 0);
+			if (!Streaming_HasModelLoaded(m_nPedmodelId)) { // rouz edit (ChatGPT)
+				Streaming_RequestModel(m_nPedmodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 				CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
@@ -509,8 +509,8 @@ void CSceneEdit::ProcessCommand(void)
 		if (m_nVehicle == -1) {
 			if (m_nNumVehicles == NUM_VEHICLES_IN_MOVIE)
 				break;
-			if (!CStreaming::HasModelLoaded(m_nVehiclemodelId)) {
-				CStreaming::RequestModel(m_nVehiclemodelId, 0);
+			if (!Streaming_HasModelLoaded(m_nVehiclemodelId)) { // rouz edit (ChatGPT)
+				Streaming_RequestModel(m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 				CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
@@ -871,8 +871,8 @@ void CSceneEdit::PlayBack(void)
 	{
 		m_nPedmodelId = Movie[m_nCurrentMovieCommand].m_nModelIndex;
 		m_vecCurrentPosition = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		if (!CStreaming::HasModelLoaded(m_nPedmodelId)) {
-			CStreaming::RequestModel(m_nPedmodelId, 0);
+		if (!Streaming_HasModelLoaded(m_nPedmodelId)) { // rouz edit (ChatGPT)
+			Streaming_RequestModel(m_nPedmodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 			CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif
@@ -906,8 +906,8 @@ void CSceneEdit::PlayBack(void)
 	{
 		m_nVehiclemodelId = Movie[m_nCurrentMovieCommand].m_nModelIndex;
 		m_vecCurrentPosition = Movie[m_nCurrentMovieCommand].m_vecPosition;
-		if (!CStreaming::HasModelLoaded(m_nVehiclemodelId)) {
-			CStreaming::RequestModel(m_nVehiclemodelId, 0);
+		if (!Streaming_HasModelLoaded(m_nVehiclemodelId)) { // rouz edit (ChatGPT)
+			Streaming_RequestModel(m_nVehiclemodelId, 0); // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 			CStreaming::LoadAllRequestedModels(false); // otherwise gets stuck :(
 #endif

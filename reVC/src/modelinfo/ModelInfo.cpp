@@ -4,315 +4,160 @@
 #include "TempColModels.h"
 #include "ModelIndices.h"
 #include "ModelInfo.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
+#include "ModelRegistry_backend.h" // rouz edit (ChatGPT)
 
-CBaseModelInfo *CModelInfo::ms_modelInfoPtrs[MODELINFOSIZE];
 
 //+ rouz edit (ChatGPT)
 static CSimpleModelInfo simpleModelEntries[SIMPLEMODELSIZE];
-CStore CModelInfo::ms_simpleModelStore = { 0, simpleModelEntries, sizeof(CSimpleModelInfo), SIMPLEMODELSIZE };
+static CStore simpleModelStore = { 0, simpleModelEntries, sizeof(CSimpleModelInfo), SIMPLEMODELSIZE };
 static CTimeModelInfo timeModelEntries[TIMEMODELSIZE];
-CStore CModelInfo::ms_timeModelStore = { 0, timeModelEntries, sizeof(CTimeModelInfo), TIMEMODELSIZE };
+static CStore timeModelStore = { 0, timeModelEntries, sizeof(CTimeModelInfo), TIMEMODELSIZE };
 static CWeaponModelInfo weaponModelEntries[WEAPONMODELSIZE];
-CStore CModelInfo::ms_weaponModelStore = { 0, weaponModelEntries, sizeof(CWeaponModelInfo), WEAPONMODELSIZE };
+static CStore weaponModelStore = { 0, weaponModelEntries, sizeof(CWeaponModelInfo), WEAPONMODELSIZE };
 static CClumpModelInfo clumpModelEntries[CLUMPMODELSIZE];
-CStore CModelInfo::ms_clumpModelStore = { 0, clumpModelEntries, sizeof(CClumpModelInfo), CLUMPMODELSIZE };
+static CStore clumpModelStore = { 0, clumpModelEntries, sizeof(CClumpModelInfo), CLUMPMODELSIZE };
 static CPedModelInfo pedModelEntries[PEDMODELSIZE];
-CStore CModelInfo::ms_pedModelStore = { 0, pedModelEntries, sizeof(CPedModelInfo), PEDMODELSIZE };
+static CStore pedModelStore = { 0, pedModelEntries, sizeof(CPedModelInfo), PEDMODELSIZE };
 static CVehicleModelInfo vehicleModelEntries[VEHICLEMODELSIZE];
-CStore CModelInfo::ms_vehicleModelStore = { 0, vehicleModelEntries, sizeof(CVehicleModelInfo), VEHICLEMODELSIZE };
-static C2dEffect effectEntries[TWODFXSIZE];
-CStore CModelInfo::ms_2dEffectStore = { 0, effectEntries, sizeof(C2dEffect), TWODFXSIZE };
+static CStore vehicleModelStore = { 0, vehicleModelEntries, sizeof(CVehicleModelInfo), VEHICLEMODELSIZE };
 //- rouz edit (ChatGPT)
 
-void
-CModelInfo::Initialise(void)
+//+ rouz edit (ChatGPT)
+void ModelRegistry_BackendLogStores(void)
 {
-	int i;
-	CSimpleModelInfo *m;
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	debug("sizeof SimpleModelStore %d\n", sizeof(simpleModelEntries));
-	debug("sizeof TimeModelStore %d\n", sizeof(timeModelEntries));
-	debug("sizeof WeaponModelStore %d\n", sizeof(weaponModelEntries));
-	debug("sizeof ClumpModelStore %d\n", sizeof(clumpModelEntries));
-	debug("sizeof VehicleModelStore %d\n", sizeof(vehicleModelEntries));
-	debug("sizeof PedModelStore %d\n", sizeof(pedModelEntries));
-	debug("sizeof 2deffectsModelStore %d\n", sizeof(effectEntries));
-	//- rouz edit (ChatGPT)
-
-	for(i = 0; i < MODELINFOSIZE; i++)
-		ms_modelInfoPtrs[i] = nil;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CStore_Clear(&ms_2dEffectStore);
-	CStore_Clear(&ms_simpleModelStore);
-	CStore_Clear(&ms_timeModelStore);
-	CStore_Clear(&ms_weaponModelStore);
-	CStore_Clear(&ms_clumpModelStore);
-	CStore_Clear(&ms_pedModelStore);
-	CStore_Clear(&ms_vehicleModelStore);
-	//- rouz edit (ChatGPT)
-
-	m = AddSimpleModel(MI_CAR_DOOR);
-	m->SetColModel(&CTempColModels::ms_colModelDoor1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_CAR_BUMPER);
-	m->SetColModel(&CTempColModels::ms_colModelBumper1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_CAR_PANEL);
-	m->SetColModel(&CTempColModels::ms_colModelPanel1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_CAR_BONNET);
-	m->SetColModel(&CTempColModels::ms_colModelBonnet1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_CAR_BOOT);
-	m->SetColModel(&CTempColModels::ms_colModelBoot1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_CAR_WHEEL);
-	m->SetColModel(&CTempColModels::ms_colModelWheel1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_BODYPARTA);
-	m->SetColModel(&CTempColModels::ms_colModelBodyPart1);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
-
-	m = AddSimpleModel(MI_BODYPARTB);
-	m->SetColModel(&CTempColModels::ms_colModelBodyPart2);
-	m->SetTexDictionary("generic");
-	m->SetNumAtomics(1);
-	m->m_lodDistances[0] = 80.0f;
+    // Preserve the original store-size diagnostics
+    debug("sizeof SimpleModelStore %d\n",sizeof(simpleModelEntries));
+    debug("sizeof TimeModelStore %d\n",sizeof(timeModelEntries));
+    debug("sizeof WeaponModelStore %d\n",sizeof(weaponModelEntries));
+    debug("sizeof ClumpModelStore %d\n",sizeof(clumpModelEntries));
+    debug("sizeof VehicleModelStore %d\n",sizeof(vehicleModelEntries));
+    debug("sizeof PedModelStore %d\n",sizeof(pedModelEntries));
+    debug("sizeof 2deffectsModelStore %d\n",sizeof(C2dEffect)*TWODFXSIZE);
 }
 
-void
-CModelInfo::ShutDown(void)
+void ModelRegistry_BackendSetBuiltinCollision(void *model,int kind)
 {
-	int i;
-	for(i = 0; i < ms_simpleModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		simpleModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_timeModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		timeModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_weaponModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		weaponModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_clumpModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		clumpModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_vehicleModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		vehicleModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_pedModelStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		pedModelEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-	for(i = 0; i < ms_2dEffectStore.allocPtr; i++)
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		effectEntries[i].Shutdown();
-		//- rouz edit (ChatGPT)
-
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CStore_Clear(&ms_2dEffectStore);
-	CStore_Clear(&ms_simpleModelStore);
-	CStore_Clear(&ms_timeModelStore);
-	CStore_Clear(&ms_weaponModelStore);
-	CStore_Clear(&ms_pedModelStore);
-	CStore_Clear(&ms_clumpModelStore);
-	CStore_Clear(&ms_vehicleModelStore);
-	//- rouz edit (ChatGPT)
+    // Assign the matching original temporary collision model
+    CColModel *models[]={&CTempColModels::ms_colModelDoor1,&CTempColModels::ms_colModelBumper1,
+        &CTempColModels::ms_colModelPanel1,&CTempColModels::ms_colModelBonnet1,
+        &CTempColModels::ms_colModelBoot1,&CTempColModels::ms_colModelWheel1,
+        &CTempColModels::ms_colModelBodyPart1,&CTempColModels::ms_colModelBodyPart2};
+    ((CSimpleModelInfo*)model)->SetColModel(models[kind]);
 }
 
-CSimpleModelInfo*
-CModelInfo::AddSimpleModel(int id)
+void ModelRegistry_BackendSetBuiltinTexture(void *model)
 {
-	CSimpleModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CSimpleModelInfo*)CStore_Alloc(&CModelInfo::ms_simpleModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->Init();
-	return modelinfo;
+    // Assign the original generic texture dictionary
+    ((CSimpleModelInfo*)model)->SetTexDictionary("generic");
 }
 
-CTimeModelInfo*
-CModelInfo::AddTimeModel(int id)
+void ModelRegistry_BackendSetBuiltinGeometry(void *model)
 {
-	CTimeModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CTimeModelInfo*)CStore_Alloc(&CModelInfo::ms_timeModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->Init();
-	return modelinfo;
+    // Preserve the built-in atomic count and draw distance
+    CSimpleModelInfo *simple=(CSimpleModelInfo*)model;
+    simple->m_numAtomics=1;
+    simple->m_lodDistances[0]=80.0f;
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+CStore *ModelRegistry_BackendStore(int kind)
+{
+    // Resolve each original native store without changing its ownership
+    switch (kind) {
+    case MODEL_STORE_SIMPLE: return &simpleModelStore;
+    case MODEL_STORE_TIME: return &timeModelStore;
+    case MODEL_STORE_WEAPON: return &weaponModelStore;
+    case MODEL_STORE_CLUMP: return &clumpModelStore;
+    case MODEL_STORE_VEHICLE: return &vehicleModelStore;
+    case MODEL_STORE_PED: return &pedModelStore;
+    default: return ModelRegistry_EffectsStore();
+    }
 }
 
-CWeaponModelInfo*
-CModelInfo::AddWeaponModel(int id)
+void ModelRegistry_BackendShutdownEntry(int kind,void *entry)
 {
-	CWeaponModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CWeaponModelInfo*)CStore_Alloc(&CModelInfo::ms_weaponModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->Init();
-	return modelinfo;
+    // Dispatch shutdown through each entry's original native type
+    switch (kind) {
+    case MODEL_STORE_SIMPLE: ((CSimpleModelInfo*)entry)->Shutdown(); break;
+    case MODEL_STORE_TIME: ((CTimeModelInfo*)entry)->Shutdown(); break;
+    case MODEL_STORE_WEAPON: ((CWeaponModelInfo*)entry)->Shutdown(); break;
+    case MODEL_STORE_CLUMP: ((CClumpModelInfo*)entry)->Shutdown(); break;
+    case MODEL_STORE_VEHICLE: ((CVehicleModelInfo*)entry)->Shutdown(); break;
+    case MODEL_STORE_PED: ((CPedModelInfo*)entry)->Shutdown(); break;
+    }
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+void ModelRegistry_BackendPublish(int id,int kind,void *entry)
+{
+    // Convert each native entry to its base pointer before publishing it
+    CBaseModelInfo *base;
+    switch (kind) {
+    case MODEL_STORE_SIMPLE: base=(CSimpleModelInfo*)entry; break;
+    case MODEL_STORE_TIME: base=(CTimeModelInfo*)entry; break;
+    case MODEL_STORE_WEAPON: base=(CWeaponModelInfo*)entry; break;
+    case MODEL_STORE_CLUMP: base=(CClumpModelInfo*)entry; break;
+    case MODEL_STORE_VEHICLE: base=(CVehicleModelInfo*)entry; break;
+    default: base=(CPedModelInfo*)entry; break;
+    }
+    ModelRegistry_Set(id,base);
 }
 
-CClumpModelInfo*
-CModelInfo::AddClumpModel(int id)
+void ModelRegistry_BackendInitEntry(int kind,void *entry)
 {
-	CClumpModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CClumpModelInfo*)CStore_Alloc(&CModelInfo::ms_clumpModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->m_clump = nil;
-	return modelinfo;
+    // Apply the original per-type initialization after publishing the entry
+    switch (kind) {
+    case MODEL_STORE_SIMPLE: ((CSimpleModelInfo*)entry)->Init(); break;
+    case MODEL_STORE_TIME: ((CTimeModelInfo*)entry)->Init(); break;
+    case MODEL_STORE_WEAPON: ((CWeaponModelInfo*)entry)->Init(); break;
+    case MODEL_STORE_CLUMP: ((CClumpModelInfo*)entry)->m_clump=nil; break;
+    case MODEL_STORE_PED: ((CPedModelInfo*)entry)->m_clump=nil; break;
+    case MODEL_STORE_VEHICLE: {
+        // Reset only the vehicle fields initialized by the original allocator
+        CVehicleModelInfo *model=(CVehicleModelInfo*)entry;
+        model->m_clump=nil;
+        model->m_vehicleType=-1;
+        model->m_wheelId=-1;
+        model->m_materials1[0]=nil;
+        model->m_materials2[0]=nil;
+        model->m_bikeSteerAngle=999.99f;
+        break;
+    }
+    }
+}
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+const char *ModelRegistry_Name(void *model)
+{
+    // Borrow the native name without changing its lifetime
+    return ((CBaseModelInfo*)model)->GetModelName();
 }
 
-CPedModelInfo*
-CModelInfo::AddPedModel(int id)
+//- rouz edit (ChatGPT)
+
+//+ rouz edit (ChatGPT)
+void *ModelRegistry_Collision(void *model)
 {
-	CPedModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CPedModelInfo*)CStore_Alloc(&CModelInfo::ms_pedModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->m_clump = nil;
-	return modelinfo;
+    // Borrow the original collision model pointer
+    return ((CBaseModelInfo*)model)->GetColModel();
 }
 
-CVehicleModelInfo*
-CModelInfo::AddVehicleModel(int id)
+int ModelRegistry_Type(void *model)
 {
-	CVehicleModelInfo *modelinfo;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	modelinfo = (CVehicleModelInfo*)CStore_Alloc(&CModelInfo::ms_vehicleModelStore);
-	//- rouz edit (ChatGPT)
-	CModelInfo::ms_modelInfoPtrs[id] = modelinfo;
-	modelinfo->m_clump = nil;
-	modelinfo->m_vehicleType = -1;
-	modelinfo->m_wheelId = -1;
-	modelinfo->m_materials1[0] = nil;
-	modelinfo->m_materials2[0] = nil;
-	modelinfo->m_bikeSteerAngle = 999.99f;
-	return modelinfo;
+    // Read the original model category without changing null handling
+    return ((CBaseModelInfo*)model)->GetModelType();
 }
 
-CBaseModelInfo*
-CModelInfo::GetModelInfo(const char *name, int *id)
+int ModelRegistry_BackendVehicleType(void *model)
 {
-	CBaseModelInfo *modelinfo;
-	for(int i = 0; i < MODELINFOSIZE; i++){
-		modelinfo = CModelInfo::ms_modelInfoPtrs[i];
-	 	if(modelinfo && !General_faststricmp(modelinfo->GetModelName(), name)){
-			if(id)
-				*id = i;
-			return modelinfo;
-		}
-	}
-	return nil;
+    // Read the original vehicle subtype from the native model
+    return ((CVehicleModelInfo*)((CBaseModelInfo*)model))->m_vehicleType;
 }
+//- rouz edit (ChatGPT)
 
-CBaseModelInfo*
-CModelInfo::GetModelInfo(const char *name, int minIndex, int maxIndex)
-{
-	if (minIndex > maxIndex)
-		return 0;
-
-	CBaseModelInfo *modelinfo;
-	for(int i = minIndex; i <= maxIndex; i++){
-		modelinfo = CModelInfo::ms_modelInfoPtrs[i];
-	 	if(modelinfo && !General_faststricmp(modelinfo->GetModelName(), name))
-			return modelinfo;
-	}
-	return nil;
-}
-
-bool
-CModelInfo::IsBoatModel(int32 id)
-{
-	return GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-		((CVehicleModelInfo*)GetModelInfo(id))->m_vehicleType == VEHICLE_TYPE_BOAT;
-}
-
-bool
-CModelInfo::IsBikeModel(int32 id)
-{
-	return GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-		((CVehicleModelInfo*)GetModelInfo(id))->m_vehicleType == VEHICLE_TYPE_BIKE;
-}
-
-bool
-CModelInfo::IsCarModel(int32 id)
-{
-	return GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-		((CVehicleModelInfo*)GetModelInfo(id))->m_vehicleType == VEHICLE_TYPE_CAR;
-}
-
-bool
-CModelInfo::IsHeliModel(int32 id)
-{
-	return GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-		((CVehicleModelInfo*)GetModelInfo(id))->m_vehicleType == VEHICLE_TYPE_HELI;
-}
-
-bool
-CModelInfo::IsPlaneModel(int32 id)
-{
-	return GetModelInfo(id)->GetModelType() == MITYPE_VEHICLE &&
-		((CVehicleModelInfo*)GetModelInfo(id))->m_vehicleType == VEHICLE_TYPE_PLANE;
-}
-
-void
-CModelInfo::ReInit2dEffects()
-{
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	CStore_Clear(&ms_2dEffectStore);
-	//- rouz edit (ChatGPT)
-
-	for (int i = 0; i < MODELINFOSIZE; i++) {
-		if (ms_modelInfoPtrs[i])
-			ms_modelInfoPtrs[i]->Init2dEffects();
-	}
-}
+//+ rouz edit (ChatGPT)
+//- rouz edit (ChatGPT)

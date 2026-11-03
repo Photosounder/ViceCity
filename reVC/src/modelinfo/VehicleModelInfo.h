@@ -92,10 +92,7 @@ public:
 	uint8 m_currentColour2;
 	RpAtomic *m_comps[6];
 	// This is stupid, CClumpModelInfo already has it!
-	union {
-		int32 m_animFileIndex;
-		char *m_animFileName;
-	};
+	ModelAnimFile m_animFile; // rouz edit (ChatGPT)
 
 	static int8 ms_compsToUse[2];
 	static int8 ms_compsUsed[2];
@@ -109,7 +106,7 @@ public:
 	void SetClump(RpClump *);
 	void SetAnimFile(const char *file);
 	void ConvertAnimFileIndex(void);
-	int GetAnimFileIndex(void) { return m_animFileIndex; }
+	int GetAnimFileIndex(void) { return m_animFile.index; } // rouz edit (ChatGPT)
 
 	static RwFrame *CollapseFramesCB(RwFrame *frame, void *data);
 	static RwObject *MoveObjectsCB(RwObject *object, void *data);

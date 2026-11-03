@@ -17,6 +17,10 @@ extern bool bDebugRenderGroups;
 extern bool gPS2alphaTest;
 extern bool gBackfaceCulling;
 
+void RwHelper_SetTextureRaster(void *raster); // rouz edit (ChatGPT)
+void *RwHelper_TextureRaster(void *texture); // rouz edit (ChatGPT)
+void *RwHelper_ReadTexture(const char *name,const char *mask); // rouz edit (ChatGPT)
+void RwHelper_DestroyTexture(void *texture); // rouz edit (ChatGPT)
 void OpenCharsetSafe(void);
 void CreateDebugFont(void);
 void DestroyDebugFont(void);

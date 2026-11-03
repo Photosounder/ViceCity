@@ -11,11 +11,7 @@ int32_t *OnscreenTimer_BackendVariable(int32_t offset)
     // Return the actual script variable pointer at the original lookup point
     return CTheScripts::GetPointerToScriptVariable(offset);
 }
-bool OnscreenTimer_BackendPlayingBack(void)
-{
-    // Query the live replay predicate before the disabled flag is examined
-    return CReplay::IsPlayingBack();
-}
+
 bool OnscreenTimer_BackendDrawHud(void)
 {
     // Read the live HUD visibility flag without resetting retained display state

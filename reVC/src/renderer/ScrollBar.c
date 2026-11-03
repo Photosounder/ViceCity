@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "ScrollBar_backend.h"
 #include "General.h"
 #include "Clock.h"
@@ -249,7 +250,7 @@ void ScrollBar_Render(ScrollBar *bar)
 	ScrollBar_BackendSrcBlend(true);
 	ScrollBar_BackendDestBlend(true);
 	ScrollBar_BackendLinear();
-	ScrollBar_BackendSetRaster(ScrollBar_BackendRaster(ScrollBar_BackendTexture()));
+	RwHelper_SetTextureRaster(RwHelper_TextureRaster(ScrollBar_BackendTexture()));
 	ScrollBar_BackendZTest(true);
 
     // Keep both actual native projection vectors alive throughout the pixel loop
@@ -349,7 +350,7 @@ ScrollBar_RenderForEnvMap(ScrollBar *bar,void *camera)
 	ScrollBar_BackendLinear();
 	ScrollBar_BackendSrcBlend(true);
 	ScrollBar_BackendDestBlend(true);
-	ScrollBar_BackendSetRaster(ScrollBar_BackendRaster(ScrollBar_BackendTexture()));
+	RwHelper_SetTextureRaster(RwHelper_TextureRaster(ScrollBar_BackendTexture()));
 	// Enter the C shared-buffer algorithm with the original arguments
 	RenderBuffer_ClearRenderBuffer();
 
@@ -409,7 +410,7 @@ ScrollBar_RenderForEnvMap(ScrollBar *bar,void *camera)
 	ScrollBar_BackendVertexAlpha(false);
 	ScrollBar_BackendSrcBlend(false);
 	ScrollBar_BackendDestBlend(false);
-	ScrollBar_BackendSetRaster(NULL);
+	RwHelper_SetTextureRaster(NULL);
 	ScrollBar_BackendCull(false);
 	ScrollBar_BackendPop();
 }

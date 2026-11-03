@@ -24,26 +24,6 @@ SkidmarksVector Skidmarks_BackendReadPosition(const void *position)
 
 
 
-void *Skidmarks_BackendTextureRead(const char *name, const char *mask)
-{
-	// Retain the original typed texture load and names
-	return RwTextureRead(name, mask);
-}
-void Skidmarks_BackendTextureDestroy(void *texture)
-{
-	// Destroy the original typed texture at the C algorithm's release point
-	RwTextureDestroy((RwTexture *)texture);
-}
-void *Skidmarks_BackendRaster(void *texture)
-{
-	// Read the raster through the original typed texture API
-	return RwTextureGetRaster((RwTexture *)texture);
-}
-void Skidmarks_BackendTextureRaster(void *raster)
-{
-	// Select the same raster in the original render state
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
-}
 void Skidmarks_BackendZWrite(bool enabled)
 {
 	// Preserve the original typed depth-write state
@@ -119,10 +99,6 @@ void Skidmarks_BackendPop(void)
 	// Close the original debug group when enabled
 	POP_RENDERGROUP();
 }
-bool Skidmarks_BackendPlayingBack(void)
-{
-	// Query the original live replay owner before any position read
-	return CReplay::IsPlayingBack();
-}
+
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

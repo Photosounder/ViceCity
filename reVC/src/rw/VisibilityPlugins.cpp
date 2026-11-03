@@ -6,6 +6,7 @@
 #include "main.h"
 #include "Entity.h"
 #include "ModelInfo.h"
+#include "SimpleModelPolicy.h" // rouz edit (ChatGPT)
 #include "Lights.h"
 #include "RwHelper.h"
 #include "Renderer.h"
@@ -311,7 +312,7 @@ CVisibilityPlugins::RenderFadingEntities(CSortedLinkList *list)
 		if(CustomPipes::bRenderingEnvMap && (e->IsPed() || e->IsVehicle()))
 			continue;
 #endif
-		mi = (CSimpleModelInfo *)CModelInfo::GetModelInfo(e->GetModelIndex());
+		mi = (CSimpleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 		if(mi->GetModelType() == MITYPE_SIMPLE && mi->m_noZwrite)
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, FALSE);
 
@@ -413,7 +414,7 @@ CVisibilityPlugins::RenderWeaponCB(RpAtomic *atomic)
 	mi = GetAtomicModelInfo(atomic);
 	m = RwFrameGetLTM(RpAtomicGetFrame(atomic));
 	RwV3dSub(&view, RwMatrixGetPos(m), ms_pCameraPosn);
-	maxdist = mi->GetLodDistance(0);
+	maxdist = (mi->m_lodDistances[0] * TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 	distsq = RwV3dDotProduct(&view, &view);
 	if(distsq < maxdist*maxdist)
 		RENDERCALLBACK(atomic);
@@ -433,7 +434,7 @@ CVisibilityPlugins::RenderFadingAtomic(RpAtomic *atomic, float camdist)
 	if(mi->m_additive)
 		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 
-	fadefactor = (mi->GetLargestLodDistance() - (camdist - FADE_DISTANCE))/FADE_DISTANCE;
+	fadefactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) - (camdist - FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
 	if(fadefactor > 1.0f)
 		fadefactor = 1.0f;
 	alpha = mi->m_alpha * fadefactor;

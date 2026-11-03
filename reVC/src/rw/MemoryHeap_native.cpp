@@ -12,7 +12,7 @@
 size_t MemoryHeap_HostMemoryUsed(void)
 {
     // Forward the original external owner primitive at its exact operation boundary
-    return CStreaming::ms_memoryUsed;
+    return Streaming_memoryUsed; // rouz edit (ChatGPT)
 }
 void MemoryHeap_HostMakeSpaceFor(int32_t size)
 {

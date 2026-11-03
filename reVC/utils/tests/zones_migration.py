@@ -23,12 +23,6 @@ ZonesHost_Player(void)
     return ZonesPosition_FromVector(FindPlayerCoors());
 }
 
-extern "C" uint16_t *
-ZonesHost_Text(const char *name)
-{
-    // Look up the original eight-byte zone label through the existing text owner
-    return TheText.Get(name);
-}
 //- rouz edit (ChatGPT)
 '''
 
@@ -140,7 +134,6 @@ extern "C" {
 #endif
 uint16_t *Zone_GetTranslatedName(CZone *zone);
 ZonesPosition ZonesHost_Player(void);
-uint16_t *ZonesHost_Text(const char *name);
 '''
     for declaration in re.findall(r'\bstatic\s+([^;{}]+);',owner):
         # Retain exact scalar widths and array dimensions for every original static field
@@ -163,7 +156,7 @@ def kernel(source):
     # Retain all hierarchy, density, label, audio traversal and serialization statements
     methods=re.findall(r'CTheZones::(\w+)\(',source)
     source=source[source.index('eLevelName CTheZones::m_CurrLevel;'):]
-    source=source.replace('CZone::GetTranslatedName(void)','Zone_GetTranslatedName(CZone *zone)').replace('TheText.Get(name)','ZonesHost_Text(zone->name)')
+    source=source.replace('CZone::GetTranslatedName(void)','Zone_GetTranslatedName(CZone *zone)').replace('TheText.Get(name)','Text_Get(&TheText,zone->name)')
     source=source.replace('pos = FindPlayerCoors();','pos = ZonesHost_Player();')
     source=re.sub(r'(?:const CVector|CVector const)\s*\*\s*(\w+)',r'ZonesPosition \1',source)
     source=re.sub(r'CVector\s*\*\s*(\w+)',r'ZonesPosition \1',source)
@@ -180,6 +173,7 @@ def kernel(source):
     source=re.sub(r'\n\{\n', '\n{\n\t// Preserve the original zone operation and live state access order\n',source)
     return '''//+ rouz edit (ChatGPT)
 #include "Zones.h"
+#include "Text.h"
 #include "Clock.h"
 #include "Timer.h"
 #include <ctype.h>

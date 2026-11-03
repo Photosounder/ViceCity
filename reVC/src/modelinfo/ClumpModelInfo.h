@@ -1,4 +1,5 @@
 #pragma once
+#include "ModelAnimFile.h" // rouz edit (ChatGPT)
 
 #include "BaseModelInfo.h"
 
@@ -30,13 +31,10 @@ class CClumpModelInfo : public CBaseModelInfo
 {
 public:
 	RpClump *m_clump;
-	union {
-		int32 m_animFileIndex;
-		char *m_animFileName;
-	};
+	ModelAnimFile m_animFile; // rouz edit (ChatGPT)
 
-	CClumpModelInfo(void) : CBaseModelInfo(MITYPE_CLUMP) { m_animFileIndex = -1; }
-	CClumpModelInfo(ModelInfoType id) : CBaseModelInfo(id) { m_animFileIndex = -1; }
+	CClumpModelInfo(void) : CBaseModelInfo(MITYPE_CLUMP) { m_animFile.index = -1; } // rouz edit (ChatGPT)
+	CClumpModelInfo(ModelInfoType id) : CBaseModelInfo(id) { m_animFile.index = -1; } // rouz edit (ChatGPT)
 	~CClumpModelInfo() {}
 	void DeleteRwObject(void);
 	RwObject *CreateInstance(void);
@@ -46,7 +44,7 @@ public:
 	virtual void SetClump(RpClump *);
 	virtual void SetAnimFile(const char *file);
 	virtual void ConvertAnimFileIndex(void);
-	virtual int GetAnimFileIndex(void) { return m_animFileIndex; }
+	virtual int GetAnimFileIndex(void) { return m_animFile.index; } // rouz edit (ChatGPT)
 
 	static RpAtomic *SetAtomicRendererCB(RpAtomic *atomic, void *data);
 	void SetFrameIds(RwObjectNameIdAssocation *assocs);

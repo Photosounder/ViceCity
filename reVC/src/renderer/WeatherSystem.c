@@ -1,5 +1,7 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "Weather_backend.h"
+#include "Timecycle.h"
 #include "Timer.h"
 #include "Clock.h"
 #include "General.h"
@@ -197,7 +199,7 @@ void Weather_Update(void)
 	int32_t lightningUpdates = (int32_t)(lightningUpdateCounter);
 	lightningUpdateCounter -= lightningUpdates;
 	
-	if(!Weather_BackendPlayback()){
+	if(!Replay_IsPlayingBack()){
 		float fNewInterpolation = (Clock_GetMinutes() + Clock_GetSeconds()/60.0f)/60.0f;
 		if (fNewInterpolation < Weather_InterpolationValue) {
 			// new hour
@@ -606,7 +608,7 @@ void Weather_RenderRainStreaks(void)
 	
 	if (Timer_GetIsCodePaused())
 		return;
-	int base_intensity = (64.0f - Weather_BackendFogReduction()) / 64.0f * (int)(255 * Weather_Rain);
+	int base_intensity = (64.0f - TimeCycle_GetFogReduction()) / 64.0f * (int)(255 * Weather_Rain);
 	if (base_intensity == 0)
 		return;
 	if (Weather_BackendCameraSpeed() > 1.75f)

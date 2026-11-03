@@ -2210,7 +2210,7 @@ CPed::FightStrike(CVector &touchedNodePos, bool fightWithWeapon)
 			CVector nearPedCentre;
 
 			// Have to animate a skinned clump because the initial col model is useless
-			hisCol = ((CPedModelInfo*)CModelInfo::GetModelInfo(nearPed->GetModelIndex()))->AnimatePedColModelSkinnedWorld(nearPed->GetClump());
+			hisCol = ((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(nearPed->GetModelIndex())))->AnimatePedColModelSkinnedWorld(nearPed->GetClump()); // rouz edit (ChatGPT)
 
 			nearPed->GetBoundCentre(nearPedCentre);
 			CVector potentialAttackDistance = nearPedCentre - touchedNodePos;
@@ -3810,7 +3810,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 		}
 		bIsStanding = false;
 		damageDir = GetLocalDirection(-m_vecMoveSpeed);
-		vehModel = (CVehicleModelInfo *)CModelInfo::GetModelInfo(car->GetModelIndex());
+		vehModel = (CVehicleModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(car->GetModelIndex())); // rouz edit (ChatGPT)
 		vehColModel = vehModel->GetColModel();
 		float carRightAndDistDotProd = DotProduct(distVec, car->GetRight());
 

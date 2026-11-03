@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "RwHelper.h"
 #include "PlaneBanners_backend.h"
 #include "Timer.h"
 #include "RenderBuffer.h"
@@ -142,7 +143,7 @@ PlaneBanner_Render(PlaneBanner *banner)
 			PlaneBanners_BackendDestBlend();
 			PlaneBanners_BackendVertexAlpha(true);
 			// Read the C-owned rubbish texture through its typed raster boundary
-			PlaneBanners_BackendRaster( Rubbish_BackendRaster(gpRubbishTexture[2]));
+			RwHelper_SetTextureRaster( RwHelper_TextureRaster(gpRubbishTexture[2]));
 
 			if(PlaneBanners_BackendTransform(TempBufferVerticesStored)){
 				// Preserve the original branch and traversal order

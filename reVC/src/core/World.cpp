@@ -2,6 +2,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "ColSphere_native.h"
 #include "CollisionVector_native.h"
@@ -165,7 +166,9 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 	CObject::DeleteAllTempObjectsInArea(pos, radius);
 	FireManager_ExtinguishPoint(&gFireManager,Fire_VectorFromNative(pos), radius);
 	ExtinguishAllCarFiresInArea(pos, radius);
-	CExplosion::RemoveAllExplosionsInArea(pos, radius);
+	// Copy the original by-value position into the C area operation
+	ExplosionPosition explosionPosition = {pos.x,pos.y,pos.z};
+	Explosion_RemoveAllExplosionsInArea(explosionPosition, radius);
 	if(bRemoveProjectilesAndTidyUpShadows) {
 		ProjectileInfo_RemoveAllProjectiles();
 		CShadows::TidyUpShadows();
@@ -380,12 +383,12 @@ CWorld::ProcessLineOfSightSectorList(CPtrList &list, const CColLine &line, CColP
 
 			if(e->IsPed()) {
 				if(e->bUsesCollision || deadPeds && ((CPed *)e)->m_nPedState == PED_DEAD || bikers && ((CPed*)e)->InVehicle() && (((CPed*)e)->m_pMyVehicle->IsBike() || ((CPed*)e)->m_pMyVehicle->IsBoat())) {
-					colmodel = ((CPedModelInfo *)CModelInfo::GetModelInfo(e->GetModelIndex()))->AnimatePedColModelSkinned(e->GetClump());
+					colmodel = ((CPedModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())))->AnimatePedColModelSkinned(e->GetClump()); // rouz edit (ChatGPT)
 				} else
 					colmodel = nil;
 
 			} else if(e->bUsesCollision)
-				colmodel = CModelInfo::GetColModel(e->GetModelIndex());
+				colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 
 			if(colmodel && CCollision::ProcessLineOfSight(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                              ignoreSeeThrough, ignoreShootThrough))
@@ -490,7 +493,7 @@ CWorld::ProcessVerticalLineSectorList(CPtrList &list, const CColLine &line, CCol
 		if(e->m_scanCode != GetCurrentScanCode() && e->bUsesCollision) {
 			e->m_scanCode = GetCurrentScanCode();
 
-			colmodel = CModelInfo::GetColModel(e->GetModelIndex());
+			colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 			if(CCollision::ProcessVerticalLine(line, e->GetMatrix(), *colmodel, point, mindist,
 			                                   ignoreSeeThrough, false, poly))
 				entity = e;
@@ -691,7 +694,7 @@ CWorld::GetIsLineOfSightSectorListClear(CPtrList &list, const CColLine &line, bo
 
 			if(e != pIgnoreEntity && !(ignoreSomeObjects && CameraToIgnoreThisObject(e))) {
 
-				colmodel = CModelInfo::GetColModel(e->GetModelIndex());
+				colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 
 				if(CCollision::TestLineOfSight(line, e->GetMatrix(), *colmodel, ignoreSeeThrough, false))
 					return false;
@@ -1010,7 +1013,7 @@ CWorld::TestSphereAgainstSectorList(CPtrList &list, CVector spherePos, float rad
 				float distance = diff.Magnitude();
 
 				if(e->GetBoundRadius() + radius > distance) {
-					CColModel *eCol = CModelInfo::GetColModel(e->GetModelIndex());
+					CColModel *eCol = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(e->GetModelIndex()))); // rouz edit (ChatGPT)
 					int collidedSpheres =
 					    CCollision::ProcessColModels(sphereMat, worldSphereColModel, e->GetMatrix(), *eCol,
 					                                 gaTempSphereColPoints, nil, nil);
@@ -2090,8 +2093,8 @@ CWorld::Process(void)
 				csObj->UpdateRwFrame();
 			}
 		}
-		CRecordDataForChase::ProcessControlCars();
-		CRecordDataForChase::SaveOrRetrieveCarPositions();
+		RecordChase_ProcessControlCars(); // rouz edit (ChatGPT)
+		RecordChase_SaveOrRetrieveCarPositions(); // rouz edit (ChatGPT)
 	} else {
 		for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
 			CEntity *movingEnt = (CEntity *)node->item;
@@ -2129,7 +2132,7 @@ CWorld::Process(void)
 			}
 		}
 		bForceProcessControl = false;
-		if(CReplay::IsPlayingBack()) {
+		if(Replay_IsPlayingBack()) { // rouz edit (ChatGPT)
 			for(CPtrNode *node = ms_listMovingEntityPtrs.first; node; node = node->next) {
 				CEntity *movingEnt = (CEntity *)node->item;
 				movingEnt->bIsInSafePosition = true;
@@ -2260,7 +2263,7 @@ CWorld::Process(void)
 		}
 		Messages_Process();
 		Players[PlayerInFocus].Process();
-		CRecordDataForChase::SaveOrRetrieveCarPositions();
+		RecordChase_SaveOrRetrieveCarPositions(); // rouz edit (ChatGPT)
 		if(((*Timer_GetFrameCounter()) & 7) == 1) {
 			RemoveFallenPeds();
 		} else if(((*Timer_GetFrameCounter()) & 7) == 5) {
@@ -2485,6 +2488,7 @@ CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float di
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

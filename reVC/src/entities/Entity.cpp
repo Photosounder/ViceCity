@@ -125,7 +125,7 @@ CEntity::CreateRwObject(void)
 {
 	CBaseModelInfo *mi;
 
-	mi = CModelInfo::GetModelInfo(m_modelIndex);
+	mi = ((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)); // rouz edit (ChatGPT)
 
 	PUSH_MEMID(MEMID_WORLD);
 	m_rwObject = mi->CreateInstance();
@@ -153,7 +153,7 @@ CEntity::AttachToRwObject(RwObject *obj)
 		else if(RwObjectGetType(m_rwObject) == rpCLUMP)
 			GetMatrix().Attach(RwFrameGetMatrix(RpClumpGetFrame((RpClump *)m_rwObject)), false);
 
-		CModelInfo::GetModelInfo(m_modelIndex)->AddRef();
+		((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->AddRef(); // rouz edit (ChatGPT)
 	}
 }
 
@@ -161,7 +161,7 @@ void
 CEntity::DetachFromRwObject(void)
 {
 	if(m_rwObject)
-		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
+		((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->RemoveRef(); // rouz edit (ChatGPT)
 	m_rwObject = nil;
 	GetMatrix().Detach();
 }
@@ -203,7 +203,7 @@ CEntity::DeleteRwObject(void)
 			RpClumpDestroy((RpClump*)m_rwObject);
 		}
 		m_rwObject = nil;
-		CModelInfo::GetModelInfo(m_modelIndex)->RemoveRef();
+		((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->RemoveRef(); // rouz edit (ChatGPT)
 		if(IsBuilding())
 			gBuildings--;
 	}
@@ -216,7 +216,7 @@ CEntity::GetBoundRect(void)
 	// Initialize rectangle bounds at the former local constructor boundary
 	Rect_Init(&rect);
 	CVector v;
-	CColModel *col = CModelInfo::GetColModel(m_modelIndex);
+	CColModel *col = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex))); // rouz edit (ChatGPT)
 
 	// Pass the native point once while retaining live coordinate reads
 	const CVector &rectanglePoint0 = GetMatrix() * CollisionVector_ToNative(col->boundingBox.min);
@@ -243,27 +243,27 @@ CEntity::GetBoundRect(void)
 CVector
 CEntity::GetBoundCentre(void)
 {
-	return GetMatrix() * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
+	return GetMatrix() * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.center); // rouz edit (ChatGPT)
 }
 
 #ifdef GTA_PS2
 void
 CEntity::GetBoundCentre(CVuVector &out)
 {
-	TransformPoint(out, GetMatrix(), CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center));
+	TransformPoint(out, GetMatrix(), CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.center)); // rouz edit (ChatGPT)
 }
 #else
 void
 CEntity::GetBoundCentre(CVector &out)
 {
-	out = GetMatrix() * CollisionVector_ToNative(CModelInfo::GetColModel(m_modelIndex)->boundingSphere.center);
+	out = GetMatrix() * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.center); // rouz edit (ChatGPT)
 }
 #endif
 
 float
 CEntity::GetBoundRadius(void)
 {
-	return CModelInfo::GetColModel(m_modelIndex)->boundingSphere.radius;
+	return ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.radius; // rouz edit (ChatGPT)
 }
 
 void
@@ -332,7 +332,7 @@ CEntity::HasPreRenderEffects(void)
 void
 CEntity::PreRender(void)
 {
-	if (CModelInfo::GetModelInfo(GetModelIndex())->GetNum2dEffects() != 0)
+	if ((*ModelRegistry_EffectCount(ModelRegistry_Get(GetModelIndex()))) != 0) // rouz edit (ChatGPT)
 		ProcessLightsForEntity();
 
 	if(!bHasPreRenderEffects)
@@ -503,7 +503,7 @@ CEntity::GetIsOnScreenComplex(void)
 		return true;
 
 	CRect rect = GetBoundRect();
-	CColModel *colmodel = CModelInfo::GetColModel(m_modelIndex);
+	CColModel *colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex))); // rouz edit (ChatGPT)
 	float z = GetPosition().z;
 	float minz = z + colmodel->boundingBox.min.z;
 	float maxz = z + colmodel->boundingBox.max.z;
@@ -658,7 +658,7 @@ CEntity::Remove(void)
 float
 CEntity::GetDistanceFromCentreOfMassToBaseOfModel(void)
 {
-	return -CModelInfo::GetColModel(m_modelIndex)->boundingBox.min.z;
+	return -((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.min.z; // rouz edit (ChatGPT)
 }
 
 void
@@ -666,7 +666,7 @@ CEntity::SetupBigBuilding(void)
 {
 	CSimpleModelInfo *mi;
 
-	mi = (CSimpleModelInfo*)CModelInfo::GetModelInfo(m_modelIndex);
+	mi = (CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)); // rouz edit (ChatGPT)
 	bIsBIGBuilding = true;
 	bStreamingDontDelete = true;
 	bUsesCollision = false;
@@ -773,7 +773,7 @@ CEntity::ModifyMatrixForBannerInWind(void)
 void
 CEntity::PreRenderForGlassWindow(void)
 {
-	if(((CSimpleModelInfo*)CModelInfo::GetModelInfo(m_modelIndex))->m_isArtistGlass)
+	if(((CSimpleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex)))->m_isArtistGlass) // rouz edit (ChatGPT)
 		return;
 	CGlass::AskForObjectToBeRenderedInGlass(this);
 	bIsVisible = false;

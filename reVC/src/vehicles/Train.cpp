@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "main.h"
 
 #include "Timer.h"
@@ -48,7 +49,7 @@ CTrain::CTrain(int32 id, uint8 CreatedBy)
     for(int doorIndex=0;doorIndex<2;++doorIndex)
         TrainDoor_Init(&Doors[doorIndex]);
 #ifdef GTA_TRAIN
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(id);
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(id)); // rouz edit (ChatGPT)
 	m_vehType = VEHICLE_TYPE_TRAIN;
 	pHandling = mod_HandlingManager.GetHandlingData((tVehicleType)mi->m_handlingId);
 	SetModelIndex(id);
@@ -261,14 +262,14 @@ CTrain::ProcessControl(void)
 	if(m_isFarAway){
 		if(m_rwObject)
 			DeleteRwObject();
-	}else if(CStreaming::HasModelLoaded(MI_TRAIN)){
+	}else if(Streaming_HasModelLoaded(MI_TRAIN)){ // rouz edit (ChatGPT)
 		if(m_rwObject == nil){
 			m_modelIndex = -1;
 			SetModelIndex(MI_TRAIN);
 		}
 	}else{
 		if(FindPlayerCoors().z * GetPosition().z >= 0.0f)
-			CStreaming::RequestModel(MI_TRAIN, STREAMFLAGS_DEPENDENCY);
+			Streaming_RequestModel(MI_TRAIN, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 	}
 
 	// Hit stuff
@@ -305,7 +306,7 @@ void
 CTrain::PreRender(void)
 {
 #ifdef GTA_TRAIN
-	CVehicleModelInfo *mi = (CVehicleModelInfo*)CModelInfo::GetModelInfo(GetModelIndex());
+	CVehicleModelInfo *mi = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(GetModelIndex())); // rouz edit (ChatGPT)
 
 	if(m_bIsFirstWagon){
 		CVector lookVector = GetPosition() - TheCamera.GetPosition();
@@ -460,8 +461,8 @@ CTrain::InitTrains(void)
 
 	int trainId;
 	CStreaming::LoadAllRequestedModels(false);
-	if(CModelInfo::GetModelInfo("train", &trainId))
-		CStreaming::RequestModel(trainId, 0);
+	if((CBaseModelInfo*)ModelRegistry_Find("train", 0, MODELINFOSIZE-1, &trainId)) // rouz edit (ChatGPT)
+		Streaming_RequestModel(trainId, 0); // rouz edit (ChatGPT)
 	CStreaming::LoadAllRequestedModels(false);
 
 	// El-Train wagons

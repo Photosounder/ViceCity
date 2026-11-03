@@ -20,11 +20,6 @@ int32_t Stats_BackendVisibleMoney(void)
     return CWorld::Players[CWorld::PlayerInFocus].m_nVisibleMoney;
 }
 
-bool Stats_BackendHasCheated(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return CPad::bHasPlayerCheated;
-}
 
 bool Stats_BackendNastyGame(void)
 {
@@ -66,35 +61,10 @@ bool Stats_BackendJapanese(void)
 #endif
 }
 
-char * Stats_BackendString2(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return gString2;
-}
 
-uint16_t * Stats_BackendUnicode(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return gUString;
-}
 
-uint16_t * Stats_BackendUnicode2(void)
-{
-    // Access the original typed native primitive at its original C policy access point
-    return gUString2;
-}
 
-void Stats_BackendUnicodeStrcpy(uint16_t *target,const uint16_t *source)
-{
-    // Access the original typed native primitive at its original C policy access point
-    UnicodeStrcpy(target,source);
-}
 
-void Stats_BackendAsciiToUnicode(const char *source,uint16_t *target)
-{
-    // Access the original typed native primitive at its original C policy access point
-    AsciiToUnicode(source,target);
-}
 
 void Stats_BackendFilter(uint16_t *text)
 {

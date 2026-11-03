@@ -3,6 +3,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+//+ rouz edit (ChatGPT)
+enum eCopType
+{
+	COP_STREET = 0,
+	COP_FBI = 1,
+	COP_SWAT = 2,
+	COP_HELI_SWAT = 3,
+	COP_ARMY = 4,
+	COP_MIAMIVICE = 5
+};
+//- rouz edit (ChatGPT)
+
 // Index into the PedType array
 typedef enum ePedType
 {

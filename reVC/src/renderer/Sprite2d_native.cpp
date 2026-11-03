@@ -13,16 +13,6 @@ void * Sprite2d_HostTempVertices(void)
     // Forward the original SDK primitive using its actual native storage
     return TempVertexBuffer.im2d;
 }
-void * Sprite2d_HostTextureRead(const char *name,const char *mask)
-{
-    // Forward the original SDK primitive using its actual native storage
-    return RwTextureRead(name,mask);
-}
-void * Sprite2d_HostTextureRaster(void *texture)
-{
-    // Forward the original SDK primitive using its actual native storage
-    return RwTextureGetRaster((RwTexture*)texture);
-}
 void Sprite2d_HostIndexedDraw(int32_t kind,void *vertices,int32_t count,uint16_t *indices,int32_t indexCount)
 {
     // Forward the original SDK primitive using its actual native storage

@@ -34,8 +34,6 @@ bool StoredCar_BackendHasModelLoaded(int32_t model);
 CVehicleModelInfo * StoredCar_BackendModelInfo(int32_t model);
 int8_t StoredCar_BackendNumComponents(CVehicleModelInfo *info);
 void StoredCar_BackendSetComponents(int8_t first, int8_t second);
-bool StoredCar_BackendIsBoatModel(int32_t model);
-bool StoredCar_BackendIsBikeModel(int32_t model);
 CVehicle * StoredCar_BackendAllocateVehicle(void);
 void StoredCar_BackendConstructBoat(CVehicle *vehicle, int32_t model);
 void StoredCar_BackendConstructBike(CVehicle *vehicle, int32_t model);

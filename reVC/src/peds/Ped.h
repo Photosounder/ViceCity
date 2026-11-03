@@ -15,7 +15,7 @@
 #include "PathFind.h"
 #include "Collision.h"
 
-#define FEET_OFFSET	1.04f
+#include "PedConstants.h" // rouz edit (ChatGPT)
 #define CHECK_NEARBY_THINGS_MAX_DIST	15.0f
 #define ENTER_CAR_MAX_DIST	30.0f
 #define CAN_SEE_ENTITY_ANGLE_THRESHOLD	DEGTORAD(60.0f)

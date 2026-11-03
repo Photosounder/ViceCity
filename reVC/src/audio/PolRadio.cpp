@@ -28,12 +28,6 @@
 //+ rouz edit (ChatGPT)
 
 #ifdef FIX_BUGS
-uint32_t
-AudioPoliceHost_LogicalFramesPassed(void)
-{
-	// Read the existing game timer at the original wait-counter update point
-	return Timer_GetLogicalFramesPassed();
-}
 #endif
 
 #ifdef USE_TIME_SCALE_FOR_AUDIO
@@ -80,14 +74,6 @@ AudioPoliceHost_WantedLevel(const CPlayerPed *player)
 	return Wanted_GetWantedLevel(player->m_pWanted);
 }
 
-#ifdef FIX_BUGS
-uint8_t
-AudioPoliceHost_IsReplay(void)
-{
-	// Retain the original replay gate and short-circuit order
-	return CReplay::IsPlayingBack();
-}
-#endif
 
 int16_t
 AudioPoliceHost_FindZone(const AudioCrimePosition *position)

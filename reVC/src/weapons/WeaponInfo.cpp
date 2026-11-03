@@ -11,11 +11,6 @@ CVector WeaponInfo_VectorToNative(WeaponInfoVector value)
     // Supply the original native vector value to each remaining native consumer
     return CVector(value.x,value.y,value.z);
 }
-WeaponInfoWorkBuffer * WeaponInfo_BackendBuffer(void)
-{
-    // Enter the original typed native operation or exact diagnostic call
-    return &work_buff;
-}
 bool WeaponInfo_BackendIsShotgun(int32_t weapon)
 {
     // Enter the original typed native operation or exact diagnostic call
@@ -24,7 +19,7 @@ bool WeaponInfo_BackendIsShotgun(int32_t weapon)
 void WeaponInfo_BackendSetModelWeapon(int32_t model,int32_t weapon)
 {
     // Enter the original typed native operation or exact diagnostic call
-    ((CWeaponModelInfo *)CModelInfo::GetModelInfo(model))->SetWeaponInfo(weapon);
+    ((CWeaponModelInfo *)((CBaseModelInfo*)ModelRegistry_Get(model)))->m_atomics[2]=(RpAtomic*)weapon; // rouz edit (ChatGPT)
 }
 const char * WeaponInfo_BackendAnimGroupName(enum AssocGroupId group)
 {

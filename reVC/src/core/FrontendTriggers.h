@@ -17,7 +17,7 @@ void TriggerSaveZone_SaveSlots(CMenuMultiChoiceTwoLinesTriggered *widget);
 void
 DisplayWarningControllerMsg()
 {
-	if ( CPad::bDisplayNoControllerMessage )
+	if ( Input_displayNoControllerMessage ) // rouz edit (ChatGPT)
 	{
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation
@@ -44,7 +44,7 @@ DisplayWarningControllerMsg()
 		
 		CFont::DrawFonts();
 	}
-	else if ( CPad::bObsoleteControllerMessage )
+	else if ( Input_obsoleteControllerMessage ) // rouz edit (ChatGPT)
 	{
 		([](const CRect &r,const CRGBA &col){
     // Retain actual native reference objects through the complete synchronous C operation

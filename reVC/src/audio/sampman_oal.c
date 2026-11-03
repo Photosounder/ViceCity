@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <alloca.h>
+#include "CasePath.h"
 #endif
 
 typedef uint8_t uint8;
@@ -97,8 +98,7 @@ typedef uintptr_t uintptr;
 #define FindFirstFile AudioSample_FindFirstFile
 #define FindNextFile AudioSample_FindNextFile
 #define FindClose AudioSample_FindClose
-#define fcaseopen AudioSample_CaseOpen
-#define casepath AudioStream_CasePath
+#define fcaseopen _fcaseopen
 #define MAX_PATH PATH_MAX
 #define OutputDebugString(s) re3_debug("[DBG-2]: %s\n", s)
 #endif
@@ -587,7 +587,7 @@ _FindMP3s(void)
 	strcat(path, "\\MP3\\");
 
 #if !defined(_WIN32)
-	char *actualPath = casepath(path);
+	char *actualPath = casepath(path, true);
 	if (actualPath) {
 		strcpy(path, actualPath);
 		free(actualPath);

@@ -6,10 +6,8 @@
 // Functions that's different on glfw and win but have same signature, should be located on platform.h.
 
 #include "crossplatform_constants.h"
+#include "PlatformTime.h" // rouz edit (ChatGPT)
 
-#if !defined(_MSC_VER) && !defined(__CWCC__)
-char *_strdate(char *buf);
-#endif
 
 #ifdef _WIN32
 
@@ -29,8 +27,6 @@ extern DWORD _dwOperatingSystemVersion;
 #define fcaseopen fopen
 #define caserename rename
 #else
-char *strupr(char *str);
-char *strlwr(char *str);
 
 enum {
 	LANG_OTHER,
@@ -47,10 +43,8 @@ enum {
 };
 
 extern long _dwOperatingSystemVersion;
-char *casepath(char const *path, bool checkPathFirst = true);
-FILE *_fcaseopen(char const *filename, char const *mode);
+#include "CasePath.h" // rouz edit (ChatGPT)
 #define fcaseopen _fcaseopen
-int _caserename(const char *old_filename, const char *new_filename);
 #define caserename _caserename
 #endif
 
@@ -106,19 +100,6 @@ RwBool IsForegroundApp();
 #ifndef _WIN32
 #define DeleteFile unlink
 
-// Needed for save games
-struct SYSTEMTIME {
-    RwUInt16 wYear;
-    RwUInt16 wMonth;
-    RwUInt16 wDayOfWeek;
-    RwUInt16 wDay;
-    RwUInt16 wHour;
-    RwUInt16 wMinute;
-    RwUInt16 wSecond;
-    RwUInt16 wMilliseconds;
-};
-
-void GetLocalTime_CP(SYSTEMTIME* out);
 #define GetLocalTime GetLocalTime_CP
 #define OutputDebugString(s) re3_debug("[DBG-2]: %s\n",s)
 #endif
@@ -132,28 +113,10 @@ void GetLocalTime_CP(SYSTEMTIME* out);
 #include <langinfo.h>
 #include <unistd.h>
 
-typedef void* HANDLE;
-#define INVALID_HANDLE_VALUE NULL
-#define FindClose(h) \
-    do { \
-        if (h != nil) \
-            closedir((DIR*)h); \
-    } while(0)
-
+#include "PlatformFind.h" // rouz edit (ChatGPT)
 #define LOCALE_USER_DEFAULT 0
 #define DATE_SHORTDATE 0
 
-struct WIN32_FIND_DATA {
-    char extension[32]; // for searching
-    char folder[MAX_PATH];	// for searching
-    char cFileName[256]; // because tSkinInfo has it 256
-    time_t ftLastWriteTime;
-};
-
-HANDLE FindFirstFile(const char*, WIN32_FIND_DATA*);
-bool FindNextFile(HANDLE, WIN32_FIND_DATA*);
-void FileTimeToSystemTime(time_t*, SYSTEMTIME*);
-void GetDateFormat(int, int, SYSTEMTIME*, int, char*, int);
 #endif
 
 #ifdef __SWITCH__

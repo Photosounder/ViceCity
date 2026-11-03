@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
 #include "StoredCar_backend.h"
 #include "config.h"
 #include "EntityStatus.h"
@@ -85,11 +86,11 @@ CVehicle *StoredCar_RestoreCar(CStoredCar *self)
 
     // Preserve boat-first selection and each allocation, assertion and construction boundary
     CVehicle *pVehicle;
-    if (StoredCar_BackendIsBoatModel(self->m_nModelIndex)) {
+    if (ModelRegistry_IsBoatModel(self->m_nModelIndex)) {
         pVehicle = StoredCar_BackendAllocateVehicle();
         assert(pVehicle);
         StoredCar_BackendConstructBoat(pVehicle, self->m_nModelIndex);
-    } else if (StoredCar_BackendIsBikeModel(self->m_nModelIndex)) {
+    } else if (ModelRegistry_IsBikeModel(self->m_nModelIndex)) {
         CVehicle *pBike = StoredCar_BackendAllocateVehicle();
         assert(pBike);
         StoredCar_BackendConstructBike(pBike, self->m_nModelIndex);

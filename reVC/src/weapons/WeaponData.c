@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 #define _CRT_SECURE_NO_WARNINGS
 #include "WeaponInfo_backend.h"
+#include "WorkBuffer.h"
 #include "FileMgr.h"
 #include "ModelIndexData.h"
 #include <stddef.h>
@@ -141,7 +142,7 @@ void
 WeaponInfo_LoadWeaponData(void)
 {
     // Preserve the complete original LoadWeaponData operation and ordered live accesses
-    WeaponInfoWorkBuffer *buffer=WeaponInfo_BackendBuffer();
+    uint8_t (*buffer)[WORK_BUFFER_SIZE]=&work_buff;
 	float spread, speed, lifeSpan, radius;
 	float range, fireOffsetX, fireOffsetY, fireOffsetZ;
 	float anim2LoopStart, anim2LoopEnd, delayBetweenAnim2AndFire, animBreakout;

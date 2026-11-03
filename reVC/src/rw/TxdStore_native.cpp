@@ -27,7 +27,7 @@ void * TxdStore_HostCreateDictionary(void)
 void TxdStore_HostRemoveStreamingTxd(int slot)
 {
     // Invoke the original external owner primitive with the same borrowed arguments
-    CStreaming::RemoveTxd(slot);
+    Streaming_RemoveTxd(slot); // rouz edit (ChatGPT)
 }
 bool TxdStore_HostFindDictionaryChunk(void *stream)
 {

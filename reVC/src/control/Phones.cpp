@@ -48,7 +48,7 @@ void
 CPhoneInfo::Update(void)
 {
 #ifdef FIX_BUGS
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 #endif
 	CPlayerPed *player = FindPlayerPed();
@@ -96,7 +96,7 @@ CPhoneInfo::Update(void)
 						phoneRings = (Timer_GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
 					}
 					if (scratchTheCabinet) {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f; // rouz edit (ChatGPT)
 						if (!phoneRings)
 						    {
 						    	// Evaluate the game position once before passing its components to C
@@ -104,7 +104,7 @@ CPhoneInfo::Update(void)
 						    	PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 						    }
 					} else {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f; // rouz edit (ChatGPT)
 					}
 					m_aPhones[phoneId].m_pEntity->GetMatrix().UpdateRW();
 					m_aPhones[phoneId].m_pEntity->UpdateRwFrame();
@@ -141,7 +141,7 @@ CPhoneInfo::Update(void)
 					scratchTheCabinet = ((*Timer_GetTimeInMilliseconds()) / 1880) % 2 == 1;
 					phoneRings = (Timer_GetPreviousTimeInMilliseconds() / 1880) % 2 == 1;
 					if (scratchTheCabinet) {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = (General_GetRandomNumber() % 1024) / 16000.0f + 1.0f; // rouz edit (ChatGPT)
 						if (!phoneRings)
 						    {
 						    	// Evaluate the game position once before passing its components to C
@@ -149,7 +149,7 @@ CPhoneInfo::Update(void)
 						    	PlayOneShotScriptObject(SCRIPT_SOUND_PAYPHONE_RINGING, scriptPosition.x, scriptPosition.y, scriptPosition.z);
 						    }
 					} else {
-						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f;
+						m_aPhones[phoneId].m_pEntity->GetUp().z = 1.0f; // rouz edit (ChatGPT)
 					}
 					m_aPhones[phoneId].m_pEntity->GetMatrix().UpdateRW();
 					m_aPhones[phoneId].m_pEntity->UpdateRwFrame();

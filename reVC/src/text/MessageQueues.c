@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "Messages.h"
 #include "Messages_backend.h"
+#include "FontText.h"
 #include "Timer.h"
 #include "Pager.h"
 #include <stddef.h>
@@ -378,7 +379,7 @@ Messages_InsertNumberInString(uint16_t *str, int32_t n1, int32_t n2, int32_t n3,
 
 	sprintf(numStr, "%d", n1);
 	size_t outLen = strlen(numStr);
-	Messages_BackendAsciiToUnicode(numStr, wNumStr);
+	AsciiToUnicode(numStr, wNumStr);
 	if (str[0] == 0) {
 		*outstr = '\0';
 		return;
@@ -408,7 +409,7 @@ Messages_InsertNumberInString(uint16_t *str, int32_t n1, int32_t n2, int32_t n3,
 			case 5: sprintf(numStr, "%d", n6); break;
 			}
 			outLen = strlen(numStr);
-			Messages_BackendAsciiToUnicode(numStr, wNumStr);
+			AsciiToUnicode(numStr, wNumStr);
 		} else {
 			*(outstr++) = str[c++];
 		}

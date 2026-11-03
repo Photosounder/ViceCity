@@ -52,9 +52,6 @@ bool Pager_BackendWidescreen(void);
 bool Pager_BackendDrawHud(void);
 uint16_t Pager_BackendBigMessage0(void);
 uint16_t Pager_BackendBigMessage2(void);
-void Pager_BackendBrief(uint16_t *text,int32_t n1,int32_t n2,int32_t n3,int32_t n4,int32_t n5,int32_t n6,uint16_t *string);
-void Pager_BackendInsertNumbers(uint16_t *str,int32_t n1,int32_t n2,int32_t n3,int32_t n4,int32_t n5,int32_t n6,uint16_t *output);
-uint16_t Pager_BackendLength(uint16_t *str);
 void Pager_BackendSetMessage(uint16_t *message);
 #ifdef __cplusplus
 }
@@ -88,21 +85,6 @@ uint16_t Pager_BackendBigMessage2(void)
     // Read the original third message channel only when the preceding gates permit it
     return CHud::m_BigMessage[2][0];
 }
-void Pager_BackendBrief(uint16_t *text,int32_t n1,int32_t n2,int32_t n3,int32_t n4,int32_t n5,int32_t n6,uint16_t *string)
-{
-    // Forward the captured original message payload to the native previous-brief owner
-    CMessages::AddToPreviousBriefArray(text,n1,n2,n3,n4,n5,n6,string);
-}
-void Pager_BackendInsertNumbers(uint16_t *str,int32_t n1,int32_t n2,int32_t n3,int32_t n4,int32_t n5,int32_t n6,uint16_t *output)
-{
-    // Expand the borrowed original text with the native UTF-16 substitution operation
-    CMessages::InsertNumberInString(str,n1,n2,n3,n4,n5,n6,output);
-}
-uint16_t Pager_BackendLength(uint16_t *str)
-{
-    // Query the native UTF-16 length at the original call site
-    return CMessages::GetWideStringLength(str);
-}
 void Pager_BackendSetMessage(uint16_t *message)
 {
     // Publish the original scroll slice through the existing synchronous HUD copy
@@ -119,12 +101,13 @@ def kernel(source):
         text=text.replace('CPager::'+name+'(', 'Pager_'+name+'(CPager *self'+('' if re.search(r'CPager::'+name+r'\(\s*\)',source) else ','))
         for field in FIELDS:text=re.sub(r'(?<![\w.>])'+field+r'\b','self->'+field,text)
         for method in ['ClearMessages','Display','RestartCurrentMessage']:text=re.sub(r'(?<![\w])'+method+r'\(\)', 'Pager_'+method+'(self)',text)
-        for old,new in [('TheCamera.m_WideScreenOn','Pager_BackendWidescreen()'),('CHud::m_Wants_To_Draw_Hud','Pager_BackendDrawHud()'),('CHud::m_BigMessage[0][0]','Pager_BackendBigMessage0()'),('CHud::m_BigMessage[2][0]','Pager_BackendBigMessage2()'),('CMessages::AddToPreviousBriefArray','Pager_BackendBrief'),('CMessages::InsertNumberInString','Pager_BackendInsertNumbers'),('CMessages::GetWideStringLength','Pager_BackendLength'),('CHud::SetPagerMessage','Pager_BackendSetMessage')]:text=text.replace(old,new)
+        for old,new in [('TheCamera.m_WideScreenOn','Pager_BackendWidescreen()'),('CHud::m_Wants_To_Draw_Hud','Pager_BackendDrawHud()'),('CHud::m_BigMessage[0][0]','Pager_BackendBigMessage0()'),('CHud::m_BigMessage[2][0]','Pager_BackendBigMessage2()'),('CMessages::AddToPreviousBriefArray','Messages_AddToPreviousBriefArray'),('CMessages::InsertNumberInString','Messages_InsertNumberInString'),('CMessages::GetWideStringLength','Messages_GetWideStringLength'),('CHud::SetPagerMessage','Pager_BackendSetMessage')]:text=text.replace(old,new)
         for old,new in [('wchar','uint16_t'),('uint16','uint16_t'),('int16','int16_t'),('int32','int32_t'),('uint32','uint32_t'),('nil','NULL')]:text=re.sub(r'\b'+old+r'\b',new,text)
         text=text.replace('\n{','\n{\n    // Preserve the complete original '+name+' operation with explicit queue storage',1);chunks.append(text)
     return '''//+ rouz edit (ChatGPT)
 #include "Pager.h"
 #include "Pager_backend.h"
+#include "Messages.h"
 #include "Timer.h"
 #include <stddef.h>
 CPager Pager_state;

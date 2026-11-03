@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "MotionBlurStreaks_backend.h"
+#include "Timecycle.h"
 
 static uint16_t StreakIndexList[12];
 
@@ -162,7 +163,7 @@ MotionBlurStreaks_Render(void)
 				MotionBlurStreaks_BackendZWrite(false);
 				MotionBlurStreaks_BackendVertexAlpha(true);
 				MotionBlurStreaks_BackendFog(true);
-				MotionBlurStreaks_BackendFogColor(((uint32_t)255 << 24) | ((uint32_t)MotionBlurStreaks_BackendFogRed() << 16) | ((uint32_t)MotionBlurStreaks_BackendFogGreen() << 8) | (uint32_t)MotionBlurStreaks_BackendFogBlue());
+				MotionBlurStreaks_BackendFogColor(((uint32_t)255 << 24) | ((uint32_t)TimeCycle_GetFogRed() << 16) | ((uint32_t)TimeCycle_GetFogGreen() << 8) | (uint32_t)TimeCycle_GetFogBlue());
 				MotionBlurStreaks_BackendSrcBlend();
 				MotionBlurStreaks_BackendDestBlend();
 				MotionBlurStreaks_BackendRaster();

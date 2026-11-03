@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "CollisionVector_native.h" // rouz edit (ChatGPT)
 
 #include "main.h"
 #include "General.h"
@@ -1194,13 +1195,13 @@ CEntity::ProcessLightsForEntity(void)
 	flashTimer2 = 0;
 	flashTimer3 = 0;
 
-	n = CModelInfo::GetModelInfo(GetModelIndex())->GetNum2dEffects();
+	n = (*ModelRegistry_EffectCount(ModelRegistry_Get(GetModelIndex()))); // rouz edit (ChatGPT)
 	for(i = 0; i < n; i++, flashTimer1 += 0x80, flashTimer2 += 0x100, flashTimer3 += 0x200){
-		effect = CModelInfo::GetModelInfo(GetModelIndex())->Get2dEffect(i);
+		effect = ((C2dEffect*)ModelRegistry_GetEffect(ModelRegistry_Get(GetModelIndex()), i)); // rouz edit (ChatGPT)
 
 		switch(effect->type){
 		case EFFECT_LIGHT:
-			pos = GetMatrix() * effect->pos;
+			pos = GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 
 			lightOn = false;
 			lightFlickering = false;
@@ -1306,14 +1307,14 @@ CEntity::ProcessLightsForEntity(void)
 				CCoronas::RegisterCorona((uintptr)this + i,
 					effect->col.r, effect->col.g, effect->col.b, 255,
 					pos, effect->light.size, effect->light.dist,
-					effect->light.corona, effect->light.flareType, effect->light.roadReflection,
+					(RwTexture*)effect->light.corona, effect->light.flareType, effect->light.roadReflection, // rouz edit (ChatGPT)
 					effect->light.flags&LIGHTFLAG_LOSCHECK, CCoronas::STREAK_OFF, 0.0f,
 					!!(effect->light.flags&LIGHTFLAG_LONG_DIST));
 			else if(lightFlickering)
 				CCoronas::RegisterCorona((uintptr)this + i,
 					0, 0, 0, 255,
 					pos, effect->light.size, effect->light.dist,
-					effect->light.corona, effect->light.flareType, effect->light.roadReflection,
+					(RwTexture*)effect->light.corona, effect->light.flareType, effect->light.roadReflection, // rouz edit (ChatGPT)
 					effect->light.flags&LIGHTFLAG_LOSCHECK, CCoronas::STREAK_OFF, 0.0f,
 					!!(effect->light.flags&LIGHTFLAG_LONG_DIST));
 
@@ -1364,7 +1365,7 @@ CEntity::ProcessLightsForEntity(void)
 			if(effect->light.shadowSize != 0.0f){
 				if(lightOn){
 					CShadows::StoreStaticShadow((uintptr)this + i, SHADOWTYPE_ADDITIVE,
-						effect->light.shadow, &pos,
+						(RwTexture*)effect->light.shadow, &pos, // rouz edit (ChatGPT)
 						effect->light.shadowSize, 0.0f,
 						0.0f, -effect->light.shadowSize,
 						128,
@@ -1374,7 +1375,7 @@ CEntity::ProcessLightsForEntity(void)
 						15.0f, 1.0f, 40.0f, false, 0.0f);
 				}else if(lightFlickering){
 					CShadows::StoreStaticShadow((uintptr)this + i, SHADOWTYPE_ADDITIVE,
-						effect->light.shadow, &pos,
+						(RwTexture*)effect->light.shadow, &pos, // rouz edit (ChatGPT)
 						effect->light.shadowSize, 0.0f,
 						0.0f, -effect->light.shadowSize,
 						0, 0.0f, 0.0f, 0.0f,
@@ -1385,7 +1386,7 @@ CEntity::ProcessLightsForEntity(void)
 
 		case EFFECT_SUNGLARE:
 			if(Weather_SunGlare >= 0.0f){
-				CVector pos = GetMatrix() * effect->pos;
+				CVector pos = GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 				CVector glareDir = pos - GetPosition();
 				glareDir.Normalise();
 				CVector camDir = TheCamera.GetPosition() - pos;
@@ -1421,7 +1422,7 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 	// Skip entities that do not contribute their regular 2D effects
 	if(!entity || entity->bRenderDamaged || !entity->bIsVisible || entity->GetUp().z < 0.96f)
 		return;
-	CBaseModelInfo *modelInfo = CModelInfo::GetModelInfo(entity->GetModelIndex());
+	CBaseModelInfo *modelInfo = ((CBaseModelInfo*)ModelRegistry_Get(entity->GetModelIndex())); // rouz edit (ChatGPT)
 	if(!modelInfo)
 		return;
 
@@ -1429,8 +1430,8 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 	uint32 flashTimer1 = 0;
 	uint32 flashTimer2 = 0;
 	uint32 flashTimer3 = 0;
-	for(int i = 0; i < modelInfo->GetNum2dEffects(); i++, flashTimer1 += 0x80, flashTimer2 += 0x100, flashTimer3 += 0x200){
-		C2dEffect *effect = modelInfo->Get2dEffect(i);
+	for(int i = 0; i < (*ModelRegistry_EffectCount(modelInfo)); i++, flashTimer1 += 0x80, flashTimer2 += 0x100, flashTimer3 += 0x200){ // rouz edit (ChatGPT)
+		C2dEffect *effect = ((C2dEffect*)ModelRegistry_GetEffect(modelInfo, i)); // rouz edit (ChatGPT)
 		if(effect->type != EFFECT_LIGHT || (effect->light.flags & LIGHTFLAG_HIDE_OBJECT))
 			continue;
 
@@ -1497,7 +1498,7 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 			continue;
 
 		// Register reflection-only point lights, fog, and corona sprites
-		CVector pos = entity->GetMatrix() * effect->pos;
+		CVector pos = entity->GetMatrix() * CollisionVector_ToNative(effect->pos); // rouz edit (ChatGPT)
 		// Keep reflection-only corona bulbs separate from the main camera's history
 		uint32 coronaId = (uint32)((uintptr)entity + i);
 		bool registeredInMainView = false;
@@ -1514,7 +1515,7 @@ CCoronas::ProcessLightsForEnvMap(CEntity *entity)
 			}
 			corona->coors = pos;
 			corona->id = coronaId;
-			corona->texture = effect->light.corona;
+			corona->texture = (RwTexture*)effect->light.corona; // rouz edit (ChatGPT)
 			corona->size = effect->light.size;
 			corona->someAngle = 0.0f;
 			corona->drawDist = effect->light.dist;

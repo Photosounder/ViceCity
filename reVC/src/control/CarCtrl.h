@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #pragma once
+#include "PopulationLimits.h" // rouz edit (ChatGPT)
 #include "CarClasses.h"
 #include "PathFind.h"
 #include "Boat.h"
@@ -126,7 +127,7 @@ public:
 	static bool bCarsGeneratedAroundCamera;
 	static float CarDensityMultiplier;
 	static int8 CountDownToCarsAtStart;
-	static int32 MaxNumberOfCarsInUse;
+
 	static uint32 LastTimeLawEnforcerCreated;
 	static uint32 LastTimeFireTruckCreated;
 	static uint32 LastTimeAmbulanceCreated;

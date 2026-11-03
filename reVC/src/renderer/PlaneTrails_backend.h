@@ -24,9 +24,6 @@ void PlaneTrails_BackendUpdateCorona(uint32_t id,void *position);
 float PlaneTrails_BackendFoggyness(void);
 float PlaneTrails_BackendCloudCoverage(void);
 float PlaneTrails_BackendRain(void);
-int32_t PlaneTrails_BackendSkyTopRed(void);
-int32_t PlaneTrails_BackendSkyTopGreen(void);
-int32_t PlaneTrails_BackendSkyTopBlue(void);
 #ifdef __cplusplus
 }
 #endif

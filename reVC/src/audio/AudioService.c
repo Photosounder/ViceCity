@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "AudioManager.h"
 #include "MusicManager.h"
 #include "DMAudio.h"
@@ -16,7 +17,7 @@ AudioService_Run(cAudioManager *manager)
 	}
 	if (manager->m_bIsInitialised) {
 		manager->m_bWasPaused = manager->m_bIsPaused;
-		manager->m_bIsPaused = AudioServiceHost_UserPaused();
+		manager->m_bIsPaused = Timer_GetIsUserPaused();
 #ifdef AUDIO_REFLECTIONS
 		AudioReflections_Update(manager);
 #endif

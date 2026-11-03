@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ModelRegistry.h"
 #include "Fire_backend.h"
 #include "Timer.h"
 #include "General.h"
@@ -318,7 +319,7 @@ FireManager_StartFireOn(CFireManager *manager,CEntity *entityOnFire, CEntity *fl
 		} else {
 			if (Fire_BackendIsVehicle(entityOnFire)) {
 				Fire_BackendSetVehicleFire(veh,fire);
-				if (Fire_BackendBikeModel(Fire_BackendModel(veh)) || Fire_BackendCarModel(Fire_BackendModel(veh)))
+				if (ModelRegistry_IsBikeModel(Fire_BackendModel(veh)) || ModelRegistry_IsCarModel(Fire_BackendModel(veh)))
         				Fire_BackendFleeOccupants(veh);
 
 				if (fleeFrom) {

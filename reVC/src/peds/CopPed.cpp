@@ -824,7 +824,7 @@ CCopPed::ProcessHeliSwat(void)
 {
 	CVector bestPos = GetPosition();
 	SetPedState(PED_ABSEIL);
-	CPedPlacement::FindZCoorForPed(&bestPos);
+	PedPlacement_CFindZ(bestPos.x, bestPos.y, &bestPos.z); // rouz edit (ChatGPT)
 	if (GetPosition().z - 2.0f >= bestPos.z && m_pRopeEntity) {
 		m_fAbseilPos += 0.003f * (*Timer_GetTimeStep());
 		m_vecMoveSpeed.z = -0.03f;

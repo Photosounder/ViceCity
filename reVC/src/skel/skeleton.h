@@ -3,6 +3,7 @@
 #define SKELETON_H
 
 #include "rwcore.h"
+#include "RsTimer.h" // rouz edit (ChatGPT)
 
 /* Default arena size depending on platform. */
 #define rsRESOURCESDEFAULTARENASIZE (1 << 20)
@@ -180,12 +181,7 @@ extern RwBool
 RsInputDeviceAttach(RsInputDeviceType inputDevice,
 					RsInputEventHandler inputEventHandler);
 
-#ifdef _WIN32
-extern RwUInt32    
-#else
-extern double
-#endif             
-RsTimer(void);
+// Platform timer declaration is shared with C callers in RsTimer.h // rouz edit (ChatGPT)
 
 extern void                     
 RsCameraShowRaster(RwCamera *camera);

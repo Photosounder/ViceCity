@@ -170,26 +170,6 @@ void Rubbish_BackendSetIndex(int index, uint32_t value)
 
 
 
-void * Rubbish_BackendTextureRead(const char *name, const char *mask)
-{
-	// Read the original typed texture resource
-	return RwTextureRead(name, mask);
-}
-void Rubbish_BackendTextureDestroy(void *texture)
-{
-	// Destroy the original typed texture before C clears the handle
-	RwTextureDestroy((RwTexture *)texture);
-}
-void * Rubbish_BackendRaster(void *texture)
-{
-	// Read the actual raster for the original texture handle
-	return RwTextureGetRaster((RwTexture *)texture);
-}
-void Rubbish_BackendTextureRaster(void *raster)
-{
-	// Select the same typed texture raster
-	RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
-}
 void Rubbish_BackendZWrite(bool enabled)
 {
 	// Set the original typed depth-write state

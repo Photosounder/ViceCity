@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "MoneyMessages_backend.h"
+#include "FontText.h"
 #include "Timer.h"
 #include "Draw.h"
 #include "Draw_constants.h"
@@ -120,7 +121,7 @@ MoneyMessages_RegisterOne(MoneyMessageVector vecPos,const char *pText,uint8_t bR
 	if(i < NUMMONEYMESSAGES) {
 		// Preserve original conditions and live owner reads
 		// Add data of this money message to the array
-		MoneyMessages_BackendAsciiToUnicode(pText, aMoneyMessages[i].m_aText);
+		AsciiToUnicode(pText, aMoneyMessages[i].m_aText);
 
 		aMoneyMessages[i].m_nTimeRegistered = (*Timer_GetTimeInMilliseconds());
 		aMoneyMessages[i].m_vecPosition = vecPos;

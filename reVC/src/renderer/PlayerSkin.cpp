@@ -82,16 +82,6 @@ void PlayerSkin_BackendCloseStream(void *stream,void *memory)
 
 
 
-PlayerSkinTexture * PlayerSkin_BackendReadTexture(const char *name)
-{
-    // Retain the original typed native operation and its borrowed owner arguments
-    return RwTextureRead(name,NULL);
-}
-char * PlayerSkin_BackendString(void)
-{
-    // Retain the original typed native operation and its borrowed owner arguments
-    return gString;
-}
 void * PlayerSkin_BackendReadImage(const char *path)
 {
     // Retain the original typed native operation and its borrowed owner arguments

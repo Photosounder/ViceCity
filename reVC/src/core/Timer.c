@@ -1,5 +1,8 @@
 //+ rouz edit (ChatGPT)
 #include "Timer.h"
+#include "RecordGame.h"
+#include "Record.h"
+#include "SpecialFX_control.h"
 #include "../audio/DMAudio.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -71,7 +74,7 @@ void Timer_Initialise(void)
 	{
 		OutputDebugString("Performance counter not available, using millesecond timer\n");
 		_nCyclesPerMS = 0;
-		oldPcTimer = TimerHost_PlatformTime();
+		oldPcTimer = RsTimer();
 	}
 	
 	Timer_timeMs = Timer_previousTimeMs;
@@ -120,7 +123,7 @@ void Timer_Update(void)
 	else
 #endif
 	{
-		TimerPlatformTime timer = TimerHost_PlatformTime();
+		TimerPlatformTime timer = RsTimer();
 		
 		TimerPlatformTime updInMs = timer - oldPcTimer;
 		
@@ -156,12 +159,12 @@ void Timer_Update(void)
 	frameTimeFraction -= ((uint32_t)(frameTimeFraction));
 	frameTimeFractionScaled -= ((uint32_t)(frameTimeFractionScaled));
 	
-	if ( Timer_timeStep < 0.01f && !Timer_GetIsPaused() && !TimerHost_SnapshotActive())
+	if ( Timer_timeStep < 0.01f && !Timer_GetIsPaused() && !SpecialFX_bSnapShotActive)
 		Timer_timeStep = 0.01f;
 
 	Timer_nonClippedTimeStep = Timer_timeStep;
 	
-	if ( !TimerHost_PlayingBack() )
+	if ( !RecordGame_IsPlayingBack() )
 	{
 		Timer_timeStep = TIMER_MIN(3.0f, Timer_timeStep);
 
@@ -169,7 +172,7 @@ void Timer_Update(void)
 			Timer_timeMs = Timer_previousTimeMs + 60;
 	}
   
-	if ( TimerHost_ChaseRecording() )
+	if ( RecordChase_IsRecording() )
 	{
 		Timer_timeStep = 1.0f;
 		Timer_timeMs = Timer_previousTimeMs + 16;
@@ -211,7 +214,7 @@ void Timer_Update(void)
 	else
 #endif
 	{
-		TimerPlatformTime timer = TimerHost_PlatformTime();
+		TimerPlatformTime timer = RsTimer();
 		
 		TimerPlatformTime updInMs = timer - oldPcTimer;
 		
@@ -231,12 +234,12 @@ void Timer_Update(void)
 		}
 	}
 	
-	if ( Timer_timeStep < 0.01f && !Timer_GetIsPaused() && !TimerHost_SnapshotActive())
+	if ( Timer_timeStep < 0.01f && !Timer_GetIsPaused() && !SpecialFX_bSnapShotActive)
 		Timer_timeStep = 0.01f;
 
 	Timer_nonClippedTimeStep = Timer_timeStep;
 	
-	if ( !TimerHost_PlayingBack() )
+	if ( !RecordGame_IsPlayingBack() )
 	{
 		Timer_timeStep = TIMER_MIN(3.0f, Timer_timeStep);
 
@@ -244,7 +247,7 @@ void Timer_Update(void)
 			Timer_timeMs = Timer_previousTimeMs + 60;
 	}
   
-	if ( TimerHost_ChaseRecording() )
+	if ( RecordChase_IsRecording() )
 	{
 		Timer_timeStep = 1.0f;
 		Timer_timeMs = Timer_previousTimeMs + 16;
@@ -265,7 +268,7 @@ void Timer_Suspend(void)
 		QueryPerformanceCounter(&perfSuspendCounter);
 	else
 #endif
-		suspendPcTimer = TimerHost_PlatformTime();
+		suspendPcTimer = RsTimer();
 }
 
 void Timer_Resume(void)
@@ -284,7 +287,7 @@ void Timer_Resume(void)
 	}
 	else
 #endif
-		oldPcTimer += TimerHost_PlatformTime() - suspendPcTimer;
+		oldPcTimer += RsTimer() - suspendPcTimer;
 }
 
 uint32_t Timer_GetCyclesPerMillisecond(void)
@@ -310,7 +313,7 @@ uint32_t Timer_GetCurrentTimeInCycles(void)
 	}
 	else
 #endif
-		return TimerHost_PlatformTime() - oldPcTimer;
+		return RsTimer() - oldPcTimer;
 }
 
 bool Timer_GetIsSlowMotionActive(void)

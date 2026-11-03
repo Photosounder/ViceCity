@@ -4,11 +4,6 @@
 #ifdef TEST_ORIGINAL
 #include "original-SpecialFX.h"
 #define SF(name) CSpecialFX::name
-extern "C" bool TimerHost_SnapshotActive(void)
-{
-    // Read the unchanged original live snapshot flag
-    return CSpecialFX::bSnapShotActive;
-}
 #else
 #define SF(name) SpecialFX_##name
 RwObject *LookForBatCB(RwObject *,void *);
@@ -58,7 +53,7 @@ static void color(const CRGBA &c)
 static void snapshot(void)
 {
     // Observe complete controller state and both shared text buffers
-    states++;word(0xff);word(SF(bVideoCam));word(SF(bLiftCam));word(SF(bSnapShotActive));word(SF(SnapShotFrames));floating(Timer_timeScale);word(TimerHost_SnapshotActive());word(rng);word(RsGlobal.width);word(RsGlobal.height);
+    states++;word(0xff);word(SF(bVideoCam));word(SF(bLiftCam));word(SF(bSnapShotActive));word(SF(SnapShotFrames));floating(Timer_timeScale);word(SF(bSnapShotActive));word(rng);word(RsGlobal.width);word(RsGlobal.height);
     for(int i=0;i<256;i++){
         // Include untouched trailing units to detect excess writes
         word((unsigned char)gString[i]);word(gUString[i]);

@@ -1,5 +1,8 @@
 //+ rouz edit (ChatGPT)
 #include "Clock.h"
+#include "Timer.h"
+#include "Stats.h"
+#include "VarConsole.h"
 
 void re3_debug(const char *format, ...);
 
@@ -26,12 +29,12 @@ Clock_Initialise(uint32_t scale)
 	Clock_minutes = 0;
 	Clock_seconds = 0;
 	Clock_millisecondsPerMinute = scale;
-	Clock_lastTick = ClockHost_Time();
+	Clock_lastTick = (*Timer_GetTimeInMilliseconds());
 	Clock_hasBeenStored = false;
 	re3_debug("[DBG]: CClock ready\n");
 #ifndef MASTER
-	ClockHost_RegisterHour(&Clock_hours);
-	ClockHost_RegisterFreeze(&gbFreezeTime);
+	VarConsole_AddUInt8(&VarConsole,"Time (hour of day)", &Clock_hours, 1, 0, 23, true);
+	VarConsole_AddBool(&VarConsole,"Freeze time", &gbFreezeTime, true);
 #endif
 }
 
@@ -42,7 +45,7 @@ Clock_Update(void)
 	if(ClockHost_RightShoulder())
 	{
 		Clock_minutes += 8;
-		Clock_lastTick = ClockHost_Time();
+		Clock_lastTick = (*Timer_GetTimeInMilliseconds());
 		
 		if(Clock_minutes >= 60)
 		{
@@ -55,15 +58,15 @@ Clock_Update(void)
 	}
 #ifndef MASTER
 	else if (gbFreezeTime)
-		Clock_lastTick = ClockHost_Time();
+		Clock_lastTick = (*Timer_GetTimeInMilliseconds());
 #endif
-	else if(ClockHost_Time() - Clock_lastTick > Clock_millisecondsPerMinute || gbFastTime)
+	else if((*Timer_GetTimeInMilliseconds()) - Clock_lastTick > Clock_millisecondsPerMinute || gbFastTime)
 	{
 		Clock_minutes++;
 		Clock_lastTick += Clock_millisecondsPerMinute;
 		
 		if ( gbFastTime )
-			Clock_lastTick = ClockHost_Time();
+			Clock_lastTick = (*Timer_GetTimeInMilliseconds());
 		
 		if(Clock_minutes >= 60)
 		{
@@ -71,12 +74,12 @@ Clock_Update(void)
 			Clock_minutes = 0;
 			if(Clock_hours >= 24)
 			{
-				(*ClockHost_DaysPassed())++;
+				Stats_DaysPassed++;
 				Clock_hours = 0;
 			}
 		}
 	}
-	Clock_seconds = 60 * (ClockHost_Time() - Clock_lastTick) / Clock_millisecondsPerMinute;
+	Clock_seconds = 60 * ((*Timer_GetTimeInMilliseconds()) - Clock_lastTick) / Clock_millisecondsPerMinute;
 }
 
 void
@@ -92,7 +95,7 @@ Clock_SetGameClock(uint8_t h, uint8_t m)
 		h -= 24;
 	Clock_hours = h;
 	Clock_seconds = 0;
-	Clock_lastTick = ClockHost_Time();
+	Clock_lastTick = (*Timer_GetTimeInMilliseconds());
 }
 
 int32_t

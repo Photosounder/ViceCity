@@ -38,7 +38,6 @@ typedef struct AudioSampleFindData {
 void *AudioSample_FindFirstFile(const char *path, AudioSampleFindData *data);
 bool AudioSample_FindNextFile(void *handle, AudioSampleFindData *data);
 void AudioSample_FindClose(void *handle);
-FILE *AudioSample_CaseOpen(const char *filename, const char *mode);
 #endif
 #ifdef __cplusplus
 }

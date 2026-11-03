@@ -122,8 +122,6 @@ FindCutsceneAudioTrackId(const char *szCutsceneName)
 	return -1;
 }
 
-bool CCutsceneMgr::ms_running;
-bool CCutsceneMgr::ms_cutsceneProcessing;
 CDirectory *CCutsceneMgr::ms_pCutsceneDir;
 CCutsceneObject *CCutsceneMgr::ms_pCutsceneObjects[NUMCUTSCENEOBJECTS];
 int32 CCutsceneMgr::ms_numCutsceneObjs;
@@ -168,10 +166,10 @@ CCutsceneMgr::Initialise(void)
 	ms_numCutsceneObjs = 0;
 	ms_loaded = false;
 	ms_wasCutsceneSkipped = false;
-	ms_running = false;
+	Cutscene_running = false; // rouz edit (ChatGPT)
 	ms_useLodMultiplier = false;
 	ms_animLoaded = false;
-	ms_cutsceneProcessing = false;
+	Cutscene_processing = false; // rouz edit (ChatGPT)
 
 	// Allocate the cutscene directory without invoking C++ new.
 	ms_pCutsceneDir = (CDirectory*)malloc(sizeof(CDirectory));
@@ -202,11 +200,11 @@ CCutsceneMgr::LoadCutsceneData(const char *szCutsceneName)
 	uint32 offset;
 	CPlayerPed *pPlayerPed;
 
-	ms_cutsceneProcessing = true;
+	Cutscene_processing = true; // rouz edit (ChatGPT)
 	ms_wasCutsceneSkipped = false;
 	Timer_Suspend();
 	if (!bIsEverythingRemovedFromTheWorldForTheBiggestFuckoffCutsceneEver)
-		CStreaming::RemoveCurrentZonesModels();
+		Streaming_RemoveCurrentZonesModels(); // rouz edit (ChatGPT)
 
 	ms_pCutsceneDir->numEntries = 0;
 	Directory_ReadDirFile(ms_pCutsceneDir, "ANIM\\CUTS.DIR");
@@ -336,7 +334,7 @@ CCutsceneMgr::SetupCutsceneToStart(void)
 
 	Timer_Update();
 	Timer_Update();
-	ms_running = true;
+	Cutscene_running = true; // rouz edit (ChatGPT)
 	ms_cutsceneTimer = 0.0f;
 }
 
@@ -413,14 +411,14 @@ CCutsceneMgr::CreateCutsceneObject(int modelId)
 	CCutsceneObject *pCutsceneObject;
 
 	CStreaming::ImGonnaUseStreamingMemory();
-	debug("Created cutscene object %s\n", CModelInfo::GetModelInfo(modelId)->GetModelName());
+	debug("Created cutscene object %s\n", ((CBaseModelInfo*)ModelRegistry_Get(modelId))->GetModelName()); // rouz edit (ChatGPT)
 	if (modelId >= MI_CUTOBJ01 && modelId <= MI_CUTOBJ05) {
-		pModelInfo = CModelInfo::GetModelInfo(modelId);
+		pModelInfo = ((CBaseModelInfo*)ModelRegistry_Get(modelId)); // rouz edit (ChatGPT)
 		pColModel = &CTempColModels::ms_colModelCutObj[modelId - MI_CUTOBJ01];
 		pModelInfo->SetColModel(pColModel);
 		UpdateCutsceneObjectBoundingBox((RpClump*)pModelInfo->GetRwObject(), modelId);
 	} else if (modelId >= MI_SPECIAL01 && modelId <= MI_SPECIAL21) {
-		pModelInfo = CModelInfo::GetModelInfo(modelId);
+		pModelInfo = ((CBaseModelInfo*)ModelRegistry_Get(modelId)); // rouz edit (ChatGPT)
 		if (pModelInfo->GetColModel() == &CTempColModels::ms_colModelPed1) {
 			// Construct the cutscene collision model in pool storage without invoking C++ new.
 						// Access raw storage through the C store or pool API
@@ -458,7 +456,7 @@ CCutsceneMgr::DeleteCutsceneData(void)
 	if (!ms_loaded) return;
 	Timer_Suspend();
 
-	ms_cutsceneProcessing = false;
+	Cutscene_processing = false; // rouz edit (ChatGPT)
 	ms_useLodMultiplier = false;
 	ms_useCutsceneShadows = true;
 
@@ -474,7 +472,7 @@ CCutsceneMgr::DeleteCutsceneData(void)
 	ms_numCutsceneObjs = 0;
 
 	for (int i = MI_SPECIAL01; i < MI_SPECIAL21; i++) {
-		CBaseModelInfo *minfo = CModelInfo::GetModelInfo(i);
+		CBaseModelInfo *minfo = ((CBaseModelInfo*)ModelRegistry_Get(i)); // rouz edit (ChatGPT)
 		CColModel *colModel = minfo->GetColModel();
 		if (colModel != &CTempColModels::ms_colModelPed1) {
 			// Destroy and release the cutscene collision model without invoking C++ delete.
@@ -499,7 +497,7 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		TheCamera.SetWideScreenOff();
 		TheCamera.DeleteCutSceneCamDataMemory();
 	}
-	ms_running = false;
+	Cutscene_running = false; // rouz edit (ChatGPT)
 	ms_loaded = false;
 
 	FindPlayerPed()->bIsVisible = true;
@@ -527,15 +525,15 @@ CCutsceneMgr::DeleteCutsceneData(void)
 		CPlayerPed *pPlayerPed = FindPlayerPed();
 		for (int i = 0; i < NumberOfSavedWeapons; i++) {
 			int32 weaponModelId = WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModelId;
-			uint8 flags = CStreaming::ms_aInfoForModel[weaponModelId].m_flags;
-			CStreaming::RequestModel(weaponModelId, STREAMFLAGS_DONT_REMOVE);
+			uint8 flags = Streaming_modelInfo[weaponModelId].m_flags; // rouz edit (ChatGPT)
+			Streaming_RequestModel(weaponModelId, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 			CStreaming::LoadAllRequestedModels(false);
 			if (WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id != -1) {
-				CStreaming::RequestModel(WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id, 0);
+				Streaming_RequestModel(WeaponInfo_GetWeaponInfo(SavedWeaponIDs[i])->m_nModel2Id, 0); // rouz edit (ChatGPT)
 				CStreaming::LoadAllRequestedModels(false);
 			}
 			if (!(flags & STREAMFLAGS_DONT_REMOVE))
-				CStreaming::SetModelIsDeletable(weaponModelId);
+				Streaming_SetModelIsDeletable(weaponModelId); // rouz edit (ChatGPT)
 			pPlayerPed->GiveWeapon(SavedWeaponIDs[i], SavedWeaponAmmo[i], true);
 		}
 		NumberOfSavedWeapons = 0;
@@ -573,7 +571,7 @@ CCutsceneMgr::Update(void)
 		break;
 	}
 
-	if (!ms_running) return;
+	if (!Cutscene_running) return; // rouz edit (ChatGPT)
 
 	ms_cutsceneTimer += Timer_GetTimeStepNonClippedInSeconds();
 
@@ -590,9 +588,9 @@ CCutsceneMgr::Update(void)
 		if (General_faststricmp(ms_cutsceneName, "finale") && TheCamera.Cams[TheCamera.ActiveCam].Mode == CCam::MODE_FLYBY && ms_cutsceneLoadStatus == CUTSCENE_LOADING_0) {
 			if (CPad::GetPad(0)->GetCrossJustDown()
 				|| (CGame::playingIntro && CPad::GetPad(0)->GetStartJustDown())
-				|| CPad::GetPad(0)->GetLeftMouseJustDown()
-				|| CPad::GetPad(0)->GetEnterJustDown()
-				|| CPad::GetPad(0)->GetCharJustDown(' '))
+				|| Input_GetLeftMouseJustDown() // rouz edit (ChatGPT)
+				|| Input_GetEnterJustDown() // rouz edit (ChatGPT)
+				|| Input_GetCharJustDown(' ')) // rouz edit (ChatGPT)
 					FinishCutscene();
 		}
 }
@@ -616,7 +614,7 @@ CCutsceneMgr::AttachObjectToParent(CObject *pObject, CEntity *pAttachTo)
 	((CCutsceneObject*)pObject)->m_pAttachmentObject = nil;
 	((CCutsceneObject*)pObject)->m_pAttachTo = RpClumpGetFrame(pAttachTo->GetClump());
 
-	debug("Attach %s to %s\n", CModelInfo::GetModelInfo(pObject->GetModelIndex())->GetModelName(), CModelInfo::GetModelInfo(pAttachTo->GetModelIndex())->GetModelName());
+	debug("Attach %s to %s\n", ((CBaseModelInfo*)ModelRegistry_Get(pObject->GetModelIndex()))->GetModelName(), ((CBaseModelInfo*)ModelRegistry_Get(pAttachTo->GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 }
 
 void
@@ -625,9 +623,9 @@ CCutsceneMgr::AttachObjectToFrame(CObject *pObject, CEntity *pAttachTo, const ch
 	((CCutsceneObject*)pObject)->m_pAttachmentObject = nil;
 	((CCutsceneObject*)pObject)->m_pAttachTo = RpAnimBlendClumpFindFrame(pAttachTo->GetClump(), frame)->frame;
 	debug("Attach %s to component %s of %s\n",
-		CModelInfo::GetModelInfo(pObject->GetModelIndex())->GetModelName(),
+		((CBaseModelInfo*)ModelRegistry_Get(pObject->GetModelIndex()))->GetModelName(), // rouz edit (ChatGPT)
 		frame,
-		CModelInfo::GetModelInfo(pAttachTo->GetModelIndex())->GetModelName());
+		((CBaseModelInfo*)ModelRegistry_Get(pAttachTo->GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 	if (RwObjectGetType(pObject->m_rwObject) == rpCLUMP) {
 		RpClump *clump = (RpClump*)pObject->m_rwObject;
 		if (IsClumpSkinned(clump))
@@ -646,8 +644,8 @@ CCutsceneMgr::AttachObjectToBone(CObject *pObject, CObject *pAttachTo, int bone)
 	((CCutsceneObject*)pObject)->m_pAttachmentObject = pAttachTo;
 	((CCutsceneObject*)pObject)->m_pAttachTo = &matrixArray[id];
 	debug("Attach %s to %s\n",
-		CModelInfo::GetModelInfo(pObject->GetModelIndex())->GetModelName(),
-		CModelInfo::GetModelInfo(pAttachTo->GetModelIndex())->GetModelName());
+		((CBaseModelInfo*)ModelRegistry_Get(pObject->GetModelIndex()))->GetModelName(), // rouz edit (ChatGPT)
+		((CBaseModelInfo*)ModelRegistry_Get(pAttachTo->GetModelIndex()))->GetModelName()); // rouz edit (ChatGPT)
 }
 
 void
@@ -656,7 +654,7 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 	CStreaming::ms_disableStreaming = true;
 	CColStore::RemoveAllCollision();
 	CWorld::bProcessCutsceneOnly = true;
-	ms_cutsceneProcessing = true;
+	Cutscene_processing = true; // rouz edit (ChatGPT)
 
 		// Access raw storage through the C store or pool API
 	for (int i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--) {
@@ -689,19 +687,19 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 	}
 
 	bIsEverythingRemovedFromTheWorldForTheBiggestFuckoffCutsceneEver = true;
-	CStreaming::RemoveCurrentZonesModels();
-	CStreaming::SetModelIsDeletable(MI_MALE01);
-	CStreaming::SetModelTxdIsDeletable(MI_MALE01);
-	CStreaming::SetModelIsDeletable(MI_TAXI_D);
-	CStreaming::SetModelTxdIsDeletable(MI_TAXI_D);
-	CStreaming::SetModelIsDeletable(MI_NIGHTSTICK);
-	CStreaming::SetModelTxdIsDeletable(MI_NIGHTSTICK);
-	CStreaming::SetModelIsDeletable(MI_MISSILE);
-	CStreaming::SetModelTxdIsDeletable(MI_MISSILE);
-	CStreaming::SetModelIsDeletable(MI_POLICE);
-	CStreaming::SetModelTxdIsDeletable(MI_POLICE);
+	Streaming_RemoveCurrentZonesModels(); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MALE01); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(MI_MALE01); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_TAXI_D); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(MI_TAXI_D); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_NIGHTSTICK); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(MI_NIGHTSTICK); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_MISSILE); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(MI_MISSILE); // rouz edit (ChatGPT)
+	Streaming_SetModelIsDeletable(MI_POLICE); // rouz edit (ChatGPT)
+	Streaming_SetModelTxdIsDeletable(MI_POLICE); // rouz edit (ChatGPT)
 
-	while (CStreaming::RemoveLoadedVehicle()) ;
+	while (Streaming_RemoveLoadedVehicle()) ; // rouz edit (ChatGPT)
 
 	CRadar::RemoveRadarSections();
 
@@ -727,7 +725,7 @@ CCutsceneMgr::RemoveEverythingFromTheWorldForTheBiggestFuckoffCutsceneEver()
 		CBuilding* pBuilding = ((CBuilding*)CPool_GetSlot(CPools::GetBuildingPool(), i));
 			if (pBuilding && pBuilding->m_rwObject != nil && pBuilding->bIsBIGBuilding && pBuilding->bStreamBIGBuilding) {
 			if (pBuilding->bIsBIGBuilding)
-				CStreaming::RequestModel(pBuilding->GetModelIndex(), 0);
+				Streaming_RequestModel(pBuilding->GetModelIndex(), 0); // rouz edit (ChatGPT)
 			if (!pBuilding->bImBeingRendered)
 				pBuilding->DeleteRwObject();
 		}

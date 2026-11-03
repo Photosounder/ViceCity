@@ -17,8 +17,6 @@ void ScrollBar_BackendWithPoints(ScrollBar *bar,uint8_t r,uint8_t g,uint8_t b,Sc
 bool ScrollBar_BackendProject(ScrollBarPoint input,ScrollBarPoint output,float *width,float *height,bool farclip);
 void ScrollBar_BackendSprite(float x,float y,float z,float width,float height,uint8_t r,uint8_t g,uint8_t b,int16_t intensity,float reciprocal,uint8_t alpha);
 void * ScrollBar_BackendTexture(void);
-void * ScrollBar_BackendRaster(void *texture);
-void ScrollBar_BackendSetRaster(void *raster);
 void ScrollBar_BackendZWrite(bool enabled);
 void ScrollBar_BackendZTest(bool enabled);
 void ScrollBar_BackendVertexAlpha(bool enabled);

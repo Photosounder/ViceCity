@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "ReplayState.h"
 #include "AudioManager.h"
 #include "AudioGeometry.h"
 #include "AudioSamples.h"
@@ -114,9 +115,9 @@ AudioPlayerEngine_Process(cAudioManager *manager, cVehicleParams *params, CVehic
 		bHandbrakeOnLastFrame = 0;
 	}
 #ifdef FIX_BUGS // fix acceleration sound on exiting the vehicle
-	if (AudioEnvironmentHost_Replay() || AudioPlayerEngineHost_Exiting()) {
+	if (Replay_IsPlayingBack() || AudioPlayerEngineHost_Exiting()) {
 #else
-	if (AudioEnvironmentHost_Replay()) {
+	if (Replay_IsPlayingBack()) {
 #endif
 		accelerateState = (255 * AudioPlayerEngine_Clamp(AudioVehicleReverseHost_Gas(params->m_pVehicle), 0.0f, 1.0f));
 		brakeState = (255 * AudioPlayerEngine_Clamp(AudioVehicleModelHost_BrakePedal(params->m_pVehicle), 0.0f, 1.0f));

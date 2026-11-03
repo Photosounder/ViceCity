@@ -34,21 +34,6 @@ int32_t TrafficLights_BackendModel(CEntity *entity)
     // Enter the original typed native field or action at the C decision point
     return entity->GetModelIndex();
 }
-TrafficLightModel * TrafficLights_BackendModelInfo(int32_t model)
-{
-    // Enter the original typed native field or action at the C decision point
-    return CModelInfo::GetModelInfo(model);
-}
-bool TrafficLights_BackendHasEffect(TrafficLightModel *model,int32_t index)
-{
-    // Enter the original typed native field or action at the C decision point
-    return model->Get2dEffect(index)!=nil;
-}
-TrafficLightVector TrafficLights_BackendEffectPosition(TrafficLightModel *model,int32_t index)
-{
-    // Enter the original typed native field or action at the C decision point
-    return TrafficLights_FromNative(model->Get2dEffect(index)->pos);
-}
 TrafficLightVector TrafficLights_BackendTransform(CEntity *entity,TrafficLightVector point)
 {
     // Enter the original typed native field or action at the C decision point
@@ -58,21 +43,6 @@ TrafficLightVector TrafficLights_BackendCameraForward(void)
 {
     // Enter the original typed native field or action at the C decision point
     return TrafficLights_FromNative(TheCamera.GetForward());
-}
-float TrafficLights_BackendGroundBrightness(void)
-{
-    // Enter the original typed native field or action at the C decision point
-    return TimeCycle_GetLightOnGroundBrightness();
-}
-float TrafficLights_BackendSpriteBrightness(void)
-{
-    // Enter the original typed native field or action at the C decision point
-    return TimeCycle_GetSpriteBrightness();
-}
-float TrafficLights_BackendSpriteSize(void)
-{
-    // Enter the original typed native field or action at the C decision point
-    return TimeCycle_GetSpriteSize();
 }
 void TrafficLights_BackendShadow(uintptr_t id,TrafficLightVector position,uint8_t red,uint8_t green,uint8_t blue)
 {
@@ -208,21 +178,6 @@ int32_t TrafficLights_BackendVehicleStatus(CVehicle *vehicle)
 {
     // Enter the original typed native field or action at the C decision point
     return vehicle->GetStatus();
-}
-float TrafficLights_BackendEffectX(TrafficLightModel *model,int32_t index)
-{
-    // Enter the original typed native field or action at the C decision point
-    return model->Get2dEffect(index)->pos.x;
-}
-float TrafficLights_BackendEffectY(TrafficLightModel *model,int32_t index)
-{
-    // Enter the original typed native field or action at the C decision point
-    return model->Get2dEffect(index)->pos.y;
-}
-float TrafficLights_BackendEffectZ(TrafficLightModel *model,int32_t index)
-{
-    // Enter the original typed native field or action at the C decision point
-    return model->Get2dEffect(index)->pos.z;
 }
 TrafficLightVector TrafficLights_BackendUp(CEntity *entity)
 {

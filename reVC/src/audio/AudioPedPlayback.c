@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "AudioManager.h"
 #include "AudioMath.h"
 #include "AudioSamples.h"
@@ -136,7 +137,7 @@ PedComments_Process(cPedComments *comments)
 			AudioManager.m_sQueueSample.m_nFrequency =
 				SampleManager_GetSampleBaseFrequency(&SampleManager, AudioManager.m_sQueueSample.m_nSampleIndex) + AudioMath_RandomDisplacement(AudioManager.m_anRandomTable, 750);
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-			if (AudioRequestsHost_SlowMotion())
+			if (Timer_GetIsSlowMotionActive())
 				AudioManager.m_sQueueSample.m_nFrequency >>= 1;
 #endif
 			comments->m_aPedCommentQueue[comments->m_nActiveQueue][comments->m_aPedCommentOrderList[comments->m_nActiveQueue][0]].m_nLoadingTimeout = -1;

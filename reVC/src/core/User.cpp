@@ -53,21 +53,12 @@ int16_t UserDisplay_BackendModelIndex(const CVehicle *vehicle)
 char *UserDisplay_BackendGameName(int16_t model)
 {
     // Resolve the original typed model record and borrow its existing game-name array
-    return ((CVehicleModelInfo*)CModelInfo::GetModelInfo(model))->m_gameName;
-}
-uint16_t *UserDisplay_BackendText(const char *name)
-{
-    // Perform the original native text lookup after the C display controller selects a model
-    return Text_Get(&TheText,name);
+    return ((CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(model)))->m_gameName; // rouz edit (ChatGPT)
 }
 void UserDisplay_BackendSetVehicleName(uint16_t *name)
 {
     // Publish the original borrowed UTF-16 vehicle name through the native HUD owner
     CHud::SetVehicleName(name);
 }
-bool UserDisplay_BackendPlayingBack(void)
-{
-    // Query the original replay predicate at the compile-time guarded update gate
-    return CReplay::IsPlayingBack();
-}
+
 //- rouz edit (ChatGPT)

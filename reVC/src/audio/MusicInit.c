@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "DMAudio.h"
@@ -105,7 +106,7 @@ MusicInit_SetStartingTrackPositions(cMusicManager *manager, uint8_t isNewGameTim
 			else
 				manager->m_aTracks[i].m_nPosition = 0;
 			
-			manager->m_aTracks[i].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+			manager->m_aTracks[i].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 		}
 	}
 }

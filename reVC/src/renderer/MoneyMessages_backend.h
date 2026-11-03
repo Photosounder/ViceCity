@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 bool MoneyMessages_BackendProject(MoneyMessageVector position,MoneyMessageVector *out,float *width,float *height,bool farclip);
-void MoneyMessages_BackendAsciiToUnicode(const char *source,uint16_t *target);
 float MoneyMessages_BackendScreenWidth(void);
 float MoneyMessages_BackendScreenHeight(void);
 void MoneyMessages_BackendFontScale(float x,float y);

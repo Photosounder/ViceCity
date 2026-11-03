@@ -1,4 +1,6 @@
 //+ rouz edit (ChatGPT)
+#include "ZoneCull.h"
+#include "Timer.h"
 #include "AudioManager.h"
 #include "sampman.h"
 
@@ -24,7 +26,7 @@ AudioRequests_Submit(cAudioManager *manager)
 		manager->m_sQueueSample.m_nFinalPriority = finalPriority;
 		manager->m_sQueueSample.m_bIsPlayingFinished = 0;
 #ifdef AUDIO_REFLECTIONS
-		if (manager->m_sQueueSample.m_bIs2D || AudioRequestsHost_InRoom()) {
+		if (manager->m_sQueueSample.m_bIs2D || CullZones_InRoomForAudio()) {
 			manager->m_sQueueSample.m_bReflections = 0;
 			manager->m_sQueueSample.m_nReflectionDelay = 0;
 		}
@@ -73,7 +75,7 @@ AudioRequests_AddReflections(cAudioManager *manager)
 	// Copy the sound coordinates for the game vector operation
 	AudioSoundPosition oldPos = manager->m_sQueueSample.m_vecPos;
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-	if ( AudioRequestsHost_SlowMotion() ) {
+	if ( Timer_GetIsSlowMotionActive() ) {
 		emittingVolume = manager->m_sQueueSample.m_nVolume;
 		oldFreq = manager->m_sQueueSample.m_nFrequency;
 	} else
@@ -85,14 +87,14 @@ AudioRequests_AddReflections(cAudioManager *manager)
 
 	for (uint32_t i = 0; i < (sizeof(manager->m_afReflectionsDistances) / sizeof(manager->m_afReflectionsDistances[0])); i++) {
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-		if ( AudioRequestsHost_SlowMotion() )
+		if ( Timer_GetIsSlowMotionActive() )
 			manager->m_afReflectionsDistances[i] = (manager->m_anRandomTable[i % 4] % 3) * 100.0f / 8.0f;
 #endif
 
 		reflectionDistance = manager->m_afReflectionsDistances[i];
 		if (reflectionDistance > 0.0f && reflectionDistance < 100.0f && reflectionDistance < manager->m_sQueueSample.m_MaxDistance) {
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-			manager->m_sQueueSample.m_nReflectionDelay = AudioRequestsHost_SlowMotion() ? (reflectionDistance * 800.0f / 1029.0f) : (reflectionDistance * 500.0f / 1029.0f);
+			manager->m_sQueueSample.m_nReflectionDelay = Timer_GetIsSlowMotionActive() ? (reflectionDistance * 800.0f / 1029.0f) : (reflectionDistance * 500.0f / 1029.0f);
 #else
 			manager->m_sQueueSample.m_nReflectionDelay = reflectionDistance * 500.0f / 1029.0f;
 #endif
@@ -107,7 +109,7 @@ AudioRequests_AddReflections(cAudioManager *manager)
 					manager->m_sQueueSample.m_nCounter = oldCounter + ((i + 1) << 8);
 					if (manager->m_sQueueSample.m_nLoopCount > 0) {
 #ifndef USE_TIME_SCALE_FOR_AUDIO
-						if ( AudioRequestsHost_SlowMotion() ) {
+						if ( Timer_GetIsSlowMotionActive() ) {
 							manager->m_sQueueSample.m_nFrequency = halfOldFreq + ((halfOldFreq * i) / (sizeof(manager->m_afReflectionsDistances) / sizeof(manager->m_afReflectionsDistances[0])));
 						} else
 #endif

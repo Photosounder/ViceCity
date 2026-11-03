@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "sampman.h"
@@ -62,7 +63,7 @@ MusicStream_ServiceAnnouncement(cMusicManager *manager)
 			MusicPositions_RecordRadioStats(manager);
 			MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
 			g_bAnnouncementReadPosAlready = 1;
-			MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+			MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 		}
 		SampleManager_StopStreamedFile(&SampleManager, 0);
 	} else {
@@ -91,7 +92,7 @@ MusicStream_ServiceTrack(cMusicManager *manager, CVehicle *veh, CPed *ped)
 		if (SampleManager_IsStreamPlaying(&SampleManager, 0)) {
 			if (manager->m_nPlayingTrack != NO_TRACK && !bRadioStatsRecorded) {
 				MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
-				MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+				MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 				MusicPositions_RecordRadioStats(manager);
 				bRadioStatsRecorded = 1;
 			}
@@ -148,7 +149,7 @@ MusicStream_ServiceTrack(cMusicManager *manager, CVehicle *veh, CPed *ped)
 							SampleManager_SetStreamedVolumeAndPan(&SampleManager, volume, 63, 1, 0);
 						}
 						if (manager->m_nNextTrack < STREAMED_SOUND_CITY_AMBIENT)
-							manager->m_nLastTrackServiceTime = MusicInitHost_PauseTime();
+							manager->m_nLastTrackServiceTime = Timer_GetTimeInMillisecondsPauseMode();
 						manager->m_bVerifyNextTrackStartedToPlay = 1;
 					}
 				}
@@ -158,7 +159,7 @@ MusicStream_ServiceTrack(cMusicManager *manager, CVehicle *veh, CPed *ped)
 				else if (!bRadioStatsRecorded2)
 				{
 					MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nPosition, SampleManager_GetStreamedFilePosition(&SampleManager, 0));
-					MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, MusicInitHost_PauseTime());
+					MUSIC_STREAM_STORE_TRACK_VALUE(manager, m_nLastPosCheckTimer, Timer_GetTimeInMillisecondsPauseMode());
 					bRadioStatsRecorded2 = 1;
 					MusicPositions_RecordRadioStats(manager);
 					if (manager->m_nPlayingTrack >= STREAMED_SOUND_HAVANA_CITY_AMBIENT && manager->m_nPlayingTrack <= STREAMED_SOUND_HAVANA_BEACH_AMBIENT)
@@ -180,7 +181,7 @@ MusicStream_ServiceTrack(cMusicManager *manager, CVehicle *veh, CPed *ped)
 		SampleManager_SetStreamedVolumeAndPan(&SampleManager, volume, 63, 1, 0);
 		return;
 	}
-	if (MusicStreamHost_SlowMotion())
+	if (Timer_GetIsSlowMotionActive())
 	{
 		if (MusicStreamHost_Target())
 		{

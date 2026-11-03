@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
+//+ rouz edit (ChatGPT)
 #include "common.h"
 #include "ColSphere_native.h"
 #include "CollisionVector_native.h"
@@ -190,8 +191,8 @@ CPickup::GiveUsAPickUpObject(CObject **ppObject, CObject **ppExtraObject, int32 
 	object = extraObject = nil;
 
 	int32 modelId = -1;
-	if (CModelInfo::GetModelInfo(m_eModelIndex)->GetModelType() == MITYPE_WEAPON) {
-		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo(((CWeaponModelInfo*)CModelInfo::GetModelInfo(m_eModelIndex))->GetWeaponInfo());
+	if (((CBaseModelInfo*)ModelRegistry_Get(m_eModelIndex))->GetModelType() == MITYPE_WEAPON) { // rouz edit (ChatGPT)
+		CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo((eWeaponType)(uintptr)((CWeaponModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(m_eModelIndex)))->m_atomics[2]); // rouz edit (ChatGPT)
 		modelId = weaponInfo->m_nModelId;
 		if (modelId == m_eModelIndex)
 			modelId = weaponInfo->m_nModel2Id;
@@ -437,7 +438,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 				uint32 slot = WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot;
 				eWeaponType plrWeaponSlot = FindPlayerPed()->GetWeapon(slot).m_eWeaponType;
 				if (plrWeaponSlot != weaponType) {
-					if (CStreaming::ms_aInfoForModel[m_pObject->GetModelIndex()].m_loadState == STREAMSTATE_LOADED) {
+					if (Streaming_modelInfo[m_pObject->GetModelIndex()].m_loadState == STREAMSTATE_LOADED) { // rouz edit (ChatGPT)
 						if (plrWeaponSlot == WEAPONTYPE_UNARMED || (FindPlayerPed()->GetWeapon(slot).m_nAmmoTotal == 0 && !WeaponInfo_IsWeaponSlotAmmoMergeable(slot))) {
 							if ((*Timer_GetTimeInMilliseconds()) - FindPlayerPed()->m_nPadDownPressedInMilliseconds < 1500) {
 								CPickups::PlayerOnWeaponPickup = 6;
@@ -686,7 +687,7 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 				}
 			}
 			if (explode) {
-				CExplosion::AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
+				Explosion_AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
 				Remove();
 			}
 			break;
@@ -734,7 +735,7 @@ CPickup::ProcessGunShot(CVector *vec1, CVector *vec2)
 		sphere.bounds.radius = 4.0f;
 		sphere.bounds.center = CollisionVector_FromNative(m_pObject->GetPosition());
 		if (CCollision::TestLineSphere(line, sphere)) {
-			CExplosion::AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
+			Explosion_AddExplosion(nil, nil, EXPLOSION_MINE, m_pObject->GetPosition(), 0);
 			CWorld::Remove(m_pObject);
 			// Destroy and release the pickup object without invoking C++ delete.
 			m_pObject->~CObject();
@@ -1013,7 +1014,7 @@ CPickups::WeaponForModel(int32 model)
 	if (model == MI_PICKUP_HEALTH) return WEAPONTYPE_HEALTH;
 	if (model == MI_PICKUP_ADRENALINE) return WEAPONTYPE_ARMOUR;
 	if (model == -1) return WEAPONTYPE_UNARMED;
-	return ((CWeaponModelInfo*)CModelInfo::GetModelInfo(model))->GetWeaponInfo();
+	return (eWeaponType)(uintptr)((CWeaponModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(model)))->m_atomics[2]; // rouz edit (ChatGPT)
 }
 
 void
@@ -1028,7 +1029,7 @@ void
 CPickups::Update()
 {
 #ifdef FIX_BUGS // RIP speedrunning (solution from SA)
-	if (CReplay::IsPlayingBack())
+	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 #endif
 #ifdef CAMERA_PICKUP
@@ -1870,5 +1871,6 @@ CPed::CreateDeadPedPickupCoors(float *x, float *y, float *z)
 
 //- rouz edit (ChatGPT)
 
+//- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)
 //- rouz edit (ChatGPT)

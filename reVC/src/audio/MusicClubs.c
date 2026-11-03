@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include "Timer.h"
 #include "MusicManager.h"
 #include "AudioManager.h"
 #include "soundlist.h"
@@ -22,7 +23,7 @@ MusicClubs_SetMalibuClubTrackPos(cMusicManager *manager, uint8_t scriptObject)
 			manager->m_aTracks[STREAMED_SOUND_MALIBU_AMBIENT].m_nPosition = (AudioManager.m_anRandomTable[0] % 128) + 509120;
 			break;
 		}
-		manager->m_aTracks[STREAMED_SOUND_MALIBU_AMBIENT].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+		manager->m_aTracks[STREAMED_SOUND_MALIBU_AMBIENT].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 	}
 }
 
@@ -46,7 +47,7 @@ MusicClubs_SetStripClubTrackPos(cMusicManager *manager, uint8_t scriptObject)
 			manager->m_aTracks[STREAMED_SOUND_STRIPCLUB_AMBIENT].m_nPosition = (AudioManager.m_anRandomTable[0] % 128) + 672000;
 			break;
 		}
-		manager->m_aTracks[STREAMED_SOUND_STRIPCLUB_AMBIENT].m_nLastPosCheckTimer = MusicInitHost_PauseTime();
+		manager->m_aTracks[STREAMED_SOUND_STRIPCLUB_AMBIENT].m_nLastPosCheckTimer = Timer_GetTimeInMillisecondsPauseMode();
 	}
 }
 

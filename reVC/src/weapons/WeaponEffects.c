@@ -47,7 +47,7 @@ WeaponEffects_Init(void)
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_SetCurrentTxd(slot);
 	
-	gpCrossHairTex    = Sprite2d_HostTextureRead("target256", "target256m");
+	gpCrossHairTex    = RwHelper_ReadTexture("target256", "target256m");
 	
 	// Use the complete C texture dictionary owner with the original live arguments
 	TxdStore_PopCurrentTxd();
@@ -57,7 +57,7 @@ void
 WeaponEffects_Shutdown(void)
 {
     // Execute the complete original weapon effect operation with C-owned state
-	Shadow_HostTextureDestroy(gpCrossHairTex);
+	RwHelper_DestroyTexture(gpCrossHairTex);
 	gpCrossHairTex = NULL;
 }
 
@@ -111,7 +111,7 @@ WeaponEffects_Render(void)
 #else
 		RwHelper_HostRenderState(WeaponEffects_HostConstant(WEAPON_EFFECTS_CONST_rwRENDERSTATEDESTBLEND),         (void *)(uintptr_t)WeaponEffects_HostConstant(WEAPON_EFFECTS_CONST_rwBLENDINVDESTALPHA));
 #endif
-		RwHelper_HostRenderState(WeaponEffects_HostConstant(WEAPON_EFFECTS_CONST_rwRENDERSTATETEXTURERASTER),     (void *)Sprite2d_HostTextureRaster(gpCrossHairTex));
+		RwHelper_HostRenderState(WeaponEffects_HostConstant(WEAPON_EFFECTS_CONST_rwRENDERSTATETEXTURERASTER),     (void *)RwHelper_TextureRaster(gpCrossHairTex));
 
 		WeaponEffectsVector pos;
 		float w, h;

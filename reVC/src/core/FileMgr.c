@@ -2,6 +2,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "FileMgr.h"
 #include "FileMgr_backend.h"
+#include "PlatformFiles.h"
 #include "config.h"
 #include <string.h>
 #include <stdlib.h>
@@ -14,7 +15,8 @@
 #define __FILE_NAME__ __FILE__
 #endif
 #include <cita_windows.h>
-#define FileMgr_CaseOpen FileMgr_BackendCaseOpen
+#include "CasePath.h"
+#define FileMgr_CaseOpen _fcaseopen
 #endif
 #ifndef MASTER
 #define FileMgr_Assert(expr) (void)((!!(expr)) || (re3_assert(#expr, __FILE__, __LINE__, __func__), 0))
@@ -50,7 +52,7 @@ static myFILE myfiles[NUMFILES];
 static void mychdir(char const *path)
 {
 	// Resolve the original non-Windows path before changing the current directory
-	char* r = FileMgr_BackendCasePath(path, false);
+	char* r = casepath(path, false);
     if (r) {
         chdir(r);
 		free(r);
@@ -263,7 +265,7 @@ FileMgr_SetDirMyDocuments(void)
 {
 	// Restore the root before querying and entering the platform user directory
 	FileMgr_SetDir("");	// better start at the root if user directory is relative
-	mychdir(FileMgr_BackendUserFilesFolder());
+	mychdir(_psGetUserFilesFolder());
 }
 
 FileMgrSize

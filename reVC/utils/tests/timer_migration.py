@@ -23,20 +23,6 @@ HOST='''//+ rouz edit (ChatGPT)
 #include "Record.h"
 #include "SpecialFX.h"
 
-extern "C" TimerPlatformTime
-TimerHost_PlatformTime(void)
-{
-    // Read the original platform timer with its platform-specific scalar type
-    return RsTimer();
-}
-
-extern "C" bool
-TimerHost_SnapshotActive(void)
-{
-    // Read the original snapshot flag after the time-step and pause gates
-    return CSpecialFX::bSnapShotActive;
-}
-
 extern "C" bool
 TimerHost_PlayingBack(void)
 {
@@ -63,9 +49,8 @@ def local(source):
     # Rewrite timer members and nested pause calls without changing their evaluation points
     for name,(_,target) in FIELDS.items():source=re.sub(r'\b'+name+r'\b',target,source)
     source=source.replace('GetIsPaused()', 'Timer_GetIsPaused()')
-    source=source.replace('CSpecialFX::bSnapShotActive','TimerHost_SnapshotActive()').replace('SpecialFX_bSnapShotActive','TimerHost_SnapshotActive()')
+    source=source.replace('CSpecialFX::bSnapShotActive','SpecialFX_bSnapShotActive')
     source=source.replace('CRecordDataForGame::IsPlayingBack()','TimerHost_PlayingBack()').replace('CRecordDataForChase::IsRecording()','TimerHost_ChaseRecording()')
-    source=source.replace('RsTimer()', 'TimerHost_PlatformTime()')
     source=source.replace('debug("','re3_debug("[DBG]: ')
     source=re.sub(r'uint32\(([^()]*)\)',r'((uint32_t)(\1))',source)
     for a,b in [('uint32','uint32_t'),('int32','int32_t'),('RsTimerType','TimerPlatformTime')]:source=re.sub(r'\b'+a+r'\b',b,source)
@@ -78,6 +63,7 @@ def header(source):
 #include <stdint.h>
 #include <stdbool.h>
 #include "config.h"
+#include "RsTimer.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -98,13 +84,7 @@ extern "C" {
         for a,b in [('uint32','uint32_t')]:kind=re.sub(r'\b'+a+r'\b',b,kind);args=re.sub(r'\b'+a+r'\b',b,args)
         result+='static inline '+kind+'\nTimer_'+name+'('+('void' if not args else args)+')\n{\n    // Preserve the original scalar access and reference-backed storage\n    '+body.strip()+'\n}\n\n'
     result+='''#endif
-#ifdef _WIN32
-typedef uint32_t TimerPlatformTime;
-#else
-typedef double TimerPlatformTime;
-#endif
-TimerPlatformTime TimerHost_PlatformTime(void);
-bool TimerHost_SnapshotActive(void);
+typedef RsTimerValue TimerPlatformTime;
 bool TimerHost_PlayingBack(void);
 bool TimerHost_ChaseRecording(void);
 #ifdef __cplusplus
@@ -126,6 +106,7 @@ def kernel(source):
     source=re.sub(r'(\bTimer_\w+\([^\n]*\)\n\{[^\n]*\n)',r'\1\t// Preserve the original timing operation, arithmetic and live state access order\n',source)
     return '''//+ rouz edit (ChatGPT)
 #include "Timer.h"
+#include "SpecialFX_control.h"
 #include "../audio/DMAudio.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

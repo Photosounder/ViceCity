@@ -46,7 +46,6 @@ void Projectile_BackendRemoveObject(CObject *object);
 CEntity * Projectile_BackendColliding(CEntity *entity);
 void Projectile_BackendSetColliding(CEntity *entity,CProjectile *projectile);
 CEntity * Projectile_BackendDriver(CEntity *entity);
-void Projectile_BackendExplosion(CEntity *source,enum eExplosionType type,ProjectileVector position);
 void Projectile_BackendProjectileExplosion(CEntity *source,enum eExplosionType type,CProjectile *projectile);
 ProjectileVector Projectile_BackendProjectileSpeed(CProjectile *projectile);
 void Projectile_BackendScaleSpeed(CProjectile *projectile,float scale);

@@ -2010,10 +2010,10 @@ CMenuManager::DrawMemoryCardStartUpMenus()
 			page.GoDown();
 		if ( CPad::GetPad(0)->GetDPadDownJustDown() )
 			page.GoUp();
-		if ( CPad::GetPad(0)->GetCrossJustDown() || CPad::GetPad(0)->GetEnterJustDown() || CPad::GetPad(0)->GetRightMouseJustDown() )
+		if ( CPad::GetPad(0)->GetCrossJustDown() || Input_GetEnterJustDown() || Input_GetRightMouseJustDown() ) // rouz edit (ChatGPT)
 			page.SelectCurrentOptionUnderCursor();
 
-		if ( CPad::GetPad(0)->GetCircleJustDown() || CPad::GetPad(0)->GetEscapeJustDown() )
+		if ( CPad::GetPad(0)->GetCircleJustDown() || Input_GetEscapeJustDown() ) // rouz edit (ChatGPT)
 			;
 #else
 		if ( CPad::GetPad(0)->GetDPadLeftJustDown() )
@@ -2180,7 +2180,7 @@ void
 CMenuManager::WorkOutMenuState(uint8 bExit)
 {
 #ifdef GTA_PC
-	bool bIsStartPressed = CPad::GetPad(0)->GetStartJustDown() || (m_pageState == PAGESTATE_NORMAL && CPad::GetPad(0)->GetEscapeJustDown());
+	bool bIsStartPressed = CPad::GetPad(0)->GetStartJustDown() || (m_pageState == PAGESTATE_NORMAL && Input_GetEscapeJustDown()); // rouz edit (ChatGPT)
 #else
 	bool bIsStartPressed = CPad::GetPad(0)->GetStartJustDown();
 #endif
@@ -2310,7 +2310,7 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadLeft() || CPad::GetPad(0)->GetLeft() )
+	if ( CPad::GetPad(0)->GetDPadLeft() || Input_GetLeft() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadLeft() )
 #endif
@@ -2331,7 +2331,7 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadRight() || CPad::GetPad(0)->GetRight() )
+	if ( CPad::GetPad(0)->GetDPadRight() || Input_GetRight() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadRight() )
 #endif
@@ -2352,21 +2352,21 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadLeftJustDown() || CPad::GetPad(0)->GetLeftJustDown() )
+	if ( CPad::GetPad(0)->GetDPadLeftJustDown() || Input_GetLeftJustDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadLeftJustDown() )
 #endif
 		ProcessDPadLeftJustDown();
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadRightJustDown() || CPad::GetPad(0)->GetRightJustDown() )
+	if ( CPad::GetPad(0)->GetDPadRightJustDown() || Input_GetRightJustDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadRightJustDown() )
 #endif
 		ProcessDPadRightJustDown();
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadUp() || CPad::GetPad(0)->GetUp() )
+	if ( CPad::GetPad(0)->GetDPadUp() || Input_GetUp() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadUp() )
 #endif
@@ -2396,7 +2396,7 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadDown() || CPad::GetPad(0)->GetDown() )
+	if ( CPad::GetPad(0)->GetDPadDown() || Input_GetDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadDown() )
 #endif
@@ -2426,14 +2426,14 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadUpJustDown() || CPad::GetPad(0)->GetUpJustDown() )
+	if ( CPad::GetPad(0)->GetDPadUpJustDown() || Input_GetUpJustDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadUpJustDown() )
 #endif
 		ProcessDPadUpJustDown();
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetDPadDownJustDown() || CPad::GetPad(0)->GetDownJustDown() )
+	if ( CPad::GetPad(0)->GetDPadDownJustDown() || Input_GetDownJustDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetDPadDownJustDown() )
 #endif
@@ -2468,14 +2468,14 @@ CMenuManager::ProcessControllerInput(void)
 	}
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetCrossJustDown() || CPad::GetPad(0)->GetEnterJustDown() || CPad::GetPad(0)->GetRightMouseJustDown() )
+	if ( CPad::GetPad(0)->GetCrossJustDown() || Input_GetEnterJustDown() || Input_GetRightMouseJustDown() ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetCrossJustDown() )
 #endif
 		ProcessDPadCrossJustDown();
 
 #ifdef GTA_PC
-	if ( CPad::GetPad(0)->GetTriangleJustDown() || CPad::GetPad(0)->GetBackspaceJustDown() || (m_pageState != PAGESTATE_NORMAL && CPad::GetPad(0)->GetEscapeJustDown()) )
+	if ( CPad::GetPad(0)->GetTriangleJustDown() || Input_GetBackspaceJustDown() || (m_pageState != PAGESTATE_NORMAL && Input_GetEscapeJustDown()) ) // rouz edit (ChatGPT)
 #else
 	if ( CPad::GetPad(0)->GetTriangleJustDown() )
 #endif

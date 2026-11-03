@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #include "Zones.h"
+#include "Text.h"
 #include "Clock.h"
 #include "Timer.h"
 #include <ctype.h>
@@ -36,7 +37,7 @@ uint16_t*
 Zone_GetTranslatedName(CZone *zone)
 {
 	// Preserve the original zone operation and live state access order
-	return ZonesHost_Text(zone->name);
+	return Text_Get(&TheText,zone->name);
 }
 
 void

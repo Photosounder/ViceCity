@@ -138,9 +138,10 @@ CdStreamInit(int32 numChannels)
 	
 	debug("%s: read info %p\n", "cdvd_stream", gpReadInfo);
 	
-	CdStreamAddImage("MODELS\\GTA3.IMG");
-	
-	int32 nStatus = CdStreamRead(0, pBuffer, 0, 1);
+	// Only probe an image that was opened successfully
+	int32 nStatus = STREAM_NONE; // rouz edit (ChatGPT)
+	if (CdStreamAddImage("MODELS\\GTA3.IMG")) // rouz edit (ChatGPT)
+		nStatus = CdStreamRead(0, pBuffer, 0, 1); // rouz edit (ChatGPT)
 	
 	CdStreamRemoveImages();
 	
@@ -493,9 +494,11 @@ CdStreamAddImage(char const *path)
 	                                   _gdwCdStreamFlags | FILE_FLAG_RANDOM_ACCESS | FILE_ATTRIBUTE_READONLY,
 	                                   nil);
 	
-	ASSERT( gImgFiles[gNumImages] != nil );
-	if ( gImgFiles[gNumImages] == NULL )
+	// Reject the Windows invalid-handle sentinel before recording the image
+	if (gImgFiles[gNumImages] == INVALID_HANDLE_VALUE) { // rouz edit (ChatGPT)
+		gImgFiles[gNumImages] = nil; // rouz edit (ChatGPT)
 		return false;
+	}
 	
 	strcpy(gCdImageNames[gNumImages], path);
 	

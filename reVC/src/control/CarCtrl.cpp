@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include "StoredCollPoly_native.h"
 
 #include "CarCtrl.h"
@@ -97,7 +98,6 @@ int32 CCarCtrl::NumRandomCars;
 int32 CCarCtrl::NumParkedCars;
 int32 CCarCtrl::NumPermanentCars;
 int8 CCarCtrl::CountDownToCarsAtStart;
-int32 CCarCtrl::MaxNumberOfCarsInUse = DEFAULT_MAX_NUMBER_OF_CARS;
 uint32 CCarCtrl::LastTimeLawEnforcerCreated;
 uint32 CCarCtrl::LastTimeFireTruckCreated;
 uint32 CCarCtrl::LastTimeAmbulanceCreated;
@@ -115,7 +115,7 @@ uint32 aCarsToKeepTime[MAX_CARS_TO_KEEP];
 void
 CCarCtrl::GenerateRandomCars()
 {
-	if (CCutsceneMgr::IsRunning()) {
+	if (Cutscene_IsRunning()) { // rouz edit (ChatGPT)
 		CountDownToCarsAtStart = 2;
 		return;
 	}
@@ -165,7 +165,7 @@ CCarCtrl::GenerateOneRandomCar()
 	{
 		if (NumRandomCars - rouz.veh_locked_count >= pPlayer->m_nTrafficMultiplier * CarDensityMultiplier * IniFile_CarNumberMultiplier)
 			return;
-		if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars + NumLawEnforcerCars + NumRandomCars - rouz.veh_locked_count >= MaxNumberOfCarsInUse)
+		if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars + NumLawEnforcerCars + NumRandomCars - rouz.veh_locked_count >= PopulationLimits_MaxCars) // rouz edit (ChatGPT)
 		return;
 	}
 
@@ -333,15 +333,15 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		if (carClass == CARCLASS_COPS) {
 			carModel = MI_PREDATOR;
 			carClass = CARCLASS_COPS_BOAT;
-			if (!CStreaming::HasModelLoaded(MI_PREDATOR)) {
-				CStreaming::RequestModel(MI_PREDATOR, STREAMFLAGS_DEPENDENCY);
+			if (!Streaming_HasModelLoaded(MI_PREDATOR)) { // rouz edit (ChatGPT)
+				Streaming_RequestModel(MI_PREDATOR, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
 				return;
 			}
 		}
 		else {
 			int i;
 			carModel = -1;
-			for (i = 10; i > 0 && (carModel == -1 || !CStreaming::HasModelLoaded(carModel)); i--) {
+			for (i = 10; i > 0 && (carModel == -1 || !Streaming_HasModelLoaded(carModel)); i--) { // rouz edit (ChatGPT)
 				carModel = ChooseBoatModel(ChooseBoatRating(&zone));
 			}
 			if (i == 0)
@@ -375,7 +375,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 	int16 connectionId = ThePaths.m_carPathConnections[idInNode + pCurNode->firstLink];
 	CCarPathLink* pPathLink = &ThePaths.m_carPathLinks[connectionId];
 	int16 lanesOnCurrentRoad = pPathLink->pathNodeIndex == nextNodeId ? pPathLink->numLeftLanes : pPathLink->numRightLanes;
-	CVehicleModelInfo* pModelInfo = (CVehicleModelInfo*)CModelInfo::GetModelInfo(carModel);
+	CVehicleModelInfo* pModelInfo = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(carModel)); // rouz edit (ChatGPT)
 	if (lanesOnCurrentRoad == 0)
 	{
 		if (debug_cargen) debug("Car gen stopped because lanesOnCurrentRoad\n");
@@ -384,7 +384,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 	}
 	CVehicle* pVehicle;
 //+ rouz edit (ChatGPT)
-	if (CModelInfo::IsBoatModel(carModel)) {
+	if (ModelRegistry_IsBoatModel(carModel)) { // rouz edit (ChatGPT)
 		// Allocate the generated boat from the vehicle pool without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
@@ -392,7 +392,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		//- rouz edit (ChatGPT)
 		assert(pVehicle);
 		std::allocator<CBoat>().construct((CBoat*)pVehicle, carModel, RANDOM_VEHICLE);
-	} else if (CModelInfo::IsBikeModel(carModel)) {
+	} else if (ModelRegistry_IsBikeModel(carModel)) { // rouz edit (ChatGPT)
 		// Allocate the generated bike from the vehicle pool without invoking C++ new.
 		//+ rouz edit (ChatGPT)
 		// Access raw storage through the C store or pool API
@@ -460,7 +460,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		pVehicle->m_bSirenOrAlarm = true;
 	pVehicle->AutoPilot.m_nNextPathNodeInfo = connectionId;
 	pVehicle->AutoPilot.m_nNextLane = pVehicle->AutoPilot.m_nCurrentLane = General_GetRandomNumber() % lanesOnCurrentRoad;
-	CBox* boundingBox = &CModelInfo::GetColModel(pVehicle->GetModelIndex())->boundingBox;
+	CBox* boundingBox = &((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(pVehicle->GetModelIndex())))->boundingBox; // rouz edit (ChatGPT)
 	float carLength = 1.0f + (boundingBox->max.y - boundingBox->min.y) / 2;
 	float distanceBetweenNodes = (pCurNode->GetPosition() - pNextNode->GetPosition()).Magnitude2D();
 	/* If car is so long that it doesn't fit between two car nodes, place it directly in the middle. */
@@ -504,8 +504,8 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 	/* I think the following might be some form of SetRotateZOnly. */
 	/* Setting up direction between two car nodes. */
 	pVehicle->GetForward() = CVector(forwardX, forwardY, 0.0f);
-	pVehicle->GetRight() = CVector(forwardY, -forwardX, 0.0f);
-	pVehicle->GetUp() = CVector(0.0f, 0.0f, 1.0f);
+	pVehicle->GetRight() = CVector(forwardY, -forwardX, 0.0f); // rouz edit (ChatGPT)
+	pVehicle->GetUp() = CVector(0.0f, 0.0f, 1.0f); // rouz edit (ChatGPT)
 
 	float currentPathLinkForwardX = pVehicle->AutoPilot.m_nCurrentDirection * ThePaths.m_carPathLinks[pVehicle->AutoPilot.m_nCurrentPathNodeInfo].GetDirX();
 	float currentPathLinkForwardY = pVehicle->AutoPilot.m_nCurrentDirection * ThePaths.m_carPathLinks[pVehicle->AutoPilot.m_nCurrentPathNodeInfo].GetDirY();
@@ -660,7 +660,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 //- rouz edit (ChatGPT)
 		return;
 	}
-	if (CModelInfo::IsBoatModel(carModel)) {
+	if (ModelRegistry_IsBoatModel(carModel)) { // rouz edit (ChatGPT)
 		finalPosition.z = groundZ;
 		pVehicle->bExtendedRange = true;
 	}
@@ -789,12 +789,12 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		for (int i = 0; i < pVehicle->m_nNumMaxPassengers; i++)
 			passengers += (General_GetRandomNumberInRangeFloat(0.0f, 1.0f) < PROBABILITY_OF_PASSENGER_IN_VEHICLE) ? 1 : 0;
 		// Use the complete C animation manager at the original call boundary
-		if (CModelInfo::IsCarModel(carModel) && (CModelInfo::GetModelInfo(carModel)->GetAnimFileIndex() == AnimManager_GetAnimationBlockIndex("van") && passengers >= 1))
+		if (ModelRegistry_IsCarModel(carModel) && (((CBaseModelInfo*)ModelRegistry_Get(carModel))->GetAnimFileIndex() == AnimManager_GetAnimationBlockIndex("van") && passengers >= 1)) // rouz edit (ChatGPT)
 			passengers = 1;
 		for (int i = 0; i < passengers; i++) {
 			CPed* pPassenger = pVehicle->SetupPassenger(i);
 			if (pPassenger) {
-				++CPopulation::ms_nTotalCarPassengerPeds;
+				++Population_nTotalCarPassengerPeds; // rouz edit (ChatGPT)
 				pPassenger->bCarPassenger = true;
 			}
 		}
@@ -823,7 +823,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		pVehicle->AutoPilot.m_nDrivingStyle = DRIVINGSTYLE_AVOID_CARS;
 	}
 	if (carClass == CARCLASS_COPS && pVehicle->GetModelIndex() == MI_VICECHEE) {
-		CVehicleModelInfo* pVehicleModel = (CVehicleModelInfo*)CModelInfo::GetModelInfo(MI_VICECHEE);
+		CVehicleModelInfo* pVehicleModel = (CVehicleModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(MI_VICECHEE)); // rouz edit (ChatGPT)
 		switch (MiamiViceCycle) {
 		case 0:
 			pVehicleModel->SetVehicleColour(53, 77);
@@ -842,7 +842,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		}
 	}
 	if (General_GetRandomNumberInRangeFloat(0.0f, 1.0f) >= (1 - PROBABILITY_OF_DEAD_PED_ACCIDENT)) {
-		if (CModelInfo::IsCarModel(pVehicle->GetModelIndex()) && !pVehicle->bIsLawEnforcer) {
+		if (ModelRegistry_IsCarModel(pVehicle->GetModelIndex()) && !pVehicle->bIsLawEnforcer) { // rouz edit (ChatGPT)
 			if (CPopulation::AddDeadPedInFrontOfCar(pVehicle->GetPosition() + pVehicle->GetForward() * DISTANCE_BETWEEN_CAR_AND_DEAD_PED, pVehicle)) {
 				pVehicle->AutoPilot.m_nCruiseSpeed = 0;
 				pVehicle->SetMoveSpeed(0.0f, 0.0f, 0.0f);
@@ -906,7 +906,7 @@ int32
 CCarCtrl::ChooseModel(CZoneInfo* pZone, int* pClass) {
 	int32 model = -1;
 	int32 i;
-	for (i = 10; i > 0 && (model == -1 || !CStreaming::HasModelLoaded(model)); i--) {
+	for (i = 10; i > 0 && (model == -1 || !Streaming_HasModelLoaded(model)); i--) { // rouz edit (ChatGPT)
 		int rnd = General_GetRandomNumberInRangeInt(0, 1000);
 
 		if (rnd < pZone->copThreshold) {
@@ -997,22 +997,22 @@ CCarCtrl::ChoosePoliceCarModel(void)
 #else
 		(*Timer_GetTimeInMilliseconds()) > LastTimeMiamiViceGenerated + 120000 &&
 #endif
-		CStreaming::HasModelLoaded(MI_VICECHEE)) {
+		Streaming_HasModelLoaded(MI_VICECHEE)) { // rouz edit (ChatGPT)
 		switch (MiamiViceCycle) {
 		case 0:
-			if (CStreaming::HasModelLoaded(MI_VICE1) && CStreaming::HasModelLoaded(MI_VICE2))
+			if (Streaming_HasModelLoaded(MI_VICE1) && Streaming_HasModelLoaded(MI_VICE2)) // rouz edit (ChatGPT)
 				return MI_VICECHEE;
 			break;
 		case 1:
-			if (CStreaming::HasModelLoaded(MI_VICE3) && CStreaming::HasModelLoaded(MI_VICE4))
+			if (Streaming_HasModelLoaded(MI_VICE3) && Streaming_HasModelLoaded(MI_VICE4)) // rouz edit (ChatGPT)
 				return MI_VICECHEE;
 			break;
 		case 2:
-			if (CStreaming::HasModelLoaded(MI_VICE5) && CStreaming::HasModelLoaded(MI_VICE6))
+			if (Streaming_HasModelLoaded(MI_VICE5) && Streaming_HasModelLoaded(MI_VICE6)) // rouz edit (ChatGPT)
 				return MI_VICECHEE;
 			break;
 		case 3:
-			if (CStreaming::HasModelLoaded(MI_VICE7) && CStreaming::HasModelLoaded(MI_VICE8))
+			if (Streaming_HasModelLoaded(MI_VICE7) && Streaming_HasModelLoaded(MI_VICE8)) // rouz edit (ChatGPT)
 				return MI_VICECHEE;
 			break;
 		default:
@@ -1020,17 +1020,17 @@ CCarCtrl::ChoosePoliceCarModel(void)
 		}
 	}
 	if (Wanted_AreSwatRequired(FindPlayerPed()->m_pWanted) &&
-		CStreaming::HasModelLoaded(MI_ENFORCER) &&
-		CStreaming::HasModelLoaded(MI_POLICE))
+		Streaming_HasModelLoaded(MI_ENFORCER) && // rouz edit (ChatGPT)
+		Streaming_HasModelLoaded(MI_POLICE)) // rouz edit (ChatGPT)
 		return ((General_GetRandomNumber() & 0xF) == 0) ? MI_ENFORCER : MI_POLICE;
 	if (Wanted_AreFbiRequired(FindPlayerPed()->m_pWanted) &&
-		CStreaming::HasModelLoaded(MI_FBIRANCH) &&
-		CStreaming::HasModelLoaded(MI_FBI))
+		Streaming_HasModelLoaded(MI_FBIRANCH) && // rouz edit (ChatGPT)
+		Streaming_HasModelLoaded(MI_FBI)) // rouz edit (ChatGPT)
 		return MI_FBIRANCH;
 	if (Wanted_AreArmyRequired(FindPlayerPed()->m_pWanted) &&
-		CStreaming::HasModelLoaded(MI_RHINO) &&
-		CStreaming::HasModelLoaded(MI_BARRACKS) &&
-		CStreaming::HasModelLoaded(MI_ARMY))
+		Streaming_HasModelLoaded(MI_RHINO) && // rouz edit (ChatGPT)
+		Streaming_HasModelLoaded(MI_BARRACKS) && // rouz edit (ChatGPT)
+		Streaming_HasModelLoaded(MI_ARMY)) // rouz edit (ChatGPT)
 		return General_GetRandomTrueFalse() ? MI_BARRACKS : MI_RHINO;
 	return MI_POLICE;
 }
@@ -1434,7 +1434,7 @@ void CCarCtrl::SlowCarDownForPedsSectorList(CPtrList& lst, CVehicle* pVehicle, f
 		if (4 * movementTowardsPedPerSecond <= distanceUntilHit)
 			/* If car isn't projected to hit a ped in 4 seconds, don't care */
 			continue;
-		float sidewaysDistance = ABS(DotProduct(pVehicle->GetRight(), vecToPed));
+		float sidewaysDistance = ABS(DotProduct(pVehicle->GetRight(), vecToPed)); // rouz edit (ChatGPT)
 		float sideLength = pVehicle->GetModelInfo()->GetColModel()->boundingBox.max.x;
 		if (pVehicle->m_vehType == VEHICLE_TYPE_BIKE)
 			sideLength *= 1.6f;
@@ -1881,7 +1881,7 @@ void CCarCtrl::WeaveThroughObjectsSectorList(CPtrList& lst, CVehicle* pVehicle, 
 			continue;
 		if (Abs(pObject->GetPosition().z - pVehicle->GetPosition().z) >= OBJECT_HEIGHT_DIFF_TO_CONSIDER_WEAVING)
 			continue;
-		if (pObject->GetUp().z > 0.9f)
+		if (pObject->GetUp().z > 0.9f) // rouz edit (ChatGPT)
 			WeaveForObject(pObject, pVehicle, pAngleToWeaveLeft, pAngleToWeaveRight);
 	}
 }
@@ -1915,7 +1915,7 @@ void CCarCtrl::WeaveForObject(CEntity* pOtherEntity, CVehicle* pVehicle, float* 
 		return;
 	CObject* pObject = (CObject*)pOtherEntity;
 	CVector2D vecDiff = pObject->GetPosition() +
-		rightCoef * pObject->GetRight() +
+		rightCoef * pObject->GetRight() + // rouz edit (ChatGPT)
 		forwardCoef * pObject->GetForward() -
 		pVehicle->GetPosition();
 	float angleBetweenVehicleAndObject = General_GetATanOfXY(vecDiff.x, vecDiff.y);
@@ -2503,9 +2503,9 @@ void CCarCtrl::DragCarToPoint(CVehicle* pVehicle, CVector* pPoint)
 	float angleZ = Atan2((actualAheadZ - actualBehindZ) / 3, 1.0f);
 	float cosZ = Cos(angleZ);
 	float sinZ = Sin(angleZ);
-	pVehicle->GetRight() = CVector(posTarget.y - midPos.y, -(posTarget.x - midPos.x), 0.0f) / 3;
-	pVehicle->GetForward() = CVector(-cosZ * pVehicle->GetRight().y, cosZ * pVehicle->GetRight().x, sinZ);
-	pVehicle->GetUp() = CrossProduct(pVehicle->GetRight(), pVehicle->GetForward());
+	pVehicle->GetRight() = CVector(posTarget.y - midPos.y, -(posTarget.x - midPos.x), 0.0f) / 3; // rouz edit (ChatGPT)
+	pVehicle->GetForward() = CVector(-cosZ * pVehicle->GetRight().y, cosZ * pVehicle->GetRight().x, sinZ); // rouz edit (ChatGPT)
+	pVehicle->GetUp() = CrossProduct(pVehicle->GetRight(), pVehicle->GetForward()); // rouz edit (ChatGPT)
 	pVehicle->SetPosition((CVector(midPos.x, midPos.y, actualBehindZ) + CVector(posTarget.x, posTarget.y, actualAheadZ)) / 2);
 	pVehicle->GetMatrix().GetPosition().z += pVehicle->GetHeightAboveRoad();
 }
@@ -2756,7 +2756,7 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* pVehicle, float*
 	*pHandbrake = false;
 	CVector player = FindPlayerSpeed() + 0.1f * FindPlayerEntity()->GetForward();
 	player.z = 0.0f;
-	CVector right(pVehicle->GetRight().x, pVehicle->GetRight().y, 0.0f);
+	CVector right(pVehicle->GetRight().x, pVehicle->GetRight().y, 0.0f); // rouz edit (ChatGPT)
 	right.Normalise();
 	CVector forward(pVehicle->GetForward().x, pVehicle->GetForward().y, 0.0f);
 	forward.Normalise();
@@ -3388,20 +3388,20 @@ void CCarCtrl::GenerateEmergencyServicesCar(void)
 	if (CGame::IsInInterior())
 		return;
 	if (NumFiretrucksOnDuty + NumAmbulancesOnDuty + NumParkedCars + NumMissionCars +
-		NumLawEnforcerCars + NumRandomCars > MaxNumberOfCarsInUse)
+		NumLawEnforcerCars + NumRandomCars > PopulationLimits_MaxCars) // rouz edit (ChatGPT)
 		return;
 	if (NumAmbulancesOnDuty == 0 && rouz.no_ambulance == 0){
 		if (AccidentManager_CountActiveAccidents(&gAccidentManager) < 2){
-			if (CStreaming::HasModelLoaded(MI_AMBULAN))
-				CStreaming::SetModelIsDeletable(MI_MEDIC);
+			if (Streaming_HasModelLoaded(MI_AMBULAN)) // rouz edit (ChatGPT)
+				Streaming_SetModelIsDeletable(MI_MEDIC); // rouz edit (ChatGPT)
 		}else{
 			float distance = 30.0f;
 			CAccident* pNearestAccident = AccidentManager_FindNearestAccident(&gAccidentManager,Events_VectorFromNative(FindPlayerCoors()),&distance);
 			if (pNearestAccident){
 				if (CountCarsOfType(MI_AMBULAN) < 2 && (*Timer_GetTimeInMilliseconds()) > LastTimeAmbulanceCreated + 30000){
-					CStreaming::RequestModel(MI_AMBULAN, STREAMFLAGS_DEPENDENCY);
-					CStreaming::RequestModel(MI_MEDIC, STREAMFLAGS_DONT_REMOVE);
-					if (CStreaming::HasModelLoaded(MI_AMBULAN) && CStreaming::HasModelLoaded(MI_MEDIC)){
+					Streaming_RequestModel(MI_AMBULAN, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+					Streaming_RequestModel(MI_MEDIC, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+					if (Streaming_HasModelLoaded(MI_AMBULAN) && Streaming_HasModelLoaded(MI_MEDIC)){ // rouz edit (ChatGPT)
 						if (GenerateOneEmergencyServicesCar(MI_AMBULAN, pNearestAccident->m_pVictim->GetPosition())){
 							LastTimeAmbulanceCreated = (*Timer_GetTimeInMilliseconds());
 						}
@@ -3412,16 +3412,16 @@ void CCarCtrl::GenerateEmergencyServicesCar(void)
 	}
 	if (NumFiretrucksOnDuty == 0){
 		if (FireManager_GetTotalActiveFires(&gFireManager) < 3){
-			if (CStreaming::HasModelLoaded(MI_FIRETRUCK))
-				CStreaming::SetModelIsDeletable(MI_FIREMAN);
+			if (Streaming_HasModelLoaded(MI_FIRETRUCK)) // rouz edit (ChatGPT)
+				Streaming_SetModelIsDeletable(MI_FIREMAN); // rouz edit (ChatGPT)
 		}else{
 			float distance = 30.0f;
 			CFire* pNearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(FindPlayerCoors()), &distance);
 			if (pNearestFire) {
 				if (CountCarsOfType(MI_FIRETRUCK) < 2 && (*Timer_GetTimeInMilliseconds()) > LastTimeFireTruckCreated + 35000){
-					CStreaming::RequestModel(MI_FIRETRUCK, STREAMFLAGS_DEPENDENCY);
-					CStreaming::RequestModel(MI_FIREMAN, STREAMFLAGS_DONT_REMOVE);
-					if (CStreaming::HasModelLoaded(MI_FIRETRUCK) && CStreaming::HasModelLoaded(MI_FIREMAN)){
+					Streaming_RequestModel(MI_FIRETRUCK, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
+					Streaming_RequestModel(MI_FIREMAN, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
+					if (Streaming_HasModelLoaded(MI_FIRETRUCK) && Streaming_HasModelLoaded(MI_FIREMAN)){ // rouz edit (ChatGPT)
 						if (GenerateOneEmergencyServicesCar(MI_FIRETRUCK, Fire_VectorToNative(pNearestFire->m_vecPos))){
 							LastTimeFireTruckCreated = (*Timer_GetTimeInMilliseconds());
 #ifdef SECUROM
@@ -3478,8 +3478,8 @@ bool CCarCtrl::GenerateOneEmergencyServicesCar(uint32 mi, CVector vecPos)
 	CVector2D direction = vecPos - spawnPos;
 	direction.Normalise();
 	pVehicle->GetForward() = CVector(direction.x, direction.y, 0.0f);
-	pVehicle->GetRight() = CVector(direction.y, -direction.x, 0.0f);
-	pVehicle->GetUp() = CVector(0.0f, 0.0f, 1.0f);
+	pVehicle->GetRight() = CVector(direction.y, -direction.x, 0.0f); // rouz edit (ChatGPT)
+	pVehicle->GetUp() = CVector(0.0f, 0.0f, 1.0f); // rouz edit (ChatGPT)
 	spawnPos.z = posBetweenNodes * ThePaths.m_pathNodes[curNode].GetZ() + (1.0f - posBetweenNodes) * ThePaths.m_pathNodes[nextNode].GetZ();
 	float groundZ = INFINITE_Z;
 	CColPoint colPoint;
