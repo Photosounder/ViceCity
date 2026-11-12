@@ -2,6 +2,7 @@
 #include "common.h"
 
 #include "Cranes.h"
+#include "CraneLogic.h"
 
 #include "Camera.h"
 #include "DMAudio.h"
@@ -449,131 +450,38 @@ void CCrane::FindCarInSectorList(CPtrList* pList)
 
 bool CCrane::DoesCranePickUpThisCarType(uint32 mi)
 {
-	if (m_bIsCrusher) {
-		return mi != MI_FIRETRUCK &&
-			mi != MI_TRASH &&
-#ifdef FIX_BUGS
-			mi != MI_COACH &&
-#endif
-			mi != MI_SECURICA &&
-			mi != MI_BUS &&
-			mi != MI_DODO &&
-			mi != MI_RHINO;
-	}
-	if (m_bIsMilitaryCrane) {
-		return mi == MI_FIRETRUCK ||
-			mi == MI_AMBULAN ||
-			mi == MI_ENFORCER ||
-			mi == MI_FBIRANCH ||
-			mi == MI_RHINO ||
-			mi == MI_BARRACKS ||
-			mi == MI_POLICE;
-	}
-	return true;
+	// Delegate to the C implementation
+	return Crane_DoesPickUpThisCarType(this, mi);
 }
 
 bool CCranes::DoesMilitaryCraneHaveThisOneAlready(uint32 mi)
 {
-	switch (mi) {
-	case MI_FIRETRUCK: return (CarsCollectedMilitaryCrane & 1);
-	case MI_AMBULAN: return (CarsCollectedMilitaryCrane & 2);
-	case MI_ENFORCER: return (CarsCollectedMilitaryCrane & 4);
-	case MI_FBIRANCH: return (CarsCollectedMilitaryCrane & 8);
-	case MI_RHINO: return (CarsCollectedMilitaryCrane & 0x10);
-	case MI_BARRACKS: return (CarsCollectedMilitaryCrane & 0x20);
-	case MI_POLICE: return (CarsCollectedMilitaryCrane & 0x40);
-	default: break;
-	}
-	return false;
+	// Delegate to the C implementation
+	return Cranes_DoesMilitaryCraneHaveThisOneAlready(CarsCollectedMilitaryCrane, mi);
 }
 
 void CCranes::RegisterCarForMilitaryCrane(uint32 mi)
 {
-	switch (mi) {
-	case MI_FIRETRUCK: CarsCollectedMilitaryCrane |= 1; break;
-	case MI_AMBULAN: CarsCollectedMilitaryCrane |= 2; break;
-	case MI_ENFORCER: CarsCollectedMilitaryCrane |= 4; break;
-	case MI_FBIRANCH: CarsCollectedMilitaryCrane |= 8; break;
-	case MI_RHINO: CarsCollectedMilitaryCrane |= 0x10; break;
-	case MI_BARRACKS: CarsCollectedMilitaryCrane |= 0x20; break;
-	case MI_POLICE: CarsCollectedMilitaryCrane |= 0x40; break;
-	default: break;
-	}
+	// Delegate to the C implementation
+	Cranes_RegisterCarForMilitaryCrane(&CarsCollectedMilitaryCrane, mi);
 }
 
 bool CCranes::HaveAllCarsBeenCollectedByMilitaryCrane()
 {
-	return (CarsCollectedMilitaryCrane & 0x7F) == 0x7F;
+	// Delegate to the C implementation
+	return Cranes_HaveAllCarsBeenCollectedByMilitaryCrane(CarsCollectedMilitaryCrane);
 }
 
 bool CCrane::GoTowardsTarget(float fAngleToTarget, float fDistanceToTarget, float fTargetHeight, float fSpeedMultiplier)
 {
-	bool bAngleMovementFinished, bOffsetMovementFinished, bHeightMovementFinished;
-	float fHookAngleDelta = fAngleToTarget - m_fHookAngle;
-	while (fHookAngleDelta > PI)
-		fHookAngleDelta -= TWOPI;
-	while (fHookAngleDelta < -PI)
-		fHookAngleDelta += TWOPI;
-	float fHookAngleChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_ANGLE_MOVEMENT_SPEED;
-	if (Abs(fHookAngleDelta) < fHookAngleChangeThisFrame) {
-		m_fHookAngle = fAngleToTarget;
-		bAngleMovementFinished = true;
-	} else {
-		if (fHookAngleDelta < 0.0f) {
-			m_fHookAngle -= fHookAngleChangeThisFrame;
-			if (m_fHookAngle < 0.0f)
-				m_fHookAngle += TWOPI;
-		}
-		else {
-			m_fHookAngle += fHookAngleChangeThisFrame;
-			if (m_fHookAngle > TWOPI)
-				m_fHookAngle -= TWOPI;
-		}
-		bAngleMovementFinished = false;
-	}
-	float fHookOffsetDelta = fDistanceToTarget - m_fHookOffset;
-	float fHookOffsetChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_OFFSET_MOVEMENT_SPEED;
-	if (Abs(fHookOffsetDelta) < fHookOffsetChangeThisFrame) {
-		m_fHookOffset = fDistanceToTarget;
-		bOffsetMovementFinished = true;
-	} else {
-		if (fHookOffsetDelta < 0.0f)
-			m_fHookOffset -= fHookOffsetChangeThisFrame;
-		else
-			m_fHookOffset += fHookOffsetChangeThisFrame;
-		bOffsetMovementFinished = false;
-	}
-	float fHookHeightDelta = fTargetHeight - m_fHookHeight;
-	float fHookHeightChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_HEIGHT_MOVEMENT_SPEED;
-	if (Abs(fHookHeightDelta) < fHookHeightChangeThisFrame) {
-		m_fHookHeight = fTargetHeight;
-		bHeightMovementFinished = true;
-	} else {
-		if (fHookHeightDelta < 0.0f)
-			m_fHookHeight -= fHookHeightChangeThisFrame;
-		else
-			m_fHookHeight += fHookHeightChangeThisFrame;
-		bHeightMovementFinished = false;
-	}
-	return bAngleMovementFinished && bOffsetMovementFinished && bHeightMovementFinished;
+	// Delegate to the C implementation
+	return Crane_GoTowardsTarget(this, fAngleToTarget, fDistanceToTarget, fTargetHeight, fSpeedMultiplier, (*Timer_GetTimeStep()));
 }
 
 bool CCrane::GoTowardsHeightTarget(float fTargetHeight, float fSpeedMultiplier)
 {
-	bool bHeightMovementFinished;
-	float fHookHeightDelta = fTargetHeight - m_fHookHeight;
-	float fHookHeightChangeThisFrame = fSpeedMultiplier * (*Timer_GetTimeStep()) * HOOK_HEIGHT_MOVEMENT_SPEED;
-	if (Abs(fHookHeightDelta) < fHookHeightChangeThisFrame) {
-		m_fHookHeight = fTargetHeight;
-		bHeightMovementFinished = true;
-	} else {
-		if (fHookHeightDelta < 0.0f)
-			m_fHookHeight -= fHookHeightChangeThisFrame;
-		else
-			m_fHookHeight += fHookHeightChangeThisFrame;
-		bHeightMovementFinished = false;
-	}
-	return bHeightMovementFinished;
+	// Delegate to the C implementation
+	return Crane_GoTowardsHeightTarget(this, fTargetHeight, fSpeedMultiplier, (*Timer_GetTimeStep()));
 }
 
 void CCrane::FindParametersForTarget(float X, float Y, float Z, float* pAngle, float* pDistance, float* pHeight)

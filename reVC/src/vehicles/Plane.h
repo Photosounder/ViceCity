@@ -2,34 +2,7 @@
 
 #include "Vehicle.h"
 
-enum ePlaneNodes
-{
-#ifdef CPLANE_ROTORS
-	// for heli
-	PLANE_TOPROTOR,
-	PLANE_BACKROTOR,
-#endif
-	PLANE_WHEEL_FRONT = 2,
-	PLANE_WHEEL_READ,
-	NUM_PLANE_NODES
-};
-
-struct CPlaneNode
-{
-	CVector p;	// position
-	float t;	// xy-distance from start on path
-	bool bOnGround;	// i.e. not flying
-};
-
-struct CPlaneInterpolationLine
-{
-	uint8 type;
-	float time;	// when does this keyframe start
-	// initial values at start of frame
-	float position;
-	float speed;
-	float acceleration;
-};
+#include "PlaneNodes.h"
 
 class CPlane : public CVehicle
 {

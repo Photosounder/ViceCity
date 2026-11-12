@@ -32,6 +32,7 @@
 #include "TempColModels.h"
 #include "WaterLevel.h"
 #include "World.h"
+#include "WorldLogic.h"
 
 #define OBJECT_REPOSITION_OFFSET_Z 2.0f
 
@@ -107,43 +108,34 @@ CWorld::Remove(CEntity *ent)
 void
 CWorld::ClearScanCodes(void)
 {
-	CPtrNode *node;
+	// Delegate to the C implementation
 	for(int i = 0; i < NUMSECTORS_Y; i++)
 		for(int j = 0; j < NUMSECTORS_X; j++) {
 			CSector *s = &ms_aSectors[i][j];
-			for(node = s->m_lists[ENTITYLIST_BUILDINGS].first; node; node = node->next)
-				((CEntity *)node->item)->m_scanCode = 0;
-			for(node = s->m_lists[ENTITYLIST_VEHICLES].first; node; node = node->next)
-				((CEntity *)node->item)->m_scanCode = 0;
-			for(node = s->m_lists[ENTITYLIST_PEDS].first; node; node = node->next)
-				((CEntity *)node->item)->m_scanCode = 0;
-			for(node = s->m_lists[ENTITYLIST_OBJECTS].first; node; node = node->next)
-				((CEntity *)node->item)->m_scanCode = 0;
-			for(node = s->m_lists[ENTITYLIST_DUMMIES].first; node; node = node->next)
-				((CEntity *)node->item)->m_scanCode = 0;
+			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_BUILDINGS]);
+			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_VEHICLES]);
+			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_PEDS]);
+			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_OBJECTS]);
+			World_ClearScanCodesInList(&s->m_lists[ENTITYLIST_DUMMIES]);
 		}
 }
 
 void
 CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemoveProjectilesAndTidyUpShadows)
 {
-	CPedPool *pedPool = CPools::GetPedPool();
-		// Access raw storage through the C store or pool API
-	for(int32 i = 0; i < CPool_GetSize(pedPool); i++) {
-		// Access raw storage through the C store or pool API
-		CPed *pPed = ((CPed*)CPool_GetSlot(pedPool, i));
-			if(pPed && !pPed->IsPlayer() && pPed->CanBeDeleted() &&
-		   CVector2D(pPed->GetPosition() - pos).MagnitudeSqr() < SQR(radius)) {
-			CPopulation::RemovePed(pPed);
-		}
+	// The C implementation picks the peds and vehicles to remove, the removal stays here
+	{
+		void *selected[NUMPEDS * 2];
+		int numSelected = World_SelectPedsInCircleToClear(CPools::GetPedPool(), pos.x, pos.y, radius, selected, ARRAY_SIZE(selected));
+		for(int s = 0; s < numSelected; s++)
+			CPopulation::RemovePed((CPed*)selected[s]);
 	}
 	CVehiclePool *VehiclePool = CPools::GetVehiclePool();
-		// Access raw storage through the C store or pool API
-	for(int32 i = 0; i < CPool_GetSize(VehiclePool); i++) {
-		// Access raw storage through the C store or pool API
-		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(VehiclePool, i));
-			if(pVehicle && CVector2D(pVehicle->GetPosition() - pos).MagnitudeSqr() < SQR(radius) &&
-		   !pVehicle->bIsLocked && pVehicle->CanBeDeleted()) {
+	{
+		void *selected[NUMVEHICLES * 2];
+		int numSelected = World_SelectCarsInCircleToClear(VehiclePool, pos.x, pos.y, radius, selected, ARRAY_SIZE(selected));
+		for(int s = 0; s < numSelected; s++) {
+			CVehicle *pVehicle = (CVehicle*)selected[s];
 			if(pVehicle->pDriver) {
 				CPopulation::RemovePed(pVehicle->pDriver);
 				pVehicle->pDriver = nil;
@@ -159,9 +151,9 @@ CWorld::ClearExcitingStuffFromArea(const CVector &pos, float radius, bool bRemov
 			Remove(pVehicle);
 			// Destroy and release the vehicle without invoking C++ delete.
 			pVehicle->~CVehicle();
-						// Access raw storage through the C store or pool API
-			CPool_Delete(CPools::GetVehiclePool(), pVehicle);
-					}
+			// Access raw storage through the C store or pool API
+			CPool_Delete(VehiclePool, pVehicle);
+		}
 	}
 	CObject::DeleteAllTempObjectsInArea(pos, radius);
 	FireManager_ExtinguishPoint(&gFireManager,Fire_VectorFromNative(pos), radius);
@@ -709,26 +701,8 @@ void
 CWorld::FindObjectsInRangeSectorList(CPtrList &list, Const CVector &centre, float radius, bool ignoreZ, int16 *numObjects,
                                      int16 lastObject, CEntity **objects)
 {
-	float radiusSqr = radius * radius;
-	float objDistSqr;
-
-	for(CPtrNode *node = list.first; node; node = node->next) {
-		CEntity *object = (CEntity *)node->item;
-		if(object->m_scanCode != GetCurrentScanCode()) {
-			object->m_scanCode = GetCurrentScanCode();
-
-			CVector diff = centre - object->GetPosition();
-			if(ignoreZ)
-				objDistSqr = diff.MagnitudeSqr2D();
-			else
-				objDistSqr = diff.MagnitudeSqr();
-
-			if(objDistSqr < radiusSqr && *numObjects < lastObject) {
-				if(objects) { objects[*numObjects] = object; }
-				(*numObjects)++;
-			}
-		}
-	}
+	// Delegate to the C implementation
+	World_FindObjectsInRangeInList(&list, GetCurrentScanCode(), centre.x, centre.y, centre.z, radius, ignoreZ, numObjects, lastObject, (void**)objects);
 }
 
 void
@@ -793,23 +767,8 @@ CWorld::FindObjectsOfTypeInRangeSectorList(uint32 modelId, CPtrList &list, const
                                            bool bCheck2DOnly, int16 *nEntitiesFound, int16 maxEntitiesToFind,
                                            CEntity **aEntities)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CEntity *pEntity = (CEntity *)pNode->item;
-		if(pEntity->m_scanCode != GetCurrentScanCode()) {
-			pEntity->m_scanCode = GetCurrentScanCode();
-			if (modelId == pEntity->GetModelIndex()) {
-				float fMagnitude = 0.0f;
-				if(bCheck2DOnly)
-					fMagnitude = (position - pEntity->GetPosition()).MagnitudeSqr2D();
-				else
-					fMagnitude = (position - pEntity->GetPosition()).MagnitudeSqr();
-				if(fMagnitude < radius * radius && *nEntitiesFound < maxEntitiesToFind) {
-					if(aEntities) aEntities[*nEntitiesFound] = pEntity;
-					++*nEntitiesFound;
-				}
-			}
-		}
-	}
+	// Delegate to the C implementation
+	World_FindObjectsOfTypeInRangeInList(modelId, &list, GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nEntitiesFound, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
@@ -821,15 +780,9 @@ CWorld::FindObjectsOfTypeInRange(uint32 modelId, const CVector &position, float 
 	*nEntitiesFound = 0;
 	const CVector2D vecSectorStartPos(position.x - radius, position.y - radius);
 	const CVector2D vecSectorEndPos(position.x + radius, position.y + radius);
-	const int32 nStartX = Max(GetSectorIndexX(vecSectorStartPos.x), 0);
-	const int32 nStartY = Max(GetSectorIndexY(vecSectorStartPos.y), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(vecSectorStartPos.x, vecSectorStartPos.y, vecSectorEndPos.x, vecSectorEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1077,33 +1030,18 @@ CWorld::FindRoofZFor3DCoord(float x, float y, float z, bool *found)
 void
 CWorld::RemoveReferencesToDeletedObject(CEntity *pDeletedObject)
 {
-		// Access raw storage through the C store or pool API
-	int32 i = CPool_GetSize(CPools::GetPedPool());
-		while(--i >= 0) {
-				// Access raw storage through the C store or pool API
-		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-				if(pPed && pPed != pDeletedObject) {
-			pPed->RemoveRefsToEntity(pDeletedObject);
-			if(pPed->m_pCurrentPhysSurface == pDeletedObject) pPed->m_pCurrentPhysSurface = nil;
-		}
-	}
-		// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetVehiclePool());
-		while(--i >= 0) {
-				// Access raw storage through the C store or pool API
+	// The ped and object pools are handled by the C implementation
+	World_RemoveRefsToDeletedFromPeds(CPools::GetPedPool(), pDeletedObject);
+	// Access raw storage through the C store or pool API
+	int32 i = CPool_GetSize(CPools::GetVehiclePool());
+	while(--i >= 0) {
 		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-				if(pVehicle && pVehicle != pDeletedObject) {
+		if(pVehicle && pVehicle != pDeletedObject) {
 			pVehicle->RemoveRefsToEntity(pDeletedObject);
 			pVehicle->RemoveRefsToVehicle(pDeletedObject);
 		}
 	}
-		// Access raw storage through the C store or pool API
-	i = CPool_GetSize(CPools::GetObjectPool());
-		while(--i >= 0) {
-				// Access raw storage through the C store or pool API
-		CObject *pObject = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
-				if(pObject && pObject != pDeletedObject) { pObject->RemoveRefsToEntity(pDeletedObject); }
-	}
+	World_RemoveRefsToDeletedFromObjects(CPools::GetObjectPool(), pDeletedObject);
 }
 
 void
@@ -1115,15 +1053,9 @@ CWorld::FindObjectsKindaColliding(const CVector &position, float radius, bool bC
 	*nCollidingEntities = 0;
 	const CVector2D vecSectorStartPos(position.x - radius, position.y - radius);
 	const CVector2D vecSectorEndPos(position.x + radius, position.y + radius);
-	const int32 nStartX = Max(GetSectorIndexX(vecSectorStartPos.x), 0);
-	const int32 nStartY = Max(GetSectorIndexY(vecSectorStartPos.y), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(vecSectorStartPos.x, vecSectorStartPos.y, vecSectorEndPos.x, vecSectorEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1175,21 +1107,8 @@ void
 CWorld::FindObjectsKindaCollidingSectorList(CPtrList &list, const CVector &position, float radius, bool bCheck2DOnly,
                                             int16 *nCollidingEntities, int16 maxEntitiesToFind, CEntity **aEntities)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CEntity *pEntity = (CEntity *)pNode->item;
-		if(pEntity->m_scanCode != GetCurrentScanCode()) {
-			pEntity->m_scanCode = GetCurrentScanCode();
-			float fMagnitude = 0.0f;
-			if(bCheck2DOnly)
-				fMagnitude = (position - pEntity->GetPosition()).Magnitude2D();
-			else
-				fMagnitude = (position - pEntity->GetPosition()).Magnitude();
-			if(pEntity->GetBoundRadius() + radius > fMagnitude && *nCollidingEntities < maxEntitiesToFind) {
-				if(aEntities) aEntities[*nCollidingEntities] = pEntity;
-				++*nCollidingEntities;
-			}
-		}
-	}
+	// Delegate to the C implementation
+	World_FindObjectsKindaCollidingInList(&list, GetCurrentScanCode(), position.x, position.y, position.z, radius, bCheck2DOnly, nCollidingEntities, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
@@ -1199,15 +1118,9 @@ CWorld::FindObjectsIntersectingCube(const CVector &vecStartPos, const CVector &v
 {
 	AdvanceCurrentScanCode();
 	*nIntersecting = 0;
-	const int32 nStartX = Max(GetSectorIndexX(vecStartPos.x), 0);
-	const int32 nStartY = Max(GetSectorIndexY(vecStartPos.y), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(vecStartPos.x), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(vecStartPos.y), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(vecStartPos.x), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(vecStartPos.y), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(vecStartPos.x, vecStartPos.y, vecStartPos.x, vecStartPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1259,21 +1172,10 @@ void
 CWorld::FindObjectsIntersectingCubeSectorList(CPtrList &list, const CVector &vecStartPos, const CVector &vecEndPos,
                                               int16 *nIntersecting, int16 maxEntitiesToFind, CEntity **aEntities)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CEntity *pEntity = (CEntity *)pNode->item;
-		if(pEntity->m_scanCode != GetCurrentScanCode()) {
-			pEntity->m_scanCode = GetCurrentScanCode();
-			float fRadius = pEntity->GetBoundRadius();
-			const CVector &entityPos = pEntity->GetPosition();
-			if(fRadius + entityPos.x >= vecStartPos.x && entityPos.x - fRadius <= vecEndPos.x &&
-			   fRadius + entityPos.y >= vecStartPos.y && entityPos.y - fRadius <= vecEndPos.y &&
-			   fRadius + entityPos.z >= vecStartPos.z && entityPos.z - fRadius <= vecEndPos.z &&
-			   *nIntersecting < maxEntitiesToFind) {
-				if(aEntities) aEntities[*nIntersecting] = pEntity;
-				++*nIntersecting;
-			}
-		}
-	}
+	// Delegate to the C implementation
+	float start[3] = {vecStartPos.x, vecStartPos.y, vecStartPos.z};
+	float end[3] = {vecEndPos.x, vecEndPos.y, vecEndPos.z};
+	World_FindObjectsIntersectingCubeInList(&list, GetCurrentScanCode(), start, end, nIntersecting, maxEntitiesToFind, (void**)aEntities);
 }
 
 void
@@ -1285,15 +1187,9 @@ CWorld::FindObjectsIntersectingAngledCollisionBox(const CBox &boundingBox, const
 {
 	AdvanceCurrentScanCode();
 	*nEntitiesFound = 0;
-	const int32 nStartX = Max(GetSectorIndexX(fStartX), 0);
-	const int32 nStartY = Max(GetSectorIndexY(fStartY), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(fEndX), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(fEndY), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(fEndX), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(fEndY), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(fStartX, fStartY, fEndX, fEndY, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1370,15 +1266,9 @@ CWorld::FindMissionEntitiesIntersectingCube(const CVector &vecStartPos, const CV
 {
 	AdvanceCurrentScanCode();
 	*nIntersecting = 0;
-	const int32 nStartX = Max(GetSectorIndexX(vecStartPos.x), 0);
-	const int32 nStartY = Max(GetSectorIndexY(vecStartPos.y), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(vecEndPos.x), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(vecEndPos.y), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(vecEndPos.x), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(vecEndPos.y), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(vecStartPos.x, vecStartPos.y, vecEndPos.x, vecEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1416,61 +1306,38 @@ CWorld::FindMissionEntitiesIntersectingCubeSectorList(CPtrList &list, const CVec
                                                       int16 maxEntitiesToFind, CEntity **aEntities, bool bIsVehicleList,
                                                       bool bIsPedList)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CEntity *pEntity = (CEntity *)pNode->item;
-		if(pEntity->m_scanCode != GetCurrentScanCode()) {
-			pEntity->m_scanCode = GetCurrentScanCode();
-			bool bIsMissionEntity = false;
-			if(bIsVehicleList)
-				bIsMissionEntity = ((CVehicle *)pEntity)->VehicleCreatedBy == MISSION_VEHICLE;
-			else if(bIsPedList)
-				bIsMissionEntity = ((CPed *)pEntity)->CharCreatedBy == MISSION_CHAR;
-			else
-				bIsMissionEntity = ((CObject *)pEntity)->ObjectCreatedBy == MISSION_OBJECT;
-			float fRadius = pEntity->GetBoundRadius();
-			const CVector &entityPos = pEntity->GetPosition();
-			if(bIsMissionEntity && fRadius + entityPos.x >= vecStartPos.x &&
-			   entityPos.x - fRadius <= vecEndPos.x && fRadius + entityPos.y >= vecStartPos.y &&
-			   entityPos.y - fRadius <= vecEndPos.y && fRadius + entityPos.z >= vecStartPos.z &&
-			   entityPos.z - fRadius <= vecEndPos.z && *nIntersecting < maxEntitiesToFind) {
-				if(aEntities) aEntities[*nIntersecting] = pEntity;
-				++*nIntersecting;
-			}
-		}
-	}
+	// Delegate to the C implementation
+	float start[3] = {vecStartPos.x, vecStartPos.y, vecStartPos.z};
+	float end[3] = {vecEndPos.x, vecEndPos.y, vecEndPos.z};
+	World_FindMissionEntitiesIntersectingCubeInList(&list, GetCurrentScanCode(), start, end, nIntersecting, maxEntitiesToFind, (void**)aEntities, bIsVehicleList, bIsPedList);
 }
 
 void
 CWorld::ClearCarsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	CVehiclePool *pVehiclePool = CPools::GetVehiclePool();
-		// Access raw storage through the C store or pool API
-	for(int32 i = 0; i < CPool_GetSize(pVehiclePool); i++) {
-		// Access raw storage through the C store or pool API
-		CVehicle *pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-			if(pVehicle) {
-			const CVector &position = pVehicle->GetPosition();
-			if(position.x >= x1 && position.x <= x2 && position.y >= y1 && position.y <= y2 &&
-			   position.z >= z1 && position.z <= z2 && !pVehicle->bIsLocked && pVehicle->CanBeDeleted()) {
-				if(pVehicle->pDriver) {
-					CPopulation::RemovePed(pVehicle->pDriver);
-					pVehicle->pDriver = nil;
-				}
-				for(int32 j = 0; j < pVehicle->m_nNumMaxPassengers; ++j) {
-					if(pVehicle->pPassengers[j]) {
-						CPopulation::RemovePed(pVehicle->pPassengers[j]);
-						pVehicle->pPassengers[j] = nil;
-						--pVehicle->m_nNumPassengers;
-					}
-				}
-				CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
-				Remove(pVehicle);
-				// Destroy and release the vehicle without invoking C++ delete.
-				pVehicle->~CVehicle();
-								// Access raw storage through the C store or pool API
-				CPool_Delete(pVehiclePool, pVehicle);
-							}
+	// The C implementation picks the vehicles, their removal stays here
+	void *selected[NUMVEHICLES * 2];
+	int numSelected = World_SelectCarsToClearFromArea(pVehiclePool, x1, y1, z1, x2, y2, z2, selected, ARRAY_SIZE(selected));
+	for(int32 s = 0; s < numSelected; s++) {
+		CVehicle *pVehicle = (CVehicle*)selected[s];
+		if(pVehicle->pDriver) {
+			CPopulation::RemovePed(pVehicle->pDriver);
+			pVehicle->pDriver = nil;
 		}
+		for(int32 j = 0; j < pVehicle->m_nNumMaxPassengers; ++j) {
+			if(pVehicle->pPassengers[j]) {
+				CPopulation::RemovePed(pVehicle->pPassengers[j]);
+				pVehicle->pPassengers[j] = nil;
+				--pVehicle->m_nNumPassengers;
+			}
+		}
+		CCarCtrl::RemoveFromInterestingVehicleList(pVehicle);
+		Remove(pVehicle);
+		// Destroy and release the vehicle without invoking C++ delete.
+		pVehicle->~CVehicle();
+		// Access raw storage through the C store or pool API
+		CPool_Delete(pVehiclePool, pVehicle);
 	}
 }
 
@@ -1478,18 +1345,11 @@ void
 CWorld::ClearPedsFromArea(float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	CPedPool *pPedPool = CPools::GetPedPool();
-		// Access raw storage through the C store or pool API
-	for(int32 i = 0; i < CPool_GetSize(pPedPool); i++) {
-		// Access raw storage through the C store or pool API
-		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-			if(pPed) {
-			const CVector &position = pPed->GetPosition();
-			if(!pPed->IsPlayer() && pPed->CanBeDeleted() && position.x >= x1 && position.x <= x2 &&
-			   position.y >= y1 && position.y <= y2 && position.z >= z1 && position.z <= z2) {
-				CPopulation::RemovePed(pPed);
-			}
-		}
-	}
+	// The C implementation picks the peds, their removal stays here
+	void *selected[NUMPEDS * 2];
+	int numSelected = World_SelectPedsToClearFromArea(pPedPool, x1, y1, z1, x2, y2, z2, selected, ARRAY_SIZE(selected));
+	for(int32 s = 0; s < numSelected; s++)
+		CPopulation::RemovePed((CPed*)selected[s]);
 }
 
 void
@@ -1500,15 +1360,9 @@ CWorld::CallOffChaseForArea(float x1, float y1, float x2, float y2)
 	float fStartY = y1 - 10.0f;
 	float fEndX = x2 + 10.0f;
 	float fEndY = y2 + 10.0f;
-	const int32 nStartX = Max(GetSectorIndexX(fStartX), 0);
-	const int32 nStartY = Max(GetSectorIndexY(fStartY), 0);
-#ifdef FIX_BUGS
-	const int32 nEndX = Min(GetSectorIndexX(fEndX), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(fEndY), NUMSECTORS_Y - 1);
-#else
-	const int32 nEndX = Min(GetSectorIndexX(fEndX), NUMSECTORS_X);
-	const int32 nEndY = Min(GetSectorIndexY(fEndY), NUMSECTORS_Y);
-#endif
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRange(fStartX, fStartY, fEndX, fEndY, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -1527,69 +1381,27 @@ void
 CWorld::CallOffChaseForAreaSectorListVehicles(CPtrList &list, float x1, float y1, float x2, float y2, float fStartX,
                                               float fStartY, float fEndX, float fEndY)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CVehicle *pVehicle = (CVehicle *)pNode->item;
-		if(pVehicle->m_scanCode != GetCurrentScanCode()) {
-			pVehicle->m_scanCode = GetCurrentScanCode();
-			const CVector &vehiclePos = pVehicle->GetPosition();
-			uint8 carMission = pVehicle->AutoPilot.m_nCarMission;
-			if(pVehicle != FindPlayerVehicle() && vehiclePos.x > fStartX && vehiclePos.x < fEndX &&
-			   vehiclePos.y > fStartY && vehiclePos.y < fEndY && pVehicle->bIsLawEnforcer &&
-			   (carMission == MISSION_RAMPLAYER_FARAWAY || carMission == MISSION_RAMPLAYER_CLOSE ||
-			    carMission == MISSION_BLOCKPLAYER_FARAWAY || carMission == MISSION_BLOCKPLAYER_CLOSE)) {
-				pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 2000;
-				CColModel *pColModel = pVehicle->GetColModel();
-				bool bInsideSphere = false;
-				for(int32 i = 0; i < pColModel->numSpheres; i++) {
-					CVector pos = pVehicle->GetMatrix() * CollisionVector_ToNative(pColModel->spheres[i].bounds.center);
-					float fRadius = pColModel->spheres[i].bounds.radius;
-					if(pos.x + fRadius > x1 && pos.x - fRadius < x2 && pos.y + fRadius > y1 &&
-					   pos.y - fRadius < y2)
-						bInsideSphere = true;
-					// Maybe break the loop when bInsideSphere is set to true?
-				}
-				if(bInsideSphere) {
-					if(pVehicle->GetPosition().x <= (x1 + x2) * 0.5f)
-						pVehicle->m_vecMoveSpeed.x = Min(pVehicle->m_vecMoveSpeed.x, 0.0f);
-					else
-						pVehicle->m_vecMoveSpeed.x = Max(pVehicle->m_vecMoveSpeed.x, 0.0f);
-					if(pVehicle->GetPosition().y <= (y1 + y2) * 0.5f)
-						pVehicle->m_vecMoveSpeed.y = Min(pVehicle->m_vecMoveSpeed.y, 0.0f);
-					else
-						pVehicle->m_vecMoveSpeed.y = Max(pVehicle->m_vecMoveSpeed.y, 0.0f);
-				}
-			}
-		}
-	}
+	// Delegate to the C implementation
+	World_CallOffChaseForVehiclesInList(&list, GetCurrentScanCode(), x1, y1, x2, y2, fStartX, fStartY, fEndX, fEndY, FindPlayerVehicle(), (*Timer_GetTimeInMilliseconds()));
 }
 
 void
 CWorld::CallOffChaseForAreaSectorListPeds(CPtrList &list, float x1, float y1, float x2, float y2)
 {
-	for(CPtrNode *pNode = list.first; pNode; pNode = pNode->next) {
-		CPed *pPed = (CPed *)pNode->item;
-		const CVector &pedPos = pPed->GetPosition();
-		if(pPed->m_scanCode != GetCurrentScanCode()) {
-			pPed->m_scanCode = GetCurrentScanCode();
-			if(pPed != FindPlayerPed() && pPed->m_leader != FindPlayerPed() && pedPos.x > x1 &&
-			   pedPos.x < x2 && pedPos.y > y1 && pedPos.y < y2 &&
-			   (pPed->m_pedInObjective == FindPlayerPed() ||
-			    pPed->m_carInObjective && pPed->m_carInObjective == FindPlayerVehicle()) &&
-			   pPed->m_nPedState != PED_DEAD && pPed->m_nPedState != PED_DIE &&
-			   (pPed->m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT ||
-			    pPed->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER ||
-			    pPed->m_objective == OBJECTIVE_KILL_CHAR_ANY_MEANS)) {
-				if(pPed->IsPedInControl()) {
-					if(pPed->m_nPedType == PEDTYPE_COP)
-						((CCopPed *)pPed)->ClearPursuit();
-					else
-						pPed->SetIdle();
-					pPed->SetObjective(OBJECTIVE_NONE);
-				} else {
-					pPed->m_prevObjective = OBJECTIVE_NONE;
-					pPed->m_nLastPedState = PED_IDLE;
-				}
-			}
+	// The C implementation picks the peds, calling off their pursuit stays here
+	void *selected[NUMPEDS * 2];
+	int numSelected = World_SelectPedsToCallOffChase(&list, GetCurrentScanCode(), x1, y1, x2, y2, FindPlayerPed(), FindPlayerVehicle(), selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++) {
+		CPed *pPed = (CPed*)selected[s];
+		if(pPed->IsPedInControl()) {
+			if(pPed->m_nPedType == PEDTYPE_COP)
+				((CCopPed *)pPed)->ClearPursuit();
+			else
+				pPed->SetIdle();
+			pPed->SetObjective(OBJECTIVE_NONE);
+		} else {
+			pPed->m_prevObjective = OBJECTIVE_NONE;
+			pPed->m_nLastPedState = PED_IDLE;
 		}
 	}
 }
@@ -1633,24 +1445,21 @@ CWorld::RemoveEntityInsteadOfProcessingIt(CEntity *ent)
 void
 CWorld::RemoveFallenPeds(void)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetPedPool());
-		for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-				// Access raw storage through the C store or pool API
-		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), poolIndex));
-				if(ped) {
-			if(ped->GetPosition().z < MAP_Z_LOW_LIMIT) {
-				if(ped->CharCreatedBy != RANDOM_CHAR || ped->IsPlayer()) {
-					int closestNode = ThePaths.FindNodeClosestToCoors(ped->GetPosition(), PATH_PED,
-					                                                  999999.9f, false, false);
-					CVector newPos = ThePaths.m_pathNodes[closestNode].GetPosition();
-					newPos.z += 2.0f;
-					ped->Teleport(newPos);
-					ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-				} else {
-					CPopulation::RemovePed(ped);
-				}
-			}
+	// The C implementation picks the peds and what to do with them, the effects stay here
+	void *selected[NUMPEDS * 2];
+	int action[NUMPEDS * 2];
+	int numSelected = World_SelectFallenPeds(CPools::GetPedPool(), MAP_Z_LOW_LIMIT, selected, action, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++) {
+		CPed *ped = (CPed*)selected[s];
+		if(action[s] == 1) {
+			int closestNode = ThePaths.FindNodeClosestToCoors(ped->GetPosition(), PATH_PED,
+			                                                  999999.9f, false, false);
+			CVector newPos = ThePaths.m_pathNodes[closestNode].GetPosition();
+			newPos.z += 2.0f;
+			ped->Teleport(newPos);
+			ped->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
+		} else {
+			CPopulation::RemovePed(ped);
 		}
 	}
 }
@@ -1658,30 +1467,25 @@ CWorld::RemoveFallenPeds(void)
 void
 CWorld::RemoveFallenCars(void)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
-		for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-				// Access raw storage through the C store or pool API
-		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
-				if(veh) {
-			if(veh->GetPosition().z < MAP_Z_LOW_LIMIT) {
-				if(veh->VehicleCreatedBy == MISSION_VEHICLE && !veh->bRenderScorched || veh == FindPlayerVehicle() ||
-				   (veh->pDriver && veh->pDriver->IsPlayer())) {
-					int closestNode = ThePaths.FindNodeClosestToCoors(veh->GetPosition(), PATH_CAR,
-					                                                  999999.9f, false, false);
-					CVector newPos = ThePaths.m_pathNodes[closestNode].GetPosition();
-					newPos.z += 3.0f;
-					veh->Teleport(newPos);
-					veh->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-				} else if(veh->VehicleCreatedBy == RANDOM_VEHICLE ||
-				          veh->VehicleCreatedBy == PARKED_VEHICLE) {
-					Remove(veh);
-					// Destroy and release the fallen vehicle without invoking C++ delete.
-					veh->~CVehicle();
-										// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetVehiclePool(), veh);
-									}
-			}
+	// The C implementation picks the vehicles and what to do with them, the effects stay here
+	void *selected[NUMVEHICLES * 2];
+	int action[NUMVEHICLES * 2];
+	int numSelected = World_SelectFallenCars(CPools::GetVehiclePool(), MAP_Z_LOW_LIMIT, FindPlayerVehicle(), selected, action, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++) {
+		CVehicle *veh = (CVehicle*)selected[s];
+		if(action[s] == 1) {
+			int closestNode = ThePaths.FindNodeClosestToCoors(veh->GetPosition(), PATH_CAR,
+			                                                  999999.9f, false, false);
+			CVector newPos = ThePaths.m_pathNodes[closestNode].GetPosition();
+			newPos.z += 3.0f;
+			veh->Teleport(newPos);
+			veh->m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
+		} else {
+			Remove(veh);
+			// Destroy and release the fallen vehicle without invoking C++ delete.
+			veh->~CVehicle();
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetVehiclePool(), veh);
 		}
 	}
 }
@@ -1689,41 +1493,25 @@ CWorld::RemoveFallenCars(void)
 void
 CWorld::StopAllLawEnforcersInTheirTracks(void)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
-		for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-				// Access raw storage through the C store or pool API
-		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
-				if(veh) {
-			if(veh->bIsLawEnforcer) veh->SetMoveSpeed(0.0f, 0.0f, 0.0f);
-		}
-	}
+	// Delegate to the C implementation
+	World_StopAllLawEnforcersInTheirTracks(CPools::GetVehiclePool());
 }
 
 void
 CWorld::SetAllCarsCanBeDamaged(bool toggle)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
-		for(int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
-				// Access raw storage through the C store or pool API
-		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
-				if(veh) veh->bCanBeDamaged = toggle;
-	}
+	// Delegate to the C implementation
+	World_SetAllCarsCanBeDamaged(CPools::GetVehiclePool(), toggle);
 }
 
 void
 CWorld::ExtinguishAllCarFiresInArea(CVector point, float range)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
-		for(int poolIndex = 0; poolIndex < poolSize; poolIndex++) {
-				// Access raw storage through the C store or pool API
-		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
-				if(veh) {
-			if((point - veh->GetPosition()).MagnitudeSqr() < sq(range)) veh->ExtinguishCarFire();
-		}
-	}
+	// The C implementation picks the vehicles, extinguishing stays here
+	void *selected[NUMVEHICLES * 2];
+	int numSelected = World_SelectCarsInRangeOfPoint(CPools::GetVehiclePool(), point.x, point.y, point.z, range, selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++)
+		((CVehicle*)selected[s])->ExtinguishCarFire();
 }
 
 inline void
@@ -1973,57 +1761,39 @@ CWorld::RepositionOneObject(CEntity *pEntity)
 void
 CWorld::SetCarsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
-		// Access raw storage through the C store or pool API
-	int poolSize = CPool_GetSize(CPools::GetVehiclePool());
-		for(int poolIndex = poolSize - 1; poolIndex >= 0; poolIndex--) {
-				// Access raw storage through the C store or pool API
-		CVehicle *veh = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), poolIndex));
-				if(veh && veh->GetStatus() != STATUS_WRECKED && !veh->m_pCarFire && !veh->bFireProof) {
-			if(Abs(veh->GetPosition().z - z) < 5.0f && Abs(veh->GetPosition().x - x) < radius &&
-			   Abs(veh->GetPosition().y - y) < radius)
-				FireManager_StartFireOn(&gFireManager,veh, reason, 0.8f, true);
-		}
-	}
+	// The C implementation picks the vehicles, starting the fire stays here
+	void *selected[NUMVEHICLES * 2];
+	int numSelected = World_SelectCarsToSetOnFire(CPools::GetVehiclePool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++)
+		FireManager_StartFireOn(&gFireManager, (CVehicle*)selected[s], reason, 0.8f, true);
 }
 
 void
 CWorld::SetPedsChoking(float x, float y, float z, float radius, CEntity* reason)
 {
-		// Access raw storage through the C store or pool API
-	int32 poolSize = CPool_GetSize(CPools::GetPedPool());
-		for (int32 i = poolSize - 1; i >= 0; i--) {
-				// Access raw storage through the C store or pool API
-		CPed* pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-				// suspicious copypaste
-		if (pPed && pPed->m_nPedState != PED_DEAD && !pPed->bInVehicle && !pPed->m_pFire && !pPed->bFireProof && pPed->CharCreatedBy != MISSION_CHAR) {
-			if (Abs(pPed->GetPosition().z - z) < 5.0f && Abs(pPed->GetPosition().x - x) < radius &&
-				Abs(pPed->GetPosition().y - y) < radius) {
-				if (!pPed->IsPlayer())
-					pPed->SetFlee(CVector2D(x, y), 10000);
+	// The C implementation picks the peds, their reaction stays here
+	void *selected[NUMPEDS * 2];
+	int numSelected = World_SelectPedsToChoke(CPools::GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++) {
+		CPed *pPed = (CPed*)selected[s];
+		if (!pPed->IsPlayer())
+			pPed->SetFlee(CVector2D(x, y), 10000);
 #ifdef FIX_BUGS
-				pPed->InflictDamage(reason, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);
+		pPed->InflictDamage(reason, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);
 #else
-				pPed->InflictDamage(nil, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);
+		pPed->InflictDamage(nil, WEAPONTYPE_TEARGAS, 1.0f, PEDPIECE_TORSO, 0);
 #endif
-			}
-		}
 	}
 }
 
 void
 CWorld::SetPedsOnFire(float x, float y, float z, float radius, CEntity *reason)
 {
-		// Access raw storage through the C store or pool API
-	int32 poolSize = CPool_GetSize(CPools::GetPedPool());
-		for(int32 i = poolSize - 1; i >= 0; i--) {
-				// Access raw storage through the C store or pool API
-		CPed *pPed = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-				if(pPed && pPed->m_nPedState != PED_DEAD && !pPed->bInVehicle && !pPed->m_pFire && !pPed->bFireProof) {
-			if(Abs(pPed->GetPosition().z - z) < 5.0f && Abs(pPed->GetPosition().x - x) < radius &&
-			   Abs(pPed->GetPosition().y - y) < radius)
-				FireManager_StartFireOn(&gFireManager,pPed, reason, 0.8f, true);
-		}
-	}
+	// The C implementation picks the peds, starting the fire stays here
+	void *selected[NUMPEDS * 2];
+	int numSelected = World_SelectPedsToSetOnFire(CPools::GetPedPool(), x, y, z, radius, selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++)
+		FireManager_StartFireOn(&gFireManager, (CPed*)selected[s], reason, 0.8f, true);
 }
 
 void
@@ -2278,10 +2048,9 @@ CWorld::TriggerExplosion(const CVector &position, float fRadius, float fPower, C
 {
 	CVector2D vecStartPos(position.x - fRadius, position.y - fRadius);
 	CVector2D vecEndPos(position.x + fRadius, position.y + fRadius);
-	const int32 nStartX = Max(GetSectorIndexX(vecStartPos.x), 0);
-	const int32 nStartY = Max(GetSectorIndexY(vecStartPos.y), 0);
-	const int32 nEndX = Min(GetSectorIndexX(vecEndPos.x), NUMSECTORS_X - 1);
-	const int32 nEndY = Min(GetSectorIndexY(vecEndPos.y), NUMSECTORS_Y - 1);
+	// Delegate to the C implementation
+	int32 nStartX, nStartY, nEndX, nEndY;
+	World_SectorRangeClamped(vecStartPos.x, vecStartPos.y, vecEndPos.x, vecEndPos.y, &nStartX, &nStartY, &nEndX, &nEndY);
 	for(int32 y = nStartY; y <= nEndY; y++) {
 		for(int32 x = nStartX; x <= nEndX; x++) {
 			CSector *pSector = GetSector(x, y);
@@ -2409,25 +2178,8 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 void
 CWorld::UseDetonator(CEntity *pEntity)
 {
-		// Access raw storage through the C store or pool API
-	int32 i = CPool_GetSize(CPools::GetVehiclePool());
-		while(--i >= 0) {
-#ifdef FIX_BUGS
-				// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		#else
-				// Access raw storage through the C store or pool API
-		CAutomobile *pVehicle = (CAutomobile *)((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		#endif
-		if(pVehicle && pVehicle->m_bombType == CARBOMB_REMOTE &&
-		   pVehicle->m_pBombRigger == pEntity) {
-			pVehicle->m_bombType = CARBOMB_NONE;
-			pVehicle->m_nBombTimer = 500;
-			pVehicle->m_pBlowUpEntity = pVehicle->m_pBombRigger;
-			if(pVehicle->m_pBlowUpEntity)
-				pVehicle->m_pBlowUpEntity->RegisterReference(&pVehicle->m_pBlowUpEntity);
-		}
-	}
+	// Delegate to the C implementation
+	World_UseDetonator(CPools::GetVehiclePool(), pEntity);
 	ProjectileInfo_RemoveDetonatorProjectiles();
 }
 

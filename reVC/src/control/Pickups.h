@@ -1,52 +1,16 @@
 #pragma once
 #include "Weapon.h"
 
-enum ePickupType
-{
-	PICKUP_NONE = 0,
-	PICKUP_IN_SHOP,
-	PICKUP_ON_STREET,
-	PICKUP_ONCE,
-	PICKUP_ONCE_TIMEOUT,
-	PICKUP_ONCE_TIMEOUT_SLOW,
-	PICKUP_COLLECTABLE1,
-	PICKUP_IN_SHOP_OUT_OF_STOCK,
-	PICKUP_MONEY,
-	PICKUP_MINE_INACTIVE,
-	PICKUP_MINE_ARMED,
-	PICKUP_NAUTICAL_MINE_INACTIVE,
-	PICKUP_NAUTICAL_MINE_ARMED,
-	PICKUP_FLOATINGPACKAGE,
-	PICKUP_FLOATINGPACKAGE_FLOATING,
-	PICKUP_ON_STREET_SLOW,
-	PICKUP_ASSET_REVENUE,
-	PICKUP_PROPERTY_LOCKED,
-	PICKUP_PROPERTY_FORSALE,
-	PICKUP_NUMOFTYPES
-};
+#include "PickupData.h"
 
 class CEntity;
 class CObject;
 class CVehicle;
 class CPlayerPed;
 
-class CPickup
+class CPickup : public CPickupData
 {
 public:
-	CVector m_vecPos;
-	float m_fRevenue;
-	CObject *m_pObject;
-	CObject *m_pExtraObject;
-	uint32 m_nQuantity;
-	uint32 m_nTimer;
-	uint16 m_nMoneySpeed;
-	int16 m_eModelIndex;
-	uint16 m_nIndex;
-	char m_sTextKey[8];
-	uint8 m_eType;
-	bool m_bRemoved;
-	uint8 m_bWasAmmoCollected:1;
-	uint8 m_bWasControlMessageShown:1;
 
 	CObject *GiveUsAPickUpObject(CObject **object, CObject **extraObject, int32 handle, int32 extraHandle);
 	bool Update(CPlayerPed *player, CVehicle *vehicle, int playerId);

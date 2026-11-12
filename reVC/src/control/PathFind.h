@@ -1,5 +1,6 @@
 //+ rouz edit (ChatGPT)
 #pragma once
+#include "PathNodeData.h"
 
 #include "Treadable.h"
 
@@ -33,15 +34,7 @@ enum
 	ROUTE_NO_BLOCKADE = 1
 };
 
-struct CPedPathNode
-{
-	bool bBlockade;
-	uint8 nodeIdX;
-	uint8 nodeIdY;
-	int16 id;
-	CPedPathNode* prev;
-	CPedPathNode* next;
-};
+#include "PedPathNode.h"
 
 VALIDATE_SIZE(CPedPathNode, 0x10);
 
@@ -57,35 +50,8 @@ public:
 	static void AddBuildingBlockadeSectorList(CPtrList&, CPedPathNode(*)[40], CVector*);
 };
 
-struct CPathNode
+struct CPathNode : public CPathNodeData
 {
-	int16 prevIndex;
-	int16 nextIndex;
-	int16 x;
-	int16 y;
-	int16 z;
-	int16 distance;		// in path search
-	int16 firstLink;
-	uint8 width;
-	int8 group;
-
-	uint8 numLinks : 4;
-	uint8 bDeadEnd : 1;
-	uint8 bDisabled : 1;
-	uint8 bBetweenLevels : 1;
-	uint8 bUseInRoadBlock : 1;
-
-	uint8 bWaterPath : 1;
-	uint8 bOnlySmallBoats : 1;
-	uint8 bSelected : 1;
-	uint8 speedLimit : 2;
-	//uint8 flagB20 : 1;
-	//uint8 flagB40 : 1;
-	//uint8 flagB80 : 1;
-
-	uint8 spawnRate : 4;
-	uint8 flagsC : 4;
-
 	CVector GetPosition(void) { return CVector(x/8.0f, y/8.0f, z/8.0f); }
 	void SetPosition(const CVector &p) { x = p.x*8.0f; y = p.y*8.0f; z = p.z*8.0f; }
 	float GetX(void) { return x/8.0f; }
@@ -109,19 +75,8 @@ union CConnectionFlags
 	};
 };
 
-struct CCarPathLink
+struct CCarPathLink : public CCarPathLinkData
 {
-	int16 x;
-	int16 y;
-	int16 pathNodeIndex;
-	int8 dirX;
-	int8 dirY;
-	int8 numLeftLanes : 3;
-	int8 numRightLanes : 3;
-	uint8 trafficLightDirection : 1;
-	uint8 trafficLightType : 2;
-	uint8 bBridgeLights : 1;	// at least in LCS...
-	uint8 width;
 
 	CVector2D GetPosition(void) { return CVector2D(x/8.0f, y/8.0f); }
 	CVector2D GetDirection(void) { return CVector2D(dirX/100.0f, dirY/100.0f); }

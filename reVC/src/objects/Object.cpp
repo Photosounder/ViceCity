@@ -9,6 +9,7 @@
 #include "Pools.h"
 #include "Radar.h"
 #include "Object.h"
+#include "ObjectLogic.h"
 #include "DummyObject.h"
 #include "Particle.h"
 #include "General.h"
@@ -31,33 +32,8 @@ float CObject::fDistToNearestTree;
 
 CObject::CObject(void)
 {
-	m_type = ENTITY_TYPE_OBJECT;
-	m_fUprootLimit = 0.0f;
-	m_nCollisionDamageEffect = 0;
-	m_nSpecialCollisionResponseCases = COLLRESPONSE_NONE;
-	m_bCameraToAvoidThisObject = false;
-	ObjectCreatedBy = UNKNOWN_OBJECT;
-	m_nEndOfLifeTime = 0;
-	//	m_nRefModelIndex = -1;	// duplicate
-	//	bUseVehicleColours = false;	// duplicate
-	m_colour2 = 0;
-	m_colour1 = m_colour2;
-	m_nBonusValue = 0;
-	m_nCostValue = 0;
-	bIsPickup = false;
-	bPickupObjWithMessage = false;
-	bOutOfStock = false;
-	bGlassCracked = false;
-	bGlassBroken = false;
-	bHasBeenDamaged = false;
-	m_nRefModelIndex = -1;
-	bUseVehicleColours = false;
-	//	bIsStreetLight = false;		// duplicate
-	m_pCurSurface = nil;
-	m_pCollidingEntity = nil;
-	m_nBeachballBounces = 0;
-	bIsStreetLight = false;
-	m_area = AREA_EVERYWHERE;
+	// Delegate to the C implementation
+	Object_InitFields((CObjectStruct*)this);
 }
 
 CObject::CObject(int32 mi, bool createRW)
@@ -823,41 +799,24 @@ CObject::Init(void)
 bool
 CObject::CanBeDeleted(void)
 {
-	switch (ObjectCreatedBy) {
-		case GAME_OBJECT:
-			return true;
-		case MISSION_OBJECT:
-			return false;
-		case TEMP_OBJECT:
-			return true;
-		case CUTSCENE_OBJECT:
-			return false;
-		case CONTROLLED_SUB_OBJECT:
-			return false;
-		default:
-			return true;
-	}
+	// Delegate to the C implementation
+	return Object_CanBeDeleted(this);
 }
 
 void
 CObject::DeleteAllMissionObjects()
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+	// The C implementation picks the objects, their removal stays here
+	void *selected[NUMOBJECTS * 2];
+	int numSelected = Object_SelectByCreation(objectPool, MISSION_OBJECT, selected, ARRAY_SIZE(selected));
+	for (int s = 0; s < numSelected; s++) {
+		CObject *pObject = (CObject*)selected[s];
+		CWorld::Remove(pObject);
+		// Destroy and release the object without invoking C++ delete.
+		pObject->~CObject();
 		// Access raw storage through the C store or pool API
-		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
-	//- rouz edit (ChatGPT)
-		if (pObject && pObject->ObjectCreatedBy == MISSION_OBJECT) {
-			CWorld::Remove(pObject);
-			// Destroy and release the mission object without invoking C++ delete.
-			pObject->~CObject();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(objectPool, pObject);
-			//- rouz edit (ChatGPT)
-		}
+		CPool_Delete(objectPool, pObject);
 	}
 }
 
@@ -865,21 +824,16 @@ void
 CObject::DeleteAllTempObjects()
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+	// The C implementation picks the objects, their removal stays here
+	void *selected[NUMOBJECTS * 2];
+	int numSelected = Object_SelectByCreation(objectPool, TEMP_OBJECT, selected, ARRAY_SIZE(selected));
+	for (int s = 0; s < numSelected; s++) {
+		CObject *pObject = (CObject*)selected[s];
+		CWorld::Remove(pObject);
+		// Destroy and release the object without invoking C++ delete.
+		pObject->~CObject();
 		// Access raw storage through the C store or pool API
-		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
-	//- rouz edit (ChatGPT)
-		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT) {
-			CWorld::Remove(pObject);
-			// Destroy and release the temporary object without invoking C++ delete.
-			pObject->~CObject();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(objectPool, pObject);
-			//- rouz edit (ChatGPT)
-		}
+		CPool_Delete(objectPool, pObject);
 	}
 }
 
@@ -887,21 +841,16 @@ void
 CObject::DeleteAllTempObjectsInArea(CVector point, float fRadius)
 {
 	CObjectPool *objectPool = CPools::GetObjectPool();
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for (int32 i = 0; i < CPool_GetSize(objectPool); i++) {
+	// The C implementation picks the objects, their removal stays here
+	void *selected[NUMOBJECTS * 2];
+	int numSelected = Object_SelectTempInArea(objectPool, point.x, point.y, point.z, fRadius, selected, ARRAY_SIZE(selected));
+	for (int s = 0; s < numSelected; s++) {
+		CObject *pObject = (CObject*)selected[s];
+		CWorld::Remove(pObject);
+		// Destroy and release the object without invoking C++ delete.
+		pObject->~CObject();
 		// Access raw storage through the C store or pool API
-		CObject *pObject = ((CObject*)CPool_GetSlot(objectPool, i));
-	//- rouz edit (ChatGPT)
-		if (pObject && pObject->ObjectCreatedBy == TEMP_OBJECT && (point - pObject->GetPosition()).MagnitudeSqr() < SQR(fRadius)) {
-			CWorld::Remove(pObject);
-			// Destroy and release the temporary object without invoking C++ delete.
-			pObject->~CObject();
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			CPool_Delete(objectPool, pObject);
-			//- rouz edit (ChatGPT)
-		}
+		CPool_Delete(objectPool, pObject);
 	}
 }
 

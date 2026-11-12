@@ -4,6 +4,7 @@
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "CivilianPed.h"
+#include "CivilianLogic.h"
 #include "Phones.h"
 #include "General.h"
 #include "PlayerPed.h"
@@ -480,15 +481,9 @@ void CCivilianPed::FindNearbyAttractorsSectorList(CPtrList& list, float& minDist
 
 void CCivilianPed::UseNearbyAttractors()
 {
-	if (Weather_Rain < 0.2f && !m_bAttractorUnk)
+	// Only search every few calls, decided in C
+	if (!Civilian_AttractorSearchDue(Weather_Rain, m_bAttractorUnk, HasAttractor(), &m_nAttractorCycleState, gFrequencyOfAttractorAttempt))
 		return;
-	if (HasAttractor())
-		return;
-	if (m_nAttractorCycleState != gFrequencyOfAttractorAttempt) {
-		m_nAttractorCycleState++;
-		return;
-	}
-	m_nAttractorCycleState = 0;
 	if (!IsPedInControl())
 		return;
 	if (m_nPedState == PED_FLEE_ENTITY)
@@ -522,15 +517,8 @@ void CCivilianPed::UseNearbyAttractors()
 
 bool CCivilianPed::IsAttractedTo(int8 type)
 {
-	switch (type) {
-	case ATTRACTOR_ATM: return true;
-	case ATTRACTOR_SEAT: return true;
-	case ATTRACTOR_STOP: return true;
-	case ATTRACTOR_PIZZA: return true;
-	case ATTRACTOR_SHELTER: return Weather_Rain >= 0.2f;
-	case ATTRACTOR_ICECREAM: return false;
-	}
-	return false;
+	// Delegate to the C implementation
+	return Civilian_IsAttractedTo(type, Weather_Rain);
 }
 
 void
@@ -604,12 +592,8 @@ CCivilianPed::EnterVacantNearbyCars(void)
 bool
 CCivilianPed::IsOnStealWishList(int32 model)
 {
-	for (int i = 0; i < ARRAY_SIZE(m_nStealWishList); i++) {
-		if (model == m_nStealWishList[i]) {
-			return true;
-		}
-	}
-	return false;
+	// Delegate to the C implementation
+	return Civilian_IsOnStealWishList(m_nStealWishList, ARRAY_SIZE(m_nStealWishList), model);
 }
 
 //- rouz edit (ChatGPT)

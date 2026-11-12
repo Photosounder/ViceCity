@@ -11,6 +11,7 @@
 #include "Timer.h"
 #include "Pad.h"
 #include "Vehicle.h"
+#include "VehicleRules.h"
 #include "Bike.h"
 #include "Automobile.h"
 #include "Pools.h"
@@ -1125,37 +1126,16 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 float
 CVehicle::ProcessWheelRotation(tWheelState state, const CVector &fwd, const CVector &speed, float radius)
 {
-	float angularVelocity;
-	switch(state){
-	case WHEEL_STATE_SPINNING:
-		angularVelocity = -1.1f;	// constant speed forward
-		break;
-	case WHEEL_STATE_FIXED:
-		angularVelocity = 0.0f;		// not moving
-		break;
-	default:
-		angularVelocity = -DotProduct(fwd, speed) / radius;	// forward speed
-		break;
-	}
-	return angularVelocity * (*Timer_GetTimeStep());
+	// Delegate to the C implementation
+	return Vehicle_ProcessWheelRotation(state, DotProduct(fwd, speed), radius, (*Timer_GetTimeStep()));
 }
 
 int
 CVehicle::FindTyreNearestPoint(float x, float y)
 {
+	// The offsets are computed here and the choice made in C
 	CVector pos = CVector(x - GetPosition().x, y - GetPosition().y, 0.0f);
-	float fwd = DotProduct(GetForward(), pos);
-	float right = DotProduct(GetRight(), pos);
-
-	int piece;
-	if(IsBike()){
-		piece = fwd > 0.0f ? CAR_PIECE_WHEEL_LF : CAR_PIECE_WHEEL_LR;
-	}else{
-		piece = fwd > 0.0f ?
-			right > 0.0f ? CAR_PIECE_WHEEL_RF : CAR_PIECE_WHEEL_LF :
-			right > 0.0f ? CAR_PIECE_WHEEL_RR : CAR_PIECE_WHEEL_LR;
-	}
-	return piece - CAR_PIECE_WHEEL_LF;
+	return Vehicle_FindTyreNearestPoint(IsBike(), DotProduct(GetForward(), pos), DotProduct(GetRight(), pos));
 }
 
 void
@@ -1470,60 +1450,9 @@ CVehicle::ExtinguishCarFire(void)
 bool
 CVehicle::ShufflePassengersToMakeSpace(void)
 {
-	if (m_nNumPassengers >= m_nNumMaxPassengers)
-		return false;
-	if (pPassengers[1] &&
-		!(m_nGettingInFlags & CAR_DOOR_FLAG_LR) &&
-		IsRoomForPedToLeaveCar(CAR_DOOR_LR, nil)) {
-		if (!pPassengers[2] && !(m_nGettingInFlags & CAR_DOOR_FLAG_RR)) {
-			pPassengers[2] = pPassengers[1];
-			pPassengers[1] = nil;
-			pPassengers[2]->m_vehDoor = CAR_DOOR_RR;
-			return true;
-		}
-		if (!pPassengers[0] && !(m_nGettingInFlags & CAR_DOOR_FLAG_RF)) {
-			pPassengers[0] = pPassengers[1];
-			pPassengers[1] = nil;
-			pPassengers[0]->m_vehDoor = CAR_DOOR_RF;
-			return true;
-		}
-		return false;
-	}
-	if (pPassengers[2] &&
-		!(m_nGettingInFlags & CAR_DOOR_FLAG_RR) &&
-		IsRoomForPedToLeaveCar(CAR_DOOR_RR, nil)) {
-		if (!pPassengers[1] && !(m_nGettingInFlags & CAR_DOOR_FLAG_LR)) {
-			pPassengers[1] = pPassengers[2];
-			pPassengers[2] = nil;
-			pPassengers[1]->m_vehDoor = CAR_DOOR_LR;
-			return true;
-		}
-		if (!pPassengers[0] && !(m_nGettingInFlags & CAR_DOOR_FLAG_RF)) {
-			pPassengers[0] = pPassengers[2];
-			pPassengers[2] = nil;
-			pPassengers[0]->m_vehDoor = CAR_DOOR_RF;
-			return true;
-		}
-		return false;
-	}
-	if (pPassengers[0] &&
-		!(m_nGettingInFlags & CAR_DOOR_FLAG_RF) &&
-		IsRoomForPedToLeaveCar(CAR_DOOR_RF, nil)) {
-		if (!pPassengers[1] && !(m_nGettingInFlags & CAR_DOOR_FLAG_LR)) {
-			pPassengers[1] = pPassengers[0];
-			pPassengers[0] = nil;
-			pPassengers[1]->m_vehDoor = CAR_DOOR_LR;
-			return true;
-		}
-		if (!pPassengers[2] && !(m_nGettingInFlags & CAR_DOOR_FLAG_RR)) {
-			pPassengers[2] = pPassengers[0];
-			pPassengers[0] = nil;
-			pPassengers[2]->m_vehDoor = CAR_DOOR_RR;
-			return true;
-		}
-		return false;
-	}
-	return false;
+	// The seat shuffling is done in C, asking this vehicle whether a ped can leave through a door
+	return VehicleLogic_ShufflePassengersToMakeSpace(this,
+		[](void *context, uint32_t door) { return ((CVehicle*)context)->IsRoomForPedToLeaveCar(door, nil); }, this);
 }
 
 void
@@ -1611,37 +1540,15 @@ CVehicle::ProcessDelayedExplosion(void)
 bool
 CVehicle::IsLawEnforcementVehicle(void)
 {
-	switch(GetModelIndex()){
-	case MI_POLICE:
-	case MI_ENFORCER:
-	case MI_PREDATOR:
-	case MI_RHINO:
-	case MI_BARRACKS:
-	case MI_FBIRANCH:
-	case MI_VICECHEE:
-		return true;
-	default:
-		return false;
-	}
+	// Delegate to the C implementation
+	return Vehicle_IsLawEnforcementModel(GetModelIndex());
 }
 
 bool
 CVehicle::UsesSiren(void)
 {
-	switch(GetModelIndex()){
-	case MI_FIRETRUCK:
-	case MI_AMBULAN:
-	case MI_FBICAR:
-	case MI_MRWHOOP:
-	case MI_POLICE:
-	case MI_ENFORCER:
-	case MI_PREDATOR:
-	case MI_FBIRANCH:
-	case MI_VICECHEE:
-		return true;
-	default:
-		return false;
-	}
+	// Delegate to the C implementation
+	return Vehicle_UsesSirenModel(GetModelIndex());
 }
 
 bool
@@ -1655,137 +1562,57 @@ CVehicle::IsVehicleNormal(void)
 bool
 CVehicle::CarHasRoof(void)
 {
-	if((pHandling->Flags & HANDLING_HAS_NO_ROOF) == 0)
-		return true;
-	// component 0 is assumed to be a roof
-	return m_aExtras[0] == 0 || m_aExtras[1] == 0;
+	// Delegate to the C implementation
+	return VehicleLogic_CarHasRoof(this);
 }
 
 bool
 CVehicle::IsUpsideDown(void)
 {
-	if(GetUp().z > -0.9f)
-		return false;
-	return true;
+	// Delegate to the C implementation
+	return VehicleLogic_IsUpsideDown(this);
 }
 
 bool
 CVehicle::IsOnItsSide(void)
 {
-	if(GetRight().z < 0.8f && GetRight().z > -0.8f)
-		return false;
-	return true;
+	// Delegate to the C implementation
+	return VehicleLogic_IsOnItsSide(this);
 }
 
 bool
 CVehicle::CanBeDeleted(void)
 {
-	int i;
-
-	if(m_nNumGettingIn || m_nGettingOutFlags)
-		return false;
-
-	if(pDriver){
-		// This looks like it was inlined
-		if(pDriver->CharCreatedBy == MISSION_CHAR)
-			return false;
-		if(pDriver->GetPedState() != PED_DRIVING &&
-		   pDriver->GetPedState() != PED_DEAD)
-			return false;
-	}
-
-	for(i = 0; i < ARRAY_SIZE(pPassengers); i++){
-		// Same check as above
-		if(pPassengers[i]){
-			if(pPassengers[i]->CharCreatedBy == MISSION_CHAR)
-				return false;
-			if(pPassengers[i]->GetPedState() != PED_DRIVING &&
-			   pPassengers[i]->GetPedState() != PED_DEAD)
-				return false;
-		}
-		// and then again... probably because something was inlined
-		if(pPassengers[i]){
-			if(pPassengers[i]->GetPedState() != PED_DRIVING &&
-			   pPassengers[i]->GetPedState() != PED_DEAD)
-				return false;
-		}
-	}
-
-	switch(VehicleCreatedBy){
-	case RANDOM_VEHICLE: return true;
-	case MISSION_VEHICLE: return false;
-	case PARKED_VEHICLE: return true;
-	case PERMANENT_VEHICLE: return false;
-	}
-	return true;
+	// Delegate to the C implementation
+	return VehicleLogic_CanBeDeleted(this);
 }
 
 bool
 CVehicle::CanPedOpenLocks(CPed *ped)
 {
-	if(m_nDoorLock == CARLOCK_LOCKED ||
-	   m_nDoorLock == CARLOCK_LOCKED_INITIALLY ||
-	   m_nDoorLock == CARLOCK_LOCKED_PLAYER_INSIDE ||
-	   m_nDoorLock == CARLOCK_LOCKED_BUT_CAN_BE_DAMAGED)
-		return false;
-	if(ped->IsPlayer() && m_nDoorLock == CARLOCK_LOCKOUT_PLAYER_ONLY)
-		return false;
-	return true;
+	// Delegate to the C implementation
+	return VehicleLogic_CanPedOpenLocks(this, ped->IsPlayer());
 }
 
 bool
 CVehicle::CanDoorsBeDamaged(void)
 {
-	return m_nDoorLock == CARLOCK_NOT_USED ||
-		m_nDoorLock == CARLOCK_UNLOCKED ||
-		m_nDoorLock == CARLOCK_LOCKED_BUT_CAN_BE_DAMAGED;
+	// Delegate to the C implementation
+	return VehicleLogic_CanDoorsBeDamaged(this);
 }
 
 bool
 CVehicle::CanPedEnterCar(void)
 {
-	// can't enter when car is on side
-	if(IsBike() || GetUp().z > 0.1f ||  GetUp().z < -0.1f){
-		// also when car is moving too fast
-		if(m_vecMoveSpeed.MagnitudeSqr() > sq(0.2f))
-			return false;
-		if(m_vecTurnSpeed.MagnitudeSqr() > sq(0.2f))
-			return false;
-		return true;
-	}
-	return false;
+	// Delegate to the C implementation
+	return VehicleLogic_CanPedEnterCar(this, this, this);
 }
 
 bool
 CVehicle::CanPedExitCar(bool jumpExit)
 {
-	if (m_vecMoveSpeed.MagnitudeSqr() < 0.2f) return true; // rouz edit, speed threshold is 80 km/h
-	CVector up = GetUp();
-	if(up.z > 0.1f || up.z < -0.1f){
-		if (IsBoat())
-			return true;
-		// can't exit when car is moving too fast
-		if(m_vecMoveSpeed.MagnitudeSqr() > 0.005f && !jumpExit)
-			return false;
-		// if car is slow enough, check turn speed
-		if(Abs(m_vecTurnSpeed.x) > 0.01f ||
-		   Abs(m_vecTurnSpeed.y) > 0.01f ||
-		   Abs(m_vecTurnSpeed.z) > 0.01f)
-			return false;
-		return true;
-	}else{
-		// What is this? just > replaced by >= ??
-
-		// can't exit when car is moving too fast
-		if(m_vecMoveSpeed.MagnitudeSqr() >= 0.005f)
-			return false;
-		// if car is slow enough, check turn speed
-		if(Abs(m_vecTurnSpeed.x) >= 0.01f ||
-		   Abs(m_vecTurnSpeed.y) >= 0.01f ||
-		   Abs(m_vecTurnSpeed.z) >= 0.01f)
-			return false;
-		return true;
-	}
+	// Delegate to the C implementation
+	return VehicleLogic_CanPedExitCar(this, this, this, jumpExit);
 }
 
 bool
@@ -1810,17 +1637,10 @@ CVehicle::CanPedJumpOffBike(void)
 void
 CVehicle::ChangeLawEnforcerState(uint8 enable)
 {
-	if (enable) {
-		if (!bIsLawEnforcer) {
-			bIsLawEnforcer = true;
-			CCarCtrl::NumLawEnforcerCars++;
-		}
-	} else {
-		if (bIsLawEnforcer) {
-			bIsLawEnforcer = false;
-			CCarCtrl::NumLawEnforcerCars--;
-		}
-	}
+	// Delegate to the C implementation, the flag is a bit field so it goes through a temporary
+	bool isLawEnforcer = bIsLawEnforcer;
+	Vehicle_ChangeLawEnforcerState(&isLawEnforcer, &CCarCtrl::NumLawEnforcerCars, enable != 0);
+	bIsLawEnforcer = isLawEnforcer;
 }
 
 CPed*
@@ -1922,8 +1742,6 @@ CVehicle::SetDriver(CPed *driver)
 bool
 CVehicle::AddPassenger(CPed *passenger)
 {
-	int i;
-
 	if(IsBike())
 		ApplyTurnForce(-0.02f*passenger->m_fMass * GetUp(), -0.1f*GetForward());
 	else
@@ -1932,13 +1750,8 @@ CVehicle::AddPassenger(CPed *passenger)
 			passenger->GetPosition().y - GetPosition().y,
 			0.0f);
 
-	for(i = 0; i < m_nNumMaxPassengers; i++)
-		if(pPassengers[i] == nil){
-			pPassengers[i] = passenger;
-			m_nNumPassengers++;
-			return true;
-		}
-	return false;
+	// Seat the passenger in C
+	return VehicleLogic_AddPassengerToFirstFreeSeat(this, passenger);
 }
 
 bool
@@ -1955,12 +1768,8 @@ CVehicle::AddPassenger(CPed *passenger, uint8 n)
 			passenger->GetPosition().y - GetPosition().y,
 			0.0f);
 
-	if(n < m_nNumMaxPassengers && pPassengers[n] == nil){
-		pPassengers[n] = passenger;
-		m_nNumPassengers++;
-		return true;
-	}
-	return false;
+	// Seat the passenger in C
+	return VehicleLogic_AddPassengerToSeat(this, passenger, n);
 }
 
 void
@@ -1992,29 +1801,15 @@ CVehicle::RemoveDriver(void)
 void
 CVehicle::RemovePassenger(CPed *p)
 {
-	if (IsTrain()){
-		for (int i = 0; i < ARRAY_SIZE(pPassengers); i++){
-			if (pPassengers[i] == p) {
-				pPassengers[i] = nil;
-				m_nNumPassengers--;
-				return;
-			}
-		}
-		return;
-	}
-	for (int i = 0; i < m_nNumMaxPassengers; i++){
-		if (pPassengers[i] == p){
-			pPassengers[i] = nil;
-			m_nNumPassengers--;
-			return;
-		}
-	}
+	// Delegate to the C implementation
+	VehicleLogic_RemovePassenger(this, p, IsTrain());
 }
 
 bool
 CVehicle::IsDriver(CPed *ped)
 {
-	return ped && ped == pDriver;
+	// Delegate to the C implementation
+	return VehicleLogic_IsDriver(this, ped);
 }
 
 bool
@@ -2026,13 +1821,8 @@ CVehicle::IsDriver(int32 model)
 bool
 CVehicle::IsPassenger(CPed *ped)
 {
-	int i;
-	if(ped == nil)
-		return false;
-	for(i = 0; i < 8; i++)
-		if(pPassengers[i] == ped)
-			return true;
-	return false;
+	// Delegate to the C implementation
+	return VehicleLogic_IsPassenger(this, ped);
 }
 
 bool
@@ -2048,32 +1838,15 @@ CVehicle::IsPassenger(int32 model)
 void
 CVehicle::UpdatePassengerList(void)
 {
-	int i;
-	bool hasPassenger = false;
-	if(m_nNumPassengers)
-		for(i = 0; i < 8; i++)
-			if(pPassengers[i]){
-				hasPassenger = true;
-				break;
-			}
-	if(!hasPassenger)
-		m_nNumPassengers = 0;
+	// Delegate to the C implementation
+	VehicleLogic_UpdatePassengerList(this);
 }
 
 void
 CVehicle::ProcessCarAlarm(void)
 {
-	uint32 step;
-
-	if(m_nAlarmState == 0 || m_nAlarmState == -1)
-		return;
-
-	step = Timer_GetTimeStepInMilliseconds();
-	if((uint16)m_nAlarmState < step){
-		m_nAlarmState = 0;
-		m_nCarHornTimer = 0;
-	}else
-		m_nAlarmState -= step;
+	// Delegate to the C implementation
+	VehicleLogic_ProcessCarAlarm(this, Timer_GetTimeStepInMilliseconds());
 }
 
 bool
@@ -2121,15 +1894,9 @@ void
 CVehicle::UpdateClumpAlpha(void)
 {
 	int clumpAlpha = CVisibilityPlugins::GetClumpAlpha((RpClump*)m_rwObject);
-	if(bFadeOut){
-		clumpAlpha -= 8;
-		if(clumpAlpha < 0)
-			clumpAlpha = 0;
-	}else if(clumpAlpha < 255){
-		clumpAlpha += 16;
-		if(clumpAlpha > 255)
-			clumpAlpha = 255;
-	}
+
+	// The next alpha is worked out in C
+	clumpAlpha = Vehicle_UpdateClumpAlpha(clumpAlpha, bFadeOut);
 	CVisibilityPlugins::SetClumpAlpha((RpClump*)m_rwObject, clumpAlpha);
 }
 
@@ -2551,18 +2318,8 @@ CVehicle::Load(uint8*& buf)
 eVehicleAppearance
 CVehicle::GetVehicleAppearance(void)
 {
-	uint32 flags = pHandling->Flags & 0xF0000;
-	if (flags == 0)
-		return VEHICLE_APPEARANCE_CAR;
-	if (flags == HANDLING_IS_BIKE)
-		return VEHICLE_APPEARANCE_BIKE;
-	if (flags == HANDLING_IS_HELI)
-		return VEHICLE_APPEARANCE_HELI;
-	if (flags == HANDLING_IS_PLANE)
-		return VEHICLE_APPEARANCE_PLANE;
-	if (flags == HANDLING_IS_BOAT)
-		return VEHICLE_APPEARANCE_BOAT;
-	return VEHICLE_APPEARANCE_NONE;
+	// Delegate to the C implementation
+	return (eVehicleAppearance)Vehicle_GetVehicleAppearance(pHandling->Flags);
 }
 
 bool

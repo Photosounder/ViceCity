@@ -12,6 +12,7 @@
 #include "ColLine_native.h"
 
 #include "Weapon.h"
+#include "WeaponLogic.h"
 #include "AnimBlendAssociation.h"
 #include "AudioManager.h"
 #include "BulletInfo.h"
@@ -93,12 +94,8 @@ CWeapon::GetInfo()
 
 CWeapon::CWeapon(eWeaponType type, int32 ammo)
 {
-	m_eWeaponType = type;
-	m_eWeaponState = WEAPONSTATE_READY;
-	m_nAmmoTotal = Min(ammo, 99999);
-	m_nAmmoInClip = 0;
-	Reload();
-	m_nTimer = 0;
+	// Delegate to the C implementation
+	Weapon_Init(this, type, ammo, WeaponInfo_GetWeaponInfo(type)->m_nAmountofAmmunition);
 	m_bAddRotOffset = false;
 }
 
@@ -142,12 +139,8 @@ CWeapon::UpdateWeapons(void)
 void
 CWeapon::Initialise(eWeaponType type, int32 ammo)
 {
-	m_eWeaponType = type;
-	m_eWeaponState = WEAPONSTATE_READY;
-	m_nAmmoTotal = Min(ammo, 99999);
-	m_nAmmoInClip = 0;
-	Reload();
-	m_nTimer = 0;
+	// Set the slot up in C
+	Weapon_Init(this, type, ammo, WeaponInfo_GetWeaponInfo(type)->m_nAmountofAmmunition);
 	int32 modelId = WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_nModelId;
 	int32 model2Id = WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_nModel2Id;
 	
@@ -168,11 +161,9 @@ CWeapon::Shutdown()
 	if (model2Id != -1)
 		((CBaseModelInfo*)ModelRegistry_Get(model2Id))->RemoveRef(); // rouz edit (ChatGPT)
 
-	m_eWeaponType = WEAPONTYPE_UNARMED;
-	m_eWeaponState = WEAPONSTATE_READY;
-	m_nAmmoInClip = 0;
-	m_nAmmoTotal = 0;
-	m_nTimer = 0;
+	// Clear the slot in C
+	Weapon_ClearSlot(this);
+
 }
 
 bool
@@ -3009,15 +3000,8 @@ CWeapon::DoDriveByAutoAiming(CEntity *driver, CVehicle *vehicle, CVector *source
 void
 CWeapon::Reload(void)
 {
-	if (m_nAmmoTotal == 0)
-		return;
-
-	CWeaponInfo *info = GetInfo();
-
-	if (m_nAmmoTotal >= info->m_nAmountofAmmunition)
-		m_nAmmoInClip = info->m_nAmountofAmmunition;
-	else
-		m_nAmmoInClip = m_nAmmoTotal;
+	// Delegate to the C implementation
+	Weapon_Reload(this, GetInfo()->m_nAmountofAmmunition);
 }
 
 void
@@ -3037,19 +3021,14 @@ CWeapon::Update(int32 audioEntity, CPed *pedToAdjustSound)
 		{
 			if ( IsShotgun(m_eWeaponType) && AEHANDLE_IS_OK(audioEntity) )
 			{
-				uint32 timePassed = m_nTimer - WeaponInfo_ms_aReloadSampleTime[m_eWeaponType];
-				if ( Timer_GetPreviousTimeInMilliseconds() < timePassed && (*Timer_GetTimeInMilliseconds()) >= timePassed )
+				// The pump sample is timed in C
+				if ( Weapon_SampleDue(m_nTimer, WeaponInfo_ms_aReloadSampleTime[m_eWeaponType], Timer_GetPreviousTimeInMilliseconds(), (*Timer_GetTimeInMilliseconds())) )
 					DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, 0.0f);
 			}
 
-			if ( (*Timer_GetTimeInMilliseconds()) > m_nTimer )
-			{
-				if ( GetInfo()->m_eWeaponFire != WEAPON_FIRE_MELEE && m_nAmmoTotal == 0 ) {
-					m_eWeaponState = WEAPONSTATE_OUT_OF_AMMO;
-					CPickups::RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(m_eWeaponType);
-				} else
-					m_eWeaponState = WEAPONSTATE_READY;
-			}
+			// The state change is decided in C, the pickups are removed here
+			if ( Weapon_UpdateFiring(this, (*Timer_GetTimeInMilliseconds()), GetInfo()->m_eWeaponFire == WEAPON_FIRE_MELEE) )
+				CPickups::RemoveAllPickupsOfACertainWeaponGroupWithNoAmmo(m_eWeaponType);
 
 			break;
 		}
@@ -3069,27 +3048,7 @@ CWeapon::Update(int32 audioEntity, CPed *pedToAdjustSound)
 				}
 				// Use the complete C association at the original native operation boundary
 				if (reloadAssoc && AnimAssociation_IsRunning(reloadAssoc) && reloadAssoc->blendAmount > 0.2f) {
-					float soundStart = 0.75f;
-					switch (info->m_AnimToPlay) {
-						case ASSOCGRP_PYTHON:
-							soundStart = fReloadAnimSampleFraction[0];
-							break;
-						case ASSOCGRP_COLT:
-						case ASSOCGRP_TEC:
-							soundStart = fReloadAnimSampleFraction[1];
-							break;
-						case ASSOCGRP_UZI:
-							soundStart = fReloadAnimSampleFraction[2];
-							break;
-						case ASSOCGRP_RIFLE:
-							soundStart = fReloadAnimSampleFraction[3];
-							break;
-						case ASSOCGRP_M60:
-							soundStart = fReloadAnimSampleFraction[4];
-							break;
-						default:
-							break;
-					}
+					float soundStart = Weapon_ReloadAnimSoundStart(info->m_AnimToPlay, fReloadAnimSampleFraction);
 					// Use the complete C association at the original native operation boundary
 					if (AnimAssociation_GetProgress(reloadAssoc) >= soundStart && (reloadAssoc->currentTime - reloadAssoc->timeStep) / reloadAssoc->hierarchy->totalLength < soundStart)
 						DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
@@ -3098,17 +3057,13 @@ CWeapon::Update(int32 audioEntity, CPed *pedToAdjustSound)
 						m_nTimer = (*Timer_GetTimeInMilliseconds());
 					}
 				} else {
-					uint32 timePassed = m_nTimer - WeaponInfo_ms_aReloadSampleTime[m_eWeaponType];
-					if (Timer_GetPreviousTimeInMilliseconds() < timePassed && (*Timer_GetTimeInMilliseconds()) >= timePassed)
+					if (Weapon_SampleDue(m_nTimer, WeaponInfo_ms_aReloadSampleTime[m_eWeaponType], Timer_GetPreviousTimeInMilliseconds(), (*Timer_GetTimeInMilliseconds())))
 						DMAudio_PlayOneShot(audioEntity, SOUND_WEAPON_RELOAD, m_eWeaponType);
 				}
 			}
 
-			if ( (*Timer_GetTimeInMilliseconds()) > m_nTimer )
-			{
-				Reload();
-				m_eWeaponState = WEAPONSTATE_READY;
-			}
+			// Finish the reload in C
+			Weapon_UpdateReloading(this, (*Timer_GetTimeInMilliseconds()), info->m_nAmountofAmmunition);
 
 			break;
 		}
@@ -3251,9 +3206,8 @@ CWeapon::IsTypeMelee(void)
 bool
 CWeapon::IsType2Handed(void)
 {
-	return m_eWeaponType == WEAPONTYPE_FLAMETHROWER || m_eWeaponType == WEAPONTYPE_HELICANNON || m_eWeaponType == WEAPONTYPE_M60 ||
-		m_eWeaponType == WEAPONTYPE_M4 || IsShotgun(m_eWeaponType) ||
-		m_eWeaponType == WEAPONTYPE_RUGER || m_eWeaponType == WEAPONTYPE_SNIPERRIFLE || m_eWeaponType == WEAPONTYPE_LASERSCOPE;
+	// Delegate to the C implementation
+	return Weapon_IsType2Handed(m_eWeaponType);
 }
 
 void
@@ -3366,15 +3320,8 @@ CWeapon::BlowUpExplosiveThings(CEntity *thing)
 bool
 CWeapon::HasWeaponAmmoToBeUsed(void)
 {
-	// FIX: This is better (not bug tho)
-//#if 0
-	if (m_eWeaponType <= WEAPONTYPE_CHAINSAW)
-//#else
-//	if (WeaponInfo_GetWeaponInfo(m_eWeaponType)->m_eWeaponFire == WEAPON_FIRE_MELEE)
-//#endif
-		return true;
-	else
-		return m_nAmmoTotal != 0;
+	// Delegate to the C implementation
+	return Weapon_HasWeaponAmmoToBeUsed(this);
 }
 
 bool

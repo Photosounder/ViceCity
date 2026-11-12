@@ -23,30 +23,10 @@
 
 void CRunningScript::UpdateCompareFlag(bool flag)
 {
-	if (m_bNotFlag)
-		flag = !flag;
-	if (m_nAndOrState == ANDOR_NONE) {
-		m_bCondResult = flag;
-		return;
-	}
-	if (m_nAndOrState >= ANDS_1 && m_nAndOrState <= ANDS_8) {
-		m_bCondResult &= flag;
-		if (m_nAndOrState == ANDS_1) {
-			m_nAndOrState = ANDOR_NONE;
-			return;
-		}
-	}
-	else if (m_nAndOrState >= ORS_1 && m_nAndOrState <= ORS_8) {
-		m_bCondResult |= flag;
-		if (m_nAndOrState == ORS_1) {
-			m_nAndOrState = ANDOR_NONE;
-			return;
-		}
-	}
-	else {
-		return;
-	}
-	m_nAndOrState--;
+	// Delegate to the C implementation
+	int condResult = m_bCondResult;
+	ScriptBC_UpdateCompareFlag(flag, m_bNotFlag, &m_nAndOrState, &condResult);
+	m_bCondResult = condResult != 0;
 }
 
 void CRunningScript::LocatePlayerCommand(int32 command, uint32* pIp)

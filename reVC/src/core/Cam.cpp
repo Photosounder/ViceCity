@@ -30,6 +30,7 @@
 #include "SceneEdit.h"
 #include "Debug.h"
 #include "Camera.h"
+#include "CameraMath.h"
 #include "DMAudio.h"
 #include "Bike.h"
 #include "Pickups.h"
@@ -396,8 +397,8 @@ WellBufferMe(float Target, float *CurrentValue, float *CurrentSpeed, float MaxSp
 void
 MakeAngleLessThan180(float &Angle)
 {
-	while(Angle >= PI) Angle -= 2*PI;
-	while(Angle < -PI) Angle += 2*PI;
+	// Delegate to the C implementation
+	CameraMath_MakeAngleLessThan180(&Angle);
 }
 
 void
@@ -552,16 +553,8 @@ CCam::ProcessSpecialHeightRoutines(void)
 void
 CCam::GetVectorsReadyForRW(void)
 {
-	CVector right;
-	Up = CVector(0.0f, 0.0f, 1.0f);
-	Front.Normalise();
-	if(Front.x == 0.0f && Front.y == 0.0f){
-		Front.x = 0.0001f;
-		Front.y = 0.0001f;
-	}
-	right = CrossProduct(Front, Up);
-	right.Normalise();
-	Up = CrossProduct(right, Front);
+	// Delegate to the C implementation
+	CameraMath_GetVectorsReadyForRW((VectorMath3*)&Front, (VectorMath3*)&Up);
 }
 
 bool
@@ -795,7 +788,7 @@ CCam::LookRight(void)
 void
 CCam::ClipIfPedInFrontOfPlayer(void)
 {
-	float FwdAngle, PedAngle, DeltaAngle, fDist, Near;
+	float FwdAngle, PedAngle, Near;
 	CVector vDist;
 	CPed *Player;
 	bool found = false;
@@ -813,52 +806,33 @@ CCam::ClipIfPedInFrontOfPlayer(void)
 	if(found){
 		vDist = Player->m_nearPeds[ped]->GetPosition() - TheCamera.GetGameCamPosition();
 		PedAngle = General_GetATanOfXY(vDist.x, vDist.y);
-		DeltaAngle = FwdAngle - PedAngle;
-		while(DeltaAngle >= PI) DeltaAngle -= 2*PI;
-		while(DeltaAngle < -PI) DeltaAngle += 2*PI;
-		if(Abs(DeltaAngle) < HALFPI){
-			fDist = vDist.Magnitude2D();
-			if(fDist < 1.25f){
-				Near = DEFAULT_NEAR - (1.25f - fDist);
-				if(Near < 0.05f)
-					Near = 0.05f;
-				RwCameraSetNearClipPlane(Scene.camera, Near);
-			}
-		}
+		// Delegate to the C implementation
+		if(CameraMath_NearClipForPedInFront(FwdAngle, PedAngle, vDist.x, vDist.y, DEFAULT_NEAR, &Near))
+			RwCameraSetNearClipPlane(Scene.camera, Near);
 	}
 }
 
 void
 CCam::KeepTrackOfTheSpeed(const CVector &source, const CVector &target, const CVector &up, const float &alpha, const float &beta, const float &fov)
 {
-	static CVector PreviousSource = source;
-	static CVector PreviousTarget = target;
-	static CVector PreviousUp = up;
-	static float PreviousBeta = beta;
-	static float PreviousAlpha = alpha;
-	static float PreviousFov = fov;
+	static CamSpeedState state;
+	static bool stateInitialised = false;
 
-	if(TheCamera.m_bJust_Switched){
-		PreviousSource = source;
-		PreviousTarget = target;
-		PreviousUp = up;
+	// The previous values start as the first ones given
+	if(!stateInitialised){
+		state.source = *(const VectorMath3*)&source;
+		state.target = *(const VectorMath3*)&target;
+		state.up = *(const VectorMath3*)&up;
+		state.beta = beta;
+		state.alpha = alpha;
+		state.fov = fov;
+		stateInitialised = true;
 	}
 
-	m_cvecSourceSpeedOverOneFrame = source - PreviousSource;
-	m_cvecTargetSpeedOverOneFrame = target - PreviousTarget;
-	m_cvecUpOverOneFrame = up - PreviousUp;
-	m_fFovSpeedOverOneFrame = fov - PreviousFov;
-	m_fBetaSpeedOverOneFrame = beta - PreviousBeta;
-	MakeAngleLessThan180(m_fBetaSpeedOverOneFrame);
-	m_fAlphaSpeedOverOneFrame = alpha - PreviousAlpha;
-	MakeAngleLessThan180(m_fAlphaSpeedOverOneFrame);
-
-	PreviousSource = source;
-	PreviousTarget = target;
-	PreviousUp = up;
-	PreviousBeta = beta;
-	PreviousAlpha = alpha;
-	PreviousFov = fov;
+	// Delegate to the C implementation
+	CameraMath_KeepTrackOfTheSpeed(&state, TheCamera.m_bJust_Switched, *(const VectorMath3*)&source, *(const VectorMath3*)&target, *(const VectorMath3*)&up, alpha, beta, fov,
+		(VectorMath3*)&m_cvecSourceSpeedOverOneFrame, (VectorMath3*)&m_cvecTargetSpeedOverOneFrame, (VectorMath3*)&m_cvecUpOverOneFrame,
+		&m_fFovSpeedOverOneFrame, &m_fBetaSpeedOverOneFrame, &m_fAlphaSpeedOverOneFrame);
 }
 
 bool
@@ -879,14 +853,13 @@ CCam::IsTargetInWater(const CVector &CamCoors)
 	if(CamTargetEntity){
 		float WaterZ = -6000.0f;
 		CWaterLevel::GetWaterLevel(CamTargetEntity->GetPosition(), &WaterZ, false);
+		// Delegate the test to the C implementation
 		if(CamTargetEntity->IsPed()){
-			if(((CPed*)CamTargetEntity)->bIsDrowning ||
-			   ((CPed*)CamTargetEntity)->bIsInWater && CamTargetEntity->GetPosition().z < WaterZ)
+			if(CameraMath_IsTargetUnderWater(((CPed*)CamTargetEntity)->bIsDrowning, ((CPed*)CamTargetEntity)->bIsInWater, CamTargetEntity->GetPosition().z, WaterZ))
 				return true;
 		}else{
 			assert(CamTargetEntity->IsVehicle());
-			if(((CVehicle*)CamTargetEntity)->bIsDrowning ||
-			   ((CVehicle*)CamTargetEntity)->bIsInWater && CamTargetEntity->GetPosition().z < WaterZ)
+			if(CameraMath_IsTargetUnderWater(((CVehicle*)CamTargetEntity)->bIsDrowning, ((CVehicle*)CamTargetEntity)->bIsInWater, CamTargetEntity->GetPosition().z, WaterZ))
 				return true;
 		}
 	}
@@ -950,33 +923,9 @@ CCam::PrintMode(void)
 CVector
 CCam::DoAverageOnVector(const CVector &vec)
 {
-	int i;
-	CVector Average = CVector(0.0f, 0.0f, 0.0f);
-
-	if(ResetStatics){
-		m_iRunningVectorArrayPos = 0;
-		m_iRunningVectorCounter = 1;
-	}
-
-	// TODO: make this work with NUMBER_OF_VECTORS_FOR_AVERAGE != 2
-	if(m_iRunningVectorCounter == 3){
-		m_arrPreviousVectors[0] = m_arrPreviousVectors[1];
-		m_arrPreviousVectors[1] = vec;
-	}else
-		m_arrPreviousVectors[m_iRunningVectorArrayPos] = vec;
-
-	for(i = 0; i <= m_iRunningVectorArrayPos; i++)
-		Average += m_arrPreviousVectors[i];
-	Average /= i;
-
-	m_iRunningVectorArrayPos++;
-	m_iRunningVectorCounter++;
-	if(m_iRunningVectorArrayPos >= NUMBER_OF_VECTORS_FOR_AVERAGE)
-		m_iRunningVectorArrayPos = NUMBER_OF_VECTORS_FOR_AVERAGE-1;
-	if(m_iRunningVectorCounter > NUMBER_OF_VECTORS_FOR_AVERAGE+1)
-		m_iRunningVectorCounter = NUMBER_OF_VECTORS_FOR_AVERAGE+1;
-
-	return Average;
+	// Delegate to the C implementation
+	VectorMath3 average = CameraMath_DoAverageOnVector((VectorMath3*)m_arrPreviousVectors, &m_iRunningVectorArrayPos, &m_iRunningVectorCounter, ResetStatics, *(const VectorMath3*)&vec);
+	return CVector(average.x, average.y, average.z);
 }
 
 float DefaultAcceleration = 0.045f;
@@ -2052,7 +2001,6 @@ CCam::AvoidWallsTopDownPed(const CVector &TargetCoors, const CVector &Offset, fl
 	float Target = 0.0f;
 	float MaxSpeed = 0.13f;
 	float Acceleration = 0.015f;
-	float SpeedMult;
 	float dy;
 	CVector TestPoint2;
 	CVector TestPoint1;
@@ -2065,13 +2013,8 @@ CCam::AvoidWallsTopDownPed(const CVector &TargetCoors, const CVector &Offset, fl
 	if(CWorld::ProcessLineOfSight(TestPoint1, TestPoint2, colPoint, entity, true, false, false, false, false, false, false)){
 		// What is this even?
 		dy = TestPoint1.y - colPoint.point.y;
-		if(dy > yDistLimit)
-			dy = yDistLimit;
-		SpeedMult = yDistLimit - Abs(dy/yDistLimit);
-
-		Target = 2.5f;
-		MaxSpeed += SpeedMult*0.3f;
-		Acceleration += SpeedMult*0.03f;
+		// Delegate to the C implementation
+		CameraMath_AvoidWallsHit(dy, yDistLimit, &Target, &MaxSpeed, &Acceleration);
 	}
 	WellBufferMe(Target, Adjuster, AdjusterSpeed, MaxSpeed, Acceleration, false);
 }
@@ -3639,23 +3582,23 @@ CCam::Process_FlyBy(const CVector&, float, float, float)
 	if(uiTime < uiFinishTime){
 		TheCamera.m_fPositionAlongSpline = (float) uiTime / uiFinishTime;
 
-		while(uiTime >= (TheCamera.m_arrPathArray[2].m_arr_PathData[ArrayMarkerSource] - TheCamera.m_arrPathArray[2].m_arr_PathData[1])*1000.0f)
-			ArrayMarkerSource += 10;
+		// Advance to the spline segment of the time
+		ArrayMarkerSource = CameraMath_AdvanceSplineMarker(TheCamera.m_arrPathArray[2].m_arr_PathData, ArrayMarkerSource, uiTime, 10);
 		FindSplinePathPositionVector(&Source, TheCamera.m_arrPathArray[2].m_arr_PathData, uiTime, ArrayMarkerSource);
 
-		while(uiTime >= (TheCamera.m_arrPathArray[3].m_arr_PathData[ArrayMarkerFront] - TheCamera.m_arrPathArray[3].m_arr_PathData[1])*1000.0f)
-			ArrayMarkerFront += 10;
+		// Advance to the spline segment of the time
+		ArrayMarkerFront = CameraMath_AdvanceSplineMarker(TheCamera.m_arrPathArray[3].m_arr_PathData, ArrayMarkerFront, uiTime, 10);
 		FindSplinePathPositionVector(&Front, TheCamera.m_arrPathArray[3].m_arr_PathData, uiTime, ArrayMarkerFront);
 
-		while(uiTime >= (TheCamera.m_arrPathArray[1].m_arr_PathData[ArrayMarkerUp] - TheCamera.m_arrPathArray[1].m_arr_PathData[1])*1000.0f)
-			ArrayMarkerUp += 4;
+		// Advance to the spline segment of the time
+		ArrayMarkerUp = CameraMath_AdvanceSplineMarker(TheCamera.m_arrPathArray[1].m_arr_PathData, ArrayMarkerUp, uiTime, 4);
 		FindSplinePathPositionFloat(&UpAngle, TheCamera.m_arrPathArray[1].m_arr_PathData, uiTime, ArrayMarkerUp);
 		UpAngle = DEGTORAD(UpAngle) + HALFPI;
 		Up.x = Cos(UpAngle);
 		Up.z = Sin(UpAngle);
 
-		while(uiTime >= (TheCamera.m_arrPathArray[0].m_arr_PathData[ArrayMarkerFOV] - TheCamera.m_arrPathArray[0].m_arr_PathData[1])*1000.0f)
-			ArrayMarkerFOV += 4;
+		// Advance to the spline segment of the time
+		ArrayMarkerFOV = CameraMath_AdvanceSplineMarker(TheCamera.m_arrPathArray[0].m_arr_PathData, ArrayMarkerFOV, uiTime, 4);
 		FindSplinePathPositionFloat(&PsuedoFOV, TheCamera.m_arrPathArray[0].m_arr_PathData, uiTime, ArrayMarkerFOV);
 
 		m_cvecTargetCoorsForFudgeInter = Front;
@@ -3845,29 +3788,8 @@ CCam::Process_LightHouse(const CVector &CameraTarget, float, float, float)
 	Source.x = 474.3f;
 	Source.y = -1717.6f;
 
-	int CamMode;
-	if(CameraTarget.z > 57.0f && (CameraTarget-Source).Magnitude2D() > 3.2f){
-		// Outside at top
-		if(Timer > 0.0f){
-			Timer -= (*Timer_GetTimeStep());
-			CamMode = 1;
-		}else{
-			Timer = -24.0f;
-			CamMode = 2;
-		}
-	}else if(CameraTarget.z > 57.0f){
-		// Inside at top
-		if(Timer < 0.0f){
-			Timer += (*Timer_GetTimeStep());
-			CamMode = 2;
-		}else{
-			Timer = 24.0f;
-			CamMode = 1;
-		}
-	}else{
-		Timer = 0.0f;
-		CamMode = 0;
-	}
+	// Delegate to the C implementation
+	int CamMode = CameraMath_LightHouseMode(&Timer, CameraTarget.z, (CameraTarget-Source).Magnitude2D(), (*Timer_GetTimeStep()));
 
 	if(CamMode == 2){
 		Source.z = 57.5f;

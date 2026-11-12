@@ -5,6 +5,7 @@
 #include "ColSphere_native.h"
 
 #include "Garages.h"
+#include "GarageLogic.h"
 #include "StoredCar_backend.h"
 #include "main.h"
 
@@ -1160,43 +1161,14 @@ bool CGarage::IsStaticPlayerCarEntirelyInside()
 
 bool CGarage::IsPointInsideGarage(CVector pos)
 {
-	// is it IsPointInsideGarage(pos, 0.0f)?
-	if (pos.z < m_fInfZ)
-		return false;
-	if (pos.z > m_fSupZ)
-		return false;
-	CVector2D vecToTarget((CVector2D)pos - m_vecCorner1);
-	float dp = DotProduct2D(m_vDir1, vecToTarget);
-	if (dp < 0.0f)
-		return false;
-	if (m_fDir1Len < dp)
-		return false;
-	dp = DotProduct2D(m_vDir2, vecToTarget);
-	if (dp < 0.0f)
-		return false;
-	if (m_fDir2Len < dp)
-		return false;
-	return true;
+	// Delegate to the C implementation
+	return Garage_IsPointInside(this, pos.x, pos.y, pos.z);
 }
 
 bool CGarage::IsPointInsideGarage(CVector pos, float m_fMargin)
 {
-	if (pos.z < m_fInfZ - m_fMargin)
-		return false;
-	if (pos.z > m_fSupZ + m_fMargin)
-		return false;
-	CVector2D vecToTarget((CVector2D)pos - m_vecCorner1);
-	float dp = DotProduct2D(m_vDir1, vecToTarget);
-	if (dp < -m_fMargin)
-		return false;
-	if (m_fDir1Len + m_fMargin < dp)
-		return false;
-	dp = DotProduct2D(m_vDir2, vecToTarget);
-	if (dp < -m_fMargin)
-		return false;
-	if (m_fDir2Len + m_fMargin < dp)
-		return false;
-	return true;
+	// Delegate to the C implementation
+	return Garage_IsPointInsideWithMargin(this, pos.x, pos.y, pos.z, m_fMargin);
 }
 
 bool CGarage::IsEntityEntirelyInside3D(CEntity* pEntity, float fMargin)
@@ -1712,43 +1684,26 @@ bool CGarage::MarkThisCarAsCollectedForCraig(int32 mi)
 
 void CGarage::OpenThisGarage()
 {
-	if (m_eGarageState == GS_FULLYCLOSED || m_eGarageState == GS_CLOSING || m_eGarageState == GS_CLOSEDCONTAINSCAR)
-		m_eGarageState = GS_OPENING;
+	// Delegate to the C implementation
+	Garage_OpenThis(this);
 }
 
 void CGarage::CloseThisGarage()
 {
-	if (m_eGarageState == GS_OPENED || m_eGarageState == GS_OPENING)
-		m_eGarageState = GS_CLOSING;
+	// Delegate to the C implementation
+	Garage_CloseThis(this);
 }
 
 float CGarage::CalcDistToGarageRectangleSquared(float X, float Y)
 {
-	float distX, distY;
-	if (X < m_fInfX)
-		distX = m_fInfX - X;
-	else if (X > m_fSupX)
-		distX = X - m_fSupX;
-	else
-		distX = 0.0f;
-	if (Y < m_fInfY)
-		distY = m_fInfY - Y;
-	else if (Y > m_fSupY)
-		distY = Y - m_fSupY;
-	else
-		distY = 0.0f;
-	return SQR(distX) + SQR(distY);
+	// Delegate to the C implementation
+	return Garage_CalcDistToRectangleSquared(this, X, Y);
 }
 
 float CGarage::CalcSmallestDistToGarageDoorSquared(float X, float Y)
 {
-	float dist1 = 10000000.0f;
-	float dist2 = 10000000.0f;
-	if (m_pDoor1)
-		dist1 = SQR(m_fDoor1X - X) + SQR(m_fDoor1Y - Y);
-	if (m_pDoor2)
-		dist2 = SQR(m_fDoor2X - X) + SQR(m_fDoor2Y - Y);
-	return Min(dist1, dist2);
+	// Delegate to the C implementation
+	return Garage_CalcSmallestDistToDoorSquared(this, X, Y);
 }
 
 void CGarage::FindDoorsEntities()

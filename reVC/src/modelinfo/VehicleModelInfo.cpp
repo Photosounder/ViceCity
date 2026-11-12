@@ -3,6 +3,7 @@
 //+ rouz edit (ChatGPT)
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "VehicleComponents.h"
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 #include <rpmatfx.h>
 
@@ -662,82 +663,6 @@ CVehicleModelInfo::SetVehicleComponentFlags(RwFrame *frame, uint32 flags)
 #define COMPRULE2_COMPS(comprule) ((comprule >> 16) & 0xFFF)
 #define COMPRULE2_COMPN(comps, n) (((comps >> 16) >> 4*(n)) & 0xF)
 
-bool
-IsValidCompRule(int rule)
-{
-	if(rule == 2)
-		return Weather_OldWeatherType == WEATHER_RAINY ||
-		       Weather_NewWeatherType == WEATHER_RAINY;
-	return true;
-}
-
-int32
-CountCompsInRule(int comps)
-{
-	int32 n;
-	for(n = 0; comps != 0; comps >>= 4)
-		if((comps & 0xF) != 0xF)
-			n++;
-	return n;
-}
-
-int32
-ChooseComponent(int32 rule, int32 comps)
-{
-	int32 n;
-	switch(rule){
-	// identical cases....
-	case 1:
-		n = General_GetRandomNumberInRangeInt(0, CountCompsInRule(comps));
-		return COMPRULE_COMPN(comps, n);
-	case 2:
-		// only valid in rain
-		n = General_GetRandomNumberInRangeInt(0, CountCompsInRule(comps));
-		return COMPRULE_COMPN(comps, n);
-	case 3:
-		n = General_GetRandomNumberInRangeInt(0, 1+CountCompsInRule(comps));
-		if(n != 0)
-			return COMPRULE_COMPN(comps, n-1);
-		return -1;
-	case 4:
-#ifdef FIX_BUGS
-		return General_GetRandomNumberInRangeInt(0, 6);
-#else
-		return General_GetRandomNumberInRangeInt(0, 5);
-#endif
-	}
-	return -1;
-}
-
-int32
-GetListOfComponentsNotUsedByRules(uint32 comprules, int32 numComps, int32 *comps)
-{
-	int32 i, n;
-	int32 unused[6] = { 0, 1, 2, 3, 4, 5 };
-
-	// first comprule
-	if(COMPRULE_RULE(comprules) && IsValidCompRule(COMPRULE_RULE(comprules)))
-		for(i = 0; i < 3; i++){
-			n = COMPRULE_COMPN(comprules, i);
-			if(n != 0xF)
-				unused[n] = 0xF;
-		}
-	// second comprule
-	comprules >>= 16;
-	if(COMPRULE_RULE(comprules) && IsValidCompRule(COMPRULE_RULE(comprules)))
-		for(i = 0; i < 3; i++){
-			n = COMPRULE_COMPN(comprules, i);
-			if(n != 0xF)
-				unused[n] = 0xF;
-		}
-
-	n = 0;
-	for(i = 0; i < numComps; i++)
-		if(unused[i] != 0xF)
-			comps[n++] = unused[i];
-	return n;
-}
-
 int32 wheelIds[] = { CAR_WHEEL_LF, CAR_WHEEL_LB, CAR_WHEEL_RF, CAR_WHEEL_RB };
 
 void
@@ -750,52 +675,26 @@ CVehicleModelInfo::GetWheelPosn(int32 n, CVector &pos)
 }
 
 
+static bool
+IsRaining(void)
+{
+	// Rule 2 is only valid while it is raining or about to rain
+	return Weather_OldWeatherType == WEATHER_RAINY ||
+	       Weather_NewWeatherType == WEATHER_RAINY;
+}
+
 int32
 CVehicleModelInfo::ChooseComponent(void)
 {
-	int32 comp;
-	int32 comps[8];
-	int32 n;
-
-	comp = -1;
-	if(ms_compsToUse[0] == -2){
-		if(COMPRULE_RULE(m_compRules) && IsValidCompRule(COMPRULE_RULE(m_compRules)))
-			comp = ::ChooseComponent(COMPRULE_RULE(m_compRules), COMPRULE_COMPS(m_compRules));
-		else if(General_GetRandomNumberInRangeInt(0, 3) < 2){
-			n = GetListOfComponentsNotUsedByRules(m_compRules, m_numComps, comps);
-			if(n)
-				comp = comps[(int)General_GetRandomNumberInRangeInt(0, n)];
-		}
-	}else{
-		comp = ms_compsToUse[0];
-		ms_compsToUse[0] = -2;
-	}
-	return comp;
+	// Delegate to the C implementation
+	return VehicleComp_ChooseFirst(ms_compsToUse, m_compRules, m_numComps, IsRaining());
 }
 
 int32
 CVehicleModelInfo::ChooseSecondComponent(void)
 {
-	int32 comp;
-	int32 comps[8];
-	int32 n;
-
-	comp = -1;
-	if(ms_compsToUse[1] == -2){
-		if(COMPRULE2_RULE(m_compRules) && IsValidCompRule(COMPRULE2_RULE(m_compRules)))
-			comp = ::ChooseComponent(COMPRULE2_RULE(m_compRules), COMPRULE2_COMPS(m_compRules));
-		else if(COMPRULE_RULE(m_compRules) && IsValidCompRule(COMPRULE_RULE(m_compRules)) &&
-		        General_GetRandomNumberInRangeInt(0, 3) < 2){
-
-			n = GetListOfComponentsNotUsedByRules(m_compRules, m_numComps, comps);
-			if(n)
-				comp = comps[(int)General_GetRandomNumberInRangeInt(0, n)];
-		}
-	}else{
-		comp = ms_compsToUse[1];
-		ms_compsToUse[1] = -2;
-	}
-	return comp;
+	// Delegate to the C implementation
+	return VehicleComp_ChooseSecond(ms_compsToUse, m_compRules, m_numComps, IsRaining());
 }
 
 struct editableMatCBData

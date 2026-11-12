@@ -11,6 +11,7 @@
 #include "crossplatform.h"
 #include "platform.h"
 #include "Frontend.h"
+#include "MenuListLogic.h"
 #include "Font.h"
 #include "Pad.h"
 #include "Text.h"
@@ -242,67 +243,31 @@ wchar* CMenuManager::m_pDialogText = nil;
 inline void
 CMenuManager::ScrollUpListByOne() 
 {
-	if (m_nSelectedListRow == m_nFirstVisibleRowOnList) {
-		if (m_nFirstVisibleRowOnList > 0) {
-			m_nSelectedListRow--;
-			m_nFirstVisibleRowOnList--;
-			m_nScrollbarTopMargin -= SCROLLBAR_MAX_HEIGHT / m_nTotalListRow;
-		}
-	} else {
-		m_nSelectedListRow--;
-	}
+	// Delegate to the C implementation
+	MenuList_ScrollUpByOne(&m_nSelectedListRow, &m_nFirstVisibleRowOnList, &m_nScrollbarTopMargin, m_nTotalListRow, SCROLLBAR_MAX_HEIGHT);
 }
 
 inline void
 CMenuManager::ScrollDownListByOne()
 {
-	if (m_nSelectedListRow == m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION_ON_SCREEN - 1) {
-		if (m_nFirstVisibleRowOnList < m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN) {
-			m_nSelectedListRow++;
-			m_nFirstVisibleRowOnList++;
-			m_nScrollbarTopMargin += SCROLLBAR_MAX_HEIGHT / m_nTotalListRow;
-		}
-	} else {
-		if (m_nSelectedListRow < m_nTotalListRow - 1) {
-			m_nSelectedListRow++;
-		}
-	}
+	// Delegate to the C implementation
+	MenuList_ScrollDownByOne(&m_nSelectedListRow, &m_nFirstVisibleRowOnList, &m_nScrollbarTopMargin, m_nTotalListRow, MAX_VISIBLE_OPTION_ON_SCREEN, SCROLLBAR_MAX_HEIGHT);
 }
 
 inline void
 CMenuManager::PageUpList(bool playSoundOnSuccess)
 {
-	if (m_nTotalListRow > MAX_VISIBLE_OPTION_ON_SCREEN) {
-		if (m_nFirstVisibleRowOnList > 0) {
-			if(playSoundOnSuccess)
-				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
-
-			m_nFirstVisibleRowOnList = Max(0, m_nFirstVisibleRowOnList - MAX_VISIBLE_OPTION_ON_SCREEN);
-			m_nSelectedListRow = Min(m_nSelectedListRow, m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION_ON_SCREEN - 1);
-		} else {
-			m_nFirstVisibleRowOnList = 0;
-			m_nSelectedListRow = 0;
-		}
-		m_nScrollbarTopMargin = (SCROLLBAR_MAX_HEIGHT / m_nTotalListRow) * m_nFirstVisibleRowOnList;
-	}
+	// Page in C and play the sound when it asks for it
+	if (MenuList_PageUp(&m_nSelectedListRow, &m_nFirstVisibleRowOnList, &m_nScrollbarTopMargin, m_nTotalListRow, MAX_VISIBLE_OPTION_ON_SCREEN, SCROLLBAR_MAX_HEIGHT) && playSoundOnSuccess)
+		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 }
 
 inline void
 CMenuManager::PageDownList(bool playSoundOnSuccess)
 {
-	if (m_nTotalListRow > MAX_VISIBLE_OPTION_ON_SCREEN) {
-		if (m_nFirstVisibleRowOnList < m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN) {
-			if(playSoundOnSuccess)
-				DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
-
-			m_nFirstVisibleRowOnList = Min(m_nFirstVisibleRowOnList + MAX_VISIBLE_OPTION_ON_SCREEN, m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN);
-			m_nSelectedListRow = Max(m_nSelectedListRow, m_nFirstVisibleRowOnList);
-		} else {
-			m_nFirstVisibleRowOnList = m_nTotalListRow - MAX_VISIBLE_OPTION_ON_SCREEN;
-			m_nSelectedListRow = m_nTotalListRow - 1;
-		}
-		m_nScrollbarTopMargin = (SCROLLBAR_MAX_HEIGHT / m_nTotalListRow) * m_nFirstVisibleRowOnList;
-	}
+	// Page in C and play the sound when it asks for it
+	if (MenuList_PageDown(&m_nSelectedListRow, &m_nFirstVisibleRowOnList, &m_nScrollbarTopMargin, m_nTotalListRow, MAX_VISIBLE_OPTION_ON_SCREEN, SCROLLBAR_MAX_HEIGHT) && playSoundOnSuccess)
+		DMAudio_PlayFrontEndSound(SOUND_FRONTEND_HIGHLIGHT_OPTION, 0);
 }
 
 #ifdef CUSTOM_FRONTEND_OPTIONS
@@ -730,48 +695,46 @@ CMenuManager::CheckSliderMovement(int value)
 	switch (aScreens[m_nCurrScreen].m_aEntries[m_nCurrOption].m_Action) {
 	case MENUACTION_BRIGHTNESS:
 #ifdef FIX_BUGS
-		m_PrefsBrightness += value * (384 / MENUSLIDER_LOGICAL_BARS);
+		// Delegate the slider step to the C implementation
+		m_PrefsBrightness = MenuLogic_SliderBrightness(m_PrefsBrightness, value, MENUSLIDER_LOGICAL_BARS);
 #else
 		m_PrefsBrightness += value * 24.19f;
-#endif
 		m_PrefsBrightness = Clamp(m_PrefsBrightness, 0, 384);
+#endif
 		break;
 	case MENUACTION_DRAWDIST:
-		if(value > 0)
-			m_PrefsLOD += ((1.8f - 0.925f) / MENUSLIDER_LOGICAL_BARS);
-		else
-			m_PrefsLOD -= ((1.8f - 0.925f) / MENUSLIDER_LOGICAL_BARS);
-		m_PrefsLOD = Clamp(m_PrefsLOD, 0.925f, 1.8f);
+		// Delegate the slider step to the C implementation
+		m_PrefsLOD = MenuLogic_SliderLOD(m_PrefsLOD, value, MENUSLIDER_LOGICAL_BARS);
 		CRenderer::ms_lodDistScale = m_PrefsLOD;
 		break;
 
 	// I wonder the idea behind clamping those max to 65
 	case MENUACTION_MUSICVOLUME:
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
-			m_PrefsMusicVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
-			m_PrefsMusicVolume = Clamp(m_PrefsMusicVolume, 0, 65);
+			// Delegate the slider step to the C implementation
+			m_PrefsMusicVolume = MenuLogic_SliderVolume(m_PrefsMusicVolume, value, MENUSLIDER_LOGICAL_BARS);
 			DMAudio_SetMusicMasterVolume(m_PrefsMusicVolume);
 		}
 		break;
 	case MENUACTION_SFXVOLUME:
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
-			m_PrefsSfxVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
-			m_PrefsSfxVolume = Clamp(m_PrefsSfxVolume, 0, 65);
+			// Delegate the slider step to the C implementation
+			m_PrefsSfxVolume = MenuLogic_SliderVolume(m_PrefsSfxVolume, value, MENUSLIDER_LOGICAL_BARS);
 			DMAudio_SetEffectsMasterVolume(m_PrefsSfxVolume);
 		}
 		break;
 	case MENUACTION_MP3VOLUMEBOOST:
 		if (m_nPrefsAudio3DProviderIndex != NO_AUDIO_PROVIDER) {
 			if (DMAudio_IsMP3RadioChannelAvailable()) {
-				m_PrefsMP3BoostVolume += value * (64 / MENUSLIDER_LOGICAL_BARS);
-				m_PrefsMP3BoostVolume = Clamp(m_PrefsMP3BoostVolume, 0, 65);
+				// Delegate the slider step to the C implementation
+				m_PrefsMP3BoostVolume = MenuLogic_SliderVolume(m_PrefsMP3BoostVolume, value, MENUSLIDER_LOGICAL_BARS);
 				DMAudio_SetMP3BoostVolume(m_PrefsMP3BoostVolume);
 			}
 		}
 		break;
 	case MENUACTION_MOUSESENS:
-		TheCamera.m_fMouseAccelHorzntl += value * 1.0f/200.0f/15.0f;	// probably because diving it to 15 instead of 16(MENUSLIDER_LOGICAL_BARS) had more accurate steps
-		TheCamera.m_fMouseAccelHorzntl = Clamp(TheCamera.m_fMouseAccelHorzntl, 1.0f/3200.0f, 1.0f/200.0f);
+		// Delegate the slider step to the C implementation
+		TheCamera.m_fMouseAccelHorzntl = MenuLogic_SliderMouseSens(TheCamera.m_fMouseAccelHorzntl, value);
 #ifdef FIX_BUGS
 		TheCamera.m_fMouseAccelVertical = TheCamera.m_fMouseAccelHorzntl + 0.0005f;
 #endif
@@ -6313,17 +6276,8 @@ CMenuManager::ChangeRadioStation(int8 increaseBy)
 		m_LeftMostRadioX = MENU_X_LEFT_ALIGNED(MENURADIO_ICON_FIRST_X - (2 * MENURADIO_ICON_SIZE));
 	}
 
-	if (DMAudio_IsMP3RadioChannelAvailable()) {
-		if (m_PrefsRadioStation < WILDSTYLE)
-			m_PrefsRadioStation = USERTRACK;
-		if (m_PrefsRadioStation > USERTRACK)
-			m_PrefsRadioStation = WILDSTYLE;
-	} else {
-		if (m_PrefsRadioStation < WILDSTYLE)
-			m_PrefsRadioStation = WAVE;
-		if (m_PrefsRadioStation > WAVE)
-			m_PrefsRadioStation = WILDSTYLE;
-	}
+	// Delegate to the C implementation
+	m_PrefsRadioStation = MenuLogic_WrapRadioStation(m_PrefsRadioStation, DMAudio_IsMP3RadioChannelAvailable());
 	DMAudio_StopFrontEndTrack();
 	DMAudio_PlayFrontEndSound(SOUND_RADIO_CHANGE, 0);
 }

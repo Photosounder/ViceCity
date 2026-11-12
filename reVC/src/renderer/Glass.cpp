@@ -4,6 +4,7 @@
 #include "ColSphere_native.h"
 
 #include "Glass.h"
+#include "GlassLogic.h"
 #include "Timer.h"
 #include "Object.h"
 #include "Vehicle.h"
@@ -124,22 +125,8 @@ CFallingGlassPane::Update(void)
 {
 	if ( (*Timer_GetTimeInMilliseconds()) >= m_nTimer )
 	{
-		// Apply MoveSpeed
-		if ( m_bCarGlass )
-			GetPosition()    += m_vecMoveSpeed * (*Timer_GetTimeStep()) * 0.35f;
-		else
-			GetPosition()    += m_vecMoveSpeed * (*Timer_GetTimeStep());
-
-		// Apply Gravity
-		if ( m_bCarGlass )
-			m_vecMoveSpeed.z -= 0.01f          *  (*Timer_GetTimeStep());
-		else
-			m_vecMoveSpeed.z -= 0.02f          *  (*Timer_GetTimeStep());
-
-		// Apply TurnSpeed
-		GetRight()   += CrossProduct(m_vecTurn, GetRight());
-		GetForward() += CrossProduct(m_vecTurn, GetForward());
-		GetUp()      += CrossProduct(m_vecTurn, GetUp());
+		// Delegate to the C implementation
+		Glass_StepFallingPane(m_bCarGlass, (*Timer_GetTimeStep()), (VectorMath3*)&GetPosition(), (VectorMath3*)&m_vecMoveSpeed, (VectorMath3*)&GetRight(), (VectorMath3*)&GetForward(), (VectorMath3*)&GetUp(), *(VectorMath3*)&m_vecTurn);
 
 		if ( GetPosition().z < m_fGroundZ )
 		{
@@ -196,21 +183,15 @@ CFallingGlassPane::Render(void)
 	fwdNorm.Normalise();
 	uint8 alpha = CGlass::CalcAlphaWithNormal(&fwdNorm);
 
-#ifdef FIX_BUGS
-	uint16 time = Clamp((*Timer_GetTimeInMilliseconds()) > m_nTimer ? (*Timer_GetTimeInMilliseconds()) - m_nTimer : 0u, 0u, 500u);
-#else
-	uint16 time = Clamp((*Timer_GetTimeInMilliseconds()) - m_nTimer, 0, 500);
-#endif
-
-	uint8 color = int32( float(alpha) * (float(time) / 500) );
+// Delegate to the C implementation
+uint8 color = Glass_HiLightColor(alpha, (*Timer_GetTimeInMilliseconds()), m_nTimer, m_bCarGlass);
 
 	if ( TempBufferIndicesStoredHiLight >= TEMPBUFFERINDEXHILIGHTSIZE-7 || TempBufferVerticesStoredHiLight >= TEMPBUFFERVERTHILIGHTSIZE-4 )
 		CGlass::RenderHiLightPolys();
 
 	// HiLight Polys
 	
-	if ( m_bCarGlass && color < 64 )
-		color = 64;
+	// The minimum for car glass is applied by the C implementation
 		
 	RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredHiLight + 0], color, color, color, color);
 	RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredHiLight + 1], color, color, color, color);
@@ -251,9 +232,8 @@ CFallingGlassPane::Render(void)
 		if ( TempBufferIndicesStoredShattered >= TEMPBUFFERINDEXSHATTEREDSIZE-7 || TempBufferVerticesStoredShattered >= TEMPBUFFERVERTSHATTEREDSIZE-4 )
 			CGlass::RenderShatteredPolys();
 
-		uint8 shatteredColor = 140;
-		if ( distToCamera > 30.0f )
-			shatteredColor = int32((1.0f - (distToCamera - 30.0f) * 4.0f / 40.0f) * 140);
+		// Delegate to the C implementation
+		uint8 shatteredColor = Glass_ShatteredColor(distToCamera);
 
 		RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredShattered + 0], shatteredColor, shatteredColor, shatteredColor, shatteredColor);
 		RwIm3DVertexSetRGBA (&TempBufferRenderVertices[TempBufferVerticesStoredShattered + 1], shatteredColor, shatteredColor, shatteredColor, shatteredColor);
@@ -367,23 +347,9 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 	float upLen    = up.Magnitude();
 	float rightLen = right.Magnitude();
 
-	float upSteps = upLen + 0.75f;
-	if ( upSteps < 1.0f ) upSteps = 1.0f;
-
-	float rightSteps = rightLen + 0.75f;
-	if ( rightSteps < 1.0f ) rightSteps = 1.0f;
-
-	uint32 ysteps = stepmul * (uint32)upSteps;
-	if ( ysteps > 3 ) ysteps = 3;
-
-	uint32 xsteps = stepmul * (uint32)rightSteps;
-	if ( xsteps > 3 ) xsteps = 3;
-
-	if ( explosion )
-	{
-		if ( ysteps > 1 ) ysteps = 1;
-		if ( xsteps > 1 ) xsteps = 1;
-	}
+	// Delegate to the C implementation
+	uint32 ysteps, xsteps;
+	Glass_ComputeSteps(upLen, rightLen, stepmul, explosion, &ysteps, &xsteps);
 
 	float upScl    = upLen    / float(ysteps);
 	float rightScl = rightLen / float(xsteps);
@@ -406,33 +372,11 @@ CGlass::GeneratePanesForWindow(uint32 type, CVector pos, CVector up, CVector rig
 				{
 					pane->m_nTriIndex = i;
 					
-					pane->GetRight()  = (right * rightScl) / rightLen;
-					pane->GetUp()     = (up    * upScl)    / upLen;
-
-					CVector fwd = CrossProduct(pane->GetRight(), pane->GetUp());
-					fwd.Normalise();
-
-					pane->GetForward() = fwd;
-
-					pane->GetPosition() = right / rightLen * (rightScl * CentersWithTriangle[i].x + stepx)
-										+ up    / upLen    * (upScl    * CentersWithTriangle[i].y + stepy)
-										+ pos;
-
-					pane->m_vecMoveSpeed.x = float((General_GetRandomNumber() & 127) - 64) * 0.0015f + speed.x;
-					pane->m_vecMoveSpeed.y = float((General_GetRandomNumber() & 127) - 64) * 0.0015f + speed.y;
-					pane->m_vecMoveSpeed.z = 0.0f + speed.z;
-
-					if ( moveSpeed != 0.0f )
-					{
-						CVector dist = pane->GetPosition() - center;
-						dist.Normalise();
-
-						pane->m_vecMoveSpeed += moveSpeed * dist;
-					}
-
-					pane->m_vecTurn.x = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
-					pane->m_vecTurn.y = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
-					pane->m_vecTurn.z = float((General_GetRandomNumber() & 127) - 64) * 0.002f;
+					// Delegate to the C implementation
+					Glass_InitPane(*(VectorMath3*)&right, *(VectorMath3*)&up, rightLen, upLen, rightScl, upScl, stepx, stepy, CentersWithTriangle[i].x, CentersWithTriangle[i].y,
+						*(VectorMath3*)&pos, *(VectorMath3*)&speed, *(VectorMath3*)&center, moveSpeed,
+						(VectorMath3*)&pane->GetRight(), (VectorMath3*)&pane->GetUp(), (VectorMath3*)&pane->GetForward(), (VectorMath3*)&pane->GetPosition(),
+						(VectorMath3*)&pane->m_vecMoveSpeed, (VectorMath3*)&pane->m_vecTurn);
 
 					switch ( type )
 					{
@@ -612,10 +556,9 @@ CGlass::CalcAlphaWithNormal(CVector *normal)
 	//+ rouz edit (ChatGPT)
 	// Calculate pane brightness against the camera currently rendering the glass
 	CVector cameraForward = GetGlassRenderCameraForward();
-	float fwdDir = 2.0f * DotProduct(*normal, cameraForward);
-	float fwdDot = DotProduct(cameraForward-fwdDir*(*normal), CVector(0.57f, 0.57f, -0.57f));
 	//- rouz edit (ChatGPT)
-	return int32(lerp(fwdDot*fwdDot*fwdDot*fwdDot*fwdDot*fwdDot, 20.0f, 255.0f));
+	// Delegate to the C implementation
+	return Glass_CalcAlphaWithNormal(*(VectorMath3*)normal, *(VectorMath3*)&cameraForward);
 }
 
 void
@@ -714,12 +657,11 @@ CGlass::WindowRespondsToCollision(CEntity *entity, float amount, CVector speed, 
 		const CollisionVector3 collisionVertexValue7_0=CompressedVector_Get(&col->vertices[3]);
 		CVector d = CVector(collisionVertexValue7_0.x,collisionVertexValue7_0.y,collisionVertexValue7_0.z);
 	
-		float minx = Min(Min(a.x, b.x), Min(c.x, d.x));
-		float maxx = Max(Max(a.x, b.x), Max(c.x, d.x));
-		float miny = Min(Min(a.y, b.y), Min(c.y, d.y));
-		float maxy = Max(Max(a.y, b.y), Max(c.y, d.y));
-		float minz = Min(Min(a.z, b.z), Min(c.z, d.z));
-		float maxz = Max(Max(a.z, b.z), Max(c.z, d.z));
+		// Delegate to the C implementation
+		VectorMath3 boundsMin, boundsMax;
+		Glass_WindowBounds(*(VectorMath3*)&a, *(VectorMath3*)&b, *(VectorMath3*)&c, *(VectorMath3*)&d, &boundsMin, &boundsMax);
+		float minx = boundsMin.x, miny = boundsMin.y, minz = boundsMin.z;
+		float maxx = boundsMax.x, maxy = boundsMax.y, maxz = boundsMax.z;
 		
 		CVector pa = object->GetMatrix() * CVector(minx, miny, minz);
 		CVector pb = object->GetMatrix() * CVector(maxx, maxy, minz);
@@ -821,7 +763,9 @@ CGlass::WindowRespondsToExplosion(CEntity *entity, CVector point)
 	
 		if ( fDistToGlass < 10.0f )
 		{
-			distToGlass *= (0.3f / fDistToGlass); // normalise
+			// Normalise to the length of the push in the C implementation
+			VectorMath3 push = Glass_ExplosionPush(*(VectorMath3*)&distToGlass, fDistToGlass);
+			distToGlass = CVector(push.x, push.y, push.z);
 			WindowRespondsToCollision(object, 10000.0f, distToGlass, object->GetPosition(), true);
 		}
 		else

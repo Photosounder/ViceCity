@@ -21,6 +21,7 @@
 #include "HandlingMgr.h"
 #include "Heli.h"
 #include "Plane.h"
+#include "PlaneMath.h"
 #include "MemoryHeap.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 
@@ -61,50 +62,13 @@ enum
 	CESNA_STATUS_LANDED,
 };
 
-static float
-GetPlanePathSegmentLength(CPlaneNode *nodes, int32 numNodes, float totalLength, int32 start, int32 end)
-{
-	float length;
-
-	if(start == end)
-		return 0.0f;
-	length = nodes[end].t - nodes[start].t;
-	if(length <= 0.0f)
-		length += totalLength;
-	return length;
-}
-
-static CVector
-GetPlanePathTangent(CPlaneNode *nodes, int32 numNodes, float totalLength, bool loop, int32 node, float segmentLength)
-{
-	int32 prev = node > 0 ? node - 1 : (loop ? numNodes - 1 : node);
-	int32 next = node + 1 < numNodes ? node + 1 : (loop ? 0 : node);
-	float prevLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, prev, node);
-	float nextLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, node, next);
-	float tangentLength = prevLength + nextLength;
-
-	if(prev == node)
-		return nodes[next].p - nodes[node].p;
-	if(next == node)
-		return nodes[node].p - nodes[prev].p;
-	if(tangentLength <= 0.0f)
-		return CVector(0.0f, 0.0f, 0.0f);
-	return (nodes[next].p - nodes[prev].p) * (segmentLength/tangentLength);
-}
-
 static CVector
 InterpolatePlanePathPosition(CPlaneNode *nodes, int32 numNodes, float totalLength, bool loop, int32 node, int32 next, float f)
 {
-	float f2 = f*f;
-	float f3 = f2*f;
-	float segmentLength = GetPlanePathSegmentLength(nodes, numNodes, totalLength, node, next);
-	CVector tangent0 = GetPlanePathTangent(nodes, numNodes, totalLength, loop, node, segmentLength);
-	CVector tangent1 = GetPlanePathTangent(nodes, numNodes, totalLength, loop, next, segmentLength);
-
-	return nodes[node].p*(2.0f*f3 - 3.0f*f2 + 1.0f) +
-		tangent0*(f3 - 2.0f*f2 + f) +
-		nodes[next].p*(-2.0f*f3 + 3.0f*f2) +
-		tangent1*(f3 - f2);
+	// Delegate to the C implementation
+	float out[3];
+	PlaneMath_InterpolatePathPosition(nodes, numNodes, totalLength, loop, node, next, f, out);
+	return CVector(out[0], out[1], out[2]);
 }
 
 int32 CesnaMissionStatus;

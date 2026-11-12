@@ -4,6 +4,7 @@
 
 #include "templates.h"
 #include "General.h"
+#include "ColStoreLogic.h"
 #include "ModelInfo.h"
 #include "Streaming.h"
 #include "FileLoader.h"
@@ -69,15 +70,8 @@ CColStore::AddColSlot(const char *name)
 	ColDef *def = ((ColDef*)CPool_New(ms_pColPool));
 	//- rouz edit (ChatGPT)
 	assert(def);
-	def->isLoaded = false;
-	def->unused = 0;
-	def->bounds.left = 1000000.0f;
-	def->bounds.top = 1000000.0f;
-	def->bounds.right = -1000000.0f;
-	def->bounds.bottom = -1000000.0f;
-	def->minIndex = INT16_MAX;
-	def->maxIndex = INT16_MIN;
-	strcpy(def->name, name);
+	// Set the slot up in C
+	ColStore_InitSlot(def, name);
 	//+ rouz edit (ChatGPT)
 	// Access raw storage through the C store or pool API
 	return CPool_GetJustIndex(ms_pColPool, def);
@@ -100,17 +94,8 @@ CColStore::RemoveColSlot(int slot)
 int
 CColStore::FindColSlot(const char *name)
 {
-	ColDef *def;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int size = CPool_GetSize(ms_pColPool);
-	//- rouz edit (ChatGPT)
-	for(int i = 0; i < size; i++){
-		def = GetSlot(i);
-		if(def && !General_faststricmp(def->name, name))
-			return i;
-	}
-	return -1;
+	// Delegate to the C implementation
+	return ColStore_FindColSlot(ms_pColPool, name);
 }
 
 char*
@@ -128,11 +113,8 @@ CColStore::GetBoundingBox(int32 slot)
 void
 CColStore::IncludeModelIndex(int32 slot, int32 modelIndex)
 {
-	ColDef *def = GetSlot(slot);
-	if(modelIndex < def->minIndex)
-		def->minIndex = modelIndex;
-	if(modelIndex > def->maxIndex)
-		def->maxIndex = modelIndex;
+	// Delegate to the C implementation
+	ColStore_IncludeModelIndex(GetSlot(slot), modelIndex);
 }
 
 bool
@@ -286,13 +268,8 @@ CColStore::EnsureCollisionIsInMemory(const CVector2D &pos)
 bool
 CColStore::HasCollisionLoaded(const CVector2D &pos)
 {
-	int i;
-
-	for(i = 1; i < COLSTORESIZE; i++)
-		if(GetSlot(i) && Rect_IsPointInsideRadius(&GetBoundingBox(i), &pos.x, &pos.y, -115.0f) &&
-		   !GetSlot(i)->isLoaded)
-			return false;
-	return true;
+	// Delegate to the C implementation
+	return ColStore_HasCollisionLoaded(ms_pColPool, COLSTORESIZE, pos.x, pos.y);
 }
 
 //- rouz edit (ChatGPT)

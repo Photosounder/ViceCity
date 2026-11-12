@@ -31,6 +31,7 @@
 #include "Occlusion.h"
 #include "Replay.h"
 #include "WaterLevel.h"
+#include "WaterLevelMath.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 #include "SurfaceTable.h"
 #include "WaterCreatures.h"
@@ -791,27 +792,8 @@ CWaterLevel::GetWaterLevel(float fX, float fY, float fZ, float *pfOutLevel, bool
 	ASSERT( pfOutLevel != nil );
 	*pfOutLevel = ms_aWaterZs[nBlock];
 
-	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
-	
-	float fWave = Sin
-	(
-		( WATER_UNSIGN_Y(fY)                  - y*SMALL_SECTOR_SIZE
-		+ WATER_UNSIGN_X(fX + WATER_X_OFFSET) - x*SMALL_SECTOR_SIZE )
-		
-		* (TWOPI / SMALL_SECTOR_SIZE ) + fAngle
-	);
-
-	float fWindFactor = Weather_WindClipped * 0.4f + 0.2f;
-	
-	*pfOutLevel += fWave * fWindFactor;
-
-	if ( bDontCheckZ == false && (*pfOutLevel - fZ) > 3.0f )
-	{
-		*pfOutLevel = 0.0f;
-		return false;
-	}
-
-	return true;
+	// Delegate the waves to the C implementation
+	return WaterMath_LevelWithWaves(pfOutLevel, (*Timer_GetTimeInMilliseconds()), Weather_WindClipped, fX, fY, fZ, bDontCheckZ, x, y);
 }
 
 bool
@@ -837,13 +819,8 @@ CWaterLevel::GetWaterLevelNoWaves(float fX, float fY, float fZ, float *pfOutLeve
 float
 CWaterLevel::GetWaterWavesOnly(short x, short y)
 {
-	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
-	
-	float fWindFactor = Weather_WindClipped * 0.7f + 0.3f;
-	
-	float fWave = Sin( float(float(4 * y + 4 * x) * (TWOPI / SMALL_SECTOR_SIZE )) + fAngle );
-	
-	return fWave * fWindFactor;
+	// Delegate to the C implementation
+	return WaterMath_WavesOnly((*Timer_GetTimeInMilliseconds()), Weather_WindClipped, x, y);
 }
 	   
 CVector
@@ -854,20 +831,9 @@ CWaterLevel::GetWaterNormal(float fX, float fY)
 	int32 x = WATER_TO_SMALL_SECTOR_X(fX);
 	int32 y = WATER_TO_SMALL_SECTOR_Y(fY);
 	
-	float fAngle = ((*Timer_GetTimeInMilliseconds()) & 4095) * (TWOPI / 4096.0f);
-	float fWindFactor = Weather_WindClipped * 0.4f + 0.2f;
-	
-	float _fWave = (WATER_UNSIGN_Y(fY) - y*SMALL_SECTOR_SIZE + WATER_UNSIGN_X(fX) - x*SMALL_SECTOR_SIZE)
-			* (TWOPI / SMALL_SECTOR_SIZE ) + fAngle;
-
-	CVector vA(1.0f, 0.0f, fWindFactor * (TWOPI / SMALL_SECTOR_SIZE ) * Cos(_fWave));
-	CVector vB(0.0f, 1.0f, fWindFactor * (TWOPI / SMALL_SECTOR_SIZE ) * Cos(_fWave));
-	
-	CVector norm = CrossProduct(vA, vB);
-	
-	norm.Normalise();
-	
-	return norm;
+	// Delegate the normal to the C implementation
+	VectorMath3 norm = WaterMath_Normal((*Timer_GetTimeInMilliseconds()), Weather_WindClipped, fX, fY, x, y);
+	return CVector(norm.x, norm.y, norm.z);
 }
 
 
@@ -875,96 +841,35 @@ inline float
 _GetWaterDrawDist()
 {
 	// Scale the water draw distance from the camera currently rendering the water
-	//+ rouz edit (ChatGPT)
-	float cameraZ = GetWaterRenderCameraPosition().z;
-	if     ( cameraZ > 40.0f  ) return 4000.0f;
-	if     ( cameraZ < 15.0f  ) return 1200.0f;
-	return ( cameraZ + -15.0f ) * 800.0f / 45.0f + 1200.0f;
-	//- rouz edit (ChatGPT)
+	return WaterMath_WaterDrawDist(GetWaterRenderCameraPosition().z);
 }
 
 inline float
 _GetWavyDrawDist()
 {
-	if ( FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() )
-		return 120.0f;
-	else
-		return 70.0f;
+	return WaterMath_WavyDrawDist(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 }
 
 inline void
 _GetCamBounds(bool *bUseCamStartY, bool *bUseCamEndY, bool *bUseCamStartX, bool *bUseCamEndX)
 {
 	// Avoid directional water-sector clipping for cameras looking mostly vertically
-	//+ rouz edit (ChatGPT)
 	CVector cameraForward = GetWaterRenderCameraForward();
-	if ( Abs(cameraForward.z) < 0.8f )
-	{
-		if ( Abs(cameraForward.x) > Abs(cameraForward.y) )
-		{
-			if ( cameraForward.x > 0.0f )
-				*bUseCamStartX = true;
-			else
-				*bUseCamEndX = true;
-		}
-		else
-		{
-			if ( cameraForward.y > 0.0f )
-				*bUseCamStartY = true;
-			else
-				*bUseCamEndY = true;
-		}
-	}
-	//- rouz edit (ChatGPT)
+	WaterMath_CamBounds(cameraForward.x, cameraForward.y, cameraForward.z, bUseCamStartY, bUseCamEndY, bUseCamStartX, bUseCamEndX);
 }
 
 
 inline bool 
 _IsColideWithBlock(int32 x, int32 y, int32 &block)
 {
-	block = CWaterLevel::aWaterFineBlockList[x + 0][y + 0];
-	if (block >= 0)
-		return true;
-
-	block = CWaterLevel::aWaterFineBlockList[x + 0][y + 1];
-	if (block >= 0)
-	{
-		block = CWaterLevel::aWaterFineBlockList[x + 0][y + 2];
-		if (block >= 0)
-			return true;
-	}
-
-	block = CWaterLevel::aWaterFineBlockList[x + 1][y + 0];
-	if (block >= 0)
-		return true;
-
-	block = CWaterLevel::aWaterFineBlockList[x + 1][y + 1];
-	if (block >= 0)
-	{
-		block = CWaterLevel::aWaterFineBlockList[x + 1][y + 2];
-		if (block >= 0)
-			return true;
-	}
-
-	block = CWaterLevel::aWaterFineBlockList[x + 2][y + 0];
-	if (block >= 0)
-		return true;
-
-	block = CWaterLevel::aWaterFineBlockList[x + 2][y + 1];
-	if (block >= 0)
-	{
-		block = CWaterLevel::aWaterFineBlockList[x + 2][y + 2];
-		if (block >= 0)
-			return true;
-	}
-
-	return false;
+	// Delegate to the C implementation
+	return WaterMath_CollidesWithBlock((const int8_t (*)[128])CWaterLevel::aWaterFineBlockList, x, y, &block);
 }
 
 inline float
 SectorRadius(float fSize)
 {
-	return Sqrt(Pow(fSize, 2) + Pow(fSize, 2));
+	return WaterMath_SectorRadius(fSize);
 }
 
 //+ rouz edit (ChatGPT)

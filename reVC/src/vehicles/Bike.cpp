@@ -45,8 +45,10 @@
 #include "PlayerPed.h"
 #include "DamageManager.h"
 #include "Vehicle.h"
+#include "VehicleLogic.h"
 #include "Automobile.h"
 #include "Bike.h"
+#include "BikeLogic.h"
 #include "Debug.h"
 #include "SaveBuf.h"
 
@@ -2401,7 +2403,8 @@ CBike::GetComponentWorldPosition(int32 component, CVector &pos)
 bool
 CBike::IsComponentPresent(int32 component)
 {
-	return m_aBikeNodes[component] != nil;
+	// Delegate to the C implementation
+	return Bike_IsComponentPresent(this, component);
 }
 
 void
@@ -2444,10 +2447,8 @@ CBike::IsDoorMissing(eDoors door)
 void
 CBike::RemoveRefsToVehicle(CEntity *ent)
 {
-	int i;
-	for(i = 0; i < 4; i++)
-		if(m_aGroundPhysical[i] == ent)
-			m_aGroundPhysical[i] = nil;
+	// Delegate to the C implementation
+	Bike_RemoveRefsToVehicle(this, ent);
 }
 
 void
@@ -2634,28 +2635,9 @@ CBike::GetHeightAboveRoad(void)
 void
 CBike::PlayCarHorn(void)
 {
-	uint32 r;
-
-	if (IsAlarmOn() || m_nCarHornTimer != 0)
-		return;
-
-	if (m_nCarHornDelay) {
-		m_nCarHornDelay--;
-		return;
-	}
-
-	m_nCarHornDelay = (General_GetRandomNumber() & 0x7F) + 150;
-	r = m_nCarHornDelay & 7;
-	if(r < 2){
-		m_nCarHornTimer = 45;
-	}else if(r < 4){
-		if(pDriver)
-			pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
-		m_nCarHornTimer = 45;
-	}else{
-		if(pDriver)
-			pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
-	}
+	// The honking is decided in C, the driver shouts here
+	if (VehicleLogic_PlayCarHorn(this, IsAlarmOn(), General_GetRandomNumber) && pDriver)
+		pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
 }
 
 void
@@ -2875,15 +2857,8 @@ CBike::PlayHornIfNecessary(void)
 void
 CBike::ResetSuspension(void)
 {
-	int i;
-	for(i = 0; i < 2; i++){
-		m_aWheelRotation[i] = 0.0f;
-		m_aWheelState[i] = WHEEL_STATE_NORMAL;
-	}
-	for(i = 0; i < 4; i++){
-		m_aSuspensionSpringRatio[i] = 1.0f;
-		m_aWheelTimer[i] = 0.0f;
-	}
+	// Delegate to the C implementation
+	Bike_ResetSuspension(this);
 }
 
 void
@@ -2987,30 +2962,19 @@ CBike::CalculateLeanMatrix(void)
 	if(bLeanMatrixClean)
 		return;
 
-	CMatrix mat;
-	mat.SetRotateX(-0.05f*Abs(m_fLeanLRAngle));
-	mat.RotateY(m_fLeanLRAngle);
+	// The matrix starts as that of the bike and the rest is done in C
 	m_leanMatrix = GetMatrix();
-	m_leanMatrix = m_leanMatrix * mat;
-	// place wheel back on ground
-	m_leanMatrix.GetPosition() += GetUp()*(1.0f-Cos(m_fLeanLRAngle))*GetColModel()->boundingBox.min.z;
+	Bike_CalculateLeanMatrix(&m_leanMatrix, m_fLeanLRAngle, &GetUp().x, GetColModel()->boundingBox.min.z);
 	bLeanMatrixClean = true;
 }
 
 void
 CBike::GetCorrectedWorldDoorPosition(CVector &pos, CVector p1, CVector p2)
 {
-	CVector &fwd = GetForward();
-	CVector rightWorld = CrossProduct(fwd, CVector(0.0f, 0.0f, 1.0f));
-	CVector upWorld = CrossProduct(rightWorld, fwd);
+	// Delegate to the C implementation
 	CColModel *colModel = GetColModel();
-	float onSide = DotProduct(GetUp(), rightWorld);
-	float diff = Max(colModel->boundingBox.max.z-colModel->boundingBox.max.x, 0.0f);
-	pos = CVector(0.0f, 0.0f, 0.0f);
-	float y = p2.y - p1.y;
-	float x = onSide*diff + p2.x + p1.x;
-	float z = p2.z - p1.z;
-	pos = x*rightWorld + y*fwd + z*upWorld + GetPosition();
+	Bike_GetCorrectedWorldDoorPosition(&GetForward().x, &GetUp().x, &GetPosition().x,
+		colModel->boundingBox.max.x, colModel->boundingBox.max.z, &p1.x, &p2.x, &pos.x);
 }
 
 void
@@ -3025,9 +2989,8 @@ CBike::Fix(void)
 void
 CBike::SetupModelNodes(void)
 {
-	int i;
-	for(i = 0; i < BIKE_NUM_NODES; i++)
-		m_aBikeNodes[i] = nil;
+	// Clear the node array in C before filling it
+	Bike_ClearNodes(this);
 	CClumpModelInfo::FillFrameArray(GetClump(), m_aBikeNodes);
 }
 

@@ -5,17 +5,8 @@
 #include "Skidmarks.h"
 #include "AnimManager.h"
 
-enum eBikeNodes {
-	BIKE_NODE_NONE,
-	BIKE_CHASSIS,
-	BIKE_FORKS_FRONT,
-	BIKE_FORKS_REAR,
-	BIKE_WHEEL_FRONT,
-	BIKE_WHEEL_REAR,
-	BIKE_MUDGUARD,
-	BIKE_HANDLEBARS,
-	BIKE_NUM_NODES
-};
+#include "BikeNodes.h"
+#include "BikeData.h"
 
 #include "WheelIndices.h"
 
@@ -26,66 +17,9 @@ enum {
 	BIKESUSP_R2,
 };
 
-class CBike : public CVehicle
+class CBike : public CVehicle, public CBikeData
 {
 public:
-	RwFrame *m_aBikeNodes[BIKE_NUM_NODES];
-	bool bLeanMatrixClean;
-	CMatrix m_leanMatrix;
-	CVector m_vecAvgSurfaceNormal;
-	CVector m_vecAvgSurfaceRight;
-	tBikeHandlingData *pBikeHandling;
-	AssocGroupId m_bikeAnimType;
-	uint8 m_wheelStatus[2];
-	CColPoint m_aWheelColPoints[4];
-	float m_aSuspensionSpringRatio[4];
-	float m_aSuspensionSpringRatioPrev[4];
-	float m_aWheelTimer[4];
-	float m_bike_unused1;
-	eSkidmarkType m_aWheelSkidmarkType[2];
-	bool m_aWheelSkidmarkBloody[2];
-	bool m_aWheelSkidmarkUnk[2];
-	float m_aWheelRotation[2];
-	float m_aWheelSpeed[2];
-	float m_aWheelPosition[2];
-	float m_aWheelBasePosition[2];
-	float m_aSuspensionSpringLength[4];
-	float m_aSuspensionLineLength[4];
-	float m_fHeightAboveRoad;
-	float m_fTraction;
-	float m_fRearForkLength;
-	float m_fFrontForkY;
-	float m_fFrontForkZ;
-	float m_fFrontForkSlope;
-	float m_fWheelAngle;
-	float m_fLeanLRAngle;
-	float m_fLeanLRAngle2;
-	float m_fLeanInput;
-	float m_fPedLeanAmountLR;
-	float m_fPedLeanAmountUD;
-	uint8 m_bike_unused2;
-	uint8 unused[3];	// looks like padding..but for what?
-	uint8 m_bike_flag01 : 1;
-	uint8 m_bike_flag02 : 1;
-	uint8 bWaterTight : 1;
-	uint8 bIsBeingPickedUp : 1;
-	uint8 bIsStanding : 1;
-	uint8 bExtraSpeed : 1;	// leaning forward
-	uint8 bIsOnFire : 1;
-	uint8 bWheelieCam : 1;
-	int16 m_doingBurnout;
-	float m_fTireTemperature;
-	float m_fBrakeDestabilization;
-	float m_fVelocityChangeForAudio;
-	float m_fFireBlowUpTimer;
-	CPhysical *m_aGroundPhysical[4];
-	CVector m_aGroundOffset[4];
-	CEntity *m_pSetOnFireEntity;
-	uint8 m_nWheelsOnGround;
-	uint8 m_nDriveWheelsOnGround;
-	uint8 m_nDriveWheelsOnGroundPrev;
-	float m_fGasPedalAudio;
-	tWheelState m_aWheelState[2];
 
 	CBike(int32 id, uint8 CreatedBy);
 

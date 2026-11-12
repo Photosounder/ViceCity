@@ -18,6 +18,7 @@
 #include "RpAnimBlend.h"
 #include "Bones.h"
 #include "Ped.h"
+#include "WeaponLogic.h"
 #include "AnimBlendAssociation.h"
 #include "Fire.h"
 #include "DMAudio.h"
@@ -70,10 +71,14 @@ bool CPed::bFannyMagnetCheat;
 bool CPed::bPedCheat3;
 CVector2D CPed::ms_vec2DFleePosition;
 
+static_assert(PEDIK_GUN_POINTED_SUCCESSFULLY == CPedIK::GUN_POINTED_SUCCESSFULLY && PEDIK_LOOKAROUND_HEAD_ONLY == CPedIK::LOOKAROUND_HEAD_ONLY && PEDIK_AIMS_WITH_ARM == CPedIK::AIMS_WITH_ARM, "The C ped IK flag values match the class");
+
 float gfTommyFatness = 1.0f;
 
-CPed::CPed(uint32 pedType) : m_pedIK(this)
+CPed::CPed(uint32 pedType)
 {
+	// Construct the inverse kinematics state now that it lives in the C data struct
+	m_pedIK = CPedIK(this);
 #ifdef USE_CUTSCENE_SHADOW_FOR_PED
 	m_pRTShadow = nil;
 #endif
@@ -622,37 +627,8 @@ CPed::OurPedCanSeeThisOne(CEntity *target, bool shootablesDoBlock)
 void
 CPed::SortPeds(CPed **list, int min, int max)
 {
-	if (min >= max)
-		return;
-
-	CVector leftDiff, rightDiff;
-	CVector middleDiff = GetPosition() - list[(max + min) / 2]->GetPosition();
-	float middleDist = middleDiff.Magnitude();
-
-	int left = max;
-	int right = min;
-	while(right <= left){
-		float rightDist, leftDist;
-		do {
-			rightDiff = GetPosition() - list[right]->GetPosition();
-			rightDist = rightDiff.Magnitude();
-		} while (middleDist > rightDist && ++right);
-
-		do {
-			leftDiff = GetPosition() - list[left]->GetPosition();
-			leftDist = leftDiff.Magnitude();
-		} while (middleDist < leftDist && left--);
-
-		if (right <= left) {
-			CPed *ped = list[right];
-			list[right] = list[left];
-			list[left] = ped;
-			right++;
-			left--;
-		}
-	}
-	SortPeds(list, min, left);
-	SortPeds(list, right, max);
+	// Delegate to the C implementation
+	PedLogic_SortPedsByDistance(GetPosition().x, GetPosition().y, GetPosition().z, (void**)list, min, max);
 }
 
 void
@@ -730,31 +706,11 @@ CPed::SetMoveAnim(void)
 			ClearLookFlag();
 		}
 
-		switch (m_nMoveState) {
-			case PEDMOVE_STILL:
-				// Use the complete C animation manager at the original call boundary
-				animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, ANIM_STD_IDLE, 4.0f);
-				break;
-			case PEDMOVE_WALK:
-				// Use the complete C animation manager at the original call boundary
-				animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, ANIM_STD_WALK, 1.0f);
-				break;
-			case PEDMOVE_RUN:
-				if (m_nPedState == PED_FLEE_ENTITY) {
-					// Use the complete C animation manager at the original call boundary
-					animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, ANIM_STD_RUN, 3.0f);
-				} else {
-					// Use the complete C animation manager at the original call boundary
-					animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, ANIM_STD_RUN, 1.0f);
-				}
-				break;
-			case PEDMOVE_SPRINT:
-				// Use the complete C animation manager at the original call boundary
-				animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, ANIM_STD_RUNFAST, 1.0f);
-				break;
-			default:
-				break;
-		}
+		// The animation for the move state is chosen in C
+		int moveAnim;
+		float moveBlendRate;
+		if (PedLogic_MoveAnimForState(m_nMoveState, m_nPedState == PED_FLEE_ENTITY, &moveAnim, &moveBlendRate))
+			animAssoc = AnimManager_BlendAnimation(GetClump(), animGroupToUse, (AnimationId)moveAnim, moveBlendRate);
 
 		if (animAssoc) {
 			if (m_leader) {
@@ -768,17 +724,11 @@ CPed::SetMoveAnim(void)
 				if (walkAssoc) {
 					animAssoc->speed = walkAssoc->speed;
 				} else {
-					if (CharCreatedBy == MISSION_CHAR)
-						animAssoc->speed = 1.0f;
-					else
-						animAssoc->speed = 1.2f - m_randomSeed * 0.4f / MYRAND_MAX;
+					animAssoc->speed = PedLogic_MoveAnimSpeed(CharCreatedBy == MISSION_CHAR, m_randomSeed, MYRAND_MAX);
 							
 				}
 			} else {
-				if (CharCreatedBy == MISSION_CHAR)
-					animAssoc->speed = 1.0f;
-				else
-					animAssoc->speed = 1.2f - m_randomSeed * 0.4f / MYRAND_MAX;
+				animAssoc->speed = PedLogic_MoveAnimSpeed(CharCreatedBy == MISSION_CHAR, m_randomSeed, MYRAND_MAX);
 			}
 		}
 	}
@@ -812,19 +762,8 @@ CPed::RestartNonPartialAnims(void)
 void
 CPed::SetStoredState(void)
 {
-	if (m_nLastPedState != PED_NONE || !CanPedReturnToState())
-		return;
-
-	if (m_nPedState == PED_WANDER_PATH) {
-		bFindNewNodeAfterStateRestore = true;
-		if (m_nMoveState == PEDMOVE_NONE || m_nMoveState == PEDMOVE_STILL)
-			m_nMoveState = PEDMOVE_WALK;
-	}
-	if (m_nPedState != PED_IDLE) {
-		m_nLastPedState = m_nPedState;
-		if (m_nMoveState >= m_nPrevMoveState)
-			m_nPrevMoveState = m_nMoveState;
-	}
+	// Delegate to the C implementation
+	PedLogic_SetStoredState(this);
 }
 
 void
@@ -891,14 +830,14 @@ CPed::ScanForThreats(void)
 	
 	if (fearFlags & PED_FLAG_GUN) {
 		CPed *shooter = CheckForGunShots();
-		if (shooter && (m_nPedType != shooter->m_nPedType || m_nPedType == PEDTYPE_CIVMALE || m_nPedType == PEDTYPE_CIVFEMALE)) {
+		if (shooter && PedLogic_ShooterIsThreat(m_nPedType, shooter->m_nPedType)) {
 			if (!IsGangMember()) {
 				m_threatEntity = shooter;
 				m_threatEntity->RegisterReference((CEntity**)&m_threatEntity);
 				return PED_FLAG_GUN;
 			}
 
-			if (PedType_GetFlag(shooter->m_nPedType) & fearFlags || m_nPedType == PEDTYPE_GANG5) {
+			if (PedLogic_GangFearsShooter((PedType_GetFlag(shooter->m_nPedType) & fearFlags) != 0, m_nPedType == PEDTYPE_GANG5)) {
 				if (m_threatEntity)
 					m_threatEntity->CleanUpOldReference(&m_threatEntity);
 				m_threatEntity = shooter;
@@ -1059,42 +998,22 @@ CPed::ScanForDelayedResponseThreats(void)
 void
 CPed::CheckThreatValidity(void)
 {
-	if (m_threatEntity && !IsEntityPointerValid(m_threatEntity)) {
-		m_threatFlags = 0;
-		m_threatEntity = nil;
-	}
-	if (m_pEventEntity && !IsEntityPointerValid(m_pEventEntity)) {
-		m_threatFlags = 0;
-		m_pEventEntity = nil;
-	}
-	if (!m_threatEntity && !m_pEventEntity)
-		m_threatFlags = 0;
+	// Delegate to the C implementation
+	PedLogic_CheckThreatValidity(this, m_threatEntity && !IsEntityPointerValid(m_threatEntity), m_pEventEntity && !IsEntityPointerValid(m_pEventEntity));
 }
 
 bool
 CPed::CanUseTorsoWhenLooking(void)
 {
-	if (m_nPedState != PED_DRIVING && m_nPedState != PED_DRAG_FROM_CAR && !bIsDucking) {
-		if (m_animGroup != ASSOCGRP_SEXYWOMAN && m_animGroup != ASSOCGRP_WOMAN)
-			return true;
-	}
-	return false;
+	// Delegate to the C implementation
+	return PedLogic_CanUseTorsoWhenLooking(this);
 }
 
 void
 CPed::SetLookFlag(float direction, bool keepTryingToLook, bool cancelPrevious)
 {
-	if (m_lookTimer < (*Timer_GetTimeInMilliseconds()) || cancelPrevious) {
-		bIsLooking = true;
-		bIsRestoringLook = false;
-		m_fLookDirection = direction;
-		m_pLookTarget = nil;
-		m_lookTimer = 0;
-		bKeepTryingToLook = keepTryingToLook;
-		if (CanUseTorsoWhenLooking()) {
-			m_pedIK.m_flags &= ~CPedIK::LOOKAROUND_HEAD_ONLY;
-		}
-	}
+	// Delegate to the C implementation
+	PedLogic_SetLookFlagDirection(this, (*Timer_GetTimeInMilliseconds()), direction, keepTryingToLook, cancelPrevious);
 }
 
 void
@@ -1172,29 +1091,13 @@ CPed::MoveHeadToLook(void)
 			return;
 
 		bool handFreeToMove = false;
-		AnimationId animToPlay = ANIM_STD_NUM;
-
 		if (!GetWeapon()->IsType2Handed() && GetWeapon()->m_eWeaponType != WEAPONTYPE_ROCKETLAUNCHER)
 			handFreeToMove = true;
 
-		if (IsPlayer() && handFreeToMove) {
-
-			if (m_pLookTarget->IsPed()) {
-#ifdef FIX_BUGS
-				if (m_pedStats->m_temper > 49 || ((CPed*)m_pLookTarget)->m_nPedType == PEDTYPE_COP)
-#else
-				if (m_pedStats->m_temper < 49 || ((CPed*)m_pLookTarget)->m_nPedType == PEDTYPE_COP)
-#endif
-					animToPlay = ANIM_STD_PARTIAL_FUCKU;
-				else if(m_pedStats->m_temper < 47)
-					animToPlay = ANIM_STD_PARTIAL_PUNCH;
-			} else {
-				if (m_pedStats->m_temper > 49 || m_pLookTarget->GetModelIndex() == MI_POLICE)
-					animToPlay = ANIM_STD_PARTIAL_FUCKU;
-			}
-		} else if (handFreeToMove && (General_GetRandomNumber() & 1)) {
-			animToPlay = ANIM_STD_PARTIAL_FUCKU;
-		}
+		// Delegate the choice of animation to the C implementation
+		bool targetIsPed = m_pLookTarget->IsPed();
+		AnimationId animToPlay = (AnimationId)PedLogic_ChooseFistShakeAnim(IsPlayer(), handFreeToMove, targetIsPed, m_pedStats->m_temper,
+			targetIsPed && ((CPed*)m_pLookTarget)->m_nPedType == PEDTYPE_COP, !targetIsPed && m_pLookTarget->GetModelIndex() == MI_POLICE);
 
 		if (animToPlay != ANIM_STD_NUM) {
 			// Use the complete C animation manager at the original call boundary
@@ -1352,25 +1255,26 @@ CPed::ScanForInterestingStuff(void)
 	if (m_nPedType == PEDTYPE_CRIMINAL && m_carJackTimer < (*Timer_GetTimeInMilliseconds())) {
 		// Find a car to steal or a ped to mug if we haven't already decided to steal a car
 		if (General_GetRandomNumber() % 100 < 10) {
-			int mostExpensiveVehAround = -1;
-			int bestMonetaryValue = 0;
-
 			CVector pos = GetPosition();
 			int16 lastVehicle;
 			CEntity *vehicles[8];
+			int vehicleValues[8];
 			CWorld::FindObjectsInRange(pos, 10.0f, true, &lastVehicle, 6, vehicles, false, true, false, false, false);
 
+			// Value of each vehicle that can be stolen, zero for the others
 			for (int i = 0; i < lastVehicle; i++) {
 				CVehicle* veh = (CVehicle*)vehicles[i];
 
+				vehicleValues[i] = 0;
 				if (veh->VehicleCreatedBy != MISSION_VEHICLE) {
-					if (veh->m_vecMoveSpeed.Magnitude() <= 0.1f && veh->IsVehicleNormal()
-						&& veh->IsCar() && bestMonetaryValue < veh->pHandling->nMonetaryValue) {
-						mostExpensiveVehAround = i;
-						bestMonetaryValue = veh->pHandling->nMonetaryValue;
-					}
+					if (veh->m_vecMoveSpeed.Magnitude() <= 0.1f && veh->IsVehicleNormal() && veh->IsCar())
+						vehicleValues[i] = veh->pHandling->nMonetaryValue;
 				}
 			}
+
+			// Delegate the choice to the C implementation
+			int bestMonetaryValue;
+			int mostExpensiveVehAround = PedLogic_PickMostValuableVehicle(vehicleValues, lastVehicle, &bestMonetaryValue);
 			if (bestMonetaryValue > 2000 && mostExpensiveVehAround != -1 && vehicles[mostExpensiveVehAround]) {
 				SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, vehicles[mostExpensiveVehAround]);
 				m_carJackTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
@@ -1385,9 +1289,7 @@ CPed::ScanForInterestingStuff(void)
 				if ((nearPed->GetPosition() - GetPosition()).MagnitudeSqr() > sq(7.0f))
 					break;
 
-				if ((nearPed->m_nPedType == PEDTYPE_CIVFEMALE || nearPed->m_nPedType == PEDTYPE_CIVMALE
-					|| nearPed->m_nPedType == PEDTYPE_CRIMINAL || nearPed->m_nPedType == PEDTYPE_UNUSED1
-					|| nearPed->m_nPedType == PEDTYPE_PROSTITUTE)
+				if (PedLogic_IsMugVictimType(nearPed->m_nPedType)
 					&& nearPed->CharCreatedBy != MISSION_CHAR
 					&& nearPed->IsPedShootable()
 					&& nearPed->m_objective != OBJECTIVE_MUG_CHAR) {
@@ -1428,26 +1330,9 @@ CPed::ScanForInterestingStuff(void)
 bool
 CPed::WillChat(CPed *stranger)
 {
-	if (m_pNextPathNode && m_pLastPathNode) {
-		if (m_pNextPathNode != m_pLastPathNode && ThePaths.TestCrossesRoad(m_pNextPathNode, m_pLastPathNode)) {
-			return false;
-		}
-	}
-	if (m_nSurfaceTouched == SURFACE_TARMAC)
-		return false;
-	if (stranger == this)
-		return false;
-	if (m_nPedType == stranger->m_nPedType)
-		return true;
-	if (m_nPedType == PEDTYPE_CRIMINAL)
-		return false;
-	if (stranger->m_nPedType == PEDTYPE_COP)
-		return false;
-	if (stranger->IsPlayer())
-		return false;
-	if ((IsGangMember() || stranger->IsGangMember()) && m_nPedType != stranger->m_nPedType)
-		return false;
-	return true;
+	// The road between the path nodes is looked up here, the rest is decided in C
+	bool roadBetween = m_pNextPathNode && m_pLastPathNode && m_pNextPathNode != m_pLastPathNode && ThePaths.TestCrossesRoad(m_pNextPathNode, m_pLastPathNode);
+	return PedLogic_WillChat(roadBetween, m_nSurfaceTouched, stranger == this, m_nPedType, stranger->m_nPedType);
 }
 
 void
@@ -1455,24 +1340,9 @@ CPed::CalculateNewVelocity(void)
 {
 	if (IsPedInControl()) {
 		float headAmount = DEGTORAD(m_headingRate) * (*Timer_GetTimeStep());
-		m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-		float limitedRotDest = General_LimitRadianAngle(m_fRotationDest);
 
-		if (m_fRotationCur - PI > limitedRotDest) {
-				limitedRotDest += 2 * PI;
-		} else if(PI + m_fRotationCur < limitedRotDest) {
-			limitedRotDest -= 2 * PI;
-		}
-
-		float neededTurn = limitedRotDest - m_fRotationCur;
-		if (neededTurn <= headAmount) {
-			if (neededTurn > (-headAmount))
-				m_fRotationCur += neededTurn;
-			else
-				m_fRotationCur -= headAmount;
-		} else {
-			m_fRotationCur += headAmount;
-		}
+		// Delegate to the C implementation
+		m_fRotationCur = PedLogic_TurnTowardsDest(m_fRotationCur, m_fRotationDest, headAmount);
 	}
 
 	CVector2D forward(Sin(m_fRotationCur), Cos(m_fRotationCur));
@@ -1498,11 +1368,7 @@ CPed::CalculateNewVelocity(void)
 	float pedSpeed = m_moved.Magnitude();
 	float localWalkAngle = General_LimitRadianAngle(walkAngle - m_fRotationCur);
 
-	if (localWalkAngle < -0.5f * PI) {
-		localWalkAngle += PI;
-	} else if (localWalkAngle > 0.5f * PI) {
-		localWalkAngle -= PI;
-	}
+	localWalkAngle = PedLogic_FoldWalkAngle(localWalkAngle);
 
 	// Interestingly this part is responsible for diagonal walking.
 	if (localWalkAngle > -DEGTORAD(50.0f) && localWalkAngle < DEGTORAD(50.0f)) {
@@ -1554,18 +1420,9 @@ CPed::WorkOutHeadingForMovingFirstPerson(float offset)
 	CPad *pad0 = CPad::GetPad(0);
 	float leftRight = pad0->GetPedWalkLeftRight();
 	float upDown = pad0->GetPedWalkUpDown();
-	float &angle = ((CPlayerPed*)this)->m_fWalkAngle;
 
-	if (upDown != 0.0f) {
-		angle = General_GetRadianAngleBetweenPoints(0.0f, 0.0f, -leftRight, upDown);
-	} else {
-		if (leftRight < 0.0f)
-			angle = HALFPI;
-		else if (leftRight > 0.0f)
-			angle = -HALFPI;
-	}
-
-	return General_LimitRadianAngle(offset + angle);
+	// Delegate to the C implementation
+	return PedLogic_WorkOutHeadingFirstPerson(offset, leftRight, upDown, &((CPlayerPed*)this)->m_fWalkAngle);
 }
 
 void
@@ -1667,16 +1524,8 @@ CPed::UpdatePosition(void)
 		// Ped got damaged by steep slope
 		m_vecMoveSpeed = CVector(0.0f, 0.0f, -0.001f);
 		// some kind of
-		CVector2D reactionForce = m_vecDamageNormal;
-		reactionForce.Normalise();
-
-		velocityChange = 0.02f * reactionForce + m_moved;
-
-		float reactionAndVelocityDotProd = DotProduct2D(reactionForce, velocityChange);
-		// they're in same direction
-		if (reactionAndVelocityDotProd < 0.0f) {
-			velocityChange -= reactionAndVelocityDotProd * reactionForce;
-		}
+		// Delegate to the C implementation
+		PedLogic_SteepCliffVelocityChange(m_vecDamageNormal.x, m_vecDamageNormal.y, m_moved.x, m_moved.y, &velocityChange.x, &velocityChange.y);
 	}
 	else
 	{
@@ -1685,18 +1534,10 @@ CPed::UpdatePosition(void)
 	
 	// Take time step into account
 	if (m_pCurrentPhysSurface && (!m_pCurrentPhysSurface->bInfiniteMass || m_pCurrentPhysSurface->m_phy_flagA08)) {
-		float speedChange = velocityChange.Magnitude();
-		float changeMult = speedChange;
-		if (m_nPedState == PED_DIE && m_pCurrentPhysSurface->IsVehicle()) {
-			changeMult = 0.002f * (*Timer_GetTimeStep());
-		} else if (!(m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat())) {
-			changeMult = 0.01f * (*Timer_GetTimeStep());
-		}
-
+		// Delegate to the C implementation unless the vehicle glue replaces the limit
 		if (rouz.glue_on_vehs==0)
-		if (speedChange > changeMult) {
-			velocityChange = velocityChange * (changeMult / speedChange);
-		}
+			PedLogic_LimitSurfaceVelocityChange(&velocityChange.x, &velocityChange.y, m_nPedState == PED_DIE && m_pCurrentPhysSurface->IsVehicle(),
+				!(m_pCurrentPhysSurface->IsVehicle() && ((CVehicle*)m_pCurrentPhysSurface)->IsBoat()), (*Timer_GetTimeStep()));
 	}
 	m_vecMoveSpeed.x += velocityChange.x;
 	m_vecMoveSpeed.y += velocityChange.y;
@@ -1789,9 +1630,9 @@ CPed::ProcessBuoyancy(void)
 			}
 		}
 		float speedMult = 0.0f;
-		if (buoyancyImpulse.z / m_fMass > GRAVITY * (*Timer_GetTimeStep())
-			|| mod_Buoyancy.m_waterlevel > GetPosition().z + 0.6f) {
-			speedMult = pow(0.9f, (*Timer_GetTimeStep()));
+		// Delegate the water tests to the C implementation
+		if (PedLogic_IsBuoyantlySubmerged(buoyancyImpulse.z, m_fMass, (*Timer_GetTimeStep()), mod_Buoyancy.m_waterlevel, GetPosition().z)) {
+			speedMult = PedLogic_WaterSpeedMult((*Timer_GetTimeStep()));
 			m_vecMoveSpeed.x *= speedMult;
 			m_vecMoveSpeed.y *= speedMult;
 			m_vecMoveSpeed.z *= speedMult;
@@ -1799,17 +1640,15 @@ CPed::ProcessBuoyancy(void)
 			bIsDrowning = true;
 			InflictDamage(nil, WEAPONTYPE_DROWNING, rouz.drown_mul * 3.0f * (*Timer_GetTimeStep()), PEDPIECE_TORSO, 0);
 		}
-		if (buoyancyImpulse.z / m_fMass > GRAVITY * 0.25f * (*Timer_GetTimeStep())) {
+		if (PedLogic_IsBuoyancySlowing(buoyancyImpulse.z, m_fMass, (*Timer_GetTimeStep()))) {
 			if (speedMult == 0.0f) {
-				speedMult = pow(0.9f, (*Timer_GetTimeStep()));
+				speedMult = PedLogic_WaterSpeedMult((*Timer_GetTimeStep()));
 			}
 			m_vecMoveSpeed.x *= speedMult;
 			m_vecMoveSpeed.y *= speedMult;
-			if (m_vecMoveSpeed.z >= -0.1f) {
-				if (m_vecMoveSpeed.z < -0.04f)
-					m_vecMoveSpeed.z = -0.02f;
-			} else {
-				m_vecMoveSpeed.z = -0.01f;
+			bool splash;
+			m_vecMoveSpeed.z = PedLogic_WaterVerticalSpeed(m_vecMoveSpeed.z, &splash);
+			if (splash) {
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
 				CVector aBitForward = 2.2f * m_vecMoveSpeed + GetPosition();
 				float level = 0.0f;
@@ -1865,17 +1704,8 @@ CPed::ProcessControl(void)
 		PruneReferences();
 
 	int alpha = CVisibilityPlugins::GetClumpAlpha(GetClump());
-	if (!bFadeOut) {
-		if (alpha < 255) {
-			alpha += 16;
-			if (alpha > 255)
-				alpha = 255;
-		}
-	} else {
-		alpha -= 8;
-		if (alpha < 0)
-			alpha = 0;
-	}
+	// Delegate to the C implementation
+	alpha = PedLogic_NextClumpAlpha(alpha, bFadeOut);
 
 	CVisibilityPlugins::SetClumpAlpha(GetClump(), alpha);
 	bIsShooting = false;
@@ -1890,15 +1720,7 @@ CPed::ProcessControl(void)
 			DeadPedMakesTyresBloody();
 			if (CGame::nastyGame && !bIsInWater) {
 				uint32 remainingBloodyFpTime = (*Timer_GetTimeInMilliseconds()) - m_bloodyFootprintCountOrDeathTime;
-				float timeDependentDist;
-				if (remainingBloodyFpTime >= 2000) {
-					if (remainingBloodyFpTime <= 7000)
-						timeDependentDist = (remainingBloodyFpTime - 2000) / 5000.0f * 0.75f;
-					else
-						timeDependentDist = 0.75f;
-				} else {
-					timeDependentDist = 0.0f;
-				}
+				float timeDependentDist = PedLogic_DeadBloodRadius(remainingBloodyFpTime);
 
 				for (int i = 0; i < m_numNearPeds; ++i) {
 					CPed *nearPed = m_nearPeds[i];
@@ -1965,11 +1787,9 @@ CPed::ProcessControl(void)
 			}
 		}
 
-		if (!IsPedInControl() || m_nWaitState != WAITSTATE_FALSE || 0.01f * (*Timer_GetTimeStep()) <= m_fDistanceTravelled
-			|| (m_nStoredMoveState != PEDMOVE_WALK && m_nStoredMoveState != PEDMOVE_RUN && m_nStoredMoveState != PEDMOVE_SPRINT))
-			m_panicCounter = 0;
-		else if (m_panicCounter < 50)
-			++m_panicCounter;
+		bool panicResets = !IsPedInControl() || m_nWaitState != WAITSTATE_FALSE || 0.01f * (*Timer_GetTimeStep()) <= m_fDistanceTravelled
+			|| (m_nStoredMoveState != PEDMOVE_WALK && m_nStoredMoveState != PEDMOVE_RUN && m_nStoredMoveState != PEDMOVE_SPRINT);
+		m_panicCounter = PedLogic_NextPanicCounter(m_panicCounter, panicResets);
 
 		if (m_fHealth <= 1.0f && m_nPedState <= PED_STATES_NO_AI && !bIsInTheAir && !bIsLanding)
 			SetDie();
@@ -2162,18 +1982,8 @@ CPed::ProcessControl(void)
 											0.0f,
 											0.0f);
 
-										if (angleToFaceAwayDamage < m_fRotationCur)
-											angleToFaceAwayDamage += TWOPI;
-
-										float neededTurn = angleToFaceAwayDamage - m_fRotationCur;
-
-										if (neededTurn <= PI) {
-											angleToFace = 0.5f * neededTurn + m_fRotationCur;
-											m_fRotationCur += DEGTORAD(m_pedStats->m_headingChangeRate) * 2.0f;
-										} else {
-											angleToFace = m_fRotationCur - (TWOPI - neededTurn) * 0.5f;
-											m_fRotationCur -= DEGTORAD(m_pedStats->m_headingChangeRate) * 2.0f;
-										}
+										// Delegate to the C implementation
+										angleToFace = PedLogic_TurnAwayFromDamage(angleToFaceAwayDamage, &m_fRotationCur, m_pedStats->m_headingChangeRate);
 
 										m_nPedStateTimer = (*Timer_GetTimeInMilliseconds()) + 200;
 										if (m_nPedType == PEDTYPE_COP) {
@@ -2198,13 +2008,7 @@ CPed::ProcessControl(void)
 											}
 										}
 									}
-									m_fRotationDest = General_LimitRadianAngle(angleToFace);
-
-									if (m_fRotationCur - PI > m_fRotationDest) {
-										m_fRotationDest += TWOPI;
-									} else if (PI + m_fRotationCur < m_fRotationDest) {
-										m_fRotationDest -= TWOPI;
-									}
+									m_fRotationDest = PedLogic_WrapDestRotation(General_LimitRadianAngle(angleToFace), m_fRotationCur);
 
 									if (oldDestRot == m_fRotationDest && (*Timer_GetTimeInMilliseconds()) > m_nPedStateTimer) {
 										m_nPedStateTimer = (*Timer_GetTimeInMilliseconds()) + 200;
@@ -3559,15 +3363,8 @@ CPed::PlayFootSteps(void)
 int
 CPed::GetLocalDirection(const CVector2D &posOffset)
 {
-	int direction;
-	float angle;
-
-	for (angle = posOffset.Heading() - m_fRotationCur + DEGTORAD(45.0f); angle < 0.0f; angle += TWOPI);
-
-	for (direction = RADTODEG(angle)/90.0f; direction > 3; direction -= 4);
-
-	// 0-forward, 1-left, 2-backward, 3-right.
-	return direction;
+	// Delegate to the C implementation
+	return PedLogic_GetLocalDirection(this, posOffset.x, posOffset.y);
 }
 
 bool
@@ -3639,6 +3436,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 	float angleToFaceObjCenter = (objColCenter - GetPosition()).Heading();
 	float angleDiffBtwObjCenterAndForward = General_LimitRadianAngle(dirToSet - angleToFaceObjCenter);
 	float objTopRightHeading = Atan2(adjustedColMax.x - adjustedColMin.x, adjustedColMax.y - adjustedColMin.y);
+	// Heading of the ped relative to the direction to the object center, used by the C implementation
+	float rotDestRel = General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter);
 
 	if (IsPlayer()) {
 		if (FindPlayerPed()->m_fMoveSpeed <= 0.0f)
@@ -3821,63 +3620,9 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 		if (!collidingThingChanged) {
 			m_walkAroundType = 0;
 		} else {
-			if (Abs(angleDiffBtwObjCenterAndForward) >= objTopRightHeading) {
-				if (PI - objTopRightHeading >= Abs(angleDiffBtwObjCenterAndForward)) {
-					if ((angleDiffBtwObjCenterAndForward <= 0.0f || objUpsideDown) && (angleDiffBtwObjCenterAndForward < 0.0f || !objUpsideDown)) {
-						if (goingToEnterCar && (m_vehDoor == CAR_DOOR_RF || m_vehDoor == CAR_DOOR_RR)) {
-							m_walkAroundType = 0;
-						} else {
-							if (General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) >= 0.0f) {
-								if (entityOnBottomRightOfObj == 1 || entityOnBottomRightOfObj && !entityOnTopLeftOfObj && !entityOnTopRightOfObj) {
-									m_walkAroundType = 1;
-								} else if (entityOnBottomLeftOfObj == 1 || entityOnBottomLeftOfObj && !entityOnTopLeftOfObj && !entityOnTopRightOfObj) {
-									m_walkAroundType = 1;
-								}
-							} else {
-								if (entityOnTopRightOfObj == 1 || entityOnTopRightOfObj && !entityOnBottomRightOfObj && !entityOnBottomLeftOfObj) {
-									m_walkAroundType = 4;
-								} else if (entityOnTopLeftOfObj == 1 || entityOnTopLeftOfObj && !entityOnBottomRightOfObj && !entityOnBottomLeftOfObj) {
-									m_walkAroundType = 4;
-								}
-							}
-						}
-					} else {
-						if (goingToEnterCar && (m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_LR)) {
-							m_walkAroundType = 0;
-						} else {
-							if (General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) <= 0.0f) {
-								if (entityOnBottomLeftOfObj == 1 || entityOnBottomLeftOfObj && !entityOnTopLeftOfObj && !entityOnTopRightOfObj) {
-									m_walkAroundType = 2;
-								} else if (entityOnBottomRightOfObj == 1 || entityOnBottomRightOfObj && !entityOnTopLeftOfObj && !entityOnTopRightOfObj) {
-									m_walkAroundType = 2;
-								}
-							} else {
-								if (entityOnTopLeftOfObj == 1 || entityOnTopLeftOfObj && !entityOnBottomRightOfObj && !entityOnBottomLeftOfObj) {
-									m_walkAroundType = 3;
-								} else if (entityOnTopRightOfObj == 1 || entityOnTopRightOfObj && !entityOnBottomRightOfObj && !entityOnBottomLeftOfObj) {
-									m_walkAroundType = 3;
-								}
-							}
-						}
-					}
-				} else if (goingToEnterCar && (m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_LR)
-					|| General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) < 0.0f) {
-					if (entityOnTopLeftOfObj == 1 || entityOnTopLeftOfObj && !entityOnTopRightOfObj && !entityOnBottomRightOfObj) {
-						m_walkAroundType = 3;
-					}
-				} else if (entityOnTopRightOfObj == 1 || entityOnTopRightOfObj && !entityOnTopLeftOfObj && !entityOnBottomLeftOfObj) {
-					m_walkAroundType = 4;
-				}
-			} else if (goingToEnterCar && (m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_LR)
-				|| General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) > 0.0f) {
-				if (entityOnBottomLeftOfObj == 1 || entityOnBottomLeftOfObj && !entityOnTopRightOfObj && !entityOnBottomRightOfObj) {
-					m_walkAroundType = 2;
-				}
-			} else if (entityOnBottomRightOfObj == 1 || entityOnBottomRightOfObj && !entityOnTopLeftOfObj && !entityOnBottomLeftOfObj) {
-				m_walkAroundType = 1;
-			} else {
-				m_walkAroundType = 0;
-			}
+			// Delegate the choice of the side to walk around on to the C implementation
+			m_walkAroundType = PedLogic_WalkAroundType(m_walkAroundType, angleDiffBtwObjCenterAndForward, objTopRightHeading, objUpsideDown, goingToEnterCar, m_vehDoor, rotDestRel,
+				entityOnTopLeftOfObj, entityOnTopRightOfObj, entityOnBottomRightOfObj, entityOnBottomLeftOfObj);
 		}
 	}
 	m_collidingEntityWhileFleeing = obj;
@@ -3888,120 +3633,15 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 
 	CVector localPosToHead;
 
-	if (Abs(angleDiffBtwObjCenterAndForward) < objTopRightHeading) {
-		if (goingToEnterCar) {
-			if (goingToEnterCarAndItsVan) {
-				if (m_vehDoor == CAR_DOOR_LR || m_vehDoor == CAR_DOOR_RR)
-					return;
-			}
-			if (m_vehDoor != CAR_DOOR_LF && m_vehDoor != CAR_DOOR_LR && (!entityOnBottomRightOfObj || entityOnBottomLeftOfObj)) {
-				m_fRotationDest = General_LimitRadianAngle(dirToSet - HALFPI);
-				localPosToHead.x = adjustedColMax.x;
-				localPosToHead.z = 0.0f;
-				localPosToHead.y = adjustedColMin.y;
-			} else {
-				m_fRotationDest = General_LimitRadianAngle(HALFPI + dirToSet);
-				localPosToHead.x = adjustedColMin.x;
-				localPosToHead.z = 0.0f;
-				localPosToHead.y = adjustedColMin.y;
-			}
-		} else {
-			if (m_walkAroundType != 1 && m_walkAroundType != 4
-				&& (m_walkAroundType || General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) <= 0.0f)) {
+	// Delegate the choice of the corner to head for to the C implementation
+	bool headForMaxX, headForMaxY;
+	if (PedLogic_WalkAroundTarget(m_walkAroundType, angleDiffBtwObjCenterAndForward, objTopRightHeading, goingToEnterCar, goingToEnterCarAndItsVan, m_vehDoor, rotDestRel,
+		entityOnTopLeftOfObj, entityOnTopRightOfObj, entityOnBottomRightOfObj, entityOnBottomLeftOfObj, &headForMaxX, &headForMaxY))
+		return;
+	localPosToHead.x = headForMaxX ? adjustedColMax.x : adjustedColMin.x;
+	localPosToHead.y = headForMaxY ? adjustedColMax.y : adjustedColMin.y;
+	localPosToHead.z = 0.0f;
 
-				m_fRotationDest = General_LimitRadianAngle(dirToSet - HALFPI);
-				localPosToHead.x = adjustedColMax.x;
-				localPosToHead.z = 0.0f;
-				localPosToHead.y = adjustedColMin.y;
-			} else {
-				m_fRotationDest = General_LimitRadianAngle(HALFPI + dirToSet);
-				localPosToHead.x = adjustedColMin.x;
-				localPosToHead.z = 0.0f;
-				localPosToHead.y = adjustedColMin.y;
-			}
-		}
-	} else {
-		if (PI - objTopRightHeading >= Abs(angleDiffBtwObjCenterAndForward)) {
-			if (angleDiffBtwObjCenterAndForward <= 0.0f) {
-				if (!goingToEnterCar || !goingToEnterCarAndItsVan || m_vehDoor != CAR_DOOR_LR && m_vehDoor != CAR_DOOR_RR) {
-					if (goingToEnterCar) {
-						if (m_vehDoor == CAR_DOOR_RF || (m_vehDoor == CAR_DOOR_RR && !goingToEnterCarAndItsVan))
-							return;
-					}
-					if (m_walkAroundType == 4 || m_walkAroundType == 3
-						|| !m_walkAroundType && General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) > 0.0f) {
-
-						m_fRotationDest = General_LimitRadianAngle(PI + dirToSet);
-						localPosToHead.x = adjustedColMax.x;
-						localPosToHead.z = 0.0f;
-						localPosToHead.y = adjustedColMin.y;
-					} else {
-						m_fRotationDest = dirToSet;
-						localPosToHead.x = adjustedColMax.x;
-						localPosToHead.z = 0.0f;
-						localPosToHead.y = adjustedColMax.y;
-					}
-				} else {
-					m_fRotationDest = General_LimitRadianAngle(PI + dirToSet);
-					localPosToHead.x = adjustedColMax.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMin.y;
-				}
-			} else if (goingToEnterCar && goingToEnterCarAndItsVan && (m_vehDoor == CAR_DOOR_LR || m_vehDoor == CAR_DOOR_RR)) {
-				m_fRotationDest = General_LimitRadianAngle(PI + dirToSet);
-				localPosToHead.x = adjustedColMin.x;
-				localPosToHead.z = 0.0f;
-				localPosToHead.y = adjustedColMin.y;
-			} else {
-				if (goingToEnterCar) {
-					if (m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_LR && !goingToEnterCarAndItsVan)
-						return;
-				}
-				if (m_walkAroundType == 1 || m_walkAroundType == 2
-					|| !m_walkAroundType && General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) > 0.0f) {
-
-					m_fRotationDest = dirToSet;
-					localPosToHead.x = adjustedColMin.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMax.y;
-				} else {
-					m_fRotationDest = General_LimitRadianAngle(PI + dirToSet);
-					localPosToHead.x = adjustedColMin.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMin.y;
-				}
-			}
-		} else {
-			if (goingToEnterCar && (!goingToEnterCarAndItsVan || m_vehDoor != CAR_DOOR_LR && m_vehDoor != CAR_DOOR_RR)) {
-				if (m_vehDoor != CAR_DOOR_LF && m_vehDoor != CAR_DOOR_LR && (!entityOnTopRightOfObj || entityOnTopLeftOfObj)) {
-
-					m_fRotationDest = General_LimitRadianAngle(dirToSet - HALFPI);
-					localPosToHead.x = adjustedColMax.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMax.y;
-				} else {
-					m_fRotationDest = General_LimitRadianAngle(HALFPI + dirToSet);
-					localPosToHead.x = adjustedColMin.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMax.y;
-				}
-			} else {
-				if (m_walkAroundType == 2 || m_walkAroundType == 3
-					|| !m_walkAroundType && General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter) > 0.0f) {
-
-					m_fRotationDest = General_LimitRadianAngle(dirToSet - HALFPI);
-					localPosToHead.x = adjustedColMax.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMax.y;
-				} else {
-					m_fRotationDest = General_LimitRadianAngle(HALFPI + dirToSet);
-					localPosToHead.x = adjustedColMin.x;
-					localPosToHead.z = 0.0f;
-					localPosToHead.y = adjustedColMax.y;
-				}
-			}
-		}
-	}
 	if (objUpsideDown)
 		localPosToHead.x = localPosToHead.x * -1.0f;
 
@@ -4031,48 +3671,47 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 bool
 CPed::IsPedInControl(void)
 {
-	return m_nPedState <= PED_STATES_NO_AI
-		&& !bIsInTheAir && !bIsLanding
-		&& m_fHealth > 0.0f;
+	// Delegate to the C implementation
+	return PedLogic_IsPedInControl(this);
 }
 
 bool
 CPed::IsPedShootable(void)
 {
-	return m_nPedState <= PED_STATES_NO_ST;
+	// Delegate to the C implementation
+	return PedLogic_IsPedShootable(this);
 }
 
 bool
 CPed::UseGroundColModel(void)
 {
-	return m_nPedState == PED_FALL ||
-		m_nPedState == PED_DIVE_AWAY ||
-		m_nPedState == PED_DIE ||
-		m_nPedState == PED_DEAD;
+	// Delegate to the C implementation
+	return PedLogic_UseGroundColModel(this);
 }
 
 bool
 CPed::CanPedReturnToState(void)
 {
-	return m_nPedState <= PED_STATES_NO_AI && m_nPedState != PED_AIM_GUN && m_nPedState != PED_ATTACK &&
-		m_nPedState != PED_FIGHT && m_nPedState != PED_STEP_AWAY && m_nPedState != PED_SNIPER_MODE && m_nPedState != PED_LOOK_ENTITY;
+	// Delegate to the C implementation
+	return PedLogic_CanPedReturnToState(this);
 }
 
 bool
 CPed::CanSetPedState(void)
 {
-	return !DyingOrDead() && m_nPedState != PED_ARRESTED && !EnteringCar() && m_nPedState != PED_STEAL_CAR;
+	// Delegate to the C implementation
+	return PedLogic_CanSetPedState(this);
 }
 
 bool
 CPed::CanStrafeOrMouseControl(void)
 {
+	// Delegate to the C implementation with the free camera state
 #ifdef FREE_CAM
-	if (CCamera::bFreeCam)
-		return false;
+	return PedLogic_CanStrafeOrMouseControl(this, CCamera::bFreeCam);
+#else
+	return PedLogic_CanStrafeOrMouseControl(this, false);
 #endif
-	return m_nPedState == PED_NONE || m_nPedState == PED_IDLE || m_nPedState == PED_FLEE_POS || m_nPedState == PED_FLEE_ENTITY ||
-		m_nPedState == PED_ATTACK || m_nPedState == PED_FIGHT || m_nPedState == PED_AIM_GUN || m_nPedState == PED_JUMP || m_nPedState == PED_ANSWER_MOBILE;
 }
 
 void
@@ -4663,34 +4302,15 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 bool
 CPed::CanBeDeleted(void)
 {
-	if (bInVehicle)
-		return false;
-
-	switch (CharCreatedBy) {
-		case RANDOM_CHAR:
-			return true;
-		case MISSION_CHAR:
-			return false;
-		case UNK_CHAR:
-			return false;
-		default:
-			return true;
-	}
+	// Delegate to the C implementation
+	return PedLogic_CanBeDeleted(this);
 }
 
 bool
 CPed::CanBeDeletedEvenInVehicle(void)
 {
-	switch (CharCreatedBy) {
-		case RANDOM_CHAR:
-			return true;
-		case MISSION_CHAR:
-			return false;
-		case UNK_CHAR:
-			return false;
-		default:
-			return true;
-	}
+	// Delegate to the C implementation
+	return PedLogic_CanBeDeletedEvenInVehicle(this);
 }
 
 void
@@ -4864,17 +4484,9 @@ CPed::GrantAmmo(eWeaponType weaponType, uint32 ammo)
 	if (slot == -1)
 		return;
 
-	GetWeapon(slot).m_nAmmoTotal += ammo;
-	if (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType > WEAPONTYPE_UNARMED && WeaponInfo_ms_aMaxAmmoForWeapon[weaponType] >= 0) {
-
-		// Looks like abandoned idea. This block never runs, ms_aMaxAmmoForWeapon is always -1.
-		GetWeapon(slot).m_nAmmoTotal = Min(WeaponInfo_ms_aMaxAmmoForWeapon[weaponType], GetWeapon(slot).m_nAmmoTotal);
-	} else {
-		GetWeapon(slot).m_nAmmoTotal = Min(99999, GetWeapon(slot).m_nAmmoTotal);
-	}
-
-	if (GetWeapon(slot).m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO && GetWeapon(slot).m_nAmmoTotal > 0)
-		GetWeapon(slot).m_eWeaponState = WEAPONSTATE_READY;
+	// Add the ammo in C, a maximum only counts for real weapon types
+	int32 maxAmmo = (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType > WEAPONTYPE_UNARMED) ? WeaponInfo_ms_aMaxAmmoForWeapon[weaponType] : -1;
+	Weapon_GrantAmmo(&GetWeapon(slot), ammo, maxAmmo);
 }
 
 void
@@ -4884,21 +4496,9 @@ CPed::SetAmmo(eWeaponType weaponType, uint32 ammo)
 	if (slot == -1)
 		return;
 
-	GetWeapon(slot).m_nAmmoTotal = ammo;
-	if (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType > WEAPONTYPE_UNARMED && WeaponInfo_ms_aMaxAmmoForWeapon[weaponType] >= 0) {
-
-		// Looks like abandoned idea. This block never runs, ms_aMaxAmmoForWeapon is always -1.
-		GetWeapon(slot).m_nAmmoTotal = Min(WeaponInfo_ms_aMaxAmmoForWeapon[weaponType], GetWeapon(slot).m_nAmmoTotal);
-	} else {
-		GetWeapon(slot).m_nAmmoTotal = Min(99999, GetWeapon(slot).m_nAmmoTotal);
-	}
-	int32 newClip = GetWeapon(slot).m_nAmmoTotal;
-	if (newClip >= GetWeapon(slot).m_nAmmoInClip)
-		newClip = GetWeapon(slot).m_nAmmoInClip;
-	GetWeapon(slot).m_nAmmoInClip = newClip;
-
-	if (GetWeapon(slot).m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO && GetWeapon(slot).m_nAmmoTotal > 0)
-		GetWeapon(slot).m_eWeaponState = WEAPONSTATE_READY;
+	// Set the ammo in C, a maximum only counts for real weapon types
+	int32 maxAmmo = (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType > WEAPONTYPE_UNARMED) ? WeaponInfo_ms_aMaxAmmoForWeapon[weaponType] : -1;
+	Weapon_SetAmmo(&GetWeapon(slot), ammo, maxAmmo);
 }
 
 void
@@ -5696,24 +5296,22 @@ CPed::SetLook(CEntity* to)
 void
 CPed::SetLookTimer(int time)
 {
-	if ((*Timer_GetTimeInMilliseconds()) > m_lookTimer) {
-		m_lookTimer = (*Timer_GetTimeInMilliseconds()) + time;
-	}
+	// Delegate to the C implementation
+	PedLogic_SetLookTimer(this, (*Timer_GetTimeInMilliseconds()), time);
 }
 
 void
 CPed::SetAttackTimer(uint32 time)
 {
-	if ((*Timer_GetTimeInMilliseconds()) > m_attackTimer)
-		m_attackTimer = Max(m_shootTimer, (*Timer_GetTimeInMilliseconds())) + time;
+	// Delegate to the C implementation
+	PedLogic_SetAttackTimer(this, (*Timer_GetTimeInMilliseconds()), time);
 }
 
 void
 CPed::SetShootTimer(uint32 time)
 {
-	if ((*Timer_GetTimeInMilliseconds()) > m_shootTimer) {
-		m_shootTimer = (*Timer_GetTimeInMilliseconds()) + time;
-	}
+	// Delegate to the C implementation
+	PedLogic_SetShootTimer(this, (*Timer_GetTimeInMilliseconds()), time);
 }
 
 void
@@ -5732,34 +5330,8 @@ CPed::Look(void)
 bool
 CPed::TurnBody(void)
 {
-	bool turnDone = true;
-
-	if (m_pLookTarget)
-		m_fLookDirection = General_GetRadianAngleBetweenPoints(
-					m_pLookTarget->GetPosition().x,
-					m_pLookTarget->GetPosition().y,
-					GetPosition().x,
-					GetPosition().y);
-
-	float limitedLookDir = General_LimitRadianAngle(m_fLookDirection);
-	float currentRot = m_fRotationCur;
-
-	if (currentRot - PI > limitedLookDir)
-		limitedLookDir += 2 * PI;
-	else if (PI + currentRot < limitedLookDir)
-		limitedLookDir -= 2 * PI;
-
-	float neededTurn = currentRot - limitedLookDir;
-	m_fRotationDest = limitedLookDir;
-
-	if (Abs(neededTurn) > 0.05f) {
-		turnDone = false;
-		currentRot -= neededTurn * 0.2f;
-	}
-
-	m_fRotationCur = currentRot;
-	m_fLookDirection = limitedLookDir;
-	return turnDone;
+	// Delegate to the C implementation
+	return PedLogic_TurnBody(this, GetPosition().x, GetPosition().y);
 }
 
 void
@@ -5851,32 +5423,9 @@ CPed::Seek(void)
 	}
 
 	float seekPosDist = (m_vecSeekPos - GetPosition()).Magnitude2D();
-	if (seekPosDist < 2.0f || m_objective == OBJECTIVE_GOTO_AREA_ON_FOOT) {
-
-		if (m_objective == OBJECTIVE_FOLLOW_CHAR_IN_FORMATION) {
-
-			if (m_pedInObjective->m_nMoveState != PEDMOVE_STILL)
-				nextMove = m_pedInObjective->m_nMoveState;
-		} else
-			nextMove = PEDMOVE_WALK;
-
-	} else if (m_objective != OBJECTIVE_FOLLOW_CHAR_IN_FORMATION) {
-
-		if (m_objective == OBJECTIVE_SPRINT_TO_AREA)
-			nextMove = PEDMOVE_SPRINT;
-		else if (m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT || m_objective == OBJECTIVE_KILL_CHAR_ANY_MEANS || m_objective == OBJECTIVE_RUN_TO_AREA || bIsRunning)
-			nextMove = PEDMOVE_RUN;
-		else
-			nextMove = PEDMOVE_WALK;
-
-	} else if (seekPosDist <= 2.0f) {
-
-		if (m_pedInObjective->m_nMoveState != PEDMOVE_STILL)
-			nextMove = m_pedInObjective->m_nMoveState;
-
-	} else {
-		nextMove = PEDMOVE_RUN;
-	}
+	// Delegate the choice of the first move state to the C implementation
+	nextMove = (eMoveState)PedLogic_SeekInitialMove(m_objective, seekPosDist, bIsRunning,
+		m_objective == OBJECTIVE_FOLLOW_CHAR_IN_FORMATION ? m_pedInObjective->m_nMoveState : PEDMOVE_STILL);
 
 	if (m_nPedState == PED_SEEK_ENTITY) {
 		if (m_pSeekTarget->IsPed()) {
@@ -5899,23 +5448,8 @@ CPed::Seek(void)
 					m_actionX, m_actionY,
 					GetPosition().x, GetPosition().y);
 
-				float neededTurn = Abs(m_fRotationDest - m_fRotationCur);
-
-				if (neededTurn > PI)
-					neededTurn = TWOPI - neededTurn;
-
-				if (neededTurn > HALFPI) {
-					if (seekPosDist >= 1.0f) {
-						if (seekPosDist < 2.0f) {
-							if (bIsRunning)
-								nextMove = PEDMOVE_RUN;
-							else
-								nextMove = PEDMOVE_WALK;
-						}
-					} else {
-						nextMove = PEDMOVE_STILL;
-					}
-				}
+				// Delegate the adjustment of the move state for a turn to the C implementation
+				nextMove = (eMoveState)PedLogic_SeekTurnAdjustMove(nextMove, m_fRotationDest, m_fRotationCur, seekPosDist, bIsRunning);
 
 				CVector2D moveDist(GetPosition().x - m_actionX, GetPosition().y - m_actionY);
 				if (moveDist.Magnitude() < 0.5f) {
@@ -5936,23 +5470,12 @@ CPed::Seek(void)
 					GetPosition().x, GetPosition().y);
 			}
 
-			float neededTurn = Abs(m_fRotationDest - m_fRotationCur);
-
-			if (neededTurn > PI)
-				neededTurn = TWOPI - neededTurn;
-
-			if (neededTurn > HALFPI) {
-				if (seekPosDist >= 1.0f && neededTurn <= DEGTORAD(135.0f)) {
-					if (seekPosDist < 2.0f)
-						nextMove = PEDMOVE_WALK;
-				} else {
-					nextMove = PEDMOVE_STILL;
-				}
-			}
+			// Delegate the adjustment of the move state for a turn to the C implementation
+			nextMove = (eMoveState)PedLogic_SeekPathTurnAdjustMove(nextMove, m_fRotationDest, m_fRotationCur, seekPosDist);
 		}
 
-		if (((m_nPedState == PED_FLEE_POS || m_nPedState == PED_FLEE_ENTITY) && m_nMoveState < nextMove)
-			|| (m_nPedState != PED_FLEE_POS && m_nPedState != PED_FLEE_ENTITY && m_nPedState != PED_FOLLOW_PATH && m_objective != OBJECTIVE_GOTO_CHAR_ON_FOOT && m_nWaitState == WAITSTATE_FALSE)) {
+		// Delegate the decision to take the new move state to the C implementation
+		if (PedLogic_SeekMayChangeMoveState(m_nPedState, m_nMoveState, nextMove, m_objective, m_nWaitState == WAITSTATE_FALSE)) {
 
 			SetMoveState(nextMove);
 		}
@@ -6003,11 +5526,8 @@ CPed::SetFlee(CVector2D const &from, int time)
 		from.x, from.y);
 
 	m_fRotationDest = General_LimitRadianAngle(angleToFace);
-	if (m_fRotationCur - PI > m_fRotationDest) {
-		m_fRotationDest += 2 * PI;
-	} else if (PI + m_fRotationCur < m_fRotationDest) {
-		m_fRotationDest -= 2 * PI;
-	}
+	// Delegate to the C implementation
+	m_fRotationDest = PedLogic_WrapDestRotation(m_fRotationDest, m_fRotationCur);
 }
 
 void
@@ -6033,11 +5553,8 @@ CPed::SetFlee(CEntity *fleeFrom, int time)
 			fleeFrom->GetPosition().x, fleeFrom->GetPosition().y);
 
 	m_fRotationDest = General_LimitRadianAngle(angleToFace);
-	if (m_fRotationCur - PI > m_fRotationDest) {
-		m_fRotationDest += 2 * PI;
-	} else if (PI + m_fRotationCur < m_fRotationDest) {
-		m_fRotationDest -= 2 * PI;
-	}
+	// Delegate to the C implementation
+	m_fRotationDest = PedLogic_WrapDestRotation(m_fRotationDest, m_fRotationCur);
 }
 
 void
@@ -6153,10 +5670,8 @@ CPed::Flee(void)
 
 		m_fRotationDest = General_LimitRadianAngle(angleToFleeFromPos);
 
-		if (m_fRotationCur - PI > m_fRotationDest)
-			m_fRotationDest += TWOPI;
-		else if (PI + m_fRotationCur < m_fRotationDest)
-			m_fRotationDest -= TWOPI;
+		// Delegate to the C implementation
+		m_fRotationDest = PedLogic_WrapDestRotation(m_fRotationDest, m_fRotationCur);
 	}
 
 	if ((*Timer_GetTimeInMilliseconds()) >= m_collidingThingTimer)
@@ -6165,60 +5680,10 @@ CPed::Flee(void)
 	if (!m_collidingEntityWhileFleeing)
 		return;
 
-	double collidingThingPriorityMult = (double)(m_collidingThingTimer - (*Timer_GetTimeInMilliseconds())) * 2.0 / 2500;
-
-	if (collidingThingPriorityMult <= 1.5) {
-		double angleToFleeEntity = General_GetRadianAngleBetweenPoints(
-			GetPosition().x,
-			GetPosition().y,
-			m_collidingEntityWhileFleeing->GetPosition().x,
-			m_collidingEntityWhileFleeing->GetPosition().y);
-		angleToFleeEntity = General_LimitRadianAngle(angleToFleeEntity);
-
-		double angleToFleeCollidingThing = General_GetRadianAngleBetweenPoints(
-			m_vecDamageNormal.x,
-			m_vecDamageNormal.y,
-			0.0f,
-			0.0f);
-		angleToFleeCollidingThing = General_LimitRadianAngle(angleToFleeCollidingThing);
-
-		if (angleToFleeEntity - PI > angleToFleeCollidingThing)
-			angleToFleeCollidingThing += TWOPI;
-		else if (PI + angleToFleeEntity < angleToFleeCollidingThing)
-			angleToFleeCollidingThing -= TWOPI;
-
-		if (collidingThingPriorityMult <= 1.0f) {
-			// Range [0.0, 1.0]
-
-			float angleToFleeBoth = (angleToFleeCollidingThing + angleToFleeEntity) * 0.5f;
-
-			if (m_fRotationDest - PI > angleToFleeBoth)
-				angleToFleeBoth += TWOPI;
-			else if (PI + m_fRotationDest < angleToFleeBoth)
-				angleToFleeBoth -= TWOPI;
-	
-			m_fRotationDest = (1.0f - collidingThingPriorityMult) * m_fRotationDest + collidingThingPriorityMult * angleToFleeBoth;
-		} else {
-			// Range (1.0, 1.5]
-
-			double adjustedMult = (collidingThingPriorityMult - 1.0f) * 2.0f;
-			m_fRotationDest = angleToFleeEntity * (1.0 - adjustedMult) + adjustedMult * angleToFleeCollidingThing;
-		}
-	} else {
-		m_fRotationDest = General_GetRadianAngleBetweenPoints(
-			m_vecDamageNormal.x,
-			m_vecDamageNormal.y,
-			0.0f,
-			0.0f);
-		m_fRotationDest = General_LimitRadianAngle(m_fRotationDest);
-	}
-
-	m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-
-	if (m_fRotationCur - PI > m_fRotationDest)
-		m_fRotationDest += TWOPI;
-	else if (PI + m_fRotationCur < m_fRotationDest)
-		m_fRotationDest -= TWOPI;
+	// Delegate the blend of the headings to the C implementation
+	PedLogic_FleeCollisionHeading(m_collidingThingTimer, (*Timer_GetTimeInMilliseconds()), GetPosition().x, GetPosition().y,
+		m_collidingEntityWhileFleeing->GetPosition().x, m_collidingEntityWhileFleeing->GetPosition().y, m_vecDamageNormal.x, m_vecDamageNormal.y,
+		&m_fRotationDest, &m_fRotationCur);
 
 }
 
@@ -6310,27 +5775,15 @@ CPed::WanderPath(void)
 	uint8 randVal = (m_randomSeed + 3 * (*Timer_GetFrameCounter())) % 100;
 
 	// We don't prefer 180-degree turns in normal situations
-	uint8 dirWeWouldntPrefer = m_nPathDir;
-	if (dirWeWouldntPrefer <= 3)
-		dirWeWouldntPrefer += 4;
-	else
-		dirWeWouldntPrefer -= 4;
+	uint8 dirWeWouldntPrefer = PedLogic_OppositePathDir(m_nPathDir);
 
 	CPathNode *nodeWeWouldntPrefer = nil;
 	uint8 dirToSet = 9; // means undefined
 	uint8 dirWeWouldntPrefer2 = 9; // means undefined
 	uint8 tryCount = 0;
 
-	if (randVal <= 90) {
-		if (randVal > 80) {
-			m_nPathDir += 2;
-			m_nPathDir %= 8;
-		}
-	} else {
-		m_nPathDir -= 2;
-		if (m_nPathDir < 0)
-			m_nPathDir += 8;
-	}
+	// Delegate the random turn of the direction to the C implementation
+	m_nPathDir = PedLogic_WanderPathDirAdjust(m_nPathDir, randVal);
 
 	m_pLastPathNode = m_pNextPathNode;
 	ThePaths.FindNextNodeWandering(PATH_PED, GetPosition(), &m_pLastPathNode, &m_pNextPathNode,
@@ -6973,11 +6426,8 @@ CPed::SetFollowPathDynamic(void)
 void
 CPed::ClearFollowPath()
 {
-	for (int i = 0; i < ARRAY_SIZE(m_pathNodesToGo); i++) {
-		m_pathNodesToGo[i] = nil;
-	}
-	m_nNumPathNodes = 0;
-	m_nCurPathNodeId = 0;
+	// Delegate to the C implementation
+	PedLogic_ClearFollowPath(this);
 }
 
 void
@@ -7911,19 +7361,15 @@ CPed::CheckForDeadPeds(void)
 bool
 CPed::IsPlayer(void) const
 {
-#if 0
-	return m_nPedType == PEDTYPE_PLAYER1; // Original
-#else
-	// We still have those in enum, so let's also check for them.
-	return m_nPedType == PEDTYPE_PLAYER1 || m_nPedType == PEDTYPE_PLAYER2 ||
-		m_nPedType == PEDTYPE_PLAYER3 || m_nPedType == PEDTYPE_PLAYER4;
-#endif
+	// Delegate to the C implementation
+	return PedLogic_IsPlayer(this);
 }
 
 bool
 CPed::IsGangMember(void) const
 {
-	return m_nPedType >= PEDTYPE_GANG1 && m_nPedType <= PEDTYPE_GANG9;
+	// Delegate to the C implementation
+	return PedLogic_IsGangMember(this);
 }
 
 bool
@@ -8432,11 +7878,13 @@ CPed::SetWaitState(eWaitState state, void *time)
 
 	switch (state) {
 		case WAITSTATE_TRAFFIC_LIGHTS:
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 500;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			SetMoveState(PEDMOVE_STILL);
 			break;
 		case WAITSTATE_CROSS_ROAD:
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 1000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
 			break;
@@ -8444,10 +7892,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			// Use the complete C animation manager at the original call boundary
 			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ROADCROSS, 8.0f);
 
-			if (time)
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
-			else
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(2000,5000);
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 
 			break;
 		case WAITSTATE_LOOK_PED:
@@ -8459,7 +7905,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			break;
 		case WAITSTATE_DOUBLEBACK:
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 3500;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
 #ifdef FIX_BUGS
@@ -8469,7 +7916,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			break;
 		case WAITSTATE_HITWALL:
 			m_headingRate = 2.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_WALL, 16.0f);
 			animAssoc->flags |= ASSOC_DELETEFADEDOUT;
@@ -8485,7 +7933,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			break;
 		case WAITSTATE_TURN180:
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_TURN180, 4.0f);
 			// Use the complete C association at the original native operation boundary
@@ -8493,7 +7942,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			break;
 		case WAITSTATE_SURPRISE:
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 2000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_WALL, 4.0f);
 			// Use the complete C association at the original native operation boundary
@@ -8503,7 +7953,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			SetMoveState(PEDMOVE_STILL);
 			SetMoveAnim();
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
 #ifdef FIX_BUGS
@@ -8522,7 +7973,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			SetMoveState(PEDMOVE_STILL);
 			SetMoveAnim();
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
 #ifdef FIX_BUGS
@@ -8540,10 +7992,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			if (waitAnim == ANIM_STD_NUM)
 				waitAnim = ANIM_STD_HANDSCOWER;
 			m_headingRate = 0.0f;
-			if (time)
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
-			else
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 3000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, waitAnim, 4.0f);
@@ -8558,10 +8008,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 		case WAITSTATE_PLAYANIM_CHAT:
 			if (waitAnim == ANIM_STD_NUM)
 				waitAnim = ANIM_STD_CHAT;
-			if (time)
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
-			else
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 3000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, waitAnim, 4.0f);
@@ -8574,7 +8022,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			SetMoveState(PEDMOVE_STILL);
 			SetMoveAnim();
 			m_headingRate = 0.0f;
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 2500;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
 #ifdef FIX_BUGS
@@ -8587,34 +8036,32 @@ CPed::SetWaitState(eWaitState state, void *time)
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_DOWN, 4.0f);
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 100000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_SIT_UP:
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_UP, 4.0f);
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 100000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_SIT_IDLE:
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_IDLE, 128.f);
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			if (time)
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
-			else
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(25000, 30000);
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_USE_ATM:
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ATM, 4.0f);
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			if (time)
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
-			else
-				m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 100000;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_SUN_BATHE_IDLE:
 			m_headingRate = 0.0f;
@@ -8622,7 +8069,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_SUNBATHE, ANIM_SUNBATHE_IDLE, 4.0f);
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetDeleteCallback(animAssoc,DeleteSunbatheIdleAnimCB, this);
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + General_GetRandomNumberInRangeInt(50000, 100000);
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_FAST_FALL:
 			SetFall(-1, ANIM_STD_HIGHIMPACT_FRONT, true);
@@ -8630,7 +8078,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 		case WAITSTATE_BOMBER:
 			// Use the complete C animation manager at the original call boundary
 			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_DETONATE, 4.0f);
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		case WAITSTATE_GROUND_ATTACK:
 		{
@@ -8639,7 +8088,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 				break;
 			if (GetFireAnimGround(currentWeapon, false)) {
 				if (!RpAnimBlendClumpGetAssociation(GetClump(), GetFireAnimGround(currentWeapon, false))) {
-					m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + 5000;
+					// Delegate the duration of the wait to the C implementation
+					m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 					// Use the complete C animation manager at the original call boundary
 					CAnimBlendAssociation* newAnim = AnimManager_BlendAnimation(GetClump(),
 						currentWeapon->m_AnimToPlay, GetFireAnimGround(currentWeapon, false), 8.0f);
@@ -8660,7 +8110,8 @@ CPed::SetWaitState(eWaitState state, void *time)
 			animAssoc->flags |= ASSOC_DELETEFADEDOUT;
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + *(int*)time;
+			// Delegate the duration of the wait to the C implementation
+			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
 			break;
 		default:
 			ClearWaitState();
@@ -8723,7 +8174,7 @@ CPed::Wait(void)
 		case WAITSTATE_DOUBLEBACK:
 			if ((*Timer_GetTimeInMilliseconds()) <= m_nWaitTimer) {
 				uint32 timeLeft = m_nWaitTimer - (*Timer_GetTimeInMilliseconds());
-				if (timeLeft < 2500 && timeLeft > 2000) {
+				if (PedLogic_DoubleBackScratch(timeLeft)) {
 					m_nWaitTimer -= 500;
 					// Use the complete C animation manager at the original call boundary
 					AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_XPRESS_SCRATCH, 4.0f);
@@ -8807,22 +8258,8 @@ CPed::Wait(void)
 
 			AnimationId animToPlay;
 
-			switch (General_GetRandomNumber() & 3) {
-				case 0:
-					animToPlay = ANIM_STD_ROADCROSS;
-					break;
-				case 1:
-					animToPlay = ANIM_STD_IDLE_TIRED;
-					break;
-				case 2:
-					animToPlay = ANIM_STD_XPRESS_SCRATCH;
-					break;
-				case 3:
-					animToPlay = ANIM_STD_TURN180;
-					break;
-				default:
-					break;
-			}
+			// The animation of the stuck ped is chosen in C from a random number
+			animToPlay = (AnimationId)PedLogic_StuckWaitAnim(General_GetRandomNumber());
 
 			// Use the complete C animation manager at the original call boundary
 			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, animToPlay, 4.0f);
@@ -8846,69 +8283,66 @@ CPed::Wait(void)
 			break;
 
 		case WAITSTATE_PLAYANIM_HANDSUP:
-			mustHaveAnim = ANIM_STD_HANDSUP;
-			
 		case WAITSTATE_PLAYANIM_HANDSCOWER:
-			if (mustHaveAnim == ANIM_STD_NUM)
-				mustHaveAnim = ANIM_STD_HANDSCOWER;
+			mustHaveAnim = (AnimationId)PedLogic_WaitStateMustHaveAnim(m_nWaitState);
 
 			animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), mustHaveAnim);
 			pedWeLook = (CPed*) m_pLookTarget;
 
-			if ((!m_pLookTarget || !m_pLookTarget->IsPed() || pedWeLook->m_pPointGunAt)
-				&& m_nPedState != PED_FLEE_ENTITY
-				&& m_nPedState != PED_ATTACK
-				&& (*Timer_GetTimeInMilliseconds()) <= m_nWaitTimer
-				&& animAssoc) {
+			// Delegate the condition for keeping the hands up to the C implementation
+			if (PedLogic_HandsUpKeepsWaiting(!m_pLookTarget || !m_pLookTarget->IsPed(), m_pLookTarget && m_pLookTarget->IsPed() && pedWeLook->m_pPointGunAt,
+				m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_ATTACK, (*Timer_GetTimeInMilliseconds()) <= m_nWaitTimer, animAssoc != nil)) {
 
 				if (pedWeLook)
 					TurnBody();
 			} else {
 				ClearWaitState();
 				m_nWaitTimer = 0;
-				if (m_pLookTarget && m_pLookTarget->IsPed()) {
-					if (m_nPedState != PED_FLEE_ENTITY && m_nPedState != PED_ATTACK) {
-						if (bCrouchWhenScared) {
-							if (bIsDucking) {
-								ClearDuck(false);
-								SetDuck(10000, true);
-							}
-
-						} else if (m_pedStats->m_fear <= 100 - pedWeLook->m_pedStats->m_temper) {
-							if (GetWeapon()->IsTypeMelee()) {
-								if(m_pedStats->m_flags & STAT_GUN_PANIC) {
-									SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE, m_pLookTarget);
-									if (m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_FLEE_POS) {
-
-										bUsePedNodeSeek = true;
-										m_pNextPathNode = nil;
-									}
-									if (m_nMoveState != PEDMOVE_RUN)
-										SetMoveState(PEDMOVE_WALK);
-
-									if (m_nPedType != PEDTYPE_COP) {
-										ProcessObjective();
-										SetMoveState(PEDMOVE_WALK);
-									}
-								} else {
-									SetObjective(OBJECTIVE_NONE);
-									SetWanderPath(General_GetRandomNumberInRangeFloat(0.0f, 8.0f));
-								}
-							} else {
-								SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, m_pLookTarget);
-								SetObjectiveTimer(20000);
-							}
-						} else {
-							SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE, m_pLookTarget);
-							if (m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_FLEE_POS)
-							{
-								bUsePedNodeSeek = true;
-								m_pNextPathNode = nil;
-							}
-							SetMoveState(PEDMOVE_RUN);
-							Say(SOUND_PED_FLEE_RUN);
-						}
+				// Delegate the choice of the reaction to the C implementation
+				bool lookIsPed = m_pLookTarget && m_pLookTarget->IsPed();
+				switch (PedLogic_HandsUpReaction(lookIsPed, m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_ATTACK, bCrouchWhenScared,
+					lookIsPed && m_pedStats->m_fear <= 100 - pedWeLook->m_pedStats->m_temper, GetWeapon()->IsTypeMelee(), (m_pedStats->m_flags & STAT_GUN_PANIC) != 0)) {
+				case HANDSUP_REACT_CROUCH:
+					if (bIsDucking) {
+						ClearDuck(false);
+						SetDuck(10000, true);
 					}
+					break;
+				case HANDSUP_REACT_MELEE_PANIC:
+					SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE, m_pLookTarget);
+					if (m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_FLEE_POS) {
+
+						bUsePedNodeSeek = true;
+						m_pNextPathNode = nil;
+					}
+					if (m_nMoveState != PEDMOVE_RUN)
+						SetMoveState(PEDMOVE_WALK);
+
+					if (m_nPedType != PEDTYPE_COP) {
+						ProcessObjective();
+						SetMoveState(PEDMOVE_WALK);
+					}
+					break;
+				case HANDSUP_REACT_MELEE_WANDER:
+					SetObjective(OBJECTIVE_NONE);
+					SetWanderPath(General_GetRandomNumberInRangeFloat(0.0f, 8.0f));
+					break;
+				case HANDSUP_REACT_KILL:
+					SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, m_pLookTarget);
+					SetObjectiveTimer(20000);
+					break;
+				case HANDSUP_REACT_FLEE:
+					SetObjective(OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE, m_pLookTarget);
+					if (m_nPedState == PED_FLEE_ENTITY || m_nPedState == PED_FLEE_POS)
+					{
+						bUsePedNodeSeek = true;
+						m_pNextPathNode = nil;
+					}
+					SetMoveState(PEDMOVE_RUN);
+					Say(SOUND_PED_FLEE_RUN);
+					break;
+				default:
+					break;
 				}
 				animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), mustHaveAnim);
 				if (animAssoc) {
@@ -8918,19 +8352,10 @@ CPed::Wait(void)
 			}
 			break;
 		case WAITSTATE_PLAYANIM_COWER:
-			mustHaveAnim = ANIM_STD_HANDSCOWER;
-
 		case WAITSTATE_PLAYANIM_DUCK:
-			if (mustHaveAnim == ANIM_STD_NUM)
-				mustHaveAnim = ANIM_STD_DUCK_DOWN;
-
 		case WAITSTATE_PLAYANIM_TAXI:
-			if (mustHaveAnim == ANIM_STD_NUM)
-				mustHaveAnim = ANIM_STD_HAILTAXI;
-
 		case WAITSTATE_PLAYANIM_CHAT:
-			if (mustHaveAnim == ANIM_STD_NUM)
-				mustHaveAnim = ANIM_STD_CHAT;
+			mustHaveAnim = (AnimationId)PedLogic_WaitStateMustHaveAnim(m_nWaitState);
 
 			if ((*Timer_GetTimeInMilliseconds()) > m_nWaitTimer) {
 				animAssoc = RpAnimBlendClumpGetAssociation(GetClump(), mustHaveAnim);
@@ -9152,7 +8577,8 @@ CPed::FinishedWaitCB(CAnimBlendAssociation *animAssoc, void *arg)
 void
 CPed::RestoreHeadingRate(void)
 {
-	m_headingRate = m_pedStats->m_headingChangeRate;
+	// Delegate to the C implementation
+	PedLogic_RestoreHeadingRate(this);
 }
 
 void
@@ -9621,17 +9047,8 @@ CPed::FinishHitHeadCB(CAnimBlendAssociation *animAssoc, void *arg)
 bool
 CPed::CanPedDriveOff(void)
 {
-	if (m_nPedState != PED_DRIVING || m_lookTimer > (*Timer_GetTimeInMilliseconds()))
-		return false;
-
-	for (int i = 0; i < m_numNearPeds; i++) {
-		CPed *nearPed = m_nearPeds[i];
-		if (nearPed->m_nPedType == m_nPedType && nearPed->m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER && nearPed->m_carInObjective == m_carInObjective) {
-			m_lookTimer = (*Timer_GetTimeInMilliseconds()) + 1000;
-			return false;
-		}
-	}
-	return true;
+	// Delegate to the C implementation
+	return PedLogic_CanPedDriveOff(this, (*Timer_GetTimeInMilliseconds()));
 }
 void
 CPed::SetRadioStation(void)
@@ -9723,7 +9140,8 @@ CPed::WarpPedIntoCar(CVehicle *car)
 bool
 CPed::HasAttractor(void)
 {
-	return m_attractor != nil;
+	// Delegate to the C implementation
+	return PedLogic_HasAttractor(this);
 }
 
 void

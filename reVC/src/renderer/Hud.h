@@ -25,14 +25,7 @@ enum DRAW_FADE_STATE
 };
 
 // My name
-enum eFadeOperation
-{
-	FADED_OUT = 0,
-	START_FADE_OUT,
-	FADING_IN,
-	FADING_OUT,
-	FADE_DISABLED = 5,
-};
+#include "HudFade.h"
 
 enum eSprites 
 {

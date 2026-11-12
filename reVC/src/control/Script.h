@@ -5,6 +5,7 @@
 #include "PedType.h"
 #include "Text.h"
 #include "Sprite2d.h"
+#include "ScriptBytecode.h"
 
 class CEntity;
 class CBuilding;
@@ -498,21 +499,10 @@ public:
 
 	static int32* GetPointerToScriptVariable(int32 offset) { assert(offset >= 8 && offset < CTheScripts::GetSizeOfVariableSpace()); return (int32*)&ScriptSpace[offset]; }
 
-	static int32 Read4BytesFromScript(uint32* pIp) {
-		int32 retval = ScriptSpace[*pIp + 3] << 24 | ScriptSpace[*pIp + 2] << 16 | ScriptSpace[*pIp + 1] << 8 | ScriptSpace[*pIp];
-		*pIp += 4;
-		return retval;
-	}
-	static int16 Read2BytesFromScript(uint32* pIp) {
-		int16 retval = ScriptSpace[*pIp + 1] << 8 | ScriptSpace[*pIp];
-		*pIp += 2;
-		return retval;
-	}
-	static int8 Read1ByteFromScript(uint32* pIp) {
-		int8 retval = ScriptSpace[*pIp];
-		*pIp += 1;
-		return retval;
-	}
+	// Delegate to the C implementation
+	static int32 Read4BytesFromScript(uint32* pIp) { return ScriptBC_Read4(ScriptSpace, pIp); }
+	static int16 Read2BytesFromScript(uint32* pIp) { return ScriptBC_Read2(ScriptSpace, pIp); }
+	static int8 Read1ByteFromScript(uint32* pIp) { return ScriptBC_Read1(ScriptSpace, pIp); }
 	static float ReadFloatFromScript(uint32* pIp) {
 		return Read2BytesFromScript(pIp) / 16.0f;
 	}

@@ -41,6 +41,7 @@
 #include "Coronas.h" // rouz edit (ChatGPT)
 #include "Occlusion.h"
 #include "Renderer.h"
+#include "RendererLogic.h"
 #include "custompipes.h"
 #include "Frontend.h"
 #include "CutsceneMgr.h" // rouz edit (ChatGPT)
@@ -891,14 +892,11 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 
 	if(ent->bDistanceFade){
 		RpAtomic *lodatm;
-		float fadefactor;
 		uint32 alpha;
 
 		lodatm = mi->GetAtomicFromDistance(camdist - FADE_DISTANCE);
-		fadefactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) - (camdist - FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
-		if(fadefactor > 1.0f)
-			fadefactor = 1.0f;
-		alpha = mi->m_alpha * fadefactor;
+		// Delegate the alpha of the distance fade to the C implementation
+		alpha = RendererLogic_DistanceFadeAlpha(mi->m_alpha, SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), camdist, FADE_DISTANCE);
 
 		if(alpha == 255 || lodatm == nil) // rouz edit (ChatGPT)
 			WorldRender::AtomicFirstPass(atomic, pass);
@@ -2094,7 +2092,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	if(mi->m_noFade){
 		mi->m_isDamaged = false;
 		// request model
-		if(lodDist - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) && request) // rouz edit (ChatGPT)
+		if(RendererLogic_WithinStreamDistance(lodDist, SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), STREAM_DISTANCE) && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
@@ -2105,7 +2103,7 @@ CRenderer::SetupEntityVisibility(CEntity *ent)
 	mi->m_isDamaged = false;
 	if(a == nil){
 		// request model
-		if(lodDist - FADE_DISTANCE - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) && request) // rouz edit (ChatGPT)
+		if(RendererLogic_WithinStreamDistance(lodDist - FADE_DISTANCE, SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), STREAM_DISTANCE) && request) // rouz edit (ChatGPT)
 			return VIS_STREAMME;
 		return VIS_INVISIBLE;
 	}
@@ -2629,150 +2627,21 @@ CalcNewDelta(RwV2d *a, RwV2d *b)
 #define TOINT(x) ((int)(x))
 #endif
 
+// Gives the lists of a sector to the function that scans them
+struct ScanSectorContext { void (*scanfunc)(CPtrList *); };
+
+static void
+ScanSectorCallback(int32 x, int32 y, void *context)
+{
+	((ScanSectorContext*)context)->scanfunc(CWorld::GetSector(x, y)->m_lists);
+}
+
 void
 CRenderer::ScanSectorPoly(RwV2d *poly, int32 numVertices, void (*scanfunc)(CPtrList *))
 {
-	float miny, maxy;
-	int y, yend;
-	int x, xstart, xend;
-	int i;
-	int a1, a2, b1, b2;
-	float deltaA, deltaB;
-	float xA, xB;
-
-	miny = poly[0].y;
-	maxy = poly[0].y;
-	a2 = 0;
-	xstart = 9999;
-	xend = -9999;
-
-	for(i = 1; i < numVertices; i++){
-		if(poly[i].y > maxy)
-			maxy = poly[i].y;
-		if(poly[i].y < miny){
-			miny = poly[i].y;
-			a2 = i;
-		}
-	}
-	y = TOINT(miny);
-	yend = TOINT(maxy);
-
-	// Go left in poly to find first edge b
-	b2 = a2;
-	for(i = 0; i < numVertices; i++){
-		b1 = b2--;
-		if(b2 < 0) b2 = numVertices-1;
-		if(poly[b1].x < xstart)
-			xstart = TOINT(poly[b1].x);
-		if(TOINT(poly[b1].y) != TOINT(poly[b2].y))
-			break;
-	}
-	// Go right to find first edge a
-	for(i = 0; i < numVertices; i++){
-		a1 = a2++;
-		if(a2 == numVertices) a2 = 0;
-		if(poly[a1].x > xend)
-			xend = TOINT(poly[a1].x);
-		if(TOINT(poly[a1].y) != TOINT(poly[a2].y))
-			break;
-	}
-
-	// prestep x1 and x2 to next integer y
-	deltaA = CalcNewDelta(&poly[a1], &poly[a2]);
-	xA = deltaA * (Ceil(poly[a1].y) - poly[a1].y) + poly[a1].x;
-	deltaB = CalcNewDelta(&poly[b1], &poly[b2]);
-	xB = deltaB * (Ceil(poly[b1].y) - poly[b1].y) + poly[b1].x;
-
-	if(y != yend){
-		if(deltaB < 0.0f && TOINT(xB) < xstart)
-			xstart = TOINT(xB);
-		if(deltaA >= 0.0f && TOINT(xA) > xend)
-			xend = TOINT(xA);
-	}
-
-	while(y <= yend && y < NUMSECTORS_Y){
-		// scan one x-line
-		if(y >= 0 && xstart < NUMSECTORS_X)
-			for(x = xstart; x <= xend && x != NUMSECTORS_X; x++)
-				if(x >= 0)
-					scanfunc(CWorld::GetSector(x, y)->m_lists);
-
-		// advance one scan line
-		y++;
-		xA += deltaA;
-		xB += deltaB;
-
-		// update left side
-		if(y == TOINT(poly[b2].y)){
-			// reached end of edge
-			if(y == yend){
-				if(deltaB < 0.0f){
-					do{
-						xstart = TOINT(poly[b2--].x);
-						if(b2 < 0) b2 = numVertices-1;
-					}while(xstart > TOINT(poly[b2].x));
-				}else
-					xstart = TOINT(xB - deltaB);
-			}else{
-				// switch edges
-				if(deltaB < 0.0f)
-					xstart = TOINT(poly[b2].x);
-				else
-					xstart = TOINT(xB - deltaB);
-				do{
-					b1 = b2--;
-					if(b2 < 0) b2 = numVertices-1;
-					if(TOINT(poly[b1].x) < xstart)
-						xstart = TOINT(poly[b1].x);
-				}while(y == TOINT(poly[b2].y));
-				deltaB = CalcNewDelta(&poly[b1], &poly[b2]);
-				xB = deltaB * (Ceil(poly[b1].y) - poly[b1].y) + poly[b1].x;
-				if(deltaB < 0.0f && TOINT(xB) < xstart)
-					xstart = TOINT(xB);
-			}
-		}else{
-			if(deltaB < 0.0f)
-				xstart = TOINT(xB);
-			else
-				xstart = TOINT(xB - deltaB);
-		}
-
-		// update right side
-		if(y == TOINT(poly[a2].y)){
-			// reached end of edge
-			if(y == yend){
-				if(deltaA < 0.0f)
-					xend = TOINT(xA - deltaA);
-				else{
-					do{
-						xend = TOINT(poly[a2++].x);
-						if(a2 == numVertices) a2 = 0;
-					}while(xend < TOINT(poly[a2].x));
-				}
-			}else{
-				// switch edges
-				if(deltaA < 0.0f)
-					xend = TOINT(xA - deltaA);
-				else
-					xend = TOINT(poly[a2].x);
-				do{
-					a1 = a2++;
-					if(a2 == numVertices) a2 = 0;
-					if(TOINT(poly[a1].x) > xend)
-						xend = TOINT(poly[a1].x);
-				}while(y == TOINT(poly[a2].y));
-				deltaA = CalcNewDelta(&poly[a1], &poly[a2]);
-				xA = deltaA * (Ceil(poly[a1].y) - poly[a1].y) + poly[a1].x;
-				if(deltaA >= 0.0f && TOINT(xA) > xend)
-					xend = TOINT(xA);
-			}
-		}else{
-			if(deltaA < 0.0f)
-				xend = TOINT(xA - deltaA);
-			else
-				xend = TOINT(xA);
-		}
-	}
+	// Delegate the scan conversion of the polygon to the C implementation
+	ScanSectorContext context = { scanfunc };
+	RendererLogic_ScanSectorPoly((const RendererV2*)poly, numVertices, NUMSECTORS_X, NUMSECTORS_Y, ScanSectorCallback, &context);
 }
 
 void
@@ -3187,9 +3056,9 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 		return true;
 
 	if(mi->m_noFade)
-		return dist - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
+		return RendererLogic_WithinStreamDistance(dist, SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), STREAM_DISTANCE); // rouz edit (ChatGPT)
 	else
-		return dist - FADE_DISTANCE - STREAM_DISTANCE < SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
+		return RendererLogic_WithinStreamDistance(dist - FADE_DISTANCE, SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), STREAM_DISTANCE); // rouz edit (ChatGPT)
 }
 
 void

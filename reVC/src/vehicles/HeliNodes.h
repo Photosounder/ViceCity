@@ -1,0 +1,23 @@
+//+ rouz edit (Claude)
+#pragma once
+
+enum eHeliNodes
+{
+	HELI_CHASSIS = 1,
+	HELI_TOPROTOR,
+	HELI_BACKROTOR,
+	HELI_TAIL,
+	HELI_TOPKNOT,
+	HELI_SKID_LEFT,
+	HELI_SKID_RIGHT,
+	NUM_HELI_NODES
+};
+enum
+{
+	HELI_RANDOM0,
+	HELI_RANDOM1,
+	HELI_SCRIPT,
+	HELI_CATALINA,	// TODO 2 in VC
+	NUM_HELIS
+};
+//- rouz edit (Claude)

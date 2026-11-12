@@ -1557,7 +1557,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>NameGrid.cpp</PATH>
+                    <PATH>NameGrid.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
@@ -2775,7 +2775,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ObjectData.cpp</PATH>
+                    <PATH>ObjectData.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
@@ -4600,7 +4600,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>NameGrid.cpp</PATH>
+                    <PATH>NameGrid.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -5470,7 +5470,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ObjectData.cpp</PATH>
+                    <PATH>ObjectData.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -8094,7 +8094,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>NameGrid.cpp</PATH>
+                    <PATH>NameGrid.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
@@ -9312,7 +9312,7 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ObjectData.cpp</PATH>
+                    <PATH>ObjectData.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
@@ -11137,7 +11137,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>NameGrid.cpp</PATH>
+                    <PATH>NameGrid.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -12007,7 +12007,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ObjectData.cpp</PATH>
+                    <PATH>ObjectData.c</PATH>
                     <PATHFORMAT>Windows</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -13663,7 +13663,7 @@
             <FILEREF>
                 <TARGETNAME>Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>NameGrid.cpp</PATH>
+                <PATH>NameGrid.c</PATH>
                 <PATHFORMAT>Windows</PATHFORMAT>
             </FILEREF>
             <FILEREF>
@@ -14717,7 +14717,7 @@
             <FILEREF>
                 <TARGETNAME>Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>ObjectData.cpp</PATH>
+                <PATH>ObjectData.c</PATH>
                 <PATHFORMAT>Windows</PATHFORMAT>
             </FILEREF>
             <FILEREF>

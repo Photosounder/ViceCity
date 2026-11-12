@@ -13,14 +13,8 @@
 
 CBaseModelInfo::CBaseModelInfo(ModelInfoType type)
 {
-	m_colModel = nil;
-	m_2dEffectsID = -1;
-	m_objectId = -1;
-	m_refCount = 0;
-	m_txdSlot = -1;
-	m_type = type;
-	m_num2dEffects = 0;
-	m_bOwnsColModel = false;
+	// Delegate the field initialisation to the C implementation
+	BaseModelInfo_Init(this, type);
 }
 
 void
@@ -30,8 +24,7 @@ CBaseModelInfo::Shutdown(void)
 	DeleteRwObject();
 	// Reset the model effect range through the C policy
 	ModelRegistry_ResetEffects(this);
-	m_txdSlot = -1;
-	m_objectId = -1;
+	BaseModelInfo_ResetAfterShutdown(this);
 }
 
 void
@@ -57,40 +50,36 @@ CBaseModelInfo::DeleteCollisionModel(void)
 void
 CBaseModelInfo::AddRef(void)
 {
-	m_refCount++;
-	AddTexDictionaryRef();
+	// Delegate to the C implementation
+	BaseModelInfo_AddRef(this);
 }
 
 void
 CBaseModelInfo::RemoveRef(void)
 {
-	m_refCount--;
-	RemoveTexDictionaryRef();
+	// Delegate to the C implementation
+	BaseModelInfo_RemoveRef(this);
 }
 
 void
 CBaseModelInfo::SetTexDictionary(const char *name)
 {
-	// Use the complete C texture dictionary owner with the original live arguments
-	int slot = TxdStore_FindTxdSlot(name);
-	if(slot == -1)
-		// Use the complete C texture dictionary owner with the original live arguments
-		slot = TxdStore_AddTxdSlot(name);
-	m_txdSlot = slot;
+	// Delegate to the C implementation
+	BaseModelInfo_SetTexDictionary(this, name);
 }
 
 void
 CBaseModelInfo::AddTexDictionaryRef(void)
 {
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_AddRef(m_txdSlot);
+	// Delegate to the C implementation
+	BaseModelInfo_AddTexDictionaryRef(this);
 }
 
 void
 CBaseModelInfo::RemoveTexDictionaryRef(void)
 {
-	// Use the complete C texture dictionary owner with the original live arguments
-	TxdStore_RemoveRef(m_txdSlot);
+	// Delegate to the C implementation
+	BaseModelInfo_RemoveTexDictionaryRef(this);
 }
 
 int16_t *ModelRegistry_EffectId(void *model)

@@ -11,6 +11,8 @@
 #include "Clock.h"
 #include "Darkel.h"
 #include "Hud.h"
+#include "HudMessages.h"
+#include "HudLogic.h"
 #include "Messages.h"
 #include "Frontend.h"
 #include "Font.h"
@@ -264,25 +266,10 @@ void CHud::Draw()
 		eWeaponType WeaponType = playerPed->GetWeapon()->m_eWeaponType;
 		int32 Mode = TheCamera.Cams[TheCamera.ActiveCam].Mode;
 
-		if ((Mode == CCam::MODE_SNIPER || Mode == CCam::MODE_ROCKETLAUNCHER || Mode == CCam::MODE_M16_1STPERSON || Mode == CCam::MODE_HELICANNON_1STPERSON || Mode == CCam::MODE_CAMERA)
-			&& playerPed && !playerPed->GetWeapon()->IsTypeMelee())
-			DrawCrossHair = true;
-
-		if (Mode == CCam::MODE_M16_1STPERSON_RUNABOUT || Mode == CCam::MODE_ROCKETLAUNCHER_RUNABOUT || Mode == CCam::MODE_SNIPER_RUNABOUT)
-			DrawCrossHairPC = true;
-		if (TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam() && (!CPad::GetPad(0)->GetLookBehindForPed() || TheCamera.m_bPlayerIsInGarage)
-			|| Mode == CCam::MODE_1STPERSON_RUNABOUT) {
-			if (playerPed) {
-				if (playerPed->m_nPedState != PED_ENTER_CAR && playerPed->m_nPedState != PED_CARJACK) {
-
-					if (WeaponType >= WEAPONTYPE_COLT45 && WeaponType <= WEAPONTYPE_RUGER
-						|| WeaponType == WEAPONTYPE_M60 || WeaponType == WEAPONTYPE_MINIGUN
-						|| WeaponType == WEAPONTYPE_FLAMETHROWER) {
-						DrawCrossHairPC = 1;
-					}
-				}
-			}
-		}
+		// Delegate to the C implementation
+		Hud_CrosshairFlags(Mode, WeaponType, playerPed->GetWeapon()->IsTypeMelee(),
+			TheCamera.Cams[TheCamera.ActiveCam].Using3rdPersonMouseCam(), CPad::GetPad(0)->GetLookBehindForPed(), TheCamera.m_bPlayerIsInGarage,
+			playerPed->m_nPedState, &DrawCrossHair, &DrawCrossHairPC);
 
 		if (DrawCrossHair || DrawCrossHairPC) {
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void *)rwFILTERLINEAR);
@@ -509,23 +496,8 @@ void CHud::Draw()
 			int32 AmmoAmount = WeaponInfo_GetWeaponInfo((eWeaponType)WeaponType)->m_nAmountofAmmunition;
 			int32 AmmoInClip = weapon->m_nAmmoInClip;
 			int32 TotalAmmo = weapon->m_nAmmoTotal;
-			int32 Ammo, Clip;
-
-			if (AmmoAmount <= 1 || AmmoAmount >= 1000)
-				sprintf(sTemp, "%d", TotalAmmo);
-			else {
-				if (WeaponType == WEAPONTYPE_FLAMETHROWER) {
-					Clip = AmmoInClip / 10;
-
-					Ammo = Min((TotalAmmo - AmmoInClip) / 10, 9999);
-				} else {
-					Clip = AmmoInClip;
-
-					Ammo = Min(TotalAmmo - AmmoInClip, 9999);
-				}
-
-				sprintf(sTemp, "%d-%d", Ammo, Clip);
-			}
+			// Delegate to the C implementation
+			Hud_FormatAmmo(sTemp, AmmoAmount, WeaponType, AmmoInClip, TotalAmmo);
 
 			AsciiToUnicode(sTemp, sPrint);
 			CWeaponInfo *weaponInfo = WeaponInfo_GetWeaponInfo((eWeaponType)WeaponType);
@@ -631,12 +603,9 @@ void CHud::Draw()
 			CFont::SetDropShadowPosition(2);
 			CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 
-			if (m_ItemToFlash == ITEM_HEALTH && FRAMECOUNTER & 8
-				|| m_ItemToFlash != ITEM_HEALTH
-				|| playerPed->m_fHealth < 10
-				&& FRAMECOUNTER & 8) {
-				if (playerPed->m_fHealth >= 10
-					|| playerPed->m_fHealth < 10 && FRAMECOUNTER & 8) {
+			// Delegate the blinking tests to the C implementation
+			if (Hud_ShowHealth(m_ItemToFlash == ITEM_HEALTH, FRAMECOUNTER, playerPed->m_fHealth)) {
+				{
 
 					AsciiToUnicode("{", sPrintIcon);
 #ifdef FIX_BUGS
@@ -650,7 +619,7 @@ void CHud::Draw()
 					if (FrontEndMenuManager.m_PrefsShowHud) {
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss || (*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss + 2000 || FRAMECOUNTER & 4) {
+						if (Hud_ShowLossIcon(CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastHealthLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
 							// CFont::SetColor(HEALTH_COLOR);
 							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(110.0f + 54.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
@@ -661,7 +630,7 @@ void CHud::Draw()
 			/*
 				DrawArmour
 			*/
-			if (m_ItemToFlash == ITEM_ARMOUR && FRAMECOUNTER & 8 || m_ItemToFlash != ITEM_ARMOUR) {
+			if (Hud_ShowArmour(m_ItemToFlash == ITEM_ARMOUR, FRAMECOUNTER)) {
 				CFont::SetScale(SCREEN_SCALE_X(HUD_TEXT_SCALE_X), SCREEN_SCALE_Y(HUD_TEXT_SCALE_Y));
 				if (playerPed->m_fArmour > 1.0f) {
 					AsciiToUnicode("<", sPrintIcon);
@@ -677,7 +646,7 @@ void CHud::Draw()
 
 						CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f), SCREEN_SCALE_Y(65.0f), sPrint);
 
-						if (!CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss || (*Timer_GetTimeInMilliseconds()) > CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss + 2000 || FRAMECOUNTER & 4) {
+						if (Hud_ShowLossIcon(CWorld::Players[CWorld::PlayerInFocus].m_nTimeLastArmourLoss, (*Timer_GetTimeInMilliseconds()), FRAMECOUNTER)) {
 							// CFont::SetColor(ARMOUR_COLOR);
 							CFont::PrintString(SCREEN_SCALE_FROM_RIGHT(182.0f + 52.0f), SCREEN_SCALE_Y(65.0f), sPrintIcon);
 						}
@@ -784,68 +753,19 @@ void CHud::Draw()
 		if (m_pZoneName) {
 
 			if (m_pZoneName != m_pLastZoneName) {
-				switch (m_ZoneState) {
-				case 0:
-					m_ZoneState = 2;
+				// Delegate to the C implementation
+				if (Hud_ZoneNameChanged(&m_ZoneState, &m_ZoneNameTimer, &m_ZoneFadeTimer, &m_VehicleState))
 					m_ZoneToPrint = m_pZoneName;
-					m_ZoneNameTimer = 0;
-					m_ZoneFadeTimer = 0;
-					if (m_VehicleState == 1 || m_VehicleState == 2)
-						m_VehicleState = 3;
-					break;
-				case 1:
-				case 2:
-				case 3:
-				case 4:
-					m_ZoneNameTimer = 5;
-					m_ZoneState = 4;
-					break;
-				default:
-					break;
-				}
 				m_pLastZoneName = m_pZoneName;
 			}
 
 			float fZoneAlpha = 255.0f;
 			if (m_ZoneState) {
-				switch (m_ZoneState) {
-				case 1:
-					fZoneAlpha = 255.0f;
-					m_ZoneFadeTimer = 1000;
-					if (m_ZoneNameTimer > 10000.0f) {
-						m_ZoneFadeTimer = 1000;
-						m_ZoneState = 3;
-					}
-					break;
-				case 2:
-					m_ZoneFadeTimer += Timer_GetTimeStepInMilliseconds();
-					if (m_ZoneFadeTimer > 1000.0f) {
-						m_ZoneState = 1;
-						m_ZoneFadeTimer = 1000;
-					}
-					fZoneAlpha = m_ZoneFadeTimer * 0.001f * 255.0f;
-					break;
-				case 3:
-					m_ZoneFadeTimer -= Timer_GetTimeStepInMilliseconds();
-					if (m_ZoneFadeTimer < 0.0f) {
-						m_ZoneState = 0;
-						m_ZoneFadeTimer = 0;
-					}
-					fZoneAlpha = m_ZoneFadeTimer * 0.001f * 255.0f;
-					break;
-				case 4:
-					m_ZoneFadeTimer -= Timer_GetTimeStepInMilliseconds();
-					if (m_ZoneFadeTimer < 0.0f) {
-						m_ZoneFadeTimer = 0;
-						m_ZoneToPrint = m_pLastZoneName;
-						m_ZoneState = 2;
-					}
-					fZoneAlpha = m_ZoneFadeTimer * 0.001f * 255.0f;
-					break;
-				default:
-					break;
-
-				}
+				// Delegate to the C implementation
+				bool restoreZonePrint;
+				fZoneAlpha = Hud_ZoneNameFadeStep(&m_ZoneState, &m_ZoneFadeTimer, m_ZoneNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreZonePrint);
+				if (restoreZonePrint)
+					m_ZoneToPrint = m_pLastZoneName;
 
 				if (!m_Message[0] && BigMessageInUse[1] == 0.0f && BigMessageInUse[2] == 0.0f) {
 
@@ -887,66 +807,18 @@ void CHud::Draw()
 			float fVehicleAlpha = 0.0f;
 
 			if (m_VehicleName != m_pLastVehicleName) {
-				switch (m_VehicleState) {
-				case 0:
-					m_VehicleState = 2;
+				// Delegate to the C implementation
+				if (Hud_VehicleNameChanged(&m_VehicleState, &m_VehicleNameTimer, &m_VehicleFadeTimer, &m_ZoneState))
 					m_pVehicleNameToPrint = m_VehicleName;
-					m_VehicleNameTimer = 0;
-					m_VehicleFadeTimer = 0;
-					if (m_ZoneState == 1 || m_ZoneState == 2)
-						m_ZoneState = 3;
-					break;
-				case 1:
-				case 2:
-				case 3:
-				case 4:
-					m_VehicleNameTimer = 0;
-					m_VehicleState = 4;
-					break;
-				default:
-					break;
-				}
 				m_pLastVehicleName = m_VehicleName;
 			}
 
 			if (m_VehicleState) {
-				switch (m_VehicleState) {
-				case 1:
-					if (m_VehicleNameTimer > 10000) {
-						m_VehicleFadeTimer = 1000;
-						m_VehicleState = 3;
-					}
-					fVehicleAlpha = 255.0f;
-					break;
-				case 2:
-					m_VehicleFadeTimer += Timer_GetTimeStepInMilliseconds();
-					if (m_VehicleFadeTimer > 1000) {
-						m_VehicleState = 1;
-						m_VehicleFadeTimer = 1000;
-					}
-					fVehicleAlpha = m_VehicleFadeTimer * 0.001f * 255.0f;
-					break;
-				case 3:
-					m_VehicleFadeTimer -= Timer_GetTimeStepInMilliseconds();
-					if (m_VehicleFadeTimer < 0) {
-						m_VehicleState = 0;
-						m_VehicleFadeTimer = 0;
-					}
-					fVehicleAlpha = m_VehicleFadeTimer * 0.001f * 255.0f;
-					break;
-				case 4:
-					m_VehicleFadeTimer -= Timer_GetTimeStepInMilliseconds();
-					if (m_VehicleFadeTimer < 0) {
-						m_VehicleFadeTimer = 0;
-						m_pVehicleNameToPrint = m_pLastVehicleName;
-						m_VehicleNameTimer = 0;
-						m_VehicleState = 2;
-					}
-					fVehicleAlpha = m_VehicleFadeTimer * 0.001f * 255.0f;
-					break;
-				default:
-					break;
-				}
+				// Delegate to the C implementation
+				bool restoreVehiclePrint;
+				fVehicleAlpha = Hud_VehicleNameFadeStep(&m_VehicleState, &m_VehicleFadeTimer, &m_VehicleNameTimer, Timer_GetTimeStepInMilliseconds(), &restoreVehiclePrint);
+				if (restoreVehiclePrint)
+					m_pVehicleNameToPrint = m_pLastVehicleName;
 
 				if (!m_Message[0]) {
 					m_VehicleNameTimer += Timer_GetTimeStepInMilliseconds();
@@ -1023,17 +895,8 @@ void CHud::Draw()
 
 		if (OnscreenTimer_state.m_bProcessed) {
 			if (OnscreenTimer_state.m_sClocks[0].m_bClockProcessed) {
-				if (!TimerOnLastFrame)
-					TimerFlashTimer = 1;
-
-				TimerOnLastFrame = true;
-
-				if (TimerFlashTimer != 0) {
-					if (++TimerFlashTimer > 50)
-						TimerFlashTimer = 0;
-				}
-
-				if (FRAMECOUNTER & 4 || TimerFlashTimer == 0) {
+				// Delegate the blinking to the C implementation
+				if (Hud_FlashTimerStep(&TimerOnLastFrame, &TimerFlashTimer, FRAMECOUNTER)) {
 					AsciiToUnicode(OnscreenTimer_state.m_sClocks[0].m_aClockBuffer, sTimer);
 					CFont::SetPropOn();
 					CFont::SetBackgroundOff();
@@ -1061,17 +924,8 @@ void CHud::Draw()
 
 			for(uint32 i = 0; i < NUMONSCREENCOUNTERS; i++) {
 				if (OnscreenTimer_state.m_sCounters[i].m_bCounterProcessed) {
-					if (!CounterOnLastFrame[i])
-						CounterFlashTimer[i] = 1;
-
-					CounterOnLastFrame[i] = true;
-
-					if (CounterFlashTimer[i] != 0) {
-						if (++CounterFlashTimer[i] > 50)
-							CounterFlashTimer[i] = 0;
-					}
-
-					if (FRAMECOUNTER & 4 || CounterFlashTimer[i] == 0) {
+					// Delegate the blinking to the C implementation
+					if (Hud_FlashTimerStep(&CounterOnLastFrame[i], &CounterFlashTimer[i], FRAMECOUNTER)) {
 						if (OnscreenTimer_state.m_sCounters[i].m_nType == COUNTER_DISPLAY_NUMBER) {
 							AsciiToUnicode(OnscreenTimer_state.m_sCounters[i].m_aCounterBuffer, sTimer);
 							CFont::SetPropOn();
@@ -1311,26 +1165,12 @@ void CHud::Draw()
 
 		if (m_HelpMessage[0]) {
 			if (!Messages_WideStringCompare(m_HelpMessage, m_LastHelpMessage, HELP_MSG_LENGTH)) {
-				switch (m_HelpMessageState) {
-				case 0:
-					m_HelpMessageFadeTimer = 0;
-					m_HelpMessageState = 2;
-					m_HelpMessageTimer = 0;
+				// Delegate to the C implementation
+				if (Hud_HelpMessageChanged(&m_HelpMessageState, &m_HelpMessageFadeTimer, &m_HelpMessageTimer, &m_HelpMessageDisplayTime, Messages_GetWideStringLength(m_HelpMessage))) {
 					Messages_WideStringCopy(m_HelpMessageToPrint, m_HelpMessage, HELP_MSG_LENGTH);
-					m_HelpMessageDisplayTime = Messages_GetWideStringLength(m_HelpMessage) * 0.05f + 3.0f;
-
+				
 					if (TheCamera.m_ScreenReductionPercentage == 0.0f)
 						DMAudio_PlayFrontEndSound(SOUND_HUD, 0);
-					break;
-				case 1:
-				case 2:
-				case 3:
-				case 4:
-					m_HelpMessageTimer = 5;
-					m_HelpMessageState = 4;
-					break;
-				default:
-					break;
 				}
 				Messages_WideStringCopy(m_LastHelpMessage, m_HelpMessage, HELP_MSG_LENGTH);
 			}
@@ -1338,48 +1178,12 @@ void CHud::Draw()
 			float fAlpha = 225.0f;
 
 			if (m_HelpMessageState != 0) {
-				switch (m_HelpMessageState) {
-				case 1:
-					fAlpha = 225.0f;
-					m_HelpMessageFadeTimer = 600;
-					if (!m_HelpMessageDisplayForever && m_HelpMessageTimer > m_HelpMessageDisplayTime * 1000.0f ||
-						m_HelpMessageQuick && m_HelpMessageTimer > 1500.0f) {
-
-						m_HelpMessageFadeTimer = 600;
-						m_HelpMessageState = 3;
-					}
-					break;
-				case 2:
-					if (TheCamera.m_WideScreenOn)
-						break;
-
-					m_HelpMessageFadeTimer += 2 * Timer_GetTimeStepInMilliseconds();
-					if (m_HelpMessageFadeTimer > 0) {
-						m_HelpMessageState = 1;
-						m_HelpMessageFadeTimer = 0;
-					}
-					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
-					break;
-				case 3:
-					m_HelpMessageFadeTimer -= 2 * Timer_GetTimeStepInMilliseconds();
-					if (m_HelpMessageFadeTimer < 0 || TheCamera.m_WideScreenOn) {
-						m_HelpMessageState = 0;
-						m_HelpMessageFadeTimer = 0;
-					}
-					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
-					break;
-				case 4:
-					m_HelpMessageFadeTimer -= 2 * Timer_GetTimeStepInMilliseconds();
-					if (m_HelpMessageFadeTimer < 0) {
-						m_HelpMessageState = 2;
-						m_HelpMessageFadeTimer = 0;
-						Messages_WideStringCopy(m_HelpMessageToPrint, m_LastHelpMessage, HELP_MSG_LENGTH);
-					}
-					fAlpha = m_HelpMessageFadeTimer * 0.001f * 225.0f;
-					break;
-				default:
-					break;
-				}
+				// Delegate to the C implementation
+				bool showNewHelpMessage;
+				fAlpha = Hud_HelpMessageFadeStep(&m_HelpMessageState, m_HelpMessageTimer, &m_HelpMessageFadeTimer, m_HelpMessageDisplayTime, m_HelpMessageDisplayForever, m_HelpMessageQuick,
+					TheCamera.m_WideScreenOn, Timer_GetTimeStepInMilliseconds(), &showNewHelpMessage);
+				if (showNewHelpMessage)
+					Messages_WideStringCopy(m_HelpMessageToPrint, m_LastHelpMessage, HELP_MSG_LENGTH);
 
 				if (!TheCamera.m_WideScreenOn) {
 					m_HelpMessageTimer += Timer_GetTimeStepInMilliseconds();
@@ -1442,26 +1246,12 @@ void CHud::Draw()
 
 				// Appearently sliding text in here was abandoned very early, since this text is centered now.
 
-				if (BigMessageX[0] >= SCALE_AND_CENTER_X(620.0f)) {
-					BigMessageInUse[0] += (*Timer_GetTimeStep());
-
-					if (BigMessageInUse[0] >= 120.0f) {
-						BigMessageInUse[0] = 120.0f;
-						BigMessageAlpha[0] -= (Timer_GetTimeStepInMilliseconds() * 0.3f);
-					}
-
-					if (BigMessageAlpha[0] <= 0.0f) {
-						m_BigMessage[0][0] = 0;
-						BigMessageAlpha[0] = 0.0f;
-					}
-				}
-				else {
-					BigMessageX[0] += SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f));
-					BigMessageAlpha[0] += (Timer_GetTimeStepInMilliseconds() * 0.3f);
-
-					if (BigMessageAlpha[0] > 255.0f)
-						BigMessageAlpha[0] = 255.0f;
-				}
+				// Delegate to the C implementation
+				bool clearBigMessage0;
+				Hud_BigMessage0Step(&BigMessageX[0], &BigMessageInUse[0], &BigMessageAlpha[0], SCALE_AND_CENTER_X(620.0f), (*Timer_GetTimeStep()),
+					Timer_GetTimeStepInMilliseconds(), SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f)), &clearBigMessage0);
+				if (clearBigMessage0)
+					m_BigMessage[0][0] = 0;
 				CFont::DrawFonts();
 				CFont::SetDropShadowPosition(2);
 				CFont::SetDropColor(CRGBA(0, 0, 0, BigMessageAlpha[0]));
@@ -1481,10 +1271,8 @@ void CHud::Draw()
 		// WastedBustedText
 		if (m_BigMessage[2][0]) {
 			if (BigMessageInUse[2] != 0.0f) {
-				BigMessageAlpha[2] += (Timer_GetTimeStepInMilliseconds() * 0.4f);
-
-				if (BigMessageAlpha[2] > 255.0f)
-					BigMessageAlpha[2] = 255.0f;
+				// Delegate to the C implementation
+				Hud_BigMessage2Step(&BigMessageAlpha[2], Timer_GetTimeStepInMilliseconds());
 
 				CFont::SetBackgroundOff();
 
@@ -1624,46 +1412,8 @@ void CHud::DrawAfterFade()
 	}
 
 	// Oddjob result
-	if (OddJob2OffTimer > 0)
-		OddJob2OffTimer -= Timer_GetTimeStepInMilliseconds();
-
-	float fStep;
-	if (m_BigMessage[5][0] && OddJob2OffTimer <= 0.0f) {
-		switch (OddJob2On) {
-			case 0:
-				OddJob2On = 1;
-				OddJob2XOffset = 380.0f;
-				break;
-			case 1:
-				if (OddJob2XOffset <= 2.0f) {
-					OddJob2Timer = 0;
-					OddJob2On = 2;
-				}
-				else {
-					fStep = Min(40.0f, OddJob2XOffset / 6.0f);
-					OddJob2XOffset = OddJob2XOffset - fStep;
-				}
-				break;
-			case 2:
-				OddJob2Timer += Timer_GetTimeStepInMilliseconds();
-				if (OddJob2Timer > 1500) {
-					OddJob2On = 3;
-				}
-				break;
-			case 3:
-				fStep = Max(30.0f, OddJob2XOffset / 5.0f);
-
-				OddJob2XOffset = OddJob2XOffset - fStep;
-
-				if (OddJob2XOffset < -380.0f) {
-					OddJob2OffTimer = 5000.0f;
-					OddJob2On = 0;
-				}
-				break;
-			default:
-				break;
-		}
-
+	// Delegate the sliding of the message to the C implementation
+	if (Hud_OddJob2Step(&OddJob2OffTimer, &OddJob2On, &OddJob2XOffset, &OddJob2Timer, m_BigMessage[5][0] != 0, Timer_GetTimeStepInMilliseconds())) {
 		if (!m_BigMessage[1][0]) {
 			CFont::SetJustifyOff();
 			CFont::SetBackgroundOff();
@@ -1699,25 +1449,12 @@ void CHud::DrawAfterFade()
 			CFont::SetFontStyle(FONT_BANK);
 			CFont::SetScale(FrontEndMenuManager.m_PrefsLanguage == CMenuManager::LANGUAGE_AMERICAN ? SCREEN_SCALE_X(1.7f) : SCREEN_SCALE_X(1.5f), SCREEN_SCALE_Y(1.8f));
 
-			if (BigMessageX[1] >= SCREEN_SCALE_FROM_RIGHT(20.0f)) {
-				BigMessageInUse[1] += (*Timer_GetTimeStep());
-
-				if (BigMessageInUse[1] >= 120.0f) {
-					BigMessageInUse[1] = 120.0f;
-					BigMessageAlpha[1] -= Timer_GetTimeStepInMilliseconds();
-				}
-				if (BigMessageAlpha[1] <= 0.0f) {
-					m_BigMessage[1][0] = 0;
-					BigMessageInUse[1] = 0.0f;
-					BigMessageAlpha[1] = 0.0f;
-				}
-			} else {
-				BigMessageX[1] += SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f));
-				BigMessageAlpha[1] += Timer_GetTimeStepInMilliseconds();
-
-				if (BigMessageAlpha[1] > 255.0f)
-					BigMessageAlpha[1] = 255.0f;
-			}
+			// Delegate to the C implementation
+			bool clearMissionTitle;
+			Hud_MissionTitleStep(&BigMessageX[1], &BigMessageInUse[1], &BigMessageAlpha[1], SCREEN_SCALE_FROM_RIGHT(20.0f), (*Timer_GetTimeStep()),
+				Timer_GetTimeStepInMilliseconds(), SCREEN_SCALE_X((Timer_GetTimeStepInMilliseconds() * 0.3f)), &clearMissionTitle);
+			if (clearMissionTitle)
+				m_BigMessage[1][0] = 0;
 
 			CFont::SetColor(CRGBA(40, 40, 40, BigMessageAlpha[1])); // what was that for?
 
@@ -1959,33 +1696,14 @@ wchar LastBigMessage[6][128];
 
 void CHud::SetBigMessage(wchar *message, uint16 style)
 {
-	int i = 0;
-
 	if (BigMessageInUse[style] != 0.0f)
 		return;
 
-	if (style == 5) {
-		for (i = 0; i < 128; i++) {
-			if (message[i] == 0)
-				break;
-
-			if (message[i] != LastBigMessage[5][i]) {
-				OddJob2On = 0;
-				OddJob2OffTimer = 0.0f;
-			}
-
-			m_BigMessage[5][i] = message[i];
-			LastBigMessage[5][i] = message[i];
-		}
-	} else {
-		for (i = 0; i < 128; i++) {
-			if (message[i] == 0)
-				break;
-			m_BigMessage[style][i] = message[i];
-		}
+	// Delegate to the C implementation
+	if (Hud_SetBigMessage(m_BigMessage[style], LastBigMessage[style], message, style == 5)) {
+		OddJob2On = 0;
+		OddJob2OffTimer = 0.0f;
 	}
-	LastBigMessage[style][i] = 0;
-	m_BigMessage[style][i] = 0;
 }
 
 void CHud::SetHelpMessage(wchar *message, bool quick, bool displayForever)
@@ -2034,26 +1752,14 @@ bool CHud::IsHelpMessageBeingDisplayed(void)
 
 void CHud::SetMessage(wchar *message)
 {
-	int i = 0;
-	for (i = 0; i < ARRAY_SIZE(m_Message); i++) {
-		if (message[i] == 0)
-			break;
-
-		m_Message[i] = message[i];
-	}
-	m_Message[i] = 0;
+	// Delegate to the C implementation
+	Hud_CopyMessage(m_Message, message, ARRAY_SIZE(m_Message));
 }
 
 void CHud::SetPagerMessage(wchar *message)
 {
-	int i = 0;
-	for (i = 0; i < ARRAY_SIZE(m_PagerMessage); i++) {
-		if (message[i] == 0)
-			break;
-
-		m_PagerMessage[i] = message[i];
-	}
-	m_PagerMessage[i] = 0;
+	// Delegate to the C implementation
+	Hud_CopyMessage(m_PagerMessage, message, ARRAY_SIZE(m_PagerMessage));
 }
 
 void CHud::SetVehicleName(wchar *name)
@@ -2126,50 +1832,8 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 		default:
 			break;
 	}
-	if (forceFadingIn) {
-		switch (operation) {
-			case FADED_OUT:
-				fadeTimer = 0;
-			case START_FADE_OUT:
-			case FADING_OUT:
-				timer = 5;
-				operation = FADING_IN;
-				break;
-			default:
-				break;
-		}
-	}
-	if (operation != FADED_OUT && operation != FADE_DISABLED) {
-		switch (operation) {
-			case START_FADE_OUT:
-				fadeTimer = 1000;
-				alpha = 255.0f;
-				if (timer > 10000) {
-					fadeTimer = 3000;
-					operation = FADING_OUT;
-				}
-				break;
-			case FADING_IN:
-				fadeTimer += Timer_GetTimeStepInMilliseconds();
-				if (fadeTimer > 1000.0f) {
-					operation = START_FADE_OUT;
-					fadeTimer = 1000;
-				}
-				alpha = fadeTimer / 1000.0f * 255.0f;
-				break;
-			case FADING_OUT:
-				fadeTimer -= Timer_GetTimeStepInMilliseconds();
-				if (fadeTimer < 0.0f) {
-					fadeTimer = 0;
-					operation = FADED_OUT;
-				}
-				alpha = fadeTimer / 1000.0f * 255.0f;
-				break;
-			default:
-				break;
-		}
-		timer += Timer_GetTimeStepInMilliseconds();
-	}
+	// The fade step itself is done in C
+	alpha = Hud_DrawFadeStep(&fadeTimer, &operation, &timer, forceFadingIn, Timer_GetTimeStepInMilliseconds());
 
 	switch (fadingElement) {
 		case HUD_WANTED_FADING:
@@ -2196,7 +1860,7 @@ float CHud::DrawFadeState(DRAW_FADE_STATE fadingElement, int forceFadingIn)
 			break;
 	}
 
-	return Clamp(alpha, 0.0f, 255.0f);
+	return alpha;
 }
 
 void

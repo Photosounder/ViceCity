@@ -3,6 +3,8 @@
 
 #include "ModelInfo.h"
 #include "Placeable.h"
+#include "EntityData.h"
+#include "EntityLogic.h"
 
 struct CReference;
 struct CPtrList;
@@ -11,79 +13,15 @@ struct CPtrList;
 
 #include "EntityStatus.h"
 
-class CEntity : public CPlaceable
+class CEntity : public CPlaceable, public CEntityData
 {
-public:
-	RwObject *m_rwObject;
-protected:
-	uint32 m_type : 3;
-private:
-	uint32 m_status : 5;
-public:
-	// flagsA
-	uint32 bUsesCollision : 1;			// does entity use collision
-	uint32 bCollisionProcessed : 1;		// has object been processed by a ProcessEntityCollision function
-	uint32 bIsStatic : 1;				// is entity static
-	uint32 bHasContacted : 1;			// has entity processed some contact forces
-	uint32 bPedPhysics : 1;
-	uint32 bIsStuck : 1;				// is entity stuck
-	uint32 bIsInSafePosition : 1;		// is entity in a collision free safe position
-	uint32 bUseCollisionRecords : 1;
-
-	// flagsB
-	uint32 bWasPostponed : 1;			// was entity control processing postponed
-	uint32 bExplosionProof : 1;
-	uint32 bIsVisible : 1;				//is the entity visible
-	uint32 bHasCollided : 1;
-	uint32 bRenderScorched : 1;
-	uint32 bHasBlip : 1;
-	uint32 bIsBIGBuilding : 1;			// Set if this entity is a big building
-	uint32 bStreamBIGBuilding : 1;	// set when draw dist <= 2000
-
-	// flagsC
-	uint32 bRenderDamaged : 1;			// use damaged LOD models for objects with applicable damage
-	uint32 bBulletProof : 1;
-	uint32 bFireProof : 1;
-	uint32 bCollisionProof : 1;
-	uint32 bMeleeProof : 1;
-	uint32 bOnlyDamagedByPlayer : 1;
-	uint32 bStreamingDontDelete : 1;	// Dont let the streaming remove this 
-	uint32 bRemoveFromWorld : 1;		// remove this entity next time it should be processed
-
-	// flagsD
-	uint32 bHasHitWall : 1;				// has collided with a building (changes subsequent collisions)
-	uint32 bImBeingRendered : 1;		// don't delete me because I'm being rendered
-	uint32 bTouchingWater : 1;	// used by cBuoyancy::ProcessBuoyancy
-	uint32 bIsSubway : 1;	// set when subway, but maybe different meaning?
-	uint32 bDrawLast : 1;				// draw object last
-	uint32 bNoBrightHeadLights : 1;
-	uint32 bDoNotRender : 1;	//-- only applies to CObjects apparently
-	uint32 bDistanceFade : 1;			// Fade entity because it is far away
-
-	// flagsE
-	uint32 m_flagE1 : 1;
-	uint32 bDontCastShadowsOn : 1;       // Dont cast shadows on this object
-	uint32 bOffscreen : 1;               // offscreen flag. This can only be trusted when it is set to true
-	uint32 bIsStaticWaitingForCollision : 1; // this is used by script created entities - they are static until the collision is loaded below them
-	uint32 bDontStream : 1;              // tell the streaming not to stream me
-	uint32 bUnderwater : 1;              // this object is underwater change drawing order
-	uint32 bHasPreRenderEffects : 1; // Object has a prerender effects attached to it
-	uint32 bDrawFarAway : 1;             // render this dynamic entity in the far-distance pass // rouz edit (ChatGPT)
-
-	uint16 m_scanCode;
-	uint16 m_randomSeed;
-	int16 m_modelIndex;
-	int8 m_level;
-	int8 m_area;
-	CReference *m_pFirstReference;
-
 public:
 	uint8 GetType() const { return m_type; }
 	void SetType(uint8 type) { m_type = type; }
 	uint8 GetStatus() const { return m_status; }
 	void SetStatus(uint8 status) { m_status = status; }
 	CColModel *GetColModel(void) { return ((CBaseModelInfo*)ModelRegistry_Get(m_modelIndex))->GetColModel(); } // rouz edit (ChatGPT)
-	bool GetIsStatic(void) const { return bIsStatic || bIsStaticWaitingForCollision; }
+	bool GetIsStatic(void) const { return Entity_GetIsStatic(this); }
 	void SetIsStatic(bool state) { bIsStatic = state; }
 #ifdef COMPATIBLE_SAVES
 	void SaveEntityFlags(uint8*& buf);
@@ -112,11 +50,11 @@ public:
 	virtual void RemoveLighting(bool);
 	virtual void FlagToDestroyWhenNextProcessed(void) {}
 
-	bool IsBuilding(void) { return m_type == ENTITY_TYPE_BUILDING; }
-	bool IsVehicle(void) { return m_type == ENTITY_TYPE_VEHICLE; }
-	bool IsPed(void) { return m_type == ENTITY_TYPE_PED; }
-	bool IsObject(void) { return m_type == ENTITY_TYPE_OBJECT; }
-	bool IsDummy(void) { return m_type == ENTITY_TYPE_DUMMY; }
+	bool IsBuilding(void) { return Entity_IsBuilding(this); }
+	bool IsVehicle(void) { return Entity_IsVehicle(this); }
+	bool IsPed(void) { return Entity_IsPed(this); }
+	bool IsObject(void) { return Entity_IsObject(this); }
+	bool IsDummy(void) { return Entity_IsDummy(this); }
 
 	RpAtomic *GetAtomic(void) {
 		assert(RwObjectGetType(m_rwObject) == rpATOMIC);

@@ -102,16 +102,8 @@ enum eRadarSprite
 	RADAR_SPRITE_COUNT
 };
 
-enum
-{
-	RADAR_TRACE_RED,
-	RADAR_TRACE_GREEN,
-	RADAR_TRACE_LIGHT_BLUE,
-	RADAR_TRACE_GRAY,
-	RADAR_TRACE_YELLOW,
-	RADAR_TRACE_MAGENTA,
-	RADAR_TRACE_CYAN
-};
+#include "RadarTrace.h"
+#include "RadarTraceData.h"
 
 enum
 {
@@ -120,22 +112,8 @@ enum
 	BLIP_MODE_SQUARE,
 };
 
-struct sRadarTrace
+struct sRadarTrace : public sRadarTraceData
 {
-	uint32 m_nColor;
-	uint32 m_eBlipType; // eBlipType
-	int32 m_nEntityHandle;
-	CVector m_vec2DPos;
-	CVector m_vecPos;
-	uint16 m_BlipIndex;
-	bool m_bDim;
-	bool m_bInUse;
-	bool m_bShortRange;
-	bool m_unused;
-	float m_Radius;
-	int16 m_wScale;
-	uint16 m_eBlipDisplay; // eBlipDisplay
-	uint16 m_eRadarSprite; // eRadarSprite
 };
 
 // Either that was a thing while saving/loading blips, or they added sizes of each field one by one. I want to do the former.

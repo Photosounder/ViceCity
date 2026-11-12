@@ -1,0 +1,14 @@
+//+ rouz edit (Claude)
+#pragma once
+
+enum
+{
+	RADAR_TRACE_RED,
+	RADAR_TRACE_GREEN,
+	RADAR_TRACE_LIGHT_BLUE,
+	RADAR_TRACE_GRAY,
+	RADAR_TRACE_YELLOW,
+	RADAR_TRACE_MAGENTA,
+	RADAR_TRACE_CYAN
+};
+//- rouz edit (Claude)

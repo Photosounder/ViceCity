@@ -2,13 +2,14 @@
 #include "common.h"
 
 #include "World.h"
+#include "CraneData.h"
 
 class CVehicle;
 class CEntity;
 class CObject;
 class CBuilding;
 
-class CCrane
+class CCrane : public CCraneData
 {
 public:
 	enum CraneState {
@@ -24,35 +25,6 @@ public:
 		ACTIVATED = 1,
 		DEACTIVATED = 2
 	};
-	CBuilding *m_pCraneEntity;
-	CObject *m_pHook;
-	float m_fPickupX1;
-	float m_fPickupX2;
-	float m_fPickupY1;
-	float m_fPickupY2;
-	CVector m_vecDropoffTarget;
-	float m_fDropoffHeading;
-	float m_fPickupAngle;
-	float m_fDropoffAngle;
-	float m_fPickupDistance;
-	float m_fDropoffDistance;
-	float m_fPickupHeight;
-	float m_fDropoffHeight;
-	float m_fHookAngle;
-	float m_fHookOffset;
-	float m_fHookHeight;
-	CVector m_vecHookInitPos;
-	CVector m_vecHookCurPos;
-	CVector2D m_vecHookVelocity;
-	CVehicle *m_pVehiclePickedUp;
-	uint32 m_nTimeForNextCheck;
-	uint8 m_nCraneStatus;
-	uint8 m_nCraneState;
-	uint8 m_nVehiclesCollected;
-	bool m_bIsCrusher;
-	bool m_bIsMilitaryCrane;
-	bool m_bWasMilitaryCrane;
-	bool m_bIsTop;
 
 	void Init(void) { memset(this, 0, sizeof(*this)); }
 	void Update(void);

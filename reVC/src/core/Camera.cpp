@@ -38,6 +38,7 @@
 #include "Debug.h"
 #include "GenericGameStorage.h"
 #include "Camera.h"
+#include "CameraMath.h"
 
 enum
 {
@@ -2049,13 +2050,8 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 void
 CCamera::GetArrPosForVehicleType(int apperance, int &index)
 {
-	switch(apperance){
-	case VEHICLE_APPEARANCE_CAR: index = 0; break;
-	case VEHICLE_APPEARANCE_BIKE: index = 1; break;
-	case VEHICLE_APPEARANCE_HELI: index = 2; break;
-	case VEHICLE_APPEARANCE_PLANE: index = 3; break;
-	case VEHICLE_APPEARANCE_BOAT: index = 4; break;
-	}
+	// Delegate to the C implementation
+	CameraMath_GetArrPosForVehicleType(apperance, &index);
 }
 
 void
@@ -3861,20 +3857,15 @@ CCamera::GetFading(void)
 int
 CCamera::GetFadingDirection(void)
 {
-	if(m_bFading)
-		return m_iFadingDirection == FADE_IN ? FADE_IN : FADE_OUT;
-	else
-		return FADE_NONE;
+	// Delegate to the C implementation
+	return CameraMath_GetFadingDirection(m_bFading, m_iFadingDirection);
 }
 
 int
 CCamera::GetScreenFadeStatus(void)
 {
-	if(m_fFLOATingFade == 0.0f)
-		return FADE_0;
-	if(m_fFLOATingFade == 255.0f)
-		return FADE_2;
-	return FADE_1;
+	// Delegate to the C implementation
+	return CameraMath_GetScreenFadeStatus(m_fFLOATingFade);
 }
 
 
@@ -4001,24 +3992,15 @@ CCamera::Find3rdPersonCamTargetVector(float dist, CVector pos, CVector &source, 
 float
 CCamera::Find3rdPersonQuickAimPitch(void)
 {
-	float clampedFrontZ = Clamp(Cams[ActiveCam].Front.z, -1.0f, 1.0f);
-
-	float rot = Asin(clampedFrontZ);
-
-	return -(DEGTORAD(((0.5f - m_f3rdPersonCHairMultY) * 1.8f * 0.5f * Cams[ActiveCam].FOV)) + rot);
+	// Delegate to the C implementation
+	return CameraMath_Find3rdPersonQuickAimPitch(Cams[ActiveCam].Front.z, m_f3rdPersonCHairMultY, Cams[ActiveCam].FOV);
 }
 
 bool
 CCamera::Using1stPersonWeaponMode(void)
 {
-	switch(PlayerWeaponMode.Mode)
-	case CCam::MODE_SNIPER:
-	case CCam::MODE_M16_1STPERSON:
-	case CCam::MODE_ROCKETLAUNCHER:
-	case CCam::MODE_HELICANNON_1STPERSON:
-	case CCam::MODE_CAMERA:
-		return true;
-	return false;
+	// Delegate to the C implementation
+	return CameraMath_Using1stPersonWeaponMode(PlayerWeaponMode.Mode);
 }
 
 
@@ -4072,47 +4054,17 @@ CCamera::CalculateDerivedValues(void)
 bool
 CCamera::IsPointVisible(const CVector &center, const CMatrix *mat)
 {
-#ifdef GTA_PS2
-	CVuVector c;
-	TransformPoint(c, *mat, center);
-#else
-	CVector c = center;
-	#ifdef FIX_BUGS
-		c = *mat * center;
-	#else
-		RwV3dTransformPoints(&c, &c, 1, (RwMatrix*)mat);
-	#endif
-#endif
-	if(c.y < Draw_GetNearClipZ()) return false;
-	if(c.y > Draw_GetFarClipZ()) return false;
-	if(c.x*m_vecFrustumNormals[0].x + c.y*m_vecFrustumNormals[0].y > 0.0f) return false;
-	if(c.x*m_vecFrustumNormals[1].x + c.y*m_vecFrustumNormals[1].y > 0.0f) return false;
-	if(c.y*m_vecFrustumNormals[2].y + c.z*m_vecFrustumNormals[2].z > 0.0f) return false;
-	if(c.y*m_vecFrustumNormals[3].y + c.z*m_vecFrustumNormals[3].z > 0.0f) return false;
-	return true;
+	// Delegate to the C implementation
+	VectorMath3 v = {center.x, center.y, center.z};
+	return CameraMath_IsPointVisible((const VectorMath3*)m_vecFrustumNormals, v, mat->f);
 }
 
 bool
 CCamera::IsSphereVisible(const CVector &center, float radius, const CMatrix *mat)
 {
-#ifdef GTA_PS2
-	CVuVector c;
-	TransformPoint(c, *mat, center);
-#else
-	CVector c = center;
-	#ifdef FIX_BUGS
-		c = *mat * center;
-	#else
-		RwV3dTransformPoints(&c, &c, 1, (RwMatrix*)mat);
-	#endif
-#endif
-	if(c.y + radius < Draw_GetNearClipZ()) return false;
-	if(c.y - radius > Draw_GetFarClipZ()) return false;
-	if(c.x*m_vecFrustumNormals[0].x + c.y*m_vecFrustumNormals[0].y > radius) return false;
-	if(c.x*m_vecFrustumNormals[1].x + c.y*m_vecFrustumNormals[1].y > radius) return false;
-	if(c.y*m_vecFrustumNormals[2].y + c.z*m_vecFrustumNormals[2].z > radius) return false;
-	if(c.y*m_vecFrustumNormals[3].y + c.z*m_vecFrustumNormals[3].z > radius) return false;
-	return true;
+	// Delegate to the C implementation
+	VectorMath3 v = {center.x, center.y, center.z};
+	return CameraMath_IsSphereVisible((const VectorMath3*)m_vecFrustumNormals, v, radius, mat->f);
 }
 
 bool
@@ -4124,32 +4076,21 @@ CCamera::IsSphereVisible(const CVector &center, float radius)
 bool
 CCamera::IsBoxVisible(CVUVECTOR *box, const CMatrix *mat)
 {
-	int i;
-	int frustumTests[6] = { 0 };
-#ifdef GTA_PS2
-	TransformPoints(box, 8, *mat, box);
-#else
-	#ifdef FIX_BUGS
-		for (i = 0; i < 8; i++)
-			box[i] = *mat * box[i];
-	#else
-		RwV3dTransformPoints(box, box, 8, (RwMatrix*)mat);
-	#endif
-#endif
-
-	for(i = 0; i < 8; i++){
-		if(box[i].y < Draw_GetNearClipZ()) frustumTests[0]++;
-		if(box[i].y > Draw_GetFarClipZ()) frustumTests[1]++;
-		if(box[i].x*m_vecFrustumNormals[0].x + box[i].y*m_vecFrustumNormals[0].y > 0.0f) frustumTests[2]++;
-		if(box[i].x*m_vecFrustumNormals[1].x + box[i].y*m_vecFrustumNormals[1].y > 0.0f) frustumTests[3]++;
-//	Why not test z?
-//		if(box[i].y*m_vecFrustumNormals[2].y + box[i].z*m_vecFrustumNormals[2].z > 0.0f) frustumTests[4]++;
-//		if(box[i].y*m_vecFrustumNormals[3].y + box[i].z*m_vecFrustumNormals[3].z > 0.0f) frustumTests[5]++;
+	// Delegate to the C implementation, the corners are plain xyz triples in the non PS2 vector
+	VectorMath3 corners[8];
+	for(int i = 0; i < 8; i++){
+		corners[i].x = box[i].x;
+		corners[i].y = box[i].y;
+		corners[i].z = box[i].z;
 	}
-	for(i = 0; i < 6; i++)
-		if(frustumTests[i] == 8)
-			return false;		// Box is completely outside of one plane
-	return true;
+	bool visible = CameraMath_IsBoxVisible((const VectorMath3*)m_vecFrustumNormals, corners, mat->f);
+	// The caller sees the corners transformed in place like before
+	for(int i = 0; i < 8; i++){
+		box[i].x = corners[i].x;
+		box[i].y = corners[i].y;
+		box[i].z = corners[i].z;
+	}
+	return visible;
 }
 
 

@@ -1,46 +1,58 @@
+//+ rouz edit (Claude)
 #include "common.h"
+#include "VectorMath.h"
+
+static inline VectorMath3 ToC(const CVector &v)
+{
+	// Copy the components into the plain C record
+	VectorMath3 r = {v.x, v.y, v.z};
+	return r;
+}
+
+static inline CVector FromC(VectorMath3 v)
+{
+	// Copy the components back into the native vector
+	return CVector(v.x, v.y, v.z);
+}
+
+#ifdef GTA_PS2
+#error "VectorMath assumes the float[4][4] CMatrix layout"
+#endif
 
 void
 CVector::Normalise(void)
 {
-	float sq = MagnitudeSqr();
-	if (sq > 0.0f) {
-		float invsqrt = RecipSqrt(sq);
-		x *= invsqrt;
-		y *= invsqrt;
-		z *= invsqrt;
-	} else
-		x = 1.0f;
+	// Delegate to the C implementation
+	VectorMath3 v = ToC(*this);
+	VectorMath_Normalise(&v);
+	*this = FromC(v);
 }
 
 CVector
 CrossProduct(const CVector &v1, const CVector &v2)
 {
-	return CVector(v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x);
+	// Delegate to the C implementation
+	return FromC(VectorMath_Cross(ToC(v1), ToC(v2)));
 }
 
 CVector
 Multiply3x3(const CMatrix &mat, const CVector &vec)
 {
 	// TODO: VU0 code
-	return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z,
-	               mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z,
-	               mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z);
+	return FromC(VectorMath_MatrixTimesVector3x3(mat.f, ToC(vec)));
 }
 
 CVector
 Multiply3x3(const CVector &vec, const CMatrix &mat)
 {
-	return CVector(mat.rx * vec.x + mat.ry * vec.y + mat.rz * vec.z,
-	               mat.fx * vec.x + mat.fy * vec.y + mat.fz * vec.z,
-	               mat.ux * vec.x + mat.uy * vec.y + mat.uz * vec.z);
+	// Delegate to the C implementation
+	return FromC(VectorMath_VectorTimesMatrix3x3(ToC(vec), mat.f));
 }
 
 CVector
 operator*(const CMatrix &mat, const CVector &vec)
 {
 	// TODO: VU0 code
-	return CVector(mat.rx * vec.x + mat.fx * vec.y + mat.ux * vec.z + mat.px,
-	               mat.ry * vec.x + mat.fy * vec.y + mat.uy * vec.z + mat.py,
-	               mat.rz * vec.x + mat.fz * vec.y + mat.uz * vec.z + mat.pz);
+	return FromC(VectorMath_MatrixTimesVector(mat.f, ToC(vec)));
 }
+//- rouz edit (Claude)

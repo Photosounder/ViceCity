@@ -10,6 +10,7 @@
 
 #include "RwHelper.h"
 #include "Radar.h"
+#include "RadarMath.h"
 #include "Camera.h"
 #include "Hud.h"
 #include "World.h"
@@ -638,16 +639,8 @@ void GetTextureCorners(int32 x, int32 y, CVector2D *out)
 
 uint8 CRadar::CalculateBlipAlpha(float dist)
 {
-	if (FrontEndMenuManager.m_bMenuMapActive)
-		return 255;
-
-	if (dist <= 1.0f)
-		return 255;
-
-	if (dist <= 10.0f)
-		return (128.0f * ((dist - 1.0f) / 9.0f)) + ((1.0f - (dist - 1.0f) / 9.0f) * 255.0f);
-
-	return 128;
+	// Delegate to the C implementation
+	return Radar_CalculateBlipAlpha(FrontEndMenuManager.m_bMenuMapActive, dist);
 }
 
 void CRadar::ChangeBlipBrightness(int32 i, int32 bright)
@@ -892,19 +885,8 @@ ClipPolyPlane(const CVector2D *in, int nin, CVector2D *out, CVector *plane)
 
 int CRadar::ClipRadarPoly(CVector2D *poly, const CVector2D *rect)
 {
-	CVector planes[4] = {
-		CVector(-1.0f, 0.0f, 1.0f),
-		CVector( 1.0f, 0.0f, 1.0f),
-		CVector(0.0f, -1.0f, 1.0f),
-		CVector(0.0f,  1.0f, 1.0f)
-	};
-	CVector2D tmp[8];
-	int n;
-	if(n = ClipPolyPlane(rect, 4, tmp, &planes[0]), n == 0) return 0;
-	if(n = ClipPolyPlane(tmp, n, poly, &planes[1]), n == 0) return 0;
-	if(n = ClipPolyPlane(poly, n, tmp, &planes[2]), n == 0) return 0;
-	if(n = ClipPolyPlane(tmp, n, poly, &planes[3]), n == 0) return 0;
-	return n;
+	// Delegate to the C implementation
+	return Radar_ClipRadarPoly(&poly[0].x, &rect[0].x);
 }
 #endif
 
@@ -1334,74 +1316,20 @@ void CRadar::DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float a
 
 int32 CRadar::GetActualBlipArrayIndex(int32 i)
 {
-	if (i == -1)
-		return -1;
-	else if ((i & 0xFFFF0000) >> 16 != ms_RadarTrace[(uint16)i].m_BlipIndex)
-		return -1;
-	else
-		return (uint16)i;
+	// Delegate to the C implementation
+	return Radar_GetActualBlipArrayIndex(ms_RadarTrace, i);
 }
 
 int32 CRadar::GetNewUniqueBlipIndex(int32 i)
 {
-	if (ms_RadarTrace[i].m_BlipIndex >= UINT16_MAX - 1)
-		ms_RadarTrace[i].m_BlipIndex = 1;
-	else
-		ms_RadarTrace[i].m_BlipIndex++;
-	return i | (ms_RadarTrace[i].m_BlipIndex << 16);
+	// Delegate to the C implementation
+	return Radar_GetNewUniqueBlipIndex(ms_RadarTrace, i);
 }
 
 uint32 CRadar::GetRadarTraceColour(uint32 color, bool bright)
 {
-	uint32 c;
-	switch (color) {
-	case RADAR_TRACE_RED:
-		if (bright)
-			c = 0x712B49FF;
-		else
-			c = 0x7F0000FF;
-		break;
-	case RADAR_TRACE_GREEN:
-		if (bright)
-			c = 0x5FA06AFF;
-		else
-			c = 0x007F00FF;
-		break;
-	case RADAR_TRACE_LIGHT_BLUE:
-		if (bright)
-			c = 0x80A7F3FF;
-		else
-			c = 0x00007FFF;
-		break;
-	case RADAR_TRACE_GRAY:
-		if (bright)
-			c = 0xE1E1E1FF;
-		else
-			c = 0x7F7F7FFF;
-		break;
-	case RADAR_TRACE_YELLOW:
-		if (bright)
-			c = 0xFFFF00FF;
-		else
-			c = 0x7F7F00FF;
-		break;
-	case RADAR_TRACE_MAGENTA:
-		if (bright)
-			c = 0xFF00FFFF;
-		else
-			c = 0x7F007FFF;
-		break;
-	case RADAR_TRACE_CYAN:
-		if (bright)
-			c = 0x00FFFFFF;
-		else
-			c = 0x007F7FFF;
-		break;
-	default:
-		c = color;
-		break;
-	};
-	return c;
+	// Delegate to the C implementation
+	return Radar_GetRadarTraceColour(color, bright);
 }
 
 const char* gRadarTexNames[] = {
@@ -1439,19 +1367,8 @@ CRadar::Initialise()
 
 float CRadar::LimitRadarPoint(CVector2D &point)
 {
-	float dist, invdist;
-
-	dist = point.Magnitude();
-
-	if (FrontEndMenuManager.m_bMenuMapActive)
-		return dist;
-
-	if (dist > 1.0f) {
-		invdist = 1.0f / dist;
-		point.x *= invdist;
-		point.y *= invdist;
-	}
-	return dist;
+	// Delegate to the C implementation
+	return Radar_LimitRadarPoint(&point.x, FrontEndMenuManager.m_bMenuMapActive);
 }
 
 void CRadar::LoadAllRadarBlips(uint8 *buf, uint32 size)
@@ -2124,14 +2041,8 @@ void CRadar::TransformRealWorldToTexCoordSpace(CVector2D &out, const CVector2D &
 
 void CRadar::TransformRadarPointToRealWorldSpace(CVector2D &out, const CVector2D &in)
 {
-	float s, c;
-	s = -cachedSin;
-	c = cachedCos;
-
-	out.x = s * in.y + c * in.x;
-	out.y = c * in.y - s * in.x;
-
-	out = out * m_radarRange + vec2DRadarOrigin;
+	// Delegate to the C implementation
+	Radar_TransformRadarPointToRealWorldSpace(&out.x, &in.x, cachedSin, cachedCos, &vec2DRadarOrigin.x, m_radarRange);
 }
 
 // Radar space goes from -1.0 to 1.0 in x and y, top right is (1.0, 1.0)
@@ -2152,15 +2063,8 @@ void CRadar::TransformRadarPointToScreenSpace(CVector2D &out, const CVector2D &i
 
 void CRadar::TransformRealWorldPointToRadarSpace(CVector2D &out, const CVector2D &in)
 {
-	float s, c;
-	s = cachedSin;
-	c = cachedCos;
-
-	float x = (in.x - vec2DRadarOrigin.x) * (1.0f / m_radarRange);
-	float y = (in.y - vec2DRadarOrigin.y) * (1.0f / m_radarRange);
-
-	out.x = s * y + c * x;
-	out.y = c * y - s * x;
+	// Delegate to the C implementation
+	Radar_TransformRealWorldPointToRadarSpace(&out.x, &in.x, cachedSin, cachedCos, &vec2DRadarOrigin.x, m_radarRange);
 }
 
 void

@@ -6,6 +6,7 @@
 #include "Bones.h"
 #include "Camera.h"
 #include "PedIK.h"
+#include "PedIKLogic.h"
 #include "Ped.h"
 #include "General.h"
 #include "RwHelper.h"
@@ -20,9 +21,11 @@ const RwV3d XaxisIK = { 1.0f, 0.0f, 0.0f};
 const RwV3d YaxisIK = { 0.0f, 1.0f, 0.0f};
 const RwV3d ZaxisIK = { 0.0f, 0.0f, 1.0f};
 
-CPedIK::CPedIK(CPed *ped) : m_ped(ped)
+CPedIK::CPedIK(CPed *ped)
 {
 	assert(ped != nil);
+	// The pointer lives in the C data struct so it is assigned here
+	m_ped = ped;
 	m_flags = 0;
 	m_headOrient.yaw = 0.0f;
 	m_headOrient.pitch = 0.0f;
@@ -68,44 +71,8 @@ CPedIK::GetComponentPosition(RwV3d &pos, uint32 node)
 LimbMoveStatus
 CPedIK::MoveLimb(LimbOrientation &limb, float targetYaw, float targetPitch, LimbMovementInfo &moveInfo)
 {
-	LimbMoveStatus result = ONE_ANGLE_COULDNT_BE_SET_EXACTLY;
-
-	// yaw
-
-	if(Abs(limb.yaw-targetYaw) < moveInfo.yawD){
-		limb.yaw = targetYaw;
-		result = ANGLES_SET_EXACTLY;
-	}else{
-		if (limb.yaw > targetYaw) {
-			limb.yaw -= moveInfo.yawD;
-		} else if (limb.yaw < targetYaw) {
-			limb.yaw += moveInfo.yawD;
-		}
-	}
-
-	if (limb.yaw > moveInfo.maxYaw || limb.yaw < moveInfo.minYaw) {
-		limb.yaw = Clamp(limb.yaw, moveInfo.minYaw, moveInfo.maxYaw);
-		result = ANGLES_SET_TO_MAX;
-	}
-
-	// pitch
-
-	if (Abs(limb.pitch - targetPitch) < moveInfo.pitchD){
-		limb.pitch = targetPitch;
-	}else{
-		if (limb.pitch > targetPitch) {
-			limb.pitch -= moveInfo.pitchD;
-		} else if (limb.pitch < targetPitch) {
-			limb.pitch += moveInfo.pitchD;
-		}
-		result = ONE_ANGLE_COULDNT_BE_SET_EXACTLY;
-	}
-
-	if (limb.pitch > moveInfo.maxPitch || limb.pitch < moveInfo.minPitch) {
-		limb.pitch = Clamp(limb.pitch, moveInfo.minPitch, moveInfo.maxPitch);
-		result = ANGLES_SET_TO_MAX;
-	}
-	return result;
+	// Delegate to the C implementation
+	return (LimbMoveStatus)PedIK_MoveLimb(&limb, targetYaw, targetPitch, &moveInfo);
 }
 
 bool
@@ -360,25 +327,21 @@ CPedIK::RestoreLookAt(void)
 void
 CPedIK::ExtractYawAndPitchWorld(RwMatrix *mat, float *yaw, float *pitch)
 {
-	float f = Clamp(DotProduct(mat->up, CVector(0.0f, 1.0f, 0.0f)), -1.0f, 1.0f);
-	*yaw = Acos(f);
-	if (mat->up.x > 0.0f) *yaw = -*yaw;
-
-	f = Clamp(DotProduct(mat->right, CVector(0.0f, 0.0f, 1.0f)), -1.0f, 1.0f);
-	*pitch = Acos(f);
-	if (mat->up.z > 0.0f) *pitch = -*pitch;
+	// Delegate to the C implementation
+	float r[3] = {mat->right.x, mat->right.y, mat->right.z};
+	float u[3] = {mat->up.x, mat->up.y, mat->up.z};
+	float a[3] = {mat->at.x, mat->at.y, mat->at.z};
+	PedIK_ExtractYawAndPitchWorld(r, u, a, yaw, pitch);
 }
 
 void
 CPedIK::ExtractYawAndPitchLocal(RwMatrix *mat, float *yaw, float *pitch)
 {
-	float f = Clamp(DotProduct(mat->at, CVector(0.0f, 0.0f, 1.0f)), -1.0f, 1.0f);
-	*yaw = Acos(f);
-	if (mat->at.y > 0.0f) *yaw = -*yaw;
-
-	f = Clamp(DotProduct(mat->right, CVector(1.0f, 0.0f, 0.0f)), -1.0f, 1.0f);
-	*pitch = Acos(f);
-	if (mat->up.x > 0.0f) *pitch = -*pitch;
+	// Delegate to the C implementation
+	float r[3] = {mat->right.x, mat->right.y, mat->right.z};
+	float u[3] = {mat->up.x, mat->up.y, mat->up.z};
+	float a[3] = {mat->at.x, mat->at.y, mat->at.z};
+	PedIK_ExtractYawAndPitchLocal(r, u, a, yaw, pitch);
 }
 
 void

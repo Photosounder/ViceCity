@@ -21,53 +21,14 @@ enum
 //+ rouz edit (ChatGPT)
 #include "StoredCar.h"
 //- rouz edit (ChatGPT)
+#include "GarageData.h"
 VALIDATE_SIZE(CStoredCar, 0x28);
 
 #define SWITCH_GARAGE_DISTANCE_CLOSE 40.0f
 
-class CGarage
+class CGarage : public CGarageData
 {
 public:
-	uint8 m_eGarageType;
-	uint8 m_eGarageState;
-	uint8 m_nMaxStoredCars;
-	bool field_2; // unused
-	bool m_bClosingWithoutTargetCar;
-	bool m_bDeactivated;
-	bool m_bResprayHappened;
-	int32 m_nTargetModelIndex;
-	CEntity *m_pDoor1;
-	CEntity *m_pDoor2;
-	uint8 m_bDoor1PoolIndex;
-	uint8 m_bDoor2PoolIndex;
-	bool m_bDoor1IsDummy;
-	bool m_bDoor2IsDummy;
-	bool m_bRecreateDoorOnNextRefresh;
-	bool m_bRotatedDoor;
-	bool m_bCameraFollowsPlayer;
-	CVector2D m_vecCorner1;
-	float m_fInfZ;
-	CVector2D m_vDir1;
-	CVector2D m_vDir2;
-	float m_fSupZ;
-	float m_fDir1Len;
-	float m_fDir2Len;
-	float m_fInfX;
-	float m_fSupX;
-	float m_fInfY;
-	float m_fSupY;
-	float m_fDoorPos;
-	float m_fDoorHeight;
-	float m_fDoor1X;
-	float m_fDoor1Y;
-	float m_fDoor2X;
-	float m_fDoor2Y;
-	float m_fDoor1Z;
-	float m_fDoor2Z;
-	uint32 m_nTimeToStartAction;
-	uint8 m_bCollectedCarsState;
-	CVehicle *m_pTarget;
-	CStoredCar m_sStoredCar; // not needed
 
 	void OpenThisGarage();
 	void CloseThisGarage();

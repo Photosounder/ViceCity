@@ -27,13 +27,7 @@ struct AnimBlendFrameData;
 struct CAnimBlendAssociation;
 class CPedAttractor;
 
-struct PedAudioData
-{
-	int m_nFixedDelayTime;
-	int m_nOverrideFixedDelayTime;
-	int m_nOverrideMaxRandomDelayTime;
-	int m_nMaxRandomDelayTime;
-};
+#include "PedAudioData.h"
 
 enum
 {
@@ -42,18 +36,6 @@ enum
 	WATCH_UNTIL_HE_DISAPPEARS,
 };
 
-enum eFormation
-{
-	FORMATION_UNDEFINED,
-	FORMATION_REAR,
-	FORMATION_REAR_LEFT,
-	FORMATION_REAR_RIGHT,
-	FORMATION_FRONT_LEFT,
-	FORMATION_FRONT_RIGHT,
-	FORMATION_LEFT,
-	FORMATION_RIGHT,
-	FORMATION_FRONT
-};
 
 enum FightState {
 	FIGHTSTATE_MOVE_FINISHED = -2,
@@ -69,12 +51,6 @@ enum
 	ENDFIGHT_FAST
 };
 
-enum PedRouteType
-{
-	PEDROUTE_STOP_WHEN_DONE = 1,
-	PEDROUTE_GO_BACKWARD_WHEN_DONE,
-	PEDROUTE_GO_TO_START_WHEN_DONE
-};
 
 enum FightMoveHitLevel
 {
@@ -112,114 +88,9 @@ enum ePedPieceTypes
 	PEDPIECE_HEAD,
 };
 
-enum eWaitState {
-	WAITSTATE_FALSE,
-	WAITSTATE_TRAFFIC_LIGHTS,
-	WAITSTATE_CROSS_ROAD,
-	WAITSTATE_CROSS_ROAD_LOOK,
-	WAITSTATE_LOOK_PED,
-	WAITSTATE_LOOK_SHOP,
-	WAITSTATE_LOOK_ACCIDENT,
-	WAITSTATE_FACEOFF_GANG,
-	WAITSTATE_DOUBLEBACK,
-	WAITSTATE_HITWALL,
-	WAITSTATE_TURN180,
-	WAITSTATE_SURPRISE,
-	WAITSTATE_STUCK,
-	WAITSTATE_LOOK_ABOUT,
-	WAITSTATE_PLAYANIM_DUCK,
-	WAITSTATE_PLAYANIM_COWER,
-	WAITSTATE_PLAYANIM_TAXI,
-	WAITSTATE_PLAYANIM_HANDSUP,
-	WAITSTATE_PLAYANIM_HANDSCOWER,
-	WAITSTATE_PLAYANIM_CHAT,
-	WAITSTATE_FINISH_FLEE,
-	WAITSTATE_SIT_DOWN,
-	WAITSTATE_SIT_DOWN_RVRS,
-	WAITSTATE_SIT_UP,
-	WAITSTATE_SIT_IDLE,
-	WAITSTATE_USE_ATM,
-	WAITSTATE_SUN_BATHE_PRE,
-	WAITSTATE_SUN_BATHE_DOWN,
-	WAITSTATE_SUN_BATHE_IDLE,
-	WAITSTATE_RIOT,
-	WAITSTATE_FAST_FALL,
-	WAITSTATE_BOMBER,
-	WAITSTATE_STRIPPER,
-	WAITSTATE_GROUND_ATTACK,
-	WAITSTATE_LANCESITTING,
-	WAITSTATE_PLAYANIM_HANDSUP_SIMPLE,
-};
+#include "PedWaitStates.h"
 
-enum eObjective {
-	OBJECTIVE_NONE,
-	OBJECTIVE_WAIT_ON_FOOT,
-	OBJECTIVE_WAIT_ON_FOOT_FOR_COP,
-	OBJECTIVE_FLEE_ON_FOOT_TILL_SAFE,
-	OBJECTIVE_GUARD_SPOT,
-	OBJECTIVE_GUARD_AREA,
-	OBJECTIVE_WAIT_IN_CAR,
-	OBJECTIVE_WAIT_IN_CAR_THEN_GET_OUT,
-	OBJECTIVE_KILL_CHAR_ON_FOOT,
-	OBJECTIVE_KILL_CHAR_ANY_MEANS,
-	OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE,
-	OBJECTIVE_FLEE_CHAR_ON_FOOT_ALWAYS,
-	OBJECTIVE_GOTO_CHAR_ON_FOOT,
-	OBJECTIVE_GOTO_CHAR_ON_FOOT_WALKING,
-	OBJECTIVE_HASSLE_CHAR,
-	OBJECTIVE_FOLLOW_CHAR_IN_FORMATION,
-	OBJECTIVE_LEAVE_CAR,
-	OBJECTIVE_ENTER_CAR_AS_PASSENGER,
-	OBJECTIVE_ENTER_CAR_AS_DRIVER,
-	OBJECTIVE_FOLLOW_CAR_IN_CAR,
-	OBJECTIVE_FIRE_AT_OBJECT_FROM_VEHICLE,
-	OBJECTIVE_DESTROY_OBJECT,
-	OBJECTIVE_DESTROY_CAR,
-	OBJECTIVE_GOTO_AREA_ANY_MEANS,
-	OBJECTIVE_GOTO_AREA_ON_FOOT,
-	OBJECTIVE_RUN_TO_AREA,
-	OBJECTIVE_GOTO_AREA_IN_CAR,
-	OBJECTIVE_FOLLOW_CAR_ON_FOOT_WITH_OFFSET,
-	OBJECTIVE_GUARD_ATTACK,
-	OBJECTIVE_SET_LEADER,
-	OBJECTIVE_FOLLOW_ROUTE,
-	OBJECTIVE_SOLICIT_VEHICLE,
-	OBJECTIVE_HAIL_TAXI,
-	OBJECTIVE_CATCH_TRAIN,
-	OBJECTIVE_BUY_ICE_CREAM,
-	OBJECTIVE_STEAL_ANY_CAR,
-	OBJECTIVE_STEAL_ANY_MISSION_CAR,
-	OBJECTIVE_MUG_CHAR,
-	OBJECTIVE_LEAVE_CAR_AND_DIE,
-	OBJECTIVE_GOTO_SEAT_ON_FOOT,
-	OBJECTIVE_GOTO_ATM_ON_FOOT,
-	OBJECTIVE_FLEE_CAR,
-	OBJECTIVE_SUN_BATHE,
-	OBJECTIVE_GOTO_BUS_STOP_ON_FOOT,
-	OBJECTIVE_GOTO_PIZZA_ON_FOOT,
-	OBJECTIVE_GOTO_SHELTER_ON_FOOT,
-	OBJECTIVE_AIM_GUN_AT,
-	OBJECTIVE_WANDER,
-	OBJECTIVE_WAIT_ON_FOOT_AT_SHELTER,
-	OBJECTIVE_SPRINT_TO_AREA,
-	OBJECTIVE_KILL_CHAR_ON_BOAT,
-	OBJECTIVE_SOLICIT_FOOT,
-	OBJECTIVE_WAIT_ON_FOOT_AT_BUS_STOP,
-	OBJECTIVE_GOTO_ICE_CREAM_VAN_ON_FOOT,
-	OBJECTIVE_WAIT_ON_FOOT_AT_ICE_CREAM_VAN,
-	OBJ_55,
-	OBJ_56,
-	OBJ_57,
-	OBJ_58,
-	OBJ_59
-
-};
-
-enum {
-	RANDOM_CHAR = 1,
-	MISSION_CHAR,
-	UNK_CHAR,
-};
+#include "PedObjectives.h"
 
 enum PedLineUpPhase {
 	LINE_UP_TO_CAR_START,
@@ -235,11 +106,8 @@ enum PedOnGroundState {
 	PED_DEAD_ON_THE_FLOOR
 };
 
-enum PointBlankNecessity {
-	NO_POINT_BLANK_PED,
-	POINT_BLANK_FOR_WANTED_PED,
-	POINT_BLANK_FOR_SOMEONE_ELSE
-};
+#include "PointBlank.h"
+#include "PedFormation.h"
 
 
 
@@ -249,294 +117,12 @@ extern float gfTommyFatness;
 
 class CVehicle;
 
-class CPed : public CPhysical
+#include "PedData.h"
+#include "PedLogic.h"
+
+class CPed : public CPhysical, public CPedData
 {
 public:
-#ifdef USE_CUTSCENE_SHADOW_FOR_PED
-	struct CutsceneShadow *m_pRTShadow;
-#endif
-	// 0x128
-	CStoredCollPoly m_collPoly;
-	float m_fCollisionSpeed;
-
-	// cf. https://github.com/DK22Pac/plugin-sdk/blob/master/plugin_sa/game_sa/CPed.h from R*
-	uint32 bIsStanding : 1;
-	uint32 bWasStanding : 1;
-	uint32 bIsAttacking : 1;		// doesn't reset after fist fight
-	uint32 bIsPointingGunAt : 1;
-	uint32 bIsLooking : 1;
-	uint32 bKeepTryingToLook : 1; // if we can't look somewhere due to unreachable angles
-	uint32 bIsRestoringLook : 1;
-	uint32 bIsAimingGun : 1;
-
-	uint32 bIsRestoringGun : 1;
-	uint32 bCanPointGunAtTarget : 1;
-	uint32 bIsTalking : 1;
-	uint32 bIsInTheAir : 1;
-	uint32 bIsLanding : 1;
-	uint32 bIsRunning : 1; // on some conditions
-	uint32 bHitSomethingLastFrame : 1;
-	uint32 bVehEnterDoorIsBlocked : 1; // because someone else enters/exits from there
-
-	uint32 bCanPedEnterSeekedCar : 1;
-	uint32 bRespondsToThreats : 1;
-	uint32 bRenderPedInCar : 1;
-	uint32 bChangedSeat : 1;
-	uint32 bUpdateAnimHeading : 1;
-	uint32 bBodyPartJustCameOff : 1;
-	uint32 bIsShooting : 1;
-	uint32 bFindNewNodeAfterStateRestore : 1;
-
-	uint32 bHasACamera : 1; // does ped possess a camera to document accidents involves fire/explosion
-	uint32 bGonnaInvestigateEvent : 1;
-	uint32 bPedIsBleeding : 1;
-	uint32 bStopAndShoot : 1; // Ped cannot reach target to attack with fist, need to use gun
-	uint32 bIsPedDieAnimPlaying : 1;
-	uint32 bUsePedNodeSeek : 1;
-	uint32 bObjectiveCompleted : 1;
-	uint32 bScriptObjectiveCompleted : 1;
-
-	uint32 bKindaStayInSamePlace : 1;
-	uint32 bBeingChasedByPolice : 1;
-	uint32 bNotAllowedToDuck : 1;
-	uint32 bCrouchWhenShooting : 1;
-	uint32 bIsDucking : 1;
-	uint32 bGetUpAnimStarted : 1;
-	uint32 bDoBloodyFootprints : 1;
-	uint32 bFleeAfterExitingCar : 1;
-
-	uint32 bWanderPathAfterExitingCar : 1;
-	uint32 bIsLeader : 1;
-	uint32 bDontDragMeOutCar : 1; // unfinished feature
-	uint32 m_ped_flagF8 : 1;
-	uint32 bWillBeQuickJacked : 1;
-	uint32 bCancelEnteringCar : 1; // after door is opened or couldn't be opened due to it's locked
-	uint32 bObstacleShowedUpDuringKillObjective : 1;
-	uint32 bDuckAndCover : 1;
-
-	uint32 bStillOnValidPoly : 1; // set if the polygon the ped is on is still valid for collision
-	uint32 bAllowMedicsToReviveMe : 1;
-	uint32 bResetWalkAnims : 1;
-	uint32 bStartWanderPathOnFoot : 1; // exits the car if he's in it, reset after path found
-	uint32 bOnBoat : 1; // not just driver, may be just standing
-	uint32 bBusJacked : 1;
-	uint32 bGonnaKillTheCarJacker : 1; // only set when car is jacked from right door and when arrested by police
-	uint32 bFadeOut : 1;
-
-	uint32 bKnockedUpIntoAir : 1; // has ped been knocked up into the air by a car collision
-	uint32 bHitSteepSlope : 1; // has ped collided/is standing on a steep slope (surface type)
-	uint32 bCullExtraFarAway : 1; // special ped only gets culled if it's extra far away (for roadblocks)
-	uint32 bClearObjective : 1;
-	uint32 bTryingToReachDryLand : 1; // has ped just exited boat and trying to get to dry land
-	uint32 bCollidedWithMyVehicle : 1;
-	uint32 bRichFromMugging : 1; // ped has lots of cash cause they've been mugging people
-	uint32 bChrisCriminal : 1; // Is a criminal as killed during Chris' police mission (should be counted as such)
-
-	uint32 bShakeFist : 1;  // test shake hand at look entity
-	uint32 bNoCriticalHits : 1; // if set, limbs won't came off
-	uint32 bVehExitWillBeInstant : 1;
-	uint32 bHasAlreadyBeenRecorded : 1;
-	uint32 bFallenDown : 1;
-	uint32 bDontAcceptIKLookAts : 1;
-	uint32 bReachedAttractorHeadingTarget : 1;
-	uint32 bTurnedAroundOnAttractor : 1;
-
-	uint32 bHasAlreadyUsedAttractor : 1;
-	uint32 bHasAlreadyStoleACar : 1;
-	uint32 bCarPassenger : 1;
-	uint32 bFleeWhenStanding : 1;
-	uint32 bGotUpOfMyOwnAccord : 1;
-	uint32 bMiamiViceCop : 1;
-	uint32 bMoneyHasBeenGivenByScript : 1; //
-	uint32 bHasBeenPhotographed : 1;  //
-
-	uint32 bIsDrowning : 1;
-	uint32 bDrownsInWater : 1;
-	uint32 bWaitForLeaderToComeCloser : 1;
-	uint32 bHeldHostageInCar : 1;
-	uint32 bIsPlayerFriend : 1;
-	uint32 bHeadStuckInCollision : 1;
-	uint32 bDeadPedInFrontOfCar : 1;
-	uint32 bStayInCarOnJack : 1;
-
-	uint32 bDontFight : 1;
-	uint32 bDoomAim : 1;
-	uint32 bCanBeShotInVehicle : 1;
-	uint32 bCanGiveUpSunbathing : 1;
-	uint32 bMakeFleeScream : 1;
-	uint32 bPushedAlongByCar : 1;
-	uint32 bRemoveMeWhenIGotIntoCar : 1;
-	uint32 bIgnoreThreatsBehindObjects : 1;
-
-	uint32 bNeverEverTargetThisPed : 1;
-	uint32 bCrouchWhenScared : 1;
-	uint32 bKnockedOffBike : 1;
-	uint32 b158_8 : 1;
-	uint32 bCollectBusFare : 1;
-	uint32 bBoughtIceCream : 1;
-	uint32 bDonePositionOutOfCollision : 1;
-	uint32 bCanAttackPlayerWithCops : 1;
-
-#ifdef KANGAROO_CHEAT
-	// our own flags
-	uint32 m_ped_flagI80 : 1; // KANGAROO_CHEAT define makes use of this as cheat toggle 
-#endif
-
-	uint8 m_gangFlags;
-	uint8 m_unused15D; // these 3 can't be padding but had to actually have been members ...
-	uint8 m_unused15E;
-	uint8 m_unused15F;
-	uint8 CharCreatedBy;
-	eObjective m_objective;
-	eObjective m_prevObjective;
-	CPed *m_pedInObjective;
-	CVehicle *m_carInObjective;
-	CVector m_nextRoutePointPos;
-	float m_attractorHeading;
-	CPed *m_leader;
-	eFormation m_pedFormation;
-	uint32 m_fearFlags;
-	CEntity *m_threatEntity;
-	CVector2D m_eventOrThreat;
-	uint32 m_eventType;
-	CEntity* m_pEventEntity;
-	float m_fAngleToEvent;
-	AnimBlendFrameData *m_pFrames[PED_NODE_MAX];
-	RpAtomic *m_pWeaponModel;
-	AssocGroupId m_animGroup;
-	CAnimBlendAssociation *m_pVehicleAnim;
-	CVector2D m_vecAnimMoveDelta;
-	CVector m_vecOffsetSeek;
-	CPedIK m_pedIK; 
-	float m_actionX;
-	float m_actionY;
-	uint32 m_nPedStateTimer;
-	PedState m_nPedState;
-	PedState m_nLastPedState;
-	eMoveState m_nMoveState;
-	int32 m_nStoredMoveState;
-	int32 m_nPrevMoveState;
-	eWaitState m_nWaitState;
-	uint32 m_nWaitTimer;
-	CPathNode* m_pathNodesToGo[8];
-	int16 m_nNumPathNodes;
-	int16 m_nCurPathNodeId;
-	CEntity* m_followPathWalkAroundEnt;
-	CEntity* m_followPathTargetEnt;
-	uint32 m_pathNodeTimer;
-	CPathNode m_pathNodeObjPool[8];
-	CPathNode* m_pCurPathNode;
-	int8 m_nPathDir;
-	CPathNode* m_pLastPathNode;
-	CPathNode* m_pNextPathNode;
-	CVector m_followPathDestPos;
-	float m_followPathAbortDist;
-	eMoveState m_followPathMoveState;
-	float m_fHealth;
-	float m_fArmour;
-	uint32 m_nExtendedRangeTimer;
-	int16 m_routeLastPoint;
-	uint16 m_routeStartPoint;
-	int16 m_routePointsPassed;
-	int16 m_routeType;	// See PedRouteType
-	int16 m_routePointsBeingPassed;
-	CVector2D m_moved;
-	float m_fRotationCur;
-	float m_fRotationDest;
-	float m_headingRate;
-	uint16 m_vehDoor;
-	int16 m_walkAroundType;
-	CPhysical *m_pCurrentPhysSurface;
-	CVector m_vecOffsetFromPhysSurface;
-	CEntity *m_pCurSurface;
-	CVector m_vecSeekPos;
-	CEntity *m_pSeekTarget;
-	CVehicle *m_pMyVehicle;
-	bool bInVehicle;
-	float m_distanceToCountSeekDone;
-	float m_acceptableHeadingOffset;
-	CVehicle* m_vehicleInAccident;
-	CPedAttractor* m_attractor;
-	int32 m_positionInQueue;
-	bool bRunningToPhone;
-	int16 m_phoneId;
-	eCrimeType m_crimeToReportOnPhone;
-	uint32 m_phoneTalkTimer;
-	CAccident *m_lastAccident;
-	uint32 m_nPedType;
-	PedStats *m_pedStats;
-	CVector2D m_fleeFromPos;
-	CEntity *m_fleeFrom;
-	uint32 m_fleeTimer;
-	CEntity* m_threatEx; // TODO(Miami): What is this?
-	CEntity* m_collidingEntityWhileFleeing;
-	uint32 m_collidingThingTimer;
-	CEntity *m_pCollidingEntity;
-	uint8 m_stateUnused;
-	uint32 m_timerUnused;
-	struct Range2D *m_wanderRangeBounds; // rouz edit (ChatGPT)
-	CWeapon m_weapons[TOTAL_WEAPON_SLOTS];
-	eWeaponType m_storedWeapon;
-	eWeaponType m_delayedWeapon;
-	uint32 m_delayedWeaponAmmo;
-	uint8 m_currentWeapon;			// eWeaponType
-	uint8 m_maxWeaponTypeAllowed;	// eWeaponType
-	uint8 m_wepSkills;
-	uint8 m_wepAccuracy;
-	CEntity *m_pPointGunAt;
-	CVector m_vecHitLastPos;
-	uint32 m_curFightMove;
-	uint32 m_lastFightMove;
-	uint8 m_fightButtonPressure;
-	int8 m_fightState;
-	bool m_takeAStepAfterAttack;
-	uint8 m_bleedCounter;
-	CFire *m_pFire;
-	CEntity *m_pLookTarget;
-	float m_fLookDirection;
-	int32 m_wepModelID;
-	uint32 m_leaveCarTimer;
-	uint32 m_getUpTimer;
-	uint32 m_lookTimer;
-	uint32 m_chatTimer;
-	uint32 m_attackTimer;
-	uint32 m_shootTimer; // shooting is a part of attack
-	uint32 m_carJackTimer;
-	uint32 m_objectiveTimer;
-	uint32 m_duckTimer;
-	uint32 m_duckAndCoverTimer;
-	uint32 m_bloodyFootprintCountOrDeathTime;	// Death time when bDoBloodyFootprints is false. Weird decision
-	uint32 m_shotTime;
-	uint32 m_ceaseAttackTimer;
-	uint8 m_panicCounter;
-	bool m_deadBleeding;
-	int8 m_bodyPartBleeding;		// PedNode, but -1 if there isn't
-	CPed *m_nearPeds[10];
-	uint16 m_numNearPeds;
-	uint16 m_nPedMoney;
- 	int8 m_lastWepDam;
-	CEntity *m_lastDamEntity;
-	CEntity *m_attachedTo;
-	CVector m_vecAttachOffset;
-	uint16 m_attachType;
-	float m_attachRotStep;
-	uint32 m_attachWepAmmo;
-	uint32 m_threatFlags;
-	uint32 m_threatCheckTimer;
-	uint32 m_threatCheckInterval;
-	int32 m_delayedSoundID;
-	uint32 m_delayedSoundTimer;
-	uint32 m_lastSoundStart;
-	uint32 m_soundStart;
-	uint16 m_lastQueuedSound;
-	uint16 m_queuedSound;
-	bool m_canTalk;
-	uint32 m_lastComment;
-	CVector m_vecSpotToGuard;
-	float m_radiusToGuard;
-
-	// rouz edit
-	CVector surf_rel_origin;
 
 	CPed(uint32 pedType);
 	~CPed(void);
@@ -869,13 +455,13 @@ public:
 	}
 	bool Dead(void) { return m_nPedState == PED_DEAD; }
 	bool Dying(void) { return m_nPedState == PED_DIE; }
-	bool DyingOrDead(void) { return m_nPedState == PED_DIE || m_nPedState == PED_DEAD; }
+	bool DyingOrDead(void) { return PedLogic_DyingOrDead(this); }
 	bool OnGround(void) { return m_nPedState == PED_FALL || m_nPedState == PED_DIE || m_nPedState == PED_DEAD; }
 	bool OnGroundOrGettingUp(void) { return OnGround() || m_nPedState == PED_GETUP; }
 	
 	bool Driving(void) { return m_nPedState == PED_DRIVING; }
 	bool InVehicle(void) { return bInVehicle && m_pMyVehicle; } // True when ped is sitting/standing in vehicle, not in enter/exit state.
-	bool EnteringCar(void) { return m_nPedState == PED_ENTER_CAR || m_nPedState == PED_CARJACK; }
+	bool EnteringCar(void) { return PedLogic_EnteringCar(this); }
 	bool HasAttractor(void);
 	bool IsUseAttractorObjective(eObjective obj) {
 		return obj == OBJECTIVE_GOTO_ATM_ON_FOOT || obj == OBJECTIVE_GOTO_ICE_CREAM_VAN_ON_FOOT ||

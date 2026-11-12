@@ -20,6 +20,7 @@
 #include "Object.h"
 #include "Pad.h"
 #include "Pickups.h"
+#include "PickupLogic.h"
 #include "PlayerPed.h"
 #include "Wanted.h"
 #include "DMAudio.h"
@@ -789,58 +790,35 @@ CPickups::Init(void)
 bool
 CPickups::TestForPickupsInBubble(CVector pos, float range)
 {
-	for (int i = 0; i < NUMPICKUPS; i++) {
-		if ((aPickUps[i].m_vecPos - pos).Magnitude() < range)
-			return true;
-	}
-	return false;
+	// Delegate to the C implementation
+	return Pickups_TestForPickupsInBubble(aPickUps, NUMPICKUPS, pos.x, pos.y, pos.z, range);
 }
 
 bool
 CPickups::TryToMerge_WeaponType(CVector pos, eWeaponType weapon, uint8 type, uint32 quantity, bool unused) {
-	for (int i = 0; i < NUMPICKUPS; i++) {
-		if (aPickUps[i].m_eType == type && aPickUps[i].m_eModelIndex == ModelForWeapon(weapon))
-			if ((aPickUps[i].m_vecPos - pos).Magnitude() < 7.5f) {
-				aPickUps[i].m_nQuantity += quantity;
-				return true;
-			}
-	}
-	return false;
+	// Delegate to the C implementation
+	return Pickups_TryToMerge(aPickUps, NUMPICKUPS, pos.x, pos.y, pos.z, type, ModelForWeapon(weapon), quantity);
 }
 
 bool
 CPickups::IsPickUpPickedUp(int32 pickupId)
 {
-	for (int i = 0; i < NUMCOLLECTEDPICKUPS; i++) {
-		if (pickupId == aPickUpsCollected[i]) {
-			aPickUpsCollected[i] = 0;
-			return true;
-		}
-	}
-	return false;
+	// Delegate to the C implementation
+	return Pickups_IsPickUpPickedUp((int32_t*)aPickUpsCollected, NUMCOLLECTEDPICKUPS, pickupId);
 }
 
 void
 CPickups::PassTime(uint32 time)
 {
-	for (int i = 0; i < NUMPICKUPS; i++) {
-		if (aPickUps[i].m_eType != PICKUP_NONE && aPickUps[i].m_eType != PICKUP_ASSET_REVENUE) {
-			if (aPickUps[i].m_nTimer <= time)
-				aPickUps[i].m_nTimer = 0;
-			else
-				aPickUps[i].m_nTimer -= time;
-		}
-	}
+	// Delegate to the C implementation
+	Pickups_PassTime(aPickUps, NUMPICKUPS, time);
 }
 
 int32
 CPickups::GetActualPickupIndex(int32 index)
 {
-	if (index == -1) return -1;
-
-	// doesn't look nice
-	if ((uint16)((index & 0xFFFF0000) >> 16) != aPickUps[(uint16)index].m_nIndex) return -1;
-	return (uint16)index;
+	// Delegate to the C implementation
+	return Pickups_GetActualPickupIndex(aPickUps, index);
 }
 
 bool
@@ -1527,14 +1505,14 @@ CPickups::DetonateMinesHitByGunShot(CVector *vec1, CVector *vec2)
 void
 CPickups::RemoveUnnecessaryPickups(const CVector& center, float radius)
 {
-	for (int i = 0; i < NUMPICKUPS; i++) {
-		if (aPickUps[i].m_eType == PICKUP_ONCE_TIMEOUT || aPickUps[i].m_eType == PICKUP_MONEY) {
-			if (Distance(center, aPickUps[i].m_vecPos) < radius) {
-				aPickUps[i].GetRidOfObjects();
-				aPickUps[i].m_bRemoved = true;
-				aPickUps[i].m_eType = PICKUP_NONE;
-			}
-		}
+	// The C implementation picks the pickups, getting rid of them stays here
+	int selected[NUMPICKUPS];
+	int numSelected = Pickups_SelectUnnecessary(aPickUps, NUMPICKUPS, center.x, center.y, center.z, radius, selected, NUMPICKUPS);
+	for (int s = 0; s < numSelected; s++) {
+		int i = selected[s];
+		aPickUps[i].GetRidOfObjects();
+		aPickUps[i].m_bRemoved = true;
+		aPickUps[i].m_eType = PICKUP_NONE;
 	}
 }
 

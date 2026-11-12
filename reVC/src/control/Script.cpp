@@ -8,6 +8,8 @@
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Script.h"
+#include "ScriptBytecode.h"
+#include "DoubleList.h"
 #include "ScriptCommands.h"
 
 #include "AnimBlendAssociation.h"
@@ -645,92 +647,40 @@ bool CStuckCarCheck::HasCarBeenStuckForAWhile(int32 id)
 	return false;
 }
 
+static_assert(SCRIPTBC_ARG_INT32 == ARGUMENT_INT32 && SCRIPTBC_ARG_GLOBALVAR == ARGUMENT_GLOBALVAR && SCRIPTBC_ARG_LOCALVAR == ARGUMENT_LOCALVAR &&
+	SCRIPTBC_ARG_INT8 == ARGUMENT_INT8 && SCRIPTBC_ARG_INT16 == ARGUMENT_INT16 && SCRIPTBC_ARG_FLOAT == ARGUMENT_FLOAT && SCRIPTBC_ARG_END == ARGUMENT_END &&
+	SCRIPTBC_VAR_LOCAL == VAR_LOCAL && SCRIPTBC_VAR_GLOBAL == VAR_GLOBAL, "Script byte code constants differ from the C decoder");
+
 void CRunningScript::CollectParameters(uint32* pIp, int16 total)
 {
-	for (int16 i = 0; i < total; i++){
-		uint16 varIndex;
-		switch (CTheScripts::Read1ByteFromScript(pIp))
-		{
-		case ARGUMENT_INT32:
-		case ARGUMENT_FLOAT:
-			ScriptParams[i] = CTheScripts::Read4BytesFromScript(pIp);
-			break;
-		case ARGUMENT_GLOBALVAR:
-			varIndex = CTheScripts::Read2BytesFromScript(pIp);
-			script_assert(varIndex >= 8 && varIndex < CTheScripts::GetSizeOfVariableSpace());
-			ScriptParams[i] = *((int32*)&CTheScripts::ScriptSpace[varIndex]);
-			break;
-		case ARGUMENT_LOCALVAR:
-			varIndex = CTheScripts::Read2BytesFromScript(pIp);
-			script_assert(varIndex >= 0 && varIndex < ARRAY_SIZE(m_anLocalVariables));
-			ScriptParams[i] = m_anLocalVariables[varIndex];
-			break;
-		case ARGUMENT_INT8:
-			ScriptParams[i] = CTheScripts::Read1ByteFromScript(pIp);
-			break;
-		case ARGUMENT_INT16:
-			ScriptParams[i] = CTheScripts::Read2BytesFromScript(pIp);
-			break;
-		default:
-			script_assert(0);
-			break;
-		}
-	}
+	// Delegate to the C implementation
+	int result = ScriptBC_CollectParameters(CTheScripts::ScriptSpace, CTheScripts::GetSizeOfVariableSpace(), m_anLocalVariables, ARRAY_SIZE(m_anLocalVariables), pIp, total, ScriptParams);
+	script_assert(result == SCRIPTBC_OK);
 }
 
 int32 CRunningScript::CollectNextParameterWithoutIncreasingPC(uint32 ip)
 {
-	uint32* pIp = &ip;
-	switch (CTheScripts::Read1ByteFromScript(pIp))
-	{
-	case ARGUMENT_INT32:
-		return CTheScripts::Read4BytesFromScript(pIp);
-	case ARGUMENT_GLOBALVAR:
-		return *((int32*)&CTheScripts::ScriptSpace[(uint16)CTheScripts::Read2BytesFromScript(pIp)]);
-	case ARGUMENT_LOCALVAR:
-		return m_anLocalVariables[CTheScripts::Read2BytesFromScript(pIp)];
-	case ARGUMENT_INT8:
-		return CTheScripts::Read1ByteFromScript(pIp);
-	case ARGUMENT_INT16:
-		return CTheScripts::Read2BytesFromScript(pIp);
-	case ARGUMENT_FLOAT:
-		return CTheScripts::Read4BytesFromScript(pIp);
-	default:
-		script_assert(0);
-	}
-	return -1;
+	// Delegate to the C implementation
+	int result;
+	int32 value = ScriptBC_CollectNextParameterWithoutIncreasingPC(CTheScripts::ScriptSpace, m_anLocalVariables, ip, &result);
+	script_assert(result == SCRIPTBC_OK);
+	return value;
 }
 
 void CRunningScript::StoreParameters(uint32* pIp, int16 number)
 {
-	for (int16 i = 0; i < number; i++){
-		switch (CTheScripts::Read1ByteFromScript(pIp)) {
-		case ARGUMENT_GLOBALVAR:
-			*(int32*)&CTheScripts::ScriptSpace[(uint16)CTheScripts::Read2BytesFromScript(pIp)] = ScriptParams[i];
-			break;
-		case ARGUMENT_LOCALVAR:
-			m_anLocalVariables[CTheScripts::Read2BytesFromScript(pIp)] = ScriptParams[i];
-			break;
-		default:
-			script_assert(0);
-		}
-	}
+	// Delegate to the C implementation
+	int result = ScriptBC_StoreParameters(CTheScripts::ScriptSpace, m_anLocalVariables, pIp, number, ScriptParams);
+	script_assert(result == SCRIPTBC_OK);
 }
 
 int32 *CRunningScript::GetPointerToScriptVariable(uint32* pIp, int16 type)
 {
-	switch (CTheScripts::Read1ByteFromScript(pIp))
-	{
-	case ARGUMENT_GLOBALVAR:
-		script_assert(type == VAR_GLOBAL);
-		return (int32*)&CTheScripts::ScriptSpace[(uint16)CTheScripts::Read2BytesFromScript(pIp)];
-	case ARGUMENT_LOCALVAR:
-		script_assert(type == VAR_LOCAL);
-		return &m_anLocalVariables[CTheScripts::Read2BytesFromScript(pIp)];
-	default:
-		script_assert(0);
-	}
-	return nil;
+	// Delegate to the C implementation
+	int result;
+	int32 *ptr = ScriptBC_GetPointerToVariable(CTheScripts::ScriptSpace, m_anLocalVariables, pIp, type, &result);
+	script_assert(result == SCRIPTBC_OK);
+	return ptr;
 }
 
 void CRunningScript::Init()
@@ -878,21 +828,14 @@ void CTheScripts::RemoveScriptTextureDictionary()
 
 void CRunningScript::RemoveScriptFromList(CRunningScript** ppScript)
 {
-	if (prev)
-		prev->next = next;
-	else
-		*ppScript = next;
-	if (next)
-		next->prev = prev;
+	// Delegate to the C implementation
+	DList_Remove((void**)ppScript, this, offsetof(CRunningScript, prev), offsetof(CRunningScript, next));
 }
 
 void CRunningScript::AddScriptToList(CRunningScript** ppScript)
 {
-	next = *ppScript;
-	prev = nil;
-	if (*ppScript)
-		(*ppScript)->prev = this;
-	*ppScript = this;
+	// Delegate to the C implementation
+	DList_PushFront((void**)ppScript, this, offsetof(CRunningScript, prev), offsetof(CRunningScript, next));
 }
 
 CRunningScript* CTheScripts::StartNewScript(uint32 ip)
@@ -1042,42 +985,74 @@ int8 CRunningScript::ProcessOneCommand()
 {
 	int8 retval = -1;
 	++CTheScripts::CommandsExecuted;
-	int32 command = (uint16)CTheScripts::Read2BytesFromScript(&m_nIp);
-	m_bNotFlag = (command & 0x8000);
-	command &= 0x7FFF;
+	// Delegate the reading and grouping of the command to the C implementation
+	int notFlag;
+	int32 command = ScriptBC_ReadCommand(CTheScripts::ScriptSpace, &m_nIp, &notFlag);
+	m_bNotFlag = notFlag;
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 	LogBeforeProcessingCommand(command);
 #endif
-	if (command < 100)
+	// Delegate the timed additions and the absolute values to the C implementation
+	if (ScriptBC_IsTimedOpCommand(command)) {
+		int result = ScriptBC_TimedOp(command, CTheScripts::ScriptSpace, CTheScripts::GetSizeOfVariableSpace(), m_anLocalVariables, ARRAY_SIZE(m_anLocalVariables), &m_nIp, ScriptParams, (*Timer_GetTimeStep()));
+		script_assert(result == SCRIPTBC_OK);
+		retval = 0;
+	} else
+	// Delegate the operations between two script variables to the C implementation
+	if (ScriptBC_IsVariableOpCommand(command)) {
+		int result = ScriptBC_VariableOp(command, CTheScripts::ScriptSpace, m_anLocalVariables, &m_nIp);
+		script_assert(result == SCRIPTBC_OK);
+		retval = 0;
+	} else
+	switch (ScriptBC_CommandGroup(command)) {
+	case 0:
 		retval = ProcessCommands0To99(command);
-	else if (command < 200)
+		break;
+	case 1:
 		retval = ProcessCommands100To199(command);
-	else if (command < 300)
+		break;
+	case 2:
 		retval = ProcessCommands200To299(command);
-	else if (command < 400)
+		break;
+	case 3:
 		retval = ProcessCommands300To399(command);
-	else if (command < 500)
+		break;
+	case 4:
 		retval = ProcessCommands400To499(command);
-	else if (command < 600)
+		break;
+	case 5:
 		retval = ProcessCommands500To599(command);
-	else if (command < 700)
+		break;
+	case 6:
 		retval = ProcessCommands600To699(command);
-	else if (command < 800)
+		break;
+	case 7:
 		retval = ProcessCommands700To799(command);
-	else if (command < 900)
+		break;
+	case 8:
 		retval = ProcessCommands800To899(command);
-	else if (command < 1000)
+		break;
+	case 9:
 		retval = ProcessCommands900To999(command);
-	else if (command < 1100)
+		break;
+	case 10:
 		retval = ProcessCommands1000To1099(command);
-	else if (command < 1200)
+		break;
+	case 11:
 		retval = ProcessCommands1100To1199(command);
-	else if (command < 1300)
+		break;
+	case 12:
 		retval = ProcessCommands1200To1299(command);
-	else if (command < 1400)
+		break;
+	case 13:
 		retval = ProcessCommands1300To1399(command);
-	else if (command < 1500)
+		break;
+	case 14:
 		retval = ProcessCommands1400To1499(command);
+		break;
+	default:
+		break;
+	}
 #ifdef USE_MISSION_REPLAY_OVERRIDE_FOR_NON_MOBILE_SCRIPT
 	if (!AlreadySavedGame) // we need to ignore first "fake" command which actually just saves the game
 #endif
@@ -1099,6 +1074,23 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 {
 	float *fScriptVar1;
 	int *nScriptVar1;
+
+	// Delegate the comparisons of variables and numbers to the C implementation
+	if (ScriptBC_IsCompareCommand(command)) {
+		int flag;
+		int result = ScriptBC_Compare(command, CTheScripts::ScriptSpace, CTheScripts::GetSizeOfVariableSpace(), m_anLocalVariables, ARRAY_SIZE(m_anLocalVariables), &m_nIp, ScriptParams, &flag);
+		script_assert(result == SCRIPTBC_OK);
+		UpdateCompareFlag(flag != 0);
+		return 0;
+	}
+
+	// Delegate the arithmetic on script variables to the C implementation
+	if (command >= COMMAND_SET_VAR_INT && command <= COMMAND_DIV_FLOAT_LVAR_BY_VAL) {
+		int result = ScriptBC_Arithmetic(command, CTheScripts::ScriptSpace, CTheScripts::GetSizeOfVariableSpace(), m_anLocalVariables, ARRAY_SIZE(m_anLocalVariables), &m_nIp, ScriptParams);
+		script_assert(result == SCRIPTBC_OK);
+		return 0;
+	}
+
 	switch (command) {
 	case COMMAND_NOP:
 		return 0;
@@ -1109,7 +1101,8 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		return 1;
 	case COMMAND_GOTO:
 		CollectParameters(&m_nIp, 1);
-		SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+		// Delegate to the C implementation
+		ScriptBC_Jump(&m_nIp, ScriptParams[0], SIZE_MAIN_SCRIPT);
 		/* Known issue: GOTO to 0. It might have been "better" to use > instead of >= */
 		/* simply because it never makes sense to jump to start of the script */
 		/* but jumping to start of a custom mission is an issue for simple mission-like scripts */
@@ -1120,445 +1113,11 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CamShakeNoPos(&TheCamera, ScriptParams[0] / 1000.0f);
 		return 0;
-	case COMMAND_SET_VAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr = ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SET_VAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr = *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SET_LVAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr = ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SET_LVAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr = *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_VAL_TO_INT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr += ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_VAL_TO_FLOAT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_VAL_TO_INT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr += ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_VAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_VAL_FROM_INT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr -= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_VAL_FROM_FLOAT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_VAL_FROM_INT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr -= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_VAL_FROM_FLOAT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_MULT_INT_VAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr *= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_MULT_FLOAT_VAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr *= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_MULT_INT_LVAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr *= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_MULT_FLOAT_LVAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr *= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_DIV_INT_VAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr /= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_DIV_FLOAT_VAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr /= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_DIV_INT_LVAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*ptr /= ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_DIV_FLOAT_LVAR_BY_VAL:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr /= *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_THAN_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr > ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_THAN_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr > ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_THAN_INT_VAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(ScriptParams[0] > *ptr);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_THAN_INT_LVAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(ScriptParams[0] > *ptr);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_THAN_INT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*ptr1 > *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_THAN_INT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*ptr1 > *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_THAN_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 > *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_THAN_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 > *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_THAN_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr > *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_THAN_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr > *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_THAN_FLOAT_VAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)&ScriptParams[0] > *(float*)ptr);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_THAN_FLOAT_LVAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)&ScriptParams[0] > *(float*)ptr);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_THAN_FLOAT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)ptr1 > *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_THAN_FLOAT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)ptr1 > *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_THAN_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 > *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_THAN_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 > *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_OR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr >= ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_OR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr >= ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_INT_VAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(ScriptParams[0] >= *ptr);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_INT_LVAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(ScriptParams[0] >= *ptr);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_OR_EQUAL_TO_INT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*ptr1 >= *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_OR_EQUAL_TO_INT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*ptr1 >= *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_GREATER_OR_EQUAL_TO_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 >= *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_GREATER_OR_EQUAL_TO_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 >= *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_OR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr >= *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_OR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr >= *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_FLOAT_VAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)&ScriptParams[0] >= *(float*)ptr);
-		return 0;
-	}
-	case COMMAND_IS_NUMBER_GREATER_OR_EQUAL_TO_FLOAT_LVAR:
-	{
-		CollectParameters(&m_nIp, 1);
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)&ScriptParams[0] >= *(float*)ptr);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_OR_EQUAL_TO_FLOAT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)ptr1 >= *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_OR_EQUAL_TO_FLOAT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)ptr1 >= *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_GREATER_OR_EQUAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 >= *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_GREATER_OR_EQUAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 >= *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr == ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*ptr == ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_EQUAL_TO_INT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*ptr1 == *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_VAR_EQUAL_TO_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 == *ptr2);
-		return 0;
-	}
-	case COMMAND_IS_INT_LVAR_EQUAL_TO_INT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*ptr1 == *ptr2);
-		return 0;
-	}
 	//case COMMAND_IS_INT_VAR_NOT_EQUAL_TO_NUMBER:
 	//case COMMAND_IS_INT_LVAR_NOT_EQUAL_TO_NUMBER:
 	//case COMMAND_IS_INT_VAR_NOT_EQUAL_TO_INT_VAR:
 	//case COMMAND_IS_INT_LVAR_NOT_EQUAL_TO_INT_LVAR:
 	//case COMMAND_IS_INT_VAR_NOT_EQUAL_TO_INT_LVAR:
-	case COMMAND_IS_FLOAT_VAR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr == *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_EQUAL_TO_NUMBER:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		UpdateCompareFlag(*(float*)ptr == *(float*)&ScriptParams[0]);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_EQUAL_TO_FLOAT_VAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		UpdateCompareFlag(*(float*)ptr1 == *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_VAR_EQUAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 == *(float*)ptr2);
-		return 0;
-	}
-	case COMMAND_IS_FLOAT_LVAR_EQUAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		int32* ptr2 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		UpdateCompareFlag(*(float*)ptr1 == *(float*)ptr2);
-		return 0;
-	}
 	//case COMMAND_IS_FLOAT_VAR_NOT_EQUAL_TO_NUMBER:
 	//case COMMAND_IS_FLOAT_LVAR_NOT_EQUAL_TO_NUMBER:
 	//case COMMAND_IS_FLOAT_VAR_NOT_EQUAL_TO_FLOAT_VAR:
@@ -1574,7 +1133,7 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 	case COMMAND_GOTO_IF_FALSE:
 		CollectParameters(&m_nIp, 1);
 		if (!m_bCondResult)
-			SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+			ScriptBC_Jump(&m_nIp, ScriptParams[0], SIZE_MAIN_SCRIPT);
 		/* Check COMMAND_GOTO note. */
 		return 0;
 	case COMMAND_TERMINATE_THIS_SCRIPT:
@@ -1603,45 +1162,25 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 		script_assert(ScriptParams[0] >= 0);
 		CRunningScript* pNew = CTheScripts::StartNewScript(ScriptParams[0]);
 		pNew->m_bIsActive = true;
-		int8 type = CTheScripts::Read1ByteFromScript(&m_nIp);
-		float tmp;
-		for (int i = 0; type != ARGUMENT_END; type = CTheScripts::Read1ByteFromScript(&m_nIp), i++) {
-			switch (type) {
-			case ARGUMENT_INT32:
-				pNew->m_anLocalVariables[i] = CTheScripts::Read4BytesFromScript(&m_nIp);
-				break;
-			case ARGUMENT_GLOBALVAR:
-				pNew->m_anLocalVariables[i] = *(int32*)&CTheScripts::ScriptSpace[(uint16)CTheScripts::Read2BytesFromScript(&m_nIp)];
-				break;
-			case ARGUMENT_LOCALVAR:
-				pNew->m_anLocalVariables[i] = m_anLocalVariables[CTheScripts::Read2BytesFromScript(&m_nIp)];
-				break;
-			case ARGUMENT_INT8:
-				pNew->m_anLocalVariables[i] = CTheScripts::Read1ByteFromScript(&m_nIp);
-				break;
-			case ARGUMENT_INT16:
-				pNew->m_anLocalVariables[i] = CTheScripts::Read2BytesFromScript(&m_nIp);
-				break;
-			case ARGUMENT_FLOAT:
-				tmp = CTheScripts::ReadFloatFromScript(&m_nIp);
-				pNew->m_anLocalVariables[i] = *(int32*)&tmp;
-				break;
-			default:
-				break;
-			}
-		}
+		// Delegate the copying of the arguments to the C implementation
+		ScriptBC_CopyArgumentsToLocals(CTheScripts::ScriptSpace, m_anLocalVariables, pNew->m_anLocalVariables, &m_nIp);
 		return 0;
 	}
 	case COMMAND_GOSUB:
 		CollectParameters(&m_nIp, 1);
-		script_assert(m_nStackPointer < MAX_STACK_DEPTH);
-		m_anStack[m_nStackPointer++] = m_nIp;
-		SetIP(ScriptParams[0] >= 0 ? ScriptParams[0] : SIZE_MAIN_SCRIPT - ScriptParams[0]);
+		{
+			// Delegate to the C implementation
+			int result = ScriptBC_Gosub(m_anStack, &m_nStackPointer, MAX_STACK_DEPTH, &m_nIp, ScriptParams[0], SIZE_MAIN_SCRIPT);
+			script_assert(result == SCRIPTBC_OK);
+		}
 		return 0;
 	case COMMAND_RETURN:
-		script_assert(m_nStackPointer > 0); /* No more SSU */
-		SetIP(m_anStack[--m_nStackPointer]);
+	{
+		// No more SSU
+		int result = ScriptBC_Return(m_anStack, &m_nStackPointer, &m_nIp);
+		script_assert(result == SCRIPTBC_OK);
 		return 0;
+	}
 	case COMMAND_LINE:
 		CollectParameters(&m_nIp, 6);
 		/* Something must have been here */
@@ -1773,54 +1312,6 @@ int8 CRunningScript::ProcessCommands0To99(int32 command)
 			CTheScripts::DrawDebugCube(x1, y1, z1, x2, y2, z2);
 		return 0;
 	}
-	case COMMAND_ADD_INT_VAR_TO_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 += *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_ADD_INT_LVAR_TO_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 += *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_ADD_INT_VAR_TO_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 += *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_ADD_INT_LVAR_TO_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 += *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_ADD_FLOAT_VAR_TO_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_ADD_FLOAT_LVAR_TO_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_ADD_FLOAT_VAR_TO_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_ADD_FLOAT_LVAR_TO_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SUB_INT_VAR_FROM_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 -= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_SUB_INT_LVAR_FROM_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 -= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SUB_FLOAT_VAR_FROM_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_SUB_FLOAT_LVAR_FROM_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
 	default:
 		script_assert(0);
 		break;
@@ -1833,282 +1324,6 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 	float *fScriptVar1;
 	int *nScriptVar1;
 	switch (command) {
-	case COMMAND_SUB_INT_LVAR_FROM_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 -= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SUB_INT_VAR_FROM_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 -= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_SUB_FLOAT_LVAR_FROM_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SUB_FLOAT_VAR_FROM_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_MULT_INT_VAR_BY_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 *= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_MULT_INT_VAR_BY_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 *= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_MULT_INT_LVAR_BY_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 *= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_MULT_INT_LVAR_BY_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 *= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_MULT_FLOAT_VAR_BY_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 *= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_MULT_FLOAT_VAR_BY_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 *= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_MULT_FLOAT_LVAR_BY_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 *= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_MULT_FLOAT_LVAR_BY_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 *= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_DIV_INT_VAR_BY_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 /= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_DIV_INT_VAR_BY_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*nScriptVar1 /= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_DIV_INT_LVAR_BY_INT_VAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 /= *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_DIV_INT_LVAR_BY_INT_LVAR:
-		nScriptVar1 = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*nScriptVar1 /= *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_DIV_FLOAT_VAR_BY_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 /= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_DIV_FLOAT_VAR_BY_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 /= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_DIV_FLOAT_LVAR_BY_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 /= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_DIV_FLOAT_LVAR_BY_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 /= *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_ADD_TIMED_VAL_TO_FLOAT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_TIMED_VAL_TO_FLOAT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr += (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-#ifdef FIX_BUGS
-	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
-#else
-	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
-#endif
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-#ifdef FIX_BUGS
-	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_VAR:
-#else
-	case COMMAND_ADD_TIMED_FLOAT_VAR_TO_FLOAT_LVAR:
-#endif
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_ADD_TIMED_FLOAT_LVAR_TO_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 += (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_VAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_TIMED_VAL_FROM_FLOAT_LVAR:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		CollectParameters(&m_nIp, 1);
-		*(float*)ptr -= (*Timer_GetTimeStep()) * *(float*)&ScriptParams[0];
-		return 0;
-	}
-	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_VAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-#ifdef FIX_BUGS // in SA it was fixed by reversing their order in enum
-	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
-#else
-	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
-#endif
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-#ifdef FIX_BUGS
-	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_VAR:
-#else
-	case COMMAND_SUB_TIMED_FLOAT_VAR_FROM_FLOAT_LVAR:
-#endif
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	case COMMAND_SUB_TIMED_FLOAT_LVAR_FROM_FLOAT_LVAR:
-		fScriptVar1 = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*fScriptVar1 -= (*Timer_GetTimeStep()) * *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	case COMMAND_SET_VAR_INT_TO_VAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_SET_VAR_INT_TO_LVAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_SET_LVAR_INT_TO_VAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_SET_LVAR_INT_TO_LVAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_SET_VAR_FLOAT_TO_VAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_SET_VAR_FLOAT_TO_LVAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_SET_LVAR_FLOAT_TO_VAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_SET_LVAR_FLOAT_TO_LVAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_CSET_VAR_INT_TO_VAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_CSET_VAR_INT_TO_LVAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_CSET_LVAR_INT_TO_VAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_CSET_LVAR_INT_TO_LVAR_FLOAT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *(float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_CSET_VAR_FLOAT_TO_VAR_INT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_CSET_VAR_FLOAT_TO_LVAR_INT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_CSET_LVAR_FLOAT_TO_VAR_INT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		return 0;
-	}
-	case COMMAND_CSET_LVAR_FLOAT_TO_LVAR_INT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = *GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		return 0;
-	}
-	case COMMAND_ABS_VAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = ABS(*ptr);
-		return 0;
-	}
-	case COMMAND_ABS_LVAR_INT:
-	{
-		int32* ptr = GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = ABS(*ptr);
-		return 0;
-	}
-	case COMMAND_ABS_VAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
-		*ptr = ABS(*ptr);
-		return 0;
-	}
-	case COMMAND_ABS_LVAR_FLOAT:
-	{
-		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_LOCAL);
-		*ptr = ABS(*ptr);
-		return 0;
-	}
 	case COMMAND_GENERATE_RANDOM_FLOAT:
 	{
 		float* ptr = (float*)GetPointerToScriptVariable(&m_nIp, VAR_GLOBAL);
@@ -2766,20 +1981,15 @@ int8 CRunningScript::ProcessCommands200To299(int32 command)
 	case COMMAND_ENDWHILE:
 	*/
 	case COMMAND_ANDOR:
+	{
 		CollectParameters(&m_nIp, 1);
-		m_nAndOrState = ScriptParams[0];
-		if (m_nAndOrState == ANDOR_NONE){
-			m_bCondResult = false; // pointless
-		}else if (m_nAndOrState >= ANDS_1 && m_nAndOrState <= ANDS_8){
-			m_bCondResult = true;
-			m_nAndOrState++;
-		}else if (m_nAndOrState >= ORS_1 && m_nAndOrState <= ORS_8){
-			m_bCondResult = false;
-			m_nAndOrState++;
-		}else{
-			script_assert(0 && "COMMAND_ANDOR: invalid ANDOR state");
-		}
+		// Delegate to the C implementation
+		int condResult = m_bCondResult;
+		int result = ScriptBC_AndOr(ScriptParams[0], &m_nAndOrState, &condResult);
+		m_bCondResult = condResult != 0;
+		script_assert(result == SCRIPTBC_OK && "COMMAND_ANDOR: invalid ANDOR state");
 		return 0;
+	}
 	case COMMAND_LAUNCH_MISSION:
 	{
 		CollectParameters(&m_nIp, 1);

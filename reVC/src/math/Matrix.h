@@ -1,39 +1,10 @@
+//+ rouz edit (Claude)
 #pragma once
+#include "MatrixData.h"
 
-class CMatrix
+class CMatrix : public CMatrixData
 {
 public:
-#ifdef GTA_PS2
-	union
-	{
-		float f[4][4];
-		struct
-		{
-			float rx, ry, rz;
-			RwMatrix *m_attachment;
-			float fx, fy, fz;
-			bool m_hasRwMatrix;	// are we the owner?
-			float ux, uy, uz, uw;
-			float px, py, pz, pw;
-		};
-	};
-#else
-	union
-	{
-		float f[4][4];
-		struct
-		{
-			float rx, ry, rz, rw;
-			float fx, fy, fz, fw;
-			float ux, uy, uz, uw;
-			float px, py, pz, pw;
-		};
-	};
-
-	RwMatrix *m_attachment;
-	bool m_hasRwMatrix;	// are we the owner?
-#endif
-
 	CMatrix(void);
 	CMatrix(CMatrix const &m);
 	CMatrix(RwMatrix *matrix, bool owner = false);
@@ -152,3 +123,4 @@ class CCompressedMatrix : public CCompressedMatrixNotAligned
 {
 	int _alignment; // no clue what would this align to
 };
+//- rouz edit (Claude)

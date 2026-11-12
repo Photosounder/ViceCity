@@ -34,19 +34,13 @@
 #include "Ropes.h"
 #include "Ropes_backend.h"
 #include "Heli.h"
+#include "HeliLogic.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 #ifdef FIX_BUGS
 #include "Replay.h"
 #endif
 
-enum
-{
-	HELI_STATUS_HOVER,
-	HELI_STATUS_CHASE_PLAYER,
-	HELI_STATUS_FLY_AWAY,
-	HELI_STATUS_SHOT_DOWN,
-	HELI_STATUS_HOVER2,
-};
+#include "HeliStatus.h"
 
 CHeli *CHeli::pHelis[NUM_HELIS];
 int16 CHeli::NumRandomHelis;
@@ -104,11 +98,10 @@ CHeli::CHeli(int32 id, uint8 CreatedBy)
 void
 CHeli::SetModelIndex(uint32 id)
 {
-	int i;
-
 	CVehicle::SetModelIndex(id);
-	for(i = 0; i < NUM_HELI_NODES; i++)
-		m_aHeliNodes[i] = nil;
+
+	// Clear the node array in C before filling it
+	Heli_ClearNodes(this);
 	CClumpModelInfo::FillFrameArray(GetClump(), m_aHeliNodes);
 }
 
@@ -744,13 +737,10 @@ CHeli::SpawnFlyingComponent(int32 component)
 CVector
 CHeli::FindSwatPositionRelativeToHeli(int n)
 {
-	switch(n){
-	case 0: return CVector(-1.2f, -1.0f, -0.5f);
-	case 1: return CVector( 1.2f, -1.0f, -0.5f);
-	case 2: return CVector(-1.2f,  1.0f, -0.5f);
-	case 3: return CVector( 1.2f,  1.0f, -0.5f);
-	default: return CVector(0.0f, 0.0f, 0.0f);
-	}
+	// Delegate to the C implementation
+	CVector v;
+	Heli_FindSwatPositionRelativeToHeli(n, &v.x, &v.y, &v.z);
+	return v;
 }
 
 bool
@@ -1015,9 +1005,8 @@ CHeli::TestRocketCollision(CVector *rocketPos)
 
 	for(i = 0; i < NUM_HELIS; i++){
 		if(pHelis[i] && !pHelis[i]->bExplosionProof && (*rocketPos - pHelis[i]->GetPosition()).MagnitudeSqr() < sq(8.0f)){
-			pHelis[i]->m_fAngularSpeed = General_GetRandomTrueFalse() ? 0.05f : -0.05f;
-			pHelis[i]->m_heliStatus = HELI_STATUS_SHOT_DOWN;
-			pHelis[i]->m_nExplosionTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
+			// Bring it down in C
+			Heli_ShootDown(pHelis[i], General_GetRandomTrueFalse(), (*Timer_GetTimeInMilliseconds()) + 10000);
 			hit = true;
 		}
 	}
@@ -1032,20 +1021,11 @@ CHeli::TestBulletCollision(CVector *line0, CVector *line1, CVector *bulletPos, i
 
 	for(i = 0; i < NUM_HELIS; i++)
 		if(pHelis[i] && !pHelis[i]->bBulletProof && CCollision::DistToLine(line0, line1, &pHelis[i]->GetPosition()) < 5.0f){
-			// Find bullet position
-			float distToHeli = (pHelis[i]->GetPosition() - *line0).Magnitude();
-			CVector line = (*line1 - *line0);
-			float lineLength = line.Magnitude();
-			*bulletPos = *line0 + line*Max(1.0f, distToHeli-5.0f)/lineLength;
+			// Find the bullet position in C
+			Heli_BulletPosition(&line0->x, &line1->x, &pHelis[i]->GetPosition().x, &bulletPos->x);
 
-			pHelis[i]->m_nBulletDamage += damage;
-
-			if(pHelis[i]->m_heliType == HELI_CATALINA && pHelis[i]->m_nBulletDamage > 400 ||
-			   pHelis[i]->m_heliType != HELI_CATALINA && pHelis[i]->m_nBulletDamage > 700){
-				pHelis[i]->m_fAngularSpeed = General_GetRandomTrueFalse() ? 0.05f : -0.05f;
-				pHelis[i]->m_heliStatus = HELI_STATUS_SHOT_DOWN;
-				pHelis[i]->m_nExplosionTimer = (*Timer_GetTimeInMilliseconds()) + 10000;
-			}
+			if(Heli_AddBulletDamage(pHelis[i], damage))
+				Heli_ShootDown(pHelis[i], General_GetRandomTrueFalse(), (*Timer_GetTimeInMilliseconds()) + 10000);
 
 			hit = true;
 		}
@@ -1062,9 +1042,7 @@ CHeli::TestSniperCollision(CVector *line0, CVector *line1)
 		if(pHelis[i] && !pHelis[i]->bBulletProof) {
 			CVector pilotPos = pHelis[i]->GetMatrix() * CVector(-0.43f, 1.49f, 1.5f);
 			if(CCollision::DistToLine(line0, line1, &pilotPos) < 0.8f){
-				pHelis[i]->m_fAngularSpeed = General_GetRandomTrueFalse() ? 0.05f : -0.05f;
-				pHelis[i]->m_heliStatus = HELI_STATUS_SHOT_DOWN;
-				pHelis[i]->m_nExplosionTimer = (*Timer_GetTimeInMilliseconds()) + 9999999;
+				Heli_ShootDown(pHelis[i], General_GetRandomTrueFalse(), (*Timer_GetTimeInMilliseconds()) + 9999999);
 				pHelis[i]->m_numSwat = 0;
 
 				hit = true;

@@ -1,25 +1,7 @@
 #pragma once
 
 #include "Physical.h"
-
-enum {
-	UNKNOWN_OBJECT = 0,
-	GAME_OBJECT = 1,
-	MISSION_OBJECT = 2,
-	TEMP_OBJECT = 3,
-	CUTSCENE_OBJECT = 4,
-	CONTROLLED_SUB_OBJECT = 5,
-};
-
-enum CollisionSpecialResponseCase
-{
-	COLLRESPONSE_NONE,
-	COLLRESPONSE_LAMPOST,
-	COLLRESPONSE_SMALLBOX,
-	COLLRESPONSE_BIGBOX,
-	COLLRESPONSE_FENCEPART,
-	COLLRESPONSE_UNKNOWN5
-};
+#include "ObjectState.h"
 
 enum CollisionDamageEffect
 {
@@ -54,35 +36,9 @@ enum CollisionDamageEffect
 class CVehicle;
 class CDummyObject;
 
-class CObject : public CPhysical
+class CObject : public CPhysical, public CObjectState
 {
 public:
-	CMatrix m_objectMatrix;
-	float m_fUprootLimit;
-	int8 ObjectCreatedBy;
-	uint8 bIsPickup : 1;
-	uint8 bAmmoCollected : 1;
-	uint8 bPickupObjWithMessage : 1;
-	uint8 bOutOfStock : 1;
-	uint8 bGlassCracked : 1;
-	uint8 bGlassBroken : 1;
-	uint8 bHasBeenDamaged : 1;
-	uint8 bUseVehicleColours : 1;
-	uint8 bIsWeapon : 1;
-	uint8 bIsStreetLight : 1;
-	int8 m_nBonusValue;
-	uint16 m_nCostValue;
-	float m_fCollisionDamageMultiplier;
-	uint8 m_nCollisionDamageEffect;
-	uint8 m_nSpecialCollisionResponseCases;
-	bool m_bCameraToAvoidThisObject;
-	uint8 m_nBeachballBounces;
-	uint32 m_obj_unused1;
-	uint32 m_nEndOfLifeTime;
-	int16 m_nRefModelIndex;
-	CEntity *m_pCurSurface;
-	CEntity *m_pCollidingEntity;
-	int8 m_colour1, m_colour2;
 
 	static int16 nNoTempObjects;
 	static float fDistToNearestTree;

@@ -1,16 +1,31 @@
-//+ rouz edit (ChatGPT)
-#include "common.h"
+//+ rouz edit (Claude)
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "config.h"
 
-#include "main.h"
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#include "Draw_constants.h"
 #include "FileMgr.h"
-#include "Physical.h"
+#include "WorkBuffer.h"
 #include "HandlingMgr.h"
 
-cHandlingDataMgr mod_HandlingManager;
+void re3_assert(const char *expression,const char *file,unsigned int line,const char *function);
+#ifndef MASTER
+#define HandlingMgr_Assert(expression) ((void)((!!(expression)) || (re3_assert(#expression,__FILE__,__LINE__,__func__),0)))
+#else
+#define HandlingMgr_Assert(expression) (expression)
+#endif
 
-const char *HandlingFilename = "HANDLING.CFG";
+#define GRAVITY (0.008f)
+#define SQR(x) ((x) * (x))
 
-const char VehicleNames[NUMHANDLINGS][14] = {
+static const char *HandlingFilename = "HANDLING.CFG";
+
+static const char VehicleNames[NUMHANDLINGS][14] = {
 	"LANDSTAL",
 	"IDAHO",
 	"STINGER",
@@ -119,25 +134,22 @@ const char VehicleNames[NUMHANDLINGS][14] = {
 	"RCCOPTER"
 };
 
-cHandlingDataMgr::cHandlingDataMgr(void)
+void
+HandlingMgr_Initialise(cHandlingDataMgrState *self)
 {
-	memset(this, 0, sizeof(*this));
+	// Load the file then set the global constants
+	HandlingMgr_LoadHandlingData(self);
+	self->field_0 = 0.1f;
+	self->fWheelFriction = 0.9f;
+	self->field_8 = 1.0f;
+	self->field_C = 0.8f;
+	self->field_10 = 0.98f;
 }
 
 void
-cHandlingDataMgr::Initialise(void)
+HandlingMgr_LoadHandlingData(cHandlingDataMgrState *self)
 {
-	LoadHandlingData();
-	field_0 = 0.1f;
-	fWheelFriction = 0.9f;
-	field_8 = 1.0f;
-	field_C = 0.8f;
-	field_10 = 0.98f;
-}
-
-void
-cHandlingDataMgr::LoadHandlingData(void)
-{
+	// Parse HANDLING.CFG line by line
 	char *start, *end;
 	char line[201];	// weird value
 	char delim[4];	// not sure
@@ -155,10 +167,10 @@ cHandlingDataMgr::LoadHandlingData(void)
 
 	start = (char*)work_buff;
 	end = start+1;
-	handling = nil;
-	flyingHandling = nil;
-	boatHandling = nil;
-	bikeHandling = nil;
+	handling = NULL;
+	flyingHandling = NULL;
+	boatHandling = NULL;
+	bikeHandling = NULL;
 	keepGoing = 1;
 
 	while(keepGoing){
@@ -180,13 +192,13 @@ cHandlingDataMgr::LoadHandlingData(void)
 				field = 0;
 				strcpy(delim, " \t");
 				// FIX: game seems to use a do-while loop here
-				for(word = strtok(line, delim); word; word = strtok(nil, delim)){
+				for(word = strtok(line, delim); word; word = strtok(NULL, delim)){
 					switch(field){
 					case  0: break;
 					case  1:
-						handlingId = FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
-						assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
-						bikeHandling = GetBikePointer(handlingId);
+						handlingId = HandlingMgr_FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
+						HandlingMgr_Assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
+						bikeHandling = &self->BikeHandlingData[handlingId-HANDLING_BIKE];
 						bikeHandling->nIdentifier = (tVehicleType)handlingId;
 						break;
 					case  2: bikeHandling->fLeanFwdCOM = atof(word); break;
@@ -207,19 +219,19 @@ cHandlingDataMgr::LoadHandlingData(void)
 					}
 					field++;
 				}
-				ConvertBikeDataToGameUnits(bikeHandling);
+				HandlingMgr_ConvertBikeDataToGameUnits(bikeHandling);
 			}else if(line[0] == '$'){
 				// Flying data
 				field = 0;
 				strcpy(delim, " \t");
 				// FIX: game seems to use a do-while loop here
-				for(word = strtok(line, delim); word; word = strtok(nil, delim)){
+				for(word = strtok(line, delim); word; word = strtok(NULL, delim)){
 					switch(field){
 					case  0: break;
 					case  1:
-						handlingId = FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
-						assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
-						flyingHandling = GetFlyingPointer(handlingId);
+						handlingId = HandlingMgr_FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
+						HandlingMgr_Assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
+						flyingHandling = HandlingMgr_GetFlyingPointer(self, handlingId);
 						flyingHandling->nIdentifier = (tVehicleType)handlingId;
 						break;
 					case  2: flyingHandling->fThrust = atof(word); break;
@@ -248,13 +260,13 @@ cHandlingDataMgr::LoadHandlingData(void)
 				field = 0;
 				strcpy(delim, " \t");
 				// FIX: game seems to use a do-while loop here
-				for(word = strtok(line, delim); word; word = strtok(nil, delim)){
+				for(word = strtok(line, delim); word; word = strtok(NULL, delim)){
 					switch(field){
 					case  0: break;
 					case  1:
-						handlingId = FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
-						assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
-						boatHandling = GetBoatPointer(handlingId);
+						handlingId = HandlingMgr_FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
+						HandlingMgr_Assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
+						boatHandling = HandlingMgr_GetBoatPointer(self, handlingId);
 						boatHandling->nIdentifier = (tVehicleType)handlingId;
 						break;
 					case  2: boatHandling->fThrustY = atof(word); break;
@@ -278,12 +290,12 @@ cHandlingDataMgr::LoadHandlingData(void)
 				field = 0;
 				strcpy(delim, " \t");
 				// FIX: game seems to use a do-while loop here
-				for(word = strtok(line, delim); word; word = strtok(nil, delim)){
+				for(word = strtok(line, delim); word; word = strtok(NULL, delim)){
 					switch(field){
 					case  0:
-						handlingId = FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
-						assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
-						handling = &HandlingData[handlingId];
+						handlingId = HandlingMgr_FindExactWord(word, (const char*)VehicleNames, 14, NUMHANDLINGS);
+						HandlingMgr_Assert(handlingId >= 0 && handlingId < NUMHANDLINGS);
+						handling = &self->HandlingData[handlingId];
 						handling->nIdentifier = (tVehicleType)handlingId;
 						break;
 					case  1: handling->fMass = atof(word); break;
@@ -324,14 +336,14 @@ cHandlingDataMgr::LoadHandlingData(void)
 					}
 					field++;
 				}
-				ConvertDataToGameUnits(handling);
+				HandlingMgr_ConvertDataToGameUnits(handling);
 			}
 		}
 	}
 }
 
 int
-cHandlingDataMgr::FindExactWord(const char *word, const char *words, int wordLen, int numWords)
+HandlingMgr_FindExactWord(const char *word, const char *words, int wordLen, int numWords)
 {
 	int i;
 
@@ -346,7 +358,7 @@ cHandlingDataMgr::FindExactWord(const char *word, const char *words, int wordLen
 
 
 void
-cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData *handling)
+HandlingMgr_ConvertDataToGameUnits(tHandlingData *handling)
 {
 	// convert distance to m, time to 1/50s
 	float velocity, a, b;
@@ -354,7 +366,7 @@ cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData *handling)
 	handling->Transmission.fEngineAcceleration *= 1.0f/(50.0f*50.0f);
 	handling->Transmission.fMaxVelocity *= 1000.0f/(60.0f*60.0f * 50.0f);
 	handling->fBrakeDeceleration *= 1.0f/(50.0f*50.0f);
-	handling->fTurnMass = (sq(handling->Dimension.x) + sq(handling->Dimension.y)) * handling->fMass / 12.0f;
+	handling->fTurnMass = (SQR(handling->Dimension.x) + SQR(handling->Dimension.y)) * handling->fMass / 12.0f;
 	if(handling->fTurnMass < 10.0f)
 		handling->fTurnMass *= 5.0f;
 	handling->fInvMass = 1.0f/handling->fMass;
@@ -400,16 +412,16 @@ cHandlingDataMgr::ConvertDataToGameUnits(tHandlingData *handling)
 }
 
 void
-cHandlingDataMgr::ConvertBikeDataToGameUnits(tBikeHandlingData *handling)
+HandlingMgr_ConvertBikeDataToGameUnits(tBikeHandlingData *handling)
 {
-	handling->fMaxLean = Sin(DEGTORAD(handling->fMaxLean));
+	handling->fMaxLean = sinf(DEGTORAD(handling->fMaxLean));
 	handling->fFullAnimLean = DEGTORAD(handling->fFullAnimLean);
-	handling->fWheelieAng = Sin(DEGTORAD(handling->fWheelieAng));
-	handling->fStoppieAng = Sin(DEGTORAD(handling->fStoppieAng));
+	handling->fWheelieAng = sinf(DEGTORAD(handling->fWheelieAng));
+	handling->fStoppieAng = sinf(DEGTORAD(handling->fStoppieAng));
 }
 
-int32
-cHandlingDataMgr::GetHandlingId(const char *name)
+int32_t
+HandlingMgr_GetHandlingId(const char *name)
 {
 	int i;
 	for(i = 0; i < NUMHANDLINGS; i++)
@@ -419,18 +431,18 @@ cHandlingDataMgr::GetHandlingId(const char *name)
 }
 
 tFlyingHandlingData*
-cHandlingDataMgr::GetFlyingPointer(uint8 id)
+HandlingMgr_GetFlyingPointer(cHandlingDataMgrState *self, uint8_t id)
 {
 	if(id >= HANDLING_SEAPLANE && id <= HANDLING_RCCOPTER)
-		return &FlyingHandlingData[id-HANDLING_SEAPLANE];
-	return &FlyingHandlingData[0];
+		return &self->FlyingHandlingData[id-HANDLING_SEAPLANE];
+	return &self->FlyingHandlingData[0];
 }
 
 tBoatHandlingData*
-cHandlingDataMgr::GetBoatPointer(uint8 id)
+HandlingMgr_GetBoatPointer(cHandlingDataMgrState *self, uint8_t id)
 {
 	if(id >= HANDLING_PREDATOR && id <= HANDLING_SEAPLANE)
-		return &BoatHandlingData[id-HANDLING_PREDATOR];
-	return &BoatHandlingData[0];
+		return &self->BoatHandlingData[id-HANDLING_PREDATOR];
+	return &self->BoatHandlingData[0];
 }
-//- rouz edit (ChatGPT)
+//- rouz edit (Claude)

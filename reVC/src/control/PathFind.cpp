@@ -8,6 +8,7 @@
 #include "World.h"
 #include "Lines.h"	// for debug
 #include "PathFind.h"
+#include "PathLogic.h"
 
 bool gbShowPedPaths;
 bool gbShowCarPaths;
@@ -164,20 +165,15 @@ CPedPath::AddNodeToPathList(CPedPathNode *pNodeToAdd, int16 id, CPedPathNode *pN
 void 
 CPedPath::RemoveNodeFromList(CPedPathNode *pNode)
 {
-	pNode->next->prev = pNode->prev;
-	if (pNode->prev)
-		pNode->prev->next = pNode->next;
+	// Delegate to the C implementation
+	PedPath_RemoveNodeFromList(pNode);
 }
 
 void 
 CPedPath::AddNodeToList(CPedPathNode *pNode, int16 index, CPedPathNode *pList)
 {
-	pNode->prev = pList[index].prev;
-	pNode->next = &pList[index];
-	if (pList[index].prev)
-		pList[index].prev->next = pNode;
-	pList[index].prev = pNode;
-	pNode->id = index;
+	// Delegate to the C implementation
+	PedPath_AddNodeToList(pNode, index, pList);
 }
 
 void
@@ -1016,23 +1012,8 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 float
 CPathFind::CalcRoadDensity(float x, float y)
 {
-	int i, j;
-	float density = 0.0f;
-
-	for(i = 0; i < m_numCarPathNodes; i++){
-		if(Abs(m_pathNodes[i].GetX() - x) < 80.0f &&
-		   Abs(m_pathNodes[i].GetY() - y) < 80.0f &&
-		   m_pathNodes[i].numLinks > 0){
-			for(j = 0; j < m_pathNodes[i].numLinks; j++){
-				int next = ConnectedNode(m_pathNodes[i].firstLink + j);
-				float dist = (m_pathNodes[i].GetPosition() - m_pathNodes[next].GetPosition()).Magnitude2D();
-				next = m_carPathConnections[m_pathNodes[i].firstLink + j];
-				density += m_carPathLinks[next].numLeftLanes * dist;
-				density += m_carPathLinks[next].numRightLanes * dist;
-			}
-		}
-	}
-	return density/2500.0f;
+	// Delegate to the C implementation
+	return PathLogic_CalcRoadDensity(m_pathNodes, m_numCarPathNodes, m_connections, m_carPathConnections, m_carPathLinks, x, y);
 }
 
 bool
@@ -1400,69 +1381,24 @@ CPathFind::FindNthNodeClosestToCoors(CVector coors, uint8 type, float distLimit,
 CVector
 CPathFind::FindNodeCoorsForScript(int32 id)
 {
-	// the point is to return valid position in case there is a divider in the middle of the road
-	if (!m_pathNodes[id].HasDivider() || m_pathNodes[id].numLinks == 0)
-		return m_pathNodes[id].GetPosition();
-	CVector2D dir(m_pathNodes[ConnectedNode(m_pathNodes[id].firstLink)].GetX() - m_pathNodes[id].GetX(), 
-		m_pathNodes[ConnectedNode(m_pathNodes[id].firstLink)].GetY() - m_pathNodes[id].GetY());
-	dir.Normalise();
-	if (dir.x < 0)
-		dir = -dir;
-	return m_pathNodes[id].GetPosition() + CVector(-dir.y, dir.x, 0.0f) * (LANE_WIDTH / 2 + m_pathNodes[id].GetDividerWidth());
+	CVector out;
+	// Delegate to the C implementation
+	PathLogic_FindNodeCoorsForScript(m_pathNodes, m_connections, id, &out.x);
+	return out;
 }
 
 float
 CPathFind::FindNodeOrientationForCarPlacement(int32 nodeId)
 {
-	if(m_pathNodes[nodeId].numLinks == 0)
-		return 0.0f;
-	CVector dir = m_pathNodes[ConnectedNode(m_pathNodes[nodeId].firstLink)].GetPosition() - m_pathNodes[nodeId].GetPosition();
-	dir.z = 0.0f;
-	dir.Normalise();
-	return RADTODEG(dir.Heading());
+	// Delegate to the C implementation
+	return PathLogic_FindNodeOrientationForCarPlacement(m_pathNodes, m_connections, nodeId);
 }
 
 float
 CPathFind::FindNodeOrientationForCarPlacementFacingDestination(int32 nodeId, float x, float y, bool towards)
 {
-	int i;
-
-	CVector targetDir(x - m_pathNodes[nodeId].GetX(), y - m_pathNodes[nodeId].GetY(), 0.0f);
-	targetDir.Normalise();
-	CVector dir;
-
-	if(m_pathNodes[nodeId].numLinks == 0)
-		return 0.0f;
-
-	int bestNode = ConnectedNode(m_pathNodes[nodeId].firstLink);
-#ifdef FIX_BUGS
-	float bestDot = towards ? -2.0f : 2.0f;
-#else
-	int bestDot = towards ? -2 : 2;	// why int?
-#endif
-
-	for(i = 0; i < m_pathNodes[nodeId].numLinks; i++){
-		dir = m_pathNodes[ConnectedNode(m_pathNodes[nodeId].firstLink + i)].GetPosition() - m_pathNodes[nodeId].GetPosition();
-		dir.z = 0.0f;
-		dir.Normalise();
-		float angle = DotProduct2D(dir, targetDir);
-		if(towards){
-			if(angle > bestDot){
-				bestDot = angle;
-				bestNode = ConnectedNode(m_pathNodes[nodeId].firstLink + i);
-			}
-		}else{
-			if(angle < bestDot){
-				bestDot = angle;
-				bestNode = ConnectedNode(m_pathNodes[nodeId].firstLink + i);
-			}
-		}
-	}
-
-	dir = m_pathNodes[bestNode].GetPosition() - m_pathNodes[nodeId].GetPosition();
-	dir.z = 0.0f;
-	dir.Normalise();
-	return RADTODEG(dir.Heading());
+	// Delegate to the C implementation
+	return PathLogic_FindNodeOrientationForCarPlacementFacingDestination(m_pathNodes, m_connections, nodeId, x, y, towards);
 }
 
 bool
@@ -1962,16 +1898,21 @@ CVector
 CPathFind::TakeWidthIntoAccountForWandering(CPathNode* nextNode, uint16 random)
 {
 	CVector pos = nextNode->GetPosition();
-	float newX = (nextNode->GetPedNodeWidth() * ((random % 16) - 7)) + pos.x;
-	float newY = (nextNode->GetPedNodeWidth() * (((random / 16) % 16) - 7)) + pos.y;
-	return CVector(newX, newY, pos.z);
+
+	// The spread is worked out in C
+	float dx, dy;
+	PathLogic_WanderOffset(nextNode->GetPedNodeWidth(), random, &dx, &dy);
+	return CVector(dx + pos.x, dy + pos.y, pos.z);
 }
 
 void
 CPathFind::TakeWidthIntoAccountForCoors(CPathNode* node1, CPathNode* node2, uint16 random, float* x, float* y)
 {
-	*x += (Min(node1->width, node2->width) * WIDTH_TO_PED_NODE_WIDTH * ((random % 16) - 7));
-	*y += (Min(node1->width, node2->width) * WIDTH_TO_PED_NODE_WIDTH * (((random / 16) % 16) - 7));
+	// The spread is worked out in C
+	float dx, dy;
+	PathLogic_WidthOffsetBetweenNodes(node1->width, node2->width, WIDTH_TO_PED_NODE_WIDTH, random, &dx, &dy);
+	*x += dx;
+	*y += dy;
 }
 
 CPathNode*

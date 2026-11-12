@@ -21,6 +21,8 @@
 #include "Pad.h"
 #include "Particle.h"
 #include "Ped.h"
+#include "PedLogic.h"
+#include "PedFightLogic.h"
 #include "PlayerPed.h"
 #include "Stats.h"
 #include "TempColModels.h"
@@ -667,44 +669,8 @@ CPed::FinishedReloadCB(CAnimBlendAssociation *reloadAssoc, void *arg)
 uint8
 CPed::CheckForPointBlankPeds(CPed *pedToVerify)
 {
-	float pbDistance = 1.1f;
-	if (GetWeapon()->IsType2Handed())
-		pbDistance = 1.6f;
-
-	for (int i = 0; i < m_numNearPeds; i++)	{
-		CPed *nearPed = m_nearPeds[i];
-
-		if (!pedToVerify || pedToVerify == nearPed) {
-
-			CVector diff = nearPed->GetPosition() - GetPosition();
-			if (diff.MagnitudeSqr() < SQR(pbDistance)) {
-
-				float neededAngle = General_GetRadianAngleBetweenPoints(
-					nearPed->GetPosition().x, nearPed->GetPosition().y,
-					GetPosition().x, GetPosition().y);
-				neededAngle = General_LimitRadianAngle(neededAngle);
-				m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-
-				float neededTurn = Abs(neededAngle - m_fRotationCur);
-
-				if (neededTurn > PI)
-					neededTurn = 2*PI - neededTurn;
-
-				PedState nearPedState = nearPed->m_nPedState;
-
-				if (nearPedState == PED_FALL || nearPedState == PED_GETUP || nearPedState == PED_DIE || nearPedState == PED_DEAD || nearPedState == PED_DIVE_AWAY)
-					return NO_POINT_BLANK_PED;
-
-				if (neededTurn < CAN_SEE_ENTITY_ANGLE_THRESHOLD) {
-					if (pedToVerify == nearPed)
-						return POINT_BLANK_FOR_WANTED_PED;
-					else
-						return POINT_BLANK_FOR_SOMEONE_ELSE;
-				}
-			}
-		}
-	}
-	return NO_POINT_BLANK_PED;
+	// Delegate to the C implementation
+	return PedLogic_CheckForPointBlankPeds((CPedStruct*)this, GetWeapon()->IsType2Handed(), pedToVerify);
 }
 
 void
@@ -788,19 +754,8 @@ CPed::Attack(void)
 				if ( IsPlayer() )
 					meleeAttackStarted = true;
 
-				switch ( ourWeapon->m_AnimToPlay ) {
-					case ASSOCGRP_UNARMED:
-					case ASSOCGRP_SCREWDRIVER:
-					case ASSOCGRP_KNIFE:
-					case ASSOCGRP_BASEBALLBAT:
-					case ASSOCGRP_GOLFCLUB:
-					case ASSOCGRP_CHAINSAW:
-						delayBetweenAnimAndFire = 0.2f;
-						animLoopStart = 0.1f;
-						break;
-					default:
-						break;
-				}
+				// The timing of the start of the melee attack is chosen in C
+				PedFightLogic_MeleeStartTiming(ourWeapon->m_AnimToPlay, &delayBetweenAnimAndFire, &animLoopStart);
 				animLoopEnd = 99.9f;
 			}
 		}
@@ -891,9 +846,9 @@ CPed::Attack(void)
 			m_pedIK.m_flags &= ~CPedIK::AIMS_WITH_ARM;
 	}
 
-	if (GetWeapon()->m_eWeaponType != WEAPONTYPE_CHAINSAW
-		|| !meleeAttackStarted && delayBetweenAnimAndFire - 0.5f >= weaponAnimAssoc->currentTime
-		|| weaponAnimAssoc->currentTime - weaponAnimAssoc->timeStep > delayBetweenAnimAndFire) {
+	// The condition for the branch that isn't the chainsaw hitting is evaluated in C
+	if (PedFightLogic_NotChainsawHit(GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW, meleeAttackStarted, delayBetweenAnimAndFire,
+		weaponAnimAssoc->currentTime, weaponAnimAssoc->timeStep)) {
 
 		if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CHAINSAW) {
 			DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_CHAINSAW_IDLE, 0.0f);
@@ -1007,9 +962,8 @@ CPed::Attack(void)
 
 	if (IsPlayer()) {
 		if (GetWeapon()->m_eWeaponType == WEAPONTYPE_BASEBALLBAT || GetWeapon()->m_eWeaponType == WEAPONTYPE_GOLFCLUB || GetWeapon()->m_eWeaponType == WEAPONTYPE_KATANA) {
-			float loopEndWithDelay = animLoopEnd;
-			if (loopEndWithDelay >= 98.0f)
-				loopEndWithDelay = (14.0f / 30.0f) + delayBetweenAnimAndFire;
+			// The end of the loop is worked out in C
+			float loopEndWithDelay = PedFightLogic_LoopEndWithDelay(animLoopEnd, delayBetweenAnimAndFire);
 			if (weaponAnimAssoc->flags & ASSOC_RUNNING) {
 				if (weaponAnimAssoc->currentTime >= animLoopStart && weaponAnimAssoc->currentTime <= loopEndWithDelay)
 					// Enter the C special-effects controller with the original arguments
@@ -1188,30 +1142,10 @@ CPed::StartFightAttack(uint8 buttonPressure)
 		animAssoc = AnimManager_BlendAnimation(GetClump(), m_curFightMove < FIGHTMOVE_MELEE1 ? ASSOCGRP_STD : weaponInfo->m_AnimToPlay,
 			tFightMoves[m_curFightMove].animId, 8.0f);
 
-		if (weaponInfo->m_AnimToPlay == ASSOCGRP_KNIFE && m_curFightMove >= FIGHTMOVE_MELEE1) {
-			switch (GetWeapon()->m_eWeaponType) {
-				case WEAPONTYPE_SCREWDRIVER:
-				case WEAPONTYPE_KNIFE:
-					animAssoc->speed = 1.05f;
-					break;
-				case WEAPONTYPE_GOLFCLUB:
-				case WEAPONTYPE_NIGHTSTICK:
-				case WEAPONTYPE_BASEBALLBAT:
-				case WEAPONTYPE_HAMMER:
-				case WEAPONTYPE_KATANA:
-					animAssoc->speed = 0.8f;
-					break;
-				case WEAPONTYPE_CLEAVER:
-				case WEAPONTYPE_MACHETE:
-					animAssoc->speed = 0.9f;
-					break;
-			}
-		} else {
-			if (m_curFightMove == FIGHTMOVE_BACKKICK)
-				animAssoc->speed = 1.15f;
-			else
-				animAssoc->speed = 0.8f;
-		}
+		// The speed of the move is chosen in C
+		float animSpeed;
+		if (PedFightLogic_FightMoveAnimSpeed(weaponInfo->m_AnimToPlay, GetWeapon()->m_eWeaponType, m_curFightMove, &animSpeed))
+			animAssoc->speed = animSpeed;
 		if (IsPlayer())
 			// Use the complete C association at the original native operation boundary
 			AnimAssociation_SetCurrentTime(animAssoc,0.08f);
@@ -1229,6 +1163,8 @@ CPed::StartFightAttack(uint8 buttonPressure)
 	if (IsPlayer())
 		nPlayerInComboMove = 0;
 }
+
+static_assert(HITLEVEL_GROUND == 1 && HITLEVEL_LOW == 2 && HITLEVEL_HIGH == 4, "Hit levels are mirrored in PedFightLogic.c");
 
 void
 CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
@@ -1279,23 +1215,11 @@ CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 		if ((IsPlayer() && m_nPedState != PED_FIGHT && ((CPlayerPed*)this)->m_fMoveSpeed > 1.0f)
 			|| (!IsPlayer() && m_objective == OBJECTIVE_FLEE_CHAR_ON_FOOT_TILL_SAFE)) {
 
-			if (hitLevel != HITLEVEL_HIGH && hitLevel != HITLEVEL_LOW || (IsPlayer() || General_GetRandomNumber() & 1) && General_GetRandomNumber() & 7) {
+			// The decision to flinch without falling is made in C
+			if (PedFightLogic_FlinchWithoutFall(hitLevel, IsPlayer(), General_GetRandomNumber)) {
 				if (IsPlayer() || General_GetRandomNumber() & 1) {
-					AnimationId shotAnim;
-					switch (direction) {
-						case 1:
-							shotAnim = ANIM_STD_HITBYGUN_LEFT;
-							break;
-						case 2:
-							shotAnim = ANIM_STD_HITBYGUN_BACK;
-							break;
-						case 3:
-							shotAnim = ANIM_STD_HITBYGUN_RIGHT;
-							break;
-						default:
-							shotAnim = ANIM_STD_HITBYGUN_FRONT;
-							break;
-					}
+					// The animation for a shot ped is chosen in C
+					AnimationId shotAnim = (AnimationId)PedFightLogic_ShotAnim(direction);
 					CAnimBlendAssociation *shotAssoc = RpAnimBlendClumpGetAssociation(GetClump(), shotAnim);
 					if (!shotAssoc || shotAssoc->blendDelta < 0.0f)
 						// Use the complete C animation manager at the original call boundary
@@ -1311,37 +1235,9 @@ CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 					SetWaitState(WAITSTATE_PLAYANIM_DUCK, &time);
 				}
 			} else {
-				bool fall = true;
-				AnimationId hitAnim;
-				switch (direction) {
-					case 1:
-						hitAnim = ANIM_STD_HIGHIMPACT_LEFT;
-						break;
-					case 2:
-						if (General_GetRandomNumber() & 1) {
-							fall = false;
-							hitAnim = ANIM_STD_HIT_BACK;
-						} else	{
-							hitAnim = ANIM_STD_HIGHIMPACT_BACK;
-						}
-						break;
-					case 3:
-						hitAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-						break;
-					default:
-						if (hitLevel == HITLEVEL_LOW) {
-							hitAnim = ANIM_STD_KO_SHOT_STOMACH;
-						} else if (General_GetRandomNumber() & 1) {
-							fall = false;
-							hitAnim = ANIM_STD_HIT_WALK;
-						} else if (General_GetRandomNumber() & 1) {
-							fall = false;
-							hitAnim = ANIM_STD_HIT_HEAD;
-						} else {
-							hitAnim = ANIM_STD_KO_SHOT_FACE;
-						}
-						break;
-				}
+				// The animation of the flinch is chosen in C
+				bool fall;
+				AnimationId hitAnim = (AnimationId)PedFightLogic_FlinchAnim(direction, hitLevel, General_GetRandomNumber, &fall);
 				if (fall) {
 					SetFall(500, hitAnim, false);
 				} else {
@@ -1377,42 +1273,12 @@ CPed::StartFightDefend(uint8 direction, uint8 hitLevel, uint8 unk)
 					m_curFightMove = FIGHTMOVE_HITBODY;
 					break;
 				case HITLEVEL_HIGH:
-					switch (direction) {
-						case 1:
-							m_curFightMove = FIGHTMOVE_HITLEFT;
-							break;
-						case 2:
-							m_curFightMove = FIGHTMOVE_HITBACK;
-							break;
-						case 3:
-							m_curFightMove = FIGHTMOVE_HITRIGHT;
-							break;
-						default:
-							if (unk <= 5)
-								m_curFightMove = FIGHTMOVE_HITHEAD;
-							else
-								m_curFightMove = FIGHTMOVE_HITBIGSTEP;
-							break;
-					}
+					// The fight move for the hit is chosen in C
+					m_curFightMove = PedFightLogic_DefendHitMove(true, direction, unk);
 					break;
 				default:
-					switch (direction) {
-						case 1:
-							m_curFightMove = FIGHTMOVE_HITLEFT;
-							break;
-						case 2:
-							m_curFightMove = FIGHTMOVE_HITBACK;
-							break;
-						case 3:
-							m_curFightMove = FIGHTMOVE_HITRIGHT;
-							break;
-						default:
-							if (unk <= 5)
-								m_curFightMove = FIGHTMOVE_HITCHEST;
-							else
-								m_curFightMove = FIGHTMOVE_HITBIGSTEP;
-							break;
-					}
+					// The fight move for the hit is chosen in C
+					m_curFightMove = PedFightLogic_DefendHitMove(false, direction, unk);
 					break;
 			}
 			if (m_nPedState == PED_GETUP && !IsPedHeadAbovePos(0.0f))
@@ -1573,35 +1439,8 @@ CPed::Fight(void)
 
 			CVector touchingNodePos(0.0f, 0.0f, 0.0f);
 
-			switch (m_curFightMove) {
-				case FIGHTMOVE_KNEE:
-					TransformToNode(touchingNodePos, PED_LOWERLEGR);
-					break;
-				case FIGHTMOVE_PUNCHHOOK:
-				case FIGHTMOVE_PUNCHJAB:
-					TransformToNode(touchingNodePos, PED_HANDL);
-					break;
-				case FIGHTMOVE_LONGKICK:
-				case FIGHTMOVE_ROUNDHOUSE:
-				case FIGHTMOVE_FWDLEFT:
-				case FIGHTMOVE_BACKRIGHT:
-				case FIGHTMOVE_GROUNDKICK:
-					TransformToNode(touchingNodePos, PED_FOOTR);
-					break;
-				case FIGHTMOVE_FWDRIGHT:
-					TransformToNode(touchingNodePos, PED_HEAD);
-					break;
-				case FIGHTMOVE_BACKKICK:
-				case FIGHTMOVE_BACKFLIP:
-					TransformToNode(touchingNodePos, PED_FOOTL);
-					break;
-				case FIGHTMOVE_BACKLEFT:
-					TransformToNode(touchingNodePos, PED_UPPERARML);
-					break;
-				default:
-					TransformToNode(touchingNodePos, PED_HANDR);
-					break;
-			}
+			// The node that hits is chosen in C
+			TransformToNode(touchingNodePos, (PedNode)PedFightLogic_StrikeNode(m_curFightMove));
 
 			FightStrike(touchingNodePos, fightWithWeapon);
 			m_fightButtonPressure = 0;
@@ -1652,30 +1491,10 @@ CPed::Fight(void)
 			animAssoc = AnimManager_BlendAnimation(GetClump(), m_curFightMove < FIGHTMOVE_MELEE1 ? ASSOCGRP_STD : weaponInfo->m_AnimToPlay,
 				tFightMoves[m_curFightMove].animId, 8.0f);
 
-			if (weaponInfo->m_AnimToPlay != ASSOCGRP_KNIFE || m_curFightMove < FIGHTMOVE_MELEE1) {
-				if (m_curFightMove == FIGHTMOVE_BACKKICK)
-					animAssoc->speed = 1.15f;
-				else
-					animAssoc->speed = 0.8f;
-			} else {
-				switch (GetWeapon()->m_eWeaponType) {
-					case WEAPONTYPE_SCREWDRIVER:
-					case WEAPONTYPE_KNIFE:
-						animAssoc->speed = 1.05f;
-						break;
-					case WEAPONTYPE_GOLFCLUB:
-					case WEAPONTYPE_NIGHTSTICK:
-					case WEAPONTYPE_BASEBALLBAT:
-					case WEAPONTYPE_HAMMER:
-					case WEAPONTYPE_KATANA:
-						animAssoc->speed = 0.8f;
-						break;
-					case WEAPONTYPE_CLEAVER:
-					case WEAPONTYPE_MACHETE:
-						animAssoc->speed = 0.9f;
-						break;
-				}
-			}
+			// The speed of the animation is chosen in C, it is left as it is for weapons without one
+			float newAnimSpeed;
+			if (PedFightLogic_FightMoveAnimSpeed(weaponInfo->m_AnimToPlay, GetWeapon()->m_eWeaponType, m_curFightMove, &newAnimSpeed))
+				animAssoc->speed = newAnimSpeed;
 
 			if (m_fightState == FIGHTSTATE_MOVE_FINISHED && animAssoc->currentTime != 0.0f) {
 				// Use the complete C association at the original native operation boundary
@@ -1751,76 +1570,27 @@ CPed::ChooseAttackAI(uint8 buttonPressure, bool fightWithWeapon)
 	if (buttonPressure == 0)
 		return FIGHTMOVE_IDLE;
 
-	uint16 pedFeatures = m_pedStats->m_flags;
-	bool punchOnly = !!(pedFeatures & STAT_PUNCH_ONLY);
-	bool canRoundhouse = !!(pedFeatures & STAT_CAN_ROUNDHOUSE);
-	bool canKneeHead = !!(pedFeatures & STAT_CAN_KNEE_HEAD);
-	bool canKick = !!(pedFeatures & STAT_CAN_KICK);
-	bool hasShoppingBags = !!(pedFeatures & STAT_SHOPPING_BAGS);
-
 	CVector distVec(m_pedInObjective->GetPosition() - GetPosition());
 	float dist = distVec.Magnitude();
 	m_fRotationDest = General_LimitRadianAngle(distVec.Heading());
 	m_fRotationCur = m_fRotationDest;
 
-	if (fightWithWeapon) {
-		if (m_pedInObjective->OnGroundOrGettingUp()) {
-			if (CGame::nastyGame && dist < 1.2f && !m_pedInObjective->IsPlayer()
-				&& (m_pedInObjective->m_nPedState == PED_DEAD || !m_pedInObjective->IsPedHeadAbovePos(-0.3f))) {
-				if (WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_2ND))
-					return FIGHTMOVE_MELEE2;
-				if (WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_3RD))
-					return FIGHTMOVE_MELEE3;
-
-				return FIGHTMOVE_GROUNDKICK;
-			} else {
-				return FIGHTMOVE_IDLE;
-			}
-		}
-		if (dist < 2.f) {
-			if (m_curFightMove == FIGHTMOVE_MELEE1) {
-				if (GetSecondFireAnim(weaponInfo))
-					return FIGHTMOVE_MELEE2;
-			}
-			if (m_curFightMove == FIGHTMOVE_MELEE2) {
-				if (GetFinishingAttackAnim(weaponInfo))
-					return FIGHTMOVE_MELEE3;
-			}
-			return FIGHTMOVE_MELEE1;
-		}
-		return FIGHTMOVE_SHUFFLE_F;
-	}
-	if (!hasShoppingBags) {
-		if (punchOnly) {
-			if (dist < 1.4f)
-				return FIGHTMOVE_PUNCH;
-		} else {
-			if (m_pedInObjective->OnGroundOrGettingUp()) {
-				if (CGame::nastyGame && dist < 1.2f && !m_pedInObjective->IsPlayer()
-					&& (m_pedInObjective->m_nPedState == PED_DEAD || !m_pedInObjective->IsPedHeadAbovePos(-0.3f))) {
-
-					return FIGHTMOVE_GROUNDKICK;
-				} else {
-					return FIGHTMOVE_IDLE;
-				}
-			}
-			if (dist < 0.95f && canKneeHead)
-				return FIGHTMOVE_KNEE;
-			if (dist < 1.4f)
-				return FIGHTMOVE_PUNCH;
-			if (dist < 2.f && canKick) {
-				int nextMove = FIGHTMOVE_LONGKICK;
-				if (canRoundhouse && General_GetRandomNumber() & 1)
-					nextMove = FIGHTMOVE_ROUNDHOUSE;
-				return nextMove;
-			}
-		}
-		return FIGHTMOVE_SHUFFLE_F;
-	}
-	if (dist < 2.f)
-		return FIGHTMOVE_ROUNDHOUSE;
-	else
-		return FIGHTMOVE_SHUFFLE_F;
+	// The choice itself is made in C, the facts about the target are looked up here
+	PedAttackAIInput in;
+	in.fightWithWeapon = fightWithWeapon;
+	in.pedFlags = m_pedStats->m_flags;
+	in.dist = dist;
+	in.targetOnGroundOrGettingUp = m_pedInObjective->OnGroundOrGettingUp();
+	in.nastyGame = CGame::nastyGame;
+	in.targetIsPlayer = m_pedInObjective->IsPlayer();
+	in.targetDead = m_pedInObjective->m_nPedState == PED_DEAD;
+	in.weaponFlagGround2nd = WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_2ND);
+	in.weaponFlagGround3rd = WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_3RD);
+	in.curFightMove = m_curFightMove;
+	in.hasSecondFireAnim = !!GetSecondFireAnim(weaponInfo);
+	in.hasFinishingAttackAnim = !!GetFinishingAttackAnim(weaponInfo);
+	return PedFightLogic_ChooseAttackAI(&in,
+		[](void *context) { return !((CPed*)context)->IsPedHeadAbovePos(-0.3f); }, m_pedInObjective, General_GetRandomNumber);
 }
 
 int32
@@ -1851,9 +1621,8 @@ CPed::ChooseAttackPlayer(uint8 buttonPressure, bool fightWithWeapon)
 		if (dist < maxAttackDist) {
 			float nearPedAngle = General_LimitRadianAngle(distVec.Heading());
 			m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-			float neededTurn = Abs(nearPedAngle - m_fRotationCur);
-			if (neededTurn > PI)
-				neededTurn = TWOPI - neededTurn;
+			// Delegate the angle to turn to the C implementation
+			float neededTurn = PedFightLogic_NeededTurn(nearPedAngle, m_fRotationCur);
 
 			if (!nearPed->OnGroundOrGettingUp() && nearPed->m_nWaitState != WAITSTATE_SUN_BATHE_IDLE) {
 				if (!willWalkUp || neededTurn <= DEGTORAD(45.0f)) {
@@ -1904,83 +1673,18 @@ CPed::ChooseAttackPlayer(uint8 buttonPressure, bool fightWithWeapon)
 	}
 
 	if (victimPed) {
-		float adjustedAngleDiff = victimAngle - m_fRotationCur + DEGTORAD(30.0f);
-		if (adjustedAngleDiff < 0.0f)
-			adjustedAngleDiff += TWOPI;
-
-		int16 dir = Floor(adjustedAngleDiff / DEGTORAD(60.0f));
-
-		// Just focus on who we're fighting with, don't care peds on ground
-		if (numPedsWeCanReach < 2 || fightWithWeapon) {
-			float angleDiff = Abs(victimAngle - m_fRotationCur);
-			if (angleDiff > PI)
-				angleDiff = TWOPI - angleDiff;
-
-			if (angleDiff < DEGTORAD(60.0f))
-				dir = 0; // forward
-		}
+		// The direction of the victim is worked out in C
+		int16 dir = PedFightLogic_VictimDirection(victimAngle, m_fRotationCur, numPedsWeCanReach, fightWithWeapon);
 		int16 randVal = General_GetRandomNumber() & 3;
 		switch (dir) {
 			case 0: // forward
-				if (fightWithWeapon) {
-					if (distToVictim < 0.95f - 0.2f && m_nPedState == PED_FIGHT) {
-						choosenMove = FIGHTMOVE_KNEE;
-					} else {
-						if (GetWeapon()->m_eWeaponType == WEAPONTYPE_CLEAVER) {
-							if (distToVictim < 0.85f * weaponInfo->m_fRange)
-								choosenMove = FIGHTMOVE_MELEE1;
-							else
-								choosenMove = FIGHTMOVE_SHUFFLE_F;
-						} else {
-							float weaponRange = weaponInfo->m_fRange;
-							if (distToVictim < 0.75f * weaponRange && GetWeapon()->m_eWeaponType != WEAPONTYPE_SCREWDRIVER) {
-								if (m_lastFightMove == FIGHTMOVE_MELEE1 && GetFinishingAttackAnim(weaponInfo)) {
-									choosenMove = FIGHTMOVE_MELEE2;
-								} else if (m_lastFightMove == FIGHTMOVE_MELEE2 && GetFinishingAttackAnim(weaponInfo)) {
-									choosenMove = FIGHTMOVE_MELEE3;
-								} else {
-									choosenMove = FIGHTMOVE_MELEE1;
-								}
-							} else if (distToVictim < weaponRange && GetFinishingAttackAnim(weaponInfo)) {
-								choosenMove = FIGHTMOVE_MELEE3;
-							} else {
-								choosenMove = FIGHTMOVE_SHUFFLE_F;
-							}
-						}
-					}
-				} else if (distToVictim < 0.95f && m_nPedState == PED_FIGHT) {
-					choosenMove = FIGHTMOVE_KNEE;
-
-				} else if (distToVictim < 1.4f) {
-					if (m_curFightMove == FIGHTMOVE_PUNCHJAB) {
-						choosenMove = FIGHTMOVE_PUNCH;
-
-					} else if (m_curFightMove != FIGHTMOVE_PUNCH || randVal != 1) {
-						if (randVal == 2)
-							choosenMove = FIGHTMOVE_PUNCH;
-						else
-							choosenMove = FIGHTMOVE_PUNCHJAB;
-					} else {
-						choosenMove = FIGHTMOVE_LONGKICK;
-					}
-				} else {
-					choosenMove = FIGHTMOVE_LONGKICK;
-				}
-				break;
-			case 1:
-				choosenMove = FIGHTMOVE_FWDLEFT;
-				break;
-			case 2:
-				choosenMove = FIGHTMOVE_BACKLEFT;
-				break;
-			case 3:
-				choosenMove = FIGHTMOVE_BACKKICK;
-				break;
-			case 4:
-				choosenMove = FIGHTMOVE_BACKRIGHT;
+				// The move is chosen in C
+				choosenMove = (PedFightMoves)PedFightLogic_ChooseForwardMovePlayer(fightWithWeapon, distToVictim, m_nPedState == PED_FIGHT,
+					GetWeapon()->m_eWeaponType, weaponInfo->m_fRange, m_lastFightMove, m_curFightMove, !!GetFinishingAttackAnim(weaponInfo), randVal);
 				break;
 			default:
-				choosenMove = FIGHTMOVE_FWDRIGHT;
+				// The move for the other directions is chosen in C
+				choosenMove = (PedFightMoves)PedFightLogic_DirectionMove(dir);
 				break;
 		}
 
@@ -1996,13 +1700,8 @@ CPed::ChooseAttackPlayer(uint8 buttonPressure, bool fightWithWeapon)
 		Say(SOUND_PED_ATTACK);
 
 	} else if (groundAttackAlivePed || groundAttackDeadPed) {
-		if (fightWithWeapon && WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_2ND)) {
-			choosenMove = FIGHTMOVE_MELEE2;
-		} else if (fightWithWeapon && WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_3RD)) {
-			choosenMove = FIGHTMOVE_MELEE3;
-		} else {
-			choosenMove = FIGHTMOVE_GROUNDKICK;
-		}
+		// The move against a ped on the ground is chosen in C
+		choosenMove = (PedFightMoves)PedFightLogic_GroundMove(fightWithWeapon, WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_2ND), WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_GROUND_3RD));
 		if (groundAttackAlivePed)
 			m_fRotationDest = groundAttackAliveAngle;
 		else
@@ -2026,39 +1725,16 @@ CPed::ChooseAttackPlayer(uint8 buttonPressure, bool fightWithWeapon)
 
 	} else if (fightWithWeapon) {
 		// No enemy, fight with space
-		if (GetWeapon()->m_eWeaponType == WEAPONTYPE_SCREWDRIVER) {
-			choosenMove = FIGHTMOVE_MELEE3;
-		} else {
-			if (m_lastFightMove == FIGHTMOVE_MELEE1 && GetFinishingAttackAnim(weaponInfo)) {
-				choosenMove = FIGHTMOVE_MELEE2;
-			} else if (m_lastFightMove == FIGHTMOVE_MELEE2 && GetFinishingAttackAnim(weaponInfo)) {
-				choosenMove = FIGHTMOVE_MELEE3;
-			} else {
-				choosenMove = FIGHTMOVE_MELEE1;
-			}
-		}
+		// The move is chosen in C
+		choosenMove = (PedFightMoves)PedFightLogic_ChooseNoEnemyWeaponMove(GetWeapon()->m_eWeaponType, m_lastFightMove, !!GetFinishingAttackAnim(weaponInfo));
 	} else {
 		// Max number GetRandomNumberInRange returns is max-1
+		// The move is chosen in C from the random number
 #ifdef FIX_BUGS
-		switch (General_GetRandomNumberInRangeInt(0,4)) {
+		choosenMove = (PedFightMoves)PedFightLogic_ChooseRandomUnarmedMove(General_GetRandomNumberInRangeInt(0,4));
 #else
-		switch (General_GetRandomNumberInRangeInt(0,3)) {
+		choosenMove = (PedFightMoves)PedFightLogic_ChooseRandomUnarmedMove(General_GetRandomNumberInRangeInt(0,3));
 #endif
-			case 0:
-				choosenMove = FIGHTMOVE_PUNCHJAB;
-				break;
-			case 1:
-				choosenMove = FIGHTMOVE_PUNCH;
-				break;
-			case 2:
-				choosenMove = FIGHTMOVE_LONGKICK;
-				break;
-			case 3:
-				choosenMove = FIGHTMOVE_KNEE;
-				break;
-			default:
-				break;
-		}
 	}
 	return choosenMove;
 }
@@ -2545,6 +2221,8 @@ CPed::SetInvestigateEvent(eEventType event, CVector2D pos, float distanceToCount
 
 }
 
+static_assert(EVENT_EXPLOSION == 13 && EVENT_ICECREAM == 20 && EVENT_SHOPSTALL == 22, "Event types are mirrored in PedFightLogic.c");
+
 void
 CPed::InvestigateEvent(void)
 {
@@ -2729,18 +2407,10 @@ CPed::InvestigateEvent(void)
 		m_vecSeekPos.z = GetPosition().z;
 		Seek();
 
-		if (m_eventType < EVENT_ICECREAM) {
-			if (sq(5.0f + m_distanceToCountSeekDone) < distSqr) {
-				SetMoveState(PEDMOVE_RUN);
-				return;
-			}
-		}
-		if (m_eventType <= EVENT_EXPLOSION || m_eventType >= EVENT_SHOPSTALL) {
-			SetMoveState(PEDMOVE_WALK);
-			return;
-		}
-		if (distSqr > sq(1.2f)) {
-			SetMoveState(PEDMOVE_WALK);
+		// Delegate the choice of the move state to the C implementation
+		int approach = PedFightLogic_InvestigateApproach(m_eventType, distSqr, m_distanceToCountSeekDone);
+		if (approach != PEDFIGHT_CHECK_CROWD) {
+			SetMoveState((eMoveState)approach);
 			return;
 		}
 
@@ -2886,22 +2556,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 						dieSpeed = 0.5f;
 					}
 				} else {
-					switch (direction) {
-						case 0:
-							dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-							break;
-						case 1:
-							dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-							break;
-						case 2:
-							dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-							break;
-						case 3:
-							dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-							break;
-						default:
-							break;
-					}
+					// The animation for the direction of the hit is chosen in C
+					dieAnim = (AnimationId)PedLogic_HighImpactAnim(direction, dieAnim);
 				}
 				break;
 			case WEAPONTYPE_SCREWDRIVER:
@@ -2937,22 +2593,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 						}
 					} else if (damagedBy != FindPlayerPed() || FindPlayerPed()->m_curFightMove != FIGHTMOVE_MELEE2) {
 						if (damagedBy != FindPlayerPed() || FindPlayerPed()->m_curFightMove != FIGHTMOVE_MELEE3) {
-							switch (direction) {
-								case 0:
-									dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-									break;
-								case 1:
-									dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-									break;
-								case 2:
-									dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-									break;
-								case 3:
-									dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-									break;
-								default:
-									break;
-							}
+							// The animation for the direction of the hit is chosen in C
+							dieAnim = (AnimationId)PedLogic_HighImpactAnim(direction, dieAnim);
 						} else {
 							dieAnim = ANIM_STD_KO_SHOT_STOMACH;
 						}
@@ -2999,22 +2641,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 
 				if (dontRemoveLimb) {
 					if (method == WEAPONTYPE_SHOTGUN) {
-						switch (direction) {
-							case 0:
-								dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-								break;
-							case 1:
-								dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-								break;
-							case 2:
-								dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-								break;
-							case 3:
-								dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-								break;
-							default:
-								break;
-						}
+						// The animation for the direction of the hit is chosen in C
+						dieAnim = (AnimationId)PedLogic_HighImpactAnim(direction, dieAnim);
 					} else
 						dieAnim = ANIM_STD_KO_FRONT;
 
@@ -3088,22 +2716,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 				if (bExplosionProof)
 					return false;
 
-				switch (direction) {
-					case 0:
-						dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-						break;
-					case 1:
-						dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-						break;
-					case 2:
-						dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-						break;
-					case 3:
-						dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-						break;
-					default:
-						break;
-				}
+				// The animation for the direction of the hit is chosen in C
+				dieAnim = (AnimationId)PedLogic_HighImpactAnim(direction, dieAnim);
 				break;
 			case WEAPONTYPE_FLAMETHROWER:
 				if (bFireProof)
@@ -3117,47 +2731,9 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 					return false;
 
 				random = General_GetRandomNumber() & 3;
-				switch (random) {
-					case 0:
-						if ((pedPiece != PEDPIECE_LEFTARM || random <= 1)
-							&& (pedPiece != PEDPIECE_MID || random != 1)) {
-							if (pedPiece == PEDPIECE_RIGHTARM && random > 1
-								|| pedPiece == PEDPIECE_MID && random == 2)
-						
-								dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-							else
-								dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-						} else
-							dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-
-						break;
-					case 1:
-						if (m_nPedState == PED_DIVE_AWAY)
-							dieAnim = ANIM_STD_SPINFORWARD_LEFT;
-						else
-							dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-						break;
-					case 2:
-						if ((pedPiece != PEDPIECE_LEFTARM || random <= 1)
-							&& (pedPiece != PEDPIECE_MID || random != 1)) {
-							if ((pedPiece != PEDPIECE_RIGHTARM || random <= 1)
-								&& (pedPiece != PEDPIECE_MID || random != 2)) {
-								dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-							} else {
-								dieAnim = ANIM_STD_SPINFORWARD_RIGHT;
-							}
-						} else
-							dieAnim = ANIM_STD_SPINFORWARD_LEFT;
-						break;
-					case 3:
-						if (m_nPedState == PED_DIVE_AWAY)
-							dieAnim = ANIM_STD_SPINFORWARD_RIGHT;
-						else
-							dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-						break;
-					default:
-						break;
-				}
+				// The animation for a ped hit by a car is chosen in C
+				dieAnim = (AnimationId)PedLogic_CarHitDieAnim(random, pedPiece == PEDPIECE_LEFTARM, pedPiece == PEDPIECE_RIGHTARM, pedPiece == PEDPIECE_MID,
+					m_nPedState == PED_DIVE_AWAY, dieAnim);
 				if (damagedBy && pedPiece != PEDPIECE_TORSO) {
 					CVehicle *vehicle = (CVehicle*)damagedBy;
 					if (method == WEAPONTYPE_RAMMEDBYCAR) {
@@ -3177,22 +2753,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 				if (bCollisionProof)
 					return false;
 
-				switch (direction) {
-					case 0:
-						dieAnim = ANIM_STD_HIGHIMPACT_FRONT;
-						break;
-					case 1:
-						dieAnim = ANIM_STD_HIGHIMPACT_LEFT;
-						break;
-					case 2:
-						dieAnim = ANIM_STD_HIGHIMPACT_BACK;
-						break;
-					case 3:
-						dieAnim = ANIM_STD_HIGHIMPACT_RIGHT;
-						break;
-					default:
-						break;
-				}
+				// The animation for the direction of the hit is chosen in C
+				dieAnim = (AnimationId)PedLogic_HighImpactAnim(direction, dieAnim);
 				break;
 			default:
 				break;
@@ -3558,9 +3120,10 @@ CPed::CollideWithPed(CPed *collideWith)
 									|| m_objective != OBJECTIVE_KILL_CHAR_ANY_MEANS && m_objective != OBJECTIVE_KILL_CHAR_ON_FOOT
 									|| collideWith == m_pedInObjective) {
 
-									if (weAreMissionChar || m_pedStats->m_fear <= 100 - collideWith->m_pedStats->m_temper
-										|| (collideWith->IsPlayer() || collideWith->m_nMoveState == PEDMOVE_NONE || collideWith->m_nMoveState == PEDMOVE_STILL) &&
-										(!collideWith->IsPlayer() || ((CPlayerPed*)collideWith)->m_fMoveSpeed <= 1.0f)) {
+									// Delegate the decision to walk around the other ped to the C implementation
+									if (PedFightLogic_WalkAroundNotEvade(weAreMissionChar, m_pedStats->m_fear, collideWith->m_pedStats->m_temper, collideWith->IsPlayer(),
+										collideWith->m_nMoveState == PEDMOVE_NONE || collideWith->m_nMoveState == PEDMOVE_STILL,
+										collideWith->IsPlayer() ? ((CPlayerPed*)collideWith)->m_fMoveSpeed : 0.0f)) {
 										SetDirectionToWalkAroundObject(collideWith);
 										if (!weAreMissionChar)
 											Say(SOUND_PED_CHAT);
@@ -3606,12 +3169,9 @@ CPed::CollideWithPed(CPed *collideWith)
 								}
 							}
 						} else {
-							if (m_pedStats->m_temper <= m_pedStats->m_fear
-								|| GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED
-								|| weAreMissionChar
-								|| collideWith->m_nPedType == PEDTYPE_CIVFEMALE
-								|| collideWith->m_nPedType == m_nPedType
-								|| collideWith->GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED) {
+							// Delegate the decision to avoid a fight to the C implementation
+							if (PedFightLogic_BumpIsPeaceful(m_pedStats->m_temper, m_pedStats->m_fear, GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED, weAreMissionChar,
+								collideWith->m_nPedType == PEDTYPE_CIVFEMALE, collideWith->m_nPedType == m_nPedType, collideWith->GetWeapon()->m_eWeaponType != WEAPONTYPE_UNARMED)) {
 								SetDirectionToWalkAroundObject(collideWith);
 								Say(SOUND_PED_CHAT);
 							} else {
@@ -3665,31 +3225,17 @@ CPed::CollideWithPed(CPed *collideWith)
 						}
 					}
 				}
-			} else if (collideWith->m_pedStats->m_defendWeakness <= 1.5f || heIsMissionChar ||
-				m_pedStats->m_defendWeakness <= collideWith->m_pedStats->m_defendWeakness) {
+			} else if (PedFightLogic_ShoveStaggers(collideWith->m_pedStats->m_defendWeakness, heIsMissionChar, m_pedStats->m_defendWeakness)) {
 
 				// He looks us and we're not at his right side
-				if (heLooksToUs && DotProduct(posDiff,collideWith->GetRight()) > 0.0f) {
-					CVector moveForce = GetRight();
+				// The animation of the bumped ped and the side it is pushed to are chosen in C
+				int forceSide;
+				animToPlay = (AnimationId)PedFightLogic_ShoveHitAnim(heLooksToUs, DotProduct(posDiff,collideWith->GetRight()) > 0.0f,
+					collideWith->m_nMoveState == PEDMOVE_RUN || collideWith->m_nMoveState == PEDMOVE_SPRINT, &forceSide);
+				if (forceSide != 0) {
+					CVector moveForce = forceSide > 0 ? GetRight() : GetRight() * -1.0f;
 					moveForce.z += 0.1f;
 					ApplyMoveForce(moveForce);
-					if (collideWith->m_nMoveState != PEDMOVE_RUN && collideWith->m_nMoveState != PEDMOVE_SPRINT)
-						animToPlay = ANIM_STD_HIT_LEFT;
-					else
-						animToPlay = ANIM_STD_HITBYGUN_LEFT;
-				} else if (heLooksToUs) {
-					CVector moveForce = GetRight() * -1.0f;
-					moveForce.z += 0.1f;
-					ApplyMoveForce(moveForce);
-					if (collideWith->m_nMoveState != PEDMOVE_RUN && collideWith->m_nMoveState != PEDMOVE_SPRINT)
-						animToPlay = ANIM_STD_HIT_RIGHT;
-					else
-						animToPlay = ANIM_STD_HITBYGUN_RIGHT;
-				} else {
-					if (collideWith->m_nMoveState != PEDMOVE_RUN && collideWith->m_nMoveState != PEDMOVE_SPRINT)
-						animToPlay = ANIM_STD_HIT_BACK;
-					else
-						animToPlay = ANIM_STD_HITBYGUN_BACK;
 				}
 
 				if (collideWith->IsPedInControl() && (*Timer_GetTimeInMilliseconds()) > collideWith->m_nPedStateTimer) {
@@ -3702,23 +3248,12 @@ CPed::CollideWithPed(CPed *collideWith)
 				}
 			} else {
 				// We're at his right side
-				if (DotProduct(posDiff, collideWith->GetRight()) <= 0.0f) {
-					CVector moveForce = GetRight() * -1.0f;
-					moveForce.z += 0.1f;
-					ApplyMoveForce(moveForce);
-					if (heLooksToUs)
-						animToPlay = ANIM_STD_HIGHIMPACT_RIGHT;
-					else
-						animToPlay = ANIM_STD_SPINFORWARD_RIGHT;
-				} else {
-					CVector moveForce = GetRight();
-					moveForce.z += 0.1f;
-					ApplyMoveForce(moveForce);
-					if (heLooksToUs)
-						animToPlay = ANIM_STD_HIGHIMPACT_LEFT;
-					else
-						animToPlay = ANIM_STD_SPINFORWARD_LEFT;
-				}
+				// The animation of the knocked down ped and the side it is pushed to are chosen in C
+				int forceSide;
+				animToPlay = (AnimationId)PedFightLogic_KnockdownAnim(DotProduct(posDiff, collideWith->GetRight()) <= 0.0f, heLooksToUs, &forceSide);
+				CVector moveForce = forceSide > 0 ? GetRight() : GetRight() * -1.0f;
+				moveForce.z += 0.1f;
+				ApplyMoveForce(moveForce);
 
 				if (m_nPedState == PED_ATTACK && collideWith->IsPedInControl())
 					DMAudio_PlayOneShot(m_audioEntityId, SOUND_49, 0.0f);
@@ -3764,6 +3299,8 @@ CPed::CollideWithPed(CPed *collideWith)
 	}
 }
 
+static_assert(PEDPIECE_MID == 1 && PEDPIECE_LEFTARM == 2 && PEDPIECE_RIGHTARM == 3 && PEDPIECE_HEAD == 6, "Ped pieces are mirrored in PedFightLogic.c");
+
 void
 CPed::KillPedWithCar(CVehicle *car, float impulse)
 {
@@ -3800,12 +3337,8 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 
 		if (car == FindPlayerVehicle()) {
 			float carSpeed = car->m_vecMoveSpeed.Magnitude();
-			uint8 shakeFreq;
-			if (100.0f * carSpeed * 2000.0f / car->m_fMass + 80.0f <= 250.0f) {
-				shakeFreq = 100.0f * carSpeed * 2000.0f / car->m_fMass + 80.0f;
-			} else {
-				shakeFreq = 250.0f;
-			}
+			// The frequency of the shake is worked out in C
+			uint8 shakeFreq = PedFightLogic_CarHitShakeFreq(carSpeed, car->m_fMass);
 			CPad::GetPad(0)->StartShake(40000 / shakeFreq, shakeFreq);
 		}
 		bIsStanding = false;
@@ -3814,114 +3347,77 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 		vehColModel = vehModel->GetColModel();
 		float carRightAndDistDotProd = DotProduct(distVec, car->GetRight());
 
-		if (car->GetModelIndex() == MI_TRAIN) {
+		// Delegate the classification of the hit to the C implementation
+		bool runOver, knockedUp;
+		nodeToDamage = (PedNode)PedFightLogic_CarHitClassify(car->GetModelIndex() == MI_TRAIN, DotProduct(car->m_vecMoveSpeed, car->GetForward()), carRightAndDistDotProd,
+			DotProduct(distVec, car->GetForward()), vehColModel->boundingBox.max.x, vehColModel->boundingBox.max.y, randVal, &runOver, &knockedUp);
+		if (runOver) {
 			killMethod = WEAPONTYPE_RUNOVERBYCAR;
-			nodeToDamage = PED_HEAD;
 			m_vecMoveSpeed = 0.9f * car->m_vecMoveSpeed;
 			m_vecMoveSpeed.z = 0.0f;
 			if (damageDir == 1 || damageDir == 3)
 				damageDir = 2;
 			if (CGame::nastyGame)
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
+		} else if (knockedUp) {
+			float vehColMaxY = vehColModel->boundingBox.max.y;
+			float vehColMinY = vehColModel->boundingBox.min.y;
+			float vehColMaxZ = vehColModel->boundingBox.max.z;
+			float carFrontZ = car->GetForward().z;
+			float carHighestZ, carLength;
 
-		// Car doesn't look to us
-		} else if (DotProduct(car->m_vecMoveSpeed, car->GetForward()) >= 0.0f){
+			if (carFrontZ < -0.2f) {
+				// Highest point of car's back
+				carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMinY, vehColMaxZ)).z;
+				carLength = vehColMaxY - vehColMinY;
 
-			if (0.99f * vehColModel->boundingBox.max.x < Abs(carRightAndDistDotProd)) {
-
-				// We're at the right of the car
-				if (carRightAndDistDotProd <= 0.0f)
-					nodeToDamage = PED_UPPERARML;
-				else
-					nodeToDamage = PED_UPPERARMR;
-
-				if (Abs(DotProduct(distVec, car->GetForward())) < 0.85f * vehColModel->boundingBox.max.y) {
-					killMethod = WEAPONTYPE_RUNOVERBYCAR;
-					m_vecMoveSpeed = 0.9f * car->m_vecMoveSpeed;
-					m_vecMoveSpeed.z = 0.0f;
-					if (damageDir == 1 || damageDir == 3)
-						damageDir = 2;
-					if (CGame::nastyGame)
-						DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
-
+			} else if (carFrontZ > 0.1f) {
+				// Highest point of car's front
+				carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMaxY, vehColMaxZ)).z;
+				float highestZDist = carHighestZ - GetPosition().z;
+				if (highestZDist > 0.0f) {
+					GetMatrix().GetPosition().z += 0.5f * highestZDist;
+					carHighestZ += highestZDist * 0.25f;
 				}
+				carLength = vehColMaxY;
+
 			} else {
-				float carFrontAndDistDotProd = DotProduct(distVec, car->GetForward());
+				// Highest point of car's front
+				carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMaxY, vehColMaxZ)).z;
+				carLength = vehColMaxY;
+			}
 
-				// carFrontAndDistDotProd <= 0.0 car looks to us
-				if ((carFrontAndDistDotProd <= 0.1 || randVal <= 1) && randVal != 0) {
-					killMethod = WEAPONTYPE_RUNOVERBYCAR;
-					nodeToDamage = PED_HEAD;
-					m_vecMoveSpeed = 0.9f * car->m_vecMoveSpeed;
-					m_vecMoveSpeed.z = 0.0f;
-					if (damageDir == 1 || damageDir == 3)
-						damageDir = 2;
+			float pedJumpSpeedToReachHighestZ = (carHighestZ - GetPosition().z) / (carLength / car->m_vecMoveSpeed.Magnitude());
 
-					if (CGame::nastyGame)
-						DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLATTER, 0.0f);
+			// TODO: What are we doing down here?
+			float unknown = ((General_GetRandomNumber() % 256) * 0.002 + 1.5) * pedJumpSpeedToReachHighestZ;
 
-				} else {
-					nodeToDamage = PED_MID;
-					float vehColMaxY = vehColModel->boundingBox.max.y;
-					float vehColMinY = vehColModel->boundingBox.min.y;
-					float vehColMaxZ = vehColModel->boundingBox.max.z;
-					float carFrontZ = car->GetForward().z;
-					float carHighestZ, carLength;
+			// After this point distVec isn't really distVec.
+			distVec = car->m_vecMoveSpeed;
+			distVec.Normalise();
+			distVec *= 0.2 * unknown;
 
-					if (carFrontZ < -0.2f) {
-						// Highest point of car's back
-						carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMinY, vehColMaxZ)).z;
-						carLength = vehColMaxY - vehColMinY;
+			if (damageDir != 1 && damageDir != 3)
+				distVec.z += unknown;
+			else
+				distVec.z += 1.5f * unknown;
 
-					} else if (carFrontZ > 0.1f) {
-						// Highest point of car's front
-						carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMaxY, vehColMaxZ)).z;
-						float highestZDist = carHighestZ - GetPosition().z;
-						if (highestZDist > 0.0f) {
-							GetMatrix().GetPosition().z += 0.5f * highestZDist;
-							carHighestZ += highestZDist * 0.25f;
-						}
-						carLength = vehColMaxY;
+			m_vecMoveSpeed = distVec;
+			damageDir += 2;
+			if (damageDir > 3)
+				damageDir = damageDir - 4;
 
+			if (car->IsCar()) {
+				CObject *bonnet = ((CAutomobile*)car)->RemoveBonnetInPedCollision();
+
+				if (bonnet) {
+					if (General_GetRandomNumber() & 1) {
+						bonnet->m_vecMoveSpeed += Multiply3x3(car->GetMatrix(), CVector(0.1f, 0.0f, 0.5f));
 					} else {
-						// Highest point of car's front
-						carHighestZ = (car->GetMatrix() * CVector(0.0f, vehColMaxY, vehColMaxZ)).z;
-						carLength = vehColMaxY;
+						bonnet->m_vecMoveSpeed += Multiply3x3(car->GetMatrix(), CVector(-0.1f, 0.0f, 0.5f));
 					}
-
-					float pedJumpSpeedToReachHighestZ = (carHighestZ - GetPosition().z) / (carLength / car->m_vecMoveSpeed.Magnitude());
-
-					// TODO: What are we doing down here?
-					float unknown = ((General_GetRandomNumber() % 256) * 0.002 + 1.5) * pedJumpSpeedToReachHighestZ;
-
-					// After this point distVec isn't really distVec.
-					distVec = car->m_vecMoveSpeed;
-					distVec.Normalise();
-					distVec *= 0.2 * unknown;
-
-					if (damageDir != 1 && damageDir != 3)
-						distVec.z += unknown;
-					else
-						distVec.z += 1.5f * unknown;
-
-					m_vecMoveSpeed = distVec;
-					damageDir += 2;
-					if (damageDir > 3)
-						damageDir = damageDir - 4;
-
-					if (car->IsCar()) {
-						CObject *bonnet = ((CAutomobile*)car)->RemoveBonnetInPedCollision();
-
-						if (bonnet) {
-							if (General_GetRandomNumber() & 1) {
-								bonnet->m_vecMoveSpeed += Multiply3x3(car->GetMatrix(), CVector(0.1f, 0.0f, 0.5f));
-							} else {
-								bonnet->m_vecMoveSpeed += Multiply3x3(car->GetMatrix(), CVector(-0.1f, 0.0f, 0.5f));
-							}
-							CVector forceDir = car->GetUp() * 10.0f;
-							bonnet->ApplyTurnForce(forceDir, car->GetForward());
-						}
-					}
+					CVector forceDir = car->GetUp() * 10.0f;
+					bonnet->ApplyTurnForce(forceDir, car->GetForward());
 				}
 			}
 		}
@@ -3930,21 +3426,8 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 			Events_RegisterEntity((m_nPedType == PEDTYPE_COP ? EVENT_HIT_AND_RUN_COP : EVENT_HIT_AND_RUN),EVENT_ENTITY_PED,this,car->pDriver,1000);
 		}
 
-		ePedPieceTypes pieceToDamage;
-		switch (nodeToDamage) {
-			case PED_HEAD:
-				pieceToDamage = PEDPIECE_HEAD;
-				break;
-			case PED_UPPERARML:
-				pieceToDamage = PEDPIECE_LEFTARM;
-				break;
-			case PED_UPPERARMR:
-				pieceToDamage = PEDPIECE_RIGHTARM;
-				break;
-			default:
-				pieceToDamage = PEDPIECE_MID;
-				break;
-		}
+		// The piece of the ped that is damaged is chosen in C
+		ePedPieceTypes pieceToDamage = (ePedPieceTypes)PedFightLogic_PieceForNode(nodeToDamage);
 		InflictDamage(car, killMethod, 1000.0f, pieceToDamage, damageDir);
 
 		if (DyingOrDead()
@@ -4082,7 +3565,7 @@ CPed::DriveVehicle(void)
 		if (walkbackAssoc)
 			blendDelta -= Min(blendDelta, (*Timer_GetTimeStepNonClipped()) * 0.02f * walkbackAssoc->blendDelta + walkbackAssoc->blendAmount);
 
-		float targetLRLean, timeBlend, neededAngForWheelie, stoppieAng;
+		float targetLRLean, timeBlend;
 
 		// Smooth the lean amount
 		if (targetUDLean == -1.0f) {
@@ -4095,46 +3578,13 @@ CPed::DriveVehicle(void)
 
 		bike->m_fPedLeanAmountLR = bike->m_fPedLeanAmountLR * timeBlend + (1.0 - timeBlend) * targetLRLean;
 
-		if (!IsPlayer()) {
-			targetUDLean = 0.0f;
-
-		} else if (targetUDLean > -1.0f) {
-			targetUDLean = bike->m_fLeanInput;
-			bike->bWheelieCam = false;
-			neededAngForWheelie = 1.0f;
-			if (bike->m_aWheelTimer[0] != 0.0f || bike->m_aWheelTimer[1] != 0.0f || bike->GetForward().z <= 0.0f ||
-				(0.0f == bike->m_aWheelTimer[2] && 0.0f == bike->m_aWheelTimer[3])) {
-
-				if (0.0f == bike->m_aWheelTimer[2] && 0.0f == bike->m_aWheelTimer[3] &&
-					(bike->GetForward().z < 0.0f && (bike->m_aWheelTimer[0] != 0.0f || bike->m_aWheelTimer[1] != 0.0f))) {
-
-					stoppieAng = bike->pBikeHandling->fStoppieAng;
-					if (stoppieAng - bike->GetForward().z > 0.6f * stoppieAng)
-						bike->bWheelieCam = true;
-				}
-			} else {
-				float wheelieAng = bike->pBikeHandling->fWheelieAng;
-				neededAngForWheelie = wheelieAng - bike->GetForward().z;
-				if (neededAngForWheelie < wheelieAng / 2.f)
-					bike->bWheelieCam = true;
-			}
-			if (neededAngForWheelie >= 0.15f) {
-				if (bike->m_fBrakePedal <= 0.5f || velocityFwdDotProd <= 0.01f) {
-					if (bike->m_fGasPedal > 0.5f && targetUDLean <= 0.0f && 0.3f * bike->pHandling->Transmission.fMaxCruiseVelocity > velocityFwdDotProd) {
-						targetUDLean = Min(0.1f, targetUDLean);
-					}
-				} else {
-					targetUDLean = Max(0.1f, targetUDLean);
-				}
-			} else {
-				targetUDLean = Max(0.25f, targetUDLean);
-			}
-			float targetLRLeanABS = Abs(targetLRLean);
-			if (targetLRLeanABS > 0.3f) {
-				// Yes, UD
-				targetUDLean *= Max(0.0f, 1.0f - (targetLRLeanABS - 0.3f) * 50.f / 13.f);
-			}
-		}
+		// Delegate the forward/backward lean to the C implementation
+		bool setWheelieCam, wheelieCam;
+		targetUDLean = PedLogic_BikeLeanUD(IsPlayer(), targetUDLean, targetLRLean, bike->m_fLeanInput, bike->m_aWheelTimer, bike->GetForward().z,
+			bike->pBikeHandling->fStoppieAng, bike->pBikeHandling->fWheelieAng, bike->m_fBrakePedal, bike->m_fGasPedal, velocityFwdDotProd,
+			bike->pHandling->Transmission.fMaxCruiseVelocity, &setWheelieCam, &wheelieCam);
+		if (setWheelieCam)
+			bike->bWheelieCam = wheelieCam;
 		if (IsPlayer()) {
 			float timeBlend = Pow(0.89f, (*Timer_GetTimeStep()));
 			bike->m_fPedLeanAmountUD = (timeBlend * bike->m_fPedLeanAmountUD) + ((1.0f - timeBlend) * targetUDLean);
@@ -4143,26 +3593,8 @@ CPed::DriveVehicle(void)
 		}
 
 		float fwdBackLeanAmount, leftRightLeanAmount;
-		if (Abs(bike->m_fPedLeanAmountLR) <= 0.56f && IsPlayer()) {
-
-			if (Abs(bike->m_fPedLeanAmountUD) <= 0.56f) {
-				CVector2D smoothedLean(bike->m_fPedLeanAmountLR, bike->m_fPedLeanAmountUD);
-				float smoothLeanMag = smoothedLean.Magnitude();
-				if (smoothLeanMag <= 0.01f) {
-					fwdBackLeanAmount = Abs(smoothedLean.y);
-					leftRightLeanAmount = Abs(smoothedLean.x);
-				} else {
-					fwdBackLeanAmount = Abs(smoothedLean.y / smoothLeanMag);
-					leftRightLeanAmount = Abs(smoothedLean.x / smoothLeanMag);
-				}
-			} else {
-				fwdBackLeanAmount = 1.0f;
-				leftRightLeanAmount = 0.0f;
-			}
-		} else {
-			fwdBackLeanAmount = 0.0f;
-			leftRightLeanAmount = 1.0f;
-		}
+		// Delegate the weights of the lean animations to the C implementation
+		PedLogic_BikeLeanAmounts(bike->m_fPedLeanAmountLR, bike->m_fPedLeanAmountUD, IsPlayer(), &fwdBackLeanAmount, &leftRightLeanAmount);
 		float fwdBackBlend = fwdBackLeanAmount * blendDelta;
 		float leftRightBlend = leftRightLeanAmount * blendDelta;
 		if (IsPlayer()) {

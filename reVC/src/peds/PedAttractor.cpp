@@ -1,6 +1,7 @@
 #include "common.h"
 #include "CollisionVector_native.h" // rouz edit (ChatGPT)
 #include "PedAttractor.h"
+#include "PedAttractorMath.h"
 
 #include "General.h"
 #include "Vehicle.h"
@@ -634,17 +635,23 @@ bool CPedAttractorManager::IsPedRegisteredWithEffect(CPed* pPed)
 
 void CPedAttractorManager::ComputeEffectPos(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = matrix.GetPosition() + Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pos)); // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	CVector effectPos = CollisionVector_ToNative(pEffect->pos);
+	PedAttractor_ComputeEffectPos(matrix.f, &effectPos.x, &pos.x);
 }
 
 void CPedAttractorManager::ComputeEffectQueueDir(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pedattr.queueDir)); // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	CVector dir = CollisionVector_ToNative(pEffect->pedattr.queueDir);
+	PedAttractor_ComputeEffectDir(matrix.f, &dir.x, &pos.x);
 }
 
 void CPedAttractorManager::ComputeEffectUseDir(const C2dEffect* pEffect, const CMatrix& matrix, CVector& pos)
 {
-	pos = Multiply3x3(matrix, CollisionVector_ToNative(pEffect->pedattr.useDir)); // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	CVector dir = CollisionVector_ToNative(pEffect->pedattr.useDir);
+	PedAttractor_ComputeEffectDir(matrix.f, &dir.x, &pos.x);
 }
 
 CPedAttractor* CPedAttractorManager::RegisterPed(CPed* pPed, C2dEffect* pEffect, const CMatrix& matrix, std::vector<CPedAttractor*>& vecAttractors)
@@ -833,16 +840,11 @@ bool CPedAttractorManager::IsApproachable(C2dEffect* pEffect, const CMatrix& mat
 	CVector vecUseDir, vecEffectPos;
 	ComputeEffectUseDir(pEffect, matrix, vecUseDir);
 	ComputeEffectPos(pEffect, matrix, vecEffectPos);
-	float dp = -DotProduct(vecUseDir, vecEffectPos);
-	if (pEffect->pedattr.type == ATTRACTOR_ATM || pEffect->pedattr.type == ATTRACTOR_PIZZA || pEffect->pedattr.type == ATTRACTOR_ICECREAM) {
-		vecUseDir = -vecUseDir;
-		dp = -dp;
-	}
-	if (dp + DotProduct(vecEffectPos, pPed->GetPosition()) > 0.0f) {
-		CVector vecPedToAttractor = pPed->GetPosition() - vecEffectPos;
-		vecPedToAttractor.Normalise();
-		if (DotProduct(vecPedToAttractor, vecUseDir) > 0.25f && CWorld::IsWanderPathClear(pPed->GetPosition(), vecEffectPos, 2.0f, 0))
-			return true;
-	}
+	// The side and cone test is done in C, then the path has to be clear
+	CVector pedPos = pPed->GetPosition();
+	CVector useDir;
+	if (PedAttractor_IsPedOnUsableSide(pEffect->pedattr.type, &vecUseDir.x, &vecEffectPos.x, &pedPos.x, &useDir.x) &&
+		CWorld::IsWanderPathClear(pPed->GetPosition(), vecEffectPos, 2.0f, 0))
+		return true;
 	return false;
 }

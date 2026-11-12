@@ -25,6 +25,7 @@
 #include "AudioScriptObject.h"
 #include "ParticleObject.h"
 #include "Particle.h"
+#include "ParticleLogic.h"
 #include "RenderBuffer.h" // rouz edit (ChatGPT)
 #include "soundlist.h"
 #include "SaveBuf.h"
@@ -1213,46 +1214,16 @@ void CParticle::Update()
 				}
 				
 				static uint8 nWaterDropCount;
-
-				if ( nWaterDropCount == 5 )
-				{
-					vecMoveStep = CVector(0.0f, 0.0f, 0.0f);
-					particle->m_nTimeWhenWillBeDestroyed += 1250;
-					nWaterDropCount = 0;
-				}
-				else
-				{
-					if ( TheCamera.m_CameraAverageSpeed > 0.35f )
-					{
-						if ( vecMoveStep.Magnitude() > 0.5f )
-						{
-							if ( vecMoveStep.Magnitude() > 0.4f && vecMoveStep.Magnitude() < 0.8f )
-							{
-								vecMoveStep.x += TheCamera.m_CameraAverageSpeed * 1.5f;
-								vecMoveStep.y += TheCamera.m_CameraAverageSpeed * 1.5f;
-							}
-							else if ( vecMoveStep.Magnitude() != 0.0f )
-							{
-								vecMoveStep.x += General_GetRandomNumberInRangeFloat(0.01f, 0.05f);
-								vecMoveStep.y += General_GetRandomNumberInRangeFloat(0.01f, 0.05f);
-							}
-						}
-					}
-					
-					nWaterDropCount++;
-				}
 				
-				if ( vecPos.z <= 1.5f )
-					vecMoveStep.z = 0.0f;
+				// Delegate to the C implementation
+				if ( Particle_WaterDropStep(&nWaterDropCount, (VectorMath3*)&vecMoveStep, TheCamera.m_CameraAverageSpeed, vecPos.z) )
+					particle->m_nTimeWhenWillBeDestroyed += 1250;
 			}
 			
 			if ( psystem->m_Type == PARTICLE_HEATHAZE || psystem->m_Type == PARTICLE_HEATHAZE_IN_DIST )
 			{
-#ifdef FIX_BUGS
-				int32 nSinCosIndex = (int32(DEGTORAD((float)particle->m_nRotation) * float(SIN_COS_TABLE_SIZE) / TWOPI) + SIN_COS_TABLE_SIZE) % SIN_COS_TABLE_SIZE;
-#else
-				int32 nSinCosIndex = int32(DEGTORAD((float)particle->m_nRotation) * float(SIN_COS_TABLE_SIZE) / TWOPI) % SIN_COS_TABLE_SIZE;
-#endif
+				// Delegate to the C implementation
+				int32 nSinCosIndex = Particle_SinCosIndex(particle->m_nRotation, SIN_COS_TABLE_SIZE);
 				vecMoveStep.x = Sin(nSinCosIndex);
 				vecMoveStep.y = Sin(nSinCosIndex);
 				
@@ -1264,11 +1235,8 @@ void CParticle::Update()
 			
 			if ( psystem->m_Type == PARTICLE_BEASTIE )
 			{
-#ifdef FIX_BUGS
-				int32 nSinCosIndex = (int32(DEGTORAD((float)particle->m_nRotation) * float(SIN_COS_TABLE_SIZE) / TWOPI) + SIN_COS_TABLE_SIZE) % SIN_COS_TABLE_SIZE;
-#else
-				int32 nSinCosIndex = int32(DEGTORAD((float)particle->m_nRotation) * float(SIN_COS_TABLE_SIZE) / TWOPI) % SIN_COS_TABLE_SIZE;
-#endif				
+				// Delegate to the C implementation
+				int32 nSinCosIndex = Particle_SinCosIndex(particle->m_nRotation, SIN_COS_TABLE_SIZE);
 				particle->m_vecVelocity.x = 0.50f * Cos(nSinCosIndex);
 				particle->m_vecVelocity.y = Cos(nSinCosIndex);
 				particle->m_vecVelocity.z = 0.25f * Sin(nSinCosIndex);
@@ -1404,31 +1372,16 @@ void CParticle::Update()
 				continue;
 			}
 
-			if ( particle->m_nTimeWhenColorWillBeChanged != 0 )
+			// Delegate to the C implementation
 			{
-				if ( particle->m_nTimeWhenColorWillBeChanged > (*Timer_GetTimeInMilliseconds()) )
-				{
-					float colorMul = 1.0f - float(particle->m_nTimeWhenColorWillBeChanged - (*Timer_GetTimeInMilliseconds())) / float(psystem->m_ColorFadeTime);
-				
-					particle->m_Color.red = Clamp(
-						psystem->m_RenderColouring.red + int32(float(psystem->m_FadeDestinationColor.red - psystem->m_RenderColouring.red) * colorMul),
-						0, 255);
-					
-					particle->m_Color.green = Clamp(
-						psystem->m_RenderColouring.green + int32(float(psystem->m_FadeDestinationColor.green - psystem->m_RenderColouring.green) * colorMul),
-						0, 255);
-						
-					particle->m_Color.blue = Clamp(
-						psystem->m_RenderColouring.blue + int32(float(psystem->m_FadeDestinationColor.blue - psystem->m_RenderColouring.blue) * colorMul),
-						0, 255);
-				}
-				else {
-					//+ rouz edit (ChatGPT)
-					// Copy the same four destination channels after the original color-fade gate
-					RwRGBA fadeColour={psystem->m_FadeDestinationColor.red,psystem->m_FadeDestinationColor.green,psystem->m_FadeDestinationColor.blue,psystem->m_FadeDestinationColor.alpha};
-					RwRGBAAssign(&particle->m_Color, &fadeColour);
-					//- rouz edit (ChatGPT)
-				}
+				const uint8_t renderColor[4] = { psystem->m_RenderColouring.red, psystem->m_RenderColouring.green, psystem->m_RenderColouring.blue, psystem->m_RenderColouring.alpha };
+				const uint8_t destColor[4] = { psystem->m_FadeDestinationColor.red, psystem->m_FadeDestinationColor.green, psystem->m_FadeDestinationColor.blue, psystem->m_FadeDestinationColor.alpha };
+				uint8_t color4[4] = { particle->m_Color.red, particle->m_Color.green, particle->m_Color.blue, particle->m_Color.alpha };
+				Particle_UpdateColor((*Timer_GetTimeInMilliseconds()), particle->m_nTimeWhenColorWillBeChanged, psystem->m_ColorFadeTime, renderColor, destColor, color4);
+				particle->m_Color.red = color4[0];
+				particle->m_Color.green = color4[1];
+				particle->m_Color.blue = color4[2];
+				particle->m_Color.alpha = color4[3];
 			}
 			
 			if ( psystem->Flags & CLIPOUT2D )
@@ -1444,30 +1397,17 @@ void CParticle::Update()
 			if ( !(psystem->Flags & SCREEN_TRAIL) )
 			{
 				float size;
-
-				if ( particle->m_fExpansionRate > 0.0f )
-				{
-					float speed = Max(vecWind.Magnitude(), vecMoveStep.Magnitude());
-					
-					if ( psystem->m_Type == PARTICLE_EXHAUST_FUMES || psystem->m_Type == PARTICLE_ENGINE_STEAM )
-						speed *= 2.0f;
-					
-					if ( ( psystem->m_Type == PARTICLE_BOAT_SPLASH || psystem->m_Type == PARTICLE_CAR_SPLASH )
-							&& particle->m_fSize > 1.2f )
-					{
-						size = particle->m_fSize - (1.0f + speed) * particle->m_fExpansionRate;
-						particle->m_vecVelocity.z -= 0.15f;
-					}
-					else
-						size = particle->m_fSize + (1.0f + speed) * particle->m_fExpansionRate;
-				}
-				else
-					size = particle->m_fSize + particle->m_fExpansionRate;
+				bool dropVelZ;
 				
-				if ( psystem->m_Type == PARTICLE_WATERDROP )
-					size = (size - Abs(vecMoveStep.x) * 0.000150000007f) + (Abs(vecMoveStep.z) * 0.0500000007f); //TODO:
+				// Delegate to the C implementation
+				bool keepParticle = Particle_NextSize(particle->m_fSize, particle->m_fExpansionRate, vecWind.Magnitude(), vecMoveStep.Magnitude(),
+					psystem->m_Type == PARTICLE_EXHAUST_FUMES || psystem->m_Type == PARTICLE_ENGINE_STEAM,
+					psystem->m_Type == PARTICLE_BOAT_SPLASH || psystem->m_Type == PARTICLE_CAR_SPLASH,
+					psystem->m_Type == PARTICLE_WATERDROP, vecMoveStep.x, vecMoveStep.z, &size, &dropVelZ);
+				if ( dropVelZ )
+					particle->m_vecVelocity.z -= 0.15f;
 				
-				if ( size < 0.0f )
+				if ( !keepParticle )
 				{
 					bRemoveParticle = true;
 					continue;
@@ -1739,17 +1679,13 @@ void CParticle::Update()
 				}
 			}
 
+			// Delegate the timer driven changes to the C implementation
 			if ( particle->m_nFadeToBlackTimer != 0 )
-			{
-				particle->m_nColorIntensity = Clamp(particle->m_nColorIntensity - particle->m_nFadeToBlackTimer,
-														0, 255);
-			}
-
+				particle->m_nColorIntensity = Particle_FadeToBlack(particle->m_nColorIntensity, particle->m_nFadeToBlackTimer);
+			
 			if ( particle->m_nFadeAlphaTimer != 0 )
 			{
-				particle->m_nAlpha = Clamp(particle->m_nAlpha - particle->m_nFadeAlphaTimer,
-														0, 255);
-				if ( particle->m_nAlpha == 0 )
+				if ( !Particle_FadeAlpha(&particle->m_nAlpha, particle->m_nFadeAlphaTimer) )
 				{
 					bRemoveParticle = true;
 					continue;
@@ -1757,44 +1693,13 @@ void CParticle::Update()
 			}
 			
 			if ( psystem->m_nZRotationAngleChangeAmount != 0 )
-			{
-				if ( particle->m_nZRotationTimer >= psystem->m_nZRotationChangeTime )
-				{
-					particle->m_nZRotationTimer = 0;
-					particle->m_nCurrentZRotation += psystem->m_nZRotationAngleChangeAmount;
-				}
-				else
-					++particle->m_nZRotationTimer;
-			}
+				Particle_StepZRotation(&particle->m_nZRotationTimer, psystem->m_nZRotationChangeTime, &particle->m_nCurrentZRotation, psystem->m_nZRotationAngleChangeAmount);
 			
 			if ( psystem->m_fZRadiusChangeAmount != 0.0f )
-			{
-				if ( particle->m_nZRadiusTimer >= psystem->m_nZRadiusChangeTime )
-				{
-					particle->m_nZRadiusTimer = 0;
-					particle->m_fCurrentZRadius += psystem->m_fZRadiusChangeAmount;
-				}
-				else
-					++particle->m_nZRadiusTimer;
-			}
-
+				Particle_StepZRadius(&particle->m_nZRadiusTimer, psystem->m_nZRadiusChangeTime, &particle->m_fCurrentZRadius, psystem->m_fZRadiusChangeAmount);
+			
 			if ( psystem->m_nAnimationSpeed != 0 )
-			{
-				if ( particle->m_nAnimationSpeedTimer > psystem->m_nAnimationSpeed )
-				{
-					particle->m_nAnimationSpeedTimer = 0;
-					
-					if ( ++particle->m_nCurrentFrame > psystem->m_nFinalAnimationFrame )
-					{
-						if ( psystem->Flags & CYCLE_ANIM )
-							particle->m_nCurrentFrame = psystem->m_nStartAnimationFrame;
-						else
-							--particle->m_nCurrentFrame;
-					}	
-				}
-				else
-					++particle->m_nAnimationSpeedTimer;
-			}
+				Particle_StepAnimation(&particle->m_nAnimationSpeedTimer, psystem->m_nAnimationSpeed, &particle->m_nCurrentFrame, psystem->m_nStartAnimationFrame, psystem->m_nFinalAnimationFrame, (psystem->Flags & CYCLE_ANIM) != 0);
 			
 			if ( particle->m_nRotationStep != 0 )
 #ifdef FIX_BUGS
@@ -1928,13 +1833,8 @@ void CParticle::Render()
 				bool zIsZero = true;
 				if ( particle->m_vecPosition.z != 0.0f ) {
 #endif
-				screenZ = (particle->m_vecPosition.z - Draw_GetNearClipZ())
-					// Use the complete C sprite operation with the original argument values
-					* (Sprite_GetFarScreenZ() - Sprite_GetNearScreenZ())
-					* Draw_GetFarClipZ()
-					/ ( (Draw_GetFarClipZ() - Draw_GetNearClipZ()) * particle->m_vecPosition.z )
-					// Use the complete C sprite operation with the original argument values
-					+ Sprite_GetNearScreenZ();
+				// Delegate to the C implementation
+				screenZ = Particle_ScreenZ(particle->m_vecPosition.z, Draw_GetNearClipZ(), Draw_GetFarClipZ(), Sprite_GetNearScreenZ(), Sprite_GetFarScreenZ());
 #ifdef FIX_BUGS
 				zIsZero = false;
 				}
@@ -2659,13 +2559,8 @@ void CParticle::HandleShipsAtHorizonStuff()
 
 	for ( CParticle *particle = psystemdata->m_pParticles; particle; particle = particle->m_pNext )
 	{
-		if ( (*Timer_GetTimeInMilliseconds()) > particle->m_nTimeWhenWillBeDestroyed - 32000 
-				&& (*Timer_GetTimeInMilliseconds()) < particle->m_nTimeWhenWillBeDestroyed - 22000 )
-		{		
-			particle->m_nAlpha = Min(particle->m_nAlpha + 1, 96);
-		}
-		if ( (*Timer_GetTimeInMilliseconds()) > particle->m_nTimeWhenWillBeDestroyed - 10000 )
-			particle->m_nFadeAlphaTimer = 1;
+		// Delegate to the C implementation
+		Particle_ShipFade((*Timer_GetTimeInMilliseconds()), particle->m_nTimeWhenWillBeDestroyed, &particle->m_nAlpha, &particle->m_nFadeAlphaTimer);
 	}
 }
 

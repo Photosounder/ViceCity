@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include "Phones.h"
+#include "PhoneLogic.h"
 #include "Pools.h"
 #include "ModelIndices.h"
 #include "Ped.h"
@@ -169,44 +170,22 @@ CPhoneInfo::Update(void)
 int
 CPhoneInfo::FindNearestFreePhone(CVector *pos)
 {
-	int nearestPhoneId = -1;
-	float nearestPhoneDist = 60.0f;
-
-	for (int phoneId = 0; phoneId < m_nMax; phoneId++) {
-
-		if (gPhoneInfo.m_aPhones[phoneId].m_nState == PHONE_STATE_FREE) {
-			float phoneDist = (m_aPhones[phoneId].m_vecPos - *pos).Magnitude2D();
-
-			if (phoneDist < nearestPhoneDist) {
-				nearestPhoneDist = phoneDist;
-				nearestPhoneId = phoneId;
-			}
-		}
-	}
-	return nearestPhoneId;
+	// Delegate to the C implementation
+	return Phone_FindNearestFreePhone(this, pos->x, pos->y);
 }
 
 bool
 CPhoneInfo::PhoneAtThisPosition(CVector pos)
 {
-	for (int phoneId = 0; phoneId < m_nMax; phoneId++) {
-		if (pos.x == m_aPhones[phoneId].m_vecPos.x && pos.y == m_aPhones[phoneId].m_vecPos.y)
-			return true;
-	}
-	return false;
+	// Delegate to the C implementation
+	return Phone_PhoneAtThisPosition(this, pos.x, pos.y);
 }
 
 bool
 CPhoneInfo::HasMessageBeenDisplayed(int phoneId)
 {
-	if (bDisplayingPhoneMessage)
-		return false;
-
-	int state = m_aPhones[phoneId].m_nState;
-
-	return state == PHONE_STATE_REPEATED_MESSAGE_SHOWN_ONCE ||
-		state == PHONE_STATE_ONETIME_MESSAGE_STARTED ||
-		state == PHONE_STATE_REPEATED_MESSAGE_STARTED;
+	// Delegate to the C implementation
+	return Phone_HasMessageBeenDisplayed(this, phoneId, bDisplayingPhoneMessage);
 }
 
 bool
@@ -270,62 +249,24 @@ VALIDATESAVEBUF(size)
 void
 CPhoneInfo::SetPhoneMessage_JustOnce(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6)
 {
-	// If there is at least one message, it should be msg1.
-	if (msg1) {
-		m_aPhones[phoneId].m_apMessages[0] = msg1;
-		m_aPhones[phoneId].m_apMessages[1] = msg2;
-		m_aPhones[phoneId].m_apMessages[2] = msg3;
-		m_aPhones[phoneId].m_apMessages[3] = msg4;
-		m_aPhones[phoneId].m_apMessages[4] = msg5;
-		m_aPhones[phoneId].m_apMessages[5] = msg6;
-		m_aPhones[phoneId].m_nState = PHONE_STATE_ONETIME_MESSAGE_SET;
-	} else {
-		m_aPhones[phoneId].m_nState = PHONE_STATE_MESSAGE_REMOVED;
-	}
+	// Delegate to the C implementation
+	uint16_t *msgs[6] = {msg1, msg2, msg3, msg4, msg5, msg6};
+	Phone_SetMessage(this, phoneId, msgs, PHONE_STATE_ONETIME_MESSAGE_SET);
 }
 
 void
 CPhoneInfo::SetPhoneMessage_Repeatedly(int phoneId, wchar *msg1, wchar *msg2, wchar *msg3, wchar *msg4, wchar *msg5, wchar *msg6)
 {
-	// If there is at least one message, it should be msg1.
-	if (msg1) {
-		m_aPhones[phoneId].m_apMessages[0] = msg1;
-		m_aPhones[phoneId].m_apMessages[1] = msg2;
-		m_aPhones[phoneId].m_apMessages[2] = msg3;
-		m_aPhones[phoneId].m_apMessages[3] = msg4;
-		m_aPhones[phoneId].m_apMessages[4] = msg5;
-		m_aPhones[phoneId].m_apMessages[5] = msg6;
-		m_aPhones[phoneId].m_nState = PHONE_STATE_REPEATED_MESSAGE_SET;
-	} else {
-		m_aPhones[phoneId].m_nState = PHONE_STATE_MESSAGE_REMOVED;
-	}
+	// Delegate to the C implementation
+	uint16_t *msgs[6] = {msg1, msg2, msg3, msg4, msg5, msg6};
+	Phone_SetMessage(this, phoneId, msgs, PHONE_STATE_REPEATED_MESSAGE_SET);
 }
 
 int
 CPhoneInfo::GrabPhone(float xPos, float yPos)
 {
-	// "Grab" doesn't mean picking up the phone, it means allocating some particular phone to
-	// whoever called the 024A opcode first with the position parameters closest to phone.
-	// Same phone won't be available on next run of this function.
-
-	int nearestPhoneId = -1;
-	CVector pos(xPos, yPos, 0.0f);
-	float nearestPhoneDist = 100.0f;
-
-	for (int phoneId = m_nScriptPhonesMax; phoneId < m_nMax; phoneId++) {
-		float phoneDistance = (m_aPhones[phoneId].m_vecPos - pos).Magnitude2D();
-		if (phoneDistance < nearestPhoneDist) {
-			nearestPhoneDist = phoneDistance;
-			nearestPhoneId = phoneId;
-		}
-	}
-	m_aPhones[nearestPhoneId].m_nState = PHONE_STATE_MESSAGE_REMOVED;
-
-	CPhone oldFirstPhone = m_aPhones[m_nScriptPhonesMax];
-	m_aPhones[m_nScriptPhonesMax] = m_aPhones[nearestPhoneId];
-	m_aPhones[nearestPhoneId] = oldFirstPhone;
-	m_nScriptPhonesMax++;
-	return m_nScriptPhonesMax - 1;
+	// Delegate to the C implementation
+	return Phone_GrabPhone(this, xPos, yPos);
 }
 
 void

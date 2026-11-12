@@ -1,15 +1,11 @@
+//+ rouz edit (Claude)
 #pragma once
+#include <stdbool.h>
+#include "PlaceableData.h"
 
-class CPlaceable
+class CPlaceable : public CPlaceableData
 {
-protected:
-	//CMatrix m_matrix;		// rouz edit
-
 public:
-	CMatrix m_matrix;		// rouz edit, I hate C++
-	xyz_t orig_pos;			// rouz edit, keep track of the original location for buildings and such
-	int orig_pos_set = 0;
-
 	CPlaceable(void);
 	const CVector &GetPosition(void) { return m_matrix.GetPosition(); }
 	void SetPosition(float x, float y, float z) {
@@ -26,12 +22,12 @@ public:
 	void SetTransform(RwMatrix *m) { m_matrix = CMatrix(m, false); }
 	void SetHeading(float angle);
 	void SetOrientation(float x, float y, float z){
-		CVector pos = m_matrix.GetPosition();
-		m_matrix.SetRotate(x, y, z);
-		m_matrix.Translate(pos);
+		// Delegate to the C implementation
+		Placeable_SetOrientation(this, x, y, z);
 	}
 	bool IsWithinArea(float x1, float y1, float x2, float y2);
 	bool IsWithinArea(float x1, float y1, float z1, float x2, float y2, float z2);
 };
 
 VALIDATE_SIZE(CPlaceable, 0x48);
+//- rouz edit (Claude)

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "WeaponType.h"
+#include "WeaponData.h"
 
 #define CAR_DRIVEBYAUTOAIMING_MAXDIST (2.5f)
 #define DOOMAUTOAIMING_MAXDIST    (9000.0f)
@@ -13,16 +14,9 @@ class CPed;
 struct CColPoint;
 struct CWeaponInfo;
 
-class CWeapon
+class CWeapon : public CWeaponData
 {
 public:
-	eWeaponType m_eWeaponType;
-	eWeaponState m_eWeaponState;
-	int32 m_nAmmoInClip;
-	int32 m_nAmmoTotal;
-	uint32 m_nTimer;
-	bool m_bAddRotOffset;
-	
 	static bool bPhotographHasBeenTaken;
 	
 	CWeapon() {

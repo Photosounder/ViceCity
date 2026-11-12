@@ -3,49 +3,12 @@
 #include "Vehicle.h"
 #include "Door.h"
 
-enum eBoatNodes
-{
-	BOAT_MOVING = 1,
-	BOAT_WINDSCREEN,
-	BOAT_RUDDER,
-	BOAT_FLAP_LEFT,
-	BOAT_FLAP_RIGHT,
-	BOAT_REARFLAP_LEFT,
-	BOAT_REARFLAP_RIGHT,
-	NUM_BOAT_NODES
-};
+#include "BoatNodes.h"
+#include "BoatData.h"
 
-class CBoat : public CVehicle
+class CBoat : public CVehicle, public CBoatData
 {
 public:
-	float m_fMovingRotation;
-	float m_fMovingSpeed;
-	int32 m_boat_unused1;
-	RwFrame *m_aBoatNodes[NUM_BOAT_NODES];
-	CDoor m_boom;
-	tBoatHandlingData *pBoatHandling;
-	uint8 bBoatInWater : 1;
-	uint8 bPropellerInWater : 1;
-	bool m_bIsAnchored;
-	float m_fOrientation;
-	uint32 m_nPoliceShoutTimer;
-	int32 m_boat_unused2;
-	float m_fDamage;
-	CEntity *m_pSetOnFireEntity;
-	float m_skimmerThingTimer;
-	bool m_boat_unused3;
-	float m_fAccelerate;
-	float m_fBrake;
-	float m_fSteeringLeftRight;
-	uint8 m_nPadID;
-	int32 m_boat_unused4;
-	float m_fVolumeUnderWater;
-	CVector m_vecBuoyancePoint;
-	float m_fPrevVolumeUnderWater;
-	int16 m_nDeltaVolumeUnderWater;
-	uint16 m_nNumWakePoints;
-	CVector2D m_avec2dWakePoints[32];
-	float m_afWakePointLifeTime[32];
 
 	static float MAX_WAKE_LENGTH;
 	static float MIN_WAKE_INTERVAL;

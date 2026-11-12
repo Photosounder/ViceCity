@@ -1,31 +1,13 @@
 #pragma once
 #include "common.h"
 #include "AnimBlendClumpData.h"
+#include "PedIKData.h"
 
-struct LimbOrientation
-{
-	float yaw;
-	float pitch;
-};
 
-struct LimbMovementInfo {
-	float maxYaw;
-	float minYaw;
-	float yawD;
-	float maxPitch;
-	float minPitch;
-	float pitchD;
-};
-
-enum LimbMoveStatus {
-	ANGLES_SET_TO_MAX, // because given angles were unreachable
-	ONE_ANGLE_COULDNT_BE_SET_EXACTLY, // because it can't be reached in a jiffy
-	ANGLES_SET_EXACTLY
-};
 
 class CPed;
 
-class CPedIK
+class CPedIK : public CPedIKData
 {
 public:
 	enum {
@@ -34,19 +16,13 @@ public:
 		AIMS_WITH_ARM = 4,
 	};
 
-	CPed *Const m_ped;
-	LimbOrientation m_headOrient;
-	LimbOrientation m_torsoOrient;
-	LimbOrientation m_upperArmOrient;
-	LimbOrientation m_lowerArmOrient;
-	int32 m_flags;
-
 	static LimbMovementInfo ms_torsoInfo;
 	static LimbMovementInfo ms_headInfo;
 	static LimbMovementInfo ms_headRestoreInfo;
 	static LimbMovementInfo ms_upperArmInfo;
 	static LimbMovementInfo ms_lowerArmInfo;
 
+	CPedIK(void) {}	// the CPed constructor assigns the real value
 	CPedIK(CPed *ped);
 	bool PointGunInDirection(float targetYaw, float targetPitch);
 	bool PointGunInDirectionUsingArm(float targetYaw, float targetPitch);

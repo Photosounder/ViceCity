@@ -5,6 +5,7 @@
 #include "World.h"
 #include "PlayerPed.h"
 #include "CopPed.h"
+#include "CopLogic.h"
 #include "Wanted.h"
 #include "DMAudio.h"
 #include "ModelIndices.h"
@@ -864,21 +865,13 @@ CCopPed::ProcessStingerCop(void)
 		} else {
 			CVector2D vehDist = GetPosition() - FindPlayerVehicle()->GetPosition();
 			CVector2D dirVehGoing = FindPlayerVehicle()->m_vecMoveSpeed;
-			if (vehDist.MagnitudeSqr() < sq(30.0f)) {
-				if (dirVehGoing.MagnitudeSqr() > 0.0f) {
-					vehDist.Normalise();
-					dirVehGoing.Normalise();
-					if (DotProduct2D(vehDist, dirVehGoing) > 0.8f) {
-						float angle = (CrossProduct2D(vehDist, dirVehGoing - vehDist) < 0.0f ?
-							FindPlayerVehicle()->GetForward().Heading() - HALFPI :
-							HALFPI + FindPlayerVehicle()->GetForward().Heading());
-
-						SetHeading(angle);
-						m_fRotationCur = angle;
-						m_fRotationDest = angle;
-						m_pStinger->Deploy(this);
-					}
-				}
+			// Decide in C whether and where to face before throwing the stinger
+			float angle;
+			if (CopLogic_ShouldDeployStinger(vehDist.x, vehDist.y, dirVehGoing.x, dirVehGoing.y, FindPlayerVehicle()->GetForward().Heading(), &angle)) {
+				SetHeading(angle);
+				m_fRotationCur = angle;
+				m_fRotationDest = angle;
+				m_pStinger->Deploy(this);
 			}
 		}
 	} else {

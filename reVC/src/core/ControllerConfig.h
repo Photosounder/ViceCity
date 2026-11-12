@@ -12,16 +12,7 @@
 
 #include "ControllerActions.h"
 
-enum e_ControllerActionType
-{
-	ACTIONTYPE_1RSTPERSON = 0,
-	ACTIONTYPE_3RDPERSON,
-	ACTIONTYPE_VEHICLE,
-	ACTIONTYPE_VEHICLE_3RDPERSON,
-	ACTIONTYPE_COMMON,
-	ACTIONTYPE_1RST3RDPERSON,
-	ACTIONTYPE_NONE,
-};
+#include "ControllerActionType.h"
 
 
 
@@ -98,12 +89,6 @@ public:
 
 
 
-	void DeleteMatchingCommonControls           (e_ControllerAction action, int32 key, eControllerType type);
-	void DeleteMatching3rdPersonControls        (e_ControllerAction action, int32 key, eControllerType type);
-	void DeleteMatching1rst3rdPersonControls    (e_ControllerAction action, int32 key, eControllerType type);
-	void DeleteMatchingVehicleControls          (e_ControllerAction action, int32 key, eControllerType type);
-	void DeleteMatchingVehicle_3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type);
-	void DeleteMatching1rstPersonControls       (e_ControllerAction action, int32 key, eControllerType type);
 	void DeleteMatchingActionInitiators         (e_ControllerAction action, int32 key, eControllerType type);
 
 #ifdef RADIO_SCROLL_TO_PREV_STATION

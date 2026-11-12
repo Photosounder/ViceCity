@@ -3,6 +3,7 @@
 #include "common.h"
 
 #include "ParticleObject.h"
+#include "DoubleList.h"
 #include "Timer.h"
 #include "General.h"
 #include "ParticleMgr.h"
@@ -1320,30 +1321,9 @@ CParticleObject::MoveToList(CParticleObject **from, CParticleObject **to, CParti
 	ASSERT( from != nil );
 	ASSERT( to   != nil );
 	ASSERT( obj  != nil );
-	
-	if ( obj->m_pPrev == nil )
-	{
-		*from = obj->m_pNext;
-		if ( *from )
-			(*from)->m_pPrev = nil;
-	}
-	else
-	{
-		if ( obj->m_pNext == nil )
-			obj->m_pPrev->m_pNext = nil;
-		else
-		{
-			obj->m_pNext->m_pPrev = obj->m_pPrev;
-			obj->m_pPrev->m_pNext = obj->m_pNext;
-		}
-	}
-	
-	obj->m_pNext = *to;
-	obj->m_pPrev = nil;
-	*to = obj;
 
-	if ( obj->m_pNext )
-		obj->m_pNext->m_pPrev = obj;
+	// Delegate to the C implementation
+	DList_MoveToList((void**)from, (void**)to, obj, offsetof(CParticleObject, m_pPrev), offsetof(CParticleObject, m_pNext));
 }
 
 //- rouz edit (ChatGPT)

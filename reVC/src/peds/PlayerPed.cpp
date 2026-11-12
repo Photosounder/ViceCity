@@ -8,6 +8,7 @@
 
 #include "RwHelper.h"
 #include "PlayerPed.h"
+#include "PlayerPedLogic.h"
 #include "Wanted.h"
 #include "Fire.h"
 #include "DMAudio.h"
@@ -223,17 +224,8 @@ CPlayerPed::ReactivatePlayerPed(int32 index)
 void
 CPlayerPed::UseSprintEnergy(void)
 {
-	if (m_fCurrentStamina > -150.0f && !CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint
-		&& !m_bAdrenalineActive) {
-		m_fCurrentStamina = m_fCurrentStamina - (*Timer_GetTimeStep());
-		m_fStaminaProgress = m_fStaminaProgress + (*Timer_GetTimeStep());
-	}
-
-	if (m_fStaminaProgress >= 500.0f) {
-		m_fStaminaProgress = 0;
-		if (m_fMaxStamina < 1000.0f)
-			m_fMaxStamina += 10.0f;
-	}
+	// Delegate to the C implementation
+	PlayerPedLogic_UseSprintEnergy(&m_fCurrentStamina, &m_fStaminaProgress, &m_fMaxStamina, CWorld::Players[CWorld::PlayerInFocus].m_bInfiniteSprint, m_bAdrenalineActive, (*Timer_GetTimeStep()));
 }
 
 void
@@ -699,10 +691,8 @@ CPlayerPed::DoesTargetHaveToBeBroken(CVector target, CWeapon *weaponUsed)
 {
 	CVector distVec = target - GetPosition();
 
-	if (distVec.Magnitude() > WeaponInfo_GetWeaponInfo(weaponUsed->m_eWeaponType)->m_fRange)
-		return true;
-
-	return false;
+	// Delegate to the C implementation
+	return PlayerPedLogic_DoesTargetHaveToBeBroken(distVec.Magnitude(), WeaponInfo_GetWeaponInfo(weaponUsed->m_eWeaponType)->m_fRange);
 }
 
 // Cancels landing anim while running & jumping? I think
@@ -1066,12 +1056,8 @@ CPlayerPed::EvaluateNeighbouringTarget(CEntity *candidate, CEntity **targetPtr, 
 				candidate->GetPosition().y - TheCamera.GetPosition().y);
 
 			angleBetweenUs = General_LimitAngle(angleBetweenUs - angleOffset);
-			float closeness;
-			if (lookToLeft) {
-				closeness = angleBetweenUs > 0.0f ? -Abs(angleBetweenUs) : -100000.0f;
-			} else {
-				closeness = angleBetweenUs > 0.0f ? -100000.0f : -Abs(angleBetweenUs);
-			}
+			// Score the candidate in C
+			float closeness = PlayerPedLogic_NeighbourCloseness(angleBetweenUs, lookToLeft);
 
 			if (closeness > *lastCloseness) {
 				*targetPtr = candidate;
@@ -1091,10 +1077,8 @@ CPlayerPed::EvaluateTarget(CEntity *candidate, CEntity **targetPtr, float *lastC
 			float angleBetweenUs = General_GetATanOfXY(distVec.x, distVec.y);
 			angleBetweenUs = General_LimitAngle(angleBetweenUs - angleOffset);
 
-			float closeness = -dist - 5.0f * Abs(angleBetweenUs);
-			if (priority) {
-				closeness += 30.0f;
-			}
+			// Score the candidate in C
+			float closeness = PlayerPedLogic_TargetCloseness(dist, angleBetweenUs, priority);
 
 			if (closeness > *lastCloseness) {
 				*targetPtr = candidate;
@@ -1463,13 +1447,8 @@ CPlayerPed::ProcessPlayerWeapon(CPad *padUsed)
 					// Anim. fix for shotgun, ak47 and m16 (we must finish rot. it quickly)
 					if (WeaponInfo_IsFlagSet(weaponInfo,WEAPONFLAG_CANAIM) && padUsed->WeaponJustDown()) {
 						m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-						float limitedRotDest = m_fRotationDest;
-
-						if (m_fRotationCur - PI > m_fRotationDest) {
-							limitedRotDest += 2 * PI;
-						} else if (PI + m_fRotationCur < m_fRotationDest) {
-							limitedRotDest -= 2 * PI;
-						}
+						// Delegate to the C implementation
+						float limitedRotDest = PedLogic_WrapDestRotation(m_fRotationDest, m_fRotationCur);
 
 						m_fRotationCur += (limitedRotDest - m_fRotationCur) / 2;
 					}

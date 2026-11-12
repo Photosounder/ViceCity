@@ -2,6 +2,7 @@
 #include "common.h"
 
 #include "CarAI.h"
+#include "CarAILogic.h"
 
 #include "Accident.h"
 #include "AutoPilot.h"
@@ -35,9 +36,8 @@ float CCarAI::FindSwitchDistanceFarNormalVehicle(CVehicle* pVehicle)
 
 float CCarAI::FindSwitchDistanceFar(CVehicle* pVehicle)
 {
-	if (pVehicle->bIsLawEnforcer)
-		return 50.0f;
-	return FindSwitchDistanceFarNormalVehicle(pVehicle);
+	// Delegate to the C implementation
+	return CarAI_FindSwitchDistanceFar(pVehicle->AutoPilot.m_nSwitchDistance, pVehicle->bIsLawEnforcer);
 }
 
 void CCarAI::BackToCruisingIfNoWantedLevel(CVehicle* pVehicle)
@@ -655,101 +655,33 @@ void CCarAI::TellCarToBlockOtherCar(CVehicle* pVehicle, CVehicle* pTarget)
 
 uint8 CCarAI::FindPoliceCarMissionForWantedLevel()
 {
-	switch (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted)){
-	case 0:
-	case 1: return MISSION_BLOCKPLAYER_FARAWAY;
-	case 2: return (General_GetRandomNumber() & 3) >= 3 ? MISSION_RAMPLAYER_FARAWAY : MISSION_BLOCKPLAYER_FARAWAY;
-	case 3: return (General_GetRandomNumber() & 3) >= 2 ? MISSION_RAMPLAYER_FARAWAY : MISSION_BLOCKPLAYER_FARAWAY;
-	case 4: 
-	case 5:
-	case 6: return (General_GetRandomNumber() & 3) >= 1 ? MISSION_RAMPLAYER_FARAWAY : MISSION_BLOCKPLAYER_FARAWAY;
-	default: return MISSION_BLOCKPLAYER_FARAWAY;
-	}
+	// Delegate to the C implementation
+	return CarAI_FindPoliceCarMissionForWantedLevel(Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted), General_GetRandomNumber);
 }
 
 uint8 CCarAI::FindPoliceBoatMissionForWantedLevel()
 {
-	switch (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted)) {
-	case 0:
-	case 1: return MISSION_BLOCKPLAYER_FARAWAY;
-	case 2:
-	case 3:
-	case 4:
-	case 5:
-	case 6: return MISSION_ATTACKPLAYER;
-	default: return MISSION_BLOCKPLAYER_FARAWAY;
-	}
+	// Delegate to the C implementation
+	return CarAI_FindPoliceBoatMissionForWantedLevel(Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted));
 }
 
 int32 CCarAI::FindPoliceCarSpeedForWantedLevel(CVehicle* pVehicle)
 {
-	switch (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted)) {
-	case 0: return General_GetRandomNumberInRangeInt(12, 16);
-	case 1: return 25;
-	case 2: return 34;
-	case 3: return GAME_SPEED_TO_CARAI_SPEED * pVehicle->pHandling->Transmission.fMaxVelocity * 0.9f;
-	case 4: return GAME_SPEED_TO_CARAI_SPEED * pVehicle->pHandling->Transmission.fMaxVelocity * 1.2f;
-	case 5: return GAME_SPEED_TO_CARAI_SPEED * pVehicle->pHandling->Transmission.fMaxVelocity * 1.25f;
-	case 6: return GAME_SPEED_TO_CARAI_SPEED * pVehicle->pHandling->Transmission.fMaxVelocity * 1.3f;
-	default: return 0;
-	}
+	// Delegate to the C implementation
+	return CarAI_FindPoliceCarSpeedForWantedLevel(Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted), pVehicle->pHandling->Transmission.fMaxVelocity, General_GetRandomNumberInRangeInt);
 }
 
 void CCarAI::MellowOutChaseSpeed(CVehicle* pVehicle)
 {
-	if (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted) == 1){
-		float distanceToPlayer = (pVehicle->GetPosition() - FindPlayerCoors()).Magnitude();
-		if (FindPlayerVehicle()){
-			if (distanceToPlayer < 10.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 15;
-			else if (distanceToPlayer < 20.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 22;
-			else
-				pVehicle->AutoPilot.m_nCruiseSpeed = 25;
-		}else{
-			if (distanceToPlayer < 20.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 5;
-			else if (distanceToPlayer < 40.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 13;
-			else
-				pVehicle->AutoPilot.m_nCruiseSpeed = 25;
-		}
-	}else if (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted) == 2){
-		float distanceToPlayer = (pVehicle->GetPosition() - FindPlayerCoors()).Magnitude();
-		if (FindPlayerVehicle()) {
-			if (distanceToPlayer < 10.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 27;
-			else if (distanceToPlayer < 20.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 30;
-			else
-				pVehicle->AutoPilot.m_nCruiseSpeed = 34;
-		}
-		else {
-			if (distanceToPlayer < 20.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 5;
-			else if (distanceToPlayer < 40.0f)
-				pVehicle->AutoPilot.m_nCruiseSpeed = 18;
-			else
-				pVehicle->AutoPilot.m_nCruiseSpeed = 34;
-		}
-	}
-	if (!FindPlayerVehicle() && FindPlayerPed()->GetMoveSpeed().Magnitude() < 0.07f) {
-		if ((FindPlayerCoors() - pVehicle->GetPosition()).Magnitude() < 30.0f)
-			pVehicle->AutoPilot.m_nCruiseSpeed = Min(10, pVehicle->AutoPilot.m_nCruiseSpeed);
-	}
+	// Delegate to the C implementation
+	pVehicle->AutoPilot.m_nCruiseSpeed = CarAI_MellowOutChaseSpeed(Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted), pVehicle->AutoPilot.m_nCruiseSpeed,
+		(pVehicle->GetPosition() - FindPlayerCoors()).Magnitude(), FindPlayerVehicle() != nil, FindPlayerPed()->GetMoveSpeed().Magnitude());
 }
 
 void CCarAI::MellowOutChaseSpeedBoat(CVehicle* pVehicle)
 {
-	switch (Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted)) {
-	case 0: pVehicle->AutoPilot.m_nCruiseSpeed = 8; break;
-	case 1: pVehicle->AutoPilot.m_nCruiseSpeed = 10; break;
-	case 2: pVehicle->AutoPilot.m_nCruiseSpeed = 15; break;
-	case 3: pVehicle->AutoPilot.m_nCruiseSpeed = 20; break;
-	case 4: pVehicle->AutoPilot.m_nCruiseSpeed = 25; break;
-	case 5: pVehicle->AutoPilot.m_nCruiseSpeed = 30; break;
-	case 6: pVehicle->AutoPilot.m_nCruiseSpeed = 40; break;
-	}
+	// Delegate to the C implementation
+	pVehicle->AutoPilot.m_nCruiseSpeed = CarAI_MellowOutChaseSpeedBoat(Wanted_GetWantedLevel(CWorld::Players[CWorld::PlayerInFocus].m_pPed->m_pWanted), pVehicle->AutoPilot.m_nCruiseSpeed);
 }
 
 void CCarAI::MakeWayForCarWithSiren(CVehicle *pVehicle)

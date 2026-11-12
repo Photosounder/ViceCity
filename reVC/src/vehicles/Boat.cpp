@@ -29,6 +29,7 @@
 #include "Pools.h"
 #include "Pad.h"
 #include "Boat.h"
+#include "BoatLogic.h"
 #include "AnimBlendAssociation.h"
 #include "RpAnimBlend.h"
 #include "Record.h"
@@ -1346,9 +1347,8 @@ CBoat::IsVertexAffectedByWake(CVector vecVertex, CBoat *pBoat)
 void
 CBoat::SetupModelNodes()
 {
-	int i;
-	for(i = 0; i < ARRAY_SIZE(m_aBoatNodes); i++)
-		m_aBoatNodes[i] = nil;
+	// Clear the node array in C before filling it
+	Boat_ClearNodes(this);
 	CClumpModelInfo::FillFrameArray(GetClump(), m_aBoatNodes);
 }
 
@@ -1418,50 +1418,15 @@ CBoat::FillBoatList()
 void
 CBoat::PruneWakeTrail(void)
 {
-	int i;
-
-	for(i = 0; i < ARRAY_SIZE(m_afWakePointLifeTime); i++){
-		if(m_afWakePointLifeTime[i] <= 0.0f)
-			break;
-		if(m_afWakePointLifeTime[i] <= (*Timer_GetTimeStep())){
-			m_afWakePointLifeTime[i] = 0.0f;
-			break;
-		}
-		m_afWakePointLifeTime[i] -= (*Timer_GetTimeStep());
-	}
-	m_nNumWakePoints = i;
+	// Delegate to the C implementation
+	Boat_PruneWakeTrail(this, *Timer_GetTimeStep());
 }
 
 void
 CBoat::AddWakePoint(CVector point)
 {
-	int i;
-	if(m_afWakePointLifeTime[0] > 0.0f){
-		if((CVector2D(GetPosition()) - m_avec2dWakePoints[0]).MagnitudeSqr() < SQR(2.0f)) {
-			if(GetStatus() == STATUS_PLAYER){
-				if(m_nNumWakePoints >= 31)
-					m_nNumWakePoints = 31;
-			}else if(VehicleCreatedBy == MISSION_VEHICLE){
-				if(m_nNumWakePoints >= 20)
-					m_nNumWakePoints = 20;
-			}else{
-				if(m_nNumWakePoints >= 15)
-					m_nNumWakePoints = 15;
-			}
-			for(i = m_nNumWakePoints; i != 0; i--){
-				m_avec2dWakePoints[i] = m_avec2dWakePoints[i-1];
-				m_afWakePointLifeTime[i] = m_afWakePointLifeTime[i-1];
-			}
-			m_avec2dWakePoints[0] = point;
-			m_afWakePointLifeTime[0] = 150.0f;
-			if(m_nNumWakePoints < ARRAY_SIZE(m_afWakePointLifeTime))
-				m_nNumWakePoints++;
-		}
-	}else{
-		m_avec2dWakePoints[0] = point;
-		m_afWakePointLifeTime[0] = 150.0f;
-		m_nNumWakePoints = 1;
-	}
+	// Delegate to the C implementation
+	Boat_AddWakePoint((CBoatStruct*)this, point.x, point.y);
 }
 
 void

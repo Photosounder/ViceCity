@@ -29,6 +29,8 @@
 #include "Script.h"
 #include "TimeStep.h"
 #include "Shadows.h"
+#include "ShadowMath.h"
+#include "DoubleList.h"
 #include "CutsceneObject.h"
 #include "CutsceneShadow.h"
 #include "Clock.h"
@@ -1613,30 +1615,11 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 	
 	CCollision::CalculateTrianglePlanes(pCol);
 
-	float fFrontRight    = DotProduct2D(CVector2D(fFrontX, fFrontY),     pEntity->GetRight());
-	float fFrontForward  = DotProduct2D(CVector2D(fFrontX, fFrontY),     pEntity->GetForward());
-	float fSideRight     = DotProduct2D(CVector2D(fSideX, fSideY),       pEntity->GetRight());
-	float fSideForward   = DotProduct2D(CVector2D(fSideX, fSideY),       pEntity->GetForward());
-	float fLengthRight   = DotProduct2D(*pPosn - pEntity->GetPosition(), pEntity->GetRight());
-	float fLengthForward = DotProduct2D(*pPosn - pEntity->GetPosition(), pEntity->GetForward());
-
-	Points[0].x = (fLengthRight   + fFrontRight  )  - fSideRight;
-	Points[0].y = (fLengthForward + fFrontForward)  - fSideForward;
-
-	Points[1].x = fSideRight      + (fLengthRight   + fFrontRight);
-	Points[1].y = fSideForward    + (fLengthForward + fFrontForward);
-                                  
-	Points[2].x = fSideRight      + (fLengthRight   - fFrontRight);
-	Points[2].y = fSideForward    + (fLengthForward - fFrontForward);
-
-	Points[3].x = (fLengthRight   - fFrontRight)    - fSideRight;
-	Points[3].y = (fLengthForward - fFrontForward)  - fSideForward;
-
-	float MinX = Min(Min(Points[0].x, Points[1].x), Min(Points[2].x, Points[3].x));
-	float MaxX = Max(Max(Points[0].x, Points[1].x), Max(Points[2].x, Points[3].x));
-
-	float MinY = Min(Min(Points[0].y, Points[1].y), Min(Points[2].y, Points[3].y));
-	float MaxY = Max(Max(Points[0].y, Points[1].y), Max(Points[2].y, Points[3].y));
+	// Delegate the shadow quad and its bounds to the C implementation
+	CVector posRelToEntity = *pPosn - pEntity->GetPosition();
+	float MinX, MaxX, MinY, MaxY;
+	ShadowMath_ProjectQuad(fFrontX, fFrontY, fSideX, fSideY, pEntity->GetRight().x, pEntity->GetRight().y, pEntity->GetForward().x, pEntity->GetForward().y,
+		posRelToEntity.x, posRelToEntity.y, (VectorMath3*)Points, &MinX, &MaxX, &MinY, &MaxY);
 
 	float MaxZ = pPosn->z - pEntity->GetPosition().z;
 	float MinZ = MaxZ - fZDistance;
@@ -1670,390 +1653,22 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 				&& (PointA.z > MinZ || PointB.z > MinZ || PointC.z > MinZ) )
 
 			{
-				List[0].x = Points[0].x;
-				List[0].y = Points[0].y;
+				// Delegate the clipping of the shadow quad to the triangle to the C implementation
+				int32 numVerts3 = ShadowMath_ClipQuadToTriangle((VectorMath3*)List, (VectorMath3*)Texture, (const VectorMath3*)Points,
+					*(VectorMath3*)&PointA, *(VectorMath3*)&PointB, *(VectorMath3*)&PointC);
 
-				List[1].x = Points[1].x;
-				List[1].y = Points[1].y;
-
-				List[2].x = Points[2].x;
-				List[2].y = Points[2].y;
-
-				List[3].x = Points[3].x;
-				List[3].y = Points[3].y;
-
-				Texture[0].x = 0.0f;
-				Texture[0].y = 0.0f;
-
-				Texture[1].x = 1.0f;
-				Texture[1].y = 0.0f;
-
-				Texture[2].x = 1.0f;
-				Texture[2].y = 1.0f;
-
-				Texture[3].x = 0.0f;
-				Texture[3].y = 1.0f;
-
-
-				CVector2D start;
-				CVector2D dist;
-
-				int32 numVerts1 = 0;
-				int16 vertType1 = 0;
-				{						
-					for ( int32 j = 0; j < 4; j++ )
-					{
-						start = PointA;
-						dist  = PointB - PointA;
-						
-						int32 in = j;
-						
-						float cp = CrossProduct2D(CVector2D(List[in]) - start, dist);
-
-						if ( cp > 0.0f )
-						{
-							switch ( vertType1 )
-							{
-								case 0:
-								{
-									int32 out = numVerts1++ + 10;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-
-									break;
-								}
-
-								case 1:
-								{
-									int32 out = numVerts1++ + 10;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-
-									break;
-								}
-
-								case 2:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out1 = numVerts1++ + 10;
-									int32 out2 = numVerts1++ + 10;
-
-									Texture[out1].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out1].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out1].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out1].y    = Compl*List[in-1].y    + Scale*List[in].y;
-
-									Texture[out2].x = Texture[in].x;
-									Texture[out2].y = Texture[in].y;
-									List[out2].x    = List[in].x;
-									List[out2].y    = List[in].y;
-
-									break;
-								}
-							}
-
-							vertType1 = 1;
-						}
-						else
-						{
-							switch ( vertType1 )
-							{
-								case 1:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out = numVerts1++ + 10;
-
-									Texture[out].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out].y    = Compl*List[in-1].y    + Scale*List[in].y;
-									
-									break;
-								}
-							}
-
-							vertType1 = 2;
-						}
-					}
-
-					float cp1 = CrossProduct2D(CVector2D(List[0]) - start, dist);
-					if ( cp1 > 0.0f && vertType1 == 2 || cp1 <= 0.0f && vertType1 == 1 )
-					{
-						float cp2 = CrossProduct2D(CVector2D(List[3]) - start, dist);
-
-						float Scale = Abs(cp2) / (Abs(cp2) + Abs(cp1));
-						float Compl = 1.0f - Scale;
-
-						int32 out = numVerts1++ + 10;
-
-						Texture[out].x = Compl*Texture[3].x + Scale*Texture[0].x;
-						Texture[out].y = Compl*Texture[3].y + Scale*Texture[0].y;
-						List[out].x    = Compl*List[3].x    + Scale*List[0].x;
-						List[out].y    = Compl*List[3].y    + Scale*List[0].y;
-					}
-				}
-
-				int32 numVerts2 = 0;
-				int16 vertType2 = 0;
-				{						
-					for ( int32 j = 0; j < numVerts1; j++ )
-					{
-						start = PointB;
-						dist  = PointC - PointB;
-					
-						int32 in = j + 10;
-						float cp = CrossProduct2D(CVector2D(List[in]) - start, dist);
-
-						if ( cp > 0.0f )
-						{
-							switch ( vertType2 )
-							{
-								case 0:
-								{
-									int32 out = numVerts2++;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-									
-									break;
-								}
-
-								case 1:
-								{
-									int32 out = numVerts2++;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-									
-									break;
-								}
-
-								case 2:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out1 = numVerts2++;
-									int32 out2 = numVerts2++;
-
-									Texture[out1].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out1].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out1].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out1].y    = Compl*List[in-1].y    + Scale*List[in].y;
-
-									Texture[out2].x = Texture[in].x;
-									Texture[out2].y = Texture[in].y;
-									List[out2].x    = List[in].x;
-									List[out2].y    = List[in].y;
-									
-									break;
-								}
-							}
-
-							vertType2 = 1;
-						}
-						else
-						{
-							switch ( vertType2 )
-							{
-								case 1:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out = numVerts2++;
-
-									Texture[out].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out].y    = Compl*List[in-1].y    + Scale*List[in].y;
-									
-									break;
-								}
-							}
-
-							vertType2 = 2;
-						}
-					}
-
-					float cp1 = CrossProduct2D(CVector2D(List[10]) - start, dist);
-					if ( cp1 > 0.0f && vertType2 == 2 || cp1 <= 0.0f && vertType2 == 1 )
-					{
-						int32 in = numVerts1 + 10;
-
-						float cp2 = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-						float Scale = Abs(cp2) / (Abs(cp2) + Abs(cp1));
-						float Compl = 1.0f - Scale;
-
-						int32 out = numVerts2++;
-
-						Texture[out].x = Compl*Texture[in-1].x + Scale*Texture[10].x;
-						Texture[out].y = Compl*Texture[in-1].y + Scale*Texture[10].y;
-						List[out].x    = Compl*List[in-1].x    + Scale*List[10].x;
-						List[out].y    = Compl*List[in-1].y    + Scale*List[10].y;
-					}
-				}
-
-				int32 numVerts3 = 0;
-				int16 vertType3 = 0;
-				{					
-					for ( int32 j = 0; j < numVerts2; j++ )
-					{
-						start = PointC;
-						dist  = PointA - PointC;
-					
-						int32 in = j;
-						float cp = CrossProduct2D(CVector2D(List[in]) - start, dist);
-
-						if ( cp > 0.0f )
-						{
-							switch ( vertType3 )
-							{
-								case 0:
-								{
-									int32 out = numVerts3++ + 10;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-									
-									break;
-								}
-
-								case 1:
-								{
-									int32 out = numVerts3++ + 10;
-
-									Texture[out].x = Texture[in].x;
-									Texture[out].y = Texture[in].y;
-									List[out].x    = List[in].x;
-									List[out].y    = List[in].y;
-									
-									break;
-								}
-
-								case 2:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out1 = numVerts3++ + 10;
-									int32 out2 = numVerts3++ + 10;
-
-									Texture[out1].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out1].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out1].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out1].y    = Compl*List[in-1].y    + Scale*List[in].y;
-
-									Texture[out2].x = Texture[in].x;
-									Texture[out2].y = Texture[in].y;
-									List[out2].x    = List[in].x;
-									List[out2].y    = List[in].y;
-									
-									break;
-								}
-							}
-
-							vertType3 = 1;
-						}
-						else
-						{
-							switch ( vertType3 )
-							{
-								case 1:
-								{
-									float prevcp = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-									float Scale = Abs(prevcp) / (Abs(prevcp) + Abs(cp));
-									float Compl = 1.0f - Scale;
-
-									int32 out = numVerts3++ + 10;
-
-									Texture[out].x = Compl*Texture[in-1].x + Scale*Texture[in].x;
-									Texture[out].y = Compl*Texture[in-1].y + Scale*Texture[in].y;
-									List[out].x    = Compl*List[in-1].x    + Scale*List[in].x;
-									List[out].y    = Compl*List[in-1].y    + Scale*List[in].y;
-									
-									break;
-								}
-							}
-
-							vertType3 = 2;
-						}
-					}
-
-					float cp1 = CrossProduct2D(CVector2D(List[0]) - start, dist);
-					if ( cp1 > 0.0f && vertType3 == 2 || cp1 <= 0.0f && vertType3 == 1 )
-					{
-						int32 in = numVerts2;
-
-						float cp2 = CrossProduct2D(CVector2D(List[in-1]) - start, dist);
-
-						float Scale = Abs(cp2) / (Abs(cp2) + Abs(cp1));
-						float Compl = 1.0f - Scale;
-
-						int32 out = numVerts3++ + 10;
-
-						Texture[out].x = Compl*Texture[in-1].x + Scale*Texture[0].x;
-						Texture[out].y = Compl*Texture[in-1].y + Scale*Texture[0].y;
-						List[out].x    = Compl*List[in-1].x    + Scale*List[0].x;
-						List[out].y    = Compl*List[in-1].y    + Scale*List[0].y;
-					}
-				}
-					
 				if ( numVerts3 >= 3 )
 				{
 					CVector norm;
 
 					ColTrianglePlane_GetNormal(&pColTriPlanes[i],&norm.x,&norm.y,&norm.z);
 
-					float dot = DotProduct(norm, PointA);
+					// Delegate the placement of the polygon on the triangle plane and in the world to the C implementation
+					CVector entityPos = pEntity->GetPosition();
+					ShadowMath_ClippedToWorld((VectorMath3*)List, numVerts3, *(VectorMath3*)&norm, *(VectorMath3*)&PointA, pEntity->GetForward().x, pEntity->GetForward().y,
+						pEntity->GetRight().x, pEntity->GetRight().y, *(VectorMath3*)&pEntity->GetPosition());
 
-					for ( int32 j = 0; j < numVerts3; j++ )
-					{
-						int32 idx = j + 10;
 
-						List[idx].z = -(DotProduct2D(norm, List[idx]) - dot) / norm.z;
-					}
-
-					for ( int32 j = 0; j < numVerts3; j++ )
-					{
-						int32 idx = j + 10;
-
-						CVector p = List[idx];
-						
-						List[idx].x = p.y * pEntity->GetForward().x + p.x * pEntity->GetRight().x + pEntity->GetPosition().x;
-						List[idx].y = p.y * pEntity->GetForward().y + p.x * pEntity->GetRight().y + pEntity->GetPosition().y;
-						List[idx].z = p.z + pEntity->GetPosition().z;
-					}
-
-					
 					if ( ppPolyBunch != nil )
 					{
 						if ( pEmptyBunchList != nil )
@@ -2420,19 +2035,8 @@ CShadows::UpdatePermanentShadows(void)
 void
 CStaticShadow::Free(void)
 {
-	if ( m_pPolyBunch != nil )
-	{
-		CPolyBunch *pFree = CShadows::pEmptyBunchList;
-		CShadows::pEmptyBunchList = m_pPolyBunch;
-
-		CPolyBunch *pUsed = m_pPolyBunch;
-		while (pUsed->m_pNext != nil)
-			pUsed = pUsed->m_pNext;
-
-			pUsed->m_pNext = pFree;
-	}
-
-	m_pPolyBunch = nil;
+	// Give the polygon bunches back to the empty list in C
+	SList_MoveChainToFront((void**)&m_pPolyBunch, (void**)&CShadows::pEmptyBunchList, offsetof(CPolyBunch, m_pNext));
 
 	m_nId = 0;
 }
@@ -2450,30 +2054,8 @@ CShadows::CalcPedShadowValues(CVector vecLightDir,
 	ASSERT(pfDisplacementX != nil);
 	ASSERT(pfDisplacementY != nil);
 
-	*pfFrontX = -vecLightDir.x;
-	*pfFrontY = -vecLightDir.y;
-
-	float fDist = Sqrt(*pfFrontY * *pfFrontY + *pfFrontX * *pfFrontX);
-	float fMult = (fDist + 1.0f) / fDist;
-
-	*pfFrontX *= fMult;
-	*pfFrontY *= fMult;
-
-	*pfSideX = -vecLightDir.y / fDist;
-	*pfSideY =  vecLightDir.x / fDist;
-
-	*pfDisplacementX = -vecLightDir.x;
-	*pfDisplacementY = -vecLightDir.y;
-
-	*pfFrontX /= 2;
-	*pfFrontY /= 2;
-
-	*pfSideX /= 2;
-	*pfSideY /= 2;
-
-	*pfDisplacementX /= 2;
-	*pfDisplacementY /= 2;
-	
+	// Delegate to the C implementation
+	ShadowMath_CalcPedShadowValues(vecLightDir.x, vecLightDir.y, pfFrontX, pfFrontY, pfSideX, pfSideY, pfDisplacementX, pfDisplacementY);
 }
 
 

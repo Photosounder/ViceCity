@@ -1,0 +1,14 @@
+//+ rouz edit (Claude)
+#pragma once
+
+enum e_ControllerActionType
+{
+	ACTIONTYPE_1RSTPERSON = 0,
+	ACTIONTYPE_3RDPERSON,
+	ACTIONTYPE_VEHICLE,
+	ACTIONTYPE_VEHICLE_3RDPERSON,
+	ACTIONTYPE_COMMON,
+	ACTIONTYPE_1RST3RDPERSON,
+	ACTIONTYPE_NONE,
+};
+//- rouz edit (Claude)

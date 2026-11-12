@@ -4,66 +4,15 @@
 #include "Lists.h"
 #include "Timer.h"
 #include "Entity.h"
-
-enum {
-	PHYSICAL_MAX_COLLISIONRECORDS = 6
-};
+#include "PhysicalData.h"
 
 #define GRAVITY (0.008f)
 
 class CTreadable;
 
-class CPhysical : public CEntity
+class CPhysical : public CEntity, public CPhysicalData
 {
 public:
-	int32 m_audioEntityId;
-	float m_phys_unused1;
-	uint32 m_nLastTimeCollided;
-	CVector m_vecMoveSpeed;		// velocity
-	CVector m_vecTurnSpeed;		// angular velocity
-	CVector m_vecMoveFriction;
-	CVector m_vecTurnFriction;
-	CVector m_vecMoveSpeedAvg;
-	CVector m_vecTurnSpeedAvg;
-	float m_fMass;
-	float m_fTurnMass;	// moment of inertia
-	float m_fForceMultiplier;
-	float m_fAirResistance;
-	float m_fElasticity;
-	float m_fBuoyancy;
-	CVector m_vecCentreOfMass;
-	CEntryInfoList m_entryInfoList;
-	CPtrNode *m_movingListNode;
-
-	int8 m_phys_unused2;
-	uint8 m_nStaticFrames;
-	uint8 m_nCollisionRecords;
-	CEntity *m_aCollisionRecords[PHYSICAL_MAX_COLLISIONRECORDS];
-
-	float m_fDistanceTravelled;
-
-	// damaged piece
-	float m_fDamageImpulse;
-	CEntity *m_pDamageEntity;
-	CVector m_vecDamageNormal;
-	int16 m_nDamagePieceType;
-
-	uint8 bIsHeavy : 1;
-	uint8 bAffectedByGravity : 1;
-	uint8 bInfiniteMass : 1;
-	uint8 m_phy_flagA08 : 1;
-	uint8 bIsInWater : 1;
-	uint8 m_phy_flagA20 : 1; // unused
-	uint8 bHitByTrain : 1;
-	uint8 bSkipLineCol : 1;
-
-	uint8 bIsFrozen : 1;
-	uint8 bDontLoadCollision : 1;
-	uint8 m_bIsVehicleBeingShifted : 1;	// wrong name - also used on but never set for peds
-	uint8 bJustCheckCollision : 1;	// just see if there is a collision
-
-	uint8 m_nSurfaceTouched;
-	int8 m_nZoneLevel;
 
 	CPhysical(void);
 	~CPhysical(void);

@@ -23,6 +23,9 @@
 #include "Bike.h"
 #include "Pickups.h"
 #include "Physical.h"
+#include "PhysicalRecords.h"
+#include "PhysicalForces.h"
+#include "PhysicalSectors.h"
 
 #ifdef WALLCLIMB_CHEAT
 bool gGravityCheat;
@@ -99,194 +102,65 @@ CPhysical::~CPhysical(void)
 void
 CPhysical::Add(void)
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
-	CPtrList *list;
-
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
-	assert(xstart >= 0);
-	assert(xend < NUMSECTORS_X);
-	assert(ystart >= 0);
-	assert(yend < NUMSECTORS_Y);
-
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
-			if(x == xmid && y == ymid) switch(m_type){
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS];
-				break;
-			default:
-				assert(0);
-			}else switch(m_type){
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
-				break;
-			default:
-				assert(0);
-			}
-			CPtrNode *node = PtrList_InsertItem(list, this);
-			assert(node);
-			EntryInfoList_InsertItem(&m_entryInfoList, list, node, s);
-		}
+	// Delegate to the C implementation
+	Physical_Add((CPhysicalStruct*)this, CWorld::GetSector(0, 0));
 }
 
 void
 CPhysical::Remove(void)
 {
-	CEntryInfoNode *node, *next;
-	for(node = m_entryInfoList.first; node; node = next){
-		next = node->next;
-		PtrList_DeleteNode(node->list, node->listnode);
-		EntryInfoList_DeleteNode(&m_entryInfoList, node);
-	}
+	// Delegate to the C implementation
+	Physical_Remove((CPhysicalStruct*)this);
 }
 
 void
 CPhysical::RemoveAndAdd(void)
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
-	CPtrList *list;
-
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
-	assert(xstart >= 0);
-	assert(xend < NUMSECTORS_X);
-	assert(ystart >= 0);
-	assert(yend < NUMSECTORS_Y);
-
-	// we'll try to recycle nodes from here
-	CEntryInfoNode *next = m_entryInfoList.first;
-
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
-			if(x == xmid && y == ymid) switch(m_type){
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS];
-				break;
-			}else switch(m_type){
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
-				break;
-			}
-			if(next){
-				// If we still have old nodes, use them
-				PtrList_RemoveNode(next->list, next->listnode);
-				PtrList_InsertNode(list, next->listnode);
-				next->list = list;
-				next->sector = s;
-				next = next->next;
-			}else{
-				CPtrNode *node = PtrList_InsertItem(list, this);
-				EntryInfoList_InsertItem(&m_entryInfoList, list, node, s);
-			}
-		}
-
-	// Remove old nodes we no longer need
-	CEntryInfoNode *node;
-	for(node = next; node; node = next){
-		next = node->next;
-		PtrList_DeleteNode(node->list, node->listnode);
-		EntryInfoList_DeleteNode(&m_entryInfoList, node);
-	}
+	// Delegate to the C implementation
+	Physical_RemoveAndAdd((CPhysicalStruct*)this, CWorld::GetSector(0, 0));
 }
 
 CRect
 CPhysical::GetBoundRect(void)
 {
-	CVector center;
-	float radius;
-	center = GetBoundCentre();
-	radius = GetBoundRadius();
-	return Rect_Make(center.x-radius, center.y-radius, center.x+radius, center.y+radius);
+	// Delegate to the C implementation
+	return Physical_GetBoundRect(this, this);
 }
 
 void
 CPhysical::AddToMovingList(void)
 {
-	if (!bIsStaticWaitingForCollision)
-		m_movingListNode = PtrList_InsertItem(&CWorld::GetMovingEntityList(), this);
+	// Delegate to the C implementation
+	Physical_AddToMovingList((CPhysicalStruct*)this, &CWorld::GetMovingEntityList());
 }
 
 void
 CPhysical::RemoveFromMovingList(void)
 {
-	if(m_movingListNode){
-		PtrList_DeleteNode(&CWorld::GetMovingEntityList(), m_movingListNode);
-		m_movingListNode = nil;
-	}
+	// Delegate to the C implementation
+	Physical_RemoveFromMovingList((CPhysicalStruct*)this, &CWorld::GetMovingEntityList());
 }
 
 void
 CPhysical::SetDamagedPieceRecord(uint16 piece, float impulse, CEntity *entity, CVector dir)
 {
-	m_nDamagePieceType = piece;
-	m_fDamageImpulse = impulse;
-	m_pDamageEntity = entity;
+	// Delegate the record to the C implementation then register the reference
+	Physical_SetDamagedPieceRecord(this, piece, impulse, entity, dir.x, dir.y, dir.z);
 	entity->RegisterReference(&m_pDamageEntity);
-	m_vecDamageNormal = dir;
 }
 
 void
 CPhysical::AddCollisionRecord(CEntity *ent)
 {
 	AddCollisionRecord_Treadable(ent);
-	this->bHasCollided = true;
-	ent->bHasCollided = true;
-	this->m_nLastTimeCollided = (*Timer_GetTimeInMilliseconds());
 	if(IsVehicle() && ent->IsVehicle()){
 		if(((CVehicle*)this)->m_nAlarmState == -1)
 			((CVehicle*)this)->m_nAlarmState = 15000;
 		if(((CVehicle*)ent)->m_nAlarmState == -1)
 			((CVehicle*)ent)->m_nAlarmState = 15000;
 	}
-	if(bUseCollisionRecords){
-		int i;
-		for(i = 0; i < m_nCollisionRecords; i++)
-			if(m_aCollisionRecords[i] == ent)
-				return;
-		if(m_nCollisionRecords < PHYSICAL_MAX_COLLISIONRECORDS)
-			m_aCollisionRecords[m_nCollisionRecords++] = ent;
-	}
+	// Delegate flags, time stamp and record keeping to the C implementation
+	Physical_AddCollisionRecord(this, this, ent, ent, (*Timer_GetTimeInMilliseconds()));
 }
 
 void
@@ -299,27 +173,15 @@ CPhysical::AddCollisionRecord_Treadable(CEntity *ent)
 bool
 CPhysical::GetHasCollidedWith(CEntity *ent)
 {
-	int i;
-	if(bUseCollisionRecords)
-		for(i = 0; i < m_nCollisionRecords; i++)
-			if(m_aCollisionRecords[i] == ent)
-				return true;
-	return false;
+	// Delegate to the C implementation
+	return Physical_GetHasCollidedWith(this, this, ent);
 }
 
 void
 CPhysical::RemoveRefsToEntity(CEntity *ent)
 {
-	int i = 0, j;
-
-	while (i < m_nCollisionRecords){
-		if(m_aCollisionRecords[i] == ent){
-			for(j = i; j < m_nCollisionRecords-1; j++)
-				m_aCollisionRecords[j] = m_aCollisionRecords[j+1];
-			m_nCollisionRecords--;
-		} else
-			i++;
-	}
+	// Delegate to the C implementation
+	Physical_RemoveRefsToEntity(this, ent);
 }
 
 void
@@ -394,45 +256,10 @@ CPhysical::ProcessEntityCollision(CEntity *ent, CColPoint *colpoints)
 void
 CPhysical::ProcessControl(void)
 {
-	// rouz edit, no idea why bIsInWater was disabled for vehicles
-	//if(!IsPed())
-	//	bIsInWater = false;
-	bHasContacted = false;
-	bIsInSafePosition = false;
-	bWasPostponed = false;
-	bHasHitWall = false;
-
-	if(GetStatus() == STATUS_SIMPLE)
+	// rouz edit, bIsInWater used to be cleared here for non-peds and no idea why it was disabled for vehicles
+	// The first half is handled by the C implementation
+	if(!Physical_ProcessControlStart((CPhysicalStruct*)this, (*Timer_GetTimeStep())))
 		return;
-
-	m_nCollisionRecords = 0;
-	bHasCollided = false;
-	m_nDamagePieceType = 0;
-	m_fDamageImpulse = 0.0f;
-	m_pDamageEntity = nil;
-
-	if(!bIsStuck){
-		if(IsObject() ||
-		   IsPed() && !bPedPhysics){
-			m_vecMoveSpeedAvg = (m_vecMoveSpeedAvg + m_vecMoveSpeed)/2.0f;
-			m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
-			float step = (*Timer_GetTimeStep()) * 0.003f;
-			if(m_vecMoveSpeedAvg.MagnitudeSqr() < step*step &&
-			   m_vecTurnSpeedAvg.MagnitudeSqr() < step*step){
-				m_nStaticFrames++;
-				if(m_nStaticFrames > 10){
-					m_nStaticFrames = 10;
-					SetIsStatic(true);
-					m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-					m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
-					m_vecMoveFriction = m_vecMoveSpeed;
-					m_vecTurnFriction = m_vecTurnSpeed;
-					return;
-				}
-			}else 
-				m_nStaticFrames = 0;
-		}
-	}
 	ApplyGravity();
 	ApplyFriction();
 	ApplyAirResistance();
@@ -456,89 +283,71 @@ CPhysical::ProcessControl(void)
 CVector
 CPhysical::GetSpeed(const CVector &r)
 {
-	return m_vecMoveSpeed + m_vecMoveFriction + CrossProduct(m_vecTurnFriction + m_vecTurnSpeed, r);
+	// Delegate to the C implementation
+	VectorMath3 v = {r.x, r.y, r.z};
+	v = Physical_GetSpeed(this, v);
+	return CVector(v.x, v.y, v.z);
 }
 
 void
 CPhysical::ApplyMoveSpeed(void)
 {
-	if(bIsFrozen)
-		m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
-	else
-		GetMatrix().Translate(m_vecMoveSpeed * (*Timer_GetTimeStep()));
+	// Delegate to the C implementation
+	Physical_ApplyMoveSpeed(this, this, (*Timer_GetTimeStep()));
 }
 
 void
 CPhysical::ApplyTurnSpeed(void)
 {
-	if(bIsFrozen){
-		m_vecTurnSpeed = CVector(0.0f, 0.0f, 0.0f);
-	}else{
-		// Move the coordinate axes by their speed
-		// Note that this denormalizes the matrix
-		CVector turnvec = m_vecTurnSpeed*(*Timer_GetTimeStep());
-		GetRight() += CrossProduct(turnvec, GetRight());
-		GetForward() += CrossProduct(turnvec, GetForward());
-		GetUp() += CrossProduct(turnvec, GetUp());
-	}
+	// Delegate to the C implementation
+	Physical_ApplyTurnSpeed(this, this, (*Timer_GetTimeStep()));
 }
 
 void
 CPhysical::ApplyMoveForce(float jx, float jy, float jz)
 {
-	m_vecMoveSpeed += CVector(jx, jy, jz)*(1.0f/m_fMass);
+	// Delegate to the C implementation
+	Physical_ApplyMoveForce(this, jx, jy, jz);
 }
 
 void
 CPhysical::ApplyTurnForce(float jx, float jy, float jz, float px, float py, float pz)
 {
-	CVector com = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
-	CVector turnimpulse = CrossProduct(CVector(px, py, pz)-com, CVector(jx, jy, jz));
-	m_vecTurnSpeed += turnimpulse*(1.0f/m_fTurnMass);
+	// Delegate to the C implementation
+	Physical_ApplyTurnForce(this, this, jx, jy, jz, px, py, pz);
 }
 
 void
 CPhysical::ApplyFrictionMoveForce(float jx, float jy, float jz)
 {
-	m_vecMoveFriction += CVector(jx, jy, jz)*(1.0f/m_fMass);
+	// Delegate to the C implementation
+	Physical_ApplyFrictionMoveForce(this, jx, jy, jz);
 }
 
 void
 CPhysical::ApplyFrictionTurnForce(float jx, float jy, float jz, float px, float py, float pz)
 {
-	CVector com = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
-	CVector turnimpulse = CrossProduct(CVector(px, py, pz)-com, CVector(jx, jy, jz));
-	m_vecTurnFriction += turnimpulse*(1.0f/m_fTurnMass);
+	// Delegate to the C implementation
+	Physical_ApplyFrictionTurnForce(this, this, jx, jy, jz, px, py, pz);
 }
 
 bool
 CPhysical::ApplySpringCollision(float springConst, CVector &springDir, CVector &point, float springRatio, float bias)
 {
-	float compression = 1.0f - springRatio;
-	if(compression > 0.0f){
-		float step = Min((*Timer_GetTimeStep()), 3.0f);
-		float impulse = -GRAVITY*m_fMass*step * springConst * compression * bias*2.0f;
-		ApplyMoveForce(springDir*impulse);
-		ApplyTurnForce(springDir*impulse, point);
-	}
+	// Delegate to the C implementation
+	VectorMath3 dir = {springDir.x, springDir.y, springDir.z};
+	VectorMath3 p = {point.x, point.y, point.z};
+	Physical_ApplySpringCollision(this, this, (*Timer_GetTimeStep()), springConst, dir, p, springRatio, bias);
 	return true;
 }
 
 bool
 CPhysical::ApplySpringCollisionAlt(float springConst, CVector &springDir, CVector &point, float springRatio, float bias, CColPoint &contact)
 {
-    // Update the actual contact normal before either force application
-	float compression = 1.0f - springRatio;
-	if(compression > 0.0f){
-		if(DotProduct(springDir, CollisionVector_ToNative(contact.normal)) > 0.0f)
-			ColPoint_ReverseNormal(&contact);
-		float step = Min((*Timer_GetTimeStep()), 3.0f);
-		float impulse = GRAVITY*m_fMass*step * springConst * compression * bias*2.0f;
-		if(bIsHeavy)
-			impulse *= 0.75f;
-		ApplyMoveForce(CollisionVector_ToNative(contact.normal)*impulse);
-		ApplyTurnForce(CollisionVector_ToNative(contact.normal)*impulse, point);
-	}
+	// Delegate to the C implementation
+	VectorMath3 dir = {springDir.x, springDir.y, springDir.z};
+	VectorMath3 pt = {point.x, point.y, point.z};
+	Physical_ApplySpringCollisionAlt(this, this, (*Timer_GetTimeStep()), springConst, dir, pt, springRatio, bias, &contact);
 	return true;
 }
 
@@ -546,26 +355,11 @@ CPhysical::ApplySpringCollisionAlt(float springConst, CVector &springDir, CVecto
 bool
 CPhysical::ApplySpringDampening(float damping, CVector &springDir, CVector &point, CVector &speed)
 {
-	float speedA = DotProduct(speed, springDir);
-	float speedB = DotProduct(GetSpeed(point), springDir);
-#ifdef FIX_BUGS
-	if (speedB == 0.0f)
-		return true;
-#endif
-	float step = Min((*Timer_GetTimeStep()), 3.0f);
-	float impulse = -damping * (speedA + speedB)/2.0f * m_fMass * step * 0.53f;
-	if(bIsHeavy)
-		impulse *= 2.0f;
-
-	// what is this?
-	float a = m_fTurnMass / ((point.MagnitudeSqr() + 1.0f) * 2.0f * m_fMass);
-	a = Min(a, 1.0f);
-	float b = Abs(impulse / (speedB * m_fMass));
-	if(a < b)
-		impulse *= a/b;
-
-	ApplyMoveForce(springDir*impulse);
-	ApplyTurnForce(springDir*impulse, point);
+	// Delegate to the C implementation
+	VectorMath3 dir = {springDir.x, springDir.y, springDir.z};
+	VectorMath3 p = {point.x, point.y, point.z};
+	VectorMath3 sp = {speed.x, speed.y, speed.z};
+	Physical_ApplySpringDampening(this, this, (*Timer_GetTimeStep()), damping, dir, p, sp);
 	return true;
 }
 
@@ -605,10 +399,8 @@ CPhysical::ApplyGravity(void)
 void
 CPhysical::ApplyFriction(void)
 {
-	m_vecMoveSpeed += m_vecMoveFriction;
-	m_vecTurnSpeed += m_vecTurnFriction;
-	m_vecMoveFriction = CVector(0.0f, 0.0f, 0.0f);
-	m_vecTurnFriction = CVector(0.0f, 0.0f, 0.0f);
+	// Delegate to the C implementation
+	Physical_ApplyFriction(this);
 }
 
 void
@@ -619,17 +411,8 @@ CPhysical::ApplyAirResistance(void)
 	if (rouz.flight && (p == FindPlayerVehicle() || p == rouz.rc_veh))
 		return;
 
-	if(m_fAirResistance > 0.1f){
-		float f = Pow(m_fAirResistance, (*Timer_GetTimeStep()));
-		m_vecMoveSpeed *= f;
-		m_vecTurnSpeed *= f;
-	}else if(GetStatus() != STATUS_GHOST){ 
-		float f = Pow(1.0f/Abs(1.0f + m_fAirResistance*0.5f*m_vecMoveSpeed.MagnitudeSqr()), (*Timer_GetTimeStep()));
-		m_vecMoveSpeed *= f;
-		//rouz edit, this fixes spin decay depending on FPS
-		//m_vecTurnSpeed *= 0.99f;
-		m_vecTurnSpeed *= Pow(0.99f, (*Timer_GetTimeStep()));
-	}
+	// Delegate to the C implementation
+	Physical_ApplyAirResistance(this, (*Timer_GetTimeStep()), GetStatus() == STATUS_GHOST);
 }
 
 static bool

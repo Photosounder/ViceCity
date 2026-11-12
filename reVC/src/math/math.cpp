@@ -3,6 +3,7 @@
 #include "common.h"
 
 #include "VuVector.h"
+#include "VectorMath.h"
 #include "ColLine_native.h"
 #include "ColSphere_native.h"
 
@@ -25,7 +26,8 @@ void TransformPoint(CVuVector &out, const CMatrix &mat, const CVuVector &in)
 		sqc2    vf06,0x0(%0)\n\
 		": : "r" (&out) , "r" (&mat) ,"r" (&in): "memory");
 #else
-	out = mat * in;
+	// Delegate to the C implementation
+	VectorMath_TransformPoints(&out.x, 1, mat.f, &in, sizeof(in));
 #endif
 }
 
@@ -49,7 +51,8 @@ void TransformPoint(CVuVector &out, const CMatrix &mat, const RwV3d &in)
 		sqc2    vf06,0x0(%0)\n\
 		": : "r" (&out) , "r" (&mat) ,"r" (&in): "memory");
 #else
-	out = mat * in;
+	// Delegate to the C implementation
+	VectorMath_TransformPoints(&out.x, 1, mat.f, &in, sizeof(in));
 #endif
 }
 
@@ -83,11 +86,8 @@ void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const RwV3d *in,
 		bnez	%1,1b\n\
 		": : "r" (out) , "r" (n), "r" (&mat), "r" (in), "r" (stride): "memory");
 #else
-	while(n--){
-		*out = mat * *in;
-		in = (RwV3d*)((uint8*)in + stride);
-		out++;
-	}
+	// Delegate to the C implementation
+	VectorMath_TransformPoints(&out->x, n, mat.f, in, stride);
 #endif
 }
 
@@ -113,11 +113,8 @@ void TransformPoints(CVuVector *out, int n, const CMatrix &mat, const CVuVector 
 		bnez	%1,1b\n\
 		": : "r" (out) , "r" (n), "r" (&mat) ,"r" (in): "memory");
 #else
-	while(n--){
-		*out = mat * *in;
-		in++;
-		out++;
-	}
+	// Delegate to the C implementation
+	VectorMath_TransformPoints(&out->x, n, mat.f, in, sizeof(CVuVector));
 #endif
 }
 

@@ -26,6 +26,8 @@
 #include "Directory.h"
 #include "RwHelper.h"
 #include "World.h"
+#include "WorldLogic.h"
+#include "StreamingVehicles.h"
 #include "Entity.h"
 #include "FileMgr.h"
 #include "FileLoader.h"
@@ -1357,7 +1359,7 @@ CStreaming::LoadInitialVehicles(void)
 void
 CStreaming::StreamVehiclesAndPeds(void)
 {
-	int i, model;
+	int model;
 	static int timeBeforeNextLoad = 0;
 	static int modelQualityClass = 0;
 
@@ -1455,22 +1457,8 @@ CStreaming::StreamVehiclesAndPeds(void)
 		CZoneInfo zone;
 		CVector coors = FindPlayerCoors();
 		Zones_GetZoneInfoForTimeOfDay(ZonesPosition_FromVector(*(&coors)), &zone);
-		int32 maxReq = -1;
-		int32 mostRequestedRating = 0;
-		for(i = 0; i < CARCLASS_TOTAL_CUSTOM_CLASSES; i++){
-			if(CCarCtrl::NumRequestsOfCarRating[i] > maxReq &&
-				((i == 0 && zone.carThreshold[0] != 0) ||
-#ifdef FIX_BUGS
-				(i < CARCLASS_NUM_CAR_CLASSES && zone.carThreshold[i] != zone.carThreshold[i-1]) ||
-				(i == CARCLASS_NUM_CAR_CLASSES && zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES] != 0) ||
-				(i > CARCLASS_NUM_CAR_CLASSES && i < CARCLASS_TOTAL_CUSTOM_CLASSES && zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES] != zone.boatThreshold[i - CARCLASS_NUM_CAR_CLASSES - 1]))) {
-#else
-				(i != 0 && zone.carThreshold[i] != zone.carThreshold[i-1]))) {
-#endif
-				maxReq = CCarCtrl::NumRequestsOfCarRating[i];
-				mostRequestedRating = i;
-			}
-		}
+		// Delegate to the C implementation
+		int32 mostRequestedRating = Streaming_MostRequestedRating(CCarCtrl::NumRequestsOfCarRating, zone.carThreshold, zone.boatThreshold);
 		model = CCarCtrl::ChooseCarModelToLoad(mostRequestedRating);
 		if(!Streaming_HasModelLoaded(model)){ // rouz edit (ChatGPT)
 			Streaming_RequestModel(model, STREAMFLAGS_DEPENDENCY); // rouz edit (ChatGPT)
@@ -1554,18 +1542,8 @@ CStreaming::StreamZoneModels(const CVector &pos)
 	Streaming_RequestModel(MI_MALE01, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 	Streaming_RequestModel(MI_TAXI_D, STREAMFLAGS_DONT_REMOVE); // rouz edit (ChatGPT)
 
-	gangsToLoad = 0;
-	gangCarsToLoad = 0;
-	if(info.gangPedThreshold[0] != info.copPedThreshold)
-		gangsToLoad = 1;
-	for(i = 1; i < NUM_GANGS; i++)
-		if(info.gangPedThreshold[i] != info.gangPedThreshold[i-1])
-			gangsToLoad |= 1<<i;
-	if(info.gangThreshold[0] != info.copThreshold)
-		gangCarsToLoad = 1;
-	for(i = 1; i < NUM_GANGS; i++)
-		if(info.gangThreshold[i] != info.gangThreshold[i-1])
-			gangCarsToLoad |= 1<<i;
+	// Delegate to the C implementation
+	Streaming_GangLoadMasks(&info, &gangsToLoad, &gangCarsToLoad);
 
 	if(gangsToLoad == Streaming_loadedGangs && gangCarsToLoad == Streaming_loadedGangCars) // rouz edit (ChatGPT)
 		return;
@@ -2134,14 +2112,8 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 	xmax = pos.x + STREAM_DIST;
 	ymax = pos.y + STREAM_DIST;
 
-	ixmin = CWorld::GetSectorIndexX(xmin);
-	if(ixmin < 0) ixmin = 0;
-	ixmax = CWorld::GetSectorIndexX(xmax);
-	if(ixmax >= NUMSECTORS_X) ixmax = NUMSECTORS_X-1;
-	iymin = CWorld::GetSectorIndexY(ymin);
-	if(iymin < 0) iymin = 0;
-	iymax = CWorld::GetSectorIndexY(ymax);
-	if(iymax >= NUMSECTORS_Y) iymax = NUMSECTORS_Y-1;
+	// Delegate to the C implementation
+	World_SectorRangeClamped(xmin, ymin, xmax, ymax, &ixmin, &iymin, &ixmax, &iymax);
 
 	CWorld::AdvanceCurrentScanCode();
 
@@ -2153,14 +2125,14 @@ CStreaming::AddModelsToRequestList(const CVector &pos, int32 flags)
 				return;
 
 			dx = ix - CWorld::GetSectorIndexX(pos.x);
-			d = dx*dx + dy*dy;
+			d = World_SectorStreamRing(dx, dy);
 			sect = CWorld::GetSector(ix, iy);
-			if(d <= 0){
+			if(d == 0){
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_DUMMIES], flags);
-			}else if(d <= 3*3){
+			}else if(d == 1){
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);
 				ProcessEntitiesInSectorList(sect->m_lists[ENTITYLIST_OBJECTS], pos.x, pos.y, xmin, ymin, xmax, ymax, flags);

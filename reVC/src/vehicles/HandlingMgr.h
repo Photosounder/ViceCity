@@ -1,9 +1,17 @@
-//+ rouz edit (ChatGPT)
+//+ rouz edit (Claude)
 #pragma once
-
+#include <stdint.h>
+#include <stdbool.h>
 #include "Transmission.h"
 
-enum tVehicleType
+// The vector members keep the engine HandlingVec type in C++ and the same three floats in C
+#ifdef __cplusplus
+typedef CVector HandlingVec;
+#else
+typedef struct HandlingVec {float x,y,z;} HandlingVec;
+#endif
+
+typedef enum tVehicleType
 {
 	HANDLING_LANDSTAL,
 	HANDLING_IDAHO,
@@ -119,30 +127,25 @@ enum tVehicleType
 	NUMBIKEHANDLINGS = HANDLING_FREEWAY+1 - HANDLING_BIKE,
 	NUMFLYINGHANDLINGS = HANDLING_RCCOPTER+1 - HANDLING_SEAPLANE,
 	NUMBOATHANDLINGS = HANDLING_SEAPLANE+1 - HANDLING_PREDATOR,
-};
-
-enum tField // most likely a handling field enum, never used so :shrug:
-{
-
-};
+} tVehicleType;
 
 #include "HandlingFlags.h"
 
-struct tHandlingData
+typedef struct tHandlingData
 {
 	tVehicleType nIdentifier;
 	float fMass;
 	float fInvMass;
 	float fTurnMass;
-	CVector Dimension;
-	CVector CentreOfMass;
-	int8 nPercentSubmerged;
+	HandlingVec Dimension;
+	HandlingVec CentreOfMass;
+	int8_t nPercentSubmerged;
 	float fBuoyancy;
 	float fTractionMultiplier;
 	cTransmission Transmission;
 	float fBrakeDeceleration;
 	float fBrakeBias;
-	int8 bABS;
+	int8_t bABS;
 	float fSteeringLock;
 	float fTractionLoss;
 	float fTractionBias;
@@ -154,14 +157,14 @@ struct tHandlingData
 	float fSuspensionBias;
 	float fSuspensionAntidiveMultiplier;
 	float fCollisionDamageMultiplier;
-	uint32 Flags;
+	uint32_t Flags;
 	float fSeatOffsetDistance;
-	int32 nMonetaryValue;
-	int8 FrontLights;
-	int8 RearLights;
-};
+	int32_t nMonetaryValue;
+	int8_t FrontLights;
+	int8_t RearLights;
+} tHandlingData;
 
-struct tBikeHandlingData
+typedef struct tBikeHandlingData
 {
 	tVehicleType nIdentifier;
 	float fLeanFwdCOM;
@@ -179,9 +182,9 @@ struct tBikeHandlingData
 	float fWheelieSteer;
 	float fWheelieStabMult;
 	float fStoppieStabMult;
-};
+} tBikeHandlingData;
 
-struct tBoatHandlingData
+typedef struct tBoatHandlingData
 {
 	tVehicleType nIdentifier;
 	float fThrustY;
@@ -192,11 +195,11 @@ struct tBoatHandlingData
 	float fAqPlaneOffset;
 	float fWaveAudioMult;
 	float fLook_L_R_BehindCamHeight;
-	CVector vecMoveRes;
-	CVector vecTurnRes;
-};
+	HandlingVec vecMoveRes;
+	HandlingVec vecTurnRes;
+} tBoatHandlingData;
 
-struct  tFlyingHandlingData
+typedef struct tFlyingHandlingData
 {
 	tVehicleType nIdentifier;
 	float fThrust;
@@ -211,18 +214,14 @@ struct  tFlyingHandlingData
 	float fFormLift;
 	float fAttackLift;
 	float fMoveRes;
-	CVector vecTurnRes;
-	CVector vecSpeedRes;
-};
+	HandlingVec vecTurnRes;
+	HandlingVec vecSpeedRes;
+} tFlyingHandlingData;
 
-class CVehicle;
-
-class cHandlingDataMgr
+typedef struct cHandlingDataMgrState
 {
 	float field_0;	// unused it seems
-public:
 	float fWheelFriction;	// wheel related
-private:
 	float field_8;	//
 	float field_C;	// unused it seems
 	float field_10;	//
@@ -230,22 +229,39 @@ private:
 	tBikeHandlingData BikeHandlingData[NUMBIKEHANDLINGS];
 	tFlyingHandlingData FlyingHandlingData[NUMFLYINGHANDLINGS];
 	tBoatHandlingData BoatHandlingData[NUMBOATHANDLINGS];
+} cHandlingDataMgrState;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void HandlingMgr_Initialise(cHandlingDataMgrState *self);
+void HandlingMgr_LoadHandlingData(cHandlingDataMgrState *self);
+int HandlingMgr_FindExactWord(const char *word, const char *words, int wordLen, int numWords);
+void HandlingMgr_ConvertDataToGameUnits(tHandlingData *handling);
+void HandlingMgr_ConvertBikeDataToGameUnits(tBikeHandlingData *handling);
+int32_t HandlingMgr_GetHandlingId(const char *name);
+tFlyingHandlingData *HandlingMgr_GetFlyingPointer(cHandlingDataMgrState *self, uint8_t id);
+tBoatHandlingData *HandlingMgr_GetBoatPointer(cHandlingDataMgrState *self, uint8_t id);
+#ifdef __cplusplus
+}
+
+class cHandlingDataMgr : public cHandlingDataMgrState
+{
 public:
-	cHandlingDataMgr(void);
-	void Initialise(void);
-	void LoadHandlingData(void);
-	int FindExactWord(const char *word, const char *words, int wordLen, int numWords);
-	void ConvertDataToWorldUnits(tHandlingData *handling);
-	void ConvertDataToGameUnits(tHandlingData *handling);
-	void ConvertBikeDataToGameUnits(tBikeHandlingData *handling);
-	int32 GetHandlingId(const char *name);
+	cHandlingDataMgr(void) { memset((void*)this, 0, sizeof(*this)); }
+	void Initialise(void) { HandlingMgr_Initialise(this); }
+	void LoadHandlingData(void) { HandlingMgr_LoadHandlingData(this); }
+	int FindExactWord(const char *word, const char *words, int wordLen, int numWords) { return HandlingMgr_FindExactWord(word, words, wordLen, numWords); }
+	void ConvertDataToGameUnits(tHandlingData *handling) { HandlingMgr_ConvertDataToGameUnits(handling); }
+	void ConvertBikeDataToGameUnits(tBikeHandlingData *handling) { HandlingMgr_ConvertBikeDataToGameUnits(handling); }
+	int32_t GetHandlingId(const char *name) { return HandlingMgr_GetHandlingId(name); }
 	tHandlingData *GetHandlingData(tVehicleType id) { return &HandlingData[id]; }
-	tBikeHandlingData *GetBikePointer(uint8 id) { return &BikeHandlingData[id-HANDLING_BIKE]; }
-	tFlyingHandlingData *GetFlyingPointer(uint8 id);
-	tBoatHandlingData *GetBoatPointer(uint8 id);
+	tBikeHandlingData *GetBikePointer(uint8_t id) { return &BikeHandlingData[id-HANDLING_BIKE]; }
+	tFlyingHandlingData *GetFlyingPointer(uint8_t id) { return HandlingMgr_GetFlyingPointer(this, id); }
+	tBoatHandlingData *GetBoatPointer(uint8_t id) { return HandlingMgr_GetBoatPointer(this, id); }
 	bool HasRearWheelDrive(tVehicleType id) { return HandlingData[id].Transmission.nDriveType != 'F'; }
 	bool HasFrontWheelDrive(tVehicleType id) { return HandlingData[id].Transmission.nDriveType != 'R'; }
 };
 extern cHandlingDataMgr mod_HandlingManager;
-//- rouz edit (ChatGPT)
+#endif
+//- rouz edit (Claude)

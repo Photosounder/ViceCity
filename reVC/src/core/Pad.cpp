@@ -16,6 +16,7 @@
 #endif
 
 #include "Pad.h"
+#include "PadLogic.h"
 #include "InputState_backend.h"
 #include "ControllerConfig.h"
 #include "Timer.h"
@@ -3349,72 +3350,32 @@ bool CPad::GetAnaloguePadUp(void)
 {
 	static int16 oldfStickY = 0;
 
-	int16 leftStickY = CPad::GetPad(0)->GetLeftStickY();
-
-	if ( leftStickY < -15 && oldfStickY >= -5 )
-	{
-		oldfStickY = leftStickY;
-		return true;
-	}
-	else
-	{
-		oldfStickY = leftStickY;
-		return false;
-	}
+	// Delegate to the C implementation
+	return PadLogic_AnalogueEdge(CPad::GetPad(0)->GetLeftStickY(), &oldfStickY, true);
 }
 
 bool CPad::GetAnaloguePadDown(void)
 {
 	static int16 oldfStickY = 0;
 
-	int16 leftStickY = CPad::GetPad(0)->GetLeftStickY();
-
-	if ( leftStickY > 15 && oldfStickY <= 5 )
-	{
-		oldfStickY = leftStickY;
-		return true;
-	}
-	else
-	{
-		oldfStickY = leftStickY;
-		return false;
-	}
+	// Delegate to the C implementation
+	return PadLogic_AnalogueEdge(CPad::GetPad(0)->GetLeftStickY(), &oldfStickY, false);
 }
 
 bool CPad::GetAnaloguePadLeft(void)
 {
 	static int16 oldfStickX = 0;
 
-	int16 leftStickX = CPad::GetPad(0)->GetLeftStickX();
-
-	if ( leftStickX < -15 && oldfStickX >= -5 )
-	{
-		oldfStickX = leftStickX;
-		return true;
-	}
-	else
-	{
-		oldfStickX = leftStickX;
-		return false;
-	}
+	// Delegate to the C implementation
+	return PadLogic_AnalogueEdge(CPad::GetPad(0)->GetLeftStickX(), &oldfStickX, true);
 }
 
 bool CPad::GetAnaloguePadRight(void)
 {
 	static int16 oldfStickX = 0;
 
-	int16 leftStickX = CPad::GetPad(0)->GetLeftStickX();
-
-	if ( leftStickX > 15 && oldfStickX <= 5 )
-	{
-		oldfStickX = leftStickX;
-		return true;
-	}
-	else
-	{
-		oldfStickX = leftStickX;
-		return false;
-	}
+	// Delegate to the C implementation
+	return PadLogic_AnalogueEdge(CPad::GetPad(0)->GetLeftStickX(), &oldfStickX, false);
 }
 
 bool CPad::GetAnaloguePadLeftJustUp(void)
@@ -3551,14 +3512,8 @@ int16 CPad::SniperModeLookLeftRight(void)
 	int16 axis = NewState.LeftStickX;
 	int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-	if ( Abs(axis) > Abs(dpad) ) {
-		if ( Abs(axis) > 35.0f ) {
-		  return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
-		} else {
-		  return 0;
-		}
-	} else
-		return dpad;
+	// Delegate to the C implementation
+	return PadLogic_SniperAxis(axis, dpad);
 }
 
 int16 CPad::SniperModeLookUpDown(void)
@@ -3569,36 +3524,23 @@ int16 CPad::SniperModeLookUpDown(void)
 #ifdef FIX_BUGS
 	axis = -axis;
 #endif
-	if (Input_invertPadLook) { // rouz edit (ChatGPT)
+	if (Input_invertPadLook) {
 		axis = -axis;
 		dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 	} else {
 		dpad = (NewState.DPadUp - NewState.DPadDown) / 2;
 	}
 
-	if ( Abs(axis) > Abs(dpad) ) {
-	    if ( Abs(axis) > 35.0f ) {
-	      return (axis > 0.f ? axis - 35.f : axis + 35.f) * (128.f / (128 - 35));
-	    } else {
-	      return 0;
-	    }
-	} else
-		return dpad;
+	// Delegate to the C implementation
+	return PadLogic_SniperAxis(axis, dpad);
 }
 
 int16 CPad::LookAroundLeftRight(void)
 {
 	float axis = GetPad(0)->NewState.RightStickX;
 
-	if ( Abs(axis) > 85 && !GetLookBehindForPed() )
-		return (int16) ( (axis + ( ( axis > 0 ) ? -85 : 85) )
-							* (127.0f / 32.0f) ); // 3.96875f
-
-	else if ( TheCamera.Cams[0].Using3rdPersonMouseCam() && Abs(axis) > 10 )
-		return (int16) ( (axis + ( ( axis > 0 ) ? -10 : 10) )
-							* (127.0f / 64.0f) ); // 1.984375f
-
-	return 0;
+	// Delegate to the C implementation
+	return PadLogic_LookAroundAxis(axis, GetLookBehindForPed(), TheCamera.Cams[0].Using3rdPersonMouseCam(), 10.0f);
 }
 
 int16 CPad::LookAroundUpDown(void)
@@ -3607,18 +3549,11 @@ int16 CPad::LookAroundUpDown(void)
 #ifdef FIX_BUGS
 	axis = -axis;
 #endif
-	if (Input_invertPadLook) // rouz edit (ChatGPT)
+	if (Input_invertPadLook)
 		axis = -axis;
 
-	if ( Abs(axis) > 85 && !GetLookBehindForPed() )
-		return (int16) ( (axis + ( ( axis > 0 ) ? -85 : 85) )
-							* (127.0f / 32.0f) ); // 3.96875f
-
-	else if ( TheCamera.Cams[0].Using3rdPersonMouseCam() && Abs(axis) > 40 )
-		return (int16) ( (axis + ( ( axis > 0 ) ? -40 : 40) )
-							* (127.0f / 64.0f) ); // 1.984375f
-
-	return 0;
+	// Delegate to the C implementation
+	return PadLogic_LookAroundAxis(axis, GetLookBehindForPed(), TheCamera.Cams[0].Using3rdPersonMouseCam(), 40.0f);
 }
 
 void CPad::ResetAverageWeapon(void)

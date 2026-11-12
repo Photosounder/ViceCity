@@ -1,4 +1,4 @@
-//+ rouz edit (ChatGPT)
+//+ rouz edit (Claude)
 #include "common.h"
 #include "CollisionVector_native.h"
 
@@ -42,6 +42,38 @@ float fBoatVolumeDistributionSpeed[9] = {
 	0.6f, 0.7f, 0.6f
 };
 
+static VectorMath3 ToC(const CVector &v)
+{
+	// Copy the components into the plain C record
+	VectorMath3 r = {v.x, v.y, v.z};
+	return r;
+}
+
+static CVector FromC(VectorMath3 v)
+{
+	// Copy the components back into the native vector
+	return CVector(v.x, v.y, v.z);
+}
+
+static FloaterBoatKind BoatKindFromModel(int model)
+{
+	// Map the boat model to the C boat kind used for box tuning
+	switch(model){
+	case MI_SPEEDER: return FLOATER_BOAT_SPEEDER;
+	case MI_REEFER: return FLOATER_BOAT_REEFER;
+	case MI_RIO: return FLOATER_BOAT_RIO;
+	case MI_SQUALO: return FLOATER_BOAT_SQUALO;
+	case MI_TROPIC: return FLOATER_BOAT_TROPIC;
+	case MI_SKIMMER: return FLOATER_BOAT_SKIMMER;
+	case MI_COASTG: return FLOATER_BOAT_COASTG;
+	case MI_DINGHY: return FLOATER_BOAT_DINGHY;
+	case MI_MARQUIS: return FLOATER_BOAT_MARQUIS;
+	case MI_JETMAX: return FLOATER_BOAT_JETMAX;
+	case MI_PREDATOR:
+	default: return FLOATER_BOAT_PREDATOR;
+	}
+}
+
 bool
 cBuoyancy::ProcessBuoyancy(CPhysical *phys, float buoyancy, CVector *point, CVector *impulse)
 {
@@ -49,7 +81,7 @@ cBuoyancy::ProcessBuoyancy(CPhysical *phys, float buoyancy, CVector *point, CVec
 
 	if(!CWaterLevel::GetWaterLevel(phys->GetPosition(), &m_waterlevel, phys->bTouchingWater))
 		return false;
-	m_matrix = phys->GetMatrix();
+	memcpy(m_matrix, phys->GetMatrix().f, sizeof(m_matrix));
 
 	PreCalcSetup(phys, buoyancy);
 	SimpleCalcBuoyancy();
@@ -66,7 +98,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 
 	if(!CWaterLevel::GetWaterLevel(veh->GetPosition(), &m_waterlevel, veh->bTouchingWater))
 		return false;
-	m_matrix = veh->GetMatrix();
+	memcpy(m_matrix, veh->GetMatrix().f, sizeof(m_matrix));
 	PreCalcSetup(veh, buoyancy);
 
 
@@ -82,7 +114,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 		i = ix;
 		for(y = m_dimMin.y; y <= m_dimMax.y; y += m_step.y){
 			CVector waterLevel(x, y, 0.0f);
-			FindWaterLevelNorm(m_positionZ, &waterLevel, &waterPosition, &waterNormal);
+			FindWaterLevelNorm(FromC(m_positionZ), &waterLevel, &waterPosition, &waterNormal);
 			switch(veh->GetModelIndex()){
 			case MI_RIO:
 				fVolMultiplier = fBoatVolumeDistributionCat[i];
@@ -115,7 +147,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 				float finalImpulse = upImpulse*Max(damp, 0.0f);
 				impulse->z += finalImpulse;
 				if(!bNoTurnForce)
-					veh->ApplyTurnForce(finalImpulse*waterNormal, Multiply3x3(m_matrix, waterLevel));
+					veh->ApplyTurnForce(finalImpulse*waterNormal, FromC(Floater_RotateOffset(this, ToC(waterLevel))));
 			}
 			i += 3;
 		}
@@ -124,7 +156,7 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 
 	m_volumeUnderWater *= volDiv;
 
-	*point = Multiply3x3(m_matrix, m_impulsePoint);
+	*point = FromC(Floater_RotateOffset(this, m_impulsePoint));
 	return m_isBoat || m_haveVolume;
 
 }
@@ -134,88 +166,12 @@ cBuoyancy::PreCalcSetup(CPhysical *phys, float buoyancy)
 {
 	CColModel *colModel;
 
-	m_isBoat = phys->IsVehicle() && ((CVehicle*)phys)->IsBoat();
+	// Delegate the box tuning and accumulator reset to the C implementation
+	bool isBoat = phys->IsVehicle() && ((CVehicle*)phys)->IsBoat();
 	colModel = phys->GetColModel();
-	m_dimMin = CollisionVector_ToNative(colModel->boundingBox.min);
-	m_dimMax = CollisionVector_ToNative(colModel->boundingBox.max);
-
-	if(m_isBoat){
-		switch(phys->GetModelIndex()){
-		case MI_PREDATOR:
-		default:
-			m_dimMax.y *= 1.05f;
-			m_dimMin.y *= 0.9f;
-			break;
-		case MI_SPEEDER:
-			m_dimMax.y *= 1.25f;
-			m_dimMin.y *= 0.83f;
-			break;
-		case MI_REEFER:
-			m_dimMin.y *= 0.9f;
-			break;
-		case MI_RIO:
-			m_dimMax.y *= 0.9f;
-			m_dimMin.y *= 0.9f;
-			m_dimMax.z += 0.25f;
-			m_dimMin.z -= 0.2f;
-			break;
-		case MI_SQUALO:
-			m_dimMax.y *= 0.9f;
-			m_dimMin.y *= 0.9f;
-			break;
-		case MI_TROPIC:
-			m_dimMax.y *= 1.3f;
-			m_dimMin.y *= 0.82f;
-			m_dimMin.z -= 0.2f;
-			break;
-		case MI_SKIMMER:
-			m_dimMin.y = -m_dimMax.y;
-			m_dimMax.y *= 1.2f;
-			break;
-		case MI_COASTG:
-			m_dimMax.y *= 1.1f;
-			m_dimMin.y *= 0.9f;
-			m_dimMin.z -= 0.3f;
-			break;
-		case MI_DINGHY:
-			m_dimMax.y *= 1.3f;
-			m_dimMin.y *= 0.9f;
-			m_dimMin.z -= 0.2f;
-			break;
-		case MI_MARQUIS:
-			m_dimMax.y *= 1.3f;
-			m_dimMin.y *= 0.9f;
-			break;
-		case MI_JETMAX:
-			m_dimMin.y *= 0.9f;
-			break;
-		}
-	}
-
-	m_step = (m_dimMax - m_dimMin)/m_numSteps;
-
-	if(m_step.z > m_step.x && m_step.z > m_step.y){
-		m_stepRatio.x = m_step.x/m_step.z;
-		m_stepRatio.y = m_step.y/m_step.z;
-		m_stepRatio.z = 1.0f;
-	}else if(m_step.y > m_step.x && m_step.y > m_step.z){
-		m_stepRatio.x = m_step.x/m_step.y;
-		m_stepRatio.y = 1.0f;
-		m_stepRatio.z = m_step.z/m_step.y;
-	}else{
-		m_stepRatio.x = 1.0f;
-		m_stepRatio.y = m_step.y/m_step.x;
-		m_stepRatio.z = m_step.z/m_step.x;
-	}
-
-	m_haveVolume = false;
-	m_numPartialVolumes = 1.0f;
-	m_volumeUnderWater = 0.0f;
-	m_impulsePoint = CVector(0.0f, 0.0f, 0.0f);
-	m_position = phys->GetPosition();
-	m_positionZ = CVector(0.0f, 0.0f, m_position.z);
-	m_buoyancy = buoyancy;
-	m_waterlevel += m_waterLevelInc;
+	CVector dimMin = CollisionVector_ToNative(colModel->boundingBox.min);
+	CVector dimMax = CollisionVector_ToNative(colModel->boundingBox.max);
+	Floater_PreCalcSetup(this, ToC(dimMin), ToC(dimMax), isBoat, BoatKindFromModel(phys->GetModelIndex()), ToC(phys->GetPosition()), buoyancy);
 }
 
 void
@@ -228,101 +184,59 @@ cBuoyancy::SimpleCalcBuoyancy(void)
 	for(x = m_dimMin.x; x <= m_dimMax.x; x += m_step.x){
 		for(y = m_dimMin.y; y <= m_dimMax.y; y += m_step.y){
 			CVector waterLevel(x, y, 0.0f);
-			FindWaterLevel(m_positionZ, &waterLevel, &waterPosition);
+			FindWaterLevel(FromC(m_positionZ), &waterLevel, &waterPosition);
 			fVolMultiplier = 1.0f;
 			if(waterPosition != FLOATER_ABOVE_WATER)
 				SimpleSumBuoyancyData(waterLevel, waterPosition);
 		}
 	}
 
-	m_volumeUnderWater /= (m_dimMax.z - m_dimMin.z)*sq(m_numSteps+1.0f);
+	// Delegate the normalisation to the C implementation
+	Floater_NormaliseVolume(this);
 }
 
 float
 cBuoyancy::SimpleSumBuoyancyData(CVector &waterLevel, tWaterLevel waterPosition)
 {
-	static float fThisVolume;
-	static CVector AverageOfWaterLevel;
-	static float fFraction;
-	static float fRemainingSlice;
-
-	float submerged = Abs(waterLevel.z - m_dimMin.z);
-	// subtract empty space from submerged volume
-	fThisVolume = submerged - (1.0f - fVolMultiplier);
-	if(fThisVolume < 0.0f)
-		return 0.0f;
-
-	if(m_isBoat){
-		fThisVolume *= fVolMultiplier;
-		fThisVolume = sq(fThisVolume);
-	}
-
-	m_volumeUnderWater += fThisVolume;
-
-	AverageOfWaterLevel.x = waterLevel.x * m_stepRatio.x;
-	AverageOfWaterLevel.y = waterLevel.y * m_stepRatio.y;
-	AverageOfWaterLevel.z = (waterLevel.z+m_dimMin.z)/2.0f * m_stepRatio.z;
-
-	if(m_flipAverage)
-		AverageOfWaterLevel = -AverageOfWaterLevel;
-
-	fFraction = 1.0f/m_numPartialVolumes;
-	fRemainingSlice = 1.0f - fFraction;
-	m_impulsePoint = m_impulsePoint*fRemainingSlice + AverageOfWaterLevel*fThisVolume*fFraction;
-	m_numPartialVolumes += 1.0f;
-	m_haveVolume = true;
-	return fThisVolume;
+	// Delegate to the C implementation
+	return Floater_SumBuoyancyData(this, ToC(waterLevel), fVolMultiplier);
 }
 
 void
 cBuoyancy::FindWaterLevel(const CVector &zpos, CVector *waterLevel, tWaterLevel *waterPosition)
 {
-	*waterPosition = FLOATER_IN_WATER;
 	// waterLevel is a local x,y point
 	// m_position is the global position of our floater
 	// zpos is the global z coordinate of our floater
-	CVector xWaterLevel = Multiply3x3(m_matrix, *waterLevel);
+	CVector xWaterLevel = FromC(Floater_RotateOffset(this, ToC(*waterLevel)));
 	CWaterLevel::GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
 		&waterLevel->z, true);
 	waterLevel->z -= xWaterLevel.z + zpos.z;	// make local
-	if(waterLevel->z > m_dimMax.z){
-		waterLevel->z = m_dimMax.z;
-		*waterPosition = FLOATER_UNDER_WATER;
-	}else if(waterLevel->z < m_dimMin.z){
-		waterLevel->z = m_dimMin.z;
-		*waterPosition = FLOATER_ABOVE_WATER;
-	}
+	*waterPosition = (tWaterLevel)Floater_ClampWaterLevel(this, &waterLevel->z);
 }
 
 // Same as above but also get normal
 void
 cBuoyancy::FindWaterLevelNorm(const CVector &zpos, CVector *waterLevel, tWaterLevel *waterPosition, CVector *normal)
 {
-	*waterPosition = FLOATER_IN_WATER;
-	CVector xWaterLevel = Multiply3x3(m_matrix, *waterLevel);
+	CVector xWaterLevel = FromC(Floater_RotateOffset(this, ToC(*waterLevel)));
 	CWaterLevel::GetWaterLevel(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y, m_position.z,
 		&waterLevel->z, true);
 	waterLevel->z -= xWaterLevel.z + zpos.z;	// make local
 	if(waterLevel->z >= m_dimMin.z)
 		*normal = CWaterLevel::GetWaterNormal(xWaterLevel.x + m_position.x, xWaterLevel.y + m_position.y);
-	if(waterLevel->z > m_dimMax.z){
-		waterLevel->z = m_dimMax.z;
-		*waterPosition = FLOATER_UNDER_WATER;
-	}else if(waterLevel->z < m_dimMin.z){
-		waterLevel->z = m_dimMin.z;
-		*waterPosition = FLOATER_ABOVE_WATER;
-	}
+	*waterPosition = (tWaterLevel)Floater_ClampWaterLevel(this, &waterLevel->z);
 }
 
 bool
 cBuoyancy::CalcBuoyancyForce(CPhysical *phys, CVector *point, CVector *impulse)
 {
-	if(!m_haveVolume)
+	// Delegate to the C implementation
+	VectorMath3 p, i;
+	if(!Floater_CalcForce(this, *Timer_GetTimeStep(), &p, &i))
 		return false;
-
-	*point = Multiply3x3(m_matrix, m_impulsePoint);
-	*impulse = CVector(0.0f, 0.0f, m_volumeUnderWater*m_buoyancy*(*Timer_GetTimeStep()));
+	*point = FromC(p);
+	*impulse = FromC(i);
 	return true;
 }
-
-//- rouz edit (ChatGPT)
+//- rouz edit (Claude)

@@ -7,6 +7,7 @@
 #include "Text.h"
 #include "Font.h"
 #include "FrontEndControls.h"
+#include "MenuListLogic.h"
 
 #define X SCREEN_SCALE_X
 #define Y(x) SCREEN_SCALE_Y(float(x)*(float(DEFAULT_SCREEN_HEIGHT)/float(SCREEN_HEIGHT_PAL)))
@@ -415,25 +416,15 @@ CMenuMultiChoice::SetShadows(bool bDropShadows, CRGBA const &shadowColor, CVecto
 bool
 CMenuMultiChoice::GoNext(void)
 {
-	if(m_cursor == m_numOptions-1){
-		m_cursor = -1;
-		return false;
-	}else{
-		m_cursor++;
-		return true;
-	}
+	// Delegate to the C implementation
+	return MenuLogic_CursorNext(&m_cursor, m_numOptions);
 }
 
 bool
 CMenuMultiChoice::GoPrev(void)
 {
-	if(m_cursor == 0){
-		m_cursor = -1;
-		return false;
-	}else{
-		m_cursor--;
-		return true;
-	}
+	// Delegate to the C implementation
+	return MenuLogic_CursorPrev(&m_cursor);
 }
 
 void
@@ -907,25 +898,15 @@ CMenuMultiChoiceTwoLines::SetShadows(bool bDropShadows, CRGBA const &shadowColor
 bool
 CMenuMultiChoiceTwoLines::GoNext(void)
 {
-	if(m_cursor == m_numOptions-1){
-		m_cursor = -1;
-		return false;
-	}else{
-		m_cursor++;
-		return true;
-	}
+	// Delegate to the C implementation
+	return MenuLogic_CursorNext(&m_cursor, m_numOptions);
 }
 
 bool
 CMenuMultiChoiceTwoLines::GoPrev(void)
 {
-	if(m_cursor == 0){
-		m_cursor = -1;
-		return false;
-	}else{
-		m_cursor--;
-		return true;
-	}
+	// Delegate to the C implementation
+	return MenuLogic_CursorPrev(&m_cursor);
 }
 
 void

@@ -61,6 +61,8 @@
 #include "PlayerPed.h"
 #include "Object.h"
 #include "Automobile.h"
+#include "AutomobileLogic.h"
+#include "PathLogic.h"
 #include "Bike.h"
 #include "Wanted.h"
 #include "SaveBuf.h"
@@ -4069,31 +4071,12 @@ CAutomobile::DoHoverSuspensionRatios(void)
 
 	CColModel *colmodel = GetColModel();
 	for(i = 0; i < 4; i++){
-		float z, waterZ;
+		float waterZ;
 		CVector upper = GetMatrix() * CollisionVector_ToNative(colmodel->lines[i].p0);
 		CVector lower = GetMatrix() * CollisionVector_ToNative(colmodel->lines[i].p1);
-		if(m_aSuspensionSpringRatio[i] < 1.0f)
-			z = m_aWheelColPoints[i].point.z;
-		else
-			z = -100.0f;
-		// see if touching water
-		if(CWaterLevel::GetWaterLevel(lower, &waterZ, false) &&
-		   waterZ > z && lower.z-1.0f < waterZ){
-			// compress spring
-			if(lower.z < waterZ){
-				if(upper.z < waterZ)
-					m_aSuspensionSpringRatio[i] = 0.0f;
-				else
-					m_aSuspensionSpringRatio[i] = (upper.z - waterZ)/(upper.z - lower.z);
-			}else
-				m_aSuspensionSpringRatio[i] = 0.99999f;
-
-			m_aWheelColPoints[i].point = CollisionVector_FromNative(CVector((lower.x - upper.x)*m_aSuspensionSpringRatio[i] + upper.x,
-			                                     (lower.y - upper.y)*m_aSuspensionSpringRatio[i] + upper.y,
-			                                     waterZ));
-			m_aWheelColPoints[i].normal = CollisionVector_FromNative(CVector(0.0f, 0.0f, 1.0f));
-			m_aWheelColPoints[i].surfaceB = SURFACE_WATER;
-		}
+		// see if touching water, the wheel is changed in C
+		if(CWaterLevel::GetWaterLevel(lower, &waterZ, false))
+			Automobile_HoverWheelInWater(this, i, &upper.x, &lower.x, waterZ);
 	}
 }
 
@@ -4674,7 +4657,8 @@ CAutomobile::GetComponentWorldPosition(int32 component, CVector &pos)
 bool
 CAutomobile::IsComponentPresent(int32 comp)
 {
-	return m_aCarNodes[comp] != nil;
+	// Delegate to the C implementation
+	return Automobile_IsComponentPresent(this, comp);
 }
 
 void
@@ -4841,70 +4825,50 @@ CAutomobile::ProcessOpenDoor(uint32 component, uint32 anim, float time)
 bool
 CAutomobile::IsDoorReady(eDoors door)
 {
-	if(Door_IsClosed(&Doors[door]) || IsDoorMissing(door))
-		return true;
-	int doorflag = 0;
-	switch(door){
-	case DOOR_FRONT_LEFT: doorflag = CAR_DOOR_FLAG_LF; break;
-	case DOOR_FRONT_RIGHT: doorflag = CAR_DOOR_FLAG_RF; break;
-	case DOOR_REAR_LEFT: doorflag = CAR_DOOR_FLAG_LR; break;
-	case DOOR_REAR_RIGHT: doorflag = CAR_DOOR_FLAG_RR; break;
-	default: break;
-	}
-	return (doorflag & m_nGettingInFlags) == 0;
+	// Delegate to the C implementation
+	return Automobile_IsDoorReady(this, door, m_nGettingInFlags);
 }
 
 bool
 CAutomobile::IsDoorFullyOpen(eDoors door)
 {
-	return Door_IsFullyOpen(&Doors[door]) || IsDoorMissing(door);
+	// Delegate to the C implementation
+	return Automobile_IsDoorFullyOpen(this, door);
 }
 
 bool
 CAutomobile::IsDoorClosed(eDoors door)
 {
-	return !!Door_IsClosed(&Doors[door]);
+	// Delegate to the C implementation
+	return Automobile_IsDoorClosed(this, door);
 }
 
 bool
 CAutomobile::IsDoorMissing(eDoors door)
 {
-	return Damage_GetDoorStatus(&Damage, door) == DOOR_STATUS_MISSING;
+	// Delegate to the C implementation
+	return Automobile_IsDoorMissing(this, door);
 }
 
 bool
 CAutomobile::IsDoorReady(uint32 door)
 {
-	switch(door){
-	case CAR_DOOR_RF: return IsDoorReady(DOOR_FRONT_RIGHT);
-	case CAR_DOOR_RR: return IsDoorReady(DOOR_REAR_RIGHT);
-	case CAR_DOOR_LF: return IsDoorReady(DOOR_FRONT_LEFT);
-	case CAR_DOOR_LR: return IsDoorReady(DOOR_REAR_LEFT);
-	default:
-		return false;
-	}
+	// Delegate to the C implementation
+	return Automobile_IsDoorReadyByNode(this, door, m_nGettingInFlags);
 }
 
 bool
 CAutomobile::IsDoorMissing(uint32 door)
 {
-	switch(door){
-	case CAR_DOOR_RF: return IsDoorMissing(DOOR_FRONT_RIGHT);
-	case CAR_DOOR_RR: return IsDoorMissing(DOOR_REAR_RIGHT);
-	case CAR_DOOR_LF: return IsDoorMissing(DOOR_FRONT_LEFT);
-	case CAR_DOOR_LR: return IsDoorMissing(DOOR_REAR_LEFT);
-	default:
-		return false;
-	}
+	// Delegate to the C implementation
+	return Automobile_IsDoorMissingByNode(this, door);
 }
 
 bool
 CAutomobile::IsOpenTopCar(void)
 {
-	return GetModelIndex() == MI_STINGER ||
-		// component 0 is assumed to be a roof
-		GetModelIndex() == MI_COMET && m_aExtras[0] != 0 && m_aExtras[1] != 0 ||
-		GetModelIndex() == MI_STALLION && m_aExtras[0] != 0 && m_aExtras[1] != 0;
+	// Delegate to the C implementation
+	return Automobile_IsOpenTopCar((CAutomobileStruct*)this);
 }
 
 void
@@ -5146,28 +5110,9 @@ CAutomobile::GetHeightAboveRoad(void)
 void
 CAutomobile::PlayCarHorn(void)
 {
-	uint32 r;
-
-	if (IsAlarmOn() || m_nCarHornTimer != 0)
-		return;
-
-	if (m_nCarHornDelay) {
-		m_nCarHornDelay--;
-		return;
-	}
-
-	m_nCarHornDelay = (General_GetRandomNumber() & 0x7F) + 150;
-	r = m_nCarHornDelay & 7;
-	if(r < 2){
-		m_nCarHornTimer = 45;
-	}else if(r < 4){
-		if(pDriver)
-			pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
-		m_nCarHornTimer = 45;
-	}else{
-		if(pDriver)
-			pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
-	}
+	// The honking is decided in C, the driver shouts here
+	if (VehicleLogic_PlayCarHorn(this, IsAlarmOn(), General_GetRandomNumber) && pDriver)
+		pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
 }
 
 void
@@ -5182,13 +5127,8 @@ CAutomobile::PlayHornIfNecessary(void)
 void
 CAutomobile::ResetSuspension(void)
 {
-	int i;
-	for(i = 0; i < 4; i++){
-		m_aSuspensionSpringRatio[i] = 1.0f;
-		m_aWheelTimer[i] = 0.0f;
-		m_aWheelRotation[i] = 0.0f;
-		m_aWheelState[i] = WHEEL_STATE_NORMAL;
-	}
+	// Delegate to the C implementation
+	Automobile_ResetSuspension(this);
 }
 
 void
@@ -5271,30 +5211,19 @@ CAutomobile::BlowUpCarsInPath(void)
 bool
 CAutomobile::HasCarStoppedBecauseOfLight(void)
 {
-	int i;
-
 	if(GetStatus() != STATUS_SIMPLE && GetStatus() != STATUS_PHYSICS)
 		return false;
 
-	if(AutoPilot.m_nCurrentRouteNode && AutoPilot.m_nNextRouteNode){
-		CPathNode *curnode = &ThePaths.m_pathNodes[AutoPilot.m_nCurrentRouteNode];
-		for(i = 0; i < curnode->numLinks; i++)
-			if(ThePaths.ConnectedNode(curnode->firstLink + i) == AutoPilot.m_nNextRouteNode)
-				break;
-		if(i < curnode->numLinks &&
-		   ThePaths.m_carPathLinks[ThePaths.m_carPathConnections[curnode->firstLink + i]].trafficLightType & 3)
-			return true;
-	}
+	// The link tests are done in C
+	if(AutoPilot.m_nCurrentRouteNode && AutoPilot.m_nNextRouteNode &&
+	   PathLogic_LinkHasTrafficLight(ThePaths.m_pathNodes, ThePaths.m_connections, ThePaths.m_carPathConnections, ThePaths.m_carPathLinks,
+			AutoPilot.m_nCurrentRouteNode, AutoPilot.m_nNextRouteNode))
+		return true;
 
-	if(AutoPilot.m_nCurrentRouteNode && AutoPilot.m_nPrevRouteNode){
-		CPathNode *curnode = &ThePaths.m_pathNodes[AutoPilot.m_nCurrentRouteNode];
-		for(i = 0; i < curnode->numLinks; i++)
-			if(ThePaths.ConnectedNode(curnode->firstLink + i) == AutoPilot.m_nPrevRouteNode)
-				break;
-		if(i < curnode->numLinks &&
-		   ThePaths.m_carPathLinks[ThePaths.m_carPathConnections[curnode->firstLink + i]].trafficLightType & 3)
-			return true;
-	}
+	if(AutoPilot.m_nCurrentRouteNode && AutoPilot.m_nPrevRouteNode &&
+	   PathLogic_LinkHasTrafficLight(ThePaths.m_pathNodes, ThePaths.m_connections, ThePaths.m_carPathConnections, ThePaths.m_carPathLinks,
+			AutoPilot.m_nCurrentRouteNode, AutoPilot.m_nPrevRouteNode))
+		return true;
 
 	return false;
 }
@@ -5435,54 +5364,20 @@ CPed::MakeTyresMuddySectorList(CPtrList &list)
 void
 CAutomobile::SetBusDoorTimer(uint32 timer, uint8 type)
 {
-	if(timer < 1000)
-		timer = 1000;
-	if(type == 0)
-		// open and close
-		m_nBusDoorTimerStart = (*Timer_GetTimeInMilliseconds());
-	else
-		// only close
-		m_nBusDoorTimerStart = (*Timer_GetTimeInMilliseconds()) - 500;
-	m_nBusDoorTimerEnd = m_nBusDoorTimerStart + timer;
+	// Delegate to the C implementation
+	Automobile_SetBusDoorTimer(this, timer, type, (*Timer_GetTimeInMilliseconds()));
 }
 
 void
 CAutomobile::ProcessAutoBusDoors(void)
 {
-	if((*Timer_GetTimeInMilliseconds()) < m_nBusDoorTimerEnd){
-		if(m_nBusDoorTimerEnd != 0 && (*Timer_GetTimeInMilliseconds()) > m_nBusDoorTimerEnd-500){
-			// close door
-			if(!IsDoorMissing(DOOR_FRONT_LEFT) && (m_nGettingInFlags & CAR_DOOR_FLAG_LF) == 0){
-				if(IsDoorClosed(DOOR_FRONT_LEFT)){
-					m_nBusDoorTimerEnd = (*Timer_GetTimeInMilliseconds());
-					OpenDoor(CAR_DOOR_LF, DOOR_FRONT_LEFT, 0.0f);
-				}else{
-					OpenDoor(CAR_DOOR_LF, DOOR_FRONT_LEFT,
-						1.0f - ((*Timer_GetTimeInMilliseconds()) - (m_nBusDoorTimerEnd-500))/500.0f);
-				}
-			}
-
-			if(!IsDoorMissing(DOOR_FRONT_RIGHT) && (m_nGettingInFlags & CAR_DOOR_FLAG_RF) == 0){
-				if(IsDoorClosed(DOOR_FRONT_RIGHT)){
-					m_nBusDoorTimerEnd = (*Timer_GetTimeInMilliseconds());
-					OpenDoor(CAR_DOOR_RF, DOOR_FRONT_RIGHT, 0.0f);
-				}else{
-					OpenDoor(CAR_DOOR_RF, DOOR_FRONT_RIGHT,
-						1.0f - ((*Timer_GetTimeInMilliseconds()) - (m_nBusDoorTimerEnd-500))/500.0f);
-				}
-			}
-		}
-	}else{
-		// ended
-		if(m_nBusDoorTimerStart){
-			if(!IsDoorMissing(DOOR_FRONT_LEFT) && (m_nGettingInFlags & CAR_DOOR_FLAG_LF) == 0)
-				OpenDoor(CAR_DOOR_LF, DOOR_FRONT_LEFT, 0.0f);
-			if(!IsDoorMissing(DOOR_FRONT_RIGHT) && (m_nGettingInFlags & CAR_DOOR_FLAG_RF) == 0)
-				OpenDoor(CAR_DOOR_RF, DOOR_FRONT_RIGHT, 0.0f);
-			m_nBusDoorTimerStart = 0;
-			m_nBusDoorTimerEnd = 0;
-		}
-	}
+	// The decisions are made in C, the doors are opened here
+	const bool doorMissing[2] = { IsDoorMissing(DOOR_FRONT_LEFT), IsDoorMissing(DOOR_FRONT_RIGHT) };
+	const bool doorClosed[2] = { IsDoorClosed(DOOR_FRONT_LEFT), IsDoorClosed(DOOR_FRONT_RIGHT) };
+	AutomobileDoorAction actions[2];
+	int numActions = Automobile_ProcessAutoBusDoors((CAutomobileStruct*)this, (*Timer_GetTimeInMilliseconds()), doorMissing, doorClosed, actions);
+	for(int i = 0; i < numActions; i++)
+		OpenDoor(actions[i].component, (eDoors)actions[i].door, actions[i].ratio);
 }
 
 void
@@ -5901,9 +5796,8 @@ CAutomobile::SetComponentVisibility(RwFrame *frame, uint32 flags)
 void
 CAutomobile::SetupModelNodes(void)
 {
-	int i;
-	for(i = 0; i < NUM_CAR_NODES; i++)
-		m_aCarNodes[i] = nil;
+	// Clear the node array in C before filling it
+	Automobile_ClearCarNodes(this);
 	CClumpModelInfo::FillFrameArray(GetClump(), m_aCarNodes);
 }
 
@@ -5916,7 +5810,8 @@ CAutomobile::SetTaxiLight(bool light)
 bool
 CAutomobile::GetAllWheelsOffGround(void)
 {
-	return m_nDriveWheelsOnGround == 0;
+	// Delegate to the C implementation
+	return Automobile_GetAllWheelsOffGround(this);
 }
 
 void
@@ -5934,8 +5829,8 @@ CAutomobile::ShowAllComps(void)
 void
 CAutomobile::ReduceHornCounter(void)
 {
-	if(m_nCarHornTimer != 0)
-		m_nCarHornTimer--;
+	// Delegate to the C implementation
+	Automobile_ReduceHornCounter(this);
 }
 
 void
@@ -5947,31 +5842,15 @@ CAutomobile::SetAllTaxiLights(bool set)
 void
 CAutomobile::TellHeliToGoToCoors(float x, float y, float z, uint8 speed)
 {
-	AutoPilot.m_nCarMission = MISSION_HELI_FLYTOCOORS;
-	AutoPilot.m_vecDestinationCoors.x = x;
-	AutoPilot.m_vecDestinationCoors.y = y;
-	AutoPilot.m_vecDestinationCoors.z = z;
-	AutoPilot.m_nCruiseSpeed = speed;
-	SetStatus(STATUS_PHYSICS);
-
-	if(m_fOrientation == 0.0f){
-		m_fOrientation = General_GetATanOfXY(GetForward().x, GetForward().y) + PI;
-		while(m_fOrientation > TWOPI) m_fOrientation -= TWOPI;
-	}
+	// Delegate to the C implementation
+	Automobile_TellHeliToGoToCoors((CAutomobileStruct*)this, x, y, z, speed);
 }
 
 void
 CAutomobile::TellPlaneToGoToCoors(float x, float y, float z, uint8 speed)
 {
-	AutoPilot.m_nCarMission = MISSION_PLANE_FLYTOCOORS;
-	AutoPilot.m_vecDestinationCoors.x = x;
-	AutoPilot.m_vecDestinationCoors.y = y;
-	AutoPilot.m_vecDestinationCoors.z = z;
-	AutoPilot.m_nCruiseSpeed = speed;
-	SetStatus(STATUS_PHYSICS);
-
-	if(m_fOrientation == 0.0f)
-		m_fOrientation = General_GetATanOfXY(GetForward().x, GetForward().y);
+	// Delegate to the C implementation
+	Automobile_TellPlaneToGoToCoors((CAutomobileStruct*)this, x, y, z, speed);
 }
 
 void
@@ -5994,11 +5873,8 @@ CAutomobile::PopBoot(void)
 void
 CAutomobile::PopBootUsingPhysics(void)
 {
-	switch(Damage_GetDoorStatus(&Damage, DOOR_BOOT))
-	case DOOR_STATUS_OK:
-	case DOOR_STATUS_SMASHED:
-		Damage_SetDoorStatus(&Damage, DOOR_BOOT, DOOR_STATUS_SWINGING);
-	Doors[DOOR_BOOT].m_fAngVel = -2.0f;
+	// Delegate to the C implementation
+	Automobile_PopBootUsingPhysics(this);
 }
 
 void

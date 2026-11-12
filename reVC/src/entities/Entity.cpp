@@ -10,6 +10,7 @@
 #include "ModelIndices.h"
 #include "Timer.h"
 #include "Entity.h"
+#include "EntityLogic.h"
 #include "Object.h"
 #include "World.h"
 #include "Camera.h"
@@ -43,58 +44,8 @@ int gBuildings;
 
 CEntity::CEntity(void)
 {
-	m_type = ENTITY_TYPE_NOTHING;
-	m_status = STATUS_ABANDONED;
-
-	bUsesCollision = false;
-	bCollisionProcessed = false;
-	bIsStatic = false;
-	bHasContacted = false;
-	bPedPhysics = false;
-	bIsStuck = false;
-	bIsInSafePosition = false;
-	bUseCollisionRecords = false;
-
-	bWasPostponed = false;
-	bExplosionProof = false;
-	bIsVisible = true;
-	bHasCollided = false;
-	bRenderScorched = false;
-	bHasBlip = false;
-	bIsBIGBuilding = false;
-	bStreamBIGBuilding = false;
-
-	bRenderDamaged = false;
-	bBulletProof = false;
-	bFireProof = false;
-	bCollisionProof = false;
-	bMeleeProof = false;
-	bOnlyDamagedByPlayer = false;
-	bStreamingDontDelete = false;
-	bRemoveFromWorld = false;
-
-	bHasHitWall = false;
-	bImBeingRendered = false;
-	bTouchingWater = false;
-	bIsSubway = false;
-	bDrawLast = false;
-	bNoBrightHeadLights = false;
-	bDoNotRender = false;
-	bDistanceFade = false;
-
-	m_flagE1 = false;
-	bDontCastShadowsOn = false;
-	bOffscreen = false;
-	bIsStaticWaitingForCollision = false;
-	bDontStream = false;
-	bUnderwater = false;
-	bHasPreRenderEffects = false;
-	bDrawFarAway = false; // rouz edit (ChatGPT)
-
-	m_scanCode = 0;
-	m_modelIndex = -1;
-	m_rwObject = nil;
-	m_area = AREA_MAIN_MAP;
+	// Delegate the field initialisation to the C implementation
+	Entity_Init(this);
 	m_randomSeed = General_GetRandomNumber();
 	m_pFirstReference = nil;
 }
@@ -212,38 +163,17 @@ CEntity::DeleteRwObject(void)
 CRect
 CEntity::GetBoundRect(void)
 {
-	CRect rect;
-	// Initialize rectangle bounds at the former local constructor boundary
-	Rect_Init(&rect);
-	CVector v;
-	CColModel *col = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex))); // rouz edit (ChatGPT)
-
-	// Pass the native point once while retaining live coordinate reads
-	const CVector &rectanglePoint0 = GetMatrix() * CollisionVector_ToNative(col->boundingBox.min);
-	Rect_ContainPoint(&rect, &rectanglePoint0.x, &rectanglePoint0.y);
-	// Pass the native point once while retaining live coordinate reads
-	const CVector &rectanglePoint1 = GetMatrix() * CollisionVector_ToNative(col->boundingBox.max);
-	Rect_ContainPoint(&rect, &rectanglePoint1.x, &rectanglePoint1.y);
-
-	v = CollisionVector_ToNative(col->boundingBox.min);
-	v.x = col->boundingBox.max.x;
-	// Pass the native point once while retaining live coordinate reads
-	const CVector &rectanglePoint2 = GetMatrix() * v;
-	Rect_ContainPoint(&rect, &rectanglePoint2.x, &rectanglePoint2.y);
-
-	v = CollisionVector_ToNative(col->boundingBox.max);
-	v.x = col->boundingBox.min.x;
-	// Pass the native point once while retaining live coordinate reads
-	const CVector &rectanglePoint3 = GetMatrix() * v;
-	Rect_ContainPoint(&rect, &rectanglePoint3.x, &rectanglePoint3.y);
-
-	return rect;
+	// Delegate to the C implementation
+	return Entity_GetBoundRect(this, this);
 }
 
 CVector
 CEntity::GetBoundCentre(void)
 {
-	return GetMatrix() * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.center); // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	float c[3];
+	Entity_GetBoundCentre(this, this, c);
+	return CVector(c[0], c[1], c[2]);
 }
 
 #ifdef GTA_PS2
@@ -256,14 +186,18 @@ CEntity::GetBoundCentre(CVuVector &out)
 void
 CEntity::GetBoundCentre(CVector &out)
 {
-	out = GetMatrix() * CollisionVector_ToNative(((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.center); // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	float c[3];
+	Entity_GetBoundCentre(this, this, c);
+	out = CVector(c[0], c[1], c[2]);
 }
 #endif
 
 float
 CEntity::GetBoundRadius(void)
 {
-	return ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingSphere.radius; // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	return Entity_GetBoundRadius(this);
 }
 
 void
@@ -467,198 +401,57 @@ CEntity::Render(void)
 bool
 CEntity::GetIsTouching(CVUVECTOR const &center, float radius)
 {
-	CVUVECTOR boundCenter;
-	GetBoundCentre(boundCenter);
-	return sq(GetBoundRadius()+radius) > (boundCenter-center).MagnitudeSqr();
+	// Delegate to the C implementation
+	return Entity_GetIsTouching(this, this, center.x, center.y, center.z, radius);
 }
 
 bool
 CEntity::IsVisible(void)
 {
-	return m_rwObject && bIsVisible && GetIsOnScreen();
+	// Delegate to the C implementation
+	return Entity_IsVisible(this, this, (const VectorMath3*)TheCamera.m_vecFrustumNormals, TheCamera.GetCameraMatrix().f);
 }
 
 bool
 CEntity::IsVisibleComplex(void)
 {
-	return m_rwObject && bIsVisible && GetIsOnScreenComplex();
+	// Delegate to the C implementation
+	return Entity_IsVisibleComplex(this, this, (const VectorMath3*)TheCamera.m_vecFrustumNormals, TheCamera.GetCameraMatrix().f);
 }
 
 bool
 CEntity::GetIsOnScreen(void)
 {
-	return TheCamera.IsSphereVisible(GetBoundCentre(), GetBoundRadius());
+	// Delegate to the C implementation
+	return Entity_GetIsOnScreen(this, this, (const VectorMath3*)TheCamera.m_vecFrustumNormals, TheCamera.GetCameraMatrix().f);
 }
 
 bool
 CEntity::GetIsOnScreenComplex(void)
 {
-#ifdef GTA_PS2
-	CVuVector boundBox[8];
-#else
-	CVector boundBox[8];
-#endif
-
-	if(TheCamera.IsPointVisible(GetBoundCentre(), &TheCamera.GetCameraMatrix()))
-		return true;
-
-	CRect rect = GetBoundRect();
-	CColModel *colmodel = ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex))); // rouz edit (ChatGPT)
-	float z = GetPosition().z;
-	float minz = z + colmodel->boundingBox.min.z;
-	float maxz = z + colmodel->boundingBox.max.z;
-	boundBox[0].x = rect.left;
-	boundBox[0].y = rect.bottom;
-	boundBox[0].z = minz;
-	boundBox[1].x = rect.left;
-	boundBox[1].y = rect.top;
-	boundBox[1].z = minz;
-	boundBox[2].x = rect.right;
-	boundBox[2].y = rect.bottom;
-	boundBox[2].z = minz;
-	boundBox[3].x = rect.right;
-	boundBox[3].y = rect.top;
-	boundBox[3].z = minz;
-	boundBox[4].x = rect.left;
-	boundBox[4].y = rect.bottom;
-	boundBox[4].z = maxz;
-	boundBox[5].x = rect.left;
-	boundBox[5].y = rect.top;
-	boundBox[5].z = maxz;
-	boundBox[6].x = rect.right;
-	boundBox[6].y = rect.bottom;
-	boundBox[6].z = maxz;
-	boundBox[7].x = rect.right;
-	boundBox[7].y = rect.top;
-	boundBox[7].z = maxz;
-
-	return TheCamera.IsBoxVisible(boundBox, &TheCamera.GetCameraMatrix());
+	// Delegate to the C implementation
+	return Entity_GetIsOnScreenComplex(this, this, (const VectorMath3*)TheCamera.m_vecFrustumNormals, TheCamera.GetCameraMatrix().f);
 }
 
 void
 CEntity::Add(void)
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
-	CPtrList *list;
-
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
-	assert(xstart >= 0);
-	assert(xend < NUMSECTORS_X);
-	assert(ystart >= 0);
-	assert(yend < NUMSECTORS_Y);
-
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
-			if(x == xmid && y == ymid) switch(m_type){
-			case ENTITY_TYPE_BUILDING:
-				list = &s->m_lists[ENTITYLIST_BUILDINGS];
-				break;
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS];
-				break;
-			case ENTITY_TYPE_DUMMY:
-				list = &s->m_lists[ENTITYLIST_DUMMIES];
-				break;
-			}else switch(m_type){
-			case ENTITY_TYPE_BUILDING:
-				list = &s->m_lists[ENTITYLIST_BUILDINGS_OVERLAP];
-				break;
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
-				break;
-			case ENTITY_TYPE_DUMMY:
-				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
-				break;
-			}
-			PtrList_InsertItem(list, this);
-		}
+	// Delegate to the C implementation
+	Entity_AddToSectors(this, this, this, CWorld::GetSector(0, 0));
 }
 
 void
 CEntity::Remove(void)
 {
-	int x, xstart, xmid, xend;
-	int y, ystart, ymid, yend;
-	CSector *s;
-	CPtrList *list;
-
-	CRect bounds = GetBoundRect();
-	xstart = CWorld::GetSectorIndexX(bounds.left);
-	xend   = CWorld::GetSectorIndexX(bounds.right);
-	xmid   = CWorld::GetSectorIndexX((bounds.left + bounds.right)/2.0f);
-	ystart = CWorld::GetSectorIndexY(bounds.top);
-	yend   = CWorld::GetSectorIndexY(bounds.bottom);
-	ymid   = CWorld::GetSectorIndexY((bounds.top + bounds.bottom)/2.0f);
-	assert(xstart >= 0);
-	assert(xend < NUMSECTORS_X);
-	assert(ystart >= 0);
-	assert(yend < NUMSECTORS_Y);
-
-	for(y = ystart; y <= yend; y++)
-		for(x = xstart; x <= xend; x++){
-			s = CWorld::GetSector(x, y);
-			if(x == xmid && y == ymid) switch(m_type){
-			case ENTITY_TYPE_BUILDING:
-				list = &s->m_lists[ENTITYLIST_BUILDINGS];
-				break;
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS];
-				break;
-			case ENTITY_TYPE_DUMMY:
-				list = &s->m_lists[ENTITYLIST_DUMMIES];
-				break;
-			}else switch(m_type){
-			case ENTITY_TYPE_BUILDING:
-				list = &s->m_lists[ENTITYLIST_BUILDINGS_OVERLAP];
-				break;
-			case ENTITY_TYPE_VEHICLE:
-				list = &s->m_lists[ENTITYLIST_VEHICLES_OVERLAP];
-				break;
-			case ENTITY_TYPE_PED:
-				list = &s->m_lists[ENTITYLIST_PEDS_OVERLAP];
-				break;
-			case ENTITY_TYPE_OBJECT:
-				list = &s->m_lists[ENTITYLIST_OBJECTS_OVERLAP];
-				break;
-			case ENTITY_TYPE_DUMMY:
-				list = &s->m_lists[ENTITYLIST_DUMMIES_OVERLAP];
-				break;
-			}
-			PtrList_RemoveItem(list, this);
-		}
+	// Delegate to the C implementation
+	Entity_RemoveFromSectors(this, this, this, CWorld::GetSector(0, 0));
 }
 
 float
 CEntity::GetDistanceFromCentreOfMassToBaseOfModel(void)
 {
-	return -((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(m_modelIndex)))->boundingBox.min.z; // rouz edit (ChatGPT)
+	// Delegate to the C implementation
+	return Entity_GetDistanceFromCentreOfMassToBaseOfModel(this);
 }
 
 void

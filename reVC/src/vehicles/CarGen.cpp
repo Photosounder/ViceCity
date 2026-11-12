@@ -3,6 +3,7 @@
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "CarGen.h"
+#include "CarGenLogic.h"
 
 #include "Automobile.h"
 #include "Bike.h"
@@ -29,25 +30,20 @@ uint32 CTheCarGenerators::CurrentActiveCount;
 
 void CCarGenerator::SwitchOff()
 {
-#ifdef FIX_BUGS
-	if (m_nUsesRemaining != 0)
-#endif
-	{
-		m_nUsesRemaining = 0;
-		--CTheCarGenerators::CurrentActiveCount;
-	}
+	// Delegate to the C implementation
+	CarGen_SwitchOff(this, &CTheCarGenerators::CurrentActiveCount);
 }
 
 void CCarGenerator::SwitchOn()
 {
-	m_nUsesRemaining = UINT16_MAX;
-	m_nTimer = CalcNextGen();
-	++CTheCarGenerators::CurrentActiveCount;
+	// Delegate to the C implementation
+	CarGen_SwitchOn(this, &CTheCarGenerators::CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
 }
 
 uint32 CCarGenerator::CalcNextGen()
 {
-	return (*Timer_GetTimeInMilliseconds()) + 4;
+	// Delegate to the C implementation
+	return CarGen_CalcNextGen((*Timer_GetTimeInMilliseconds()));
 }
 
 void CCarGenerator::DoInternalProcessing()
@@ -172,24 +168,13 @@ void CCarGenerator::DoInternalProcessing()
 	// Access raw storage through the C store or pool API
 	m_nVehicleHandle = CPool_GetIndex(CPools::GetVehiclePool(), pVehicle);
 	//- rouz edit (ChatGPT)
-	/* I don't think this is a correct comparasion */
-#ifdef FIX_BUGS
-	if (m_nUsesRemaining < UINT16_MAX)
-		--m_nUsesRemaining;
-#else
-	if (m_nUsesRemaining < ~0)
-		--m_nUsesRemaining;
-#endif
-	m_nTimer = CalcNextGen();
-	if (m_nUsesRemaining == 0)
-		--CTheCarGenerators::CurrentActiveCount;
+	// Use up a spawn and arm the timer in C
+	CarGen_AfterSpawn(this, &CTheCarGenerators::CurrentActiveCount, (*Timer_GetTimeInMilliseconds()));
 }
 
 void CCarGenerator::Process()
 {
-	if (m_nVehicleHandle == -1 && 
-		(CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter || (*Timer_GetTimeInMilliseconds()) >= m_nTimer) &&
-		m_nUsesRemaining != 0 && CheckIfWithinRangeOfAnyPlayers())
+	if (CarGen_IsDueToSpawn(this, CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter != 0, (*Timer_GetTimeInMilliseconds())) && CheckIfWithinRangeOfAnyPlayers())
 		DoInternalProcessing();
 	if (m_nVehicleHandle == -1)
 		return;
@@ -203,31 +188,14 @@ void CCarGenerator::Process()
 	}
 	if (pVehicle->GetStatus() != STATUS_PLAYER)
 		return;
-	m_nTimer += 60000;
-	m_nVehicleHandle = -1;
-	m_bIsBlocking = true;
+	CarGen_ReleaseAfterPlayerTookOver(this);
 	pVehicle->bExtendedRange = false;
-	if (m_nModelIndex < 0)
-		m_nModelIndex = -1;
 }
 
 void CCarGenerator::Setup(float x, float y, float z, float angle, int32 mi, int16 color1, int16 color2, uint8 force, uint8 alarm, uint8 lock, uint16 min_delay, uint16 max_delay)
 {
-	CMatrix m1, m2, m3; /* Unused but present on stack, so I'll leave them. */
-	m_vecPos = CVector(x, y, z);
-	m_fAngle = angle;
-	m_nModelIndex = mi;
-	m_nColor1 = color1;
-	m_nColor2 = color2;
-	m_bForceSpawn = force;
-	m_nAlarm = alarm;
-	m_nDoorlock = lock;
-	m_nMinDelay = min_delay;
-	m_nMaxDelay = max_delay;
-	m_nVehicleHandle = -1;
-	m_nTimer = (*Timer_GetTimeInMilliseconds()) + 1;
-	m_nUsesRemaining = 0;
-	m_bIsBlocking = false;
+	// Delegate to the C implementation
+	CarGen_Setup(this, x, y, z, angle, mi, color1, color2, force, alarm, lock, min_delay, max_delay, (*Timer_GetTimeInMilliseconds()));
 }
 
 bool CCarGenerator::CheckForBlockage(int32 mi)
@@ -246,26 +214,20 @@ bool CCarGenerator::CheckForBlockage(int32 mi)
 	return false;
 }
 
+static bool CarGenIsVisible(void *context)
+{
+	// The generator position is on screen and not occluded
+	const CVector *pos = (const CVector*)context;
+	return TheCamera.IsSphereVisible(*pos, 0.0f) && !COcclusion::IsPositionOccluded(*pos, 0.0f);
+}
+
 bool CCarGenerator::CheckIfWithinRangeOfAnyPlayers()
 {
+	// Delegate the decision to the C implementation
 	CVector2D direction = FindPlayerCentreOfWorld(CWorld::PlayerInFocus) - m_vecPos;
-	float distance = direction.Magnitude();
-	float farclip = 110.0f * TheCamera.GenerationDistMultiplier;
-	float nearclip = farclip - 20.0f;
-	bool canBeRemoved = (m_nModelIndex > 0 && ModelRegistry_IsBoatModel(m_nModelIndex) && 165.0f * TheCamera.GenerationDistMultiplier > distance && // rouz edit (ChatGPT)
-		TheCamera.IsSphereVisible(m_vecPos, 0.0f) && !COcclusion::IsPositionOccluded(m_vecPos, 0.0f)); 
-	if (distance >= farclip && !canBeRemoved){
-		if (m_bIsBlocking)
-			m_bIsBlocking = false;
-		return false;
-	}
-	if (CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter)
-		return true;
-	if (m_bIsBlocking)
-		return false;
-	if (distance < nearclip && !m_bForceSpawn)
-		return false;
-	return DotProduct2D(direction, FindPlayerSpeed()) <= 0;
+	CVector2D speed = CVector2D(FindPlayerSpeed());
+	return CarGen_CheckRange(this, direction.x, direction.y, speed.x, speed.y, TheCamera.GenerationDistMultiplier,
+		m_nModelIndex > 0 && ModelRegistry_IsBoatModel(m_nModelIndex), CarGenIsVisible, &m_vecPos, CTheCarGenerators::GenerateEvenIfPlayerIsCloseCounter != 0);
 }
 
 void CTheCarGenerators::Process()

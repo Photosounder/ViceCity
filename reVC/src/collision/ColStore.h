@@ -2,14 +2,7 @@
 
 #include "templates.h"
 
-struct ColDef {	// made up name
-	int32 unused;
-	bool isLoaded;
-	CRect bounds;
-	char name[20];
-	int16 minIndex;
-	int16 maxIndex;
-};
+#include "ColDef.h"
 
 class CColStore
 {

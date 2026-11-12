@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "crossplatform.h"
 #include "ControllerConfig.h"
+#include "InputConfigLogic.h"
 #include "Pad.h"
 #include "FileMgr.h"
 #include "Text.h"
@@ -1153,111 +1154,6 @@ void InputConfig_ButtonUp(int32_t key, int32_t type)
 
 
 
-#define CLEAR_ACTION_IF_NEEDED(action) \
-if (key == Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type))\
-	Input_ClearSettingsAssociatedWithAction(m_aSettings, action, type); // rouz edit (ChatGPT)
-
-void CControllerConfigManager::DeleteMatchingCommonControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-#ifndef BIND_VEHICLE_FIREWEAPON
-		CLEAR_ACTION_IF_NEEDED(PED_FIREWEAPON);
-#endif
-		CLEAR_ACTION_IF_NEEDED(GO_LEFT);
-		CLEAR_ACTION_IF_NEEDED(GO_RIGHT);
-		CLEAR_ACTION_IF_NEEDED(CAMERA_CHANGE_VIEW_ALL_SITUATIONS);
-		CLEAR_ACTION_IF_NEEDED(NETWORK_TALK);
-		CLEAR_ACTION_IF_NEEDED(SWITCH_DEBUG_CAM_ON);
-		CLEAR_ACTION_IF_NEEDED(TOGGLE_DPAD);
-		CLEAR_ACTION_IF_NEEDED(TAKE_SCREEN_SHOT);
-		CLEAR_ACTION_IF_NEEDED(SHOW_MOUSE_POINTER_TOGGLE);
-	}
-}
-
-void CControllerConfigManager::DeleteMatching3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-		CLEAR_ACTION_IF_NEEDED(PED_CYCLE_WEAPON_LEFT);
-		CLEAR_ACTION_IF_NEEDED(PED_CYCLE_WEAPON_RIGHT);
-		CLEAR_ACTION_IF_NEEDED(PED_JUMPING);
-		CLEAR_ACTION_IF_NEEDED(PED_SPRINT);
-		CLEAR_ACTION_IF_NEEDED(PED_LOOKBEHIND);
-		CLEAR_ACTION_IF_NEEDED(PED_DUCK);
-		CLEAR_ACTION_IF_NEEDED(PED_ANSWER_PHONE);
-
-		if (FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC)
-		{
-			CLEAR_ACTION_IF_NEEDED(PED_CYCLE_TARGET_LEFT);
-			CLEAR_ACTION_IF_NEEDED(PED_CYCLE_TARGET_RIGHT);
-			CLEAR_ACTION_IF_NEEDED(PED_CENTER_CAMERA_BEHIND_PLAYER);
-		}
-	}
-}
-
-void CControllerConfigManager::DeleteMatching1rst3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-#ifdef BIND_VEHICLE_FIREWEAPON
-		CLEAR_ACTION_IF_NEEDED(PED_FIREWEAPON);
-#endif
-		CLEAR_ACTION_IF_NEEDED(PED_LOCK_TARGET);
-		CLEAR_ACTION_IF_NEEDED(GO_FORWARD);
-		CLEAR_ACTION_IF_NEEDED(GO_BACK);
-
-		if (FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC)
-		{
-			CLEAR_ACTION_IF_NEEDED(PED_1RST_PERSON_LOOK_LEFT);
-			CLEAR_ACTION_IF_NEEDED(PED_1RST_PERSON_LOOK_RIGHT);
-			CLEAR_ACTION_IF_NEEDED(PED_1RST_PERSON_LOOK_DOWN);
-			CLEAR_ACTION_IF_NEEDED(PED_1RST_PERSON_LOOK_UP);
-		}
-	}
-}
-
-void CControllerConfigManager::DeleteMatchingVehicleControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-#ifdef BIND_VEHICLE_FIREWEAPON
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_FIREWEAPON);
-#endif
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_ACCELERATE);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_BRAKE);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_CHANGE_RADIO_STATION);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_HORN);
-		CLEAR_ACTION_IF_NEEDED(TOGGLE_SUBMISSIONS);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_HANDBRAKE);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_LOOKLEFT);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_LOOKRIGHT);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_LOOKBEHIND);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_TURRETLEFT);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_TURRETRIGHT);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_TURRETUP);
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_TURRETDOWN);
-	}
-}
-
-void CControllerConfigManager::DeleteMatchingVehicle_3rdPersonControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-		CLEAR_ACTION_IF_NEEDED(VEHICLE_ENTER_EXIT);
-	}
-}
-
-void CControllerConfigManager::DeleteMatching1rstPersonControls(e_ControllerAction action, int32 key, eControllerType type)
-{
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-		CLEAR_ACTION_IF_NEEDED(PED_SNIPER_ZOOM_IN);
-		CLEAR_ACTION_IF_NEEDED(PED_SNIPER_ZOOM_OUT);
-	}
-}
-
-#undef CLEAR_ACTION_IF_NEEDED
 
 #ifdef RADIO_SCROLL_TO_PREV_STATION
 #define CHECK_ACTION(action) \
@@ -1266,39 +1162,8 @@ if (key == Input_GetControllerKeyAssociatedWithAction(m_aSettings, action, type)
 
 bool CControllerConfigManager::IsAnyVehicleActionAssignedToMouseKey(int32 key)
 {
-	const eControllerType type = MOUSE;
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-#ifdef BIND_VEHICLE_FIREWEAPON
-		CHECK_ACTION(VEHICLE_FIREWEAPON);
-#endif
-		CHECK_ACTION(VEHICLE_LOOKBEHIND);
-		CHECK_ACTION(VEHICLE_LOOKLEFT);
-		CHECK_ACTION(VEHICLE_LOOKRIGHT);
-		CHECK_ACTION(VEHICLE_HORN);
-		CHECK_ACTION(VEHICLE_HANDBRAKE);
-		CHECK_ACTION(VEHICLE_ACCELERATE);
-		CHECK_ACTION(VEHICLE_BRAKE);
-		CHECK_ACTION(VEHICLE_CHANGE_RADIO_STATION);
-		CHECK_ACTION(TOGGLE_SUBMISSIONS);
-		CHECK_ACTION(VEHICLE_TURRETLEFT);
-		CHECK_ACTION(VEHICLE_TURRETRIGHT);
-		CHECK_ACTION(VEHICLE_TURRETUP);
-		CHECK_ACTION(VEHICLE_TURRETDOWN);
-		CHECK_ACTION(VEHICLE_ENTER_EXIT);
-		CHECK_ACTION(CAMERA_CHANGE_VIEW_ALL_SITUATIONS);
-#ifndef BIND_VEHICLE_FIREWEAPON
-		CHECK_ACTION(PED_FIREWEAPON);
-#endif
-		CHECK_ACTION(GO_LEFT);
-		CHECK_ACTION(GO_RIGHT);
-		CHECK_ACTION(NETWORK_TALK);
-		CHECK_ACTION(SWITCH_DEBUG_CAM_ON);
-		CHECK_ACTION(TOGGLE_DPAD);
-		CHECK_ACTION(TAKE_SCREEN_SHOT);
-		CHECK_ACTION(SHOW_MOUSE_POINTER_TOGGLE);
-	}
-	return false;
+	// Delegate to the C implementation
+	return InputConfig_IsAnyVehicleActionAssignedToMouseKey(m_aSettings, key);
 }
 
 #undef CHECK_ACTION
@@ -1306,129 +1171,16 @@ bool CControllerConfigManager::IsAnyVehicleActionAssignedToMouseKey(int32 key)
 
 void CControllerConfigManager::DeleteMatchingActionInitiators(e_ControllerAction action, int32 key, eControllerType type)
 {
-	if (!Input_GetIsKeyBlank(key, type)) // rouz edit (ChatGPT)
-	{
-		switch (GetActionType(action))
-		{
-		case ACTIONTYPE_1RSTPERSON:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatching1rstPersonControls       (action, key, type);
-			DeleteMatching1rst3rdPersonControls    (action, key, type);
-			break;
-		case ACTIONTYPE_3RDPERSON:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatching1rst3rdPersonControls    (action, key, type);
-			DeleteMatching3rdPersonControls        (action, key, type);
-			DeleteMatchingVehicle_3rdPersonControls(action, key, type);
-			break;
-		case ACTIONTYPE_VEHICLE:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatchingVehicleControls          (action, key, type);
-			DeleteMatchingVehicle_3rdPersonControls(action, key, type);
-			break;
-		case ACTIONTYPE_VEHICLE_3RDPERSON:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatching1rst3rdPersonControls    (action, key, type);
-			DeleteMatching3rdPersonControls        (action, key, type);
-			DeleteMatchingVehicleControls          (action, key, type);
-			break;
-		case ACTIONTYPE_COMMON:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatching1rstPersonControls       (action, key, type);
-			DeleteMatching1rst3rdPersonControls    (action, key, type);
-			DeleteMatching3rdPersonControls        (action, key, type);
-			DeleteMatchingVehicleControls          (action, key, type);
-			DeleteMatchingVehicle_3rdPersonControls(action, key, type);
-			break;
-		case ACTIONTYPE_1RST3RDPERSON:
-			DeleteMatchingCommonControls           (action, key, type);
-			DeleteMatching1rstPersonControls       (action, key, type);
-			DeleteMatching1rst3rdPersonControls    (action, key, type);
-			DeleteMatching3rdPersonControls        (action, key, type);
-			DeleteMatchingVehicle_3rdPersonControls(action, key, type);
-			break;
-		default: break;
-		}
-	}
+	// Delegate to the C implementation
+	InputConfig_DeleteMatchingActionInitiators(m_aSettings, action, key, type, FrontEndMenuManager.m_ControlMethod == CONTROL_CLASSIC);
 }
 
 
 
 e_ControllerActionType CControllerConfigManager::GetActionType(e_ControllerAction action)
 {
-	switch (action)
-	{
-#ifndef BIND_VEHICLE_FIREWEAPON
-	case PED_FIREWEAPON:
-#endif
-	case GO_LEFT:
-	case GO_RIGHT:
-	case CAMERA_CHANGE_VIEW_ALL_SITUATIONS:
-	case NETWORK_TALK:
-	case TOGGLE_DPAD:
-	case SWITCH_DEBUG_CAM_ON:
-	case TAKE_SCREEN_SHOT:
-	case SHOW_MOUSE_POINTER_TOGGLE:
-		return ACTIONTYPE_COMMON;
-		break;
-
-	case PED_CYCLE_WEAPON_RIGHT:
-	case PED_CYCLE_WEAPON_LEFT:
-	case PED_JUMPING:
-	case PED_SPRINT:
-	case PED_LOOKBEHIND:
-	case PED_DUCK:
-	case PED_ANSWER_PHONE:
-	case PED_CYCLE_TARGET_LEFT:
-	case PED_CYCLE_TARGET_RIGHT:
-	case PED_CENTER_CAMERA_BEHIND_PLAYER:
-		return ACTIONTYPE_3RDPERSON;
-		break;
-
-#ifdef BIND_VEHICLE_FIREWEAPON
-	case VEHICLE_FIREWEAPON:
-#endif
-	case VEHICLE_ACCELERATE:
-	case VEHICLE_BRAKE:
-	case VEHICLE_CHANGE_RADIO_STATION:
-	case VEHICLE_HORN:
-	case TOGGLE_SUBMISSIONS:
-	case VEHICLE_HANDBRAKE:
-	case VEHICLE_LOOKLEFT:
-	case VEHICLE_LOOKRIGHT:
-	case VEHICLE_LOOKBEHIND:
-	case VEHICLE_TURRETLEFT:
-	case VEHICLE_TURRETRIGHT:
-	case VEHICLE_TURRETUP:
-	case VEHICLE_TURRETDOWN:
-		return ACTIONTYPE_VEHICLE;
-		break;
-
-	case VEHICLE_ENTER_EXIT:
-		return ACTIONTYPE_VEHICLE_3RDPERSON;
-		break;
-
-#ifdef BIND_VEHICLE_FIREWEAPON
-	case PED_FIREWEAPON:
-#endif
-	case GO_FORWARD:
-	case GO_BACK:
-	case PED_1RST_PERSON_LOOK_LEFT:
-	case PED_1RST_PERSON_LOOK_RIGHT:
-	case PED_LOCK_TARGET:
-	case PED_1RST_PERSON_LOOK_UP:
-	case PED_1RST_PERSON_LOOK_DOWN:
-		return ACTIONTYPE_1RST3RDPERSON;
-		break;
-
-	case PED_SNIPER_ZOOM_IN:
-	case PED_SNIPER_ZOOM_OUT:
-		return ACTIONTYPE_1RSTPERSON;
-		break;
-	default: break;
-	}
-
-	return ACTIONTYPE_NONE;
+	// Delegate to the C implementation
+	return (e_ControllerActionType)InputConfig_GetActionType(action);
 }
 
 

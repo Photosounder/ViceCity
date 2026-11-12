@@ -32,6 +32,11 @@
 #include "Clock.h"
 #include "WaterLevel.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "Vehicle.h"
+#include "Ped.h"
+#include "PopulationLogic.h"
+#include "Object.h"
+#include "ObjectLogic.h"
 
 #define MIN_CREATION_DIST		40.0f // not for start of the game (look at the GeneratePedsAtStartOfGame)
 #define CREATION_RANGE			10.0f // added over the MIN_CREATION_DIST.
@@ -681,20 +686,11 @@ CPopulation::MoveCarsAndPedsOutOfAbandonedZones()
 void
 CPopulation::ConvertAllObjectsToDummyObjects()
 {
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	uint32 i = CPool_GetSize(CPools::GetObjectPool());
-	//- rouz edit (ChatGPT)
-	while(i--) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
-		//- rouz edit (ChatGPT)
-		if (obj) {
-			if (obj->CanBeDeleted())
-				ConvertToDummyObject(obj);
-		}
-	}
+	// The C implementation picks the objects, the conversion stays here
+	void *selected[NUMOBJECTS * 2];
+	int numSelected = Object_SelectDeletable(CPools::GetObjectPool(), selected, ARRAY_SIZE(selected));
+	for(int s = 0; s < numSelected; s++)
+		ConvertToDummyObject((CObject*)selected[s]);
 }
 
 void
@@ -867,6 +863,13 @@ CPopulation::TestSafeForRealObject(CDummyObject *dummy)
 	return true;
 }
 
+static int
+PedClumpAlpha(void *ped)
+{
+	// Alpha of the ped clump
+	return CVisibilityPlugins::GetClumpAlpha(((CPed*)ped)->GetClump());
+}
+
 void
 CPopulation::ManagePopulation(void)
 {
@@ -877,154 +880,89 @@ CPopulation::ManagePopulation(void)
 	CVector playerPos = FindPlayerCentreOfWorld(CWorld::PlayerInFocus);
 
 	// Why this code is here?! Delete temporary objects when they got too far, and convert others to "dummy" objects. (like lamp posts)
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int objectPoolSize = CPool_GetSize(CPools::GetObjectPool());
-	//- rouz edit (ChatGPT)
-	for (int i = objectPoolSize * frameMod32 / 32; i < objectPoolSize * (frameMod32 + 1) / 32; i++) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CObject *obj = ((CObject*)CPool_GetSlot(CPools::GetObjectPool(), i));
-		//- rouz edit (ChatGPT)
-		if (obj && obj->CanBeDeleted()) {
-			float objPlayerDist = (obj->GetPosition() - playerPos).Magnitude();
-			if (obj->ObjectCreatedBy == TEMP_OBJECT) {
-				if (obj->GetModelIndex() != MI_ROADWORKBARRIER1 && obj->GetModelIndex() != MI_BEACHBALL) {
-					if (objPlayerDist > 51.0f || objPlayerDist > 25.0f && !obj->GetIsOnScreen() || (*Timer_GetTimeInMilliseconds()) > obj->m_nEndOfLifeTime) {
-						CWorld::Remove(obj);
-//+ rouz edit (ChatGPT)
-						// Destroy and release the temporary object without invoking C++ delete.
-						obj->~CObject();
-						//+ rouz edit (ChatGPT)
-						// Access raw storage through the C store or pool API
-						CPool_Delete(CPools::GetObjectPool(), obj);
-						//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-					}
-				} else if (objPlayerDist > 120.0f) {
-					CWorld::Remove(obj);
-//+ rouz edit (ChatGPT)
-					// Destroy and release the temporary object without invoking C++ delete.
-					obj->~CObject();
-					//+ rouz edit (ChatGPT)
-					// Access raw storage through the C store or pool API
-					CPool_Delete(CPools::GetObjectPool(), obj);
-					//- rouz edit (ChatGPT)
-//- rouz edit (ChatGPT)
-				}
-
-			} else if (objPlayerDist > 80.0f && (obj->m_objectMatrix.GetPosition() - playerPos).Magnitude() > 80.0f) {
-				if (obj->ObjectCreatedBy != CUTSCENE_OBJECT && TestRoomForDummyObject(obj)) {
-					ConvertToDummyObject(obj);
-				}
-			}
+	// The C implementation decides what happens to the objects of this frame slice, the effects stay here
+	void *selectedObjects[NUMOBJECTS * 2];
+	int objectActions[NUMOBJECTS * 2];
+	int numObjects = Population_SelectObjectActions(CPools::GetObjectPool(), frameMod32, playerPos.x, playerPos.y, playerPos.z,
+		(*Timer_GetTimeInMilliseconds()), (const VectorMath3*)TheCamera.m_vecFrustumNormals, TheCamera.GetCameraMatrix().f,
+		selectedObjects, objectActions, ARRAY_SIZE(selectedObjects));
+	for (int s = 0; s < numObjects; s++) {
+		CObject *obj = (CObject*)selectedObjects[s];
+		if (objectActions[s] == 1) {
+			CWorld::Remove(obj);
+			// Destroy and release the temporary object without invoking C++ delete.
+			obj->~CObject();
+			// Access raw storage through the C store or pool API
+			CPool_Delete(CPools::GetObjectPool(), obj);
+		} else if (TestRoomForDummyObject(obj)) {
+			ConvertToDummyObject(obj);
 		}
 	}
 
 	// Convert them back to real objects. Dummy objects don't have collisions, so they need to be converted.
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int dummyPoolSize = CPool_GetSize(CPools::GetDummyPool());
-	//- rouz edit (ChatGPT)
-	for (int i = dummyPoolSize * frameMod32 / 32; i < dummyPoolSize * (frameMod32 + 1) / 32; i++) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CDummy *dummy = ((CDummy*)CPool_GetSlot(CPools::GetDummyPool(), i));
-		//- rouz edit (ChatGPT)
-		if (dummy && (dummy->m_area == CGame::currArea || dummy->m_area == AREA_EVERYWHERE)) {
-			if ((dummy->GetPosition() - playerPos).Magnitude() < 80.0f)
-				ConvertToRealObject((CDummyObject*)dummy);
+	// The C implementation picks the dummies, the conversion stays here
+	void *selectedDummies[NUMDUMMIES * 2];
+	int numDummies = Population_SelectDummiesToConvert(CPools::GetDummyPool(), frameMod32, playerPos.x, playerPos.y, playerPos.z, CGame::currArea, selectedDummies, ARRAY_SIZE(selectedDummies));
+	for (int s = 0; s < numDummies; s++)
+		ConvertToRealObject((CDummyObject*)selectedDummies[s]);
+
+	// The C implementation decides what happens to each ped, the effects stay here
+	PopulationPedParams pedParams;
+	pedParams.px = playerPos.x;
+	pedParams.py = playerPos.y;
+	pedParams.pz = playerPos.z;
+	pedParams.timeMs = (*Timer_GetTimeInMilliseconds());
+	pedParams.frenzyOnGoing = Darkel_FrenzyOnGoing();
+	pedParams.removeDistSpecial = Population_PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier);
+	pedParams.removeDist = Population_PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier;
+	pedParams.offscreenDist = Population_PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT;
+	pedParams.offscreenDespawnAllowed = TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
+		&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
+		&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_CAMERA
+		&& !TheCamera.Cams[TheCamera.ActiveCam].LookingLeft
+		&& !TheCamera.Cams[TheCamera.ActiveCam].LookingRight
+		&& !TheCamera.Cams[TheCamera.ActiveCam].LookingBehind;
+	pedParams.normals = (const VectorMath3*)TheCamera.m_vecFrustumNormals;
+	pedParams.cameraMatrix = TheCamera.GetCameraMatrix().f;
+	pedParams.getClumpAlpha = PedClumpAlpha;
+	void *selectedPeds[NUMPEDS * 2];
+	int pedActions[NUMPEDS * 2];
+	int numPeds = Population_SelectPedActions(CPools::GetPedPool(), &pedParams, selectedPeds, pedActions, ARRAY_SIZE(selectedPeds));
+	for (int s = 0; s < numPeds; s++) {
+		CPed *ped = (CPed*)selectedPeds[s];
+		if (pedActions[s] == 1) {
+			RemovePed(ped);
+			continue;
 		}
-	}
 
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int pedPoolSize = CPool_GetSize(CPools::GetPedPool());
-	//- rouz edit (ChatGPT)
-#ifndef SQUEEZE_PERFORMANCE
-	for (int poolIndex = pedPoolSize-1; poolIndex >= 0; poolIndex--) {
-#else
-	for (int poolIndex = (pedPoolSize * (frameMod32 + 1) / 32) - 1; poolIndex >= pedPoolSize * frameMod32 / 32; poolIndex--) {
-#endif
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CPed *ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), poolIndex));
-		//- rouz edit (ChatGPT)
+		if (ped->m_nPedState == PED_DEAD && !ped->bFadeOut) {
+			CVector pedPos = ped->GetPosition();
 
-		if (ped && !ped->IsPlayer() && ped->CanBeDeleted() && !ped->bInVehicle) {
-			uint32 timeSinceDeath = (*Timer_GetTimeInMilliseconds()) - ped->m_bloodyFootprintCountOrDeathTime;
-			if (ped->m_nPedState == PED_DEAD && (timeSinceDeath > 30000 || Darkel_FrenzyOnGoing() && timeSinceDeath > 15000))
-				ped->bFadeOut = true;
-
-			if (ped->bFadeOut && CVisibilityPlugins::GetClumpAlpha(ped->GetClump()) == 0) {
-				RemovePed(ped);
-				continue;
+			float randAngle = (uint8) General_GetRandomNumber() * (3.14f / 128.0f); // Not PI, 3.14
+			switch (General_GetRandomNumber() % 3) {
+				case 0:
+					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline1Tex, &pedPos,
+						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						255, 255, 255, 255, 4.0f, 40000, 1.0f);
+					break;
+				case 1:
+					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline2Tex, &pedPos,
+						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						255, 255, 255, 255, 4.0f, 40000, 1.0f);
+					break;
+				case 2:
+					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline3Tex, &pedPos,
+						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						255, 255, 255, 255, 4.0f, 40000, 1.0f);
+					break;
+				default:
+					break;
 			}
-
-			float dist = (ped->GetPosition() - playerPos).Magnitude2D();
-
-			bool pedIsFarAway = false;
-
-			if (ped->IsGangMember())
-				dist -= 30.0f;
-			else if (ped->bDeadPedInFrontOfCar && ped->m_vehicleInAccident)
-				dist = 0.0f;
-
-			if (Population_PedCreationDistMultiplier() * (PED_REMOVE_DIST_SPECIAL * TheCamera.GenerationDistMultiplier) < dist || // rouz edit (ChatGPT)
-				(!ped->bCullExtraFarAway && Population_PedCreationDistMultiplier() * PED_REMOVE_DIST * TheCamera.GenerationDistMultiplier < dist)) { // rouz edit (ChatGPT)
-				pedIsFarAway = true;
-			}
-#ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
-			else if (Population_PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE) * OFFSCREEN_CREATION_MULT < dist) { // rouz edit (ChatGPT)
-				if ((*Timer_GetTimeInMilliseconds()) > ped->m_nExtendedRangeTimer && !ped->GetIsOnScreen()) {
-					if (TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER
-						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_SNIPER_RUNABOUT
-						&& TheCamera.Cams[TheCamera.ActiveCam].Mode != CCam::MODE_CAMERA
-						&& !TheCamera.Cams[TheCamera.ActiveCam].LookingLeft
-						&& !TheCamera.Cams[TheCamera.ActiveCam].LookingRight
-						&& !TheCamera.Cams[TheCamera.ActiveCam].LookingBehind) {
-						pedIsFarAway = true;
-					}
-				}
-						
-			}
-#endif
-			else {
-				ped->m_nExtendedRangeTimer = ped->m_nPedType == PEDTYPE_COP ? (*Timer_GetTimeInMilliseconds()) + 10000 : (*Timer_GetTimeInMilliseconds()) + 4000;
-			}
-
-			if (!pedIsFarAway)
-				continue;
-
-			if (ped->m_nPedState == PED_DEAD && !ped->bFadeOut) {
-				CVector pedPos = ped->GetPosition();
-
-				float randAngle = (uint8) General_GetRandomNumber() * (3.14f / 128.0f); // Not PI, 3.14
-				switch (General_GetRandomNumber() % 3) {
-					case 0:
-						CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline1Tex, &pedPos,
-							0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
-							255, 255, 255, 255, 4.0f, 40000, 1.0f);
-						break;
-					case 1:
-						CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline2Tex, &pedPos,
-							0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
-							255, 255, 255, 255, 4.0f, 40000, 1.0f);
-						break;
-					case 2:
-						CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline3Tex, &pedPos,
-							0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
-							255, 255, 255, 255, 4.0f, 40000, 1.0f);
-						break;
-					default:
-						break;
-				}
-			}
-			if (ped->GetIsOnScreen())
-				ped->bFadeOut = true;
-			else
-				RemovePed(ped);
 		}
+		if (ped->GetIsOnScreen())
+			ped->bFadeOut = true;
+		else
+			RemovePed(ped);
 	}
 }
 
@@ -1088,25 +1026,9 @@ CPopulation::RemovePedsIfThePoolGetsFull(void)
 		// Access raw storage through the C store or pool API
 		if (CPool_GetNoOfFreeSpaces(CPools::GetPedPool()) < 8) {
 		//- rouz edit (ChatGPT)
-			CPed *closestPed = nil;
-			float closestDist = 10000000.0;
-			//+ rouz edit (ChatGPT)
-			// Access raw storage through the C store or pool API
-			int poolSize = CPool_GetSize(CPools::GetPedPool());
-			//- rouz edit (ChatGPT)
-			for (int i = poolSize - 1; i >= 0; i--) {
-				//+ rouz edit (ChatGPT)
-				// Access raw storage through the C store or pool API
-				CPed* ped = ((CPed*)CPool_GetSlot(CPools::GetPedPool(), i));
-				//- rouz edit (ChatGPT)
-				if (ped && ped->CanBeDeleted()) {
-					float dist = (TheCamera.GetPosition() - ped->GetPosition()).Magnitude();
-					if (dist < closestDist) {
-						closestDist = dist;
-						closestPed = ped;
-					}
-				}
-			}
+			// Find the ped to remove with the C implementation
+			const CVector &camPos = TheCamera.GetPosition();
+			CPed *closestPed = (CPed*)Population_FindClosestDeletablePed(CPools::GetPedPool(), camPos.x, camPos.y, camPos.z);
 			if (closestPed) {
 				RemovePed(closestPed);
 			}

@@ -14,67 +14,16 @@ class CPlayerPed;
 class CCopPed;
 struct CFire;
 
-enum {
-	RANDOM_VEHICLE = 1,
-	MISSION_VEHICLE = 2,
-	PARKED_VEHICLE = 3,
-	PERMANENT_VEHICLE = 4,
-};
+#include "VehicleCreation.h"
 
-enum eCarNodes
-{
-	CAR_WHEEL_RF = 1,
-	CAR_WHEEL_RM,
-	CAR_WHEEL_RB,
-	CAR_WHEEL_LF,
-	CAR_WHEEL_LM,
-	CAR_WHEEL_LB,
-	CAR_BUMP_FRONT,
-	CAR_BUMP_REAR,
-	CAR_WING_RF,
-	CAR_WING_RR,
-	CAR_DOOR_RF,
-	CAR_DOOR_RR,
-	CAR_WING_LF,
-	CAR_WING_LR,
-	CAR_DOOR_LF,
-	CAR_DOOR_LR,
-	CAR_BONNET,
-	CAR_BOOT,
-	CAR_WINDSCREEN,
-	NUM_CAR_NODES,
-};
+#include "CarNodes.h"
 
-enum {
-	CAR_DOOR_FLAG_UNKNOWN = 0x0,
-	CAR_DOOR_FLAG_LF = 0x1,
-	CAR_DOOR_FLAG_LR = 0x2,
-	CAR_DOOR_FLAG_RF = 0x4,
-	CAR_DOOR_FLAG_RR = 0x8
-};
 
-enum eCarLock {
-	CARLOCK_NOT_USED,
-	CARLOCK_UNLOCKED,
-	CARLOCK_LOCKED,
-	CARLOCK_LOCKOUT_PLAYER_ONLY,
-	CARLOCK_LOCKED_PLAYER_INSIDE,
-	CARLOCK_LOCKED_INITIALLY,
-	CARLOCK_FORCE_SHUT_DOORS,
-	CARLOCK_LOCKED_BUT_CAN_BE_DAMAGED
-};
+#include "CarLock.h"
 
 #include "VehicleBombTypes.h"
 
-enum eDoors
-{
-	DOOR_BONNET = 0,
-	DOOR_BOOT,
-	DOOR_FRONT_LEFT,
-	DOOR_FRONT_RIGHT,
-	DOOR_REAR_LEFT,
-	DOOR_REAR_RIGHT
-};
+#include "VehicleDoors.h"
 
 #include "VehicleDamageParts.h"
 
@@ -134,112 +83,12 @@ enum
 	ROTOR_BOTTOM = 9,
 };
 
-class CVehicle : public CPhysical
+#include "VehicleData.h"
+#include "VehicleLogic.h"
+
+class CVehicle : public CPhysical, public CVehicleData
 {
 public:
-	tHandlingData *pHandling;
-	tFlyingHandlingData *pFlyingHandling;
-	CAutoPilot AutoPilot;
-	uint8 m_currentColour1;
-	uint8 m_currentColour2;
-	int8 m_aExtras[2];
-	int16 m_nAlarmState;
-	int16 m_nRouteSeed;
-	CPed *pDriver;
-	CPed *pPassengers[8];
-	uint8 m_nNumPassengers;
-	int8 m_nNumGettingIn;
-	int8 m_nGettingInFlags;
-	int8 m_nGettingOutFlags;
-	uint8 m_nNumMaxPassengers;
-	float field_1D0[4];
-	CEntity *m_pCurGroundEntity;
-	CFire *m_pCarFire;
-	float m_fSteerAngle;
-	float m_fGasPedal;
-	float m_fBrakePedal;
-	uint8 VehicleCreatedBy;
-
-	// cf. https://github.com/DK22Pac/plugin-sdk/blob/master/plugin_sa/game_sa/CVehicle.h from R*
-	uint8 bIsLawEnforcer: 1; // Is this guy chasing the player at the moment
-	uint8 bIsAmbulanceOnDuty: 1; // Ambulance trying to get to an accident
-	uint8 bIsFireTruckOnDuty: 1; // Firetruck trying to get to a fire
-	uint8 bIsLocked: 1; // Is this guy locked by the script (cannot be removed)
-	uint8 bEngineOn: 1; // For sound purposes. Parked cars have their engines switched off (so do destroyed cars)
-	uint8 bIsHandbrakeOn: 1; // How's the handbrake doing ?
-	uint8 bLightsOn: 1; // Are the lights switched on ?
-	uint8 bFreebies: 1; // Any freebies left in this vehicle ?
-
-	uint8 bIsVan: 1; // Is this vehicle a van (doors at back of vehicle)
-	uint8 bIsBus: 1; // Is this vehicle a bus
-	uint8 bIsBig: 1; // Is this vehicle a bus
-	uint8 bLowVehicle: 1; // Need this for sporty type cars to use low getting-in/out anims
-	uint8 bComedyControls : 1; // Will make the car hard to control (hopefully in a funny way)
-	uint8 bWarnedPeds : 1; // Has scan and warn peds of danger been processed?
-	uint8 bCraneMessageDone : 1; // A crane message has been printed for this car allready
-	uint8 bExtendedRange : 1; // This vehicle needs to be a bit further away to get deleted
-
-	uint8 bTakeLessDamage : 1; // This vehicle is stronger (takes about 1/4 of damage)
-	uint8 bIsDamaged : 1; // This vehicle has been damaged and is displaying all its components
-	uint8 bHasBeenOwnedByPlayer : 1;// To work out whether stealing it is a crime
-	uint8 bFadeOut : 1; // Fade vehicle out
-	uint8 bIsBeingCarJacked : 1; // Fade vehicle out
-	uint8 bCreateRoadBlockPeds : 1; // If this vehicle gets close enough we will create peds (coppers or gang members) round it
-	uint8 bCanBeDamaged : 1; // Set to FALSE during cut scenes to avoid explosions
-	uint8 bUsingSpecialColModel : 1;// Is player vehicle using special collision model, stored in player strucure
-
-	uint8 bOccupantsHaveBeenGenerated : 1;  // Is true if the occupants have already been generated. (Shouldn't happen again)
-	uint8 bGunSwitchedOff : 1;  // Level designers can use this to switch off guns on boats
-	uint8 bVehicleColProcessed : 1;// Has ProcessEntityCollision been processed for this car?
-	uint8 bIsCarParkVehicle : 1; // Car has been created using the special CAR_PARK script command
-	uint8 bHasAlreadyBeenRecorded : 1; // Used for replays
-	uint8 bPartOfConvoy : 1;
-	uint8 bHeliMinimumTilt : 1; // This heli should have almost no tilt really
-	uint8 bAudioChangingGear : 1; // sounds like vehicle is changing gear
-
-	uint8 bIsDrowning : 1; // is vehicle occupants taking damage in water (i.e. vehicle is dead in water)
-	uint8 bTyresDontBurst : 1; // If this is set the tyres are invincible
-	uint8 bCreatedAsPoliceVehicle : 1;// True if this guy was created as a police vehicle (enforcer, policecar, miamivice car etc)
-	uint8 bRestingOnPhysical : 1; // Dont go static cause car is sitting on a physical object that might get removed
-	uint8 bParking : 1;
-	uint8 bCanPark : 1;
-#if (!defined GTA_PS2 || defined FIX_BUGS)
-	uint8 m_bombType : 3;
-#endif
-	uint8 bDriverLastFrame : 1;
-
-	int8 m_numPedsUseItAsCover;
-	uint8 m_nAmmoInClip;    // Used to make the guns on boat do a reload (20 by default)
-	int8 m_nPacManPickupsCarried;
-	uint8 m_nRoadblockType;
-	float m_fHealth;           // 1000.0f = full health. 250.0f = fire. 0 -> explode
-	uint8 m_nCurrentGear;
-	float m_fChangeGearTime;
-#if (!defined GTA_PS2 || defined FIX_BUGS)
-	CEntity* m_pBombRigger;
-#endif
-	uint32 m_nSetPieceExtendedRangeTime;
-	uint32 m_nGunFiringTime;    // last time when gun on vehicle was fired (used on boats)
-	uint32 m_nTimeOfDeath;
-	uint16 m_nTimeBlocked;
-	int16 m_nBombTimer;        // goes down with each frame
-	CEntity *m_pBlowUpEntity;
-	float m_fMapObjectHeightAhead;	// front Z?
-	float m_fMapObjectHeightBehind;	// rear Z?
-	eCarLock m_nDoorLock;
-	int8 m_nLastWeaponDamage; // see eWeaponType, -1 if no damage
-	CEntity *m_pLastDamageEntity;
-	uint8 m_nRadioStation;
-	uint8 m_bRainAudioCounter;
-	uint8 m_bRainSamplesCounter;
-	uint32 m_nCarHornTimer;
-	uint8 m_nCarHornPattern;
-	bool m_bSirenOrAlarm;
-	uint8 m_nCarHornDelay;
-	int8 m_comedyControlState;
-	CStoredCollPoly m_aCollPolys[2];     // poly which is under front/rear part of car
-	float m_fSteerInput;
-	eVehicleType m_vehType;
 
 	CVehicle(void) {
         // Preserve the original autopilot initialization in the fake vehicle constructor

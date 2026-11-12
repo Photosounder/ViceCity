@@ -35,6 +35,7 @@
 #include "MBlur.h"
 #include "screendroplets.h"
 #include "SaveBuf.h"
+#include "GameLogicMath.h"
 
 uint8 CGameLogic::ActivePlayers;
 uint8 CGameLogic::ShortCutState;
@@ -68,18 +69,9 @@ CGameLogic::PassTime(uint32 time)
 {
 	int32 minutes, hours, days;
 
-	minutes = time + Clock_GetMinutes();
-	hours = Clock_GetHours();
-
-	for (; minutes >= 60; minutes -= 60)
-		hours++;
-
-	if (hours > 23) {
-		days = Stats_DaysPassed;
-		for (; hours >= 24; hours -= 24)
-			days++;
-		Stats_DaysPassed = days;
-	}
+	// Do the clock arithmetic in C
+	GameLogic_PassTime(time, Clock_GetMinutes(), Clock_GetHours(), Stats_DaysPassed, &minutes, &hours, &days);
+	Stats_DaysPassed = days;
 
 	Clock_SetGameClock(hours, minutes);
 	CPickups::PassTime(time * 1000);
@@ -442,13 +434,11 @@ CGameLogic::AbandonShortCutIfTaxiHasBeenMessedWith()
 {
 	if (!pShortCutTaxi)
 		return;
-	if (pShortCutTaxi->pDriver == nil ||
-		pShortCutTaxi->pDriver->DyingOrDead() ||
-		pShortCutTaxi->pDriver->GetPedState() == PED_DRAG_FROM_CAR ||
-		pShortCutTaxi->pDriver->GetPedState() == PED_ON_FIRE ||
-		pShortCutTaxi->pDriver->m_objective == OBJECTIVE_LEAVE_CAR_AND_DIE ||
-		pShortCutTaxi->m_fHealth < 250.0f ||
-		pShortCutTaxi->bRenderScorched)
+	// Decide in C, the driver tests are only valid with a driver
+	CPed *driver = pShortCutTaxi->pDriver;
+	if (GameLogic_TaxiHasBeenMessedWith(driver != nil, driver && driver->DyingOrDead(),
+		driver && driver->GetPedState() == PED_DRAG_FROM_CAR, driver && driver->GetPedState() == PED_ON_FIRE,
+		driver && driver->m_objective == OBJECTIVE_LEAVE_CAR_AND_DIE, pShortCutTaxi->m_fHealth, pShortCutTaxi->bRenderScorched))
 		ClearShortCut();
 }
 
@@ -593,15 +583,11 @@ CGameLogic::AfterDeathArrestSetUpShortCutTaxi()
 {
 	if (!MissionDropOffReadyToBeUsed)
 		return;
-	int nClosestPoint = -1;
-	float fDistanceToPoint = 999999.9f;
-	for (int i = 0; i < NUM_SHORTCUT_START_POINTS; i++) {
-		float dist = (AfterDeathStartPoints[i] - FindPlayerCoors()).Magnitude();
-		if (dist < fDistanceToPoint) {
-			fDistanceToPoint = dist;
-			nClosestPoint = i;
-		}
-	}
+	// Find the nearest start point in C
+	float fDistanceToPoint;
+	CVector playerCoors = FindPlayerCoors();
+	int nClosestPoint = GameLogic_FindClosestPoint((const float*)AfterDeathStartPoints, NUM_SHORTCUT_START_POINTS,
+		playerCoors.x, playerCoors.y, playerCoors.z, &fDistanceToPoint);
 	if (fDistanceToPoint < 100.0f)
 		SetUpShortCut(AfterDeathStartPoints[nClosestPoint],
 			AfterDeathStartPointOrientation[nClosestPoint],

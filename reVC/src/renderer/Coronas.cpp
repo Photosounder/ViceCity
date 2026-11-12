@@ -18,6 +18,7 @@
 #include "Collision.h"
 #include "Timecycle.h"
 #include "Coronas.h"
+#include "CoronaLogic.h"
 #include "PointLights.h"
 #include "Shadows.h"
 #include "Clock.h"
@@ -1144,33 +1145,17 @@ CCoronas::DoSunAndMoon(void)
 void
 CRegisteredCorona::Update(void)
 {
-	if(!registeredThisFrame)
-		alpha = 0;
-
-	if(LOScheck &&
+	// The line of sight and cloud test, evaluated only when it is needed as before
+	bool blocked = LOScheck &&
 	   (CCoronas::SunBlockedByClouds && id == CCoronas::SUN_CORONA ||
-	    !CWorld::GetIsLineOfSightClear(coors, TheCamera.GetPosition(), true, false, false, false, false, false))){
-		// Corona is blocked, fade out
-		fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), 0.0f);
-	}else if(offScreen){
-		// Same when off screen
-		fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), 0.0f);
-	}else{
-		// Visible
-		if(alpha > fadeAlpha){
-			// fade in
-			fadeAlpha = Min(fadeAlpha + 15.0f*(*Timer_GetTimeStep()), alpha);
-			if(CCoronas::bChangeBrightnessImmediately)
-				fadeAlpha = alpha;
-		}else if(alpha < fadeAlpha){
-			// too visible, decrease alpha but not below alpha
-			fadeAlpha = Max(fadeAlpha - 15.0f*(*Timer_GetTimeStep()), alpha);
-		}
+	    !CWorld::GetIsLineOfSightClear(coors, TheCamera.GetPosition(), true, false, false, false, false, false));
 
-		// darken scene when the sun is visible
-		if(id == CCoronas::SUN_CORONA)
-			CCoronas::LightsMult = Max(CCoronas::LightsMult - (*Timer_GetTimeStep())*0.06f, 0.6f);
-	}
+	// The fade itself is done in C
+	bool visible = CoronaLogic_UpdateFade(&alpha, &fadeAlpha, registeredThisFrame, blocked, offScreen, CCoronas::bChangeBrightnessImmediately, (*Timer_GetTimeStep()));
+
+	// darken scene when the sun is visible
+	if(visible && id == CCoronas::SUN_CORONA)
+		CCoronas::LightsMult = Max(CCoronas::LightsMult - (*Timer_GetTimeStep())*0.06f, 0.6f);
 
 	// remove if invisible
 	if(fadeAlpha == 0 && !firstUpdate)

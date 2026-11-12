@@ -40,6 +40,7 @@
 #include "World.h"
 #include "Zones.h"
 #include "Pickups.h"
+#include "CarCtrlLogic.h"
 
 #define DISTANCE_TO_SPAWN_ROADBLOCK_PEDS (51.0f)
 #define DISTANCE_TO_SCAN_FOR_DANGER (14.0f)
@@ -883,23 +884,15 @@ CCarCtrl::ChooseBoatModel(int32 rating)
 int32
 CCarCtrl::ChooseBoatRating(CZoneInfo* pZoneInfo)
 {
-	int rnd = General_GetRandomNumberInRangeInt(0, 1000);
-	for (int i = 0; i < CARCLASS_NUM_BOAT_CLASSES - 1; i++) {
-		if (rnd < pZoneInfo->boatThreshold[i])
-			return CARCLASS_FIRST_BOAT_RATING + i;
-	}
-	return CARCLASS_FIRST_BOAT_RATING + CARCLASS_NUM_BOAT_CLASSES - 1;
+	// Delegate to the C implementation
+	return CarCtrl_ChooseRatingFromThresholds(General_GetRandomNumberInRangeInt(0, 1000), pZoneInfo->boatThreshold, CARCLASS_NUM_BOAT_CLASSES, CARCLASS_FIRST_BOAT_RATING, false);
 }
 
 int32
 CCarCtrl::ChooseCarRating(CZoneInfo* pZoneInfo)
 {
-	int rnd = General_GetRandomNumberInRangeInt(0, 1000);
-	for (int i = 0; i < CARCLASS_NUM_CAR_CLASSES - 1; i++) {
-		if (rnd < pZoneInfo->carThreshold[i])
-			return i;
-	}
-	return CARCLASS_FIRST_CAR_RATING + CARCLASS_NUM_CAR_CLASSES - 1;
+	// Delegate to the C implementation
+	return CarCtrl_ChooseRatingFromThresholds(General_GetRandomNumberInRangeInt(0, 1000), pZoneInfo->carThreshold, CARCLASS_NUM_CAR_CLASSES, CARCLASS_FIRST_CAR_RATING, true);
 }
 
 int32
@@ -938,48 +931,24 @@ CCarCtrl::ChooseModel(CZoneInfo* pZone, int* pClass) {
 int32
 CCarCtrl::ChooseCarModel(int32 vehclass)
 {
-	int32 model = -1;
 	++NumRequestsOfCarRating[vehclass];
-	if (NumOfLoadedCarsOfRating[vehclass] == 0)
-		return -1;
-	int32 rnd = General_GetRandomNumberInRangeInt(0, CarFreqArrays[vehclass][NumOfLoadedCarsOfRating[vehclass] - 1]);
-	int32 index = 0;
-	while (rnd > CarFreqArrays[vehclass][index])
-		index++;
-	assert(LoadedCarsArray[vehclass][index]);
-	return LoadedCarsArray[vehclass][index];
+	// Delegate to the C implementation
+	return CarCtrl_ChooseCarModel(LoadedCarsArray[vehclass], CarFreqArrays[vehclass], NumOfLoadedCarsOfRating[vehclass], General_GetRandomNumberInRangeInt);
 }
 
 void
 CCarCtrl::AddToLoadedVehicleArray(int32 mi, int32 rating, int32 freq)
 {
-	LoadedCarsArray[rating][NumOfLoadedCarsOfRating[rating]] = mi;
 	assert(mi >= 130);
-	CarFreqArrays[rating][NumOfLoadedCarsOfRating[rating]] = freq;
-	if (NumOfLoadedCarsOfRating[rating])
-		CarFreqArrays[rating][NumOfLoadedCarsOfRating[rating]] += CarFreqArrays[rating][NumOfLoadedCarsOfRating[rating] - 1];
-	NumOfLoadedCarsOfRating[rating]++;
+	// Delegate to the C implementation
+	CarCtrl_AddToLoadedVehicleArray(LoadedCarsArray[rating], CarFreqArrays[rating], &NumOfLoadedCarsOfRating[rating], mi, freq);
 }
 
 void
 CCarCtrl::RemoveFromLoadedVehicleArray(int mi, int32 rating)
 {
-	int index = 0;
-	while (LoadedCarsArray[rating][index] != -1) {
-		if (LoadedCarsArray[rating][index] == mi)
-			break;
-		index++;
-	}
-	assert(LoadedCarsArray[rating][index] == mi);
-	int32 freq = CarFreqArrays[rating][index];
-	if (index > 0)
-		freq -= CarFreqArrays[rating][index - 1];
-	while (LoadedCarsArray[rating][index + 1] != -1) {
-		LoadedCarsArray[rating][index] = LoadedCarsArray[rating][index + 1];
-		CarFreqArrays[rating][index] = CarFreqArrays[rating][index + 1] - freq;
-		index++;
-	}
-	--NumOfLoadedCarsOfRating[rating];
+	// Delegate to the C implementation
+	CarCtrl_RemoveFromLoadedVehicleArray(LoadedCarsArray[rating], CarFreqArrays[rating], &NumOfLoadedCarsOfRating[rating], mi);
 }
 
 int32
@@ -1050,6 +1019,20 @@ CCarCtrl::AddToCarArray(int32 id, int32 vehclass)
 	CarArrays[vehclass][TotalNumOfCarsOfRating[vehclass]++] = id;
 }
 
+static bool
+VehicleIsInteresting(void *vehicle)
+{
+	// Vehicles of interest to the player or the police are kept
+	return CCarCtrl::IsThisVehicleInteresting((CVehicle*)vehicle);
+}
+
+static bool
+VehicleTargetedByCrane(void *vehicle)
+{
+	// Vehicles a crane is about to pick up are kept
+	return CCranes::IsThisCarBeingTargettedByAnyCrane((CVehicle*)vehicle);
+}
+
 void
 CCarCtrl::RemoveDistantCars()
 {
@@ -1081,29 +1064,9 @@ CCarCtrl::RemoveCarsIfThePoolGetsFull(void)
 	if (CPool_GetNoOfFreeSpaces(CPools::GetVehiclePool()) >= 8)
 	//- rouz edit (ChatGPT)
 		return;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	int i = CPool_GetSize(CPools::GetVehiclePool());
-	//- rouz edit (ChatGPT)
-	float md = 10000000.f;
-	CVehicle* pClosestVehicle = nil;
-	while (i--) {
-		//+ rouz edit (ChatGPT)
-		// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-		//- rouz edit (ChatGPT)
-		if (!pVehicle)
-			continue;
-		if (IsThisVehicleInteresting(pVehicle) || pVehicle->bIsLocked)
-			continue;
-		if (!pVehicle->CanBeDeleted() || CCranes::IsThisCarBeingTargettedByAnyCrane(pVehicle))
-			continue;
-		float distance = (TheCamera.GetPosition() - pVehicle->GetPosition()).Magnitude();
-		if (distance < md) {
-			md = distance;
-			pClosestVehicle = pVehicle;
-		}
-	}
+	// The C implementation finds the closest vehicle that can be removed
+	const CVector &camPos = TheCamera.GetPosition();
+	CVehicle* pClosestVehicle = (CVehicle*)CarCtrl_FindClosestRemovableCar(CPools::GetVehiclePool(), camPos.x, camPos.y, camPos.z, VehicleIsInteresting, VehicleTargetedByCrane);
 	if (pClosestVehicle) {
 		CWorld::Remove(pClosestVehicle);
 //+ rouz edit (ChatGPT)
@@ -1230,29 +1193,16 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 int32
 CCarCtrl::CountCarsOfType(int32 mi)
 {
-	int32 total = 0;
-	//+ rouz edit (ChatGPT)
-	// Access raw storage through the C store or pool API
-	for (int i = CPool_GetSize(CPools::GetVehiclePool())-1; i >= 0; i--) {
-		// Access raw storage through the C store or pool API
-		CVehicle* pVehicle = ((CVehicle*)CPool_GetSlot(CPools::GetVehiclePool(), i));
-	//- rouz edit (ChatGPT)
-		if (!pVehicle)
-			continue;
-		if (pVehicle->GetModelIndex() == mi)
-			total++;
-	}
-	return total;
+	// Delegate to the C implementation
+	return CarCtrl_CountCarsOfType(CPools::GetVehiclePool(), mi);
 }
 
 static CVector GetRandomOffsetForVehicle(CVehicle* pVehicle, bool bNext)
 {
-	CVector offset;
-	int32 seed = ((bNext ? pVehicle->AutoPilot.m_nNextPathNodeInfo : pVehicle->AutoPilot.m_nCurrentPathNodeInfo) + pVehicle->m_randomSeed) & 7;
-	offset.x = (seed - 3) * 0.009f;
-	offset.y = ((seed >> 3) - 3) * 0.009f;
-	offset.z = 0.0f;
-	return offset;
+	// Delegate to the C implementation
+	float o[3];
+	CarCtrl_GetRandomOffsetForVehicle((CVehicleStruct*)pVehicle, bNext, o);
+	return CVector(o[0], o[1], o[2]);
 }
 
 void
@@ -1394,16 +1344,10 @@ CCarCtrl::SlowCarOnRailsDownForTrafficAndLights(CVehicle* pVehicle)
 	}else{
 		maxSpeed = FindMaximumSpeedForThisCarInTraffic(pVehicle);
 	}
-	float curSpeed = pVehicle->AutoPilot.m_fMaxTrafficSpeed;
-	if (maxSpeed >= curSpeed){
-		if (maxSpeed > curSpeed)
-			AutoPilot_ModifySpeed(&pVehicle->AutoPilot,Min(maxSpeed, curSpeed + 0.05f * (*Timer_GetTimeStep())));
-	}else if (curSpeed != 0.0f) {
-		if (curSpeed < 0.1f)
-			AutoPilot_ModifySpeed(&pVehicle->AutoPilot,0.0f);
-		else
-			AutoPilot_ModifySpeed(&pVehicle->AutoPilot,Max(maxSpeed, curSpeed - 0.7f * (*Timer_GetTimeStep())));
-	}
+	// The new speed is worked out in C
+	float newSpeed;
+	if (CarCtrl_AdjustTrafficSpeed(maxSpeed, pVehicle->AutoPilot.m_fMaxTrafficSpeed, (*Timer_GetTimeStep()), &newSpeed))
+		AutoPilot_ModifySpeed(&pVehicle->AutoPilot, newSpeed);
 }
 
 void CCarCtrl::SlowCarDownForPedsSectorList(CPtrList& lst, CVehicle* pVehicle, float x_inf, float y_inf, float x_sup, float y_sup, float* pSpeed, float curSpeed)
@@ -2512,14 +2456,8 @@ void CCarCtrl::DragCarToPoint(CVehicle* pVehicle, CVector* pPoint)
 
 float CCarCtrl::FindSpeedMultiplier(float angleChange, float minAngle, float maxAngle, float coef)
 {
-	float angle = Abs(LimitRadianAngle(angleChange));
-	float n = angle - minAngle;
-	n = Max(0.0f, n);
-	float d = maxAngle - minAngle;
-	float mult = 1.0f - n / d * (1.0f - coef);
-	if (n > d)
-		return coef;
-	return mult;
+	// Delegate to the C implementation
+	return CarCtrl_FindSpeedMultiplier(LimitRadianAngle(angleChange), minAngle, maxAngle, coef);
 }
 
 void CCarCtrl::SteerAICarWithPhysics(CVehicle* pVehicle)
@@ -3253,19 +3191,14 @@ CCarCtrl::RegisterVehicleOfInterest(CVehicle* pVehicle)
 bool
 CCarCtrl::IsThisVehicleInteresting(CVehicle* pVehicle)
 {
-	for (int i = 0; i < MAX_CARS_TO_KEEP; i++) {
-		if (apCarsToKeep[i] == pVehicle)
-			return true;
-	}
-	return false;
+	// Delegate to the C implementation
+	return CarCtrl_IsInPointerList((void *const *)apCarsToKeep, MAX_CARS_TO_KEEP, pVehicle);
 }
 
 void CCarCtrl::RemoveFromInterestingVehicleList(CVehicle* pVehicle)
 {
-	for (int i = 0; i < MAX_CARS_TO_KEEP; i++) {
-		if (apCarsToKeep[i] == pVehicle)
-			apCarsToKeep[i] = nil;
-	}
+	// Delegate to the C implementation
+	CarCtrl_RemoveFromPointerList((void **)apCarsToKeep, MAX_CARS_TO_KEEP, pVehicle);
 }
 
 void CCarCtrl::ClearInterestingVehicleList()
@@ -3591,12 +3524,8 @@ bool CCarCtrl::MapCouldMoveInThisArea(float x, float y)
 
 float CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(int8 type)
 {
-	switch (type)
-	{
-	case 1: return 1.5f;
-	case 2: return 2.0f;
-	}
-	return 1.0f;
+	// Delegate to the C implementation
+	return CarCtrl_FindSpeedMultiplierWithSpeedFromNodes(type);
 }
 
 //- rouz edit (ChatGPT)

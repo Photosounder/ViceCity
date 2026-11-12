@@ -1,31 +1,53 @@
+//+ rouz edit (Claude)
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
-
-struct CColModel;
 
 #define MAX_MODEL_NAME (21)
 
 #include "ModelInfoType.h" // rouz edit (ChatGPT)
 
+#ifdef __cplusplus
+struct CColModel;
 struct C2dEffect; // rouz edit (ChatGPT)
+#define BASEMODELINFO_COLMODEL_TYPE CColModel
+#else
+#define BASEMODELINFO_COLMODEL_TYPE void
+#endif
 
-class CBaseModelInfo
+// Plain data of CBaseModelInfo, the C++ class adds the virtual interface on top
+typedef struct CBaseModelInfoData {
+	char         m_name[MAX_MODEL_NAME];
+	uint8_t      m_type;
+	uint8_t      m_num2dEffects;
+	bool         m_bOwnsColModel;
+	BASEMODELINFO_COLMODEL_TYPE *m_colModel;
+	int16_t      m_2dEffectsID;
+	int16_t      m_objectId;
+	uint16_t     m_refCount;
+	int16_t      m_txdSlot;
+} CBaseModelInfoData;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+void BaseModelInfo_Init(CBaseModelInfoData *self, int type);
+void BaseModelInfo_ResetAfterShutdown(CBaseModelInfoData *self);
+void BaseModelInfo_AddRef(CBaseModelInfoData *self);
+void BaseModelInfo_RemoveRef(CBaseModelInfoData *self);
+void BaseModelInfo_SetTexDictionary(CBaseModelInfoData *self, const char *name);
+void BaseModelInfo_AddTexDictionaryRef(CBaseModelInfoData *self);
+void BaseModelInfo_RemoveTexDictionaryRef(CBaseModelInfoData *self);
+#ifdef __cplusplus
+}
+
+class CBaseModelInfo : public CBaseModelInfoData
 {
     //+ rouz edit (ChatGPT)
     friend int16_t *ModelRegistry_EffectId(void *model);
     friend uint8_t *ModelRegistry_EffectCount(void *model);
     //- rouz edit (ChatGPT)
-protected:
-	char         m_name[MAX_MODEL_NAME];
-	uint8        m_type;
-	uint8        m_num2dEffects;
-	bool         m_bOwnsColModel;
-	CColModel   *m_colModel;
-	int16        m_2dEffectsID;
-	int16        m_objectId;
-	uint16       m_refCount;
-	int16        m_txdSlot;
-
 public:
 	CBaseModelInfo(ModelInfoType type);
 	virtual ~CBaseModelInfo() {}
@@ -61,3 +83,5 @@ public:
 	void RemoveTexDictionaryRef(void);
 	uint16 GetNumRefs() const { return m_refCount; }
 };
+#endif
+//- rouz edit (Claude)

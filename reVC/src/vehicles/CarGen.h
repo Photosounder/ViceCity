@@ -1,27 +1,14 @@
 #pragma once
 #include "common.h"
 #include "config.h"
+#include "CarGenData.h"
 
 enum {
 	CARGEN_MAXACTUALLIMIT = 100
 };
 
-class CCarGenerator
+class CCarGenerator : public CCarGeneratorData
 {
-	int32 m_nModelIndex;
-	CVector m_vecPos;
-	float m_fAngle;
-	int16 m_nColor1;
-	int16 m_nColor2;
-	uint8 m_bForceSpawn;
-	uint8 m_nAlarm;
-	uint8 m_nDoorlock;
-	int16 m_nMinDelay;
-	int16 m_nMaxDelay;
-	uint32 m_nTimer;
-	int32 m_nVehicleHandle;
-	uint16 m_nUsesRemaining;
-	bool m_bIsBlocking;
 public:
 	void SwitchOff();
 	void SwitchOn();

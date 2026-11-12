@@ -17,6 +17,7 @@
 #include "Pad.h"
 #include "PathFind.h"
 #include "PlayerInfo.h"
+#include "PlayerInfoLogic.h"
 #include "PlayerPed.h"
 #include "PlayerSkin.h"
 #include "ProjectileInfo.h"
@@ -679,11 +680,10 @@ CPlayerInfo::FindClosestCarSectorList(CPtrList& carList, CPed* ped, float unk1, 
 				continue;
 
 			car->m_scanCode = CWorld::GetCurrentScanCode();
-			if (car->GetStatus() != STATUS_WRECKED && car->GetStatus() != STATUS_TRAIN_MOVING
-				&& (car->GetUp().z > 0.3f || (car->IsVehicle() && ((CVehicle*)car)->m_vehType == VEHICLE_TYPE_BIKE))) {
-				CVector carCentre = car->GetBoundCentre();
-
-				if (Abs(ped->GetPosition().z - carCentre.z) < 2.0f || car->IsCar() && carCentre.z < ped->GetPosition().z && ped->GetPosition().z - 4.f < carCentre.z) {
+			// The candidate test is done in C once the centre is known
+			CVector carCentre = car->GetBoundCentre();
+			if (PlayerInfoLogic_IsCarCandidate(car->GetStatus(), car->GetUp().z, car->IsVehicle() && ((CVehicle*)car)->m_vehType == VEHICLE_TYPE_BIKE, car->IsCar(), ped->GetPosition().z, carCentre.z)) {
+				{
 					float dist = (ped->GetPosition() - carCentre).Magnitude2D();
 					if (dist <= 10.0f && !CCranes::IsThisCarBeingCarriedByAnyCrane(car)) {
 						EvaluateCarPosition(car, ped, dist, lastCloseness, closestCarOutput);
@@ -698,24 +698,10 @@ CPlayerInfo::FindClosestCarSectorList(CPtrList& carList, CPed* ped, float unk1, 
 void
 CPlayerInfo::EvaluateCarPosition(CEntity *carToTest, CPed *player, float carBoundCentrePedDist, float *lastCloseness, CVehicle **closestCarOutput)
 {
-	// This dist used for determining the angle to face
-	CVector2D dist(carToTest->GetPosition() - player->GetPosition());
-	float neededTurn = General_GetATanOfXY(player->GetForward().x, player->GetForward().y) - General_GetATanOfXY(dist.x, dist.y);
-	while (neededTurn >= PI) {
-		neededTurn -= 2 * PI;
-	}
-
-	while (neededTurn < -PI) {
-		neededTurn += 2 * PI;
-	}
-
-	// This dist used for evaluating cars' distances, weird...
-	// Accounts inverted needed turn (or needed turn in long way) and car dist.
-	float closeness = (1.0f - Abs(neededTurn) / TWOPI) * (10.0f - carBoundCentrePedDist);
-	if (closeness > *lastCloseness) {
-		*lastCloseness = closeness;
+	// Delegate to the C implementation
+	if (PlayerInfoLogic_EvaluateCarPosition(carToTest->GetPosition().x, carToTest->GetPosition().y, player->GetPosition().x, player->GetPosition().y,
+		player->GetForward().x, player->GetForward().y, carBoundCentrePedDist, lastCloseness))
 		*closestCarOutput = (CVehicle*)carToTest;
-	}
 }
 
 const CVector &

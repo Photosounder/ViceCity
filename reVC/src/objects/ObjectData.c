@@ -1,25 +1,40 @@
-//+ rouz edit (ChatGPT)
-#include "common.h"
-#include "ModelRegistry.h" // rouz edit (ChatGPT)
-
-#include "main.h"
-#include "ModelInfo.h"
-#include "Object.h"
+//+ rouz edit (Claude)
+#include <stdio.h>
+#include <stddef.h>
+#include "config.h"
 #include "FileMgr.h"
+#include "WorkBuffer.h"
+#include "ModelRegistry.h"
 #include "ObjectData.h"
 
-CObjectInfo CObjectData::ms_aObjectInfo[NUMOBJECTINFO];
+void re3_debug(const char *format, ...);
+void re3_assert(const char *expression,const char *file,unsigned int line,const char *function);
+#ifndef MASTER
+#define ObjectData_Assert(expression) ((void)((!!(expression)) || (re3_assert(#expression,__FILE__,__LINE__,__func__),0)))
+#else
+#define ObjectData_Assert(expression) (expression)
+#endif
+
+#define GRAVITY (0.008f)
+
+static CObjectInfo ms_aObjectInfo[NUMOBJECTINFO];
+
+const CObjectInfo *ObjectData_Info(int id)
+{
+	// Give read access to one object info entry
+	return &ms_aObjectInfo[id];
+}
 
 // Another ugly file reader
 void
-CObjectData::Initialise(const char *filename)
+ObjectData_Initialise(const char *filename)
 {
 	char *p, *lp;
 	char line[1024], name[256];
 	int id;
 	float percentSubmerged;
 	int damageEffect, responseCase, camAvoid;
-	CBaseModelInfo *mi;
+	void *mi;
 	
 	ms_aObjectInfo[0].m_fMass = 99999.0f;
 	ms_aObjectInfo[0].m_fTurnMass = 99999.0f;
@@ -96,7 +111,7 @@ CObjectData::Initialise(const char *filename)
 		*lp = '\n';
 #endif
 
-		assert(id < NUMOBJECTINFO);
+		ObjectData_Assert(id < NUMOBJECTINFO);
 		sscanf(line, "%s %f %f %f %f %f %f %f %d %d %d", name,
 			&ms_aObjectInfo[id].m_fMass,
 			&ms_aObjectInfo[id].m_fTurnMass,
@@ -112,53 +127,25 @@ CObjectData::Initialise(const char *filename)
 		ms_aObjectInfo[id].m_nSpecialCollisionResponseCases = responseCase;
 		ms_aObjectInfo[id].m_bCameraToAvoidThisObject = camAvoid;
 
-		mi = (CBaseModelInfo*)ModelRegistry_Find(name, 0, MODELINFOSIZE-1, nil); // rouz edit (ChatGPT)
+		mi = ModelRegistry_Find(name, 0, MODELINFOSIZE-1, NULL);
 		if (mi) {
 			if (ms_aObjectInfo[0].m_fMass != ms_aObjectInfo[id].m_fMass
 				|| ms_aObjectInfo[0].m_fCollisionDamageMultiplier != ms_aObjectInfo[id].m_fCollisionDamageMultiplier
 				|| ms_aObjectInfo[0].m_nCollisionDamageEffect != ms_aObjectInfo[id].m_nCollisionDamageEffect
 				|| ((ms_aObjectInfo[0].m_nSpecialCollisionResponseCases != ms_aObjectInfo[id].m_nSpecialCollisionResponseCases)
 					&& (ms_aObjectInfo[2].m_nSpecialCollisionResponseCases != ms_aObjectInfo[id].m_nSpecialCollisionResponseCases))) {
-				mi->SetObjectID(id++);
+				ObjectData_BackendSetModelObjectID(mi, id++);
 			} else if (ms_aObjectInfo[0].m_nSpecialCollisionResponseCases == ms_aObjectInfo[id].m_nSpecialCollisionResponseCases) {
 				if (ms_aObjectInfo[0].m_bCameraToAvoidThisObject == ms_aObjectInfo[id].m_bCameraToAvoidThisObject)
-					mi->SetObjectID(0);
+					ObjectData_BackendSetModelObjectID(mi, 0);
 				else
-					mi->SetObjectID(1);
+					ObjectData_BackendSetModelObjectID(mi, 1);
 			} else if (ms_aObjectInfo[2].m_bCameraToAvoidThisObject == ms_aObjectInfo[id].m_bCameraToAvoidThisObject)
-				mi->SetObjectID(2);
+				ObjectData_BackendSetModelObjectID(mi, 2);
 			else 
-				mi->SetObjectID(3);
+				ObjectData_BackendSetModelObjectID(mi, 3);
 		} else
-			debug("CObjectData: Cannot find object %s\n", name);
+			re3_debug("CObjectData: Cannot find object %s\n", name);
 	}
 }
-
-void
-CObjectData::SetObjectData(int32 modelId, CObject &object)
-{
-	CObjectInfo *objinfo;
-
-	if(((CBaseModelInfo*)ModelRegistry_Get(modelId))->GetObjectID() == -1) // rouz edit (ChatGPT)
-		return;
-
-	objinfo = &ms_aObjectInfo[((CBaseModelInfo*)ModelRegistry_Get(modelId))->GetObjectID()]; // rouz edit (ChatGPT)
-
-	object.m_fMass = objinfo->m_fMass;
-	object.m_fTurnMass = objinfo->m_fTurnMass;
-	object.m_fAirResistance = objinfo->m_fAirResistance;
-	object.m_fElasticity = objinfo->m_fElasticity;
-	object.m_fBuoyancy = objinfo->m_fBuoyancy;
-	object.m_fUprootLimit = objinfo->m_fUprootLimit;
-	object.m_fCollisionDamageMultiplier = objinfo->m_fCollisionDamageMultiplier;
-	object.m_nCollisionDamageEffect = objinfo->m_nCollisionDamageEffect;
-	object.m_nSpecialCollisionResponseCases = objinfo->m_nSpecialCollisionResponseCases;
-	object.m_bCameraToAvoidThisObject = objinfo->m_bCameraToAvoidThisObject;
-	if(object.m_fMass >= 99998.0f){
-		object.bInfiniteMass = true;
-		object.m_phy_flagA08 = true;
-		object.bAffectedByGravity = false;
-		object.bExplosionProof = true;
-	}
-}
-//- rouz edit (ChatGPT)
+//- rouz edit (Claude)
