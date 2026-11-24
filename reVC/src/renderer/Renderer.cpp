@@ -394,10 +394,20 @@ ShouldForceHighAltitudeStaticMapEntity(CEntity *e)
 	return IsHighAltitudeStaticMapEntity(e);
 }
 
+//+ rouz edit (Claude)
+// Whether the forced high-altitude distance applies, in the far scan and also in the near scans while the camera is high,
+// so an entity doesn't switch between its LOD and its forced detailed model at the edge of the near region
+static bool
+UseHighAltitudeStaticMapDistance(void)
+{
+	return gbUseHighAltitudeStaticMapDistance || ShouldScanFarStaticMapEntities();
+}
+//- rouz edit (Claude)
+
 static float
 GetHighAltitudeLodDistance(CEntity *e, CSimpleModelInfo *mi, float dist)
 {
-	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(e)){
+	if(UseHighAltitudeStaticMapDistance() && ShouldForceHighAltitudeStaticMapEntity(e)){ // rouz edit (Claude)
 		float largestLodDist = SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 		if(dist > largestLodDist)
 			// Delegate the distance to the C implementation
@@ -409,7 +419,7 @@ GetHighAltitudeLodDistance(CEntity *e, CSimpleModelInfo *mi, float dist)
 static void
 MarkHighAltitudeStaticMapInstance(CEntity *e)
 {
-	if(!gbUseHighAltitudeStaticMapDistance || !ShouldForceHighAltitudeStaticMapEntity(e) ||
+	if(!UseHighAltitudeStaticMapDistance() || !ShouldForceHighAltitudeStaticMapEntity(e) || // rouz edit (Claude)
 	   gNumHighAltitudeStaticMapInstances >= NUMVISIBLEENTITIES)
 		return;
 
@@ -958,7 +968,8 @@ static void RenderSoftwareReflectionBuildingPool(CPool *pool, int pass, const CV
 			continue;
 		if(entity->bIsBIGBuilding){
 			CSimpleModelInfo *nonLOD = (CSimpleModelInfo*)modelInfo->m_atomics[2]; // rouz edit (ChatGPT)
-			if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, entity->GetPosition()))
+			// Keep the LOD visible until the queued non-LOD has completely faded in
+			if(nonLOD && nonLOD->GetRwObject() && nonLOD->m_alpha == 255 && IsHighAltitudeStaticMapInstanceQueued(nonLOD, entity->GetPosition())) // rouz edit (Claude)
 				continue;
 			if(distance < (modelInfo->m_lodDistances[2] * TheCamera.LODDistMultiplier) && distance < LOD_DISTANCE){ // rouz edit (ChatGPT)
 				if(nonLOD == nil || (nonLOD->GetRwObject() && nonLOD->m_alpha == 255))
@@ -2169,8 +2180,11 @@ CRenderer::SetupBigBuildingVisibility(CEntity *ent)
 	CSimpleModelInfo *nonLOD = (CSimpleModelInfo*)mi->m_atomics[2]; // rouz edit (ChatGPT)
 
 	// rouz edit (ChatGPT)
-	if(nonLOD && IsHighAltitudeStaticMapInstanceQueued(nonLOD, ent->GetPosition()))
+	//+ rouz edit (Claude)
+	// Keep the LOD visible until the queued non-LOD has completely faded in, so the transition stays smooth at high altitude
+	if(nonLOD && nonLOD->GetRwObject() && nonLOD->m_alpha == 255 && IsHighAltitudeStaticMapInstanceQueued(nonLOD, ent->GetPosition()))
 		return VIS_INVISIBLE;
+	//- rouz edit (Claude)
 
 	// Find out whether to draw below near distance.
 	// This is only the case if there is a non-LOD which is either not
@@ -3044,7 +3058,7 @@ CRenderer::ShouldModelBeStreamed(CEntity *ent, const CVector &campos)
 	float dist = (ent->GetPosition() - campos).Magnitude();
 
 	// rouz edit (ChatGPT)
-	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(ent))
+	if(UseHighAltitudeStaticMapDistance() && ShouldForceHighAltitudeStaticMapEntity(ent)) // rouz edit (Claude)
 		return true;
 
 	if(mi->m_noFade)
