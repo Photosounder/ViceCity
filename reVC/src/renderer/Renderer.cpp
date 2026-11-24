@@ -33,6 +33,7 @@
 #include "VisibilityPlugins.h"
 #include "Clock.h"
 #include "World.h"
+#include "WorldLogic.h"
 #include "Camera.h"
 #include "ModelIndices.h"
 #include "Streaming.h"
@@ -42,6 +43,7 @@
 #include "Occlusion.h"
 #include "Renderer.h"
 #include "RendererLogic.h"
+#include "General.h"
 #include "custompipes.h"
 #include "Frontend.h"
 #include "CutsceneMgr.h" // rouz edit (ChatGPT)
@@ -398,7 +400,8 @@ GetHighAltitudeLodDistance(CEntity *e, CSimpleModelInfo *mi, float dist)
 	if(gbUseHighAltitudeStaticMapDistance && ShouldForceHighAltitudeStaticMapEntity(e)){
 		float largestLodDist = SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier); // rouz edit (ChatGPT)
 		if(dist > largestLodDist)
-			return Max(0.0f, largestLodDist - 0.1f);
+			// Delegate the distance to the C implementation
+			return Visibility_HighAltitudeLodDistance(largestLodDist);
 	}
 	return dist;
 }
@@ -851,7 +854,8 @@ CRenderer::RenderOneBuilding(CEntity *ent, float camdist)
 	if(ent->bDistanceFade){
 		RpAtomic *lodAtomic = mi->GetAtomicFromDistance(camdist-FADE_DISTANCE);
 		float fadeFactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier)-(camdist-FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
-		fadeFactor = Clamp(fadeFactor, 0.0f, 1.0f);
+		// Delegate the limit to the C implementation
+		fadeFactor = General_ClampFloat(fadeFactor, 0.0f, 1.0f);
 		alpha = (uint32)(mi->m_alpha*fadeFactor);
 		if(alpha < 255 && lodAtomic){
 			RpGeometry *fadeGeometry = RpAtomicGetGeometry(lodAtomic);
@@ -1920,8 +1924,8 @@ CRenderer::RenderCollisionLines(void)
 	// this should probably be fixed
 	for(i = 0; i < ms_nNoOfVisibleEntities; i++){
 		CEntity *e = ms_aVisibleEntityPtrs[i];
-		if(Abs(e->GetPosition().x - ms_vecCameraPosition.x) < 100.0f &&
-		   Abs(e->GetPosition().y - ms_vecCameraPosition.y) < 100.0f)
+		if(General_AbsDiffBelow(e->GetPosition().x, ms_vecCameraPosition.x, 100.0f) &&
+		   General_AbsDiffBelow(e->GetPosition().y, ms_vecCameraPosition.y, 100.0f))
 			CCollision::DrawColModel(e->GetMatrix(), *e->GetColModel());
 	}
 }
@@ -2414,14 +2418,8 @@ CRenderer::ScanWorld(void)
 		// Pass the native point once while retaining live coordinate reads
 		const CVector &rectanglePoint3 = vectors[CORNER_FAR_BOTLEFT];
 		Rect_ContainPoint(&rect, &rectanglePoint3.x, &rectanglePoint3.y);
-		x1 = CWorld::GetSectorIndexX(rect.left);
-		if(x1 < 0) x1 = 0;
-		x2 = CWorld::GetSectorIndexX(rect.right);
-		if(x2 >= NUMSECTORS_X-1) x2 = NUMSECTORS_X-1;
-		y1 = CWorld::GetSectorIndexY(rect.top);
-		if(y1 < 0) y1 = 0;
-		y2 = CWorld::GetSectorIndexY(rect.bottom);
-		if(y2 >= NUMSECTORS_Y-1) y2 = NUMSECTORS_Y-1;
+		// Delegate the range of sectors to the C implementation
+		World_SectorRange(rect.left, rect.top, rect.right, rect.bottom, &x1, &y1, &x2, &y2);
 		for(; x1 <= x2; x1++)
 			for(int y = y1; y <= y2; y++)
 				ScanSectorList(CWorld::GetSector(x1, y)->m_lists);
@@ -2534,14 +2532,8 @@ CRenderer::RequestObjectsInFrustum(void)
 		// Pass the native point once while retaining live coordinate reads
 		const CVector &rectanglePoint7 = vectors[CORNER_FAR_BOTLEFT];
 		Rect_ContainPoint(&rect, &rectanglePoint7.x, &rectanglePoint7.y);
-		x1 = CWorld::GetSectorIndexX(rect.left);
-		if(x1 < 0) x1 = 0;
-		x2 = CWorld::GetSectorIndexX(rect.right);
-		if(x2 >= NUMSECTORS_X-1) x2 = NUMSECTORS_X-1;
-		y1 = CWorld::GetSectorIndexY(rect.top);
-		if(y1 < 0) y1 = 0;
-		y2 = CWorld::GetSectorIndexY(rect.bottom);
-		if(y2 >= NUMSECTORS_Y-1) y2 = NUMSECTORS_Y-1;
+		// Delegate the range of sectors to the C implementation
+		World_SectorRange(rect.left, rect.top, rect.right, rect.bottom, &x1, &y1, &x2, &y2);
 		for(; x1 <= x2; x1++)
 			for(int y = y1; y <= y2; y++)
 				ScanSectorList_RequestModels(CWorld::GetSector(x1, y)->m_lists);

@@ -146,4 +146,97 @@ bool WaterMath_CollidesWithBlock(const int8_t blockList[128][128], int32_t x, in
 
 	return false;
 }
+void WaterMath_WaveAngles(float morphVertXHalf, float morphVertYHalf, float angle, float wave2InvLength, float *waveMulA, float *waveMulB)
+{
+	*waveMulA = (morphVertYHalf + morphVertXHalf) * (WLM_TWOPI / 16.0f) + angle;
+	*waveMulB = (morphVertYHalf - morphVertXHalf) * (WLM_TWOPI / (16.0f * wave2InvLength)) + angle;
+}
+
+void WaterMath_WaveHeights(float waveMulA, float waveMulB, float wind, float waveWind, float waveA, float waveB, float *z, float *tangentAZ, float *tangentBZ)
+{
+	*z = wind * sinf(waveMulA) + waveWind * sinf(waveMulB);
+	*tangentAZ = (waveA * cosf(waveMulA)) - (waveB * cosf(waveMulB));
+	*tangentBZ = (waveA * cosf(waveMulA)) + (waveB * cosf(waveMulB));
+}
+
+void WaterMath_ScrollTextures(float angle, float windAddUV, float timeStep, float *maskU, float *maskV, float *wakeU, float *wakeV)
+{
+	*maskU += (sinf(angle) * 0.0005f + 1.1f * windAddUV) * timeStep;
+	*maskV -= (cosf(angle * 1.3f) * 0.0005f + 1.2f * windAddUV) * timeStep;
+	*wakeU -= (sinf(angle) * 0.0003f + windAddUV) * timeStep;
+	*wakeV += (cosf(angle * 0.7f) * 0.0003f + windAddUV) * timeStep;
+}
+void WaterMath_WaveSlopes(float camX, float camY, float windClipped, float dirScalar1, float normMult, float dirScalar2, float normMultB, float wave2NormScale, float *waveA, float *waveB)
+{
+	*waveA = (WLM_TWOPI / 16.0f)
+		* ((dirScalar1 * fabsf(camX + camY) + normMult) * (windClipped * 0.4f + 0.2f));
+	*waveB = WLM_TWOPI / (16.0f * wave2NormScale)
+		* ((dirScalar2 * fabsf(camY - camX) + normMultB) * (windClipped * 0.2f + 0.1f));
+}
+int32_t WaterMath_ClampSectorIndex(int32_t index, int32_t lastSector)
+{
+	return index < 0 ? 0 : index > lastSector ? lastSector : index;
+}
+float WaterMath_WakeSizeInIntervals(int index, float size, float lifeTimeMult, float timeLeft, float minInterval)
+{
+	float clipped = timeLeft > 0.0f ? timeLeft : 0.0f;
+	float wakeSize = ((float)index * 0.19f) + size - lifeTimeMult * clipped;
+	float sizeB = wakeSize / minInterval;
+
+	if (sizeB < 0.0f)
+		sizeB = 1.0f;
+	return sizeB;
+}
+
+float WaterMath_WakeAlpha(float wakeLifetime, float pointLifetime)
+{
+	float val = 500.0f - (wakeLifetime - pointLifetime)
+		* 600.0f / wakeLifetime;
+
+	return val < 0.0f ? 0.0f : val > 255.0f ? 255.0f : val;
+}
+void WaterMath_WakeSegmentCorners(const float pointA[2], const float pointB[2], float sizeA, float sizeB, const float distA[2], const float distB[2], float corners[8])
+{
+	corners[0] = pointA[0] - (sizeA * distA[1]);
+	corners[1] = pointA[1] + (sizeA * distA[0]);
+	corners[2] = pointA[0] + (sizeA * distA[1]);
+	corners[3] = pointA[1] - (sizeA * distA[0]);
+	corners[4] = pointB[0] + (sizeB * distB[1]);
+	corners[5] = pointB[1] - (sizeB * distB[0]);
+	corners[6] = pointB[0] - (sizeB * distB[1]);
+	corners[7] = pointB[1] + (sizeB * distB[0]);
+}
+float WaterMath_FlatWaterBlend(float distX, float distY, float blendRange, float blendDrawDist, float minAlphaMult)
+{
+	double d = sqrt(distX + distY) - blendDrawDist;
+	double m = d > minAlphaMult ? d : (double)minAlphaMult;
+	double v = blendRange * m;
+
+	return (float)(v < 1.0f ? v : (double)1.0f);
+}
+
+bool WaterMath_NormaliseWakeDirection(float dir[2], float squaredDistance)
+{
+	bool render = true;
+
+	if (squaredDistance > 3.0f * 3.0f) {
+		float norm = (float)(1.0f / sqrt(squaredDistance));
+
+		dir[0] *= norm;
+		dir[1] *= norm;
+		if (sqrt(squaredDistance) > 13.0f)
+			render = false;
+	}
+	return render;
+}
+int WaterLevel_MaskAlpha(int alpha, float alphaMul, float dx, float dy)
+{
+	int a = (int)((float)alpha - (alphaMul * (fabsf(dx) + fabsf(dy))));
+
+	return 0 > a ? 0 : a;
+}
+bool WaterLevel_MovedFarther(float dx, float dy, float dz, float limit)
+{
+	return fabsf(dx) + fabsf(dy) + fabsf(dz) > limit;
+}
 //- rouz edit (Claude)

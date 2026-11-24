@@ -19,6 +19,7 @@
 #include "CarCtrl.h"
 #include "Population.h"
 #include "ModelIndices.h"
+#include "WorldLogic.h"
 #include "World.h"
 #include "Lights.h"
 #include "PointLights.h"
@@ -291,15 +292,14 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		// Move Left/Right
 		float moveSpeed = m_vecMoveSpeed.Magnitude();
 		float sideSpeed = DotProduct(m_vecMoveSpeed, GetRight());
-		float sideImpulse = -1.0f * sideSpeed / moveSpeed;
+		// Delegate the forces of the Dodo to the C implementation
+		float sideImpulse = VehicleLogic_DodoImpulse(sideSpeed, moveSpeed);
 		float fwdSpeed = DotProduct(m_vecMoveSpeed, GetForward());
-		float magic = m_vecMoveSpeed.MagnitudeSqr() * sq(fwdSpeed);
-		float turnImpulse = (sideImpulse*0.003f + m_fSteerAngle*0.001f) *
-			magic*m_fTurnMass*(*Timer_GetTimeStep());
+		float magic = VehicleLogic_DodoMagic(m_vecMoveSpeed.MagnitudeSqr(), fwdSpeed);
+		float turnImpulse = VehicleLogic_DodoTurnForce(sideImpulse, 0.003f, m_fSteerAngle, 0.001f, magic, m_fTurnMass, (*Timer_GetTimeStep()));
 		ApplyTurnForce(turnImpulse*GetRight(), -4.0f*GetForward());
 
-		float impulse = sideImpulse*0.2f *
-			magic*m_fMass*(*Timer_GetTimeStep());
+		float impulse = VehicleLogic_DodoSideForce(sideImpulse, magic, m_fMass, (*Timer_GetTimeStep()));
 		ApplyMoveForce(impulse*GetRight());
 		ApplyTurnForce(impulse*GetRight(), 2.0f*GetUp());
 
@@ -307,31 +307,23 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		// Move Up/Down
 		moveSpeed = m_vecMoveSpeed.Magnitude();
 		float upSpeed = DotProduct(m_vecMoveSpeed, GetUp());
-		float upImpulse = -1.0f * upSpeed / moveSpeed;
-		turnImpulse = (upImpulse*0.002f + -CPad::GetPad(0)->GetSteeringUpDown()/128.0f*0.001f) *
-			magic*m_fTurnMass*(*Timer_GetTimeStep());
+		float upImpulse = VehicleLogic_DodoImpulse(upSpeed, moveSpeed);
+		turnImpulse = VehicleLogic_DodoTurnForce(upImpulse, 0.002f, -CPad::GetPad(0)->GetSteeringUpDown()/128.0f, 0.001f, magic, m_fTurnMass, (*Timer_GetTimeStep()));
 		ApplyTurnForce(turnImpulse*GetUp(), -4.0f*GetForward());
 
-		impulse = (upImpulse*3.5f + 0.5f)*0.05f *
-			magic*m_fMass*(*Timer_GetTimeStep());
-		if(GRAVITY*m_fMass*(*Timer_GetTimeStep()) < impulse &&
-		   GetPosition().z > 100.0f)
-			impulse = 0.9f*GRAVITY*m_fMass*(*Timer_GetTimeStep());
+		impulse = VehicleLogic_DodoLiftForce(upImpulse, magic, m_fMass, (*Timer_GetTimeStep()), GRAVITY, GetPosition().z);
 		CVector com = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 		ApplyMoveForce(impulse*GetUp());
 		ApplyTurnForce(impulse*GetUp(), 2.0f*GetUp() + com);
 
 
-		m_vecTurnSpeed.y *= Pow(0.9f, (*Timer_GetTimeStep()));
+		// Delegate the resistance per time step to the C implementation
+		m_vecTurnSpeed.y *= VehicleLogic_ResistancePerStep(0.9f, (*Timer_GetTimeStep()));
 
 
-		moveSpeed = m_vecMoveSpeed.MagnitudeSqr();
-		if(moveSpeed > SQR(1.5f))
-			m_vecMoveSpeed *= 1.5f/Sqrt(moveSpeed);
-
-		float turnSpeed = m_vecTurnSpeed.MagnitudeSqr();
-		if(turnSpeed > SQR(0.2f))
-			m_vecTurnSpeed *= 0.2f/Sqrt(turnSpeed);
+		// Delegate the limits of the speeds to the C implementation
+		m_vecMoveSpeed *= VehicleLogic_SpeedLimitScale(m_vecMoveSpeed.MagnitudeSqr(), 1.5f);
+		m_vecTurnSpeed *= VehicleLogic_SpeedLimitScale(m_vecTurnSpeed.MagnitudeSqr(), 0.2f);
 		break;
 	}
 
@@ -349,18 +341,8 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		if(fGunUD > 1.0f)
 			fSteerUD = -CPad::GetPad(0)->GetCarGunUpDown() / 128.0f;
 
-		float fSteerAngle = Atan2(fSteerUD, fSteerLR);
-		float fSteerMult = 1.0f;
-		if(fSteerAngle > -PI/4.0f && fSteerAngle <= PI/4.0f)
-			fSteerMult = 1.0f/Cos(fSteerAngle);
-		else if(fSteerAngle > PI/4.0f && fSteerAngle <= PI*3.0f/4.0f)
-			fSteerMult = 1.0f/Cos(fSteerAngle - HALFPI);
-		else if(fSteerAngle > PI*3.0f/4.0f)
-			fSteerMult = 1.0f/Cos(fSteerAngle - PI);
-		else if(fSteerAngle <= -PI*3.0f/4.0f)
-			fSteerMult = 1.0f/Cos(fSteerAngle + PI);
-		else if(fSteerAngle > -PI*3.0f/4.0f && fSteerAngle < -PI/4.0f)
-			fSteerMult = 1.0f/Cos(fSteerAngle + HALFPI);
+		// Delegate the factor that stretches the input of the stick to the C implementation
+		float fSteerMult = VehicleLogic_PlaneSteerMultiplier(fSteerUD, fSteerLR);
 
 		fSteerLR *= fSteerMult;
 		fSteerUD *= -fSteerMult;
@@ -373,58 +355,55 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 		if (bAllDodosCheat && !IsRealPlane()) {
 			fThrust = pHandling->Transmission.fEngineAcceleration
 				* (pHandling->Transmission.nDriveType == '4' ? 4.0f : 2.0f);
-			fThrust = 5.0f * Max(fThrust, pFlyingHandling->fThrust); //tweak: (cars engines too weak to thrust car on air)
-			fThrustFallOff = Min(0.7f / pHandling->Transmission.fMaxVelocity, fThrustFallOff); //tweak: (use 0.7 instead of 1.0 to make cars 30% faster)
+			fThrust = 5.0f * General_MaxFloat(fThrust, pFlyingHandling->fThrust); //tweak: (cars engines too weak to thrust car on air)
+			fThrustFallOff = General_MinFloat(0.7f / pHandling->Transmission.fMaxVelocity, fThrustFallOff); //tweak: (use 0.7 instead of 1.0 to make cars 30% faster)
 			fThrustFallOffBack = -1.0f / pHandling->Transmission.fMaxReverseVelocity;
 		}
 #endif
 		float fForwSpeed = DotProduct(GetMoveSpeed(), GetForward());
 		CVector vecTail = GetColModel()->boundingBox.min.y * GetForward();
 		float fPedalState = (CPad::GetPad(0)->GetAccelerate() - CPad::GetPad(0)->GetBrake()) / 255.0f;
-		float fThrustAccel;
-		if(fForwSpeed > 0.0f || fPedalState > 0.0f)
-			fThrustAccel = (fPedalState - fThrustFallOff * fForwSpeed) * fThrust;
-		else
-			fThrustAccel = Min(fPedalState - fThrustFallOffBack * fForwSpeed, 0.0f) * fThrust;
-		if(flightModel == FLIGHT_MODEL_PLANE_UNUSED)
-			fThrustAccel *= 0.3f;
-		else if(flightModel == FLIGHT_MODEL_PLANE)
-			fThrustAccel *= 0.1f;
+		// Delegate the acceleration of the engine to the C implementation
+		float fThrustAccel = VehicleLogic_PlaneThrustAccel(fPedalState, fForwSpeed, fThrust, fThrustFallOff, fThrustFallOffBack,
+			flightModel == FLIGHT_MODEL_PLANE_UNUSED, flightModel == FLIGHT_MODEL_PLANE);
 		ApplyMoveForce(fThrustAccel * GetForward() * m_fMass * (*Timer_GetTimeStep()));
 
 		// left/right
 		float fSideSpeed = -DotProduct(GetMoveSpeed(), GetRight());
-		float fSideSlipAccel = pFlyingHandling->fSideSlip * fSideSpeed * Abs(fSideSpeed);
+		// Delegate the sideways acceleration to the C implementation
+		float fSideSlipAccel = VehicleLogic_SideSlipAccel(pFlyingHandling->fSideSlip, fSideSpeed);
 		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * (*Timer_GetTimeStep()));
 
 		float fYaw = -DotProduct(GetSpeed(vecTail), GetRight());
-		float fYawAccel = pFlyingHandling->fYawStab * fYaw * Abs(fYaw) + pFlyingHandling->fYaw * fSteerLR * fForwSpeed;
+		// Delegate the acceleration around the yaw axis to the C implementation
+		float fYawAccel = VehicleLogic_PlaneAxisAccel(pFlyingHandling->fYawStab, fYaw, pFlyingHandling->fYaw, fSteerLR, fForwSpeed);
 		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * (*Timer_GetTimeStep()), vecTail);
 
-		float fRollAccel;
+		float fDirectionMultiplier = 0.0f;
 		if (flightModel == FLIGHT_MODEL_RCPLANE) {
-			float fDirectionMultiplier = CPad::GetPad(0)->GetLookRight();
+			fDirectionMultiplier = CPad::GetPad(0)->GetLookRight();
 			if (CPad::GetPad(0)->GetLookLeft())
 				fDirectionMultiplier = -1;
-			fRollAccel = (0.5f * fDirectionMultiplier + fSteerLR) * pFlyingHandling->fRoll;
 		}
-		else
-			fRollAccel = fSteerLR * pFlyingHandling->fRoll;
+		// Delegate the acceleration around the roll axis to the C implementation
+		float fRollAccel = VehicleLogic_PlaneRollAccel(flightModel == FLIGHT_MODEL_RCPLANE, fDirectionMultiplier, fSteerLR, pFlyingHandling->fRoll);
 		ApplyTurnForce(GetRight() * fRollAccel * fForwSpeed * m_fTurnMass * (*Timer_GetTimeStep()), GetUp());
 
 		CVector vecFRight = CrossProduct(GetForward(), CVector(0.0f, 0.0f, 1.0f));
 		CVector vecStabilise = (GetUp().z > 0.0f) ? vecFRight : -vecFRight;
-		float fStabiliseDirection = (GetRight().z > 0.0f) ? -1.0f : 1.0f;
-		float fStabiliseSpeed = pFlyingHandling->fRollStab * fStabiliseDirection * (1.0f - DotProduct(GetRight(), vecStabilise)) * (1.0f - Abs(GetForward().z));
+		// Delegate the speed of the stabilisation to the C implementation
+		float fStabiliseSpeed = VehicleLogic_PlaneRollStabilise(pFlyingHandling->fRollStab, GetRight().z, DotProduct(GetRight(), vecStabilise), GetForward().z);
 		ApplyTurnForce(fStabiliseSpeed * m_fTurnMass * GetRight(), GetUp()); // no (*Timer_GetTimeStep()), is it right?
 
 		// up/down
 		float fTail = -DotProduct(GetSpeed(vecTail), GetUp());
-		float fPitchAccel = pFlyingHandling->fPitchStab * fTail * Abs(fTail) + pFlyingHandling->fPitch * fSteerUD * fForwSpeed;
+		// Delegate the acceleration around the pitch axis to the C implementation
+		float fPitchAccel = VehicleLogic_PlaneAxisAccel(pFlyingHandling->fPitchStab, fTail, pFlyingHandling->fPitch, fSteerUD, fForwSpeed);
 		ApplyTurnForce(fPitchAccel * m_fTurnMass * GetUp() * (*Timer_GetTimeStep()), vecTail);
 
-		float fLift = DotProduct(GetMoveSpeed(), GetUp()) / Max(0.01f, GetMoveSpeed().Magnitude()); //accel*angle
-		float fLiftAccel = (pFlyingHandling->fFormLift - pFlyingHandling->fAttackLift * fLift) * SQR(fForwSpeed);
+		float fLift = DotProduct(GetMoveSpeed(), GetUp()) / General_MaxFloat(0.01f, GetMoveSpeed().Magnitude()); //accel*angle
+		// Delegate the lift to the C implementation
+		float fLiftAccel = VehicleLogic_PlaneLiftAccel(pFlyingHandling->fFormLift, pFlyingHandling->fAttackLift, fLift, fForwSpeed);
 		float fLiftImpulse = fLiftAccel * m_fMass * (*Timer_GetTimeStep());
 		if (GRAVITY * (*Timer_GetTimeStep()) * m_fMass < fLiftImpulse) {
 			if (flightModel == FLIGHT_MODEL_RCPLANE && GetPosition().z > 50.0f)
@@ -440,24 +419,21 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 
 		CVector vecResistance;
 		vecResistance = pFlyingHandling->vecTurnRes;
-		float rX = Pow(vecResistance.x, (*Timer_GetTimeStep()));
-		float rY = Pow(vecResistance.y, (*Timer_GetTimeStep()));
-		float rZ = Pow(vecResistance.z, (*Timer_GetTimeStep()));
+		// Delegate the resistance per time step to the C implementation
+		float rX = VehicleLogic_ResistancePerStep(vecResistance.x, (*Timer_GetTimeStep()));
+		float rZ = VehicleLogic_ResistancePerStep(vecResistance.z, (*Timer_GetTimeStep()));
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
 		vecTurnSpeed.x *= rX;
-		float fResistance = vecTurnSpeed.y * (1.0f / (pFlyingHandling->vecSpeedRes.y * SQR(vecTurnSpeed.y) + 1.0f)) * rY - vecTurnSpeed.y;
+		// Delegate the resistance to rolling to the C implementation
+		float fResistance = VehicleLogic_PlaneRollResistance(vecTurnSpeed.y, vecResistance.y, pFlyingHandling->vecSpeedRes.y, (*Timer_GetTimeStep()));
 		vecTurnSpeed.z *= rZ;
 		m_vecTurnSpeed = Multiply3x3(GetMatrix(), vecTurnSpeed);
 		ApplyTurnForce(-GetUp() * fResistance * m_fTurnMass, GetRight() + Multiply3x3(GetMatrix(), m_vecCentreOfMass));
 
 
-		float fMoveSpeed = m_vecMoveSpeed.MagnitudeSqr();
-		if(fMoveSpeed > SQR(1.5f))
-			m_vecMoveSpeed *= 1.5f/Sqrt(fMoveSpeed);
-
-		float fTurnSpeed = m_vecTurnSpeed.MagnitudeSqr();
-		if(fTurnSpeed > SQR(0.2f))
-			m_vecTurnSpeed *= 0.2f/Sqrt(fTurnSpeed);
+		// Delegate the limits of the speeds to the C implementation
+		m_vecMoveSpeed *= VehicleLogic_SpeedLimitScale(m_vecMoveSpeed.MagnitudeSqr(), 1.5f);
+		m_vecTurnSpeed *= VehicleLogic_SpeedLimitScale(m_vecTurnSpeed.MagnitudeSqr(), 0.2f);
 		break;
 	}
 	case FLIGHT_MODEL_RCHELI:
@@ -468,43 +444,28 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 #else
 		tFlyingHandlingData* flyingHandling = pFlyingHandling;
 #endif
-		float rm = Pow(flyingHandling->fMoveRes, (*Timer_GetTimeStep()));
+		// Delegate the resistance per time step to the C implementation
+		float rm = VehicleLogic_ResistancePerStep(flyingHandling->fMoveRes, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= rm;
 		if (GetStatus() != STATUS_PLAYER && GetStatus() != STATUS_PLAYER_REMOTE)
 			return;
 		float fUpSpeed = DotProduct(m_vecMoveSpeed, GetUp());
-		float fThrust = (CPad::GetPad(0)->GetAccelerate() - CPad::GetPad(0)->GetBrake()) / 255.0f;
-		if(fThrust < 0.0f)
-			fThrust *= 2.0f;
-		if(flightModel == FLIGHT_MODEL_RCHELI){
-			fThrust = flyingHandling->fThrust * fThrust + 0.45f;
+		float fPedalState = (CPad::GetPad(0)->GetAccelerate() - CPad::GetPad(0)->GetBrake()) / 255.0f;
+		if(flightModel == FLIGHT_MODEL_RCHELI)
 			ApplyMoveForce(GRAVITY * CVector(0.0f, 0.0f, 0.5f) * m_fMass * (*Timer_GetTimeStep()));
-		}else
-			fThrust = flyingHandling->fThrust * fThrust + 0.95f;
-		fThrust -= flyingHandling->fThrustFallOff * fUpSpeed;
-		if(flightModel == FLIGHT_MODEL_RCHELI && GetPosition().z > 40.0f)
-			fThrust *= 10.0f/(GetPosition().z - 30.0f);
-		else if(GetPosition().z > 80.0f)
-			fThrust *= 10.0f/(GetPosition().z - 70.0f);
+
+		// Delegate the thrust of the helicopter to the C implementation
+		float fThrust = VehicleLogic_HeliThrust(fPedalState, flightModel == FLIGHT_MODEL_RCHELI, flyingHandling->fThrust, flyingHandling->fThrustFallOff, fUpSpeed, GetPosition().z);
 		ApplyMoveForce(GRAVITY * GetUp() * fThrust * m_fMass * (*Timer_GetTimeStep()));
 
-		if (GetUp().z > 0.0f){
-			float upRight = Clamp(GetRight().z, -flyingHandling->fFormLift, flyingHandling->fFormLift);
-			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
-			ApplyTurnForce(upImpulseRight * GetUp(), GetRight());
+		// Delegate the lean of the helicopter to the C implementation
+		float upRight, upFwd;
+		VehicleLogic_HeliStabilise(GetUp().z, GetRight().z, GetForward().z, flyingHandling->fFormLift, &upRight, &upFwd);
+		float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
+		ApplyTurnForce(upImpulseRight * GetUp(), GetRight());
 
-			float upFwd = Clamp(GetForward().z, -flyingHandling->fFormLift, flyingHandling->fFormLift);
-			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
-			ApplyTurnForce(upImpulseFwd * GetUp(), GetForward());
-		}else{
-			float upRight = GetRight().z < 0.0f ? -flyingHandling->fFormLift : flyingHandling->fFormLift;
-			float upImpulseRight = -upRight * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
-			ApplyTurnForce(upImpulseRight * GetUp(), GetRight());
-
-			float upFwd = GetForward().z < 0.0f ? -flyingHandling->fFormLift : flyingHandling->fFormLift;
-			float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
-			ApplyTurnForce(upImpulseFwd * GetUp(), GetForward());
-		}
+		float upImpulseFwd = -upFwd * flyingHandling->fAttackLift * m_fTurnMass * (*Timer_GetTimeStep());
+		ApplyTurnForce(upImpulseFwd * GetUp(), GetForward());
 
 		float fRoll, fPitch, fYaw;
 		if (bCheat5) {
@@ -532,26 +493,28 @@ CVehicle::FlyingControl(eFlightModel flightModel)
 			fPitch = -CPad::GetPad(0)->GetCarGunUpDown() / 128.0f;
 		if (CPad::GetPad(0)->GetHorn()) {
 			fYaw = 0.0f;
-			fPitch = Clamp(flyingHandling->fPitchStab * DotProduct(m_vecMoveSpeed, GetForward()), -200.0f, 1.3f);
-			fRoll = Clamp(flyingHandling->fRollStab * DotProduct(m_vecMoveSpeed, GetRight()), -200.0f, 1.3f);
+			fPitch = VehicleLogic_StabilityClamp(flyingHandling->fPitchStab, DotProduct(m_vecMoveSpeed, GetForward()));
+			fRoll = VehicleLogic_StabilityClamp(flyingHandling->fRollStab, DotProduct(m_vecMoveSpeed, GetRight()));
 		}
 		ApplyTurnForce(fPitch * GetUp() * flyingHandling->fPitch * m_fTurnMass * (*Timer_GetTimeStep()), GetForward());
 		ApplyTurnForce(fRoll * GetUp() * flyingHandling->fRoll * m_fTurnMass * (*Timer_GetTimeStep()), GetRight());
 
 		float fSideSpeed = -DotProduct(GetMoveSpeed(), GetRight());
-		float fSideSlipAccel = flyingHandling->fSideSlip * fSideSpeed * Abs(fSideSpeed);
+		// Delegate the sideways acceleration to the C implementation
+		float fSideSlipAccel = VehicleLogic_SideSlipAccel(flyingHandling->fSideSlip, fSideSpeed);
 		ApplyMoveForce(m_fMass * GetRight() * fSideSlipAccel * (*Timer_GetTimeStep()));
 		float fYawAccel = flyingHandling->fYawStab * fSideSpeed * Abs(fSideSpeed) + flyingHandling->fYaw * fYaw;
 		ApplyTurnForce(fYawAccel * GetRight() * m_fTurnMass * (*Timer_GetTimeStep()), -GetForward());
 
 		ApplyTurnForce(fYaw * GetForward() * flyingHandling->fYaw * m_fTurnMass * (*Timer_GetTimeStep()), GetRight());
 
-		float rX = Pow(flyingHandling->vecTurnRes.x, (*Timer_GetTimeStep()));
-		float rY = Pow(flyingHandling->vecTurnRes.y, (*Timer_GetTimeStep()));
-		float rZ = Pow(flyingHandling->vecTurnRes.z, (*Timer_GetTimeStep()));
+		// Delegate the resistance per time step to the C implementation
+		float rX = VehicleLogic_ResistancePerStep(flyingHandling->vecTurnRes.x, (*Timer_GetTimeStep()));
+		float rY = VehicleLogic_ResistancePerStep(flyingHandling->vecTurnRes.y, (*Timer_GetTimeStep()));
 		CVector vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
-		float fResistanceMultiplier = Pow(1.0f / (flyingHandling->vecSpeedRes.z * SQR(vecTurnSpeed.z) + 1.0f) * rZ, (*Timer_GetTimeStep()));
-		float fResistance = vecTurnSpeed.z * fResistanceMultiplier - vecTurnSpeed.z;
+		// Delegate the resistance to yawing to the C implementation
+		float fResistance;
+		float fResistanceMultiplier = VehicleLogic_HeliYawResistance(vecTurnSpeed.z, flyingHandling->vecTurnRes.z, flyingHandling->vecSpeedRes.z, (*Timer_GetTimeStep()), &fResistance);
 		vecTurnSpeed.x *= rX;
 		vecTurnSpeed.y *= rY;
 		vecTurnSpeed.z *= fResistanceMultiplier;
@@ -625,25 +588,9 @@ CVehicle::DoBladeCollision(CVector pos, CMatrix &matrix, int16 rotorType, float 
 
 	pos = matrix * pos;
 	bool hadCollision = false;
-	int minX = CWorld::GetSectorIndexX(pos.x - radius);
-	if(minX <= 0) minX = 0;
-
-	int minY = CWorld::GetSectorIndexY(pos.y - radius);
-	if(minY <= 0) minY = 0;
-
-	int maxX = CWorld::GetSectorIndexX(pos.x + radius);
-#ifdef FIX_BUGS
-	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
-#else
-	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X;
-#endif
-
-	int maxY = CWorld::GetSectorIndexY(pos.y + radius);
-#ifdef FIX_BUGS
-	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
-#else
-	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y;
-#endif
+	// Delegate the range of sectors to the C implementation
+	int32_t minX, minY, maxX, maxY;
+	World_SectorRange(pos.x - radius, pos.y - radius, pos.x + radius, pos.y + radius, &minX, &minY, &maxX, &maxY);
 
 	CWorld::AdvanceCurrentScanCode();
 	for(int curY = minY; curY <= maxY; curY++) {
@@ -761,8 +708,8 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 				float axisDir = DotProduct(axis, localColpos);
 				float colDir = DotProduct(CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal), localColpos);
 
-				if(2.0f*ROTOR_SEMI_THICKNESS < Abs(axisDir) &&
-				   ROTOR_DISGUARD_MULT*Abs(colDir) < Abs(axisDir))
+				// Delegate the check that the collision misses the rotor to the C implementation
+				if(VehicleLogic_RotorMissesCollision(axisDir, colDir, ROTOR_SEMI_THICKNESS, ROTOR_DISGUARD_MULT))
 					continue;
 
 				hadCollision = true;
@@ -787,7 +734,7 @@ CVehicle::BladeColSectorList(CPtrList &list, CColModel &rotorColModel, CMatrix &
 						heli->m_aWheelSpeed[1] *= -1.0f;
 				}
 
-				float damageImpulse = damageMult * Max(impulse, ROTOR_DEFAULT_DAMAGE*m_fMass/3000.0f);
+				float damageImpulse = damageMult * General_MaxFloat(impulse, ROTOR_DEFAULT_DAMAGE*m_fMass/3000.0f);
 				if(damageImpulse > m_fDamageImpulse)
 					SetDamagedPieceRecord(0, damageImpulse, entity, CollisionVector_ToNative(CWorld::m_aTempColPts[i].normal));
 
@@ -818,114 +765,43 @@ CVehicle::ProcessWheel(CVector &wheelFwd, CVector &wheelRight, CVector &wheelCon
 	bAlreadySkidding = false;
 #endif
 
-	// how much force we want to apply in these axes
-	float fwd = 0.0f;
-	float right = 0.0f;
-
-	bBraking = brake != 0.0f;
-	if(bBraking)
-		thrust = 0.0f;
-	bDriving = thrust != 0.0f;
-
+	// Delegate the friction of the wheel to the C implementation
 	float contactSpeedFwd = DotProduct(wheelContactSpeed, wheelFwd);
 	float contactSpeedRight = DotProduct(wheelContactSpeed, wheelRight);
 
-	if(*wheelState != WHEEL_STATE_NORMAL)
-		bAlreadySkidding = true;
-	*wheelState = WHEEL_STATE_NORMAL;
-
-	adhesion *= (*Timer_GetTimeStep());
-	if(bAlreadySkidding)
-		adhesion *= pHandling->fTractionLoss;
-
-	// rouz edit
-	if (rouz.slippery)
-		if (wheelId == CARWHEEL_FRONT_LEFT || wheelId == CARWHEEL_FRONT_RIGHT)
-			adhesion *= 0.2f;
-		else
-			adhesion *= 0.19f;
-
-	// moving sideways
-	if(contactSpeedRight != 0.0f){
-		// exert opposing force
-		right = -contactSpeedRight/wheelsOnGround;
-		// BUG?
-		// contactSpeedRight is independent of framerate but right has timestep as a factor
-		// so we probably have to fix this
-		// fixing this causes jittery cars at 15fps, and causes the car to move backwards slowly at 18fps
-		// at 19fps, the effects are gone ...
-		//right *= Timer_GetTimeStepFix();
-
-		if(wheelStatus == WHEEL_STATUS_BURST){
-			float fwdspeed = Min(contactSpeedFwd, fBurstSpeedMax);
-			right += fwdspeed * General_GetRandomNumberInRangeFloat(-fBurstTyreMod, fBurstTyreMod);
-		}
-	}
-
-	if(bDriving){
-		fwd = thrust;
-
-		// limit sideways force (why?)
-		if(right > 0.0f){
-			if(right > adhesion)
-				right = adhesion;
-		}else{
-			if(right < -adhesion)
-				right = -adhesion;
-		}
-	}else if(contactSpeedFwd != 0.0f){
-		fwd = -contactSpeedFwd/wheelsOnGround;
+	VehicleWheelInput wheelInput;
+	wheelInput.contactSpeedFwd = contactSpeedFwd;
+	wheelInput.contactSpeedRight = contactSpeedRight;
+	wheelInput.wheelsOnGround = wheelsOnGround;
+	wheelInput.thrust = thrust;
+	wheelInput.brake = brake;
+	wheelInput.adhesion = adhesion;
+	wheelInput.timeStep = (*Timer_GetTimeStep());
+	wheelInput.tractionLoss = pHandling->fTractionLoss;
+	wheelInput.slippery = rouz.slippery != 0;
+	wheelInput.isFrontWheel = wheelId == CARWHEEL_FRONT_LEFT || wheelId == CARWHEEL_FRONT_RIGHT;
+	wheelInput.isBurst = wheelStatus == WHEEL_STATUS_BURST;
+	wheelInput.burstSpeedMax = fBurstSpeedMax;
+	wheelInput.burstTyreMod = fBurstTyreMod;
+	wheelInput.gasPedal = m_fGasPedal;
+	wheelInput.isBike = IsBike();
+	wheelInput.isRCBandit = GetModelIndex() == MI_RCBANDIT;
+	wheelInput.mass = pHandling->fMass;
+	wheelInput.wheelFriction = mod_HandlingManager.fWheelFriction;
 #ifdef FIX_BUGS
-		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
-		// so we probably have to fix this
-		// better get rid of it here too
-		//fwd *= Timer_GetTimeStepFix();
+	wheelInput.useTimeStepFix = true;
+#else
+	wheelInput.useTimeStepFix = false;
 #endif
-
-		if(!bBraking){
-			if(m_fGasPedal < 0.01f){
-				if(IsBike())
-					brake = 0.6f * mod_HandlingManager.fWheelFriction / (pHandling->fMass + 200.0f);
-				else if(pHandling->fMass < 500.0f)
-					brake = 0.2f * mod_HandlingManager.fWheelFriction / pHandling->fMass;
-				else if(GetModelIndex() == MI_RCBANDIT)
-					brake = 0.2f * mod_HandlingManager.fWheelFriction / pHandling->fMass;
-				else
-					brake = mod_HandlingManager.fWheelFriction / pHandling->fMass;
-#ifdef FIX_BUGS
-				brake *= Timer_GetTimeStepFix();
-#endif
-			}
-		}
-
-		if(brake > adhesion){
-			if(Abs(contactSpeedFwd) > 0.005f)
-				*wheelState = WHEEL_STATE_FIXED;
-		}else {
-			if(fwd > 0.0f){
-				if(fwd > brake)
-					fwd = brake;
-			}else{
-				if(fwd < -brake)
-					fwd = -brake;
-			}
-		}
-	}
-
-	float speedSq = sq(right) + sq(fwd);
-	if(sq(adhesion) < speedSq){
-		if(*wheelState != WHEEL_STATE_FIXED){
-			if(bDriving && contactSpeedFwd < 0.2f)
-				*wheelState = WHEEL_STATE_SPINNING;
-			else
-				*wheelState = WHEEL_STATE_SKIDDING;
-		}
-
-		float l = Sqrt(speedSq);
-		float tractionLoss = bAlreadySkidding ? 1.0f : pHandling->fTractionLoss;
-		right *= adhesion * tractionLoss / l;
-		fwd *= adhesion * tractionLoss / l;
-	}
+	wheelInput.timeStepFix = Timer_GetTimeStepFix();
+	wheelInput.wheelState = *wheelState;
+	VehicleWheelOutput wheelOutput;
+	VehicleLogic_ProcessWheel(&wheelInput, &bAlreadySkidding, &wheelOutput);
+	float fwd = wheelOutput.fwd;
+	float right = wheelOutput.right;
+	*wheelState = (tWheelState)wheelOutput.wheelState;
+	bBraking = wheelOutput.braking;
+	bDriving = wheelOutput.driving;
 
 	if(fwd != 0.0f || right != 0.0f){
 		CVector totalSpeed = fwd*wheelFwd + right*wheelRight;
@@ -982,123 +858,48 @@ CVehicle::ProcessBikeWheel(CVector &wheelFwd, CVector &wheelRight, CVector &whee
 	bAlreadySkidding = false;
 #endif
 
-	// how much force we want to apply in these axes
-	float fwd = 0.0f;
-	float right = 0.0f;
-
-	bBraking = brake != 0.0f;
-	if(bBraking)
-		thrust = 0.0f;
-	bDriving = thrust != 0.0f;
-	bReversing = thrust < 0.0f;
-
+	// Delegate the friction of the wheel to the C implementation
 	float contactSpeedFwd = DotProduct(wheelContactSpeed, wheelFwd);
 	float contactSpeedRight;
-
-	if(*wheelState != WHEEL_STATE_NORMAL)
-		bAlreadySkidding = true;
-	*wheelState = WHEEL_STATE_NORMAL;
-
-	adhesion *= (*Timer_GetTimeStep());
-	if(bAlreadySkidding)
-		adhesion *= pHandling->fTractionLoss;
-
 	if(special == BIKE_WHEELSPEC_2 || special == BIKE_WHEELSPEC_3)
 		contactSpeedRight = 0.0f;
 	else
 		contactSpeedRight = DotProduct(wheelContactSpeed, wheelRight);
 
-	// moving sideways
-	if(contactSpeedRight != 0.0f){
-		// exert opposing force
-		right = -contactSpeedRight/wheelsOnGround;
+	VehicleBikeWheelInput wheelInput;
+	wheelInput.contactSpeedFwd = contactSpeedFwd;
+	wheelInput.contactSpeedRight = contactSpeedRight;
+	wheelInput.wheelsOnGround = wheelsOnGround;
+	wheelInput.thrust = thrust;
+	wheelInput.brake = brake;
+	wheelInput.adhesion = adhesion;
+	wheelInput.destabTraction = destabTraction;
+	wheelInput.timeStep = (*Timer_GetTimeStep());
+	wheelInput.tractionLoss = pHandling->fTractionLoss;
+	wheelInput.isBurst = wheelStatus == WHEEL_STATUS_BURST;
+	wheelInput.burstSpeedMax = fBurstBikeSpeedMax;
+	wheelInput.burstTyreMod = fBurstBikeTyreMod;
+	wheelInput.gasPedal = m_fGasPedal;
+	wheelInput.isBike = IsBike();
+	wheelInput.isRCBandit = GetModelIndex() == MI_RCBANDIT;
+	wheelInput.handlingMass = pHandling->fMass;
+	wheelInput.mass = m_fMass;
+	wheelInput.wheelFriction = mod_HandlingManager.fWheelFriction;
 #ifdef FIX_BUGS
-		// contactSpeedRight is independent of framerate but right has timestep as a factor
-		// so we probably have to fix this
-		// see above
-		//right *= Timer_GetTimeStepFix();
+	wheelInput.useTimeStepFix = true;
+#else
+	wheelInput.useTimeStepFix = false;
 #endif
-
-		if(wheelStatus == WHEEL_STATUS_BURST){
-			float fwdspeed = Min(contactSpeedFwd, fBurstBikeSpeedMax);
-			right += fwdspeed * General_GetRandomNumberInRangeFloat(-fBurstBikeTyreMod, fBurstBikeTyreMod);
-		}
-	}
-
-	if(bDriving){
-		fwd = thrust;
-
-		// limit sideways force (why?)
-		if(right > 0.0f){
-			if(right > adhesion)
-				right = adhesion;
-		}else{
-			if(right < -adhesion)
-				right = -adhesion;
-		}
-	}else if(contactSpeedFwd != 0.0f){
-		fwd = -contactSpeedFwd/wheelsOnGround;
-#ifdef FIX_BUGS
-		// contactSpeedFwd is independent of framerate but fwd has timestep as a factor
-		// so we probably have to fix this
-		// see above
-		//fwd *= Timer_GetTimeStepFix();
-#endif
-
-		if(!bBraking){
-			if(m_fGasPedal < 0.01f){
-				if(IsBike())
-					brake = 0.6f * mod_HandlingManager.fWheelFriction / (pHandling->fMass + 200.0f);
-				else if(pHandling->fMass < 500.0f)
-					brake = mod_HandlingManager.fWheelFriction / m_fMass;
-				else if(GetModelIndex() == MI_RCBANDIT)
-					brake = 0.2f * mod_HandlingManager.fWheelFriction / m_fMass;
-				else
-					brake = mod_HandlingManager.fWheelFriction / m_fMass;
-#ifdef FIX_BUGS
-				brake *= Timer_GetTimeStepFix();
-#endif
-			}
-		}
-
-		if(brake > adhesion){
-			if(Abs(contactSpeedFwd) > 0.005f)
-				*wheelState = WHEEL_STATE_FIXED;
-		}else {
-			if(fwd > 0.0f){
-				if(fwd > brake)
-					fwd = brake;
-			}else{
-				if(fwd < -brake)
-					fwd = -brake;
-			}
-		}
-	}
-
-	float speedSq = sq(right) + sq(fwd);
-	if(sq(adhesion) < speedSq){
-		if(*wheelState != WHEEL_STATE_FIXED){
-			if(bDriving && contactSpeedFwd < 0.2f)
-				*wheelState = WHEEL_STATE_SPINNING;
-			else
-				*wheelState = WHEEL_STATE_SKIDDING;
-		}
-
-		float l = Sqrt(speedSq);
-		float tractionLoss = bAlreadySkidding ? 1.0f : pHandling->fTractionLoss;
-		right *= adhesion * tractionLoss / l;
-		fwd *= adhesion * tractionLoss / l;
-
-		if(destabTraction < 1.0f)
-			right *= destabTraction;
-	}else if(destabTraction < 1.0f){
-		if(!bAlreadySkidding)
-			destabTraction *= pHandling->fTractionLoss;
-		if(sq(adhesion*destabTraction) < speedSq){
-			float l = Sqrt(speedSq);
-			right *= adhesion * destabTraction / l;
-		}
-	}
+	wheelInput.timeStepFix = Timer_GetTimeStepFix();
+	wheelInput.wheelState = *wheelState;
+	VehicleBikeWheelOutput wheelOutput;
+	VehicleLogic_ProcessBikeWheel(&wheelInput, &bAlreadySkidding, &wheelOutput);
+	float fwd = wheelOutput.fwd;
+	float right = wheelOutput.right;
+	*wheelState = (tWheelState)wheelOutput.wheelState;
+	bBraking = wheelOutput.braking;
+	bDriving = wheelOutput.driving;
+	bReversing = wheelOutput.reversing;
 
 	if(fwd != 0.0f || right != 0.0f){
 		CVector direction = fwd*wheelFwd + right*wheelRight;
@@ -1154,98 +955,41 @@ CVehicle::InflictDamage(CEntity *damagedBy, eWeaponType weaponType, float damage
 		Stats_PropertyDestroyed += General_GetRandomNumberInRangeInt(5, 25);
 	}
 
+	// Delegate the kind of damage of the weapon to the C implementation
 	bool bFrightensDriver = false;
-	switch (weaponType) {
-	case WEAPONTYPE_UNARMED:
-	case WEAPONTYPE_BRASSKNUCKLE:
-	case WEAPONTYPE_SCREWDRIVER:
-	case WEAPONTYPE_GOLFCLUB:
-	case WEAPONTYPE_NIGHTSTICK:
-	case WEAPONTYPE_KNIFE:
-	case WEAPONTYPE_BASEBALLBAT:
-	case WEAPONTYPE_HAMMER:
-	case WEAPONTYPE_CLEAVER:
-	case WEAPONTYPE_MACHETE:
-	case WEAPONTYPE_KATANA:
-	case WEAPONTYPE_CHAINSAW:
+	switch (VehicleLogic_DamageProofKind(weaponType)) {
+	case VEHICLE_DAMAGE_MELEE:
 		if (bMeleeProof)
 			return;
 		break;
-	case WEAPONTYPE_COLT45:
-	case WEAPONTYPE_PYTHON:
-	case WEAPONTYPE_SHOTGUN:
-	case WEAPONTYPE_SPAS12_SHOTGUN:
-	case WEAPONTYPE_STUBBY_SHOTGUN:
-	case WEAPONTYPE_TEC9:
-	case WEAPONTYPE_UZI:
-	case WEAPONTYPE_SILENCED_INGRAM:
-	case WEAPONTYPE_MP5:
-	case WEAPONTYPE_M4:
-	case WEAPONTYPE_RUGER:
-	case WEAPONTYPE_SNIPERRIFLE:
-	case WEAPONTYPE_LASERSCOPE:
-	case WEAPONTYPE_M60:
-	case WEAPONTYPE_MINIGUN:
-	case WEAPONTYPE_HELICANNON:
-	case WEAPONTYPE_UZI_DRIVEBY:
+	case VEHICLE_DAMAGE_BULLET:
 		if (bBulletProof)
 			return;
 		bFrightensDriver = true;
 		break;
-	case WEAPONTYPE_GRENADE:
-	case WEAPONTYPE_MOLOTOV:
-	case WEAPONTYPE_ROCKET:
-	case WEAPONTYPE_EXPLOSION:
+	case VEHICLE_DAMAGE_EXPLOSION:
 		if (bExplosionProof)
 			return;
 		bFrightensDriver = true;
 		break;
-	case WEAPONTYPE_FLAMETHROWER:
+	case VEHICLE_DAMAGE_FIRE:
 		if (bFireProof)
 			return;
 		break;
-	case WEAPONTYPE_RAMMEDBYCAR:
+	case VEHICLE_DAMAGE_COLLISION:
 		if (bCollisionProof)
 			return;
 		break;
 	default:
 		break;
 	}
-
 	if(bFrightensDriver && GetStatus() == STATUS_PLAYER && m_fHealth < 250.0f)
 		return;
 
 	// Pop tires
 	if(damagedBy && damagedBy->IsPed() && (IsCar() || IsBike())){
-		int accuracy = 0;
-		switch(weaponType){
-		case WEAPONTYPE_COLT45:
-			accuracy = 10;
-			break;
-		case WEAPONTYPE_PYTHON:
-			if(!((CPed*)damagedBy)->IsPlayer())
-				accuracy = 64;
-			break;
-		case WEAPONTYPE_SHOTGUN:
-		case WEAPONTYPE_STUBBY_SHOTGUN:
-		case WEAPONTYPE_M60:
-		case WEAPONTYPE_HELICANNON:
-			accuracy = 25;
-			break;
-		case WEAPONTYPE_TEC9:
-		case WEAPONTYPE_UZI:
-		case WEAPONTYPE_SILENCED_INGRAM:
-		case WEAPONTYPE_MP5:
-		case WEAPONTYPE_UZI_DRIVEBY:
-			accuracy = 15;
-			break;
-		case WEAPONTYPE_M4:
-		case WEAPONTYPE_RUGER:
-			if(!((CPed*)damagedBy)->IsPlayer())
-				accuracy = 15;
-			break;
-		}
-
+		// Delegate the chance to burst a tyre to the C implementation
+		int accuracy = VehicleLogic_TyreBurstAccuracy(weaponType, ((CPed*)damagedBy)->IsPlayer());
 		if(((CPed*)damagedBy)->IsPlayer() && (CCamera::m_bUseMouse3rdPerson || TheCamera.Using1stPersonWeaponMode()))
 			accuracy = 0;
 
@@ -1361,14 +1105,9 @@ CVehicle::FireFixedMachineGuns(void)
 	if ((*Timer_GetTimeInMilliseconds()) <= m_nGunFiringTime + 150)
 		return;
 	CVector source, target;
-	float dx, dy, len;
-
-	dx = GetForward().x;
-	dy = GetForward().y;
-	len = Sqrt(SQR(dx) + SQR(dy));
-	if (len < 0.1f) len = 0.1f;
-	dx /= len;
-	dy /= len;
+	// Delegate the direction of the shots to the C implementation
+	float dx, dy;
+	VehicleLogic_FixedGunDirection(GetForward().x, GetForward().y, &dx, &dy);
 
 	m_nGunFiringTime = (*Timer_GetTimeInMilliseconds());
 
@@ -1436,7 +1175,8 @@ void
 CVehicle::ExtinguishCarFire(void)
 {
 	if(GetStatus() != STATUS_WRECKED)
-		m_fHealth = Max(m_fHealth, 300.0f);
+		// Delegate the limit to the C implementation
+		m_fHealth = General_MaxFloat(m_fHealth, 300.0f);
 	if(m_pCarFire)
 		Fire_Extinguish(m_pCarFire);
 	if(IsCar()){
@@ -1704,7 +1444,8 @@ CVehicle::SetDriver(CPed *driver)
 		bFreebies = false;
 		switch(GetModelIndex()){
 		case MI_AMBULAN:
-			FindPlayerPed()->m_fHealth = Max(FindPlayerPed()->m_fHealth, Min(FindPlayerPed()->m_fHealth + 20.0f, CWorld::Players[0].m_nMaxHealth));
+			// Delegate the health of the freebie to the C implementation
+			FindPlayerPed()->m_fHealth = VehicleLogic_AmbulanceFreebieHealth(FindPlayerPed()->m_fHealth, CWorld::Players[0].m_nMaxHealth);
 			break;
 
 		case MI_TAXI:
@@ -1720,7 +1461,8 @@ CVehicle::SetDriver(CPed *driver)
 			break;
 
 		case MI_ENFORCER:
-			driver->m_fArmour = Max(driver->m_fArmour, CWorld::Players[0].m_nMaxArmour);
+			// Delegate the armour of the freebie to the C implementation
+			driver->m_fArmour = VehicleLogic_EnforcerFreebieArmour(driver->m_fArmour, CWorld::Players[0].m_nMaxArmour);
 			break;
 
 		case MI_CADDY:
@@ -1964,12 +1706,10 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 		if(n){
 			pos.z = particleZ;
 			if(surface == SURFACE_WATER){
-				float red = (0.3*TimeCycle_GetDirectionalRed() + TimeCycle_GetAmbientRed_Obj())*255.0f/4.0f;
-				float green = (0.3*TimeCycle_GetDirectionalGreen() + TimeCycle_GetAmbientGreen_Obj())*255.0f/4.0f;
-				float blue = (0.3*TimeCycle_GetDirectionalBlue() + TimeCycle_GetAmbientBlue_Obj())*255.0f/4.0f;
-				r = Clamp(red, 0.0f, 255.0f);
-				g = Clamp(green, 0.0f, 255.0f);
-				b = Clamp(blue, 0.0f, 255.0f);
+				// Delegate the colour of the spray to the C implementation
+				r = VehicleLogic_HeliWaterChannel(TimeCycle_GetDirectionalRed(), TimeCycle_GetAmbientRed_Obj());
+				g = VehicleLogic_HeliWaterChannel(TimeCycle_GetDirectionalGreen(), TimeCycle_GetAmbientGreen_Obj());
+				b = VehicleLogic_HeliWaterChannel(TimeCycle_GetDirectionalBlue(), TimeCycle_GetAmbientBlue_Obj());
 				RwRGBA col1 = { r, g, b, (RwUInt8)General_GetRandomNumberInRangeInt(8, 32) };
 				RwRGBA col2 = { 255, 255, 255, 32 };
 
@@ -1980,35 +1720,8 @@ CVehicle::HeliDustGenerate(CEntity *heli, float radius, float ground, int rnd)
 						General_GetRandomNumberInRangeFloat(0.0f, 10.0f),
 						General_GetRandomNumberInRangeFloat(0.0f, 90.0f), 1);
 			}else{
-				switch(surface){
-				default:
-				case SURFACE_TARMAC:
-					r = 10;
-					g = 10;
-					b = 10;
-					break;
-				case SURFACE_GRASS:
-					r = 10;
-					g = 10;
-					b = 3;
-					break;
-				case SURFACE_GRAVEL:
-					r = 10;
-					g = 8;
-					b = 7;
-					break;
-				case SURFACE_MUD_DRY:
-					r = 10;
-					g = 6;
-					b = 3;
-					break;
-				case SURFACE_SAND:
-				case SURFACE_SAND_BEACH:
-					r = 10;
-					g = 10;
-					b = 7;
-					break;
-				}
+				// Delegate the colour of the dust to the C implementation
+				VehicleLogic_HeliDustColor(surface, &r, &g, &b);
 				RwRGBA col = { r, g, b, 32 };
 				if(heliPos.z - pos.z < 20.0f)
 					CParticle::AddParticle(PARTICLE_HELI_DUST, pos, dir, nil, dustSize, col);
@@ -2047,26 +1760,15 @@ CVehicle::DoSunGlare(void)
 	camDir2D.Normalise();
 	float fwdness = Abs(DotProduct2D(fwd2D, camDir2D));
 
-	// check angle
+	// Delegate the strength of the glare to the C implementation
 	float strength;
-	if(fwdness > GLARE_FULL_ANGLE)
-		strength = 1.0f;
-	else if(fwdness > GLARE_MIN_ANGLE)
-		strength = (fwdness - GLARE_MIN_ANGLE)/(GLARE_FULL_ANGLE-GLARE_MIN_ANGLE);
-	else
-		return;
-	// check distance
-	if(dist > GLARE_FULL_DIST){
-		// no max distance
-	}else if(dist > GLARE_MIN_DIST)
-		strength *= (dist - GLARE_MIN_DIST)/(GLARE_FULL_DIST - GLARE_MIN_DIST);
-	else
+	if(!VehicleLogic_SunGlareStrength(fwdness, dist, &strength))
 		return;
 
 	float intens = 0.8f * strength * Weather_SunGlare;
-	int r = intens * (TimeCycle_GetSunCoreRed() + 2*255)/3.0f;
-	int g = intens * (TimeCycle_GetSunCoreGreen() + 2*255)/3.0f;
-	int b = intens * (TimeCycle_GetSunCoreBlue() + 2*255)/3.0f;
+	int r = VehicleLogic_SunGlareChannel(intens, TimeCycle_GetSunCoreRed());
+	int g = VehicleLogic_SunGlareChannel(intens, TimeCycle_GetSunCoreGreen());
+	int b = VehicleLogic_SunGlareChannel(intens, TimeCycle_GetSunCoreBlue());
 
 	CColModel *colmodel = GetColModel();
 	CCollision::CalculateTrianglePlanes(colmodel);
@@ -2087,28 +1789,13 @@ CVehicle::DoSunGlare(void)
 		if(vert1.z <= 0.0f)
 			continue;
 
-		// trying to find a quad here
-		int numTri2Verts = 0;
-		if(a2 != a1 && a2 != b1 && a2 != c1){
-			// a2 is not in tri1
-			numTri2Verts++;
+		// Delegate the search of the fourth vertex of the quad to the C implementation
+		int fourthVertex = 0;
+		int numTri2Verts = VehicleLogic_FindQuadVertex(a1, b1, c1, a2, b2, c2, &fourthVertex);
+		if(numTri2Verts == 1){
 			// Copy complete decoded values before the original native vector expression
-			const CollisionVector3 collisionVertexValue1_0=CompressedVector_Get(&colmodel->vertices[a2]);
+			const CollisionVector3 collisionVertexValue1_0=CompressedVector_Get(&colmodel->vertices[fourthVertex]);
 			vert4 = CVector(collisionVertexValue1_0.x,collisionVertexValue1_0.y,collisionVertexValue1_0.z);
-		}
-		if(b2 != a1 && b2 != b1 && b2 != c1){
-			// b2 is not in tri1
-			numTri2Verts++;
-			// Copy complete decoded values before the original native vector expression
-			const CollisionVector3 collisionVertexValue2_0=CompressedVector_Get(&colmodel->vertices[b2]);
-			vert4 = CVector(collisionVertexValue2_0.x,collisionVertexValue2_0.y,collisionVertexValue2_0.z);
-		}
-		if(c2 != a1 && c2 != b1 && c2 != c1){
-			// c2 is not in tri1
-			numTri2Verts++;
-			// Copy complete decoded values before the original native vector expression
-			const CollisionVector3 collisionVertexValue3_0=CompressedVector_Get(&colmodel->vertices[c2]);
-			vert4 = CVector(collisionVertexValue3_0.x,collisionVertexValue3_0.y,collisionVertexValue3_0.z);
 		}
 		// Need exactly one vertex from tri2 for a quad with tri1
 		if(numTri2Verts != 1)
@@ -2120,7 +1807,8 @@ CVehicle::DoSunGlare(void)
 		CVector mid = (vert1 + CVector(collisionVertexValue4_0.x,collisionVertexValue4_0.y,collisionVertexValue4_0.z) + CVector(collisionVertexValue4_1.x,collisionVertexValue4_1.y,collisionVertexValue4_1.z) + vert4)/4.0f;
 		float dy = mid.y - vert1.y;
 		float dx = mid.x - vert1.x;
-		float dist = 1.4f * Min(Abs(dx), Abs(dy));
+		// Delegate the distance of the glare to the C implementation
+		float dist = VehicleLogic_GlareDistance(dx, dy);
 		if(dist > 0.6f){
 			CVector pos = GetMatrix() * (dist * localGlareVec + mid) + camDir;
 			CCoronas::RegisterCorona((uintptr)this + 27 + i,

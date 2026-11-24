@@ -111,8 +111,9 @@ CPhoneInfo::Update(void)
 					m_aPhones[phoneId].m_pEntity->UpdateRwFrame();
 					if (notInCar && !bPickingUpPhone && player->IsPedInControl()) {
 						CVector2D distToPhone = playerPos - m_aPhones[phoneId].m_vecPos;
-						if (Abs(distToPhone.x) < 1.0f && Abs(distToPhone.y) < 1.0f) {
-							if (DotProduct2D(distToPhone, m_aPhones[phoneId].m_pEntity->GetForward()) / distToPhone.Magnitude() < -0.85f) {
+						// Delegate the checks that the player is close to the C implementation
+						if (Phone_PlayerIsClose(distToPhone.x, distToPhone.y)) {
+							if (Phone_PlayerFacesPhone(distToPhone.x, distToPhone.y, m_aPhones[phoneId].m_pEntity->GetForward().x, m_aPhones[phoneId].m_pEntity->GetForward().y, distToPhone.Magnitude())) {
 								CVector2D distToPhoneObj = playerPos - m_aPhones[phoneId].m_pEntity->GetPosition();
 								float angleToFace = General_GetATanOfXY(distToPhoneObj.x, distToPhoneObj.y) + HALFPI;
 								if (angleToFace > TWOPI)

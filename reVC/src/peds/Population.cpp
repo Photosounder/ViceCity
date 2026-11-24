@@ -35,6 +35,7 @@
 #include "Vehicle.h"
 #include "Ped.h"
 #include "PopulationLogic.h"
+#include "WorldLogic.h"
 #include "Object.h"
 #include "ObjectLogic.h"
 
@@ -326,7 +327,8 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 			maxDist = Population_PedCreationDistMultiplier() * (MIN_CREATION_DIST + CREATION_RANGE); // rouz edit (ChatGPT)
 		}
 	}
-	float missionAndWeatherMult = -0.8f * Sqrt(Weather_Rain) + 1.0f;
+	// Delegate the multiplier of the weather to the C implementation
+	float missionAndWeatherMult = Population_RainMultiplier(Weather_Rain);
 
 	// Taxi side mission
 	if (CTheScripts::IsPlayerOnAMission()) {
@@ -339,9 +341,9 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 	int selectedMaxPeds = CGame::IsInInterior() ? PopulationLimits_MaxInteriorPeds : PopulationLimits_MaxPeds; // rouz edit (ChatGPT)
 
 	// Yeah, float
-	float maxPossiblePedsForArea = (zoneInfo.pedDensity + zoneInfo.carDensity) * playerInfo->m_fRoadDensity * Population_pedDensityMultiplier // rouz edit (ChatGPT)
-		* (Darkel_FrenzyOnGoing() ? 1.f : IniFile_PedNumberMultiplier) * missionAndWeatherMult;
-	maxPossiblePedsForArea = Min(maxPossiblePedsForArea, selectedMaxPeds);
+	// Delegate the maximum number of peds to the C implementation
+	float maxPossiblePedsForArea = Population_MaxPedsForArea(zoneInfo.pedDensity + zoneInfo.carDensity, playerInfo->m_fRoadDensity, Population_pedDensityMultiplier, // rouz edit (ChatGPT)
+		(Darkel_FrenzyOnGoing() ? 1.f : IniFile_PedNumberMultiplier), missionAndWeatherMult, selectedMaxPeds);
 
 	if (Population_nTotalPeds - rouz.driver_ped_count < rouz.ped_mul * maxPossiblePedsForArea || addCop) { // rouz edit (ChatGPT)
 		int decisionThreshold = General_GetRandomNumberInRangeInt(0, 1000);
@@ -403,7 +405,8 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 		if (!foundCoors)
 			return;
 
-		uint8 nodeSpawnRate = Min(ThePaths.m_pathNodes[node1].spawnRate, ThePaths.m_pathNodes[node2].spawnRate);
+		// Delegate the spawn rate of the link to the C implementation
+		uint8 nodeSpawnRate = Population_NodeSpawnRate(ThePaths.m_pathNodes[node1].spawnRate, ThePaths.m_pathNodes[node2].spawnRate);
 		int randomRate = General_GetRandomNumber() & 0xF;
 		if (randomRate > nodeSpawnRate)
 			return;
@@ -480,7 +483,8 @@ CPopulation::AddToPopulation(float minDist, float maxDist, float minDistOffScree
 				if (!foundGround)
 					return;
 
-				generatedCoors.z = Max(generatedCoors.z, groundZ);
+				// Delegate the raising to the ground to the C implementation
+				generatedCoors.z = Population_RaisedToGround(generatedCoors.z, groundZ);
 			}
 			bool surfaceAndDistIsOk = true;
 			if (TheCamera.IsSphereVisible(generatedCoors, 2.0f)) {
@@ -809,23 +813,9 @@ CPopulation::TestSafeForRealObject(CDummyObject *dummy)
 	CColModel *dummyCol = dummy->GetColModel();
 
 	float radius = dummyCol->boundingSphere.radius;
-	int minX = CWorld::GetSectorIndexX(dummy->GetPosition().x - radius);
-	if (minX < 0) minX = 0;
-	int minY = CWorld::GetSectorIndexY(dummy->GetPosition().y - radius);
-	if (minY < 0) minY = 0;
-	int maxX = CWorld::GetSectorIndexX(dummy->GetPosition().x + radius);
-#ifdef FIX_BUGS
-	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
-#else
-	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X;
-#endif
-
-	int maxY = CWorld::GetSectorIndexY(dummy->GetPosition().y + radius);
-#ifdef FIX_BUGS
-	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
-#else
-	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y;
-#endif
+	// Delegate the range of sectors the dummy touches to the C implementation
+	int32_t minX, minY, maxX, maxY;
+	World_SectorRange(dummy->GetPosition().x - radius, dummy->GetPosition().y - radius, dummy->GetPosition().x + radius, dummy->GetPosition().y + radius, &minX, &minY, &maxX, &maxY);
 
 	float colRadius = dummy->GetBoundRadius();
 	CVUVECTOR colCentre;
@@ -939,20 +929,23 @@ CPopulation::ManagePopulation(void)
 			CVector pedPos = ped->GetPosition();
 
 			float randAngle = (uint8) General_GetRandomNumber() * (3.14f / 128.0f); // Not PI, 3.14
+			// Delegate the axes of the outline shadow to the C implementation
+			float outlineAxes[4];
+			Population_OutlineAxes(randAngle, outlineAxes);
 			switch (General_GetRandomNumber() % 3) {
 				case 0:
 					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline1Tex, &pedPos,
-						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						outlineAxes[0], outlineAxes[1], outlineAxes[2], outlineAxes[3],
 						255, 255, 255, 255, 4.0f, 40000, 1.0f);
 					break;
 				case 1:
 					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline2Tex, &pedPos,
-						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						outlineAxes[0], outlineAxes[1], outlineAxes[2], outlineAxes[3],
 						255, 255, 255, 255, 4.0f, 40000, 1.0f);
 					break;
 				case 2:
 					CShadows::AddPermanentShadow(SHADOWTYPE_DARK, gpOutline3Tex, &pedPos,
-						0.9f * Cos(randAngle), 0.9f * Sin(randAngle), 0.9f * Sin(randAngle), -0.9f * Cos(randAngle),
+						outlineAxes[0], outlineAxes[1], outlineAxes[2], outlineAxes[3],
 						255, 255, 255, 255, 4.0f, 40000, 1.0f);
 					break;
 				default:
@@ -977,7 +970,8 @@ CPopulation::AddDeadPedInFrontOfCar(const CVector& pos, CVehicle* pCulprit)
 	float z = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &found) + 1.0f;
 	if (!found)
 		return nil;
-	z = Max(z, pos.z);
+	// Delegate the raising to the ground to the C implementation
+	z = Population_RaisedToGround(z, pos.z);
 	if (!((CBaseModelInfo*)ModelRegistry_Get(MI_MALE01))->GetRwObject()) // rouz edit (ChatGPT)
 		return nil;
 	CPed* pPed = CPopulation::AddPed(PEDTYPE_CIVMALE, MI_MALE01, pos);
@@ -1101,7 +1095,8 @@ CPopulation::PlaceGangMembersInFormation(ePedType pedType, int pedAmount, CVecto
 							bool formationFoundGround;
 							float formationGroundZ = CWorld::FindGroundZFor3DCoord(formationPos.x, formationPos.y, 1.0f + formationPos.z, &formationFoundGround) + 1.0f;
 
-							finalFormationPos.z = Max(finalFormationPos.z, formationGroundZ);
+							// Delegate the raising to the ground to the C implementation
+							finalFormationPos.z = Population_RaisedToGround(finalFormationPos.z, formationGroundZ);
 							if (formationFoundGround) {
 								if (Abs(finalFormationPos.z - leader->GetPosition().z) <= 1.0f) {
 									if (CWorld::GetIsLineOfSightClear(finalFormationPos, leader->GetPosition(), true, false, false, false, false, false, false)) {
@@ -1141,9 +1136,8 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 	if (pedAmount < 2)
 		return;
 
-	float circleSector = TWOPI / pedAmount;
-
-	float circleR = Sqrt(0.5f / (1.0f - Cos(circleSector)));
+	// Delegate the radius of the circle to the C implementation
+	float circleR = Population_CircleRadius(pedAmount);
 
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
 		MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
@@ -1156,10 +1150,12 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 #endif
 
 			for (int i = 0; i < pedAmount; i++) {
-				float angleMult = i + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
-				float randomR = circleR + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * circleR;
-				float xOffset = randomR * Cos(angleMult * circleSector);
-				float yOffset = randomR * Sin(angleMult * circleSector);
+				float angleRandom = General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+				float radiusRandom = General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+
+				// Delegate the position on the circle to the C implementation
+				float xOffset, yOffset;
+				Population_CircleOffset(i, angleRandom, radiusRandom, pedAmount, circleR, &xOffset, &yOffset);
 				bool foundGround;
 				float groundZ = CWorld::FindGroundZFor3DCoord(xOffset + coors.x, yOffset + coors.y, coors.z + 1.0, &foundGround) + 1.0f;
 				if (foundGround) {
@@ -1174,25 +1170,11 @@ CPopulation::PlaceGangMembersInCircle(ePedType pedType, int pedAmount, CVector c
 					if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(gangModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 						CEntity* obstacles[6] = { nil, nil, nil, nil, nil, nil };
 						PedPlacement_CIsClear(finalPos.x, finalPos.y, finalPos.z, ((CColModel*)ModelRegistry_Collision(ModelRegistry_Get(gangModel)))->boundingSphere.radius, ARRAY_SIZE(obstacles), obstacles); // rouz edit (ChatGPT)
-						bool foundObstacle = false;
-						for (int m = 0; m < ARRAY_SIZE(obstacles); m++) {
-							CEntity* obstacle = obstacles[m];
-							if (obstacle) {
-								int n = 0;
-								bool obstacleIsHarmless = false;
-								for (int n = 0; n < pedIdx; n++) {
-									if (obstacle == createdPeds[n])
-										obstacleIsHarmless = true;
-								}
-								if (!obstacleIsHarmless) {
-									foundObstacle = true;
-									break;
-								}
-							}
-						}
+						// Delegate the check for obstacles that are not our own peds to the C implementation
+						bool foundObstacle = Population_HasRealObstacle((void *const *)obstacles, ARRAY_SIZE(obstacles), (void *const *)createdPeds, pedIdx);
 						bool memberCanSeeLeader = createLeader ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
 
-						bool notTooHighFromLeader = createLeader ? true : !(Abs(finalPos.z - leaderPos.z) >= 1.0f);
+						bool notTooHighFromLeader = createLeader ? true : !General_AbsDiffAtLeast(finalPos.z, leaderPos.z, 1.0f);
 
 						if (!foundObstacle && memberCanSeeLeader && notTooHighFromLeader) {
 							CPed* newPed = AddPed(pedType, gangModel, finalPos);
@@ -1262,7 +1244,8 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 			float manGroundZ = CWorld::FindGroundZFor3DCoord(coors.x, coors.y, coors.z, &manFoundGround) + 1.0f;
 			if (manFoundGround) {
 				CVector correctedManPos = coors;
-				correctedManPos.z = Max(coors.z, manGroundZ);
+				// Delegate the raising to the ground to the C implementation
+				correctedManPos.z = Population_RaisedToGround(coors.z, manGroundZ);
 				if (((CPedModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(manModel)))->GetRwObject()) { // rouz edit (ChatGPT)
 					CPed *man = AddPed(PEDTYPE_CIVMALE, manModel, correctedManPos);
 					if (man) {
@@ -1284,7 +1267,8 @@ CPopulation::PlaceCouple(ePedType manType, int32 manModel, ePedType womanType, i
 
 								if (womanFoundGround) {
 									CVector correctedWomanPos = womanPos;
-									correctedWomanPos.z = Max(womanPos.z, formationGroundZ);
+									// Delegate the raising to the ground to the C implementation
+									correctedWomanPos.z = Population_RaisedToGround(womanPos.z, formationGroundZ);
 									woman->SetPosition(correctedWomanPos);
 
 									// What's the point of this??
@@ -1332,9 +1316,8 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 
 	int pedAmount = General_GetRandomNumberInRangeInt(0, 4) + 3;
 
-	float circleSector = TWOPI / pedAmount;
-
-	float circleR = Sqrt(0.5f / (1.0f - Cos(circleSector)));
+	// Delegate the radius of the circle to the C implementation
+	float circleR = Population_CircleRadius(pedAmount);
 
 	if (!TheCamera.IsSphereVisible(coors, circleR) ||
 		MIN_CREATION_DIST * Population_PedCreationDistMultiplier() <= (coors - FindPlayerPed()->GetPosition()).Magnitude2D()) { // rouz edit (ChatGPT)
@@ -1347,10 +1330,11 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 #endif
 
 			for (int i = 0; i < pedAmount; i++) {	
-				float angleMult = i + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
-				float randomR = circleR + General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * circleR;
-				float xOffset = randomR * Cos(angleMult * circleSector);
-				float yOffset = randomR * Sin(angleMult * circleSector);
+				float angleRandom = General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+				float radiusRandom = General_GetRandomNumberInRangeFloat(-0.2f, 0.2f);
+				// Delegate the position on the circle to the C implementation
+				float xOffset, yOffset;
+				Population_CircleOffset(i, angleRandom, radiusRandom, pedAmount, circleR, &xOffset, &yOffset);
 				bool foundGround;
 				float groundZ = CWorld::FindGroundZFor3DCoord(xOffset + coors.x, yOffset + coors.y, coors.z + 1.0, &foundGround) + 1.0f;
 				if (foundGround) {
@@ -1386,7 +1370,7 @@ CPopulation::PlaceMallPedsAsStationaryGroup(CVector const& coors, int32 group)
 						}
 						bool memberCanSeeLeader = createLeader ? true : CWorld::GetIsLineOfSightClear(finalPos, leaderPos, true, false, false, false, false, false, false);
 
-						bool notTooHighFromLeader = createLeader ? true : !(Abs(finalPos.z - leaderPos.z) >= 1.0f);
+						bool notTooHighFromLeader = createLeader ? true : !General_AbsDiffAtLeast(finalPos.z, leaderPos.z, 1.0f);
 
 						if (!foundObstacle && memberCanSeeLeader && notTooHighFromLeader) {
 							CPed *newPed = AddPed(pedModelInfo->m_pedType, pedModel, finalPos);

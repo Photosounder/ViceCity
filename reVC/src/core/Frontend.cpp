@@ -2500,7 +2500,8 @@ CMenuManager::DrawBackground(bool transitionCall)
 			) {
 			m_nMenuFadeAlpha += 20;
 			if (m_firstStartCounter < 255) {
-				m_firstStartCounter = Min(m_firstStartCounter + 20, 255);
+				// Delegate the next counter value to the C implementation
+				m_firstStartCounter = Menu_NextFirstStartCounter(m_firstStartCounter);
 			}
 			LastFade = Timer_GetTimeInMillisecondsPauseMode();
 #ifdef FIX_BUGS
@@ -3041,7 +3042,8 @@ CMenuManager::DrawPlayerSetupScreen(bool activeScreen)
 int
 CMenuManager::FadeIn(int alpha)
 {
-	return Min(m_nMenuFadeAlpha, alpha);
+	// Delegate the limited alpha to the C implementation
+	return Menu_FadedAlpha(m_nMenuFadeAlpha, alpha);
 }
 
 int
@@ -3679,8 +3681,8 @@ CMenuManager::Process(void)
 			break; \
 		\
 		m_fMapSize *= z2; \
-		m_fMapCenterX = Clamp(m_fMapCenterX, SCREEN_WIDTH/2 - (m_fMapSize - MENU_X(MAP_MIN_SIZE)), m_fMapSize - MENU_X(MAP_MIN_SIZE) + SCREEN_WIDTH/2); \
-		m_fMapCenterY = Clamp(m_fMapCenterY, SCREEN_HEIGHT/2 - (m_fMapSize - MENU_Y(MAP_MIN_SIZE)), m_fMapSize - MENU_Y(MAP_MIN_SIZE) + SCREEN_HEIGHT/2); \
+		m_fMapCenterX = Menu_ClampMapCenter(m_fMapCenterX, SCREEN_WIDTH/2, m_fMapSize, MENU_X(MAP_MIN_SIZE)); \
+		m_fMapCenterY = Menu_ClampMapCenter(m_fMapCenterY, SCREEN_HEIGHT/2, m_fMapSize, MENU_Y(MAP_MIN_SIZE)); \
 	} while(0)
 
 #endif
@@ -3699,7 +3701,8 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 #ifndef MAP_ENHANCEMENTS
 			if (Input_GetMouseWheelUpJustDown() || Input_GetMouseWheelUpJustUp() || Input_GetPageUp() || CPad::GetPad(0)->GetRightShoulder1()) { // rouz edit (ChatGPT)
 				if (Timer_GetTimeInMillisecondsPauseMode() - lastMapTick > 10) {
-					m_fMapSize = Min(MENU_Y(1000.0f), m_fMapSize + MENU_Y(15.f));
+					// Delegate the zoomed in size to the C implementation
+					m_fMapSize = Menu_MapSizeZoomedIn(m_fMapSize, MENU_Y(15.f), MENU_Y(1000.0f));
 				}
 			}
 			if (Input_GetMouseWheelDownJustDown() || Input_GetMouseWheelDownJustUp() || Input_GetPageDown() || CPad::GetPad(0)->GetRightShoulder2()) { // rouz edit (ChatGPT)
@@ -3717,9 +3720,10 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 						if (m_fMapCenterX < SCREEN_WIDTH/2)
 							m_fMapCenterX += (SCREEN_WIDTH/2 - m_fMapCenterX) / ((m_fMapSize - MENU_X(MAP_MIN_SIZE)) * 1/15.f);
 
-						m_fMapSize = Max(MENU_Y(MAP_MIN_SIZE), m_fMapSize - MENU_Y(15.f));
-						m_fMapCenterX = Clamp(m_fMapCenterX, SCREEN_WIDTH/2 - (m_fMapSize - MENU_X(MAP_MIN_SIZE)), m_fMapSize - MENU_X(MAP_MIN_SIZE) + SCREEN_WIDTH/2);
-						m_fMapCenterY = Clamp(m_fMapCenterY, SCREEN_HEIGHT/2 - (m_fMapSize - MENU_Y(MAP_MIN_SIZE)), m_fMapSize - MENU_Y(MAP_MIN_SIZE) + SCREEN_HEIGHT/2);
+						// Delegate the zoomed out size to the C implementation
+						m_fMapSize = Menu_MapSizeZoomedOut(m_fMapSize, MENU_Y(15.f), MENU_Y(MAP_MIN_SIZE));
+						m_fMapCenterX = Menu_ClampMapCenter(m_fMapCenterX, SCREEN_WIDTH/2, m_fMapSize, MENU_X(MAP_MIN_SIZE));
+						m_fMapCenterY = Menu_ClampMapCenter(m_fMapCenterY, SCREEN_HEIGHT/2, m_fMapSize, MENU_Y(MAP_MIN_SIZE));
 					} else {
 						m_fMapSize = MENU_Y(MAP_MIN_SIZE);
 					}
@@ -3760,8 +3764,8 @@ CMenuManager::AdditionalOptionInput(bool &goBack)
 				if (!justResetPointer) {
 					m_fMapCenterX += m_nMousePosX - m_nMouseOldPosX;
 					m_fMapCenterY += m_nMousePosY - m_nMouseOldPosY;
-					m_fMapCenterX = Clamp(m_fMapCenterX, SCREEN_WIDTH/2 - (m_fMapSize - MENU_X(MAP_MIN_SIZE)), m_fMapSize - MENU_X(MAP_MIN_SIZE) + SCREEN_WIDTH/2);
-					m_fMapCenterY = Clamp(m_fMapCenterY, SCREEN_HEIGHT/2 - (m_fMapSize - MENU_Y(MAP_MIN_SIZE)), m_fMapSize - MENU_Y(MAP_MIN_SIZE) + SCREEN_HEIGHT/2);
+					m_fMapCenterX = Menu_ClampMapCenter(m_fMapCenterX, SCREEN_WIDTH/2, m_fMapSize, MENU_X(MAP_MIN_SIZE));
+					m_fMapCenterY = Menu_ClampMapCenter(m_fMapCenterY, SCREEN_HEIGHT/2, m_fMapSize, MENU_Y(MAP_MIN_SIZE));
 				}
 				justResetPointer = false;
 

@@ -8,6 +8,7 @@
 #include "CarCtrl.h"
 #include "CivilianPed.h"
 #include "FileMgr.h"
+#include "General.h"
 #include "Font.h"
 #include "ModelIndices.h"
 #include "ModelInfo.h"
@@ -665,7 +666,7 @@ void CSceneEdit::ProcessCommand(void)
 						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
 					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
 					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = Max(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
+					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
 					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 					TheCamera.TakeControl(pActors[m_nActor]->m_pMyVehicle, CCam::MODE_BEHINDCAR, JUMP_CUT, CAMCONTROL_SCRIPT);
 				}
@@ -959,7 +960,7 @@ void CSceneEdit::PlayBack(void)
 						pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
 					pActors[m_nActor]->m_pMyVehicle->SetStatus(STATUS_PHYSICS);
 					pActors[m_nActor]->m_pMyVehicle->bEngineOn = true;
-					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = Max(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
+					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(16, pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nCruiseSpeed);
 					pActors[m_nActor]->m_pMyVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 					if (m_nCurrentCommand != MOVIE_GOTO_WAIT)
 						++m_nCurrentMovieCommand;

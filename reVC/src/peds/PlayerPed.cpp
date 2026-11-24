@@ -945,7 +945,8 @@ CPlayerPed::PlayerControl1stPersonRunAround(CPad *padUsed)
 	float padMoveInGameUnit = padMove / PAD_MOVE_TO_GAME_WORLD_MOVE;
 	if (padMoveInGameUnit > 0.0f) {
 		m_fRotationDest = General_LimitRadianAngle(TheCamera.Orientation);
-		m_fMoveSpeed = Min(padMoveInGameUnit, 0.07f * (*Timer_GetTimeStep()) + m_fMoveSpeed);
+		// Delegate the acceleration of the player to the C implementation
+		m_fMoveSpeed = PlayerPedLogic_MoveSpeedRamp(padMoveInGameUnit, m_fMoveSpeed, (*Timer_GetTimeStep()));
 	} else {
 		m_fMoveSpeed = 0.0f;
 	}
@@ -955,9 +956,10 @@ CPlayerPed::PlayerControl1stPersonRunAround(CPad *padUsed)
 			if (bUsesCollision && !bHitSteepSlope && (!bHitSomethingLastFrame || m_vecDamageNormal.z > 0.6f)
 				&& m_fDistanceTravelled < Timer_GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
 
-				float angleSin = Sin(m_fRotationCur); // originally sin(DEGTORAD(RADTODEG(m_fRotationCur))) o_O
-				float angleCos = Cos(m_fRotationCur);
-				ApplyMoveForce(-angleSin * 3.0f, 3.0f * angleCos, 0.05f);
+				// Delegate the push of the jump to the C implementation
+				float pushX, pushY;
+				PlayerPedLogic_JumpPush(m_fRotationCur, &pushX, &pushY);
+				ApplyMoveForce(pushX, pushY, 0.05f);
 			}
 		} else if (bIsLanding) {
 			m_fMoveSpeed = 0.0f;
@@ -1094,8 +1096,9 @@ CPlayerPed::CanIKReachThisTarget(CVector target, CWeapon* weapon, bool zRotImpor
 	float angleToFace = General_GetRadianAngleBetweenPoints(target.x, target.y, GetPosition().x, GetPosition().y);
 	float angleDiff = General_LimitRadianAngle(angleToFace - m_fRotationCur);
 
-	return (!zRotImportant || WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM) || Abs(angleDiff) <= HALFPI) &&
-		(WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM) || Abs(target.z - GetPosition().z) <= (target - GetPosition()).Magnitude2D());
+	// Delegate the reach check to the C implementation
+	bool canAimWithArm = WeaponInfo_IsFlagSet(WeaponInfo_GetWeaponInfo(weapon->m_eWeaponType),WEAPONFLAG_CANAIM_WITHARM);
+	return PlayerPedLogic_CanReachTarget(angleDiff, zRotImportant, canAimWithArm, target.z - GetPosition().z, (target - GetPosition()).Magnitude2D());
 }
 
 void
@@ -1594,8 +1597,8 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 			m_fRotationDest = neededTurn;
 		}
 
-		float maxAcc = 0.07f * (*Timer_GetTimeStep());
-		m_fMoveSpeed = Min(padMoveInGameUnit, m_fMoveSpeed + maxAcc);
+		// Delegate the acceleration of the player to the C implementation
+		m_fMoveSpeed = PlayerPedLogic_MoveSpeedRamp(padMoveInGameUnit, m_fMoveSpeed, (*Timer_GetTimeStep()));
 
 	} else {
 		m_fMoveSpeed = 0.0f;
@@ -1606,9 +1609,10 @@ CPlayerPed::PlayerControlZelda(CPad *padUsed)
 			if (bUsesCollision && !bHitSteepSlope && (!bHitSomethingLastFrame || m_vecDamageNormal.z > 0.6f)
 				&& m_fDistanceTravelled < Timer_GetTimeStepInSeconds() && m_vecMoveSpeed.MagnitudeSqr() < 0.01f) {
 
-				float angleSin = Sin(m_fRotationCur); // originally sin(DEGTORAD(RADTODEG(m_fRotationCur))) o_O
-				float angleCos = Cos(m_fRotationCur);
-				ApplyMoveForce(-angleSin * 3.0f, 3.0f * angleCos, 0.05f);
+				// Delegate the push of the jump to the C implementation
+				float pushX, pushY;
+				PlayerPedLogic_JumpPush(m_fRotationCur, &pushX, &pushY);
+				ApplyMoveForce(pushX, pushY, 0.05f);
 			}
 		} else if (bIsLanding) {
 			m_fMoveSpeed = 0.0f;
@@ -1824,7 +1828,8 @@ CPlayerPed::ProcessControl(void)
 		CAnimBlendAssociation *fireAnim = RpAnimBlendClumpGetAssociation(GetClump(), GetPrimaryFireAnim(weaponInfo));
 		if (fireAnim && fireAnim->currentTime - fireAnim->timeStep < weaponInfo->m_fAnimLoopEnd && m_nPedState == PED_ATTACK) {
 			if (m_fGunSpinSpeed < 0.45f) {
-				m_fGunSpinSpeed = Min(0.45f, m_fGunSpinSpeed + (*Timer_GetTimeStep()) * 0.013f);
+				// Delegate the spinning up of the minigun to the C implementation
+				m_fGunSpinSpeed = PlayerPedLogic_GunSpinUp(m_fGunSpinSpeed, (*Timer_GetTimeStep()));
 			}
 
 			if (padUsed->GetWeapon() && GetWeapon()->m_nAmmoTotal > 0 && fireAnim->currentTime >= weaponInfo->m_fAnimLoopStart) {
@@ -1837,7 +1842,8 @@ CPlayerPed::ProcessControl(void)
 				if (m_fGunSpinSpeed >= 0.45f) {
 					DMAudio_PlayOneShot(m_audioEntityId, SOUND_WEAPON_MINIGUN_3,  0.0f);
 				}
-				m_fGunSpinSpeed = Max(0.0f, m_fGunSpinSpeed - (*Timer_GetTimeStep()) * 0.003f);
+				// Delegate the winding down of the minigun to the C implementation
+				m_fGunSpinSpeed = PlayerPedLogic_GunSpinDown(m_fGunSpinSpeed, (*Timer_GetTimeStep()));
 			}
 		}
 	}
@@ -1980,7 +1986,8 @@ CPlayerPed::ProcessControl(void)
 			if (bVehEnterDoorIsBlocked || bKindaStayInSamePlace) {
 				m_fMoveSpeed = 0.0f;
 			} else {
-				m_fMoveSpeed = Min(2.0f, 2.0f * (m_vecSeekPos - GetPosition()).Magnitude2D());
+				// Delegate the move speed to the C implementation
+				m_fMoveSpeed = PlayerPedLogic_SeekMoveSpeed((m_vecSeekPos - GetPosition()).Magnitude2D());
 			}
 			if (padUsed && !padUsed->ArePlayerControlsDisabled()) {
 				if (padUsed->GetTarget() || padUsed->GetLeftStickXJustDown() || padUsed->GetLeftStickYJustDown() ||
@@ -2034,20 +2041,10 @@ CPlayerPed::ProcessControl(void)
 
 			m_lookTimer = 0;
 			float camAngle = General_LimitRadianAngle(TheCamera.Cams[TheCamera.ActiveCam].Front.Heading());
-			float angleBetweenPlayerAndCam = Abs(camAngle - m_fRotationCur);
-
-			if (m_nPedState != PED_ATTACK && angleBetweenPlayerAndCam > DEGTORAD(30.0f) && angleBetweenPlayerAndCam < DEGTORAD(330.0f)) {
-				if (angleBetweenPlayerAndCam > DEGTORAD(150.0f) && angleBetweenPlayerAndCam < DEGTORAD(210.0f)) {
-					float rightTurnAngle = General_LimitRadianAngle(m_fRotationCur - DEGTORAD(150.0f));
-					float leftTurnAngle = General_LimitRadianAngle(DEGTORAD(150.0f) + m_fRotationCur);
-
-					if (m_fLookDirection == 999999.0f || bIsDucking)
-						camAngle = rightTurnAngle;
-					else if (Abs(rightTurnAngle - m_fLookDirection) < Abs(leftTurnAngle - m_fLookDirection))
-						camAngle = rightTurnAngle;
-					else
-						camAngle = leftTurnAngle;
-				}
+			// Delegate the angle the player looks towards to the C implementation
+			float lookAngle;
+			if (m_nPedState != PED_ATTACK && PlayerPedLogic_LookBehindAngle(camAngle, m_fRotationCur, m_fLookDirection, bIsDucking, &lookAngle)) {
+				camAngle = lookAngle;
 				SetLookFlag(camAngle, true);
 				SetLookTimer(Timer_GetTimeStepInMilliseconds() * 5.0f);
 			} else {
@@ -2262,32 +2259,11 @@ void
 CPlayerPed::GetMeleeAttackCoords(CVector& coords, int8 dir, float dist)
 {
 	coords = GetPosition();
-	switch (dir) {
-		case 0:
-			coords.y += dist;
-			break;
-		case 1:
-			coords.x += Sqrt(3.f / 4.f) * dist;
-			coords.y += 0.5f * dist;
-			break;
-		case 2:
-			coords.x += Sqrt(3.f / 4.f) * dist;
-			coords.y -= 0.5f * dist;
-			break;
-		case 3:
-			coords.y -= dist;
-			break;
-		case 4:
-			coords.x -= Sqrt(3.f / 4.f) * dist;
-			coords.y -= 0.5f * dist;
-			break;
-		case 5:
-			coords.x -= Sqrt(3.f / 4.f) * dist;
-			coords.y += 0.5f * dist;
-			break;
-		default:
-			break;
-	}
+	// Delegate the offset of the melee attack position to the C implementation
+	float offX, offY;
+	PlayerPedLogic_MeleeAttackOffset(dir, dist, &offX, &offY);
+	coords.x += offX;
+	coords.y += offY;
 }
 
 int32
@@ -2312,24 +2288,18 @@ CPlayerPed::FindMeleeAttackPoint(CPed *victim, CVector &dist, uint32 &endOfAttac
 
 	// We don't have victim ped in our melee list
 	if (dirToAttack == -1 && thereIsAnEmptySlot) {
-		float angle = Atan2(-dist.x, -dist.y);
-		float adjustedAngle = angle + DEGTORAD(30.0f);
-		if (adjustedAngle < 0.f)
-			adjustedAngle += TWOPI;
-
-		int wantedDir = Floor(adjustedAngle / DEGTORAD(60.0f));
+		// Delegate the direction the victim is attacked from to the C implementation
+		int wantedDir = PlayerPedLogic_MeleeWantedDir(dist.x, dist.y);
 
 		// And we have another ped at the direction of victim ped, so store victim to next empty direction to it's real direction. (Bollocks)
 		if (m_pMeleeList[wantedDir]) {
-			int closestDirToPreferred = -99;
 			int preferredDir = wantedDir;
 
-			for (int i = 0; i < ARRAY_SIZE(m_pMeleeList); i++) {
-				if (!m_pMeleeList[i]) {
-					if (Abs(i - preferredDir) < Abs(closestDirToPreferred - preferredDir))
-						closestDirToPreferred = i;
-				}
-			}
+			// Delegate the search of the closest free direction to the C implementation
+			bool occupied[6];
+			for (int i = 0; i < 6; i++)
+				occupied[i] = m_pMeleeList[i] != nil;
+			int closestDirToPreferred = PlayerPedLogic_ClosestFreeMeleeDir(occupied, preferredDir);
 			if (closestDirToPreferred > 0)
 				dirToAttack = closestDirToPreferred;
 		} else {

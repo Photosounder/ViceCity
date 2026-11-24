@@ -2,6 +2,7 @@
 #ifdef VU_COLLISION
 #include "VuVector.h"
 #include "VuCollision.h"
+#include "General.h"
 
 #ifndef GTA_PS2
 int16 vi01;
@@ -94,10 +95,8 @@ LineToTriangleCollision(const CVuVector &p0, const CVuVector &p1,
 	CVector cross2 = CrossProduct(p-v1, v2-v1);
 	CVector cross3 = CrossProduct(p-v2, v0-v2);
 	// Only check relevant directions
-	int flagmask = 0;
-	if(Abs(plane.x) > 0.5f) flagmask |= 1;
-	if(Abs(plane.y) > 0.5f) flagmask |= 2;
-	if(Abs(plane.z) > 0.5f) flagmask |= 4;
+	// Delegate the mask of the relevant axes to the C implementation
+	int flagmask = General_AxisFlagMask(plane.x, plane.y, plane.z, 0.5f);
 	int flags1 = SignFlags(cross1) & flagmask;
 	int flags2 = SignFlags(cross2) & flagmask;
 	int flags3 = SignFlags(cross3) & flagmask;
@@ -190,10 +189,8 @@ SphereToTriangleCollision(const CVuVector &sph,
 	CVector cross2 = CrossProduct(p-v1, v12);
 	CVector cross3 = CrossProduct(p-v2, v20);
 	// Only check relevant directions
-	int flagmask = 0;
-	if(Abs(plane.x) > 0.1f) flagmask |= 1;
-	if(Abs(plane.y) > 0.1f) flagmask |= 2;
-	if(Abs(plane.z) > 0.1f) flagmask |= 4;
+	// Delegate the mask of the relevant axes to the C implementation
+	int flagmask = General_AxisFlagMask(plane.x, plane.y, plane.z, 0.1f);
 	int nflags = SignFlags(plane) & flagmask;
 	int flags1 = SignFlags(cross1) & flagmask;
 	int flags2 = SignFlags(cross2) & flagmask;

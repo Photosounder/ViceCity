@@ -97,16 +97,18 @@ CPedIK::LookInDirection(float targetYaw, float targetPitch)
 		m_headOrient.yaw -= m_ped->m_fRotationCur;
 		m_headOrient.yaw = General_LimitRadianAngle(m_headOrient.yaw);
 		float up = Clamp(m->up.z, -1.0f, 1.0f);
-		m_headOrient.pitch = Atan2(-up, Sqrt(1.0f - SQR(-up)));
+		// Delegate the pitch to the C implementation
+		m_headOrient.pitch = PedIK_PitchFromUp(-up);
 	}
 
 	// parent of head is neck
 	RwMatrix *m = GetComponentMatrix(m_ped, PED_NECK);
 	yaw = General_LimitRadianAngle(Atan2(-m->at.y, -m->at.x));
 	float up = Clamp(m->up.z, -1.0f, 1.0f);
-	pitch = Atan2(-up, Sqrt(1.0f - SQR(-up)));
+	// Delegate the pitch to the C implementation
+	pitch = PedIK_PitchFromUp(-up);
 	float headYaw = General_LimitRadianAngle(targetYaw - (yaw + m_torsoOrient.yaw));
-	float headPitch = General_LimitRadianAngle(targetPitch - pitch) * Cos(Min(Abs(headYaw), HALFPI));
+	float headPitch = General_LimitRadianAngle(targetPitch - pitch) * Cos(General_MinFloat(Abs(headYaw), HALFPI));
 
 	LimbMoveStatus headStatus = MoveLimb(m_headOrient, headYaw, headPitch, ms_headInfo);
 	if (headStatus == ANGLES_SET_TO_MAX)
@@ -169,10 +171,8 @@ CPedIK::PointGunInDirection(float targetYaw, float targetPitch)
 		RwMatrixDestroy(matrix);
 
 		if(m_flags & AIMS_WITH_ARM){
-			if(targetPitch > 0.0f)
-				targetPitch = Max(targetPitch - Abs(targetYaw), 0.0f);
-			else
-				targetPitch = Min(targetPitch + Abs(targetYaw), 0.0f);
+			// Delegate the pitch of the torso to the C implementation
+			targetPitch = PedIK_ArmAimPitch(targetPitch, targetYaw);
 		}
 		LimbMoveStatus status = MoveLimb(m_torsoOrient, targetYaw, targetPitch, ms_torsoInfo);
 		if (status == ANGLES_SET_TO_MAX)
@@ -217,7 +217,8 @@ CPedIK::PointGunInDirectionUsingArm(float targetYaw, float targetPitch)
 
 	matrix = GetComponentMatrix(m_ped, PED_CLAVICLER);
 	yaw = General_LimitRadianAngle(Atan2(matrix->right.y, matrix->right.x) - m_ped->m_fRotationCur);
-	pitch = Atan2(matrix->up.z, Sqrt(1.0f - SQR(matrix->up.z)));
+	// Delegate the pitch to the C implementation
+	pitch = PedIK_PitchFromUp(matrix->up.z);
 
 	float uaYaw, uaPitch;
 	uaYaw = General_LimitRadianAngle(targetYaw - yaw - DEGTORAD(15.0f));
@@ -234,17 +235,17 @@ CPedIK::PointGunInDirectionUsingArm(float targetYaw, float targetPitch)
 		LimbMoveStatus laStatus;
 		if (laYaw > 0.0f){
 			float rollReduce = laYaw/DEGTORAD(30.0f);
-			uaRoll *= 1.0f - Min(rollReduce, 1.0f);
-			handRoll *= 1.0f - Min(rollReduce, 1.0f);
+			// Delegate the kept fraction of the roll to the C implementation
+			float rollKept = PedIK_RollKept(rollReduce);
+			uaRoll *= rollKept;
+			handRoll *= rollKept;
 
 			laYaw *= 1.9f;
 			laStatus = MoveLimb(m_lowerArmOrient, laYaw, 0.0f, ms_lowerArmInfo);
 
 			// some unused statics here
-			float uaPitchAmount = 1.0f - (m_lowerArmOrient.yaw + m_upperArmOrient.yaw) * 0.34f;
-			float f1 = ms_upperArmInfo.maxPitch * Max(uaPitchAmount, 0.0f);
-			float f2 = 0.2f*m_lowerArmOrient.yaw + m_upperArmOrient.pitch;
-			m_upperArmOrient.pitch = Min(f1, f2);
+			// Delegate the pitch of the upper arm to the C implementation
+			m_upperArmOrient.pitch = PedIK_UpperArmPitch(ms_upperArmInfo.maxPitch, m_lowerArmOrient.yaw, m_upperArmOrient.yaw, m_upperArmOrient.pitch);
 		}else
 			laStatus = MoveLimb(m_lowerArmOrient, laYaw, 0.0f, ms_lowerArmInfo);
 

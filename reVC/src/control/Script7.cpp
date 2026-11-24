@@ -36,6 +36,7 @@
 #include "User.h"
 #include "World.h"
 #include "Zones.h"
+#include "ScriptArea.h"
 
 int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 {
@@ -281,10 +282,9 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 		CAutomobile* pHeli = (CAutomobile*)((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pHeli && pHeli->IsCar() && pHeli->IsRealHeli());
 		float fAngle = DEGTORAD(*(float*)&ScriptParams[1] - 90.0f);
-		while (fAngle < 0.0f)
-			fAngle += TWOPI;
-		while (fAngle > TWOPI)
-			fAngle -= TWOPI;
+		// Delegate the angle wrapping to the C implementation
+		fAngle = General_RaiseBelow(fAngle, 0.0f, TWOPI);
+		fAngle = General_ReduceAbove(fAngle, TWOPI, TWOPI);
 		pHeli->SetHeliOrientation(fAngle);
 		return 0;
 	}
@@ -721,14 +721,16 @@ int8 CRunningScript::ProcessCommands1200To1299(int32 command)
 	case COMMAND_GET_DISTANCE_BETWEEN_COORDS_2D:
 	{
 		CollectParameters(&m_nIp, 4);
-		*(float*)&ScriptParams[0] = (*(CVector2D*)&ScriptParams[0] - *(CVector2D*)&ScriptParams[2]).Magnitude();
+		// Delegate the distance to the C implementation
+		*(float*)&ScriptParams[0] = ScriptMath_Distance2D(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], *(float*)&ScriptParams[2], *(float*)&ScriptParams[3]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
 	case COMMAND_GET_DISTANCE_BETWEEN_COORDS_3D:
 	{
 		CollectParameters(&m_nIp, 6);
-		*(float*)&ScriptParams[0] = (*(CVector*)&ScriptParams[0] - *(CVector*)&ScriptParams[3]).Magnitude();
+		// Delegate the distance to the C implementation
+		*(float*)&ScriptParams[0] = ScriptMath_Distance3D(*(float*)&ScriptParams[0], *(float*)&ScriptParams[1], *(float*)&ScriptParams[2], *(float*)&ScriptParams[3], *(float*)&ScriptParams[4], *(float*)&ScriptParams[5]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}

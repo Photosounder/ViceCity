@@ -274,12 +274,13 @@ void CHud::Draw()
 		if (DrawCrossHair || DrawCrossHairPC) {
 			RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void *)rwFILTERLINEAR);
 
-			SpriteBrightness = Min(SpriteBrightness+1, 30);
+			// Delegate the next brightness to the C implementation
+			SpriteBrightness = Hud_NextSpriteBrightness(SpriteBrightness);
 
 			RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, (void*)FALSE);
 
-			float fStep = Sin(((*Timer_GetTimeInMilliseconds()) & 1023)/1024.0f * 6.28f);
-			float fMultBright = SpriteBrightness * 0.03f * (0.25f * fStep + 0.75f);
+			// Delegate the pulse of the crosshair to the C implementation
+			float fMultBright = Hud_CrosshairPulse((*Timer_GetTimeInMilliseconds()), SpriteBrightness);
 			CRect rect;
 			// Initialize rectangle bounds at the former local constructor boundary
 			Rect_Init(&rect);

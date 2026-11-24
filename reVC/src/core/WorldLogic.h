@@ -54,6 +54,20 @@ void World_SectorRangeClamped(float startX, float startY, float endX, float endY
 // Streaming ring of a sector around the one the player is in, from the sector offsets: 0 for the sector itself, 1 for the sectors up to 3 away and -1 for the rest
 int World_SectorStreamRing(int32_t dx, int32_t dy);
 
+// Damage multiplier of an explosion at a distance from its centre, from the radius and the distance: it fades with the distance and is at most 1
+float World_ExplosionDamageMultiplier(float radius, float magnitude);
+// Force an explosion pushes an entity with, from the vector from the centre to the entity, the power, the mass of the entity, the damage multiplier, the distance and whether the entity is the player: it never pulls down and the player is pushed up by at most 1
+void World_ExplosionForce(const float distance[3], float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, float force[3]);
+// Height at which an explosion pushes a body turning it, from the height of the centre above the entity and the bound radius of the entity: limited to the bound radius on either side
+float World_ExplosionTurnPointZ(float distanceZ, float boundRadius);
+// Number of steps used to test a wander path: the larger of the length of the path and the wanted number of steps, truncated
+uint32_t World_WanderPathSteps(float length, int maxSteps);
+// Range of sectors to scan on one axis, from the sector indices of both ends: the start is at least 0 and the end at most the last sector
+void World_ClampSectorRange(int lowIndex, int highIndex, int numSectors, int *start, int *end);
+// Damage of an explosion on an entity: 300 scaled by the damage multiplier, which counts for at most 1
+float World_FireDamage(float damageMultiplier);
+// The higher of two heights
+float World_HigherZ(float z1, float z2);
 #ifdef __cplusplus
 }
 #endif

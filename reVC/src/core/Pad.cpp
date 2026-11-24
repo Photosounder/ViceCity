@@ -482,7 +482,8 @@ void WantedLevelUpCheat()
 		return;
 
 	CHud::SetHelpMessage(Text_Get(&TheText,"CHEAT5"), true);
-	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,Min(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) + 2, 6));
+	// Delegate the cheat wanted level to the C implementation
+	Wanted_CheatWantedLevel(FindPlayerPed()->m_pWanted,Pad_CheatWantedLevel(Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted)));
 }
 
 void WantedLevelDownCheat()
@@ -1932,14 +1933,22 @@ void CPad::AffectFromXinput(uint32 pad)
 		float rx = (float)xstate.Gamepad.sThumbRX / (float)0x7FFF;
 		float ry = (float)xstate.Gamepad.sThumbRY / (float)0x7FFF;
 
-		if (Abs(lx) > 0.3f || Abs(ly) > 0.3f) {
-			PCTempJoyState.LeftStickX = (int32)(lx * 128.0f);
-			PCTempJoyState.LeftStickY = (int32)(-ly * 128.0f);
+		// Delegate the reading of the stick to the C implementation
+		{
+			int32_t stickX, stickY;
+			if (Pad_XInputStick(lx, ly, &stickX, &stickY)) {
+				PCTempJoyState.LeftStickX = stickX;
+				PCTempJoyState.LeftStickY = stickY;
+			}
 		}
 
-		if (Abs(rx) > 0.3f || Abs(ry) > 0.3f) {
-			PCTempJoyState.RightStickX = (int32)(rx * 128.0f);
-			PCTempJoyState.RightStickY = (int32)(-ry * 128.0f);
+		// Delegate the reading of the stick to the C implementation
+		{
+			int32_t stickX, stickY;
+			if (Pad_XInputStick(rx, ry, &stickX, &stickY)) {
+				PCTempJoyState.RightStickX = stickX;
+				PCTempJoyState.RightStickY = stickY;
+			}
 		}
 
 		XINPUT_VIBRATION VibrationState;
@@ -2170,7 +2179,8 @@ void CPad::Update(int16 pad)
 		{
 			if ( ShakeDur )
 			{
-				ShakeDur = Max(ShakeDur - (int32)Timer_GetTimeStepInMilliseconds(), 0);
+				// Delegate the time left to the C implementation
+				ShakeDur = Pad_ShakeDurationLeft(ShakeDur, (int32)Timer_GetTimeStepInMilliseconds());
 
 				if ( ShakeDur == 0 )
 				{
@@ -2409,10 +2419,8 @@ int16 CPad::GetSteeringLeftRight(void)
 			int16 axis = NewState.LeftStickX;
 			int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				value = axis;
-			else
-				value = dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			value = Pad_AxisOrDPad(axis, dpad);
 
 			SteeringLeftRightBuffer[0] = value;
 			value = SteeringLeftRightBuffer[DrunkDrivingBufferUsed];
@@ -2450,10 +2458,8 @@ int16 CPad::GetSteeringUpDown(void)
 			int16 axis = NewState.LeftStickY;
 			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			return Pad_AxisOrDPad(axis, dpad);
 
 			break;
 		}
@@ -2537,10 +2543,8 @@ int16 CPad::GetPedWalkLeftRight(void)
 			int16 axis = NewState.LeftStickX;
 			int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			return Pad_AxisOrDPad(axis, dpad);
 
 			break;
 		}
@@ -2570,10 +2574,8 @@ int16 CPad::GetPedWalkUpDown(void)
 			int16 axis = NewState.LeftStickY;
 			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			return Pad_AxisOrDPad(axis, dpad);
 
 			break;
 		}
@@ -2600,10 +2602,8 @@ int16 CPad::GetAnalogueUpDown(void)
 			int16 axis = NewState.LeftStickY;
 			int16 dpad = (NewState.DPadDown - NewState.DPadUp) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			return Pad_AxisOrDPad(axis, dpad);
 
 			break;
 		}
@@ -2630,10 +2630,8 @@ int16 CPad::GetAnalogueLeftRight(void)
 			int16 axis = NewState.LeftStickX;
 			int16 dpad = (NewState.DPadRight - NewState.DPadLeft) / 2;
 
-			if ( Abs(axis) > Abs(dpad) )
-				return axis;
-			else
-				return dpad;
+			// Delegate the choice between the axis and the pad to the C implementation
+			return Pad_AxisOrDPad(axis, dpad);
 
 			break;
 		}

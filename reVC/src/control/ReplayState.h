@@ -35,6 +35,18 @@ static inline bool Replay_IsPlayingBack(void)
     return false;
 #endif
 }
+//+ rouz edit (Claude)
+// Offset of the look-around replay camera from its focus, from the distance and the vertical (alpha) and horizontal (beta) angles
+void Replay_LookAroundOffset(float distance, float alpha, float beta, float offset[3]);
+// Orientation of the look-around replay camera that looks from a position at a focus point (forward, right and up vectors, all normalised)
+void Replay_LookAroundBasis(const float focus[3], const float cameraPos[3], float forward[3], float right[3], float up[3]);
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+// Value of a replay packet field: a factor times the value limited to a range
+float Replay_ScaledClamp(float factor, float value, float low, float high);
+// Velocity stored in a replay packet for a vehicle: 8000 times the speed limited to -4..4
+float Replay_VehicleVelocity(float speed);
+//- rouz edit (Claude)
 #ifdef __cplusplus
 }
 #endif

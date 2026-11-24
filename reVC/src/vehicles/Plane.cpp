@@ -24,6 +24,7 @@
 #include "PlaneMath.h"
 #include "MemoryHeap.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "VehicleLogic.h"
 
 CPlaneNode *pPathNodes;
 CPlaneNode *pPath2Nodes;
@@ -313,54 +314,19 @@ CPlane::ProcessControl(void)
 				pathPositionRear += TotalLengthOfFlightPath;
 			float pathPosition = pathPositionRear + 30.0f;
 
-			float pitch = 0.0f;
-			float distSinceTakeOff = pathPosition - TakeOffPoint;
-			if(distSinceTakeOff <= 0.0f && distSinceTakeOff > -70.0f){
-				// shortly before take off
-				pitch = 1.0f - distSinceTakeOff/-70.0f;
-			}else if(distSinceTakeOff >= 0.0f && distSinceTakeOff < 100.0f){
-				// shortly after take off
-				pitch = 1.0f - distSinceTakeOff/100.0f;
-			}
-
-			float distSinceLanding = pathPosition - LandingPoint;
-			if(distSinceLanding <= 0.0f && distSinceLanding > -200.0f){
-				// shortly before landing
-				pitch = 1.0f - distSinceLanding/-200.0f;
-			}else if(distSinceLanding >= 0.0f && distSinceLanding < 70.0f){
-				// shortly after landing
-				pitch = 1.0f - distSinceLanding/70.0f;
-			}
-
+			// Delegate the pitch of the airtrain to the C implementation
+			float pitch = PlaneMath_AirtrainPitch(pathPosition, TakeOffPoint, LandingPoint);
 
 			// Advance current node to appropriate position
-			float pos1, pos2;
-			int nextTrackNode = m_nCurPathNode + 1;
-			pos1 = pPathNodes[m_nCurPathNode].t;
-			if(nextTrackNode < NumPathNodes)
-				pos2 = pPathNodes[nextTrackNode].t;
-			else{
-				nextTrackNode = 0;
-				pos2 = TotalLengthOfFlightPath;
-			}
-			while(pathPositionRear < pos1 || pathPositionRear > pos2){
-				m_nCurPathNode = (m_nCurPathNode+1) % NumPathNodes;
-				nextTrackNode = m_nCurPathNode + 1;
-				pos1 = pPathNodes[m_nCurPathNode].t;
-				if(nextTrackNode < NumPathNodes)
-					pos2 = pPathNodes[nextTrackNode].t;
-				else{
-					nextTrackNode = 0;
-					pos2 = TotalLengthOfFlightPath;
-				}
-			}
+			// Delegate the search of the segment of the path to the C implementation
+			int nextTrackNode;
+			float f;
+			int curNode = m_nCurPathNode;
+			PlaneMath_LocatePathNode(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, &curNode, pathPositionRear, &nextTrackNode, &f);
+			m_nCurPathNode = curNode;
 			bool bothOnGround = pPathNodes[m_nCurPathNode].bOnGround && pPathNodes[nextTrackNode].bOnGround;
 			if(PlanePathPosition[m_nPlaneId] >= LandingPoint && OldPlanePathPosition[m_nPlaneId] < LandingPoint)
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_PLANE_ON_GROUND, 0.0f);
-			float dist = pPathNodes[nextTrackNode].t - pPathNodes[m_nCurPathNode].t;
-			if(dist < 0.0f)
-				dist += TotalLengthOfFlightPath;
-			float f = (pathPositionRear - pPathNodes[m_nCurPathNode].t)/dist;
 			CVector posRear = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, m_nCurPathNode, nextTrackNode, f); // rouz edit (ChatGPT)
 
 			// Same for the front
@@ -368,29 +334,8 @@ CPlane::ProcessControl(void)
 			if(pathPositionFront > TotalLengthOfFlightPath)
 				pathPositionFront -= TotalLengthOfFlightPath;
 			int curPathNodeFront = m_nCurPathNode;
-			int nextPathNodeFront = curPathNodeFront + 1;
-			pos1 = pPathNodes[curPathNodeFront].t;
-			if(nextPathNodeFront < NumPathNodes)
-				pos2 = pPathNodes[nextPathNodeFront].t;
-			else{
-				nextPathNodeFront = 0;
-				pos2 = TotalLengthOfFlightPath;
-			}
-			while(pathPositionFront < pos1 || pathPositionFront > pos2){
-				curPathNodeFront = (curPathNodeFront+1) % NumPathNodes;
-				nextPathNodeFront = curPathNodeFront + 1;
-				pos1 = pPathNodes[curPathNodeFront].t;
-				if(nextPathNodeFront < NumPathNodes)
-					pos2 = pPathNodes[nextPathNodeFront].t;
-				else{
-					nextPathNodeFront = 0;
-					pos2 = TotalLengthOfFlightPath;
-				}
-			}
-			dist = pPathNodes[nextPathNodeFront].t - pPathNodes[curPathNodeFront].t;
-			if(dist < 0.0f)
-				dist += TotalLengthOfFlightPath;
-			f = (pathPositionFront - pPathNodes[curPathNodeFront].t)/dist;
+			int nextPathNodeFront;
+			PlaneMath_LocatePathNode(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, &curPathNodeFront, pathPositionFront, &nextPathNodeFront, &f);
 			CVector posFront = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, curPathNodeFront, nextPathNodeFront, f); // rouz edit (ChatGPT)
 
 			// And for another point 60 units in front of the plane, used to calculate roll
@@ -398,48 +343,25 @@ CPlane::ProcessControl(void)
 			if(pathPositionFront2 > TotalLengthOfFlightPath)
 				pathPositionFront2 -= TotalLengthOfFlightPath;
 			int curPathNodeFront2 = m_nCurPathNode;
-			int nextPathNodeFront2 = curPathNodeFront2 + 1;
-			pos1 = pPathNodes[curPathNodeFront2].t;
-			if(nextPathNodeFront2 < NumPathNodes)
-				pos2 = pPathNodes[nextPathNodeFront2].t;
-			else{
-				nextPathNodeFront2 = 0;
-				pos2 = TotalLengthOfFlightPath;
-			}
-			while(pathPositionFront2 < pos1 || pathPositionFront2 > pos2){
-				curPathNodeFront2 = (curPathNodeFront2+1) % NumPathNodes;
-				nextPathNodeFront2 = curPathNodeFront2 + 1;
-				pos1 = pPathNodes[curPathNodeFront2].t;
-				if(nextPathNodeFront2 < NumPathNodes)
-					pos2 = pPathNodes[nextPathNodeFront2].t;
-				else{
-					nextPathNodeFront2 = 0;
-					pos2 = TotalLengthOfFlightPath;
-				}
-			}
-			dist = pPathNodes[nextPathNodeFront2].t - pPathNodes[curPathNodeFront2].t;
-			if(dist < 0.0f)
-				dist += TotalLengthOfFlightPath;
-			f = (pathPositionFront2 - pPathNodes[curPathNodeFront2].t)/dist;
+			int nextPathNodeFront2;
+			PlaneMath_LocatePathNode(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, &curPathNodeFront2, pathPositionFront2, &nextPathNodeFront2, &f);
 			CVector posFront2 = InterpolatePlanePathPosition(pPathNodes, NumPathNodes, TotalLengthOfFlightPath, true, curPathNodeFront2, nextPathNodeFront2, f); // rouz edit (ChatGPT)
 
 			// Now set matrix
 			GetMatrix().SetTranslateOnly((posRear + posFront) / 2.0f);
 			GetMatrix().GetPosition().z += 4.3f;
-			CVector fwd = posFront - posRear;
-			fwd.Normalise();
-			if(pitch != 0.0f){
-				fwd.z += 0.4f*pitch;
-				fwd.Normalise();
+			// Delegate the orientation along the path to the C implementation
+			CVector fwd, right, up;
+			{
+				float fr[3] = { posFront.x, posFront.y, posFront.z };
+				float re[3] = { posRear.x, posRear.y, posRear.z };
+				float fr2[3] = { posFront2.x, posFront2.y, posFront2.z };
+				float f[3], r[3], u[3];
+				PlaneMath_PathOrientation(fr, re, fr2, pitch, !bothOnGround, f, r, u);
+				fwd = CVector(f[0], f[1], f[2]);
+				right = CVector(r[0], r[1], r[2]);
+				up = CVector(u[0], u[1], u[2]);
 			}
-			CVector fwd2 = posFront2 - posRear;
-			fwd2.Normalise();
-			CVector roll = CrossProduct(fwd, fwd2);
-			CVector right = CrossProduct(fwd, CVector(0.0f, 0.0f, 1.0f));
-			if(!bothOnGround)
-				right.z += 3.0f*roll.z;
-			right.Normalise();
-			CVector up = CrossProduct(right, fwd);
 			GetMatrix().GetRight() = right;
 			GetMatrix().GetUp() = up;
 			GetMatrix().GetForward() = fwd;
@@ -477,30 +399,12 @@ CPlane::ProcessControl(void)
 			float pathPositionRear = planePathPosition - 10.0f;
 			if(pathPositionRear < 0.0f)
 				pathPositionRear += totalLengthOfFlightPath;
-			float pos1, pos2;
-			int nextTrackNode = m_nCurPathNode + 1;
-			pos1 = pathNodes[m_nCurPathNode].t;
-			if(nextTrackNode < numPathNodes)
-				pos2 = pathNodes[nextTrackNode].t;
-			else{
-				nextTrackNode = 0;
-				pos2 = totalLengthOfFlightPath;
-			}
-			while(pathPositionRear < pos1 || pathPositionRear > pos2){
-				m_nCurPathNode = (m_nCurPathNode+1) % numPathNodes;
-				nextTrackNode = m_nCurPathNode + 1;
-				pos1 = pathNodes[m_nCurPathNode].t;
-				if(nextTrackNode < numPathNodes)
-					pos2 = pathNodes[nextTrackNode].t;
-				else{
-					nextTrackNode = 0;
-					pos2 = totalLengthOfFlightPath;
-				}
-			}
-			float dist = pathNodes[nextTrackNode].t - pathNodes[m_nCurPathNode].t;
-			if(dist < 0.0f)
-				dist += totalLengthOfFlightPath;
-			float f = (pathPositionRear - pathNodes[m_nCurPathNode].t)/dist;
+			// Delegate the search of the segment of the path to the C implementation
+			int nextTrackNode;
+			float f;
+			int curNode = m_nCurPathNode;
+			PlaneMath_LocatePathNode(pathNodes, numPathNodes, totalLengthOfFlightPath, &curNode, pathPositionRear, &nextTrackNode, &f);
+			m_nCurPathNode = curNode;
 			CVector posRear = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, m_nCurPathNode, nextTrackNode, f); // rouz edit (ChatGPT)
 
 			// Same for the front
@@ -508,29 +412,8 @@ CPlane::ProcessControl(void)
 			if(pathPositionFront > totalLengthOfFlightPath)
 				pathPositionFront -= totalLengthOfFlightPath;
 			int curPathNodeFront = m_nCurPathNode;
-			int nextPathNodeFront = curPathNodeFront + 1;
-			pos1 = pathNodes[curPathNodeFront].t;
-			if(nextPathNodeFront < numPathNodes)
-				pos2 = pathNodes[nextPathNodeFront].t;
-			else{
-				nextPathNodeFront = 0;
-				pos2 = totalLengthOfFlightPath;
-			}
-			while(pathPositionFront < pos1 || pathPositionFront > pos2){
-				curPathNodeFront = (curPathNodeFront+1) % numPathNodes;
-				nextPathNodeFront = curPathNodeFront + 1;
-				pos1 = pathNodes[curPathNodeFront].t;
-				if(nextPathNodeFront < numPathNodes)
-					pos2 = pathNodes[nextPathNodeFront].t;
-				else{
-					nextPathNodeFront = 0;
-					pos2 = totalLengthOfFlightPath;
-				}
-			}
-			dist = pathNodes[nextPathNodeFront].t - pathNodes[curPathNodeFront].t;
-			if(dist < 0.0f)
-				dist += totalLengthOfFlightPath;
-			f = (pathPositionFront - pathNodes[curPathNodeFront].t)/dist;
+			int nextPathNodeFront;
+			PlaneMath_LocatePathNode(pathNodes, numPathNodes, totalLengthOfFlightPath, &curPathNodeFront, pathPositionFront, &nextPathNodeFront, &f);
 			CVector posFront = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, curPathNodeFront, nextPathNodeFront, f); // rouz edit (ChatGPT)
 
 			// And for another point 30 units in front of the plane, used to calculate roll
@@ -538,43 +421,25 @@ CPlane::ProcessControl(void)
 			if(pathPositionFront2 > totalLengthOfFlightPath)
 				pathPositionFront2 -= totalLengthOfFlightPath;
 			int curPathNodeFront2 = m_nCurPathNode;
-			int nextPathNodeFront2 = curPathNodeFront2 + 1;
-			pos1 = pathNodes[curPathNodeFront2].t;
-			if(nextPathNodeFront2 < numPathNodes)
-				pos2 = pathNodes[nextPathNodeFront2].t;
-			else{
-				nextPathNodeFront2 = 0;
-				pos2 = totalLengthOfFlightPath;
-			}
-			while(pathPositionFront2 < pos1 || pathPositionFront2 > pos2){
-				curPathNodeFront2 = (curPathNodeFront2+1) % numPathNodes;
-				nextPathNodeFront2 = curPathNodeFront2 + 1;
-				pos1 = pathNodes[curPathNodeFront2].t;
-				if(nextPathNodeFront2 < numPathNodes)
-					pos2 = pathNodes[nextPathNodeFront2].t;
-				else{
-					nextPathNodeFront2 = 0;
-					pos2 = totalLengthOfFlightPath;
-				}
-			}
-			dist = pathNodes[nextPathNodeFront2].t - pathNodes[curPathNodeFront2].t;
-			if(dist < 0.0f)
-				dist += totalLengthOfFlightPath;
-			f = (pathPositionFront2 - pathNodes[curPathNodeFront2].t)/dist;
+			int nextPathNodeFront2;
+			PlaneMath_LocatePathNode(pathNodes, numPathNodes, totalLengthOfFlightPath, &curPathNodeFront2, pathPositionFront2, &nextPathNodeFront2, &f);
 			CVector posFront2 = InterpolatePlanePathPosition(pathNodes, numPathNodes, totalLengthOfFlightPath, planePathLoops, curPathNodeFront2, nextPathNodeFront2, f); // rouz edit (ChatGPT)
 
 			// Now set matrix
 			GetMatrix().SetTranslateOnly((posRear + posFront) / 2.0f);
 			GetMatrix().GetPosition().z += 1.0f;
-			CVector fwd = posFront - posRear;
-			fwd.Normalise();
-			CVector fwd2 = posFront2 - posRear;
-			fwd2.Normalise();
-			CVector roll = CrossProduct(fwd, fwd2);
-			CVector right = CrossProduct(fwd, CVector(0.0f, 0.0f, 1.0f));
-			right.z += 3.0f*roll.z;
-			right.Normalise();
-			CVector up = CrossProduct(right, fwd);
+			// Delegate the orientation along the path to the C implementation
+			CVector fwd, right, up;
+			{
+				float fr[3] = { posFront.x, posFront.y, posFront.z };
+				float re[3] = { posRear.x, posRear.y, posRear.z };
+				float fr2[3] = { posFront2.x, posFront2.y, posFront2.z };
+				float f[3], r[3], u[3];
+				PlaneMath_PathOrientation(fr, re, fr2, 0.0f, true, f, r, u);
+				fwd = CVector(f[0], f[1], f[2]);
+				right = CVector(r[0], r[1], r[2]);
+				up = CVector(u[0], u[1], u[2]);
+			}
 			GetMatrix().GetRight() = right;
 			GetMatrix().GetUp() = up;
 			GetMatrix().GetForward() = fwd;
@@ -681,7 +546,15 @@ CPlane::PreRender(void)
 		CVector lightPos = mi->m_positions[PLANE_POS_LIGHT_RIGHT];
 		CVector lightR = GetMatrix() * lightPos;
 		CVector lightL = lightR;
-		lightL -= GetRight()*2.0f*lightPos.x;
+		// Delegate the position of the left light to the C implementation
+		{
+			CVector right = GetRight();
+			const float lr[3] = { lightL.x, lightL.y, lightL.z };
+			const float rt[3] = { right.x, right.y, right.z };
+			float ll[3];
+			VehicleLogic_MirrorLight(lr, rt, lightPos.x, ll);
+			lightL = CVector(ll[0], ll[1], ll[2]);
+		}
 
 		float intensity = -0.6f*behindness + 0.4f;
 		float size = 1.0f - behindness;
@@ -763,79 +636,9 @@ CPlane::InitPlanes(void)
 	if(pPathNodes == nil){
 		pPathNodes = LoadPath("data\\paths\\flight.dat", NumPathNodes, TotalLengthOfFlightPath, true);
 
-		// Figure out which nodes are on ground
-		for(i = 0; i < NumPathNodes; i++){
-			if(pPathNodes[i].p.z < 14.0f){
-				pPathNodes[i].p.z = 14.0f;
-				pPathNodes[i].bOnGround = true;
-			}else
-				pPathNodes[i].bOnGround = false;
-		}
-
-		// Find lading and takeoff points
-		LandingPoint = -1.0f;
-		TakeOffPoint = -1.0f;
-		bool lastOnGround = pPathNodes[NumPathNodes-1].bOnGround;
-		for(i = 0; i < NumPathNodes; i++){
-			if(pPathNodes[i].bOnGround && !lastOnGround)
-				LandingPoint = pPathNodes[i].t;
-			else if(!pPathNodes[i].bOnGround && lastOnGround)
-				TakeOffPoint = pPathNodes[i].t;
-			lastOnGround = pPathNodes[i].bOnGround;
-		}
-
-		// Animation
-		float time = 0.0f;
-		float position = 0.0f;
-		// Start on ground with slow speed
-		aPlaneLineBits[0].type = 1;
-		aPlaneLineBits[0].time = time;
-		aPlaneLineBits[0].position = position;
-		aPlaneLineBits[0].speed = TAXI_SPEED;
-		aPlaneLineBits[0].acceleration = 0.0f;
-		float dist = (TakeOffPoint-500.0f) - position;
-		time += dist/TAXI_SPEED;
-		position += dist;
-
-		// Accelerate to take off
-		aPlaneLineBits[1].type = 2;
-		aPlaneLineBits[1].time = time;
-		aPlaneLineBits[1].position = position;
-		aPlaneLineBits[1].speed = TAXI_SPEED;
-		aPlaneLineBits[1].acceleration = 618.75f/500.0f;
-		time += 500.0f/((CRUISE_SPEED+TAXI_SPEED)/2.0f);
-		position += 500.0f;
-
-		// Fly at cruise speed
-		aPlaneLineBits[2].type = 1;
-		aPlaneLineBits[2].time = time;
-		aPlaneLineBits[2].position = position;
-		aPlaneLineBits[2].speed = CRUISE_SPEED;
-		aPlaneLineBits[2].acceleration = 0.0f;
-		dist = LandingPoint - TakeOffPoint;
-		time += dist/CRUISE_SPEED;
-		position += dist;
-
-		// Brake after landing
-		aPlaneLineBits[3].type = 2;
-		aPlaneLineBits[3].time = time;
-		aPlaneLineBits[3].position = position;
-		aPlaneLineBits[3].speed = CRUISE_SPEED;
-		aPlaneLineBits[3].acceleration = -618.75f/500.0f;
-		time += 500.0f/((CRUISE_SPEED+TAXI_SPEED)/2.0f);
-		position += 500.0f;
-
-		// Taxi
-		aPlaneLineBits[4].type = 1;
-		aPlaneLineBits[4].time = time;
-		aPlaneLineBits[4].position = position;
-		aPlaneLineBits[4].speed = TAXI_SPEED;
-		aPlaneLineBits[4].acceleration = 0.0f;
-		time += (TotalLengthOfFlightPath - position)/TAXI_SPEED;
-
-		// end
-		aPlaneLineBits[5].time = time;
-		TotalDurationOfFlightPath = time;
+		// Delegate the search of the ground points and the timeline of the flight to the C implementation
+		PlaneMath_FindGroundPoints(pPathNodes, NumPathNodes, &LandingPoint, &TakeOffPoint);
+		PlaneMath_BuildFlightTimeline(aPlaneLineBits, TakeOffPoint, LandingPoint, TotalLengthOfFlightPath, CRUISE_SPEED, TAXI_SPEED, &TotalDurationOfFlightPath);
 	}
 
 	// Dodo
@@ -907,15 +710,8 @@ CPlane::LoadPath(char const *filename, int32 &numNodes, float &totalLength, bool
 		sscanf(gString, "%f %f %f", &nodes[i].p.x, &nodes[i].p.y, &nodes[i].p.z);
 	}
 
-	// Calculate length of segments and path
-	totalLength = 0.0f;
-	for(i = 0; i < numNodes; i++){
-		nodes[i].t = totalLength;
-		float l = (nodes[(i+1) % numNodes].p - nodes[i].p).Magnitude2D();
-		if(!loop && i == numNodes-1)
-			l = 0.0f;
-		totalLength += l;
-	}
+	// Delegate the calculation of the length of segments and path to the C implementation
+	PlaneMath_ComputePathLengths(nodes, numNodes, loop, &totalLength);
 
 	return nodes;
 }
@@ -927,36 +723,18 @@ bool bHelisActivated;
 void
 CPlane::UpdatePlanes(void)
 {
-	int i, j;
+	int i;
 	uint32 time;
-	float t, deltaT;
 
 	if(Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 
 	// Jumbo jets
 	time = (*Timer_GetTimeInMilliseconds());
+	// Delegate the position and speed of the jumbo jets to the C implementation
 	for(i = 0; i < 3; i++){
-		t = TotalDurationOfFlightPath * (float)(time & 0x7FFFF)/0x80000;
-		// find current frame
-		for(j = 0; t > aPlaneLineBits[j+1].time; j++);
-
 		OldPlanePathPosition[i] = PlanePathPosition[i];
-		deltaT = t - aPlaneLineBits[j].time;
-		switch(aPlaneLineBits[j].type){
-		case 0:	// standing still
-			PlanePathPosition[i] = aPlaneLineBits[j].position;
-			PlanePathSpeed[i] = 0.0f;
-			break;
-		case 1:	// moving with constant speed
-			PlanePathPosition[i] = aPlaneLineBits[j].position + aPlaneLineBits[j].speed*deltaT;
-			PlanePathSpeed[i] = (TotalDurationOfFlightPath*1000.0f/0x80000) * aPlaneLineBits[j].speed;
-			break;
-		case 2:	// accelerating/braking
-			PlanePathPosition[i] = aPlaneLineBits[j].position + (aPlaneLineBits[j].speed + aPlaneLineBits[j].acceleration*deltaT)*deltaT;
-			PlanePathSpeed[i] = (TotalDurationOfFlightPath*1000.0f/0x80000)*aPlaneLineBits[j].speed + 2.0f*aPlaneLineBits[j].acceleration*deltaT;
-			break;
-		}
+		PlaneMath_JumboPath(time, TotalDurationOfFlightPath, aPlaneLineBits, &PlanePathPosition[i], &PlanePathSpeed[i]);
 
 		// time offset for each plane
 		time += 0x80000/3;
@@ -964,27 +742,9 @@ CPlane::UpdatePlanes(void)
 
 	time = (*Timer_GetTimeInMilliseconds());
 
-	t = TotalDurationOfFlightPath2/0x80000;
-	PlanePath2Position[0] = CRUISE_SPEED * (time & 0x7FFFF)*t;
-	PlanePath2Position[1] = CRUISE_SPEED * ((time + 0x80000/5) & 0x7FFFF)*t;
-	PlanePath2Position[2] = CRUISE_SPEED * ((time + 0x80000/5*2) & 0x7FFFF)*t;
-	PlanePath2Position[3] = CRUISE_SPEED * ((time + 0x80000/5*3) & 0x7FFFF)*t;
-	PlanePath2Position[4] = CRUISE_SPEED * ((time + 0x80000/5*4) & 0x7FFFF)*t;
-	PlanePath2Speed[0] = CRUISE_SPEED*t;
-	PlanePath2Speed[1] = CRUISE_SPEED*t;
-	PlanePath2Speed[2] = CRUISE_SPEED*t;
-	PlanePath2Speed[3] = CRUISE_SPEED*t;
-	PlanePath2Speed[4] = CRUISE_SPEED*t;
-
-	t = TotalDurationOfFlightPath3/0x80000;
-	PlanePath3Position[0] = CRUISE_SPEED * (time & 0x7FFFF)*t;
-	PlanePath3Position[1] = CRUISE_SPEED * ((time + 0x80000/4) & 0x7FFFF)*t;
-	PlanePath3Position[2] = CRUISE_SPEED * ((time + 0x80000/4*2) & 0x7FFFF)*t;
-	PlanePath3Position[3] = CRUISE_SPEED * ((time + 0x80000/4*3) & 0x7FFFF)*t;
-	PlanePath3Speed[0] = CRUISE_SPEED*t;
-	PlanePath3Speed[1] = CRUISE_SPEED*t;
-	PlanePath3Speed[2] = CRUISE_SPEED*t;
-	PlanePath3Speed[3] = CRUISE_SPEED*t;
+	// Delegate the position and speed of the other planes and of the choppers to the C implementation
+	PlaneMath_CruisePath(time, TotalDurationOfFlightPath2, CRUISE_SPEED, 5, PlanePath2Position, PlanePath2Speed);
+	PlaneMath_CruisePath(time, TotalDurationOfFlightPath3, CRUISE_SPEED, 4, PlanePath3Position, PlanePath3Speed);
 
 	if(FindPlayerVehicle() && (FindPlayerVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_HELI ||
 	                           FindPlayerVehicle()->GetVehicleAppearance() == VEHICLE_APPEARANCE_PLANE))

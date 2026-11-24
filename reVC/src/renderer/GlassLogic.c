@@ -166,4 +166,14 @@ VectorMath3 Glass_ExplosionPush(VectorMath3 distToGlass, float fDistToGlass)
 	return distToGlass;
 }
 
+void Glass_MinMax4(float a, float b, float c, float d, float *minimum, float *maximum)
+{
+	float lo1 = a < b ? a : b;
+	float lo2 = c < d ? c : d;
+	float hi1 = a > b ? a : b;
+	float hi2 = c > d ? c : d;
+
+	*minimum = lo1 < lo2 ? lo1 : lo2;
+	*maximum = hi1 > hi2 ? hi1 : hi2;
+}
 //- rouz edit (Claude)

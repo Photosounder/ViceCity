@@ -111,6 +111,16 @@ CCamera::CCamera(void)
 	Init();
 }
 
+static CVector
+NormalisedHorizontal(const CVector &v)
+{
+	float in[3] = { v.x, v.y, v.z };
+	float out[3];
+
+	General_NormalisedHorizontal(in, out);
+	return CVector(out[0], out[1], out[2]);
+}
+
 void
 CCamera::Init(void)
 {
@@ -302,18 +312,14 @@ CCamera::Process(void)
 
 	RwCameraSetNearClipPlane(Scene.camera, DEFAULT_NEAR);
 
-	if(Cams[ActiveCam].Front.x == 0.0f && Cams[ActiveCam].Front.y == 0.0f)
-		oldBeta = 0.0f;
-	else
-		oldBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+	// Delegate the angle of the vector to the C implementation
+	oldBeta = Camera_BetaOfVector(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 
 	Cams[ActiveCam].Process();
 	Cams[ActiveCam].ProcessSpecialHeightRoutines();
 
-	if(Cams[ActiveCam].Front.x == 0.0f && Cams[ActiveCam].Front.y == 0.0f)
-		newBeta = 0.0f;
-	else
-		newBeta = General_GetATanOfXY(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
+	// Delegate the angle of the vector to the C implementation
+	newBeta = Camera_BetaOfVector(Cams[ActiveCam].Front.x, Cams[ActiveCam].Front.y);
 
 
 	// Stop transition when it's done
@@ -329,9 +335,9 @@ CCamera::Process(void)
 		RwCameraSetNearClipPlane(Scene.camera, m_fNearClipScript);
 
 	deltaBeta = newBeta - oldBeta;
-	while(deltaBeta >= PI) deltaBeta -= 2*PI;
-	while(deltaBeta < -PI) deltaBeta += 2*PI;
-	if(Abs(deltaBeta) > 0.3f)
+	// Delegate the wrap of the angle to the C implementation
+	CameraMath_MakeAngleLessThan180(&deltaBeta);
+	if(General_AbsAbove(deltaBeta, 0.3f))
 		m_bJust_Switched = true;
 
 #ifndef MASTER
@@ -353,26 +359,19 @@ CCamera::Process(void)
 			currentTime = m_uiTransitionDuration;
 		float fractionInter = (float) currentTime / m_uiTransitionDuration;
 		float fractionInterTarget = (float) currentTime / m_uiTransitionDurationTargetCoors;
-		fractionInterTarget = Clamp(fractionInterTarget, 0.0f, 1.0f);
+		// Delegate the limit to the C implementation
+		fractionInterTarget = General_ClampFloat(fractionInterTarget, 0.0f, 1.0f);
 
 		// Interpolate target separately
 		if(fractionInterTarget <= m_fFractionInterToStopMovingTarget){
-			float inter;
-			if(m_fFractionInterToStopMovingTarget == 0.0f)
-				inter = 0.0f;
-			else
-				inter = (m_fFractionInterToStopMovingTarget - fractionInterTarget)/m_fFractionInterToStopMovingTarget;
-			inter = 0.5f - 0.5*Cos(inter*PI);	// smooth it
+			// Delegate the smoothed fraction of the transition to the C implementation
+			float inter = Camera_SmoothInterpolation(m_fFractionInterToStopMovingTarget - fractionInterTarget, m_fFractionInterToStopMovingTarget);
 
 			m_vecTargetWhenInterPol = m_cvecStartingTargetForInterPol + inter*m_cvecTargetSpeedAtStartInter;
 			Target = m_vecTargetWhenInterPol;
 		}else if(fractionInterTarget > m_fFractionInterToStopMovingTarget){
-			float inter;
-			if(m_fFractionInterToStopCatchUpTarget == 0.0f)
-				inter = 0.0f;
-			else
-				inter = (fractionInterTarget - m_fFractionInterToStopMovingTarget)/m_fFractionInterToStopCatchUpTarget;
-			inter = 0.5f - 0.5*Cos(inter*PI);	// smooth it
+			// Delegate the smoothed fraction of the transition to the C implementation
+			float inter = Camera_SmoothInterpolation(fractionInterTarget - m_fFractionInterToStopMovingTarget, m_fFractionInterToStopCatchUpTarget);
 
 			if(m_fFractionInterToStopMovingTarget == 0.0f)
 				m_vecTargetWhenInterPol = m_cvecStartingTargetForInterPol;
@@ -380,12 +379,8 @@ CCamera::Process(void)
 		}
 
 		if(fractionInter <= m_fFractionInterToStopMoving){
-			float inter;
-			if(m_fFractionInterToStopMoving == 0.0f)
-				inter = 0.0f;
-			else
-				inter = (m_fFractionInterToStopMoving - fractionInter)/m_fFractionInterToStopMoving;
-			inter = 0.5f - 0.5*Cos(inter*PI);	// smooth it
+			// Delegate the smoothed fraction of the transition to the C implementation
+			float inter = Camera_SmoothInterpolation(m_fFractionInterToStopMoving - fractionInter, m_fFractionInterToStopMoving);
 
 			m_vecSourceWhenInterPol = m_cvecStartingSourceForInterPol + inter*m_cvecSourceSpeedAtStartInter;
 
@@ -393,8 +388,11 @@ CCamera::Process(void)
 				CVector ToCam = m_vecSourceWhenInterPol - Target;
 				if(ToCam.Magnitude2D() < PlayerMinDist){
 					float beta = General_GetATanOfXY(ToCam.x, ToCam.y);
-					CamSource.x = Target.x + PlayerMinDist*Cos(beta);
-					CamSource.y = Target.y + PlayerMinDist*Sin(beta);
+					// Delegate the offset of the camera to the C implementation
+					float orbitX, orbitY;
+					Camera_OrbitOffset(PlayerMinDist, beta, &orbitX, &orbitY);
+					CamSource.x = Target.x + orbitX;
+					CamSource.y = Target.y + orbitY;
 				}
 			}
 
@@ -412,26 +410,33 @@ CCamera::Process(void)
 			CamUp.Normalise();
 
 			if(Cams[ActiveCam].Mode == CCam::MODE_TOPDOWN || Cams[ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
-				CamFront.Normalise();
-				CamRight = CVector(-1.0f, 0.0f, 0.0f);
-				CamUp = CrossProduct(CamFront, CamRight);
-				CamUp.Normalise();
+				// Delegate the top-down camera basis to the C implementation
+				{
+					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
+					float fOut[3], rOut[3], uOut[3];
+
+					Camera_TopDownBasis(fIn, fOut, rOut, uOut);
+					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
+					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
+					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+				}
 			}else{
-				CamFront.Normalise();
-				CamUp.Normalise();
-				CamRight = CrossProduct(CamFront, CamUp);
-				CamRight.Normalise();
-				CamUp = CrossProduct(CamRight, CamFront);
-				CamUp.Normalise();
+				// Delegate the camera basis to the C implementation
+				{
+					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
+					float uIn[3] = { CamUp.x, CamUp.y, CamUp.z };
+					float fOut[3], rOut[3], uOut[3];
+
+					Camera_OrthonormalBasis(fIn, uIn, fOut, rOut, uOut);
+					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
+					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
+					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+				}
 			}
 			FOV = m_fFOVWhenInterPol;
 		}else if(fractionInter > m_fFractionInterToStopMoving && fractionInter <= 1.0f){
-			float inter;
-			if(m_fFractionInterToStopCatchUp == 0.0f)
-				inter = 0.0f;
-			else
-				inter = (fractionInter - m_fFractionInterToStopMoving)/m_fFractionInterToStopCatchUp;
-			inter = 0.5f - 0.5*Cos(inter*PI);	// smooth it
+			// Delegate the smoothed fraction of the transition to the C implementation
+			float inter = Camera_SmoothInterpolation(fractionInter - m_fFractionInterToStopMoving, m_fFractionInterToStopCatchUp);
 
 			CamSource = m_vecSourceWhenInterPol + inter*(Cams[ActiveCam].Source - m_vecSourceWhenInterPol);
 
@@ -439,8 +444,11 @@ CCamera::Process(void)
 				CVector ToCam = m_vecSourceWhenInterPol - Target;
 				if(ToCam.Magnitude2D() < PlayerMinDist){
 					float beta = General_GetATanOfXY(ToCam.x, ToCam.y);
-					CamSource.x = Target.x + PlayerMinDist*Cos(beta);
-					CamSource.y = Target.y + PlayerMinDist*Sin(beta);
+					// Delegate the offset of the camera to the C implementation
+					float orbitX, orbitY;
+					Camera_OrbitOffset(PlayerMinDist, beta, &orbitX, &orbitY);
+					CamSource.x = Target.x + orbitX;
+					CamSource.y = Target.y + orbitY;
 				}
 			}
 
@@ -456,17 +464,28 @@ CCamera::Process(void)
 				CamUp = CVector(0.0f, 0.0f, 1.0f);
 
 			if(Cams[ActiveCam].Mode == CCam::MODE_TOPDOWN || Cams[ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
-				CamFront.Normalise();
-				CamRight = CVector(-1.0f, 0.0f, 0.0f);
-				CamUp = CrossProduct(CamFront, CamRight);
-				CamUp.Normalise();
+				// Delegate the top-down camera basis to the C implementation
+				{
+					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
+					float fOut[3], rOut[3], uOut[3];
+
+					Camera_TopDownBasis(fIn, fOut, rOut, uOut);
+					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
+					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
+					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+				}
 			}else{
-				CamFront.Normalise();
-				CamUp.Normalise();
-				CamRight = CrossProduct(CamFront, CamUp);
-				CamRight.Normalise();
-				CamUp = CrossProduct(CamRight, CamFront);
-				CamUp.Normalise();
+				// Delegate the camera basis to the C implementation
+				{
+					float fIn[3] = { CamFront.x, CamFront.y, CamFront.z };
+					float uIn[3] = { CamUp.x, CamUp.y, CamUp.z };
+					float fOut[3], rOut[3], uOut[3];
+
+					Camera_OrthonormalBasis(fIn, uIn, fOut, rOut, uOut);
+					CamFront = CVector(fOut[0], fOut[1], fOut[2]);
+					CamRight = CVector(rOut[0], rOut[1], rOut[2]);
+					CamUp = CVector(uOut[0], uOut[1], uOut[2]);
+				}
 			}
 #ifndef FIX_BUGS
 			// BUG: FOV was already interpolated but m_fFOVWhenInterPol was not
@@ -564,14 +583,17 @@ CCamera::Process(void)
 	GetMatrix().GetPosition() = CamSource;
 
 	// Process Shake
-	float shakeStrength = m_fCamShakeForce - 0.28f*((*Timer_GetTimeInMilliseconds())-m_uiCamShakeStart)/1000.0f;
-	shakeStrength = Clamp(shakeStrength, 0.0f, 2.0f);
+	// Delegate the strength of the shake to the C implementation
+	float shakeStrength = Camera_ShakeStrength(m_fCamShakeForce, m_uiCamShakeStart, (*Timer_GetTimeInMilliseconds()));
 	int shakeRand = General_GetRandomNumber();
-	float shakeOffset = shakeStrength*0.1f;
-	GetMatrix().GetPosition().x += shakeOffset * ((shakeRand & 0xF) - 7);
-	GetMatrix().GetPosition().y += shakeOffset * (((shakeRand & 0xF0) >> 4) - 7);
-	GetMatrix().GetPosition().z += shakeOffset * (((shakeRand & 0xF00) >> 8) - 7);
+	// Delegate the offsets of the shake to the C implementation
+	float shakeOffsets[3];
+	Camera_ShakeOffsets(shakeStrength, shakeRand, shakeOffsets);
+	GetMatrix().GetPosition().x += shakeOffsets[0];
+	GetMatrix().GetPosition().y += shakeOffsets[1];
+	GetMatrix().GetPosition().z += shakeOffsets[2];
 
+	float shakeOffset = shakeStrength*0.1f;
 	if(shakeOffset > 0.0f && m_BlurType != MOTION_BLUR_SNIPER)
 		SetMotionBlurAlpha(Min((int)(shakeStrength*255.0f) + 25, 150));
 
@@ -622,16 +644,18 @@ CCamera::Process(void)
 
 	// LOD dist
 	if(!Cutscene_IsRunning() || CCutsceneMgr::UseLodMultiplier()){ // rouz edit (ChatGPT)
-		LODDistMultiplier = 70.0f/Draw_GetFOV();
+		bool highAltitude = false;
 
 		if(GetPosition().z > 55.0f && FindPlayerVehicle() && FindPlayerVehicle()->pHandling->Flags & (HANDLING_IS_HELI|HANDLING_IS_PLANE) ||
 		   FindPlayerPed()->m_attachedTo){
-			LODDistMultiplier *= 1.0f + Max((GetPosition().z - 55.0f)/60.0f, 0.0f);
-			float NewNear = DEFAULT_NEAR * (1.0f + Max((GetPosition().z - 55.0f)/60.0f, 0.0f));
+			highAltitude = true;
+			// Delegate the scale for the altitude to the C implementation
+			float NewNear = DEFAULT_NEAR * Camera_HighAltitudeScale(GetPosition().z);
 			if(RwCameraGetNearClipPlane(Scene.camera) >= DEFAULT_NEAR)
 				RwCameraSetNearClipPlane(Scene.camera, NewNear);
 		}
-		if(LODDistMultiplier > 2.2f) LODDistMultiplier = 2.2f;
+		// Delegate the multiplier of the draw distances to the C implementation
+		LODDistMultiplier = Camera_LODDistMultiplier(Draw_GetFOV(), highAltitude, GetPosition().z);
 	}else
 		LODDistMultiplier = 1.0f;
 	GenerationDistMultiplier = LODDistMultiplier;
@@ -821,9 +845,8 @@ CCamera::CamControl(void)
 									garageCenter = CVector((stairsZone->minx+stairsZone->maxx)/2.0f, (stairsZone->miny+stairsZone->maxy)/2.0f, 0.0f);
 									if((garageCenter-garageDoorPos1).Magnitude() > 15.0f){
 										bool bClearViewOutside = true;
-										CVector dirOutside = pTargetEntity->GetPosition() - garageCenter;
-										dirOutside.z = 0.0f;
-										dirOutside.Normalise();
+										// Delegate the horizontal direction to the C implementation
+										CVector dirOutside = NormalisedHorizontal(pTargetEntity->GetPosition() - garageCenter);
 										float zoneDim = stairsZone->maxx - stairsZone->minx;
 										if(zoneDim < stairsZone->maxy - stairsZone->miny)
 											zoneDim = stairsZone->maxy - stairsZone->miny;
@@ -950,30 +973,15 @@ CCamera::CamControl(void)
 
 				// Smooth zoom value - ugly code
 				if(m_bUseScriptZoomValueCar){
-					if(CarZoomValueSmooth < m_fCarZoomValueScript){
-						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Min(CarZoomValueSmooth, m_fCarZoomValueScript);
-					}else{
-						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Max(CarZoomValueSmooth, m_fCarZoomValueScript);
-					}
+					// Delegate the smoothing of the zoom to the C implementation
+					CarZoomValueSmooth = Camera_ZoomStep(CarZoomValueSmooth, m_fCarZoomValueScript, (*Timer_GetTimeStep()));
 				}else if(m_bFailedCullZoneTestPreviously){
 					CloseInCarHeightTarget = 0.65f;
-					if(CarZoomValueSmooth < -0.65f){
-						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Min(CarZoomValueSmooth, -0.65f);
-					}else{
-						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Max(CarZoomValueSmooth, -0.65f);
-					}
+					// Delegate the smoothing of the zoom to the C implementation
+					CarZoomValueSmooth = Camera_ZoomStep(CarZoomValueSmooth, -0.65f, (*Timer_GetTimeStep()));
 				}else{
-					if(CarZoomValueSmooth < CarZoomValue){
-						CarZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Min(CarZoomValueSmooth, CarZoomValue);
-					}else{
-						CarZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-						CarZoomValueSmooth = Max(CarZoomValueSmooth, CarZoomValue);
-					}
+					// Delegate the smoothing of the zoom to the C implementation
+					CarZoomValueSmooth = Camera_ZoomStep(CarZoomValueSmooth, CarZoomValue, (*Timer_GetTimeStep()));
 				}
 
 				WellBufferMe(CloseInCarHeightTarget, &Cams[ActiveCam].m_fCloseInCarHeightOffset, &Cams[ActiveCam].m_fCloseInCarHeightOffsetSpeed, 0.1f, 0.25f, false);
@@ -1061,31 +1069,16 @@ CCamera::CamControl(void)
 
 			// Smooth zoom value - ugly code
 			if(m_bUseScriptZoomValuePed){
-				if(m_fPedZoomValueSmooth < m_fPedZoomValueScript){
-					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, m_fPedZoomValueScript);
-				}else{
-					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, m_fPedZoomValueScript);
-				}
+				// Delegate the smoothing of the zoom to the C implementation
+				m_fPedZoomValueSmooth = Camera_ZoomStep(m_fPedZoomValueSmooth, m_fPedZoomValueScript, (*Timer_GetTimeStep()));
 			}else if(m_bFailedCullZoneTestPreviously){
 				static float PedZoomedInVal = 0.5f;
 				CloseInPedHeightTarget = 0.7f;
-				if(m_fPedZoomValueSmooth < PedZoomedInVal){
-					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, PedZoomedInVal);
-				}else{
-					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, PedZoomedInVal);
-				}
+				// Delegate the smoothing of the zoom to the C implementation
+				m_fPedZoomValueSmooth = Camera_ZoomStep(m_fPedZoomValueSmooth, PedZoomedInVal, (*Timer_GetTimeStep()));
 			}else{
-				if(m_fPedZoomValueSmooth < m_fPedZoomValue){
-					m_fPedZoomValueSmooth += 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Min(m_fPedZoomValueSmooth, m_fPedZoomValue);
-				}else{
-					m_fPedZoomValueSmooth -= 0.12f * (*Timer_GetTimeStep());
-					m_fPedZoomValueSmooth = Max(m_fPedZoomValueSmooth, m_fPedZoomValue);
-				}
+				// Delegate the smoothing of the zoom to the C implementation
+				m_fPedZoomValueSmooth = Camera_ZoomStep(m_fPedZoomValueSmooth, m_fPedZoomValue, (*Timer_GetTimeStep()));
 				if(PedZoomIndicator == CAM_ZOOM_3 && m_fPedZoomValue == 0.0f)
 					m_fPedZoomValueSmooth = m_fPedZoomValue;
 			}
@@ -1152,9 +1145,8 @@ CCamera::CamControl(void)
 									garageDoorPos1 = CVector(382.6f, -489.6f, 13.1f);
 								}else{
 									bool bClearViewOutside = true;
-									CVector dirOutside = pTargetEntity->GetPosition() - garageCenter;
-									dirOutside.z = 0.0f;
-									dirOutside.Normalise();
+									// Delegate the horizontal direction to the C implementation
+									CVector dirOutside = NormalisedHorizontal(pTargetEntity->GetPosition() - garageCenter);
 									float zoneDim = stairsZone->maxx - stairsZone->minx;
 									if(zoneDim < stairsZone->maxy - stairsZone->miny)
 										zoneDim = stairsZone->maxy - stairsZone->miny;
@@ -1306,8 +1298,8 @@ CCamera::CamControl(void)
 						// Check whether to start aiming in crim-in-front mode
 						if(Cams[ActiveCam].Mode != CCam::MODE_SYPHON){
 							float angleDiff = camAngle - targetAngle;
-							while(angleDiff >= PI) angleDiff -= 2*PI;
-							while(angleDiff < -PI) angleDiff += 2*PI;
+							// Delegate the wrap of the angle to the C implementation
+							CameraMath_MakeAngleLessThan180(&angleDiff);
 							if(Abs(angleDiff) < HALFPI && playerTargetDist < 3.5f && playerToTarget.z > -1.0f)
 								ReqMode = CCam::MODE_SYPHON_CRIM_IN_FRONT;
 						}
@@ -1329,8 +1321,11 @@ CCamera::CamControl(void)
 								CEntity *entity;
 								CColPoint colPoint;
 								CVector fixedPos = pTargetEntity->GetPosition();
-								fixedPos.x += fixedModeDist*Cos(camAngle);
-								fixedPos.y += fixedModeDist*Sin(camAngle);
+								// Delegate the offset of the camera to the C implementation
+								float orbitX, orbitY;
+								Camera_OrbitOffset(fixedModeDist, camAngle, &orbitX, &orbitY);
+								fixedPos.x += orbitX;
+								fixedPos.y += orbitY;
 								fixedPos.z += 1.15f;
 								if(CWorld::ProcessLineOfSight(pTargetEntity->GetPosition(), fixedPos, colPoint, entity, true, false, false, true, false, true, true))
 									SetCamPositionForFixedMode(CollisionVector_ToNative(colPoint.point), CVector(0.0f, 0.0f, 0.0f));
@@ -1578,9 +1573,8 @@ CCamera::CamControl(void)
 					m_bUseTransitionBeta = true;
 					switchByJumpCut = true;
 					if(Cams[ActiveCam].Mode == CCam::MODE_TOP_DOWN_PED){
-						CVector front = Cams[ActiveCam].Source - FindPlayerPed()->GetPosition();
-						front.z = 0.0f;
-						front.Normalise();
+						// Delegate the horizontal direction to the C implementation
+						CVector front = NormalisedHorizontal(Cams[ActiveCam].Source - FindPlayerPed()->GetPosition());
 #ifdef FIX_BUGS
 						// this is almost as bad as the bugged code
 						if(front.x == 0.001f && front.y == 0.001f)
@@ -1911,15 +1905,11 @@ CCamera::CamShake(float strength, float x, float y, float z)
 {
 	CVector Dist = Cams[ActiveCam].Source - CVector(x, y, z);
 	// a bit complicated...
-	float dist2d = Sqrt(SQR(Dist.x) + SQR(Dist.y));
-	float dist3d = Sqrt(SQR(dist2d) + SQR(Dist.z));
-	if(dist3d > 100.0f) dist3d = 100.0f;
-	if(dist3d < 0.0f) dist3d = 0.0f;
-	float mult = 1.0f - dist3d/100.0f;
+	// Delegate the multiplier of the distance and the test for the shake to the C implementation
+	float mult = Camera_ShakeDistanceMultiplier(Dist.x, Dist.y, Dist.z);
 
-	float curForce = mult*(m_fCamShakeForce - ((*Timer_GetTimeInMilliseconds()) - m_uiCamShakeStart)/1000.0f);
 	strength = mult*strength;
-	if(Clamp(curForce, 0.0f, 2.0f) < strength){
+	if(Camera_ShakeReplaces(mult, m_fCamShakeForce, (*Timer_GetTimeInMilliseconds()) - m_uiCamShakeStart, strength)){
 		m_fCamShakeForce = strength;
 		m_uiCamShakeStart = (*Timer_GetTimeInMilliseconds());
 	}
@@ -1929,8 +1919,8 @@ CCamera::CamShake(float strength, float x, float y, float z)
 void
 CamShakeNoPos(CCamera *cam, float strength)
 {
-	float curForce = cam->m_fCamShakeForce - ((*Timer_GetTimeInMilliseconds()) - cam->m_uiCamShakeStart)/1000.0f;
-	if(Clamp(curForce, 0.0f, 2.0f) < strength){
+	// Delegate the test for the shake to the C implementation
+	if(Camera_ShakeReplaces(1.0f, cam->m_fCamShakeForce, (*Timer_GetTimeInMilliseconds()) - cam->m_uiCamShakeStart, strength)){
 		cam->m_fCamShakeForce = strength;
 		cam->m_uiCamShakeStart = (*Timer_GetTimeInMilliseconds());
 	}
@@ -1947,20 +1937,13 @@ float fAvoidProbTimerDamp = 0.9f;
 void
 CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVector &NewSource, float FOV)
 {
-	float Beta = 0.0f;
-	float Alpha = 0.0f;
-
 	CVector vDist = TargetPos - Source;
 	m_vecClearGeometryVec = CVector(0.0f, 0.0f, 0.0f);
-	float fDist = vDist.Magnitude();
-	float fDistOnGround = vDist.Magnitude2D();
-	if(vDist.x == 0.0f && vDist.y == 0.0f)
-		Beta = General_GetATanOfXY(GetForward().x, GetForward().y);
-	else
-		Beta = General_GetATanOfXY(vDist.x, vDist.y);
-	if(fDistOnGround != 0.0f || vDist.z != 0.0f)
-		Alpha = General_GetATanOfXY(fDistOnGround, vDist.z);
-	CVector Front(Cos(Alpha)*Cos(Beta), Cos(Alpha)*Sin(Beta), Sin(Alpha));
+	// Delegate the direction to the target to the C implementation
+	float fDist;
+	float frontXYZ[3];
+	Camera_AvoidFront(vDist.x, vDist.y, vDist.z, GetForward().x, GetForward().y, frontXYZ, &fDist);
+	CVector Front(frontXYZ[0], frontXYZ[1], frontXYZ[2]);
 	NewSource = TargetPos - Front*fDist;
 	Front.Normalise();
 
@@ -1993,19 +1976,21 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 	static float fClearGeomAmount;
 	static float fClearGeomAmountSpeed;
 	float Near = RwCameraGetNearClipPlane(Scene.camera);
-	float ViewPlaneHeight = Tan(DEGTORAD(FOV) / 2.0f);
-	float ViewPlaneWidth = ViewPlaneHeight * Draw_CalculateAspectRatio() * fAvoidTweakFOV;
+	// Delegate the width of the view plane to the C implementation
+	float ViewPlaneWidth = Camera_AvoidViewPlaneWidth(FOV, Draw_CalculateAspectRatio(), fAvoidTweakFOV);
 	CVector Center = NewSource + Front*Near;
 	float fClearGeomTarget = 0.0f;
 	if(CWorld::TestSphereAgainstWorld(Center, ViewPlaneWidth, nil, true, false, false, true, false, true)){
 		CVector CamToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - NewSource;
 		float FrontDist = DotProduct(CamToCol, Front);
 		CVector CenterToCol = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - Center;
-		if(FrontDist < DEFAULT_NEAR && FrontDist > fCloseNearClipLimit){
-			if(FrontDist < RwCameraGetNearClipPlane(Scene.camera))
-				RwCameraSetNearClipPlane(Scene.camera, FrontDist);
-		}else if(FrontDist < fCloseNearClipLimit)
-			RwCameraSetNearClipPlane(Scene.camera, fCloseNearClipLimit);
+		// Delegate the choice of the near clip plane to the C implementation
+		{
+			float currentNear = RwCameraGetNearClipPlane(Scene.camera);
+			float newNear = Camera_AvoidNearClip(FrontDist, fCloseNearClipLimit, DEFAULT_NEAR, currentNear);
+			if(newNear != currentNear || FrontDist < fCloseNearClipLimit)
+				RwCameraSetNearClipPlane(Scene.camera, newNear);
+		}
 
 		float ColDepth = ViewPlaneWidth - CenterToCol.Magnitude();	// amount of radius in collision
 		CenterToCol.Normalise();
@@ -2018,17 +2003,8 @@ CCamera::AvoidTheGeometry(const CVector &Source, const CVector &TargetPos, CVect
 
 		if(pTargetEntity && pTargetEntity->IsPed() && RwCameraGetNearClipPlane(Scene.camera) < 2.0f*fCloseNearClipLimit){
 			float TargetNormalDir = DotProduct(Normal, pTargetEntity->GetForward());
-			if(TargetNormalDir < 0.0f){
-				// target looking towards collision
-				if(m_fAvoidTheGeometryProbsTimer < 0.0f)
-					m_fAvoidTheGeometryProbsTimer = 0.0f;
-				m_fAvoidTheGeometryProbsTimer += (*Timer_GetTimeStep());
-			}else if(TargetNormalDir > 0.5f){
-				// target looking away from collision
-				if(m_fAvoidTheGeometryProbsTimer > 0.0f)
-					m_fAvoidTheGeometryProbsTimer = 0.0f;
-				m_fAvoidTheGeometryProbsTimer -= (*Timer_GetTimeStep());
-			}
+			// Delegate the timer to the C implementation: it counts up when the target looks towards the collision and down when it looks away
+			m_fAvoidTheGeometryProbsTimer = Camera_GeomProbsTimer(m_fAvoidTheGeometryProbsTimer, TargetNormalDir, (*Timer_GetTimeStep()));
 
 			if(m_nAvoidTheGeometryProbsDirn == 0){
 				if(CrossProduct(pTargetEntity->GetPosition() - NewSource, Normal).z > 0.0f)
@@ -2350,8 +2326,8 @@ CCamera::StartTransition(int16 newMode)
 		else
 			targetBeta = camBeta;
 		deltaBeta = targetBeta - camBeta;
-		while(deltaBeta >= PI) deltaBeta -= 2*PI;
-		while(deltaBeta < -PI) deltaBeta += 2*PI;
+		// Delegate the wrap of the angle to the C implementation
+		CameraMath_MakeAngleLessThan180(&deltaBeta);
 		deltaBeta = Abs(deltaBeta);
 
 		door = FindPlayerPed()->m_vehDoor;
@@ -2623,13 +2599,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd = FindPlayerCoors() - m_vecFixedModeSource;
 		fwd.z = 0.0f;
 
-		// too far and driving away from cam
-		if(fwd.Magnitude() > 40.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
-			return true;
-		// too close
-		if(fwd.Magnitude() < 1.6f)
-			return true;
-		return false;
+		// Delegate the distance checks to the C implementation
+		return Camera_ScriptDistanceEnds(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 40.0f, 1.6f);
 	case OBBE_2:
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return true;
@@ -2641,9 +2612,9 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 
 		if(fwd.Magnitude() < 2.0f)
 			// very close, fix near clip
-			SetNearClipScript(Max(fwd.Magnitude()*0.5f, 0.05f));
+			SetNearClipScript(Camera_ScriptNearClip(fwd.Magnitude()));
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 29.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 29.0f))
 			return true;
 		// too close
 		if(fwd.Magnitude() < 2.0f)
@@ -2657,7 +2628,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 48.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 48.0f))
 			return true;
 		return false;
 	case OBBE_1STPERSON:
@@ -2672,7 +2643,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 38.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 38.0f))
 			return true;
 		return false;
 	case OBBE_ONSTRING:
@@ -2698,7 +2669,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 20.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 20.0f))
 			return true;
 		return false;
 	case OBBE_10:
@@ -2709,7 +2680,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 8.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 8.0f))
 			return true;
 		return false;
 	case OBBE_11:
@@ -2720,7 +2691,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 25.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 25.0f))
 			return true;
 		return false;
 	case OBBE_12:
@@ -2731,7 +2702,7 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 		fwd.z = 0.0f;
 
 		// too far and driving away from cam
-		if(fwd.Magnitude() > 8.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
+		if(Camera_ScriptTargetPullingAway(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 8.0f))
 			return true;
 		return false;
 	case OBBE_13:
@@ -2750,11 +2721,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
 
-			// too far and driving away from cam
-			if(fwd.Magnitude() > 44.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
-				return true;
-			// too close
-			if(fwd.Magnitude() < 2.0f)
+			// Delegate the distance checks to the C implementation
+			if(Camera_ScriptDistanceEnds(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 44.0f, 2.0f))
 				return true;
 		}
 		return false;
@@ -2765,11 +2733,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
 
-			// too far and driving away from cam
-			if(fwd.Magnitude() > 50.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
-				return true;
-			// too close
-			if(fwd.Magnitude() < 3.0f)
+			// Delegate the distance checks to the C implementation
+			if(Camera_ScriptDistanceEnds(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 50.0f, 3.0f))
 				return true;
 		}
 		return false;
@@ -2780,11 +2745,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
 
-			// too far
-			if(fwd.Magnitude() > 50.0f)
-				return true;
-			// too close
-			if(fwd.Magnitude() < 2.0f)
+			// Delegate the distance checks to the C implementation
+			if(Camera_ScriptDistanceOutOfRange(fwd.Magnitude(), 50.0f, 2.0f))
 				return true;
 		}
 		return false;
@@ -2794,11 +2756,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 				return true;
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 
-			// too far
-			if(fwd.Magnitude() > 57.0f)
-				return true;
-			// too close
-			if(fwd.Magnitude() < 1.0f)
+			// Delegate the distance checks to the C implementation
+			if(Camera_ScriptDistanceOutOfRange(fwd.Magnitude(), 57.0f, 1.0f))
 				return true;
 		}
 		return false;
@@ -2809,11 +2768,8 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 			fwd = FindPlayerCoors() - m_vecFixedModeSource;
 			fwd.z = 0.0f;
 
-			// too far
-			if(fwd.Magnitude() > 36.0f)
-				return true;
-			// too close
-			if(fwd.Magnitude() < 2.0f)
+			// Delegate the distance checks to the C implementation
+			if(Camera_ScriptDistanceOutOfRange(fwd.Magnitude(), 36.0f, 2.0f))
 				return true;
 		}
 		return false;
@@ -2823,6 +2779,28 @@ CCamera::IsItTimeForNewcam(int32 obbeMode, int32 time)
 	default:
 		return false;
 	}
+}
+
+static CVector
+ScriptCamAheadPosition(const CVector &coors, const CVector &speed, float ahead)
+{
+	float c[3] = { coors.x, coors.y, coors.z };
+	float sp[3] = { speed.x, speed.y, speed.z };
+	float out[3];
+
+	Camera_AheadPosition(c, sp, ahead, out);
+	return CVector(out[0], out[1], out[2]);
+}
+
+static CVector
+ScriptCamAheadAndSidePosition(const CVector &coors, const CVector &speed, float ahead, float side)
+{
+	float c[3] = { coors.x, coors.y, coors.z };
+	float sp[3] = { speed.x, speed.y, speed.z };
+	float out[3];
+
+	Camera_AheadAndSidePosition(c, sp, ahead, side, out);
+	return CVector(out[0], out[1], out[2]);
 }
 
 bool
@@ -2850,11 +2828,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_1:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 20.0f*playerSpeed;
-		camPos += 3.0f*CVector(playerSpeed.y, -playerSpeed.x, 0.0f);
+		// Delegate the position ahead of and beside the player to the C implementation
+		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 20.0f, 3.0f);
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
 
@@ -2871,12 +2846,11 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 
 		fwd = FindPlayerCoors() - camPos;
 		fwd.z = 0.0f;
-		// too far and driving away from cam
-		if(fwd.Magnitude() > 40.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 2.5f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartVerdict(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 40.0f, 2.5f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -2885,11 +2859,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat() && pTargetEntity->GetModelIndex() != MI_SKIMMER)
 			return false;
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 16.0f*playerSpeed;
-		camPos += 2.5f*CVector(playerSpeed.y, -playerSpeed.x, 0.0f);
+		// Delegate the position ahead of and beside the player to the C implementation
+		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 16.0f, 2.5f);
 
 		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
@@ -2904,23 +2875,19 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 
 		fwd = FindPlayerCoors() - camPos;
 		fwd.z = 0.0f;
-		// too far and driving away from cam
-		if(fwd.Magnitude() > 29.0f && DotProduct(FindPlayerSpeed(), fwd) > 0.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 2.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartVerdict(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd), 29.0f, 2.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
 		return true;
 	case OBBE_3:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 30.0f*playerSpeed;
-		camPos += 8.0f*CVector(playerSpeed.y, -playerSpeed.x, 0.0f);
+		// Delegate the position ahead of and beside the player to the C implementation
+		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 30.0f, 8.0f);
 
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
@@ -2933,11 +2900,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_5:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 30.0f*playerSpeed;
-		camPos += 6.0f*CVector(playerSpeed.y, -playerSpeed.x, 0.0f);
+		// Delegate the position ahead of and beside the player to the C implementation
+		camPos = ScriptCamAheadAndSidePosition(camPos, FindPlayerSpeed(), 30.0f, 6.0f);
 
 		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
@@ -2977,8 +2941,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
 				float dist = (veh->GetPosition() - FindPlayerCoors()).Magnitude();
 				if(dist < 30.0f){
-					if(dx*FindPlayerVehicle()->GetForward().x + dy*FindPlayerVehicle()->GetForward().y < 0.0f &&
-					   veh->GetForward().x*FindPlayerVehicle()->GetForward().x + veh->GetForward().y*FindPlayerVehicle()->GetForward().y > 0.8f){
+					if(Camera_CopCarFollowsPlayer(dx, dy, FindPlayerVehicle()->GetForward().x, FindPlayerVehicle()->GetForward().y, veh->GetForward().x, veh->GetForward().y)){
 						TakeControl(veh, CCam::MODE_CAM_ON_A_STRING, JUMP_CUT, CAMCONTROL_OBBE);
 						return true;
 					}
@@ -3007,8 +2970,7 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 				float dy = veh->GetPosition().y - FindPlayerCoors().y;
 				float dist = (veh->GetPosition() - FindPlayerCoors()).Magnitude();
 				if(dist < 30.0f){
-					if(dx*FindPlayerVehicle()->GetForward().x + dy*FindPlayerVehicle()->GetForward().y < 0.0f &&
-					   veh->GetForward().x*FindPlayerVehicle()->GetForward().x + veh->GetForward().y*FindPlayerVehicle()->GetForward().y > 0.8f){
+					if(Camera_CopCarFollowsPlayer(dx, dy, FindPlayerVehicle()->GetForward().x, FindPlayerVehicle()->GetForward().y, veh->GetForward().x, veh->GetForward().y)){
 						target = Multiply3x3(veh->GetMatrix(), CVector(-1.4f, -2.3f, 0.3f));
 						target += veh->GetPosition();
 						if(!CWorld::GetIsLineOfSightClear(veh->GetPosition(), target, true, false, false, false, false, false, false))
@@ -3023,10 +2985,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 
 	case OBBE_9:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 15.0f*playerSpeed;
+		// Delegate the position ahead of the player to the C implementation
+		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 15.0f);
 		camPos += CVector(2.0f, 1.0f, 0.0f);
 
 		ground = CWorld::FindGroundZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
@@ -3045,10 +3005,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_10:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 5.0f*playerSpeed;
+		// Delegate the position ahead of the player to the C implementation
+		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 5.0f);
 		camPos += CVector(2.0f, 1.0f, 0.5f);
 
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
@@ -3059,10 +3017,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_11:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 20.0f*playerSpeed;
+		// Delegate the position ahead of the player to the C implementation
+		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 20.0f);
 		camPos += CVector(2.0f, 1.0f, 20.0f);
 
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
@@ -3073,10 +3029,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		return true;
 	case OBBE_12:
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 5.0f*playerSpeed;
+		// Delegate the position ahead of the player to the C implementation
+		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 5.0f);
 		camPos += CVector(2.0f, 1.0f, 10.5f);
 
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
@@ -3108,10 +3062,8 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() == nil)
 			return false;
 		camPos = FindPlayerCoors();
-		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		camPos += 34.0f*playerSpeed;
+		// Delegate the position ahead of the player to the C implementation
+		camPos = ScriptCamAheadPosition(camPos, FindPlayerSpeed(), 34.0f);
 		camPos.z = FindPlayerCoors().z + 0.5f;
 		if(FindPlayerVehicle()->IsBoat())
 			camPos.z += 1.0f;
@@ -3122,12 +3074,11 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		fwd = FindPlayerCoors() - camPos;
 		fwd2 = FindPlayerCoors() - camPos;
 		fwd2.z = 0.0f;
-		// too far and driving away from cam
-		if(fwd.Magnitude() > 44.0f && DotProduct(FindPlayerSpeed(), fwd2) > 0.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 3.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartVerdict(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd2), 44.0f, 3.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -3136,12 +3087,13 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() == nil)
 			return false;
 		camPos = FindPlayerCoors();
+		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(60.0f);
-		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
-		playerSpeed.Normalise();
+		{
+			float obbeDir[3];
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(60.0f), true, obbeDir);
+			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+		}
 		camPos += 30.0f*playerSpeed;
 		camPos.z = FindPlayerCoors().z - 5.5f;
 
@@ -3149,23 +3101,18 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
-		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
-			float waterOffset = 1.0f;
-			if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
-				waterOffset = -2.0f;
-			if(camPos.z < ground + waterOffset)
-				camPos.z = ground + waterOffset;
-		}
+		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
+			// Delegate the raising above the water to the C implementation
+			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
-		// too far
-		if(fwd.Magnitude() > 50.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 3.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartRangeVerdict(fwd.Magnitude(), 50.0f, 3.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -3174,12 +3121,13 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(FindPlayerVehicle() == nil)
 			return false;
 		camPos = FindPlayerCoors();
+		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
-		playerSpeed.z = 0.0f;
-		playerSpeed.Normalise();
-		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(190.0f);
-		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
-		playerSpeed.Normalise();
+		{
+			float obbeDir[3];
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(190.0f), true, obbeDir);
+			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+		}
 		camPos += 25.0f*playerSpeed;
 		camPos.z = FindPlayerCoors().z - 1.0f;
 
@@ -3187,25 +3135,20 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		ground = CWorld::FindRoofZFor3DCoord(camPos.x, camPos.y, camPos.z+5.0f, &foundGround);
 		if(foundGround)
 			camPos.z = ground + 0.5f;
-		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
-			float waterOffset = 1.0f;
-			if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
-				waterOffset = -2.0f;
-			if(camPos.z < ground + waterOffset)
-				camPos.z = ground + waterOffset;
-		}
+		else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground))
+			// Delegate the raising above the water to the C implementation
+			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
 		fwd2 = FindPlayerCoors() - camPos;
 		fwd2.z = 0.0f;
-		// too far and driving away from cam
-		if(fwd.Magnitude() > 50.0f && DotProduct(FindPlayerSpeed(), fwd2) > 0.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 2.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartVerdict(fwd.Magnitude(), DotProduct(FindPlayerSpeed(), fwd2), 50.0f, 2.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -3216,10 +3159,13 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			camPos.z += 23.0f;
 		else
 			camPos.z -= 23.0f;
+		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
-		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(145.0f);
-		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
-		playerSpeed.Normalise();
+		{
+			float obbeDir[3];
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(145.0f), false, obbeDir);
+			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+		}
 		camPos += 15.0f*playerSpeed;
 
 		foundGround = false;
@@ -3230,25 +3176,21 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(ground == true)
 #endif
 		{
-			if(camPos.z < ground)
-				camPos.z = ground + 0.5f;
+			// Delegate the raising above the ground to the C implementation
+			camPos.z = Camera_RaisedAboveGround(camPos.z, ground);
 		}else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
-			float waterOffset = 1.0f;
-			if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
-				waterOffset = -2.0f;
-			if(camPos.z < ground + waterOffset)
-				camPos.z = ground + waterOffset;
+			// Delegate the raising above the water to the C implementation
+			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		}
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
-		// too far
-		if(fwd.Magnitude() > 57.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 1.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartRangeVerdict(fwd.Magnitude(), 57.0f, 1.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -3259,10 +3201,13 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 			camPos.z += 4.0f;
 		else
 			camPos.z -= 1.0f;
+		// Delegate the direction to the C implementation
 		playerSpeed = FindPlayerSpeed();
-		angle = General_GetATanOfXY(playerSpeed.x, playerSpeed.y) + DEGTORAD(28.0f);
-		playerSpeed += CVector(Cos(angle), Sin(angle), 0.0f);
-		playerSpeed.Normalise();
+		{
+			float obbeDir[3];
+			Camera_ObbeOffsetDirection(playerSpeed.x, playerSpeed.y, playerSpeed.z, DEGTORAD(28.0f), false, obbeDir);
+			playerSpeed = CVector(obbeDir[0], obbeDir[1], obbeDir[2]);
+		}
 		camPos += 12.5f*playerSpeed;
 
 		foundGround = false;
@@ -3273,25 +3218,21 @@ CCamera::TryToStartNewCamMode(int obbeMode)
 		if(ground == true)
 #endif
 		{
-			if(camPos.z < ground)
-				camPos.z = ground + 0.5f;
+			// Delegate the raising above the ground to the C implementation
+			camPos.z = Camera_RaisedAboveGround(camPos.z, ground);
 		}else if(CWaterLevel::GetWaterLevelNoWaves(camPos.x, camPos.y, camPos.z, &ground)){
-			float waterOffset = 1.0f;
-			if(FindPlayerVehicle() && FindPlayerVehicle()->IsBoat())
-				waterOffset = -2.0f;
-			if(camPos.z < ground + waterOffset)
-				camPos.z = ground + waterOffset;
+			// Delegate the raising above the water to the C implementation
+			camPos.z = Camera_RaisedAboveWater(camPos.z, ground, FindPlayerVehicle() && FindPlayerVehicle()->IsBoat());
 		}
 		if(!CWorld::GetIsLineOfSightClear(FindPlayerCoors(), camPos, true, false, false, false, false, false, false))
 			return false;
 
 		fwd = FindPlayerCoors() - camPos;
-		// too far
-		if(fwd.Magnitude() > 36.0f)
-			return false;
-		// too close
-		if(fwd.Magnitude() < 2.0f)
-			return true;
+		// Delegate the distance checks to the C implementation
+		switch(Camera_ScriptStartRangeVerdict(fwd.Magnitude(), 36.0f, 2.0f)){
+		case 0: return false;
+		case 1: return true;
+		}
 
 		SetCamPositionForFixedMode(camPos, CVector(0.0f, 0.0f, 0.0f));
 		TakeControl(FindPlayerEntity(), CCam::MODE_FIXED, JUMP_CUT, CAMCONTROL_OBBE);
@@ -4019,36 +3960,20 @@ CCamera::CalculateDerivedValues(void)
 	m_cameraMatrix = Invert(GetMatrix());
 
 	float hfov = DEGTORAD(Draw_GetScaledFOV()/2.0f);
-	float c = Cos(hfov);
-	float s = Sin(hfov);
-
-	// right plane
-	m_vecFrustumNormals[0] = CVector(c, -s, 0.0f);
-	// left plane
-	m_vecFrustumNormals[1] = CVector(-c, -s, 0.0f);
-
 	Draw_CalculateAspectRatio();
-	c /= SCREEN_ASPECT_RATIO;
-	s /= SCREEN_ASPECT_RATIO;
-	// bottom plane
-	m_vecFrustumNormals[2] = CVector(0.0f, -s, -c);
-	// top plane
-	m_vecFrustumNormals[3] = CVector(0.0f, -s, c);
+	// Delegate the normals of the planes of the frustum to the C implementation
+	float frustumNormals[4][3];
+	Camera_FrustumNormals(hfov, SCREEN_ASPECT_RATIO, frustumNormals);
+	for(int i = 0; i < 4; i++)
+		m_vecFrustumNormals[i] = CVector(frustumNormals[i][0], frustumNormals[i][1], frustumNormals[i][2]);
 
 	if(GetForward().x == 0.0f && GetForward().y == 0.0f)
 		GetForward().x = 0.0001f;
 	else
 		Orientation = Atan2(GetForward().x, GetForward().y);
 
-	CamFrontXNorm = GetForward().x;
-	CamFrontYNorm = GetForward().y;
-	float l = Sqrt(SQR(CamFrontXNorm) + SQR(CamFrontYNorm));
-	if(l == 0.0f)
-		CamFrontXNorm = 1.0f;
-	else{
-		CamFrontXNorm /= l;
-		CamFrontYNorm /= l;
-	}
+	// Delegate the normalised direction on the ground to the C implementation
+	Camera_FrontNormalised(GetForward().x, GetForward().y, &CamFrontXNorm, &CamFrontYNorm);
 }
 
 bool

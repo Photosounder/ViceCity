@@ -3,6 +3,7 @@
 #include "common.h"
 
 #include "Script.h"
+#include "ScriptArea.h"
 #include "ScriptCommands.h"
 
 #include "Camera.h"
@@ -465,11 +466,8 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 		CollectParameters(&m_nIp, 1);
 		CPed* pPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		float angle = pPed->bInVehicle ? pPed->m_pMyVehicle->GetForward().Heading() : pPed->GetForward().Heading();
-		angle = RADTODEG(angle);
-		if (angle < 0.0f)
-			angle += 360.0f;
-		if (angle > 360.0f)
-			angle -= 360.0f;
+		// Delegate the heading in degrees to the C implementation
+		angle = ScriptArea_HeadingDegrees(angle);
 		*(float*)&ScriptParams[0] = angle;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -492,11 +490,8 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
 		float angle = pPed->bInVehicle ? pPed->m_pMyVehicle->GetForward().Heading() : pPed->GetForward().Heading();
-		angle = RADTODEG(angle);
-		if (angle < 0.0f)
-			angle += 360.0f;
-		if (angle > 360.0f)
-			angle -= 360.0f;
+		// Delegate the heading in degrees to the C implementation
+		angle = ScriptArea_HeadingDegrees(angle);
 		*(float*)&ScriptParams[0] = angle;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -520,11 +515,8 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 				script_assert(pVehicle);
 		float angle = pVehicle->GetForward().Heading();
-		angle = RADTODEG(angle);
-		if (angle < 0.0f)
-			angle += 360.0f;
-		if (angle > 360.0f)
-			angle -= 360.0f;
+		// Delegate the heading in degrees to the C implementation
+		angle = ScriptArea_HeadingDegrees(angle);
 		*(float*)&ScriptParams[0] = angle;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -545,11 +537,8 @@ int8 CRunningScript::ProcessCommands300To399(int32 command)
 		CObject* pObject = ((CObject*)CPool_GetAt(CPools::GetObjectPool(), ScriptParams[0]));
 				script_assert(pObject);
 		float angle = pObject->GetForward().Heading();
-		angle = RADTODEG(angle);
-		if (angle < 0.0f)
-			angle += 360.0f;
-		if (angle > 360.0f)
-			angle -= 360.0f;
+		// Delegate the heading in degrees to the C implementation
+		angle = ScriptArea_HeadingDegrees(angle);
 		*(float*)&ScriptParams[0] = angle;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -880,19 +869,16 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		float infY = *(float*)&ScriptParams[2];
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
-		if (infX > supX){
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_GUARD_SPOT, pos, radius);
 		return 0;
@@ -1435,19 +1421,16 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		float infY = *(float*)&ScriptParams[2];
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_GOTO_AREA_ON_FOOT, pos, radius);
 		return 0;
@@ -1536,18 +1519,12 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX){
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY){
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ){
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.SwitchRoadsOffInArea(infX, supX, infY, supY, infZ, supZ, false);
 		return 0;
 	}
@@ -1560,18 +1537,12 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.SwitchRoadsOffInArea(infX, supX, infY, supY, infZ, supZ, true);
 		return 0;
 	}
@@ -1636,14 +1607,10 @@ int8 CRunningScript::ProcessCommands400To499(int32 command)
 		float infY = *(float*)&ScriptParams[3];
 		float supX = *(float*)&ScriptParams[4];
 		float supY = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[4];
-			supX = *(float*)&ScriptParams[2];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[5];
-			supY = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CCranes::ActivateCrane(infX, supX, infY, supY,
 			*(float*)&ScriptParams[6], *(float*)&ScriptParams[7], *(float*)&ScriptParams[8],
 			DEGTORAD(*(float*)&ScriptParams[9]), false, false,

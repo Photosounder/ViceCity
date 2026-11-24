@@ -41,4 +41,10 @@ bool PlayerInfoLogic_EvaluateCarPosition(float carX, float carY, float pedX, flo
 	}
 	return false;
 }
+int32_t PlayerInfo_CancelStuntTimer(int32_t timer, float timeStepMs, float rate)
+{
+	float v = timer - timeStepMs * rate;
+
+	return (int32_t)(0.0f > v ? 0.0f : v);
+}
 //- rouz edit (Claude)

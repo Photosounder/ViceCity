@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include "Script.h"
+#include "ScriptArea.h"
 #include "ScriptCommands.h"
 
 #include "Boat.h"
@@ -111,7 +112,8 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 	case COMMAND_SQRT:
 	{
 		CollectParameters(&m_nIp, 1);
-		*(float*)&ScriptParams[0] = Sqrt(*(float*)&ScriptParams[0]);
+		// Delegate the square root to the C implementation
+		*(float*)&ScriptParams[0] = ScriptMath_Sqrt(*(float*)&ScriptParams[0]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	}
@@ -536,18 +538,12 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.SwitchPedRoadsOffInArea(infX, supX, infY, supY, infZ, supZ, false);
 		return 0;
 	}
@@ -560,18 +556,12 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.SwitchPedRoadsOffInArea(infX, supX, infY, supY, infZ, supZ, true);
 		return 0;
 	}
@@ -679,19 +669,16 @@ int8 CRunningScript::ProcessCommands500To599(int32 command)
 		float infY = *(float*)&ScriptParams[2];
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_RUN_TO_AREA, pos, radius);
 		return 0;
@@ -1007,21 +994,18 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		CollectParameters(&m_nIp, 5);
 		float infX = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[3];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
 		float infY = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[4];
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		CTheScripts::SetObjectiveForAllPedsInCollective(ScriptParams[0], OBJECTIVE_GUARD_AREA, pos, radius);
 		return 0;
 	}
@@ -1158,21 +1142,18 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		CollectParameters(&m_nIp, 5);
 		float infX = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[3];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
 		float infY = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[4];
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		CTheScripts::SetObjectiveForAllPedsInCollective(ScriptParams[0], OBJECTIVE_GOTO_AREA_ON_FOOT, pos, radius);
 		return 0;
 	}
@@ -1198,21 +1179,18 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		CollectParameters(&m_nIp, 5);
 		float infX = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[3];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
 		float infY = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[4];
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		CTheScripts::SetObjectiveForAllPedsInCollective(ScriptParams[0], OBJECTIVE_RUN_TO_AREA, pos, radius);
 		return 0;
 	}
@@ -1494,19 +1472,16 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		float infY = *(float*)&ScriptParams[2];
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		pPed->bScriptObjectiveCompleted = false;
 		pPed->SetObjective(OBJECTIVE_GOTO_AREA_ANY_MEANS, pos, radius);
 		return 0;
@@ -1518,21 +1493,18 @@ int8 CRunningScript::ProcessCommands600To699(int32 command)
 		CollectParameters(&m_nIp, 5);
 		float infX = *(float*)&ScriptParams[1];
 		float supX = *(float*)&ScriptParams[3];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[1];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
 		float infY = *(float*)&ScriptParams[2];
 		float supY = *(float*)&ScriptParams[4];
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CVector pos;
 		pos.x = (infX + supX) / 2;
 		pos.y = (infY + supY) / 2;
 		pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float radius = Max(pos.x - infX, pos.y - infY);
+		// Delegate the radius of the area to the C implementation
+		float radius = ScriptArea_Radius(pos.x, pos.y, infX, infY);
 		CTheScripts::SetObjectiveForAllPedsInCollective(ScriptParams[0], OBJECTIVE_GOTO_AREA_ANY_MEANS, pos, radius);
 		return 0;
 	}
@@ -1805,7 +1777,7 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 			pVehicle->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS_ACCURATE;
 		pVehicle->SetStatus(STATUS_PHYSICS);
 		pVehicle->bEngineOn = true;
-		pVehicle->AutoPilot.m_nCruiseSpeed = Max(1, pVehicle->AutoPilot.m_nCruiseSpeed);
+		pVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(1, pVehicle->AutoPilot.m_nCruiseSpeed);
 		pVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}
@@ -1942,7 +1914,7 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		pBoat->AutoPilot.m_vecDestinationCoors = AutoPilot_FromVector(pos);
 		pBoat->SetStatus(STATUS_PHYSICS);
 		pBoat->bEngineOn = true;
-		pBoat->AutoPilot.m_nCruiseSpeed = Max(1, pBoat->AutoPilot.m_nCruiseSpeed);
+		pBoat->AutoPilot.m_nCruiseSpeed = General_MaxInt(1, pBoat->AutoPilot.m_nCruiseSpeed);
 		pBoat->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}
@@ -2304,18 +2276,12 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		UpdateCompareFlag(ProjectileInfo_IsProjectileInRange(infX, supX, infY, supY, infZ, supZ, false));
 		if (CTheScripts::DbgFlag)
 			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
@@ -2330,18 +2296,12 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		UpdateCompareFlag(ProjectileInfo_IsProjectileInRange(infX, supX, infY, supY, infZ, supZ, true));
 		if (CTheScripts::DbgFlag)
 			CTheScripts::DrawDebugCube(infX, infY, infZ, supX, supY, supZ);
@@ -2392,12 +2352,14 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 	//case COMMAND_SET_CUTSCENE_HEAD_ANIM:
 	case COMMAND_SIN:
 		CollectParameters(&m_nIp, 1);
-		*(float*)&ScriptParams[0] = Sin(DEGTORAD(*(float*)&ScriptParams[0]));
+		// Delegate the sine to the C implementation
+		*(float*)&ScriptParams[0] = ScriptMath_SinDegrees(*(float*)&ScriptParams[0]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	case COMMAND_COS:
 		CollectParameters(&m_nIp, 1);
-		*(float*)&ScriptParams[0] = Cos(DEGTORAD(*(float*)&ScriptParams[0]));
+		// Delegate the cosine to the C implementation
+		*(float*)&ScriptParams[0] = ScriptMath_CosDegrees(*(float*)&ScriptParams[0]);
 		StoreParameters(&m_nIp, 1);
 		return 0;
 	case COMMAND_GET_CAR_FORWARD_X:
@@ -2407,7 +2369,8 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 		//- rouz edit (ChatGPT)
-		float forwardX = pVehicle->GetForward().x / pVehicle->GetForward().Magnitude2D();
+		// Delegate the direction to the C implementation
+		float forwardX = ScriptMath_GroundDirection(pVehicle->GetForward().x, pVehicle->GetForward().x, pVehicle->GetForward().y);
 		*(float*)&ScriptParams[0] = forwardX;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -2419,7 +2382,8 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		// Access raw storage through the C store or pool API
 		CVehicle* pVehicle = ((CVehicle*)CPool_GetAt(CPools::GetVehiclePool(), ScriptParams[0]));
 		//- rouz edit (ChatGPT)
-		float forwardY = pVehicle->GetForward().y / pVehicle->GetForward().Magnitude2D();
+		// Delegate the direction to the C implementation
+		float forwardY = ScriptMath_GroundDirection(pVehicle->GetForward().y, pVehicle->GetForward().x, pVehicle->GetForward().y);
 		*(float*)&ScriptParams[0] = forwardY;
 		StoreParameters(&m_nIp, 1);
 		return 0;
@@ -2436,14 +2400,10 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		float infY = *(float*)&ScriptParams[3];
 		float supX = *(float*)&ScriptParams[4];
 		float supY = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[4];
-			supX = *(float*)&ScriptParams[2];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[5];
-			supY = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CCranes::ActivateCrane(infX, supX, infY, supY,
 			*(float*)&ScriptParams[6], *(float*)&ScriptParams[7], *(float*)&ScriptParams[8],
 			DEGTORAD(*(float*)&ScriptParams[9]), true, false,
@@ -2593,23 +2553,23 @@ int8 CRunningScript::ProcessCommands700To799(int32 command)
 		return 0;
 	case COMMAND_REGISTER_JUMP_DISTANCE:
 		CollectParameters(&m_nIp, 1);
-		Stats_MaximumJumpDistance = Max(Stats_MaximumJumpDistance, *(float*)&ScriptParams[0]);
+		Stats_MaximumJumpDistance = General_MaxFloat(Stats_MaximumJumpDistance, *(float*)&ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_JUMP_HEIGHT:
 		CollectParameters(&m_nIp, 1);
-		Stats_MaximumJumpHeight = Max(Stats_MaximumJumpHeight, *(float*)&ScriptParams[0]);
+		Stats_MaximumJumpHeight = General_MaxFloat(Stats_MaximumJumpHeight, *(float*)&ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_JUMP_FLIPS:
 		CollectParameters(&m_nIp, 1);
-		Stats_MaximumJumpFlips = Max(Stats_MaximumJumpFlips, ScriptParams[0]);
+		Stats_MaximumJumpFlips = General_MaxInt(Stats_MaximumJumpFlips, ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_JUMP_SPINS:
 		CollectParameters(&m_nIp, 1);
-		Stats_MaximumJumpSpins = Max(Stats_MaximumJumpSpins, ScriptParams[0]);
+		Stats_MaximumJumpSpins = General_MaxInt(Stats_MaximumJumpSpins, ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_JUMP_STUNT:
 		CollectParameters(&m_nIp, 1);
-		Stats_BestStuntJump = Max(Stats_BestStuntJump, ScriptParams[0]);
+		Stats_BestStuntJump = General_MaxInt(Stats_BestStuntJump, ScriptParams[0]);
 		return 0;
 	case COMMAND_REGISTER_UNIQUE_JUMP_FOUND:
 		++Stats_NumberOfUniqueJumpsFound;

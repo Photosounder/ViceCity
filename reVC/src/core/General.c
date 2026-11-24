@@ -1,6 +1,7 @@
 //+ rouz edit (ChatGPT)
 #include "General.h"
 #include "Random.h"
+#include "VectorMath.h"
 #include <ctype.h>
 #include <math.h>
 #define GENERAL_PI ((float)3.14159265358979323846)
@@ -201,4 +202,143 @@ void General_SetRandomSeed(int32_t seed)
 	mysrand(seed);
 }
 
+//+ rouz edit (Claude)
+float General_ReduceAbove(float value, float limit, float step)
+{
+	while (value > limit)
+		value -= step;
+	return value;
+}
+
+float General_RaiseBelow(float value, float limit, float step)
+{
+	while (value < limit)
+		value += step;
+	return value;
+}
+
+float General_ReduceAtLeast(float value, float limit, float step)
+{
+	while (value >= limit)
+		value -= step;
+	return value;
+}
+float General_ObjectRotationDegrees(float w)
+{
+	return -GENERAL_RADTODEG(2.0f * acosf(w));
+}
+float General_AsinClamped(float value)
+{
+	return asinf(value < -1.0f ? -1.0f : value > 1.0f ? 1.0f : value);
+}
+
+float General_AcosClamped(float value)
+{
+	return acosf(value < -1.0f ? -1.0f : value > 1.0f ? 1.0f : value);
+}
+//- rouz edit (Claude)
 //- rouz edit (ChatGPT)
+//+ rouz edit (Claude)
+float General_ClampFloat(float value, float low, float high)
+{
+	return value < low ? low : value > high ? high : value;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+float General_MinFloat(float a, float b)
+{
+	return a < b ? a : b;
+}
+float General_MaxFloat(float a, float b)
+{
+	return a > b ? a : b;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+int General_MaxInt(int a, int b)
+{
+	return a > b ? a : b;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+int General_MinInt(int a, int b)
+{
+	return a < b ? a : b;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+bool General_AbsDiffBelow(float a, float b, float limit)
+{
+	return fabsf(a - b) < limit;
+}
+bool General_AbsDiffAbove(float a, float b, float limit)
+{
+	return fabsf(a - b) > limit;
+}
+bool General_AbsDiffAtLeast(float a, float b, float limit)
+{
+	return fabsf(a - b) >= limit;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+bool General_AbsBelow(float value, float limit)
+{
+	return fabsf(value) < limit;
+}
+bool General_AbsAbove(float value, float limit)
+{
+	return fabsf(value) > limit;
+}
+bool General_AbsGreater(float a, float b)
+{
+	return fabsf(a) > fabsf(b);
+}
+bool General_ManhattanAbove(float dx, float dy, float limit)
+{
+	return fabsf(dx) + fabsf(dy) > limit;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+bool General_AbsBothBelow(float x, float y, float limit)
+{
+	return fabsf(x) < limit && fabsf(y) < limit;
+}
+bool General_AbsBothAbove(float x, float y, float limit)
+{
+	return fabsf(x) > limit && fabsf(y) > limit;
+}
+bool General_AbsEitherAbove(float x, float y, float limit)
+{
+	return fabsf(x) > limit || fabsf(y) > limit;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+int General_AxisFlagMask(float x, float y, float z, float threshold)
+{
+	int mask = 0;
+
+	if (fabsf(x) > threshold) mask |= 1;
+	if (fabsf(y) > threshold) mask |= 2;
+	if (fabsf(z) > threshold) mask |= 4;
+	return mask;
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+bool General_AnyAbsAtLeast3(float a, float b, float c, float limit)
+{
+	return fabsf(a) >= limit || fabsf(b) >= limit || fabsf(c) >= limit;
+}
+float General_AbsDiff(float a, float b)
+{
+	return fabsf(a - b);
+}
+//- rouz edit (Claude)
+//+ rouz edit (Claude)
+void General_NormalisedHorizontal(const float v[3], float out[3])
+{
+	VectorMath3 n = { v[0], v[1], 0.0f };
+
+	VectorMath_Normalise(&n);
+	out[0] = n.x; out[1] = n.y; out[2] = n.z;
+}
+//- rouz edit (Claude)

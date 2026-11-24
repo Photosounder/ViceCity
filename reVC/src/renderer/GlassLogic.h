@@ -25,6 +25,8 @@ void Glass_InitPane(VectorMath3 right, VectorMath3 up, float rightLen, float upL
 void Glass_WindowBounds(VectorMath3 a, VectorMath3 b, VectorMath3 c, VectorMath3 d, VectorMath3 *mins, VectorMath3 *maxs);
 // Push away from an explosion given to a window at the distance dist, the vector is scaled to a length of 0.3
 VectorMath3 Glass_ExplosionPush(VectorMath3 distToGlass, float fDistToGlass);
+// Smallest and largest of four values
+void Glass_MinMax4(float a, float b, float c, float d, float *minimum, float *maximum);
 #ifdef __cplusplus
 }
 #endif

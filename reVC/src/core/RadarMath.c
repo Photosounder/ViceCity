@@ -135,4 +135,39 @@ int32_t Radar_GetNewUniqueBlipIndex(sRadarTraceData *traces, int32_t index)
 		traces[index].m_BlipIndex++;
 	return index | (traces[index].m_BlipIndex << 16);
 }
+int Radar_BlipHeightMode(float blipZ, float playerZ)
+{
+	int mode = 0;
+	if (blipZ - playerZ <= 2.0f) {
+		if (blipZ - playerZ < -4.0f) mode = 1;
+		else mode = 2;
+	}
+	return mode;
+}
+
+float Radar_DebugRadiusStep(float radius)
+{
+	radius = radius - 0.1f;
+	if (radius < 1.0f)
+		radius = 5.0f;
+	return radius;
+}
+
+void Radar_MarkerCorner(int corner, float x, float y, float sizeX, float sizeY, float correctedAngle, float *outX, float *outY)
+{
+	const float pi = (float)3.14159265358979323846;
+	const float halfpi = pi / 2;
+	const float cornerAngle = corner * halfpi + correctedAngle;
+
+	*outX = x + (0.0f * cosf(cornerAngle) + 1.0f * sinf(cornerAngle)) * sizeX;
+	*outY = y - (0.0f * sinf(cornerAngle) - 1.0f * cosf(cornerAngle)) * sizeY;
+}
+
+void Radar_QuarterCirclePoint(float cornerX, float cornerY, int step, float *outX, float *outY)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	*outX = cornerX * cosf(step * (pi / 2.0f / 6.0f));
+	*outY = cornerY * sinf(step * (pi / 2.0f / 6.0f));
+}
 //- rouz edit (Claude)

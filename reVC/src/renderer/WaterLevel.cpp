@@ -179,6 +179,16 @@ float fStartBlendDistanceAdd  = 64.0f;
 float fMinWaterAlphaMult      = -30.0f;
 
 
+static CVector
+NormalisedHorizontal(const CVector &v)
+{
+	float in[3] = { v.x, v.y, v.z };
+	float out[3];
+
+	General_NormalisedHorizontal(in, out);
+	return CVector(out[0], out[1], out[2]);
+}
+
 void
 CWaterLevel::Initialise(Const char *pWaterDat)
 {
@@ -246,10 +256,10 @@ CWaterLevel::Initialise(Const char *pWaterDat)
 			int32 t = WATER_HUGE_Y(ms_aWaterRects[i].top);
 			int32 b = WATER_HUGE_Y(ms_aWaterRects[i].bottom) + 1.0f;
 
-			l = Clamp(l, 0, MAX_SMALL_SECTORS - 1);
-			r = Clamp(r, 0, MAX_SMALL_SECTORS - 1);
-			t = Clamp(t, 0, MAX_SMALL_SECTORS - 1);
-			b = Clamp(b, 0, MAX_SMALL_SECTORS - 1);
+			l = WaterMath_ClampSectorIndex(l, MAX_SMALL_SECTORS - 1);
+			r = WaterMath_ClampSectorIndex(r, MAX_SMALL_SECTORS - 1);
+			t = WaterMath_ClampSectorIndex(t, MAX_SMALL_SECTORS - 1);
+			b = WaterMath_ClampSectorIndex(b, MAX_SMALL_SECTORS - 1);
 
 			for (int32 x = l; x <= r; x++)
 			{
@@ -921,11 +931,8 @@ CWaterLevel::RenderWater()
 		TEXTURE_ADDU       += windAddUV * timeStep;
 		TEXTURE_ADDV       += windAddUV * timeStep;
 		
-		_TEXTURE_MASK_ADDU += (Sin(fAngle)        * 0.0005f + 1.1f * windAddUV) * timeStep;
-		_TEXTURE_MASK_ADDV -= (Cos(fAngle * 1.3f) * 0.0005f + 1.2f * windAddUV) * timeStep;
-		
-		_TEXTURE_WAKE_ADDU -= (Sin(fAngle)        * 0.0003f + windAddUV) * timeStep;
-		_TEXTURE_WAKE_ADDV += (Cos(fAngle * 0.7f) * 0.0003f + windAddUV) * timeStep;
+		// Delegate the scrolling of the mask and wake textures to the C implementation
+		WaterMath_ScrollTextures(fAngle, windAddUV, timeStep, &_TEXTURE_MASK_ADDU, &_TEXTURE_MASK_ADDV, &_TEXTURE_WAKE_ADDU, &_TEXTURE_WAKE_ADDV);
 	}
 	
 	// Keep texture animation fixed while drawing the auxiliary camera
@@ -990,10 +997,10 @@ CWaterLevel::RenderWater()
 	if ( bUseCamEndY )                             
 		nEndY   = WATER_TO_HUGE_SECTOR_Y(camPos.y);
 
-	nStartX = Clamp(nStartX, 0, MAX_HUGE_SECTORS - 1);
-	nEndX   = Clamp(nEndX,   0, MAX_HUGE_SECTORS - 1);
-	nStartY = Clamp(nStartY, 0, MAX_HUGE_SECTORS - 1);
-	nEndY   = Clamp(nEndY,   0, MAX_HUGE_SECTORS - 1);
+	nStartX = WaterMath_ClampSectorIndex(nStartX, MAX_HUGE_SECTORS - 1);
+	nEndX   = WaterMath_ClampSectorIndex(nEndX, MAX_HUGE_SECTORS - 1);
+	nStartY = WaterMath_ClampSectorIndex(nStartY, MAX_HUGE_SECTORS - 1);
+	nEndY   = WaterMath_ClampSectorIndex(nEndY, MAX_HUGE_SECTORS - 1);
 	
 	for ( int32 x = nStartX; x <= nEndX; x++ )
 	{
@@ -1273,10 +1280,10 @@ CWaterLevel::RenderTransparentWater(void)
 	if ( bUseCamEndY )                                      
 		nEndY   = WATER_TO_HUGE_SECTOR_Y(camPos.y         );
 	
-	nStartX = Clamp(nStartX, 0, MAX_HUGE_SECTORS - 1);
-	nEndX   = Clamp(nEndX,   0, MAX_HUGE_SECTORS - 1);
-	nStartY = Clamp(nStartY, 0, MAX_HUGE_SECTORS - 1);
-	nEndY   = Clamp(nEndY,   0, MAX_HUGE_SECTORS - 1);
+	nStartX = WaterMath_ClampSectorIndex(nStartX, MAX_HUGE_SECTORS - 1);
+	nEndX   = WaterMath_ClampSectorIndex(nEndX, MAX_HUGE_SECTORS - 1);
+	nStartY = WaterMath_ClampSectorIndex(nStartY, MAX_HUGE_SECTORS - 1);
+	nEndY   = WaterMath_ClampSectorIndex(nEndY, MAX_HUGE_SECTORS - 1);
 	
 	
 	for ( int32 x = nStartX; x <= nEndX; x++ )
@@ -1735,11 +1742,9 @@ CWaterLevel::RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &col
 		float wind = Weather_WindClipped * 0.4f + 0.2f;
 		float waveWind = Weather_WindClipped * fWave2Ampl + 0.05f;
 
-		float waveA = (TWOPI / 16.0f)
-			* ((fNormalDirectionScalar1 * Abs(camMat->at.x + camMat->at.y) + fNormMult) * (Weather_WindClipped * 0.4f + 0.2f));
-
-		float waveB = TWOPI / (16.0f * fWave2NormScale)
-			* ((fNormalDirectionScalar2 * Abs(camMat->at.y - camMat->at.x) + fNormMultB) * (Weather_WindClipped * 0.2f + 0.1f));
+		// Delegate the slopes of the waves to the C implementation
+		float waveA, waveB;
+		WaterMath_WaveSlopes(camMat->at.x, camMat->at.y, Weather_WindClipped, fNormalDirectionScalar1, fNormMult, fNormalDirectionScalar2, fNormMultB, fWave2NormScale, &waveA, &waveB);
 
 		CVector vA(1.0f, 0.0f, 0.0f);
 		CVector vB(0.0f, 1.0f, 0.0f);
@@ -1767,13 +1772,12 @@ CWaterLevel::RenderOneWavySector(float fX, float fY, float fZ, RwRGBA const &col
 				float morphVertXHalf = (i == 16) ? 0.0f : vertMul * wavyMorphVerts->x;
 				float morphVertYHalf = (j == 16) ? 0.0f : vertMul * wavyMorphVerts->y;
 
-				float waveMulA = (morphVertYHalf + morphVertXHalf) * (TWOPI / 16.0f) + fAngle;
-				float waveMulB = (morphVertYHalf - morphVertXHalf) * (TWOPI / (16.0f * fWave2InvLength)) + fAngle;
+				// Delegate the angles of the waves to the C implementation
+				float waveMulA, waveMulB;
+				WaterMath_WaveAngles(morphVertXHalf, morphVertYHalf, fAngle, fWave2InvLength, &waveMulA, &waveMulB);
 
-				wavyMorphVerts->z = wind * Sin(waveMulA) + waveWind * Sin(waveMulB);
-
-				vA.z = (waveA * Cos(waveMulA)) - (waveB * Cos(waveMulB));
-				vB.z = (waveA * Cos(waveMulA)) + (waveB * Cos(waveMulB));
+				// Delegate the heights of the vertex and its tangents to the C implementation
+				WaterMath_WaveHeights(waveMulA, waveMulB, wind, waveWind, waveA, waveB, &wavyMorphVerts->z, &vA.z, &vB.z);
 
 				CVector norm = CrossProduct(vA, vB);
 				norm.Normalise();
@@ -2118,10 +2122,10 @@ CWaterLevel::RenderWavyMask(float fX, float fY, float fZ,
 			maskPreLight[base+b].alpha = maskPreLight[base+c].alpha;
 
 #ifndef PC_WATER
-			maskPreLight[base + a].alpha = Max(0, (int32)((float)color.alpha - (fAlphaMul * (Abs((float)i - fXOffset) + Abs((float)j - fYOffset)))));
-			maskPreLight[base + b].alpha = Max(0, (int32)((float)color.alpha - (fAlphaMul * (Abs((float)i - fXOffset) + Abs(16.0f + (float)j - fYOffset)))));
-			maskPreLight[base + c].alpha = Max(0, (int32)((float)color.alpha - (fAlphaMul * (Abs(16.0f + (float)i - fXOffset) + Abs((float)j - fYOffset)))));
-			maskPreLight[base + d].alpha = Max(0, (int32)((float)color.alpha - (fAlphaMul * (Abs(16.0f + (float)i - fXOffset) + Abs(16.0f + (float)j - fYOffset)))));
+			maskPreLight[base + a].alpha = WaterLevel_MaskAlpha(color.alpha, fAlphaMul, (float)i - fXOffset, (float)j - fYOffset);
+			maskPreLight[base + b].alpha = WaterLevel_MaskAlpha(color.alpha, fAlphaMul, (float)i - fXOffset, 16.0f + (float)j - fYOffset);
+			maskPreLight[base + c].alpha = WaterLevel_MaskAlpha(color.alpha, fAlphaMul, 16.0f + (float)i - fXOffset, (float)j - fYOffset);
+			maskPreLight[base + d].alpha = WaterLevel_MaskAlpha(color.alpha, fAlphaMul, 16.0f + (float)i - fXOffset, 16.0f + (float)j - fYOffset);
 #endif
 		}
 	}
@@ -2180,9 +2184,8 @@ CWaterLevel::PreCalcWaterGeometry(void)
 	
 	// Build the wavy-mask direction from the camera rendering water
 	//+ rouz edit (ChatGPT)
-	CVector CamFwdDir = GetWaterRenderCameraForward();
-	CamFwdDir.z = 0.0f;
-	CamFwdDir.Normalise();
+	// Delegate the horizontal direction to the C implementation
+	CVector CamFwdDir = NormalisedHorizontal(GetWaterRenderCameraForward());
 	
 	CVector renderCameraPosition = GetWaterRenderCameraPosition();
 	float fCamX = renderCameraPosition.x - SMALL_SECTOR_SIZE;
@@ -2193,10 +2196,12 @@ CWaterLevel::PreCalcWaterGeometry(void)
 	float signX = CamFwdDir.x * 1.4144272f;
 	float signY = CamFwdDir.y * 1.4144272f;
 	
-	signX = Clamp(signX, -1.0f, 1.0f);
+	// Delegate the limit to the C implementation
+	signX = General_ClampFloat(signX, -1.0f, 1.0f);
 	fCamX += 0.4f * signX * float(SMALL_SECTOR_SIZE * 2.0f);
 
-	signY = Clamp(signY, -1.0f, 1.0f);
+	// Delegate the limit to the C implementation
+	signY = General_ClampFloat(signY, -1.0f, 1.0f);
 	fCamY += 0.4f * signY * float(SMALL_SECTOR_SIZE * 2.0f);
 	
 	int32 nBlock;
@@ -2263,11 +2268,9 @@ CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 	float wind     = Weather_WindClipped * 0.4f + 0.2f;
 	float waveWind = Weather_WindClipped * fWave2Ampl + 0.05f;
 
-	float waveA = (TWOPI / 16.0f)
-		* ((Weather_WindClipped * 0.4f + 0.2f) * (fNormalDirectionScalar1 * Abs(camPosUp.x + camPosUp.y) + fNormMult));
-		
-	float waveB = TWOPI / (16.0f * fWave2NormScale)
-		* ((Weather_WindClipped * 0.2f + 0.1f) * (fNormalDirectionScalar2 * Abs(camPosUp.y - camPosUp.x) + fNormMultB));
+	// Delegate the slopes of the waves to the C implementation
+	float waveA, waveB;
+	WaterMath_WaveSlopes(camPosUp.x, camPosUp.y, Weather_WindClipped, fNormalDirectionScalar1, fNormMult, fNormalDirectionScalar2, fNormMultB, fWave2NormScale, &waveA, &waveB);
 
 	
 	CVector vA(1.0f, 0.0f, 0.0f);
@@ -2296,13 +2299,12 @@ CWaterLevel::PreCalcWavySector(RwRGBA const &color)
 			float morphVertXHalf = ( i == 16 ) ? 0.0f : 0.5f * wavyMorphVerts->x;
 			float morphVertYHalf = ( j == 16 ) ? 0.0f : 0.5f * wavyMorphVerts->y;
 			
-			float waveMulA = (morphVertYHalf + morphVertXHalf) * (TWOPI / 16.0f) + fAngle;	  
-			float waveMulB = (morphVertYHalf - morphVertXHalf) * (TWOPI / (16.0f * fWave2InvLength)) + fAngle;		
+			// Delegate the angles of the waves to the C implementation
+			float waveMulA, waveMulB;
+			WaterMath_WaveAngles(morphVertXHalf, morphVertYHalf, fAngle, fWave2InvLength, &waveMulA, &waveMulB);
 	
-			wavyMorphVerts->z = wind * Sin(waveMulA) + waveWind * Sin(waveMulB);
-			
-			vA.z = (waveA * Cos(waveMulA)) - (waveB * Cos(waveMulB));
-			vB.z = (waveA * Cos(waveMulA)) + (waveB * Cos(waveMulB));
+			// Delegate the heights of the vertex and its tangents to the C implementation
+			WaterMath_WaveHeights(waveMulA, waveMulB, wind, waveWind, waveA, waveB, &wavyMorphVerts->z, &vA.z, &vB.z);
 
 			CVector norm = CrossProduct(vA, vB);
 			norm.Normalise();
@@ -2612,11 +2614,8 @@ CWaterLevel::RenderBoatWakes(void)
 			
 			float fTimeleft = CBoat::WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[wake];
 
-			float fWakeSizeB = ((float)wake * 0.19f) + fSize - fWakeLifeTimeMult * Max(fTimeleft, 0.0f);
-			
-			fSizeB = fWakeSizeB / CBoat::MIN_WAKE_INTERVAL;
-			if ( fSizeB < 0.0f )
-				fSizeB = 1.0f;
+			// Delegate the size of the wake point to the C implementation
+			fSizeB = WaterMath_WakeSizeInIntervals(wake, fSize, fWakeLifeTimeMult, fTimeleft, CBoat::MIN_WAKE_INTERVAL);
 			
 			if ( wake == pBoat->m_nNumWakePoints - 1 )
 			{
@@ -2626,10 +2625,8 @@ CWaterLevel::RenderBoatWakes(void)
 			else
 			{
 				// clip (-100, 500), less lifetime - less val
-				float val = 500.0f - (CBoat::WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[wake])
-						* 600.0f / CBoat::WAKE_LIFETIME;
-						
-				fAplhaB = Clamp(val, 0.0f, 255.0f);
+				// Delegate the alpha of the wake point to the C implementation
+				fAplhaB = WaterMath_WakeAlpha(CBoat::WAKE_LIFETIME, pBoat->m_afWakePointLifeTime[wake]);
 			}
 
 			CVector2D vecDistB = pBoat->m_avec2dWakePoints[wake - 1] - pBoat->m_avec2dWakePoints[wake];
@@ -2638,39 +2635,25 @@ CWaterLevel::RenderBoatWakes(void)
 			
 			// normalize if distance between points is greater than 3
 
-			if ( fScal > SQR(3.0f) )
-			{				
-				float fNorm = 1.0f / sqrt(fScal);
-				
-				vecDistB.x *= fNorm;
-				vecDistB.y *= fNorm;
-				
-				// disable render if distance between points too big
-				
-				if ( sqrt(fScal) > 13.0f )
-					bRender = false;
+			// Delegate the normalisation of the direction to the C implementation
+			{
+				float dirB[2] = { vecDistB.x, vecDistB.y };
+				bRender = WaterMath_NormaliseWakeDirection(dirB, fScal);
+				vecDistB.x = dirB[0];
+				vecDistB.y = dirB[1];
 			}
 			
-			CVector2D vecAA
-			(
-				pBoat->m_avec2dWakePoints[wake - 1].x - (fSizeA * vecDistA.y),
-				pBoat->m_avec2dWakePoints[wake - 1].y + (fSizeA * vecDistA.x)
-			);
-			CVector2D vecAB
-			(
-				pBoat->m_avec2dWakePoints[wake - 1].x + (fSizeA * vecDistA.y),
-				pBoat->m_avec2dWakePoints[wake - 1].y - (fSizeA * vecDistA.x)
-			);
-			CVector2D vecBA
-			(
-				pBoat->m_avec2dWakePoints[wake].x     + (fSizeB * vecDistB.y),
-				pBoat->m_avec2dWakePoints[wake].y     - (fSizeB * vecDistB.x)
-			);                                                                            
-			CVector2D vecBB                         
-			(                                       
-				pBoat->m_avec2dWakePoints[wake].x     - (fSizeB * vecDistB.y),
-				pBoat->m_avec2dWakePoints[wake].y     + (fSizeB * vecDistB.x)
-			);
+			// Delegate the corners of the wake segment to the C implementation
+			const float wakeA[2] = { pBoat->m_avec2dWakePoints[wake - 1].x, pBoat->m_avec2dWakePoints[wake - 1].y };
+			const float wakeB[2] = { pBoat->m_avec2dWakePoints[wake].x, pBoat->m_avec2dWakePoints[wake].y };
+			const float distAC[2] = { vecDistA.x, vecDistA.y };
+			const float distBC[2] = { vecDistB.x, vecDistB.y };
+			float cornersC[8];
+			WaterMath_WakeSegmentCorners(wakeA, wakeB, fSizeA, fSizeB, distAC, distBC, cornersC);
+			CVector2D vecAA(cornersC[0], cornersC[1]);
+			CVector2D vecAB(cornersC[2], cornersC[3]);
+			CVector2D vecBA(cornersC[4], cornersC[5]);
+			CVector2D vecBB(cornersC[6], cornersC[7]);
 			
 			if ( bRender )
 				RenderWakeSegment(vecAA, vecAB, vecBA, vecBB, fSizeA, fSizeB, fAplhaA, fAplhaB, fWakeZ);
@@ -2891,14 +2874,14 @@ CWaterLevel::RenderOneFlatSmallWaterPolyBlended(float fX, float fY, float fZ, fl
 	float fDistEndY   = SQR((fY + SMALL_SECTOR_SIZE) - fCamY);
 	
 	
-	float fAlphaBlendMulA 
-			= Min(fFlatWaterBlendRange * Max(sqrt(fDistStartX + fDistStartY) - fBlendDrawDist, fMinWaterAlphaMult), 1.0f);
-	float fAlphaBlendMulB
-			= Min(fFlatWaterBlendRange * Max(sqrt(fDistStartX + fDistEndY  ) - fBlendDrawDist, fMinWaterAlphaMult), 1.0f);
-	float fAlphaBlendMulC
-			= Min(fFlatWaterBlendRange * Max(sqrt(fDistEndX   + fDistEndY  ) - fBlendDrawDist, fMinWaterAlphaMult), 1.0f);
-	float fAlphaBlendMulD
-			= Min(fFlatWaterBlendRange * Max(sqrt(fDistEndX   + fDistStartY) - fBlendDrawDist, fMinWaterAlphaMult), 1.0f);
+	// Delegate the alpha blend of the corner to the C implementation
+	float fAlphaBlendMulA = WaterMath_FlatWaterBlend(fDistStartX, fDistStartY, fFlatWaterBlendRange, fBlendDrawDist, fMinWaterAlphaMult);
+	// Delegate the alpha blend of the corner to the C implementation
+	float fAlphaBlendMulB = WaterMath_FlatWaterBlend(fDistStartX, fDistEndY, fFlatWaterBlendRange, fBlendDrawDist, fMinWaterAlphaMult);
+	// Delegate the alpha blend of the corner to the C implementation
+	float fAlphaBlendMulC = WaterMath_FlatWaterBlend(fDistEndX, fDistEndY, fFlatWaterBlendRange, fBlendDrawDist, fMinWaterAlphaMult);
+	// Delegate the alpha blend of the corner to the C implementation
+	float fAlphaBlendMulD = WaterMath_FlatWaterBlend(fDistEndX, fDistStartY, fFlatWaterBlendRange, fBlendDrawDist, fMinWaterAlphaMult);
 
 
 	RwIm3DVertexSetPos  (&TempBufferRenderVertices[vidx + 0], fX, fY, fZ - _fWaterZOffset);
@@ -2950,10 +2933,10 @@ CWaterLevel::CalcDistanceToWater(float fX, float fY)
 	int32 nStartY = WATER_TO_SMALL_SECTOR_Y(fY - fSectorMaxRenderDist) - 1;
 	int32 nEndY   = WATER_TO_SMALL_SECTOR_Y(fY + fSectorMaxRenderDist) + 1;
 	
-	nStartX = Clamp(nStartX, 0, MAX_SMALL_SECTORS - 1);
-	nEndX   = Clamp(nEndX,   0, MAX_SMALL_SECTORS - 1);
-	nStartY = Clamp(nStartY, 0, MAX_SMALL_SECTORS - 1);
-	nEndY   = Clamp(nEndY,   0, MAX_SMALL_SECTORS - 1);
+	nStartX = WaterMath_ClampSectorIndex(nStartX, MAX_SMALL_SECTORS - 1);
+	nEndX   = WaterMath_ClampSectorIndex(nEndX, MAX_SMALL_SECTORS - 1);
+	nStartY = WaterMath_ClampSectorIndex(nStartY, MAX_SMALL_SECTORS - 1);
+	nEndY   = WaterMath_ClampSectorIndex(nEndY, MAX_SMALL_SECTORS - 1);
 	
 	float fDistSqr = 1.0e10f;
 	
@@ -3075,7 +3058,7 @@ CWaterLevel::RenderSeaBirds()
 		static CVector prev_front(0.0f, 0.0f, 0.0f);
 		static int32 timecounter;
 
-		if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
+		if ( WaterLevel_MovedFarther(prev_pos.x - cur_pos.x, prev_pos.y - cur_pos.y, prev_pos.z - cur_pos.z, 1.5f) )
 		{
 			prev_pos = cur_pos;
 			timecounter = (*Timer_GetTimeInMilliseconds());
@@ -3124,7 +3107,7 @@ CWaterLevel::RenderShipsOnHorizon()
 	static CVector prev_front(0.0f, 0.0f, 0.0f);
 	static int32 timecounter;
 
-	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
+	if ( WaterLevel_MovedFarther(prev_pos.x - cur_pos.x, prev_pos.y - cur_pos.y, prev_pos.z - cur_pos.z, 1.5f) )
 	{
 		prev_pos = cur_pos;
 		timecounter = (*Timer_GetTimeInMilliseconds());
@@ -3183,7 +3166,7 @@ CWaterLevel::HandleSeaLifeForms()
 	static CVector prev_pos(0.0f, 0.0f, 0.0f);
 	static int32 timecounter;
 	
-	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
+	if ( WaterLevel_MovedFarther(prev_pos.x - cur_pos.x, prev_pos.y - cur_pos.y, prev_pos.z - cur_pos.z, 1.5f) )
 	{
 		prev_pos = cur_pos;
 		timecounter = (*Timer_GetTimeInMilliseconds());
@@ -3230,7 +3213,7 @@ CWaterLevel::HandleBeachToysStuff(void)
 	static CVector prev_pos(0.0f, 0.0f, 0.0f);
 	static int32 timecounter;
 
-	if ( Abs(prev_pos.x - cur_pos.x) + Abs(prev_pos.y - cur_pos.y) + Abs(prev_pos.z - cur_pos.z) > 1.5f )
+	if ( WaterLevel_MovedFarther(prev_pos.x - cur_pos.x, prev_pos.y - cur_pos.y, prev_pos.z - cur_pos.z, 1.5f) )
 	{
 		prev_pos = cur_pos;
 		timecounter = (*Timer_GetTimeInMilliseconds());

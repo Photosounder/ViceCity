@@ -235,4 +235,138 @@ void ShadowMath_ClippedToWorld(VectorMath3 *list, int32_t numVerts, VectorMath3 
 		list[idx].z = p.z + entityPos.z;
 	}
 }
+int32_t ShadowMath_FadedStrength(float distToCam, float drawDistance, int32_t shadowStrength)
+{
+	float fMult = 1.0f - (4.0f / drawDistance) * (distToCam - (drawDistance * (1.0f / 4.0f)));
+
+	if (distToCam >= (drawDistance * (1.0f / 4.0f)))
+		return (int32_t)(shadowStrength * fMult);
+	return shadowStrength;
+}
+
+int32_t ShadowMath_CarFadedStrength(float distToCam, float drawDistance, int32_t shadowStrength)
+{
+	float fMult = 1.0f - (distToCam - (drawDistance * (1.0f - (1.0f / 4.0f)))) / (drawDistance * (1.0f / 4.0f));
+
+	if (distToCam >= (drawDistance * (1.0f - (1.0f / 4.0f))))
+		return (int32_t)(fMult * shadowStrength);
+	return shadowStrength;
+}
+void ShadowMath_ShadowExtent(float posX, float posY, float frontX, float frontY, float sideX, float sideY, float *startX, float *endX, float *startY, float *endY)
+{
+	float fWidth = fabsf(frontX) + fabsf(sideX);
+	float fHeight = fabsf(frontY) + fabsf(sideY);
+
+	*startX = posX - fWidth;
+	*endX = posX + fWidth;
+	*startY = posY - fHeight;
+	*endY = posY + fHeight;
+}
+float ShadowMath_BikeWidthMultiplier(float leanAngle, bool isPhysics, float rightZ)
+{
+	float wheelZ = fabsf(leanAngle);
+	float mul = 5.092958f * wheelZ + 1.0f;
+
+	if (isPhysics) {
+		float z = rightZ;
+		if (z > 0.6f)
+			mul += 4.0f * z;
+	}
+	return mul;
+}
+void ShadowMath_VehicleAxes(bool isBike, bool isHeli, const float forward[3], const float right[3], const float up[3], float front[2], float side[2])
+{
+	front[0] = forward[0];
+	front[1] = forward[1];
+	side[0] = right[0];
+	side[1] = right[1];
+	if (isBike) {
+		if (fabsf(right[2]) > 0.6f) {
+			side[0] = up[0];
+			side[1] = up[1];
+		}
+	} else if (isHeli) {
+		if (fabsf(right[2]) > 0.57f) {
+			side[0] = up[0];
+			side[1] = up[1];
+		}
+		if (fabsf(forward[2]) > 0.57f) {
+			front[0] = up[0];
+			front[1] = up[1];
+		}
+	}
+}
+float ShadowMath_VehicleDrawDistance(bool isFlyer)
+{
+	return isFlyer ? 144.0f : 18.0f;
+}
+
+void ShadowMath_ModelAdjust(int kind, float *height, float *width, float *size)
+{
+	switch (kind) {
+	case SHADOWMODEL_MOPED:
+		*height *= 1.2f;
+		*size = 0.05f;
+		break;
+	case SHADOWMODEL_BIKE:
+		*height *= 1.5f;
+		*size *= 0.03f;
+		break;
+	case SHADOWMODEL_HELI:
+		*width *= 3.0f;
+		*height *= 1.4f;
+		*size *= 0.5f;
+		break;
+	case SHADOWMODEL_RCCOPTER:
+		*height *= 1.5f;
+		*width *= 2.0f;
+		*size *= 0.2f;
+		break;
+	case SHADOWMODEL_DODO:
+		*height *= 0.9f;
+		*width *= 0.4f;
+		break;
+	}
+}
+void ShadowMath_FadeStaticShadow(float distToCamSqr, float drawDistance, int32_t *intensity, int32_t *red, int32_t *green, int32_t *blue)
+{
+	if (drawDistance != 0.0f) {
+		float distToCam = sqrtf(distToCamSqr);
+
+		if (distToCam >= (drawDistance * (1.0f - (1.0f / 4.0f)))) {
+			float fMult = 1.0f - (4.0f / drawDistance) * (distToCam - (drawDistance * (1.0f - (1.0f / 4.0f))));
+
+			*intensity = (int32_t)(*intensity * fMult);
+			*red = (int32_t)(*red * fMult);
+			*green = (int32_t)(*green * fMult);
+			*blue = (int32_t)(*blue * fMult);
+		}
+	}
+}
+void ShadowMath_FadeHeadlightShadow(float distToCam, float drawDistance, int32_t *red, int32_t *green, int32_t *blue)
+{
+	float fMult = 1.0f - (3.0f / drawDistance) * (distToCam - (drawDistance * (1.0f - (1.0f / 3.0f))));
+
+	*red = (int32_t)(*red * fMult);
+	*green = (int32_t)(*green * fMult);
+	*blue = (int32_t)(*blue * fMult);
+}
+bool ShadowMath_StaticShadowIsNear(float posX, float posY, float storedX, float storedY, float upDistance)
+{
+	return fabsf(posX - storedX) < upDistance && fabsf(posY - storedY) < upDistance;
+}
+
+bool ShadowMath_StaticShadowIsSamePlace(float posX, float posY, float posZ, float storedX, float storedY, float storedZ)
+{
+	return fabsf(posX - storedX) < 0.05f && fabsf(posY - storedY) < 0.05f && fabsf(posZ - storedZ) < 2.0f;
+}
+bool ShadowMath_SameGeometry(const float a[7], const float b[7])
+{
+	int i;
+
+	for (i = 0; i < 7; i++)
+		if (!(fabsf(a[i] - b[i]) < 0.01f))
+			return false;
+	return true;
+}
 //- rouz edit (Claude)

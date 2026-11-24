@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #pragma once
+#include <stdbool.h>
 #include "EntityLayout.h"
 #include "PedLogic.h"
 #include "Pool.h"
@@ -35,6 +36,23 @@ typedef struct PopulationPedParams {
 // Walks the ped pool backwards: action 1 removes a ped that finished fading out, action 3 handles a ped that is too far away
 int Population_SelectPedActions(const CPool *pedPool, const PopulationPedParams *params, void **out, int *action, int maxOut);
 
+// Radius of the circle that gang members standing next to each other fit on
+float Population_CircleRadius(int pedAmount);
+// Offset of the gang member number i on the circle from its two random values in -0.2 to 0.2
+void Population_CircleOffset(int i, float angleRandom, float radiusRandom, int pedAmount, float circleR, float *xOffset, float *yOffset);
+// Whether any of the obstacles is not one of the already created peds
+bool Population_HasRealObstacle(void *const *obstacles, int numObstacles, void *const *createdPeds, int numCreated);
+
+// Front and side vectors of the outline shadow of a dead ped drawn at a random angle: (0.9 cos, 0.9 sin) and (0.9 sin, -0.9 cos)
+void Population_OutlineAxes(float angle, float axes[4]);
+// Multiplier of the population from the rain: fewer peds when it rains
+float Population_RainMultiplier(float rain);
+// Maximum number of peds for an area, from the sum of the ped and car densities of the zone, the density of the roads, the density multiplier, the ped number multiplier (1 during a frenzy), the multiplier of the mission and the weather, limited by the maximum
+float Population_MaxPedsForArea(float zoneDensitySum, float roadDensity, float densityMult, float pedNumberMult, float missionAndWeatherMult, int selectedMaxPeds);
+// Height raised to the ground height when it is under it
+float Population_RaisedToGround(float z, float groundZ);
+// Spawn rate of a ped on a path link: the lower of the spawn rates of its two nodes
+unsigned char Population_NodeSpawnRate(unsigned char rate1, unsigned char rate2);
 #ifdef __cplusplus
 }
 #endif

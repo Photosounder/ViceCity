@@ -412,22 +412,18 @@ CPickup::Update(CPlayerPed *player, CVehicle *vehicle, int playerId)
 					isPickupTouched = true;
 			}
 			else {
-				if (Abs(player->GetPosition().z - m_pObject->GetPosition().z) < 2.0f) {
-					if ((player->GetPosition().x - m_pObject->GetPosition().x) * (player->GetPosition().x - m_pObject->GetPosition().x) +
-						(player->GetPosition().y - m_pObject->GetPosition().y) * (player->GetPosition().y - m_pObject->GetPosition().y) < 1.8f)
-						isPickupTouched = true;
-				}
+				// Delegate the touch test of the player on foot to the C implementation
+				if (Pickups_OnFootTouches(player->GetPosition().x, player->GetPosition().y, player->GetPosition().z, m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z))
+					isPickupTouched = true;
 			}
 		} else if (m_pObject->GetModelIndex() == MI_PICKUP_CAMERA) {
 			if (vehicle != nil && vehicle->IsSphereTouchingVehicle(m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z, 2.0f)) {
 				isPickupTouched = true;
 			}
 		} else if (vehicle == nil) {
-			if (Abs(player->GetPosition().z - m_pObject->GetPosition().z) < 2.0f) {
-				if ((player->GetPosition().x - m_pObject->GetPosition().x) * (player->GetPosition().x - m_pObject->GetPosition().x) +
-					(player->GetPosition().y - m_pObject->GetPosition().y) * (player->GetPosition().y - m_pObject->GetPosition().y) < 1.8f)
-					isPickupTouched = true;
-			}
+			// Delegate the touch test of the player on foot to the C implementation
+			if (Pickups_OnFootTouches(player->GetPosition().x, player->GetPosition().y, player->GetPosition().z, m_pObject->GetPosition().x, m_pObject->GetPosition().y, m_pObject->GetPosition().z))
+				isPickupTouched = true;
 		}
 
 		if (isPickupTouched) {
@@ -1040,10 +1036,10 @@ CPickups::Update()
 	if (CPad::GetPad(0)->CollectPickupJustDown())
 		CollectPickupBuffer = 6;
 	else
-		CollectPickupBuffer = Max(0, CollectPickupBuffer - 1);
+		CollectPickupBuffer = General_MaxInt(0, CollectPickupBuffer - 1);
 
 	if (PlayerOnWeaponPickup)
-		PlayerOnWeaponPickup = Max(0, PlayerOnWeaponPickup - 1);
+		PlayerOnWeaponPickup = General_MaxInt(0, PlayerOnWeaponPickup - 1);
 
 #define PICKUPS_FRAME_SPAN (6)
 #ifdef FIX_BUGS
@@ -1081,7 +1077,8 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		entity->bDoNotRender = CTheScripts::IsPlayerOnAMission() || Darkel_FrenzyOnGoing() || !CGame::nastyGame;
 
 	if (!entity->bDoNotRender) {
-		float modifiedSin = 0.3f * (Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800)) + 1.0f);
+		// Delegate the sine of the pulse to the C implementation
+		float modifiedSin = 0.3f * (Pickups_PulseSin((uint32)((*Timer_GetTimeInMilliseconds()) + (uintptr)entity), 0x7FF) + 1.0f);
 
 #ifdef FIX_BUGS
 		int16 colorId = 0;
@@ -1132,20 +1129,19 @@ CPickups::DoPickUpEffects(CEntity *entity)
 			bool corona2 = false;
 			int timerVal = ((*Timer_GetTimeInMilliseconds()) >> 9) & 7;
 
-			if (timerVal < 3)
-				corona1 = false;
-			else if (timerVal == 3)
+			// Delegate the state of the flickering to the C implementation
+			int phase1 = Pickups_CoronaPhase(timerVal);
+			if (phase1 == 1)
 				corona1 = (General_GetRandomNumber() & 3) != 0;
 			else
-				corona1 = true;
+				corona1 = phase1 == 2;
 
 			timerVal = (timerVal - 1) & 7;
-			if (timerVal < 3)
-				corona2 = false;
-			else if (timerVal == 3)
+			int phase2 = Pickups_CoronaPhase(timerVal);
+			if (phase2 == 1)
 				corona2 = (General_GetRandomNumber() & 3) != 0;
 			else
-				corona2 = true;
+				corona2 = phase2 == 2;
 
 			if (((CObject*)entity)->bAmmoCollected) {
 				corona2 = false;
@@ -1162,7 +1158,7 @@ CPickups::DoPickUpEffects(CEntity *entity)
 					SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0,
 					aPickupColors[colorId].r * 0.3f, aPickupColors[colorId].g * 0.3f, aPickupColors[colorId].b * 0.3f,
 					4.0f, 1.0f, 40.0f, false, 0.0f);
-				float radius = (General_GetRandomNumber() & 0xF) * 0.1f + 3.0f;
+				float radius = Pickups_LightRadius(General_GetRandomNumber());
 				// Enter the C point-light algorithm with the original owner expressions
 				PointLights_AddLightLegacy(POINTLIGHTS_LIGHT_POINT, pos, CVector(0.0f, 0.0f, 0.0f), radius, aPickupColors[colorId].r / 256.0f, aPickupColors[colorId].g / 256.0f, aPickupColors[colorId].b / 256.0f, POINTLIGHTS_FOG_NONE, true);
 			} else
@@ -1208,7 +1204,7 @@ CPickups::DoPickUpEffects(CEntity *entity)
 					aMessages[NumMessages].m_color.red = aPickupColors[colorId].r;
 					aMessages[NumMessages].m_color.green = aPickupColors[colorId].g;
 					aMessages[NumMessages].m_color.blue = aPickupColors[colorId].b;
-					aMessages[NumMessages].m_color.alpha = (1.0f - dist / MAXDIST) * 128.0f;
+					aMessages[NumMessages].m_color.alpha = Pickups_MessageAlpha(dist, MAXDIST);
 					aMessages[NumMessages].m_bOutOfStock = object->bOutOfStock;
 					aMessages[NumMessages].m_quantity = object->m_nBonusValue;
 					aMessages[NumMessages].money = object->m_nCostValue;
@@ -1220,15 +1216,17 @@ CPickups::DoPickUpEffects(CEntity *entity)
 		uint32 model = entity->GetModelIndex();
 		CColModel *colModel = entity->GetColModel();
 		CVector colLength = CollisionVector_ToNative(colModel->boundingBox.max) - CollisionVector_ToNative(colModel->boundingBox.min);
-		float maxDimension = Max(colLength.x, Max(colLength.y, colLength.z));
+		float maxDimension = General_MaxFloat(colLength.x, General_MaxFloat(colLength.y, colLength.z));
 
-		float scale = (Max(1.f, 1.2f / maxDimension) - 1.0f) * 0.6f + 1.0f;
+		// Delegate the scale and the angle to the C implementation
+		float scale = Pickups_ModelScale(maxDimension);
 		if (model == MI_MINIGUN || model == MI_MINIGUN2)
 			scale = 1.2f;
 
-		float angle = (float)((*Timer_GetTimeInMilliseconds()) & 0x7FF) * DEGTORAD(360.0f / 0x800);
-		float c = Cos(angle) * scale;
-		float s = Sin(angle) * scale;
+		float angle = Pickups_SpinAngle((*Timer_GetTimeInMilliseconds()), 0x7FF);
+		// Delegate the cosine and sine of the spin to the C implementation
+		float c, s;
+		Pickups_SpinCosSin(angle, scale, &c, &s);
 
 		// we know from SA they were setting each field manually like this
 		entity->GetMatrix().rx = c;
@@ -1301,15 +1299,17 @@ CPickups::DoMineEffects(CEntity *entity)
 	const float MAXDIST = 20.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x1FF) * DEGTORAD(360.0f / 0x200));
+		// Delegate the pulse and the glow to the C implementation
+		float s = Pickups_PulseSin((uint32)((*Timer_GetTimeInMilliseconds()) + (uintptr)entity), 0x1FF);
 
-		int32 red = (MAXDIST - dist) * (0.5f * s + 0.5f) / MAXDIST * 64.0f;
+		int32 red = Pickups_GlowChannel(MAXDIST, dist, s, 0.5f, 0.5f, 64.0f);
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, red, 0, 0, 4.0f, 1.0f, 40.0f,
 		                            false, 0.0f);
 		CCoronas::RegisterCorona((uintptr)entity, red, 0, 0, 255, pos, 0.6f, 60.0f, CCoronas::TYPE_RING, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0x3FF) * DEGTORAD(360.0f / 0x400));
+	// Delegate the angle to the C implementation
+	entity->GetMatrix().SetRotateZOnly(Pickups_SpinAngle((*Timer_GetTimeInMilliseconds()), 0x3FF));
 }
 
 void
@@ -1320,15 +1320,17 @@ CPickups::DoMoneyEffects(CEntity *entity)
 	const float MAXDIST = 20.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x3FF) * DEGTORAD(360.0f / 0x400));
+		// Delegate the pulse and the glow to the C implementation
+		float s = Pickups_PulseSin((uint32)((*Timer_GetTimeInMilliseconds()) + (uintptr)entity), 0x3FF);
 
-		int32 green = (MAXDIST - dist) * (0.2f * s + 0.3f) / MAXDIST * 64.0f;
+		int32 green = Pickups_GlowChannel(MAXDIST, dist, s, 0.2f, 0.3f, 64.0f);
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, 0, green, 0, 4.0f, 1.0f,
 		                            40.0f, false, 0.0f);
 		CCoronas::RegisterCorona((uintptr)entity, 0, green, 0, 255, pos, 0.4f, 40.0f, CCoronas::TYPE_RING, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0x7FF) * DEGTORAD(360.0f / 0x800));
+	// Delegate the angle to the C implementation
+	entity->GetMatrix().SetRotateZOnly(Pickups_SpinAngle((*Timer_GetTimeInMilliseconds()), 0x7FF));
 }
 
 void
@@ -1339,15 +1341,17 @@ CPickups::DoCollectableEffects(CEntity *entity)
 	const float MAXDIST = 14.0f;
 
 	if (dist < MAXDIST) {
-		float s = Sin((float)(((*Timer_GetTimeInMilliseconds()) + (uintptr)entity) & 0x7FF) * DEGTORAD(360.0f / 0x800));
+		// Delegate the pulse and the glow to the C implementation
+		float s = Pickups_PulseSin((uint32)((*Timer_GetTimeInMilliseconds()) + (uintptr)entity), 0x7FF);
 
-		int32 color = (MAXDIST - dist) * (0.5f * s + 0.5f) / MAXDIST * 255.0f;
+		int32 color = Pickups_GlowChannel(MAXDIST, dist, s, 0.5f, 0.5f, 255.0f);
 		CShadows::StoreStaticShadow((uintptr)entity, SHADOWTYPE_ADDITIVE, gpShadowExplosionTex, &pos, 2.0f, 0.0f, 0.0f, -2.0f, 0, color, color, color, 4.0f,
 		                            1.0f, 40.0f, false, 0.0f);
 		CCoronas::RegisterCorona((uintptr)entity, color, color, color, 255, pos, 0.6f, 40.0f, CCoronas::TYPE_HEX, CCoronas::FLARE_NONE, CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF, CCoronas::STREAK_OFF, 0.0f);
 	}
 
-	entity->GetMatrix().SetRotateZOnly((float)((*Timer_GetTimeInMilliseconds()) & 0xFFF) * DEGTORAD(360.0f / 0x1000));
+	// Delegate the angle to the C implementation
+	entity->GetMatrix().SetRotateZOnly(Pickups_SpinAngle((*Timer_GetTimeInMilliseconds()), 0xFFF));
 }
 
 void
@@ -1430,11 +1434,10 @@ CPickups::RenderPickUpText()
 		float MAX_SCALE = RsGlobal.width / DEFAULT_SCREEN_WIDTH;
 #endif
 
-		float fScaleY = aMessages[i].m_dist.y / 30.0f;
-		if (fScaleY > MAX_SCALE) fScaleY = MAX_SCALE;
+		// Delegate the scale of the text to the C implementation
+		float fScaleY = Pickups_MessageScale(aMessages[i].m_dist.y, MAX_SCALE);
 
-		float fScaleX = aMessages[i].m_dist.x / 30.0f;
-		if (fScaleX > MAX_SCALE) fScaleX = MAX_SCALE;
+		float fScaleX = Pickups_MessageScale(aMessages[i].m_dist.x, MAX_SCALE);
 
 		CFont::SetScale(fScaleX, fScaleY); // this shouldn't be scaled
 		CFont::SetCentreOn();
@@ -1454,13 +1457,15 @@ CPickups::CreateSomeMoney(CVector pos, int money)
 {
 	bool found;
 
-	int pickupCount = Min(money / 20 + 1, 7);
+	// Delegate the number of pickups to the C implementation
+	int pickupCount = Pickups_MoneyPickupCount(money);
 	int moneyPerPickup = money / pickupCount;
 
 	for (int i = 0; i < pickupCount; i++) {
 		// (CGeneral::GetRandomNumber() % 256) * PI / 128 gives a float up to something TWOPI-ish.
-		pos.x += 1.5f * Sin((General_GetRandomNumber() % 256) * PI / 128);
-		pos.y += 1.5f * Cos((General_GetRandomNumber() % 256) * PI / 128);
+		// Delegate the offsets on the ring to the C implementation
+		pos.x += Pickups_MoneyRingOffset(General_GetRandomNumber(), false);
+		pos.y += Pickups_MoneyRingOffset(General_GetRandomNumber(), true);
 		pos.z = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, &found) + 0.5f;
 		if (found) {
 			CPickups::GenerateNewOne(CVector(pos.x, pos.y, pos.z), MI_MONEY, PICKUP_MONEY, moneyPerPickup + (General_GetRandomNumber() & 3));
@@ -1806,8 +1811,9 @@ CPed::CreateDeadPedPickupCoors(float *x, float *y, float *z)
 	for (int i = 0; i < NUMBER_OF_ATTEMPTS; i++) {
 
 		pickupPos = GetPosition();
-		pickupPos.x = 1.5f * Sin((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().x;
-		pickupPos.y = 1.5f * Cos((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().y;
+		// Delegate the offsets on the ring to the C implementation
+		pickupPos.x = Pickups_DeadPedRingOffset(General_GetRandomNumber(), false) + GetPosition().x;
+		pickupPos.y = Pickups_DeadPedRingOffset(General_GetRandomNumber(), true) + GetPosition().y;
 		pickupPos.z = CWorld::FindGroundZFor3DCoord(pickupPos.x, pickupPos.y, pickupPos.z, &found) + 0.5f;
 
 		if (!found)

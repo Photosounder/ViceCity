@@ -1,6 +1,8 @@
 //+ rouz edit (Claude)
 #include <math.h>
 #include "CameraMath.h"
+#include "VectorMath.h"
+#include "General.h"
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -278,4 +280,1184 @@ int CameraMath_AdvanceSplineMarker(const float *pathData, int marker, uint32_t t
 	return marker;
 }
 
+float Camera_SmoothInterpolation(float numerator, float denominator)
+{
+	float inter;
+
+	if (denominator == 0.0f)
+		inter = 0.0f;
+	else
+		inter = numerator / denominator;
+	// Smooth it
+	return 0.5f - 0.5 * cosf(inter * PI);
+}
+void Camera_ObbeOffsetDirection(float speedX, float speedY, float speedZ, float angleOffset, bool flatten, float dir[3])
+{
+	VectorMath3 v;
+	float angle;
+
+	v.x = speedX;
+	v.y = speedY;
+	v.z = speedZ;
+	if (flatten) {
+		v.z = 0.0f;
+		VectorMath_Normalise(&v);
+	}
+	angle = General_GetATanOfXY(v.x, v.y) + angleOffset;
+	v.x += cosf(angle);
+	v.y += sinf(angle);
+	v.z += 0.0f;
+	VectorMath_Normalise(&v);
+	dir[0] = v.x;
+	dir[1] = v.y;
+	dir[2] = v.z;
+}
+float Camera_ShakeDistanceMultiplier(float dx, float dy, float dz)
+{
+	float dist2d = sqrtf(dx * dx + dy * dy);
+	float dist3d = sqrtf(dist2d * dist2d + dz * dz);
+
+	if (dist3d > 100.0f)
+		dist3d = 100.0f;
+	if (dist3d < 0.0f)
+		dist3d = 0.0f;
+	return 1.0f - dist3d / 100.0f;
+}
+
+bool Camera_ShakeReplaces(float mult, float shakeForce, uint32_t elapsed, float strength)
+{
+	float curForce = mult * (shakeForce - elapsed / 1000.0f);
+
+	curForce = curForce < 0.0f ? 0.0f : curForce > 2.0f ? 2.0f : curForce;
+	return curForce < strength;
+}
+void Camera_FrustumNormals(float halfFov, float aspectRatio, float normals[4][3])
+{
+	float c = cosf(halfFov);
+	float s = sinf(halfFov);
+
+	// Right plane
+	normals[0][0] = c;
+	normals[0][1] = -s;
+	normals[0][2] = 0.0f;
+	// Left plane
+	normals[1][0] = -c;
+	normals[1][1] = -s;
+	normals[1][2] = 0.0f;
+
+	c /= aspectRatio;
+	s /= aspectRatio;
+	// Bottom plane
+	normals[2][0] = 0.0f;
+	normals[2][1] = -s;
+	normals[2][2] = -c;
+	// Top plane
+	normals[3][0] = 0.0f;
+	normals[3][1] = -s;
+	normals[3][2] = c;
+}
+
+void Camera_FrontNormalised(float frontX, float frontY, float *normX, float *normY)
+{
+	float l = sqrtf(frontX * frontX + frontY * frontY);
+
+	*normX = frontX;
+	*normY = frontY;
+	if (l == 0.0f)
+		*normX = 1.0f;
+	else {
+		*normX /= l;
+		*normY /= l;
+	}
+}
+void Camera_AvoidFront(float distX, float distY, float distZ, float forwardX, float forwardY, float front[3], float *dist)
+{
+	float beta = 0.0f;
+	float alpha = 0.0f;
+	float distOnGround;
+
+	*dist = sqrtf(distX * distX + distY * distY + distZ * distZ);
+	distOnGround = sqrtf(distX * distX + distY * distY);
+	if (distX == 0.0f && distY == 0.0f)
+		beta = General_GetATanOfXY(forwardX, forwardY);
+	else
+		beta = General_GetATanOfXY(distX, distY);
+	if (distOnGround != 0.0f || distZ != 0.0f)
+		alpha = General_GetATanOfXY(distOnGround, distZ);
+	front[0] = cosf(alpha) * cosf(beta);
+	front[1] = cosf(alpha) * sinf(beta);
+	front[2] = sinf(alpha);
+}
+float Camera_AvoidNearClip(float frontDist, float closeLimit, float defaultNear, float currentNear)
+{
+	if (frontDist < defaultNear && frontDist > closeLimit) {
+		if (frontDist < currentNear)
+			return frontDist;
+	} else if (frontDist < closeLimit)
+		return closeLimit;
+	return currentNear;
+}
+
+float Camera_AvoidViewPlaneWidth(float fov, float aspectRatio, float tweakFOV)
+{
+	float viewPlaneHeight = tanf(fov * PI / 180.0f / 2.0f);
+
+	return viewPlaneHeight * aspectRatio * tweakFOV;
+}
+
+float Camera_GeomProbsTimer(float timer, float targetNormalDir, float timeStep)
+{
+	if (targetNormalDir < 0.0f) {
+		if (timer < 0.0f)
+			timer = 0.0f;
+		timer += timeStep;
+	} else if (targetNormalDir > 0.5f) {
+		if (timer > 0.0f)
+			timer = 0.0f;
+		timer -= timeStep;
+	}
+	return timer;
+}
+void Camera_OrbitOffset(float distance, float angle, float *x, float *y)
+{
+	*x = distance * cosf(angle);
+	*y = distance * sinf(angle);
+}
+void Camera_SphericalDirection(float alpha, float beta, float dir[3])
+{
+	dir[0] = cosf(alpha) * cosf(beta);
+	dir[1] = cosf(alpha) * sinf(beta);
+	dir[2] = sinf(alpha);
+}
+
+void Camera_UpFromRoll(float roll, float up[3])
+{
+	const float halfPi = (float)3.14159265358979323846 / 2;
+
+	up[0] = cosf(roll + halfPi);
+	up[1] = 0.0f;
+	up[2] = sinf(roll + halfPi);
+}
+float Camera_CarTargetRoll(bool dPad, bool dPadLeft, float moveSpeedAlongForward, float leftStickX, float tiltOvershoot, float maxRollAngle, float forwardDotFront)
+{
+	const float pi = (float)3.14159265358979323846;
+	float fwdSpeed = 180.0f * moveSpeedAlongForward;
+	float targetRoll, angleDiff, a;
+
+	if (fwdSpeed > 210.0f)
+		fwdSpeed = 210.0f;
+	a = fabsf(forwardDotFront);
+	angleDiff = acosf(a < 1.0f ? a : 1.0f);
+	if (dPad) {
+		if (dPadLeft)
+			targetRoll = (10.0f * pi / 180.0f) * tiltOvershoot + maxRollAngle;
+		else
+			targetRoll = -((10.0f * pi / 180.0f) * tiltOvershoot + maxRollAngle);
+		targetRoll *= fwdSpeed / 210.0f * sinf(angleDiff);
+	} else {
+		targetRoll = leftStickX / 128.0f * fwdSpeed / 210.0f;
+		targetRoll *= ((10.0f * pi / 180.0f) * tiltOvershoot + maxRollAngle) * sinf(angleDiff);
+	}
+	return targetRoll;
+}
+float Camera_AlphaRecentre(float alpha, float defaultAlpha)
+{
+	if (alpha < defaultAlpha - 0.05f)
+		return 0.05f;
+	if (alpha < defaultAlpha)
+		return defaultAlpha - alpha;
+	if (alpha > defaultAlpha + 0.05f)
+		return -0.05f;
+	if (alpha > defaultAlpha)
+		return defaultAlpha - alpha;
+	return 0.0f;
+}
+
+void Camera_StickLookOffsets(float lookLeftRight, float lookUpDown, float stickSens, float fov, float timeStep, float *betaOffset, float *alphaOffset)
+{
+	*betaOffset = lookLeftRight * stickSens * (1.0f / 14.0f) * fov / 80.0f * timeStep;
+	*alphaOffset = lookUpDown * stickSens * (0.6f / 14.0f) * fov / 80.0f * timeStep;
+}
+bool Camera_MouseAvoidDistance(float targetDist, float returnRate, float timeStep, float *distance)
+{
+	if (targetDist < *distance) {
+		*distance = targetDist;
+		return false;
+	} else {
+		float f = powf(returnRate, timeStep);
+
+		*distance = (1.0f - f) * targetDist + f * *distance;
+		return true;
+	}
+}
+float Camera_HeliAlpha(float forwardXY, float forwardZ, float fwdSpeed)
+{
+	float carAlpha = 0.0f;
+	float a = fabsf(fwdSpeed / 90.0f);
+	float alphaAmount = a < 1.0f ? a : 1.0f;
+
+	if (forwardXY != 0.0f || forwardZ != 0.0f)
+		carAlpha = General_GetATanOfXY(forwardXY, fabsf(forwardZ)) * alphaAmount;
+	return carAlpha;
+}
+
+float Camera_ClampCarAlpha(float carAlpha)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	carAlpha = General_LimitRadianAngle(carAlpha);
+	if (carAlpha < 0.0f)
+		carAlpha = 0.0f;
+	if (carAlpha > 89.0f * pi / 180.0f)
+		carAlpha = 89.0f * pi / 180.0f;
+	return carAlpha;
+}
+float Camera_FiretruckTracking(float targetBeta, float beta, float distance, float trackingMult)
+{
+	const float pi = (float)3.14159265358979323846;
+	float deltaBeta = targetBeta - beta;
+	float clamped;
+
+	if (deltaBeta > pi)
+		deltaBeta -= pi * 2;
+	else if (deltaBeta < -pi)
+		deltaBeta += pi * 2;
+	clamped = deltaBeta < -0.8f ? -0.8f : deltaBeta > 0.8f ? 0.8f : deltaBeta;
+	return trackingMult * distance * clamped;
+}
+float Camera_PedAverageSpeed(float average, float speedSum)
+{
+	return 0.4f * average + 0.6 * (speedSum / 5.0f);
+}
+
+float Camera_TopDownHeightTarget(float pedAverageSpeed)
+{
+	if (pedAverageSpeed > 0.01f && pedAverageSpeed <= 0.04f)
+		return 2.5f;
+	if (pedAverageSpeed > 0.04f && pedAverageSpeed <= 0.145f)
+		return 4.5f;
+	if (pedAverageSpeed > 0.145f)
+		return 7.0f;
+	return 0.0f;
+}
+void Camera_LookPoint(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float point[3])
+{
+	point[0] = 3.0f * cosf(alpha) * cosf(beta) + sourceX;
+	point[1] = 3.0f * cosf(alpha) * sinf(beta) + sourceY;
+	point[2] = 3.0f * sinf(alpha) + sourceZ;
+}
+float Camera_MouseLookDelta(float mouseAccel, float look, float fov)
+{
+	return mouseAccel * look * fov / 80.0f;
+}
+
+float Camera_PadLookDelta(float look, float divisor, float direction, float scale, float fov, float timeStep)
+{
+	float v = look / divisor;
+
+	return (v * v) * direction * scale / 14.0f * fov / 80.0f * timeStep;
+}
+float Camera_ClampAlpha(float alpha, float maxDegrees)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	if (alpha > maxDegrees * pi / 180.0f)
+		alpha = maxDegrees * pi / 180.0f;
+	else if (alpha < -(89.5f * pi / 180.0f))
+		alpha = -(89.5f * pi / 180.0f);
+	return alpha;
+}
+float Camera_DebugSpeed(float speed, bool speedUp, bool slowDown)
+{
+	if (speedUp)
+		speed += 0.1f;
+	else if (slowDown)
+		speed -= 0.1f;
+	else
+		speed = 0.0f;
+	if (speed > 70.0f)
+		speed = 70.0f;
+	if (speed < -70.0f)
+		speed = -70.0f;
+	return speed;
+}
+float Camera_NearClipFromCollision(float currentNear, float dist)
+{
+	float m = currentNear < dist ? currentNear : dist;
+
+	return 0.1f > m ? 0.1f : m;
+}
+float Camera_CarFOV(float fov, float defaultFOV, bool widens, float forwardSpeed, float timeStep)
+{
+	if (widens) {
+		if (forwardSpeed > 0.4f)
+			fov += (forwardSpeed - 0.4f) * timeStep;
+	}
+
+	if (fov > defaultFOV)
+		fov = powf(0.98f, timeStep) * (fov - defaultFOV) + defaultFOV;
+
+	return fov < defaultFOV ? defaultFOV : fov > defaultFOV + 30.0f ? defaultFOV + 30.0f : fov;
+}
+float Camera_ClampBetween(float value, float low, float high)
+{
+	if (value <= high) {
+		if (value < low)
+			value = low;
+	} else {
+		value = high;
+	}
+	return value;
+}
+float Camera_ClampAlphaStop(float alpha, float low, float high, float *alphaSpeed)
+{
+	if (alpha <= high) {
+		if (low > alpha) {
+			alpha = low;
+			*alphaSpeed = 0.0f;
+		}
+	} else {
+		alpha = high;
+		*alphaSpeed = 0.0f;
+	}
+	return alpha;
+}
+void Camera_TargetHistoryPos(const float target[3], float beta, float alpha, float distance, float pos[3])
+{
+	float frontX = -(cosf(beta) * cosf(alpha));
+	float frontY = -(sinf(beta) * cosf(alpha));
+	float frontZ = sinf(alpha);
+
+	pos[0] = target[0] - frontX * distance;
+	pos[1] = target[1] - frontY * distance;
+	pos[2] = target[2] - frontZ * distance;
+}
+float Camera_TurretFace(float angleToFace, float gunLR, float turnPerFrame)
+{
+	const float pi = (float)3.14159265358979323846;
+	float neededTurn;
+
+	if (angleToFace <= gunLR + pi) {
+		if (angleToFace < gunLR - pi)
+			angleToFace = angleToFace + pi * 2;
+	} else {
+		angleToFace = angleToFace - pi * 2;
+	}
+
+	neededTurn = angleToFace - gunLR;
+	if (neededTurn <= turnPerFrame) {
+		if (neededTurn < -turnPerFrame)
+			angleToFace = gunLR - turnPerFrame;
+	} else {
+		angleToFace = turnPerFrame + gunLR;
+	}
+	return angleToFace;
+}
+
+float Camera_TurretAlpha(float alphaToFace, float gunUD, float alphaTurnPerFrame)
+{
+	const float pi = (float)3.14159265358979323846;
+	float neededAlphaTurn = alphaToFace - gunUD;
+	float turretMinY = -(20.0f * pi / 180.0f);
+	float turretMaxY = 20.0f * pi / 180.0f;
+
+	if (neededAlphaTurn > alphaTurnPerFrame) {
+		gunUD = alphaTurnPerFrame + gunUD;
+	} else {
+		if (neededAlphaTurn >= -alphaTurnPerFrame)
+			gunUD = alphaToFace;
+		else
+			gunUD = gunUD - alphaTurnPerFrame;
+	}
+
+	if (turretMinY <= gunUD) {
+		if (gunUD > turretMaxY)
+			gunUD = turretMaxY;
+	} else {
+		gunUD = turretMinY;
+	}
+	return gunUD;
+}
+float Camera_StickMovement(float stick, float fov, float scale)
+{
+	return fabsf(stick) * (fov / 80.0f * scale / 70.0f) * stick * 0.007f * 0.007f;
+}
+float Camera_BlendBetaSpeed(float targetBlendAmount, float angleChangeStep, float betaSpeed)
+{
+	float angleChangeStepLeft = 1.0f - angleChangeStep;
+
+	betaSpeed = targetBlendAmount * angleChangeStepLeft + angleChangeStep * betaSpeed;
+	if (fabsf(betaSpeed) < 0.0001f)
+		betaSpeed = 0.0f;
+	return betaSpeed;
+}
+float Camera_VehicleSpeedVar(float forwardX, float forwardY, float moveSpeedX, float moveSpeedY, float speedVar, float *targetSpeedVar)
+{
+	float fx = forwardX;
+	float fy = forwardY;
+	float fz = 0.0f;
+	float sq = fx * fx + fy * fy + fz * fz;
+	float fwdLength, fwdSpeedX, fwdSpeedY, m;
+
+	// Normalise the forward vector, x is set to 1 for a null vector
+	if (sq > 0.0f) {
+		float invsqrt = 1.0f / sqrtf(sq);
+		fx *= invsqrt;
+		fy *= invsqrt;
+	} else
+		fx = 1.0f;
+	fwdLength = sqrtf(fx * fx + fy * fy);
+	if (fwdLength != 0.0f) {
+		fx /= fwdLength;
+		fy /= fwdLength;
+	}
+
+	fwdSpeedX = moveSpeedX * fx;
+	fwdSpeedY = moveSpeedY * fy;
+	m = sqrtf(fwdSpeedX * fwdSpeedX + fwdSpeedY * fwdSpeedY);
+	if (fwdSpeedX + fwdSpeedY > 0.0f) {
+		float v = m / 0.9f;
+		*targetSpeedVar = v < 1.0f ? v : 1.0f;
+	} else {
+		float v = m / 1.8f;
+		*targetSpeedVar = -(v < 0.5f ? v : 0.5f);
+	}
+	return 0.895f * speedVar + 0.105 * *targetSpeedVar;
+}
+float Camera_SyphonBetaOffset(float lineDist, float colDist, float playerToTargetDist, float groundDist)
+{
+	float newBetaOffset = 0.0f;
+
+	if (lineDist > 0.0f && colDist > 0.1f) {
+		float distOffset, v;
+
+		// Scale the offset at the centre to the offset at the player
+		distOffset = lineDist / colDist * playerToTargetDist;
+		v = distOffset / groundDist;
+		// Turn it into an angle
+		newBetaOffset = 0.9f * asinf(v < 1.0f ? v : 1.0f);
+	}
+	return newBetaOffset;
+}
+void Camera_FrontFromAngles(float alpha, float beta, float front[3])
+{
+	front[0] = -(cosf(beta) * cosf(alpha));
+	front[1] = -(sinf(beta) * cosf(alpha));
+	front[2] = sinf(alpha);
+}
+void Camera_DebugTarget(float alpha, float beta, float sourceX, float sourceY, float sourceZ, float zScale, float target[3])
+{
+	target[0] = sourceX + cosf(alpha) * sinf(beta) * 7.0f;
+	target[1] = sourceY + cosf(alpha) * cosf(beta) * 7.0f;
+	target[2] = sourceZ + sinf(alpha) * zScale;
+}
+float Camera_BetaOfVector(float x, float y)
+{
+	if (x == 0.0f && y == 0.0f)
+		return 0.0f;
+	return General_GetATanOfXY(x, y);
+}
+void Camera_BufferStep(float *value, float *speed, float targetSpeed, float acceleration, float timeStep)
+{
+	*speed += acceleration * (targetSpeed - *speed) * timeStep;
+
+	/* Clamp speed if we overshot */
+	if (targetSpeed < 0.0f && *speed < targetSpeed)
+		*speed = targetSpeed;
+	else if (targetSpeed > 0.0f && *speed > targetSpeed)
+		*speed = targetSpeed;
+
+	*value += *speed * (10.0f < timeStep ? 10.0f : timeStep);
+}
+
+void Camera_FollowBetaStep(float *beta, float *betaSpeed, float reqSpeed, float speedStep, float timeStep)
+{
+	/* Add or subtract absolute depending on sign */
+	if (reqSpeed - *betaSpeed > 0.0f)
+		*betaSpeed += speedStep * fabsf(reqSpeed - *betaSpeed) * timeStep;
+	else
+		*betaSpeed -= speedStep * fabsf(reqSpeed - *betaSpeed) * timeStep;
+
+	if (reqSpeed < 0.0f && *betaSpeed < reqSpeed)
+		*betaSpeed = reqSpeed;
+	else if (reqSpeed > 0.0f && *betaSpeed > reqSpeed)
+		*betaSpeed = reqSpeed;
+
+	*beta += *betaSpeed * (10.0f < timeStep ? 10.0f : timeStep);
+}
+float Camera_PedCamDistance(float baseDist, float alpha, float falloff, float angleDist, bool useFalloff)
+{
+	const float halfpi = (float)3.14159265358979323846 / 2;
+
+	if (useFalloff) {
+		float a = alpha * falloff;
+
+		return baseDist + cosf(a < halfpi ? a : halfpi) * angleDist;
+	}
+	return baseDist + cosf(alpha) * angleDist;
+}
+float Camera_HeliTestHeight(float targetZ, float length, float alpha, float alphaOffset, float heightOffset)
+{
+	return targetZ + 0.2f + length * sinf(alpha + alphaOffset) + heightOffset;
+}
+
+float Camera_AngleAboveGround(float groundZ, float targetZ, float heightOffset, float length, float alphaOffset)
+{
+	float s = (groundZ - targetZ - 0.2f - heightOffset) / length;
+
+	return asinf(s < -1.0f ? -1.0f : s > 1.0f ? 1.0f : s) - alphaOffset;
+}
+
+float Camera_CarSourceHeight(float targetZ, float length, float alpha, float alphaOffset, float heightOffset)
+{
+	return targetZ + sinf(alpha + alphaOffset) * length + heightOffset;
+}
+bool Camera_NeedsBetaFix(float deltaBeta, float maxDiffBeta)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	return fabsf(deltaBeta) > pi - maxDiffBeta;
+}
+
+bool Camera_BetaFixDone(float deltaBeta)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	return fabsf(deltaBeta) < 2.0f * pi / 180.0f;
+}
+float Camera_HeliCannonLookDelta(float look, float sensitivity, float fov, float timeStep)
+{
+	return look * fabsf(look) * sensitivity / 14.0f * fov / 80.0f * timeStep;
+}
+
+float Camera_GroundHeightGain(float groundDist, float alpha, float alphaOffset)
+{
+	return groundDist * sinf(alpha + alphaOffset) + groundDist * 0.2f;
+}
+float Camera_LimitSniperFOV(float fov, float defaultFOV, bool isCameraMode)
+{
+	if (fov > defaultFOV)
+		fov = defaultFOV;
+	if (isCameraMode) {
+		if (fov < 3.0f)
+			fov = 3.0f;
+	} else {
+		if (fov < 15.0f)
+			fov = 15.0f;
+	}
+	return fov;
+}
+float Camera_HighAltitudeScale(float cameraZ)
+{
+	float v = (cameraZ - 55.0f) / 60.0f;
+
+	return 1.0f + (v > 0.0f ? v : 0.0f);
+}
+float Camera_ZoomStep(float zoom, float target, float timeStep)
+{
+	if (zoom < target) {
+		zoom += 0.12f * timeStep;
+		zoom = zoom < target ? zoom : target;
+	} else {
+		zoom -= 0.12f * timeStep;
+		zoom = zoom > target ? zoom : target;
+	}
+	return zoom;
+}
+float Camera_ShakeStrength(float force, uint32_t startMs, uint32_t nowMs)
+{
+	float strength = force - 0.28f * (nowMs - startMs) / 1000.0f;
+
+	return strength < 0.0f ? 0.0f : strength > 2.0f ? 2.0f : strength;
+}
+
+void Camera_ShakeOffsets(float strength, int rand, float offsets[3])
+{
+	float shakeOffset = strength * 0.1f;
+
+	offsets[0] = shakeOffset * ((rand & 0xF) - 7);
+	offsets[1] = shakeOffset * (((rand & 0xF0) >> 4) - 7);
+	offsets[2] = shakeOffset * (((rand & 0xF00) >> 8) - 7);
+}
+float Camera_LODDistMultiplier(float fov, bool highAltitude, float cameraZ)
+{
+	float multiplier = 70.0f / fov;
+
+	if (highAltitude)
+		multiplier *= Camera_HighAltitudeScale(cameraZ);
+	if (multiplier > 2.2f)
+		multiplier = 2.2f;
+	return multiplier;
+}
+float Camera_SmoothingFactor(float constantInv, float timeStep)
+{
+	return 1.0f - powf(constantInv, timeStep);
+}
+bool Camera_PedWillBlockView(float dist, float speedDiff, float heightOffset)
+{
+	return speedDiff > 0.01f &&
+		(heightOffset > 0.0f && (dist - 2.1f) / speedDiff < 75.0f ||
+		 heightOffset <= 0.0f && (dist - 2.1f) / speedDiff < 75.0f * 0.1f);
+}
+float Camera_Clamp01(float a)
+{
+	return a < 0.0f ? 0.0f : a > 1.0f ? 1.0f : a;
+}
+
+float Camera_BezierBlend(float a, float p0, float p1, float p2, float p3)
+{
+	float b = 1.0f - a;
+
+	return b * b * b * p0 +
+		3.0f * a * b * b * p1 +
+		3.0f * a * a * b * p2 +
+		a * a * a * p3;
+}
+float Camera_SplineFraction(const float *spline, uint32_t time, uint32_t *marker, int stride, bool *markerOutOfRange)
+{
+#define SPLINE_MS(t) (uint32_t)((t)*1000.0f)
+	uint32_t numFrames = (uint32_t)spline[0];
+	uint32_t timeDelta = SPLINE_MS(spline[*marker] - spline[*marker - stride]);
+	uint32_t endTime = SPLINE_MS(spline[stride * (numFrames - 1) + 1]);
+	float a;
+
+	if (time < endTime) {
+		bool canAdvance = true;
+
+		if ((*marker - 1) / stride > numFrames) {
+			canAdvance = false;
+			*marker = stride * (numFrames - 1) + 1;
+		}
+		/* Skipping over small time deltas */
+		while (timeDelta <= 75 && canAdvance) {
+			*marker += stride;
+			if ((*marker - 1) / stride > numFrames) {
+				canAdvance = false;
+				*marker = stride * (numFrames - 1) + 1;
+			}
+			timeDelta = (uint32_t)((spline[*marker] - spline[*marker - stride]) * 1000.0f);
+		}
+	}
+	*markerOutOfRange = (*marker - 1) / stride > numFrames;
+	a = ((float)time - (float)SPLINE_MS(spline[*marker - stride])) / (float)SPLINE_MS(spline[*marker] - spline[*marker - stride]);
+#undef SPLINE_MS
+	return Camera_Clamp01(a);
+}
+float Camera_FlyByUp(float rollDegrees, float *upX, float *upZ)
+{
+	const float pi = (float)3.14159265358979323846;
+	float angle = rollDegrees * pi / 180.0f + pi / 2;
+
+	*upX = cosf(angle);
+	*upZ = sinf(angle);
+	return angle;
+}
+void Camera_WheelCamRoll(uint32_t timeMs, float *cosine, float *sine)
+{
+	const float twopi = (float)3.14159265358979323846 * 2;
+	float roll = cosf((timeMs & 0x1FFFF) / (float)0x1FFFF * twopi);
+
+	*cosine = cosf(roll * 0.4f);
+	*sine = sinf(roll * 0.4f);
+}
+
+float Camera_WaterLuminance(float red, float green, float blue)
+{
+	return sqrtf(red * red + green * green + blue * blue);
+}
+void Camera_FixedModeUp(const float front[3], const float upOffset[3], float up[3])
+{
+	VectorMath3 f = { front[0], front[1], front[2] };
+	VectorMath3 u = { 0.0f + upOffset[0], 0.0f + upOffset[1], 1.0f + upOffset[2] };
+	VectorMath3 r;
+
+	VectorMath_Normalise(&u);
+	r = VectorMath_Cross(f, u);
+	VectorMath_Normalise(&r);
+	u = VectorMath_Cross(r, f);
+	up[0] = u.x;
+	up[1] = u.y;
+	up[2] = u.z;
+}
+void Camera_SyphonBasis(float up[3], const float upOffset[3], float front[3])
+{
+	VectorMath3 u = { up[0], up[1], up[2] };
+	VectorMath3 f = { front[0], front[1], front[2] };
+	VectorMath3 left;
+
+	u.x += upOffset[0];
+	u.y += upOffset[1];
+	u.z += upOffset[2];
+	VectorMath_Normalise(&u);
+	left = VectorMath_Cross(u, f);
+	VectorMath_Normalise(&left);
+	f = VectorMath_Cross(left, u);
+	VectorMath_Normalise(&f);
+	up[0] = u.x; up[1] = u.y; up[2] = u.z;
+	front[0] = f.x; front[1] = f.y; front[2] = f.z;
+}
+void Camera_PerpendicularUp(const float front[3], const float up[3], bool normaliseLeft, float outUp[3])
+{
+	VectorMath3 f = { front[0], front[1], front[2] };
+	VectorMath3 u = { up[0], up[1], up[2] };
+	VectorMath3 left = VectorMath_Cross(u, f);
+
+	if (normaliseLeft)
+		VectorMath_Normalise(&left);
+	u = VectorMath_Cross(f, left);
+	VectorMath_Normalise(&u);
+	outUp[0] = u.x;
+	outUp[1] = u.y;
+	outUp[2] = u.z;
+}
+void Camera_RightAndUp(const float front[3], const float up[3], bool normaliseUp, float right[3], float outUp[3])
+{
+	VectorMath3 f = { front[0], front[1], front[2] };
+	VectorMath3 u = { up[0], up[1], up[2] };
+	VectorMath3 r = VectorMath_Cross(f, u);
+
+	VectorMath_Normalise(&r);
+	u = VectorMath_Cross(r, f);
+	if (normaliseUp)
+		VectorMath_Normalise(&u);
+	right[0] = r.x; right[1] = r.y; right[2] = r.z;
+	outUp[0] = u.x; outUp[1] = u.y; outUp[2] = u.z;
+}
+void Camera_FixedPitchFront(float angle, float front[3])
+{
+	front[0] = cosf(0.3f) * sinf(angle);
+	front[1] = cosf(0.3f) * cosf(angle);
+	front[2] = -sinf(0.3f);
+}
+void Camera_DeadCamRight(const float forward[3], float right[3])
+{
+	VectorMath3 f = { forward[0], forward[1], forward[2] };
+	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
+	VectorMath3 r = VectorMath_Cross(f, up);
+
+	r.z = 0.0f;
+	VectorMath_Normalise(&r);
+	right[0] = r.x;
+	right[1] = r.y;
+	right[2] = r.z;
+}
+
+void Camera_DeadCamFront(float time, float waftRate, float tiltAmp, const float right[3], float front[3])
+{
+	VectorMath3 f = { 0.0f, 0.0f, -1.0f };
+	float t2 = time < 2000.0f ? time : 2000.0f;
+	float k = cosf(time / waftRate) * tiltAmp * t2 / 2000.0f;
+
+	f.x += k * right[0];
+	f.y += k * right[1];
+	f.z += k * right[2];
+	VectorMath_Normalise(&f);
+	front[0] = f.x;
+	front[1] = f.y;
+	front[2] = f.z;
+}
+
+void Camera_DeadCamWaftOffset(float time, float waftAmplitude, float waftRate, const float right[3], float offset[3])
+{
+	float t1 = 1000.0f < time ? 1000.0f : time;
+	float k = waftAmplitude * t1 / 1000.0f * sinf(time / waftRate);
+
+	offset[0] = k * right[0];
+	offset[1] = k * right[1];
+	offset[2] = k * right[2];
+}
+void Camera_OverShoulderPos(const float cop[3], const float target[3], float rightOfCop, float behindCop, float minFromTarget, float out[3])
+{
+	VectorMath3 copCoors = { cop[0], cop[1], cop[2] };
+	VectorMath3 copToTarget = { target[0] - cop[0], target[1] - cop[1], target[2] - cop[2] };
+	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
+	VectorMath3 side = VectorMath_Cross(copToTarget, up);
+	float dist;
+
+	VectorMath_Normalise(&side);
+	copCoors.x += rightOfCop * side.x;
+	copCoors.y += rightOfCop * side.y;
+	copCoors.z += rightOfCop * side.z;
+	VectorMath_Normalise(&copToTarget);
+	if (copToTarget.z < -0.7071f) {
+		float groundDist;
+
+		copToTarget.z = -0.7071f;
+		groundDist = sqrtf(copToTarget.x * copToTarget.x + copToTarget.y * copToTarget.y);
+		if (groundDist > 0.0f) {
+			copToTarget.x *= 0.7071f / groundDist;
+			copToTarget.y *= 0.7071f / groundDist;
+		}
+		VectorMath_Normalise(&copToTarget);
+	} else {
+		if (copToTarget.z > 0.0f) {
+			copToTarget.z = 0.0f;
+			VectorMath_Normalise(&copToTarget);
+		}
+	}
+	copCoors.x -= behindCop * copToTarget.x;
+	copCoors.y -= behindCop * copToTarget.y;
+	copCoors.z -= behindCop * copToTarget.z;
+	copToTarget.x = target[0] - copCoors.x;
+	copToTarget.y = target[1] - copCoors.y;
+	copToTarget.z = target[2] - copCoors.z;
+	dist = sqrtf(copToTarget.x * copToTarget.x + copToTarget.y * copToTarget.y + copToTarget.z * copToTarget.z);
+	if (dist < minFromTarget && dist > 0.0f) {
+		copToTarget.x *= minFromTarget / dist;
+		copToTarget.y *= minFromTarget / dist;
+		copToTarget.z *= minFromTarget / dist;
+	}
+	out[0] = target[0] - copToTarget.x;
+	out[1] = target[1] - copToTarget.y;
+	out[2] = target[2] - copToTarget.z;
+}
+void Camera_AlongGroundPos(const float target[3], const float cop[3], float alongGround, float sideGround, float out[3])
+{
+	VectorMath3 copToTarget = { target[0] - cop[0], target[1] - cop[1], target[2] - cop[2] };
+	VectorMath3 up = { 0.0f, 0.0f, 1.0f };
+	VectorMath3 side;
+
+	copToTarget.z = 0.0f;
+	VectorMath_Normalise(&copToTarget);
+	out[0] = target[0] + alongGround * copToTarget.x;
+	out[1] = target[1] + alongGround * copToTarget.y;
+	out[2] = target[2] + alongGround * copToTarget.z;
+	side = VectorMath_Cross(copToTarget, up);
+	out[0] += sideGround * side.x;
+	out[1] += sideGround * side.y;
+	out[2] += sideGround * side.z;
+	out[2] += 5.0f;
+}
+int Camera_ArrestVariantIndex(float rnd)
+{
+	if (rnd < 1.0f) return 0;
+	else if (rnd < 2.0f) return 1;
+	else if (rnd < 3.0f) return 2;
+	else if (rnd < 4.0f) return 3;
+	return 4;
+}
+void Camera_LampPostFront(const float target[3], const float camSource[3], float rotateDist, float front[3], float up[3])
+{
+	VectorMath3 toTarget = { target[0] - camSource[0], target[1] - camSource[1], target[2] - camSource[2] };
+	VectorMath3 f = toTarget;
+	VectorMath3 u = { 0.0f, 0.0f, 1.0f };
+	VectorMath3 right;
+
+	f.z = 0.0f;
+	VectorMath_Normalise(&f);
+	right = VectorMath_Cross(f, u);
+	VectorMath_Normalise(&right);
+	f.x = toTarget.x + right.x * rotateDist;
+	f.y = toTarget.y + right.y * rotateDist;
+	f.z = toTarget.z + right.z * rotateDist;
+	f.z = 0.0f;
+	VectorMath_Normalise(&f);
+	front[0] = f.x; front[1] = f.y; front[2] = f.z;
+	up[0] = u.x; up[1] = u.y; up[2] = u.z;
+}
+float Camera_DragDistance(float dist[3], float minDist, float maxDist)
+{
+	float camDist = sqrtf(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]);
+
+	if (camDist == 0.0f) {
+		dist[0] = 1.0f;
+		dist[1] = 1.0f;
+		dist[2] = 0.0f;
+	} else if (camDist < minDist) {
+		dist[0] *= minDist / camDist;
+		dist[1] *= minDist / camDist;
+		dist[2] *= minDist / camDist;
+	} else if (camDist > maxDist) {
+		dist[0] *= maxDist / camDist;
+		dist[1] *= maxDist / camDist;
+		dist[2] *= maxDist / camDist;
+	}
+	return sqrtf(dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2]);
+}
+float Camera_TransitionBetaAngle(float transitionBeta)
+{
+	return General_GetATanOfXY(-cosf(transitionBeta), -sinf(transitionBeta));
+}
+float Camera_NearClipNearPed(float pedColDist)
+{
+	float v = pedColDist - 0.3f;
+
+	return v > 0.05f ? v : 0.05f;
+}
+
+float Camera_NearClipPedInWay(float colCamDist, float defaultNear)
+{
+	float v = colCamDist - 0.35f;
+
+	return v < defaultNear ? v : defaultNear;
+}
+float Camera_DirectionAngle(float dot)
+{
+	float a = fabsf(dot);
+
+	return acosf(a < 1.0f ? a : 1.0f);
+}
+
+float Camera_SmallerDelta(float deltaLeft, float deltaRight)
+{
+	return fabsf(deltaLeft) < fabsf(deltaRight) ? deltaLeft : deltaRight;
+}
+void Camera_CarCamDistances(const float row[5], float zoomSmooth, float approxCarLength, float colMaxZ, int rcKind, float rcHeliExtra, float rcPlaneExtra, bool staysOutside, bool isGoblin, bool nearZoomSmallCar, float *alphaOffset, float *targetZAdd, float *newDistance, float *minDistForThisCar, float *nextDistance)
+{
+	float minDistForVehType;
+
+	*targetZAdd = 0.0f;
+	*newDistance = zoomSmooth + row[1] + approxCarLength;
+	if (rcKind == 1)
+		*newDistance += rcHeliExtra;
+	else if (rcKind == 2)
+		*newDistance += rcPlaneExtra;
+
+	*minDistForThisCar = approxCarLength * row[3];
+
+	if (staysOutside) {
+		float radiusToStayOutside = colMaxZ * row[0] - row[2];
+
+		if (radiusToStayOutside > 0.0f) {
+			*targetZAdd = radiusToStayOutside;
+			*newDistance += radiusToStayOutside;
+			*alphaOffset += 0.3f / *newDistance * radiusToStayOutside;
+		}
+	}
+	if (isGoblin)
+		*alphaOffset += 0.178997f;
+
+	minDistForVehType = row[4];
+	if (nearZoomSmallCar)
+		minDistForVehType = minDistForVehType * 0.65f;
+	*nextDistance = *newDistance > minDistForVehType ? *newDistance : minDistForVehType;
+}
+float Camera_FollowCarTargetBeta(float frontHeading, float speed2D, float speedHeading, float beta, float timeStep, float betaChangeFactor, float betaChangeLimitFactor, float sideSpeed)
+{
+	const float pi = (float)3.14159265358979323846;
+	const float twopi = pi * 2;
+	const float halfpi = pi / 2;
+	float camRightHeading = frontHeading - halfpi;
+	float velocityRightHeading;
+	float betaChangeMult1, betaChangeLimit, betaChange, targetBeta, m;
+
+	if (camRightHeading < -pi)
+		camRightHeading = camRightHeading + twopi;
+
+	if (speed2D <= 0.02f)
+		velocityRightHeading = camRightHeading;
+	else
+		velocityRightHeading = speedHeading - halfpi;
+
+	if (velocityRightHeading < camRightHeading - pi)
+		velocityRightHeading = velocityRightHeading + twopi;
+	else if (velocityRightHeading > camRightHeading + pi)
+		velocityRightHeading = velocityRightHeading - twopi;
+
+	betaChangeMult1 = timeStep * betaChangeFactor;
+	betaChangeLimit = timeStep * betaChangeLimitFactor;
+	m = betaChangeMult1 * sideSpeed;
+	betaChange = (1.0f < m ? 1.0f : m) * (velocityRightHeading - camRightHeading);
+	betaChange = Camera_ClampBetween(betaChange, -betaChangeLimit, betaChangeLimit);
+	targetBeta = camRightHeading + betaChange;
+
+	if (targetBeta < beta - halfpi)
+		targetBeta += twopi;
+	else if (targetBeta > beta + pi)
+		targetBeta -= twopi;
+	return targetBeta;
+}
+float Camera_FollowCarTargetAlpha(float frontZ, float alphaOffset, float lowerLimit, float upperLimit)
+{
+	float targetAlpha = General_AsinClamped(frontZ) - alphaOffset;
+
+	return Camera_ClampBetween(targetAlpha, -lowerLimit, upperLimit);
+}
+
+float Camera_FollowCarAlphaBlend(float targetAlpha, float alpha, float blendBase, float speedFactor, float timeStep)
+{
+	float maxAlphaBlendAmount = timeStep * speedFactor;
+	float targetAlphaBlendAmount = (1.0f - powf(blendBase, timeStep)) * (targetAlpha - alpha);
+
+	return Camera_ClampBetween(targetAlphaBlendAmount, -maxAlphaBlendAmount, maxAlphaBlendAmount);
+}
+float Camera_ClearedHeight(float targetZ, float cornerZ, float origZ, float sourceZ)
+{
+	float top = targetZ > cornerZ ? targetZ : cornerZ;
+	float v = top + 0.1f;
+	float height = v < origZ ? v : origZ;
+
+	return height > sourceZ ? height : sourceZ;
+}
+float Camera_BufferedHeightOffset(float bufferedHeight)
+{
+	float v = bufferedHeight / 2.0f;
+
+	return 1.0f < v ? 1.0f : v;
+}
+float Camera_MinCarDistance(float baseDist)
+{
+	float v = baseDist * 0.6f;
+
+	return v < 3.5f ? v : 3.5f;
+}
+float Camera_SniperNearClip(float fov, float nearClipMult, float defaultNear)
+{
+	float f = fov < 15.0f ? fov : 15.0f;
+
+	return ((15.0f - f) * nearClipMult + 1.0f) * defaultNear;
+}
+float Camera_ClampedGroundRatio(float ratio)
+{
+	return ratio > 0.5f ? ratio : 0.5f;
+}
+float Camera_StepsLeftAfterTimeStep(float stepsLeft, float timeStep)
+{
+	float v = stepsLeft - timeStep;
+
+	return 0.0f > v ? 0.0f : v;
+}
+float Camera_BetaStickBlendDivisor(float timeStep)
+{
+	return timeStep > 1.0f ? timeStep : 1.0f;
+}
+float Camera_ScriptNearClip(float magnitude)
+{
+	float v = magnitude * 0.5f;
+
+	return v > 0.05f ? v : 0.05f;
+}
+bool Camera_ScriptTargetPullingAway(float distance, float speedTowardsDir, float limit)
+{
+	return distance > limit && speedTowardsDir > 0.0f;
+}
+bool Camera_ScriptDistanceEnds(float distance, float speedTowardsDir, float farLimit, float nearLimit)
+{
+	return (distance > farLimit && speedTowardsDir > 0.0f) || distance < nearLimit;
+}
+bool Camera_ScriptDistanceOutOfRange(float distance, float farLimit, float nearLimit)
+{
+	return distance > farLimit || distance < nearLimit;
+}
+void Camera_AheadPosition(const float coors[3], const float speed[3], float ahead, float out[3])
+{
+	VectorMath3 v = { speed[0], speed[1], 0.0f };
+
+	VectorMath_Normalise(&v);
+	out[0] = coors[0] + ahead * v.x;
+	out[1] = coors[1] + ahead * v.y;
+	out[2] = coors[2] + ahead * v.z;
+}
+void Camera_AheadAndSidePosition(const float coors[3], const float speed[3], float ahead, float side, float out[3])
+{
+	VectorMath3 v = { speed[0], speed[1], 0.0f };
+
+	VectorMath_Normalise(&v);
+	out[0] = coors[0] + ahead * v.x;
+	out[1] = coors[1] + ahead * v.y;
+	out[2] = coors[2] + ahead * v.z;
+	out[0] += side * v.y;
+	out[1] += side * -v.x;
+	out[2] += side * 0.0f;
+}
+int Camera_ScriptStartVerdict(float distance, float speedTowardsDir, float farLimit, float nearLimit)
+{
+	if (distance > farLimit && speedTowardsDir > 0.0f)
+		return 0;
+	if (distance < nearLimit)
+		return 1;
+	return 2;
+}
+bool Camera_CopCarFollowsPlayer(float dx, float dy, float playerFwdX, float playerFwdY, float carFwdX, float carFwdY)
+{
+	return dx * playerFwdX + dy * playerFwdY < 0.0f &&
+		carFwdX * playerFwdX + carFwdY * playerFwdY > 0.8f;
+}
+int Camera_ScriptStartRangeVerdict(float distance, float farLimit, float nearLimit)
+{
+	if (distance > farLimit)
+		return 0;
+	if (distance < nearLimit)
+		return 1;
+	return 2;
+}
+float Camera_RaisedAboveWater(float camZ, float waterZ, bool isBoat)
+{
+	float offset = isBoat ? -2.0f : 1.0f;
+
+	if (camZ < waterZ + offset)
+		return waterZ + offset;
+	return camZ;
+}
+float Camera_RaisedAboveGround(float camZ, float groundZ)
+{
+	return camZ < groundZ ? groundZ + 0.5f : camZ;
+}
+float Camera_TargetForwardOrientation(const float forward[3])
+{
+	VectorMath3 v = { forward[0], forward[1], forward[2] };
+
+	VectorMath_Normalise(&v);
+	return General_GetATanOfXY(v.x, v.y);
+}
+void Camera_SideFront(const float upIn[3], const float forwardIn[3], bool negate, float upOut[3], float frontOut[3])
+{
+	VectorMath3 up = { upIn[0], upIn[1], upIn[2] };
+	VectorMath3 front = { forwardIn[0], forwardIn[1], forwardIn[2] };
+
+	// Normalise the up and forward directions
+	VectorMath_Normalise(&up);
+	VectorMath_Normalise(&front);
+
+	// Direction to the side from their cross product, negated for the other side
+	front = VectorMath_Cross(front, up);
+	if (negate) {
+		front.x = -front.x;
+		front.y = -front.y;
+		front.z = -front.z;
+	}
+	VectorMath_Normalise(&front);
+	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
+}
+void Camera_NormalisedDifference(const float a[3], const float b[3], float out[3])
+{
+	VectorMath3 v = { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
+
+	VectorMath_Normalise(&v);
+	out[0] = v.x; out[1] = v.y; out[2] = v.z;
+}
+void Camera_OrthonormalBasis(const float frontIn[3], const float upIn[3], float frontOut[3], float rightOut[3], float upOut[3])
+{
+	VectorMath3 front = { frontIn[0], frontIn[1], frontIn[2] };
+	VectorMath3 up = { upIn[0], upIn[1], upIn[2] };
+	VectorMath3 right;
+
+	// Normalise the front and up directions
+	VectorMath_Normalise(&front);
+	VectorMath_Normalise(&up);
+
+	// Right direction perpendicular to both, then the up direction perpendicular to front and right
+	right = VectorMath_Cross(front, up);
+	VectorMath_Normalise(&right);
+	up = VectorMath_Cross(right, front);
+	VectorMath_Normalise(&up);
+	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
+	rightOut[0] = right.x; rightOut[1] = right.y; rightOut[2] = right.z;
+	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+}
+void Camera_TopDownBasis(const float frontIn[3], float frontOut[3], float rightOut[3], float upOut[3])
+{
+	VectorMath3 front = { frontIn[0], frontIn[1], frontIn[2] };
+	VectorMath3 right = { -1.0f, 0.0f, 0.0f };
+	VectorMath3 up;
+
+	// Looking down: right direction is fixed, up is perpendicular to front and right
+	VectorMath_Normalise(&front);
+	up = VectorMath_Cross(front, right);
+	VectorMath_Normalise(&up);
+	frontOut[0] = front.x; frontOut[1] = front.y; frontOut[2] = front.z;
+	rightOut[0] = right.x; rightOut[1] = right.y; rightOut[2] = right.z;
+	upOut[0] = up.x; upOut[1] = up.y; upOut[2] = up.z;
+}
 //- rouz edit (Claude)

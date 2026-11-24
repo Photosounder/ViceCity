@@ -747,8 +747,8 @@ CVehicleModelInfo::FindEditableMaterialList(void)
 		GetEditableMaterialListCB(m_comps[i], &cbdata);
 	m_materials1[cbdata.numMats1] = nil;
 	m_materials2[cbdata.numMats2] = nil;
-	maxFirstMaterials = Max(maxFirstMaterials, cbdata.numMats1);
-	maxSecondMaterials = Max(maxSecondMaterials, cbdata.numMats2);
+	maxFirstMaterials = General_MaxInt(maxFirstMaterials, cbdata.numMats1);
+	maxSecondMaterials = General_MaxInt(maxSecondMaterials, cbdata.numMats2);
 	m_currentColour1 = -1;
 	m_currentColour2 = -1;
 }

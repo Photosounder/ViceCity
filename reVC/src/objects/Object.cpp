@@ -10,6 +10,11 @@
 #include "Radar.h"
 #include "Object.h"
 #include "ObjectLogic.h"
+
+// Collision damage effects the C implementation of the debris colours knows by number
+static_assert(DAMAGE_EFFECT_SMASH_NEWSTANDNEW1 == 91 && DAMAGE_EFFECT_SMASH_NEWSTANDNEW2 == 92 && DAMAGE_EFFECT_SMASH_NEWSTANDNEW3 == 93 &&
+	DAMAGE_EFFECT_SMASH_NEWSTANDNEW4 == 94 && DAMAGE_EFFECT_SMASH_NEWSTANDNEW5 == 95 && DAMAGE_EFFECT_SMASH_BLACKBAG == 100 &&
+	DAMAGE_EFFECT_SMASH_BEACHLOUNGE_WOOD == 131 && DAMAGE_EFFECT_SMASH_BEACHLOUNGE_TOWEL == 132, "Mirrored collision damage effects");
 #include "DummyObject.h"
 #include "Particle.h"
 #include "General.h"
@@ -87,7 +92,8 @@ CObject::ProcessControl(void)
 		SetIsStatic(false);
 		ApplyMoveForce(impulse);
 		ApplyTurnForce(impulse, point);
-		float fTimeStep = Pow(0.97f, (*Timer_GetTimeStep()));
+		// Delegate the damping of the speeds to the C implementation
+		float fTimeStep = ObjectLogic_SpeedDamping(0.97f, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= fTimeStep;
 		m_vecTurnSpeed *= fTimeStep;
 	}
@@ -103,12 +109,13 @@ CObject::ProcessControl(void)
 	if (mi == MI_RCBOMB) {
 		float fTurnForce = -(m_fTurnMass / 20.0f);
 		CPhysical::ApplyTurnForce(m_vecMoveSpeed * fTurnForce, -GetForward());
-		float fScalar = 1.0f - m_vecMoveSpeed.MagnitudeSqr() / 5.0f;
-		float fScalarTimed = Pow(fScalar, (*Timer_GetTimeStep()));
+		// Delegate the factor of the speed to the C implementation
+		float fScalarTimed = ObjectLogic_RCBombSpeedFactor(m_vecMoveSpeed.MagnitudeSqr(), (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= fScalarTimed;
 	}
 	if (mi == MI_BEACHBALL) {
-		float fTimeStep = Pow(0.95f, (*Timer_GetTimeStep()));
+		// Delegate the damping of the speeds to the C implementation
+		float fTimeStep = ObjectLogic_SpeedDamping(0.95f, (*Timer_GetTimeStep()));
 		float fPreviousVecSpeedMag = m_vecMoveSpeed.Magnitude2D();
 		m_vecMoveSpeed.x *= fTimeStep;
 		m_vecMoveSpeed.y *= fTimeStep;
@@ -118,9 +125,10 @@ CObject::ProcessControl(void)
 			distance.x = FindPlayerCoors().x - GetPosition().x;
 			distance.y = FindPlayerCoors().y - GetPosition().y;
 			distance.z = FindPlayerCoors().z - GetPosition().z;
-			if (distance.z > 0.0 && distance.z < 1.5f && distance.Magnitude2D() < 1.0f) {
-				CVector playerSpeed = FindPlayerSpeed();
-				if (fPreviousVecSpeedMag < 0.05f && playerSpeed.Magnitude() > 0.1f) {
+			// Delegate the test that the ball gets kicked to the C implementation
+			CVector playerSpeed = FindPlayerSpeed();
+			if (ObjectLogic_BeachballKickedByPlayer(distance.z, distance.Magnitude2D(), fPreviousVecSpeedMag, playerSpeed.Magnitude())) {
+				{
 					playerSpeed.z = 0.0f;
 					playerSpeed.Normalise();
 					playerSpeed.z = 0.3f;
@@ -149,10 +157,12 @@ CObject::ProcessControl(void)
 					}
 				}
 			}
-			if (distance.z > -1.05 && distance.z < -0.6 && m_vecMoveSpeed.z < 0.0f && distance.Magnitude2D() < 0.9f) {
+			// Delegate the test that the ball hits the head to the C implementation
+			if (ObjectLogic_BeachballHitsHead(distance.z, m_vecMoveSpeed.z, distance.Magnitude2D())) {
 				m_vecMoveSpeed.x += (General_GetRandomNumber() % 8 - 3) / 100.0f;
 				m_vecMoveSpeed.y += (General_GetRandomNumber() % 8 - 3) / 100.0f;
-				m_vecMoveSpeed.z = Max(m_vecMoveSpeed.z + 0.3f, 0.2f);
+				// Delegate the upward speed of the kick to the C implementation
+				m_vecMoveSpeed.z = ObjectLogic_BeachballKickSpeed(m_vecMoveSpeed.z);
 				{
 					// Evaluate the game position once before passing its components to C
 					const CVector scriptPosition = GetPosition();
@@ -161,7 +171,7 @@ CObject::ProcessControl(void)
 				m_vecTurnSpeed.x += (General_GetRandomNumber() % 16 - 7) / 10.0f;
 				m_vecTurnSpeed.y += (General_GetRandomNumber() % 16 - 7) / 10.0f;
 				m_nBeachballBounces++;
-				m_nBeachballBounces = Min(m_nBeachballBounces, BEACHBALL_MAX_SCORE);
+				m_nBeachballBounces = General_MinInt(m_nBeachballBounces, BEACHBALL_MAX_SCORE);
 				sprintf(gString, "%d", m_nBeachballBounces);
 				// Enter the C money-message algorithm with the original arguments
 				MoneyMessages_RegisterOneLegacy(GetPosition(), gString, 255, 50, 0, 0.6f, 0.5f);
@@ -196,17 +206,14 @@ CObject::Render(void)
 		mi->SetVehicleColour(m_colour1, m_colour2);
 	}
 
-	float red = (0.8f * TimeCycle_GetDirectionalRed() + TimeCycle_GetAmbientRed_Obj()) * 165.75f;
-	float green = (0.8f * TimeCycle_GetDirectionalGreen() + TimeCycle_GetAmbientGreen_Obj()) * 165.75f;
-	float blue = (0.8f * TimeCycle_GetDirectionalBlue() + TimeCycle_GetAmbientBlue_Obj()) * 165.75f;
-
-	red = Clamp(red, 0.0f, 255.0f);
-	green = Clamp(green, 0.0f, 255.0f);
-	blue = Clamp(blue, 0.0f, 255.0f);
+	// Delegate the colour channels of the spray to the C implementation
+	uint8 red = ObjectLogic_RenderColorChannel(TimeCycle_GetDirectionalRed(), TimeCycle_GetAmbientRed_Obj());
+	uint8 green = ObjectLogic_RenderColorChannel(TimeCycle_GetDirectionalGreen(), TimeCycle_GetAmbientGreen_Obj());
+	uint8 blue = ObjectLogic_RenderColorChannel(TimeCycle_GetDirectionalBlue(), TimeCycle_GetAmbientBlue_Obj());
 
 	int alpha = General_GetRandomNumberInRangeInt(196, 225);
 
-	RwRGBA color = { (uint8)red, (uint8)green, (uint8)blue, (uint8)alpha };
+	RwRGBA color = { red, green, blue, (uint8)alpha };
 
 	if (this->GetModelIndex() == MI_YT_MAIN_BODY) {
 		float moveSpeedMagnitude = this->GetMoveSpeed().Magnitude();
@@ -589,30 +596,12 @@ CObject::ObjectDamage(float amount)
 				bExplosionProof = true;
 				SetMoveSpeed(0.0f, 0.0f, 0.0f);
 				SetTurnSpeed(0.0f, 0.0f, 0.0f);
-				CRGBA possibleColor1;
-				CRGBA possibleColor2;
-				switch (m_nCollisionDamageEffect) {
-					case DAMAGE_EFFECT_SMASH_NEWSTANDNEW1:
-						possibleColor1 = CRGBA(0xC0, 0x3E, 0xC, 0xFF);
-						possibleColor2 = possibleColor1;
-						break;
-					case DAMAGE_EFFECT_SMASH_NEWSTANDNEW2:
-						possibleColor1 = CRGBA(0xA3, 0x36, 0x21, 0xFF);
-						possibleColor2 = possibleColor1;
-						break;
-					case DAMAGE_EFFECT_SMASH_NEWSTANDNEW3:
-						possibleColor1 = CRGBA(0x12, 0x31, 0x24, 0xFF);
-						possibleColor2 = possibleColor1;
-						break;
-					case DAMAGE_EFFECT_SMASH_NEWSTANDNEW4:
-						possibleColor1 = CRGBA(0xC0, 0xC8, 0xBE, 0xFF);
-						possibleColor2 = CRGBA(0x10, 0x57, 0x85, 0xFF);
-						break;
-					case DAMAGE_EFFECT_SMASH_NEWSTANDNEW5:
-						possibleColor1 = CRGBA(0xD0, 0x94, 0x1B, 0xFF);
-						possibleColor2 = possibleColor1;
-						break;
-				}
+				// Delegate the colours of the debris to the C implementation
+				unsigned char debrisColors1[4] = { 0, 0, 0, 0 };
+				unsigned char debrisColors2[4] = { 0, 0, 0, 0 };
+				ObjectLogic_SmashDebrisColors(m_nCollisionDamageEffect, debrisColors1, debrisColors2);
+				CRGBA possibleColor1(debrisColors1[0], debrisColors1[1], debrisColors1[2], debrisColors1[3]);
+				CRGBA possibleColor2(debrisColors2[0], debrisColors2[1], debrisColors2[2], debrisColors2[3]);
 				for (int32 i = 0; i < 16; i++) {
 					CVector vecDir(
 						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),
@@ -698,22 +687,12 @@ CObject::ObjectDamage(float amount)
 				bExplosionProof = true;
 				SetMoveSpeed(0.0f, 0.0f, 0.0f);
 				SetTurnSpeed(0.0f, 0.0f, 0.0f);
-				CRGBA possibleColor1;
-				CRGBA possibleColor2;
-				switch (m_nCollisionDamageEffect) {
-					case DAMAGE_EFFECT_SMASH_BLACKBAG:
-						possibleColor1 = CRGBA(0, 0, 0, 0xFF);
-						possibleColor2 = possibleColor1;
-						break;
-					case DAMAGE_EFFECT_SMASH_BEACHLOUNGE_WOOD:
-						possibleColor1 = CRGBA(0x8F, 0x8A, 0x8C, 0xFF);
-						possibleColor2 = CRGBA(0x73, 0x75, 0x7B, 0xFF);
-						break;
-					case DAMAGE_EFFECT_SMASH_BEACHLOUNGE_TOWEL:
-						possibleColor1 = CRGBA(0x52, 0x92, 0x4A, 0xFF);
-						possibleColor2 = CRGBA(0xCE, 0xCF, 0xCE, 0xFF);
-						break;
-				}
+				// Delegate the colours of the debris to the C implementation
+				unsigned char debrisColors1[4] = { 0, 0, 0, 0 };
+				unsigned char debrisColors2[4] = { 0, 0, 0, 0 };
+				ObjectLogic_SmashDebrisColors(m_nCollisionDamageEffect, debrisColors1, debrisColors2);
+				CRGBA possibleColor1(debrisColors1[0], debrisColors1[1], debrisColors1[2], debrisColors1[3]);
+				CRGBA possibleColor2(debrisColors2[0], debrisColors2[1], debrisColors2[2], debrisColors2[3]);
 				for (int32 i = 0; i < 16; i++) {
 					CVector vecDir(
 						General_GetRandomNumberInRangeFloat(-0.35f, 0.35f),

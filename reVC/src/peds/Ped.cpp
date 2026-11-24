@@ -17,6 +17,7 @@
 #include "Particle.h"
 #include "RpAnimBlend.h"
 #include "Bones.h"
+#include "WorldLogic.h"
 #include "Ped.h"
 #include "WeaponLogic.h"
 #include "AnimBlendAssociation.h"
@@ -32,6 +33,8 @@
 #include "Weather.h"
 #include "ZoneCull.h"
 #include "Population.h"
+#include "PedFightLogic.h"
+#include "CameraMath.h"
 #include "Pad.h"
 #include "Phones.h"
 #include "TrafficLights.h"
@@ -610,12 +613,8 @@ CPed::OurPedCanSeeThisOne(CEntity *target, bool shootablesDoBlock)
 
 	CVector2D dist = CVector2D(target->GetPosition()) - CVector2D(GetPosition());
 
-	// Check if target is behind ped
-	if (DotProduct2D(dist, CVector2D(GetForward())) < 0.0f)
-		return false;
-
-	// Check if target is too far away
-	if (dist.Magnitude() >= 40.0f)
+	// Delegate the facing and distance checks to the C implementation
+	if (!PedLogic_TargetInViewRange(dist.x, dist.y, GetForward().x, GetForward().y))
 		return false;
 
 	// Check line of sight from head
@@ -1345,16 +1344,11 @@ CPed::CalculateNewVelocity(void)
 		m_fRotationCur = PedLogic_TurnTowardsDest(m_fRotationCur, m_fRotationDest, headAmount);
 	}
 
-	CVector2D forward(Sin(m_fRotationCur), Cos(m_fRotationCur));
-
-	m_moved.x = CrossProduct2D(m_vecAnimMoveDelta, forward); // (m_vecAnimMoveDelta.x * Cos(m_fRotationCur)) + -Sin(m_fRotationCur) * m_vecAnimMoveDelta.y;
-	m_moved.y = DotProduct2D(m_vecAnimMoveDelta, forward);  // m_vecAnimMoveDelta.y* Cos(m_fRotationCur) + (m_vecAnimMoveDelta.x * Sin(m_fRotationCur));
-
-	if ((*Timer_GetTimeStep()) >= 0.01f) {
-		m_moved = m_moved * (1 / (*Timer_GetTimeStep()));
-	} else {
-		m_moved = m_moved * (1 / 100.0f);
-	}
+	// Delegate the movement from the animation to the C implementation
+	float animMoved[2];
+	PedLogic_AnimMoved(m_vecAnimMoveDelta.x, m_vecAnimMoveDelta.y, m_fRotationCur, (*Timer_GetTimeStep()), animMoved);
+	m_moved.x = animMoved[0];
+	m_moved.y = animMoved[1];
 
 	if ((!TheCamera.Cams[TheCamera.ActiveCam].GetWeaponFirstPersonOn() && !TheCamera.Cams[0].Using3rdPersonMouseCam())
 		|| FindPlayerPed() != this || !CanStrafeOrMouseControl()) {
@@ -1371,7 +1365,8 @@ CPed::CalculateNewVelocity(void)
 	localWalkAngle = PedLogic_FoldWalkAngle(localWalkAngle);
 
 	// Interestingly this part is responsible for diagonal walking.
-	if (localWalkAngle > -DEGTORAD(50.0f) && localWalkAngle < DEGTORAD(50.0f)) {
+	// Delegate the diagonal walking test to the C implementation
+	if (PedLogic_IsDiagonalWalk(localWalkAngle)) {
 		TheCamera.Cams[TheCamera.ActiveCam].m_fPlayerVelocity = pedSpeed;
 		m_moved = CVector2D(-Sin(walkAngle), Cos(walkAngle)) * pedSpeed;
 	}
@@ -1386,15 +1381,9 @@ CPed::CalculateNewVelocity(void)
 
 	if ((!idleAssoc || idleAssoc->blendAmount < 0.5f) && !fightAssoc && !bIsDucking) {
 		LimbOrientation newUpperLegs;
-		newUpperLegs.yaw = localWalkAngle;
-
-		if (newUpperLegs.yaw < -DEGTORAD(100.0f)) {
-			newUpperLegs.yaw += PI;
-		} else if (newUpperLegs.yaw > DEGTORAD(100.0f)) {
-			newUpperLegs.yaw -= PI;
-		}
-
-		if (newUpperLegs.yaw > -DEGTORAD(50.0f) && newUpperLegs.yaw < DEGTORAD(50.0f)) {
+		// Delegate the folding of the yaw and the test that the legs get turned to the C implementation
+		bool turnLegs = PedLogic_UpperLegsYaw(localWalkAngle, &newUpperLegs.yaw);
+		if (turnLegs) {
 			newUpperLegs.pitch = 0.1f;
 			RwV3d Xaxis = { 1.0f, 0.0f, 0.0f };
 			RwV3d Zaxis = { 0.0f, 0.0f, 1.0f };
@@ -1732,12 +1721,8 @@ CPed::ProcessControl(void)
 							if (nearPed->IsPlayer()) {
 								if (!nearPed->bIsLooking && nearPed->m_nPedState != PED_ATTACK) {
 									int16 camMode = TheCamera.Cams[TheCamera.ActiveCam].Mode;
-									if (camMode != CCam::MODE_SNIPER
-										&& camMode != CCam::MODE_CAMERA
-										&& camMode != CCam::MODE_ROCKETLAUNCHER
-										&& camMode != CCam::MODE_M16_1STPERSON
-										&& camMode != CCam::MODE_1STPERSON
-										&& camMode != CCam::MODE_HELICANNON_1STPERSON
+									// The camera modes that look through a weapon or from the first person are known to the C implementation
+									if (!CameraMath_Using1stPersonWeaponMode(camMode) && camMode != CCam::MODE_1STPERSON
 										&& !TheCamera.Cams[TheCamera.ActiveCam].GetWeaponFirstPersonOn()) {
 
 										nearPed->SetLookFlag(this, true);
@@ -1760,8 +1745,8 @@ CPed::ProcessControl(void)
 					} else {
 						CShadows::StoreStaticShadow(
 							(uintptr)this + 17, SHADOWTYPE_DARK, gpBloodPoolTex, &bloodPos,
-							(remainingBloodyFpTime - 2000) / 5000.0f * 0.75f, 0.0f,
-							0.0f, (remainingBloodyFpTime - 2000) / 5000.0f * -0.75f,
+							PedLogic_BloodPoolFade(remainingBloodyFpTime) * 0.75f, 0.0f,
+							0.0f, PedLogic_BloodPoolFade(remainingBloodyFpTime) * -0.75f,
 							255, 255, 0, 0, 4.0f, 1.0f, 40.0f, false, 0.0f);
 					}
 				}
@@ -1847,10 +1832,8 @@ CPed::ProcessControl(void)
 						m_vecDamageNormal.x + GetPosition().x,
 						m_vecDamageNormal.y + GetPosition().y);
 
-					float neededTurn = Abs(m_fRotationCur - angleToFaceWhenHit);
-
-					if (neededTurn > PI)
-						neededTurn = TWOPI - neededTurn;
+					// Delegate the angle between the directions to the C implementation
+					float neededTurn = PedLogic_AngleDifference(m_fRotationCur, angleToFaceWhenHit);
 
 					float oldDestRot = General_LimitRadianAngle(m_fRotationDest);
 
@@ -2045,13 +2028,10 @@ CPed::ProcessControl(void)
 					bool playerSufferSound = false;
 
 					if (collidingVehSpeedSqr <= 1.0f / 400.0f) {
-						if (IsPedInControl()
-							&& (!IsPlayer()
-								|| m_objective == OBJECTIVE_GOTO_AREA_ON_FOOT
-								|| m_objective == OBJECTIVE_RUN_TO_AREA
-								|| m_objective == OBJECTIVE_SPRINT_TO_AREA
-								|| m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER
-								|| IsUseAttractorObjective(m_objective))) {
+						// Delegate the decision to walk around the vehicle to the C implementation
+						if (PedLogic_WalksAroundBumpingVehicle(IsPedInControl(), IsPlayer(), m_objective == OBJECTIVE_GOTO_AREA_ON_FOOT
+							|| m_objective == OBJECTIVE_RUN_TO_AREA || m_objective == OBJECTIVE_SPRINT_TO_AREA
+							|| m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER || IsUseAttractorObjective(m_objective))) {
 
 							if (collidingVeh != m_pCurrentPhysSurface || IsPlayer()) {
 								if (!bVehEnterDoorIsBlocked) {
@@ -2097,10 +2077,7 @@ CPed::ProcessControl(void)
 
 								eWeaponType weaponType = GetWeapon()->m_eWeaponType;
 								uint32 weaponSlot = WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot;
-								if (weaponType == WEAPONTYPE_UNARMED
-									|| weaponSlot == 3
-									|| weaponSlot == 5
-									|| weaponSlot == 1) {
+								if (PedLogic_ShakesFistAtDriver(weaponType, weaponSlot)) {
 									bShakeFist = true;
 								}
 							} else {
@@ -2109,17 +2086,8 @@ CPed::ProcessControl(void)
 							}
 						}
 					} else {
-						float adjustedImpulse = m_fDamageImpulse;
-						if (IsPlayer()) {
-							if (bIsStanding) {
-								float forwardVecAndDamageDirDotProd = DotProduct(m_vecAnimMoveDelta.y * GetForward(), m_vecDamageNormal);
-								if (forwardVecAndDamageDirDotProd < 0.0f) {
-									adjustedImpulse = forwardVecAndDamageDirDotProd * m_fMass + m_fDamageImpulse;
-									if (adjustedImpulse < 0.0f)
-										adjustedImpulse = 0.0f;
-								}
-							}
-						}
+						// Delegate the impulse the ped feels to the C implementation
+						float adjustedImpulse = PedLogic_CarHitAdjustedImpulse(IsPlayer(), bIsStanding, DotProduct(m_vecAnimMoveDelta.y * GetForward(), m_vecDamageNormal), m_fDamageImpulse, m_fMass);
 						if (m_fMass / 20.0f < adjustedImpulse)
 							DMAudio_PlayOneShot(collidingVeh->m_audioEntityId, SOUND_CAR_PED_COLLISION, adjustedImpulse);
 
@@ -2152,34 +2120,13 @@ CPed::ProcessControl(void)
 							CVector vehDist = GetPosition() - collidingVeh->GetPosition();
 							vehDist.Normalise();
 
-							float vehRightVecAndSpeedDotProd;
-
-							if (Abs(angleDiffFromLookingFrontTLVC) >= vehTopRightHeading && Abs(angleDiffFromLookingFrontTLVC) < PI - vehTopRightHeading) {
-								if (angleDiffFromLookingFrontTLVC <= 0.0f) {
-									vehRightVecAndSpeedDotProd = DotProduct(collidingVeh->GetRight(), collidingVeh->m_vecMoveSpeed);
-
-									// vehRightVecAndSpeedDotProd < 0.1f = Vehicle being overturned or spinning to it's right?
-									if (collidingVehSpeedSqr > 1.0f / 100.0f && vehRightVecAndSpeedDotProd < 0.1f) {
-
-										// Car's right faces towards us and isn't coming directly to us
-										if (DotProduct(collidingVeh->GetRight(), GetForward()) < 0.0f
-											&& DotProduct(vehDist, collidingVeh->m_vecMoveSpeed) > 0.0f) {
-											SetEvasiveStep(collidingVeh, 1);
-										}
-									}
-								} else {
-									vehRightVecAndSpeedDotProd = DotProduct(-1.0f * collidingVeh->GetRight(), collidingVeh->m_vecMoveSpeed);
-
-									if (collidingVehSpeedSqr > 1.0f / 100.0f && vehRightVecAndSpeedDotProd < 0.1f) {
-										if (DotProduct(collidingVeh->GetRight(), GetForward()) > 0.0f
-											&& DotProduct(vehDist, collidingVeh->m_vecMoveSpeed) > 0.0f) {
-											SetEvasiveStep(collidingVeh, 1);
-										}
-									}
-								}
-							} else {
-								vehRightVecAndSpeedDotProd = DotProduct(vehDist, collidingVeh->m_vecMoveSpeed);
-							}
+							// Delegate the check of the side the car comes from to the C implementation
+							bool evasiveStep;
+							float vehRightVecAndSpeedDotProd = PedLogic_CarHitSideCheck(angleDiffFromLookingFrontTLVC, vehTopRightHeading, collidingVehSpeedSqr,
+								DotProduct(collidingVeh->GetRight(), collidingVeh->m_vecMoveSpeed), DotProduct(collidingVeh->GetRight(), GetForward()),
+								DotProduct(vehDist, collidingVeh->m_vecMoveSpeed), &evasiveStep);
+							if (evasiveStep)
+								SetEvasiveStep(collidingVeh, 1);
 
 							if (vehRightVecAndSpeedDotProd <= 0.1f) {
 								if (m_nPedState != PED_FIGHT) {
@@ -2229,10 +2176,7 @@ CPed::ProcessControl(void)
 										player->SetLookTimer(1300);
 										eWeaponType weaponType = player->GetWeapon()->m_eWeaponType;
 										uint32 weaponSlot = WeaponInfo_GetWeaponInfo(weaponType)->m_nWeaponSlot;
-										if (weaponType == WEAPONTYPE_UNARMED
-											|| weaponSlot == 3
-											|| weaponSlot == 5
-											|| weaponSlot == 1) {
+										if (PedLogic_ShakesFistAtDriver(weaponType, weaponSlot)) {
 											player->bShakeFist = true;
 										}
 									}
@@ -2270,14 +2214,15 @@ CPed::ProcessControl(void)
 				CVector offsetToCheck;
 				m_nPedStateTimer++;
 
-				float adjustedTs = Max((*Timer_GetTimeStep()), 0.01f);
+				// Delegate the minimum time step to the C implementation
+				float adjustedTs = PedLogic_AdjustedTimeStep((*Timer_GetTimeStep()));
 
 				CPad *pad0 = CPad::GetPad(0);
-				if ((m_nPedStateTimer <= 50.0f / (4.0f * adjustedTs) || m_nPedStateTimer * 0.01f <= forceDir.MagnitudeSqr())
-					&& (m_nCollisionRecords <= 1 || m_nPedStateTimer <= 50.0f / (2.0f * adjustedTs) || m_nPedStateTimer * 1.0f / 250.0f <= Abs(forceDir.z))) {
+				// Delegate the check that the ped keeps pushing to the C implementation
+				if (PedLogic_KeepsPushing(m_nPedStateTimer, adjustedTs, forceDir.MagnitudeSqr(), m_nCollisionRecords, forceDir.z)) {
 
 					if (m_nCollisionRecords == 1 && m_aCollisionRecords[0] != nil && m_aCollisionRecords[0]->IsBuilding()
-						&& m_nPedStateTimer > 50.0f / (2.0f * adjustedTs) && m_nPedStateTimer * 1.0f / 250.0f > Abs(forceDir.z)) {
+						&& PedLogic_PushedAgainstWallLong(m_nPedStateTimer, adjustedTs, forceDir.z)) {
 						offsetToCheck.x = -forceDir.y;
 						offsetToCheck.z = 1.0f;
 						offsetToCheck.y = forceDir.x;
@@ -2370,7 +2315,7 @@ CPed::ProcessControl(void)
 					if (IsPlayer() && m_nPedState != PED_JUMP && pad0->JumpJustDown()) {
 						int16 padWalkX = pad0->GetPedWalkLeftRight();
 						int16 padWalkY = pad0->GetPedWalkUpDown();
-						if (Abs(padWalkX) > 0.0f || Abs(padWalkY) > 0.0f) {
+						if (PedLogic_PadIsWalking(padWalkX, padWalkY)) {
 							m_fRotationDest = General_GetRadianAngleBetweenPoints(0.0f, 0.0f, -padWalkX, padWalkY);
 							m_fRotationDest -= TheCamera.Orientation;
 							m_fRotationDest = General_LimitRadianAngle(m_fRotationDest);
@@ -2386,7 +2331,7 @@ CPed::ProcessControl(void)
 					} else if (IsPlayer()) {
 						int16 padWalkX = pad0->GetPedWalkLeftRight();
 						int16 padWalkY = pad0->GetPedWalkUpDown();
-						if (Abs(padWalkX) > 0.0f || Abs(padWalkY) > 0.0f) {
+						if (PedLogic_PadIsWalking(padWalkX, padWalkY)) {
 							m_fRotationDest = General_GetRadianAngleBetweenPoints(0.0f, 0.0f, -padWalkX, padWalkY);
 							m_fRotationDest -= TheCamera.Orientation;
 							m_fRotationDest = General_LimitRadianAngle(m_fRotationDest);
@@ -2450,17 +2395,15 @@ CPed::ProcessControl(void)
 			}
 		}
 
-		if (!bIsStanding && m_vecMoveSpeed.z > 0.25) {
-			float airResistance = Pow(0.95f, (*Timer_GetTimeStep()));
+		if (PedLogic_InAirDrag(bIsStanding, m_vecMoveSpeed.z)) {
+			// Delegate the air resistance to the C implementation
+			float airResistance = PedLogic_AirResistanceFactor((*Timer_GetTimeStep()));
 
 			m_vecMoveSpeed *= airResistance;
 		}
-		if (IsPlayer() || !bIsStanding || m_vecMoveSpeed.x != 0.0f || m_vecMoveSpeed.y != 0.0f || m_vecMoveSpeed.z != 0.0f
-			|| (m_nMoveState != PEDMOVE_NONE && m_nMoveState != PEDMOVE_STILL)
-			|| m_vecAnimMoveDelta.x != 0.0f || m_vecAnimMoveDelta.y != 0.0f
-			|| m_nPedState == PED_JUMP
-			|| bIsInTheAir
-			|| m_pCurrentPhysSurface) {
+		// Delegate the decision to process the physics to the C implementation
+		if (PedLogic_NeedsPhysicsProcess(IsPlayer(), bIsStanding, m_vecMoveSpeed.x, m_vecMoveSpeed.y, m_vecMoveSpeed.z, m_nMoveState,
+			m_vecAnimMoveDelta.x, m_vecAnimMoveDelta.y, m_nPedState == PED_JUMP, bIsInTheAir, m_pCurrentPhysSurface != nil)) {
 
 			CPhysical::ProcessControl();
 		} else {
@@ -2538,9 +2481,8 @@ CPed::ProcessControl(void)
 
 						int16 padWalkX = pad->GetPedWalkLeftRight();
 						int16 padWalkY = pad->GetPedWalkUpDown();
-						if (Abs(padWalkX) > 0.0f || Abs(padWalkY) > 0.0f) {
-							if (vehAnim == ANIM_STD_CAR_OPEN_DOOR_LHS || vehAnim == ANIM_STD_CAR_OPEN_DOOR_RHS || vehAnim == ANIM_STD_COACH_OPEN_LHS || vehAnim == ANIM_STD_COACH_OPEN_RHS ||
-								vehAnim == ANIM_STD_VAN_OPEN_DOOR_REAR_LHS || vehAnim == ANIM_STD_VAN_OPEN_DOOR_REAR_RHS) {
+						if (PedLogic_PadIsWalking(padWalkX, padWalkY)) {
+							if (PedLogic_IsOpenDoorAnim(vehAnim)) {
 
 								if (!m_pMyVehicle->pDriver) {
 									cancelJack = false;
@@ -2550,7 +2492,7 @@ CPed::ProcessControl(void)
 							// Use the complete C association at the original native operation boundary
 							} else if (vehAnim == ANIM_STD_QUICKJACK && AnimAssociation_GetTimeLeft(m_pVehicleAnim) > 0.75f) {
 								cancelJack = true;
-							} else if (vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LO_LHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LO_RHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_RHS) {
+							} else if (PedLogic_IsPullOutAnim(vehAnim)) {
 								bCancelEnteringCar = true;
 								cancelJack = false;
 							}
@@ -2561,7 +2503,7 @@ CPed::ProcessControl(void)
 							QuitEnteringCar();
 							RestorePreviousObjective();
 						}
-						if (cancelJack && (vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LO_LHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_LO_RHS || vehAnim == ANIM_STD_CAR_PULL_OUT_PED_RHS)) {
+						if (cancelJack && (PedLogic_IsPullOutAnim(vehAnim))) {
 							cancelJack = false;
 							bCancelEnteringCar = true;
 						}
@@ -2805,14 +2747,14 @@ CPed::ProcessControl(void)
 				m_delayedSoundTimer = 0;
 			}
 
-			if (bFannyMagnetCheat && m_nPedType == PEDTYPE_CIVFEMALE
-				&& m_pedStats->m_sexiness > 40 && !m_leader) {
+			// Delegate the fanny magnet test to the C implementation
+			if (PedLogic_FannyMagnetPullsPed(bFannyMagnetCheat, m_nPedType, m_pedStats->m_sexiness, m_leader != nil)) {
 				SetLeader(FindPlayerPed());
 			}
 
 		} else {
-			if (bIsStanding && (!m_pCurrentPhysSurface || IsPlayer())
-				|| bIsInWater || !bUsesCollision) {
+			// Delegate the decision to set the ped dead to the C implementation
+			if (PedLogic_ShouldBeSetDead(bIsStanding, m_pCurrentPhysSurface != nil, IsPlayer(), bIsInWater, bUsesCollision)) {
 				SetDead();
 			}
 			m_pCurrentPhysSurface = nil;
@@ -2853,8 +2795,8 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 			bCollisionProcessed = true;
 			m_fCollisionSpeed += m_vecMoveSpeed.Magnitude2D() * (*Timer_GetTimeStep());
 			bStillOnValidPoly = false;
-			if (IsPlayer() || m_fCollisionSpeed >= 1.0f
-				&& (m_fCollisionSpeed >= 2.0f || m_nPedState != PED_WANDER_PATH)) {
+			// Delegate the decision to forget the stored polygon to the C implementation
+			if (PedLogic_ForgetsStoredPoly(IsPlayer(), m_fCollisionSpeed, m_nPedState)) {
 				m_collPoly.valid = false;
 				m_fCollisionSpeed = 0.0f;
 				bHitSteepSlope = false;
@@ -2964,22 +2906,18 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 						if (rouz.glue_on_vehs && collidingEnt->IsVehicle() && !collidedWithBoat)
 							landingVelocity -= ((CPhysical*)collidingEnt)->GetSpeed(CollisionVector_ToNative(intersectionPoint.point) - collidingEnt->GetPosition());
 						float speed = landingVelocity.Magnitude2D();
-												if (m_nPedState == PED_IDLE) {
-							upperSpeedLimit *= 2.0f;
-							lowerSpeedLimit *= 1.5f;
-						}
+												// Delegate the speed limits of the landing to the C implementation
+												PedLogic_LandingLimits(m_nPedState == PED_IDLE, &upperSpeedLimit, &lowerSpeedLimit);
 						CAnimBlendAssociation *fallAnim = RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_FALL);
 												// Use relative impact speed for both landing damage paths and the hit direction
-						if (!bWasStanding && ((speed > upperSpeedLimit && !bPushedAlongByCar) || (landingVelocity.z < lowerSpeedLimit))
-							&& m_pCollidingEntity != collidingEnt) {
+						// Delegate the decision about the landing to the C implementation
+						if (PedLogic_LandingHurts(bWasStanding, speed, upperSpeedLimit, bPushedAlongByCar, landingVelocity.z, lowerSpeedLimit, m_pCollidingEntity == collidingEnt)) {
 
-							float damage = 100.0f * Max(speed - 0.25f, 0.0f);
-							float damage2 = damage;
-							if (landingVelocity.z < -0.25f)
-								damage += (-0.25f - landingVelocity.z) * 150.0f;
+							float damage2;
+							float damage = PedLogic_LandingDamage(speed, landingVelocity.z, &damage2);
 
 							uint8 dir = 2; // from backward
-							if (Abs(landingVelocity.x) > 0.01f || Abs(landingVelocity.y) > 0.01f) {
+							if (General_AbsEitherAbove(landingVelocity.x, landingVelocity.y, 0.01f)) {
 								CVector2D offset = -landingVelocity;
 								dir = GetLocalDirection(offset);
 							}
@@ -2990,7 +2928,7 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 							if (IsPlayer() && damage2 > 5.0f)
 								Say(SOUND_PED_LAND);
 
-						} else if (!bWasStanding && fallAnim && -0.016f * (*Timer_GetTimeStep()) > landingVelocity.z) {
+						} else if (PedLogic_LandingBumps(bWasStanding, fallAnim != nil, (*Timer_GetTimeStep()), landingVelocity.z)) {
 							InflictDamage(collidingEnt, WEAPONTYPE_FALL, 15.0f, PEDPIECE_TORSO, 2);
 						}
 												m_vecMoveSpeed.z = 0.0f;
@@ -3047,8 +2985,8 @@ CPed::ProcessEntityCollision(CEntity *collidingEnt, CColPoint *collidingPoints)
 					}
 				} else {
 					float speed = m_vecMoveSpeed.Magnitude2D();
-					sphereNormal.x = -m_vecMoveSpeed.x / Max(0.001f, speed);
-					sphereNormal.y = -m_vecMoveSpeed.y / Max(0.001f, speed);
+					// Delegate the push direction to the C implementation
+					PedLogic_StuckPushDirection(m_vecMoveSpeed.x, m_vecMoveSpeed.y, speed, &sphereNormal.x, &sphereNormal.y);
 					GetMatrix().GetPosition().z -= 0.05f;
 					bHeadStuckInCollision = true;
 				}
@@ -3190,10 +3128,8 @@ CPed::PlayFootSteps(void)
 			
 			// This section is shortened/optimized for sanity.
 
-			if (currentTime >= stepStart && currentTime - walkRunAssoc->timeStep < stepStart)
-				stepPart = 1;
-			else if (currentTime >= stepEnd && currentTime - walkRunAssoc->timeStep < stepEnd)
-				stepPart = 2;
+			// Delegate the choice of the footstep to the C implementation
+			stepPart = PedLogic_FootStepPart(currentTime, walkRunAssoc->timeStep, stepStart, stepEnd);
 
 			if (stepPart != 0) {
 				CVector adjustedFootPos;
@@ -3223,14 +3159,11 @@ CPed::PlayFootSteps(void)
 						right.x, right.y,
 						255, 255, 0, 0, 4.0f, 3000, 1.0f);
 
-					if (m_bloodyFootprintCountOrDeathTime <= 20) {
-						m_bloodyFootprintCountOrDeathTime = 0;
+					// Delegate the use of the footprints to the C implementation
+					if (PedLogic_BloodyFootprintStep(&m_bloodyFootprintCountOrDeathTime))
 						bDoBloodyFootprints = false;
-					} else {
-						m_bloodyFootprintCountOrDeathTime -= 20;
-					}
 				}
-				if (m_nSurfaceTouched == SURFACE_SAND || m_nSurfaceTouched == SURFACE_SAND_BEACH) {
+				if (PedLogic_IsSandSurface(m_nSurfaceTouched)) {
 					CVector2D top(forward * -0.26f);
 					CVector2D right(GetRight() * (stepPart == 1 ? 0.1f : 0.14f));
 
@@ -3268,16 +3201,12 @@ CPed::PlayFootSteps(void)
 				right.x, right.y,
 				255, 255, 0, 0, 4.0f, 3000, 1.0f);
 
-			if (m_bloodyFootprintCountOrDeathTime <= 20) {
-				m_bloodyFootprintCountOrDeathTime = 0;
+			// Delegate the use of the footprints to the C implementation
+			if (PedLogic_BloodyFootprintStep(&m_bloodyFootprintCountOrDeathTime))
 				bDoBloodyFootprints = false;
-			}
-			else {
-				m_bloodyFootprintCountOrDeathTime -= 20;
-			}
 		}
 		if (!isSkater) {
-			if (m_nSurfaceTouched == SURFACE_SAND || m_nSurfaceTouched == SURFACE_SAND_BEACH) {
+			if (PedLogic_IsSandSurface(m_nSurfaceTouched)) {
 				CVector2D top(forward * -0.26f);
 				CVector2D right(GetRight() * 0.14f);
 
@@ -3303,15 +3232,12 @@ CPed::PlayFootSteps(void)
 				right.x, right.y,
 				255, 255, 0, 0, 4.0f, 3000, 1.0f);
 
-			if (m_bloodyFootprintCountOrDeathTime <= 20) {
-				m_bloodyFootprintCountOrDeathTime = 0;
+			// Delegate the use of the footprints to the C implementation
+			if (PedLogic_BloodyFootprintStep(&m_bloodyFootprintCountOrDeathTime))
 				bDoBloodyFootprints = false;
-			} else {
-				m_bloodyFootprintCountOrDeathTime -= 20;
-			}
 		}
 		if (!isSkater) {
-			if (m_nSurfaceTouched == SURFACE_SAND || m_nSurfaceTouched == SURFACE_SAND_BEACH) {
+			if (PedLogic_IsSandSurface(m_nSurfaceTouched)) {
 				CVector2D top(forward * -0.26f);
 				CVector2D right(GetRight() * 0.14f);
 
@@ -3326,14 +3252,9 @@ CPed::PlayFootSteps(void)
 	if (m_nSurfaceTouched == SURFACE_WATER) {
 		CRGBA rubberSmokeColor(255, 255, 255, 196);
 		float pedSpeed = CVector2D(m_vecMoveSpeed).Magnitude();
-		if (pedSpeed > 0.03f && (*Timer_GetFrameCounter()) % 2 == 0 && pedSpeed > 0.13f) {
-			float particleSize = pedSpeed * 2.0f;
-
-			if (particleSize < 0.25f)
-				particleSize = 0.25f;
-
-			if (particleSize > 0.75f)
-				particleSize = 0.75f;
+		if (PedLogic_WaterRunSplashes(pedSpeed, (*Timer_GetFrameCounter()))) {
+			// Delegate the size of the splashes to the C implementation
+			float particleSize = PedLogic_WaterRunParticleSize(pedSpeed);
 
 			CVector particlePos = GetPosition() + GetForward() * 0.3f;
 			particlePos.z -= 1.2f;
@@ -3402,9 +3323,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 	CVector2D adjustedColMin(objColMin.x - 0.35f, objColMin.y - 0.35f);
 	CVector2D adjustedColMax(objColMax.x + 0.35f, objColMax.y + 0.35f);
 
-	checkIntervalInDist = Max(checkIntervalInDist, 0.5f);
-	checkIntervalInDist = Min(checkIntervalInDist, (objColMax.z - objColMin.z) / 2.0f);
-	checkIntervalInDist = Min(checkIntervalInDist, (adjustedColMax.x - adjustedColMin.x) / 2.0f);
+	// Delegate the distance between the checks to the C implementation
+	checkIntervalInDist = PedLogic_WalkAroundCheckDist(objColMin.y, objColMax.y, objColMin.z, objColMax.z, adjustedColMin.x, adjustedColMax.x);
 
 	if (objMat.GetUp().z < 0.0f)
 		objUpsideDown = true;
@@ -3439,27 +3359,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 	// Heading of the ped relative to the direction to the object center, used by the C implementation
 	float rotDestRel = General_LimitRadianAngle(m_fRotationDest - angleToFaceObjCenter);
 
-	if (IsPlayer()) {
-		if (FindPlayerPed()->m_fMoveSpeed <= 0.0f)
-			checkIntervalInTime = 0.0f;
-		else
-			checkIntervalInTime = 2.0f / FindPlayerPed()->m_fMoveSpeed;
-	} else {
-		switch (m_nMoveState) {
-			case PEDMOVE_WALK:
-				checkIntervalInTime = 2.0f;
-				break;
-			case PEDMOVE_RUN:
-				checkIntervalInTime = 0.5f;
-				break;
-			case PEDMOVE_SPRINT:
-				checkIntervalInTime = 0.5f;
-				break;
-			default:
-				checkIntervalInTime = 0.0f;
-				break;
-		}
-	}
+	// Delegate the time between the checks to the C implementation
+	checkIntervalInTime = PedLogic_WalkAroundCheckTime(IsPlayer(), IsPlayer() ? FindPlayerPed()->m_fMoveSpeed : 0.0f, m_nMoveState);
 	if (m_pSeekTarget == obj && obj->IsVehicle()) {
 		if (m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER || m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER
 			|| m_objective == OBJECTIVE_SOLICIT_VEHICLE) {
@@ -3495,15 +3396,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 			posToCheck.z += 0.6f;
 			obstacle = CWorld::TestSphereAgainstWorld(posToCheck, checkIntervalInDist, obj,
 				true, true, false, true, false, false);
-			if (obstacle) {
-				if (obstacle->IsBuilding()) {
-					entityOnTopLeftOfObj = 1;
-				} else if (obstacle->IsVehicle()) {
-					entityOnTopLeftOfObj = 2;
-				} else {
-					entityOnTopLeftOfObj = 3;
-				}
-			}
+			// Delegate the kind of the obstacle to the C implementation
+			entityOnTopLeftOfObj = PedLogic_ObstacleKind(obstacle != nil, obstacle && obstacle->IsBuilding(), obstacle && obstacle->IsVehicle());
 
 			// Top right of obj
 			posToCheck.x = adjustedColMax.x - adjustedCheckInterval;
@@ -3513,15 +3407,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 			posToCheck.z += 0.6f;
 			obstacle = CWorld::TestSphereAgainstWorld(posToCheck, checkIntervalInDist, obj,
 				true, true, false, true, false, false);
-			if (obstacle) {
-				if (obstacle->IsBuilding()) {
-					entityOnTopRightOfObj = 1;
-				} else if (obstacle->IsVehicle()) {
-					entityOnTopRightOfObj = 2;
-				} else {
-					entityOnTopRightOfObj = 3;
-				}
-			}
+			// Delegate the kind of the obstacle to the C implementation
+			entityOnTopRightOfObj = PedLogic_ObstacleKind(obstacle != nil, obstacle && obstacle->IsBuilding(), obstacle && obstacle->IsVehicle());
 
 			// Bottom right of obj
 			posToCheck.x = adjustedColMax.x - adjustedCheckInterval;
@@ -3531,15 +3418,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 			posToCheck.z += 0.6f;
 			obstacle = CWorld::TestSphereAgainstWorld(posToCheck, checkIntervalInDist, obj,
 				true, true, false, true, false, false);
-			if (obstacle) {
-				if (obstacle->IsBuilding()) {
-					entityOnBottomRightOfObj = 1;
-				} else if (obstacle->IsVehicle()) {
-					entityOnBottomRightOfObj = 2;
-				} else {
-					entityOnBottomRightOfObj = 3;
-				}
-			}
+			// Delegate the kind of the obstacle to the C implementation
+			entityOnBottomRightOfObj = PedLogic_ObstacleKind(obstacle != nil, obstacle && obstacle->IsBuilding(), obstacle && obstacle->IsVehicle());
 
 			// Bottom left of obj
 			posToCheck.x = adjustedColMin.x + adjustedCheckInterval;
@@ -3549,15 +3429,8 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 			posToCheck.z += 0.6f;
 			obstacle = CWorld::TestSphereAgainstWorld(posToCheck, checkIntervalInDist, obj,
 				true, true, false, true, false, false);
-			if (obstacle) {
-				if (obstacle->IsBuilding()) {
-					entityOnBottomLeftOfObj = 1;
-				} else if (obstacle->IsVehicle()) {
-					entityOnBottomLeftOfObj = 2;
-				} else {
-					entityOnBottomLeftOfObj = 3;
-				}
-			}
+			// Delegate the kind of the obstacle to the C implementation
+			entityOnBottomLeftOfObj = PedLogic_ObstacleKind(obstacle != nil, obstacle && obstacle->IsBuilding(), obstacle && obstacle->IsVehicle());
 		}
 
 		if (!entityOnTopLeftOfObj && !entityOnTopRightOfObj) {
@@ -3651,21 +3524,10 @@ CPed::SetDirectionToWalkAroundObject(CEntity *obj)
 	localPosToHead -= GetPosition();
 	m_fRotationDest = General_LimitRadianAngle(localPosToHead.Heading());
 
-	if (m_fRotationDest != m_fRotationCur && bHitSomethingLastFrame) {
-		if (m_fRotationDest == oldRotDest) {
-			m_fRotationDest = oldRotDest;
-		} else {
-			m_fRotationDest = General_LimitRadianAngle(PI + dirToSet);
-		}
-	}
+	// Delegate the final rotation and the timer to the C implementation
+	m_fRotationDest = PedLogic_WalkAroundFinalRotation(m_fRotationDest, m_fRotationCur, bHitSomethingLastFrame, oldRotDest, dirToSet);
 
-	float dist = localPosToHead.Magnitude2D();
-	if (dist < 0.5f)
-		dist = 0.5f;
-
-	if (dist > distLimitForTimer)
-		dist = distLimitForTimer;
-	m_nPedStateTimer = (*Timer_GetTimeInMilliseconds()) + 280.0f * dist * checkIntervalInTime;
+	m_nPedStateTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WalkAroundTimer(localPosToHead.Magnitude2D(), distLimitForTimer, checkIntervalInTime);
 }
 
 bool
@@ -3825,7 +3687,10 @@ CPed::PedSetOutCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 			ped->RestorePreviousState();
 
 		veh = ped->m_pMyVehicle;
-		if (ped->bFleeAfterExitingCar && veh) {
+		// Delegate the choice of what to do after the exit to the C implementation
+		int followUp = PedLogic_ExitCarFollowUp(ped->bFleeAfterExitingCar, veh != nil, ped->bWanderPathAfterExitingCar, ped->bGonnaKillTheCarJacker,
+			ped->m_objective == OBJECTIVE_NONE, ped->CharCreatedBy != MISSION_CHAR, ped->m_nPedState == PED_IDLE, ped->IsPlayer());
+		if (followUp == PED_EXITCAR_FLEE) {
 			ped->bFleeAfterExitingCar = false;
 			ped->SetFlee(veh->GetPosition(), 12000);
 			ped->bUsePedNodeSeek = true;
@@ -3842,14 +3707,14 @@ CPed::PedSetOutCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 			// This is not a good way to do this...
 			ped->m_nLastPedState = PED_WANDER_PATH;
 
-		} else if (ped->bWanderPathAfterExitingCar) {
+		} else if (followUp == PED_EXITCAR_WANDER) {
 			ped->SetWanderPath(General_GetRandomNumberInRangeFloat(0.0f, 8.0f));
 			ped->bWanderPathAfterExitingCar = false;
 			if (ped->m_nPedType == PEDTYPE_PROSTITUTE)
 				ped->SetObjectiveTimer(30000);
 			ped->m_nLastPedState = PED_NONE;
 
-		} else if (ped->bGonnaKillTheCarJacker) {
+		} else if (followUp == PED_EXITCAR_KILL_CARJACKER) {
 
 			// Kill objective is already given at this point.
 			ped->bGonnaKillTheCarJacker = false;
@@ -3866,7 +3731,7 @@ CPed::PedSetOutCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 			ped->SetWaitState(WAITSTATE_PLAYANIM_COWER, &waitTime);
 			ped->SetMoveState(PEDMOVE_RUN);
 			startedToRun = true;
-		} else if (ped->m_objective == OBJECTIVE_NONE && ped->CharCreatedBy != MISSION_CHAR && ped->m_nPedState == PED_IDLE && !ped->IsPlayer()) {
+		} else if (followUp == PED_EXITCAR_WANDER_RANDOM) {
 			ped->SetWanderPath(General_GetRandomNumberInRangeFloat(0.0f, 8.0f));
 		}
 	} else if (ped->m_nPedState == PED_DRIVING) {
@@ -3918,12 +3783,8 @@ CPed::PedSetOutCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 		}
 
 		if (veh->bIsBus && !veh->IsUpsideDown() && !veh->IsOnItsSide()) {
-			float angleAfterExit;
-			if (ped->m_vehDoor == CAR_DOOR_LF) {
-				angleAfterExit = HALFPI + veh->GetForward().Heading();
-			} else {
-				angleAfterExit = veh->GetForward().Heading() - HALFPI;
-			}
+			// Delegate the heading after leaving the bus to the C implementation
+			float angleAfterExit = PedLogic_BusExitHeading(veh->GetForward().Heading(), ped->m_vehDoor == CAR_DOOR_LF);
 			ped->SetHeading(angleAfterExit);
 			ped->m_fRotationDest = angleAfterExit;
 			ped->m_fRotationCur = angleAfterExit;
@@ -4199,8 +4060,8 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 		ped->SetPedState(PED_DRIVING);
 		if (ped->m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER) {
 
-			if (ped->m_prevObjective == OBJECTIVE_RUN_TO_AREA || ped->m_prevObjective == OBJECTIVE_GOTO_CHAR_ON_FOOT
-				|| ped->m_prevObjective == OBJECTIVE_SPRINT_TO_AREA || ped->m_prevObjective == OBJECTIVE_KILL_CHAR_ON_FOOT)
+			// Delegate the test of the objective to the C implementation
+			if (PedLogic_IsGoOnFootObjective(ped->m_prevObjective))
 				ped->m_prevObjective = OBJECTIVE_NONE;
 
 			ped->RestorePreviousObjective();
@@ -4214,29 +4075,14 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 
 		// VC also has a dead condition in here.
 
-		if (veh->IsBike()) {
-			veh->AddPassenger(ped, 0);
-		} else if (veh->bIsBus) {
+		// Delegate the choice of the seat to the C implementation
+		int passengerSeat = PedLogic_PassengerSeat(veh->IsBike(), veh->bIsBus, ped->m_vehDoor);
+		if (passengerSeat >= 0)
+			veh->AddPassenger(ped, passengerSeat);
+		else
 			veh->AddPassenger(ped);
-		} else {
-			switch (ped->m_vehDoor) {
-				case CAR_DOOR_RF:
-					veh->AddPassenger(ped, 0);
-					break;
-				case CAR_DOOR_RR:
-					veh->AddPassenger(ped, 2);
-					break;
-				case CAR_DOOR_LR:
-					veh->AddPassenger(ped, 1);
-					break;
-				default:
-					veh->AddPassenger(ped);
-				break;
-			}
-		}
 		ped->SetPedState(PED_DRIVING);
-		if (ped->m_prevObjective == OBJECTIVE_RUN_TO_AREA || ped->m_prevObjective == OBJECTIVE_GOTO_CHAR_ON_FOOT
-			|| ped->m_prevObjective == OBJECTIVE_SPRINT_TO_AREA || ped->m_prevObjective == OBJECTIVE_KILL_CHAR_ON_FOOT)
+		if (PedLogic_IsGoOnFootObjective(ped->m_prevObjective))
 			ped->m_prevObjective = OBJECTIVE_NONE;
 
 		ped->RestorePreviousObjective();
@@ -4259,25 +4105,9 @@ CPed::PedSetInCarCB(CAnimBlendAssociation *animAssoc, void *arg)
 	if (veh->bIsBus && !veh->m_nGettingInFlags)
 		((CAutomobile*)veh)->SetBusDoorTimer(1000, 1);
 
-	switch (ped->m_objective) {
-		case OBJECTIVE_KILL_CHAR_ON_FOOT:
-		case OBJECTIVE_KILL_CHAR_ANY_MEANS:
-		case OBJECTIVE_LEAVE_CAR:
-		case OBJECTIVE_FOLLOW_CAR_IN_CAR:
-		case OBJECTIVE_GOTO_AREA_ANY_MEANS:
-		case OBJECTIVE_GOTO_AREA_ON_FOOT:
-		case OBJECTIVE_RUN_TO_AREA:
-		case OBJECTIVE_GOTO_SEAT_ON_FOOT:
-		case OBJECTIVE_GOTO_ATM_ON_FOOT:
-		case OBJECTIVE_GOTO_BUS_STOP_ON_FOOT:
-		case OBJECTIVE_GOTO_PIZZA_ON_FOOT:
-		case OBJECTIVE_GOTO_SHELTER_ON_FOOT:
-		case OBJECTIVE_SPRINT_TO_AREA:
-		case OBJECTIVE_GOTO_ICE_CREAM_VAN_ON_FOOT:
-			break;
-		default:
-			ped->SetObjective(OBJECTIVE_NONE);
-	}
+	// Delegate the test of the objectives that stay to the C implementation
+	if (!PedLogic_KeepsObjectiveInCar(ped->m_objective))
+		ped->SetObjective(OBJECTIVE_NONE);
 
 	ped->AddInCarAnims(veh, veh->pDriver == ped);
 	if (veh->bIsBus)
@@ -4417,9 +4247,9 @@ CPed::GiveWeapon(eWeaponType weaponType, uint32 ammo, bool unused)
 		if (weaponType < WEAPONTYPE_TOTALWEAPONS && weaponType > WEAPONTYPE_UNARMED && WeaponInfo_ms_aMaxAmmoForWeapon[weaponType] >= 0) {
 
 			// Looks like abandoned idea. This block never runs, ms_aMaxAmmoForWeapon is always -1.
-			GetWeapon(slot).m_nAmmoTotal = Min(WeaponInfo_ms_aMaxAmmoForWeapon[weaponType], GetWeapon(slot).m_nAmmoTotal);
+			GetWeapon(slot).m_nAmmoTotal = General_MinInt(WeaponInfo_ms_aMaxAmmoForWeapon[weaponType], GetWeapon(slot).m_nAmmoTotal);
 		} else {
-			GetWeapon(slot).m_nAmmoTotal = Min(99999, GetWeapon(slot).m_nAmmoTotal);
+			GetWeapon(slot).m_nAmmoTotal = General_MinInt(99999, GetWeapon(slot).m_nAmmoTotal);
 		}
 		GetWeapon(slot).Reload();
 		if (GetWeapon(slot).m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO && GetWeapon(slot).m_nAmmoTotal > 0)
@@ -4573,7 +4403,8 @@ CPed::PreRender(void)
 		}
 
 		if (bIsWindModifierTurnedOn) 
-			fWindMult = Min(fWindMult, Abs(fAnyDirectionShift - 1.0f));
+			// Delegate the limited wind to the C implementation
+			fWindMult = PedLogic_LimitedWindMult(fWindMult, fAnyDirectionShift);
 
 		// Use the C helper and retain the original typed SDK result
 		RpHAnimHierarchy* hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(GetClump()));
@@ -4634,75 +4465,19 @@ CPed::PreRender(void)
 	if (IsPlayer() && gfTommyFatness != 1.0f) {
 		// Use the C helper and retain the original typed SDK result
 		RpHAnimHierarchy* hier = ((RpHAnimHierarchy*)GetAnimHierarchyFromSkinClump(GetClump()));
-		int32 idx;
 		RwV3d scale;
+		static const int fatBones[] = { PED_HEAD, PED_NECK, PED_MID, PED_UPPERLEGL, PED_UPPERLEGR, PED_LOWERLEGR, PED_LOWERLEGL, PED_FOOTL, PED_FOOTR,
+			PED_UPPERARML, PED_UPPERARMR, PED_FOREARML, PED_FOREARMR };
 
+		// Delegate the scale of the bones to the C implementation
 		scale.x = 1.0f;
-		scale.y = 1.0f + gfTommyFatness * 0.7f;
-		scale.z = 1.0f + gfTommyFatness * 0.7f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_HEAD));
-		RwMatrix* head = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(head, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness * 0.2f;
-		scale.z = 1.0f + gfTommyFatness * 0.2f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_NECK));
-		RwMatrix* neck = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(neck, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness * 0.5f;
-		scale.z = 1.0f + gfTommyFatness * 0.5f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_MID));
-		RwMatrix* mid = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(mid, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness;
-		scale.z = 1.0f + gfTommyFatness;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_UPPERLEGL));
-		RwMatrix* upperLegL = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(upperLegL, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_UPPERLEGR));
-		RwMatrix* upperLegR = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(upperLegR, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness * 0.5f;
-		scale.z = 1.0f + gfTommyFatness * 0.5f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_LOWERLEGR));
-		RwMatrix* lowerLegR = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(lowerLegR, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_LOWERLEGL));
-		RwMatrix* lowerLegL = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(lowerLegL, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness * 0.23f;
-		scale.z = 1.0f + gfTommyFatness * 0.23f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_FOOTL));
-		RwMatrix* footL = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(footL, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_FOOTR));
-		RwMatrix* footR = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(footR, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_UPPERARML));
-		RwMatrix* upperArmL = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(upperArmL, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_UPPERARMR));
-		RwMatrix* upperArmR = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(upperArmR, &scale, rwCOMBINEPRECONCAT);
-
-		scale.y = 1.0f + gfTommyFatness * 0.2f;
-		scale.z = 1.0f + gfTommyFatness * 0.2f;
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_FOREARML));
-		RwMatrix* foreArmL = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(foreArmL, &scale, rwCOMBINEPRECONCAT);
-
-		idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(PED_FOREARMR));
-		RwMatrix* foreArmR = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
-		RwMatrixScale(foreArmR, &scale, rwCOMBINEPRECONCAT);
+		for (int i = 0; i < (int)ARRAY_SIZE(fatBones); i++) {
+			scale.y = PedLogic_TommyFatnessScale(fatBones[i], gfTommyFatness);
+			scale.z = scale.y;
+			int32 idx = RpHAnimIDGetIndex(hier, ConvertPedNode2BoneTag(fatBones[i]));
+			RwMatrix* boneMatrix = &RpHAnimHierarchyGetMatrixArray(hier)[idx];
+			RwMatrixScale(boneMatrix, &scale, rwCOMBINEPRECONCAT);
+		}
 	}
 
 	if (bBodyPartJustCameOff && bIsPedDieAnimPlaying && m_bodyPartBleeding != -1 && ((*Timer_GetFrameCounter()) & 7) > 3) {
@@ -4711,27 +4486,13 @@ CPed::PreRender(void)
 
 		TransformToNode(bloodPos, m_bodyPartBleeding);
 
-		switch (m_bodyPartBleeding) {
-			case PED_HEAD:
-				bloodDir = 0.1f * GetUp();
-				break;
-			case PED_UPPERARML:
-				bloodDir = 0.04f * GetUp() - 0.04f * GetRight();
-				break;
-			case PED_UPPERARMR:
-				bloodDir = 0.04f * GetUp() - 0.04f * GetRight();
-				break;
-			case PED_UPPERLEGL:
-				bloodDir = 0.04f * GetUp() + 0.05f * GetForward();
-				break;
-			case PED_UPPERLEGR:
-				bloodDir = 0.04f * GetUp() + 0.05f * GetForward();
-				break;
-			default:
-				bloodDir = CVector(0.0f, 0.0f, 0.0f);
-				break;
-		}
-
+		// Delegate the direction of the blood to the C implementation
+		const float upC[3] = { GetUp().x, GetUp().y, GetUp().z };
+		const float rightC[3] = { GetRight().x, GetRight().y, GetRight().z };
+		const float forwardC[3] = { GetForward().x, GetForward().y, GetForward().z };
+		float bloodDirC[3];
+		PedLogic_BloodSpurtDirection(m_bodyPartBleeding, upC, rightC, forwardC, bloodDirC);
+		bloodDir = CVector(bloodDirC[0], bloodDirC[1], bloodDirC[2]);
 		for(int i = 0; i < 4; i++)
 			CParticle::AddParticle(PARTICLE_BLOOD_SPURT, bloodPos, bloodDir, nil, 0.0f, 0, 0, 0, 0);
 	}
@@ -4961,32 +4722,11 @@ CPed::SetFall(int extraTime, AnimationId animId, uint8 evenIfNotInControl)
 			AnimAssociation_SetCurrentTime(fallAssoc,0.4f);
 	}
 
-	if (extraTime == -1) {
-		m_getUpTimer = UINT32_MAX;
-	} else if (fallAssoc) {
-		if (IsPlayer()) {
-			if (fallAssoc->animId == ANIM_STD_ROLLOUT_LHS || fallAssoc->animId == ANIM_STD_ROLLOUT_RHS) {
-				m_getUpTimer = 1000.0f * fallAssoc->hierarchy->totalLength
-					+ (*Timer_GetTimeInMilliseconds())
-					- 1000.0f * fallAssoc->currentTime
-					+ 100.0f;
-			} else {
-				m_getUpTimer = 1000.0f * fallAssoc->hierarchy->totalLength
-					+ (*Timer_GetTimeInMilliseconds())
-					+ 500.0f;
-			}
-		} else {
-			m_getUpTimer = 1000.0f * fallAssoc->hierarchy->totalLength
-				+ (*Timer_GetTimeInMilliseconds())
-				+ extraTime
-				+ ((m_randomSeed + (*Timer_GetFrameCounter())) % 1000);
-		}
-	} else {
-		m_getUpTimer = extraTime
-			+ (*Timer_GetTimeInMilliseconds())
-			+ 1000
-			+ ((m_randomSeed + (*Timer_GetFrameCounter())) % 1000);
-	}
+	// Delegate the time to get up again to the C implementation
+	m_getUpTimer = PedLogic_FallGetUpTimer(extraTime, fallAssoc != nil, IsPlayer(),
+		fallAssoc && (fallAssoc->animId == ANIM_STD_ROLLOUT_LHS || fallAssoc->animId == ANIM_STD_ROLLOUT_RHS),
+		fallAssoc ? fallAssoc->hierarchy->totalLength : 0.0f, fallAssoc ? fallAssoc->currentTime : 0.0f,
+		(*Timer_GetTimeInMilliseconds()), m_randomSeed, (*Timer_GetFrameCounter()));
 	bFallenDown = true;
 }
 
@@ -5869,7 +5609,10 @@ CPed::Avoid(void)
 					// If so, we want to avoid it, so we turn our body 45 degree and look to somewhere else.
 
 					// Game converts from radians to degress and back again here, doesn't make much sense
-					CVector2D forward(-Sin(m_fRotationCur), Cos(m_fRotationCur));
+					// Delegate the direction the ped faces to the C implementation
+					float facingXY[2];
+					PedLogic_FacingDirection(m_fRotationCur, facingXY);
+					CVector2D forward(facingXY[0], facingXY[1]);
 					forward.Normalise();	// this is kinda pointless
 
 					// Move forward 1.25 meters
@@ -6066,73 +5809,30 @@ CPed::SetFollowPathDynamic(void)
 		colCornerPos[i].z = GetPosition().z;
 	}
 
-	CVector prevColCorner = colCornerPos[3];  // top left
-	CVector *curCornerPos;
-	CVector fwdToNextCorner;
-
+	// Delegate the planes of the box to the C implementation
+	VectorMath3 cornersC[4], normalsC[4];
 	for (int i=0; i<4; i++) {
-		curCornerPos = &colCornerPos[i];
-		fwdToNextCorner = *curCornerPos - prevColCorner;
-		fwdToNextCorner.Normalise();
-		colBoxPlaneNormal[i] = CrossProduct(fwdToNextCorner, CVector(0.f, 0.f, 1.f));
-		dotProdCorrection[i] = -DotProduct(prevColCorner, colBoxPlaneNormal[i]); // yes, dp with global coord, as if in distance to plane calculation
-		prevColCorner = *curCornerPos;
+		cornersC[i].x = colCornerPos[i].x;
+		cornersC[i].y = colCornerPos[i].y;
+		cornersC[i].z = colCornerPos[i].z;
 	}
+	PedLogic_FollowPathPlanes(cornersC, normalsC, dotProdCorrection);
+	for (int i=0; i<4; i++)
+		colBoxPlaneNormal[i] = CVector(normalsC[i].x, normalsC[i].y, normalsC[i].z);
 
-	bool weReGoingGreat = false;
 	CVector startVecCandidate = GetPosition();
 	CVector targetVecCandidate = m_followPathDestPos;
 	CVector dirToGo = targetVecCandidate - startVecCandidate;
 	dirToGo.Normalise();
 	CVector ourPos = startVecCandidate;
-	
-	for (int i=0; i<4; i++) {
-		CVector curPlaneNormal = colBoxPlaneNormal[i];
-		float minusGlobalCornerPos = dotProdCorrection[i];
-		float startVecDistToPlane = DotProduct(curPlaneNormal, startVecCandidate) + minusGlobalCornerPos;
-
-#define FRONT_OF_PLANE 1
-#define ON_THE_PLANE 0
-#define BEHIND_THE_PLANE -1
-
-		int8 startVecStatus;
-		int8 targetVecStatus;
-
-		if (startVecDistToPlane > 0.1f)
-			startVecStatus = FRONT_OF_PLANE;
-		else if (startVecDistToPlane < -0.1f)
-			startVecStatus = BEHIND_THE_PLANE;
-		else
-			startVecStatus = ON_THE_PLANE;
-
-		float targetVecDistToPlane = DotProduct(curPlaneNormal, targetVecCandidate) + minusGlobalCornerPos;
-		if (targetVecDistToPlane > 0.1f)
-			targetVecStatus = FRONT_OF_PLANE;
-		else if (targetVecDistToPlane < -0.1f)
-			targetVecStatus = BEHIND_THE_PLANE;
-		else
-			targetVecStatus = ON_THE_PLANE;
-
-
-		if (startVecStatus == BEHIND_THE_PLANE || targetVecStatus == BEHIND_THE_PLANE) {
-			if (startVecStatus == BEHIND_THE_PLANE && targetVecStatus == FRONT_OF_PLANE) {
-				targetVecCandidate = -(DotProduct(ourPos, curPlaneNormal) + minusGlobalCornerPos) / DotProduct(dirToGo, curPlaneNormal) * dirToGo + ourPos;
-
-			} else if (startVecStatus == FRONT_OF_PLANE && targetVecStatus == BEHIND_THE_PLANE) {
-				startVecCandidate = -(DotProduct(ourPos, curPlaneNormal) + minusGlobalCornerPos) / DotProduct(dirToGo, curPlaneNormal) * dirToGo + ourPos;
-			}
-		} else {
-			weReGoingGreat = true;
-			if (startVecStatus == ON_THE_PLANE)
-				startVecCandidate += (0.1f - startVecDistToPlane) * curPlaneNormal;
-
-			if (targetVecStatus == ON_THE_PLANE)
-				targetVecCandidate += (0.1f - targetVecDistToPlane) * curPlaneNormal;
-		}
-#undef FRONT_OF_PLANE
-#undef ON_THE_PLANE
-#undef BEHIND_THE_PLANE
-	}
+	// Delegate the clipping of the line to the C implementation
+	VectorMath3 startC = { startVecCandidate.x, startVecCandidate.y, startVecCandidate.z };
+	VectorMath3 targetC = { targetVecCandidate.x, targetVecCandidate.y, targetVecCandidate.z };
+	VectorMath3 ourPosC = { ourPos.x, ourPos.y, ourPos.z };
+	VectorMath3 dirToGoC = { dirToGo.x, dirToGo.y, dirToGo.z };
+	bool weReGoingGreat = PedLogic_FollowPathClip(normalsC, dotProdCorrection, &startC, &targetC, ourPosC, dirToGoC);
+	startVecCandidate = CVector(startC.x, startC.y, startC.z);
+	targetVecCandidate = CVector(targetC.x, targetC.y, targetC.z);
 
 	if (!weReGoingGreat) {
 		CVector avgOfColPoints = (colCornerPos[0] + colCornerPos[1] + colCornerPos[2] + colCornerPos[3]) / 4.f;
@@ -6169,29 +5869,13 @@ CPed::SetFollowPathDynamic(void)
 		}
 	}
 
-	int lastPlaneBehindUs = -1;
-	int lastPlaneInFrontOfUs = -1;
-	CVector oldstartVecCandidate = startVecCandidate;
-	CVector oldDirToGo = targetVecCandidate - startVecCandidate;
-	oldDirToGo.Normalise();
-		
-
-	// At least one plane should be between target and us.
-	for (int i=0; i<4; i++) {
-		CVector curPlaneNormal = colBoxPlaneNormal[i];
-		float minusGlobalCornerPos = dotProdCorrection[i];
-		float startVecDistToPlane = DotProduct(curPlaneNormal, startVecCandidate) + minusGlobalCornerPos;
-		float targetVecDistToPlane = DotProduct(curPlaneNormal, targetVecCandidate) + minusGlobalCornerPos;
-
-		if (startVecDistToPlane > 0.0f && targetVecDistToPlane < 0.0f) {
-			lastPlaneInFrontOfUs = i;
-			startVecCandidate = -(DotProduct(oldstartVecCandidate, curPlaneNormal) + minusGlobalCornerPos) / DotProduct(oldDirToGo, curPlaneNormal) * oldDirToGo + oldstartVecCandidate;
-
-		} else if (startVecDistToPlane < 0.0f && targetVecDistToPlane > 0.0f) {
-			lastPlaneBehindUs = i;
-			targetVecCandidate = -(DotProduct(oldstartVecCandidate, curPlaneNormal) + minusGlobalCornerPos) / DotProduct(oldDirToGo, curPlaneNormal) * oldDirToGo + oldstartVecCandidate;
-		}
-	}
+	// Delegate the search of the planes the line crosses to the C implementation
+	int lastPlaneBehindUs, lastPlaneInFrontOfUs;
+	startC = { startVecCandidate.x, startVecCandidate.y, startVecCandidate.z };
+	targetC = { targetVecCandidate.x, targetVecCandidate.y, targetVecCandidate.z };
+	PedLogic_FollowPathFindPlanes(normalsC, dotProdCorrection, &startC, &targetC, &lastPlaneBehindUs, &lastPlaneInFrontOfUs);
+	startVecCandidate = CVector(startC.x, startC.y, startC.z);
+	targetVecCandidate = CVector(targetC.x, targetC.y, targetC.z);
 
 	CVector destsVariant1[5];
 	CVector destsVariant2[5];
@@ -6350,36 +6034,9 @@ CPed::SetFollowPathDynamic(void)
 			destTotalLengthVar2 += (destsVariant2[i + 1] - destsVariant2[i]).Magnitude();
 		}
 
-		int destVariantToUse;
-		if (dests1isOk && dests2isOk) {
-			if (destTotalLengthVar1 < destTotalLengthVar2)
-				destVariantToUse = 1;
-			else
-				destVariantToUse = 2;
-
-		} else if (dests1isOk) {
-			destVariantToUse = 1;
-
-		} else if (dests2isOk) {
-			destVariantToUse = 2;
-
-		} else if (nodeToStopDestsVar1 == 1 && nodeToStopDestsVar2 > 1) {
-			destVariantToUse = 2;
-
-		} else if (nodeToStopDestsVar1 > 1 && nodeToStopDestsVar2 == 1) {
-			destVariantToUse = 1;
-
-		} else if (foundEnt1 == foundEnt2) {
-			if (destTotalLengthVar1 < destTotalLengthVar2)
-				destVariantToUse = 1;
-			else
-				destVariantToUse = 2;
-
-		} else if (foundEnt1->GetColModel()->boundingSphere.radius >= foundEnt2->GetColModel()->boundingSphere.radius) {
-			destVariantToUse = 2;
-		} else {
-			destVariantToUse = 1;
-		}
+		// Delegate the choice of the route to the C implementation
+		int destVariantToUse = PedLogic_FollowPathPickVariant(dests1isOk != 0, dests2isOk != 0, nodeToStopDestsVar1, nodeToStopDestsVar2, destTotalLengthVar1, destTotalLengthVar2,
+			foundEnt1 == foundEnt2, foundEnt1 && foundEnt2 && foundEnt1->GetColModel()->boundingSphere.radius >= foundEnt2->GetColModel()->boundingSphere.radius);
 
 		if (destVariantToUse == 1) {
 			ClearFollowPath();
@@ -6473,11 +6130,10 @@ CPed::SetEvasiveStep(CPhysical *reason, uint8 animType)
 		GetPosition().x, GetPosition().y);
 	angleToFace = General_LimitRadianAngle(angleToFace);
 	m_fRotationCur = General_LimitRadianAngle(m_fRotationCur);
-	float neededTurn = Abs(angleToFace - m_fRotationCur);
+	// Delegate the turn that is needed to the C implementation
+	float neededTurn = PedFightLogic_NeededTurn(angleToFace, m_fRotationCur);
 	bool vehPressedHorn = false;
 
-	if (neededTurn > PI)
-		neededTurn = TWOPI - neededTurn;
 
 	if (reason->IsVehicle() && ((CVehicle*)reason)->IsCar()) {
 		CVehicle *veh = (CVehicle*)reason;
@@ -6499,26 +6155,10 @@ CPed::SetEvasiveStep(CPhysical *reason, uint8 animType)
 				0.0f, 0.0f);
 
 			// Let's turn our back to the "reason"
-			angleToFace += PI;
+			// Delegate the heading away from the vehicle to the C implementation
+			angleToFace = PedLogic_EvasiveStepAngle(angleToFace, dangerDirection);
 
-			if (angleToFace > PI)
-				angleToFace -=  TWOPI;
-
-			// We don't want to run towards car's direction
-			float dangerZone = angleToFace - dangerDirection;
-			dangerZone = General_LimitRadianAngle(dangerZone);
-
-			// So, add or subtract 90deg (jump to left/right) according to that
-			if (dangerZone > 0.0f)
-				angleToFace = dangerDirection - HALFPI;
-			else
-				angleToFace = dangerDirection + HALFPI;
-
-			stepAnim = ANIM_STD_NUM;
-			if (animType == 0 || animType == 1)
-				stepAnim = ANIM_STD_EVADE_STEP;
-			else if (animType == 2)
-				stepAnim = ANIM_STD_HANDSCOWER;
+			stepAnim = (AnimationId)PedLogic_EvasiveStepAnim(animType);
 		}
 		if (!RpAnimBlendClumpGetAssociation(GetClump(), stepAnim)) {
 			// Use the complete C animation manager at the original call boundary
@@ -6586,26 +6226,11 @@ CPed::SetEvasiveDive(CPhysical *reason, uint8 onlyRandomJump)
 			0.0f, 0.0f);
 
 		// Let's turn our back to the "reason"
-		angleToFace += PI;
-
-		if (angleToFace > PI)
-			angleToFace -= 2 * PI;
-
-		// We don't want to dive towards car's direction
-		float dangerZone = angleToFace - vehDirection;
-		dangerZone = General_LimitRadianAngle(dangerZone);
-
-		// So, add or subtract 90deg (jump to left/right) according to that
-		if (dangerZone > 0.0f)
-			angleToFace = 0.5f * PI + vehDirection;
-		else
-			angleToFace = vehDirection - 0.5f * PI;
+		// Delegate the heading to dive away with to the C implementation
+		angleToFace = PedLogic_EvasiveDiveAngle(angleToFace, vehDirection);
 #endif
 
-		neededTurn = Abs(angleToFace - m_fRotationCur);
-
-		if (neededTurn > PI)
-			neededTurn = 2 * PI - neededTurn;
+		neededTurn = PedFightLogic_NeededTurn(angleToFace, m_fRotationCur);
 
 		if (neededTurn <= 0.5f*PI) {
 			if (General_GetRandomNumber() & 1)
@@ -7185,16 +6810,15 @@ CPed::SeekCar(void)
 	m_vecSeekPos = dest;
 	float distToDestSqr = (m_vecSeekPos - GetPosition()).MagnitudeSqr();
 
-	if (bIsRunning ||
-		vehToSeek->pDriver && distToDestSqr > sq(2.0f) && (Abs(vehToSeek->m_vecMoveSpeed.x) > 0.01f || Abs(vehToSeek->m_vecMoveSpeed.y) > 0.01f))
-		SetMoveState(PEDMOVE_RUN);
-	else if (distToDestSqr < sq(2.0f))
-		SetMoveState(PEDMOVE_WALK);
+	// Delegate the choice of the move state to the C implementation
+	int seekMoveState = PedLogic_SeekCarMoveState(bIsRunning, vehToSeek->pDriver != nil, distToDestSqr, vehToSeek->m_vecMoveSpeed.x, vehToSeek->m_vecMoveSpeed.y);
+	if (seekMoveState != PEDMOVE_NONE)
+		SetMoveState((eMoveState)seekMoveState);
 
-	if (distToDestSqr >= 1.0f)
-		bCanPedEnterSeekedCar = false;
-	else if (2.0f * vehToSeek->GetColModel()->boundingBox.max.x > distToDestSqr)
-		bCanPedEnterSeekedCar = true;
+	// Delegate the decision that the ped may enter the car to the C implementation
+	int canEnter = PedLogic_CanEnterSeekedCar(distToDestSqr, vehToSeek->GetColModel()->boundingBox.max.x);
+	if (canEnter != 2)
+		bCanPedEnterSeekedCar = canEnter != 0;
 
 	if (vehToSeek->m_nGettingInFlags & GetCarDoorFlag(m_vehDoor))
 		bVehEnterDoorIsBlocked = true;
@@ -7221,56 +6845,27 @@ CPed::SeekCar(void)
 						} else if (vehToSeek->m_nNumGettingIn < vehToSeek->m_nNumMaxPassengers + 1
 							&& vehToSeek->CanPedEnterCar()) {
 
-							switch (vehToSeek->GetStatus()) {
-								case STATUS_PLAYER:
-								case STATUS_SIMPLE:
-								case STATUS_PHYSICS:
-								case STATUS_PLAYER_DISABLED:
-									if (vehToSeek->IsBike()) {
-										if ((!m_leader || m_leader != vehToSeek->pDriver) &&
-											((m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_RF || m_vehDoor == CAR_WINDSCREEN) && vehToSeek->pDriver ||
-											(m_vehDoor == CAR_DOOR_LR || m_vehDoor == CAR_DOOR_RR) && vehToSeek->pPassengers[0])) {
-											SetCarJack(vehToSeek);
-										} else {
-											SetEnterCar(vehToSeek, m_vehDoor);
-										}
-									} else if (!vehToSeek->bIsBus && (!m_leader || m_leader != vehToSeek->pDriver) &&
-										(m_vehDoor == CAR_DOOR_LF && vehToSeek->pDriver || m_vehDoor == CAR_DOOR_RF && vehToSeek->pPassengers[0] || m_vehDoor == CAR_DOOR_LR && vehToSeek->pPassengers[1] || m_vehDoor == CAR_DOOR_RR && vehToSeek->pPassengers[2])) {
-										SetCarJack(vehToSeek);
-										if (m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER && m_vehDoor != CAR_DOOR_LF)
-											vehToSeek->pDriver->bFleeAfterExitingCar = true;
-									} else {
-										SetEnterCar(vehToSeek, m_vehDoor);
-									}
-									break;
-								case STATUS_ABANDONED:
-									if (vehToSeek->IsBike()) {
-										if ((m_vehDoor == CAR_DOOR_LR || m_vehDoor == CAR_DOOR_RR) && vehToSeek->pPassengers[0]) {
-											if (vehToSeek->pPassengers[0]->bDontDragMeOutCar) {
-												if (IsPlayer())
-													SetEnterCar(vehToSeek, m_vehDoor);
-											} else {
-												SetCarJack(vehToSeek);
-											}
-										} else {
-											SetEnterCar(vehToSeek, m_vehDoor);
-										}
-									} else if (m_vehDoor == CAR_DOOR_RF && vehToSeek->pPassengers[0]) {
-										if (vehToSeek->pPassengers[0]->bDontDragMeOutCar) {
-											if (IsPlayer())
-												SetEnterCar(vehToSeek, m_vehDoor);
-										} else {
-											SetCarJack(vehToSeek);
-										}
-									} else {
-										SetEnterCar(vehToSeek, m_vehDoor);
-									}
-									break;
-								case STATUS_WRECKED:
-									SetIdle();
-									break;
-								default:
-									return;
+							// Delegate the choice of what to do at the door to the C implementation
+							switch (PedLogic_SeekCarEnterAction(vehToSeek->GetStatus(), vehToSeek->IsBike(), vehToSeek->bIsBus, m_vehDoor, m_leader && m_leader == vehToSeek->pDriver,
+								vehToSeek->pDriver != nil, vehToSeek->pPassengers[0] != nil, vehToSeek->pPassengers[1] != nil, vehToSeek->pPassengers[2] != nil, IsPlayer(),
+								vehToSeek->pPassengers[0] && vehToSeek->pPassengers[0]->bDontDragMeOutCar, m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER)) {
+							case PED_SEEKCAR_ENTER:
+								SetEnterCar(vehToSeek, m_vehDoor);
+								break;
+							case PED_SEEKCAR_CARJACK:
+								SetCarJack(vehToSeek);
+								break;
+							case PED_SEEKCAR_CARJACK_FLEE_DRIVER:
+								SetCarJack(vehToSeek);
+								vehToSeek->pDriver->bFleeAfterExitingCar = true;
+								break;
+							case PED_SEEKCAR_IDLE:
+								SetIdle();
+								break;
+							case PED_SEEKCAR_RETURN:
+								return;
+							default:
+								break;
 							}
 						} else {
 							RestorePreviousState();
@@ -7587,23 +7182,9 @@ CPed::LookForInterestingNodes(void)
 	bool found = false;
 	uint8 randVal = General_GetRandomNumber() % 256;
 
-	int minX = CWorld::GetSectorIndexX(GetPosition().x - CHECK_NEARBY_THINGS_MAX_DIST);
-	if (minX < 0) minX = 0;
-	int minY = CWorld::GetSectorIndexY(GetPosition().y - CHECK_NEARBY_THINGS_MAX_DIST);
-	if (minY < 0) minY = 0;
-	int maxX = CWorld::GetSectorIndexX(GetPosition().x + CHECK_NEARBY_THINGS_MAX_DIST);
-#ifdef FIX_BUGS
-	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
-#else
-	if (maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X;
-#endif
-
-	int maxY = CWorld::GetSectorIndexY(GetPosition().y + CHECK_NEARBY_THINGS_MAX_DIST);
-#ifdef FIX_BUGS
-	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
-#else
-	if (maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y;
-#endif
+	// Delegate the range of sectors to the C implementation
+	int32_t minX, minY, maxX, maxY;
+	World_SectorRange(GetPosition().x - CHECK_NEARBY_THINGS_MAX_DIST, GetPosition().y - CHECK_NEARBY_THINGS_MAX_DIST, GetPosition().x + CHECK_NEARBY_THINGS_MAX_DIST, GetPosition().y + CHECK_NEARBY_THINGS_MAX_DIST, &minX, &minY, &maxX, &maxY);
 
 	for (int curY = minY; curY <= maxY && !found; curY++) {
 		for (int curX = minX; curX <= maxX && !found; curX++) {
@@ -7864,7 +7445,6 @@ CPed::ClearWaitState(void)
 void
 CPed::SetWaitState(eWaitState state, void *time)
 {
-	AnimationId waitAnim = ANIM_STD_NUM;
 	CAnimBlendAssociation *animAssoc;
 
 	if (!IsPedInControl())
@@ -7876,216 +7456,12 @@ CPed::SetWaitState(eWaitState state, void *time)
 	if (state != m_nWaitState)
 		FinishedWaitCB(nil, this);
 
-	switch (state) {
-		case WAITSTATE_TRAFFIC_LIGHTS:
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			SetMoveState(PEDMOVE_STILL);
-			break;
-		case WAITSTATE_CROSS_ROAD:
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
-			break;
-		case WAITSTATE_CROSS_ROAD_LOOK:
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ROADCROSS, 8.0f);
-
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-
-			break;
-		case WAITSTATE_LOOK_PED:
-		case WAITSTATE_LOOK_SHOP:
-		case WAITSTATE_LOOK_ACCIDENT:
-		case WAITSTATE_FACEOFF_GANG:
-		case WAITSTATE_RIOT:
-		case WAITSTATE_STRIPPER:
-			break;
-		case WAITSTATE_DOUBLEBACK:
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
-#ifdef FIX_BUGS
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,RestoreHeadingRateCB, this);
-#endif
-			break;
-		case WAITSTATE_HITWALL:
-			m_headingRate = 2.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_WALL, 16.0f);
-			animAssoc->flags |= ASSOC_DELETEFADEDOUT;
-			animAssoc->flags |= ASSOC_FADEOUTWHENDONE;
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
-
-			if (m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER && CharCreatedBy == RANDOM_CHAR && m_nPedState == PED_SEEK_CAR) {
-				ClearObjective();
-				RestorePreviousState();
-				m_carJackTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
-			}
-			break;
-		case WAITSTATE_TURN180:
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_TURN180, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			break;
-		case WAITSTATE_SURPRISE:
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_HIT_WALL, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			break;
-		case WAITSTATE_STUCK:
-			SetMoveState(PEDMOVE_STILL);
-			SetMoveAnim();
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
-#ifdef FIX_BUGS
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,RestoreHeadingRateCB, this);
-#endif
-
-			// Random char as passenger? Cop, medic etc.?
-			if (m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER && CharCreatedBy == RANDOM_CHAR && m_nPedState == PED_SEEK_CAR) {
-				ClearObjective();
-				RestorePreviousState();
-				m_carJackTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
-			}
-			break;
-		case WAITSTATE_LOOK_ABOUT:
-			SetMoveState(PEDMOVE_STILL);
-			SetMoveAnim();
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_HBHB, 4.0f);
-#ifdef FIX_BUGS
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,RestoreHeadingRateCB, this);
-#endif
-
-			break;
-		case WAITSTATE_PLAYANIM_COWER:
-			waitAnim = ANIM_STD_HANDSCOWER;
-		case WAITSTATE_PLAYANIM_HANDSUP:
-			if (waitAnim == ANIM_STD_NUM)
-				waitAnim = ANIM_STD_HANDSUP;
-		case WAITSTATE_PLAYANIM_HANDSCOWER:
-			if (waitAnim == ANIM_STD_NUM)
-				waitAnim = ANIM_STD_HANDSCOWER;
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, waitAnim, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
-			break;
-		case WAITSTATE_PLAYANIM_DUCK:
-			waitAnim = ANIM_STD_DUCK_DOWN;
-		case WAITSTATE_PLAYANIM_TAXI:
-			if (waitAnim == ANIM_STD_NUM)
-				waitAnim = ANIM_STD_HAILTAXI;
-		case WAITSTATE_PLAYANIM_CHAT:
-			if (waitAnim == ANIM_STD_NUM)
-				waitAnim = ANIM_STD_CHAT;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, waitAnim, 4.0f);
-			animAssoc->flags &= ~ASSOC_FADEOUTWHENDONE;
-			animAssoc->flags |= ASSOC_DELETEFADEDOUT;
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
-			break;
-		case WAITSTATE_FINISH_FLEE:
-			SetMoveState(PEDMOVE_STILL);
-			SetMoveAnim();
-			m_headingRate = 0.0f;
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_IDLE_TIRED, 4.0f);
-#ifdef FIX_BUGS
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,RestoreHeadingRateCB, this);
-#endif
-			break;
-		case WAITSTATE_SIT_DOWN:
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_DOWN, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_SIT_UP:
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_UP, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_SIT_IDLE:
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_SEAT_IDLE, 128.f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_USE_ATM:
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_ATM, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_SUN_BATHE_IDLE:
-			m_headingRate = 0.0f;
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_SUNBATHE, ANIM_SUNBATHE_IDLE, 4.0f);
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetDeleteCallback(animAssoc,DeleteSunbatheIdleAnimCB, this);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_FAST_FALL:
-			SetFall(-1, ANIM_STD_HIGHIMPACT_FRONT, true);
-			break;
-		case WAITSTATE_BOMBER:
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_DETONATE, 4.0f);
-			// Delegate the duration of the wait to the C implementation
-			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		case WAITSTATE_GROUND_ATTACK:
-		{
-			CWeaponInfo* currentWeapon = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
-			if (!currentWeapon)
-				break;
+	PedWaitStateEffects fx;
+	if (state == WAITSTATE_FAST_FALL) {
+		SetFall(-1, ANIM_STD_HIGHIMPACT_FRONT, true);
+	} else if (state == WAITSTATE_GROUND_ATTACK) {
+		CWeaponInfo* currentWeapon = WeaponInfo_GetWeaponInfo(GetWeapon()->m_eWeaponType);
+		if (currentWeapon) {
 			if (GetFireAnimGround(currentWeapon, false)) {
 				if (!RpAnimBlendClumpGetAssociation(GetClump(), GetFireAnimGround(currentWeapon, false))) {
 					// Delegate the duration of the wait to the C implementation
@@ -8097,26 +7473,57 @@ CPed::SetWaitState(eWaitState state, void *time)
 					AnimAssociation_SetDeleteCallback(newAnim,FinishedWaitCB, this);
 				}
 			}
-			break;
 		}
-		case WAITSTATE_LANCESITTING:
-			// Use the complete C animation manager at the original call boundary
-			AnimManager_BlendAnimation(GetClump(), ASSOCGRP_LANCE, ANIM_SUNBATHE_IDLE, 4.0f);
-			break;
-		case WAITSTATE_PLAYANIM_HANDSUP_SIMPLE:
-			// Use the complete C animation manager at the original call boundary
-			animAssoc = AnimManager_BlendAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_HANDSUP, 4.0f);
-			animAssoc->flags &= ~ASSOC_FADEOUTWHENDONE;
-			animAssoc->flags |= ASSOC_DELETEFADEDOUT;
-			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
-			// Delegate the duration of the wait to the C implementation
+	} else if (!PedLogic_WaitStateEffects(state, &fx)) {
+		ClearWaitState();
+		RestoreHeadingRate();
+		return;
+	} else {
+		// Apply the effects of the wait state that the C implementation chose
+		if (fx.moveStill)
+			SetMoveState(PEDMOVE_STILL);
+		if (fx.moveAnim)
+			SetMoveAnim();
+		if (fx.headingRate >= 0.0f)
+			m_headingRate = fx.headingRate;
+		if (fx.hasTimer)
 			m_nWaitTimer = (*Timer_GetTimeInMilliseconds()) + PedLogic_WaitStateTimerMs(state, time != nil, time ? *(int*)time : 0);
-			break;
-		default:
-			ClearWaitState();
-			RestoreHeadingRate();
-			return;
+		if (fx.animGroup >= 0) {
+			// Use the complete C animation manager at the original call boundary
+			animAssoc = AnimManager_BlendAnimation(GetClump(), (AssocGroupId)fx.animGroup, (AnimationId)fx.anim, fx.blendRate);
+			if (fx.flagsMode == PEDWAIT_FLAGS_DELETE_AND_FADE_OUT) {
+				animAssoc->flags |= ASSOC_DELETEFADEDOUT;
+				animAssoc->flags |= ASSOC_FADEOUTWHENDONE;
+			} else if (fx.flagsMode == PEDWAIT_FLAGS_DELETE_NO_FADE_OUT) {
+				animAssoc->flags &= ~ASSOC_FADEOUTWHENDONE;
+				animAssoc->flags |= ASSOC_DELETEFADEDOUT;
+			}
+			// Use the complete C association at the original native operation boundary
+			switch (fx.callback) {
+			case PEDWAIT_CB_FINISH_FINISHED:
+				AnimAssociation_SetFinishCallback(animAssoc,FinishedWaitCB, this);
+				break;
+			case PEDWAIT_CB_DELETE_FINISHED:
+				AnimAssociation_SetDeleteCallback(animAssoc,FinishedWaitCB, this);
+				break;
+#ifdef FIX_BUGS
+			case PEDWAIT_CB_FINISH_RESTORE_HEADING:
+				AnimAssociation_SetFinishCallback(animAssoc,RestoreHeadingRateCB, this);
+				break;
+#endif
+			case PEDWAIT_CB_DELETE_SUNBATHE:
+				AnimAssociation_SetDeleteCallback(animAssoc,DeleteSunbatheIdleAnimCB, this);
+				break;
+			default:
+				break;
+			}
+		}
+		// Random char as passenger? Cop, medic etc.?
+		if (fx.carJackCheck && m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER && CharCreatedBy == RANDOM_CHAR && m_nPedState == PED_SEEK_CAR) {
+			ClearObjective();
+			RestorePreviousState();
+			m_carJackTimer = (*Timer_GetTimeInMilliseconds()) + 30000;
+		}
 	}
 	m_nWaitState = state;
 }
@@ -8624,7 +8031,7 @@ CPed::SetSolicit(uint32 time)
 			m_fRotationDest = m_carInObjective->GetForward().Heading() + HALFPI;
 		}
 
-		if (Abs(m_fRotationDest - m_fRotationCur) < HALFPI) {
+		if (General_AbsDiffBelow(m_fRotationDest, m_fRotationCur, HALFPI)) {
 			m_chatTimer = (*Timer_GetTimeInMilliseconds()) + time;
 
 			if(!m_carInObjective->bIsVan && !m_carInObjective->bIsBus)
@@ -8749,86 +8156,27 @@ CPed::PossiblyFindBetterPosToSeekCar(CVector *pos, CVehicle *veh)
 
 		float vehForwardHeading = veh->GetForward().Heading();
 
-		// I'm absolutely not sure about these namings.
-		// NTVF = needed turn if we're looking to vehicle front and wanna look to...
-
-		float potentialLrHeading = Atan2(leftRearPos.x - helperPos.x, leftRearPos.y - helperPos.y);
-		float NTVF_LR = General_LimitRadianAngle(potentialLrHeading - vehForwardHeading);
-
-		float potentialRrHeading = Atan2(rightRearPos.x - helperPos.x, rightRearPos.y - helperPos.y);
-		float NTVF_RR = General_LimitRadianAngle(potentialRrHeading - vehForwardHeading);
-
-		float potentialLfHeading = Atan2(leftFrontPos.x - helperPos.x, leftFrontPos.y - helperPos.y);
-		float NTVF_LF = General_LimitRadianAngle(potentialLfHeading - vehForwardHeading);
-
-		float potentialRfHeading = Atan2(rightFrontPos.x - helperPos.x, rightFrontPos.y - helperPos.y);
-		float NTVF_RF = General_LimitRadianAngle(potentialRfHeading - vehForwardHeading);
-
-		bool canHeadToLr = NTVF_LR <= -PI || NTVF_LR >= -HALFPI;
-
-		bool canHeadToRr = NTVF_RR <= HALFPI || NTVF_RR >= PI;
-
-		bool canHeadToLf = NTVF_LF >= 0.0f || NTVF_LF <= -HALFPI;
-
-		bool canHeadToRf = NTVF_RF <= 0.0f || NTVF_RF >= HALFPI;
-
-		// Only order of conditions are different among enterTypes.
-		if (m_vehDoor == CAR_DOOR_RR) {
-			if (canHeadToRr) {
-				foundPos = rightRearPos;
-				foundIt = true;
-			} else if (canHeadToRf) {
-				foundPos = rightFrontPos;
-				foundIt = true;
-			} else if (canHeadToLr) {
-				foundPos = leftRearPos;
-				foundIt = true;
-			} else if (canHeadToLf) {
-				foundPos = leftFrontPos;
-				foundIt = true;
-			}
-		} else if(m_vehDoor == CAR_DOOR_RF) {
-			if (canHeadToRf) {
-				foundPos = rightFrontPos;
-				foundIt = true;
-			} else if (canHeadToRr) {
-				foundPos = rightRearPos;
-				foundIt = true;
-			} else if (canHeadToLf) {
-				foundPos = leftFrontPos;
-				foundIt = true;
-			} else if (canHeadToLr) {
-				foundPos = leftRearPos;
-				foundIt = true;
-			}
-		} else if (m_vehDoor == CAR_DOOR_LF) {
-			if (canHeadToLf) {
-				foundPos = leftFrontPos;
-				foundIt = true;
-			} else if (canHeadToLr) {
-				foundPos = leftRearPos;
-				foundIt = true;
-			} else if (canHeadToRf) {
-				foundPos = rightFrontPos;
-				foundIt = true;
-			} else if (canHeadToRr) {
-				foundPos = rightRearPos;
-				foundIt = true;
-			}
-		} else if (m_vehDoor == CAR_DOOR_LR) {
-			if (canHeadToLr) {
-				foundPos = leftRearPos;
-				foundIt = true;
-			} else if (canHeadToLf) {
-				foundPos = leftFrontPos;
-				foundIt = true;
-			} else if (canHeadToRr) {
-				foundPos = rightRearPos;
-				foundIt = true;
-			} else if (canHeadToRf) {
-				foundPos = rightFrontPos;
-				foundIt = true;
-			}
+		// Delegate the choice of the corner to head for to the C implementation
+		const float cornersC[8] = { leftRearPos.x, leftRearPos.y, rightRearPos.x, rightRearPos.y, leftFrontPos.x, leftFrontPos.y, rightFrontPos.x, rightFrontPos.y };
+		switch (PedLogic_PickSeekCarCorner(m_vehDoor, helperPos.x, helperPos.y, cornersC, vehForwardHeading)) {
+		case PED_CARCORNER_LEFT_REAR:
+			foundPos = leftRearPos;
+			foundIt = true;
+			break;
+		case PED_CARCORNER_RIGHT_REAR:
+			foundPos = rightRearPos;
+			foundIt = true;
+			break;
+		case PED_CARCORNER_LEFT_FRONT:
+			foundPos = leftFrontPos;
+			foundIt = true;
+			break;
+		case PED_CARCORNER_RIGHT_FRONT:
+			foundPos = rightFrontPos;
+			foundIt = true;
+			break;
+		default:
+			break;
 		}
 	}
 	if (!foundIt)
@@ -8875,7 +8223,8 @@ CPed::CanPedJumpThis(CEntity *unused, CVector *damageNormal)
 			CVector invDamageNormal(-damageNormal->x, -damageNormal->y, 0.0f);
 			invDamageNormal *= 1.0f / collPower;
 			CVector estimatedJumpDist = invDamageNormal + collPower * invDamageNormal * ourCol->spheres->bounds.radius;
-			forwardOffset = estimatedJumpDist * Min(2.0f / collPower, 4.0f);
+			// Delegate the scale of the offset to the C implementation
+			forwardOffset = estimatedJumpDist * PedLogic_JumpOffsetScale(collPower);
 		} else {
 			forwardOffset += collPower * ourCol->spheres->bounds.radius * forwardOffset;
 		}
@@ -8963,11 +8312,17 @@ CPed::FinishLaunchCB(CAnimBlendAssociation *animAssoc, void *arg)
 		if (TheCamera.Cams[0].Using3rdPersonMouseCam()) {
 #endif
 			float fpsAngle = ped->WorkOutHeadingForMovingFirstPerson(ped->m_fRotationCur);
-			ped->m_vecMoveSpeed.x = -velocityFromAnim * Sin(fpsAngle);
-			ped->m_vecMoveSpeed.y = velocityFromAnim * Cos(fpsAngle);
+			// Delegate the speed from the angle to the C implementation
+			float jumpSpeed[2];
+			PedLogic_SpeedFromAngle(velocityFromAnim, fpsAngle, jumpSpeed);
+			ped->m_vecMoveSpeed.x = jumpSpeed[0];
+			ped->m_vecMoveSpeed.y = jumpSpeed[1];
 		} else {
-			ped->m_vecMoveSpeed.x = -velocityFromAnim * Sin(ped->m_fRotationCur);
-			ped->m_vecMoveSpeed.y = velocityFromAnim * Cos(ped->m_fRotationCur);
+			// Delegate the speed from the angle to the C implementation
+			float jumpSpeed[2];
+			PedLogic_SpeedFromAngle(velocityFromAnim, ped->m_fRotationCur, jumpSpeed);
+			ped->m_vecMoveSpeed.x = jumpSpeed[0];
+			ped->m_vecMoveSpeed.y = jumpSpeed[1];
 		}
 
 		if (ped->m_pCurrentPhysSurface) {

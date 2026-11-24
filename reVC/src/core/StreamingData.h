@@ -175,6 +175,16 @@ static inline bool Streaming_CanRemoveAnim(int32_t id)
     // Apply the original resource offset before testing removal flags
     return Streaming_CanRemoveModel(id + STREAM_OFFSET_ANIM);
 }
+//+ rouz edit (Claude)
+// Range of sectors along the axis the camera looks along that is scanned for models to delete: behind the camera or in front of it (the part that is not in the frustum), from the index of the camera sector, the sign of the looking direction and the number of sectors, the loop goes from min to max (excluded) by inc
+void Streaming_SectorRange(int cameraIndex, bool lookingPositive, bool behind, int numSectors, int *minIndex, int *maxIndex, int *inc);
+// Range of sectors on the other axis, 10 sectors each side of the camera
+void Streaming_SectorSpan(int cameraIndex, int numSectors, int *minIndex, int *maxIndex);
+// Whether an entity at a position inside a box and closer to a point than its LOD distance (squared, limited to the streaming distance) should be requested
+bool Streaming_ShouldRequestEntity(float posX, float posY, float xmin, float ymin, float xmax, float ymax, float x, float y, float lodDistSq, float streamDistSq);
+// Whether a sector is far from the sector of the player on both axes (more than 3 sectors)
+bool Streaming_SectorIsFar(int playerX, int playerY, int sectorX, int sectorY);
+//- rouz edit (Claude)
 #ifdef __cplusplus
 }
 #endif

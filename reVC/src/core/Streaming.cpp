@@ -916,17 +916,9 @@ CStreaming::InstanceLoadedModelsInSectorList(CPtrList &list)
 void
 CStreaming::InstanceLoadedModels(const CVector &pos)
 {
-	int minX = CWorld::GetSectorIndexX(pos.x - 80.0f);
-	if(minX <= 0) minX = 0;
-
-	int minY = CWorld::GetSectorIndexY(pos.y - 80.0f);
-	if(minY <= 0) minY = 0;
-
-	int maxX = CWorld::GetSectorIndexX(pos.x + 80.0f);
-	if(maxX >= NUMSECTORS_X) maxX = NUMSECTORS_X - 1;
-
-	int maxY = CWorld::GetSectorIndexY(pos.y + 80.0f);
-	if(maxY >= NUMSECTORS_Y) maxY = NUMSECTORS_Y - 1;
+	// Delegate the range of sectors to the C implementation
+	int32_t minX, minY, maxX, maxY;
+	World_SectorRange(pos.x - 80.0f, pos.y - 80.0f, pos.x + 80.0f, pos.y + 80.0f, &minX, &minY, &maxX, &maxY);
 
 	int x, y;
 	for(y = minY; y <= maxY; y++){
@@ -2161,11 +2153,9 @@ CStreaming::ProcessEntitiesInSectorList(CPtrList &list, float x, float y, float 
 			CTimeModelInfo *mi = (CTimeModelInfo*)((CBaseModelInfo*)ModelRegistry_Get(e->GetModelIndex())); // rouz edit (ChatGPT)
 			if (mi->GetModelType() != MITYPE_TIME || Clock_GetIsTimeInRange(mi->m_timeData.timeOn, mi->m_timeData.timeOff)) { // rouz edit (ChatGPT)
 				lodDistSq = sq(SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier)); // rouz edit (ChatGPT)
-				lodDistSq = Min(lodDistSq, sq(STREAM_DIST));
 				pos = CVector2D(e->GetPosition());
-				if(xmin < pos.x && pos.x < xmax &&
-				   ymin < pos.y && pos.y < ymax &&
-				   (CVector2D(x, y) - pos).MagnitudeSqr() < lodDistSq)
+				// Delegate the check that the entity should be requested to the C implementation
+				if(Streaming_ShouldRequestEntity(pos.x, pos.y, xmin, ymin, xmax, ymax, x, y, lodDistSq, sq(STREAM_DIST)))
 					Streaming_RequestModel(e->GetModelIndex(), flags); // rouz edit (ChatGPT)
 			}
 		}
@@ -2351,8 +2341,8 @@ CStreaming::DeleteRwObjectsAfterDeath(const CVector &pos)
 
 	for(x = 0; x < NUMSECTORS_X; x++)
 		for(y = 0; y < NUMSECTORS_Y; y++)
-			if(Abs(ix - x) > 3.0f &&
-			   Abs(iy - y) > 3.0f){
+			// Delegate the check that the sector is far from the player to the C implementation
+			if(Streaming_SectorIsFar(ix, iy, x, y)){
 				sect = CWorld::GetSector(x, y);
 				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS]);
 				DeleteRwObjectsInSectorList(sect->m_lists[ENTITYLIST_BUILDINGS_OVERLAP]);
@@ -2381,25 +2371,16 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 	ix = CWorld::GetSectorIndexX(TheCamera.GetPosition().x);
 	iy = CWorld::GetSectorIndexY(TheCamera.GetPosition().y);
 
-	if(Abs(TheCamera.GetForward().x) > Abs(TheCamera.GetForward().y)){
+	if(General_AbsGreater(TheCamera.GetForward().x, TheCamera.GetForward().y)){
 		// looking west/east
 
-		ymin = Max(iy - 10, 0);
-		ymax = Min(iy + 10, NUMSECTORS_Y - 1);
+		// Delegate the span of sectors to the C implementation
+		Streaming_SectorSpan(iy, NUMSECTORS_Y, &ymin, &ymax);
 		assert(ymin <= ymax);
 
 		// Delete a block of sectors that we know is behind the camera
-		if(TheCamera.GetForward().x > 0.0f){
-			// looking east
-			xmax = Max(ix - 2, 0);
-			xmin = Max(ix - 10, 0);
-			inc = 1;
-		}else{
-			// looking west
-			xmax = Min(ix + 2, NUMSECTORS_X - 1);
-			xmin = Min(ix + 10, NUMSECTORS_X - 1);
-			inc = -1;
-		}
+		// Delegate the range of sectors to scan to the C implementation
+		Streaming_SectorRange(ix, TheCamera.GetForward().x > 0.0f, true, NUMSECTORS_X, &xmin, &xmax, &inc);
 		for(y = ymin; y <= ymax; y++){
 			for(x = xmin; x != xmax; x += inc){
 				sect = CWorld::GetSector(x, y);
@@ -2416,17 +2397,8 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 				return;
 
 		// Now a block that intersects with the camera's frustum
-		if(TheCamera.GetForward().x > 0.0f){
-			// looking east
-			xmax = Max(ix + 10, 0);
-			xmin = Max(ix - 2, 0);
-			inc = 1;
-		}else{
-			// looking west
-			xmax = Min(ix - 10, NUMSECTORS_X - 1);
-			xmin = Min(ix + 2, NUMSECTORS_X - 1);
-			inc = -1;
-		}
+		// Delegate the range of sectors to scan to the C implementation
+		Streaming_SectorRange(ix, TheCamera.GetForward().x > 0.0f, false, NUMSECTORS_X, &xmin, &xmax, &inc);
 		for(y = ymin; y <= ymax; y++){
 			for(x = xmin; x != xmax; x += inc){
 				sect = CWorld::GetSector(x, y);
@@ -2450,22 +2422,13 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 	}else{
 		// looking north/south
 
-		xmin = Max(ix - 10, 0);
-		xmax = Min(ix + 10, NUMSECTORS_X - 1);
+		// Delegate the span of sectors to the C implementation
+		Streaming_SectorSpan(ix, NUMSECTORS_X, &xmin, &xmax);
 		assert(xmin <= xmax);
 
 		// Delete a block of sectors that we know is behind the camera
-		if(TheCamera.GetForward().y > 0.0f){
-			// looking north
-			ymax = Max(iy - 2, 0);
-			ymin = Max(iy - 10, 0);
-			inc = 1;
-		}else{
-			// looking south
-			ymax = Min(iy + 2, NUMSECTORS_Y - 1);
-			ymin = Min(iy + 10, NUMSECTORS_Y - 1);
-			inc = -1;
-		}
+		// Delegate the range of sectors to scan to the C implementation
+		Streaming_SectorRange(iy, TheCamera.GetForward().y > 0.0f, true, NUMSECTORS_Y, &ymin, &ymax, &inc);
 		for(x = xmin; x <= xmax; x++){
 			for(y = ymin; y != ymax; y += inc){
 				sect = CWorld::GetSector(x, y);
@@ -2481,17 +2444,8 @@ CStreaming::DeleteRwObjectsBehindCamera(size_t mem)
 				return;
 
 		// Now a block that intersects with the camera's frustum
-		if(TheCamera.GetForward().y > 0.0f){
-			// looking north
-			ymax = Max(iy + 10, 0);
-			ymin = Max(iy - 2, 0);
-			inc = 1;
-		}else{
-			// looking south
-			ymax = Min(iy - 10, NUMSECTORS_Y - 1);
-			ymin = Min(iy + 2, NUMSECTORS_Y - 1);
-			inc = -1;
-		}
+		// Delegate the range of sectors to scan to the C implementation
+		Streaming_SectorRange(iy, TheCamera.GetForward().y > 0.0f, false, NUMSECTORS_Y, &ymin, &ymax, &inc);
 		for(x = xmin; x <= xmax; x++){
 			for(y = ymin; y != ymax; y += inc){
 				sect = CWorld::GetSector(x, y);

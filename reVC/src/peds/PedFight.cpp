@@ -108,10 +108,8 @@ CheckForPedsOnGroundToAttack(CPed *attacker, CPed **pedOnGround)
 			angleToFace = General_LimitRadianAngle(angleToFace);
 			attacker->m_fRotationCur = General_LimitRadianAngle(attacker->m_fRotationCur);
 
-			angleDiff = Abs(angleToFace - attacker->m_fRotationCur);
-
-			if (angleDiff > PI)
-				angleDiff = 2 * PI - angleDiff;
+			// Delegate the angle between the directions to the C implementation
+			angleDiff = PedLogic_AngleDifference(angleToFace, attacker->m_fRotationCur);
 
 			currentPedState = currentPed->m_nPedState;
 
@@ -164,6 +162,16 @@ CheckForPedsOnGroundToAttack(CPed *attacker, CPed **pedOnGround)
 		*pedOnGround = currentPed;
 
 	return stateToReturn;
+}
+
+static CVector
+NormalisedHorizontal(const CVector &v)
+{
+	float in[3] = { v.x, v.y, v.z };
+	float out[3];
+
+	General_NormalisedHorizontal(in, out);
+	return CVector(out[0], out[1], out[2]);
 }
 
 void
@@ -659,10 +667,10 @@ CPed::FinishedReloadCB(CAnimBlendAssociation *reloadAssoc, void *arg)
 		AnimAssociation_SetRun(fireAssoc);
 		if (fireAssoc->currentTime == reloadAssoc->hierarchy->totalLength)
 			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetCurrentTime(fireAssoc,Max(weapon->m_fAnimLoopStart - 0.04f, 0.0f));
+			AnimAssociation_SetCurrentTime(fireAssoc,PedLogic_ReloadLoopRestartTime(weapon->m_fAnimLoopStart));
 		else if (fireAssoc->currentTime < weapon->m_fAnimLoopStart)
 			// Use the complete C association at the original native operation boundary
-			AnimAssociation_SetCurrentTime(fireAssoc,Max(weapon->m_fAnimLoopStart - 0.04f, 0.0f));
+			AnimAssociation_SetCurrentTime(fireAssoc,PedLogic_ReloadLoopRestartTime(weapon->m_fAnimLoopStart));
 	}
 }
 
@@ -2068,18 +2076,8 @@ CPed::FightHitPed(CPed *victim, CVector &touchPoint, CVector &dir, int16 piece)
 		dir.z = 1.0f;
 		victim->bIsStanding = false;
 
-		float moveMult;
-		if (fightingWithWeapon) {
-			moveMult = Min(damageMult * 0.02f, 1.0f);
-		} else if (m_curFightMove == FIGHTMOVE_GROUNDKICK) {
-			moveMult = Min(damageMult * 0.6f, 4.0f);
-		} else {
-			if (victim->m_nPedState != PED_DIE || damageMult >= 20) {
-				moveMult = damageMult;
-			} else {
-				moveMult = Min(damageMult * 2.0f, 14.0f);
-			}
-		}
+		// Delegate the strength of the push to the C implementation
+		float moveMult = PedLogic_FightMoveMult(damageMult, fightingWithWeapon, m_curFightMove == FIGHTMOVE_GROUNDKICK, victim->m_nPedState == PED_DIE);
 
 		victim->ApplyMoveForce(moveMult * 0.6 * dir);
 	}
@@ -2785,7 +2783,8 @@ CPed::InflictDamage(CEntity *damagedBy, eWeaponType method, float damage, ePedPi
 	if (method == WEAPONTYPE_FALL) {
 		if (RpAnimBlendClumpGetAssociation(GetClump(), ANIM_STD_ROLLOUT_LHS)) {
 			if (m_fHealth >= 1.0 && m_fHealth - healthImpact < 5.0f) {
-				m_fHealth = Min(m_fHealth, 5.0f);
+				// Delegate the limit to the C implementation
+				m_fHealth = General_MinFloat(m_fHealth, 5.0f);
 				return false;
 			}
 		}
@@ -3023,9 +3022,8 @@ CPed::PlacePedOnDryLand(void)
 	if (!CWorld::TestSphereAgainstWorld(potentialGround, 5.0f, nil, true, false, false, false, false, false))
 		return false;
 
-	CVector potentialGroundDist = CollisionVector_ToNative(gaTempSphereColPoints[0].point) - GetPosition();
-	potentialGroundDist.z = 0.0f;
-	potentialGroundDist.Normalise();
+	// Delegate the horizontal direction to the C implementation
+	CVector potentialGroundDist = NormalisedHorizontal(CollisionVector_ToNative(gaTempSphereColPoints[0].point) - GetPosition());
 
 	CVector posToCheck = 0.5f * potentialGroundDist + CollisionVector_ToNative(gaTempSphereColPoints[0].point);
 	posToCheck.z = 3.0f + waterLevel;
@@ -3441,7 +3439,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 
 		distVec.Normalise();
 
-		distVec *= Min(car->m_fMass / 1400.0f, 1.0f);
+		distVec *= PedLogic_CarHitMassScale(car->m_fMass);
 		car->ApplyMoveForce(distVec * -100.0f);
 		Say(SOUND_PED_DEFEND);
 
@@ -3471,7 +3469,7 @@ CPed::KillPedWithCar(CVehicle *car, float impulse)
 		}
 		m_vecMoveSpeed.z = 0.0f;
 		distVec.Normalise();
-		distVec *= Min(car->m_fMass / 1400.0f, 1.0f);
+		distVec *= PedLogic_CarHitMassScale(car->m_fMass);
 		car->ApplyMoveForce(distVec * -60.0f);
 		Say(SOUND_PED_DEFEND);
 	}
@@ -3521,7 +3519,7 @@ CPed::DriveVehicle(void)
 				bike->KnockOffRider(WEAPONTYPE_FALL, 2, bike->pPassengers[0], false);
 			return;
 		}
-		if (!drivebyAssoc && Abs(velocityFwdDotProd) < 0.02f) {
+		if (!drivebyAssoc && General_AbsBelow(velocityFwdDotProd, 0.02f)) {
 			if (!stillAssoc || stillAssoc->blendAmount < 1.0 && stillAssoc->blendDelta <= 0.0) {
 				// Use the complete C animation manager at the original call boundary
 				stillAssoc = AnimManager_BlendAnimation(GetClump(), bike->m_bikeAnimType, ANIM_BIKE_READY, 2.0f);
@@ -3557,26 +3555,25 @@ CPed::DriveVehicle(void)
 			}
 		}
 		if (stillAssoc)
-			blendDelta -= Min(1.0f, (*Timer_GetTimeStepNonClipped()) * 0.02f * stillAssoc->blendDelta + stillAssoc->blendAmount);
+			blendDelta = PedLogic_BlendRemaining(blendDelta, 1.0f, (*Timer_GetTimeStepNonClipped()), stillAssoc->blendDelta, stillAssoc->blendAmount);
 
 		if (drivebyAssoc)
-			blendDelta -= Min(blendDelta, (*Timer_GetTimeStepNonClipped()) * 0.02f * drivebyAssoc->blendDelta + drivebyAssoc->blendAmount);
+			blendDelta = PedLogic_BlendRemaining(blendDelta, blendDelta, (*Timer_GetTimeStepNonClipped()), drivebyAssoc->blendDelta, drivebyAssoc->blendAmount);
 
 		if (walkbackAssoc)
-			blendDelta -= Min(blendDelta, (*Timer_GetTimeStepNonClipped()) * 0.02f * walkbackAssoc->blendDelta + walkbackAssoc->blendAmount);
+			blendDelta = PedLogic_BlendRemaining(blendDelta, blendDelta, (*Timer_GetTimeStepNonClipped()), walkbackAssoc->blendDelta, walkbackAssoc->blendAmount);
 
-		float targetLRLean, timeBlend;
+		float targetLRLean;
 
 		// Smooth the lean amount
 		if (targetUDLean == -1.0f) {
 			targetLRLean = 0.0f;
-			timeBlend = Pow(0.86f, (*Timer_GetTimeStep()));
 		} else {
 			targetLRLean = Clamp(bike->m_fLeanLRAngle / bike->pBikeHandling->fFullAnimLean, -1.0f, 1.0f);
-			timeBlend = Pow(0.86f, (*Timer_GetTimeStep()));
 		}
 
-		bike->m_fPedLeanAmountLR = bike->m_fPedLeanAmountLR * timeBlend + (1.0 - timeBlend) * targetLRLean;
+		// Delegate the blend of the sideways lean to the C implementation
+		bike->m_fPedLeanAmountLR = PedLogic_BikeLeanLRBlend(bike->m_fPedLeanAmountLR, targetLRLean, (*Timer_GetTimeStep()));
 
 		// Delegate the forward/backward lean to the C implementation
 		bool setWheelieCam, wheelieCam;
@@ -3586,8 +3583,8 @@ CPed::DriveVehicle(void)
 		if (setWheelieCam)
 			bike->bWheelieCam = wheelieCam;
 		if (IsPlayer()) {
-			float timeBlend = Pow(0.89f, (*Timer_GetTimeStep()));
-			bike->m_fPedLeanAmountUD = (timeBlend * bike->m_fPedLeanAmountUD) + ((1.0f - timeBlend) * targetUDLean);
+			// Delegate the blend of the forward lean to the C implementation
+			bike->m_fPedLeanAmountUD = PedLogic_BikeLeanUDBlend(bike->m_fPedLeanAmountUD, targetUDLean, (*Timer_GetTimeStep()));
 		} else {
 			bike->m_fPedLeanAmountUD = 0.0f;
 		}
@@ -3718,7 +3715,8 @@ CPed::DriveVehicle(void)
 				lDriveAssoc->blendAmount = 0.0f;
 
 			if (rDriveAssoc)
-				rDriveAssoc->blendAmount = Clamp(steerAngle * -100.0f / 61.0f, 0.0f, 1.0f);
+				// Delegate the blend of the animation to the C implementation
+				rDriveAssoc->blendAmount = PedLogic_DriveBlend(steerAngle, -100.0f);
 			else if (m_pMyVehicle->IsBoat() && !(m_pMyVehicle->pHandling->Flags & HANDLING_SIT_IN_BOAT))
 				// Use the complete C animation manager at the original call boundary
 				AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_BOAT_DRIVE_RIGHT);
@@ -3734,7 +3732,8 @@ CPed::DriveVehicle(void)
 				rDriveAssoc->blendAmount = 0.0f;
 
 			if (lDriveAssoc)
-				lDriveAssoc->blendAmount = Clamp(steerAngle * 100.0f / 61.0f, 0.0f, 1.0f);
+				// Delegate the blend of the animation to the C implementation
+				lDriveAssoc->blendAmount = PedLogic_DriveBlend(steerAngle, 100.0f);
 			else if (m_pMyVehicle->IsBoat() && !(m_pMyVehicle->pHandling->Flags & HANDLING_SIT_IN_BOAT))
 				// Use the complete C animation manager at the original call boundary
 				AnimManager_AddAnimation(GetClump(), ASSOCGRP_STD, ANIM_STD_BOAT_DRIVE_LEFT);

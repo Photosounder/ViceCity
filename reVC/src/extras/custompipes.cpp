@@ -27,6 +27,7 @@
 #include "Coronas.h" // rouz edit (ChatGPT)
 #include "Glass.h" // rouz edit (ChatGPT)
 #include "Shadows.h" // rouz edit (ChatGPT)
+#include "ShadowMath.h" // rouz edit (Claude)
 #include "Skidmarks.h" // rouz edit (ChatGPT)
 #include "Rubbish.h" // rouz edit (ChatGPT)
 #include "Antennas.h" // rouz edit (ChatGPT)
@@ -87,6 +88,16 @@ static CStoredShadow EnvMapAdditionalShadows[MAX_STOREDSHADOWS];
 static int16 EnvMapAdditionalShadowCount;
 
 static bool
+SameShadowGeometry(const CStoredShadow *stored, const CStoredShadow &shadow)
+{
+	// Delegate the comparison of the geometry to the C implementation
+	float a[7] = { stored->m_vecPos.x, stored->m_vecPos.y, stored->m_vecPos.z, stored->m_vecFront.x, stored->m_vecFront.y, stored->m_vecSide.x, stored->m_vecSide.y };
+	float b[7] = { shadow.m_vecPos.x, shadow.m_vecPos.y, shadow.m_vecPos.z, shadow.m_vecFront.x, shadow.m_vecFront.y, shadow.m_vecSide.x, shadow.m_vecSide.y };
+
+	return ShadowMath_SameGeometry(a, b);
+}
+
+static bool
 IsDuplicateEnvMapShadow(const CStoredShadow &shadow)
 {
 	// Compare the shadow geometry so main-view shadows are not added twice
@@ -94,13 +105,7 @@ IsDuplicateEnvMapShadow(const CStoredShadow &shadow)
 		CStoredShadow *stored = &EnvMapStoredShadows[i];
 		if(stored->m_pTexture == shadow.m_pTexture &&
 		   stored->m_ShadowType == shadow.m_ShadowType &&
-		   Abs(stored->m_vecPos.x - shadow.m_vecPos.x) < 0.01f &&
-		   Abs(stored->m_vecPos.y - shadow.m_vecPos.y) < 0.01f &&
-		   Abs(stored->m_vecPos.z - shadow.m_vecPos.z) < 0.01f &&
-		   Abs(stored->m_vecFront.x - shadow.m_vecFront.x) < 0.01f &&
-		   Abs(stored->m_vecFront.y - shadow.m_vecFront.y) < 0.01f &&
-		   Abs(stored->m_vecSide.x - shadow.m_vecSide.x) < 0.01f &&
-		   Abs(stored->m_vecSide.y - shadow.m_vecSide.y) < 0.01f)
+		   SameShadowGeometry(stored, shadow))
 			return true;
 	}
 
@@ -109,13 +114,7 @@ IsDuplicateEnvMapShadow(const CStoredShadow &shadow)
 		CStoredShadow *stored = &EnvMapAdditionalShadows[i];
 		if(stored->m_pTexture == shadow.m_pTexture &&
 		   stored->m_ShadowType == shadow.m_ShadowType &&
-		   Abs(stored->m_vecPos.x - shadow.m_vecPos.x) < 0.01f &&
-		   Abs(stored->m_vecPos.y - shadow.m_vecPos.y) < 0.01f &&
-		   Abs(stored->m_vecPos.z - shadow.m_vecPos.z) < 0.01f &&
-		   Abs(stored->m_vecFront.x - shadow.m_vecFront.x) < 0.01f &&
-		   Abs(stored->m_vecFront.y - shadow.m_vecFront.y) < 0.01f &&
-		   Abs(stored->m_vecSide.x - shadow.m_vecSide.x) < 0.01f &&
-		   Abs(stored->m_vecSide.y - shadow.m_vecSide.y) < 0.01f)
+		   SameShadowGeometry(stored, shadow))
 			return true;
 	}
 

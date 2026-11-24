@@ -9,6 +9,7 @@
 #include "Lines.h"	// for debug
 #include "PathFind.h"
 #include "PathLogic.h"
+#include "WorldLogic.h"
 
 bool gbShowPedPaths;
 bool gbShowCarPaths;
@@ -40,7 +41,8 @@ CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVe
 {
 	*pointsFound = 0;
 	CVector vecDistance = destination - position;
-	if (Abs(vecDistance.x) > MIN_PED_ROUTE_DISTANCE || Abs(vecDistance.y) > MIN_PED_ROUTE_DISTANCE || Abs(vecDistance.z) > MIN_PED_ROUTE_DISTANCE)
+	// Delegate the check of the distance of the route to the C implementation
+	if (PathLogic_RouteTooFar(vecDistance.x, vecDistance.y, vecDistance.z, MIN_PED_ROUTE_DISTANCE))
 		return false;
 	CVector vecPos = (position + destination) * 0.5f;
 	CVector vecSectorStartPos (vecPos.x - 14.0f, vecPos.y - 14.0f, vecPos.z);
@@ -63,10 +65,10 @@ CPedPath::CalcPedRoute(int8 pathType, CVector position, CVector destination, CVe
 	}
 	CWorld::AdvanceCurrentScanCode();
 	if (pathType != ROUTE_NO_BLOCKADE) {
-		const int32 nStartX = Max(CWorld::GetSectorIndexX(vecSectorStartPos.x), 0);
-		const int32 nStartY = Max(CWorld::GetSectorIndexY(vecSectorStartPos.y), 0);
-		const int32 nEndX = Min(CWorld::GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X - 1);
-		const int32 nEndY = Min(CWorld::GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y - 1);
+		// Delegate the range of sectors to the C implementation
+		int nStartX, nStartY, nEndX, nEndY;
+		World_ClampSectorRange(CWorld::GetSectorIndexX(vecSectorStartPos.x), CWorld::GetSectorIndexX(vecSectorEndPos.x), NUMSECTORS_X, &nStartX, &nEndX);
+		World_ClampSectorRange(CWorld::GetSectorIndexY(vecSectorStartPos.y), CWorld::GetSectorIndexY(vecSectorEndPos.y), NUMSECTORS_Y, &nStartY, &nEndY);
 		for (int32 y = nStartY; y <= nEndY; y++) {
 			for (int32 x = nStartX; x <= nEndX; x++) {
 				CSector *pSector = CWorld::GetSector(x, y);
@@ -302,7 +304,7 @@ CPathFind::StoreNodeInfoPed(int16 id, int16 node, int8 type, int8 next, int16 x,
 	InfoForTilePeds[i].x = x/16.0f;
 	InfoForTilePeds[i].y = y/16.0f;
 	InfoForTilePeds[i].z = z/16.0f;
-	InfoForTilePeds[i].width = 8.0f*Min(width, 15.0f);
+	InfoForTilePeds[i].width = PathLogic_TileWidth(width, 15.0f);
 	InfoForTilePeds[i].numLeftLanes = 0;
 	InfoForTilePeds[i].numRightLanes = 0;
 	InfoForTilePeds[i].crossing = crossing;
@@ -312,7 +314,7 @@ CPathFind::StoreNodeInfoPed(int16 id, int16 node, int8 type, int8 next, int16 x,
 	InfoForTilePeds[i].waterPath = false;
 	InfoForTilePeds[i].onlySmallBoats = false;
 	InfoForTilePeds[i].betweenLevels = false;
-	InfoForTilePeds[i].spawnRate = Min(spawnRate, 15);
+	InfoForTilePeds[i].spawnRate = General_MinInt(spawnRate, 15);
 
 	if(node == 11)
 		InfoForTilePeds[id*12].SwapConnectionsToBeRightWayRound();
@@ -330,7 +332,7 @@ CPathFind::StoreNodeInfoCar(int16 id, int16 node, int8 type, int8 next, int16 x,
 	InfoForTileCars[i].x = x/16.0f;
 	InfoForTileCars[i].y = y/16.0f;
 	InfoForTileCars[i].z = z/16.0f;
-	InfoForTileCars[i].width = 8.0f*Min(width, 15.0f);
+	InfoForTileCars[i].width = PathLogic_TileWidth(width, 15.0f);
 	InfoForTileCars[i].numLeftLanes = numLeft;
 	InfoForTileCars[i].numRightLanes = numRight;
 	InfoForTileCars[i].crossing = false;
@@ -340,7 +342,7 @@ CPathFind::StoreNodeInfoCar(int16 id, int16 node, int8 type, int8 next, int16 x,
 	InfoForTileCars[i].waterPath = false;
 	InfoForTileCars[i].onlySmallBoats = false;
 	InfoForTileCars[i].betweenLevels = false;
-	InfoForTileCars[i].spawnRate = Min(spawnRate, 15);
+	InfoForTileCars[i].spawnRate = General_MinInt(spawnRate, 15);
 
 	if(node == 11)
 		InfoForTileCars[id*12].SwapConnectionsToBeRightWayRound();
@@ -361,7 +363,7 @@ CPathFind::StoreDetachedNodeInfoPed(int32 node, int8 type, int32 next, float x, 
 	DetachedInfoForTilePeds[i].x = x/16.0f;
 	DetachedInfoForTilePeds[i].y = y/16.0f;
 	DetachedInfoForTilePeds[i].z = z/16.0f;
-	DetachedInfoForTilePeds[i].width = 8.0f*Min(width, 31.0f);
+	DetachedInfoForTilePeds[i].width = PathLogic_TileWidth(width, 31.0f);
 	DetachedInfoForTilePeds[i].numLeftLanes = 0;
 	DetachedInfoForTilePeds[i].numRightLanes = 0;
 	DetachedInfoForTilePeds[i].crossing = crossing;
@@ -371,7 +373,7 @@ CPathFind::StoreDetachedNodeInfoPed(int32 node, int8 type, int32 next, float x, 
 	DetachedInfoForTilePeds[i].waterPath = false;
 	DetachedInfoForTilePeds[i].onlySmallBoats = false;
 	DetachedInfoForTilePeds[i].betweenLevels = betweenLevels;
-	DetachedInfoForTilePeds[i].spawnRate = Min(spawnRate, 15);
+	DetachedInfoForTilePeds[i].spawnRate = General_MinInt(spawnRate, 15);
 
 	if(node == 11){
 		DetachedInfoForTilePeds[NumDetachedPedNodeGroups*12].SwapConnectionsToBeRightWayRound();
@@ -394,7 +396,7 @@ CPathFind::StoreDetachedNodeInfoCar(int32 node, int8 type, int32 next, float x, 
 	DetachedInfoForTileCars[i].x = x/16.0f;
 	DetachedInfoForTileCars[i].y = y/16.0f;
 	DetachedInfoForTileCars[i].z = z/16.0f;
-	DetachedInfoForTileCars[i].width = 8.0f*Min(width, 15.0f);
+	DetachedInfoForTileCars[i].width = PathLogic_TileWidth(width, 15.0f);
 	DetachedInfoForTileCars[i].numLeftLanes = numLeft;
 	DetachedInfoForTileCars[i].numRightLanes = numRight;
 	DetachedInfoForTileCars[i].crossing = false;
@@ -404,7 +406,7 @@ CPathFind::StoreDetachedNodeInfoCar(int32 node, int8 type, int32 next, float x, 
 	DetachedInfoForTileCars[i].waterPath = waterPath;
 	DetachedInfoForTileCars[i].onlySmallBoats = onlySmallBoats;
 	DetachedInfoForTileCars[i].betweenLevels = betweenLevels;
-	DetachedInfoForTileCars[i].spawnRate = Min(spawnRate, 15);
+	DetachedInfoForTileCars[i].spawnRate = General_MinInt(spawnRate, 15);
 
 	if(node == 11){
 		DetachedInfoForTileCars[NumDetachedCarNodeGroups*12].SwapConnectionsToBeRightWayRound();
@@ -707,7 +709,8 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 			if(Abs(dx) < nearestDist){
 				dy = tempnodes[k].pos.y - TempExternalNodes[i].pos.y;
 				if(Abs(dy) < nearestDist){
-					nearestDist = Max(Abs(dx), Abs(dy));
+					// Delegate the distance to the node to the C implementation
+					nearestDist = PathLogic_LargestAxisDistance(dx, dy);
 					nearestId = k;
 				}
 			}
@@ -734,9 +737,13 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 			dx = m_pathNodes[tempnodes[nearestId].link1].GetX() - m_pathNodes[tempnodes[nearestId].link2].GetX();
 			dy = m_pathNodes[tempnodes[nearestId].link1].GetY() - m_pathNodes[tempnodes[nearestId].link2].GetY();
 			tempnodes[nearestId].pos = (tempnodes[nearestId].pos + TempExternalNodes[i].pos)*0.5f;
-			mag = Sqrt(dx*dx + dy*dy);
-			tempnodes[nearestId].dirX = dx/mag * 100;
-			tempnodes[nearestId].dirY = dy/mag * 100;
+			// Delegate the direction of the collapsed link to the C implementation
+			{
+				float collapsedDirX, collapsedDirY;
+				PathLogic_CollapsedDirection(dx, dy, &collapsedDirX, &collapsedDirY);
+				tempnodes[nearestId].dirX = collapsedDirX;
+				tempnodes[nearestId].dirY = collapsedDirY;
+			}
 			tempnodes[nearestId].width = Max(tempnodes[nearestId].width, TempExternalNodes[i].width);
 			if(TempExternalNodes[i].isCross)
 				tempnodes[nearestId].isCross = true;	// TODO: is this guaranteed to be false otherwise?
@@ -772,7 +779,8 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 				continue;
 
 			dist = (m_pathNodes[i].GetPosition() - m_pathNodes[ConnectedNode(m_numConnections)].GetPosition()).Magnitude();
-			m_distances[m_numConnections] = Min(dist, 255);
+			// Delegate the distance of the link to the C implementation
+			m_distances[m_numConnections] = PathLogic_LinkDistance(dist);
 			if(tempnodes[j].isCross)
 				m_connections[j] |= 0x8000;	// crosses road flag
 
@@ -841,21 +849,18 @@ CPathFind::PreparePathDataForType(uint8 type, CTempNode *tempnodes, CPathInfoFor
 				// NB this clears the flags in MIAMI
 				m_connections[m_numConnections] = j;
 				dist = (m_pathNodes[i].GetPosition() - m_pathNodes[j].GetPosition()).Magnitude();
-				m_distances[m_numConnections] = Min(dist, 255);
+				// Delegate the distance of the link to the C implementation
+				m_distances[m_numConnections] = PathLogic_LinkDistance(dist);
 
 				if(type == PATH_CAR){
-					posx = (m_pathNodes[i].GetX() + m_pathNodes[j].GetX())*0.5f;
-					posy = (m_pathNodes[i].GetY() + m_pathNodes[j].GetY())*0.5f;
-					dx = m_pathNodes[j].GetX() - m_pathNodes[i].GetX();
-					dy = m_pathNodes[j].GetY() - m_pathNodes[i].GetY();
-					mag = Sqrt(dx*dx + dy*dy);
-					dx /= mag;
-					dy /= mag;
+					// Delegate the middle and the direction of the link to the C implementation
+					float linkGeometry[4];
+					PathLogic_InternalLinkGeometry(m_pathNodes[i].GetX(), m_pathNodes[i].GetY(), m_pathNodes[j].GetX(), m_pathNodes[j].GetY(), i < j, linkGeometry);
+					posx = linkGeometry[0];
+					posy = linkGeometry[1];
+					dx = linkGeometry[2];
+					dy = linkGeometry[3];
 					uint8 width = Max(m_pathNodes[i].width, m_pathNodes[j].width);
-					if(i < j){
-						dx = -dx;
-						dy = -dy;
-					}
 					// IMPROVE: use a goto here
 					// Find existing car path link
 					for(k = 0; k < m_numCarPathLinks; k++){
@@ -1151,28 +1156,20 @@ CPathFind::SwitchRoadsInAngledArea(float x1, float y1, float z1, float x2, float
 
 	// angle of vector from p2 to p1
 	float angle = General_GetRadianAngleBetweenPoints(x1, y1, x2, y2) + HALFPI;
-	while(angle < 0.0f) angle += TWOPI;
-	while(angle > TWOPI) angle -= TWOPI;
-	// vector from p1 to p2
-	CVector2D v12(x2 - x1, y2 - y1);
-	float len12 = v12.Magnitude();
-	v12 /= len12;
-
-	// vector from p2 to new point p3
-	CVector2D v23(Sin(angle)*length, -(Cos(angle)*length));
-	v23 /= v23.Magnitude();	// obivously just 'length' but whatever
+	// Delegate the angle wrapping to the C implementation
+	angle = General_RaiseBelow(angle, 0.0f, TWOPI);
+	angle = General_ReduceAbove(angle, TWOPI, TWOPI);
+	// Delegate the axes of the box to the C implementation
+	float boxAxes[5];
+	PathLogic_SwitchBoxAxes(x1, y1, x2, y2, angle, length, boxAxes);
 
 	bool disable = mode == SWITCH_OFF;
 	for(i = firstNode; i < lastNode; i++){
 		CVector pos = m_pathNodes[i].GetPosition();
 		if(pos.z < z1 || pos.z > z2)
 			continue;
-		CVector2D d(pos.x - x1, pos.y - y1);
-		float dot = DotProduct2D(d, v12);
-		if(dot < 0.0f || dot > len12)
-			continue;
-		dot = DotProduct2D(d, v23);
-		if(dot < 0.0f || dot > length)
+		// Delegate the test of the box to the C implementation
+		if(!PathLogic_NodeInSwitchBox(pos.x - x1, pos.y - y1, boxAxes, length))
 			continue;
 		if(m_pathNodes[i].bDisabled != disable)
 			SwitchOffNodeAndNeighbours(i, disable);
@@ -1247,9 +1244,8 @@ CPathFind::FindNodeClosestToCoors(CVector coors, uint8 type, float distLimit, bo
 		if(ignoreBetweenLevels && m_pathNodes[i].bBetweenLevels) continue;
 		if(ignoreSelected && m_pathNodes[i].bSelected) continue;
 		if(bWaterPath != m_pathNodes[i].bWaterPath) continue;
-		dist = Abs(m_pathNodes[i].GetX() - coors.x) +
-		       Abs(m_pathNodes[i].GetY() - coors.y) +
-		       3.0f*Abs(m_pathNodes[i].GetZ() - coors.z);
+		// Delegate the distance to the node to the C implementation
+		dist = PathLogic_NodeDistance(m_pathNodes[i].GetX() - coors.x, m_pathNodes[i].GetY() - coors.y, m_pathNodes[i].GetZ() - coors.z);
 		if(dist < closestDist){
 			closestDist = dist;
 			closestNode = i;
@@ -1282,8 +1278,8 @@ CPathFind::FindNodeClosestToCoorsFavourDirection(CVector coors, uint8 type, floa
 	for(i = firstNode; i < lastNode; i++){
 		dX = m_pathNodes[i].GetX() - coors.x;
 		dY = m_pathNodes[i].GetY() - coors.y;
-		dist = Abs(dX) + Abs(dY) +
-		       3.0f*Abs(m_pathNodes[i].GetZ() - coors.z);
+		// Delegate the distance to the node to the C implementation
+		dist = PathLogic_NodeDistance(dX, dY, m_pathNodes[i].GetZ() - coors.z);
 		if(dist < closestDist){
 			NormalizeXY(dX, dY);
 			dist -= (dX*dirX + dY*dirY - 1.0f)*20.0f;
@@ -1320,9 +1316,8 @@ CPathFind::FindNodePairClosestToCoors(CVector coors, uint8 type, int* node1, int
 		if (ignoreDisabled && m_pathNodes[i].bDisabled) continue;
 		if (ignoreBetweenLevels && m_pathNodes[i].bBetweenLevels) continue;
 		if (bWaterPath != m_pathNodes[i].bWaterPath) continue;
-		dist = Abs(m_pathNodes[i].GetX() - coors.x) +
-			Abs(m_pathNodes[i].GetY() - coors.y) +
-			3.0f * Abs(m_pathNodes[i].GetZ() - coors.z);
+		// Delegate the distance to the node to the C implementation
+		dist = PathLogic_NodeDistance(m_pathNodes[i].GetX() - coors.x, m_pathNodes[i].GetY() - coors.y, m_pathNodes[i].GetZ() - coors.z);
 		if (dist < closestDist) {
 			for (j = 0; j < m_pathNodes[i].numLinks; j++) {
 				connectedNode = ConnectedNode(m_pathNodes[i].firstLink + j);
@@ -1342,7 +1337,8 @@ CPathFind::FindNodePairClosestToCoors(CVector coors, uint8 type, int* node1, int
 		*node2 = closestConnectedNode;
 		CVector dir(m_pathNodes[*node2].GetX() - m_pathNodes[*node1].GetX(), m_pathNodes[*node2].GetY() - m_pathNodes[*node1].GetY(), 0.0f);
 		dir.Normalise();
-		*angle = RADTODEG(Atan2(-dir.x, dir.y));
+		// Delegate the heading to the C implementation
+		*angle = PathLogic_HeadingDegrees(dir.x, dir.y);
 	}
 	else {
 		*node1 = -1;
@@ -1417,16 +1413,19 @@ CPathFind::GenerateCarCreationCoors(float x, float y, float dirX, float dirY, fl
 			continue;
 		dist1 = Distance2D(m_pathNodes[node1].GetPosition(), x, y);
 		if(dist1 < Max(spawnDist + 70.0f, spawnDist * 1.7f)){
-			d1 = m_pathNodes[node1].bWaterPath ? (dist1 - spawnDist * 1.5f) : (dist1 - spawnDist);
+			// Delegate the distance from the spawn distance to the C implementation
+			d1 = PathLogic_SpawnDelta(dist1, spawnDist, m_pathNodes[node1].bWaterPath);
 			for(j = 0; j < m_pathNodes[node1].numLinks; j++){
 				node2 = ConnectedNode(m_pathNodes[node1].firstLink + j);
 				if(m_pathNodes[node2].bDisabled && !ignoreDisabled)
 					continue;
 				dist2 = Distance2D(m_pathNodes[node2].GetPosition(), x, y);
-				d2 = m_pathNodes[node2].bWaterPath ? (dist2 - spawnDist * 1.5f) : (dist2 - spawnDist);
+				// Delegate the distance from the spawn distance to the C implementation
+				d2 = PathLogic_SpawnDelta(dist2, spawnDist, m_pathNodes[node2].bWaterPath);
 				if(d1*d2 < 0.0f){
 					// nodes are on different sides of spawn distance
-					float f2 = Abs(d1)/(Abs(d1) + Abs(d2));
+					// Delegate the crossing position to the C implementation
+					float f2 = PathLogic_CrossFraction(d1, d2);
 					float f1 = 1.0f - f2;
 					*pPositionBetweenNodes = f2;
 					CVector pos = m_pathNodes[node1].GetPosition()*f1 + m_pathNodes[node2].GetPosition()*f2;
@@ -1522,7 +1521,7 @@ CPathFind::GeneratePedCreationCoors(float x, float y, float minDist, float maxDi
 				float groundZ = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z+2.0f, &found);
 				if(!found)
 					return false;
-				if(Abs(groundZ - pos.z) > 3.0f)
+				if(PathLogic_TooFarFromGround(groundZ, pos.z))
 					return false;
 				pPosition->z = groundZ;
 				return true;
@@ -1543,7 +1542,10 @@ CPathFind::FindNextNodeWandering(uint8 type, CVector coors, CPathNode **lastNode
 		node = &m_pathNodes[nodeIdx];
 	}
 
-	CVector2D vCurDir(Sin(curDir*PI/4.0f), Cos(curDir * PI / 4.0f));
+	// Delegate the vector of the direction to the C implementation
+	float curDirX, curDirY;
+	PathLogic_CompassVector(curDir, &curDirX, &curDirY);
+	CVector2D vCurDir(curDirX, curDirY);
 	*nextNode = 0;
 	float bestDot = -999999.0f;
 	for(i = 0; i < node->numLinks; i++){
@@ -1563,31 +1565,8 @@ CPathFind::FindNextNodeWandering(uint8 type, CVector coors, CPathNode **lastNode
 			*nextNode = &m_pathNodes[next];
 			bestDot = dot;
 
-			// direction is 0, 2, 4, 6 for north, east, south, west
-			// this could be done simpler...
-			if(nodeDir.x < 0.0f){
-				if(2.0f*Abs(nodeDir.y) < -nodeDir.x)
-					*nextDir = 6;	// west
-				else if(-2.0f*nodeDir.x < nodeDir.y)
-					*nextDir = 0;	// north
-				else if(2.0f*nodeDir.x > nodeDir.y)
-					*nextDir = 4;	// south
-				else if(nodeDir.y > 0.0f)
-					*nextDir = 7;	// north west
-				else
-					*nextDir = 5;	// south west`
-			}else{
-				if(2.0f*Abs(nodeDir.y) < nodeDir.x)
-					*nextDir = 2;	// east
-				else if(2.0f*nodeDir.x < nodeDir.y)
-					*nextDir = 0;	// north
-				else if(-2.0f*nodeDir.x > nodeDir.y)
-					*nextDir = 4;	// south
-				else if(nodeDir.y > 0.0f)
-					*nextDir = 1;	// north east
-				else
-					*nextDir = 3;	// south east`
-			}
+			// Delegate the compass direction to the C implementation
+			*nextDir = PathLogic_WanderDirection(nodeDir.x, nodeDir.y);
 		}
 	}
 	if(*nextNode == nil){

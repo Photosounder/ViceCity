@@ -159,4 +159,67 @@ int Population_SelectPedActions(const CPool *pedPool, const PopulationPedParams 
 	}
 	return n;
 }
+float Population_CircleRadius(int pedAmount)
+{
+	const float pi = (float)3.14159265358979323846;
+	float circleSector = (pi*2) / pedAmount;
+	return sqrtf(0.5f / (1.0f - cosf(circleSector)));
+}
+
+void Population_CircleOffset(int i, float angleRandom, float radiusRandom, int pedAmount, float circleR, float *xOffset, float *yOffset)
+{
+	const float pi = (float)3.14159265358979323846;
+	float circleSector = (pi*2) / pedAmount;
+	float angleMult = i + angleRandom;
+	float randomR = circleR + radiusRandom * circleR;
+	*xOffset = randomR * cosf(angleMult * circleSector);
+	*yOffset = randomR * sinf(angleMult * circleSector);
+}
+
+bool Population_HasRealObstacle(void *const *obstacles, int numObstacles, void *const *createdPeds, int numCreated)
+{
+	for (int m = 0; m < numObstacles; m++) {
+		void *obstacle = obstacles[m];
+		if (obstacle) {
+			bool obstacleIsHarmless = false;
+
+			// An obstacle that is one of the created peds is harmless
+			for (int n = 0; n < numCreated; n++) {
+				if (obstacle == createdPeds[n])
+					obstacleIsHarmless = true;
+			}
+			if (!obstacleIsHarmless)
+				return true;
+		}
+	}
+	return false;
+}
+
+void Population_OutlineAxes(float angle, float axes[4])
+{
+	axes[0] = 0.9f * cosf(angle);
+	axes[1] = 0.9f * sinf(angle);
+	axes[2] = 0.9f * sinf(angle);
+	axes[3] = -0.9f * cosf(angle);
+}
+float Population_RainMultiplier(float rain)
+{
+	return -0.8f * sqrtf(rain) + 1.0f;
+}
+
+float Population_MaxPedsForArea(float zoneDensitySum, float roadDensity, float densityMult, float pedNumberMult, float missionAndWeatherMult, int selectedMaxPeds)
+{
+	float v = zoneDensitySum * roadDensity * densityMult * pedNumberMult * missionAndWeatherMult;
+	float m = (float)selectedMaxPeds;
+
+	return v < m ? v : m;
+}
+float Population_RaisedToGround(float z, float groundZ)
+{
+	return z > groundZ ? z : groundZ;
+}
+unsigned char Population_NodeSpawnRate(unsigned char rate1, unsigned char rate2)
+{
+	return rate1 < rate2 ? rate1 : rate2;
+}
 //- rouz edit (Claude)

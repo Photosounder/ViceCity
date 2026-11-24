@@ -127,4 +127,18 @@ bool Cranes_HaveAllCarsBeenCollectedByMilitaryCrane(uint32_t collected)
 	// All seven bits
 	return (collected & 0x7F) == 0x7F;
 }
+void Crane_HookOffset(float hookAngle, float hookOffset, float *dx, float *dy)
+{
+	*dx = cosf(hookAngle) * hookOffset;
+	*dy = sinf(hookAngle) * hookOffset;
+}
+bool Crane_RotationStep(float angleDelta, float rotationSpeed, float timeStep, float *rotation)
+{
+	float deltaThisFrame = rotationSpeed * timeStep;
+
+	if (fabsf(angleDelta) <= deltaThisFrame)
+		return true;
+	*rotation = angleDelta < 0 ? -deltaThisFrame : deltaThisFrame;
+	return false;
+}
 //- rouz edit (Claude)

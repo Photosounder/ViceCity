@@ -18,6 +18,7 @@
 #include "Train.h"
 #include "AudioScriptObject.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "VehicleLogic.h"
 
 static CTrainNode* pTrackNodes;
 static int16 NumTrackNodes;
@@ -206,10 +207,12 @@ CTrain::ProcessControl(void)
 		m_bTrainStopping = true;
 	}
 
-	m_isFarAway = !((posFront - TheCamera.GetPosition()).Magnitude2D() < sq(250.0f));
+	// Delegate the distance check to the C implementation
+	m_isFarAway = VehicleLogic_IsBeyond((posFront - TheCamera.GetPosition()).Magnitude2D(), sq(250.0f));
 
 	if(m_fWagonPosition == 20.0f && m_fSpeed > 0.0001f)
-		if(Abs(TheCamera.GetPosition().z - GetPosition().z) < 15.0f)
+		// Delegate the height check to the C implementation
+		if(VehicleLogic_HeightDifferenceBelow(TheCamera.GetPosition().z, GetPosition().z, 15.0f))
 			CPad::GetPad(0)->StartShake_Train(GetPosition().x, GetPosition().y);
 
 	if(m_bProcessDoor)
@@ -322,7 +325,15 @@ CTrain::PreRender(void)
 			CVector lightPos = mi->m_positions[TRAIN_POS_LIGHT_FRONT];
 			CVector lightR = GetMatrix() * lightPos;
 			CVector lightL = lightR;
-			lightL -= GetRight()*2.0f*lightPos.x;
+			// Delegate the position of the left light to the C implementation
+			{
+				CVector right = GetRight();
+				const float lr[3] = { lightL.x, lightL.y, lightL.z };
+				const float rt[3] = { right.x, right.y, right.z };
+				float ll[3];
+				VehicleLogic_MirrorLight(lr, rt, lightPos.x, ll);
+				lightL = CVector(ll[0], ll[1], ll[2]);
+			}
 
 			float intensity = -0.4f*behindness + 0.2f;
 			float size = 1.0f - behindness;
@@ -354,7 +365,15 @@ CTrain::PreRender(void)
 		CVector lightPos = mi->m_positions[TRAIN_POS_LIGHT_REAR];
 		CVector lightR = GetMatrix() * lightPos;
 		CVector lightL = lightR;
-		lightL -= GetRight()*2.0f*lightPos.x;
+		// Delegate the position of the left light to the C implementation
+		{
+			CVector right = GetRight();
+			const float lr[3] = { lightL.x, lightL.y, lightL.z };
+			const float rt[3] = { right.x, right.y, right.z };
+			float ll[3];
+			VehicleLogic_MirrorLight(lr, rt, lightPos.x, ll);
+			lightL = CVector(ll[0], ll[1], ll[2]);
+		}
 
 		CCoronas::RegisterCorona((uintptr)this + 12, 255, 0, 0, 255,
 			lightL, 1.0f, 80.0f,
@@ -385,7 +404,7 @@ CTrain::TrainHitStuff(CPtrList &list)
 
 	for(node = list.first; node; node = node->next){
 		phys = (CPhysical*)node->item;
-		if(phys != this && Abs(this->GetPosition().z - phys->GetPosition().z) < 1.5f)
+		if(phys != this && VehicleLogic_HeightDifferenceBelow(this->GetPosition().z, phys->GetPosition().z, 1.5f))
 			phys->bHitByTrain = true;
 	}
 #endif

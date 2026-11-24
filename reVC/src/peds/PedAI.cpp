@@ -36,8 +36,10 @@
 #include "Bike.h"
 #include "Weather.h"
 #include "GameLogic.h"
+#include "PickupLogic.h"
 #include "Streaming.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "WorldLogic.h"
 
 CVector vecPedCarDoorAnimOffset;
 CVector vecPedCarDoorLoAnimOffset;
@@ -466,7 +468,8 @@ CPed::SetObjective(eObjective newObj, CVector dest)
 			if (sq(m_distanceToCountSeekDone) > (m_nextRoutePointPos - GetPosition()).MagnitudeSqr2D()) {
 				if (!IsUseAttractorObjective(m_objective))
 					return;
-				if (Abs(m_fRotationCur - m_attractorHeading) < m_acceptableHeadingOffset)
+				// Delegate the heading check to the C implementation
+				if (PedLogic_FacesAttractor(m_fRotationCur, m_attractorHeading, m_acceptableHeadingOffset))
 					return;
 			}
 			break;
@@ -1714,29 +1717,15 @@ CPed::ProcessObjective(void)
 					}
 					else {
 						if (!bReachedAttractorHeadingTarget) {
-							float fHeadingDistance = m_fRotationCur - m_attractorHeading;
-							float fSinHeading = Sin(fHeadingDistance);
-							float fCosHeading = Cos(fHeadingDistance);
-							if (fSinHeading > 0.0f) {
-								if (fCosHeading > 0.0f)
-									m_attractorHeading = m_fRotationCur - Asin(fSinHeading);
-								else
-									m_attractorHeading = m_fRotationCur - Acos(fCosHeading);
-							}
-							else {
-								if (fCosHeading > 0.0f)
-									m_attractorHeading = m_fRotationCur - Asin(fSinHeading);
-								else
-									m_attractorHeading = m_fRotationCur + Acos(fCosHeading);
-							}
+							// Delegate the new heading of the attractor to the C implementation
+							m_attractorHeading = PedLogic_AttractorHeading(m_fRotationCur, m_attractorHeading);
 							m_fRotationDest = m_attractorHeading;
 							m_headingRate = 3.5f;
 							bReachedAttractorHeadingTarget = true;
 							bTurnedAroundOnAttractor = false;
 						}
-						if (Abs(m_fRotationCur - m_attractorHeading) >= m_acceptableHeadingOffset &&
-							Abs(m_fRotationCur - m_attractorHeading + TWOPI) >= m_acceptableHeadingOffset &&
-							Abs(m_fRotationCur - m_attractorHeading - TWOPI) >= m_acceptableHeadingOffset)
+						// Delegate the heading check to the C implementation
+						if (PedLogic_NotFacingAttractor(m_fRotationCur, m_attractorHeading, m_acceptableHeadingOffset))
 							SetMoveState(PEDMOVE_STILL);
 						else {
 							m_fRotationDest = m_fRotationCur;
@@ -1896,10 +1885,10 @@ CPed::ProcessObjective(void)
 					float right = GetPosition().x + 10.0f;
 					float top = GetPosition().y - 10.0f;
 					float bottom = GetPosition().y + 10.0f;
-					int xstart = Max(0, CWorld::GetSectorIndexX(left));
-					int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(right));
-					int ystart = Max(0, CWorld::GetSectorIndexY(top));
-					int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(bottom));
+					// Delegate the range of sectors to the C implementation
+					int xstart, xend, ystart, yend;
+					World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+					World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 					assert(xstart <= xend);
 					assert(ystart <= yend);
 
@@ -2116,8 +2105,9 @@ CPed::ReactToPointGun(CEntity *entWithGun)
 				PedLogic_MuggingPickups(money, &pickupCount, &moneyPerPickup);
 
 				for (int i = 0; i < pickupCount; i++) {
-					float pickupX = 1.5f * Sin((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().x;
-					float pickupY = 1.5f * Cos((General_GetRandomNumber() % 256)/256.0f * TWOPI) + GetPosition().y;
+					// Delegate the offsets on the ring to the C implementation shared with the pickups of dead peds
+					float pickupX = Pickups_DeadPedRingOffset(General_GetRandomNumber(), false) + GetPosition().x;
+					float pickupY = Pickups_DeadPedRingOffset(General_GetRandomNumber(), true) + GetPosition().y;
 					bool found = false;
 					float groundZ = CWorld::FindGroundZFor3DCoord(pickupX, pickupY, GetPosition().z, &found) + 0.5f;
 					if (found) {
@@ -3368,7 +3358,8 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 					zBlend = 0.0f;
 				} else {
 					float animLength = m_pVehicleAnim->hierarchy->totalLength;
-					zBlend = Min(1.0f, 2.0f * m_pVehicleAnim->currentTime / animLength);
+					// Delegate the height blend to the C implementation
+					zBlend = PedLogic_EnterCarZBlend(m_pVehicleAnim->currentTime, animLength);
 				}
 			} else {
 				zBlend = 1.0f - seatPosMult;
@@ -3383,11 +3374,12 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 				neededPos.z = autoZPos.z;
 				m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 			} else if (neededPos.z < currentZ && m_pVehicleAnim && vehAnim != ANIM_STD_VAN_CLOSE_DOOR_REAR_LHS && vehAnim != ANIM_STD_VAN_CLOSE_DOOR_REAR_RHS) {
-				adjustedTimeStep = Max(m_pVehicleAnim->timeStep, 0.1f);
+				// Delegate the time step of the animation to the C implementation
+				adjustedTimeStep = PedLogic_AnimTimeStep(m_pVehicleAnim->timeStep);
 
 				// Smoothly change ped position
 				// Use the complete C association at the original native operation boundary
-				neededPos.z = currentZ - (currentZ - neededPos.z) / (AnimAssociation_GetTimeLeft(m_pVehicleAnim) / adjustedTimeStep);
+				neededPos.z = PedLogic_SmoothZDown(currentZ, neededPos.z, AnimAssociation_GetTimeLeft(m_pVehicleAnim), adjustedTimeStep);
 			}
 		}
 	} else {
@@ -3402,11 +3394,12 @@ CPed::LineUpPedWithCar(PedLineUpPhase phase)
 					if (m_pVehicleAnim &&
 						(vehAnim == ANIM_STD_CAR_GET_IN_RHS || vehAnim == ANIM_STD_CAR_GET_IN_LO_RHS || vehAnim == ANIM_STD_CAR_GET_IN_LHS || vehAnim == ANIM_STD_CAR_GET_IN_LO_LHS
 							|| vehAnim == ANIM_STD_QUICKJACK || vehAnim == ANIM_STD_VAN_GET_IN_REAR_LHS || vehAnim == ANIM_STD_VAN_GET_IN_REAR_RHS)) {
-						adjustedTimeStep = Max(m_pVehicleAnim->timeStep, 0.1f);
+						// Delegate the time step of the animation to the C implementation
+						adjustedTimeStep = PedLogic_AnimTimeStep(m_pVehicleAnim->timeStep);
 
 						// Smoothly change ped position
 						// Use the complete C association at the original native operation boundary
-						neededPos.z = (neededPos.z - currentZ) / (AnimAssociation_GetTimeLeft(m_pVehicleAnim) / adjustedTimeStep) + currentZ;
+						neededPos.z = PedLogic_SmoothZUp(currentZ, neededPos.z, AnimAssociation_GetTimeLeft(m_pVehicleAnim), adjustedTimeStep);
 					} else if (EnteringCar() || m_nPedState == PED_DRIVING && veh->IsBike()) {
 						neededPos.z = Max(currentZ, autoZPos.z);
 					}
@@ -3525,7 +3518,8 @@ CPed::SetCarJack_AllClear(CVehicle* car, uint32 doorNode, uint32 doorFlag)
 		bUsesCollision = false;
 		PedAnimAlignCB(nil, this);
 	} else {
-		float zDiff = Max(0.0f, carEnterPos.z - GetPosition().z);
+		// Delegate the height to climb to the C implementation
+		float zDiff = PedLogic_ClimbHeight(carEnterPos.z, GetPosition().z);
 		bUsesCollision = false;
 
 		if (m_vehDoor == CAR_DOOR_LF || m_vehDoor == CAR_DOOR_LR)
@@ -3703,7 +3697,7 @@ CPed::SetEnterCar_AllClear(CVehicle *car, uint32 doorNode, uint32 doorFlag)
 
 	// Because buses have stairs
 	if (!m_pMyVehicle->bIsBus)
-		zDiff = Max(0.0f, doorOpenPos.z - GetPosition().z);
+		zDiff = PedLogic_ClimbHeight(doorOpenPos.z, GetPosition().z);
 
 	m_vecOffsetSeek = doorOpenPos - GetPosition();
 	m_nPedStateTimer = (*Timer_GetTimeInMilliseconds()) + 600;
@@ -4246,15 +4240,11 @@ CPed::GetNearestDoor(CVehicle *veh, CVector &posToOpen)
 		if (m_objective != OBJECTIVE_ENTER_CAR_AS_PASSENGER) {
 
 			// If bike didn't fall to ground
-			if (Abs(veh->GetRight().z) < 0.1f) {
+			if (General_AbsBelow(veh->GetRight().z, 0.1f)) {
 				float angleDiff = (GetPosition() - veh->GetPosition()).Heading() - veh->GetForward().Heading();
 
-				if (angleDiff > PI)
-					angleDiff -= TWOPI;
-				else if (angleDiff < -PI)
-					angleDiff += TWOPI;
-
-				if (Abs(angleDiff) < DEGTORAD(30.f)
+				// Delegate the check that the ped is in front of the bike to the C implementation
+				if (PedLogic_IsInFrontOfBike(angleDiff)
 					&& (IsPlayer() && ((CPlayerPed*)this)->m_fMoveSpeed > 1.5f && !m_vehDoor ||
 						!IsPlayer() && m_nPedType != PEDTYPE_COP && m_nMoveState == PEDMOVE_RUN
 						&& m_pedStats->m_temper > 65
@@ -5364,9 +5354,10 @@ CPed::GetLocalPositionToOpenCarDoor(CVehicle *veh, uint32 component, float seatP
 void
 CPed::SetDuck(uint32 time, bool sth)
 {
-	if (bIsDucking || (*Timer_GetTimeInMilliseconds()) <= m_duckTimer && !sth) {
-		if (sth && (*Timer_GetTimeInMilliseconds()) + time > m_duckTimer)
-			m_duckTimer = (*Timer_GetTimeInMilliseconds()) + time;
+	// Delegate the decision not to start ducking to the C implementation
+	uint32 newDuckTimer;
+	if (PedLogic_DuckCannotStart(bIsDucking, (*Timer_GetTimeInMilliseconds()), m_duckTimer, sth, time, &newDuckTimer)) {
+		m_duckTimer = newDuckTimer;
 		return;
 	}
 
@@ -5778,13 +5769,13 @@ CPed::WarpPedToNearLeaderOffScreen(void)
 	CVector halfNormalizedDist = distVec / halfOfDist;
 
 	CVector appropriatePos = GetPosition();
-	int tryCount = Min(10, (int)halfOfDist);
+	int tryCount = PedLogic_WarpTryCount(halfOfDist);
 	for (int i = 0; i < tryCount; ++i) {
 		appropriatePos += halfNormalizedDist;
 		CVector zCorrectedPos = appropriatePos;
 		PedPlacement_CFindZ(zCorrectedPos.x, zCorrectedPos.y, &zCorrectedPos.z); // rouz edit (ChatGPT)
 
-		if (Abs(zCorrectedPos.z - warpToPos.z) < 3.0f || Abs(zCorrectedPos.z - appropriatePos.z) < 3.0f) {
+		if (PedLogic_WarpHeightAcceptable(zCorrectedPos.z, warpToPos.z, appropriatePos.z)) {
 			appropriatePos.z = zCorrectedPos.z;
 			if (!TheCamera.IsSphereVisible(appropriatePos, 0.6f)
 				&& CWorld::GetIsLineOfSightClear(appropriatePos, warpToPos, true, true, false, true, false, false, false)
@@ -5811,13 +5802,13 @@ CPed::WarpPedToNearEntityOffScreen(CEntity *warpTo)
 	CVector halfNormalizedDist = distVec / halfOfDist;
 
 	CVector appropriatePos = GetPosition();
-	int tryCount = Min(10, (int)halfOfDist);
+	int tryCount = PedLogic_WarpTryCount(halfOfDist);
 	for (int i = 0; i < tryCount; ++i) {
 		appropriatePos += halfNormalizedDist;
 		CVector zCorrectedPos = appropriatePos;
 		PedPlacement_CFindZ(zCorrectedPos.x, zCorrectedPos.y, &zCorrectedPos.z); // rouz edit (ChatGPT)
 
-		if (Abs(zCorrectedPos.z - warpToPos.z) < 3.0f || Abs(zCorrectedPos.z - appropriatePos.z) < 3.0f) {
+		if (PedLogic_WarpHeightAcceptable(zCorrectedPos.z, warpToPos.z, appropriatePos.z)) {
 			appropriatePos.z = zCorrectedPos.z;
 			if (!TheCamera.IsSphereVisible(appropriatePos, 0.6f)
 				&& CWorld::GetIsLineOfSightClear(appropriatePos, warpToPos, true, true, false, true, false, false, false)
@@ -6172,7 +6163,8 @@ CPed::KillCharOnFootMelee(CVector &ourPos, CVector &targetPos, CVector &distWith
 		}
 	} else {
 		m_vecSeekPos = m_pedInObjective->GetPosition();
-		maxDistToKeep = Max(0.8f, 0.9f * wepRange);
+		// Delegate the distance to keep to the C implementation
+		maxDistToKeep = PedLogic_MaxDistToKeep(wepRange);
 		wepRange *= 1.1f;
 		if (victimPlayer && victimPlayer->m_bNoPosForMeleeAttack)
 			victimPlayer = nil;

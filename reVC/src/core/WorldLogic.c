@@ -554,4 +554,56 @@ int World_SectorStreamRing(int32_t dx, int32_t dy)
 	return -1;
 }
 
+float World_ExplosionDamageMultiplier(float radius, float magnitude)
+{
+	float v = (radius - magnitude) * 2.0f / radius;
+
+	return v < 1.0f ? v : 1.0f;
+}
+
+void World_ExplosionForce(const float distance[3], float power, float mass, float damageMultiplier, float magnitude, bool isPlayer, float force[3])
+{
+	float m = magnitude > 0.01f ? magnitude : 0.01f;
+	float k = power * mass / 1400.0f * damageMultiplier / m;
+
+	force[0] = distance[0] * k;
+	force[1] = distance[1] * k;
+	force[2] = distance[2] * k;
+	force[2] = force[2] > 0.0f ? force[2] : 0.0f;
+	if (isPlayer)
+		force[2] = force[2] < 1.0f ? force[2] : 1.0f;
+}
+
+float World_ExplosionTurnPointZ(float distanceZ, float boundRadius)
+{
+	float pointZ = boundRadius;
+	float lower = distanceZ > -boundRadius ? distanceZ : -boundRadius;
+
+	if (lower < boundRadius) {
+		if (distanceZ <= -boundRadius)
+			pointZ = -boundRadius;
+		else
+			pointZ = distanceZ;
+	}
+	return pointZ;
+}
+uint32_t World_WanderPathSteps(float length, int maxSteps)
+{
+	return (uint32_t)(length > maxSteps ? length : (float)maxSteps);
+}
+void World_ClampSectorRange(int lowIndex, int highIndex, int numSectors, int *start, int *end)
+{
+	*start = 0 > lowIndex ? 0 : lowIndex;
+	*end = (numSectors - 1) < highIndex ? (numSectors - 1) : highIndex;
+}
+float World_FireDamage(float damageMultiplier)
+{
+	float m = damageMultiplier < 1.0f ? damageMultiplier : 1.0f;
+
+	return 300.0f * m;
+}
+float World_HigherZ(float z1, float z2)
+{
+	return z1 > z2 ? z1 : z2;
+}
 //- rouz edit (Claude)

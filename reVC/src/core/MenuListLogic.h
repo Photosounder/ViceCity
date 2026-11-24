@@ -22,6 +22,16 @@ int32_t MenuLogic_SliderBrightness(int32_t brightness, int value, int bars);
 float MenuLogic_SliderLOD(float lod, int value, int bars);
 int8_t MenuLogic_SliderVolume(int8_t volume, int value, int bars);
 float MenuLogic_SliderMouseSens(float mouseAccelHorizontal, int value);
+// Centre of the map of the menu limited so that the map still covers the screen, from the centre on one axis, half the size of the screen on that axis, the size of the map and its minimum size
+float Menu_ClampMapCenter(float center, float halfScreen, float mapSize, float minMapSize);
+// Counter of the first start screen after one more step: 20 more, at most 255
+int Menu_NextFirstStartCounter(int counter);
+// Size of the map after zooming in by a step, at most the maximum size
+float Menu_MapSizeZoomedIn(float mapSize, float step, float maxSize);
+// Size of the map after zooming out by a step, at least the minimum size
+float Menu_MapSizeZoomedOut(float mapSize, float step, float minSize);
+// Alpha of a menu element limited by the fade alpha of the whole menu
+int Menu_FadedAlpha(int menuFadeAlpha, int alpha);
 #ifdef __cplusplus
 }
 #endif

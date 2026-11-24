@@ -5,6 +5,7 @@
 #include "ModelRegistry.h" // rouz edit (ChatGPT)
 
 #include "Script.h"
+#include "ScriptArea.h"
 #include "ScriptCommands.h"
 
 #include "Bike.h"
@@ -568,18 +569,12 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.MarkRoadsBetweenLevelsInArea(infX, supX, infY, supY, infZ, supZ);
 		return 0;
 	}
@@ -592,18 +587,12 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		ThePaths.PedMarkRoadsBetweenLevelsInArea(infX, supX, infY, supY, infZ, supZ);
 		return 0;
 	}
@@ -641,18 +630,12 @@ int8 CRunningScript::ProcessCommands1000To1099(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		CWorld::ClearPedsFromArea(infX, infY, infZ, supX, supY, supZ);
 		return 0;
 	}
@@ -1051,9 +1034,9 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		bool bTargetting = pTarget && pTarget->IsPed() && pTarget == pTestedPed;
 		// PC shit
 		static int nCounter = 0;
-		nCounter = Max(0, nCounter - 1);
+		nCounter = General_MaxInt(0, nCounter - 1);
 		if (!pPed->GetWeapon()->IsTypeMelee() && !bTargetting) {
-			if ((pTestedPed->GetPosition() - TheCamera.GetPosition()).Magnitude() < 10.0f) {
+			if (ScriptMath_Distance3D(pTestedPed->GetPosition().x, pTestedPed->GetPosition().y, pTestedPed->GetPosition().z, TheCamera.GetPosition().x, TheCamera.GetPosition().y, TheCamera.GetPosition().z) < 10.0f) {
 				CVector vTestedPos(pTestedPed->GetPosition().x, pTestedPed->GetPosition().y, pTestedPed->GetPosition().z + 0.4);
 				CVector vScreenPos;
 				float w, h;
@@ -1158,7 +1141,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 		CEntity* pClosestEntity = nil;
 		float min_dist = 2.0f * range;
 		for (int i = 0; i < total; i++) {
-			float dist = (apEntities[i]->GetPosition() - pos).Magnitude();
+			float dist = ScriptMath_Distance3D(apEntities[i]->GetPosition().x, apEntities[i]->GetPosition().y, apEntities[i]->GetPosition().z, pos.x, pos.y, pos.z);
 			if (dist < min_dist) {
 				min_dist = dist;
 				pClosestEntity = apEntities[i];
@@ -1170,7 +1153,7 @@ int8 CRunningScript::ProcessCommands1100To1199(int32 command)
 			pClosestEntity = nil;
 			float min_dist = 2.0f * range;
 			for (int i = 0; i < total; i++) {
-				float dist = (apEntities[i]->GetPosition() - pos).Magnitude();
+				float dist = ScriptMath_Distance3D(apEntities[i]->GetPosition().x, apEntities[i]->GetPosition().y, apEntities[i]->GetPosition().z, pos.x, pos.y, pos.z);
 				if (dist < min_dist) {
 					min_dist = dist;
 					pClosestEntity = apEntities[i];

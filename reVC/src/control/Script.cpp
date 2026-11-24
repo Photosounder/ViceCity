@@ -58,8 +58,10 @@
 #include "Timecycle.h"
 #include "TxdStore.h"
 #include "Bike.h"
+#include "ScriptArea.h"
 #ifdef USE_ADVANCED_SCRIPT_DEBUG_OUTPUT
 #include <stdarg.h>
+#include "ScriptArea.h"
 #endif
 
 uint8 CTheScripts::ScriptSpace[SIZE_SCRIPT_SPACE];
@@ -506,9 +508,11 @@ bool CUpsideDownCarCheck::IsCarUpsideDown(int32 id)
 bool CUpsideDownCarCheck::IsCarUpsideDown(CVehicle* pVehicle)
 {
 	assert(pVehicle);
-	return pVehicle->GetUp().z <= UPSIDEDOWN_UP_THRESHOLD &&
-		pVehicle->GetMoveSpeed().Magnitude() < UPSIDEDOWN_MOVE_SPEED_THRESHOLD &&
-		pVehicle->GetTurnSpeed().Magnitude() < UPSIDEDOWN_TURN_SPEED_THRESHOLD;
+	// Delegate the check that the car is upside down to the C implementation
+	return ScriptMath_IsUpsideDown(pVehicle->GetUp().z,
+		pVehicle->GetMoveSpeed().x, pVehicle->GetMoveSpeed().y, pVehicle->GetMoveSpeed().z,
+		pVehicle->GetTurnSpeed().x, pVehicle->GetTurnSpeed().y, pVehicle->GetTurnSpeed().z,
+		UPSIDEDOWN_UP_THRESHOLD, UPSIDEDOWN_MOVE_SPEED_THRESHOLD, UPSIDEDOWN_TURN_SPEED_THRESHOLD);
 }
 
 void CUpsideDownCarCheck::UpdateTimers()
@@ -601,7 +605,8 @@ void CStuckCarCheck::Process()
 			m_sCars[i].Reset();
 			continue;
 		}
-		float distance = (pv->GetPosition() - m_sCars[i].m_vecPos).Magnitude();
+		// Delegate the distance to the C implementation
+		float distance = ScriptMath_Distance3D(pv->GetPosition().x, pv->GetPosition().y, pv->GetPosition().z, m_sCars[i].m_vecPos.x, m_sCars[i].m_vecPos.y, m_sCars[i].m_vecPos.z);
 		m_sCars[i].m_bStuck = distance < m_sCars[i].m_fRadius;
 		m_sCars[i].m_vecPos = pv->GetPosition();
 		m_sCars[i].m_nLastCheck = timer;
@@ -1702,7 +1707,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 			car->AutoPilot.m_nCarMission = MISSION_GOTOCOORDS;
 		car->SetStatus(STATUS_PHYSICS);
 		car->bEngineOn = true;
-		car->AutoPilot.m_nCruiseSpeed = Max(1, car->AutoPilot.m_nCruiseSpeed);
+		car->AutoPilot.m_nCruiseSpeed = General_MaxInt(1, car->AutoPilot.m_nCruiseSpeed);
 		car->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}
@@ -1715,7 +1720,7 @@ int8 CRunningScript::ProcessCommands100To199(int32 command)
 		CCarCtrl::JoinCarWithRoadSystem(car);
 		car->AutoPilot.m_nCarMission = MISSION_CRUISE;
 		car->bEngineOn = true;
-		car->AutoPilot.m_nCruiseSpeed = Max(1, car->AutoPilot.m_nCruiseSpeed);
+		car->AutoPilot.m_nCruiseSpeed = General_MaxInt(1, car->AutoPilot.m_nCruiseSpeed);
 		car->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 		return 0;
 	}

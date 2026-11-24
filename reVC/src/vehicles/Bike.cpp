@@ -49,8 +49,22 @@
 #include "Automobile.h"
 #include "Bike.h"
 #include "BikeLogic.h"
+#include "AutomobileLogic.h"
 #include "Debug.h"
 #include "SaveBuf.h"
+
+// Wheel directions along the surface a wheel stands on, from the forward direction and the surface normal
+static void
+BikeSurfaceWheelAxes(CVector &wheelFwd, CVector &wheelRight, const CVector &normal)
+{
+	float fwdIn[3] = { wheelFwd.x, wheelFwd.y, wheelFwd.z };
+	float nIn[3] = { normal.x, normal.y, normal.z };
+	float fwdOut[3], rightOut[3];
+
+	Automobile_SurfaceWheelAxes(fwdIn, nIn, fwdOut, rightOut);
+	wheelFwd = CVector(fwdOut[0], fwdOut[1], fwdOut[2]);
+	wheelRight = CVector(rightOut[0], rightOut[1], rightOut[2]);
+}
 
 const uint32 CBike::nSaveStructSize =
 #ifdef COMPATIBLE_SAVES
@@ -274,15 +288,10 @@ CBike::ProcessControl(void)
 				com = Multiply3x3(GetMatrix(), com);
 #endif
 				if(m_fBrakePedal == 0.0f && !bIsHandbrakeOn || m_nWheelsOnGround == 0){
-					if(GetModelIndex() == MI_SANCHEZ){
-						float force = m_fLeanInput*m_fTurnMass*pBikeHandling->fLeanBackForce*Min(m_vecMoveSpeed.Magnitude(), 0.1f);
-						force *= 0.7f*m_fGasPedal + 0.3f;
-						ApplyTurnForce(-force*(*Timer_GetTimeStep())*GetUp(), com+GetForward());
-					}else{
-						float force = m_fLeanInput*m_fTurnMass*pBikeHandling->fLeanBackForce*Min(m_vecMoveSpeed.Magnitude(), 0.1f);
-						force *= 0.5f*m_fGasPedal + 0.5f;
-						ApplyTurnForce(-force*(*Timer_GetTimeStep())*GetUp(), com+GetForward());
-					}
+					// Delegate the lean back force to the C implementation
+					float force = Bike_LeanForce(m_fLeanInput, m_fTurnMass, pBikeHandling->fLeanBackForce, m_vecMoveSpeed.Magnitude());
+					force *= Bike_LeanBackGasScale(GetModelIndex() == MI_SANCHEZ, m_fGasPedal);
+					ApplyTurnForce(-force*(*Timer_GetTimeStep())*GetUp(), com+GetForward());
 				}
 			}
 			// Lean forward
@@ -296,7 +305,8 @@ CBike::ProcessControl(void)
 				com = Multiply3x3(GetMatrix(), com);
 #endif
 				if(m_fBrakePedal < 0.0f || m_nWheelsOnGround == 0){
-					float force = m_fLeanInput*m_fTurnMass*pBikeHandling->fLeanFwdForce*Min(m_vecMoveSpeed.Magnitude(), 0.1f);
+					// Delegate the lean forward force to the C implementation
+					float force = Bike_LeanForce(m_fLeanInput, m_fTurnMass, pBikeHandling->fLeanFwdForce, m_vecMoveSpeed.Magnitude());
 					ApplyTurnForce(-force*(*Timer_GetTimeStep())*GetUp(), com+GetForward());
 				}
 			}
@@ -454,36 +464,22 @@ CBike::ProcessControl(void)
 	}
 
 	if(bIsStanding)
-		if(Abs(GetRight().z) > 0.35f || Abs(GetForward().z) > 0.5f)
+		// Delegate the check that the bike tipped over to the C implementation
+		if(VehicleLogic_BikeTippedOver(GetRight().z, GetForward().z))
 			bIsStanding = false;
 
 	if(bBalancedByRider || bIsBeingPickedUp || bIsStanding){
-		float fDx = fDAxisX;
-		CVector res = vecTestResistance;
+		// Delegate the turn resistance to the C implementation
 		CVector localTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());
+		float turn[2];
+		Bike_TurnResistance(GetStatus() == STATUS_PLAYER, m_aWheelTimer[BIKESUSP_F1] == 0.0f && m_aWheelTimer[BIKESUSP_F2] == 0.0f,
+			m_aWheelTimer[BIKESUSP_R1] == 0.0f && m_aWheelTimer[BIKESUSP_R2] == 0.0f, GetForward().z, vecTestResistance.x, vecTestResistance.y,
+			fDAxisX, fDAxisXExtra, fDAxisY, fInAirXRes, pBikeHandling->fWheelieAng, pBikeHandling->fStoppieAng,
+			localTurnSpeed.x, localTurnSpeed.y, (*Timer_GetTimeStep()), turn);
+		float turnX = turn[0];
+		float turnY = turn[1];
 
-		if(GetStatus() == STATUS_PLAYER){
-			if(m_aWheelTimer[BIKESUSP_F1] == 0.0f && m_aWheelTimer[BIKESUSP_F2] == 0.0f){
-				fDx = fDAxisXExtra;
-				if(!(m_aWheelTimer[BIKESUSP_R1] == 0.0f && m_aWheelTimer[BIKESUSP_R2] == 0.0f) &&
-				   GetForward().z > 0.0f)
-					res.x -= Min(0.25f*Abs(pBikeHandling->fWheelieAng-GetForward().z), 0.07f);
-				else
-					res.x = fInAirXRes;
-			}else if(m_aWheelTimer[BIKESUSP_R1] == 0.0f && m_aWheelTimer[BIKESUSP_R2] == 0.0f){
-				fDx = fDAxisXExtra;
-				if(GetForward().z < 0.0f)
-					res.x *= Min(0.3f*Abs(pBikeHandling->fStoppieAng-GetForward().z), 0.1f) + 0.9f;
-			}
-		}
-
-		res.x *= 1.0f/(fDx*SQR(localTurnSpeed.x) + 1.0f);
-		res.y *= 1.0f/(fDAxisY*SQR(localTurnSpeed.y) + 1.0f);
-		res.x = Pow(res.x, (*Timer_GetTimeStep()));
-		res.y = Pow(res.y, (*Timer_GetTimeStep()));
-		float turnX = localTurnSpeed.x*(res.x - 1.0f);
-		float turnY = localTurnSpeed.y*(res.y - 1.0f);
-
+		CVector res;
 		res = -GetUp() * turnY * m_fTurnMass;
 		ApplyTurnForce(res, GetRight() + Multiply3x3(GetMatrix(), m_vecCentreOfMass));
 
@@ -505,31 +501,18 @@ CBike::ProcessControl(void)
 	if (!((rouz.remote_bomb && rouz.bomb_veh == this) || (rouz.remote_control && rouz.rc_veh == this)))
 	if(!bIsStuck && (GetStatus() == STATUS_ABANDONED || GetStatus() == STATUS_WRECKED) && !bIsBeingPickedUp){
 		bool makeStatic = false;
-		float moveSpeedLimit, turnSpeedLimit, distanceLimit;
-
 		if(!bVehicleColProcessed &&
 		   m_vecMoveSpeed.IsZero() &&
 		// BUG? m_aSuspensionSpringRatioPrev[3] is checked twice in the game. also, why 3?
 		   m_aSuspensionSpringRatioPrev[3] != 1.0f)
 			makeStatic = true;
 
-		if(GetStatus() == STATUS_WRECKED){
-			moveSpeedLimit = 0.006f;
-			turnSpeedLimit = 0.0015f;
-			distanceLimit = 0.015f;
-		}else{
-			moveSpeedLimit = 0.003f;
-			turnSpeedLimit = 0.0009f;
-			distanceLimit = 0.005f;
-		}
-
 		m_vecMoveSpeedAvg = (m_vecMoveSpeedAvg + m_vecMoveSpeed)/2.0f;
 		m_vecTurnSpeedAvg = (m_vecTurnSpeedAvg + m_vecTurnSpeed)/2.0f;
 
-		if(m_vecMoveSpeedAvg.MagnitudeSqr() <= sq(moveSpeedLimit*(*Timer_GetTimeStep())) &&
-		   m_vecTurnSpeedAvg.MagnitudeSqr() <= sq(turnSpeedLimit*(*Timer_GetTimeStep())) &&
-		   m_fDistanceTravelled < distanceLimit ||
-		   makeStatic){
+		// Delegate the test for the bike that barely moves to the C implementation shared with cars
+		if(Automobile_IsBarelyMoving(GetStatus() == STATUS_WRECKED, m_vecMoveSpeedAvg.MagnitudeSqr(), m_vecTurnSpeedAvg.MagnitudeSqr(), (*Timer_GetTimeStep()), m_fDistanceTravelled,
+			false, makeStatic)){
 			m_nStaticFrames++;
 
 			if(m_nStaticFrames > 10 || makeStatic)
@@ -584,7 +567,7 @@ CBike::ProcessControl(void)
 			m_fWheelAngle += DEGTORAD(1.0f)*(*Timer_GetTimeStep());
 		if(bIsStanding){
 			float f = Pow(0.97f, (*Timer_GetTimeStep()));
-			m_fLeanLRAngle2 = m_fLeanLRAngle2*f - (Asin(Clamp(GetRight().z,-1.0f,1.0f))+DEGTORAD(15.0f))*(1.0f-f);
+			m_fLeanLRAngle2 = m_fLeanLRAngle2*f - (General_AsinClamped(GetRight().z)+DEGTORAD(15.0f))*(1.0f-f);
 			m_fLeanLRAngle = m_fLeanLRAngle2;
 		}
 	}else{
@@ -642,10 +625,8 @@ CBike::ProcessControl(void)
 
 		// Rescale spring ratios, i.e. subtract wheel radius
 		for(i = 0; i < 4; i++){
-			// wheel radius in relation to suspension line
-			float wheelRadius = 1.0f - m_aSuspensionSpringLength[i]/m_aSuspensionLineLength[i];
-			// rescale such that 0.0 is fully compressed and 1.0 is fully extended
-			m_aSuspensionSpringRatio[i] = (m_aSuspensionSpringRatio[i]-wheelRadius)/(1.0f-wheelRadius);
+			// Delegate the rescaling of the spring ratio to the C implementation, 0.0 is fully compressed and 1.0 is fully extended
+			m_aSuspensionSpringRatio[i] = Automobile_PrevSpringRatio(m_aSuspensionSpringRatio[i], m_aSuspensionSpringLength[i], m_aSuspensionLineLength[i]);
 		}
 
 		int rnd = 0;
@@ -773,10 +754,13 @@ CBike::ProcessControl(void)
 
 		brake = m_fBrakePedal * pHandling->fBrakeDeceleration * (*Timer_GetTimeStep());
 		bool neutralHandling = GetStatus() != STATUS_PLAYER && GetStatus() != STATUS_PLAYER_REMOTE && (pHandling->Flags & HANDLING_NEUTRALHANDLING);
-		float brakeBiasFront = neutralHandling ? 1.0f : 2.0f*pHandling->fBrakeBias;
-		float brakeBiasRear  = neutralHandling ? 1.0f : 2.0f*(1.0f-pHandling->fBrakeBias);
-		float tractionBiasFront = neutralHandling ? 1.0f : 2.0f*pHandling->fTractionBias;
-		float tractionBiasRear  = neutralHandling ? 1.0f : 2.0f-tractionBiasFront;
+		// Delegate the biases of the wheels to the C implementation
+		float wheelBiases[4];
+		Bike_WheelBiases(neutralHandling, pHandling->fBrakeBias, pHandling->fTractionBias, wheelBiases);
+		float brakeBiasFront = wheelBiases[0];
+		float brakeBiasRear  = wheelBiases[1];
+		float tractionBiasFront = wheelBiases[2];
+		float tractionBiasRear  = wheelBiases[3];
 
 		// Count how many wheels are touching the ground
 
@@ -788,7 +772,8 @@ CBike::ProcessControl(void)
 			if(m_aSuspensionSpringRatio[i] < 1.0f)
 				m_aWheelTimer[i] = 4.0f;
 			else
-				m_aWheelTimer[i] = Max(m_aWheelTimer[i]-(*Timer_GetTimeStep()), 0.0f);
+				// Delegate the countdown of the timer to the C implementation
+				m_aWheelTimer[i] = VehicleLogic_DecayToZero(m_aWheelTimer[i], (*Timer_GetTimeStep()));
 
 			if(m_aWheelTimer[i] > 0.0f){
 				m_nWheelsOnGround++;
@@ -828,33 +813,20 @@ CBike::ProcessControl(void)
 		traction *= pHandling->fTractionMultiplier / 4.0f;
 
 		// Turn wheel
-		if(GetStatus() == STATUS_PLAYER || !bIsStanding || bIsBeingPickedUp){
-			if(Abs(m_vecMoveSpeed.x) < 0.01f && Abs(m_vecMoveSpeed.y) < 0.01f && m_fSteerAngle == 0.0f){
-				m_fWheelAngle *= Pow(0.96f, (*Timer_GetTimeStep()));
-			}else{
-				float f;
-				if(fwdSpeed > 0.01f && m_aWheelTimer[BIKESUSP_F1] > 0.0f && m_aWheelTimer[BIKESUSP_F2] > 0.0f && GetStatus() == STATUS_PLAYER){
-					CColPoint point;
-					point.surfaceA = SURFACE_WHEELBASE;
-					point.surfaceB = SURFACE_TARMAC;
-					float steer = SurfaceTable_GetAdhesiveLimit(&(point))*4.0f*pBikeHandling->fSpeedSteer*traction; // rouz edit (ChatGPT)
-					if(SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB) == ADHESIVE_LOOSE || // rouz edit (ChatGPT)
-					   SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB) == ADHESIVE_SAND) // rouz edit (ChatGPT)
-						steer *= pBikeHandling->fSlipSteer;
-					f = Asin(Min(steer/SQR(fwdSpeed), 1.0))/DEGTORAD(pHandling->fSteeringLock);
-					if(m_fSteerAngle < 0.0f && m_fLeanLRAngle < 0.0f ||
-					   m_fSteerAngle > 0.0f && m_fLeanLRAngle > 0.0f)
-						f *= 2.0f;
-					f = Min(f, 1.0f);
-				}else{
-					f = 1.0f;
-				}
-				if(GetStatus() != STATUS_PLAYER)
-					f = 1.0f;
-				m_fWheelAngle = m_fSteerAngle*f;
-			}
-		}else if(m_fWheelAngle < DEGTORAD(20.0f))
-			m_fWheelAngle += DEGTORAD(1.5f)*(*Timer_GetTimeStep());
+		// Delegate the angle of the front wheel to the C implementation
+		bool wheelLimitedByGrip = fwdSpeed > 0.01f && m_aWheelTimer[BIKESUSP_F1] > 0.0f && m_aWheelTimer[BIKESUSP_F2] > 0.0f && GetStatus() == STATUS_PLAYER;
+		float gripSteer = 0.0f;
+		if(wheelLimitedByGrip){
+			CColPoint point;
+			point.surfaceA = SURFACE_WHEELBASE;
+			point.surfaceB = SURFACE_TARMAC;
+			gripSteer = SurfaceTable_GetAdhesiveLimit(&(point))*4.0f*pBikeHandling->fSpeedSteer*traction; // rouz edit (ChatGPT)
+			if(SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB) == ADHESIVE_LOOSE || // rouz edit (ChatGPT)
+			   SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB) == ADHESIVE_SAND) // rouz edit (ChatGPT)
+				gripSteer *= pBikeHandling->fSlipSteer;
+		}
+		m_fWheelAngle = Bike_WheelAngle(GetStatus() == STATUS_PLAYER || !bIsStanding || bIsBeingPickedUp, m_vecMoveSpeed.x, m_vecMoveSpeed.y, m_fSteerAngle, m_fWheelAngle, m_fLeanLRAngle,
+			fwdSpeed, GetStatus() == STATUS_PLAYER, wheelLimitedByGrip, gripSteer, pHandling->fSteeringLock, (*Timer_GetTimeStep()));
 
 		// rouz edit, always turn wheels with remote_control
 		if (rouz.remote_control && this == rouz.rc_veh && GetStatus()==STATUS_ABANDONED)
@@ -875,30 +847,22 @@ CBike::ProcessControl(void)
 					spec = BIKE_WHEELSPEC_0;
 				else
 					spec = BIKE_WHEELSPEC_2;
-				CVector wheelFwd = Multiply3x3(GetMatrix(), CVector(-Sin(m_fWheelAngle), Cos(m_fWheelAngle), 0.0f));
-				wheelFwd -= DotProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal))*CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal);
-				wheelFwd.Normalise();
-				CVector wheelRight = CrossProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal));
-				wheelRight.Normalise();
+				// Delegate the direction of the wheel to the C implementation
+				float steerXY_wheelFwd[2];
+				Automobile_SteerForward(m_fWheelAngle, steerXY_wheelFwd);
+				CVector wheelFwd = Multiply3x3(GetMatrix(), CVector(steerXY_wheelFwd[0], steerXY_wheelFwd[1], 0.0f));
+				CVector wheelRight;
+				// Delegate the wheel axes along the surface to the C implementation
+				BikeSurfaceWheelAxes(wheelFwd, wheelRight, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal));
 
 				fThrust = 0.0f;
 				m_aWheelColPoints[frontLine].surfaceA = SURFACE_WHEELBASE;
-				float adhesion = SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[frontLine]))*traction; // rouz edit (ChatGPT)
-				float adhesionDestab = 1.0f;
-				if(m_fBrakeDestabilization > 0.0f)
-					switch(SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[frontLine].surfaceB)){ // rouz edit (ChatGPT)
-					case ADHESIVE_HARD:
-					case ADHESIVE_LOOSE:
-						adhesionDestab = 0.9f;
-						break;
-					case ADHESIVE_ROAD:
-						adhesionDestab = 0.7f;
-						break;
-					}
-				if(GetStatus() == STATUS_PLAYER)
-					adhesion *= SurfaceTable_GetWetMultiplier(m_aWheelColPoints[frontLine].surfaceB); // rouz edit (ChatGPT)
-				if(m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST)
-					adhesion *= 0.4f;
+				// Delegate the adhesion of the wheel to the C implementation
+				float adhesionDestab;
+				float adhesion = Bike_WheelAdhesion(SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[frontLine])), traction, m_fBrakeDestabilization,
+					SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[frontLine].surfaceB), GetStatus() == STATUS_PLAYER,
+					GetStatus() == STATUS_PLAYER ? SurfaceTable_GetWetMultiplier(m_aWheelColPoints[frontLine].surfaceB) : 1.0f,
+					m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST, &adhesionDestab);
 				WheelState[BIKEWHEEL_FRONT] = m_aWheelState[BIKEWHEEL_FRONT];
 				CVector contactSpeed = GetSpeed(frontContact);
 				ProcessBikeWheel(wheelFwd, wheelRight,
@@ -924,30 +888,27 @@ CBike::ProcessControl(void)
 
 		if(m_aWheelTimer[BIKESUSP_R1] > 0.0f || m_aWheelTimer[BIKESUSP_R2] > 0.0f){
 			// Wheel on ground
-			float rearBrake = brake;
-			float rearTraction = traction;
+			float rearBrake;
+			float rearTraction;
 
 			CVector wheelFwd = GetForward();
 			CVector wheelRight = GetRight();
-			wheelFwd -= DotProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[rearLine].normal))*CollisionVector_ToNative(m_aWheelColPoints[rearLine].normal);
-			wheelFwd.Normalise();
-			wheelRight = CrossProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[rearLine].normal));
-			wheelRight.Normalise();
+			// Delegate the wheel axes along the surface to the C implementation
+			BikeSurfaceWheelAxes(wheelFwd, wheelRight, CollisionVector_ToNative(m_aWheelColPoints[rearLine].normal));
 
-			if(bIsHandbrakeOn){
 #ifdef FIX_BUGS
-				// Not sure if this is needed, but brake usually has timestep as a factor
-				rearBrake = 20000.0f * Timer_GetTimeStepFix();
+			// Not sure if this is needed, but brake usually has timestep as a factor
+			float handbrakeBrake = 20000.0f * Timer_GetTimeStepFix();
 #else
-				rearBrake = 20000.0f;
+			float handbrakeBrake = 20000.0f;
 #endif
+			// Delegate the brake and traction of the rear wheel to the C implementation
+			int rearGrip = Bike_RearWheelGrip(bIsHandbrakeOn, handbrakeBrake, m_doingBurnout, m_fTireTemperature, m_fGasPedal, brake, traction, &rearBrake, &rearTraction);
+			if(rearGrip == BIKE_REARGRIP_HANDBRAKE){
 				m_fTireTemperature = 1.0f;
-			}else if(m_doingBurnout){
-				rearBrake = 0.0f;
-				rearTraction = 0.0f;
+			}else if(rearGrip == BIKE_REARGRIP_BURNOUT){
 				ApplyTurnForce(contactPoints[BIKESUSP_R1], -0.0007f*m_fTurnMass*m_fSteerAngle*GetRight()*(*Timer_GetTimeStep()));
-			}else if(m_fTireTemperature < 1.0f && m_fGasPedal > 0.75f){
-				rearTraction *= m_fTireTemperature;
+			}else if(rearGrip == BIKE_REARGRIP_COLD_TYRES){
 				ApplyTurnForce(contactPoints[BIKESUSP_R1], (1.0f-m_fTireTemperature)*-0.0007f*m_fTurnMass*m_fSteerAngle*GetRight()*(*Timer_GetTimeStep()));
 			}
 
@@ -955,22 +916,12 @@ CBike::ProcessControl(void)
 				brake = 0.0f;	// only affects next front wheel. is this intended?
 			fThrust = acceleration;
 			m_aWheelColPoints[rearLine].surfaceA = SURFACE_WHEELBASE;
-			float adhesion = SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[rearLine]))*rearTraction; // rouz edit (ChatGPT)
-			float adhesionDestab = 1.0f;
-			if(m_fBrakeDestabilization > 0.0f)
-				switch(SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB)){ // rouz edit (ChatGPT)
-				case ADHESIVE_HARD:
-				case ADHESIVE_LOOSE:
-					adhesionDestab = 0.9f;
-					break;
-				case ADHESIVE_ROAD:
-					adhesionDestab = 0.7f;
-					break;
-				}
-			if(GetStatus() == STATUS_PLAYER)
-				adhesion *= SurfaceTable_GetWetMultiplier(m_aWheelColPoints[rearLine].surfaceB); // rouz edit (ChatGPT)
-			if(m_wheelStatus[BIKEWHEEL_REAR] == WHEEL_STATUS_BURST)
-				adhesion *= 0.4f;
+			// Delegate the adhesion of the wheel to the C implementation
+			float adhesionDestab;
+			float adhesion = Bike_WheelAdhesion(SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[rearLine])), rearTraction, m_fBrakeDestabilization,
+				SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[rearLine].surfaceB), GetStatus() == STATUS_PLAYER,
+				GetStatus() == STATUS_PLAYER ? SurfaceTable_GetWetMultiplier(m_aWheelColPoints[rearLine].surfaceB) : 1.0f,
+				m_wheelStatus[BIKEWHEEL_REAR] == WHEEL_STATUS_BURST, &adhesionDestab);
 			WheelState[BIKEWHEEL_REAR] = m_aWheelState[BIKEWHEEL_REAR];
 			CVector contactSpeed = GetSpeed(rearContact);
 			ProcessBikeWheel(wheelFwd, wheelRight,
@@ -987,27 +938,13 @@ CBike::ProcessControl(void)
 				WheelState[BIKEWHEEL_REAR] = WHEEL_STATE_NORMAL;
 		}else{
 			// Wheel in the air
-			if(bIsHandbrakeOn)
-				m_aWheelSpeed[BIKEWHEEL_REAR] = 0.0f;
-			else{
-				if(acceleration > 0.0f){
-					if(m_aWheelSpeed[BIKEWHEEL_REAR] < 2.0f)
-						m_aWheelSpeed[BIKEWHEEL_REAR] -= 0.2f;
-				}else{
-					if(m_aWheelSpeed[BIKEWHEEL_REAR] > -2.0f)
-						m_aWheelSpeed[BIKEWHEEL_REAR] += 0.1f;
-				}
-			}
+			// Delegate the speed of the rear wheel to the C implementation
+			m_aWheelSpeed[BIKEWHEEL_REAR] = Bike_RearWheelAirSpeed(m_aWheelSpeed[BIKEWHEEL_REAR], acceleration, bIsHandbrakeOn);
 			m_aWheelRotation[BIKEWHEEL_REAR] += m_aWheelSpeed[BIKEWHEEL_REAR];
 		}
 
-		if(m_doingBurnout && m_aWheelState[BIKEWHEEL_REAR] == WHEEL_STATE_SPINNING){
-			m_fTireTemperature += 0.001f*(*Timer_GetTimeStep());
-			if(m_fTireTemperature > 3.0f)
-				m_fTireTemperature = 3.0f;
-		}else if(m_fTireTemperature > 1.0f){
-			m_fTireTemperature = (m_fTireTemperature - 1.0f)*Pow(0.995f, (*Timer_GetTimeStep())) + 1.0f;
-		}
+		// Delegate the temperature of the tyres to the C implementation
+		m_fTireTemperature = Automobile_TireTemperature(m_fTireTemperature, m_doingBurnout && m_aWheelState[BIKEWHEEL_REAR] == WHEEL_STATE_SPINNING, (*Timer_GetTimeStep()));
 
 		// Process front wheel - second try
 
@@ -1019,30 +956,22 @@ CBike::ProcessControl(void)
 					spec = BIKE_WHEELSPEC_0;
 				else
 					spec = BIKE_WHEELSPEC_2;
-				CVector wheelFwd = GetMatrix() * CVector(-Sin(m_fWheelAngle), Cos(m_fWheelAngle), 0.0f);
-				wheelFwd -= DotProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal))*CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal);
-				wheelFwd.Normalise();
-				CVector wheelRight = CrossProduct(wheelFwd, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal));
-				wheelRight.Normalise();
+				// Delegate the direction of the wheel to the C implementation
+				float steerXY_wheelFwd[2];
+				Automobile_SteerForward(m_fWheelAngle, steerXY_wheelFwd);
+				CVector wheelFwd = GetMatrix() * CVector(steerXY_wheelFwd[0], steerXY_wheelFwd[1], 0.0f);
+				CVector wheelRight;
+				// Delegate the wheel axes along the surface to the C implementation
+				BikeSurfaceWheelAxes(wheelFwd, wheelRight, CollisionVector_ToNative(m_aWheelColPoints[frontLine].normal));
 
 				fThrust = 0.0f;
 				m_aWheelColPoints[frontLine].surfaceA = SURFACE_WHEELBASE;
-				float adhesion = SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[frontLine]))*traction; // rouz edit (ChatGPT)
-				float adhesionDestab = 1.0f;
-				if(m_fBrakeDestabilization > 0.0f)
-					switch(SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[frontLine].surfaceB)){ // rouz edit (ChatGPT)
-					case ADHESIVE_HARD:
-					case ADHESIVE_LOOSE:
-						adhesionDestab = 0.9f;
-						break;
-					case ADHESIVE_ROAD:
-						adhesionDestab = 0.7f;
-						break;
-					}
-				if(GetStatus() == STATUS_PLAYER)
-					adhesion *= SurfaceTable_GetWetMultiplier(m_aWheelColPoints[frontLine].surfaceB); // rouz edit (ChatGPT)
-				if(m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST)
-					adhesion *= 0.4f;
+				// Delegate the adhesion of the wheel to the C implementation
+				float adhesionDestab;
+				float adhesion = Bike_WheelAdhesion(SurfaceTable_GetAdhesiveLimit(&(m_aWheelColPoints[frontLine])), traction, m_fBrakeDestabilization,
+					SurfaceTable_GetAdhesionGroup(m_aWheelColPoints[frontLine].surfaceB), GetStatus() == STATUS_PLAYER,
+					GetStatus() == STATUS_PLAYER ? SurfaceTable_GetWetMultiplier(m_aWheelColPoints[frontLine].surfaceB) : 1.0f,
+					m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST, &adhesionDestab);
 				WheelState[BIKEWHEEL_FRONT] = m_aWheelState[BIKEWHEEL_FRONT];
 				CVector contactSpeed = GetSpeed(frontContact);
 				ProcessBikeWheel(wheelFwd, wheelRight,
@@ -1071,30 +1000,16 @@ CBike::ProcessControl(void)
 			if(assoc)
 				idleAngle = DEGTORAD(10.0f) * assoc->blendAmount;
 		}
+		// Delegate the lean angle to the C implementation
+		float sideAccel = 0.0f;
 		if(bBalancedByRider || bIsBeingPickedUp){
 			m_vecAvgSurfaceRight = CrossProduct(GetForward(), m_vecAvgSurfaceNormal);
 			m_vecAvgSurfaceRight.Normalise();
-			float lean;
-			if(m_nWheelsOnGround == 0)
-				lean = -(m_fSteerAngle/DEGTORAD(pHandling->fSteeringLock))*0.5f*GRAVITY*(*Timer_GetTimeStep());
-			else
-				lean = DotProduct(m_vecMoveSpeed-initialMoveSpeed, m_vecAvgSurfaceRight);
-			lean /= GRAVITY*Max((*Timer_GetTimeStep()), 0.01f);
-			if(m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST)
-				lean = Clamp(lean, -0.4f*pBikeHandling->fMaxLean, 0.4f*pBikeHandling->fMaxLean);
-			else
-				lean = Clamp(lean, -pBikeHandling->fMaxLean, pBikeHandling->fMaxLean);
-			float f = Pow(pBikeHandling->fDesLean, (*Timer_GetTimeStep()));
-			m_fLeanLRAngle2 = (Asin(lean) - idleAngle)*(1.0f-f) + m_fLeanLRAngle2*f;
-		}else{
-			if(bIsStanding){
-				float f = Pow(0.97f, (*Timer_GetTimeStep()));
-				m_fLeanLRAngle2 = m_fLeanLRAngle2*f - (Asin(GetRight().z) + DEGTORAD(15.0f) + idleAngle)*(1.0f-f);
-			}else{
-				float f = Pow(0.95f, (*Timer_GetTimeStep()));
-				m_fLeanLRAngle2 = m_fLeanLRAngle2*f;
-			}
+			if(m_nWheelsOnGround != 0)
+				sideAccel = DotProduct(m_vecMoveSpeed-initialMoveSpeed, m_vecAvgSurfaceRight);
 		}
+		m_fLeanLRAngle2 = Bike_LeanAngle(bBalancedByRider || bIsBeingPickedUp, bIsStanding, m_nWheelsOnGround, m_fSteerAngle, pHandling->fSteeringLock, sideAccel,
+			m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST, pBikeHandling->fMaxLean, pBikeHandling->fDesLean, idleAngle, GetRight().z, m_fLeanLRAngle2, GRAVITY, (*Timer_GetTimeStep()));
 		m_fLeanLRAngle = m_fLeanLRAngle2;
 
 		// Destabilize steering when braking
@@ -1102,29 +1017,17 @@ CBike::ProcessControl(void)
 		   m_fBrakePedal - m_fGasPedal > 0.9f &&
 		   fwdSpeed > 0.02f &&
 		   !bIsHandbrakeOn){
-			m_fBrakeDestabilization += General_GetRandomNumberInRangeFloat(0.5f, 1.0f)*0.2f*(*Timer_GetTimeStep());
-			if(m_aSuspensionSpringRatio[BIKESUSP_R1] < 1.0f || m_aSuspensionSpringRatio[BIKESUSP_R2] < 1.0f){
-				// BUG: this clamp makes no sense and the arguments seem swapped too
-				ApplyTurnForce(contactPoints[BIKESUSP_R1],
-					m_fTurnMass*Sin(m_fBrakeDestabilization)*Clamp(fwdSpeed, 0.5f, 0.2f)*0.013f*GetRight()*(*Timer_GetTimeStep()));
-			}else{
-				// BUG: this clamp makes no sense and the arguments seem swapped too
-				ApplyTurnForce(contactPoints[BIKESUSP_R1],
-					m_fTurnMass*Sin(m_fBrakeDestabilization)*Clamp(fwdSpeed, 0.5f, 0.2f)*0.003f*GetRight()*(*Timer_GetTimeStep()));
-			}
+			// Delegate the destabilisation to the C implementation
+			m_fBrakeDestabilization = Bike_BrakeDestabilization(m_fBrakeDestabilization, General_GetRandomNumberInRangeFloat(0.5f, 1.0f), (*Timer_GetTimeStep()));
+			ApplyTurnForce(contactPoints[BIKESUSP_R1],
+				Bike_BrakeDestabForce(m_fTurnMass, m_fBrakeDestabilization, fwdSpeed, m_aSuspensionSpringRatio[BIKESUSP_R1] < 1.0f || m_aSuspensionSpringRatio[BIKESUSP_R2] < 1.0f)*GetRight()*(*Timer_GetTimeStep()));
 		}else
 			m_fBrakeDestabilization = 0.0f;
 
 		// Update wheel positions from suspension
-		float frontWheelPos = colModel->lines[frontLine].p0.z;
-		if(m_aSuspensionSpringRatio[frontLine] > 0.0f)
-			frontWheelPos -= m_aSuspensionSpringRatio[frontLine]*m_aSuspensionSpringLength[frontLine];
-		m_aWheelPosition[BIKEWHEEL_FRONT] += (frontWheelPos - m_aWheelPosition[BIKEWHEEL_FRONT])*0.75f;
-
-		float rearWheelPos = colModel->lines[rearLine].p0.z;
-		if(m_aSuspensionSpringRatio[rearLine] > 0.0f)
-			rearWheelPos -= m_aSuspensionSpringRatio[rearLine]*m_aSuspensionSpringLength[rearLine];
-		m_aWheelPosition[BIKEWHEEL_REAR] += (rearWheelPos - m_aWheelPosition[BIKEWHEEL_REAR])*0.75f;
+		// Delegate the heights of the wheels to the C implementation
+		m_aWheelPosition[BIKEWHEEL_FRONT] = Automobile_WheelPosition(colModel->lines[frontLine].p0.z, m_aSuspensionSpringRatio[frontLine], m_aSuspensionSpringLength[frontLine], false, m_aWheelPosition[BIKEWHEEL_FRONT]);
+		m_aWheelPosition[BIKEWHEEL_REAR] = Automobile_WheelPosition(colModel->lines[rearLine].p0.z, m_aSuspensionSpringRatio[rearLine], m_aSuspensionSpringLength[rearLine], false, m_aWheelPosition[BIKEWHEEL_REAR]);
 
 		for(i = 0; i < 2; i++)
 			m_aWheelState[i] = WheelState[i];
@@ -1213,20 +1116,11 @@ CBike::ProcessControl(void)
 		}
 
 		if(this == FindPlayerVehicle()){
-			uint8 surf = m_aWheelColPoints[i].surfaceB;
-			if(surf == SURFACE_GRAVEL || surf == SURFACE_WATER || surf == SURFACE_HEDGE){
-				if(surfShake < 0.2f)
-					surfShake = 0.3f;
-			}else if(surf == SURFACE_MUD_DRY || surf == SURFACE_SAND || surf == SURFACE_SAND_BEACH){
-				if(surfShake < 0.1f)
-					surfShake = 0.2f;
-			}else if(surf == SURFACE_GRASS){
-				if(surfShake < 0.05f)
-					surfShake = 0.1f;
-			}
+			// Delegate the shake from the surface to the C implementation
+			surfShake = Bike_SurfaceShake(m_aWheelColPoints[i].surfaceB, surfShake);
 
 // BUG: this only observes one of the wheels
-			TheCamera.m_bVehicleSuspenHigh = Abs(suspChange) > 0.05f;
+			TheCamera.m_bVehicleSuspenHigh = General_AbsAbove(suspChange, 0.05f);
 		}
 
 		m_aSuspensionSpringRatioPrev[i] = m_aSuspensionSpringRatio[i];
@@ -1240,10 +1134,10 @@ CBike::ProcessControl(void)
 		if(speed > sq(0.1f)){
 			speed = Sqrt(speed);
 			if(suspShake > 0.0f){
-				uint8 freq = Min(200.0f*suspShake*speed*2000.0f/m_fMass + 100.0f, 250.0f);
+				uint8 freq = Automobile_PadShakeFrequency(suspShake, speed, m_fMass, 100.0f, 250.0f);
 				CPad::GetPad(0)->StartShake(20000.0f*(*Timer_GetTimeStep())/freq, freq);
 			}else{
-				uint8 freq = Min(200.0f*surfShake*speed*2000.0f/m_fMass + 40.0f, 150.0f);
+				uint8 freq = Automobile_PadShakeFrequency(surfShake, speed, m_fMass, 40.0f, 150.0f);
 				CPad::GetPad(0)->StartShake(5000.0f*(*Timer_GetTimeStep())/freq, freq);
 			}
 		}
@@ -1262,9 +1156,8 @@ CBike::ProcessControl(void)
 		m_vecTurnFriction = CVector(0.0f, 0.0f, 0.0f);
 	}else if(!skipPhysics &&
 	         (acceleration == 0.0f && brake == 0.0f || GetStatus() == STATUS_WRECKED)){
-		if(Abs(m_vecMoveSpeed.x) < 0.005f &&
-		   Abs(m_vecMoveSpeed.y) < 0.005f &&
-		   Abs(m_vecMoveSpeed.z) < 0.005f){
+		// Delegate the check that the vehicle is nearly still to the C implementation
+		if(VehicleLogic_AllSpeedsBelow(m_vecMoveSpeed.x, m_vecMoveSpeed.y, m_vecMoveSpeed.z, 0.005f)){
 			m_vecMoveSpeed = CVector(0.0f, 0.0f, 0.0f);
 			m_vecTurnSpeed.z = 0.0f;
 		}
@@ -1273,7 +1166,8 @@ CBike::ProcessControl(void)
 	// Balance bike
 	if(bBalancedByRider || bIsBeingPickedUp || bIsStanding){
 		float onSideness = DotProduct(GetRight(), m_vecAvgSurfaceNormal);
-		onSideness = Clamp(onSideness, -1.0f, 1.0f);
+		// Delegate the limit to the C implementation
+		onSideness = VehicleLogic_ClampValue(onSideness, -1.0f, 1.0f);
 		CVector worldCOM = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 		// Keep bike upright
 		if(bBalancedByRider){
@@ -1288,30 +1182,18 @@ CBike::ProcessControl(void)
 			if(m_aWheelTimer[BIKESUSP_F1] == 0.0f && m_aWheelTimer[BIKESUSP_F2] == 0.0f && GetForward().z > 0.0 &&
 			   !(m_aWheelTimer[BIKESUSP_R1] == 0.0f && m_aWheelTimer[BIKESUSP_R2] == 0.0f)){
 				// Wheelie
-				float wheelie = pBikeHandling->fWheelieAng - GetForward().z;
-				if(wheelie > 0.15f)
-					// below wheelie angle
-					wheelie = Max(0.3f - wheelie, 0.0f);
-				else if(wheelie < -0.08f)
-					// above wheelie angle
-					wheelie = Min(-0.15f - wheelie, 0.0f);
-				float wheelieStab = pBikeHandling->fWheelieStabMult * Min(m_vecMoveSpeed.Magnitude(), 0.1f) * wheelie;
+				// Delegate the strength of the stabilisation to the C implementation
+				float wheelieStab = Bike_WheelieStabilisation(pBikeHandling->fWheelieAng, GetForward().z, pBikeHandling->fWheelieStabMult, m_vecMoveSpeed.Magnitude());
 				ApplyTurnForce(0.5f*(*Timer_GetTimeStep())*wheelieStab*m_fTurnMass*GetUp(), worldCOM+GetForward());
 				ApplyTurnForce(0.5f*(*Timer_GetTimeStep())*m_fWheelAngle*pBikeHandling->fWheelieSteer*m_fTurnMass*GetRight(), worldCOM+GetForward());
 			}else if(m_aWheelTimer[BIKESUSP_R1] == 0.0f && m_aWheelTimer[BIKESUSP_R2] == 0.0f && GetForward().z < 0.0 &&
 			         !(m_aWheelTimer[BIKESUSP_F1] == 0.0f && m_aWheelTimer[BIKESUSP_F2] == 0.0f)){
 				// Stoppie
-				float stoppie = pBikeHandling->fStoppieAng - GetForward().z;
-				if(stoppie > 0.15f)
-					// below stoppie angle
-					stoppie = Max(0.3f - stoppie, 0.0f);
-				else if(stoppie < -0.15f)
-					// above stoppie angle
-					stoppie = Min(-0.3f - stoppie, 0.0f);
 				float speed = m_vecMoveSpeed.Magnitude();
-				float stoppieStab = pBikeHandling->fStoppieStabMult * Min(speed, 0.1f) * stoppie;
+				// Delegate the strength of the stabilisation to the C implementation
+				float stoppieStab = Bike_StoppieStabilisation(pBikeHandling->fStoppieAng, GetForward().z, pBikeHandling->fStoppieStabMult, speed);
 				ApplyTurnForce(0.5f*(*Timer_GetTimeStep())*stoppieStab*m_fTurnMass*GetUp(), worldCOM+GetForward());
-				ApplyTurnForce(0.5f*Min(5.0f*speed,1.0f)*(*Timer_GetTimeStep())*m_fWheelAngle*pBikeHandling->fWheelieSteer*m_fTurnMass*GetRight(), worldCOM+GetForward());
+				ApplyTurnForce(0.5f*General_MinFloat(5.0f*speed,1.0f)*(*Timer_GetTimeStep())*m_fWheelAngle*pBikeHandling->fWheelieSteer*m_fTurnMass*GetRight(), worldCOM+GetForward());
 			}
 		}
 	}
@@ -1348,7 +1230,8 @@ CBike::PreRender(void)
 		CVector groundPos = CollisionVector_ToNative(m_aWheelColPoints[BIKESUSP_R2].point);
 		if(m_aSuspensionSpringRatioPrev[BIKESUSP_R1] < 1.0f)
 			groundPos = (groundPos + CollisionVector_ToNative(m_aWheelColPoints[BIKESUSP_R1].point))/2.0f;
-		groundPos += Sin(m_fLeanLRAngle) * 0.8f*GetColModel()->boundingBox.min.z * GetRight();
+		// Delegate the offset of the smoke to the C implementation
+		groundPos += Bike_LeanSmokeOffset(m_fLeanLRAngle, GetColModel()->boundingBox.min.z) * GetRight();
 		CParticle::AddParticle(PARTICLE_RUBBER_SMOKE,
 			groundPos + CVector(0.0f, 0.0f, 0.25f), CVector(0.0f, 0.0f, 0.0f),
 			nil, smokeSize);
@@ -1369,7 +1252,8 @@ CBike::PreRender(void)
 		}
 	}else if(m_aWheelSkidmarkBloody[BIKEWHEEL_REAR] || m_aWheelSkidmarkUnk[BIKEWHEEL_REAR]){
 		CVector groundPos = CollisionVector_ToNative(m_aWheelColPoints[BIKESUSP_R2].point);
-		groundPos += Sin(m_fLeanLRAngle) * 0.8f*GetColModel()->boundingBox.min.z * GetRight();
+		// Delegate the offset of the smoke to the C implementation
+		groundPos += Bike_LeanSmokeOffset(m_fLeanLRAngle, GetColModel()->boundingBox.min.z) * GetRight();
 
 		// Enter the C skidmark algorithm with the original owner expressions
 		Skidmarks_RegisterOneType((uintptr)this, Skidmarks_BackendPosition(groundPos), GetForward().x, GetForward().y,
@@ -1379,32 +1263,15 @@ CBike::PreRender(void)
 	// Process lights
 
 	// Turn lights on/off
-	bool shouldLightsBeOn = 
-		Clock_GetHours() > 20 ||
-		Clock_GetHours() > 19 && Clock_GetMinutes() > (m_randomSeed & 0x3F) ||
-		Clock_GetHours() < 7 ||
-		Clock_GetHours() < 8 && Clock_GetMinutes() < (m_randomSeed & 0x3F) ||
-		m_randomSeed/50000.0f < Weather_Foggyness ||
-		m_randomSeed/50000.0f < Weather_WetRoads;
-	if(shouldLightsBeOn != bLightsOn && GetStatus() != STATUS_WRECKED){
-		if(GetStatus() == STATUS_ABANDONED){
-			// Turn off lights on abandoned vehicles only when we they're far away
-			if(bLightsOn &&
-			   Abs(TheCamera.GetPosition().x - GetPosition().x) + Abs(TheCamera.GetPosition().y - GetPosition().y) > 100.0f)
-				bLightsOn = false;
-		}else
-			bLightsOn = shouldLightsBeOn;
-	}
+	// Delegate the state of the lights to the C implementation
+	bool shouldLightsBeOn = VehicleLogic_ShouldLightsBeOn(Clock_GetHours(), Clock_GetMinutes(), m_randomSeed, Weather_Foggyness, Weather_WetRoads);
+	bLightsOn = VehicleLogic_NextLightsState(shouldLightsBeOn, bLightsOn, GetStatus() == STATUS_WRECKED, GetStatus() == STATUS_ABANDONED,
+		General_ManhattanAbove(TheCamera.GetPosition().x - GetPosition().x, TheCamera.GetPosition().y - GetPosition().y, 100.0f));
 
 	// Actually render the lights
-	bool alarmOn = false;
-	bool alarmOff = false;
-	if(IsAlarmOn()){
-		if((*Timer_GetTimeInMilliseconds()) & 0x100)
-			alarmOn = true;
-		else
-			alarmOff = true;
-	}
+	bool alarmOn, alarmOff;
+	// Delegate the flashing of the alarm to the C implementation
+	VehicleLogic_AlarmFlash(IsAlarmOn(), (*Timer_GetTimeInMilliseconds()), &alarmOn, &alarmOff);
 	if(bEngineOn && bLightsOn || alarmOn || alarmOff){
 		CalculateLeanMatrix();
 		CVector lookVector = GetPosition() - TheCamera.GetPosition();
@@ -1417,7 +1284,8 @@ CBike::PreRender(void)
 		// 1.0 if directly behind car, -1.0 if in front
 		float behindness = DotProduct(lookVector, GetForward());
 		// 0.0 if behind car, PI if in front
-		float angle = Abs(Acos(Abs(behindness)));
+		// Delegate the angle of the view to the C implementation
+		float angle = Bike_ViewAngle(behindness);
 
 		// Headlight
 
@@ -1432,8 +1300,9 @@ CBike::PreRender(void)
 		CVector light = mat * headLightPos;
 		if(behindness < 0.0f){
 			// In front of bike
-			float intensity = -0.5f*behindness + 0.3f;
-			float size = 1.0f - behindness;
+			// Delegate the glow of the headlight to the C implementation
+			float intensity, size;
+			VehicleLogic_HeadlightGlow(behindness, &intensity, &size);
 
 			if(behindness < -0.97f && camDist < 30.0f){
 				// Directly in front and not too far away
@@ -1484,18 +1353,14 @@ CBike::PreRender(void)
 		// Taillight corona
 		if(behindness > 0.0f){
 			// Behind car
-			float intensity = 0.4f*behindness + 0.4f;
-			float size = (behindness + 1.0f)/2.0f;
+			// Delegate the glow of the taillight to the C implementation
+			float intensity, size;
+			Bike_TailLightGlow(behindness, m_fGasPedal >= 0.0f && m_fBrakePedal > 0.0f, &intensity, &size);
 
 			if(m_fGasPedal < 0.0f){
 				// reversing
 				// no lights in this case
 			}else{
-				if(m_fBrakePedal > 0.0f){
-					intensity += 0.4f;
-					size += 0.3f;
-				}
-
 				if(alarmOff){
 					CCoronas::RegisterCorona((uintptr)this + 14, 0, 0, 0, 0,
 						light, size, 0.0f,
@@ -1586,31 +1451,21 @@ CBike::PreRender(void)
 	// Wheel particles
 
 	float fwdSpeed = DotProduct(m_vecMoveSpeed, GetForward())*180.0f;
-	int drawParticles = Abs(fwdSpeed) < 90.0f;
+	int drawParticles = General_AbsBelow(fwdSpeed, 90.0f);
 	int susp = BIKESUSP_F1;
 	for(i = 0; i < 2; i++){
 		if(i == BIKEWHEEL_REAR)
 			susp = BIKESUSP_R1;
 
-		static float speedSq;
 		// Sparks for friction of burst wheels
-		if(m_wheelStatus[i] == WHEEL_STATUS_BURST && m_aSuspensionSpringRatioPrev[susp] < 1.0f &&
-		   (speedSq = m_vecMoveSpeed.MagnitudeSqr(), speedSq > SQR(0.1f)) &&
-		   m_aWheelColPoints[susp].surfaceB != SURFACE_GRASS &&
-		   m_aWheelColPoints[susp].surfaceB != SURFACE_MUD_DRY &&
-		   m_aWheelColPoints[susp].surfaceB != SURFACE_SAND &&
-		   m_aWheelColPoints[susp].surfaceB != SURFACE_SAND_BEACH){
+		// Delegate the number of sparks to the C implementation
+		int sparkCount = Bike_BurstWheelSparkCount(m_vecMoveSpeed.MagnitudeSqr(), m_aWheelColPoints[susp].surfaceB);
+		if(m_wheelStatus[i] == WHEEL_STATUS_BURST && m_aSuspensionSpringRatioPrev[susp] < 1.0f && sparkCount > 0){
 			CVector normalSpeed = CollisionVector_ToNative(m_aWheelColPoints[susp].normal) * DotProduct(CollisionVector_ToNative(m_aWheelColPoints[susp].normal), m_vecMoveSpeed);
 			CVector frictionSpeed = m_vecMoveSpeed - normalSpeed;
 			CVector sparkDir = 0.25f*frictionSpeed;
-			CParticle::AddParticle(PARTICLE_SPARK_SMALL, CollisionVector_ToNative(m_aWheelColPoints[susp].point), sparkDir);
-
-			if(speedSq > 0.04f)
+			for(int k = 0; k < sparkCount; k++)
 				CParticle::AddParticle(PARTICLE_SPARK_SMALL, CollisionVector_ToNative(m_aWheelColPoints[susp].point), sparkDir);
-			if(speedSq > 0.16f){
-				CParticle::AddParticle(PARTICLE_SPARK_SMALL, CollisionVector_ToNative(m_aWheelColPoints[susp].point), sparkDir);
-				CParticle::AddParticle(PARTICLE_SPARK_SMALL, CollisionVector_ToNative(m_aWheelColPoints[susp].point), sparkDir);
-			}
 		}else if(m_aSuspensionSpringRatioPrev[i] < 1.0f &&
 		         (fwdSpeed > 0.2f || m_aWheelState[i] == WHEEL_STATE_SPINNING)){
 			if(m_aWheelColPoints[susp].surfaceB == SURFACE_GRASS ||
@@ -1629,23 +1484,28 @@ CBike::PreRender(void)
 	CColModel *colModel = mi->GetColModel();
 
 	// Wheel rotation
-	CVector frontWheelFwd = Multiply3x3(GetMatrix(), CVector(-Sin(m_fSteerAngle), Cos(m_fSteerAngle), 0.0f));
+	// Delegate the direction of the wheel to the C implementation
+	float steerXY_frontWheelFwd[2];
+	Automobile_SteerForward(m_fSteerAngle, steerXY_frontWheelFwd);
+	CVector frontWheelFwd = Multiply3x3(GetMatrix(), CVector(steerXY_frontWheelFwd[0], steerXY_frontWheelFwd[1], 0.0f));
 	CVector rearWheelFwd = GetForward();
 	if(m_aWheelTimer[BIKESUSP_F1] > 0.0f || m_aWheelTimer[BIKESUSP_F2] > 0.0f){
-		float springRatio = Min(m_aSuspensionSpringRatioPrev[BIKESUSP_F1], m_aSuspensionSpringRatioPrev[BIKESUSP_F2]);
+		// Delegate the lower ratio to the C implementation
+		float springRatio = General_MinFloat(m_aSuspensionSpringRatioPrev[BIKESUSP_F1], m_aSuspensionSpringRatioPrev[BIKESUSP_F2]);
 		CVector contactPoint(0.0f,
 			(colModel->lines[BIKESUSP_F1].p0.y - colModel->lines[BIKESUSP_F2].p0.y)/2.0f,
-			colModel->lines[BIKESUSP_F1].p0.z - m_aSuspensionSpringLength[BIKESUSP_F1]*springRatio - 0.5f*mi->m_wheelScale);
+			Bike_WheelContactZ(colModel->lines[BIKESUSP_F1].p0.z, m_aSuspensionSpringLength[BIKESUSP_F1], springRatio, mi->m_wheelScale));
 		CVector contactSpeed = GetSpeed(contactPoint);
 		// Why is wheel state always normal?
 		m_aWheelSpeed[BIKEWHEEL_FRONT] = ProcessWheelRotation(WHEEL_STATE_NORMAL, frontWheelFwd, contactSpeed, 0.5f*mi->m_wheelScale);
 		m_aWheelRotation[BIKEWHEEL_FRONT] += m_aWheelSpeed[BIKEWHEEL_FRONT];
 	}
 	if(m_aWheelTimer[BIKESUSP_R1] > 0.0f || m_aWheelTimer[BIKESUSP_R2] > 0.0f){
-		float springRatio = Min(m_aSuspensionSpringRatioPrev[BIKESUSP_R1], m_aSuspensionSpringRatioPrev[BIKESUSP_R2]);
+		// Delegate the lower ratio to the C implementation
+		float springRatio = General_MinFloat(m_aSuspensionSpringRatioPrev[BIKESUSP_R1], m_aSuspensionSpringRatioPrev[BIKESUSP_R2]);
 		CVector contactPoint(0.0f,
 			(colModel->lines[BIKESUSP_R1].p0.y - colModel->lines[BIKESUSP_R2].p0.y)/2.0f,
-			colModel->lines[BIKESUSP_R1].p0.z - m_aSuspensionSpringLength[BIKESUSP_R1]*springRatio - 0.5f*mi->m_wheelScale);
+			Bike_WheelContactZ(colModel->lines[BIKESUSP_R1].p0.z, m_aSuspensionSpringLength[BIKESUSP_R1], springRatio, mi->m_wheelScale));
 		CVector contactSpeed = GetSpeed(contactPoint);
 		m_aWheelSpeed[BIKEWHEEL_REAR] = ProcessWheelRotation(m_aWheelState[BIKEWHEEL_REAR], rearWheelFwd, contactSpeed, 0.5f*mi->m_wheelScale);
 		m_aWheelRotation[BIKEWHEEL_REAR] += m_aWheelSpeed[BIKEWHEEL_REAR];
@@ -1664,7 +1524,10 @@ CBike::PreRender(void)
 		rot.UpdateRW();
 
 		// Make rotation matrix with front fork as axis
-		CVector forkAxis(0.0f, Sin(DEGTORAD(mi->m_bikeSteerAngle)), -Cos(DEGTORAD(mi->m_bikeSteerAngle)));
+		// Delegate the direction of the fork to the C implementation
+		float forkY, forkZ;
+		Bike_ForkAxis(mi->m_bikeSteerAngle, &forkY, &forkZ);
+		CVector forkAxis(0.0f, forkY, forkZ);
 		forkAxis.Normalise();	// as if that's not already the case
 		CQuaternion quat;
 		// Use the C quaternion operation at the original animation boundary
@@ -1695,10 +1558,10 @@ CBike::PreRender(void)
 
 	// Rear fork
 	if(m_aBikeNodes[BIKE_FORKS_REAR]){
-		float sine = (m_aWheelPosition[BIKEWHEEL_REAR] - m_aWheelBasePosition[BIKEWHEEL_REAR])/m_fRearForkLength;
 		mat.Attach(RwFrameGetMatrix(m_aBikeNodes[BIKE_FORKS_REAR]));
 		pos = mat.GetPosition();
-		mat.SetRotate(-Asin(sine), 0.0f, 0.0f);
+		// Delegate the angle of the rear fork to the C implementation
+		mat.SetRotate(Bike_RearForkAngle(m_aWheelPosition[BIKEWHEEL_REAR], m_aWheelBasePosition[BIKEWHEEL_REAR], m_fRearForkLength), 0.0f, 0.0f);
 		mat.Translate(pos);
 		mat.UpdateRW();
 	}
@@ -1706,11 +1569,12 @@ CBike::PreRender(void)
 	// Front wheel
 	mat.Attach(RwFrameGetMatrix(m_aBikeNodes[BIKE_WHEEL_FRONT]));
 	pos.x = mat.GetPosition().x;
-	pos.z = m_aWheelPosition[BIKEWHEEL_FRONT] - m_fFrontForkZ;
-	float y = (colModel->lines[BIKESUSP_F1].p0.y+colModel->lines[BIKESUSP_F2].p0.y)/2.0f - m_fFrontForkY;
-	pos.y = y - (m_aWheelPosition[BIKEWHEEL_FRONT] - m_aWheelBasePosition[BIKEWHEEL_FRONT])*m_fFrontForkSlope;
+	// Delegate the position of the front wheel to the C implementation
+	Bike_FrontWheelPos(colModel->lines[BIKESUSP_F1].p0.y, colModel->lines[BIKESUSP_F2].p0.y, m_aWheelPosition[BIKEWHEEL_FRONT], m_aWheelBasePosition[BIKEWHEEL_FRONT],
+		m_fFrontForkZ, m_fFrontForkY, m_fFrontForkSlope, &pos.y, &pos.z);
 	if(m_wheelStatus[BIKEWHEEL_FRONT] == WHEEL_STATUS_BURST)
-		mat.SetRotate(m_aWheelRotation[BIKEWHEEL_FRONT], 0.0f, 0.05f*Sin(m_aWheelRotation[BIKEWHEEL_FRONT]));
+		// Delegate the wobble of the burst wheel to the C implementation
+		mat.SetRotate(m_aWheelRotation[BIKEWHEEL_FRONT], 0.0f, Bike_BurstWheelWobble(m_aWheelRotation[BIKEWHEEL_FRONT], 0.05f));
 	else
 		mat.SetRotateX(m_aWheelRotation[BIKEWHEEL_FRONT]);
 	mat.Translate(pos);
@@ -1724,7 +1588,8 @@ CBike::PreRender(void)
 	mat.Attach(RwFrameGetMatrix(m_aBikeNodes[BIKE_WHEEL_REAR]));
 	pos = mat.GetPosition();
 	if(m_wheelStatus[BIKEWHEEL_REAR] == WHEEL_STATUS_BURST)
-		mat.SetRotate(m_aWheelRotation[BIKEWHEEL_REAR], 0.0f, 0.07f*Sin(m_aWheelRotation[BIKEWHEEL_REAR]));
+		// Delegate the wobble of the burst wheel to the C implementation
+		mat.SetRotate(m_aWheelRotation[BIKEWHEEL_REAR], 0.0f, Bike_BurstWheelWobble(m_aWheelRotation[BIKEWHEEL_REAR], 0.07f));
 	else
 		mat.SetRotateX(m_aWheelRotation[BIKEWHEEL_REAR]);
 	mat.Translate(pos);
@@ -1734,8 +1599,10 @@ CBike::PreRender(void)
 	if(m_aBikeNodes[BIKE_CHASSIS]){
 		mat.Attach(RwFrameGetMatrix(m_aBikeNodes[BIKE_CHASSIS]));
 		pos = mat.GetPosition();
-		pos.z = (1.0f - Cos(m_fLeanLRAngle)) * (0.9*colModel->boundingBox.min.z);
-		mat.SetRotateX(-0.05f*Abs(m_fLeanLRAngle));
+		// Delegate the height of the chassis to the C implementation
+		pos.z = Bike_ChassisOffsetZ(m_fLeanLRAngle, colModel->boundingBox.min.z);
+		// Delegate the roll of the chassis to the C implementation
+		mat.SetRotateX(Bike_ChassisRoll(m_fLeanLRAngle));
 		mat.RotateY(m_fLeanLRAngle);
 		mat.Translate(pos);
 		mat.UpdateRW();
@@ -1749,7 +1616,10 @@ CBike::PreRender(void)
 		if(exhaustPos != CVector(0.0f, 0.0f, 0.0f)){
 			dir.z = 0.0f;
 			if(fwdSpeed < 10.0f){
-				CVector steerFwd(-Sin(m_fSteerAngle), Cos(m_fSteerAngle), 0.0f);
+				// Delegate the direction of the wheel to the C implementation
+				float steerXY[2];
+				Automobile_SteerForward(m_fSteerAngle, steerXY);
+				CVector steerFwd(steerXY[0], steerXY[1], 0.0f);
 				steerFwd = Multiply3x3(GetMatrix(), steerFwd);
 				float r = General_GetRandomNumberInRangeFloat(-0.06f, -0.03f);
 				dir.x = steerFwd.x * r;
@@ -1889,24 +1759,24 @@ CBike::ProcessControlInputs(uint8 pad)
 #ifdef FIX_BUGS
 	if(CCamera::m_bUseMouse3rdPerson && !CVehicle::m_bDisableMouseSteering){
 		if(Input_GetMouseX() != 0.0f){ // rouz edit (ChatGPT)
-			m_fSteerInput += fMouseSteerSens*Input_GetMouseX(); // rouz edit (ChatGPT)
+			// Delegate the steering with the mouse to the C implementation shared with cars
+			m_fSteerInput = AutomobileLogic_SteerMouse(m_fSteerInput, Input_GetMouseX(), fMouseSteerSens, fMouseCentreRange, fMouseCentreMult, (*Timer_GetTimeStep()));
 			nLastControlInput = 2;
-			if(Abs(m_fSteerInput) < fMouseCentreRange)
-				m_fSteerInput *= Pow(fMouseCentreMult, (*Timer_GetTimeStep()));
 		}else if(CPad::GetPad(pad)->GetSteeringLeftRight() || nLastControlInput != 2){
 			// mouse hasn't move, steer with pad like below
-			m_fSteerInput += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteerInput)*
-				0.2f*(*Timer_GetTimeStep());
+			// Delegate the steering step to the C implementation shared with cars
+			m_fSteerInput = AutomobileLogic_SteerPad(m_fSteerInput, CPad::GetPad(pad)->GetSteeringLeftRight(), (*Timer_GetTimeStep()));
 			nLastControlInput = 0;
 		}
 	}else
 #endif
 	{
-		m_fSteerInput += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteerInput)*
-			0.2f*(*Timer_GetTimeStep());
+		// Delegate the steering step to the C implementation shared with cars
+		m_fSteerInput = AutomobileLogic_SteerPad(m_fSteerInput, CPad::GetPad(pad)->GetSteeringLeftRight(), (*Timer_GetTimeStep()));
 		nLastControlInput = 0;
 	}
-	m_fSteerInput = Clamp(m_fSteerInput, -1.0f, 1.0f);
+	// Delegate the limit to the C implementation
+	m_fSteerInput = VehicleLogic_ClampValue(m_fSteerInput, -1.0f, 1.0f);
 
 	// Lean forward/backward
 	float updown;
@@ -1922,80 +1792,24 @@ CBike::ProcessControlInputs(uint8 pad)
 		lean_mul = rouz.bike_midair_lean_mul + sinf(fabs(get_horizon_angle_of_attack((void *) this)));
 	}
 
-	m_fLeanInput += (updown - m_fLeanInput)*0.2f*(*Timer_GetTimeStep()) * lean_mul;
-	m_fLeanInput = Clamp(m_fLeanInput, -1.0f*lean_mul, 1.0f*lean_mul);
+	// Delegate the lean step to the C implementation
+	m_fLeanInput = BikeLogic_LeanInput(m_fLeanInput, updown, lean_mul, (*Timer_GetTimeStep()));
 
 	// Accelerate/Brake
-	float acceleration = (CPad::GetPad(pad)->GetAccelerate() - CPad::GetPad(pad)->GetBrake())/255.0f;
-	if(GetModelIndex() == MI_DODO && acceleration < 0.0f)
-		acceleration *= 0.3f;
-	if(Abs(speed) < 0.01f){
-		// standing still, go into direction we want
-		if(CPad::GetPad(pad)->GetAccelerate() > 150.0f && CPad::GetPad(pad)->GetBrake() > 150.0f){
-			m_fGasPedal = CPad::GetPad(pad)->GetAccelerate()/255.0f;
-			m_fBrakePedal = CPad::GetPad(pad)->GetBrake()/255.0f;
-			m_doingBurnout = 1;
-		}else{
-			m_fGasPedal = acceleration;
-			m_fBrakePedal = 0.0f;
-		}
-	}else{
-#if 1
-		// simpler than the code below
-		if(speed * acceleration < 0.0f){
-			// if opposite directions, have to brake first
-			m_fGasPedal = 0.0f;
-			m_fBrakePedal = Abs(acceleration);
-		}else{
-			// accelerating in same direction we were already going
-			m_fGasPedal = acceleration;
-			m_fBrakePedal = 0.0f;
-		}
-#else
-		if(speed < 0.0f){
-			// moving backwards currently
-			if(acceleration < 0.0f){
-				// still go backwards
-				m_fGasPedal = acceleration;
-				m_fBrakePedal = 0.0f;
-			}else{
-				// want to go forwards, so brake
-				m_fGasPedal = 0.0f;
-				m_fBrakePedal = acceleration;
-			}
-		}else{
-			// moving forwards currently
-			if(acceleration < 0.0f){
-				// want to go backwards, so brake
-				m_fGasPedal = 0.0f;
-				m_fBrakePedal = -acceleration;
-			}else{
-				// still go forwards
-				m_fGasPedal = acceleration;
-				m_fBrakePedal = 0.0f;
-			}
-		}
-#endif
-	}
+	// Delegate the pedals to the C implementation
+	bool burnout;
+	BikeLogic_Pedals(speed, CPad::GetPad(pad)->GetAccelerate(), CPad::GetPad(pad)->GetBrake(), GetModelIndex() == MI_DODO, &m_fGasPedal, &m_fBrakePedal, &burnout);
+	if(burnout)
+		m_doingBurnout = 1;
 
 	// Actually turn wheels
-	static float fValue;	// why static?
-	if(m_fSteerInput < 0.0f)
-		fValue = -sq(m_fSteerInput);
-	else
-		fValue = sq(m_fSteerInput);
-	m_fSteerAngle = DEGTORAD(pHandling->fSteeringLock) * fValue;
+	// Delegate the angle of the wheels to the C implementation shared with cars
+	m_fSteerAngle = AutomobileLogic_WheelAngle(m_fSteerInput, pHandling->fSteeringLock);
 
 	if(bComedyControls){
-		if((((*Timer_GetTimeInMilliseconds()) >> 10) & 0xF) < 12)
-			m_fGasPedal = 1.0f;
-		if(((((*Timer_GetTimeInMilliseconds()) >> 10)+6) & 0xF) < 12)
-			m_fBrakePedal = 0.0f;
+		// Delegate the pedals and steering of the comedy controls to the C implementation
+		BikeLogic_ComedyControls((*Timer_GetTimeInMilliseconds()), &m_fGasPedal, &m_fBrakePedal, &m_fSteerAngle);
 		bIsHandbrakeOn = false;
-		if((*Timer_GetTimeInMilliseconds()) & 0x800)
-			m_fSteerAngle += 0.08f;
-		else
-			m_fSteerAngle -= 0.03f;
 	}
 
 	// Brake if player isn't in control
@@ -2025,17 +1839,15 @@ CBike::ProcessBuoyancy(void)
 		ApplyMoveForce(impulse);
 		ApplyTurnForce(impulse, point);
 
-		float timeStep = Max((*Timer_GetTimeStep()), 0.01f);
-		float impulseRatio = impulse.z / (GRAVITY * m_fMass * timeStep);
-		float waterResistance = Pow(1.0f - 0.05f*impulseRatio, (*Timer_GetTimeStep()));
+		// Delegate the ratio of the impulse and the water resistance to the C implementation shared with cars
+		float impulseRatio = Automobile_WaterImpulseRatio(impulse.z, m_fMass, (*Timer_GetTimeStep()));
+		float waterResistance = Automobile_WaterResistance(impulseRatio, (*Timer_GetTimeStep()));
 		m_vecMoveSpeed *= waterResistance;
 		m_vecTurnSpeed *= waterResistance;
 
-		if(impulseRatio > 0.8f ||
-		   impulseRatio > 0.4f && (m_aSuspensionSpringRatio[0] == 1.0f ||
-		                           m_aSuspensionSpringRatio[1] == 1.0f ||
-		                           m_aSuspensionSpringRatio[2] == 1.0f ||
-		                           m_aSuspensionSpringRatio[3] == 1.0f)){
+		// Delegate the test for the drowning to the C implementation
+		if(Bike_IsDrowning(impulseRatio, m_aSuspensionSpringRatio[0] == 1.0f || m_aSuspensionSpringRatio[1] == 1.0f ||
+			m_aSuspensionSpringRatio[2] == 1.0f || m_aSuspensionSpringRatio[3] == 1.0f)){
 			bIsInWater = true;
 			bIsDrowning = true;
 			if(m_vecMoveSpeed.z < -0.1f)
@@ -2171,11 +1983,8 @@ void
 CBike::VehicleDamage(void)
 {
 	float impulse = m_fDamageImpulse;
-	float colSpeed = 800.0f*impulse/m_fMass;
-	if(GetStatus() == STATUS_PLAYER)
-		colSpeed *= 0.65f;
-	else if(VehicleCreatedBy == MISSION_VEHICLE)
-		colSpeed *= 0.4f;
+	// Delegate the speed of the collision to the C implementation
+	float colSpeed = Bike_CollisionSpeed(impulse, m_fMass, GetStatus() == STATUS_PLAYER, VehicleCreatedBy == MISSION_VEHICLE);
 
 	if(!bCanBeDamaged)
 		return;
@@ -2188,24 +1997,9 @@ CBike::VehicleDamage(void)
 
 	// Inflict damage on the driver and passenger
 	if(pDriver && pDriver->GetPedState() == PED_DRIVING && colSpeed > 10.0f){
-		float fwd = 0.6f;
-		if(Abs(DotProduct(m_vecDamageNormal, GetForward())) > 0.85f){
-			float u = Max(DotProduct(m_vecDamageNormal, CVector(0.0f, 0.0f, 1.0f)), 0.0f);
-			if(u < 0.85f)
-				u = 0.0f;
-			fwd += 7.0f * SQR(u);
-		}
-		float up = 0.05f;
-
-		if(GetModelIndex() == MI_SANCHEZ){
-			fwd *= 0.65f;
-			up *= 0.75f;
-		}
-
-		float total = fwd*Abs(DotProduct(m_vecDamageNormal, GetForward())) +
-			0.45f*Abs(DotProduct(m_vecDamageNormal, GetRight())) +
-			up*Max(DotProduct(m_vecDamageNormal, GetUp()), 0.0f);
-		float damage = (total - 1.5f*Min(DotProduct(m_vecDamageNormal, GetUp()), 0.0f))*colSpeed;
+		// Delegate the damage of the rider to the C implementation
+		float damage = Bike_RiderDamage(DotProduct(m_vecDamageNormal, GetForward()), DotProduct(m_vecDamageNormal, GetRight()), DotProduct(m_vecDamageNormal, GetUp()),
+			m_vecDamageNormal.z, GetModelIndex() == MI_SANCHEZ, colSpeed);
 
 		if(pDriver->IsPlayer() && CullZones_CamStairsForPlayer() && CullZones_FindZoneWithStairsAttributeForPlayer())
 			damage = 0.0f;
@@ -2239,17 +2033,8 @@ CBike::VehicleDamage(void)
 			   ((CVehicle*)m_pDamageEntity)->pDriver)
 					pDriver->Say(SOUND_PED_CRASH_VEHICLE);
 
-			int oldHealth = m_fHealth;
-			if(this == FindPlayerVehicle())
-				m_fHealth -= bTakeLessDamage ? damage/6.0f : damage/2.0f;
-			else if(bTakeLessDamage)
-				m_fHealth -= damage/12.0f;
-			else if(m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle())
-				m_fHealth -= damage/1.5f;
-			else
-				m_fHealth -= damage/4.0f;
-			if(m_fHealth <= 0.0f && oldHealth > 0)
-				m_fHealth = 1.0f;
+			// Delegate the health left to the C implementation shared with cars
+			m_fHealth = Automobile_HealthAfterDamage(m_fHealth, damage, this == FindPlayerVehicle(), bTakeLessDamage, m_pDamageEntity && m_pDamageEntity == FindPlayerVehicle());
 		}
 	}
 
@@ -2290,18 +2075,15 @@ CBike::AddDamagedVehicleParticles(void)
 		direction *= 0.2f;
 		CParticle::AddParticle(PARTICLE_ENGINE_SMOKE2, damagePos, direction + 0.02f*m_leanMatrix.GetRight());
 	}else if(m_fHealth < 390.0f){
-		if((((*Timer_GetFrameCounter()) + m_randomSeed) & 3) == 0 ||
-		   (((*Timer_GetFrameCounter()) + m_randomSeed) & 3) == 2)
+		// Delegate the test for the frame to the C implementation
+		if(Bike_SteamFrame((*Timer_GetFrameCounter()) + m_randomSeed))
 			CParticle::AddParticle(PARTICLE_ENGINE_STEAM, damagePos, direction + 0.05f*m_leanMatrix.GetRight());
 		direction *= 0.3f;
 		CParticle::AddParticle(PARTICLE_ENGINE_SMOKE, damagePos, direction + 0.04f*m_leanMatrix.GetRight());
 	}else if(m_fHealth < 460.0f){
 		int rnd = (*Timer_GetFrameCounter()) + m_randomSeed;
-		if(rnd < 10 ||
-		   rnd < 70 && rnd > 25 ||
-		   rnd < 160 && rnd > 100 ||
-		   rnd < 200 && rnd > 175 ||
-		   rnd > 235)
+		// Delegate the test for the pause to the C implementation
+		if(Bike_SteamSkipsFrame(rnd))
 			return;
 		direction.z += 0.05f;
 		if(TheCamera.GetLookDirection() != LOOKING_FORWARD){
@@ -2310,8 +2092,7 @@ CBike::AddDamagedVehicleParticles(void)
 			direction = 0.8f*m_vecMoveSpeed;
 			CParticle::AddParticle(PARTICLE_ENGINE_STEAM, damagePos, direction + 0.07f*m_leanMatrix.GetRight(), nil, 0.1f, 0, 0, 0, 1000);
 		}
-	}else if((((*Timer_GetFrameCounter()) + m_randomSeed) & 3) == 0 ||
-	         (((*Timer_GetFrameCounter()) + m_randomSeed) & 3) == 2){
+	}else if(Bike_SteamFrame((*Timer_GetFrameCounter()) + m_randomSeed)){
 		CParticle::AddParticle(PARTICLE_ENGINE_STEAM, damagePos + 0.06f*m_leanMatrix.GetRight(), direction);
 	}
 }
@@ -2558,8 +2339,8 @@ CBike::BurstTyre(uint8 wheel, bool applyForces)
 			   wheel == CAR_PIECE_WHEEL_LR && (m_aSuspensionSpringRatioPrev[BIKESUSP_R1] < 1.0f || m_aSuspensionSpringRatioPrev[BIKESUSP_R2] < 1.0f)){
 #endif
 				float speedSq = m_vecMoveSpeed.MagnitudeSqr();
-				if(speedSq > fBikeBurstFallSpeed &&
-				   (GetStatus() != STATUS_PLAYER || speedSq > fBikeBurstFallSpeedPlayer)){
+				// Delegate the test for the speed to the C implementation
+				if(Bike_BurstThrowsRider(speedSq, GetStatus() == STATUS_PLAYER, fBikeBurstFallSpeed, fBikeBurstFallSpeedPlayer)){
 #ifdef FIX_SIGNIFICANT_BUGS
 					if(wheel == BIKEWHEEL_FRONT){
 #else
@@ -2609,19 +2390,22 @@ CBike::IsRoomForPedToLeaveCar(uint32 component, CVector *doorOffset)
 	// Removing that makes thiProcessEntityCollisions func. return false for van doors.
 	doorPos.z += 0.5f;
 	float length = dist.Magnitude();
-	CVector pedPos = seatPos + dist*((length+0.6f)/length);
+	// Delegate the scale of the vector to the C implementation
+	CVector pedPos = seatPos + dist*VehicleLogic_ExitCheckScale(length);
 
 	if(!CWorld::GetIsLineOfSightClear(seatPos, pedPos, true, false, false, true, false, false))
 		return false;
 	if(CWorld::TestSphereAgainstWorld(doorPos, 0.6f, this, true, true, false, true, false, false))
 		return false;
 	if(CWorld::ProcessVerticalLine(doorPos, 1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
-		if(colpoint.point.z > doorPos.z && colpoint.point.z < doorPos.z + 0.6f)
+		// Delegate the test for the ceiling to the C implementation
+		if(VehicleLogic_ExitBlockedAbove(colpoint.point.z, doorPos.z))
 			return false;
 	float upperZ = colpoint.point.z;
 	if(!CWorld::ProcessVerticalLine(doorPos, -1000.0f, colpoint, ent, true, false, false, true, false, false, nil))
 		return false;
-	if(upperZ != 0.0f && upperZ < colpoint.point.z)
+	// Delegate the test for the ground to the C implementation
+	if(VehicleLogic_ExitBlockedBelow(upperZ, colpoint.point.z))
 		return false;
 	return true;
 }
@@ -2649,20 +2433,21 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 
 	if(!ped->IsPlayer()){
 		if(bGetBackOn){
-			if(ped->m_pedStats->m_temper > ped->m_pedStats->m_fear &&
-			   ped->CharCreatedBy != MISSION_CHAR && ped->m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE &&
-			   FindPlayerPed()->m_carInObjective == ped->m_pMyVehicle &&
-			   !CTheScripts::IsPlayerOnAMission())
+			// Delegate the choice of the objective to the C implementation
+			bool temperAboveFear = ped->m_pedStats->m_temper > ped->m_pedStats->m_fear;
+			bool pedNotMission = ped->CharCreatedBy != MISSION_CHAR;
+			bool bikeNotMission = pedNotMission && ped->m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE;
+			bool playerGoesForBike = temperAboveFear && bikeNotMission && FindPlayerPed()->m_carInObjective == ped->m_pMyVehicle;
+			switch(Bike_KnockOffRiderObjective(temperAboveFear, pedNotMission, bikeNotMission, playerGoesForBike, !CTheScripts::IsPlayerOnAMission())){
+			case BIKE_KNOCKOFF_ENTER_AS_DRIVER:
 				ped->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, ped->m_pMyVehicle);
-			else if(ped->m_pedStats->m_temper > ped->m_pedStats->m_fear &&
-			   ped->CharCreatedBy != MISSION_CHAR && ped->m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE &&
-			   !CTheScripts::IsPlayerOnAMission())
-				ped->SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, ped->m_pMyVehicle);
-			else if(ped->m_pedStats->m_temper <= ped->m_pedStats->m_fear &&
-			   ped->CharCreatedBy != MISSION_CHAR && ped->m_pMyVehicle->VehicleCreatedBy != MISSION_VEHICLE &&
-			   !CTheScripts::IsPlayerOnAMission()){
+				break;
+			case BIKE_KNOCKOFF_WANDER:
 				ped->SetObjective(OBJECTIVE_WANDER, ped->m_pMyVehicle);
 				ped->m_nPathDir = General_GetRandomNumberInRangeInt(0, 8);
+				break;
+			default:
+				break;
 			}
 		}else if(ped->m_leader == nil){
 			if(pDriver == ped)
@@ -2690,10 +2475,8 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 	ped->m_vehDoor = CAR_DOOR_LF;
 	CPed::PedSetOutCarCB(nil, ped);
 	ped->SetMoveState(PEDMOVE_STILL);
-	if(GetUp().z < 0.0f)
-		ped->SetHeading(General_LimitRadianAngle(GetForward().Heading() + PI));
-	else
-		ped->SetHeading(GetForward().Heading());
+	// Delegate the heading of the ped to the C implementation
+	ped->SetHeading(Bike_KnockOffHeading(GetUp().z, GetForward().Heading()));
 
 	switch(weapon){
 	case WEAPONTYPE_UNARMED:
@@ -2749,9 +2532,10 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		ped->m_vecMoveSpeed = m_vecMoveSpeed*0.2f;
 		ped->m_vecMoveSpeed.z = 0.0f;
 		ped->m_pCollidingEntity = this;
-		color.red = (0.5f * TimeCycle_GetDirectionalRed() + TimeCycle_GetAmbientRed_Obj())*0.45f*255;
-		color.green = (0.5f * TimeCycle_GetDirectionalGreen() + TimeCycle_GetAmbientGreen_Obj())*0.45f*255;
-		color.blue = (0.5f * TimeCycle_GetDirectionalBlue() + TimeCycle_GetAmbientBlue_Obj())*0.45f*255;
+		// Delegate the colour channels of the splash to the C implementation
+		color.red = Automobile_WaterSplashChannel(TimeCycle_GetDirectionalRed(), TimeCycle_GetAmbientRed_Obj());
+		color.green = Automobile_WaterSplashChannel(TimeCycle_GetDirectionalGreen(), TimeCycle_GetAmbientGreen_Obj());
+		color.blue = Automobile_WaterSplashChannel(TimeCycle_GetDirectionalBlue(), TimeCycle_GetAmbientBlue_Obj());
 		color.alpha = General_GetRandomNumberInRangeInt(48, 96);
 		DMAudio_PlayOneShot(m_audioEntityId, SOUND_SPLASH, 0.0f);
 		CVector splashPos = ped->GetPosition() + 2.2f*ped->m_vecMoveSpeed;
@@ -2765,7 +2549,8 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 
 	case WEAPONTYPE_FALL: {
 		ped->m_vecMoveSpeed = ped->m_pMyVehicle->m_vecMoveSpeed;
-		float forceXY = -0.6*m_fDamageImpulse * ped->m_fMass / m_fMass;
+		// Delegate the force on the ground to the C implementation
+		float forceXY = Bike_KnockOffForceXY(m_fDamageImpulse, ped->m_fMass, m_fMass);
 		ped->ApplyMoveForce(m_vecDamageNormal.x*forceXY, m_vecDamageNormal.y*forceXY,
 			General_GetRandomNumberInRangeFloat(3.0f, 7.0f));
 		ped->m_pCollidingEntity = this;
@@ -2784,7 +2569,8 @@ CBike::KnockOffRider(eWeaponType weapon, uint8 direction, CPed *ped, bool bGetBa
 		ped->m_vecMoveSpeed = ped->m_pMyVehicle->m_vecMoveSpeed;
 		static float minForceZ = 8.0f;
 		static float maxForceZ = 15.0f;
-		float forceXY = -0.6*m_fDamageImpulse * ped->m_fMass / m_fMass;
+		// Delegate the force on the ground to the C implementation
+		float forceXY = Bike_KnockOffForceXY(m_fDamageImpulse, ped->m_fMass, m_fMass);
 		ped->ApplyMoveForce(m_vecDamageNormal.x*forceXY, m_vecDamageNormal.y*forceXY,
 			General_GetRandomNumberInRangeFloat(minForceZ, maxForceZ));
 		ped->m_pCollidingEntity = this;
@@ -2911,7 +2697,8 @@ CBike::SetupSuspensionLines(void)
 				GetRelativeMatrix(mat, m_aBikeNodes[BIKE_FORKS_REAR], m_aBikeNodes[BIKE_FORKS_REAR]);
 				float dz = posn.z - RwMatrixGetPos(mat)->z;
 				float dy = posn.y - RwMatrixGetPos(mat)->y;
-				m_fRearForkLength = Sqrt(SQR(dy) + SQR(dz));
+				// Delegate the length of the fork to the C implementation
+				m_fRearForkLength = Bike_RearForkLength(dy, dz);
 				assert(m_fRearForkLength != 0.0f);	// we want to divide by this
 			}
 			posn.y += suspOffset;
@@ -2939,15 +2726,20 @@ CBike::SetupSuspensionLines(void)
 	}
 
 	// Compress spring somewhat to get normal height on road
-	m_fHeightAboveRoad = m_aSuspensionSpringLength[0]*(1.0f - 1.0f/(4.0f*pHandling->fSuspensionForceLevel))
-			- colModel->lines[0].p0.z + mi->m_wheelScale*0.5f;
+	// Delegate the height above the road to the C implementation
+	m_fHeightAboveRoad = Bike_HeightAboveRoad(m_aSuspensionSpringLength[0], pHandling->fSuspensionForceLevel, colModel->lines[0].p0.z, mi->m_wheelScale);
 	for(i = 0; i < 2; i++)
 		m_aWheelPosition[i] = mi->m_wheelScale*0.5f - m_fHeightAboveRoad;
 
 	// adjust col model to include suspension lines
 	if(colModel->boundingBox.min.z > colModel->lines[0].p1.z)
 		colModel->boundingBox.min.z = colModel->lines[0].p1.z;
-	float radius = Max(CollisionVector_ToNative(colModel->boundingBox.min).Magnitude(), CollisionVector_ToNative(colModel->boundingBox.max).Magnitude());
+	// Delegate the radius of the vehicle to the C implementation
+	CVector radiusMin = CollisionVector_ToNative(colModel->boundingBox.min);
+	CVector radiusMax = CollisionVector_ToNative(colModel->boundingBox.max);
+	const float radiusMinC[3] = { radiusMin.x, radiusMin.y, radiusMin.z };
+	const float radiusMaxC[3] = { radiusMax.x, radiusMax.y, radiusMax.z };
+	float radius = VehicleLogic_BoundingRadius(radiusMinC, radiusMaxC);
 	if(colModel->boundingSphere.radius < radius)
 		colModel->boundingSphere.radius = radius;
 

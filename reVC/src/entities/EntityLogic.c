@@ -1,4 +1,5 @@
 //+ rouz edit (Claude)
+#include <math.h>
 #include <stddef.h>
 #include "EntityLogic.h"
 #include "EntityTypes.h"
@@ -320,5 +321,61 @@ bool Entity_IsVisibleComplex(const CPlaceableData *placeable, const CEntityData 
 {
 	// Same with the complex screen test
 	return self->m_rwObject && self->bIsVisible && Entity_GetIsOnScreenComplex(placeable, self, normals, cameraMatrix);
+}
+static const float WindTable[] = {
+	1.0f, 0.5f, 0.2f, 0.7f, 0.4f, 1.0f, 0.5f, 0.3f,
+	0.2f, 0.1f, 0.7f, 0.6f, 0.3f, 1.0f, 0.5f, 0.2f,
+};
+
+float Entity_TreeWindSway(float wind, uint16_t randomSeed, uint32_t timeMs, uint16_t addressLow, bool isPalmTree)
+{
+	uint16_t t;
+	float f;
+	float strength, flutter;
+
+	if (wind >= 0.5) {
+		t = randomSeed + 8 * timeMs;
+		f = (t & 0xFFF) / (float)0x1000;
+		flutter = f * WindTable[(t >> 12) + 1 & 0xF] +
+			(1.0f - f) * WindTable[(t >> 12) & 0xF] +
+			1.0f;
+		strength = -0.015f * wind;
+	} else if (wind >= 0.2) {
+		t = addressLow + timeMs;
+		f = (t & 0xFFF) / (float)0x1000;
+		flutter = sinf(f * 6.28f);
+		strength = -0.008f;
+	} else {
+		t = addressLow + timeMs;
+		f = (t & 0xFFF) / (float)0x1000;
+		flutter = sinf(f * 6.28f);
+		strength = -0.005f;
+	}
+
+	float upX = strength * flutter;
+	if (isPalmTree)
+		upX += -0.07f * wind;
+	return upX;
+}
+static const float BannerWindTable[] = {
+	0.0f, 0.3f, 0.6f, 0.85f, 0.99f, 0.97f, 0.65f, 0.15f,
+	-0.1f, 0.0f, 0.35f, 0.57f, 0.55f, 0.35f, 0.45f, 0.67f,
+	0.73f, 0.45f, 0.25f, 0.35f, 0.35f, 0.11f, 0.13f, 0.21f,
+	0.28f, 0.28f, 0.22f, 0.1f, 0.0f, -0.1f, -0.17f, -0.12f
+};
+
+float Entity_BannerFlutter(uint16_t t, float strength)
+{
+	float f = (t & 0x7FF) / (float)0x800;
+	float flutter = f * BannerWindTable[(t >> 11) + 1 & 0x1F] +
+		(1.0f - f) * BannerWindTable[(t >> 11) & 0x1F];
+
+	flutter *= strength;
+	return flutter;
+}
+
+float Entity_BannerUpZ(float flutter)
+{
+	return sqrtf((1.0f * 1.0f) - (flutter * flutter));
 }
 //- rouz edit (Claude)

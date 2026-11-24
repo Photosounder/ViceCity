@@ -237,30 +237,15 @@ CHeli::ProcessControl(void)
 			vTargetDist.y = 0.0f - GetPosition().y;
 		}
 
-		float groundZ;
-		switch(m_heliStatus){
-		case HELI_STATUS_HOVER:
-			groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
-			m_fTargetZ = Max(groundZ, m_fTargetZ) + 8.0f;
-			break;
-		case HELI_STATUS_SHOT_DOWN:
-			groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
-			m_fTargetZ = Max(groundZ, m_fTargetZ) + 8.0f + m_fTargetOffset;
-			break;
-		case HELI_STATUS_HOVER2:
-			groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
-			m_fTargetZ = Max(groundZ, m_fTargetZ) + 8.0f + m_fTargetOffset;
-			break;
-		default:
-			groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
-			m_fTargetZ = Max(groundZ, m_fTargetZ) + 12.0f;
-			break;
-		}
+		// Delegate the height the helicopter flies to to the C implementation
+		float groundZ = CWorld::FindGroundZFor3DCoord(GetPosition().x, GetPosition().y, 1000.0f, nil);
+		m_fTargetZ = Heli_TargetZ(m_heliStatus, groundZ, m_fTargetZ, m_fTargetOffset);
 
 		// Move up if too low
 		if(GetPosition().z - 2.0f < groundZ && m_heliStatus != HELI_STATUS_SHOT_DOWN)
 			m_vecMoveSpeed.z += (*Timer_GetTimeStep())*0.01f;
-		m_vecMoveSpeed.z = Clamp(m_vecMoveSpeed.z, -0.3f, 0.3f);
+		// Delegate the limit to the C implementation
+		m_vecMoveSpeed.z = VehicleLogic_ClampValue(m_vecMoveSpeed.z, -0.3f, 0.3f);
 	}
 
 	float fTargetDist = vTargetDist.Magnitude();
@@ -268,11 +253,8 @@ CHeli::ProcessControl(void)
 	switch(m_heliStatus){
 	case HELI_STATUS_HOVER:
 	case HELI_STATUS_HOVER2:{
-		float targetHeight;
-		if(m_heliType == HELI_TYPE_CATALINA)
-			targetHeight = 8.0f;
-		else
-			targetHeight = 40.0f - m_nHeliId*10.0f;
+		// Delegate the distance that makes the helicopter chase to the C implementation
+		float targetHeight = Heli_HoverTargetHeight(m_heliType == HELI_TYPE_CATALINA, m_nHeliId);
 		if(fTargetDist > targetHeight)
 			m_heliStatus = HELI_STATUS_CHASE_PLAYER;
 		}
@@ -280,11 +262,8 @@ CHeli::ProcessControl(void)
 			SendDownSwat();
 		break;
 	case HELI_STATUS_CHASE_PLAYER:{
-		float targetHeight;
-		if(m_heliType == HELI_TYPE_CATALINA)
-			targetHeight = 4.0f;
-		else
-			targetHeight = 30.0f - m_nHeliId*7.5f;
+		// Delegate the distance that makes the helicopter hover to the C implementation
+		float targetHeight = Heli_ChaseTargetHeight(m_heliType == HELI_TYPE_CATALINA, m_nHeliId);
 		if(fTargetDist < 1.0f ||
 		   fTargetDist < targetHeight && CWorld::GetIsLineOfSightClear(GetPosition(), FindPlayerCoors(), true, false, false, false, false, false))
 			m_heliStatus = HELI_STATUS_HOVER;
@@ -293,15 +272,8 @@ CHeli::ProcessControl(void)
 	}
 
 	// Find xy speed
-	float speed;
-	if(fTargetDist > 100.0f)
-		speed = 1.0f;
-	else if(fTargetDist > 75.0f)
-		speed = 0.7f;
-	else
-		speed = 0.4f;
-	if(m_heliStatus == HELI_STATUS_HOVER || m_heliStatus == HELI_STATUS_HOVER2 || m_heliStatus == HELI_STATUS_SHOT_DOWN)
-		speed = 0.0f;
+	// Delegate the speed on the ground to the C implementation
+	float speed = Heli_ChaseSpeed(fTargetDist, m_heliStatus);
 
 	if(fTargetDist != 0.0f)
 		vTargetDist /= fTargetDist;
@@ -359,20 +331,8 @@ CHeli::ProcessControl(void)
 		if(m_fTargetOffset >= 2.0f)
 			m_fTargetOffset -= 2.0f;
 
-	CVector2D speedDir = targetSpeed - m_vecMoveSpeed;
-	float speedDiff = speedDir.Magnitude();
-	if(speedDiff != 0.0f)
-		speedDir /= speedDiff;
-	else
-		speedDir.x = 1.0f;
-	float speedInc = (*Timer_GetTimeStep())*0.002f;
-	if(speedDiff < speedInc){
-		m_vecMoveSpeed.x = targetSpeed.x;
-		m_vecMoveSpeed.y = targetSpeed.y;
-	}else{
-		m_vecMoveSpeed.x += speedDir.x*speedInc;
-		m_vecMoveSpeed.y += speedDir.y*speedInc;
-	}
+	// Delegate the update of the speed on the ground to the C implementation
+	Heli_UpdateGroundSpeed(targetSpeed.x, targetSpeed.y, &m_vecMoveSpeed.x, &m_vecMoveSpeed.y, (*Timer_GetTimeStep()));
 	GetMatrix().GetPosition().x += m_vecMoveSpeed.x*(*Timer_GetTimeStep());
 	GetMatrix().GetPosition().y += m_vecMoveSpeed.y*(*Timer_GetTimeStep());
 
@@ -384,52 +344,21 @@ CHeli::ProcessControl(void)
 	m_fTargetZ += m_nHeliId*5.0f;
 
 	// Find z speed
-	float targetSpeedZ = (m_fTargetZ - GetPosition().z)*0.01f;
-	float speedDiffZ = targetSpeedZ - m_vecMoveSpeed.z;
-	float speedIncZ = (*Timer_GetTimeStep())*0.001f;
-	if(m_heliStatus == HELI_STATUS_FLY_AWAY)
-		speedIncZ *= 1.5f;
-	if(Abs(speedDiffZ) < speedIncZ)
-		m_vecMoveSpeed.z = targetSpeedZ;
-	else if(speedDiffZ < 0.0f)
-		m_vecMoveSpeed.z -= speedIncZ;
-	else
-		m_vecMoveSpeed.z += speedIncZ*1.5f;
+	// Delegate the update of the vertical speed to the C implementation
+	m_vecMoveSpeed.z = Heli_UpdateVerticalSpeed(m_fTargetZ, GetPosition().z, m_vecMoveSpeed.z, (*Timer_GetTimeStep()), m_heliStatus);
 	GetMatrix().GetPosition().z += m_vecMoveSpeed.z*(*Timer_GetTimeStep());
 
 	// Find angular speed
-	float targetAngularSpeed;
-	m_fAngularSpeed *= Pow(0.995f, (*Timer_GetTimeStep()));
-	if (fabsf(m_fAngularSpeed) > 0.1f)		// rouz edit, overly high angle would cause infinite loops
-		m_fAngularSpeed = copysignf(0.1f, m_fAngularSpeed);
-	if(fTargetDist < 8.0f)
-		targetAngularSpeed = 0.0f;
-	else{
-		float rotationDiff = General_GetATanOfXY(vTargetDist.x, vTargetDist.y) - m_fRotation;
-		while(rotationDiff < -3.14f) rotationDiff += 6.28f;
-		while(rotationDiff > 3.14f) rotationDiff -= 6.28f;
-		if(Abs(rotationDiff) > 0.4f){
-			if(rotationDiff < 0.0f)
-				targetAngularSpeed = -0.2f;
-			else
-				targetAngularSpeed = 0.2f;
-		}else
-			targetAngularSpeed = 0.0f;
-	}
-	float angularSpeedDiff = targetAngularSpeed - m_fAngularSpeed;
-	float angularSpeedInc = (*Timer_GetTimeStep())*0.0001f;
-	if(Abs(angularSpeedDiff) < angularSpeedInc)
-		m_fAngularSpeed = targetAngularSpeed;
-	else if(angularSpeedDiff < 0.0f)
-		m_fAngularSpeed -= angularSpeedInc;
-	else
-		m_fAngularSpeed += angularSpeedInc;
-	m_fRotation += m_fAngularSpeed * (*Timer_GetTimeStep());
+	// Delegate the update of the angular speed and of the rotation to the C implementation
+	Heli_UpdateRotation(&m_fAngularSpeed, &m_fRotation, fTargetDist, vTargetDist.x, vTargetDist.y, (*Timer_GetTimeStep()));
 
 	// Set matrix
 	CVector up(3.0f*m_vecMoveSpeed.x, 3.0f*m_vecMoveSpeed.y, 1.0f);
 	up.Normalise();
-	CVector fwd(-Cos(m_fRotation), -Sin(m_fRotation), 0.0f);	// not really forward
+	// Delegate the direction of the search to the C implementation
+	float searchXY[2];
+	Heli_SearchDirection(m_fRotation, searchXY);
+	CVector fwd(searchXY[0], searchXY[1], 0.0f);	// not really forward
 	CVector right = CrossProduct(up, fwd);
 	fwd = CrossProduct(up, right);
 	GetRight() = right;
@@ -443,12 +372,10 @@ CHeli::ProcessControl(void)
 		// Update search light history once every 1000ms
 		int timeDiff = (*Timer_GetTimeInMilliseconds()) - m_nSearchLightTimer;
 		while (timeDiff > 1000) {
-			for (i = 5; i > 0; i--) {
-				m_aSearchLightHistoryX[i] = m_aSearchLightHistoryX[i - 1];
-				m_aSearchLightHistoryY[i] = m_aSearchLightHistoryY[i - 1];
-			}
-			m_aSearchLightHistoryX[0] = FindPlayerCoors().x + FindPlayerSpeed().x * 50.0f * (m_nHeliId + 2);
-			m_aSearchLightHistoryY[0] = FindPlayerCoors().y + FindPlayerSpeed().y * 50.0f * (m_nHeliId + 2);
+			// Delegate the history of the search light to the C implementation
+			Heli_PushSearchLight(m_aSearchLightHistoryX, m_aSearchLightHistoryY,
+				FindPlayerCoors().x + FindPlayerSpeed().x * 50.0f * (m_nHeliId + 2),
+				FindPlayerCoors().y + FindPlayerSpeed().y * 50.0f * (m_nHeliId + 2));
 
 			timeDiff -= 1000;
 			m_nSearchLightTimer += 1000;
@@ -459,13 +386,9 @@ CHeli::ProcessControl(void)
 		m_fSearchLightX = m_aSearchLightHistoryX[m_nHeliId + 2] * f2 + m_aSearchLightHistoryX[m_nHeliId + 2 - 1] * f1;
 		m_fSearchLightY = m_aSearchLightHistoryY[m_nHeliId + 2] * f2 + m_aSearchLightHistoryY[m_nHeliId + 2 - 1] * f1;
 
+		// Delegate the intensity of the search light to the C implementation
 		float searchLightDist = (CVector2D(m_fSearchLightX, m_fSearchLightY) - GetPosition()).Magnitude();
-		if (searchLightDist > 60.0f)
-			m_fSearchLightIntensity = 0.0f;
-		else if (searchLightDist < 40.0f)
-			m_fSearchLightIntensity = 1.0f;
-		else
-			m_fSearchLightIntensity = 1.0f - (40.0f - searchLightDist) / (60.0f-40.0f);
+		m_fSearchLightIntensity = Heli_SearchLightIntensity(searchLightDist);
 
 		if (m_fSearchLightIntensity < 0.9f || sq(FindPlayerCoors().x - m_fSearchLightX) + sq(FindPlayerCoors().y - m_fSearchLightY) > sq(7.0f))
 			m_nShootTimer = (*Timer_GetTimeInMilliseconds());
@@ -478,22 +401,8 @@ CHeli::ProcessControl(void)
 #endif
 		{
 			// Shoot
-			int shootTimeout;
-			if (m_heliType == HELI_TYPE_RANDOM) {
-				switch (Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted)) {
-				case 0:
-				case 1:
-				case 2: shootTimeout = 999999; break;
-				case 3: shootTimeout = 10000; break;
-				case 4: shootTimeout = 5000; break;
-				case 5: shootTimeout = 3500; break;
-				case 6: shootTimeout = 2000; break;
-				}
-				if (CullZones_NoPolice())
-					shootTimeout /= 2;
-			}
-			else
-				shootTimeout = 1500;
+			// Delegate the time to wait before shooting to the C implementation
+			int shootTimeout = Heli_ShootTimeout(m_heliType == HELI_TYPE_RANDOM, m_heliType == HELI_TYPE_RANDOM ? Wanted_GetWantedLevel(FindPlayerPed()->m_pWanted) : 0, m_heliType == HELI_TYPE_RANDOM && CullZones_NoPolice());
 
 			if (Wanted_IsIgnored(FindPlayerPed()->m_pWanted))
 				m_nShootTimer = (*Timer_GetTimeInMilliseconds());
@@ -558,7 +467,8 @@ void
 CHeli::PreRender(void)
 {
 	float radius = (GetPosition().z - FindPlayerCoors().z - 10.0f - 1.0f) * 0.3f + 10.0f;
-	HeliDustGenerate(this, radius, FindPlayerCoors().z, Max(16.0f - 4.0f*(*Timer_GetTimeStep()), 2.0f));
+	// Delegate the strength of the dust to the C implementation
+	HeliDustGenerate(this, radius, FindPlayerCoors().z, Heli_DustStrength((*Timer_GetTimeStep())));
 	CShadows::StoreShadowForVehicle(this, VEH_SHD_TYPE_HELI);
 }
 
@@ -574,9 +484,8 @@ CHeli::Render(void)
 	mat.Translate(pos);
 	mat.UpdateRW();
 
-	m_fRotorRotation += 3.14f/6.5f;
-	if(m_fRotorRotation > 6.28f)
-		m_fRotorRotation -= 6.28f;
+	// Delegate the rotation of the rotor to the C implementation
+	m_fRotorRotation = Heli_NextRotorRotation(m_fRotorRotation);
 
 	mat.Attach(RwFrameGetMatrix(m_aHeliNodes[HELI_BACKROTOR]));
 	pos = mat.GetPosition();
@@ -755,7 +664,7 @@ CHeli::SendDownSwat(void)
 
 	float groundZ = CWorld::FindGroundZFor3DCoord(pos.x, pos.y, pos.z, nil);
 	// Enter the C rope algorithm with the original owner expressions
-	if(Abs(FindPlayerCoors().z - groundZ) < 2.5f && Ropes_RegisterRope((uintptr)this + m_numSwat-1, Ropes_BackendCopyVector(pos), false)){
+	if(General_AbsDiffBelow(FindPlayerCoors().z, groundZ, 2.5f) && Ropes_RegisterRope((uintptr)this + m_numSwat-1, Ropes_BackendCopyVector(pos), false)){
 		CCopPed *swat = (CCopPed*)CPopulation::AddPed(PEDTYPE_COP, COP_HELI_SWAT, pos);
 		swat->bUsesCollision = false;
 		swat->m_pRopeEntity = this;
@@ -808,13 +717,8 @@ CHeli::GenerateHeli(bool catalina)
 	else{
 		heliPos = FindPlayerCoors();
 		float angle = (float)(General_GetRandomNumber() & 0xFF)/0x100 * 6.28f;
-		heliPos.x += 250.0f*Sin(angle);
-		heliPos.y += 250.0f*Cos(angle);
-		if(heliPos.x < -2000.0f-400.0f || heliPos.x > 2000.0f-400.0f || heliPos.y < -2000.0f || heliPos.y > 2000.0f){
-			heliPos = FindPlayerCoors();
-			heliPos.x -= 250.0f*Sin(angle);
-			heliPos.y -= 250.0f*Cos(angle);
-		}
+		// Delegate the position of the spawn to the C implementation
+		Heli_SpawnPosition(heliPos.x, heliPos.y, angle, &heliPos.x, &heliPos.y);
 		heliPos.z += 50.0f;
 	}
 	heli->GetMatrix().SetTranslate(heliPos);

@@ -33,6 +33,7 @@
 #include "WaterLevel.h"
 #include "World.h"
 #include "WorldLogic.h"
+#include "General.h"
 
 #define OBJECT_REPOSITION_OFFSET_Z 2.0f
 
@@ -2105,7 +2106,8 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 						if(pEntity->GetIsStatic()) {
 							float fDamageMultiplier =
 							    (fRadius - fMagnitude) * 2.0f / fRadius;
-							float fDamage = 300.0f * Min(fDamageMultiplier, 1.0f);
+							// Delegate the damage to the C implementation
+							float fDamage = World_FireDamage(fDamageMultiplier);
 							pObject->ObjectDamage(fDamage);
 						}
 					} else {
@@ -2114,23 +2116,18 @@ CWorld::TriggerExplosionSectorList(CPtrList &list, const CVector &position, floa
 					}
 				}
 				if(!pEntity->GetIsStatic()) {
-					float fDamageMultiplier = Min((fRadius - fMagnitude) * 2.0f / fRadius, 1.0f);
-					CVector vecForceDir =
-					    vecDistance * (fPower * pEntity->m_fMass / 1400.0f * fDamageMultiplier /
-					                   Max(fMagnitude, 0.01f));
-					vecForceDir.z = Max(vecForceDir.z, 0.0f);
-					if(pEntity == FindPlayerPed()) vecForceDir.z = Min(vecForceDir.z, 1.0f);
+					// Delegate the damage multiplier and the force of the explosion to the C implementation
+					float fDamageMultiplier = World_ExplosionDamageMultiplier(fRadius, fMagnitude);
+					const float distanceC[3] = { vecDistance.x, vecDistance.y, vecDistance.z };
+					float forceC[3];
+					World_ExplosionForce(distanceC, fPower, pEntity->m_fMass, fDamageMultiplier, fMagnitude, pEntity == FindPlayerPed(), forceC);
+					CVector vecForceDir(forceC[0], forceC[1], forceC[2]);
 					pEntity->ApplyMoveForce(vecForceDir);
 					if(!pEntity->bPedPhysics) {
 						float fBoundRadius = pEntity->GetBoundRadius();
 						float fDistanceZ = position.z - pEntity->GetPosition().z;
-						float fPointZ = fBoundRadius;
-						if(Max(fDistanceZ, -fBoundRadius) < fBoundRadius) {
-							if(fDistanceZ <= -fBoundRadius)
-								fPointZ = -fBoundRadius;
-							else
-								fPointZ = fDistanceZ;
-						}
+						// Delegate the point of the turn force to the C implementation
+						float fPointZ = World_ExplosionTurnPointZ(fDistanceZ, fBoundRadius);
 						pEntity->ApplyTurnForce(vecForceDir.x, vecForceDir.y, vecForceDir.z,
 						                        0.0f, 0.0f, fPointZ);
 					}
@@ -2186,12 +2183,13 @@ CWorld::UseDetonator(CEntity *pEntity)
 bool
 CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float distance, int maxSteps)
 {
-	if (Abs(point1.z - point2.z) > distance)
+	if (General_AbsDiffAbove(point1.z, point2.z, distance))
 		return false;
 	if (!GetIsLineOfSightClear(point1, point2, true, false, false, false, false, false, false))
 		return false;
 	CVector vecBetween = point2 - point1;
-	uint32 nSteps = Max(vecBetween.Magnitude(), maxSteps);
+	// Delegate the number of steps to the C implementation
+	uint32 nSteps = World_WanderPathSteps(vecBetween.Magnitude(), maxSteps);
 	if (nSteps == 0)
 		return true;
 	vecBetween.Normalise();
@@ -2204,7 +2202,7 @@ CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float di
 		posThisStep.z = level;
 		AdvanceCurrentScanCode();
 
-		CVector vecCheckedPos(posThisStep.x, posThisStep.y, Max(point1.z, point2.z));
+		CVector vecCheckedPos(posThisStep.x, posThisStep.y, World_HigherZ(point1.z, point2.z));
 		CColPoint colpoint;
 		CEntity* entity;
 		if (!ProcessVerticalLineSector(*GetSector(GetSectorIndexX(posThisStep.x), GetSectorIndexY(posThisStep.y)),
@@ -2231,7 +2229,7 @@ CWorld::IsWanderPathClear(CVector const& point1, CVector const& point2, float di
 		if (!ProcessVerticalLineSector(*GetSector(GetSectorIndexX(posThisStep.x), GetSectorIndexY(posThisStep.y)),
 			ColLine_Make(COLLISION_POINT_REF(posThisStep),COLLISION_POINT_REF(vecCheckedPos)), colpoint, entity, true, false, false, false, false, false, nil))
 			return false;
-		if (Abs(colpoint.point.z - heightNextStep) > 1.0f)
+		if (General_AbsDiffAbove(colpoint.point.z, heightNextStep, 1.0f))
 			return false;
 		heightNextStep = colpoint.point.z + 0.5f;
 	}

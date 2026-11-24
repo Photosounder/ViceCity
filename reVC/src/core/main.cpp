@@ -3898,14 +3898,14 @@ float get_airflow_angle_of_attack(void *p_ptr, void *normal_vec_ptr)
 	CPhysical *p = (CPhysical *) p_ptr;
 	CVector normal_vec = *(CVector *) normal_vec_ptr;
 
-	return acosf(Clamp(DotProduct(p->m_vecMoveSpeed, normal_vec) / (p->m_vecMoveSpeed.Magnitude() * normal_vec.Magnitude()), -1.f, 1.f)) - 0.5f*PI;
+	return General_AcosClamped(DotProduct(p->m_vecMoveSpeed, normal_vec) / (p->m_vecMoveSpeed.Magnitude() * normal_vec.Magnitude())) - 0.5f*PI;
 }
 
 float get_horizon_angle_of_attack(void *p_ptr)
 {
 	CPhysical *p = (CPhysical *) p_ptr;
 
-	return 0.5f*PI - acosf(Clamp(DotProduct(CVector(0.f, 0.f, 1.f), p->GetForward()), -1.f, 1.f));
+	return 0.5f*PI - General_AcosClamped(DotProduct(CVector(0.f, 0.f, 1.f), p->GetForward()));
 }
 
 void command_warp_player_from_car_to_coord(CPlayerPed *ped, CVector pos, CVector speed)

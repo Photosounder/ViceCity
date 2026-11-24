@@ -10,6 +10,7 @@
 #include "General.h"
 #include "CarCtrl.h"
 #include "Accident.h"
+#include "PedLogic.h"
 
 CEmergencyPed::CEmergencyPed(uint32 type) : CPed(type)
 {
@@ -92,73 +93,56 @@ CEmergencyPed::ProcessControl(void)
 void
 CEmergencyPed::FiremanAI(void)
 {
-	float fireDist;
-	CFire *nearestFire;
+	static_assert(EMERGENCY_PED_READY == PED_EMERGENCY_READY && EMERGENCY_PED_DETERMINE_NEXT_STATE == PED_EMERGENCY_DETERMINE_NEXT_STATE &&
+		EMERGENCY_PED_STAND_STILL == PED_EMERGENCY_STAND_STILL && EMERGENCY_PED_STOP == PED_EMERGENCY_STOP, "Mirrored emergency ped states");
 
+	float fireDist = 0.0f;
+	CFire *nearestFire = nil;
+	bool attendedIsOngoing = false;
+
+	// Look up the nearest fire in the states that need it
 	switch (m_nEmergencyPedState) {
 		case EMERGENCY_PED_READY:
-			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
-			if (nearestFire) {
-				SetPedState(PED_NONE);
-				SetSeek(Fire_VectorToNative(nearestFire->m_vecPos), 1.0f);
-				SetMoveState(PEDMOVE_RUN);
-				m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-				m_pAttendedFire = nearestFire;
-#ifdef FIX_BUGS
-				bIsRunning = true;
-#endif
-			}
-			break;
 		case EMERGENCY_PED_DETERMINE_NEXT_STATE:
 			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
-			if (nearestFire && nearestFire != m_pAttendedFire) {
-				SetPedState(PED_NONE);
-				SetSeek(Fire_VectorToNative(nearestFire->m_vecPos), 1.0f);
-				SetMoveState(PEDMOVE_RUN);
-#ifdef FIX_BUGS
-				bIsRunning = true;
-				m_pAttendedFire = nearestFire;
-			} else if (!nearestFire) {
-#else
-				m_pAttendedFire = nearestFire;
-			} else {
-#endif
-				m_nEmergencyPedState = EMERGENCY_PED_STOP;
-			}
-
-			// "Extinguish" the fire (Will overwrite the stop decision above if the attended and nearest fires are same)
-			if (fireDist < 5.0f) {
-				SetIdle();
-				m_nEmergencyPedState = EMERGENCY_PED_STAND_STILL;
-			}
 			break;
 		case EMERGENCY_PED_STAND_STILL:
-			if (!m_pAttendedFire->m_bIsOngoing)
-				m_nEmergencyPedState = EMERGENCY_PED_STOP;
-
-			// Leftover
-			// fireDist = 30.0f;
+			attendedIsOngoing = m_pAttendedFire->m_bIsOngoing;
 			nearestFire = FireManager_FindNearestFire(&gFireManager,Fire_VectorFromNative(GetPosition()), &fireDist);
-			if (nearestFire) {
-#ifdef FIX_BUGS
-				if(nearestFire != m_pAttendedFire && (Fire_VectorToNative(nearestFire->m_vecPos) - GetPosition()).Magnitude() < 30.0f)
-#endif
-					m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-			}
-			Say(SOUND_PED_EXTINGUISHING_FIRE);
 			break;
-		case EMERGENCY_PED_STOP:
-#ifdef FIX_BUGS
-			bIsRunning = false;
-#endif
-			SetPedState(PED_NONE);
-			SetWanderPath(General_GetRandomNumber() & 7);
-			m_pAttendedFire = nil;
-			m_nEmergencyPedState = EMERGENCY_PED_READY;
-			SetMoveState(PEDMOVE_WALK);
+		default:
 			break;
-		default: break;
 	}
+
+	// Delegate the decision to the C implementation
+	PedFiremanResult step = PedLogic_FiremanDecide(m_nEmergencyPedState, nearestFire != nil, nearestFire == m_pAttendedFire, fireDist, attendedIsOngoing,
+		nearestFire && (Fire_VectorToNative(nearestFire->m_vecPos) - GetPosition()).Magnitude() < 30.0f);
+
+	// Run to the nearest fire
+	if (step.chaseNearestFire) {
+		SetPedState(PED_NONE);
+		SetSeek(Fire_VectorToNative(nearestFire->m_vecPos), 1.0f);
+		SetMoveState(PEDMOVE_RUN);
+		bIsRunning = true;
+		m_pAttendedFire = nearestFire;
+	}
+
+	// Stand still near the fire
+	if (step.standIdle)
+		SetIdle();
+
+	if (step.sayExtinguishing)
+		Say(SOUND_PED_EXTINGUISHING_FIRE);
+
+	// Give up the fire and walk away
+	if (step.stop) {
+		bIsRunning = false;
+		SetPedState(PED_NONE);
+		SetWanderPath(General_GetRandomNumber() & 7);
+		m_pAttendedFire = nil;
+		SetMoveState(PEDMOVE_WALK);
+	}
+	m_nEmergencyPedState = (EmergencyPedState)step.newState;
 }
 
 void
@@ -238,25 +222,25 @@ CEmergencyPed::MedicAI(void)
 					m_pAttendedAccident = nearestAccident;
 					++m_pAttendedAccident->m_nMedicsAttending;
 				} else {
-					if (m_pMyVehicle) {
-						if (!bInVehicle) {
-							if (m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER || m_pMyVehicle->pDriver || m_pMyVehicle->m_nGettingInFlags) {
-
-								CPed* driver = m_pMyVehicle->pDriver;
-								if (driver && driver->m_nPedType != PEDTYPE_EMERGENCY && m_objective != OBJECTIVE_KILL_CHAR_ON_FOOT) {
-									SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, driver);
-
-								} else if (m_objective != OBJECTIVE_ENTER_CAR_AS_DRIVER
-									&& m_objective != OBJECTIVE_ENTER_CAR_AS_PASSENGER
-									&& m_objective != OBJECTIVE_KILL_CHAR_ON_FOOT) {
-									SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, m_pMyVehicle);
-								}
-							} else {
-								SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, m_pMyVehicle);
-							}
-						}
-					} else if (m_nPedState != PED_WANDER_PATH) {
+					// Delegate the choice of what to do without an accident to the C implementation
+					CPed *vehicleDriver = m_pMyVehicle ? m_pMyVehicle->pDriver : nil;
+					switch (PedLogic_MedicIdleAction(m_pMyVehicle != nil, bInVehicle, m_objective == OBJECTIVE_ENTER_CAR_AS_DRIVER, m_objective == OBJECTIVE_ENTER_CAR_AS_PASSENGER,
+						m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT, vehicleDriver != nil, vehicleDriver && vehicleDriver->m_nPedType == PEDTYPE_EMERGENCY,
+						m_pMyVehicle && m_pMyVehicle->m_nGettingInFlags, m_nPedState == PED_WANDER_PATH)) {
+					case PED_MEDICIDLE_KILL_DRIVER:
+						SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, vehicleDriver);
+						break;
+					case PED_MEDICIDLE_ENTER_AS_PASSENGER:
+						SetObjective(OBJECTIVE_ENTER_CAR_AS_PASSENGER, m_pMyVehicle);
+						break;
+					case PED_MEDICIDLE_ENTER_AS_DRIVER:
+						SetObjective(OBJECTIVE_ENTER_CAR_AS_DRIVER, m_pMyVehicle);
+						break;
+					case PED_MEDICIDLE_WANDER:
 						SetWanderPath(General_GetRandomNumber() & 7);
+						break;
+					default:
+						break;
 					}
 				}
 				break;
@@ -282,18 +266,17 @@ CEmergencyPed::MedicAI(void)
 					m_nEmergencyPedState = EMERGENCY_PED_STOP;
 					bIsRunning = false;
 				}
+				// Delegate the arrival at the accident to the C implementation
 				if (distToEmergency < 5.0f) {
-					if (m_pRevivedPed->m_pFire) {
+					bool victimOnFire = m_pRevivedPed->m_pFire != nil;
+					bool cprInProgress = !victimOnFire && distToEmergency < 4.5f && distToEmergency >= 1.0f && m_pAttendedAccident->m_nMedicsPerformingCPR;
+					PedMedicArrival arrival = PedLogic_MedicArrival(distToEmergency, victimOnFire, cprInProgress);
+					if (arrival.stopRunning)
 						bIsRunning = false;
-						SetMoveState(PEDMOVE_STILL);
-					} else if (distToEmergency < 4.5f) {
-						bIsRunning = false;
-						SetMoveState(PEDMOVE_WALK);
-						if (distToEmergency < 1.0f
-							|| distToEmergency < 4.5f && m_pAttendedAccident->m_nMedicsPerformingCPR) {
-							m_nEmergencyPedState = EMERGENCY_PED_START_CPR;
-						}
-					}
+					if (arrival.moveState != PEDMOVE_NONE)
+						SetMoveState((eMoveState)arrival.moveState);
+					if (arrival.startCPR)
+						m_nEmergencyPedState = EMERGENCY_PED_START_CPR;
 				}
 				break;
 			case EMERGENCY_PED_START_CPR:
@@ -336,10 +319,12 @@ CEmergencyPed::MedicAI(void)
 					m_pLookTarget->RegisterReference((CEntity**)&m_pLookTarget);
 					TurnBody();
 
-					if (Abs(m_fRotationCur - m_fRotationDest) < DEGTORAD(45.0f))
+					// Delegate the turn towards the patient to the C implementation
+					float turnedRotation = m_fRotationCur;
+					if (PedLogic_MedicFacesPatient(m_fRotationCur, m_fRotationDest, &turnedRotation))
 						m_nEmergencyPedState = EMERGENCY_PED_PERFORM_CPR;
 					else
-						m_fRotationCur = (m_fRotationCur + m_fRotationDest) * 0.5f;
+						m_fRotationCur = turnedRotation;
 				}
 				break;
 			case EMERGENCY_PED_PERFORM_CPR:
@@ -385,14 +370,15 @@ CEmergencyPed::MedicAI(void)
 				bIsDucking = true;
 				break;
 			case EMERGENCY_PED_STAND_STILL:
-				if (!m_pRevivedPed || m_pRevivedPed->m_fHealth > 0.0f)
-					m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-				else {
-					if (!m_pAttendedAccident->m_pVictim)
-						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-					if (!m_pAttendedAccident->m_nMedicsPerformingCPR)
-						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
-					if (AccidentManager_UnattendedAccidents(&gAccidentManager))
+				// Delegate the decision to look for accidents again to the C implementation
+				{
+					bool noPed = !m_pRevivedPed;
+					bool healthy = !noPed && m_pRevivedPed->m_fHealth > 0.0f;
+					bool alive = noPed || healthy;
+					bool noVictim = !alive && !m_pAttendedAccident->m_pVictim;
+					bool noCPR = !alive && !m_pAttendedAccident->m_nMedicsPerformingCPR;
+					bool unattended = !alive && AccidentManager_UnattendedAccidents(&gAccidentManager);
+					if (PedLogic_MedicStandStillResumes(noPed, healthy, noVictim, noCPR, unattended))
 						m_nEmergencyPedState = EMERGENCY_PED_DETERMINE_NEXT_STATE;
 				}
 				break;

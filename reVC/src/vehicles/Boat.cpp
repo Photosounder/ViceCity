@@ -167,23 +167,19 @@ CBoat::ProcessControl(void)
 	int r, g, b;
 	RwRGBA dropColor = { 0, 0, 0, 0 };
 	RwRGBA splashColor, jetColor;
-	r = 127.5f*(TimeCycle_GetAmbientRed_Obj() + 0.5f*TimeCycle_GetDirectionalRed());
-	g = 127.5f*(TimeCycle_GetAmbientGreen_Obj() + 0.5f*TimeCycle_GetDirectionalGreen());
-	b = 127.5f*(TimeCycle_GetAmbientBlue_Obj() + 0.5f*TimeCycle_GetDirectionalBlue());
-	r = Clamp(r, 0, 255);
-	g = Clamp(g, 0, 255);
-	b = Clamp(b, 0, 255);
+	// Delegate the colour channels of the splash to the C implementation
+	r = Boat_SprayColorChannel(127.5f, TimeCycle_GetAmbientRed_Obj(), 0.5f, TimeCycle_GetDirectionalRed());
+	g = Boat_SprayColorChannel(127.5f, TimeCycle_GetAmbientGreen_Obj(), 0.5f, TimeCycle_GetDirectionalGreen());
+	b = Boat_SprayColorChannel(127.5f, TimeCycle_GetAmbientBlue_Obj(), 0.5f, TimeCycle_GetDirectionalBlue());
 	splashColor.red = r;
 	splashColor.green = g;
 	splashColor.blue = b;
 	splashColor.alpha = General_GetRandomNumberInRangeInt(160, 196);
 
-	r = 229.5f*(TimeCycle_GetAmbientRed() + 0.85f*TimeCycle_GetDirectionalRed());
-	g = 229.5f*(TimeCycle_GetAmbientGreen() + 0.85f*TimeCycle_GetDirectionalGreen());
-	b = 229.5f*(TimeCycle_GetAmbientBlue() + 0.85f*TimeCycle_GetDirectionalBlue());
-	r = Clamp(r, 0, 255);
-	g = Clamp(g, 0, 255);
-	b = Clamp(b, 0, 255);
+	// Delegate the colour channels of the jet to the C implementation
+	r = Boat_SprayColorChannel(229.5f, TimeCycle_GetAmbientRed(), 0.85f, TimeCycle_GetDirectionalRed());
+	g = Boat_SprayColorChannel(229.5f, TimeCycle_GetAmbientGreen(), 0.85f, TimeCycle_GetDirectionalGreen());
+	b = Boat_SprayColorChannel(229.5f, TimeCycle_GetAmbientBlue(), 0.85f, TimeCycle_GetDirectionalBlue());
 	jetColor.red = r;
 	jetColor.green = g;
 	jetColor.blue = b;
@@ -256,31 +252,19 @@ CBoat::ProcessControl(void)
 			if(GetStatus() == STATUS_PLAYER && Stats_GetPercentageProgress() >= 100.0f)
 				collisionDamage *= 0.5f;
 #endif
-			if(this == FindPlayerVehicle()){
-				if(bTakeLessDamage)
-					m_fHealth -= (collisionDamage-25.0f)/6.0f;
-				else
-					m_fHealth -= (collisionDamage-25.0f)/2.0f;
-			}else{
-				if(collisionDamage > 60.0f && pDriver)
-					pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
-				if(bTakeLessDamage)
-					m_fHealth -= (collisionDamage-25.0f)/12.0f;
-				else
-					m_fHealth -= (collisionDamage-25.0f)/4.0f;
-			}
-
-			if(m_fHealth <= 0.0f && prevHealth > 0.0f){
-				m_fHealth = 1.0f;
+			// Delegate the damage to the health to the C implementation
+			BoatCollisionResult collision = Boat_CollisionDamage(m_fHealth, collisionDamage, this == FindPlayerVehicle(), bTakeLessDamage, pDriver != nil);
+			if(collision.driverAnnoyed)
+				pDriver->Say(SOUND_PED_ANNOYED_DRIVER);
+			m_fHealth = collision.health;
+			if(collision.setOnFire)
 				m_pSetOnFireEntity = m_pDamageEntity;
-			}
 		}
 	}
 
 	// Damage particles
 	if(m_fHealth <= 460.0f && GetStatus() != STATUS_WRECKED &&
-	   Abs(GetPosition().x - TheCamera.GetPosition().x) < 200.0f &&
-	   Abs(GetPosition().y - TheCamera.GetPosition().y) < 200.0f){
+	   VehicleLogic_WithinSquare(GetPosition().x, GetPosition().y, TheCamera.GetPosition().x, TheCamera.GetPosition().y, 200.0f)){
 		float speedSq = m_vecMoveSpeed.MagnitudeSqr();
 		CVector smokeDir = 0.8f*m_vecMoveSpeed;
 		CVector smokePos;
@@ -352,7 +336,7 @@ CBoat::ProcessControl(void)
 
 		m_fVolumeUnderWater = mod_Buoyancy.m_volumeUnderWater;
 		m_vecBuoyancePoint = buoyancePoint;
-		if(GetModelIndex() == MI_SKIMMER && GetUp().z < -0.5f && Abs(m_vecMoveSpeed.x) < 0.2f && Abs(m_vecMoveSpeed.y) < 0.2f)
+		if(GetModelIndex() == MI_SKIMMER && GetUp().z < -0.5f && General_AbsBothBelow(m_vecMoveSpeed.x, m_vecMoveSpeed.y, 0.2f))
 			ApplyMoveForce(0.03f*buoyanceImpulse);
 		else
 			ApplyMoveForce(buoyanceImpulse);
@@ -385,7 +369,7 @@ CBoat::ProcessControl(void)
 				impulse *= m_fGasPedal;
 			else
 				impulse = 0.0f;
-			impulse = Min(impulse, GRAVITY*pBoatHandling->fAqPlaneLimit*m_fMass*(*Timer_GetTimeStep()));
+			impulse = General_MinFloat(impulse, GRAVITY*pBoatHandling->fAqPlaneLimit*m_fMass*(*Timer_GetTimeStep()));
 			ApplyMoveForce(impulse*GetUp());
 			ApplyTurnForce(impulse*GetUp(), buoyancePoint - pBoatHandling->fAqPlaneOffset*GetForward());
 		}
@@ -402,7 +386,8 @@ CBoat::ProcessControl(void)
 				if(CPad::GetPad(0)->GetHandBrake())
 					steerLoss *= 0.5f;
 				steerFactor -= steerLoss;
-				steerFactor = Clamp(steerFactor, 0.0f, 1.0f);
+				// Delegate the limit to the C implementation
+				steerFactor = VehicleLogic_ClampValue(steerFactor, 0.0f, 1.0f);
 			}
 
 			CVector boundMin = CollisionVector_ToNative(GetColModel()->boundingBox.min);
@@ -410,16 +395,14 @@ CBoat::ProcessControl(void)
 			propeller = Multiply3x3(GetMatrix(), propeller);
 			CVector propellerWorld = GetPosition() + propeller;
 
-			float steerSin = Sin(-m_fSteerAngle * steerFactor);
-			float steerCos = Cos(-m_fSteerAngle * steerFactor);
+			// Delegate the sine and cosine of the thrust angle to the C implementation
+			float steerSin, steerCos;
+			Boat_SteerSinCos(m_fSteerAngle, steerFactor, &steerSin, &steerCos);
 			float waterLevel;
 			CWaterLevel::GetWaterLevel(propellerWorld, &waterLevel, true);
 			if(propellerWorld.z-0.5f < waterLevel){
-				float propellerDepth = waterLevel - (propellerWorld.z - 0.5f);
-				if(propellerDepth > 1.0f)
-					propellerDepth = 1.0f;
-				else
-					propellerDepth = SQR(propellerDepth);
+				// Delegate the depth of the propeller to the C implementation
+				float propellerDepth = Boat_PropellerDepth(waterLevel, propellerWorld.z);
 				bPropellerInWater = true;
 
 				bool bSlowAhead = false;
@@ -428,16 +411,12 @@ CBoat::ProcessControl(void)
 						bSlowAhead = true;
 
 					CVector forceDir = Multiply3x3(GetMatrix(), CVector(-steerSin, steerCos, -Abs(m_fSteerAngle)));
-					CVector force = propellerDepth * m_fGasPedal * 40.0f * pHandling->Transmission.fEngineAcceleration * pHandling->fMass * forceDir;
-					if(force.z > 0.2f)
-						force.z = SQR(1.2f - force.z) + 0.2f;
+					// Delegate the thrust of the propeller to the C implementation
+					const float forceDirC[3] = { forceDir.x, forceDir.y, forceDir.z };
+					float forceC[3];
+					Boat_PropellerThrust(propellerDepth, m_fGasPedal, pHandling->Transmission.fEngineAcceleration, pHandling->fMass, forceDirC, onLand, forceC);
+					CVector force(forceC[0], forceC[1], forceC[2]);
 					if(onLand){
-						if(m_fGasPedal < 0.0f){
-							force.x *= 5.0f;
-							force.y *= 5.0f;
-						}
-						if(force.z < 0.0f)
-							force.z = 0.0f;
 						ApplyMoveForce(force * (*Timer_GetTimeStep()));
 					}else{
 						ApplyMoveForce(force * (*Timer_GetTimeStep()));
@@ -477,20 +456,12 @@ CBoat::ProcessControl(void)
 					bSlowAhead = true;
 
 				if(!onLand && bSlowAhead){
-					float force = pHandling->fTractionLoss*DotProduct(m_vecMoveSpeed, GetForward());
-					force = Min(force, 0.01f*m_fTurnMass);
-					if(m_fGasPedal > 0.01f){
-						if(GetStatus() == STATUS_PLAYER)
-							force *= (0.55f - Abs(m_fGasPedal)) * 1.3f;
-						else
-							force *= (0.55f - Abs(m_fGasPedal)) * 2.5f;
-					}
-					if(m_fGasPedal < 0.0f && force > 0.0f || m_fGasPedal > 0.0f && force < 0.0f)
-						force *= -1.0f;
+					// Delegate the force of the slowing propeller to the C implementation
+					float force = Boat_SlowAheadForce(pHandling->fTractionLoss, DotProduct(m_vecMoveSpeed, GetForward()), m_fTurnMass, m_fGasPedal, GetStatus() == STATUS_PLAYER);
 					CVector propellerForce = propellerDepth * Multiply3x3(GetMatrix(), force*CVector(-steerSin, 0.0f, 0.0f));
 					ApplyMoveForce(propellerForce * (*Timer_GetTimeStep()));
 					ApplyTurnForce(propellerForce * (*Timer_GetTimeStep()), propeller);
-					float rightForce = -steerSin * force * 0.75f/steerFactor * Max((*Timer_GetTimeStep()), 0.01f);
+					float rightForce = -steerSin * force * 0.75f/steerFactor * General_MaxFloat((*Timer_GetTimeStep()), 0.01f);
 					ApplyTurnForce(GetRight() * rightForce, GetUp());
 				}
 			}else
@@ -513,25 +484,19 @@ CBoat::ProcessControl(void)
 		}
 
 		// Slow down or push down boat as it approaches the world limits
-		m_vecMoveSpeed.x = Min(m_vecMoveSpeed.x, -(GetPosition().x - (WORLD_MAX_X-100.0f))*0.01f);	// east
-		m_vecMoveSpeed.x = Max(m_vecMoveSpeed.x, -(GetPosition().x - (WORLD_MIN_X+100.0f))*0.01f);	// west
-		m_vecMoveSpeed.y = Min(m_vecMoveSpeed.y, -(GetPosition().y - (WORLD_MAX_Y-100.0f))*0.01f);	// north
-		m_vecMoveSpeed.y = Max(m_vecMoveSpeed.y, -(GetPosition().y - (WORLD_MIN_Y+100.0f))*0.01f);	// south
+		// Delegate the limits of the speed at the edge of the world to the C implementation
+		m_vecMoveSpeed.x = Boat_WorldEdgeSpeed(m_vecMoveSpeed.x, GetPosition().x, WORLD_MAX_X-100.0f, WORLD_MIN_X+100.0f);	// east and west
+		m_vecMoveSpeed.y = Boat_WorldEdgeSpeed(m_vecMoveSpeed.y, GetPosition().y, WORLD_MAX_Y-100.0f, WORLD_MIN_Y+100.0f);	// north and south
 
 		if(!onLand && bBoatInWater && !bSeparateTurnForce)
 			ApplyWaterResistance();
 
 		if((GetModelIndex() != MI_SKIMMER || m_skimmerThingTimer == 0.0f) && !bSeparateTurnForce){
 			// No idea what exactly is going on here besides drag in YZ
-			float fx = Pow(pBoatHandling->vecTurnRes.x, (*Timer_GetTimeStep()));
-			float fy = Pow(pBoatHandling->vecTurnRes.y, (*Timer_GetTimeStep()));
-			float fz = Pow(pBoatHandling->vecTurnRes.z, (*Timer_GetTimeStep()));
 			m_vecTurnSpeed = Multiply3x3(m_vecTurnSpeed, GetMatrix());	// invert - to local space
-			// TODO: figure this out
-			float magic = 1.0f/(1000.0f * SQR(m_vecTurnSpeed.x) + 1.0f) * fx;
-			m_vecTurnSpeed.y *= fy;
-			m_vecTurnSpeed.z *= fz;
-			float forceUp = (magic - 1.0f) * m_vecTurnSpeed.x * m_fTurnMass;
+			// Delegate the drag on the turn speed to the C implementation
+			float forceUp = Boat_TurnDrag(pBoatHandling->vecTurnRes.x, pBoatHandling->vecTurnRes.y, pBoatHandling->vecTurnRes.z, (*Timer_GetTimeStep()),
+				m_vecTurnSpeed.x, &m_vecTurnSpeed.y, &m_vecTurnSpeed.z, m_fTurnMass);
 			m_vecTurnSpeed = Multiply3x3(GetMatrix(), m_vecTurnSpeed);	// back to world
 			CVector com = Multiply3x3(GetMatrix(), m_vecCentreOfMass);
 			ApplyTurnForce(forceUp*GetUp(), com + GetForward());
@@ -546,12 +511,10 @@ CBoat::ProcessControl(void)
 				DMAudio_PlayOneShot(m_audioEntityId, SOUND_CAR_SPLASH, splashVol);
 
 			if(m_nDeltaVolumeUnderWater > 200){
-				float speedUp = m_vecMoveSpeed.MagnitudeSqr() * m_nDeltaVolumeUnderWater * 0.001f;
-				if(speedUp + m_vecMoveSpeed.z > pHandling->fBrakeDeceleration)
-					speedUp = pHandling->fBrakeDeceleration - m_vecMoveSpeed.z;
-				if(speedUp < 0.0f) speedUp = 0.0f;
-				float speedFwd = DotProduct(m_vecMoveSpeed, GetForward());
-				speedFwd *= -m_nDeltaVolumeUnderWater * 0.01f * pHandling->fBrakeBias;
+				// Delegate the speeds of the splash to the C implementation
+				float speedUp, speedFwd;
+				Boat_SplashImpulse(m_nDeltaVolumeUnderWater, m_vecMoveSpeed.MagnitudeSqr(), m_vecMoveSpeed.z, DotProduct(m_vecMoveSpeed, GetForward()),
+					pHandling->fBrakeDeceleration, pHandling->fBrakeBias, &speedUp, &speedFwd);
 				CVector speed = speedFwd*GetForward() + CVector(0.0f, 0.0f, speedUp);
 				CVector splashImpulse = speed * m_fMass;
 				ApplyMoveForce(splashImpulse);
@@ -566,60 +529,31 @@ CBoat::ProcessControl(void)
 			CVector splashPos, splashDir;
 			float splashSize, front, waterLevel;
 
+			// Delegate the shape of the splashes of the kind of boat to the C implementation
+			int splashKind;
 			switch(GetModelIndex()){
-			case MI_RIO:
-				splashSize = speed;
-				front = 0.9f * GetColModel()->boundingBox.max.y;
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir += 0.35f*speed*GetRight();
-				splashPos = GetPosition() + 1.85f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_SQUALO:
-				splashSize = speed;
-				front = 0.75f * GetColModel()->boundingBox.max.y;
-				splashDir = -0.125f * m_vecMoveSpeed;
-				splashDir.z += 0.15f*speed;
-				splashDir += 0.25f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint + 0.5f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_REEFER:
-				splashSize = speed;
-				front = 0.75f * GetColModel()->boundingBox.max.y;
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.15f*speed;
-				splashDir += 0.5f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint + 1.3f*GetRight() + front*GetForward();
-				break;
-			case MI_COASTG:
-				splashSize = 0.25f*speed;
-				front = 0.8f * GetColModel()->boundingBox.max.y;
-				splashDir = 0.165f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir += 0.15f*speed*GetRight();
-				splashPos = GetPosition() + 0.65f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_DINGHY:
-				splashSize = 0.25f*speed;
-				front = 0.9f * GetColModel()->boundingBox.max.y;
-				splashDir = 0.35f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir += 0.25f*speed*GetRight();
-				splashPos = GetPosition() + 0.6f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			default:
-				splashSize = speed;
-				front = 0.9f * GetColModel()->boundingBox.max.y;
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir += 0.35f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint + 0.5f*GetRight() + front*GetForward();
-				break;
+			case MI_RIO: splashKind = BOAT_SPLASH_RIO; break;
+			case MI_SQUALO: splashKind = BOAT_SPLASH_SQUALO; break;
+			case MI_REEFER: splashKind = BOAT_SPLASH_REEFER; break;
+			case MI_COASTG: splashKind = BOAT_SPLASH_COASTG; break;
+			case MI_DINGHY: splashKind = BOAT_SPLASH_DINGHY; break;
+			default: splashKind = BOAT_SPLASH_DEFAULT; break;
 			}
+			BoatSplashParams splashParams = Boat_SplashParams(splashKind);
+
+			// Splash on the right side of the bow
+			splashSize = splashParams.sizeFactor*speed;
+			front = splashParams.frontFactor * GetColModel()->boundingBox.max.y;
+			splashDir = splashParams.moveFactor * m_vecMoveSpeed;
+			splashDir.z += splashParams.upFactor*speed;
+			splashDir += splashParams.rightFactor*speed*GetRight();
+			splashPos = GetPosition();
+			if(splashParams.addBuoyancePoint)
+				splashPos += m_vecBuoyancePoint;
+			splashPos += splashParams.rightOffset*GetRight();
+			splashPos += front*GetForward();
+			if(splashParams.upOffset != 0.0f)
+				splashPos.z += splashParams.upOffset;
 			if(splashSize > 0.75f) splashSize = 0.75f;
 			if(AutoPilot.m_nCarMission == MISSION_CRUISE)
 				splashDir *= 1.5f;
@@ -638,48 +572,17 @@ CBoat::ProcessControl(void)
 					0, lifeBase + splashDir.z*lifeMult);
 			}
 
-			switch(GetModelIndex()){
-			case MI_RIO:
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir -= 0.35f*speed*GetRight();
-				splashPos = GetPosition() - 1.85f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_SQUALO:
-				splashDir = -0.125f * m_vecMoveSpeed;
-				splashDir.z += 0.15f*speed;
-				splashDir -= 0.25f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint - 0.5f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_REEFER:
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.15f*speed;
-				splashDir -= 0.5f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint - 1.3f*GetRight() + front*GetForward();
-				break;
-			case MI_COASTG:
-				splashDir = 0.165f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir -= 0.15f*speed*GetRight();
-				splashPos = GetPosition() - 0.65f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			case MI_DINGHY:
-				splashDir = 0.35f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir -= 0.25f*speed*GetRight();
-				splashPos = GetPosition() - 0.6f*GetRight() + front*GetForward();
-				splashPos.z += 0.5f;
-				break;
-			default:
-				splashDir = -0.5f * m_vecMoveSpeed;
-				splashDir.z += 0.25f*speed;
-				splashDir -= 0.35f*speed*GetRight();
-				splashPos = GetPosition() + m_vecBuoyancePoint - 0.5f*GetRight() + front*GetForward();
-				break;
-			}
+			// Splash on the left side of the bow
+			splashDir = splashParams.moveFactor * m_vecMoveSpeed;
+			splashDir.z += splashParams.upFactor*speed;
+			splashDir -= splashParams.rightFactor*speed*GetRight();
+			splashPos = GetPosition();
+			if(splashParams.addBuoyancePoint)
+				splashPos += m_vecBuoyancePoint;
+			splashPos -= splashParams.rightOffset*GetRight();
+			splashPos += front*GetForward();
+			if(splashParams.upOffset != 0.0f)
+				splashPos.z += splashParams.upOffset;
 			if(AutoPilot.m_nCarMission == MISSION_CRUISE)
 				splashDir *= 1.5f;
 			splashDir.z += 0.0003f*m_nDeltaVolumeUnderWater;
@@ -748,16 +651,10 @@ CBoat::ProcessControl(void)
 	}
 
 	if(m_modelIndex == MI_SKIMMER && (*Timer_GetTimeStep()) > 0.0f){
-		if(GetStatus() == STATUS_PLAYER){
-			if(m_fMovingSpeed < 0.22f)
-				m_fMovingSpeed += 0.001f*(*Timer_GetTimeStep());
+		// Delegate the speed of the rotor to the C implementation
+		m_fMovingSpeed = Boat_SkimmerMovingSpeed(m_fMovingSpeed, (*Timer_GetTimeStep()), GetStatus() == STATUS_PLAYER);
+		if(GetStatus() == STATUS_PLAYER)
 			FlyingControl(FLIGHT_MODEL_SEAPLANE);
-		}else{
-			if(m_fMovingSpeed > 0.0005f*(*Timer_GetTimeStep()))
-				m_fMovingSpeed -= 0.0005f*(*Timer_GetTimeStep());
-			else
-				m_fMovingSpeed = 0.0f;
-		}
 	}else if(bCheat8)
 		FlyingControl(FLIGHT_MODEL_PLANE);
 
@@ -786,17 +683,20 @@ CBoat::ProcessControlInputs(uint8 pad)
 		m_nPadID = 3;
 
 	m_fBrake += (CPad::GetPad(pad)->GetBrake()/255.0f - m_fBrake)*0.1f;
-	m_fBrake = Clamp(m_fBrake, 0.0f, 1.0f);
+	// Delegate the limit to the C implementation
+	m_fBrake = VehicleLogic_ClampValue(m_fBrake, 0.0f, 1.0f);
 
 	if(m_fBrake < 0.05f){
 		m_fBrake = 0.0f;
 		m_fAccelerate += (CPad::GetPad(pad)->GetAccelerate()/255.0f - m_fAccelerate)*0.1f;
-		m_fAccelerate = Clamp(m_fAccelerate, 0.0f, 1.0f);
+		// Delegate the limit to the C implementation
+		m_fAccelerate = VehicleLogic_ClampValue(m_fAccelerate, 0.0f, 1.0f);
 	}else
 		m_fAccelerate = -m_fBrake*0.3f;
 
 	m_fSteeringLeftRight += (-CPad::GetPad(pad)->GetSteeringLeftRight()/128.0f - m_fSteeringLeftRight)*0.2f;
-	m_fSteeringLeftRight = Clamp(m_fSteeringLeftRight, -1.0f, 1.0f);
+	// Delegate the limit to the C implementation
+	m_fSteeringLeftRight = VehicleLogic_ClampValue(m_fSteeringLeftRight, -1.0f, 1.0f);
 
 	float steeringSq = m_fSteeringLeftRight < 0.0f ? -SQR(m_fSteeringLeftRight) : SQR(m_fSteeringLeftRight);
 	m_fSteerAngle = pHandling->fSteeringLock * DEGTORAD(steeringSq);
@@ -809,15 +709,12 @@ void
 CBoat::ApplyWaterResistance(void)
 {
 	// TODO: figure out how this works
-	float resistance = 0.001f * pHandling->fSuspensionForceLevel * SQR(m_fVolumeUnderWater) * m_fMass;
-	if(GetModelIndex() == MI_SKIMMER)
-		resistance *= fSeaPlaneWaterResistance;
 	float fwdSpeed = DotProduct(GetMoveSpeed(), GetForward());
-	float magic = (SQR(fwdSpeed) + 0.05f) * resistance + 1.0f;
-	magic = Abs(magic);
-	float fx = Pow(pBoatHandling->vecMoveRes.x/magic, 0.5f*(*Timer_GetTimeStep()));
-	float fy = Pow(pBoatHandling->vecMoveRes.y/magic, 0.5f*(*Timer_GetTimeStep()));
-	float fz = Pow(pBoatHandling->vecMoveRes.z/magic, 0.5f*(*Timer_GetTimeStep()));
+
+	// Delegate the factors of the water resistance to the C implementation
+	float fx, fy, fz;
+	Boat_WaterResistanceFactors(m_fVolumeUnderWater, m_fMass, pHandling->fSuspensionForceLevel, GetModelIndex() == MI_SKIMMER, fSeaPlaneWaterResistance, fwdSpeed,
+		pBoatHandling->vecMoveRes.x, pBoatHandling->vecMoveRes.y, pBoatHandling->vecMoveRes.z, (*Timer_GetTimeStep()), &fx, &fy, &fz);
 
 	m_vecMoveSpeed = Multiply3x3(m_vecMoveSpeed, GetMatrix());	// invert - to local space
 	m_vecMoveSpeed.x *= fx;
@@ -828,10 +725,8 @@ CBoat::ApplyWaterResistance(void)
 
 	ApplyTurnForce(force*GetForward(), -GetUp());
 
-	if(m_vecMoveSpeed.z > 0.0f)
-		m_vecMoveSpeed.z *= fz;
-	else
-		m_vecMoveSpeed.z *= (1.0f - fz)*0.5f + fz;
+	// Delegate the vertical resistance to the C implementation
+	m_vecMoveSpeed.z = Boat_WaterResistanceVertical(m_vecMoveSpeed.z, fz);
 }
 
 RwObject*
@@ -975,7 +870,8 @@ CBoat::PreRender(void)
 	if(GetModelIndex() == MI_SKIMMER){
 		m_fMovingRotation += m_fMovingSpeed*(*Timer_GetTimeStep());
 		if(m_fMovingRotation > TWOPI) m_fMovingRotation -= TWOPI;
-		int alpha = (1.0f - Min(2.0f*m_fMovingSpeed*8.0f/PI, 1.0f))*255.0f;
+		// Delegate the alpha of the rotor to the C implementation
+		int alpha = Boat_SeaplaneRotorAlpha(m_fMovingSpeed);
 		if(GetStatus() == STATUS_PLAYER || GetStatus() == STATUS_PLAYER_REMOTE || GetStatus() == STATUS_PLAYER_PLAYBACKFROMBUFFER){
 			if(m_aBoatNodes[BOAT_RUDDER]){
 				float sine = Sin(m_fSteerAngle);
@@ -1006,7 +902,8 @@ CBoat::PreRender(void)
 #ifdef FREE_CAM
 			if(!CCamera::bFreeCam || (CCamera::bFreeCam && !Input_affectedByController)) // rouz edit (ChatGPT)
 #endif
-			steeringUpDown += ((Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f ? (-CPad::GetPad(0)->GetCarGunUpDown()/128.0f) : (-CPad::GetPad(0)->GetSteeringUpDown()/128.0f)) - steeringUpDown) * Min(1.f, (*Timer_GetTimeStep())/5.f);
+			// Delegate the smoothing of the steering to the C implementation
+			steeringUpDown = Boat_SmoothSteeringUD(steeringUpDown, (Abs(CPad::GetPad(0)->GetCarGunUpDown()) > 1.0f ? (-CPad::GetPad(0)->GetCarGunUpDown()/128.0f) : (-CPad::GetPad(0)->GetSteeringUpDown()/128.0f)), (*Timer_GetTimeStep()));
 #ifdef FREE_CAM
 			else
 				steeringUpDown = -CPad::GetPad(0)->GetSteeringUpDown()/128.0f;
@@ -1051,7 +948,8 @@ CBoat::PreRender(void)
 			atomic = nil;
 			RwFrameForAllObjects(m_aBoatNodes[BOAT_WINDSCREEN], GetBoatAtomicObjectCB, &atomic);
 			if(atomic)
-				SetComponentAtomicAlpha(atomic, Max(150-alpha, 0));
+				// Delegate the alpha of the windscreen to the C implementation
+				SetComponentAtomicAlpha(atomic, Boat_WindscreenAlpha(alpha));
 		}
 		CShadows::StoreShadowForVehicle(this, VEH_SHD_TYPE_SEAPLANE);
 	}else if(GetModelIndex() == MI_COASTG || GetModelIndex() == MI_DINGHY || GetModelIndex() == MI_RIO ||
@@ -1098,14 +996,9 @@ CBoat::PreRender(void)
 
 			float flapHeading = matrix.GetForward().Heading();
 			float boatHeading = GetForward().Heading();
-			float rot = -DEGTORAD(45.0f) - (flapHeading + boatHeading);
-			// eh what?
-			rot = General_LimitRadianAngle(rot);
-			if(rot > HALFPI) rot = PI;
-			else if(rot < -HALFPI) rot = -PI;
-			rot = Clamp(rot, -DEGTORAD(63.0f), DEGTORAD(63.0f));
-			m_fMovingSpeed += (0.008f * Weather_Wind + 0.002f) * rot;
-			m_fMovingSpeed *= Pow(0.9985f, (*Timer_GetTimeStep()))/(500.0f*SQR(m_fMovingSpeed) + 1.0f);
+
+			// Delegate the speed of the propeller to the C implementation
+			m_fMovingSpeed = Boat_RioPropellerSpeed(flapHeading, boatHeading, Weather_Wind, m_fMovingSpeed, (*Timer_GetTimeStep()));
 
 			matrix.SetRotateZ(flapHeading + m_fMovingSpeed*(*Timer_GetTimeStep()));
 			matrix.Translate(pos);
@@ -1312,8 +1205,8 @@ CBoat::IsSectorAffectedByWake(CVector2D sector, float fSize, CBoat **apBoats)
 		{
 			 float fDist = (WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[j]) * fShapeTime + float(j) * fShapeLength + fSize;
 			 
-			 if ( Abs(pBoat->m_avec2dWakePoints[j].x - sector.x) < fDist
-				&& Abs(pBoat->m_avec2dWakePoints[i].y - sector.y) < fDist )
+			 if ( General_AbsDiffBelow(pBoat->m_avec2dWakePoints[j].x, sector.x, fDist)
+				&& General_AbsDiffBelow(pBoat->m_avec2dWakePoints[i].y, sector.y, fDist) )
 			 {
 				 apBoats[numVerts] = pBoat;
 				 numVerts = 1; // += ?
@@ -1338,7 +1231,7 @@ CBoat::IsVertexAffectedByWake(CVector vecVertex, CBoat *pBoat)
 		float fDist = vecDist.MagnitudeSqr();
 		
 		if ( fDist < SQR(fMaxDist) )
-			return 1.0f - Min(fRangeMult * Sqrt(fDist / SQR(fMaxDist)) + (WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[i]) * fTimeMult, 1.0f);
+			return 1.0f - General_MinFloat(fRangeMult * Sqrt(fDist / SQR(fMaxDist)) + (WAKE_LIFETIME - pBoat->m_afWakePointLifeTime[i]) * fTimeMult, 1.0f);
 	}
 
 	return 0.0f;
@@ -1387,26 +1280,20 @@ CBoat::FillBoatList()
 			if (boat && boat->m_vehType == VEHICLE_TYPE_BOAT) {
 			if (boat->m_nNumWakePoints != 0) {
 				CVector2D camToBoat = CVector2D(boat->GetPosition()) - camPos;
-				float distToCam = DotProduct2D(camFwd, camToBoat);
-				if(distToCam > 100.0f || distToCam < -15.0f)
-					continue;
-				float distSq = camToBoat.MagnitudeSqr();
-				if(distSq > SQR(70.0f))
+
+				// Delegate the view range test to the C implementation
+				float distSq;
+				if(!Boat_WakeInViewRange(camToBoat.x, camToBoat.y, camFwd.x, camFwd.y, &distSq))
 					continue;
 				if (frameId >= ARRAY_SIZE(apFrameWakeGeneratingBoats)) {
-					float nearest = 999999.88f;
-					int16 frameId2 = -1;
-					for (int16 j = 0; j < ARRAY_SIZE(apFrameWakeGeneratingBoats); j++) {
-						float tmpDistSq = (CVector2D(apFrameWakeGeneratingBoats[j]->GetPosition()) - camPos).MagnitudeSqr();
-						if (tmpDistSq < nearest) {
-							nearest = tmpDistSq;
-							frameId2 = j;
-						}
-					}
+					float slotDistSq[ARRAY_SIZE(apFrameWakeGeneratingBoats)];
+					for (int16 j = 0; j < ARRAY_SIZE(apFrameWakeGeneratingBoats); j++)
+						slotDistSq[j] = (CVector2D(apFrameWakeGeneratingBoats[j]->GetPosition()) - camPos).MagnitudeSqr();
 
-					if (frameId2 != -1 &&
-					    (distSq < nearest || boat->GetStatus() == STATUS_PLAYER))
-						apFrameWakeGeneratingBoats[frameId2] = boat;
+					// Delegate the choice of the boat to replace to the C implementation
+					int slot = Boat_PickWakeSlotToReplace(slotDistSq, ARRAY_SIZE(apFrameWakeGeneratingBoats), distSq, boat->GetStatus() == STATUS_PLAYER);
+					if (slot != -1)
+						apFrameWakeGeneratingBoats[slot] = boat;
 				} else {
 					apFrameWakeGeneratingBoats[frameId++] = boat;
 				}

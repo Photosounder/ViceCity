@@ -32,6 +32,8 @@
 #include "VarConsole.h"
 #include "SaveBuf.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "VehicleLogic.h"
+#include "WorldLogic.h"
 
 #define ROTATED_DOOR_OPEN_SPEED (0.015f)
 #define ROTATED_DOOR_CLOSE_SPEED (0.02f)
@@ -214,10 +216,9 @@ int16 CGarages::AddOne(float X1, float Y1, float Z1, float X2, float Y2, float X
 		return NumGarages++;
 	}
 	CGarage* pGarage = &aGarages[NumGarages];
-	pGarage->m_fInfX = Min(Min(Min(X1, X2), X3), X2 + X3 - X1);
-	pGarage->m_fSupX = Max(Max(X1, X2), X3);
-	pGarage->m_fInfY = Min(Min(Min(Y1, Y2), Y3), Y2 + Y3 - Y1);
-	pGarage->m_fSupY = Max(Max(Y1, Y2), Y3);
+	// Delegate the bounds of the garage to the C implementation
+	Garage_AxisBounds(X1, X2, X3, &pGarage->m_fInfX, &pGarage->m_fSupX);
+	Garage_AxisBounds(Y1, Y2, Y3, &pGarage->m_fInfY, &pGarage->m_fSupY);
 	pGarage->m_vecCorner1 = CVector(X1, Y1, Z1);
 	pGarage->m_fInfZ = Z1;
 	pGarage->m_vDir1 = CVector2D(X2 - X1, Y2 - Y1);
@@ -426,7 +427,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (FindPlayerVehicle())
 				ThrowCarsNearDoorOutOfGarage(FindPlayerVehicle());
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				m_nTimeToStartAction = (*Timer_GetTimeInMilliseconds()) + TIME_TO_RESPRAY;
@@ -511,7 +513,8 @@ void CGarage::Update()
 				}
 				if (bTakeMoney) {
 					if (!CGarages::RespraysAreFree) {
-						CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - RESPRAY_PRICE);
+						// Delegate the payment to the C implementation
+						CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Garage_MoneyAfterPayment(CWorld::Players[CWorld::PlayerInFocus].m_nMoney, RESPRAY_PRICE);
 						Stats_AutoPaintingBudget += RESPRAY_PRICE;
 					}
 					CGarages::TriggerMessage("GA_2", -1, 4000, -1); // New engine and paint job. The cops won't recognize you!
@@ -531,7 +534,8 @@ void CGarage::Update()
 				m_fSupY + DISTANCE_TO_CALL_OFF_CHASE);
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENEDCONTAINSCAR;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -574,7 +578,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (FindPlayerVehicle())
 				ThrowCarsNearDoorOutOfGarage(FindPlayerVehicle());
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				m_nTimeToStartAction = (*Timer_GetTimeInMilliseconds()) + TIME_TO_SETUP_BOMB;
@@ -594,7 +599,8 @@ void CGarage::Update()
 					}
 					m_eGarageState = GS_OPENING;
 					if (!CGarages::BombsAreFree)
-						CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - BOMB_PRICE);
+						// Delegate the payment to the C implementation
+						CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Garage_MoneyAfterPayment(CWorld::Players[CWorld::PlayerInFocus].m_nMoney, BOMB_PRICE);
 					if (FindPlayerVehicle() && (FindPlayerVehicle()->IsCar() || FindPlayerVehicle()->IsBike())) {
 #if (!defined GTA_PS2 || defined FIX_BUGS)
 						FindPlayerVehicle()->m_bombType = CGarages::GetBombTypeForGarageType(m_eGarageType);
@@ -650,7 +656,8 @@ void CGarage::Update()
 			}
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENEDCONTAINSCAR;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -691,7 +698,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (m_pTarget)
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				if (m_bClosingWithoutTargetCar)
@@ -720,7 +728,8 @@ void CGarage::Update()
 			}
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -745,8 +754,8 @@ void CGarage::Update()
 				m_pTarget = FindPlayerVehicle();
 				m_pTarget->RegisterReference((CEntity**)&m_pTarget);
 			}
-			if (Abs(FindPlayerCoors().x - GetGarageCenterX()) > DISTANCE_TO_CLOSE_COLLECTCARS_GARAGE ||
-				Abs(FindPlayerCoors().y - GetGarageCenterY()) > DISTANCE_TO_CLOSE_COLLECTCARS_GARAGE) {
+			// Delegate the check that the player is far to the C implementation
+			if (Garage_PlayerIsFar(FindPlayerCoors().x, FindPlayerCoors().y, GetGarageCenterX(), GetGarageCenterY(), DISTANCE_TO_CLOSE_COLLECTCARS_GARAGE)) {
 				m_eGarageState = GS_CLOSING;
 				m_pTarget = nil;
 				break;
@@ -773,7 +782,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (m_pTarget)
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
@@ -813,7 +823,8 @@ void CGarage::Update()
 				m_pTarget = FindPlayerVehicle();
 				m_pTarget->RegisterReference((CEntity**)&m_pTarget);
 			}
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -834,7 +845,8 @@ void CGarage::Update()
 				m_eGarageState = GS_CLOSING;
 			break;
 		case GS_CLOSING:
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
@@ -845,7 +857,8 @@ void CGarage::Update()
 		case GS_FULLYCLOSED:
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -880,7 +893,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (m_pTarget)
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
 				if (m_bClosingWithoutTargetCar)
@@ -908,7 +922,8 @@ void CGarage::Update()
 				m_eGarageState = GS_OPENING;
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -928,7 +943,8 @@ void CGarage::Update()
 	case GARAGE_FOR_SCRIPT_TO_OPEN:
 		switch (m_eGarageState) {
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -948,7 +964,8 @@ void CGarage::Update()
 	case GARAGE_FOR_SCRIPT_TO_OPEN_AND_CLOSE:
 		switch (m_eGarageState) {
 		case GS_CLOSING:
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
@@ -956,7 +973,8 @@ void CGarage::Update()
 			UpdateDoorsHeight();
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -1006,7 +1024,8 @@ void CGarage::Update()
 			break;
 		}
 		case GS_CLOSING:
-			m_fDoorPos = Max(0.0f, m_fDoorPos - HIDEOUT_DOOR_SPEED_COEFFICIENT * (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, HIDEOUT_DOOR_SPEED_COEFFICIENT * (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (!IsPlayerOutsideGarage())
 				m_eGarageState = GS_OPENING;
 			else if (m_fDoorPos == 0.0f) {
@@ -1038,7 +1057,8 @@ void CGarage::Update()
 			break;
 		}
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + HIDEOUT_DOOR_SPEED_COEFFICIENT * (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, HIDEOUT_DOOR_SPEED_COEFFICIENT * (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -1065,7 +1085,8 @@ void CGarage::Update()
 		case GS_CLOSING:
 			if (m_pTarget)
 				ThrowCarsNearDoorOutOfGarage(m_pTarget);
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
@@ -1081,7 +1102,8 @@ void CGarage::Update()
 				m_eGarageState = GS_OPENING;
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -1107,7 +1129,8 @@ void CGarage::Update()
 			}
 			break;
 		case GS_CLOSING:
-			m_fDoorPos = Max(0.0f, m_fDoorPos - (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the closing of the door to the C implementation
+			m_fDoorPos = Garage_DoorClosedPos(m_fDoorPos, (m_bRotatedDoor ? ROTATED_DOOR_CLOSE_SPEED : DEFAULT_DOOR_CLOSE_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == 0.0f) {
 				m_eGarageState = GS_FULLYCLOSED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_CLOSED, 1.0f);
@@ -1118,7 +1141,8 @@ void CGarage::Update()
 		case GS_FULLYCLOSED:
 			break;
 		case GS_OPENING:
-			m_fDoorPos = Min(m_fDoorHeight, m_fDoorPos + (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED) * (*Timer_GetTimeStep()));
+			// Delegate the opening of the door to the C implementation
+			m_fDoorPos = Garage_DoorOpenedPos(m_fDoorPos, m_fDoorHeight, (m_bRotatedDoor ? ROTATED_DOOR_OPEN_SPEED : DEFAULT_DOOR_OPEN_SPEED), (*Timer_GetTimeStep()));
 			if (m_fDoorPos == m_fDoorHeight) {
 				m_eGarageState = GS_OPENED;
 				DMAudio_PlayOneShot(hGarages, SOUND_GARAGE_DOOR_OPENED, 1.0f);
@@ -1150,9 +1174,8 @@ bool CGarage::IsStaticPlayerCarEntirelyInside()
 	if (pVehicle->GetPosition().x < m_fInfX || pVehicle->GetPosition().x > m_fSupX ||
 		pVehicle->GetPosition().y < m_fInfY || pVehicle->GetPosition().y > m_fSupY)
 		return false;
-	if (Abs(pVehicle->GetSpeed().x) > 0.01f ||
-		Abs(pVehicle->GetSpeed().y) > 0.01f ||
-		Abs(pVehicle->GetSpeed().z) > 0.01f)
+	// Delegate the check that the vehicle moves to the C implementation
+	if (VehicleLogic_AnySpeedAbove(pVehicle->GetSpeed().x, pVehicle->GetSpeed().y, pVehicle->GetSpeed().z, 0.01f))
 		return false;
 	if (pVehicle->GetSpeed().MagnitudeSqr() > SQR(0.01f))
 		return false;
@@ -1474,8 +1497,10 @@ void CGarage::UpdateDoorsHeight()
 
 void CGarage::BuildRotatedDoorMatrix(CEntity * pDoor, float fPosition)
 {
-	float fAngle = -fPosition * HALFPI;
-	CVector up(-Sin(fAngle) * pDoor->GetForward().y, Sin(fAngle) * pDoor->GetForward().x, Cos(fAngle));
+	// Delegate the up vector to the C implementation
+	float doorUp[3];
+	Garage_RotatedDoorUp(fPosition, pDoor->GetForward().x, pDoor->GetForward().y, doorUp);
+	CVector up(doorUp[0], doorUp[1], doorUp[2]);
 	pDoor->GetRight() = CrossProduct(up, pDoor->GetForward()); // rouz edit (ChatGPT)
 	pDoor->GetUp() = up; // rouz edit (ChatGPT)
 }
@@ -1710,10 +1735,10 @@ void CGarage::FindDoorsEntities()
 {
 	m_pDoor1 = nil;
 	m_pDoor2 = nil;
-	int xstart = Max(0, CWorld::GetSectorIndexX(GetGarageCenterX() - 100.0f));
-	int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(GetGarageCenterX() + 100.0f));
-	int ystart = Max(0, CWorld::GetSectorIndexY(GetGarageCenterY() - 100.0f));
-	int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(GetGarageCenterY() + 100.0f));
+	// Delegate the range of sectors to the C implementation
+	int xstart, xend, ystart, yend;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(GetGarageCenterX() - 100.0f), CWorld::GetSectorIndexX(GetGarageCenterX() + 100.0f), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(GetGarageCenterY() - 100.0f), CWorld::GetSectorIndexY(GetGarageCenterY() + 100.0f), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -2454,8 +2479,9 @@ CGarages::IsModelIndexADoor(uint32 id)
 void CGarages::StopCarFromBlowingUp(CAutomobile* pCar)
 {
 	pCar->m_fFireBlowUpTimer = 0.0f;
-	pCar->m_fHealth = Max(pCar->m_fHealth, 300.0f);
-	Damage_SetEngineStatus(&pCar->Damage, Max(Damage_GetEngineStatus(&pCar->Damage), 275));
+	// Delegate the health and the engine of the saved car to the C implementation
+	pCar->m_fHealth = Garage_SavedHealth(pCar->m_fHealth);
+	Damage_SetEngineStatus(&pCar->Damage, Garage_SavedEngineStatus(Damage_GetEngineStatus(&pCar->Damage)));
 }
 
 bool CGarage::Does60SecondsNeedThisCarAtAll(int mi)

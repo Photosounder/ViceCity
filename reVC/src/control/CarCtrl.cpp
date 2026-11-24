@@ -41,6 +41,7 @@
 #include "Zones.h"
 #include "Pickups.h"
 #include "CarCtrlLogic.h"
+#include "WorldLogic.h"
 
 #define DISTANCE_TO_SPAWN_ROADBLOCK_PEDS (51.0f)
 #define DISTANCE_TO_SCAN_FOR_DANGER (14.0f)
@@ -324,7 +325,7 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 	CPathNode* pCurNode = &ThePaths.m_pathNodes[curNodeId];
 	CPathNode* pNextNode = &ThePaths.m_pathNodes[nextNodeId];
 	bool bBoatGenerated = false;
-	if ((General_GetRandomNumber() & 0xF) > Min(pCurNode->spawnRate, pNextNode->spawnRate))
+	if ((General_GetRandomNumber() & 0xF) > General_MinInt(pCurNode->spawnRate, pNextNode->spawnRate))
 	{
 		if (debug_cargen) debug("Car gen stopped because spawnRate = min(%d, %d)\n", pCurNode->spawnRate, pNextNode->spawnRate);
 		return;
@@ -466,10 +467,8 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 	float distanceBetweenNodes = (pCurNode->GetPosition() - pNextNode->GetPosition()).Magnitude2D();
 	/* If car is so long that it doesn't fit between two car nodes, place it directly in the middle. */
 	/* Otherwise put it at least in a way that full vehicle length fits between two nodes. */
-	if (distanceBetweenNodes / 2 < carLength)
-		positionBetweenNodes = 0.5f;
-	else
-		positionBetweenNodes = Min(1.0f - carLength / distanceBetweenNodes, Max(carLength / distanceBetweenNodes, positionBetweenNodes));
+	// Delegate the position between the nodes to the C implementation
+	positionBetweenNodes = CarCtrl_PositionBetweenNodes(distanceBetweenNodes, carLength, positionBetweenNodes);
 	pVehicle->AutoPilot.m_nNextDirection = (curNodeId >= nextNodeId) ? 1 : -1;
 	if (pCurNode->numLinks == 1){
 		if (debug_cargen) debug("Car gen stopped because pCurNode->numLinks == 1\n");
@@ -538,14 +537,14 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 		directionNextLinkX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 		directionNextLinkY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
 		/* We want to make a path between two links that may not have the same forward directions a curve. */
-		pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Curves_CalcSpeedScaleFactor(
+		pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_CurveTime(Curves_CalcSpeedScaleFactor(
 		CurvesVector_FromVector(*(&positionOnCurrentLinkIncludingLane)),
 		CurvesVector_FromVector(*(&positionOnNextLinkIncludingLane)),
 		directionCurrentLinkX,
 		directionCurrentLinkY,
 		directionNextLinkX,
 		directionNextLinkY
-	) * (1000.0f / pVehicle->AutoPilot.m_fMaxTrafficSpeed);
+	), pVehicle->AutoPilot.m_fMaxTrafficSpeed);
 		pVehicle->AutoPilot.m_nTimeEnteredCurve = (*Timer_GetTimeInMilliseconds()) -
 			(uint32)((0.5f + positionBetweenNodes) * pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
 	}
@@ -573,27 +572,29 @@ if (NumRandomCars < 4) preferredDistance *= fabsf(sq(General_GetRandomNumberInRa
 
 	CCarPathLink* pCurrentLink = &ThePaths.m_carPathLinks[pVehicle->AutoPilot.m_nCurrentPathNodeInfo];
 	CCarPathLink* pNextLink = &ThePaths.m_carPathLinks[pVehicle->AutoPilot.m_nNextPathNodeInfo];
-	CVector positionOnCurrentLinkIncludingLane(
-		pCurrentLink->GetX() + ((pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardY,
-		pCurrentLink->GetY() - ((pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardX,
-		0.0f);
-	CVector positionOnNextLinkIncludingLane(
-		pNextLink->GetX() + ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardY,
-		pNextLink->GetY() - ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardX,
-		0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnCurrentLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pCurrentLink->GetX(), pCurrentLink->GetY(), pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset(),
+		currentPathLinkForwardX, currentPathLinkForwardY, LANE_WIDTH, positionOnCurrentLinkIncludingLaneXY);
+	CVector positionOnCurrentLinkIncludingLane(positionOnCurrentLinkIncludingLaneXY[0], positionOnCurrentLinkIncludingLaneXY[1], 0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnNextLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pNextLink->GetX(), pNextLink->GetY(), pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset(),
+		nextPathLinkForwardX, nextPathLinkForwardY, LANE_WIDTH, positionOnNextLinkIncludingLaneXY);
+	CVector positionOnNextLinkIncludingLane(positionOnNextLinkIncludingLaneXY[0], positionOnNextLinkIncludingLaneXY[1], 0.0f);
 	float directionCurrentLinkX = pCurrentLink->GetDirX() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionCurrentLinkY = pCurrentLink->GetDirY() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionNextLinkX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 	float directionNextLinkY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
 	/* We want to make a path between two links that may not have the same forward directions a curve. */
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Curves_CalcSpeedScaleFactor(
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_CurveTime(Curves_CalcSpeedScaleFactor(
 		CurvesVector_FromVector(*(&positionOnCurrentLinkIncludingLane)),
 		CurvesVector_FromVector(*(&positionOnNextLinkIncludingLane)),
 		directionCurrentLinkX,
 		directionCurrentLinkY,
 		directionNextLinkX,
 		directionNextLinkY
-	) * (1000.0f / pVehicle->AutoPilot.m_fMaxTrafficSpeed);
+	), pVehicle->AutoPilot.m_fMaxTrafficSpeed);
 	pVehicle->AutoPilot.m_nTimeEnteredCurve = (*Timer_GetTimeInMilliseconds()) -
 		(0.5f + positionBetweenNodes) * pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve;
 #endif
@@ -1104,9 +1105,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 			return;
 		}
 		float distanceToPlayer = (pVehicle->GetPosition() - vecPlayerPos).Magnitude2D();
-		float threshold = OFFSCREEN_DESPAWN_RANGE;
+		// Delegate the distance of the removal to the C implementation
+		bool useOnscreenRange = true;
+		bool checkLookingDown = false;
 #ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
-		if (pVehicle->GetIsOnScreen() ||
+		useOnscreenRange = pVehicle->GetIsOnScreen() ||
 			TheCamera.Cams[TheCamera.ActiveCam].LookingLeft ||
 			TheCamera.Cams[TheCamera.ActiveCam].LookingRight ||
 			TheCamera.Cams[TheCamera.ActiveCam].LookingBehind ||
@@ -1116,18 +1119,11 @@ CCarCtrl::PossiblyRemoveVehicle(CVehicle* pVehicle)
 			pVehicle->GetModelIndex() == MI_FIRETRUCK ||
 			pVehicle->bIsLawEnforcer ||
 			pVehicle->bIsCarParkVehicle ||
-			(*Timer_GetTimeInMilliseconds()) < pVehicle->m_nSetPieceExtendedRangeTime
-			)
+			(*Timer_GetTimeInMilliseconds()) < pVehicle->m_nSetPieceExtendedRangeTime;
+		checkLookingDown = true;
 #endif
-		{
-			threshold = ONSCREEN_DESPAWN_RANGE * TheCamera.GenerationDistMultiplier;
-		}
-#ifndef EXTENDED_OFFSCREEN_DESPAWN_RANGE
-		if (TheCamera.GetForward().z < -0.9f)
-			threshold = 70.0f;
-#endif
-		if (pVehicle->bExtendedRange)
-			threshold *= EXTENDED_RANGE_DESPAWN_MULTIPLIER;
+		float threshold = CarCtrl_DespawnThreshold(useOnscreenRange, OFFSCREEN_DESPAWN_RANGE, ONSCREEN_DESPAWN_RANGE, TheCamera.GenerationDistMultiplier,
+			checkLookingDown, TheCamera.GetForward().z, pVehicle->bExtendedRange, EXTENDED_RANGE_DESPAWN_MULTIPLIER);
 		if (distanceToPlayer > threshold && !CGarages::IsPointWithinHideOutGarage(pVehicle->GetPosition())){
 			if (pVehicle->GetIsOnScreen()){
 				pVehicle->bFadeOut = true;
@@ -1229,14 +1225,16 @@ CCarCtrl::UpdateCarOnRails(CVehicle* pVehicle)
 	float currentPathLinkForwardY = pCurrentLink->GetDirY() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float nextPathLinkForwardX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 	float nextPathLinkForwardY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
-	CVector positionOnCurrentLinkIncludingLane(
-		pCurrentLink->GetX() + ((pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardY,
-		pCurrentLink->GetY() - ((pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardX,
-		0.0f);
-	CVector positionOnNextLinkIncludingLane(
-		pNextLink->GetX() + ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardY,
-		pNextLink->GetY() - ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardX,
-		0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnCurrentLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pCurrentLink->GetX(), pCurrentLink->GetY(), pVehicle->AutoPilot.m_nCurrentLane + pCurrentLink->OneWayLaneOffset(),
+		currentPathLinkForwardX, currentPathLinkForwardY, LANE_WIDTH, positionOnCurrentLinkIncludingLaneXY);
+	CVector positionOnCurrentLinkIncludingLane(positionOnCurrentLinkIncludingLaneXY[0], positionOnCurrentLinkIncludingLaneXY[1], 0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnNextLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pNextLink->GetX(), pNextLink->GetY(), pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset(),
+		nextPathLinkForwardX, nextPathLinkForwardY, LANE_WIDTH, positionOnNextLinkIncludingLaneXY);
+	CVector positionOnNextLinkIncludingLane(positionOnNextLinkIncludingLaneXY[0], positionOnNextLinkIncludingLaneXY[1], 0.0f);
 	CVector directionCurrentLink = GetRandomOffsetForVehicle(pVehicle, false);
 	directionCurrentLink += CVector(currentPathLinkForwardX, currentPathLinkForwardY, 0.0f);
 	directionCurrentLink.Normalise();
@@ -1278,10 +1276,10 @@ CCarCtrl::FindMaximumSpeedForThisCarInTraffic(CVehicle* pVehicle)
 	float right = pVehicle->GetPosition().x + DISTANCE_TO_SCAN_FOR_DANGER;
 	float top = pVehicle->GetPosition().y - DISTANCE_TO_SCAN_FOR_DANGER;
 	float bottom = pVehicle->GetPosition().y + DISTANCE_TO_SCAN_FOR_DANGER;
-	int xstart = Max(0, CWorld::GetSectorIndexX(left));
-	int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(right));
-	int ystart = Max(0, CWorld::GetSectorIndexY(top));
-	int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(bottom));
+	// Delegate the range of sectors to the C implementation
+	int xstart, xend, ystart, yend;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -1312,10 +1310,10 @@ CCarCtrl::ScanForPedDanger(CVehicle* pVehicle)
 	float right = pVehicle->GetPosition().x + DISTANCE_TO_SCAN_FOR_PED_DANGER;
 	float top = pVehicle->GetPosition().y - DISTANCE_TO_SCAN_FOR_PED_DANGER;
 	float bottom = pVehicle->GetPosition().y + DISTANCE_TO_SCAN_FOR_PED_DANGER;
-	int xstart = Max(0, CWorld::GetSectorIndexX(left));
-	int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(right));
-	int ystart = Max(0, CWorld::GetSectorIndexY(top));
-	int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(bottom));
+	// Delegate the range of sectors to the C implementation
+	int xstart, xend, ystart, yend;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -1389,18 +1387,15 @@ void CCarCtrl::SlowCarDownForPedsSectorList(CPtrList& lst, CVehicle* pVehicle, f
 			if (pPed->GetPedState() != PED_STEP_AWAY && pPed->GetPedState() != PED_DIVE_AWAY){
 				if (distanceUntilHit < movementTowardsPedPerSecond){
 					/* Very close. Time to evade. */
+					// Delegate the choice of the evasion to the C implementation
 					if (pVehicle->GetModelIndex() == MI_RCBANDIT){
 						if (dotVelocity * GAME_SPEED_TO_METERS_PER_SECOND / 2 > distanceUntilHit)
 							pPed->SetEvasiveStep(pVehicle, 0);
-					}else if (dotVelocity > 0.3f) {
-						if (sideLength + 0.1f < sidewaysDistance)
+					}else{
+						int evasion = CarCtrl_PedEvasion(dotVelocity, sideLength, sidewaysDistance);
+						if (evasion == CARCTRL_EVADE_STEP)
 							pPed->SetEvasiveStep(pVehicle, 0);
-						else
-							pPed->SetEvasiveDive(pVehicle, 0);
-					}else if (dotVelocity > 0.1f) {
-						if (sideLength - 0.5f < sidewaysDistance)
-							pPed->SetEvasiveStep(pVehicle, 0);
-						else
+						else if (evasion == CARCTRL_EVADE_DIVE)
 							pPed->SetEvasiveDive(pVehicle, 0);
 					}
 				}else{
@@ -1414,9 +1409,8 @@ void CCarCtrl::SlowCarDownForPedsSectorList(CPtrList& lst, CVehicle* pVehicle, f
 						);
 						angleCarToPed = General_LimitRadianAngle(angleCarToPed);
 						pPed->m_headingRate = General_LimitRadianAngle(pPed->m_headingRate);
-						float visibilityAngle = ABS(angleCarToPed - pPed->m_headingRate);
-						if (visibilityAngle > PI)
-							visibilityAngle = TWOPI - visibilityAngle;
+						// Delegate the angle to the C implementation
+						float visibilityAngle = CarCtrl_PedVisibilityAngle(angleCarToPed, pPed->m_headingRate);
 						if (visibilityAngle < HALFPI || pVehicle->m_nCarHornTimer){
 							/* if ped sees the danger or if car horn is on */
 							pPed->SetFlee(pVehicle, 2000);
@@ -1447,7 +1441,8 @@ void CCarCtrl::SlowCarDownForPedsSectorList(CPtrList& lst, CVehicle* pVehicle, f
 		if (distanceUntilHit < 10.0f){
 			if (pVehicle->AutoPilot.m_nDrivingStyle == DRIVINGSTYLE_STOP_FOR_CARS ||
 			  pVehicle->AutoPilot.m_nDrivingStyle == DRIVINGSTYLE_SLOW_DOWN_FOR_CARS){
-				*pSpeed = Min(*pSpeed, ABS(distanceUntilHit - 1.0f) / 10.0f * curSpeed);
+				// Delegate the slowing down for the ped to the C implementation
+				*pSpeed = CarCtrl_PedSlowdownSpeed(*pSpeed, distanceUntilHit, curSpeed);
 				pVehicle->AutoPilot.m_bSlowedDownBecauseOfPeds = true;
 				if (distanceUntilHit < 2.0f){
 					pVehicle->AutoPilot.m_nTempAction = TEMPACT_WAIT;
@@ -1474,7 +1469,7 @@ void CCarCtrl::SlowCarDownForCarsSectorList(CPtrList& lst, CVehicle* pVehicle, f
 			continue;
 		if (boundCenter.y < y_inf || boundCenter.y > y_sup)
 			continue;
-		if (Abs(boundCenter.z - pVehicle->GetPosition().z) < 5.0f)
+		if (General_AbsDiffBelow(boundCenter.z, pVehicle->GetPosition().z, 5.0f))
 			SlowCarDownForOtherCar(pTestVehicle, pVehicle, pSpeed, curSpeed);
 	}
 }
@@ -1497,11 +1492,11 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* pOtherEntity, CVehicle* pVehicle,
 	float proximityA = TestCollisionBetween2MovingRects(pOtherVehicle, pVehicle, projectionX, projectionY, &forwardA, &forwardB, 0);
 	float proximityB = TestCollisionBetween2MovingRects(pVehicle, pOtherVehicle, -projectionX, -projectionY, &forwardB, &forwardA, 1);
 	float minProximity = Min(proximityA, proximityB);
-	if (minProximity >= 0.0f && minProximity < 1.5f){
-		minProximity = Max(0.0f, (minProximity - 0.2f) / 1.3f);
+	// Delegate the slowing down to the C implementation
+	bool slowedForCar;
+	minProximity = CarCtrl_SlowForProximity(minProximity, curSpeed, pSpeed, &slowedForCar);
+	if (slowedForCar)
 		pVehicle->AutoPilot.m_bSlowedDownBecauseOfCars = true;
-		*pSpeed = Min(*pSpeed, minProximity * curSpeed);
-	}
 	if (minProximity >= 0.0f && minProximity < 0.5f && pOtherEntity->IsVehicle() &&
 	  (*Timer_GetTimeInMilliseconds()) - pVehicle->AutoPilot.m_nTimeToStartMission > 15000 &&
 	  (*Timer_GetTimeInMilliseconds()) - pOtherVehicle->AutoPilot.m_nTimeToStartMission > 15000){
@@ -1509,7 +1504,8 @@ void CCarCtrl::SlowCarDownForOtherCar(CEntity* pOtherEntity, CVehicle* pVehicle,
 		if (pOtherEntity != FindPlayerVehicle() &&
 		  DotProduct2D(pVehicle->GetForward(), pOtherVehicle->GetForward()) < -0.5f &&
 		  pVehicle < pOtherVehicle){ /* that comparasion though... */
-			*pSpeed = Max(curSpeed / 5, *pSpeed);
+			// Delegate the speed of the released car to the C implementation
+			*pSpeed = CarCtrl_ReleasedSpeed(*pSpeed, curSpeed);
 			if (pVehicle->GetStatus() == STATUS_SIMPLE){
 				pVehicle->SetStatus(STATUS_PHYSICS);
 				SwitchVehicleToRealPhysics(pVehicle);
@@ -1533,127 +1529,41 @@ float CCarCtrl::TestCollisionBetween2MovingRects(CVehicle* pVehicleA, CVehicle* 
 	float fullWidthB = 2.0f * widthB;
 	float fullLenB = lenB + backLenB;
 	for (int i = 0; i < 4; i++){
-		float testedOffsetX;
-		float testedOffsetY;
-		switch (i) {
-		case 0: /* Front right corner */
-			testedOffsetX = vecBToA.x + widthA * pForwardB->y + lenA * pForwardB->x;
-			testedOffsetY = vecBToA.y + lenA * pForwardB->y - widthA * pForwardB->x;
-			break;
-		case 1: /* Front left corner */
-			testedOffsetX = vecBToA.x + -widthA * pForwardB->x + lenA * pForwardB->x;
-			testedOffsetY = vecBToA.y + lenA * pForwardB->y + widthA * pForwardB->x;
-			break;
-		case 2: /* Rear right corner */
-			testedOffsetX = vecBToA.x + widthA * pForwardB->y - backLenA * pForwardB->x;
-			testedOffsetY = vecBToA.y - backLenA * pForwardB->y - widthA * pForwardB->x;
-			break;
-		case 3: /* Rear left corner */
-			testedOffsetX = vecBToA.x - widthA * pForwardB->y - backLenA * pForwardB->x;
-			testedOffsetY = vecBToA.y - backLenA * pForwardB->y + widthA * pForwardB->x;
-			break;
-		default:
-			break;
-		}
+		float testedOffsetX = 0.0f;
+		float testedOffsetY = 0.0f;
+		// Delegate the offset of the corner to the C implementation
+		CarCtrl_CornerOffset(i, vecBToA.x, vecBToA.y, widthA, lenA, backLenA, pForwardB->x, pForwardB->y, &testedOffsetX, &testedOffsetY);
 		/* Testing width collision */
-		float baseWidthProximity = 0.0f;
-		float fullWidthProximity = 1.0f;
+		float baseWidthProximity;
+		float fullWidthProximity;
 		float widthDistance = testedOffsetX * pForwardA->y - testedOffsetY * pForwardA->x;
 		float widthProjection = projectionX * pForwardA->y - projectionY * pForwardA->x;
-		if (widthDistance > widthB){
-			if (widthProjection < 0.0f){
-				float proximityWidth = -(widthDistance - widthB) / widthProjection;
-				if (proximityWidth < 1.0f){
-					baseWidthProximity = proximityWidth;
-					fullWidthProximity = Min(1.0f, proximityWidth - fullWidthB / widthProjection);
-				}else{
-					baseWidthProximity = 1.0f;
-				}
-			}else{
-				baseWidthProximity = 1.0f;
-				fullWidthProximity = 1.0f;
-			}
-		}else if (widthDistance < -widthB){
-			if (widthProjection > 0.0f) {
-				float proximityWidth = -(widthDistance + widthB) / widthProjection;
-				if (proximityWidth < 1.0f) {
-					baseWidthProximity = proximityWidth;
-					fullWidthProximity = Min(1.0f, proximityWidth + fullWidthB / widthProjection);
-				}
-				else {
-					baseWidthProximity = 1.0f;
-				}
-			}
-			else {
-				baseWidthProximity = 1.0f;
-				fullWidthProximity = 1.0f;
-			}
-		}else if (widthProjection > 0.0f){
-			fullWidthProximity = (widthB - widthDistance) / widthProjection;
-		}else if (widthProjection < 0.0f){
-			fullWidthProximity = -(widthB + widthDistance) / widthProjection;
-		}
+		// Delegate the test of the slab to the C implementation
+		CarCtrl_SlabProximity(widthDistance, widthProjection, widthB, widthB, fullWidthB, &baseWidthProximity, &fullWidthProximity);
 		/* Testing length collision */
-		float baseLengthProximity = 0.0f;
-		float fullLengthProximity = 1.0f;
+		float baseLengthProximity;
+		float fullLengthProximity;
 		float lenDistance = testedOffsetX * pForwardA->x + testedOffsetY * pForwardA->y;
 		float lenProjection = projectionX * pForwardA->x + projectionY * pForwardA->y;
-		if (lenDistance > lenB) {
-			if (lenProjection < 0.0f) {
-				float proximityLength = -(lenDistance - lenB) / lenProjection;
-				if (proximityLength < 1.0f) {
-					baseLengthProximity = proximityLength;
-					fullLengthProximity = Min(1.0f, proximityLength - fullLenB / lenProjection);
-				}
-				else {
-					baseLengthProximity = 1.0f;
-				}
-			}
-			else {
-				baseLengthProximity = 1.0f;
-				fullLengthProximity = 1.0f;
-			}
-		}
-		else if (lenDistance < -backLenB) {
-			if (lenProjection > 0.0f) {
-				float proximityLength = -(lenDistance + backLenB) / lenProjection;
-				if (proximityLength < 1.0f) {
-					baseLengthProximity = proximityLength;
-					fullLengthProximity = Min(1.0f, proximityLength + fullLenB / lenProjection);
-				}
-				else {
-					baseLengthProximity = 1.0f;
-				}
-			}
-			else {
-				baseLengthProximity = 1.0f;
-				fullLengthProximity = 1.0f;
-			}
-		}
-		else if (lenProjection > 0.0f) {
-			fullLengthProximity = (lenB - lenDistance) / lenProjection;
-		}
-		else if (lenProjection < 0.0f) {
-			fullLengthProximity = -(backLenB + lenDistance) / lenProjection;
-		}
-		float baseProximity = Max(baseWidthProximity, baseLengthProximity);
-		if (baseProximity < fullWidthProximity && baseProximity < fullLengthProximity)
-			proximity = Min(proximity, baseProximity);
+		CarCtrl_SlabProximity(lenDistance, lenProjection, lenB, backLenB, fullLenB, &baseLengthProximity, &fullLengthProximity);
+		// Delegate the combination of the proximities to the C implementation
+		proximity = CarCtrl_CombineProximity(proximity, baseWidthProximity, fullWidthProximity, baseLengthProximity, fullLengthProximity);
 	}
 	return proximity;
 }
 
 float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* pVehicle, CPhysical* pTarget, float angleToTarget, float angleForward)
 {
-	float distanceToTest = Min(2.0f, pVehicle->GetMoveSpeed().Magnitude2D() / 0.4f + 1.0f) * 12.0f;
+	// Delegate the distance to scan to the C implementation
+	float distanceToTest = CarCtrl_WeaveScanDistance(pVehicle->GetMoveSpeed().Magnitude2D());
 	float left = pVehicle->GetPosition().x - distanceToTest;
 	float right = pVehicle->GetPosition().x + distanceToTest;
 	float top = pVehicle->GetPosition().y - distanceToTest;
 	float bottom = pVehicle->GetPosition().y + distanceToTest;
-	int xstart = Max(0, CWorld::GetSectorIndexX(left));
-	int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(right));
-	int ystart = Max(0, CWorld::GetSectorIndexY(top));
-	int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(bottom));
+	// Delegate the range of sectors to the C implementation
+	int xstart, xend, ystart, yend;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -1687,17 +1597,8 @@ float CCarCtrl::FindAngleToWeaveThroughTraffic(CVehicle* pVehicle, CPhysical* pT
 			}
 		}
 	}
-	float angleDiffFromActualToTarget = LimitRadianAngle(angleForward - angleToTarget);
-	float angleToBisectActualToTarget = LimitRadianAngle(angleToTarget + angleDiffFromActualToTarget / 2);
-	float angleDiffLeft = LimitRadianAngle(angleToWeaveLeft - angleToBisectActualToTarget);
-	angleDiffLeft = ABS(angleDiffLeft);
-	float angleDiffRight = LimitRadianAngle(angleToWeaveRight - angleToBisectActualToTarget);
-	angleDiffRight = ABS(angleDiffRight);
-	if (angleDiffLeft > HALFPI && angleDiffRight > HALFPI)
-		return angleToBisectActualToTarget;
-	if (ABS(angleDiffLeft - angleDiffRight) < 0.08f)
-		return angleToWeaveRight;
-	return angleDiffLeft < angleDiffRight ? angleToWeaveLeft : angleToWeaveRight;
+	// Delegate the choice of the angle to the C implementation
+	return CarCtrl_PickWeaveAngle(angleForward, angleToTarget, angleToWeaveLeft, angleToWeaveRight);
 }
 
 void CCarCtrl::WeaveThroughCarsSectorList(CPtrList& lst, CVehicle* pVehicle, CPhysical* pTarget, float x_inf, float y_inf, float x_sup, float y_sup, float* pAngleToWeaveLeft, float* pAngleToWeaveRight)
@@ -1715,7 +1616,7 @@ void CCarCtrl::WeaveThroughCarsSectorList(CPtrList& lst, CVehicle* pVehicle, CPh
 			continue;
 		if (pTestVehicle->GetBoundCentre().y < y_inf || pTestVehicle->GetBoundCentre().y > y_sup)
 			continue;
-		if (Abs(pTestVehicle->GetPosition().z - pVehicle->GetPosition().z) >= VEHICLE_HEIGHT_DIFF_TO_CONSIDER_WEAVING)
+		if (CarCtrl_TooFarVertically(pTestVehicle->GetPosition().z - pVehicle->GetPosition().z, VEHICLE_HEIGHT_DIFF_TO_CONSIDER_WEAVING))
 			continue;
 		if (pTestVehicle != pVehicle && (!pVehicle->bPartOfConvoy || !pTestVehicle->bPartOfConvoy))
 			WeaveForOtherCar(pTestVehicle, pVehicle, pAngleToWeaveLeft, pAngleToWeaveRight);
@@ -1734,32 +1635,18 @@ void CCarCtrl::WeaveForOtherCar(CEntity* pOtherEntity, CVehicle* pVehicle, float
 	float distance = vecDiff.Magnitude();
 	if (distance < 1.0f)
 		return;
-	if (DotProduct2D(pVehicle->GetMoveSpeed() - pOtherCar->GetMoveSpeed(), vecDiff) * 110.0f -
-	  pOtherCar->GetColModel()->boundingSphere.radius -
-	  pVehicle->GetColModel()->boundingSphere.radius < distance)
+	// Delegate the test for the reach to the C implementation
+	if (CarCtrl_WeaveOutOfReach(DotProduct2D(pVehicle->GetMoveSpeed() - pOtherCar->GetMoveSpeed(), vecDiff),
+		pOtherCar->GetColModel()->boundingSphere.radius, pVehicle->GetColModel()->boundingSphere.radius, distance))
 		return;
-	CVector2D forward = pVehicle->GetForward();
-	forward.Normalise();
-	float forwardAngle = General_GetATanOfXY(forward.x, forward.y);
+	// Delegate the angle of the normalised forward direction to the C implementation
+	float forwardAngle = CarCtrl_ForwardAngle(pVehicle->GetForward().x, pVehicle->GetForward().y);
 	float angleDiff = angleBetweenVehicles - forwardAngle;
-	float lenProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.y * Sin(angleDiff));
-	float widthProjection = ABS(pOtherCar->GetColModel()->boundingBox.max.x * Cos(angleDiff));
-	float lengthToEvade = (2 * (lenProjection + widthProjection) + WIDTH_COEF_TO_WEAVE_SAFELY * 2 * pVehicle->GetColModel()->boundingBox.max.x) / distance;
-	float diffToLeftAngle = LimitRadianAngle(angleBetweenVehicles - *pAngleToWeaveLeft);
-	diffToLeftAngle = ABS(diffToLeftAngle);
-	float angleToWeave = lengthToEvade / 2;
-	if (diffToLeftAngle < angleToWeave){
-		*pAngleToWeaveLeft = angleBetweenVehicles - angleToWeave;
-		while (*pAngleToWeaveLeft < -PI)
-			*pAngleToWeaveLeft += TWOPI;
-	}
-	float diffToRightAngle = LimitRadianAngle(angleBetweenVehicles - *pAngleToWeaveRight);
-	diffToRightAngle = ABS(diffToRightAngle);
-	if (diffToRightAngle < angleToWeave){
-		*pAngleToWeaveRight = angleBetweenVehicles + angleToWeave;
-		while (*pAngleToWeaveRight > PI)
-			*pAngleToWeaveRight -= TWOPI;
-	}
+	// Delegate the angle to evade to the C implementation
+	float lengthToEvade = CarCtrl_WeaveLengthToEvade(angleDiff, pOtherCar->GetColModel()->boundingBox.max.y, pOtherCar->GetColModel()->boundingBox.max.x,
+		pVehicle->GetColModel()->boundingBox.max.x, distance, WIDTH_COEF_TO_WEAVE_SAFELY);
+	// Delegate the update of the angles to weave to the C implementation
+	CarCtrl_ApplyWeaveAngles(angleBetweenVehicles, lengthToEvade, pAngleToWeaveLeft, pAngleToWeaveRight);
 }
 
 void CCarCtrl::WeaveThroughPedsSectorList(CPtrList& lst, CVehicle* pVehicle, CPhysical* pTarget, float x_inf, float y_inf, float x_sup, float y_sup, float* pAngleToWeaveLeft, float* pAngleToWeaveRight)
@@ -1777,7 +1664,7 @@ void CCarCtrl::WeaveThroughPedsSectorList(CPtrList& lst, CVehicle* pVehicle, CPh
 			continue;
 		if (pPed->GetPosition().y < y_inf || pPed->GetPosition().y > y_sup)
 			continue;
-		if (Abs(pPed->GetPosition().z - pVehicle->GetPosition().z) >= PED_HEIGHT_DIFF_TO_CONSIDER_WEAVING)
+		if (CarCtrl_TooFarVertically(pPed->GetPosition().z - pVehicle->GetPosition().z, PED_HEIGHT_DIFF_TO_CONSIDER_WEAVING))
 			continue;
 		if (pPed->m_pCurSurface != pVehicle && pPed->m_attachedTo != pVehicle)
 			WeaveForPed(pPed, pVehicle, pAngleToWeaveLeft, pAngleToWeaveRight);
@@ -1793,21 +1680,8 @@ void CCarCtrl::WeaveForPed(CEntity* pOtherEntity, CVehicle* pVehicle, float* pAn
 	float angleBetweenVehicleAndPed = General_GetATanOfXY(vecDiff.x, vecDiff.y);
 	float distance = vecDiff.Magnitude();
 	float lengthToEvade = (WIDTH_COEF_TO_WEAVE_SAFELY * 2 * pVehicle->GetColModel()->boundingBox.max.x + PED_WIDTH_TO_WEAVE) / distance;
-	float diffToLeftAngle = LimitRadianAngle(angleBetweenVehicleAndPed - *pAngleToWeaveLeft);
-	diffToLeftAngle = ABS(diffToLeftAngle);
-	float angleToWeave = lengthToEvade / 2;
-	if (diffToLeftAngle < angleToWeave) {
-		*pAngleToWeaveLeft = angleBetweenVehicleAndPed - angleToWeave;
-		while (*pAngleToWeaveLeft < -PI)
-			*pAngleToWeaveLeft += TWOPI;
-	}
-	float diffToRightAngle = LimitRadianAngle(angleBetweenVehicleAndPed - *pAngleToWeaveRight);
-	diffToRightAngle = ABS(diffToRightAngle);
-	if (diffToRightAngle < angleToWeave) {
-		*pAngleToWeaveRight = angleBetweenVehicleAndPed + angleToWeave;
-		while (*pAngleToWeaveRight > PI)
-			*pAngleToWeaveRight -= TWOPI;
-	}
+	// Delegate the update of the angles to weave to the C implementation
+	CarCtrl_ApplyWeaveAngles(angleBetweenVehicleAndPed, lengthToEvade, pAngleToWeaveLeft, pAngleToWeaveRight);
 }
 
 void CCarCtrl::WeaveThroughObjectsSectorList(CPtrList& lst, CVehicle* pVehicle, float x_inf, float y_inf, float x_sup, float y_sup, float* pAngleToWeaveLeft, float* pAngleToWeaveRight)
@@ -1823,7 +1697,7 @@ void CCarCtrl::WeaveThroughObjectsSectorList(CPtrList& lst, CVehicle* pVehicle, 
 			continue;
 		if (pObject->GetPosition().y < y_inf || pObject->GetPosition().y > y_sup)
 			continue;
-		if (Abs(pObject->GetPosition().z - pVehicle->GetPosition().z) >= OBJECT_HEIGHT_DIFF_TO_CONSIDER_WEAVING)
+		if (CarCtrl_TooFarVertically(pObject->GetPosition().z - pVehicle->GetPosition().z, OBJECT_HEIGHT_DIFF_TO_CONSIDER_WEAVING))
 			continue;
 		if (pObject->GetUp().z > 0.9f) // rouz edit (ChatGPT)
 			WeaveForObject(pObject, pVehicle, pAngleToWeaveLeft, pAngleToWeaveRight);
@@ -1865,21 +1739,8 @@ void CCarCtrl::WeaveForObject(CEntity* pOtherEntity, CVehicle* pVehicle, float* 
 	float angleBetweenVehicleAndObject = General_GetATanOfXY(vecDiff.x, vecDiff.y);
 	float distance = vecDiff.Magnitude();
 	float lengthToEvade = (WIDTH_COEF_TO_WEAVE_SAFELY * 2 * pVehicle->GetColModel()->boundingBox.max.x + OBJECT_WIDTH_TO_WEAVE) / distance;
-	float diffToLeftAngle = LimitRadianAngle(angleBetweenVehicleAndObject - *pAngleToWeaveLeft);
-	diffToLeftAngle = ABS(diffToLeftAngle);
-	float angleToWeave = lengthToEvade / 2;
-	if (diffToLeftAngle < angleToWeave) {
-		*pAngleToWeaveLeft = angleBetweenVehicleAndObject - angleToWeave;
-		while (*pAngleToWeaveLeft < -PI)
-			*pAngleToWeaveLeft += TWOPI;
-	}
-	float diffToRightAngle = LimitRadianAngle(angleBetweenVehicleAndObject - *pAngleToWeaveRight);
-	diffToRightAngle = ABS(diffToRightAngle);
-	if (diffToRightAngle < angleToWeave) {
-		*pAngleToWeaveRight = angleBetweenVehicleAndObject + angleToWeave;
-		while (*pAngleToWeaveRight > PI)
-			*pAngleToWeaveRight -= TWOPI;
-	}
+	// Delegate the update of the angles to weave to the C implementation
+	CarCtrl_ApplyWeaveAngles(angleBetweenVehicleAndObject, lengthToEvade, pAngleToWeaveLeft, pAngleToWeaveRight);
 }
 
 bool CCarCtrl::PickNextNodeAccordingStrategy(CVehicle* pVehicle)
@@ -1925,28 +1786,12 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 	int32 curNode = pVehicle->AutoPilot.m_nNextRouteNode;
 	uint8 totalLinks = ThePaths.m_pathNodes[curNode].numLinks;
 	CCarPathLink* pCurLink = &ThePaths.m_carPathLinks[pVehicle->AutoPilot.m_nNextPathNodeInfo];
-	uint8 lanesOnCurrentPath;
+	// Delegate the lanes and the allowed directions to the C implementation
+	static_assert(PATH_DIRECTION_NONE == 0 && PATH_DIRECTION_STRAIGHT == 1 && PATH_DIRECTION_RIGHT == 2 && PATH_DIRECTION_LEFT == 4, "Path directions differ from the C implementation");
+	int lanesOnCurrentPath;
 	bool isOnOneWayRoad;
-	if (pCurLink->pathNodeIndex == curNode) {
-		lanesOnCurrentPath = pCurLink->numLeftLanes;
-		isOnOneWayRoad = pCurLink->numRightLanes == 0;
-	}
-	else {
-		lanesOnCurrentPath = pCurLink->numRightLanes;
-		isOnOneWayRoad = pCurLink->numLeftLanes == 0;
-	}
-	uint8 allowedDirections = PATH_DIRECTION_NONE;
-	uint8 nextLane = pVehicle->AutoPilot.m_nNextLane;
-	if (nextLane == 0)
-		/* We are always allowed to turn left from  leftmost lane */
-		allowedDirections |= PATH_DIRECTION_LEFT;
-	if (nextLane == lanesOnCurrentPath - 1)
-		/* We are always allowed to turn right from rightmost lane */
-		allowedDirections |= PATH_DIRECTION_RIGHT;
-	if (lanesOnCurrentPath < 3 || allowedDirections == PATH_DIRECTION_NONE)
-		/* We are always allowed to go straight on one/two-laned road */
-		/* or if we are in one of middle lanes of the road */
-		allowedDirections |= PATH_DIRECTION_STRAIGHT;
+	CarCtrl_LinkLanes(pCurLink->pathNodeIndex == curNode, pCurLink->numLeftLanes, pCurLink->numRightLanes, &lanesOnCurrentPath, &isOnOneWayRoad);
+	uint8 allowedDirections = CarCtrl_AllowedDirections(pVehicle->AutoPilot.m_nNextLane, lanesOnCurrentPath);
 	int attempt;
 	pVehicle->AutoPilot.m_nPrevRouteNode = pVehicle->AutoPilot.m_nCurrentRouteNode;
 	pVehicle->AutoPilot.m_nCurrentRouteNode = pVehicle->AutoPilot.m_nNextRouteNode;
@@ -1963,10 +1808,9 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 			if (pVehicle->AutoPilot.m_nNextRouteNode != prevNode){
 				if (direction & allowedDirections){
 					pNextPathNode = &ThePaths.m_pathNodes[pVehicle->AutoPilot.m_nNextRouteNode];
-					if ((!pNextPathNode->bDeadEnd || pPrevPathNode->bDeadEnd) &&
-						(!pNextPathNode->bDisabled || pPrevPathNode->bDisabled) &&
-						(!pNextPathNode->bBetweenLevels || pPrevPathNode->bBetweenLevels || !pVehicle->AutoPilot.m_bStayInCurrentLevel) &&
-						!goingAgainstOneWayRoad && (!isOnOneWayRoad || !nextNodeIsOneWayRoad))
+					// Delegate the test of the node to the C implementation
+					if (CarCtrl_NextNodeAcceptable(pNextPathNode->bDeadEnd, pPrevPathNode->bDeadEnd, pNextPathNode->bDisabled, pPrevPathNode->bDisabled,
+						pNextPathNode->bBetweenLevels, pPrevPathNode->bBetweenLevels, pVehicle->AutoPilot.m_bStayInCurrentLevel, goingAgainstOneWayRoad, isOnOneWayRoad, nextNodeIsOneWayRoad))
 						break;
 				}
 			}
@@ -1975,8 +1819,8 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 		pVehicle->AutoPilot.m_nNextRouteNode = ThePaths.ConnectedNode(nextLink + pCurPathNode->firstLink);
 		direction = FindPathDirection(prevNode, curNode, pVehicle->AutoPilot.m_nNextRouteNode);
 		pNextLink = &ThePaths.m_carPathLinks[ThePaths.m_carPathConnections[nextLink + pCurPathNode->firstLink]];
-		goingAgainstOneWayRoad = pNextLink->pathNodeIndex == curNode ? pNextLink->numRightLanes == 0 : pNextLink->numLeftLanes == 0;
-		nextNodeIsOneWayRoad = pNextLink->pathNodeIndex == curNode ? pNextLink->numLeftLanes == 0 : pNextLink->numRightLanes == 0;
+		// Delegate the flags of the road to the C implementation
+		CarCtrl_LinkOneWayFlags(pNextLink->pathNodeIndex == curNode, pNextLink->numLeftLanes, pNextLink->numRightLanes, &goingAgainstOneWayRoad, &nextNodeIsOneWayRoad);
 	}
 	if (attempt >= ATTEMPTS_TO_FIND_NEXT_NODE) {
 		/* If we failed 15 times, then remove dead end, one way road and current lane limitations */
@@ -1984,16 +1828,19 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 			if (attempt != 0) {
 				if (pVehicle->AutoPilot.m_nNextRouteNode != prevNode) {
 					pNextPathNode = &ThePaths.m_pathNodes[pVehicle->AutoPilot.m_nNextRouteNode];
-					if ((!pNextPathNode->bDisabled || pPrevPathNode->bDisabled) &&
-						(!pNextPathNode->bBetweenLevels || pPrevPathNode->bBetweenLevels || !pVehicle->AutoPilot.m_bStayInCurrentLevel) &&
-						!goingAgainstOneWayRoad)
+					// Delegate the test of the node to the C implementation
+					if (CarCtrl_NextNodeAcceptableRelaxed(pNextPathNode->bDisabled, pPrevPathNode->bDisabled, pNextPathNode->bBetweenLevels, pPrevPathNode->bBetweenLevels,
+						pVehicle->AutoPilot.m_bStayInCurrentLevel, goingAgainstOneWayRoad))
 						break;
 				}
 			}
 			nextLink = General_GetRandomNumber() % totalLinks;
 			pVehicle->AutoPilot.m_nNextRouteNode = ThePaths.ConnectedNode(nextLink + pCurPathNode->firstLink);
 			pNextLink = &ThePaths.m_carPathLinks[ThePaths.m_carPathConnections[nextLink + pCurPathNode->firstLink]];
-			goingAgainstOneWayRoad = pNextLink->pathNodeIndex == curNode ? pNextLink->numRightLanes == 0 : pNextLink->numLeftLanes == 0;
+			{
+				bool unusedOneWayRoad;
+				CarCtrl_LinkOneWayFlags(pNextLink->pathNodeIndex == curNode, pNextLink->numLeftLanes, pNextLink->numRightLanes, &goingAgainstOneWayRoad, &unusedOneWayRoad);
+			}
 		}
 	}
 	if (attempt >= ATTEMPTS_TO_FIND_NEXT_NODE) {
@@ -2001,7 +1848,10 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 		for (nextLink = 0; nextLink < totalLinks; nextLink++) {
 			pVehicle->AutoPilot.m_nNextRouteNode = ThePaths.ConnectedNode(nextLink + pCurPathNode->firstLink);
 			pNextLink = &ThePaths.m_carPathLinks[ThePaths.m_carPathConnections[nextLink + pCurPathNode->firstLink]];
-			goingAgainstOneWayRoad = pNextLink->pathNodeIndex == curNode ? pNextLink->numRightLanes == 0 : pNextLink->numLeftLanes == 0;
+			{
+				bool unusedOneWayRoad;
+				CarCtrl_LinkOneWayFlags(pNextLink->pathNodeIndex == curNode, pNextLink->numLeftLanes, pNextLink->numRightLanes, &goingAgainstOneWayRoad, &unusedOneWayRoad);
+			}
 			if (!goingAgainstOneWayRoad) {
 				pNextPathNode = &ThePaths.m_pathNodes[pVehicle->AutoPilot.m_nNextRouteNode];
 				if ((!pNextPathNode->bDisabled || pPrevPathNode->bDisabled) &&
@@ -2042,22 +1892,22 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 	float currentPathLinkForwardY = pVehicle->AutoPilot.m_nCurrentDirection * pCurLink->GetDirY();
 	float nextPathLinkForwardY = pVehicle->AutoPilot.m_nNextDirection * pNextLink->GetDirY();
 #endif
+	// Work out the change of lane the car wants, the random numbers are drawn as before
+	int laneChange = 0;
 	if (lanesOnNextNode >= 0){
 		if ((General_GetRandomNumber() & 0x600) == 0){
 			/* 25% chance vehicle will try to switch lane */
 			CVector2D dist = pNextPathNode->GetPosition() - pCurPathNode->GetPosition();
 			if (dist.MagnitudeSqr() >= SQR(14.0f)){
 				if (General_GetRandomTrueFalse())
-					pVehicle->AutoPilot.m_nNextLane += 1;
+					laneChange = 1;
 				else
-					pVehicle->AutoPilot.m_nNextLane -= 1;
+					laneChange = -1;
 			}
 		}
-		pVehicle->AutoPilot.m_nNextLane = Min(lanesOnNextNode - 1, pVehicle->AutoPilot.m_nNextLane);
-		pVehicle->AutoPilot.m_nNextLane = Max(0, pVehicle->AutoPilot.m_nNextLane);
-	}else{
-		pVehicle->AutoPilot.m_nNextLane = pVehicle->AutoPilot.m_nCurrentLane;
 	}
+	// Delegate the choice of the lane to the C implementation
+	pVehicle->AutoPilot.m_nNextLane = CarCtrl_NextLane(pVehicle->AutoPilot.m_nNextLane, pVehicle->AutoPilot.m_nCurrentLane, lanesOnNextNode, laneChange);
 	if (pVehicle->AutoPilot.m_bStayInFastLane)
 		pVehicle->AutoPilot.m_nNextLane = 0;
 	CVector positionOnCurrentLinkIncludingLane(
@@ -2079,45 +1929,28 @@ void CCarCtrl::PickNextNodeRandomly(CVehicle* pVehicle)
 	float directionNextLinkX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 	float directionNextLinkY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
 	/* We want to make a path between two links that may not have the same forward directions a curve. */
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Curves_CalcSpeedScaleFactor(
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_CurveTime(Curves_CalcSpeedScaleFactor(
 		CurvesVector_FromVector(*(&positionOnCurrentLinkIncludingLane)),
 		CurvesVector_FromVector(*(&positionOnNextLinkIncludingLane)),
 		directionCurrentLinkX,
 		directionCurrentLinkY,
 		directionNextLinkX,
 		directionNextLinkY
-	) * (1000.0f / pVehicle->AutoPilot.m_fMaxTrafficSpeed);
+	), pVehicle->AutoPilot.m_fMaxTrafficSpeed);
 	if (pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve < 10)
 		/* Oh hey there Obbe */
 		printf("fout\n");
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Max(10, pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
+	// Delegate the minimum time on the curve to the C implementation
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_MinCurveTime(pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
 }
 
 uint8 CCarCtrl::FindPathDirection(int32 prevNode, int32 curNode, int32 nextNode)
 {
-	CVector2D prevToCur = ThePaths.m_pathNodes[curNode].GetPosition() - ThePaths.m_pathNodes[prevNode].GetPosition();
-	CVector2D curToNext = ThePaths.m_pathNodes[nextNode].GetPosition() - ThePaths.m_pathNodes[curNode].GetPosition();
-	float distPrevToCur = prevToCur.Magnitude();
-	if (distPrevToCur == 0.0f)
-		return PATH_DIRECTION_NONE;
-	/* We are trying to determine angle between prevToCur and curToNext. */
-	/* To find it, we consider a to be an angle between y axis and prevToCur */
-	/* and b to be an angle between x axis and curToNext */
-	/* Then the angle we are looking for is (pi/2 + a + b). */
-	float sin_a = prevToCur.x / distPrevToCur;
-	float cos_a = prevToCur.y / distPrevToCur;
-	float distCurToNext = curToNext.Magnitude();
-	if (distCurToNext == 0.0f)
-		return PATH_DIRECTION_NONE;
-	float sin_b = curToNext.y / distCurToNext;
-	float cos_b = curToNext.x / distCurToNext;
-	/* sin(a) * sin(b) - cos(a) * cos(b) = -cos(a+b) = sin(pi/2+a+b) */
-	float sin_direction = sin_a * sin_b - cos_a * cos_b;
-	if (sin_direction > 0.77f) /* Roughly between -50 and -130 degrees */
-		return PATH_DIRECTION_LEFT;
-	if (sin_direction < -0.77f) /* Roughly between 50 and 130 degrees */
-		return PATH_DIRECTION_RIGHT;
-	return PATH_DIRECTION_STRAIGHT;
+	// Delegate the direction to the C implementation
+	static_assert(PATH_DIRECTION_NONE == 0 && PATH_DIRECTION_STRAIGHT == 1 && PATH_DIRECTION_RIGHT == 2 && PATH_DIRECTION_LEFT == 4, "Path directions differ from the C implementation");
+	return CarCtrl_PathDirection(ThePaths.m_pathNodes[prevNode].GetPosition().x, ThePaths.m_pathNodes[prevNode].GetPosition().y,
+		ThePaths.m_pathNodes[curNode].GetPosition().x, ThePaths.m_pathNodes[curNode].GetPosition().y,
+		ThePaths.m_pathNodes[nextNode].GetPosition().x, ThePaths.m_pathNodes[nextNode].GetPosition().y);
 }
 
 #ifdef FIX_PATHFIND_BUG
@@ -2157,9 +1990,8 @@ void CCarCtrl::PickNextNodeToChaseCar(CVehicle* pVehicle, float targetX, float t
 				if (conNode == prevNode && i > 1)
 					continue;
 				CPathNode* pTestNode = &ThePaths.m_pathNodes[conNode];
-				float angle = General_GetATanOfXY(pTestNode->GetX() - pCurNode->GetX(), pTestNode->GetY() - pCurNode->GetY());
-				angle = LimitRadianAngle(angle - currentAngle);
-				angle = ABS(angle);
+				// Delegate the angle to turn to the C implementation
+				float angle = CarCtrl_LinkAngleChange(currentAngle, pCurNode->GetX(), pCurNode->GetY(), pTestNode->GetX(), pTestNode->GetY());
 				if (angle < lowestAngleChange) {
 					lowestAngleChange = angle;
 					newNextNode = conNode;
@@ -2223,36 +2055,39 @@ void CCarCtrl::PickNextNodeToChaseCar(CVehicle* pVehicle, float targetX, float t
 					pVehicle->AutoPilot.m_nNextLane -= 1;
 			}
 		}
-		pVehicle->AutoPilot.m_nNextLane = Min(lanesOnNextNode - 1, pVehicle->AutoPilot.m_nNextLane);
-		pVehicle->AutoPilot.m_nNextLane = Max(0, pVehicle->AutoPilot.m_nNextLane);
+		// Delegate the limits of the lane to the C implementation
+		pVehicle->AutoPilot.m_nNextLane = CarCtrl_ClampNextLane(pVehicle->AutoPilot.m_nNextLane, lanesOnNextNode);
 	}
 	else {
 		pVehicle->AutoPilot.m_nNextLane = pVehicle->AutoPilot.m_nCurrentLane;
 	}
 	if (pVehicle->AutoPilot.m_bStayInFastLane)
 		pVehicle->AutoPilot.m_nNextLane = 0;
-	CVector positionOnCurrentLinkIncludingLane(
-		pCurLink->GetX() + ((pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardY,
-		pCurLink->GetY() - ((pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardX,
-		0.0f);
-	CVector positionOnNextLinkIncludingLane(
-		pNextLink->GetX() + ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardY,
-		pNextLink->GetY() - ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardX,
-		0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnCurrentLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pCurLink->GetX(), pCurLink->GetY(), pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset(),
+		currentPathLinkForwardX, currentPathLinkForwardY, LANE_WIDTH, positionOnCurrentLinkIncludingLaneXY);
+	CVector positionOnCurrentLinkIncludingLane(positionOnCurrentLinkIncludingLaneXY[0], positionOnCurrentLinkIncludingLaneXY[1], 0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnNextLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pNextLink->GetX(), pNextLink->GetY(), pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset(),
+		nextPathLinkForwardX, nextPathLinkForwardY, LANE_WIDTH, positionOnNextLinkIncludingLaneXY);
+	CVector positionOnNextLinkIncludingLane(positionOnNextLinkIncludingLaneXY[0], positionOnNextLinkIncludingLaneXY[1], 0.0f);
 	float directionCurrentLinkX = pCurLink->GetDirX() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionCurrentLinkY = pCurLink->GetDirY() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionNextLinkX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 	float directionNextLinkY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
 	/* We want to make a path between two links that may not have the same forward directions a curve. */
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Curves_CalcSpeedScaleFactor(
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_CurveTime(Curves_CalcSpeedScaleFactor(
 		CurvesVector_FromVector(*(&positionOnCurrentLinkIncludingLane)),
 		CurvesVector_FromVector(*(&positionOnNextLinkIncludingLane)),
 		directionCurrentLinkX,
 		directionCurrentLinkY,
 		directionNextLinkX,
 		directionNextLinkY
-	) * (1000.0f / pVehicle->AutoPilot.m_fMaxTrafficSpeed);
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Max(10, pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
+	), pVehicle->AutoPilot.m_fMaxTrafficSpeed);
+	// Delegate the minimum time on the curve to the C implementation
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_MinCurveTime(pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
 }
 
 bool CCarCtrl::PickNextNodeToFollowPath(CVehicle* pVehicle)
@@ -2308,36 +2143,39 @@ bool CCarCtrl::PickNextNodeToFollowPath(CVehicle* pVehicle)
 			else
 				pVehicle->AutoPilot.m_nNextLane -= 1;
 		}
-		pVehicle->AutoPilot.m_nNextLane = Min(lanesOnNextNode - 1, pVehicle->AutoPilot.m_nNextLane);
-		pVehicle->AutoPilot.m_nNextLane = Max(0, pVehicle->AutoPilot.m_nNextLane);
+		// Delegate the limits of the lane to the C implementation
+		pVehicle->AutoPilot.m_nNextLane = CarCtrl_ClampNextLane(pVehicle->AutoPilot.m_nNextLane, lanesOnNextNode);
 	}
 	else {
 		pVehicle->AutoPilot.m_nNextLane = pVehicle->AutoPilot.m_nCurrentLane;
 	}
 	if (pVehicle->AutoPilot.m_bStayInFastLane)
 		pVehicle->AutoPilot.m_nNextLane = 0;
-	CVector positionOnCurrentLinkIncludingLane(
-		pCurLink->GetX() + ((pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardY,
-		pCurLink->GetY() - ((pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset()) * LANE_WIDTH) * currentPathLinkForwardX,
-		0.0f);
-	CVector positionOnNextLinkIncludingLane(
-		pNextLink->GetX() + ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardY,
-		pNextLink->GetY() - ((pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset()) * LANE_WIDTH) * nextPathLinkForwardX,
-		0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnCurrentLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pCurLink->GetX(), pCurLink->GetY(), pVehicle->AutoPilot.m_nCurrentLane + pCurLink->OneWayLaneOffset(),
+		currentPathLinkForwardX, currentPathLinkForwardY, LANE_WIDTH, positionOnCurrentLinkIncludingLaneXY);
+	CVector positionOnCurrentLinkIncludingLane(positionOnCurrentLinkIncludingLaneXY[0], positionOnCurrentLinkIncludingLaneXY[1], 0.0f);
+	// Delegate the position in the lane to the C implementation
+	float positionOnNextLinkIncludingLaneXY[2];
+	CarCtrl_LanePosition(pNextLink->GetX(), pNextLink->GetY(), pVehicle->AutoPilot.m_nNextLane + pNextLink->OneWayLaneOffset(),
+		nextPathLinkForwardX, nextPathLinkForwardY, LANE_WIDTH, positionOnNextLinkIncludingLaneXY);
+	CVector positionOnNextLinkIncludingLane(positionOnNextLinkIncludingLaneXY[0], positionOnNextLinkIncludingLaneXY[1], 0.0f);
 	float directionCurrentLinkX = pCurLink->GetDirX() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionCurrentLinkY = pCurLink->GetDirY() * pVehicle->AutoPilot.m_nCurrentDirection;
 	float directionNextLinkX = pNextLink->GetDirX() * pVehicle->AutoPilot.m_nNextDirection;
 	float directionNextLinkY = pNextLink->GetDirY() * pVehicle->AutoPilot.m_nNextDirection;
 	/* We want to make a path between two links that may not have the same forward directions a curve. */
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Curves_CalcSpeedScaleFactor(
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_CurveTime(Curves_CalcSpeedScaleFactor(
 		CurvesVector_FromVector(*(&positionOnCurrentLinkIncludingLane)),
 		CurvesVector_FromVector(*(&positionOnNextLinkIncludingLane)),
 		directionCurrentLinkX,
 		directionCurrentLinkY,
 		directionNextLinkX,
 		directionNextLinkY
-	) * (1000.0f / pVehicle->AutoPilot.m_fMaxTrafficSpeed);
-	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = Max(10, pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
+	), pVehicle->AutoPilot.m_fMaxTrafficSpeed);
+	// Delegate the minimum time on the curve to the C implementation
+	pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve = CarCtrl_MinCurveTime(pVehicle->AutoPilot.m_nTimeToSpendOnCurrentCurve);
 	return false;
 }
 
@@ -2444,11 +2282,11 @@ void CCarCtrl::DragCarToPoint(CVehicle* pVehicle, CVector* pPoint)
 		actualBehindZ = pVehicle->m_fMapObjectHeightBehind;
 	}
 	pVehicle->m_fMapObjectHeightBehind = actualBehindZ;
-	float angleZ = Atan2((actualAheadZ - actualBehindZ) / 3, 1.0f);
-	float cosZ = Cos(angleZ);
-	float sinZ = Sin(angleZ);
-	pVehicle->GetRight() = CVector(posTarget.y - midPos.y, -(posTarget.x - midPos.x), 0.0f) / 3; // rouz edit (ChatGPT)
-	pVehicle->GetForward() = CVector(-cosZ * pVehicle->GetRight().y, cosZ * pVehicle->GetRight().x, sinZ); // rouz edit (ChatGPT)
+	// Delegate the right and forward vectors to the C implementation
+	float slopeRight[3], slopeForward[3];
+	CarCtrl_RoadSlopeOrientation(midPos.x, midPos.y, posTarget.x, posTarget.y, actualAheadZ, actualBehindZ, slopeRight, slopeForward);
+	pVehicle->GetRight() = CVector(slopeRight[0], slopeRight[1], slopeRight[2]); // rouz edit (ChatGPT)
+	pVehicle->GetForward() = CVector(slopeForward[0], slopeForward[1], slopeForward[2]); // rouz edit (ChatGPT)
 	pVehicle->GetUp() = CrossProduct(pVehicle->GetRight(), pVehicle->GetForward()); // rouz edit (ChatGPT)
 	pVehicle->SetPosition((CVector(midPos.x, midPos.y, actualBehindZ) + CVector(posTarget.x, posTarget.y, actualAheadZ)) / 2);
 	pVehicle->GetMatrix().GetPosition().z += pVehicle->GetHeightAboveRoad();
@@ -2710,29 +2548,15 @@ void CCarCtrl::SteerAICarBlockingPlayerForwardAndBack(CVehicle* pVehicle, float*
 	float dpSpeedAndForward = DotProduct(pVehicle->GetMoveSpeed(), forward);
 	float dpPlayerAndForward = DotProduct(player, forward);
 	float dpDiffAndForward = DotProduct((FindPlayerCoors() - pVehicle->GetPosition()), forward);
-	float multiplier = dpPlayerAndForward * dpDiffAndRight + dpDiffAndForward - dpSpeedAndForward * dpDiffAndRight;
-	if (multiplier > 0) {
-		*pAccel = Min(1.0f, 0.1f * multiplier);
-		*pBrake = 0.0f;
-	}
-	else if (dpSpeedAndForward > 0) {
-		*pAccel = 0.0f;
-		*pBrake = Min(1.0f, -0.1f * multiplier);
-		if (*pBrake > 0.95f)
-			*pHandbrake = true;
-	}
-	else {
-		*pAccel = Max(-1.0f, 0.1f * multiplier);
-		*pBrake = 0.0f;
-	}
+	// Delegate the pedals to the C implementation
+	CarCtrl_BlockForwardBackPedals(dpPlayerAndForward, dpDiffAndRight, dpDiffAndForward, dpSpeedAndForward, pAccel, pBrake, pHandbrake);
 }
 
 void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* pVehicle, float targetX, float targetY, float* pSwerve, float* pAccel, float* pBrake)
 {
-	CVector2D forward = pVehicle->GetForward();
-	forward.Normalise();
 	float angleToTarget = General_GetATanOfXY(targetX - pVehicle->GetPosition().x, targetY - pVehicle->GetPosition().y);
-	float angleForward = General_GetATanOfXY(forward.x, forward.y);
+	// Delegate the angle of the normalised forward direction to the C implementation
+	float angleForward = CarCtrl_ForwardAngle(pVehicle->GetForward().x, pVehicle->GetForward().y);
 	float steerAngle = LimitRadianAngle(angleToTarget - angleForward);
 	steerAngle = Clamp(steerAngle, -DEFAULT_MAX_STEER_ANGLE, DEFAULT_MAX_STEER_ANGLE);
 #ifdef FIX_BUGS
@@ -2742,16 +2566,10 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* pVehicle, float 
 #endif
 	float currentSpeed = pVehicle->GetMoveSpeed().Magnitude() * GAME_SPEED_TO_CARAI_SPEED;
 	float speedDiff = speedTarget - currentSpeed;
-	if (speedDiff <= 0.0f) {
-		speedDiff < -5.0f ? *pAccel = -0.2f : *pAccel = -0.1f;
+	// Delegate the acceleration to the C implementation
+	*pAccel = CarCtrl_BoatAccel(speedDiff, currentSpeed);
+	if (speedDiff <= 0.0f)
 		steerAngle *= -1;
-	}
-	else if (speedDiff / currentSpeed > 0.25f) {
-		*pAccel = 1.0f;
-	}
-	else {
-		*pAccel = 1.0f - (0.25f - speedDiff / currentSpeed) * 4.0f;
-	}
 	*pBrake = 0.0f;
 	*pSwerve = steerAngle;
 }
@@ -2759,12 +2577,12 @@ void CCarCtrl::SteerAIBoatWithPhysicsHeadingForTarget(CVehicle* pVehicle, float 
 void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* pVehicle, float* pSwerve, float* pAccel, float* pBrake, bool* pHandbrake)
 {
 	float distanceToPlayer = (FindPlayerCoors() - pVehicle->GetPosition()).Magnitude();
-	float projection = Min(distanceToPlayer / 20.0f, 2.0f);
-	CVector2D forward = pVehicle->GetForward();
-	forward.Normalise();
+	// Delegate the projection of the aim to the C implementation
+	float projection = CarCtrl_BoatProjection(distanceToPlayer);
 	CVector2D vecToProjection = FindPlayerCoors() + FindPlayerSpeed() * projection * GAME_SPEED_TO_CARAI_SPEED;
 	float angleToTarget = General_GetATanOfXY(vecToProjection.x - pVehicle->GetPosition().x, vecToProjection.y - pVehicle->GetPosition().y);
-	float angleForward = General_GetATanOfXY(forward.x, forward.y);
+	// Delegate the angle of the normalised forward direction to the C implementation
+	float angleForward = CarCtrl_ForwardAngle(pVehicle->GetForward().x, pVehicle->GetForward().y);
 	float steerAngle = LimitRadianAngle(angleToTarget - angleForward);
 #ifdef FIX_BUGS
 	float speedTarget = AutoPilot_GetCruiseSpeed(&pVehicle->AutoPilot);
@@ -2773,15 +2591,8 @@ void CCarCtrl::SteerAIBoatWithPhysicsAttackingPlayer(CVehicle* pVehicle, float* 
 #endif
 	float currentSpeed = pVehicle->GetMoveSpeed().Magnitude() * GAME_SPEED_TO_CARAI_SPEED;
 	float speedDiff = speedTarget - currentSpeed;
-	if (speedDiff <= 0.0f) {
-		speedDiff < -5.0f ? *pAccel = -0.2f : *pAccel = -0.1f;
-	}
-	else if (speedDiff / currentSpeed > 0.25f) {
-		*pAccel = 1.0f;
-	}
-	else {
-		*pAccel = 1.0f - (0.25f - speedDiff / currentSpeed) * 4.0f;
-	}
+	// Delegate the acceleration to the C implementation
+	*pAccel = CarCtrl_BoatAccel(speedDiff, currentSpeed);
 	*pBrake = 0.0f;
 	*pSwerve = steerAngle;
 	*pHandbrake = false;
@@ -2807,18 +2618,12 @@ void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* pHeli)
 #else
 	float speed = pHeli->AutoPilot.m_nCruiseSpeed * 0.01f;
 #endif
-	if (distanceToTarget <= 100.0f)
-	{
-		if (distanceToTarget > 75.0f)
-			speed *= 0.7f;
-		else if (distanceToTarget > 10.0f)
-			speed *= 0.4f;
-		else
-			speed *= 0.2f;
-	}
+	// Delegate the scale of the speed to the C implementation
+	speed *= CarCtrl_HeliSpeedScale(distanceToTarget);
 	vecToTarget.Normalise();
 	CVector2D vecAdvanceThisFrame(vecToTarget * speed);
-	float resistance = Pow(0.997f, (*Timer_GetTimeStep()));
+	// Delegate the air resistance to the C implementation
+	float resistance = CarCtrl_AirResistance(0.997f, (*Timer_GetTimeStep()));
 	pHeli->m_vecMoveSpeed.x *= resistance;
 	pHeli->m_vecMoveSpeed.y *= resistance;
 	CVector2D vecSpeedDirection = vecAdvanceThisFrame - pHeli->m_vecMoveSpeed;
@@ -2837,17 +2642,12 @@ void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* pHeli)
 		ZTarget += 2.0f;
 	float ZSpeedTarget = (ZTarget - pHeli->GetPosition().z) * 0.01f;
 	float ZSpeedChangeTarget = ZSpeedTarget - pHeli->GetMoveSpeed().z;
-	float ZSpeedChangeMax = 0.001f * (*Timer_GetTimeStep());
-	if (!pHeli->bHeliDestroyed) {
-		if (Abs(ZSpeedChangeTarget) < ZSpeedChangeMax)
-			pHeli->SetMoveSpeed(pHeli->GetMoveSpeed().x, pHeli->GetMoveSpeed().y, ZSpeedTarget);
-		else if (ZSpeedChangeTarget < 0.0f)
-			pHeli->AddToMoveSpeed(0.0f, 0.0f, -ZSpeedChangeMax);
-		else
-			pHeli->AddToMoveSpeed(0.0f, 0.0f, 1.5f * ZSpeedChangeMax);
-	}
+	// Delegate the vertical speed to the C implementation
+	if (!pHeli->bHeliDestroyed)
+		pHeli->SetMoveSpeed(pHeli->GetMoveSpeed().x, pHeli->GetMoveSpeed().y, CarCtrl_HeliZSpeed(pHeli->GetMoveSpeed().z, ZSpeedTarget, (*Timer_GetTimeStep()), false));
 	pHeli->GetMatrix().Translate(0.0f, 0.0f, (*Timer_GetTimeStep()) * pHeli->GetMoveSpeed().z);
-	pHeli->m_vecTurnSpeed.z *= Pow(0.99f, (*Timer_GetTimeStep()));
+	// Delegate the air resistance to the C implementation
+	pHeli->m_vecTurnSpeed.z *= CarCtrl_AirResistance(0.99f, (*Timer_GetTimeStep()));
 	float ZTurnSpeedTarget;
 	if (distanceToTarget < 8.0f && pHeli->m_fHeliOrientation < 0.0f)
 		ZTurnSpeedTarget = 0.0f;
@@ -2856,25 +2656,15 @@ void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* pHeli)
 		if (pHeli->m_fHeliOrientation >= 0.0f)
 			fAngleTarget = pHeli->m_fHeliOrientation;
 		fAngleTarget -= pHeli->m_fOrientation;
-		while (fAngleTarget < -PI)
-			fAngleTarget += TWOPI;
-		while (fAngleTarget > PI)
-			fAngleTarget -= TWOPI;
-		if (Abs(fAngleTarget) <= 0.4f)
-			ZTurnSpeedTarget = 0.0f;
-		else if (fAngleTarget < 0.0f)
-			ZTurnSpeedTarget = -0.03f;
-		else
-			ZTurnSpeedTarget = 0.03f;
+		// Delegate the wrap of the angle to the C implementation
+		CarCtrl_WrapAngleUp(&fAngleTarget);
+		// Delegate the wrap of the angle to the C implementation
+		CarCtrl_WrapAngleDown(&fAngleTarget);
+		// Delegate the turn speed to aim at to the C implementation
+		ZTurnSpeedTarget = CarCtrl_HeliTurnSpeedTarget(fAngleTarget);
 	}
-	float ZTurnSpeedChangeTarget = ZTurnSpeedTarget - pHeli->GetTurnSpeed().z;
-	float ZTurnSpeedLimit = 0.0002f * (*Timer_GetTimeStep());
-	if (Abs(ZTurnSpeedChangeTarget) < ZTurnSpeedLimit)
-		pHeli->m_vecTurnSpeed.z = ZTurnSpeedTarget;
-	else if (ZTurnSpeedChangeTarget < 0.0f)
-		pHeli->m_vecTurnSpeed.z -= ZTurnSpeedLimit;
-	else
-		pHeli->m_vecTurnSpeed.z += ZTurnSpeedLimit;
+	// Delegate the approach of the turn speed to the C implementation
+	pHeli->m_vecTurnSpeed.z = CarCtrl_ApproachValue(pHeli->GetTurnSpeed().z, ZTurnSpeedTarget, 0.0002f * (*Timer_GetTimeStep()));
 	pHeli->m_fOrientation += pHeli->GetTurnSpeed().z * (*Timer_GetTimeStep());
 	CVector up;
 	if (pHeli->bHeliMinimumTilt)
@@ -2882,7 +2672,10 @@ void CCarCtrl::SteerAIHeliTowardsTargetCoors(CAutomobile* pHeli)
 	else
 		up = CVector(3.0f * pHeli->GetMoveSpeed().x, 3.0f * pHeli->GetMoveSpeed().y, 1.0f);
 	up.Normalise();
-	CVector forward(Cos(pHeli->m_fOrientation), Sin(pHeli->m_fOrientation), 0.0f);
+	// Delegate the direction of the helicopter to the C implementation
+	float headingXY[2];
+	CarCtrl_OrientationDirection(pHeli->m_fOrientation, headingXY);
+	CVector forward(headingXY[0], headingXY[1], 0.0f);
 	CVector right = CrossProduct(up, forward);
 	forward = CrossProduct(up, right);
 	pHeli->GetMatrix().GetRight() = right;
@@ -2894,27 +2687,21 @@ void CCarCtrl::SteerAIPlaneTowardsTargetCoors(CAutomobile* pPlane)
 {
 	CVector2D vecToTarget = AutoPilot_ToVector(pPlane->AutoPilot.m_vecDestinationCoors) - pPlane->GetPosition();
 	float fForwardZ = (pPlane->AutoPilot.m_vecDestinationCoors.z - pPlane->GetPosition().z) / vecToTarget.Magnitude();
-	fForwardZ = Clamp(fForwardZ, -0.3f, 0.3f);
+	// Delegate the limit to the C implementation
+	fForwardZ = General_ClampFloat(fForwardZ, -0.3f, 0.3f);
 	float angle = General_GetATanOfXY(vecToTarget.x, vecToTarget.y);
-	while (angle > TWOPI)
-		angle -= TWOPI;
+	// Delegate the angle wrapping to the C implementation
+	angle = General_ReduceAbove(angle, TWOPI, TWOPI);
 	float difference = LimitRadianAngle(angle - pPlane->m_fOrientation);
-	float steer = difference > 0.0f ? 0.04f : -0.04f;
-	if (Abs(difference) < 0.2f)
-		steer *= 5.0f * Abs(difference);
-	pPlane->m_fPlaneSteer *= Pow(0.96f, (*Timer_GetTimeStep()));
-	float steerChange = steer - pPlane->m_fPlaneSteer;
-	float maxChange = 0.003f * (*Timer_GetTimeStep());
-	if (Abs(steerChange) < maxChange)
-		pPlane->m_fPlaneSteer = steer;
-	else if (steerChange < 0.0f)
-		pPlane->m_fPlaneSteer -= maxChange;
-	else
-		pPlane->m_fPlaneSteer += maxChange;
+	// Delegate the steering of the plane to the C implementation
+	pPlane->m_fPlaneSteer = CarCtrl_PlaneSteer(difference, pPlane->m_fPlaneSteer, (*Timer_GetTimeStep()));
 	pPlane->m_fOrientation += pPlane->m_fPlaneSteer * (*Timer_GetTimeStep());
 	CVector up(0.0f, 0.0f, 1.0f);
 	up.Normalise();
-	CVector forward(Cos(pPlane->m_fOrientation), Sin(pPlane->m_fOrientation), fForwardZ);
+	// Delegate the direction of the plane to the C implementation
+	float headingXY[2];
+	CarCtrl_OrientationDirection(pPlane->m_fOrientation, headingXY);
+	CVector forward(headingXY[0], headingXY[1], fForwardZ);
 	forward.Normalise();
 	CVector right = CrossProduct(up, forward);
 	right.z -= 5.0f * pPlane->m_fPlaneSteer;
@@ -2925,7 +2712,8 @@ void CCarCtrl::SteerAIPlaneTowardsTargetCoors(CAutomobile* pPlane)
 	pPlane->GetMatrix().GetRight() = right;
 	pPlane->GetMatrix().GetForward() = forward;
 	pPlane->GetMatrix().GetUp() = up;
-	float newSplit = 1.0f - Pow(0.95f, (*Timer_GetTimeStep()));
+	// Delegate the split between the old and the new speed to the C implementation
+	float newSplit = CarCtrl_PlaneSpeedSplit((*Timer_GetTimeStep()));
 	float oldSplit = 1.0f - newSplit;
 #ifdef FIX_BUGS
 	pPlane->m_vecMoveSpeed = pPlane->m_vecMoveSpeed * oldSplit + AutoPilot_GetCruiseSpeed(&pPlane->AutoPilot) * 0.01f * forward * newSplit;
@@ -2998,9 +2786,11 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* pVehicle, float* pSwerv
 		angleCurrentLink = FindAngleToWeaveThroughTraffic(pVehicle, nil, angleCurrentLink, angleForward);
 	float steerAngle = LimitRadianAngle(angleCurrentLink - angleForward);
 	float maxAngle = FindMaxSteerAngle(pVehicle);
-	steerAngle = Min(maxAngle, Max(-maxAngle, steerAngle));
+	// Delegate the limit of the steering angle to the C implementation
+	steerAngle = CarCtrl_LimitSteer(steerAngle, maxAngle);
 	if (pVehicle->GetMoveSpeed().Magnitude() > MIN_SPEED_TO_START_LIMITING_STEER)
-		steerAngle = Min(MAX_ANGLE_TO_STEER_AT_HIGH_SPEED, Max(-MAX_ANGLE_TO_STEER_AT_HIGH_SPEED, steerAngle));
+		// Delegate the limit of the steering angle to the C implementation
+		steerAngle = CarCtrl_LimitSteer(steerAngle, MAX_ANGLE_TO_STEER_AT_HIGH_SPEED);
 	float currentForwardSpeed = DotProduct(pVehicle->GetMoveSpeed(), pVehicle->GetForward()) * GAME_SPEED_TO_CARAI_SPEED;
 	float speedStyleMultiplier;
 	switch (pVehicle->AutoPilot.m_nDrivingStyle) {
@@ -3044,29 +2834,14 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* pVehicle, float* pSwerv
 		General_GetATanOfXY(currentPathLinkForward.x, currentPathLinkForward.y) -
 		General_GetATanOfXY(nextPathLinkForwardX, nextPathLinkForwardY),
 		MIN_ANGLE_FOR_SPEED_LIMITING_BETWEEN_NODES, MAX_ANGLE_FOR_SPEED_LIMITING, MIN_LOWERING_SPEED_COEFFICIENT);
-	float speedNodesMultiplier;
-	if (scalarDistanceToNextNode > DISTANCE_TO_NEXT_NODE_TO_CONSIDER_SLOWING_DOWN || pVehicle->AutoPilot.m_nCruiseSpeed < 12)
-		speedNodesMultiplier = 1.0f;
-	else
-		speedNodesMultiplier = 1.0f -
-			(1.0f - scalarDistanceToNextNode / DISTANCE_TO_NEXT_NODE_TO_CONSIDER_SLOWING_DOWN) *
-			(1.0f - tmpWideMultiplier);
-	float speedMultiplier = Min(speedStyleMultiplier, Min(speedAngleMultiplier, speedNodesMultiplier));
+	// Delegate the multiplier of the speed from the nodes to the C implementation
+	float speedNodesMultiplier = CarCtrl_SpeedNodesMultiplier(scalarDistanceToNextNode, pVehicle->AutoPilot.m_nCruiseSpeed, tmpWideMultiplier, DISTANCE_TO_NEXT_NODE_TO_CONSIDER_SLOWING_DOWN);
+	// Delegate the multiplier of the speed to the C implementation
+	float speedMultiplier = CarCtrl_SpeedMultiplier(speedStyleMultiplier, speedAngleMultiplier, speedNodesMultiplier);
 	float speed = pVehicle->AutoPilot.m_nCruiseSpeed * speedMultiplier;
 	float speedDifference = speed - currentForwardSpeed;
-	if (speed < 0.05f && speedDifference < 0.03f){
-		*pBrake = 1.0f;
-		*pAccel = 0.0f;
-	}else if (speedDifference <= 0.0f){
-		*pBrake = Min(0.5f, -speedDifference * 0.05f);
-		*pAccel = 0.0f;
-	}else if (currentForwardSpeed < 2.0f){
-		*pBrake = 0.0f;
-		*pAccel = Min(1.0f, speedDifference * 0.25f);
-	}else{
-		*pBrake = 0.0f;
-		*pAccel = Min(1.0f, speedDifference * 0.125f);
-	}
+	// Delegate the accelerator and the brake to the C implementation
+	CarCtrl_PathAccelBrake(speed, speedDifference, currentForwardSpeed, pAccel, pBrake);
 	*pSwerve = steerAngle;
 	*pHandbrake = false;
 }
@@ -3074,10 +2849,9 @@ void CCarCtrl::SteerAICarWithPhysicsFollowPath(CVehicle* pVehicle, float* pSwerv
 void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* pVehicle, CPhysical* pTarget, float targetX, float targetY, float* pSwerve, float* pAccel, float* pBrake, bool* pHandbrake)
 {
 	*pHandbrake = false;
-	CVector2D forward = pVehicle->GetForward();
-	forward.Normalise();
 	float angleToTarget = General_GetATanOfXY(targetX - pVehicle->GetPosition().x, targetY - pVehicle->GetPosition().y);
-	float angleForward = General_GetATanOfXY(forward.x, forward.y);
+	// Delegate the angle of the normalised forward direction to the C implementation
+	float angleForward = CarCtrl_ForwardAngle(pVehicle->GetForward().x, pVehicle->GetForward().y);
 	if (pVehicle->AutoPilot.m_nDrivingStyle == DRIVINGSTYLE_AVOID_CARS)
 		angleToTarget = FindAngleToWeaveThroughTraffic(pVehicle, pTarget, angleToTarget, angleForward);
 	float steerAngle = LimitRadianAngle(angleToTarget - angleForward);
@@ -3085,22 +2859,15 @@ void CCarCtrl::SteerAICarWithPhysicsHeadingForTarget(CVehicle* pVehicle, CPhysic
 		if (ABS(steerAngle) > MIN_ANGLE_TO_APPLY_HANDBRAKE)
 			*pHandbrake = true;
 	float maxAngle = FindMaxSteerAngle(pVehicle);
-	steerAngle = Min(maxAngle, Max(-maxAngle, steerAngle));
+	// Delegate the limit of the steering angle to the C implementation
+	steerAngle = CarCtrl_LimitSteer(steerAngle, maxAngle);
 	float speedMultiplier = FindSpeedMultiplier(General_GetATanOfXY(targetX - pVehicle->GetPosition().x, targetY - pVehicle->GetPosition().y) - angleForward,
 		MIN_ANGLE_FOR_SPEED_LIMITING, MAX_ANGLE_FOR_SPEED_LIMITING, MIN_LOWERING_SPEED_COEFFICIENT);
 	float speedTarget = pVehicle->AutoPilot.m_nCruiseSpeed * speedMultiplier;
 	float currentSpeed = pVehicle->GetMoveSpeed().Magnitude() * GAME_SPEED_TO_CARAI_SPEED;
 	float speedDiff = speedTarget - currentSpeed;
-	if (speedDiff <= 0.0f){
-		*pAccel = 0.0f;
-		*pBrake = Min(0.5f, -speedDiff / 20.0f);
-	}else if (currentSpeed < 25.0f){
-		*pAccel = Min(1.0f, speedDiff * 0.1f);
-		*pBrake = 0.0f;
-	}else{
-		*pAccel = 1.0f;
-		*pBrake = 0.0f;
-	}
+	// Delegate the accelerator and the brake to the C implementation
+	CarCtrl_TargetAccelBrake(speedDiff, currentSpeed, pAccel, pBrake);
 	*pSwerve = steerAngle;
 }
 
@@ -3163,29 +2930,8 @@ void CCarCtrl::SteerAICarWithPhysicsTryingToBlockTarget_Stop(CVehicle* pVehicle,
 void
 CCarCtrl::RegisterVehicleOfInterest(CVehicle* pVehicle)
 {
-	for (int i = 0; i < MAX_CARS_TO_KEEP; i++) {
-		if (apCarsToKeep[i] == pVehicle) {
-			aCarsToKeepTime[i] = (*Timer_GetTimeInMilliseconds());
-			return;
-		}
-	}
-	for (int i = 0; i < MAX_CARS_TO_KEEP; i++) {
-		if (!apCarsToKeep[i]) {
-			apCarsToKeep[i] = pVehicle;
-			aCarsToKeepTime[i] = (*Timer_GetTimeInMilliseconds());
-			return;
-		}
-	}
-	uint32 oldestCarWeKeepTime = UINT32_MAX;
-	int oldestCarWeKeepIndex = 0;
-	for (int i = 0; i < MAX_CARS_TO_KEEP; i++) {
-		if (apCarsToKeep[i] && aCarsToKeepTime[i] < oldestCarWeKeepTime) {
-			oldestCarWeKeepTime = aCarsToKeepTime[i];
-			oldestCarWeKeepIndex = i;
-		}
-	}
-	apCarsToKeep[oldestCarWeKeepIndex] = pVehicle;
-	aCarsToKeepTime[oldestCarWeKeepIndex] = (*Timer_GetTimeInMilliseconds());
+	// Delegate the registration of the vehicle to the C implementation
+	CarCtrl_RegisterKept((void **)apCarsToKeep, aCarsToKeepTime, MAX_CARS_TO_KEEP, pVehicle, (*Timer_GetTimeInMilliseconds()));
 }
 
 bool

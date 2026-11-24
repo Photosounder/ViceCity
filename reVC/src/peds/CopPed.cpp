@@ -5,6 +5,7 @@
 #include "World.h"
 #include "PlayerPed.h"
 #include "CopPed.h"
+#include "PedLogic.h"
 #include "CopLogic.h"
 #include "Wanted.h"
 #include "DMAudio.h"
@@ -117,6 +118,13 @@ CCopPed::~CCopPed()
 }
 
 // Parameter should always be CPlayerPed, but it seems they considered making civilians arrestable at some point
+// Distance of a cop to its target
+static float
+CopDistanceToTarget(void *cop)
+{
+	return ((CCopPed*)cop)->m_fDistanceToTarget;
+}
+
 void
 CCopPed::SetArrestPlayer(CPed *player)
 {
@@ -172,29 +180,13 @@ CCopPed::ClearPursuit(void)
 		return;
 
 	CWanted *wanted = player->m_pWanted;
-	int ourCopId = 0;
-	bool foundMyself = false;
-	int biggestCopId = 0;
 	if (!m_bIsInPursuit)
 		return;
 
 	m_bIsInPursuit = false;
-	for (int i = 0; i < Max(wanted->m_MaxCops, wanted->m_CurrentCops); ++i)  {
-		if (!foundMyself && wanted->m_pCops[i] == this) {
-			wanted->m_pCops[i] = nil;
-			--wanted->m_CurrentCops;
-			foundMyself = true;
-			ourCopId = i;
-			biggestCopId = i;
-		} else {
-			if (wanted->m_pCops[i])
-				biggestCopId = i;
-		}
-	}
-	if (foundMyself && biggestCopId > ourCopId) {
-		wanted->m_pCops[ourCopId] = wanted->m_pCops[biggestCopId];
-		wanted->m_pCops[biggestCopId] = nil;
-	}
+
+	// Delegate the removal from the list of cops to the C implementation
+	PedLogic_RemoveCopFromPursuit((void**)wanted->m_pCops, wanted->m_MaxCops, &wanted->m_CurrentCops, this);
 	m_objective = OBJECTIVE_NONE;
 	m_prevObjective = OBJECTIVE_NONE;
 	m_nLastPedState = PED_NONE;
@@ -231,24 +223,16 @@ CCopPed::SetPursuit(bool ignoreCopLimit)
 	if (m_bIsInPursuit || !IsPedInControl())
 		return;
 
-	if (wanted->m_CurrentCops < wanted->m_MaxCops || ignoreCopLimit) {
-		for (int i = 0; i < wanted->m_MaxCops; ++i) {
-			if (!wanted->m_pCops[i]) {
-				m_bIsInPursuit = true;
-				++wanted->m_CurrentCops;
-				wanted->m_pCops[i] = this;
-				break;
-			}
-		}
-		if (m_bIsInPursuit) {
-			ClearObjective();
-			m_prevObjective = OBJECTIVE_NONE;
-			SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, FindPlayerPed());
-			SetObjectiveTimer(0);
-			bNotAllowedToDuck = true;
-			bIsRunning = true;
-			m_bStopAndShootDisabledZone = false;
-		}
+	// Delegate the search of a free slot in the list of cops to the C implementation
+	m_bIsInPursuit = PedLogic_AddCopToPursuit((void**)wanted->m_pCops, wanted->m_MaxCops, &wanted->m_CurrentCops, this, ignoreCopLimit);
+	if (m_bIsInPursuit) {
+		ClearObjective();
+		m_prevObjective = OBJECTIVE_NONE;
+		SetObjective(OBJECTIVE_KILL_CHAR_ON_FOOT, FindPlayerPed());
+		SetObjectiveTimer(0);
+		bNotAllowedToDuck = true;
+		bIsRunning = true;
+		m_bStopAndShootDisabledZone = false;
 	}
 }
 
@@ -383,38 +367,27 @@ CCopPed::CopAI(void)
 			}
 
 			if (!m_bIsInPursuit || wanted->m_CurrentCops > wanted->m_MaxCops) {
-				CCopPed *copFarthestToTarget = nil;
-				float copFarthestToTargetDist = m_fDistanceToTarget;
-
 				int oldCopNum = wanted->m_CurrentCops;
 				int maxCops = wanted->m_MaxCops;
-				
-				for (int i = 0; i < Max(maxCops, oldCopNum); i++) {
-					CCopPed *cop = wanted->m_pCops[i];
-					if (cop && cop->m_fDistanceToTarget > copFarthestToTargetDist) {
-						copFarthestToTargetDist = cop->m_fDistanceToTarget;
-						copFarthestToTarget = wanted->m_pCops[i];
-					}
-				}
+				void *copFarthestToTarget;
 
-				if (m_bIsInPursuit) {
-					if (copFarthestToTarget && oldCopNum > maxCops) {
-						if (copFarthestToTarget == this && m_fDistanceToTarget > 10.0f) {
-							ClearPursuit();
-						} else if(copFarthestToTargetDist > 10.0f)
-							copFarthestToTarget->ClearPursuit();
-					}
-				} else {
-					if (oldCopNum < maxCops) {
-						SetPursuit(true);
-					} else {
-						if (m_fDistanceToTarget <= 10.0f || copFarthestToTarget && m_fDistanceToTarget < copFarthestToTargetDist) {
-							if (copFarthestToTarget && copFarthestToTargetDist > 10.0f)
-								copFarthestToTarget->ClearPursuit();
-
-							SetPursuit(true);
-						}
-					}
+				// Delegate the decision about the pursuit to the C implementation
+				switch (PedLogic_CopPursuitAction(m_bIsInPursuit, (void**)wanted->m_pCops, oldCopNum, maxCops, this, m_fDistanceToTarget, CopDistanceToTarget, &copFarthestToTarget)) {
+				case PED_COPPURSUIT_CLEAR_SELF:
+					ClearPursuit();
+					break;
+				case PED_COPPURSUIT_CLEAR_FARTHEST:
+					((CCopPed*)copFarthestToTarget)->ClearPursuit();
+					break;
+				case PED_COPPURSUIT_JOIN:
+					SetPursuit(true);
+					break;
+				case PED_COPPURSUIT_CLEAR_FARTHEST_AND_JOIN:
+					((CCopPed*)copFarthestToTarget)->ClearPursuit();
+					SetPursuit(true);
+					break;
+				default:
+					break;
 				}
 			} else
 				SetPursuit(false);
@@ -729,12 +702,21 @@ CCopPed::ProcessControl(void)
 
 				if (!bDuckAndCover && Seek()) {
 					CVehicle *playerVeh = FindPlayerVehicle();
-					if (!playerVeh && player && player->EnteringCar()) {
+
+					// Delegate the choice of what to do at the position to the C implementation
+					switch (PedLogic_CopSeekPosArrival(playerVeh != nil, player && player->EnteringCar(), GetPosition().z, m_vecSeekPos.z,
+						playerVeh && playerVeh->CanPedEnterCar() && playerVeh->m_nNumGettingIn == 0)) {
+					case PED_COPSEEK_ARREST:
 						SetArrestPlayer(player);
-					} else if (1.5f + GetPosition().z <= m_vecSeekPos.z || GetPosition().z - 0.3f >= m_vecSeekPos.z) {
+						break;
+					case PED_COPSEEK_STILL:
 						SetMoveState(PEDMOVE_STILL);
-					} else if (playerVeh && playerVeh->CanPedEnterCar() && playerVeh->m_nNumGettingIn == 0) {
+						break;
+					case PED_COPSEEK_CARJACK:
 						SetCarJack(playerVeh);
+						break;
+					default:
+						break;
 					}
 				}
 			}
@@ -744,16 +726,11 @@ CCopPed::ProcessControl(void)
 			} else {
 				m_vecSeekPos = m_pSeekTarget->GetPosition();
 				if (Seek()) {
-					if (m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT && m_fDistanceToTarget < 2.5f && player) {
-						if (player->m_nPedState == PED_ARRESTED || player->m_nPedState == PED_ENTER_CAR ||
-							(player->m_nPedState == PED_CARJACK && m_fDistanceToTarget < 1.3f)) {
-							SetArrestPlayer(player);
-						} else
-							RestorePreviousState();
-					} else {
+					// Delegate the choice between the arrest and going back to the C implementation
+					if (PedLogic_CopSeekEntityArrival(m_objective == OBJECTIVE_KILL_CHAR_ON_FOOT, m_fDistanceToTarget, player ? (int)player->m_nPedState : -1) == PED_COPARRIVAL_ARREST)
+						SetArrestPlayer(player);
+					else
 						RestorePreviousState();
-					}
-
 				}
 			}
 		}

@@ -397,9 +397,7 @@ CFileLoader::LoadCollisionModel(uint8 *buf, CColModel &model, char *modelname)
 		for(i = 0; i < numVertices; i++){
 			CompressedVector_Set(&model.vertices[i],*(float*)buf, *(float*)(buf+4), *(float*)(buf+8));
 #if 0
-			if(Abs(*(float*)buf) >= 256.0f ||
-			   Abs(*(float*)(buf+4)) >= 256.0f ||
-			   Abs(*(float*)(buf+8)) >= 256.0f)
+			if(General_AnyAbsAtLeast3(*(float*)buf, *(float*)(buf+4), *(float*)(buf+8), 256.0f))
 				printf("%s:Collision volume too big\n", modelname);
 #endif
 			buf += 12;
@@ -1165,7 +1163,8 @@ CFileLoader::LoadObjectInstance(const char *line)
 	if(!Streaming_IsObjectInCdImage(id)) // rouz edit (ChatGPT)
 		debug("Not in cdimage %s\n", mi->GetModelName());
 
-	angle = -RADTODEG(2.0f * Acos(angle));
+	// Delegate the rotation angle of the object to the C implementation
+	angle = General_ObjectRotationDegrees(angle);
 	xform = RwMatrixCreate();
 	RwMatrixRotate(xform, &axis, angle, rwCOMBINEREPLACE);
 	//RwMatrixScale(xform, &scale, rwCOMBINEPOSTCONCAT);			// rouz edit, take scaling factor into account, astoundingly this isn't supposed to be done, the values are bogus

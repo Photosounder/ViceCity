@@ -1,10 +1,12 @@
 //+ rouz edit (ChatGPT)
 #include "common.h"
+#include "General.h"
 #include "CollisionVector_native.h"
 
 #include "main.h"
 #include "Entity.h"
 #include "Occlusion.h"
+#include "RendererLogic.h"
 #include "Game.h"
 #include "Camera.h"
 #include "Vector.h"
@@ -62,8 +64,9 @@ COcclusion::AddOne(float x, float y, float z, float width, float length, float h
 	aOccluders[NumOccludersOnMap].width = width;
 	aOccluders[NumOccludersOnMap].length = length;
 	aOccluders[NumOccludersOnMap].height = height;
-	while(angle < 0.0f) angle += 360.0f;
-	while(angle > 360.0f) angle -= 360.0f;
+	// Delegate the angle wrapping to the C implementation
+	angle = General_RaiseBelow(angle, 0.0f, 360.0f);
+	angle = General_ReduceAbove(angle, 360.0f, 360.0f);
 	aOccluders[NumOccludersOnMap].angle = angle/360.0f * UINT16_MAX;
 	aOccluders[NumOccludersOnMap].listIndex = FarAwayList;
 	FarAwayList = NumOccludersOnMap++;
@@ -71,29 +74,24 @@ COcclusion::AddOne(float x, float y, float z, float width, float length, float h
 
 bool 
 COccluder::NearCamera() {
-	return (TheCamera.GetPosition() - CVector(x, y, z)).Magnitude() - (Max(width, length) / 2.0f) < 250.0f;
+	return (TheCamera.GetPosition() - CVector(x, y, z)).Magnitude() - (Occlusion_LargerSide(width, length) / 2.0f) < 250.0f;
 }
 
 bool
 DoesInfiniteLineCrossFiniteLine(float p1X, float p1Y, float p2X, float p2Y, float lineX, float lineY, float lineDX, float lineDY)
 {
-	float side1 = (p1X - lineX) * lineDY - (p1Y - lineY) * lineDX;
-	float side2 = (p2X - lineX) * lineDY - (p2Y - lineY) * lineDX;
-	return side1 * side2 < 0.0f;    // if points lie on opposite sides of the infinte line, the line between them crosses it
+	// Delegate to the C implementation
+	return Occlusion_CrossesLine(p1X, p1Y, p2X, p2Y, lineX, lineY, lineDX, lineDY);
 }
 
 bool DoesInfiniteLineTouchScreen(float lineX, float lineY, float lineDX, float lineDY) {
-	if (lineX > 0.0f && lineY > 0.0f && SCREEN_WIDTH > lineX && SCREEN_HEIGHT > lineY)
-		return true;
-
-	return (DoesInfiniteLineCrossFiniteLine(0.0f, 0.0f, SCREEN_WIDTH, 0.0f, lineX, lineY, lineDX, lineDY) ||
-		DoesInfiniteLineCrossFiniteLine(0.0f, 0.0f, 0.0f, SCREEN_HEIGHT, lineX, lineY, lineDX, lineDY) ||
-		DoesInfiniteLineCrossFiniteLine(SCREEN_WIDTH, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT, lineX, lineY, lineDX, lineDY) ||
-		DoesInfiniteLineCrossFiniteLine(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, lineX, lineY, lineDX, lineDY));
+	// Delegate to the C implementation
+	return Occlusion_LineTouchesScreen(lineX, lineY, lineDX, lineDY, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 bool IsPointInsideLine(float lineX, float lineY, float lineDX, float lineDY, float pX, float pY, float area = 0.0f) {
-	return (pX - lineX) * lineDY - (pY - lineY) * lineDX >= area;
+	// Delegate to the C implementation
+	return Occlusion_IsPointInsideLine(lineX, lineY, lineDX, lineDY, pX, pY, area);
 }
 
 bool CalcScreenCoors(CVector const &in, CVector *out, float *outw, float *outh) {
@@ -134,8 +132,8 @@ COccluder::ProcessLineSegment(int corner1, int corner2, CActiveOccluder *occl) {
 
 	CVector p1, p2;
 	if (!gOccluderCoorsValid[corner1]) {
-		float clipDist1 = Abs((TheCamera.m_viewMatrix * gOccluderCoors[corner1]).z - 1.1f);
-		float clipDist2 = Abs((TheCamera.m_viewMatrix * gOccluderCoors[corner2]).z - 1.1f);
+		float clipDist1 = General_AbsDiff((TheCamera.m_viewMatrix * gOccluderCoors[corner1]).z, 1.1f);
+		float clipDist2 = General_AbsDiff((TheCamera.m_viewMatrix * gOccluderCoors[corner2]).z, 1.1f);
 		float ratio = clipDist2 / (clipDist1 + clipDist2);
 		CVector clippedCoors = (1.0f - ratio) * gOccluderCoors[corner2] + ratio * gOccluderCoors[corner1];
 
@@ -147,8 +145,8 @@ COccluder::ProcessLineSegment(int corner1, int corner2, CActiveOccluder *occl) {
 	}
 
 	if (!gOccluderCoorsValid[corner2]) {
-		float clipDist1 = Abs((TheCamera.m_viewMatrix * gOccluderCoors[corner1]).z - 1.1f);
-		float clipDist2 = Abs((TheCamera.m_viewMatrix * gOccluderCoors[corner2]).z - 1.1f);
+		float clipDist1 = General_AbsDiff((TheCamera.m_viewMatrix * gOccluderCoors[corner1]).z, 1.1f);
+		float clipDist2 = General_AbsDiff((TheCamera.m_viewMatrix * gOccluderCoors[corner2]).z, 1.1f);
 		float ratio = clipDist1 / (clipDist1 + clipDist2);
 		CVector clippedCoors = (1.0f - ratio) * gOccluderCoors[corner2] + ratio * gOccluderCoors[corner1];
 
@@ -159,10 +157,8 @@ COccluder::ProcessLineSegment(int corner1, int corner2, CActiveOccluder *occl) {
 		p2 = gOccluderCoorsOnScreen[corner2];
 	}
 
-	gMinXInOccluder = Min(Min(gMinXInOccluder, p1.x), p2.x);
-	gMaxXInOccluder = Max(Max(gMaxXInOccluder, p1.x), p2.x);
-	gMinYInOccluder = Min(Min(gMinYInOccluder, p1.y), p2.y);
-	gMaxYInOccluder = Max(Max(gMaxYInOccluder, p1.y), p2.y);
+	// Delegate the extension of the bounds of the occluder to the C implementation
+	Occlusion_ExtendBounds(&gMinXInOccluder, &gMaxXInOccluder, &gMinYInOccluder, &gMaxYInOccluder, p1.x, p1.y, p2.x, p2.y);
 
 	CVector2D origin = p1;
 	CVector2D direction = p2 - p1;
@@ -198,38 +194,16 @@ COccluder::ProcessOneOccluder(CActiveOccluder *occl) {
 		return false;
 	}
 
-	occl->radius = Max(width, length) * 0.35f + gCenterOnScreen.z;
+	occl->radius = Occlusion_LargerSide(width, length) * 0.35f + gCenterOnScreen.z;
 
-	CVector vec[3];
-	
-	vec[0].x = length / 2.0f * Sin(GetAngle());
-	vec[0].y = -length / 2.0f * Cos(GetAngle());
-	vec[0].z = 0.0f;
-
-	vec[1].x = width / 2.0f * Cos(GetAngle());
-	vec[1].y = width / 2.0f * Sin(GetAngle());
-	vec[1].z = 0.0f;
-
-	vec[2].x = 0.0f;
-	vec[2].y = 0.0f;
-	vec[2].z = height / 2.0f;
-
-	// Figure out if we see the front or back of a face
+	// Delegate the box and its faces to the C implementation
+	float boxPos[3] = { pos.x, pos.y, pos.z };
+	float boxCam[3] = { TheCamera.GetPosition().x, TheCamera.GetPosition().y, TheCamera.GetPosition().z };
+	float boxCorners[8][3];
 	bool bFrontFace[6];
-	for (int i = 0; i < 3; i++) {
-		bFrontFace[i*2+0] = DotProduct((pos + vec[i] - TheCamera.GetPosition()), vec[i]) < 0.0f;
-		bFrontFace[i*2+1] = DotProduct((pos - vec[i] - TheCamera.GetPosition()), -vec[i]) < 0.0f;
-	}
-
-	//calculating vertices of a box
-	gOccluderCoors[0] = pos + vec[0] + vec[1] + vec[2];
-	gOccluderCoors[1] = pos - vec[0] + vec[1] + vec[2];
-	gOccluderCoors[2] = pos + vec[0] - vec[1] + vec[2];
-	gOccluderCoors[3] = pos - vec[0] - vec[1] + vec[2];
-	gOccluderCoors[4] = pos + vec[0] + vec[1] - vec[2];
-	gOccluderCoors[5] = pos - vec[0] + vec[1] - vec[2];
-	gOccluderCoors[6] = pos + vec[0] - vec[1] - vec[2];
-	gOccluderCoors[7] = pos - vec[0] - vec[1] - vec[2];
+	Occluder_BuildBox(boxPos, boxCam, length, width, height, GetAngle(), boxCorners, bFrontFace);
+	for(int i = 0; i < 8; i++)
+		gOccluderCoors[i] = CVector(boxCorners[i][0], boxCorners[i][1], boxCorners[i][2]);
 
 	for(int i = 0; i < 8; i++)
 		gOccluderCoorsValid[i] = CalcScreenCoors(gOccluderCoors[i], &gOccluderCoorsOnScreen[i], &outX, &outY);
@@ -404,8 +378,9 @@ bool COcclusion::IsAABoxOccluded(CVector pos, float width, float length, float h
 	if (!NumActiveOccluders || !CalcScreenCoors(pos, &coors, &outW, &outH))
 		return false;
 
-	float side = CVector(width, length, height).Magnitude() / 4.0f;
-	float area = Max(outW, outH) * side; 
+	// Delegate the side and the area to the C implementation
+	float side = Occlusion_BoxSide(width, length, height);
+	float area = Occlusion_TestArea(outW, outH, side);
 
 	CVector minCorner, maxCorner;
 
@@ -418,7 +393,7 @@ bool COcclusion::IsAABoxOccluded(CVector pos, float width, float length, float h
 	maxCorner.z = pos.z + height / 2.0f;
 
 	for (int i = 0; i < NumActiveOccluders; i++) {
-		if (coors.z - (side * 0.85f) > aActiveOccluders[i].radius) {
+		if (Occlusion_OccluderInFront(coors.z, side, aActiveOccluders[i].radius)) {
 			if (aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
 				return true;
 
@@ -444,10 +419,10 @@ bool COcclusion::IsPositionOccluded(CVector pos, float side) {
 	if (!NumActiveOccluders || !CalcScreenCoors(pos, &coors, &width, &height))
 		return false;
 
-	float area = Max(width, height) * side;
+	float area = Occlusion_TestArea(width, height, side);
 
 	for (int i = 0; i < NumActiveOccluders; i++) {
-		if (coors.z - (side * 0.85f) > aActiveOccluders[i].radius) 
+		if (Occlusion_OccluderInFront(coors.z, side, aActiveOccluders[i].radius))
 			if (aActiveOccluders[i].IsPointWithinOcclusionArea(coors.x, coors.y, area))
 				return true;
 	}
@@ -506,7 +481,7 @@ bool CEntity::IsEntityOccluded(void) {
 	if (COcclusion::NumActiveOccluders == 0 || !CalcScreenCoors(GetBoundCentre(), &coors, &width, &height))
 		return false;
 
-	float area = Max(width, height) * GetBoundRadius() * 0.9f;
+	float area = Occlusion_LargerSide(width, height) * GetBoundRadius() * 0.9f;
 
 	for (int i = 0; i < COcclusion::NumActiveOccluders; i++) {
 		if (coors.z - (GetBoundRadius() * 0.85f) > COcclusion::aActiveOccluders[i].radius) {

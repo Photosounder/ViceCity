@@ -143,8 +143,8 @@ cBuoyancy::ProcessBuoyancyBoat(CVehicle *veh, float buoyancy, CVector *point, CV
 				float volume = SimpleSumBuoyancyData(waterLevel, waterPosition);
 				float upImpulse = volume * volDiv * buoyancy * (*Timer_GetTimeStep());
 				CVector speed = veh->GetSpeed(Multiply3x3(veh->GetMatrix(), CVector(x, y, 0.0f)));
-				float damp = 1.0f - DotProduct(speed, waterNormal)*veh->pHandling->fSuspensionDampingLevel;
-				float finalImpulse = upImpulse*Max(damp, 0.0f);
+				// Delegate the damping of the impulse to the C implementation
+				float finalImpulse = Floater_DampedImpulse(upImpulse, DotProduct(speed, waterNormal), veh->pHandling->fSuspensionDampingLevel);
 				impulse->z += finalImpulse;
 				if(!bNoTurnForce)
 					veh->ApplyTurnForce(finalImpulse*waterNormal, FromC(Floater_RotateOffset(this, ToC(waterLevel))));

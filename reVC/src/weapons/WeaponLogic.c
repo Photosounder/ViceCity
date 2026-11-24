@@ -1,5 +1,7 @@
 //+ rouz edit (Claude)
 #include "WeaponLogic.h"
+#include <math.h>
+#include "EntityStatus.h"
 #include "WeaponType.h"
 #include "AnimGroups.h"
 
@@ -144,5 +146,165 @@ void Weapon_SetAmmo(CWeaponData *self, uint32_t ammo, int32_t maxAmmo)
 
 	if (self->m_eWeaponState == WEAPONSTATE_OUT_OF_AMMO && self->m_nAmmoTotal > 0)
 		self->m_eWeaponState = WEAPONSTATE_READY;
+}
+bool WeaponLogic_AutoAimIgnoresStatus(int status, bool includeWrecked)
+{
+	return status == STATUS_TRAIN_MOVING
+		|| status == STATUS_TRAIN_NOT_MOVING
+		|| status == STATUS_HELI
+		|| status == STATUS_PLANE
+		|| (includeWrecked && status == STATUS_WRECKED);
+}
+
+bool WeaponLogic_AutoAimWithinCone(float factor, float distZ, float dist2D)
+{
+	return factor*distZ < dist2D;
+}
+
+float WeaponLogic_AutoAimDist(float dist2D, float distZ)
+{
+	return sqrtf((dist2D*dist2D) + (distZ*distZ));
+}
+
+float WeaponLogic_AutoAimVictimZ(float victimPosZ, bool victimDuckingPed)
+{
+	float victimZ = victimPosZ + 0.3f;
+	if (victimDuckingPed)
+		victimZ -= 0.8f;
+	return victimZ;
+}
+
+float WeaponLogic_AutoAimTargetZ(float distToTarget, float distToSource, float victimZ, float sourceZ)
+{
+	return (distToTarget / distToSource) * (victimZ - sourceZ) + sourceZ;
+}
+
+float WeaponLogic_DriveByPedDist(bool isHeli, float lineDist, float distFromVehicle, float distFromDriver)
+{
+	if (isHeli) {
+		float larger = 5.f > distFromVehicle ? 5.f : distFromVehicle;
+		return lineDist / larger;
+	}
+	return 0.15f * distFromDriver + lineDist;
+}
+
+float WeaponLogic_DriveByMaxAimDist(bool isHunter, bool isSeaSparrowOrSparrow, float hunterAngle, float seaSparrowAngle, float defaultMax)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	if (isHunter)
+		return tanf(hunterAngle * pi / 180.0f);
+	if (isSeaSparrowOrSparrow)
+		return tanf(seaSparrowAngle * pi / 180.0f);
+	return defaultMax;
+}
+
+void Weapon_AheadFromAngle(float angle, float ahead[2])
+{
+	float x = -sinf(angle);
+	float y = cosf(angle);
+	float sq = x * x + y * y;
+
+	if (sq > 0.0f) {
+		float invsqrt = 1.0f / sqrtf(sq);
+		x *= invsqrt;
+		y *= invsqrt;
+	} else
+		x = 1.0f;
+	ahead[0] = x;
+	ahead[1] = y;
+}
+bool Weapon_BulletMatchesAim(float dotProd, float distWithBullet, float distWithAim)
+{
+	const float pi = (float)3.14159265358979323846;
+	float aimAndBulletAngle;
+
+	if (dotProd <= 0.35f)
+		aimAndBulletAngle = pi;
+	else
+		aimAndBulletAngle = acosf(dotProd);
+
+	return aimAndBulletAngle <= 45.0f * pi / 180.0f &&
+		(aimAndBulletAngle <= 15.0f * pi / 180.0f || distWithBullet / distWithAim >= 0.75f) &&
+		distWithBullet / distWithAim >= 0.99f;
+}
+float Weapon_PlayerInaccuracy(float aimScale, float attackButtonCounter, float inaccuracy, float aimScaleDist, float distToTarget, bool isDucking)
+{
+	float ratio = aimScaleDist / distToTarget;
+	float newInaccuracy = aimScale * attackButtonCounter * (inaccuracy * (1.f < ratio ? 1.f : ratio));
+
+	if (isDucking)
+		newInaccuracy *= 0.4f;
+	return newInaccuracy;
+}
+
+float Weapon_SpeedInaccuracy(float inaccuracy, float playerSpeed)
+{
+	float speed = 0.33f < playerSpeed ? 0.33f : playerSpeed;
+
+	return inaccuracy * (0.3f * speed * 100.f / 33.f + 0.8f);
+}
+
+uint8_t Weapon_ShakeFrequency(int firingRate)
+{
+	/* Yes, double */
+	double notFiringRate = (20.0 - firingRate) / 80.0;
+	double clamped = 0.0 > notFiringRate ? 0.0 : notFiringRate;
+	double raisedNotFiringRate = 1.0 > clamped ? 1.0 : clamped;
+
+	return (uint8_t)(80.0 * raisedNotFiringRate + 130.0);
+}
+void Weapon_ShotBox(const float source[3], const float target[3], float boxMin[3], float boxMax[3])
+{
+	int k;
+
+	for (k = 0; k < 3; k++) {
+		boxMin[k] = (source[k] < target[k] ? source[k] : target[k]) - 2.0f;
+		boxMax[k] = (source[k] > target[k] ? source[k] : target[k]) + 2.0f;
+	}
+}
+
+bool Weapon_PositionInBox(const float pos[3], const float boxMin[3], const float boxMax[3])
+{
+	return pos[0] > boxMin[0] && pos[0] < boxMax[0]
+		&& pos[1] > boxMin[1] && pos[1] < boxMax[1]
+		&& pos[2] > boxMin[2] && pos[2] < boxMax[2];
+}
+void Weapon_AngleOffset(float angle, float scale, float offset[2])
+{
+	offset[0] = -sinf(angle) * scale;
+	offset[1] = cosf(angle) * scale;
+}
+
+float Weapon_ThrowPower(float distToTarget)
+{
+	float v = (distToTarget - 10.0f) * 0.02f;
+
+	return v < 0.2f ? 0.2f : v > 1.0f ? 1.0f : v;
+}
+
+void Weapon_TraceTarget(const float fireSource[3], const float target[3], float range, float traceTarget[3])
+{
+	float m = range < 30.0f ? range : 30.0f;
+	int k;
+
+	for (k = 0; k < 3; k++)
+		traceTarget[k] = fireSource[k] + (target[k] - fireSource[k]) * m / range;
+}
+float Weapon_EffectBackOff(float distance, float minimum)
+{
+	float v = 0.2f * distance;
+
+	return v > minimum ? v : minimum;
+}
+float Weapon_ThreatTargetDistance(float magnitude)
+{
+	return magnitude > 0.01f ? magnitude : 0.01f;
+}
+float Weapon_WallSmokeBackOff(float distance)
+{
+	float v = distance / 10.0f;
+
+	return v > 0.2f ? v : 0.2f;
 }
 //- rouz edit (Claude)

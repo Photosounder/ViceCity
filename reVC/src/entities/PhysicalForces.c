@@ -2,6 +2,7 @@
 #include <math.h>
 #include "config.h"
 #include "PhysicalForces.h"
+#include "VectorMath.h"
 
 #define GRAVITY (0.008f)
 
@@ -223,6 +224,169 @@ void Physical_ApplyAirResistance(CPhysicalData *self, float timeStep, bool isGho
 		float t = powf(0.99f, timeStep);
 		self->m_vecMoveSpeed.x *= f; self->m_vecMoveSpeed.y *= f; self->m_vecMoveSpeed.z *= f;
 		self->m_vecTurnSpeed.x *= t; self->m_vecTurnSpeed.y *= t; self->m_vecTurnSpeed.z *= t;
+	}
+}
+float Physical_CollisionMassFactorA(bool bIsPedPhysics, bool aIsHeavy)
+{
+	if (bIsPedPhysics)
+		return 10.0f;
+	return aIsHeavy ? 2.0f : 1.0f;
+}
+
+float Physical_CollisionMassFactorB(bool aIsPedPhysics, bool aIsPlayerPed, bool bIsVehicle, bool bIsAbandonedOrWrecked, bool aHasHitWall, float bMass, bool bIsHeavy)
+{
+	if (aIsPedPhysics) {
+		if (aIsPlayerPed && bIsVehicle && (bIsAbandonedOrWrecked || aHasHitWall)) {
+			float excess = bMass - 2000.0f;
+			return 1.0f / ((excess > 0.0f ? excess : 0.0f) / 5000.0f + 1.0f);
+		}
+		return 10.0f;
+	}
+	return bIsHeavy ? 2.0f : 1.0f;
+}
+float Physical_VehicleAdhesion(float adhesion, bool isRCBandit, bool isBoat, float normalZ, bool surfaceIsLooseOrSand, bool isWrecked, float upZ, float impulse)
+{
+	if (isRCBandit)
+		adhesion *= 0.2f;
+	else if (isBoat) {
+		if (normalZ > 0.6f) {
+			if (surfaceIsLooseOrSand)
+				adhesion *= 3.0f;
+		} else
+			adhesion = 0.0f;
+	} else if (isWrecked)
+		adhesion *= 3.0f;
+	else if (upZ > 0.3f)
+		adhesion = 0.0f;
+	else {
+		float factor = 0.03f * impulse + 1.0f;
+		adhesion *= (5.0f < factor ? 5.0f : factor);
+	}
+	return adhesion;
+}
+
+float Physical_ReportedImpulse(float upZ, float moveSpeedX, float moveSpeedY, float impulse)
+{
+	if (upZ < -0.6f && fabsf(moveSpeedX) < 0.05f && fabsf(moveSpeedY) < 0.05f)
+		return 0.1f * impulse;
+	return impulse;
+}
+static float NumSteps(float distSq, float x)
+{
+	// Number of units of x we would like to step
+	return ceilf(sqrtf(distSq) * (1.0f / x));
+}
+
+int Physical_PedCollisionSteps(float distSq, bool isPlayer, bool hasPhysSurface)
+{
+	float n;
+
+	if (isPlayer) {
+		if (hasPhysSurface) {
+			n = NumSteps(distSq, 0.15f);
+			n = n > 4.0f ? n : 4.0f;
+		} else {
+			n = NumSteps(distSq, 0.3f);
+			n = n > 2.0f ? n : 2.0f;
+		}
+	} else
+		n = NumSteps(distSq, 0.45f);
+	return (int)n;
+}
+
+int Physical_VehicleCollisionSteps(float distSq, bool isPlayerStatus)
+{
+	if (isPlayerStatus)
+		return (int)NumSteps(distSq, 0.2f);
+	return (int)(distSq > 0.32f ? NumSteps(distSq, 0.3f) : NumSteps(distSq, 0.4f));
+}
+
+bool Physical_VehicleMovesLessThanSize(float speedRight, float speedForward, float speedUp, float timeStep, float sizeX, float sizeY, float sizeZ)
+{
+	float relDistX = fabsf(speedRight) * timeStep / sizeX;
+	float relDistY = fabsf(speedForward) * timeStep / sizeY;
+	float relDistZ = fabsf(speedUp) * timeStep / sizeZ;
+	float m = relDistY > relDistZ ? relDistY : relDistZ;
+	m = relDistX > m ? relDistX : m;
+	return m < 1.0f;
+}
+
+int Physical_ObjectCollisionSteps(float distSq, bool isLampost, bool isUnknown5, bool isSmallBoxOrFencePart)
+{
+	if (isLampost) {
+		if (distSq >= (0.3f * 0.3f))
+			return (int)NumSteps(distSq, 0.3f);
+	} else if (isUnknown5) {
+		if (distSq >= 0.009f)
+			return (int)NumSteps(distSq, 0.09f);
+	} else if (isSmallBoxOrFencePart) {
+		if (distSq >= (0.15f * 0.15f))
+			return (int)NumSteps(distSq, 0.15f);
+	} else {
+		if (distSq >= (0.3f * 0.3f))
+			return (int)NumSteps(distSq, 0.3f);
+	}
+	return 1;
+}
+bool Physical_ShiftIsDamped(bool hasHitWall, bool isPed, bool hasSurface, bool surfaceInfiniteMass, bool surfaceFlagA08, bool secondShift)
+{
+	return hasHitWall && ((isPed && (!hasSurface || !surfaceInfiniteMass || surfaceFlagA08)) || secondShift);
+}
+float Physical_CollisionImpulse(int elasticityType, bool hasContacted, float relX, float relY, float relZ, float minSpeed, float normalSpeed, float mass, bool isBoatOnWood, float elasticity)
+{
+	float impulse = 0.0f;
+	bool small = fabsf(relX) < minSpeed && fabsf(relY) < minSpeed && fabsf(relZ) < minSpeed * 2.0f;
+
+	if (elasticityType == 1 && !hasContacted && small)
+		impulse = -0.98f * normalSpeed * mass;
+	if (elasticityType == 3 && small)
+		impulse = -0.8f * normalSpeed * mass;
+	else if (elasticityType == 2 && small)
+		impulse = -0.92f * normalSpeed * mass;
+	else if (elasticityType == 4 && small)
+		impulse = -0.8f * normalSpeed * mass;
+	else if (isBoatOnWood)
+		impulse = -(2.0f * elasticity + 1.0f) * normalSpeed * mass;
+	else
+		impulse = -(elasticity + 1.0f) * normalSpeed * mass;
+	return impulse;
+}
+float Physical_ShiftFactor(bool secondShift, bool deepestOnly)
+{
+	if (deepestOnly)
+		return secondShift ? 0.4f : 0.2f;
+	return secondShift ? 1.5f : 1.2f;
+}
+float Physical_AudioSpeedDiff(float turnSpeedDiff, float moveSpeedDiff)
+{
+	return turnSpeedDiff > moveSpeedDiff ? turnSpeedDiff : moveSpeedDiff;
+}
+
+float Physical_ShiftDamping(float damp, float timeStep)
+{
+	return powf(damp, timeStep);
+}
+void Physical_BlendGravityUp(const float gravityUp[3], const float surfaceUp[3], float timeStep, float out[3])
+{
+	float t = timeStep * 0.5f;
+	float x, y, z;
+
+	// Blend factor limited between 0.05 and 0.8
+	t = t < 0.05f ? 0.05f : t > 0.8f ? 0.8f : t;
+
+	// Blend the previous gravity direction with the surface direction
+	x = gravityUp[0] * (1.0f - t) + surfaceUp[0] * t;
+	y = gravityUp[1] * (1.0f - t) + surfaceUp[1] * t;
+	z = gravityUp[2] * (1.0f - t) + surfaceUp[2] * t;
+
+	// Normalise it unless it is too short, then use straight up
+	if (x * x + y * y + z * z < 0.1f) {
+		out[0] = 0.0f; out[1] = 0.0f; out[2] = 1.0f;
+	} else {
+		VectorMath3 v = { x, y, z };
+
+		VectorMath_Normalise(&v);
+		out[0] = v.x; out[1] = v.y; out[2] = v.z;
 	}
 }
 //- rouz edit (Claude)

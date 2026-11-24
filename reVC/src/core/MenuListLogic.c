@@ -141,4 +141,33 @@ float MenuLogic_SliderMouseSens(float mouseAccelHorizontal, int value)
 	return mouseAccelHorizontal < 1.0f/3200.0f ? 1.0f/3200.0f : mouseAccelHorizontal > 1.0f/200.0f ? 1.0f/200.0f : mouseAccelHorizontal;
 }
 
+float Menu_ClampMapCenter(float center, float halfScreen, float mapSize, float minMapSize)
+{
+	float low = halfScreen - (mapSize - minMapSize);
+	float high = mapSize - minMapSize + halfScreen;
+
+	return center < low ? low : center > high ? high : center;
+}
+int Menu_NextFirstStartCounter(int counter)
+{
+	int v = counter + 20;
+
+	return v < 255 ? v : 255;
+}
+float Menu_MapSizeZoomedIn(float mapSize, float step, float maxSize)
+{
+	float v = mapSize + step;
+
+	return maxSize < v ? maxSize : v;
+}
+float Menu_MapSizeZoomedOut(float mapSize, float step, float minSize)
+{
+	float v = mapSize - step;
+
+	return minSize > v ? minSize : v;
+}
+int Menu_FadedAlpha(int menuFadeAlpha, int alpha)
+{
+	return menuFadeAlpha < alpha ? menuFadeAlpha : alpha;
+}
 //- rouz edit (Claude)

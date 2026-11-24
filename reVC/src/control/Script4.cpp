@@ -9,6 +9,7 @@
 #include "CollisionVector_native.h"
 
 #include "Script.h"
+#include "ScriptArea.h"
 #include "ScriptCommands.h"
 
 #include "AnimBlendAssociation.h"
@@ -375,18 +376,12 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		int16 total;
 		CWorld::FindObjectsIntersectingCube(CVector(infX, infY, infZ), CVector(supX, supY, supZ), &total, 2, nil,
 			!!ScriptParams[6], !!ScriptParams[7], !!ScriptParams[8], !!ScriptParams[9], !!ScriptParams[10]);
@@ -526,13 +521,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			UpdateCompareFlag(true);
 			return 0;
 		}
-		float angleClockwise = LimitAngleOnCircle(headingTarget - heading);
-		float angleCounterclockwise = LimitAngleOnCircle(heading - headingTarget);
-		float newHeading;
-		if (angleClockwise < angleCounterclockwise)
-			newHeading = rotateBy < angleClockwise ? heading + rotateBy : headingTarget;
-		else
-			newHeading = rotateBy < angleCounterclockwise ? heading - rotateBy : headingTarget;
+		// Delegate the new heading to the C implementation
+		float newHeading = ScriptArea_RotateObjectHeading(heading, headingTarget, rotateBy);
 		bool obstacleInPath = false;
 		if (ScriptParams[3]) {
 			CVector pos = pObject->GetPosition();
@@ -545,10 +535,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			CVector cp4 = tmp_matrix * CVector(pColModel->boundingBox.min.x, pColModel->boundingBox.min.y, pColModel->boundingBox.max.z);
 			int16 collisions;
 			CWorld::FindObjectsIntersectingAngledCollisionBox(pColModel->boundingBox, tmp_matrix, pos,
-				Min(cp1.x, Min(cp2.x, Min(cp3.x, cp4.x))),
-				Min(cp1.y, Min(cp2.y, Min(cp3.y, cp4.y))),
-				Max(cp1.x, Max(cp2.x, Max(cp3.x, cp4.x))),
-				Max(cp1.y, Max(cp2.y, Max(cp3.y, cp4.y))),
+				ScriptArea_Min4(cp1.x, cp2.x, cp3.x, cp4.x),
+				ScriptArea_Min4(cp1.y, cp2.y, cp3.y, cp4.y),
+				ScriptArea_Max4(cp1.x, cp2.x, cp3.x, cp4.x),
+				ScriptArea_Max4(cp1.y, cp2.y, cp3.y, cp4.y),
 				&collisions, 2, nil, false, true, true, false, false);
 			if (collisions > 0)
 				obstacleInPath = true;
@@ -584,20 +574,11 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			UpdateCompareFlag(true);
 			return 0;
 		}
-		CVector posDiff = pos - posTarget;
+		// Delegate the new position to the C implementation
 		CVector newPosition;
-		if (posDiff.x < 0)
-			newPosition.x = -posDiff.x < slideBy.x ? posTarget.x : pos.x + slideBy.x;
-		else
-			newPosition.x = posDiff.x < slideBy.x ? posTarget.x : pos.x - slideBy.x;
-		if (posDiff.y < 0)
-			newPosition.y = -posDiff.y < slideBy.y ? posTarget.y : pos.y + slideBy.y;
-		else
-			newPosition.y = posDiff.y < slideBy.y ? posTarget.y : pos.y - slideBy.y;
-		if (posDiff.z < 0)
-			newPosition.z = -posDiff.z < slideBy.z ? posTarget.z : pos.z + slideBy.z;
-		else
-			newPosition.z = posDiff.z < slideBy.z ? posTarget.z : pos.z - slideBy.z;
+		newPosition.x = ScriptArea_SlideAxis(pos.x, posTarget.x, slideBy.x);
+		newPosition.y = ScriptArea_SlideAxis(pos.y, posTarget.y, slideBy.y);
+		newPosition.z = ScriptArea_SlideAxis(pos.z, posTarget.z, slideBy.z);
 		bool obstacleInPath = false;
 		if (ScriptParams[7]) {
 			tmp_matrix = pObject->GetMatrix();
@@ -609,10 +590,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 			CVector cp4 = tmp_matrix * CVector(pColModel->boundingBox.min.x, pColModel->boundingBox.min.y, pColModel->boundingBox.max.z);
 			int16 collisions;
 			CWorld::FindObjectsIntersectingAngledCollisionBox(pColModel->boundingBox, tmp_matrix, newPosition,
-				Min(cp1.x, Min(cp2.x, Min(cp3.x, cp4.x))),
-				Min(cp1.y, Min(cp2.y, Min(cp3.y, cp4.y))),
-				Max(cp1.x, Max(cp2.x, Max(cp3.x, cp4.x))),
-				Max(cp1.y, Max(cp2.y, Max(cp3.y, cp4.y))),
+				ScriptArea_Min4(cp1.x, cp2.x, cp3.x, cp4.x),
+				ScriptArea_Min4(cp1.y, cp2.y, cp3.y, cp4.y),
+				ScriptArea_Max4(cp1.x, cp2.x, cp3.x, cp4.x),
+				ScriptArea_Max4(cp1.y, cp2.y, cp3.y, cp4.y),
 				&collisions, 2, nil, false, true, true, false, false);
 			if (collisions > 0)
 				obstacleInPath = true;
@@ -705,18 +686,12 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		float supX = *(float*)&ScriptParams[4];
 		float supY = *(float*)&ScriptParams[5];
 		float supZ = *(float*)&ScriptParams[6];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[4];
-			supX = *(float*)&ScriptParams[1];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[5];
-			supY = *(float*)&ScriptParams[2];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		// Call the standalone explosion area check
 		UpdateCompareFlag(Explosion_TestForExplosionInArea((eExplosionType)ScriptParams[0],
 			infX, supX, infY, supY, infZ, supZ));
@@ -789,7 +764,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CollectParameters(&m_nIp, 2);
 		CPlayerPed* pPlayerPed = CWorld::Players[ScriptParams[0]].m_pPed;
 		script_assert(pPlayerPed);
-		pPlayerPed->m_fArmour = Clamp(pPlayerPed->m_fArmour + ScriptParams[1], 0.0f, CWorld::Players[ScriptParams[0]].m_nMaxArmour);
+		// Delegate the armour to the C implementation
+		pPlayerPed->m_fArmour = ScriptMath_ArmourAfterAdd(pPlayerPed->m_fArmour, ScriptParams[1], CWorld::Players[ScriptParams[0]].m_nMaxArmour);
 		return 0;
 	}
 	case COMMAND_ADD_ARMOUR_TO_CHAR:
@@ -798,7 +774,8 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 				// Access raw storage through the C store or pool API
 		CPed* pPed = ((CPed*)CPool_GetAt(CPools::GetPedPool(), ScriptParams[0]));
 				script_assert(pPed);
-		pPed->m_fArmour = Clamp(pPed->m_fArmour + ScriptParams[1], 0.0f, 100.0f);
+		// Delegate the armour to the C implementation
+		pPed->m_fArmour = ScriptMath_ArmourAfterAdd(pPed->m_fArmour, ScriptParams[1], 100.0f);
 		return 0;
 	}
 	case COMMAND_OPEN_GARAGE:
@@ -906,7 +883,7 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		CEntity* pClosestEntity = nil;
 		float min_dist = 2.0f * range;
 		for (int i = 0; i < total; i++) {
-			float dist = (apEntities[i]->GetPosition() - pos).Magnitude();
+			float dist = ScriptMath_Distance3D(apEntities[i]->GetPosition().x, apEntities[i]->GetPosition().y, apEntities[i]->GetPosition().z, pos.x, pos.y, pos.z);
 			if (dist < min_dist) {
 				min_dist = dist;
 				pClosestEntity = apEntities[i];
@@ -968,14 +945,10 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		float infY = *(float*)&ScriptParams[3];
 		float supX = *(float*)&ScriptParams[4];
 		float supY = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[4];
-			supX = *(float*)&ScriptParams[2];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[5];
-			supY = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
 		CCranes::ActivateCrane(infX, supX, infY, supY,
 			*(float*)&ScriptParams[6], *(float*)&ScriptParams[7], *(float*)&ScriptParams[8],
 			DEGTORAD(*(float*)&ScriptParams[9]), false, true,
@@ -1194,18 +1167,12 @@ int8 CRunningScript::ProcessCommands800To899(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		// Call the standalone bullet operation
 		UpdateCompareFlag(BulletInfo_TestForSniperBullet(infX, supX, infY, supY, infZ, supZ));
 		return 0;
@@ -1329,21 +1296,12 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		float supY = *(float*)&ScriptParams[1] + *(float*)&ScriptParams[4];
 		float infZ = *(float*)&ScriptParams[2] - *(float*)&ScriptParams[5];
 		float supZ = *(float*)&ScriptParams[2] + *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			float tmp = infX;
-			infX = supX;
-			supX = tmp;
-		}
-		if (infY > supY) {
-			float tmp = infY;
-			infY = supY;
-			supY = tmp;
-		}
-		if (infZ > supZ) {
-			float tmp = infZ;
-			infZ = supZ;
-			supZ = tmp;
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		int16 total;
 		CWorld::FindMissionEntitiesIntersectingCube(CVector(infX, infY, infZ), CVector(supX, supY, supZ), &total, 2, nil, true, true, true);
 		UpdateCompareFlag(total > 0);
@@ -1544,7 +1502,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CVector pos = *(CVector*)&ScriptParams[1];
 		if (pos.z <= MAP_Z_LOW_LIMIT)
 			pos.z = CWorld::FindGroundZForCoord(pos.x, pos.y);
-		float size = Max(0.0f, *(float*)&ScriptParams[7]);
+		float size = General_MaxFloat(0.0f, *(float*)&ScriptParams[7]);
 		eParticleObjectType type = (eParticleObjectType)ScriptParams[0];
 		RwRGBA color;
 		if (type == POBJECT_SMOKE_TRAIL){
@@ -1743,7 +1701,7 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		CEntity* pClosestEntity = nil;
 		float min_dist = 2.0f * radius;
 		for (int i = 0; i < total; i++) {
-			float dist = (apEntities[i]->GetPosition() - pos).Magnitude();
+			float dist = ScriptMath_Distance3D(apEntities[i]->GetPosition().x, apEntities[i]->GetPosition().y, apEntities[i]->GetPosition().z, pos.x, pos.y, pos.z);
 			if (dist < min_dist) {
 				min_dist = dist;
 				pClosestEntity = apEntities[i];
@@ -1789,18 +1747,12 @@ int8 CRunningScript::ProcessCommands900To999(int32 command)
 		float supX = *(float*)&ScriptParams[3];
 		float supY = *(float*)&ScriptParams[4];
 		float supZ = *(float*)&ScriptParams[5];
-		if (infX > supX) {
-			infX = *(float*)&ScriptParams[3];
-			supX = *(float*)&ScriptParams[0];
-		}
-		if (infY > supY) {
-			infY = *(float*)&ScriptParams[4];
-			supY = *(float*)&ScriptParams[1];
-		}
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[5];
-			supZ = *(float*)&ScriptParams[2];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infX, &supX);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infY, &supY);
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		CWorld::ClearCarsFromArea(infX, infY, infZ, supX, supY, supZ);
 		return 0;
 	}

@@ -1,4 +1,5 @@
 //+ rouz edit (Claude)
+#include <math.h>
 #include "GarageLogic.h"
 
 bool Garage_IsPointInside(const CGarageData *g, float x, float y, float z)
@@ -89,5 +90,58 @@ void Garage_CloseThis(CGarageData *g)
 	// Only open or opening garages start closing
 	if (g->m_eGarageState == GS_OPENED || g->m_eGarageState == GS_OPENING)
 		g->m_eGarageState = GS_CLOSING;
+}
+void Garage_RotatedDoorUp(float position, float forwardX, float forwardY, float up[3])
+{
+	const float halfPi = (float)3.14159265358979323846 / 2;
+	float angle = -position * halfPi;
+
+	up[0] = -sinf(angle) * forwardY;
+	up[1] = sinf(angle) * forwardX;
+	up[2] = cosf(angle);
+}
+float Garage_DoorClosedPos(float doorPos, float speed, float timeStep)
+{
+	float v = doorPos - speed * timeStep;
+
+	return 0.0f > v ? 0.0f : v;
+}
+
+float Garage_DoorOpenedPos(float doorPos, float doorHeight, float speed, float timeStep)
+{
+	float v = doorPos + speed * timeStep;
+
+	return doorHeight < v ? doorHeight : v;
+}
+void Garage_AxisBounds(float c1, float c2, float c3, float *inf, float *sup)
+{
+	float a = c1 < c2 ? c1 : c2;
+	float b = a < c3 ? a : c3;
+	float d = c2 + c3 - c1;
+	float e = c1 > c2 ? c1 : c2;
+
+	*inf = b < d ? b : d;
+	*sup = e > c3 ? e : c3;
+}
+bool Garage_PlayerIsFar(float playerX, float playerY, float centerX, float centerY, float limit)
+{
+	return fabsf(playerX - centerX) > limit || fabsf(playerY - centerY) > limit;
+}
+
+int32_t Garage_MoneyAfterPayment(int32_t money, int32_t price)
+{
+	int32_t v = money - price;
+
+	return 0 > v ? 0 : v;
+}
+
+float Garage_SavedHealth(float health)
+{
+	return health > 300.0f ? health : 300.0f;
+}
+
+int Garage_SavedEngineStatus(int status)
+{
+	return status > 275 ? status : 275;
 }
 //- rouz edit (Claude)

@@ -142,7 +142,7 @@ CGameLogic::Update()
 			if (pPlayerInfo.m_bGetOutOfHospitalFree) {
 				pPlayerInfo.m_bGetOutOfHospitalFree = false;
 			} else {
-				pPlayerInfo.m_nMoney = Max(0, pPlayerInfo.m_nMoney - 100);
+				pPlayerInfo.m_nMoney = General_MaxInt(0, pPlayerInfo.m_nMoney - 100);
 				pPlayerInfo.m_pPed->ClearWeapons();
 			}
 
@@ -250,7 +250,7 @@ CGameLogic::Update()
 			if (pPlayerInfo.m_bGetOutOfJailFree) {
 				pPlayerInfo.m_bGetOutOfJailFree = false;
 			} else {
-				pPlayerInfo.m_nMoney = Max(0, pPlayerInfo.m_nMoney - takeMoney);
+				pPlayerInfo.m_nMoney = General_MaxInt(0, pPlayerInfo.m_nMoney - takeMoney);
 				pPlayerInfo.m_pPed->ClearWeapons();
 			}
 
@@ -526,7 +526,7 @@ CGameLogic::UpdateShortCut()
 		break;
 	case SHORTCUT_ARRIVING:
 		if ((*Timer_GetTimeInMilliseconds()) > ShortCutTimer) {
-			CWorld::Players[CWorld::PlayerInFocus].m_nMoney = Max(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - SHORTCUT_TAXI_COST);
+			CWorld::Players[CWorld::PlayerInFocus].m_nMoney = General_MaxInt(0, CWorld::Players[CWorld::PlayerInFocus].m_nMoney - SHORTCUT_TAXI_COST);
 			FindPlayerPed()->SetObjective(OBJECTIVE_LEAVE_CAR, pShortCutTaxi);
 			FindPlayerPed()->m_carInObjective = pShortCutTaxi;
 			ShortCutState = SHORTCUT_GETTING_OUT;

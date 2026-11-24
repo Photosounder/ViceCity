@@ -852,8 +852,8 @@ void CParticle::AddParticlesAlongLine(tParticleType type, CVector const &vecStar
 {
 	CVector vecDist = vecEnd - vecStart;
 	float fDist = vecDist.Magnitude();
-	float fSteps = Max(fDist / fPower, 1.0f);
-	int32 nSteps = (int32)fSteps;
+	// Delegate the number of steps to the C implementation
+	int32 nSteps = Particle_LineSteps(fDist, fPower);
 
 	CVector vecStep = vecDist * (1.0f / (float)nSteps); 
 
@@ -868,8 +868,8 @@ void CParticle::AddParticlesAlongLine(tParticleType type, CVector const &vecStar
 {
 	CVector vecDist = vecEnd - vecStart;
 	float fDist = vecDist.Magnitude();
-	float fSteps = Max(fDist / fPower, 1.0f);
-	int32 nSteps = (int32)fSteps;
+	// Delegate the number of steps to the C implementation
+	int32 nSteps = Particle_LineSteps(fDist, fPower);
 	
 	CVector vecStep = vecDist * (1.0f / (float)nSteps); 
 
@@ -997,17 +997,14 @@ CParticle *CParticle::AddParticle(tParticleType type, CVector const &vecPos, CVe
 			int32 ColorVariation = General_GetRandomNumberInRangeInt(-psystem->m_InitialColorVariation, psystem->m_InitialColorVariation);
 			//float ColorVariation = CGeneral::GetRandomNumberInRange((float)-psystem->m_InitialColorVariation, (float)psystem->m_InitialColorVariation);
   
-			pParticle->m_Color.red   = Clamp(pParticle->m_Color.red +
-				PERCENT(pParticle->m_Color.red, ColorVariation),
-				0, 255);
+			// Delegate the variation of the colour to the C implementation
+			pParticle->m_Color.red = Particle_VaryColorChannel(pParticle->m_Color.red, ColorVariation);
 			
-			pParticle->m_Color.green = Clamp(pParticle->m_Color.green +
-				PERCENT(pParticle->m_Color.green, ColorVariation),
-				0, 255);
+			// Delegate the variation of the colour to the C implementation
+			pParticle->m_Color.green = Particle_VaryColorChannel(pParticle->m_Color.green, ColorVariation);
 			
-			pParticle->m_Color.blue  = Clamp(pParticle->m_Color.blue +
-				PERCENT(pParticle->m_Color.blue, ColorVariation),
-				0, 255);
+			// Delegate the variation of the colour to the C implementation
+			pParticle->m_Color.blue = Particle_VaryColorChannel(pParticle->m_Color.blue, ColorVariation);
 		}
 	}
 
@@ -2049,11 +2046,9 @@ void CParticle::Render()
 					}
 					else if ( i == PARTICLE_FLYERS )
 					{
-						w += psystem->m_vecTextureStretch.x;
-						h += psystem->m_vecTextureStretch.y;
-						
-						w = Max(w, 12.0f);
-						h = Max(h, 12.0f);
+						// Delegate the stretched size to the C implementation
+						w = Particle_StretchedSize(w, psystem->m_vecTextureStretch.x);
+						h = Particle_StretchedSize(h, psystem->m_vecTextureStretch.y);
 					}
 					else
 					{
@@ -2133,16 +2128,11 @@ void CParticle::Render()
 										coors.y - particle->m_fExpansionRate
 									);
 	
-									float fDist = vecDist.Magnitude();
-	
+									// Delegate the length and rotation of the trail to the C implementation
+									float fDist;
+									Particle_TrailRotation(vecDist.x, vecDist.y, &fDist, &fRotation);
+
 									fTrailLength = fDist;
-									
-									float fRot = Asin(vecDist.x / fDist);
-	
-									fRotation = fRot;
-	
-									if ( vecDist.y < 0.0f )
-										fRotation = -1.0f * fRot + DEGTORAD(180.0f);
 									
 									float fSpeed = particle->m_vecVelocity.Magnitude();
 									
@@ -2186,16 +2176,11 @@ void CParticle::Render()
 										coors.y - vecScreenPosition.y
 									);
 									
-									float fDist = vecDist.Magnitude();
-									
+									// Delegate the length and rotation of the trail to the C implementation
+									float fDist;
+									Particle_TrailRotation(vecDist.x, vecDist.y, &fDist, &fRotation);
+
 									fTrailLength = fDist;
-									
-									float fRot = Asin(vecDist.x / fDist);
-									
-									fRotation = fRot;
-									
-									if ( vecDist.y < 0.0f )
-										fRotation = -1.0f * fRot + DEGTORAD(180.0f);
 								}
 								else
 								{
@@ -2583,16 +2568,11 @@ void CParticle::HandleShootableBirdsStuff(CEntity *entity, CVector const&camPos)
 		CVector2D vecCamPos(camPos.x, camPos.y);
 
 		CVector2D vecDist = vecPos - vecCamPos;
-		vecDist.Normalise();
-		
+
 		float fHead = DEGTORAD(fHeading);
 
-		CVector2D vecDir(-::Sin(fHead), ::Cos(fHead));
-		vecDir.Normalise();
-		
-		float fDot = DotProduct2D(vecDir, vecDist);
-		
-		if ( fDot > 0.0f && fDot > fBirdAngle )
+		// Delegate the test for the line of the shot to the C implementation
+		if ( Particle_BirdIsInLine(fHead, vecDist.x, vecDist.y, fBirdAngle) )
 		{
 			if ( (camPos - particle->m_vecPosition).MagnitudeSqr() < 40000.0f )
 			{

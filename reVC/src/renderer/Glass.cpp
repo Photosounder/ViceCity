@@ -23,6 +23,7 @@
 #include "SurfaceTable.h"
 #if defined(LIBRW) && defined(EXTENDED_PIPELINES)
 #include "custompipes.h"
+#include "WorldLogic.h"
 #endif
 
 
@@ -917,10 +918,10 @@ CGlass::HasGlassBeenShatteredAtCoors(float x, float y, float z)
 	CEntity *entity = nil;
 	float dist = 20.0f;
 	  
-	int32 nStartX = Max(CWorld::GetSectorIndexX(x - 30.0f), 0);
-	int32 nStartY = Max(CWorld::GetSectorIndexY(y - 30.0f), 0);
-	int32 nEndX   = Min(CWorld::GetSectorIndexX(x + 30.0f), NUMSECTORS_X-1);
-	int32 nEndY   = Min(CWorld::GetSectorIndexY(y + 30.0f), NUMSECTORS_Y-1);
+	// Delegate the range of sectors to the C implementation
+	int nStartX, nStartY, nEndX, nEndY;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(x - 30.0f), CWorld::GetSectorIndexX(x + 30.0f), NUMSECTORS_X, &nStartX, &nEndX);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(y - 30.0f), CWorld::GetSectorIndexY(y + 30.0f), NUMSECTORS_Y, &nStartY, &nEndY);
 
 	CWorld::AdvanceCurrentScanCode();
 	
@@ -1054,12 +1055,11 @@ CGlass::BreakGlassPhysically(CVector pos, float radius)
 							const CollisionVector3 collisionVertexValue17_0=CompressedVector_Get(&col->vertices[3]);
 							CVector d = CVector(collisionVertexValue17_0.x,collisionVertexValue17_0.y,collisionVertexValue17_0.z);
 						
-							float minx = Min(Min(a.x, b.x), Min(c.x, d.x));
-							float maxx = Max(Max(a.x, b.x), Max(c.x, d.x));
-							float miny = Min(Min(a.y, b.y), Min(c.y, d.y));
-							float maxy = Max(Max(a.y, b.y), Max(c.y, d.y));
-							float minz = Min(Min(a.z, b.z), Min(c.z, d.z));
-							float maxz = Max(Max(a.z, b.z), Max(c.z, d.z));
+							// Delegate the bounds of the quad to the C implementation
+							float minx, maxx, miny, maxy, minz, maxz;
+							Glass_MinMax4(a.x, b.x, c.x, d.x, &minx, &maxx);
+							Glass_MinMax4(a.y, b.y, c.y, d.y, &miny, &maxy);
+							Glass_MinMax4(a.z, b.z, c.z, d.z, &minz, &maxz);
 							
 							CVector pa = object->GetMatrix() * CVector(minx, miny, minz);
 							CVector pb = object->GetMatrix() * CVector(maxx, maxy, minz);

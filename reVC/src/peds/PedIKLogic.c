@@ -72,4 +72,32 @@ void PedIK_ExtractYawAndPitchLocal(const float right[3], const float up[3], cons
 	*pitch = acosf(f);
 	if (up[0] > 0.0f) *pitch = -*pitch;
 }
+float PedIK_PitchFromUp(float upZ)
+{
+	return atan2f(upZ, sqrtf(1.0f - upZ * upZ));
+}
+float PedIK_ArmAimPitch(float targetPitch, float targetYaw)
+{
+	float v;
+
+	if (targetPitch > 0.0f) {
+		v = targetPitch - fabsf(targetYaw);
+		return v > 0.0f ? v : 0.0f;
+	}
+	v = targetPitch + fabsf(targetYaw);
+	return v < 0.0f ? v : 0.0f;
+}
+
+float PedIK_UpperArmPitch(float maxPitch, float lowerArmYaw, float upperArmYaw, float upperArmPitch)
+{
+	float uaPitchAmount = 1.0f - (lowerArmYaw + upperArmYaw) * 0.34f;
+	float f1 = maxPitch * (uaPitchAmount > 0.0f ? uaPitchAmount : 0.0f);
+	float f2 = 0.2f * lowerArmYaw + upperArmPitch;
+
+	return f1 < f2 ? f1 : f2;
+}
+float PedIK_RollKept(float rollReduce)
+{
+	return 1.0f - (rollReduce < 1.0f ? rollReduce : 1.0f);
+}
 //- rouz edit (Claude)

@@ -5,11 +5,13 @@
 
 #include "CivilianPed.h"
 #include "CivilianLogic.h"
+#include "PedLogic.h"
 #include "Phones.h"
 #include "General.h"
 #include "PlayerPed.h"
 #include "Wanted.h"
 #include "DMAudio.h"
+#include "WorldLogic.h"
 #include "World.h"
 #include "Vehicle.h"
 #include "SurfaceTable.h"
@@ -352,13 +354,11 @@ CCivilianPed::ProcessControl(void)
 							int playerSexFrequency = CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency;
 							if (CWorld::Players[CWorld::PlayerInFocus].m_nMoney >= 10 && playerSexFrequency > 250) {
 									CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + playerSexFrequency;
-									if (playerSexFrequency >= 350) {
-										CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = Max(250, playerSexFrequency - 30);
-									} else {
-										CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = Max(250, playerSexFrequency - 10);
-									}
+									// Delegate the new service delay to the C implementation
+									CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency = PedLogic_SexFrequencyAfterService(playerSexFrequency);
 
-									m_pMyVehicle->pDriver->m_fHealth = Min(CWorld::Players[0].m_nMaxHealth + 25.0f, 1.0f + m_pMyVehicle->pDriver->m_fHealth);
+									// Delegate the health gain of the driver to the C implementation
+									m_pMyVehicle->pDriver->m_fHealth = PedLogic_DriverHealthAfterService(CWorld::Players[0].m_nMaxHealth, m_pMyVehicle->pDriver->m_fHealth);
 									if (CWorld::Players[CWorld::PlayerInFocus].m_nSexFrequency == 250)
 										CWorld::Players[CWorld::PlayerInFocus].m_nNextSexFrequencyUpdateTime = (*Timer_GetTimeInMilliseconds()) + 3000;
 							} else {
@@ -493,10 +493,10 @@ void CCivilianPed::UseNearbyAttractors()
 	float right = GetPosition().x + gDistanceToSeekAttractors;
 	float top = GetPosition().y - gDistanceToSeekAttractors;
 	float bottom = GetPosition().y + gDistanceToSeekAttractors;
-	int xstart = Max(0, CWorld::GetSectorIndexX(left));
-	int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(right));
-	int ystart = Max(0, CWorld::GetSectorIndexY(top));
-	int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(bottom));
+	// Delegate the range of sectors to the C implementation
+	int xstart, xend, ystart, yend;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(left), CWorld::GetSectorIndexX(right), NUMSECTORS_X, &xstart, &xend);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(top), CWorld::GetSectorIndexY(bottom), NUMSECTORS_Y, &ystart, &yend);
 	assert(xstart <= xend);
 	assert(ystart <= yend);
 
@@ -541,14 +541,9 @@ CCivilianPed::EnterVacantNearbyCars(void)
 
 				CVehicle *foundCar = nil;
 				float closestDist = FLT_MAX;
-				int minX = CWorld::GetSectorIndexX(GetPosition().x - 10.0f);
-				if (minX < 0) minX = 0;
-				int minY = CWorld::GetSectorIndexY(GetPosition().y - 10.0f);
-				if (minY < 0) minY = 0;
-				int maxX = CWorld::GetSectorIndexX(GetPosition().x + 10.0f);
-				if (maxX > NUMSECTORS_X - 1) maxX = NUMSECTORS_X - 1;
-				int maxY = CWorld::GetSectorIndexY(GetPosition().y + 10.0f);
-				if (maxY > NUMSECTORS_Y - 1) maxY = NUMSECTORS_Y - 1;
+				// Delegate the range of sectors to the C implementation
+				int32_t minX, minY, maxX, maxY;
+				World_SectorRange(GetPosition().x - 10.0f, GetPosition().y - 10.0f, GetPosition().x + 10.0f, GetPosition().y + 10.0f, &minX, &minY, &maxX, &maxY);
 
 				for (int curY = minY; curY <= maxY; curY++) {
 					for (int curX = minX; curX <= maxX; curX++) {

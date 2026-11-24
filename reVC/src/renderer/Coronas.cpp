@@ -147,7 +147,8 @@ CCoronas::Update(void)
 	int i;
 	static int LastCamLook = 0;
 
-	LightsMult = Min(LightsMult + 0.03f * (*Timer_GetTimeStep()), 1.0f);
+	// Delegate the rise of the brightness to the C implementation
+	LightsMult = CoronaLogic_LightsMultRise(LightsMult, (*Timer_GetTimeStep()));
 
 	int CamLook = 0;
 	if(TheCamera.Cams[TheCamera.ActiveCam].LookingLeft) CamLook |= 1;
@@ -345,8 +346,8 @@ CCoronas::Render(void)
 			
 				// if distance too big, break streak
 				if(aCoronas[i].hasValue[1]){
-					if(Abs(aCoronas[i].prevX[0] - aCoronas[i].prevX[1]) > 50.0f ||
-					   Abs(aCoronas[i].prevY[0] - aCoronas[i].prevY[1]) > 50.0f)
+					// Delegate the check of the streak to the C implementation
+					if(CoronaLogic_StreakBroken(aCoronas[i].prevX[0], aCoronas[i].prevX[1], aCoronas[i].prevY[0], aCoronas[i].prevY[1]))
 						aCoronas[i].hasValue[0] = false;
 				}
 			}
@@ -365,7 +366,8 @@ CCoronas::Render(void)
 
 				// render corona itself
 				if(aCoronas[i].texture){
-					float fogscale = Weather_Foggyness*Min(spriteCoors.z, 40.0f)/40.0f + 1.0f;
+					// Delegate the scale in the fog to the C implementation
+					float fogscale = CoronaLogic_FogScale(Weather_Foggyness, spriteCoors.z);
 					if(CCoronas::aCoronas[i].id == SUN_CORE)
 						spriteCoors.z = 0.95f * RwCameraGetFarClipPlane(Scene.camera);
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, RwTextureGetRaster(aCoronas[i].texture));
@@ -373,10 +375,9 @@ CCoronas::Render(void)
 
 					if(aCoronas[i].texture == gpCoronaTexture[8]){
 						// what's this?
-						float f = 1.0f - aCoronas[i].someAngle*2.0f/PI;
-						float wscale = 6.0f*sq(sq(sq(f))) + 0.5f;
-						float hscale = 0.35f - (wscale - 0.5f) * 0.06f;
-						hscale = Max(hscale, 0.15f);
+						// Delegate the scales of the streak to the C implementation
+						float wscale, hscale;
+						CoronaLogic_StreakScales(aCoronas[i].someAngle, &wscale, &hscale);
 
 						// Use the complete C sprite operation with the original argument values
 						Sprite_RenderOneXLUSprite(spriteCoors.x, spriteCoors.y, spriteCoors.z,
@@ -511,23 +512,20 @@ RenderEnvMapOnlyCorona(const CRegisteredCorona *corona, RwCamera *camera,
 		if(coronaDistance < 50.0f)
 			distanceFade *= (coronaDistance-35.0f)/15.0f;
 	}
-	int alpha = (int)(corona->fadeAlpha*Clamp(distanceFade, 0.0f, 1.0f));
+	// Delegate the alpha of the reflected corona to the C implementation
+	int alpha = CoronaLogic_ReflectionAlpha(corona->fadeAlpha, distanceFade);
 	if(alpha <= 0)
 		return;
 
 	// Tint the reflection corona for scene fog and construct its camera-facing quad
-	float fogScale = Weather_Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
-	int red = Clamp((int)(corona->red/fogScale), 0, 255);
-	int green = Clamp((int)(corona->green/fogScale), 0, 255);
-	int blue = Clamp((int)(corona->blue/fogScale), 0, 255);
-	float widthScale = fogScale;
-	float heightScale = fogScale;
-	if(corona->texture == gpCoronaTexture[8]){
-		float angleFactor = 1.0f - corona->someAngle*2.0f/PI;
-		float streakWidthScale = 6.0f*sq(sq(sq(angleFactor))) + 0.5f;
-		widthScale = streakWidthScale;
-		heightScale *= Max(0.35f - (streakWidthScale - 0.5f)*0.06f, 0.15f);
-	}
+	// Delegate the fog tint and the shape of the reflected corona to the C implementation
+	int fogRGB[3];
+	float widthScale, heightScale;
+	CoronaLogic_ReflectionFog(Weather_Foggyness, coronaDepth, corona->red, corona->green, corona->blue,
+		corona->texture == gpCoronaTexture[8], corona->someAngle, fogRGB, &widthScale, &heightScale);
+	int red = fogRGB[0];
+	int green = fogRGB[1];
+	int blue = fogRGB[2];
 	CVector horizontal = cameraRight*(corona->size*widthScale);
 	CVector vertical = cameraUp*(corona->size*heightScale);
 	CVector corners[4] = {
@@ -624,25 +622,21 @@ CCoronas::RenderForEnvMap(RwCamera *camera)
 			if(coronaDistance < 50.0f)
 				distanceFade *= (coronaDistance-35.0f)/15.0f;
 		}
-		int alpha = (int)(aCoronas[i].fadeAlpha*Clamp(distanceFade, 0.0f, 1.0f));
+		// Delegate the alpha of the reflected corona to the C implementation
+		int alpha = CoronaLogic_ReflectionAlpha(aCoronas[i].fadeAlpha, distanceFade);
 		// Ignore lights that have faded out before reaching the reflection camera
 		if(alpha <= 0)
 			continue;
 
 		// Apply the same fog tint before blending each corona texture
-		float fogScale = Weather_Foggyness*Min(coronaDepth, 40.0f)/40.0f + 1.0f;
-		int red = Clamp((int)(aCoronas[i].red/fogScale), 0, 255);
-		int green = Clamp((int)(aCoronas[i].green/fogScale), 0, 255);
-		int blue = Clamp((int)(aCoronas[i].blue/fogScale), 0, 255);
-		float widthScale = fogScale;
-		float heightScale = fogScale;
-		if(aCoronas[i].texture == gpCoronaTexture[8]){
-			// Preserve the special narrow shape used by streak coronas
-			float angleFactor = 1.0f - aCoronas[i].someAngle*2.0f/PI;
-			float streakWidthScale = 6.0f*sq(sq(sq(angleFactor))) + 0.5f;
-			widthScale = streakWidthScale;
-			heightScale *= Max(0.35f - (streakWidthScale - 0.5f)*0.06f, 0.15f);
-		}
+		// Delegate the fog tint and the shape of the reflected corona to the C implementation
+		int fogRGB[3];
+		float widthScale, heightScale;
+		CoronaLogic_ReflectionFog(Weather_Foggyness, coronaDepth, aCoronas[i].red, aCoronas[i].green, aCoronas[i].blue,
+			aCoronas[i].texture == gpCoronaTexture[8], aCoronas[i].someAngle, fogRGB, &widthScale, &heightScale);
+		int red = fogRGB[0];
+		int green = fogRGB[1];
+		int blue = fogRGB[2];
 		// Scale the textured quad with distance and preserve the elongated streak sprite proportions
 		float halfWidth = aCoronas[i].size*widthScale;
 		float halfHeight = aCoronas[i].size*heightScale;
@@ -733,17 +727,17 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 			continue;
 		CVector reflectionPos(aCoronas[i].coors.x, aCoronas[i].coors.y, groundZ + 0.02f);
 		float depth = DotProduct(reflectionPos - cameraPos, cameraForward);
-		float drawDist = Min(0.75f*aCoronas[i].drawDist, 55.0f);
+		float drawDist = CoronaLogic_ReflectionDrawDist(aCoronas[i].drawDist);
 		if(depth <= RwCameraGetNearClipPlane(camera) || depth >= drawDist || depth >= RwCameraGetFarClipPlane(camera))
 			continue;
 
-		float fadeDistance = drawDist*0.5f;
-		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
-		float heightFade = (20.0f-aCoronas[i].heightAboveRoad)/20.0f;
-		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*Weather_WetRoads);
-		int red = (intensity*aCoronas[i].red)>>8;
-		int green = (intensity*aCoronas[i].green)>>8;
-		int blue = (intensity*aCoronas[i].blue)>>8;
+		// Delegate the faded colour and the size of the road reflection to the C implementation
+		int wetRGB[3];
+		float halfWidth, halfLength;
+		int intensity = CoronaLogic_WetReflection(depth, drawDist, aCoronas[i].heightAboveRoad, Weather_WetRoads, aCoronas[i].red, aCoronas[i].green, aCoronas[i].blue, aCoronas[i].size, wetRGB, &halfWidth, &halfLength);
+		int red = wetRGB[0];
+		int green = wetRGB[1];
+		int blue = wetRGB[2];
 		if(intensity <= 0 || (red == 0 && green == 0 && blue == 0))
 			continue;
 
@@ -753,8 +747,6 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		if(towardCamera.MagnitudeSqr() < 0.0001f)
 			towardCamera = CVector(0.0f, 1.0f, 0.0f);
 		towardCamera.Normalise();
-		float halfWidth = Max(aCoronas[i].size*0.75f, 0.25f);
-		float halfLength = Max(aCoronas[i].size*2.0f, 0.5f);
 		CVector horizontal = cameraRight*halfWidth;
 		CVector vertical = towardCamera*halfLength;
 		CVector corners[4] = {
@@ -807,17 +799,17 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		// Fade the ground reflection by height, wetness, and auxiliary-camera depth
 		CVector reflectionPos(corona->coors.x, corona->coors.y, groundZ + 0.02f);
 		float depth = DotProduct(reflectionPos - cameraPos, cameraForward);
-		float drawDist = Min(0.75f*corona->drawDist, 55.0f);
+		float drawDist = CoronaLogic_ReflectionDrawDist(corona->drawDist);
 		if(depth <= RwCameraGetNearClipPlane(camera) || depth >= drawDist ||
 		   depth >= RwCameraGetFarClipPlane(camera))
 			continue;
-		float fadeDistance = drawDist*0.5f;
-		float distanceFade = depth < fadeDistance ? 1.0f : 1.0f - (depth-fadeDistance)/fadeDistance;
-		float heightFade = (20.0f-corona->heightAboveRoad)/20.0f;
-		int intensity = (int)(Clamp(distanceFade, 0.0f, 1.0f)*heightFade*230.0f*Weather_WetRoads);
-		int red = (intensity*corona->red)>>8;
-		int green = (intensity*corona->green)>>8;
-		int blue = (intensity*corona->blue)>>8;
+		// Delegate the faded colour and the size of the road reflection to the C implementation
+		int wetRGB[3];
+		float halfWidth, halfLength;
+		int intensity = CoronaLogic_WetReflection(depth, drawDist, corona->heightAboveRoad, Weather_WetRoads, corona->red, corona->green, corona->blue, corona->size, wetRGB, &halfWidth, &halfLength);
+		int red = wetRGB[0];
+		int green = wetRGB[1];
+		int blue = wetRGB[2];
 		if(intensity <= 0 || (red == 0 && green == 0 && blue == 0))
 			continue;
 
@@ -828,8 +820,8 @@ CCoronas::RenderReflectionsForEnvMap(RwCamera *camera)
 		if(towardCamera.MagnitudeSqr() < 0.0001f)
 			towardCamera = CVector(0.0f, 1.0f, 0.0f);
 		towardCamera.Normalise();
-		CVector horizontal = cameraRight*Max(corona->size*0.75f, 0.25f);
-		CVector vertical = towardCamera*Max(corona->size*2.0f, 0.5f);
+		CVector horizontal = cameraRight*halfWidth;
+		CVector vertical = towardCamera*halfLength;
 		CVector corners[4] = {
 			reflectionPos-horizontal+vertical,
 			reflectionPos+horizontal+vertical,
@@ -920,12 +912,13 @@ CCoronas::RenderReflections(void)
     // Use the complete C sprite operation with the original argument values
     return Sprite_CalcScreenCoors(Sprite_VectorRef(&spriteInput.x,&spriteInput.y,&spriteInput.z),Sprite_VectorOut(&spriteOutput->x,&spriteOutput->y,&spriteOutput->z),spriteWidth,spriteHeight,spriteFarClip);
 })(coors, &spriteCoors, &spritew, &spriteh, true)) {
-					float drawDist = 0.75f * aCoronas[i].drawDist;
-					drawDist = Min(drawDist, 55.0f);
+					// Delegate the draw distance to the C implementation
+					float drawDist = CoronaLogic_ReflectionDrawDist(aCoronas[i].drawDist);
 					if(spriteCoors.z < drawDist){
 						float fadeDistance = drawDist / 2.0f;
 						float distanceFade = spriteCoors.z < fadeDistance ? 1.0f : 1.0f - (spriteCoors.z - fadeDistance)/fadeDistance;
-						distanceFade = Clamp(distanceFade, 0.0f, 1.0f);
+						// Delegate the limit to the C implementation
+						distanceFade = General_ClampFloat(distanceFade, 0.0f, 1.0f);
 						float recipz = 1.0f/RwCameraGetNearClipPlane(Scene.camera);
 						float heightFade = (20.0f - aCoronas[i].heightAboveRoad)/20.0f;
 						int intensity = distanceFade*heightFade * 230.0 * Weather_WetRoads;
@@ -982,10 +975,8 @@ CCoronas::RenderSunReflection(void)
 	//- rouz edit (ChatGPT)
 	float sunZDir = TimeCycle_GetSunDirection()->z;
 	if(sunZDir > -0.05f){
-		float intensity = (0.3f - Abs(sunZDir - 0.25f))/0.3f *
-			(1.0f - Weather_CloudCoverage) *
-			(1.0f - Weather_Foggyness) *
-			(1.0f - Weather_Wind);
+		// Delegate the intensity of the reflection to the C implementation
+		float intensity = CoronaLogic_SunReflectionIntensity(sunZDir, Weather_CloudCoverage, Weather_Foggyness, Weather_Wind);
 		if(intensity > 0.0f){
 			int r = (TimeCycle_GetSunCoreRed() + TimeCycle_GetSunCoronaRed())*intensity*0.25f;
 			int g = (TimeCycle_GetSunCoreGreen() + TimeCycle_GetSunCoronaGreen())*intensity*0.25f;
@@ -1040,9 +1031,6 @@ CCoronas::RenderSunReflection(void)
 			RwIm3DVertexSetU(&TempBufferRenderVertices[3], 1.0f);
 			RwIm3DVertexSetV(&TempBufferRenderVertices[3], 0.5f);
 
-			int timeInc = 0;
-			int sideInc = 0;
-			int fwdInc = 0;
 			for(int i = 0; i < 20; i++){
 				TempBufferRenderIndexList[TempBufferIndicesStored + 0] = TempBufferVerticesStored;
 				TempBufferRenderIndexList[TempBufferIndicesStored + 1] = TempBufferVerticesStored-1;
@@ -1053,12 +1041,9 @@ CCoronas::RenderSunReflection(void)
 				TempBufferIndicesStored += 6;
 
 				// What a weird way to do it...
-				float fwdLen = fwdInc/20 + 60;
-				float sideLen = sideInc/20 + 30;
-				sideLen += 10.0f*Sin((float)((*Timer_GetTimeInMilliseconds())+timeInc & 0x7FF)/0x800*TWOPI);
-				timeInc += 900;
-				sideInc += 970;
-				fwdInc += 1440;
+				// Delegate the size of the segment to the C implementation
+				float fwdLen, sideLen;
+				CoronaLogic_SunReflectionSegment(i, (*Timer_GetTimeInMilliseconds()), &fwdLen, &sideLen);
 
 				RwIm3DVertexSetRGBA(&TempBufferRenderVertices[TempBufferVerticesStored+0], r, g, b, 255);
 				RwIm3DVertexSetPos(&TempBufferRenderVertices[TempBufferVerticesStored+0],
@@ -1155,7 +1140,8 @@ CRegisteredCorona::Update(void)
 
 	// darken scene when the sun is visible
 	if(visible && id == CCoronas::SUN_CORONA)
-		CCoronas::LightsMult = Max(CCoronas::LightsMult - (*Timer_GetTimeStep())*0.06f, 0.6f);
+		// Delegate the drop of the brightness to the C implementation
+		CCoronas::LightsMult = CoronaLogic_LightsMultDrop(CCoronas::LightsMult, (*Timer_GetTimeStep()));
 
 	// remove if invisible
 	if(fadeAlpha == 0 && !firstUpdate)
@@ -1381,14 +1367,16 @@ CEntity::ProcessLightsForEntity(void)
 				glareDir.Normalise();
 				float camAngle = -DotProduct(glareDir, TimeCycle_ToNativeVector(*TimeCycle_GetSunDirection()));
 				if(camAngle > 0.0f){
-					float intens = Sqrt(camAngle) * Weather_SunGlare;
+					// Delegate the colour and the size of the glare to the C implementation
+					float glareRGB[3], glareSize;
+					CoronaLogic_SunGlare(camAngle, Weather_SunGlare, dist, TimeCycle_GetSunCoreRed(), TimeCycle_GetSunCoreGreen(), TimeCycle_GetSunCoreBlue(), glareRGB, &glareSize);
 					pos += camDir;
 					CCoronas::RegisterCorona((uintptr)this + 33 + i,
-						intens * (TimeCycle_GetSunCoreRed() + 2*255)/3.0f,
-						intens * (TimeCycle_GetSunCoreGreen() + 2*255)/3.0f,
-						intens * (TimeCycle_GetSunCoreBlue() + 2*255)/3.0f,
+						glareRGB[0],
+						glareRGB[1],
+						glareRGB[2],
 						255,
-						pos, 0.5f*Weather_SunGlare*Sqrt(dist), 120.0f,
+						pos, glareSize, 120.0f,
 						CCoronas::TYPE_STAR, CCoronas::FLARE_NONE,
 						CCoronas::REFLECTION_OFF, CCoronas::LOSCHECK_OFF,
 						CCoronas::STREAK_OFF, 0.0f);

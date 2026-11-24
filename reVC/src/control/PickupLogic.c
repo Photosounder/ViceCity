@@ -88,4 +88,90 @@ int Pickups_SelectUnnecessary(const CPickupData *pickups, int count, float x, fl
 	}
 	return n;
 }
+float Pickups_PulseSin(uint32_t timePlusEntity, uint32_t mask)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	return sinf((float)(timePlusEntity & mask) * ((360.0f / (float)(mask + 1)) * pi / 180.0f));
+}
+
+float Pickups_SpinAngle(uint32_t time, uint32_t mask)
+{
+	const float pi = (float)3.14159265358979323846;
+
+	return (float)(time & mask) * ((360.0f / (float)(mask + 1)) * pi / 180.0f);
+}
+
+int32_t Pickups_GlowChannel(float maxDist, float dist, float pulse, float scale, float offset, float multiplier)
+{
+	return (int32_t)((maxDist - dist) * (scale * pulse + offset) / maxDist * multiplier);
+}
+int Pickups_CoronaPhase(int phase)
+{
+	if (phase < 3)
+		return 0;
+	if (phase == 3)
+		return 1;
+	return 2;
+}
+
+float Pickups_LightRadius(int random)
+{
+	return (random & 0xF) * 0.1f + 3.0f;
+}
+
+float Pickups_ModelScale(float maxDimension)
+{
+	float v = 1.2f / maxDimension;
+
+	return ((1.0f > v ? 1.0f : v) - 1.0f) * 0.6f + 1.0f;
+}
+
+int Pickups_MessageAlpha(float dist, float maxDist)
+{
+	return (int)((1.0f - dist / maxDist) * 128.0f);
+}
+int Pickups_MoneyPickupCount(int money)
+{
+	int count = money / 20 + 1;
+
+	return count < 7 ? count : 7;
+}
+
+float Pickups_MoneyRingOffset(int random, bool isY)
+{
+	const float pi = (float)3.14159265358979323846;
+	float angle = (random % 256) * pi / 128;
+
+	return 1.5f * (isY ? cosf(angle) : sinf(angle));
+}
+
+float Pickups_DeadPedRingOffset(int random, bool isY)
+{
+	const float twoPi = (float)3.14159265358979323846 * 2;
+	float angle = (random % 256) / 256.0f * twoPi;
+
+	return 1.5f * (isY ? cosf(angle) : sinf(angle));
+}
+
+float Pickups_MessageScale(float spriteSize, float maxScale)
+{
+	float scale = spriteSize / 30.0f;
+
+	return scale > maxScale ? maxScale : scale;
+}
+void Pickups_SpinCosSin(float angle, float scale, float *c, float *s)
+{
+	*c = cosf(angle) * scale;
+	*s = sinf(angle) * scale;
+}
+bool Pickups_OnFootTouches(float playerX, float playerY, float playerZ, float objectX, float objectY, float objectZ)
+{
+	if (fabsf(playerZ - objectZ) < 2.0f) {
+		if ((playerX - objectX) * (playerX - objectX) +
+			(playerY - objectY) * (playerY - objectY) < 1.8f)
+			return true;
+	}
+	return false;
+}
 //- rouz edit (Claude)

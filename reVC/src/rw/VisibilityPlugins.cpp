@@ -12,6 +12,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "VisibilityPlugins.h"
+#include "RendererLogic.h"
 #include "World.h"
 #include "custompipes.h"
 #include "MemoryHeap.h"
@@ -240,8 +241,8 @@ CVisibilityPlugins::SetupVehicleVariables(RpClump *vehicle)
 	DistToCameraSq = GetDistanceSquaredFromCamera(RpClumpGetFrame(vehicle));
 	RwV3d distToCam;
 	RwV3dSub(&distToCam, ms_pCameraPosn, &RwFrameGetMatrix(RpClumpGetFrame(vehicle))->pos);
-	float dist2d = Sqrt(SQR(distToCam.x) + SQR(distToCam.y));
-	PitchToCamera = Atan2(distToCam.z, dist2d);
+	// Delegate the pitch to the camera to the C implementation
+	PitchToCamera = Visibility_PitchToCamera(distToCam.x, distToCam.y, distToCam.z);
 }
 
 RpMaterial*
@@ -425,7 +426,6 @@ RpAtomic*
 CVisibilityPlugins::RenderFadingAtomic(RpAtomic *atomic, float camdist)
 {
 	RpAtomic *lodatm;
-	float fadefactor;
 	uint32 alpha;
 	CSimpleModelInfo *mi;
 
@@ -434,10 +434,8 @@ CVisibilityPlugins::RenderFadingAtomic(RpAtomic *atomic, float camdist)
 	if(mi->m_additive)
 		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDONE);
 
-	fadefactor = (SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier) - (camdist - FADE_DISTANCE))/FADE_DISTANCE; // rouz edit (ChatGPT)
-	if(fadefactor > 1.0f)
-		fadefactor = 1.0f;
-	alpha = mi->m_alpha * fadefactor;
+	// Delegate the fading alpha to the C implementation
+	alpha = Visibility_FadeAlpha(SimpleModel_LargestDistance(mi->m_lodDistances, mi->m_numAtomics, mi->m_firstDamaged, mi->m_isDamaged, TheCamera.LODDistMultiplier), camdist, FADE_DISTANCE, mi->m_alpha);
 	if(alpha == 255 || lodatm == nil) // rouz edit (ChatGPT)
 		RENDERCALLBACK(atomic);
 	else{
@@ -470,10 +468,10 @@ CVisibilityPlugins::RenderVehicleHiDetailCB(RpAtomic *atomic)
 	clumpframe = RpClumpGetFrame(RpAtomicGetClump(atomic));
 	if(DistToCameraSq < ms_vehicleLod0Dist){
 		flags = GetAtomicId(atomic);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f){
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera)){
 			dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 				RwFrameGetLTM(clumpframe), flags);
-			if(dot > 0.0f && ((flags & ATOMIC_FLAG_ANGLECULL) || 0.1f*DistToCameraSq < dot*dot))
+			if(Visibility_CompIsHidden(dot, (flags & ATOMIC_FLAG_ANGLECULL) != 0, DistToCameraSq))
 				return atomic;
 		}
 		RENDERCALLBACK(atomic);
@@ -493,8 +491,8 @@ CVisibilityPlugins::RenderVehicleHiDetailAlphaCB(RpAtomic *atomic)
 		flags = GetAtomicId(atomic);
 		dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 			RwFrameGetLTM(clumpframe), flags);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f)
-			if(dot > 0.0f && ((flags & ATOMIC_FLAG_ANGLECULL) || 0.1f*DistToCameraSq < dot*dot))
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera))
+			if(Visibility_CompIsHidden(dot, (flags & ATOMIC_FLAG_ANGLECULL) != 0, DistToCameraSq))
 				return atomic;
 
 		if(flags & ATOMIC_FLAG_DRAWLAST){
@@ -519,7 +517,7 @@ CVisibilityPlugins::RenderVehicleHiDetailCB_BigVehicle(RpAtomic *atomic)
 	clumpframe = RpClumpGetFrame(RpAtomicGetClump(atomic));
 	if(DistToCameraSq < ms_bigVehicleLod0Dist){
 		flags = GetAtomicId(atomic);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f){
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera)){
 			dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 				RwFrameGetLTM(clumpframe), flags);
 			if(dot > 0.0f)
@@ -542,8 +540,8 @@ CVisibilityPlugins::RenderVehicleHiDetailAlphaCB_BigVehicle(RpAtomic *atomic)
 		flags = GetAtomicId(atomic);
 		dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 			RwFrameGetLTM(clumpframe), flags);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f)
-			if(dot > 0.0f && ((flags & ATOMIC_FLAG_ANGLECULL) || 0.1f*DistToCameraSq < dot*dot))
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera))
+			if(Visibility_CompIsHidden(dot, (flags & ATOMIC_FLAG_ANGLECULL) != 0, DistToCameraSq))
 				return atomic;
 
 		if(!InsertAtomicIntoSortedList(atomic, DistToCameraSq + dot))
@@ -601,7 +599,7 @@ CVisibilityPlugins::RenderVehicleLowDetailCB_BigVehicle(RpAtomic *atomic)
 	if(DistToCameraSq >= ms_bigVehicleLod0Dist &&
 	   DistToCameraSq < ms_bigVehicleLod1Dist){
 		flags = GetAtomicId(atomic);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f){
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera)){
 			dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 				RwFrameGetLTM(clumpframe), flags);
 			if(dot > 0.0f)
@@ -626,7 +624,7 @@ CVisibilityPlugins::RenderVehicleLowDetailAlphaCB_BigVehicle(RpAtomic *atomic)
 		dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 			RwFrameGetLTM(clumpframe), flags);
 		if(dot > 0.0f)
-			if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f)
+			if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera))
 				return atomic;
 
 		if(!InsertAtomicIntoSortedList(atomic, DistToCameraSq + dot))
@@ -671,10 +669,10 @@ CVisibilityPlugins::RenderTrainHiDetailCB(RpAtomic *atomic)
 	clumpframe = RpClumpGetFrame(RpAtomicGetClump(atomic));
 	if(DistToCameraSq < ms_bigVehicleLod1Dist){
 		flags = GetAtomicId(atomic);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f){
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera)){
 			dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 				RwFrameGetLTM(clumpframe), flags);
-			if(dot > 0.0f && ((flags & ATOMIC_FLAG_ANGLECULL) || 0.1f*DistToCameraSq < dot*dot))
+			if(Visibility_CompIsHidden(dot, (flags & ATOMIC_FLAG_ANGLECULL) != 0, DistToCameraSq))
 				return atomic;
 		}
 		RENDERCALLBACK(atomic);
@@ -694,8 +692,8 @@ CVisibilityPlugins::RenderTrainHiDetailAlphaCB(RpAtomic *atomic)
 		flags = GetAtomicId(atomic);
 		dot = GetDotProductWithCameraVector(RwFrameGetLTM(RpAtomicGetFrame(atomic)),
 			RwFrameGetLTM(clumpframe), flags);
-		if(DistToCameraSq > ms_cullCompsDist && (flags & ATOMIC_FLAG_NOCULL) == 0 && PitchToCamera < 0.2f)
-			if(dot > 0.0f && ((flags & ATOMIC_FLAG_ANGLECULL) || 0.1f*DistToCameraSq < dot*dot))
+		if(Visibility_CompCullCheckNeeded(DistToCameraSq, ms_cullCompsDist, (flags & ATOMIC_FLAG_NOCULL) != 0, PitchToCamera))
+			if(Visibility_CompIsHidden(dot, (flags & ATOMIC_FLAG_ANGLECULL) != 0, DistToCameraSq))
 				return atomic;
 
 		if(flags & ATOMIC_FLAG_DRAWLAST){
@@ -793,39 +791,15 @@ CVisibilityPlugins::GetDistanceSquaredFromCamera(RwFrame *frame)
 float
 CVisibilityPlugins::GetDotProductWithCameraVector(RwMatrix *atomicMat, RwMatrix *clumpMat, uint32 flags)
 {
-	RwV3d dist;
-	float dot, dotdoor;
-
 	// Vehicle forward is the y axis (RwMatrix.up)
 	// Vehicle right is the x axis (RwMatrix.right)
 
-	RwV3dSub(&dist, RwMatrixGetPos(atomicMat), ms_pCameraPosn);
-	// forward/backward facing
-	if(flags & (ATOMIC_FLAG_FRONT | ATOMIC_FLAG_REAR))
-		dot = RwV3dDotProduct(&dist, RwMatrixGetUp(clumpMat));
-	// left/right facing
-	else if(flags & (ATOMIC_FLAG_LEFT | ATOMIC_FLAG_RIGHT))
-		dot = RwV3dDotProduct(&dist, RwMatrixGetRight(clumpMat));
-	else
-		dot = 0.0f;
-	if(flags & (ATOMIC_FLAG_LEFT | ATOMIC_FLAG_REAR))
-		dot = -dot;
-
-	if(flags & (ATOMIC_FLAG_REARDOOR | ATOMIC_FLAG_FRONTDOOR)){
-		if(flags & ATOMIC_FLAG_REARDOOR)
-			dotdoor = -RwV3dDotProduct(&dist, RwMatrixGetUp(clumpMat));
-		else if(flags & ATOMIC_FLAG_FRONTDOOR)
-			dotdoor = RwV3dDotProduct(&dist, RwMatrixGetUp(clumpMat));
-		else
-			dotdoor = 0.0f;
-
-		if(dot < 0.0f && dotdoor < 0.0f)
-			dot += dotdoor;
-		if(dot > 0.0f && dotdoor > 0.0f)
-			dot += dotdoor;
-	}
-
-	return dot;
+	// Delegate the dot product with the camera vector to the C implementation
+	const float atomicPos[3] = { RwMatrixGetPos(atomicMat)->x, RwMatrixGetPos(atomicMat)->y, RwMatrixGetPos(atomicMat)->z };
+	const float cameraPos[3] = { ms_pCameraPosn->x, ms_pCameraPosn->y, ms_pCameraPosn->z };
+	const float clumpForward[3] = { RwMatrixGetUp(clumpMat)->x, RwMatrixGetUp(clumpMat)->y, RwMatrixGetUp(clumpMat)->z };
+	const float clumpRight[3] = { RwMatrixGetRight(clumpMat)->x, RwMatrixGetRight(clumpMat)->y, RwMatrixGetRight(clumpMat)->z };
+	return Visibility_DotWithCameraVector(atomicPos, cameraPos, clumpForward, clumpRight, flags);
 }
 
 /* These are all unused */

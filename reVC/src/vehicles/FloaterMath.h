@@ -65,6 +65,8 @@ void Floater_NormaliseVolume(FloaterState *s);
 // Produce the buoyancy force point and impulse, returns false when nothing is submerged
 bool Floater_CalcForce(const FloaterState *s, float timeStep, VectorMath3 *point, VectorMath3 *impulse);
 
+// Upward impulse of a floating point of a vehicle after the damping of the suspension: the impulse of the water scaled by one minus the speed along the water normal times the damping level, never below 0
+float Floater_DampedImpulse(float upImpulse, float speedAlongNormal, float dampingLevel);
 #ifdef __cplusplus
 }
 #endif

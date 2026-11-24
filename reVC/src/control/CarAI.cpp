@@ -342,7 +342,7 @@ void CCarAI::UpdateCarAI(CVehicle* pVehicle)
 		case MISSION_BLOCKPLAYER_FORWARDANDBACK:
 		{
 			CVector2D diff = (CVector2D)FindPlayerCoors() - pVehicle->GetPosition();
-			float distance = Max(0.001f, diff.Magnitude());
+			float distance = General_MaxFloat(0.001f, diff.Magnitude());
 			if (!FindPlayerVehicle() || DotProduct2D(CVector2D(diff.x / distance, diff.y / distance), FindPlayerSpeed()) > 0.05f)
 				pVehicle->AutoPilot.m_nCarMission = MISSION_BLOCKPLAYER_CLOSE;
 			BackToCruisingIfNoWantedLevel(pVehicle);
@@ -407,7 +407,7 @@ void CCarAI::UpdateCarAI(CVehicle* pVehicle)
 							pVehicle->AutoPilot.m_nTimeTempAction = (*Timer_GetTimeInMilliseconds()) + 750;
 						pVehicle->AutoPilot.m_nAntiReverseTimer = (*Timer_GetTimeInMilliseconds());
 						if (pVehicle->VehicleCreatedBy == RANDOM_VEHICLE)
-							pVehicle->AutoPilot.m_nDrivingStyle = Max(DRIVINGSTYLE_AVOID_CARS, pVehicle->AutoPilot.m_nDrivingStyle);
+							pVehicle->AutoPilot.m_nDrivingStyle = General_MaxInt(DRIVINGSTYLE_AVOID_CARS, pVehicle->AutoPilot.m_nDrivingStyle);
 						pVehicle->PlayCarHorn();
 					}
 				}
@@ -477,7 +477,7 @@ void CCarAI::UpdateCarAI(CVehicle* pVehicle)
 	if (pVehicle->AutoPilot.m_nCarMission == MISSION_CRUISE)
 		target = CCarCtrl::FindSpeedMultiplierWithSpeedFromNodes(pVehicle->AutoPilot.m_nCruiseSpeedMultiplierType);
 	float change = (*Timer_GetTimeStep()) * 0.01f;
-	if (Abs(pVehicle->AutoPilot.m_fCruiseSpeedMultiplier - target) < change)
+	if (General_AbsDiffBelow(pVehicle->AutoPilot.m_fCruiseSpeedMultiplier, target, change))
 		pVehicle->AutoPilot.m_fCruiseSpeedMultiplier = target;
 	else if (pVehicle->AutoPilot.m_fCruiseSpeedMultiplier > target)
 		pVehicle->AutoPilot.m_fCruiseSpeedMultiplier -= change;
@@ -518,8 +518,8 @@ float CCarAI::GetCarToGoToCoors(CVehicle* pVehicle, CVector* pTarget)
 		pVehicle->SetStatus(STATUS_PHYSICS);
 		pVehicle->AutoPilot.m_nCarMission = (CCarCtrl::JoinCarWithRoadSystemGotoCoors(pVehicle, *pTarget, false)) ?
 			MISSION_GOTOCOORDS_STRAIGHT : MISSION_GOTOCOORDS;
-	}else if (Abs(pTarget->x - pVehicle->AutoPilot.m_vecDestinationCoors.x) > 2.0f ||
-	  Abs(pTarget->y - pVehicle->AutoPilot.m_vecDestinationCoors.y) > 2.0f){
+	}else if (General_AbsDiffAbove(pTarget->x, pVehicle->AutoPilot.m_vecDestinationCoors.x, 2.0f) ||
+	  General_AbsDiffAbove(pTarget->y, pVehicle->AutoPilot.m_vecDestinationCoors.y, 2.0f)){
 		pVehicle->AutoPilot.m_vecDestinationCoors = AutoPilot_FromVector(*pTarget);
 	}
 	return (pVehicle->GetPosition() - *pTarget).Magnitude2D();
@@ -641,7 +641,7 @@ void CCarAI::TellCarToRamOtherCar(CVehicle* pVehicle, CVehicle* pTarget)
 	pTarget->RegisterReference((CEntity**)&pVehicle->AutoPilot.m_pTargetCar);
 	pVehicle->AutoPilot.m_nCarMission = MISSION_RAMCAR_FARAWAY;
 	pVehicle->bEngineOn = true;
-	pVehicle->AutoPilot.m_nCruiseSpeed = Max(6, pVehicle->AutoPilot.m_nCruiseSpeed);
+	pVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(6, pVehicle->AutoPilot.m_nCruiseSpeed);
 }
 
 void CCarAI::TellCarToBlockOtherCar(CVehicle* pVehicle, CVehicle* pTarget)
@@ -650,7 +650,7 @@ void CCarAI::TellCarToBlockOtherCar(CVehicle* pVehicle, CVehicle* pTarget)
 	pTarget->RegisterReference((CEntity**)&pVehicle->AutoPilot.m_pTargetCar);
 	pVehicle->AutoPilot.m_nCarMission = MISSION_BLOCKCAR_FARAWAY;
 	pVehicle->bEngineOn = true;
-	pVehicle->AutoPilot.m_nCruiseSpeed = Max(6, pVehicle->AutoPilot.m_nCruiseSpeed);
+	pVehicle->AutoPilot.m_nCruiseSpeed = General_MaxInt(6, pVehicle->AutoPilot.m_nCruiseSpeed);
 }
 
 uint8 CCarAI::FindPoliceCarMissionForWantedLevel()
@@ -714,7 +714,7 @@ void CCarAI::MakeWayForCarWithSiren(CVehicle *pVehicle)
 			continue;
 		if (vehicle->AutoPilot.m_nDrivingStyle == DRIVINGSTYLE_AVOID_CARS)
 			return;
-		if (Abs(pVehicle->GetPosition().z - vehicle->GetPosition().z) >= 5.0f)
+		if (General_AbsDiffAtLeast(pVehicle->GetPosition().z, vehicle->GetPosition().z, 5.0f))
 			continue;
 		CVector2D distance = vehicle->GetPosition() - pVehicle->GetPosition();
 		if (distance.Magnitude() >= projection)

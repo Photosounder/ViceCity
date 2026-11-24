@@ -86,4 +86,13 @@ int Phone_GrabPhone(CPhoneInfoData *info, float x, float y)
 	info->m_nScriptPhonesMax++;
 	return info->m_nScriptPhonesMax - 1;
 }
+bool Phone_PlayerIsClose(float distX, float distY)
+{
+	return fabsf(distX) < 1.0f && fabsf(distY) < 1.0f;
+}
+
+bool Phone_PlayerFacesPhone(float distX, float distY, float forwardX, float forwardY, float distance)
+{
+	return (distX * forwardX + distY * forwardY) / distance < -0.85f;
+}
 //- rouz edit (Claude)

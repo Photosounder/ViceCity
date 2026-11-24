@@ -425,9 +425,9 @@ void CReplay::RecordParticle(tParticleType type, const CVector& vecPos, const CV
 	pp->pos_x = 4.0f * vecPos.x;
 	pp->pos_y = 4.0f * vecPos.y;
 	pp->pos_z = 4.0f * vecPos.z;
-	pp->dir_x = 120.0f * Clamp(vecDir.x, -1.0f, 1.0f);
-	pp->dir_y = 120.0f * Clamp(vecDir.y, -1.0f, 1.0f);
-	pp->dir_z = 120.0f * Clamp(vecDir.z, -1.0f, 1.0f);
+	pp->dir_x = Replay_ScaledClamp(120.0f, vecDir.x, -1.0f, 1.0f);
+	pp->dir_y = Replay_ScaledClamp(120.0f, vecDir.y, -1.0f, 1.0f);
+	pp->dir_z = Replay_ScaledClamp(120.0f, vecDir.z, -1.0f, 1.0f);
 	pp->size = fSize;
 	pp->r = color.red;
 	pp->g = color.green;
@@ -464,8 +464,8 @@ void CReplay::StorePedAnimation(CPed *ped, CStoredAnimationState *state)
 	CAnimBlendAssociation* main = RpAnimBlendClumpGetMainAssociation((RpClump*)ped->m_rwObject, &second, &blend_amount);
 	if (main){
 		state->animId = main->animId;
-		state->time = 255.0f / 4.0f * Clamp(main->currentTime, 0.0f, 4.0f);
-		state->speed = 255.0f / 3.0f * Clamp(main->speed, 0.0f, 3.0f);
+		state->time = Replay_ScaledClamp(255.0f / 4.0f, main->currentTime, 0.0f, 4.0f);
+		state->speed = Replay_ScaledClamp(255.0f / 3.0f, main->speed, 0.0f, 3.0f);
 		state->groupId = main->groupId;
 	}else{
 		state->animId = 3;
@@ -475,9 +475,9 @@ void CReplay::StorePedAnimation(CPed *ped, CStoredAnimationState *state)
 	}
 	if (second) {
 		state->secAnimId = second->animId;
-		state->secTime = 255.0f / 4.0f * Clamp(second->currentTime, 0.0f, 4.0f);
-		state->secSpeed = 255.0f / 3.0f * Clamp(second->speed, 0.0f, 3.0f);
-		state->blendAmount = 255.0f / 2.0f * Clamp(blend_amount, 0.0f, 2.0f);
+		state->secTime = Replay_ScaledClamp(255.0f / 4.0f, second->currentTime, 0.0f, 4.0f);
+		state->secSpeed = Replay_ScaledClamp(255.0f / 3.0f, second->speed, 0.0f, 3.0f);
+		state->blendAmount = Replay_ScaledClamp(255.0f / 2.0f, blend_amount, 0.0f, 2.0f);
 		state->secGroupId = second->groupId;
 	}else{
 		state->secAnimId = 0;
@@ -489,9 +489,9 @@ void CReplay::StorePedAnimation(CPed *ped, CStoredAnimationState *state)
 	CAnimBlendAssociation* partial = RpAnimBlendClumpGetMainPartialAssociation((RpClump*)ped->m_rwObject);
 	if (partial) {
 		state->partAnimId = partial->animId;
-		state->partAnimTime = 255.0f / 4.0f * Clamp(partial->currentTime, 0.0f, 4.0f);
-		state->partAnimSpeed = 255.0f / 3.0f * Clamp(partial->speed, 0.0f, 3.0f);
-		state->partBlendAmount = 255.0f / 2.0f * Clamp(partial->blendAmount, 0.0f, 2.0f);
+		state->partAnimTime = Replay_ScaledClamp(255.0f / 4.0f, partial->currentTime, 0.0f, 4.0f);
+		state->partAnimSpeed = Replay_ScaledClamp(255.0f / 3.0f, partial->speed, 0.0f, 3.0f);
+		state->partBlendAmount = Replay_ScaledClamp(255.0f / 2.0f, partial->blendAmount, 0.0f, 2.0f);
 		state->partGroupId = partial->groupId;
 	}else{
 		state->partAnimId = 0;
@@ -508,10 +508,10 @@ void CReplay::StoreDetailedPedAnimation(CPed *ped, CStoredDetailedAnimationState
 		CAnimBlendAssociation* assoc = RpAnimBlendClumpGetMainAssociation_N((RpClump*)ped->m_rwObject, i);
 		if (assoc){
 			state->aAnimId[i] = assoc->animId;
-			state->aCurTime[i] = 255.0f / 4.0f * Clamp(assoc->currentTime, 0.0f, 4.0f);
-			state->aSpeed[i] = 255.0f / 3.0f * Clamp(assoc->speed, 0.0f, 3.0f);
-			state->aBlendAmount[i] = 255.0f / 2.0f * Clamp(assoc->blendAmount, 0.0f, 2.0f);
-			state->aBlendDelta[i] = 127.0f / 32.0f * Clamp(assoc->blendDelta, -16.0f, 16.0f);
+			state->aCurTime[i] = Replay_ScaledClamp(255.0f / 4.0f, assoc->currentTime, 0.0f, 4.0f);
+			state->aSpeed[i] = Replay_ScaledClamp(255.0f / 3.0f, assoc->speed, 0.0f, 3.0f);
+			state->aBlendAmount[i] = Replay_ScaledClamp(255.0f / 2.0f, assoc->blendAmount, 0.0f, 2.0f);
+			state->aBlendDelta[i] = Replay_ScaledClamp(127.0f / 32.0f, assoc->blendDelta, -16.0f, 16.0f);
 			state->aFlags[i] = assoc->flags;
 			state->aGroupId[i] = assoc->groupId;
 			// Use the complete C association at the original native operation boundary
@@ -536,10 +536,10 @@ void CReplay::StoreDetailedPedAnimation(CPed *ped, CStoredDetailedAnimationState
 		CAnimBlendAssociation* assoc = RpAnimBlendClumpGetMainPartialAssociation_N((RpClump*)ped->m_rwObject, i);
 		if (assoc) {
 			state->aAnimId2[i] = assoc->animId;
-			state->aCurTime2[i] = 255.0f / 4.0f * Clamp(assoc->currentTime, 0.0f, 4.0f);
-			state->aSpeed2[i] = 255.0f / 3.0f * Clamp(assoc->speed, 0.0f, 3.0f);
-			state->aBlendAmount2[i] = 255.0f / 2.0f * Clamp(assoc->blendAmount, 0.0f, 2.0f);
-			state->aBlendDelta2[i] = 127.0f / 16.0f * Clamp(assoc->blendDelta, -16.0f, 16.0f);
+			state->aCurTime2[i] = Replay_ScaledClamp(255.0f / 4.0f, assoc->currentTime, 0.0f, 4.0f);
+			state->aSpeed2[i] = Replay_ScaledClamp(255.0f / 3.0f, assoc->speed, 0.0f, 3.0f);
+			state->aBlendAmount2[i] = Replay_ScaledClamp(255.0f / 2.0f, assoc->blendAmount, 0.0f, 2.0f);
+			state->aBlendDelta2[i] = Replay_ScaledClamp(127.0f / 16.0f, assoc->blendDelta, -16.0f, 16.0f);
 			state->aFlags2[i] = assoc->flags;
 			state->aGroupId2[i] = assoc->groupId;
 			// Use the complete C association at the original native operation boundary
@@ -786,9 +786,9 @@ void CReplay::StoreCarUpdate(CVehicle *vehicle, int id)
 	vp->health = vehicle->m_fHealth / 4.0f; /* Not anticipated that health can be > 1000. */
 	vp->acceleration = vehicle->m_fGasPedal * 100.0f;
 	vp->panels = vehicle->IsCar() ? ((CAutomobile*)vehicle)->Damage.m_panelStatus : 0;
-	vp->velocityX = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().x)); /* 8000!? */
-	vp->velocityY = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().y));
-	vp->velocityZ = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().z));
+	vp->velocityX = Replay_VehicleVelocity(vehicle->GetMoveSpeed().x); /* 8000!? */
+	vp->velocityY = Replay_VehicleVelocity(vehicle->GetMoveSpeed().y);
+	vp->velocityZ = Replay_VehicleVelocity(vehicle->GetMoveSpeed().z);
 	vp->mi = vehicle->GetModelIndex();
 	vp->primary_color = vehicle->m_currentColour1;
 	vp->secondary_color = vehicle->m_currentColour2;
@@ -839,9 +839,9 @@ void CReplay::StoreBikeUpdate(CVehicle* vehicle, int id)
 		vp->wheel_rotation[i] = 128.0f / PI * bike->m_aWheelRotation[i];
 	}
 #endif
-	vp->velocityX = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().x)); /* 8000!? */
-	vp->velocityY = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().y));
-	vp->velocityZ = 8000.0f * Max(-4.0f, Min(4.0f, vehicle->GetMoveSpeed().z));
+	vp->velocityX = Replay_VehicleVelocity(vehicle->GetMoveSpeed().x); /* 8000!? */
+	vp->velocityY = Replay_VehicleVelocity(vehicle->GetMoveSpeed().y);
+	vp->velocityZ = Replay_VehicleVelocity(vehicle->GetMoveSpeed().z);
 	vp->mi = vehicle->GetModelIndex();
 	vp->primary_color = vehicle->m_currentColour1;
 	vp->secondary_color = vehicle->m_currentColour2;
@@ -1980,11 +1980,10 @@ void ReplayHost_ApplyLookAround(void)
 void CReplay::ApplyLookAroundCam(void)
 {
     // Apply the original camera geometry after C updates its scalar state
-	CVector camera_pt(
-		Replay_distanceLookAroundCam * Sin(Replay_betaAngleLookAroundCam) * Cos(Replay_alphaAngleLookAroundCam), // rouz edit (ChatGPT)
-		Replay_distanceLookAroundCam * Cos(Replay_betaAngleLookAroundCam) * Cos(Replay_alphaAngleLookAroundCam), // rouz edit (ChatGPT)
-		Replay_distanceLookAroundCam * Sin(Replay_alphaAngleLookAroundCam) // rouz edit (ChatGPT)
-	);
+	// Delegate the offset of the camera from its focus to the C implementation
+	float offsetC[3];
+	Replay_LookAroundOffset(Replay_distanceLookAroundCam, Replay_alphaAngleLookAroundCam, Replay_betaAngleLookAroundCam, offsetC);
+	CVector camera_pt(offsetC[0], offsetC[1], offsetC[2]);
 	CVector focus = CVector(CameraFocusX, CameraFocusY, CameraFocusZ);
 	camera_pt += focus;
 	CColPoint cp;
@@ -1995,12 +1994,14 @@ void CReplay::ApplyLookAroundCam(void)
 		direction.Normalise();
 		camera_pt += direction / 4.0f;
 	}
-	CVector forward = focus - camera_pt;
-	forward.Normalise();
-	CVector right = CrossProduct(CVector(0.0f, 0.0f, 1.0f), forward);
-	right.Normalise();
-	CVector up = CrossProduct(forward, right);
-	up.Normalise();
+	// Delegate the orientation of the camera to the C implementation
+	const float focusC[3] = { focus.x, focus.y, focus.z };
+	const float cameraC[3] = { camera_pt.x, camera_pt.y, camera_pt.z };
+	float forwardC[3], rightC[3], upC[3];
+	Replay_LookAroundBasis(focusC, cameraC, forwardC, rightC, upC);
+	CVector forward(forwardC[0], forwardC[1], forwardC[2]);
+	CVector right(rightC[0], rightC[1], rightC[2]);
+	CVector up(upC[0], upC[1], upC[2]);
 	TheCamera.GetForward() = forward;
 	TheCamera.GetUp() = up;
 	TheCamera.GetRight() = right;

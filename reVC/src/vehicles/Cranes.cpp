@@ -12,9 +12,11 @@
 #include "ModelIndices.h"
 #include "Replay.h"
 #include "Object.h"
+#include "WorldLogic.h"
 #include "World.h"
 #include "SaveBuf.h"
 #include "Pools.h" // rouz edit (ChatGPT)
+#include "VehicleLogic.h"
 
 #define MAX_DISTANCE_TO_FIND_CRANE (10.0f)
 #define CRANE_UPDATE_RADIUS (300.0f)
@@ -92,8 +94,8 @@ void CCranes::AddThisOneCrane(CEntity* pEntity)
 	pCrane->m_pCraneEntity = (CBuilding*)pEntity;
 	pCrane->m_nCraneStatus = CCrane::NONE;
 	pCrane->m_fHookAngle = NumCranes; // lol wtf
-	while (pCrane->m_fHookAngle > TWOPI)
-		pCrane->m_fHookAngle -= TWOPI;
+	// Delegate the angle wrapping to the C implementation
+	pCrane->m_fHookAngle = General_ReduceAbove(pCrane->m_fHookAngle, TWOPI, TWOPI);
 	pCrane->m_fHookOffset = DEFAULT_OFFSET;
 	pCrane->m_fHookHeight = DEFAULT_OFFSET;
 	pCrane->m_nTimeForNextCheck = 0;
@@ -205,8 +207,7 @@ void CCrane::Update(void)
 	if (Replay_IsPlayingBack()) // rouz edit (ChatGPT)
 		return;
 	if (((m_nCraneStatus == ACTIVATED || m_nCraneStatus == DEACTIVATED) &&
-		Abs(TheCamera.GetGameCamPosition().x - m_pCraneEntity->GetPosition().x) < CRANE_MOVEMENT_PROCESSING_RADIUS &&
-		Abs(TheCamera.GetGameCamPosition().y - m_pCraneEntity->GetPosition().y) < CRANE_MOVEMENT_PROCESSING_RADIUS) ||
+		VehicleLogic_WithinSquare(TheCamera.GetGameCamPosition().x, TheCamera.GetGameCamPosition().y, m_pCraneEntity->GetPosition().x, m_pCraneEntity->GetPosition().y, CRANE_MOVEMENT_PROCESSING_RADIUS)) ||
 		m_nCraneState != IDLE) {
 		switch (m_nCraneState) {
 		case IDLE:
@@ -214,10 +215,9 @@ void CCrane::Update(void)
 				(*Timer_GetTimeInMilliseconds()) > m_nTimeForNextCheck) {
 				CWorld::AdvanceCurrentScanCode();
 #ifdef FIX_BUGS
-				int xstart = Max(0, CWorld::GetSectorIndexX(m_fPickupX1));
-				int xend = Min(NUMSECTORS_X - 1, CWorld::GetSectorIndexX(m_fPickupX2));
-				int ystart = Max(0, CWorld::GetSectorIndexY(m_fPickupY1));
-				int yend = Min(NUMSECTORS_Y - 1, CWorld::GetSectorIndexY(m_fPickupY2));
+				// Delegate the range of sectors to the C implementation
+				int32_t xstart, ystart, xend, yend;
+				World_SectorRange(m_fPickupX1, m_fPickupY1, m_fPickupX2, m_fPickupY2, &xstart, &ystart, &xend, &yend);
 #else
 				int xstart = CWorld::GetSectorIndexX(m_fPickupX1);
 				int xend = CWorld::GetSectorIndexX(m_fPickupX2);
@@ -241,9 +241,7 @@ void CCrane::Update(void)
 					m_pVehiclePickedUp->GetPosition().y < m_fPickupY1 ||
 					m_pVehiclePickedUp->GetPosition().y > m_fPickupY2 ||
 					m_pVehiclePickedUp->pDriver ||
-					Abs(m_pVehiclePickedUp->GetMoveSpeed().x) > CAR_MOVING_SPEED_THRESHOLD ||
-					Abs(m_pVehiclePickedUp->GetMoveSpeed().y) > CAR_MOVING_SPEED_THRESHOLD ||
-					Abs(m_pVehiclePickedUp->GetMoveSpeed().z) > CAR_MOVING_SPEED_THRESHOLD ||
+					VehicleLogic_AnySpeedAbove(m_pVehiclePickedUp->GetMoveSpeed().x, m_pVehiclePickedUp->GetMoveSpeed().y, m_pVehiclePickedUp->GetMoveSpeed().z, CAR_MOVING_SPEED_THRESHOLD) ||
 					(FindPlayerPed()->GetPedState() == PED_ENTER_CAR
 #ifdef FIX_BUGS
 					|| FindPlayerPed()->GetPedState() == PED_CARJACK
@@ -398,14 +396,14 @@ bool CCrane::RotateCarriedCarProperly()
 	if (!m_pVehiclePickedUp)
 		return true;
 	float fAngleDelta = m_fDropoffHeading - General_GetATanOfXY(m_pVehiclePickedUp->GetForward().x, m_pVehiclePickedUp->GetForward().y);
-	while (fAngleDelta < -HALFPI)
-		fAngleDelta += PI;
-	while (fAngleDelta > HALFPI)
-		fAngleDelta -= PI;
-	float fDeltaThisFrame = CAR_ROTATION_SPEED * (*Timer_GetTimeStep());
-	if (Abs(fAngleDelta) <= fDeltaThisFrame) // no rotation is actually applied?
+	// Delegate the angle wrapping to the C implementation
+	fAngleDelta = General_RaiseBelow(fAngleDelta, -HALFPI, PI);
+	fAngleDelta = General_ReduceAbove(fAngleDelta, HALFPI, PI);
+	// Delegate the step of the rotation to the C implementation
+	float fRotation;
+	if (Crane_RotationStep(fAngleDelta, CAR_ROTATION_SPEED, (*Timer_GetTimeStep()), &fRotation)) // no rotation is actually applied?
 		return true;
-	m_pVehiclePickedUp->GetMatrix().RotateZ(fAngleDelta < 0 ? -fDeltaThisFrame : fDeltaThisFrame);
+	m_pVehiclePickedUp->GetMatrix().RotateZ(fRotation);
 	return false;
 }
 
@@ -422,9 +420,8 @@ void CCrane::FindCarInSectorList(CPtrList* pList)
 			continue;
 		if (pVehicle->pDriver)
 			continue;
-		if (Abs(pVehicle->GetMoveSpeed().x) >= CAR_MOVING_SPEED_THRESHOLD ||
-			Abs(pVehicle->GetMoveSpeed().y) >= CAR_MOVING_SPEED_THRESHOLD ||
-			Abs(pVehicle->GetMoveSpeed().z) >= CAR_MOVING_SPEED_THRESHOLD)
+		// Delegate the moving check to the C implementation
+		if (VehicleLogic_AnySpeedAtLeast(pVehicle->GetMoveSpeed().x, pVehicle->GetMoveSpeed().y, pVehicle->GetMoveSpeed().z, CAR_MOVING_SPEED_THRESHOLD))
 			continue;
 		if (!pVehicle->IsCar() || pVehicle->GetStatus() == STATUS_WRECKED || pVehicle->m_fHealth < 250.0f)
 			continue;
@@ -493,8 +490,11 @@ void CCrane::FindParametersForTarget(float X, float Y, float Z, float* pAngle, f
 
 void CCrane::CalcHookCoordinates(float* pX, float* pY, float* pZ)
 {
-	*pX = Cos(m_fHookAngle) * m_fHookOffset + m_pCraneEntity->GetPosition().x;
-	*pY = Sin(m_fHookAngle) * m_fHookOffset + m_pCraneEntity->GetPosition().y;
+	// Delegate the offset of the hook to the C implementation
+	float hookDX, hookDY;
+	Crane_HookOffset(m_fHookAngle, m_fHookOffset, &hookDX, &hookDY);
+	*pX = hookDX + m_pCraneEntity->GetPosition().x;
+	*pY = hookDY + m_pCraneEntity->GetPosition().y;
 	*pZ = m_fHookHeight;
 }
 

@@ -15,6 +15,7 @@
 #include "Population.h"
 #include "RpAnimBlend.h"
 #include "SaveBuf.h"
+#include "ScriptArea.h"
 #include "Shadows.h"
 #include "SpecialFX.h"
 #include "World.h"
@@ -81,17 +82,11 @@ void CRunningScript::LocatePlayerCommand(int32 command, uint32* pIp)
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		} else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		if (in_area) {
 			switch (command) {
@@ -173,18 +168,12 @@ void CRunningScript::LocatePlayerCharCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -257,18 +246,12 @@ void CRunningScript::LocatePlayerCarCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -357,18 +340,12 @@ void CRunningScript::LocateCharCommand(int32 command, uint32* pIp)
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		if (in_area) {
 			switch (command) {
@@ -455,18 +432,12 @@ void CRunningScript::LocateCharCharCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -543,18 +514,12 @@ void CRunningScript::LocateCharCarCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -627,18 +592,12 @@ void CRunningScript::LocateCharObjectCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -719,18 +678,12 @@ void CRunningScript::LocateCarCommand(int32 command, uint32* pIp)
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		result = in_area;
 	}
@@ -781,18 +734,12 @@ void CRunningScript::LocateObjectCommand(int32 command, uint32* pIp)
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y &&
-			Z - dZ <= pos.z &&
-			Z + dZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = X - dX <= pos.x &&
-			X + dX >= pos.x &&
-			Y - dY <= pos.y &&
-			Y + dY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 	}
 	result = in_area;
 	UpdateCompareFlag(result);
@@ -887,10 +834,8 @@ void CRunningScript::PlayerInAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		debug = ScriptParams[7];
 	}
 	else {
@@ -898,33 +843,21 @@ void CRunningScript::PlayerInAreaCheckCommand(int32 command, uint32* pIp)
 		supY = *(float*)&ScriptParams[4];
 		debug = ScriptParams[5];
 	}
-	if (infX > supX) {
-		float tmp = infX;
-		infX = supX;
-		supX = tmp;
-	}
-	if (infY > supY) {
-		float tmp = infY;
-		infY = supY;
-		supY = tmp;
-	}
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infX, &supX);
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infY, &supY);
 	if (!decided) {
 		CVector pos = pPlayerInfo->GetPos();
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y &&
-				infZ <= pos.z &&
-				supZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox3D(infX, infY, infZ, supX, supY, supZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox2D(infX, infY, supX, supY, pos.x, pos.y);
 		}
 		if (in_area) {
 			switch (command) {
@@ -1004,10 +937,8 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		side2length = *(float*)&ScriptParams[7];
 		debug = ScriptParams[8];
 	}
@@ -1017,36 +948,15 @@ void CRunningScript::PlayerInAngledAreaCheckCommand(int32 command, uint32* pIp)
 		side2length = *(float*)&ScriptParams[5];
 		debug = ScriptParams[6];
 	}
-	float initAngle = General_GetRadianAngleBetweenPoints(infX, infY, supX, supY) + HALFPI;
-	while (initAngle < 0.0f)
-		initAngle += TWOPI;
-	while (initAngle > TWOPI)
-		initAngle -= TWOPI;
-	// it looks like the idea is to use a rectangle using the diagonal of the rectangle as
-	// the side of new rectangle, with "length" being the length of second side
-	float rotatedSupX = supX + side2length * Sin(initAngle);
-	float rotatedSupY = supY - side2length * Cos(initAngle);
-	float rotatedInfX = infX + side2length * Sin(initAngle);
-	float rotatedInfY = infY - side2length * Cos(initAngle);
-	float side1X = supX - infX;
-	float side1Y = supY - infY;
-	float side1Length = CVector2D(side1X, side1Y).Magnitude();
-	float side2X = rotatedInfX - infX;
-	float side2Y = rotatedInfY - infY;
-	float side2Length = CVector2D(side2X, side2Y).Magnitude(); // == side2length?
+	// Delegate the geometry of the angled area to the C implementation
+	ScriptAngledArea angled;
+	ScriptArea_AngledGeometry(infX, infY, supX, supY, side2length, &angled);
+	float rotatedSupX = angled.rotatedSupX, rotatedSupY = angled.rotatedSupY, rotatedInfX = angled.rotatedInfX, rotatedInfY = angled.rotatedInfY;
 	if (!decided) {
 		CVector pos = pPlayerInfo->GetPos();
 		result = false;
-		float X = pos.x - infX;
-		float Y = pos.y - infY;
-		float positionAlongSide1 = X * side1X / side1Length + Y * side1Y / side1Length;
-		bool in_area = false;
-		if (positionAlongSide1 >= 0.0f && positionAlongSide1 <= side1Length) {
-			float positionAlongSide2 = X * side2X / side2Length + Y * side2Y / side2Length;
-			if (positionAlongSide2 >= 0.0f && positionAlongSide2 <= side2Length) {
-				in_area = !b3D || pos.z >= infZ && pos.z <= supZ;
-			}
-		}
+		// Delegate the test of the point to the C implementation
+		bool in_area = ScriptArea_InAngledArea(&angled, pos.x, pos.y, pos.z, infZ, supZ, b3D);
 
 		if (in_area) {
 			switch (command) {
@@ -1134,10 +1044,8 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		debug = ScriptParams[7];
 	}
 	else {
@@ -1145,32 +1053,20 @@ void CRunningScript::CharInAreaCheckCommand(int32 command, uint32* pIp)
 		supY = *(float*)&ScriptParams[4];
 		debug = ScriptParams[5];
 	}
-	if (infX > supX) {
-		float tmp = infX;
-		infX = supX;
-		supX = tmp;
-	}
-	if (infY > supY) {
-		float tmp = infY;
-		infY = supY;
-		supY = tmp;
-	}
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infX, &supX);
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infY, &supY);
 	if (!decided) {
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y &&
-				infZ <= pos.z &&
-				supZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox3D(infX, infY, infZ, supX, supY, supZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox2D(infX, infY, supX, supY, pos.x, pos.y);
 		}
 		if (in_area) {
 			switch (command) {
@@ -1247,10 +1143,8 @@ void CRunningScript::CarInAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		debug = ScriptParams[7];
 	}
 	else {
@@ -1258,32 +1152,20 @@ void CRunningScript::CarInAreaCheckCommand(int32 command, uint32* pIp)
 		supY = *(float*)&ScriptParams[4];
 		debug = ScriptParams[5];
 	}
-	if (infX > supX) {
-		float tmp = infX;
-		infX = supX;
-		supX = tmp;
-	}
-	if (infY > supY) {
-		float tmp = infY;
-		infY = supY;
-		supY = tmp;
-	}
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infX, &supX);
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infY, &supY);
 	if (!decided) {
 		result = false;
 		bool in_area;
 		if (b3D) {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y &&
-				infZ <= pos.z &&
-				supZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox3D(infX, infY, infZ, supX, supY, supZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = infX <= pos.x &&
-				supX >= pos.x &&
-				infY <= pos.y &&
-				supY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InMinMaxBox2D(infX, infY, supX, supY, pos.x, pos.y);
 		}
 		if (in_area) {
 			switch (command) {
@@ -1336,10 +1218,8 @@ void CRunningScript::ObjectInAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		debug = ScriptParams[7];
 	}
 	else {
@@ -1347,31 +1227,19 @@ void CRunningScript::ObjectInAreaCheckCommand(int32 command, uint32* pIp)
 		supY = *(float*)&ScriptParams[4];
 		debug = ScriptParams[5];
 	}
-	if (infX > supX) {
-		float tmp = infX;
-		infX = supX;
-		supX = tmp;
-	}
-	if (infY > supY) {
-		float tmp = infY;
-		infY = supY;
-		supY = tmp;
-	}
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infX, &supX);
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infY, &supY);
 	result = false;
 	bool in_area;
 	if (b3D) {
-		in_area = infX <= pos.x &&
-			supX >= pos.x &&
-			infY <= pos.y &&
-			supY >= pos.y &&
-			infZ <= pos.z &&
-			supZ >= pos.z;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InMinMaxBox3D(infX, infY, infZ, supX, supY, supZ, pos.x, pos.y, pos.z);
 	}
 	else {
-		in_area = infX <= pos.x &&
-			supX >= pos.x &&
-			infY <= pos.y &&
-			supY >= pos.y;
+		// Delegate the test of the box to the C implementation
+		in_area = ScriptArea_InMinMaxBox2D(infX, infY, supX, supY, pos.x, pos.y);
 	}
 	if (in_area) {
 		switch (command) {
@@ -1513,18 +1381,12 @@ void CRunningScript::LocateCollectiveCommand(int32 command, uint32* pIp)
 		if (!decided) {
 			bool in_area;
 			if (b3D) {
-				in_area = X - dX <= pos.x &&
-					X + dX >= pos.x &&
-					Y - dY <= pos.y &&
-					Y + dY >= pos.y &&
-					Z - dZ <= pos.z &&
-					Z + dZ >= pos.z;
+				// Delegate the test of the box to the C implementation
+				in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 			}
 			else {
-				in_area = X - dX <= pos.x &&
-					X + dX >= pos.x &&
-					Y - dY <= pos.y &&
-					Y + dY >= pos.y;
+				// Delegate the test of the box to the C implementation
+				in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 			}
 			result = false;
 			if (in_area) {
@@ -1614,18 +1476,12 @@ void CRunningScript::LocateCollectiveCharCommand(int32 command, uint32* pIp)
 		CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		result = false;
 		if (in_area) {
@@ -1704,18 +1560,12 @@ void CRunningScript::LocateCollectiveCarCommand(int32 command, uint32* pIp)
 		CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		result = false;
 		if (in_area) {
@@ -1790,18 +1640,12 @@ void CRunningScript::LocateCollectivePlayerCommand(int32 command, uint32* pIp)
 		CVector pos = pPed->bInVehicle ? pPed->m_pMyVehicle->GetPosition() : pPed->GetPosition();
 		bool in_area;
 		if (b3D) {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y &&
-				Z - dZ <= pos.z &&
-				Z + dZ >= pos.z;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox3D(X, Y, Z, dX, dY, dZ, pos.x, pos.y, pos.z);
 		}
 		else {
-			in_area = X - dX <= pos.x &&
-				X + dX >= pos.x &&
-				Y - dY <= pos.y &&
-				Y + dY >= pos.y;
+			// Delegate the test of the box to the C implementation
+			in_area = ScriptArea_InCenteredBox2D(X, Y, dX, dY, pos.x, pos.y);
 		}
 		result = false;
 		if (in_area) {
@@ -1857,10 +1701,8 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 		supX = *(float*)&ScriptParams[4];
 		supY = *(float*)&ScriptParams[5];
 		supZ = *(float*)&ScriptParams[6];
-		if (infZ > supZ) {
-			infZ = *(float*)&ScriptParams[6];
-			supZ = *(float*)&ScriptParams[3];
-		}
+		// Delegate the sorting of the corners to the C implementation
+		ScriptArea_SortPair(&infZ, &supZ);
 		debug = ScriptParams[7];
 	}
 	else {
@@ -1868,16 +1710,10 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 		supY = *(float*)&ScriptParams[4];
 		debug = ScriptParams[5];
 	}
-	if (infX > supX) {
-		float tmp = infX;
-		infX = supX;
-		supX = tmp;
-	}
-	if (infY > supY) {
-		float tmp = infY;
-		infY = supY;
-		supY = tmp;
-	}
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infX, &supX);
+	// Delegate the sorting of the corners to the C implementation
+	ScriptArea_SortPair(&infY, &supY);
 	result = true;
 	for (int i = 0; i < MAX_NUM_COLLECTIVES && result; i++) {
 		if (ScriptParams[0] != CTheScripts::CollectiveArray[i].colIndex)
@@ -1907,18 +1743,12 @@ void CRunningScript::CollectiveInAreaCheckCommand(int32 command, uint32* pIp)
 		if (!decided) {
 			bool in_area;
 			if (b3D) {
-				in_area = infX <= pos.x &&
-					supX >= pos.x &&
-					infY <= pos.y &&
-					supY >= pos.y &&
-					infZ <= pos.z &&
-					supZ >= pos.z;
+				// Delegate the test of the box to the C implementation
+				in_area = ScriptArea_InMinMaxBox3D(infX, infY, infZ, supX, supY, supZ, pos.x, pos.y, pos.z);
 			}
 			else {
-				in_area = infX <= pos.x &&
-					supX >= pos.x &&
-					infY <= pos.y &&
-					supY >= pos.y;
+				// Delegate the test of the box to the C implementation
+				in_area = ScriptArea_InMinMaxBox2D(infX, infY, supX, supY, pos.x, pos.y);
 			}
 			result = false;
 			if (in_area) {
@@ -2616,21 +2446,8 @@ void CTheScripts::ClearSpaceForMissionEntity(const CVector& pos, CEntity* pEntit
 void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2, float y2, float z)
 {
 	float infX, infY, supX, supY;
-	if (x1 < x2) {
-		infX = x1;
-		supX = x2;
-	} else {
-		infX = x2;
-		supX = x1;
-	}
-	if (y1 < y2) {
-		infY = y1;
-		supY = y2;
-	}
-	else {
-		infY = y2;
-		supY = y1;
-	}
+	// Delegate the bounds of the area to the C implementation
+	ScriptArea_OrderedBounds(x1, y1, x2, y2, &infX, &supX, &infY, &supY);
 	CVector center;
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;
@@ -2641,28 +2458,8 @@ void CTheScripts::HighlightImportantArea(uint32 id, float x1, float y1, float x2
 void CTheScripts::HighlightImportantAngledArea(uint32 id, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float z)
 {
 	float infX, infY, supX, supY, X, Y;
-	X = (x1 + x2) / 2;
-	Y = (y1 + y2) / 2;
-	supX = infX = X;
-	supY = infY = Y;
-	X = (x2 + x3) / 2;
-	Y = (y2 + y3) / 2;
-	infX = Min(infX, X);
-	supX = Max(supX, X);
-	infY = Min(infY, Y);
-	supY = Max(supY, Y);
-	X = (x3 + x4) / 2;
-	Y = (y3 + y4) / 2;
-	infX = Min(infX, X);
-	supX = Max(supX, X);
-	infY = Min(infY, Y);
-	supY = Max(supY, Y);
-	X = (x4 + x1) / 2;
-	Y = (y4 + y1) / 2;
-	infX = Min(infX, X);
-	supX = Max(supX, X);
-	infY = Min(infY, Y);
-	supY = Max(supY, Y);
+	// Delegate the bounds of the angled area to the C implementation
+	ScriptArea_AngledBounds(x1, y1, x2, y2, x3, y3, x4, y4, &infX, &supX, &infY, &supY);
 	CVector center;
 	center.x = (infX + supX) / 2;
 	center.y = (infY + supY) / 2;

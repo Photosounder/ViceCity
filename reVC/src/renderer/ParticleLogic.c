@@ -166,4 +166,57 @@ float Particle_ScreenZ(float posZ, float nearClip, float farClip, float nearScre
 		+ nearScreenZ;
 }
 
+void Particle_TrailRotation(float distX, float distY, float *length, float *rotation)
+{
+	const float pi = (float)3.14159265358979323846;
+	float dist = sqrtf(distX * distX + distY * distY);
+	float rot = asinf(distX / dist);
+
+	*length = dist;
+	*rotation = rot;
+	if (distY < 0.0f)
+		*rotation = -1.0f * rot + 180.0f * pi / 180.0f;
+}
+static void Particle_Normalise2D(float *x, float *y)
+{
+	float sq = *x * *x + *y * *y;
+
+	if (sq > 0.0f) {
+		float invsqrt = 1.0f / sqrtf(sq);
+		*x *= invsqrt;
+		*y *= invsqrt;
+	} else
+		*x = 1.0f;
+}
+
+bool Particle_BirdIsInLine(float heading, float distX, float distY, float cosAngle)
+{
+	float dirX = -sinf(heading);
+	float dirY = cosf(heading);
+	float dot;
+
+	Particle_Normalise2D(&distX, &distY);
+	Particle_Normalise2D(&dirX, &dirY);
+	dot = dirX * distX + dirY * distY;
+	return dot > 0.0f && dot > cosAngle;
+}
+unsigned char Particle_VaryColorChannel(unsigned char channel, int variationPercent)
+{
+	float v = channel + ((float)channel * ((float)variationPercent / 100.0f));
+
+	return (unsigned char)(v < 0 ? 0 : v > 255 ? 255 : v);
+}
+
+int Particle_LineSteps(float dist, float power)
+{
+	float steps = dist / power;
+
+	return (int)(steps > 1.0f ? steps : 1.0f);
+}
+float Particle_StretchedSize(float size, float stretch)
+{
+	float v = size + stretch;
+
+	return v > 12.0f ? v : 12.0f;
+}
 //- rouz edit (Claude)

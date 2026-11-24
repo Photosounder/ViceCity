@@ -1,4 +1,5 @@
 //+ rouz edit (ChatGPT)
+#include <stdlib.h>
 #include "StreamingData.h"
 CStreamingInfo Streaming_modelInfo[NUMSTREAMINFO];
 CStreamingChannel Streaming_channel[2];
@@ -36,3 +37,55 @@ bool Streaming_IsObjectInCdImage(int32_t id)
     return StreamingInfo_GetCdPosnAndSize(&Streaming_modelInfo[id], &position, &size);
 }
 //- rouz edit (ChatGPT)
+//+ rouz edit (Claude)
+void Streaming_SectorRange(int cameraIndex, bool lookingPositive, bool behind, int numSectors, int *minIndex, int *maxIndex, int *inc)
+{
+	int i = cameraIndex;
+	int last = numSectors - 1;
+	int a, b;
+
+	if (lookingPositive) {
+		if (behind) {
+			*maxIndex = (i - 2 > 0) ? i - 2 : 0;
+			*minIndex = (i - 10 > 0) ? i - 10 : 0;
+		} else {
+			*maxIndex = (i + 10 > 0) ? i + 10 : 0;
+			*minIndex = (i - 2 > 0) ? i - 2 : 0;
+		}
+		*inc = 1;
+	} else {
+		if (behind) {
+			a = i + 2; b = i + 10;
+			*maxIndex = (a < last) ? a : last;
+			*minIndex = (b < last) ? b : last;
+		} else {
+			a = i - 10; b = i + 2;
+			*maxIndex = (a < last) ? a : last;
+			*minIndex = (b < last) ? b : last;
+		}
+		*inc = -1;
+	}
+}
+
+void Streaming_SectorSpan(int cameraIndex, int numSectors, int *minIndex, int *maxIndex)
+{
+	*minIndex = (cameraIndex - 10 > 0) ? cameraIndex - 10 : 0;
+	*maxIndex = (cameraIndex + 10 < numSectors - 1) ? cameraIndex + 10 : numSectors - 1;
+}
+bool Streaming_ShouldRequestEntity(float posX, float posY, float xmin, float ymin, float xmax, float ymax, float x, float y, float lodDistSq, float streamDistSq)
+{
+	float dx, dy;
+
+	lodDistSq = lodDistSq < streamDistSq ? lodDistSq : streamDistSq;
+	dx = x - posX;
+	dy = y - posY;
+	return xmin < posX && posX < xmax &&
+	       ymin < posY && posY < ymax &&
+	       dx * dx + dy * dy < lodDistSq;
+}
+
+bool Streaming_SectorIsFar(int playerX, int playerY, int sectorX, int sectorY)
+{
+	return abs(playerX - sectorX) > 3 && abs(playerY - sectorY) > 3;
+}
+//- rouz edit (Claude)

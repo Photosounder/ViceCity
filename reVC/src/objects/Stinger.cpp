@@ -12,6 +12,7 @@
 #include "Particle.h"
 #include "AnimBlendAssociation.h"
 #include "General.h"
+#include "ObjectLogic.h"
 #include "Pools.h" // rouz edit (ChatGPT)
 
 uint32 NumOfStingerSegments;
@@ -267,14 +268,12 @@ CStinger::Process()
 		if (m_nSpikeState == STINGERSTATE_DEPLOYING && (*Timer_GetTimeInMilliseconds()) > m_nTimeOfDeploy + 2500)
 			m_nSpikeState = STINGERSTATE_DEPLOYED;
 		else {
-			float progress = ((*Timer_GetTimeInMilliseconds()) - m_nTimeOfDeploy) / 2500.0f;
-			if (m_nSpikeState != STINGERSTATE_DEPLOYING)
-				progress = 1.0f - progress;
-
-			float degangle = progress * ARRAY_SIZE(m_vPositions);
-			float angle1 = m_fMax_Z + DEGTORAD(degangle);
-			float angle2 = m_fMax_Z - DEGTORAD(degangle);
-			int pos = Clamp(degangle, 0, ARRAY_SIZE(m_vPositions)-1);
+			// Delegate the angles of the segments to the C implementation
+			float spikeAngles[2];
+			int pos;
+			Stinger_SpikeAngles(m_fMax_Z, (*Timer_GetTimeInMilliseconds()) - m_nTimeOfDeploy, m_nSpikeState == STINGERSTATE_DEPLOYING, ARRAY_SIZE(m_vPositions), spikeAngles, &pos);
+			float angle1 = spikeAngles[0];
+			float angle2 = spikeAngles[1];
 
 			CVector2D pos2d = m_vPositions[pos];
 			CVector pos3d = m_vPos;
@@ -282,9 +281,6 @@ CStinger::Process()
 			CEntity *pEntity;
 			if (CWorld::ProcessVerticalLine(CVector(pos3d.x, pos3d.y, pos3d.z - 10.0f), pos3d.z, colPoint, pEntity, true, false, false, false, true, false, nil))
 				pos3d.z = colPoint.point.z + 0.15f;
-
-			angle1 = General_LimitRadianAngle(angle1);
-			angle2 = General_LimitRadianAngle(angle2);
 
 			for (int spike = 0; spike < NUM_STINGER_SEGMENTS; spike++) {
 				if (CWorld::TestSphereAgainstWorld(pos3d + CVector(pos2d.x, pos2d.y, 0.6f), 0.3f, nil, true, false, false, true, false, false))

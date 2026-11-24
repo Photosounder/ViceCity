@@ -1,9 +1,11 @@
 //+ rouz edit (Claude)
 #include <stddef.h>
 #include "AutomobileLogic.h"
+#include "VectorMath.h"
 #include "ModelIds.h"
 #include "DoorTypes.h"
 #include "WheelState.h"
+#include "WheelIndices.h"
 #include "AutoPilot.h"
 #include "EntityStatus.h"
 #include "General.h"
@@ -258,5 +260,770 @@ int Automobile_ProcessAutoBusDoors(CAutomobileStruct *self, uint32_t now, const 
 		}
 	}
 	return n;
+}
+void AutomobileLogic_Pedals(float speed, int16_t accelerate, int16_t brake, bool isDodo, float *gasPedal, float *brakePedal, bool *burnout)
+{
+	*burnout = false;
+
+	float acceleration = (accelerate - brake)/255.0f;
+	if(isDodo && acceleration < 0.0f)
+		acceleration *= 0.3f;
+	if(fabsf(speed) < 0.01f){
+		// standing still, go into direction we want
+		if(accelerate > 150.0f && brake > 150.0f){
+			*gasPedal = accelerate/255.0f;
+			*brakePedal = brake/255.0f;
+			*burnout = true;
+		}else{
+			*gasPedal = acceleration;
+			*brakePedal = 0.0f;
+		}
+	}else{
+		if(speed * acceleration < 0.0f){
+			// if opposite directions, have to brake first
+			*gasPedal = acceleration;
+			*brakePedal = fabsf(acceleration);
+		}else{
+			// accelerating in same direction we were already going
+			*gasPedal = acceleration;
+			*brakePedal = 0.0f;
+		}
+	}
+}
+
+float AutomobileLogic_SteerPad(float steerInput, int16_t steeringLeftRight, float timeStep)
+{
+	steerInput += (-steeringLeftRight/128.0f - steerInput)*
+		0.2f*timeStep;
+	return steerInput;
+}
+
+float AutomobileLogic_SteerMouse(float steerInput, float mouseX, float sensitivity, float centreRange, float centreMult, float timeStep)
+{
+	steerInput += sensitivity*mouseX;
+	if(fabsf(steerInput) < centreRange)
+		steerInput *= powf(centreMult, timeStep);
+	return steerInput;
+}
+
+float AutomobileLogic_WheelAngle(float steerInput, float steeringLockDegrees)
+{
+	float fValue;
+	if(steerInput < 0.0f)
+		fValue = -(steerInput*steerInput);
+	else
+		fValue = steerInput*steerInput;
+	return (steeringLockDegrees * (float)M_PI / 180.0f) * fValue;
+}
+
+int AutomobileLogic_ComedyControls(int state, int rnd, float *steerAngle)
+{
+	switch(state){
+	case 0:
+		if(rnd < 2)
+			state = 1;
+		else if(rnd < 4)
+			state = 2;
+		break;
+	case 1:
+		*steerAngle += 0.05f;
+		if(rnd < 2)
+			state = 0;
+		break;
+	case 2:
+		*steerAngle -= 0.05f;
+		if(rnd < 2)
+			state = 0;
+		break;
+	}
+	return state;
+}
+
+VectorMath3 AutomobileLogic_ApproxWheelOffset(int wheel, float boxMaxX, float boxMaxY, float boxMinY)
+{
+	VectorMath3 offset = { 0.0f, 0.0f, 0.0f };
+
+	switch (wheel) {
+	case 0:
+		offset.x = -boxMaxX; offset.y = boxMaxY;
+		break;
+	case 1:
+		offset.x = -boxMaxX; offset.y = boxMinY;
+		break;
+	case 2:
+		offset.x = boxMaxX; offset.y = boxMaxY;
+		break;
+	case 3:
+		offset.x = boxMaxX; offset.y = boxMinY;
+		break;
+	default:
+		break;
+	}
+	return offset;
+}
+
+VectorMath3 AutomobileLogic_ApproxBikeWheelOffset(int wheel, float boxMaxY, float boxMinY)
+{
+	VectorMath3 offset = { 0.0f, 0.0f, 0.0f };
+
+	switch (wheel) {
+	case 0:
+		offset.y = 0.8f * boxMaxY;
+		break;
+	case 1:
+		offset.y = 0.8f * boxMinY;
+		break;
+	default:
+		break;
+	}
+	return offset;
+}
+
+float Automobile_HydraulicSpringRatio(float springRatio, float lineTopZ, float wheelZ, float lineLength)
+{
+	if (springRatio < 1.0f) {
+		springRatio = (lineTopZ - wheelZ) / lineLength;
+		if (springRatio > 1.0f)
+			springRatio = 1.0f;
+	}
+	return springRatio;
+}
+
+void Automobile_HydraulicWheelLift(float upDownInput, float leftRightInput, float lift[4])
+{
+	float rear = upDownInput / 128.0f;
+	float front = -rear;
+	float right = leftRightInput / 128.0f;
+	float left = -right;
+	float v;
+
+	v = front + left;
+	lift[CARWHEEL_FRONT_LEFT] = v > 0.0f ? v : 0.0f;
+	v = rear + left;
+	lift[CARWHEEL_REAR_LEFT] = v > 0.0f ? v : 0.0f;
+	v = front + right;
+	lift[CARWHEEL_FRONT_RIGHT] = v > 0.0f ? v : 0.0f;
+	v = rear + right;
+	lift[CARWHEEL_REAR_RIGHT] = v > 0.0f ? v : 0.0f;
+}
+
+bool Automobile_HydraulicSoundLevel(float maxDelta, float limitDiff, float *level)
+{
+	if (limitDiff != 0.0f && fabsf(maxDelta / limitDiff) > 0.01f) {
+		float f = (maxDelta + limitDiff) / 2.0f / limitDiff;
+		*level = f < 0.0f ? 0.0f : f > 1.0f ? 1.0f : f;
+		return true;
+	}
+	return false;
+}
+
+float Automobile_PrevSpringRatio(float springRatio, float springLength, float lineLength)
+{
+	// Wheel radius in relation to the suspension line
+	float wheelRadius = 1.0f - springLength / lineLength;
+	return (springRatio - wheelRadius) / (1.0f - wheelRadius);
+}
+float Automobile_PedImpulseReduction(float impulse, float pedMoveDeltaY, float dotForwardNormal, float pedMass)
+{
+	float speed = pedMoveDeltaY * dotForwardNormal;
+
+	if (speed < 0.0f) {
+		float v = impulse + pedMass * speed;
+		impulse = v > 0.0f ? v : 0.0f;
+	}
+	return impulse;
+}
+
+unsigned char Automobile_ShakeFrequency(float impulse, float mass)
+{
+	float v = 0.4f * impulse * 2000.0f / mass + 100.0f;
+	return (unsigned char)(v < 250.0f ? v : 250.0f);
+}
+
+float Automobile_CollisionDamage(float impulse, float minImpulse, float collisionDamageMultiplier, float damageMultiplier, bool securicaHitByPlayer, bool isRC)
+{
+	float damage = (impulse - minImpulse) * collisionDamageMultiplier * 0.6f * damageMultiplier;
+
+	if (securicaHitByPlayer)
+		damage *= 7.0f;
+
+	if (isRC)
+		damage *= 30.0f;
+	return damage;
+}
+
+float Automobile_HealthAfterDamage(float health, float damage, bool isPlayerVehicle, bool takeLessDamage, bool hitByPlayerVehicle)
+{
+	int oldHealth = (int)health;
+
+	if (isPlayerVehicle)
+		health -= takeLessDamage ? damage / 6.0f : damage / 2.0f;
+	else if (takeLessDamage)
+		health -= damage / 12.0f;
+	else if (hitByPlayerVehicle)
+		health -= damage / 1.5f;
+	else
+		health -= damage / 4.0f;
+	if (health <= 0.0f && oldHealth > 0)
+		health = 1.0f;
+	return health;
+}
+float Automobile_WaterImpulseRatio(float impulseZ, float mass, float timeStep)
+{
+	float ts = timeStep > 0.01f ? timeStep : 0.01f;
+	return impulseZ / (0.008f * mass * ts);
+}
+
+float Automobile_WaterResistance(float impulseRatio, float timeStep)
+{
+	return powf(1.0f - 0.05f * impulseRatio, timeStep);
+}
+
+bool Automobile_IsDrowning(bool isSeaSparrow, float impulseRatio, float upZ, bool hoversOnWater, bool heliHitWaterHard, bool anySuspensionFullyExtended)
+{
+	if ((isSeaSparrow && impulseRatio < 3.0f && (upZ > -0.5f || impulseRatio < 0.6f)) || hoversOnWater)
+		return false;
+	return heliHitWaterHard || impulseRatio > 1.0f || (impulseRatio > 0.6f && anySuspensionFullyExtended);
+}
+
+unsigned char Automobile_WaterSplashChannel(float directional, float ambient)
+{
+	return (unsigned char)((0.5f * directional + ambient) * 0.45f * 255);
+}
+
+float Automobile_WheelSplashSize(float speed)
+{
+	float v = (speed < 0.15f ? 0.25f : 0.75f) * speed;
+	return v < 0.6f ? v : 0.6f;
+}
+void Automobile_FlyingComponentSpeed(const float moveSpeed[3], float upZ, bool isBonnetBootOrWindscreen, float out[3])
+{
+	out[0] = moveSpeed[0];
+	out[1] = moveSpeed[1];
+	out[2] = moveSpeed[2];
+	if (out[2] > 0.0f) {
+		out[2] *= 1.5f;
+	} else if (upZ > 0.0f && isBonnetBootOrWindscreen) {
+		out[2] *= -1.5f;
+		out[2] += 0.04f;
+	} else {
+		out[2] *= 0.25f;
+	}
+	out[0] *= 0.75f;
+	out[1] *= 0.75f;
+}
+int Automobile_BurstWheelSparkCount(float speedSqr, int surface)
+{
+	int count;
+
+	if (!(speedSqr > (0.1f * 0.1f)) || surface == SURFACE_GRASS || surface == SURFACE_MUD_DRY || surface == SURFACE_SAND ||
+		surface == SURFACE_SAND_BEACH || surface == SURFACE_WATER)
+		return 0;
+
+	count = 1;
+	if (speedSqr > 0.04f)
+		count++;
+	if (speedSqr > 0.16f)
+		count += 2;
+	return count;
+}
+
+AutomobileSirenSetup Automobile_SirenSetup(int kind)
+{
+	AutomobileSirenSetup s = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0, 0, 0 }, { 0, 0, 0 } };
+
+	switch (kind) {
+	case AUTOMOBILE_SIREN_FIRETRUCK:
+		s.pos1[0] = 1.1f;  s.pos1[1] = 1.7f; s.pos1[2] = 2.0f;
+		s.pos2[0] = -1.1f; s.pos2[1] = 1.7f; s.pos2[2] = 2.0f;
+		s.color1[0] = 255; s.color1[1] = 0; s.color1[2] = 0;
+		s.color2[0] = 255; s.color2[1] = 255; s.color2[2] = 0;
+		break;
+	case AUTOMOBILE_SIREN_AMBULANCE:
+		s.pos1[0] = 1.1f;  s.pos1[1] = 0.9f; s.pos1[2] = 1.6f;
+		s.pos2[0] = -1.1f; s.pos2[1] = 0.9f; s.pos2[2] = 1.6f;
+		s.color1[0] = 255; s.color1[1] = 0; s.color1[2] = 0;
+		s.color2[0] = 255; s.color2[1] = 255; s.color2[2] = 255;
+		break;
+	case AUTOMOBILE_SIREN_POLICE:
+		s.pos1[0] = 0.7f;  s.pos1[1] = -0.4f; s.pos1[2] = 1.0f;
+		s.pos2[0] = -0.7f; s.pos2[1] = -0.4f; s.pos2[2] = 1.0f;
+		s.color1[0] = 255; s.color1[1] = 0; s.color1[2] = 0;
+		s.color2[0] = 0; s.color2[1] = 0; s.color2[2] = 255;
+		break;
+	case AUTOMOBILE_SIREN_ENFORCER:
+		s.pos1[0] = 1.1f;  s.pos1[1] = 0.8f; s.pos1[2] = 1.2f;
+		s.pos2[0] = -1.1f; s.pos2[1] = 0.8f; s.pos2[2] = 1.2f;
+		s.color1[0] = 255; s.color1[1] = 0; s.color1[2] = 0;
+		s.color2[0] = 0; s.color2[1] = 0; s.color2[2] = 255;
+		break;
+	}
+	return s;
+}
+
+void Automobile_SirenLightColor(uint32_t timeMs, const unsigned char color1[3], const unsigned char color2[3], unsigned char out[3])
+{
+	uint32_t t = timeMs & 0x3FF;
+	int i;
+
+	for (i = 0; i < 3; i++)
+		out[i] = (t < 512 ? color1[i] : color2[i]) / 6;
+
+	t = timeMs & 0x1FF;
+	if (t < 100) {
+		float f = t / 100.0f;
+		for (i = 0; i < 3; i++)
+			out[i] = (unsigned char)(out[i] * f);
+	} else if (t > (512 - 100)) {
+		float f = (512 - t) / 100.0f;
+		for (i = 0; i < 3; i++)
+			out[i] = (unsigned char)(out[i] * f);
+	}
+}
+float Automobile_WheelTilt(float wheelZ, float heightAboveRoad, float wheelScale, bool isVoodoo, bool rightSide)
+{
+	float groundOffset = wheelZ + heightAboveRoad - 0.5f * wheelScale;
+	float v;
+
+	if (isVoodoo)
+		groundOffset *= 0.6f;
+	v = rightSide ? -groundOffset : groundOffset;
+	v = v < -1.0f ? -1.0f : v > 1.0f ? 1.0f : v;
+	return asinf(v);
+}
+
+float Automobile_HeliDustAmount(float rotorSpeed, float timeStep)
+{
+	float steps = 16.0f - 4.0f * timeStep;
+
+	return (rotorSpeed - 0.1125f) * ((int)(steps > 2.0f ? steps : 2.0f)) * 400.0f / 43.0f;
+}
+void Automobile_HeliRotorAlpha(float rotorSpeed, int *rotorAlpha, int *blurAlpha)
+{
+	float a = 1.7f * (rotorSpeed > 0.0f ? rotorSpeed : 0.0f) / 0.22f;
+	float b = 1.5f * rotorSpeed / 0.22f - 0.4f;
+
+	*rotorAlpha = (int)((1.5f - (a < 1.5f ? a : 1.5f)) * 255.0f);
+	*rotorAlpha = *rotorAlpha < 255 ? *rotorAlpha : 255;
+	*blurAlpha = (int)((b > 0.0f ? b : 0.0f) * 150.0f);
+	*blurAlpha = *blurAlpha < 150 ? *blurAlpha : 150;
+}
+
+void Automobile_CannonDirection(float angleLR, float angleUD, float dir[3])
+{
+	dir[0] = sinf(angleLR) * cosf(angleUD);
+	dir[1] = cosf(angleLR) * cosf(angleUD);
+	dir[2] = sinf(angleUD);
+}
+
+float Automobile_TankTurretAngle(float angle)
+{
+	const float twopi = (float)3.14159265358979323846 * 2;
+
+	if (angle < 0.0f)
+		angle += twopi;
+	if (angle > twopi)
+		angle -= twopi;
+	return angle;
+}
+
+void Automobile_TankGunEnd(float angle, const float baseToEnd[3], const float turretBase[3], float out[3])
+{
+	float c = cosf(angle);
+	float s = sinf(angle);
+
+	out[0] = c * baseToEnd[0] - s * baseToEnd[1];
+	out[1] = s * baseToEnd[0] + c * baseToEnd[1];
+	out[2] = baseToEnd[2] - 1.0f;	// Correct the offset here
+	out[0] += turretBase[0];
+	out[1] += turretBase[1];
+	out[2] += turretBase[2];
+}
+
+void Automobile_StrongGrip(bool playerDrivesOtherVehicle, int wantedLevel, int carMission, float playerSpeed, float ownSpeed, float distToPlayer, bool isRCBandit, bool notRemoteControlled, bool *strongGrip1, bool *strongGrip2)
+{
+	*strongGrip1 = false;
+	*strongGrip2 = false;
+	if (playerDrivesOtherVehicle && wantedLevel > 3 &&
+	    (carMission == MISSION_RAMPLAYER_FARAWAY || carMission == MISSION_RAMPLAYER_CLOSE ||
+	     carMission == MISSION_BLOCKPLAYER_FARAWAY || carMission == MISSION_BLOCKPLAYER_CLOSE) &&
+	    playerSpeed > 0.3f) {
+		*strongGrip1 = true;
+		if (playerSpeed > 0.4f && ownSpeed < 0.3f)
+			*strongGrip2 = true;
+		else if (distToPlayer > 50.0f)
+			*strongGrip2 = true;
+	} else if (isRCBandit && notRemoteControlled)
+		*strongGrip1 = true;
+}
+
+bool Automobile_TwoWheelCentreOfMassZ(float handlingCentreZ, int twoWheelTime, float steeringLeftRight, float balanceMult, float colMaxZ, float upZ, float rightZ, bool isHeliOrPlane, float *centreZ)
+{
+	if (twoWheelTime > 500 && !isHeliOrPlane) {
+		int t = twoWheelTime - 500;
+		float tweak = (t < 1000 ? t : 1000) / 500.0f;
+		if (upZ > 0.0f) {
+			// Positive when on the left wheels, negative on the right wheels
+			if (rightZ <= 0.0f)
+				tweak *= -1.0f;
+			*centreZ = handlingCentreZ + steeringLeftRight / 128.0f * balanceMult * tweak * colMaxZ;
+			return true;
+		}
+		return false;
+	}
+	*centreZ = handlingCentreZ;
+	return true;
+}
+
+float Automobile_SandSlowdown(float parallelSpeedSqr, bool goodInSand, float wetRoads, float sandSlowdown, float *parallelScale, bool *stuck)
+{
+	float slowdown;
+
+	*parallelScale = 1.0f;
+	*stuck = false;
+	if (parallelSpeedSqr > (0.3f * 0.3f)) {
+		float fSpeed = sqrtf(parallelSpeedSqr);
+		*parallelScale = 0.3f / fSpeed;
+		float v = 1.0f - 2.0f * fSpeed;
+		slowdown = sandSlowdown * (v > 0.2f ? v : 0.2f);
+	} else {
+		*stuck = true;
+		slowdown = sandSlowdown;
+	}
+	if (goodInSand)
+		slowdown *= 0.5f;
+	if (wetRoads > 0.2f)
+		slowdown *= (1.2f - wetRoads);
+	return slowdown;
+}
+bool Automobile_IsBarelyMoving(bool isWrecked, float moveSpeedAvgSqr, float turnSpeedAvgSqr, float timeStep, float distanceTravelled, bool damagedByPed, bool makeStatic)
+{
+	float moveSpeedLimit, turnSpeedLimit, distanceLimit;
+
+	if (isWrecked) {
+		moveSpeedLimit = 0.006f;
+		turnSpeedLimit = 0.0015f;
+		distanceLimit = 0.015f;
+	} else {
+		moveSpeedLimit = 0.003f;
+		turnSpeedLimit = 0.0009f;
+		distanceLimit = 0.005f;
+	}
+
+	return (moveSpeedAvgSqr <= (moveSpeedLimit * timeStep) * (moveSpeedLimit * timeStep) &&
+		turnSpeedAvgSqr <= (turnSpeedLimit * timeStep) * (turnSpeedLimit * timeStep) &&
+		distanceTravelled < distanceLimit &&
+		!damagedByPed) ||
+		makeStatic;
+}
+
+float Automobile_SandSpringRatio(float springRatio, float fwdSpeed, float wetRoads, float lineLength, float springLength)
+{
+	float f = 1.0f - fwdSpeed / 0.3f - 0.7f * wetRoads;
+	f = f > 0.4f ? f : 0.4f;
+	springRatio += 0.35f * f * (lineLength - springLength) / springLength;
+	if (springRatio > 1.0f)
+		springRatio = 1.0f;
+	return springRatio;
+}
+float Automobile_FreeWheelSpeed(float wheelSpeed, float acceleration, bool isDriven, bool handbrakeOn)
+{
+	if (handbrakeOn)
+		return 0.0f;
+	if (isDriven && acceleration != 0.0f) {
+		if (acceleration > 0.0f) {
+			if (wheelSpeed < 2.0f)
+				wheelSpeed -= 0.2f;
+		} else {
+			if (wheelSpeed > -2.0f)
+				wheelSpeed += 0.1f;
+		}
+	} else {
+		wheelSpeed *= 0.95f;
+	}
+	return wheelSpeed;
+}
+
+void Automobile_WheelBiases(bool neutralHandling, float brakeBias, float tractionBias, float biases[4])
+{
+	float tractionBiasFront = neutralHandling ? 1.0f : 2.0f * tractionBias;
+
+	biases[0] = neutralHandling ? 1.0f : 2.0f * brakeBias;
+	biases[1] = neutralHandling ? 1.0f : 2.0f - brakeBias;
+	biases[2] = tractionBiasFront;
+	biases[3] = neutralHandling ? 1.0f : 2.0f - tractionBiasFront;
+}
+
+float Automobile_TireTemperature(float temperature, bool burnoutWithSpinningWheel, float timeStep)
+{
+	if (burnoutWithSpinningWheel) {
+		temperature += 0.001f * timeStep;
+		if (temperature > 3.0f)
+			temperature = 3.0f;
+	} else if (temperature > 1.0f) {
+		temperature = (temperature - 1.0f) * powf(0.995f, timeStep) + 1.0f;
+	}
+	return temperature;
+}
+float Automobile_SurfaceShake(int surface, float currentShake)
+{
+	if (surface == SURFACE_GRAVEL || surface == SURFACE_WATER || surface == SURFACE_HEDGE) {
+		if (currentShake < 0.2f)
+			currentShake = 0.3f;
+	} else if (surface == SURFACE_MUD_DRY) {
+		if (currentShake < 0.1f)
+			currentShake = 0.2f;
+	} else if (surface == SURFACE_GRASS) {
+		if (currentShake < 0.05f)
+			currentShake = 0.1f;
+	}
+	return currentShake;
+}
+
+unsigned char Automobile_PadShakeFrequency(float shake, float speed, float mass, float base, float cap)
+{
+	float v = 200.0f * shake * speed * 2000.0f / mass + base;
+	return (unsigned char)(v < cap ? v : cap);
+}
+
+float Automobile_WheelPosition(float lineTopZ, float springRatio, float springLength, bool followsDirectly, float currentPosition)
+{
+	float wheelPos = lineTopZ;
+
+	if (springRatio > 0.0f)
+		wheelPos -= springRatio * springLength;
+	if (followsDirectly)
+		return wheelPos;
+	return currentPosition + (wheelPos - currentPosition) * 0.75f;
+}
+
+float Automobile_WheelWobble(float wheelRotation)
+{
+	return 0.3f * sinf(wheelRotation);
+}
+float Automobile_AIFireTruckGunUD(uint32_t timeMs)
+{
+	const float twoPi = (float)3.14159265358979323846 * 2;
+	float upDown = sinf((float)(timeMs & 0xFFF) / 0x1000 * twoPi);
+
+	return 0.2f + 0.2f * upDown;
+}
+float Automobile_WingPropeller(bool isBFInjection, bool gasPressed, float *propellerRotation, float timeStep, uint32_t timeMs)
+{
+	const float twoPi = (float)3.14159265358979323846 * 2;
+	float rotation = 0.0f;
+
+	if (isBFInjection)
+		if (*propellerRotation > twoPi)
+			*propellerRotation -= twoPi;
+
+	if (gasPressed) {
+		if (isBFInjection) {
+			*propellerRotation += 0.2f * timeStep;
+			rotation = *propellerRotation;
+		} else {
+			if (*propellerRotation < 1.3f) {
+				float v = *propellerRotation + 0.1f * timeStep;
+				*propellerRotation = v < 1.3f ? v : 1.3f;
+				rotation = *propellerRotation;
+			} else {
+				float wave = sinf((timeMs % 10000) / 70.0f);
+				rotation = *propellerRotation + 0.13 * wave;
+			}
+		}
+	} else {
+		if (isBFInjection) {
+			*propellerRotation += 0.1f * timeStep;
+			rotation = *propellerRotation;
+		} else {
+			if (*propellerRotation > 0.0f) {
+				float v = *propellerRotation - 0.05f * timeStep;
+				*propellerRotation = v > 0.0f ? v : 0.0f;
+				rotation = *propellerRotation;
+			}
+		}
+	}
+	return rotation;
+}
+void Automobile_SteerForward(float steerAngle, float forward[2])
+{
+	forward[0] = -sinf(steerAngle);
+	forward[1] = cosf(steerAngle);
+}
+float Automobile_WheelAdhesion(float adhesiveLimit, float traction, bool isPlayer, float wetMultiplier)
+{
+	float adhesion = adhesiveLimit * traction;
+
+	if (isPlayer)
+		adhesion *= wetMultiplier;
+	return adhesion;
+}
+void Automobile_SteeredWheelAxes(const float forward[3], const float normal[3], float s, float c, float wheelFwd[3], float wheelRight[3])
+{
+	VectorMath3 fwd = { forward[0], forward[1], forward[2] };
+	VectorMath3 n = { normal[0], normal[1], normal[2] };
+	VectorMath3 right, tmp;
+	float dot = fwd.x * n.x + fwd.y * n.y + fwd.z * n.z;
+
+	fwd.x -= dot * n.x;
+	fwd.y -= dot * n.y;
+	fwd.z -= dot * n.z;
+	VectorMath_Normalise(&fwd);
+	right = VectorMath_Cross(fwd, n);
+	VectorMath_Normalise(&right);
+	tmp.x = c * fwd.x - s * right.x;
+	tmp.y = c * fwd.y - s * right.y;
+	tmp.z = c * fwd.z - s * right.z;
+	right.x = s * fwd.x + c * right.x;
+	right.y = s * fwd.y + c * right.y;
+	right.z = s * fwd.z + c * right.z;
+	wheelFwd[0] = tmp.x;
+	wheelFwd[1] = tmp.y;
+	wheelFwd[2] = tmp.z;
+	wheelRight[0] = right.x;
+	wheelRight[1] = right.y;
+	wheelRight[2] = right.z;
+}
+void Automobile_SurfaceWheelAxes(const float forward[3], const float normal[3], float wheelFwd[3], float wheelRight[3])
+{
+	VectorMath3 fwd = { forward[0], forward[1], forward[2] };
+	VectorMath3 n = { normal[0], normal[1], normal[2] };
+	VectorMath3 right;
+	float dot = fwd.x * n.x + fwd.y * n.y + fwd.z * n.z;
+
+	fwd.x -= dot * n.x;
+	fwd.y -= dot * n.y;
+	fwd.z -= dot * n.z;
+	VectorMath_Normalise(&fwd);
+	right = VectorMath_Cross(fwd, n);
+	VectorMath_Normalise(&right);
+	wheelFwd[0] = fwd.x;
+	wheelFwd[1] = fwd.y;
+	wheelFwd[2] = fwd.z;
+	wheelRight[0] = right.x;
+	wheelRight[1] = right.y;
+	wheelRight[2] = right.z;
+}
+bool Automobile_RotorSoundCheck(float distSq, float propellerRotation, float bladeRotation)
+{
+	return distSq < 20.0f * 20.0f && fabsf(propellerRotation - bladeRotation) > 30.0f * (float)M_PI / 180.0f;
+}
+
+bool Automobile_RotorBladeInLine(float dot, float limit)
+{
+	return fabsf(dot) > limit;
+}
+float Automobile_CannonTrackStep(float gunAngle, float targetAngle, float cannonDelta, float angleStep)
+{
+	if (fabsf(cannonDelta) < angleStep)
+		return targetAngle;
+	else if (cannonDelta > 0.0f)
+		return gunAngle + angleStep;
+	return gunAngle - angleStep;
+}
+void Automobile_SirenPosition(const float pos1[3], const float pos2[3], int i, float out[3])
+{
+	int k;
+
+	for (k = 0; k < 3; k++)
+		out[k] = (pos1[k] * i + pos2[k] * (3.0f - i)) / 3.0f;
+}
+float Automobile_Behindness(float dot, float *angle)
+{
+	float behindness = dot < -1.0f ? -1.0f : dot > 1.0f ? 1.0f : dot;
+
+	*angle = fabsf(acosf(behindness));
+	return behindness;
+}
+void Automobile_RoadAlignedMatrix(const float front[2], const float rear[2], float frontZ, float rearZ, float len, float heightAboveRoad, float right[3], float forward[3], float up[3], float pos[3])
+{
+	float angle = atanf((frontZ - rearZ) / len);
+	float cs = cosf(angle);
+	float sn = sinf(angle);
+	VectorMath3 r, f, u;
+
+	r.x = (front[1] - rear[1]) / len;
+	r.y = -(front[0] - rear[0]) / len;
+	r.z = 0.0f;
+	f.x = -cs * r.y;
+	f.y = cs * r.x;
+	f.z = sn;
+	u = VectorMath_Cross(r, f);
+	right[0] = r.x; right[1] = r.y; right[2] = r.z;
+	forward[0] = f.x; forward[1] = f.y; forward[2] = f.z;
+	up[0] = u.x; up[1] = u.y; up[2] = u.z;
+	pos[0] = (front[0] + rear[0]) / 2.0f;
+	pos[1] = (front[1] + rear[1]) / 2.0f;
+	pos[2] = (frontZ + rearZ) / 2.0f + heightAboveRoad;
+}
+bool Automobile_SpeedAbove(float speed, float limit)
+{
+	return fabsf(speed) > limit;
+}
+
+bool Automobile_SpeedBelow(float speed, float limit)
+{
+	return fabsf(speed) < limit;
+}
+
+bool Automobile_LineDeltaExceeds(float posZ, float lineZ, float maxDelta)
+{
+	return fabsf(posZ - lineZ) > fabsf(maxDelta);
+}
+
+float Automobile_WheelNudgeForce(float mass, float factor)
+{
+	float v = mass * factor;
+
+	return 50.0f * (1.0f < v ? 1.0f : v);
+}
+void Automobile_RocketLead(float forwardSpeed, const float forward[3], float timeStep, float lead[3])
+{
+	float s = forwardSpeed > 0.0f ? forwardSpeed : 0.0f;
+
+	lead[0] = s * forward[0] * timeStep;
+	lead[1] = s * forward[1] * timeStep;
+	lead[2] = s * forward[2] * timeStep;
+}
+
+float Automobile_SafeDistance(float distSq)
+{
+	float d = sqrtf(distSq);
+
+	return d > 0.01f ? d : 0.01f;
+}
+
+float Automobile_SmokeLift(float speed)
+{
+	float v = 1.0f - 1.6f * speed;
+
+	return 0.05f * (v > 0.0f ? v : 0.0f);
+}
+
+float Automobile_WaterImpactDivisor(float impulseRatio)
+{
+	float v = 8.0f * impulseRatio;
+
+	return v > 1.0f ? v : 1.0f;
+}
+void Automobile_TurretDirection(float turretAngle, float dir[2])
+{
+	dir[0] = sinf(-turretAngle);
+	dir[1] = cosf(-turretAngle);
+}
+
+bool Automobile_CameraIsFarAway(float dx, float dy, float limit)
+{
+	return fabsf(dx) + fabsf(dy) > limit;
+}
+bool Automobile_WheelsOnBothSides(const float springRatio[4])
+{
+	return (springRatio[0] < 1.0f || springRatio[2] < 1.0f) &&
+		(springRatio[1] < 1.0f || springRatio[3] < 1.0f);
+}
+
+float Automobile_AntiRollStrength(float gravity, float turnMass)
+{
+	return -gravity * (turnMass < 2500.0f ? turnMass : 2500.0f);
 }
 //- rouz edit (Claude)

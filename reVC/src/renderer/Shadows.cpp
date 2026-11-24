@@ -30,11 +30,13 @@
 #include "TimeStep.h"
 #include "Shadows.h"
 #include "ShadowMath.h"
+#include "General.h"
 #include "DoubleList.h"
 #include "CutsceneObject.h"
 #include "CutsceneShadow.h"
 #include "Clock.h"
 #include "VarConsole.h"
+#include "WorldLogic.h"
 
 #ifdef DEBUGMENU
 //SETTWEAKPATH("Shadows");
@@ -259,21 +261,14 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 
 	if ( SQR(fDrawDistance) > fDistToCamSqr || fDrawDistance == 0.0f )
 	{
-		if ( fDrawDistance != 0.0f )
+		// Delegate the fading of the static shadow to the C implementation
 		{
-			float fDistToCam = Sqrt(fDistToCamSqr);
-
-			if ( fDistToCam >= (fDrawDistance*(1.0f-(1.0f/4.0f))) )
-			{
-				//fDistToCam == 0             -> 4
-				//fDistToCam == fDrawDistance -> 0
-				float fMult = 1.0f - (4.0f / fDrawDistance) * (fDistToCam - (fDrawDistance*(1.0f-(1.0f/4.0f))));
-
-				nIntensity = (int32)(nIntensity * fMult);
-				nRed       = (int32)(nRed       * fMult);
-				nGreen     = (int32)(nGreen     * fMult);
-				nBlue      = (int32)(nBlue      * fMult);
-			}
+			int32_t fadeIntensity = nIntensity, fadeRed = nRed, fadeGreen = nGreen, fadeBlue = nBlue;
+			ShadowMath_FadeStaticShadow(fDistToCamSqr, fDrawDistance, &fadeIntensity, &fadeRed, &fadeGreen, &fadeBlue);
+			nIntensity = fadeIntensity;
+			nRed = fadeRed;
+			nGreen = fadeGreen;
+			nBlue = fadeBlue;
 		}
 
 		int32 nSlot;
@@ -284,8 +279,8 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 
 		if ( nSlot < MAX_STATICSHADOWS )
 		{
-			if (   Abs(pPosn->x - aStaticShadows[nSlot].m_vecPosn.x) < fUpDistance
-				&& Abs(pPosn->y - aStaticShadows[nSlot].m_vecPosn.y) < fUpDistance )
+			// Delegate the check of the position of the shadow to the C implementation
+			if (ShadowMath_StaticShadowIsNear(pPosn->x, pPosn->y, aStaticShadows[nSlot].m_vecPosn.x, aStaticShadows[nSlot].m_vecPosn.y, fUpDistance))
 			{
 				aStaticShadows[nSlot].m_bJustCreated     = true;
 				aStaticShadows[nSlot].m_nType            = ShadowType;
@@ -301,9 +296,7 @@ CShadows::StoreStaticShadow(uint32 nID, uint8 ShadowType, RwTexture *pTexture, C
 				
 				return true;
 			}
-			else if (  Abs(pPosn->x - aStaticShadows[nSlot].m_vecPosn.x) < 0.05f
-					&& Abs(pPosn->y - aStaticShadows[nSlot].m_vecPosn.y) < 0.05f
-					&& Abs(pPosn->z - aStaticShadows[nSlot].m_vecPosn.z) < 2.0f
+			else if (  ShadowMath_StaticShadowIsSamePlace(pPosn->x, pPosn->y, pPosn->z, aStaticShadows[nSlot].m_vecPosn.x, aStaticShadows[nSlot].m_vecPosn.y, aStaticShadows[nSlot].m_vecPosn.z)
 
 					&& fFrontX == aStaticShadows[nSlot].m_vecFront.x
 					&& fFrontY == aStaticShadows[nSlot].m_vecFront.y
@@ -518,22 +511,8 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 		if ( Cutscene_IsRunning() ) // rouz edit (ChatGPT)
 			fDistToCamSqr /= SQR(TheCamera.LODDistMultiplier) * 4.0f;
 
-		float fDrawDistance;
-		switch ( type )
-		{
-			case VEH_SHD_TYPE_SEAPLANE:
-			case VEH_SHD_TYPE_RCPLANE:
-				fDrawDistance = 144.0f;
-				break;
-				
-			case VEH_SHD_TYPE_HELI:
-				fDrawDistance = 144.0f;
-				break;
-				
-			default:
-				fDrawDistance = 18.0f;
-				break;
-		}
+		// Delegate the draw distance of the vehicle shadow to the C implementation
+		float fDrawDistance = ShadowMath_VehicleDrawDistance(type == VEH_SHD_TYPE_SEAPLANE || type == VEH_SHD_TYPE_RCPLANE || type == VEH_SHD_TYPE_HELI);
 
 		if ( fDistToCamSqr < SQR(fDrawDistance) )
 		{
@@ -541,14 +520,8 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 			
 			//fDistToCam == 0             -> 4
 			//fDistToCam == fDrawDistance -> 0
-			float fMult = 1.0f - (fDistToCam - (fDrawDistance*(1.0f-(1.0f/4.0f)))) / (fDrawDistance*(1.0f/4.0f));
-
-			int32 nColorStrength;
-
-			if ( fDistToCam >= (fDrawDistance*(1.0f-(1.0f/4.0f))) )
-				nColorStrength = (int32)(fMult * TimeCycle_GetShadowStrength());
-			else
-				nColorStrength = TimeCycle_GetShadowStrength();
+			// Delegate the faded strength of the vehicle shadow to the C implementation
+			int32 nColorStrength = ShadowMath_CarFadedStrength(fDistToCam, fDrawDistance, TimeCycle_GetShadowStrength());
 			
 			
 			float fVehicleHeight  = CollisionVector_ToNative(Box_GetSize(&pCar->GetColModel()->boundingBox)).y;
@@ -556,57 +529,38 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 			
 			float size = 1.0f;
 			
+			// Delegate the adjustment of the shadow to the kind of model to the C implementation
+			int modelKind = SHADOWMODEL_NONE;
 			switch ( pCar->GetModelIndex() )
 			{
 				case MI_PIZZABOY:
 				case MI_PCJ600:
 				case MI_FAGGIO:
-				{
-					fVehicleHeight *= 1.2f;
-					size = 0.05f;
+					modelKind = SHADOWMODEL_MOPED;
 					break;
-				}
-
 				case MI_ANGEL:
 				case MI_FREEWAY:
 				case MI_SANCHEZ:
-				{
-					fVehicleHeight *= 1.5f;
-					size *= 0.03f;
+					modelKind = SHADOWMODEL_BIKE;
 					break;
-				}
-
 				case MI_HUNTER:
 				case MI_SEASPAR:
 				case MI_SPARROW:
 				case MI_MAVERICK:
 				case MI_VCNMAV:
 				case MI_POLMAV:
-				{
-					fVehicleWidth *= 3.0f;
-					fVehicleHeight *= 1.4f;
-					size *= 0.5f;
+					modelKind = SHADOWMODEL_HELI;
 					break;
-				}
-
 				case MI_RCGOBLIN:
 				case MI_RCRAIDER:
-				{
-					fVehicleHeight *= 1.5f;
-					fVehicleWidth *= 2.0f;
-					size *= 0.2f;
+					modelKind = SHADOWMODEL_RCCOPTER;
 					break;
-				}
-
 				case MI_DODO:
-				{
-					fVehicleHeight *= 0.9f;
-					fVehicleWidth *= 0.4f;
+					modelKind = SHADOWMODEL_DODO;
 					break;
-				}
 			}
+			ShadowMath_ModelAdjust(modelKind, &fVehicleHeight, &fVehicleWidth, &size);
 
-			
 			CarPos.x -= pCar->GetForward().x * (((fVehicleHeight/2) - pCar->GetColModel()->boundingBox.max.y)*size);
 			CarPos.y -= pCar->GetForward().y * (((fVehicleHeight/2) - pCar->GetColModel()->boundingBox.max.y)*size);
 			
@@ -615,14 +569,8 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 			{
 				case VEH_SHD_TYPE_BIKE:
 				{
-					float wheelZ = Abs(((CBike*)pCar)->m_fLeanLRAngle);
-					float mul = 5.092958f * wheelZ + 1.0f;
-					if (pCar->GetStatus() == STATUS_PHYSICS)
-					{
-						float z = pCar->GetRight().z;
-						if (z > 0.6f)
-							mul += 4.0f * z;
-					}
+					// Delegate the widening of the shadow of the bike to the C implementation
+					float mul = ShadowMath_BikeWidthMultiplier(((CBike*)pCar)->m_fLeanLRAngle, pCar->GetStatus() == STATUS_PHYSICS, pCar->GetRight().z);
 					fVehicleWidth *= mul;
 					tex = gpShadowBikeTex;
 					break;
@@ -648,34 +596,16 @@ CShadows::StoreShadowForVehicle(CVehicle *pCar, VEH_SHD_TYPE type,
 					break;
 			}
 			
-			float frontx = pCar->GetForward().x;
-			float fronty = pCar->GetForward().y;
-			float sidex  = pCar->GetRight().x;
-			float sidey  = pCar->GetRight().y;
-			
-			switch ( type )
-			{
-				case VEH_SHD_TYPE_BIKE:
-					if ( Abs(pCar->GetRight().z) > 0.6f )
-					{
-						sidex = pCar->GetUp().x;
-						sidey = pCar->GetUp().y;
-					}
-					break;
-					
-				case VEH_SHD_TYPE_HELI:
-					if ( Abs(pCar->GetRight().z) > 0.57f )
-					{
-						sidex = pCar->GetUp().x;
-						sidey = pCar->GetUp().y;
-					}
-					if ( Abs(pCar->GetForward().z) > 0.57f )
-					{
-						frontx = pCar->GetUp().x;
-						fronty = pCar->GetUp().y;
-					}
-					break;
-			}
+			// Delegate the directions of the shadow of the vehicle to the C implementation
+			const float fwdC[3] = { pCar->GetForward().x, pCar->GetForward().y, pCar->GetForward().z };
+			const float rightC[3] = { pCar->GetRight().x, pCar->GetRight().y, pCar->GetRight().z };
+			const float upC[3] = { pCar->GetUp().x, pCar->GetUp().y, pCar->GetUp().z };
+			float frontXY[2], sideXY[2];
+			ShadowMath_VehicleAxes(type == VEH_SHD_TYPE_BIKE, type == VEH_SHD_TYPE_HELI, fwdC, rightC, upC, frontXY, sideXY);
+			float frontx = frontXY[0];
+			float fronty = frontXY[1];
+			float sidex  = sideXY[0];
+			float sidey  = sideXY[1];
 
 			bool bDrawOnBuildings = false;
 			if (   pCar->GetModelIndex() == MI_RCBANDIT
@@ -767,11 +697,12 @@ CShadows::StoreCarLightShadow(CVehicle *pCar, int32 nID, RwTexture *pTexture, CV
 			{
 				//fDistToCam == 0             -> 3
 				//fDistToCam == fDrawDistance -> 0
-				float fMult = 1.0f - (3.0f / fDrawDistance) * (fDistToCam - (fDrawDistance*(1.0f-(1.0f/3.0f))) );
-
-				nRed   = (int32)(nRed   * fMult);
-				nGreen = (int32)(nGreen * fMult);
-				nBlue  = (int32)(nBlue  * fMult);
+				// Delegate the fading of the headlight shadow to the C implementation
+				int32_t fadeRed = nRed, fadeGreen = nGreen, fadeBlue = nBlue;
+				ShadowMath_FadeHeadlightShadow(fDistToCam, fDrawDistance, &fadeRed, &fadeGreen, &fadeBlue);
+				nRed = fadeRed;
+				nGreen = fadeGreen;
+				nBlue = fadeBlue;
 			}
 
 			if ( pCar->m_vecMoveSpeed.Magnitude() * TimeStep_timeStep > 0.4f || pCar == FindPlayerVehicle() )
@@ -825,13 +756,8 @@ StoreShadowForCutscenePedObject(CPed *pObject, float fDisplacementX, float fDisp
 		{
 			float fDistToCam = Sqrt(fDistToCamSqr);
 			
-			float fMult = 1.0f - (4.0f / fDrawDistance) * (fDistToCam - (fDrawDistance*(1.0f/4.0f)));
-			int32 nColorStrength;
-
-			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) )
-				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
-			else
-				nColorStrength = TimeCycle_GetShadowStrength();
+			// Delegate the faded strength of the shadow to the C implementation
+			int32 nColorStrength = ShadowMath_FadedStrength(fDistToCam, fDrawDistance, TimeCycle_GetShadowStrength());
 
 			int32 color = int32(nColorStrength * 0.8f);
 			
@@ -930,13 +856,8 @@ CShadows::StoreShadowForPedObject(CEntity *pPedObject, float fDisplacementX, flo
 
 			//fDistToCam == 0             ->  2
 			//fDistToCam == fDrawDistance -> -2
-			float fMult = 1.0f - (4.0f / fDrawDistance) * (fDistToCam - (fDrawDistance*(1.0f/4.0f))); // BUG ? negative
-			int32 nColorStrength;
-
-			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) ) // BUG ? negative
-				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
-			else
-				nColorStrength = TimeCycle_GetShadowStrength();
+			// Delegate the faded strength of the shadow to the C implementation
+			int32 nColorStrength = ShadowMath_FadedStrength(fDistToCam, fDrawDistance, TimeCycle_GetShadowStrength());
 
 			PedPos.x += fDisplacementX;
 			PedPos.y += fDisplacementY;
@@ -981,13 +902,8 @@ CShadows::StoreShadowForCutscenePedObject(CCutsceneObject *pObject, float fDispl
 		{
 			float fDistToCam = Sqrt(fDistToCamSqr);
 			
-			float fMult = 1.0f - (4.0f / fDrawDistance) * (fDistToCam - (fDrawDistance*(1.0f/4.0f)));
-			int32 nColorStrength;
-
-			if ( fDistToCam >= (fDrawDistance*(1.0f/4.0f)) )
-				nColorStrength = (int32)(TimeCycle_GetShadowStrength() * fMult);
-			else
-				nColorStrength = TimeCycle_GetShadowStrength();
+			// Delegate the faded strength of the shadow to the C implementation
+			int32 nColorStrength = ShadowMath_FadedStrength(fDistToCam, fDrawDistance, TimeCycle_GetShadowStrength());
 
 			int32 color = int32(nColorStrength * 0.8f);
 			
@@ -1128,20 +1044,15 @@ CShadows::RenderStoredShadows(void)
 				if ( asShadowsStored[i].m_ShadowType   == asShadowsStored[j].m_ShadowType
 					&& asShadowsStored[i].m_pTexture == asShadowsStored[j].m_pTexture )
 				{
-					float fWidth  = Abs(asShadowsStored[j].m_vecFront.x) + Abs(asShadowsStored[j].m_vecSide.x);
-					float fHeight = Abs(asShadowsStored[j].m_vecFront.y) + Abs(asShadowsStored[j].m_vecSide.y);
-
+					// Delegate the rectangle covered by the shadow to the C implementation
 					CVector shadowPos = asShadowsStored[j].m_vecPos;
+					float fStartX, fEndX, fStartY, fEndY;
+					ShadowMath_ShadowExtent(shadowPos.x, shadowPos.y, asShadowsStored[j].m_vecFront.x, asShadowsStored[j].m_vecFront.y, asShadowsStored[j].m_vecSide.x, asShadowsStored[j].m_vecSide.y, &fStartX, &fEndX, &fStartY, &fEndY);
 
-					float fStartX = shadowPos.x - fWidth;
-					float fEndX   = shadowPos.x + fWidth;
-					float fStartY = shadowPos.y - fHeight;
-					float fEndY   = shadowPos.y + fHeight;
-
-					int32 nStartX = Max(CWorld::GetSectorIndexX(fStartX), 0);
-					int32 nStartY = Max(CWorld::GetSectorIndexY(fStartY), 0);
-					int32 nEndX   = Min(CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X-1);
-					int32 nEndY   = Min(CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y-1);
+					// Delegate the range of sectors to the C implementation
+					int nStartX, nStartY, nEndX, nEndY;
+					World_ClampSectorRange(CWorld::GetSectorIndexX(fStartX), CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
+					World_ClampSectorRange(CWorld::GetSectorIndexY(fStartY), CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
 
 					CWorld::AdvanceCurrentScanCode();
 
@@ -1363,20 +1274,15 @@ CShadows::RenderStaticShadows(void)
 void
 CShadows::GeneratePolysForStaticShadow(int16 nStaticShadowID)
 {
-	float fWidth  = Abs(aStaticShadows[nStaticShadowID].m_vecFront.x) + Abs(aStaticShadows[nStaticShadowID].m_vecSide.x);
-	float fHeight = Abs(aStaticShadows[nStaticShadowID].m_vecFront.y) + Abs(aStaticShadows[nStaticShadowID].m_vecSide.y);
-
+	// Delegate the rectangle covered by the shadow to the C implementation
 	CVector shadowPos = aStaticShadows[nStaticShadowID].m_vecPosn;
+	float fStartX, fEndX, fStartY, fEndY;
+	ShadowMath_ShadowExtent(shadowPos.x, shadowPos.y, aStaticShadows[nStaticShadowID].m_vecFront.x, aStaticShadows[nStaticShadowID].m_vecFront.y, aStaticShadows[nStaticShadowID].m_vecSide.x, aStaticShadows[nStaticShadowID].m_vecSide.y, &fStartX, &fEndX, &fStartY, &fEndY);
 
-	float fStartX = shadowPos.x - fWidth;
-	float fEndX   = shadowPos.x + fWidth;
-	float fStartY = shadowPos.y - fHeight;
-	float fEndY   = shadowPos.y + fHeight;
-
-	int32 nStartX = Max(CWorld::GetSectorIndexX(fStartX), 0);
-	int32 nStartY = Max(CWorld::GetSectorIndexY(fStartY), 0);
-	int32 nEndX   = Min(CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X-1);
-	int32 nEndY   = Min(CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y-1);
+	// Delegate the range of sectors to the C implementation
+	int nStartX, nStartY, nEndX, nEndY;
+	World_ClampSectorRange(CWorld::GetSectorIndexX(fStartX), CWorld::GetSectorIndexX(fEndX), NUMSECTORS_X, &nStartX, &nEndX);
+	World_ClampSectorRange(CWorld::GetSectorIndexY(fStartY), CWorld::GetSectorIndexY(fEndY), NUMSECTORS_Y, &nStartY, &nEndY);
 
 	CWorld::AdvanceCurrentScanCode();
 
@@ -1631,7 +1537,7 @@ CShadows::CastShadowEntityXY(CEntity *pEntity,  float fStartX, float fStartY, fl
 
 		CVector normal;
 		ColTrianglePlane_GetNormal(&pColTriPlanes[i],&normal.x,&normal.y,&normal.z);
-		if ( Abs(normal.z) > 0.1f )
+		if ( General_AbsAbove(normal.z, 0.1f) )
 		{
 			CColTriangle *pColTri = pCol->triangles;
 			ASSERT(pColTri != nil);

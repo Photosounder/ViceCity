@@ -31,6 +31,7 @@
 #include "Text.h"
 #include "Wanted.h"
 #include "WaterLevel.h"
+#include "WorldLogic.h"
 #include "World.h"
 #include "ZoneCull.h"
 #include "main.h"
@@ -220,7 +221,8 @@ CPlayerInfo::Process(void)
 			if (car->m_aSuspensionSpringRatioPrev[0] < 1.0f && car->m_aSuspensionSpringRatioPrev[1] < 1.0f && car->m_fDamageImpulse == 0.0f) {
 				m_nTimeCarSpentOnTwoWheels += Timer_GetTimeStepInMilliseconds();
 				m_nDistanceCarTravelledOnTwoWheels += car->m_fDistanceTravelled;
-				m_nCancelWheelStuntTimer = Max(0.0f, m_nCancelWheelStuntTimer - Timer_GetTimeStepInMilliseconds() * 0.5f);
+				// Delegate the countdown of the timer to the C implementation
+				m_nCancelWheelStuntTimer = PlayerInfo_CancelStuntTimer(m_nCancelWheelStuntTimer, Timer_GetTimeStepInMilliseconds(), 0.5f);
 
 			} else {
 				if (m_nTimeCarSpentOnTwoWheels != 0 && m_nCancelWheelStuntTimer < 500) {
@@ -248,7 +250,8 @@ CPlayerInfo::Process(void)
 				&& car->m_aSuspensionSpringRatioPrev[3] < 1.f && 0.0f == car->m_fDamageImpulse) {
 				m_nTimeCarSpentOnTwoWheels += Timer_GetTimeStepInMilliseconds();
 				m_nDistanceCarTravelledOnTwoWheels += car->m_fDistanceTravelled;
-				m_nCancelWheelStuntTimer = Max(0.0f, m_nCancelWheelStuntTimer - Timer_GetTimeStepInMilliseconds() * 0.2f);
+				// Delegate the countdown of the timer to the C implementation
+				m_nCancelWheelStuntTimer = PlayerInfo_CancelStuntTimer(m_nCancelWheelStuntTimer, Timer_GetTimeStepInMilliseconds(), 0.2f);
 
 			} else if (m_nTimeCarSpentOnTwoWheels != 0 && m_nCancelWheelStuntTimer < 500) {
 				m_nCancelWheelStuntTimer += Timer_GetTimeStepInMilliseconds();
@@ -288,7 +291,8 @@ CPlayerInfo::Process(void)
 				|| (bike->m_aSuspensionSpringRatioPrev[3] < 1.0f && 0.0f == bike->m_fDamageImpulse)) {
 				m_nTimeSpentOnWheelie += Timer_GetTimeStepInMilliseconds();
 				m_nDistanceTravelledOnWheelie += bike->m_fDistanceTravelled;
-				m_nCancelWheelStuntTimer = Max(0.0f, m_nCancelWheelStuntTimer - Timer_GetTimeStepInMilliseconds() * 0.2f);
+				// Delegate the countdown of the timer to the C implementation
+				m_nCancelWheelStuntTimer = PlayerInfo_CancelStuntTimer(m_nCancelWheelStuntTimer, Timer_GetTimeStepInMilliseconds(), 0.2f);
 
 			} else {
 				if (m_nTimeSpentOnWheelie != 0 && m_nCancelWheelStuntTimer < 500) {
@@ -324,7 +328,8 @@ CPlayerInfo::Process(void)
 			&& 0.0f == bike->m_fDamageImpulse) {
 			m_nTimeSpentOnStoppie += Timer_GetTimeStepInMilliseconds();
 			m_nDistanceTravelledOnStoppie += bike->m_fDistanceTravelled;
-			m_nCancelWheelStuntTimer = Max(0.0f, m_nCancelWheelStuntTimer - Timer_GetTimeStepInMilliseconds() * 0.2f);
+			// Delegate the countdown of the timer to the C implementation
+			m_nCancelWheelStuntTimer = PlayerInfo_CancelStuntTimer(m_nCancelWheelStuntTimer, Timer_GetTimeStepInMilliseconds(), 0.2f);
 
 		} else {
 			if (m_nTimeSpentOnStoppie != 0 && m_nCancelWheelStuntTimer < 500) {
@@ -381,7 +386,8 @@ CPlayerInfo::Process(void)
 		m_fRoadDensity = ThePaths.CalcRoadDensity(playerPos.x, playerPos.y);
 	}
 
-	m_fRoadDensity = Clamp(m_fRoadDensity, 0.5f, 1.45f);
+	// Delegate the limit to the C implementation
+	m_fRoadDensity = General_ClampFloat(m_fRoadDensity, 0.5f, 1.45f);
 
 	// Because vehicle enter/exit use same key binding.
 	bool enterOrExitVeh;
@@ -443,14 +449,9 @@ CPlayerInfo::Process(void)
 					float minY = m_pPed->GetPosition().y - 10.0f;
 					float maxY = 10.0f + m_pPed->GetPosition().y;
 
-					int minXSector = CWorld::GetSectorIndexX(minX);
-					if (minXSector < 0) minXSector = 0;
-					int minYSector = CWorld::GetSectorIndexY(minY);
-					if (minYSector < 0) minYSector = 0;
-					int maxXSector = CWorld::GetSectorIndexX(maxX);
-					if (maxXSector > NUMSECTORS_X - 1) maxXSector = NUMSECTORS_X - 1;
-					int maxYSector = CWorld::GetSectorIndexY(maxY);
-					if (maxYSector > NUMSECTORS_Y - 1) maxYSector = NUMSECTORS_Y - 1;
+					// Delegate the range of sectors to the C implementation
+					int32_t minXSector, minYSector, maxXSector, maxYSector;
+					World_SectorRange(minX, minY, maxX, maxY, &minXSector, &minYSector, &maxXSector, &maxYSector);
 
 					CWorld::AdvanceCurrentScanCode();
 
@@ -604,9 +605,12 @@ CPlayerInfo::Process(void)
 	} else {
 		m_fMediaAttention = 0.0f;
 	}
-	Stats_HighestChaseValue = Max(m_fMediaAttention, Stats_HighestChaseValue);
-	m_nMoney = Min(999999999, m_nMoney);
-	m_nVisibleMoney = Min(999999999, m_nVisibleMoney);
+	// Delegate the highest chase value to the C implementation
+	Stats_HighestChaseValue = General_MaxFloat(m_fMediaAttention, Stats_HighestChaseValue);
+
+	// Delegate the limits of the money to the C implementation
+	m_nMoney = General_MinInt(999999999, m_nMoney);
+	m_nVisibleMoney = General_MinInt(999999999, m_nVisibleMoney);
 }
 
 bool

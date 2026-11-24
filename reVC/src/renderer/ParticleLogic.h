@@ -29,6 +29,16 @@ void Particle_StepZRadius(uint16_t *timer, uint16_t changeTime, float *radius, f
 void Particle_StepAnimation(int16_t *timer, uint16_t speed, uint8_t *frame, uint8_t startFrame, uint8_t finalFrame, bool cycle);
 // Screen z of a point drawn on top of the 2D screen from its world z, the clip planes and the screen z range of the sprite buffer
 float Particle_ScreenZ(float posZ, float nearClip, float farClip, float nearScreenZ, float farScreenZ);
+// Length and rotation of the trail of a particle on the screen from the screen distance (x and y) between its position and where it was, the trail is rotated to the direction of the movement
+void Particle_TrailRotation(float distX, float distY, float *length, float *rotation);
+// Whether a bird is in the line of a shot, from the heading of the shot, the ground distance between the bird and the camera and the cosine of the angle the shot can miss by
+bool Particle_BirdIsInLine(float heading, float distX, float distY, float cosAngle);
+// Colour channel of a particle after a random variation in percent, limited to 0..255
+unsigned char Particle_VaryColorChannel(unsigned char channel, int variationPercent);
+// Number of particles along a line, from the length of the line and the distance between particles (at least 1)
+int Particle_LineSteps(float dist, float power);
+// Size of a stretched particle: its size plus the stretch of the texture, at least 12
+float Particle_StretchedSize(float size, float stretch);
 #ifdef __cplusplus
 }
 #endif

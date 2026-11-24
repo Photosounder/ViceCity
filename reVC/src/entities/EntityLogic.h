@@ -44,6 +44,12 @@ EntitySectorRange Entity_ComputeSectorRange(CRect bounds);
 CPtrList *Entity_SectorListFor(CSector *sector, int type, bool middle);
 CSector *Entity_SectorAt(CSector *sectors, int x, int y);
 
+// Sideways lean of a tree in the wind from the strength of the wind, the random seed of the tree, the game time in milliseconds and the low half of the address of the tree, palm trees lean with the wind
+float Entity_TreeWindSway(float wind, uint16_t randomSeed, uint32_t timeMs, uint16_t addressLow, bool isPalmTree);
+// How far a banner flutters in the wind, from a time value (the position and the time packed in 16 bits) and the strength of the wind: it blends the entries of a table of the gusts
+float Entity_BannerFlutter(uint16_t t, float strength);
+// Vertical part of the up vector of a banner that flutters by the given amount
+float Entity_BannerUpZ(float flutter);
 #ifdef __cplusplus
 }
 #endif

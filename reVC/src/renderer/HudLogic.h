@@ -38,6 +38,10 @@ float Hud_HelpMessageFadeStep(uint32_t *state, uint32_t timer, int32_t *fadeTime
 void Hud_BigMessage0Step(float *x, float *inUse, float *alpha, float stopX, float timeStep, float timeStepMs, float xStep, bool *clear);
 // Fade in of the wasted or busted text for a frame, the alpha is limited to 255
 void Hud_BigMessage2Step(float *alpha, float timeStepMs);
+// Brightness of the pulsing crosshair, from the time in milliseconds and the sprite brightness (0 to 30): it pulses about once a second
+float Hud_CrosshairPulse(uint32_t timeMs, int spriteBrightness);
+// Brightness of the weapon sprite after one more step: one more, at most 30
+int Hud_NextSpriteBrightness(int brightness);
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,6 @@
 //+ rouz edit (Claude)
 #define _CRT_SECURE_NO_WARNINGS
+#include <math.h>
 #include "HudLogic.h"
 #include <stdio.h>
 #include "CameraModes.h"
@@ -423,4 +424,16 @@ void Hud_BigMessage2Step(float *alpha, float timeStepMs)
 		*alpha = 255.0f;
 }
 
+float Hud_CrosshairPulse(uint32_t timeMs, int spriteBrightness)
+{
+	float step = sinf((timeMs & 1023) / 1024.0f * 6.28f);
+
+	return spriteBrightness * 0.03f * (0.25f * step + 0.75f);
+}
+int Hud_NextSpriteBrightness(int brightness)
+{
+	int v = brightness + 1;
+
+	return v < 30 ? v : 30;
+}
 //- rouz edit (Claude)

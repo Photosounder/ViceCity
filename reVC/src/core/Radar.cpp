@@ -1200,8 +1200,8 @@ void CRadar::DrawRadarMask()
 
 		// Then generate a quarter of the circle
 		for (int j = 0; j < 7; j++) {
-			in.x = corners[i].x * Cos(j * (PI / 2.0f / 6.0f));
-			in.y = corners[i].y * Sin(j * (PI / 2.0f / 6.0f));
+			// Delegate the point of the quarter circle to the C implementation
+			Radar_QuarterCirclePoint(corners[i].x, corners[i].y, j, &in.x, &in.y);
 			TransformRadarPointToScreenSpace(out[j + 1], in);
 		};
 
@@ -1304,8 +1304,11 @@ void CRadar::DrawRotatingRadarSprite(Sprite2d* sprite, float x, float y, float a
 
 	for (uint32 i = 0; i < 4; i++) {
 		const float cornerAngle = i * HALFPI + correctedAngle;
-		curPosn[i].x = x + (0.0f * Cos(cornerAngle) + 1.0f * Sin(cornerAngle)) * sizeX;
-		curPosn[i].y = y - (0.0f * Sin(cornerAngle) - 1.0f * Cos(cornerAngle)) * sizeY;
+		// Delegate the position of the corner to the C implementation
+		float cornerX, cornerY;
+		Radar_MarkerCorner(i, x, y, sizeX, sizeY, correctedAngle, &cornerX, &cornerY);
+		curPosn[i].x = cornerX;
+		curPosn[i].y = cornerY;
 	}
 
 	([](Sprite2d *spriteSelf,float x1,float y1,float x2,float y2,float x3,float y3,float x4,float y4,const CRGBA &col){
@@ -2193,6 +2196,8 @@ CRadar::ToggleTargetMarker(float x, float y)
 }
 #endif
 
+static_assert(BLIP_MODE_TRIANGULAR_UP == 0 && BLIP_MODE_TRIANGULAR_DOWN == 1 && BLIP_MODE_SQUARE == 2, "Blip modes are mirrored in RadarMath.c");
+
 void
 CRadar::DrawEntityBlip(int32 blipId)
 {
@@ -2230,9 +2235,8 @@ CRadar::DrawEntityBlip(int32 blipId)
 		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 			if (CTheScripts::IsDebugOn()) {
 				ShowRadarMarker(blipEntity->GetPosition(), color, ms_RadarTrace[blipId].m_Radius);
-				ms_RadarTrace[blipId].m_Radius = ms_RadarTrace[blipId].m_Radius - 0.1f;
-				if (ms_RadarTrace[blipId].m_Radius < 1.0f)
-					ms_RadarTrace[blipId].m_Radius = 5.0f;
+				// Delegate the step of the debug marker to the C implementation
+				ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(ms_RadarTrace[blipId].m_Radius);
 			}
 		}
 		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
@@ -2245,11 +2249,8 @@ CRadar::DrawEntityBlip(int32 blipId)
 				} else {
 					const CVector& pos = FindPlayerCentreOfWorld_NoSniperShift();
 					const CVector& blipPos = blipEntity->GetPosition();
-					uint8 mode = BLIP_MODE_TRIANGULAR_UP;
-					if (blipPos.z - pos.z <= 2.0f) {
-						if (blipPos.z - pos.z < -4.0f) mode = BLIP_MODE_TRIANGULAR_DOWN;
-						else mode = BLIP_MODE_SQUARE;
-					}
+					// Delegate the choice of the shape to the C implementation
+					uint8 mode = Radar_BlipHeightMode(blipPos.z, pos.z);
 					ShowRadarTraceWithHeight(out.x, out.y, ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
 
 					if (FrontEndMenuManager.m_bMenuMapActive) {
@@ -2281,9 +2282,8 @@ CRadar::DrawCoordBlip(int32 blipId)
 		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_MARKER_ONLY) {
 			if (CTheScripts::IsDebugOn()) {
 				ShowRadarMarker(ms_RadarTrace[blipId].m_vecPos, color, ms_RadarTrace[blipId].m_Radius);
-				ms_RadarTrace[blipId].m_Radius = ms_RadarTrace[blipId].m_Radius - 0.1f;
-				if (ms_RadarTrace[blipId].m_Radius < 1.0f)
-					ms_RadarTrace[blipId].m_Radius = 5.0f;
+				// Delegate the step of the debug marker to the C implementation
+				ms_RadarTrace[blipId].m_Radius = Radar_DebugRadiusStep(ms_RadarTrace[blipId].m_Radius);
 			}
 		}
 		if (ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BOTH || ms_RadarTrace[blipId].m_eBlipDisplay == BLIP_DISPLAY_BLIP_ONLY) {
@@ -2296,11 +2296,8 @@ CRadar::DrawCoordBlip(int32 blipId)
 				} else {
 					const CVector& pos = FindPlayerCentreOfWorld_NoSniperShift();
 					const CVector& blipPos = ms_RadarTrace[blipId].m_vecPos;
-					uint8 mode = BLIP_MODE_TRIANGULAR_UP;
-					if (blipPos.z - pos.z <= 2.0f) {
-						if (blipPos.z - pos.z < -4.0f) mode = BLIP_MODE_TRIANGULAR_DOWN;
-						else mode = BLIP_MODE_SQUARE;
-					}
+					// Delegate the choice of the shape to the C implementation
+					uint8 mode = Radar_BlipHeightMode(blipPos.z, pos.z);
 					ShowRadarTraceWithHeight(out.x, out.y, ms_RadarTrace[blipId].m_wScale, (uint8)(color >> 24), (uint8)(color >> 16), (uint8)(color >> 8), 255, mode);
 
 					if (FrontEndMenuManager.m_bMenuMapActive) {

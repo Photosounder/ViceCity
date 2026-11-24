@@ -174,4 +174,10 @@ bool Floater_CalcForce(const FloaterState *s, float timeStep, VectorMath3 *point
 	impulse->z = s->m_volumeUnderWater * s->m_buoyancy * timeStep;
 	return true;
 }
+float Floater_DampedImpulse(float upImpulse, float speedAlongNormal, float dampingLevel)
+{
+	float damp = 1.0f - speedAlongNormal * dampingLevel;
+
+	return upImpulse * (damp > 0.0f ? damp : 0.0f);
+}
 //- rouz edit (Claude)

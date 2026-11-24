@@ -39,4 +39,34 @@ int16_t PadLogic_LookAroundAxis(float axis, bool lookBehind, bool mouseCam, floa
 
 	return 0;
 }
+int16_t Pad_AxisOrDPad(int16_t axis, int16_t dpad)
+{
+	int a = axis < 0 ? -axis : axis;
+	int d = dpad < 0 ? -dpad : dpad;
+
+	if (a > d)
+		return axis;
+	return dpad;
+}
+bool Pad_XInputStick(float x, float y, int32_t *outX, int32_t *outY)
+{
+	if (fabsf(x) > 0.3f || fabsf(y) > 0.3f) {
+		*outX = (int32_t)(x * 128.0f);
+		*outY = (int32_t)(-y * 128.0f);
+		return true;
+	}
+	return false;
+}
+int Pad_CheatWantedLevel(int wantedLevel)
+{
+	int v = wantedLevel + 2;
+
+	return v < 6 ? v : 6;
+}
+int Pad_ShakeDurationLeft(int shakeDur, int timeStepMs)
+{
+	int v = shakeDur - timeStepMs;
+
+	return 0 > v ? 0 : v;
+}
 //- rouz edit (Claude)

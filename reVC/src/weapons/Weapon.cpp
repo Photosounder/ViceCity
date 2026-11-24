@@ -189,8 +189,11 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 	{
 		float heading = RADTODEG(shooter->GetForward().Heading());
 		float angle   = DEGTORAD(heading);
-		(*source).x += -Sin(angle) * 0.15f;
-		(*source).y +=  Cos(angle) * 0.15f;
+		// Delegate the offset of the source to the C implementation
+		float offsetXY[2];
+		Weapon_AngleOffset(angle, 0.15f, offsetXY);
+		(*source).x += offsetXY[0];
+		(*source).y += offsetXY[1];
 	}
 
 	if ( m_eWeaponState != WEAPONSTATE_READY && m_eWeaponState != WEAPONSTATE_FIRING )
@@ -283,7 +286,8 @@ CWeapon::Fire(CEntity *shooter, CVector *fireSource)
 				else if ( shooter->IsPed() && ((CPed*)shooter)->m_pSeekTarget != nil )
 				{
 					float distToTarget = (shooter->GetPosition() - ((CPed*)shooter)->m_pSeekTarget->GetPosition()).Magnitude();
-					float power = Clamp((distToTarget-10.0f)*0.02f, 0.2f, 1.0f);
+					// Delegate the power of the throw to the C implementation
+					float power = Weapon_ThrowPower(distToTarget);
 
 					fired = FireProjectile(shooter, source, power);
 				}
@@ -884,8 +888,10 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 	float heading = RADTODEG(shooter->GetForward().Heading());
 	float angle   = DEGTORAD(heading);
 
-	CVector2D ahead(-Sin(angle), Cos(angle));
-	ahead.Normalise();
+	// Delegate the direction to the C implementation
+	float aheadXY[2];
+	Weapon_AheadFromAngle(angle, aheadXY);
+	CVector2D ahead(aheadXY[0], aheadXY[1]);
 
 	CVector vel = ((CPed *)shooter)->m_vecMoveSpeed;
 	int32 shooterMoving = false;
@@ -916,15 +922,15 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 				target = threatAttack->GetPosition();
 
 			target -= *fireSource;
-			float distToTarget = Max(target.Magnitude(), 0.01f);
+			// Delegate the distance with a minimum to the C implementation
+			float distToTarget = Weapon_ThreatTargetDistance(target.Magnitude());
 			target *= info->m_fRange / distToTarget;
 			target += *fireSource;
 
 			if (shooter == FindPlayerPed() && inaccuracy != 0.f)
 			{
-				float newInaccuracy = fPlayerAimScale * FindPlayerPed()->m_fAttackButtonCounter * (inaccuracy * Min(1.f, fPlayerAimScaleDist / distToTarget));
-				if (FindPlayerPed()->bIsDucking)
-					newInaccuracy *= 0.4f;
+				// Delegate the inaccuracy of the player to the C implementation
+				float newInaccuracy = Weapon_PlayerInaccuracy(fPlayerAimScale, FindPlayerPed()->m_fAttackButtonCounter, inaccuracy, fPlayerAimScaleDist, distToTarget, FindPlayerPed()->bIsDucking);
 
 				target.x += General_GetRandomNumberInRangeFloat(-0.15f, 0.15f) * newInaccuracy;
 				target.y += General_GetRandomNumberInRangeFloat(-0.15f, 0.15f) * newInaccuracy;
@@ -935,8 +941,8 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 			{
 				if (threatAttack == FindPlayerPed())
 				{
-					float speed = Min(0.33f, FindPlayerPed()->m_vecMoveSpeed.Magnitude());
-					inaccuracy *= (0.3f * speed * 100.f / 33.f + 0.8f);
+					// Delegate the widening of the inaccuracy to the C implementation
+					inaccuracy = Weapon_SpeedInaccuracy(inaccuracy, FindPlayerPed()->m_vecMoveSpeed.Magnitude());
 				}
 				target.x += General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * inaccuracy;
 				target.y += General_GetRandomNumberInRangeFloat(-0.2f, 0.2f) * inaccuracy;
@@ -968,8 +974,12 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 		heading = General_GetAngleBetweenPoints(source.x, source.y, target.x, target.y);
 		angle = DEGTORAD(heading);
 
-		ahead = CVector2D(-Sin(angle), Cos(angle));
-		ahead.Normalise();
+		// Delegate the direction to the C implementation
+		{
+			float aheadXY[2];
+			Weapon_AheadFromAngle(angle, aheadXY);
+			ahead = CVector2D(aheadXY[0], aheadXY[1]);
+		}
 #endif
 	}
 	else if ( shooter == FindPlayerPed() && TheCamera.Cams[0].Using3rdPersonMouseCam()  )
@@ -997,8 +1007,12 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 		heading = General_GetAngleBetweenPoints(source.x, source.y, target.x, target.y);
 		angle = DEGTORAD(heading);
 
-		ahead = CVector2D(-Sin(angle), Cos(angle));
-		ahead.Normalise();
+		// Delegate the direction to the C implementation
+		{
+			float aheadXY[2];
+			Weapon_AheadFromAngle(angle, aheadXY);
+			ahead = CVector2D(aheadXY[0], aheadXY[1]);
+		}
 #endif
 		CWorld::bIncludeBikers = true;
 		CWorld::bIncludeDeadPeds = true;
@@ -1068,8 +1082,10 @@ CWeapon::FireInstantHit(CEntity *shooter, CVector *fireSource)
 			float shooterHeading = RADTODEG(shooter->GetForward().Heading());
 			float shooterAngle = DEGTORAD(shooterHeading);
 
-			CVector2D rotOffset(-Sin(shooterAngle), Cos(shooterAngle));
-			rotOffset.Normalise();
+			// Delegate the direction to the C implementation
+			float rotOffsetXY[2];
+			Weapon_AheadFromAngle(shooterAngle, rotOffsetXY);
+			CVector2D rotOffset(rotOffsetXY[0], rotOffsetXY[1]);
 
 			target = *fireSource;
 			target.x += rotOffset.x * info->m_fRange;
@@ -1361,13 +1377,8 @@ CWeapon::DoBulletImpact(CEntity *shooter, CEntity *victim,
 							CVector bulletDir = (CollisionVector_ToNative(point->point) - shooter->GetPosition()) * (1.0f / distWithBullet);
 
 							float dotProd = DotProduct(aimDir, bulletDir);
-							float aimAndBulletAngle;
-							if (dotProd <= 0.35f)
-								aimAndBulletAngle = PI;
-							else
-								aimAndBulletAngle = Acos(dotProd);
-
-							if (aimAndBulletAngle <= DEGTORAD(45.0f) && (aimAndBulletAngle <= DEGTORAD(15.0f) || distWithBullet / distWithAim >= 0.75f) && distWithBullet / distWithAim >= 0.99f)
+							// Delegate the comparison of the bullet and the aim to the C implementation
+							if (Weapon_BulletMatchesAim(dotProd, distWithBullet, distWithAim))
 							{
 								shooterPed->bObstacleShowedUpDuringKillObjective = false;
 								shooterPed->m_shotTime = 0;
@@ -1540,7 +1551,7 @@ CWeapon::DoBulletImpact(CEntity *shooter, CEntity *victim,
 #ifndef FIX_BUGS
 					CVector dist = CollisionVector_ToNative(point->point) - (*source);
 					float distMagnitude = dist.Magnitude();
-					CVector smokePos = CollisionVector_ToNative(point->point) - Max(distMagnitude / 10.0f, 0.2f) * dist / distMagnitude;
+					CVector smokePos = CollisionVector_ToNative(point->point) - Weapon_WallSmokeBackOff(distMagnitude) * dist / distMagnitude;
 #else
 				    CVector smokePos = CollisionVector_ToNative(point->point);
 #endif // !FIX_BUGS
@@ -1570,7 +1581,7 @@ CWeapon::DoBulletImpact(CEntity *shooter, CEntity *victim,
 
 #ifndef FIX_BUGS
 						CVector dist = CollisionVector_ToNative(point->point) - (*source);
-						CVector offset = dist - Max(0.2f * dist.Magnitude(), 0.5f) * CVector(ahead.x, ahead.y, 0.0f);
+						CVector offset = dist - Weapon_EffectBackOff(dist.Magnitude(), 0.5f) * CVector(ahead.x, ahead.y, 0.0f);
 						CVector smokePos = *source + offset;
 #else
 						CVector smokePos = CollisionVector_ToNative(point->point);
@@ -1696,8 +1707,10 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 	float heading = RADTODEG(shooter->GetForward().Heading());
 	float angle   = DEGTORAD(heading);
 
-	CVector2D rotOffset(-Sin(angle), Cos(angle));
-	rotOffset.Normalise();
+	// Delegate the direction to the C implementation
+	float rotOffsetXY[2];
+	Weapon_AheadFromAngle(angle, rotOffsetXY);
+	CVector2D rotOffset(rotOffsetXY[0], rotOffsetXY[1]);
 
 	CVector gunflashPos = *fireSource;
 	gunflashPos += CVector(rotOffset.x*0.1f, rotOffset.y*0.1f, 0.0f);
@@ -1760,8 +1773,10 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 	for ( int32 i = 0; i < shootsAtOnce; i++ )
 	{
 		float shootAngle = DEGTORAD(RADTODEG(halfAngleRange - angleBetweenTwoShot * i) + shooterAngle);
-		CVector2D shootRot(-Sin(shootAngle), Cos(shootAngle));
-		shootRot.Normalise();
+		// Delegate the direction to the C implementation
+		float shootRotXY[2];
+		Weapon_AheadFromAngle(shootAngle, shootRotXY);
+		CVector2D shootRot(shootRotXY[0], shootRotXY[1]);
 
 		CVector source, target;
 		CColPoint point;
@@ -1853,13 +1868,8 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 									CVector bulletDir = (CollisionVector_ToNative(point.point) - shooter->GetPosition()) * (1.0f / distWithBullet);
 
 									float dotProd = DotProduct(aimDir, bulletDir);
-									float aimAndBulletAngle;
-									if (dotProd <= 0.35f)
-										aimAndBulletAngle = PI;
-									else
-										aimAndBulletAngle = Acos(dotProd);
-
-									if (aimAndBulletAngle <= DEGTORAD(45.0f) && (aimAndBulletAngle <= DEGTORAD(15.0f) || distWithBullet / distWithAim >= 0.75f) && distWithBullet / distWithAim >= 0.99f)
+									// Delegate the comparison of the bullet and the aim to the C implementation
+									if (Weapon_BulletMatchesAim(dotProd, distWithBullet, distWithAim))
 									{
 										shooterPed->bObstacleShowedUpDuringKillObjective = false;
 										shooterPed->m_shotTime = 0;
@@ -1999,7 +2009,7 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 
 #ifndef FIX_BUGS
 							CVector dist = CollisionVector_ToNative(point.point) - (*fireSource);
-							CVector offset = dist - Max(0.2f * dist.Magnitude(), 2.0f) * CVector(shootRot.x, shootRot.y, 0.0f);
+							CVector offset = dist - Weapon_EffectBackOff(dist.Magnitude(), 2.0f) * CVector(shootRot.x, shootRot.y, 0.0f);
 							CVector smokePos = *fireSource + offset;
 #else
 							CVector smokePos = CollisionVector_ToNative(point.point);
@@ -2018,7 +2028,7 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 
 #ifndef FIX_BUGS
 						CVector dist = CollisionVector_ToNative(point.point) - (*fireSource);
-						CVector offset = dist - Max(0.2f*dist.Magnitude(), 2.0f) * CVector(shootRot.x, shootRot.y, 0.0f);
+						CVector offset = dist - Weapon_EffectBackOff(dist.Magnitude(), 2.0f) * CVector(shootRot.x, shootRot.y, 0.0f);
 					    CVector smokePos = *fireSource + offset;
 #else
 					    CVector smokePos = CollisionVector_ToNative(point.point);
@@ -2115,8 +2125,12 @@ CWeapon::FireShotgun(CEntity *shooter, CVector *fireSource)
 		}
 		else
 		{
-			CVector traceTarget = *fireSource;
-			traceTarget += (target - (*fireSource)) * Min(info->m_fRange, 30.0f) / info->m_fRange;
+			// Delegate the end of the bullet trace to the C implementation
+			const float fireSourceC[3] = { fireSource->x, fireSource->y, fireSource->z };
+			const float targetC[3] = { target.x, target.y, target.z };
+			float traceC[3];
+			Weapon_TraceTarget(fireSourceC, targetC, info->m_fRange, traceC);
+			CVector traceTarget(traceC[0], traceC[1], traceC[2]);
 			// Enter the C bullet-trace algorithm with the original owner expressions
 			BulletTraces_AddWeaponLegacy(fireSource, &traceTarget, m_eWeaponType, shooter);
 		}
@@ -2262,7 +2276,10 @@ CWeapon::FireAreaEffect(CEntity *shooter, CVector *fireSource)
 	else
 	{
 		float angle = DEGTORAD(heading);
-		dir         = CVector(-Sin(angle)*0.5f, Cos(angle)*0.5f, 0.0f);
+		// Delegate the direction of the shot to the C implementation
+		float dirXY[2];
+		Weapon_AngleOffset(angle, 0.5f, dirXY);
+		dir         = CVector(dirXY[0], dirXY[1], 0.0f);
 		target      = *fireSource + dir;
 	}
 
@@ -2542,11 +2559,8 @@ CWeapon::FireM16_1stPerson(CEntity *shooter)
 		TheCamera.Cams[TheCamera.ActiveCam].Beta  += float((General_GetRandomNumber() & 127) - 64) * mult;
 		TheCamera.Cams[TheCamera.ActiveCam].Alpha += float((General_GetRandomNumber() & 127) - 64) * mult;
 
-		// yes, double
-		double notFiringRate = (20.0 - info->m_nFiringRate) / 80.0;
-		double raisedNotFiringRate = Max(1.0, Max(0.0, notFiringRate));
-
-		uint8 shakeFreq = 80.0 * raisedNotFiringRate + 130.0;
+		// Delegate the frequency of the shake to the C implementation
+		uint8 shakeFreq = Weapon_ShakeFrequency(info->m_nFiringRate);
 		CPad::GetPad(0)->StartShake(20000.0f * (*Timer_GetTimeStep()) / shakeFreq, shakeFreq);
 	}
 
@@ -2810,18 +2824,15 @@ CWeapon::DoDoomAiming(CEntity *shooter, CVector *source, CVector *target)
 
 		if ( (CEntity*)shooterPed != victim && shooterPed->CanSeeEntity(victim, DEGTORAD(22.5f)) )
 		{
-			if ( !(victim->GetStatus() == STATUS_TRAIN_MOVING
-				|| victim->GetStatus() == STATUS_TRAIN_NOT_MOVING
-				|| victim->GetStatus() == STATUS_HELI
-				|| victim->GetStatus() == STATUS_PLANE
-				|| victim->GetStatus() == STATUS_WRECKED) )
+			// Delegate the auto aiming formula to the C implementation
+			if ( !WeaponLogic_AutoAimIgnoresStatus(victim->GetStatus(), true) )
 			{
 				float distToVictim   = (shooterPed->GetPosition()-victim->GetPosition()).Magnitude2D();
 				float distToVictimZ  = Abs(shooterPed->GetPosition().z-victim->GetPosition().z);
 
-				if ( 1.5f*distToVictimZ < distToVictim )
+				if ( WeaponLogic_AutoAimWithinCone(1.5f, distToVictimZ, distToVictim) )
 				{
-					float entityDist = Sqrt(SQR(distToVictim) + SQR(distToVictimZ));
+					float entityDist = WeaponLogic_AutoAimDist(distToVictim, distToVictimZ);
 
 					if ( entityDist < closestEntityDist )
 					{
@@ -2844,14 +2855,9 @@ CWeapon::DoDoomAiming(CEntity *shooter, CVector *source, CVector *target)
 		float distToTarget = (*target - *source).Magnitude2D();
 		float distToSource = (victim->GetPosition() - *source).Magnitude2D();
 
-		float victimZ = victim->GetPosition().z + 0.3f;
-		if ( victim->IsPed() )
-		{
-			if ( ((CPed*)victim)->bIsDucking )
-				victimZ -= 0.8f;
-		}
+		float victimZ = WeaponLogic_AutoAimVictimZ(victim->GetPosition().z, victim->IsPed() && ((CPed*)victim)->bIsDucking);
 
-		(*target).z = (distToTarget / distToSource) * (victimZ - (*source).z) + (*source).z;
+		(*target).z = WeaponLogic_AutoAimTargetZ(distToTarget, distToSource, victimZ, (*source).z);
 	}
 }
 
@@ -2884,23 +2890,21 @@ CWeapon::DoTankDoomAiming(CEntity *shooter, CEntity *driver, CVector *source, CV
 
 		if ( shooter != victim && driver != victim )
 		{
-			if ( !(victim->GetStatus() == STATUS_TRAIN_MOVING
-				|| victim->GetStatus() == STATUS_TRAIN_NOT_MOVING
-				|| victim->GetStatus() == STATUS_HELI
-				|| victim->GetStatus() == STATUS_PLANE) )
+			// Delegate the auto aiming formula to the C implementation
+			if ( !WeaponLogic_AutoAimIgnoresStatus(victim->GetStatus(), false) )
 			{
 				if ( !(victim->IsVehicle() && victim->bRenderScorched) )
 				{
 					float distToVictim  = (shooter->GetPosition()-victim->GetPosition()).Magnitude2D();
 					float distToVictimZ = Abs(shooter->GetPosition().z - (distToVictim*normZ + victim->GetPosition().z));
 
-					if ( 3.0f*distToVictimZ < distToVictim )
+					if ( WeaponLogic_AutoAimWithinCone(3.0f, distToVictimZ, distToVictim) )
 					{
 						CVector tmp = CVector(victim->GetPosition().x, victim->GetPosition().y, 0.0f);
 						if ( CCollision::DistToLine(source, target,
 								&tmp) < victim->GetBoundRadius()*3.0f )
 						{
-							float vehicleDist = Sqrt(SQR(distToVictim) + SQR(distToVictimZ));
+							float vehicleDist = WeaponLogic_AutoAimDist(distToVictim, distToVictimZ);
 							if ( vehicleDist < closestEntityDist )
 							{
 								closestEntityDist = vehicleDist;
@@ -2921,7 +2925,7 @@ CWeapon::DoTankDoomAiming(CEntity *shooter, CEntity *driver, CVector *source, CV
 		float distToTarget = (*target - *source).Magnitude2D();
 		float distToSource = (victim->GetPosition() - *source).Magnitude2D();
 
-		(*target).z = (distToTarget / distToSource) * (0.3f + victim->GetPosition().z - (*source).z) + (*source).z;
+		(*target).z = WeaponLogic_AutoAimTargetZ(distToTarget, distToSource, 0.3f + victim->GetPosition().z, (*source).z);
 	}
 }
 
@@ -2955,18 +2959,10 @@ CWeapon::DoDriveByAutoAiming(CEntity *driver, CVehicle *vehicle, CVector *source
 		{
 			float lineDist = CCollision::DistToLine(source, target, &victim->GetPosition());
 
+			// Delegate the auto aiming formula to the C implementation
 			uint32 model = vehicle->GetModelIndex();
-			float pedDist;
-			if (model == MI_HUNTER || model == MI_SEASPAR || model == MI_SPARROW)
-			{
-				float distToVictim = (victim->GetPosition() - vehicle->GetPosition()).Magnitude();
-				pedDist = lineDist / Max(5.f, distToVictim);
-			}
-			else
-			{
-				float distToVictim = (victim->GetPosition() - driver->GetPosition()).Magnitude();
-				pedDist = 0.15f * distToVictim + lineDist;
-			}
+			float pedDist = WeaponLogic_DriveByPedDist(model == MI_HUNTER || model == MI_SEASPAR || model == MI_SPARROW, lineDist,
+				(victim->GetPosition() - vehicle->GetPosition()).Magnitude(), (victim->GetPosition() - driver->GetPosition()).Magnitude());
 
 			if ( DotProduct((*target-*source), victim->GetPosition()-*source) > 0.0f && pedDist < closestEntityDist)
 			{
@@ -2976,15 +2972,9 @@ CWeapon::DoDriveByAutoAiming(CEntity *driver, CVehicle *vehicle, CVector *source
 		}
 	}
 	uint32 model = vehicle->GetModelIndex();
-	float maxAimDistance = CAR_DRIVEBYAUTOAIMING_MAXDIST;
-	if (model == MI_HUNTER)
-	{
-		maxAimDistance = Tan(DEGTORAD(fHunterAimingAngle));
-	}
-	else if (model == MI_SEASPAR || model == MI_SPARROW)
-	{
-		maxAimDistance = Tan(DEGTORAD(fSeaSparrowAimingAngle));
-	}
+	// Delegate the auto aiming formula to the C implementation
+	float maxAimDistance = WeaponLogic_DriveByMaxAimDist(model == MI_HUNTER, model == MI_SEASPAR || model == MI_SPARROW,
+		fHunterAimingAngle, fSeaSparrowAimingAngle, CAR_DRIVEBYAUTOAIMING_MAXDIST);
 
 	if ( closestEntityDist < maxAimDistance )
 	{
@@ -3217,12 +3207,11 @@ CWeapon::MakePedsJumpAtShot(CPhysical *shooter, CVector *source, CVector *target
 	ASSERT(source!=nil);
 	ASSERT(target!=nil);
 
-	float minx = Min(source->x, target->x) - 2.0f;
-	float maxx = Max(source->x, target->x) + 2.0f;
-	float miny = Min(source->y, target->y) - 2.0f;
-	float maxy = Max(source->y, target->y) + 2.0f;
-	float minz = Min(source->z, target->z) - 2.0f;
-	float maxz = Max(source->z, target->z) + 2.0f;
+	// Delegate the box around the shot to the C implementation
+	const float sourceC[3] = { source->x, source->y, source->z };
+	const float targetC[3] = { target->x, target->y, target->z };
+	float boxMin[3], boxMax[3];
+	Weapon_ShotBox(sourceC, targetC, boxMin, boxMax);
 
 		// Access raw storage through the C store or pool API
 	for ( int32 i = CPool_GetSize(CPools::GetPedPool()) - 1; i >= 0; i--)
@@ -3232,9 +3221,8 @@ CWeapon::MakePedsJumpAtShot(CPhysical *shooter, CVector *source, CVector *target
 		
 		if ( ped )
 		{
-			if (   ped->GetPosition().x > minx && ped->GetPosition().x < maxx
-				&& ped->GetPosition().y > miny && ped->GetPosition().y < maxy
-				&& ped->GetPosition().z > minz && ped->GetPosition().z < maxz )
+			const float pedPos[3] = { ped->GetPosition().x, ped->GetPosition().y, ped->GetPosition().z };
+			if ( Weapon_PositionInBox(pedPos, boxMin, boxMax) )
 			{
 				if ( ped != FindPlayerPed() && !((uint8)(ped->m_randomSeed ^ General_GetRandomNumber()) & 31) )
 					ped->SetEvasiveDive(shooter, 1);
