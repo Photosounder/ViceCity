@@ -2,6 +2,8 @@
 #pragma once
 #include "MatrixData.h"
 
+// C++ sees the CMatrix class, C sees its plain data, which is the same memory
+#ifdef __cplusplus
 class CMatrix : public CMatrixData
 {
 public:
@@ -123,4 +125,9 @@ class CCompressedMatrix : public CCompressedMatrixNotAligned
 {
 	int _alignment; // no clue what would this align to
 };
+
+static_assert(sizeof(CMatrix) == sizeof(CMatrixData), "CMatrix must hold no data beyond CMatrixData so C sees the same layout");
+#else
+typedef struct CMatrixData CMatrix;
+#endif
 //- rouz edit (Claude)

@@ -63,7 +63,7 @@ enum eFrontendSprites
 
 
 struct Sprite2d;
-class CVector2D;
+struct CVector2D; // rouz edit (Claude)
 
 #ifdef GTA_PC
 enum eControlMethod

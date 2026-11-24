@@ -1,9 +1,13 @@
 #pragma once
 
-class CVector2D
+//+ rouz edit (Claude)
+// Plain 2D vector shared with C: only the x and y fields are visible to C, the C++ members below are not part of the data
+typedef struct CVector2D CVector2D;
+struct CVector2D
 {
-public:
 	float x, y;
+#ifdef __cplusplus
+//- rouz edit (Claude)
 	CVector2D(void) {}
 	CVector2D(float x, float y) : x(x), y(y) {}
 	CVector2D(const CVector &v) : x(v.x), y(v.y) {}
@@ -56,7 +60,13 @@ public:
 	CVector2D operator-() const {
 		return CVector2D(-x, -y);
 	}
+#endif // rouz edit (Claude)
 };
+
+//+ rouz edit (Claude)
+#ifdef __cplusplus
+static_assert(sizeof(CVector2D) == 2*sizeof(float), "CVector2D must stay two floats so C sees the same layout");
+//- rouz edit (Claude)
 
 inline float
 DotProduct2D(const CVector2D &v1, const CVector2D &v2)
@@ -102,3 +112,4 @@ inline CVector2D operator*(float left, const CVector2D &right)
 {
 	return CVector2D(left * right.x, left * right.y);
 }
+#endif // rouz edit (Claude)

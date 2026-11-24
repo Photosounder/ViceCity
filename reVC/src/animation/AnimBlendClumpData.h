@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 #include "AnimBlendFrameData_native.h"
 class CVector;
-class CVector2D;
+struct CVector2D; // rouz edit (Claude)
 #else
 typedef struct CVector CVector;
 typedef struct CVector2D CVector2D;

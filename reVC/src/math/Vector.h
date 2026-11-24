@@ -1,5 +1,9 @@
 #pragma once
 
+//+ rouz edit (Claude)
+// C++ sees the CVector class that extends RenderWare's RwV3d, C sees a plain struct of the same three floats
+#ifdef __cplusplus
+//- rouz edit (Claude)
 class CVector : public RwV3d
 {
 public:
@@ -127,3 +131,12 @@ class CMatrix;
 CVector Multiply3x3(const CMatrix &mat, const CVector &vec);
 CVector Multiply3x3(const CVector &vec, const CMatrix &mat);
 CVector operator*(const CMatrix &mat, const CVector &vec);
+
+//+ rouz edit (Claude)
+static_assert(sizeof(CVector) == 3*sizeof(float), "CVector must stay three floats so C sees the same layout");
+#else
+typedef struct CVector {
+	float x, y, z;
+} CVector;
+#endif
+//- rouz edit (Claude)

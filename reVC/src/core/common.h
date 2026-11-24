@@ -3,6 +3,15 @@
 
 #include "rl.h"
 
+//+ rouz edit (Claude)
+// C linkage for declarations that C and C++ files both see
+#ifdef __cplusplus
+#define COMMON_EXTERN_C extern "C"
+#else
+#define COMMON_EXTERN_C extern
+#endif
+//- rouz edit (Claude)
+
 #define _CRT_SECURE_NO_WARNINGS
 #define _USE_MATH_DEFINES
 #pragma warning(disable: 4244)	// int to float
@@ -23,7 +32,9 @@
 #include <string.h>
 #include <stdlib.h> // rouz edit (ChatGPT)
 #include <math.h>
+#ifdef __cplusplus // rouz edit (Claude)
 #include <memory> // rouz edit (ChatGPT)
+#endif // rouz edit (Claude)
 
 #ifdef __MWERKS__
 #define AUDIO_MSS
@@ -60,8 +71,10 @@
 #include <dinput.h>
 #endif
 
+#ifdef __cplusplus // rouz edit (Claude)
 #include <rwcore.h>
 #include <rpworld.h>
+#endif // rouz edit (Claude)
 
 // gotta put this somewhere
 #ifdef LIBRW
@@ -127,8 +140,10 @@ typedef ptrdiff_t ssize_t;
 
 #include "config.h"
 
+#ifdef __cplusplus // rouz edit (Claude)
 #include <rphanim.h>
 #include <rpskin.h>
+#endif // rouz edit (Claude)
 
 #ifdef __GNUC__
 #define TYPEALIGN(n) __attribute__ ((aligned (n)))
@@ -144,17 +159,19 @@ typedef ptrdiff_t ssize_t;
 
 // PDP-10 like byte functions
 #define MASK(p, s) (((1<<(s))-1) << (p))
-inline uint32 dpb(uint32 b, uint32 p, uint32 s, uint32 w)
+static inline uint32 dpb(uint32 b, uint32 p, uint32 s, uint32 w)
 {
 	uint32 m = MASK(p,s);
 	return (w & ~m) | ((b<<p) & m);
 }
-inline uint32 ldb(uint32 p, uint32 s, uint32 w)
+static inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 {
 	return w>>p & (1<<s)-1;
 }
 
+#ifdef __cplusplus // rouz edit (Claude)
 #include "skeleton.h"
+#endif // rouz edit (Claude)
 #include "Draw.h"
 
 //+ rouz edit (ChatGPT)
@@ -218,76 +235,25 @@ inline uint32 ldb(uint32 p, uint32 s, uint32 w)
 #include "Matrix.h"
 #include "Rect.h"
 
-class CRGBA
-{
-public:
-	union
-	{
-	    uint32 color32;
-		struct { uint8 r, g, b, a; };
-		struct { uint8 red, green, blue, alpha; };
-#ifdef RWCORE_H
-		struct  { RwRGBA rwRGBA; };
-#endif
-	};
-	
-	CRGBA(void) { }
-	CRGBA(uint8 r, uint8 g, uint8 b, uint8 a) : r(r), g(g), b(b), a(a) { }
-	
-	bool operator ==(const CRGBA &right)
-	{
-		return this->r == right.r && this->g == right.g && this->b == right.b && this->a == right.a;
-	}
-	
-	bool operator !=(const CRGBA &right)
-	{
-		return !(*this == right);
-	}
-	
-	CRGBA &operator =(const CRGBA &right)
-	{
-		this->r = right.r;
-		this->g = right.g;
-		this->b = right.b;
-		this->a = right.a;
-		return *this;
-	}
-#ifdef RWCORE_H
-	operator RwRGBA &(void) {
-		return rwRGBA;
-	}
-	
-	operator RwRGBA *(void) {
-		return &rwRGBA;
-	}
-	
-	operator RwRGBA (void) const {
-		return rwRGBA;
-	}
-
-	CRGBA &operator =(const RwRGBA &right)
-	{
-		this->r = right.red;
-		this->g = right.green;
-		this->b = right.blue;
-		this->a = right.alpha;
-		return *this;
-	}
-#endif
-};
+#include "RGBA.h" // rouz edit (Claude)
 
 #if (defined(_MSC_VER))
 extern int strcasecmp(const char *str1, const char *str2);
 extern int strncasecmp(const char *str1, const char *str2, size_t len);
 #endif
 
-extern "C" wchar *AllocUnicode(const char *src); // rouz edit (ChatGPT)
+COMMON_EXTERN_C wchar *AllocUnicode(const char *src); // rouz edit (ChatGPT)
 
 #define Clamp(v, low, high) ((v)<(low) ? (low) : (v)>(high) ? (high) : (v))
 
 #define Clamp2(v, center, radius) ((v) > (center) ? Min(v, center + radius) : Max(v, center - radius))
 
-inline float sq(float x) { return x*x; }
+//+ rouz edit (Claude)
+// C++ only: in C the name sq is rouziclib's double version, so C code squares with SQR or x*x to keep float results
+#ifdef __cplusplus
+static inline float sq(float x) { return x*x; }
+#endif
+//- rouz edit (Claude)
 #define SQR(x) ((x) * (x))
 
 #ifdef __MWERKS__
@@ -315,10 +281,10 @@ inline float sq(float x) { return x*x; }
 
 #include "Random.h" // rouz edit (ChatGPT)
 
-extern "C" void re3_debug(const char *format, ...); // rouz edit (ChatGPT)
-extern "C" void re3_trace(const char *filename, unsigned int lineno, const char *func, const char *format, ...); // rouz edit (ChatGPT)
-extern "C" void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func); // rouz edit (ChatGPT)
-extern "C" void re3_usererror(const char *format, ...); // rouz edit (ChatGPT)
+COMMON_EXTERN_C void re3_debug(const char *format, ...); // rouz edit (ChatGPT)
+COMMON_EXTERN_C void re3_trace(const char *filename, unsigned int lineno, const char *func, const char *format, ...); // rouz edit (ChatGPT)
+COMMON_EXTERN_C void re3_assert(const char *expr, const char *filename, unsigned int lineno, const char *func); // rouz edit (ChatGPT)
+COMMON_EXTERN_C void re3_usererror(const char *format, ...); // rouz edit (ChatGPT)
 
 #define DEBUGBREAK() __debugbreak();
 
